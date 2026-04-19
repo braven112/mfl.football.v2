@@ -20,6 +20,9 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
+import { detectAttackOnSchefter } from '../../../utils/schefter-attack-detection';
+import { assignCodename } from '../../../utils/schefter-codenames';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import {
   TIP_TOPICS,
@@ -42,6 +45,15 @@ const RATE_LIMIT_PREFIX = 'schefter:tips:ratelimit:';
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 
+// Anon Style Book keys. Named (GroupMe) attackers live under
+// `schefter:style_book:{authorKey}` keyed on the public display name. Anon
+// web tippers live here keyed on the tipster hash so the two leaderboards
+// never mix and de-anonymization is impossible through the leaderboard.
+const STYLE_BOOK_ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
+const STYLE_BOOK_ANON_SEASON_PREFIX = 'schefter:style_book:anon:season:';
+const STYLE_BOOK_ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
+const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
+
 type RedisClient = {
   lpush: (key: string, ...values: unknown[]) => Promise<number>;
   incr: (key: string) => Promise<number>;
@@ -50,7 +62,10 @@ type RedisClient = {
   llen: (key: string) => Promise<number>;
   get: <T>(key: string) => Promise<T | null>;
   zadd: (key: string, entry: { score: number; member: string }) => Promise<unknown>;
+  zincrby: (key: string, increment: number, member: string) => Promise<number | string>;
   zremrangebyscore: (key: string, min: number | string, max: number | string) => Promise<unknown>;
+  sadd: (key: string, ...members: string[]) => Promise<number>;
+  srem: (key: string, ...members: string[]) => Promise<number>;
 };
 
 let _redis: RedisClient | null | undefined;
@@ -240,6 +255,51 @@ export const POST: APIRoute = async ({ request }) => {
 
   const tipsterDivision = resolveDivision(user.franchiseId);
 
+  // Style Book — anonymous web-tip path. If the tip text attacks Schefter,
+  // bump the anon-leaderboard counters keyed on the hashed owner id. Named
+  // GroupMe attackers and anon web attackers live in separate leaderboards
+  // (different keyspaces, different Redis ZSETs) so they compete against
+  // their own pools. Codenames are resolved at leaderboard-read time via
+  // `schefter:tipster:codename:{hash}` so the raw hash never surfaces in any
+  // response.
+  //
+  // Best-effort — a failure here must not block tip enqueue. We null-check
+  // `styleBookCount` when stamping the tip so the LLM path degrades gracefully.
+  const attackCheck = detectAttackOnSchefter(trimmedText);
+  let styleBookCount: number | null = null;
+  let tipsterCodename: string | null = null;
+  if (attackCheck.attack) {
+    try {
+      const year = getCurrentLeagueYear();
+      const lifetimeKey = `${STYLE_BOOK_ANON_LIFETIME_PREFIX}${hashedOwnerId}`;
+      const seasonKey = `${STYLE_BOOK_ANON_SEASON_PREFIX}${year}:${hashedOwnerId}`;
+      const lastShotKey = `${STYLE_BOOK_ANON_LAST_SHOT_PREFIX}${hashedOwnerId}`;
+      const leaderboardKey = `${STYLE_BOOK_ANON_LEADERBOARD_PREFIX}${year}`;
+
+      await redis.incr(lifetimeKey);
+      const seasonRaw = await redis.incr(seasonKey);
+      await redis.set(lastShotKey, Date.now());
+      // Leaderboard ZSET stores the HASH as member (never surfaced). The
+      // response layer resolves to codename via schefter:tipster:codename:{hash}.
+      await redis.zincrby(leaderboardKey, 1, hashedOwnerId);
+
+      styleBookCount = typeof seasonRaw === 'number'
+        ? seasonRaw
+        : parseInt(String(seasonRaw ?? '0'), 10) || 1;
+
+      // Resolve / assign a codename so the LLM has a stable handle to use
+      // when referring to this anonymous attacker in posts. assignCodename
+      // is idempotent — returns the existing codename if one's already set.
+      try {
+        tipsterCodename = await assignCodename(redis, hashedOwnerId);
+      } catch (err) {
+        console.warn('[schefter/tip] codename assign (style-book) failed:', err);
+      }
+    } catch (err) {
+      console.warn('[schefter/tip] anon style-book bump failed:', err);
+    }
+  }
+
   const tip: Tip = {
     id: crypto.randomUUID(),
     hashedOwnerId,
@@ -251,6 +311,13 @@ export const POST: APIRoute = async ({ request }) => {
     submittedAt: Date.now(),
     source: 'web',
     ...(validatedRepliesToPostId ? { repliesToPostId: validatedRepliesToPostId } : {}),
+    ...(attackCheck.attack
+      ? {
+          attackOnSchefter: true,
+          ...(styleBookCount !== null ? { styleBookCount } : {}),
+          ...(tipsterCodename ? { tipsterCodename } : {}),
+        }
+      : {}),
   };
 
   try {

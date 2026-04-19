@@ -354,10 +354,15 @@ describe('source-level contract — scanner + prompt', () => {
     expect(scannerSrc).toMatch(/safe\.styleBookCount\s*=\s*tip\.styleBookCount/);
   });
 
-  it('system prompt contains HARD RULE 15 (Style Book)', () => {
-    expect(scannerSrc).toMatch(/15\.\s*Style Book \(GroupMe attacks on Schefter\)/);
+  it('system prompt contains HARD RULE 15 (Style Book) and covers both named + anon', () => {
+    expect(scannerSrc).toMatch(/15\.\s*Style Book \(attacks on Schefter\)/);
     expect(scannerSrc).toMatch(/attackOnSchefter:\s*true/);
     expect(scannerSrc).toMatch(/styleBookCount/);
+    // Rule must distinguish GroupMe (named) and web (anonymous) flavors so
+    // Schefter addresses each correctly.
+    expect(scannerSrc).toMatch(/GroupMe \(named\)/);
+    expect(scannerSrc).toMatch(/Web \(anonymous\)/);
+    expect(scannerSrc).toMatch(/tipsterCodename/);
   });
 
   it('system prompt forbids quoting the attack verbatim and clapping back', () => {

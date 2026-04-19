@@ -137,100 +137,165 @@ describe('normalizeAuthorKey — parity with the listener', () => {
   }
 });
 
+// ── Helpers for multi-year leaderboard population ───────────────────────────
+
+function populateNamedLeaderboard(lb: Map<string, number>) {
+  for (const y of [2025, 2026, 2027]) {
+    fakeRedis.zsets.set(`schefter:style_book:leaderboard:${y}`, new Map(lb));
+  }
+}
+
+function populateAnonLeaderboard(lb: Map<string, number>) {
+  for (const y of [2025, 2026, 2027]) {
+    fakeRedis.zsets.set(`schefter:style_book:anon_leaderboard:${y}`, new Map(lb));
+  }
+}
+
 // ── Endpoint behavior ───────────────────────────────────────────────────────
 
 describe('GET /api/schefter/style-book', () => {
-  it('returns an empty response when the leaderboard is empty', async () => {
+  it('returns empty named + anonymous pools when nothing is tracked', async () => {
     const res = await callEndpoint();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.entries).toEqual([]);
-    expect(body.totals).toEqual({ seasonShots: 0, authors: 0 });
+    expect(body.named).toEqual({ entries: [], totals: { seasonShots: 0, authors: 0 } });
+    expect(body.anonymous).toEqual({ entries: [], totals: { seasonShots: 0, authors: 0 } });
     expect(body.seasonYear).toBeGreaterThan(2024);
   });
 
-  it('returns entries ordered by seasonCount desc', async () => {
-    const lb = new Map<string, number>([
+  it('returns named entries ordered by seasonCount desc', async () => {
+    populateNamedLeaderboard(new Map<string, number>([
       ['Dead Cap Walking', 3],
       ['Wabbits', 1],
       ['Vitside Mafia', 2],
-    ]);
-    // Find the correct leaderboard key — the endpoint uses getCurrentLeagueYear()
-    // Pre-populate a leaderboard for each plausible year.
-    const years = [2025, 2026, 2027];
-    for (const y of years) fakeRedis.zsets.set(`schefter:style_book:leaderboard:${y}`, new Map(lb));
+    ]));
 
-    // Also populate lifetime + last-shot for one of them so we can assert
-    // the enrichment path works.
+    // Lifetime + last-shot enrichment for one author
     fakeRedis.strings.set('schefter:style_book:dead_cap_walking', 5);
     fakeRedis.strings.set('schefter:style_book:last_shot_at:dead_cap_walking', 1_700_000_000_000);
 
     const res = await callEndpoint();
     const body = await res.json();
-    expect(body.entries.map((e: any) => e.author)).toEqual([
+    expect(body.named.entries.map((e: any) => e.author)).toEqual([
       'Dead Cap Walking',
       'Vitside Mafia',
       'Wabbits',
     ]);
-    expect(body.entries[0].seasonCount).toBe(3);
-
-    const dcw = body.entries[0];
-    expect(dcw.lifetimeCount).toBe(5);
-    expect(dcw.lastShotAt).toBe(1_700_000_000_000);
+    expect(body.named.entries[0].seasonCount).toBe(3);
+    expect(body.named.entries[0].lifetimeCount).toBe(5);
+    expect(body.named.entries[0].lastShotAt).toBe(1_700_000_000_000);
 
     // Vitside has no lifetime record — should degrade to 0 / null.
-    const vit = body.entries[1];
-    expect(vit.lifetimeCount).toBe(0);
-    expect(vit.lastShotAt).toBeNull();
+    expect(body.named.entries[1].lifetimeCount).toBe(0);
+    expect(body.named.entries[1].lastShotAt).toBeNull();
   });
 
-  it('aggregates season totals correctly', async () => {
-    const lb = new Map<string, number>([
-      ['A', 5],
-      ['B', 3],
-      ['C', 1],
-    ]);
-    for (const y of [2025, 2026, 2027]) fakeRedis.zsets.set(`schefter:style_book:leaderboard:${y}`, new Map(lb));
+  it('returns anonymous entries by codename (never hash)', async () => {
+    // Anon leaderboard keys on the tipster HASH. Codename resolves via
+    // schefter:tipster:codename:{hash}. Entries without a codename are dropped.
+    const hashA = 'a'.repeat(64);
+    const hashB = 'b'.repeat(64);
+    const hashC = 'c'.repeat(64);
+    populateAnonLeaderboard(new Map<string, number>([
+      [hashA, 4],
+      [hashB, 2],
+      [hashC, 1], // missing codename — should be dropped
+    ]));
+    fakeRedis.strings.set(`schefter:tipster:codename:${hashA}`, 'Burner Phone');
+    fakeRedis.strings.set(`schefter:tipster:codename:${hashB}`, 'The Ghost');
+    // hashC intentionally omitted
+    fakeRedis.strings.set(`schefter:style_book:anon:${hashA}`, 7);
+    fakeRedis.strings.set(`schefter:style_book:anon:last_shot_at:${hashA}`, 1_700_000_000_000);
 
     const res = await callEndpoint();
     const body = await res.json();
-    expect(body.totals.seasonShots).toBe(9);
-    expect(body.totals.authors).toBe(3);
+    expect(body.anonymous.entries.map((e: any) => e.codename)).toEqual([
+      'Burner Phone',
+      'The Ghost',
+    ]);
+    expect(body.anonymous.entries[0].seasonCount).toBe(4);
+    expect(body.anonymous.entries[0].lifetimeCount).toBe(7);
+    expect(body.anonymous.entries[0].lastShotAt).toBe(1_700_000_000_000);
+
+    // Verify hashes never appear in the response body.
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain(hashA);
+    expect(serialized).not.toContain(hashB);
+    expect(serialized).not.toContain(hashC);
+  });
+
+  it('returns named + anonymous pools in parallel (non-interfering)', async () => {
+    populateNamedLeaderboard(new Map<string, number>([['Dead Cap Walking', 2]]));
+    const hashA = 'd'.repeat(64);
+    populateAnonLeaderboard(new Map<string, number>([[hashA, 5]]));
+    fakeRedis.strings.set(`schefter:tipster:codename:${hashA}`, 'Smoke Signal');
+
+    const res = await callEndpoint();
+    const body = await res.json();
+    expect(body.named.entries).toHaveLength(1);
+    expect(body.named.entries[0].author).toBe('Dead Cap Walking');
+    expect(body.anonymous.entries).toHaveLength(1);
+    expect(body.anonymous.entries[0].codename).toBe('Smoke Signal');
+  });
+
+  it('aggregates season totals correctly for both pools', async () => {
+    populateNamedLeaderboard(new Map<string, number>([['A', 5], ['B', 3]]));
+    const hashA = 'e'.repeat(64);
+    const hashB = 'f'.repeat(64);
+    populateAnonLeaderboard(new Map<string, number>([[hashA, 2], [hashB, 1]]));
+    fakeRedis.strings.set(`schefter:tipster:codename:${hashA}`, 'Back-Channel');
+    fakeRedis.strings.set(`schefter:tipster:codename:${hashB}`, 'Hot Mic');
+
+    const res = await callEndpoint();
+    const body = await res.json();
+    expect(body.named.totals.seasonShots).toBe(8);
+    expect(body.named.totals.authors).toBe(2);
+    expect(body.anonymous.totals.seasonShots).toBe(3);
+    expect(body.anonymous.totals.authors).toBe(2);
   });
 
   it('never exposes hashes or internal keys in the response', async () => {
-    const lb = new Map<string, number>([['Dead Cap Walking', 2]]);
-    for (const y of [2025, 2026, 2027]) fakeRedis.zsets.set(`schefter:style_book:leaderboard:${y}`, new Map(lb));
+    populateNamedLeaderboard(new Map<string, number>([['Dead Cap Walking', 2]]));
+    const hashA = '0'.repeat(64);
+    populateAnonLeaderboard(new Map<string, number>([[hashA, 1]]));
+    fakeRedis.strings.set(`schefter:tipster:codename:${hashA}`, 'Unnamed Source');
 
     const res = await callEndpoint();
     const body = await res.json();
     const serialized = JSON.stringify(body);
     expect(serialized).not.toMatch(/schefter:style_book:/);
+    expect(serialized).not.toMatch(/schefter:tipster:codename:/);
     expect(serialized).not.toMatch(/hashedOwnerId/);
-    expect(serialized).not.toMatch(/dead_cap_walking/); // normalized key should NOT leak
+    expect(serialized).not.toMatch(/dead_cap_walking/);
+    expect(serialized).not.toContain(hashA);
   });
 
   it('caches the response (second call makes no Redis reads)', async () => {
-    const lb = new Map<string, number>([['Dead Cap Walking', 1]]);
-    for (const y of [2025, 2026, 2027]) fakeRedis.zsets.set(`schefter:style_book:leaderboard:${y}`, new Map(lb));
+    populateNamedLeaderboard(new Map<string, number>([['Dead Cap Walking', 1]]));
 
     await callEndpoint();
     const zrangeCallsAfterFirst = fakeRedis.zrangeCalls.length;
     const getCallsAfterFirst = fakeRedis.getCalls.length;
 
     await callEndpoint();
-    // The second call must be served from cache — no new Redis commands.
     expect(fakeRedis.zrangeCalls.length).toBe(zrangeCallsAfterFirst);
     expect(fakeRedis.getCalls.length).toBe(getCallsAfterFirst);
   });
 
-  it('requests descending order with scores from the leaderboard ZSET', async () => {
-    fakeRedis.zsets.set(`schefter:style_book:leaderboard:2026`, new Map([['X', 1]]));
-    fakeRedis.zsets.set(`schefter:style_book:leaderboard:2027`, new Map([['X', 1]]));
-    fakeRedis.zsets.set(`schefter:style_book:leaderboard:2025`, new Map([['X', 1]]));
+  it('requests descending order with scores from BOTH leaderboard ZSETs', async () => {
+    populateNamedLeaderboard(new Map<string, number>([['X', 1]]));
+    populateAnonLeaderboard(new Map<string, number>([[''.padEnd(64, '1'), 1]]));
+    fakeRedis.strings.set(`schefter:tipster:codename:${''.padEnd(64, '1')}`, 'The Ledger');
     await callEndpoint();
-    expect(fakeRedis.zrangeCalls[0].rev).toBe(true);
-    expect(fakeRedis.zrangeCalls[0].withScores).toBe(true);
+    // Both ZRANGE calls should have rev + withScores set
+    for (const call of fakeRedis.zrangeCalls) {
+      expect(call.rev).toBe(true);
+      expect(call.withScores).toBe(true);
+    }
+    // And both leaderboard keys should have been queried.
+    const keys = fakeRedis.zrangeCalls.map((c) => c.key);
+    expect(keys.some((k) => k.startsWith('schefter:style_book:leaderboard:'))).toBe(true);
+    expect(keys.some((k) => k.startsWith('schefter:style_book:anon_leaderboard:'))).toBe(true);
   });
 });
 
@@ -250,8 +315,18 @@ describe('style-book page — contract', () => {
     expect(pageSrc).toMatch(/\/api\/schefter\/style-book/);
   });
 
-  it('renders an empty state when the dossier is empty', () => {
-    expect(pageSrc).toMatch(/The dossier is empty this season/);
+  it('renders empty states for both leaderboards', () => {
+    // Named (group chat) empty state
+    expect(pageSrc).toMatch(/The group chat file is empty/);
+    // Anonymous (tip line) empty state
+    expect(pageSrc).toMatch(/The tip-line file is empty/);
+  });
+
+  it('renders both named and anonymous boards', () => {
+    expect(pageSrc).toMatch(/Group Chat file/);
+    expect(pageSrc).toMatch(/Anonymous Tip-line file/);
+    expect(pageSrc).toMatch(/data-style-book-named-list/);
+    expect(pageSrc).toMatch(/data-style-book-anon-list/);
   });
 
   it('escapes HTML in author names', () => {

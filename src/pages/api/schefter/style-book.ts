@@ -1,32 +1,36 @@
 /**
  * GET /api/schefter/style-book
  *
- * Public (no auth) read of the Style Book leaderboard — the running tally
- * of GroupMe personal attacks on Schefter, by author. GroupMe authorship
- * is already public (anyone can scroll the chat), so exposing these counts
- * on a public page doesn't widen the de-anonymization surface.
+ * Public (no auth) read of the Style Book leaderboards — running tallies of
+ * personal attacks on Schefter. Two separate pools:
+ *
+ *   - `named` — GroupMe-chat attackers, keyed on the public display name.
+ *     Public authorship already makes these identifiable.
+ *   - `anonymous` — web-tip attackers, keyed internally on the tipster hash
+ *     but displayed ONLY as a codename ("Burner Phone", "The Ghost" …). The
+ *     raw hash never appears in the response.
+ *
+ * The two leaderboards are returned side by side so web tipsters compete
+ * against each other (by codename) and GroupMe attackers compete against each
+ * other (by name) — never mixed.
  *
  * Response shape:
  *   {
  *     seasonYear: number,
- *     entries: Array<{
- *       author: string,
- *       seasonCount: number,
- *       lifetimeCount: number,
- *       lastShotAt: number | null
- *     }>,
- *     totals: { seasonShots: number, authors: number }
+ *     named: {
+ *       entries: Array<{ author, seasonCount, lifetimeCount, lastShotAt }>,
+ *       totals: { seasonShots, authors }
+ *     },
+ *     anonymous: {
+ *       entries: Array<{ codename, seasonCount, lifetimeCount, lastShotAt }>,
+ *       totals: { seasonShots, authors }
+ *     }
  *   }
- *
- * The leaderboard ZSET stores each attacker's DISPLAY name directly
- * (not a hash) because the whole point of the bit is named ribbing.
- * Lifetime + last-shot lookups use a normalized lowercase key — mirrors
- * normalizeAuthorKey() in scripts/schefter-groupme-listen.mjs so the
- * two sides stay in sync.
  */
 
 import type { APIRoute } from 'astro';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getCodename } from '../../../utils/schefter-codenames';
 
 export const prerender = false;
 
@@ -34,12 +38,21 @@ const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-
 const LEADERBOARD_LIMIT = 25;
 const CACHE_TTL_MS = 30_000;
 
-const STYLE_BOOK_LIFETIME_PREFIX = 'schefter:style_book:';
-const STYLE_BOOK_LAST_SHOT_PREFIX = 'schefter:style_book:last_shot_at:';
-const STYLE_BOOK_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
+// Named (GroupMe) Style Book
+const NAMED_LIFETIME_PREFIX = 'schefter:style_book:';
+const NAMED_LAST_SHOT_PREFIX = 'schefter:style_book:last_shot_at:';
+const NAMED_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
+
+// Anonymous (web-tip) Style Book
+const ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
+const ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
+const ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
 
 type RedisClient = {
   get: <T>(key: string) => Promise<T | null>;
+  set: (key: string, value: unknown, opts?: { nx?: boolean; ex?: number }) => Promise<unknown>;
+  sadd: (key: string, ...members: string[]) => Promise<number>;
+  srem: (key: string, ...members: string[]) => Promise<number>;
   zrange: (
     key: string,
     start: number,
@@ -49,8 +62,15 @@ type RedisClient = {
   zcard: (key: string) => Promise<number>;
 };
 
-type LeaderboardEntry = {
+type NamedEntry = {
   author: string;
+  seasonCount: number;
+  lifetimeCount: number;
+  lastShotAt: number | null;
+};
+
+type AnonEntry = {
+  codename: string;
   seasonCount: number;
   lifetimeCount: number;
   lastShotAt: number | null;
@@ -58,8 +78,14 @@ type LeaderboardEntry = {
 
 type StyleBookResponse = {
   seasonYear: number;
-  entries: LeaderboardEntry[];
-  totals: { seasonShots: number; authors: number };
+  named: {
+    entries: NamedEntry[];
+    totals: { seasonShots: number; authors: number };
+  };
+  anonymous: {
+    entries: AnonEntry[];
+    totals: { seasonShots: number; authors: number };
+  };
 };
 
 let _redis: RedisClient | null | undefined;
@@ -110,9 +136,9 @@ function coerceTimestamp(raw: unknown): number | null {
 }
 
 /**
- * Mirrors normalizeAuthorKey() in scripts/schefter-groupme-listen.mjs.
- * Both paths must produce the same key for the same display name, otherwise
- * lifetime + last-shot lookups miss on the leaderboard display name.
+ * Mirrors normalizeAuthorKey() in scripts/schefter-groupme-listen.mjs for the
+ * NAMED leaderboard. Both paths must produce the same key for the same display
+ * name or lifetime/last-shot lookups will miss.
  */
 export function normalizeAuthorKey(name: string): string {
   if (!name || typeof name !== 'string') return '';
@@ -136,9 +162,101 @@ function normalizeZrange(raw: unknown): Array<{ member: string; score: number }>
   return out;
 }
 
-/** Expose cache reset for tests — not wired in production. */
 export function _resetStyleBookCacheForTests(): void {
   _cache = null;
+}
+
+async function fetchNamedEntries(
+  redis: RedisClient,
+  seasonYear: number,
+): Promise<{ entries: NamedEntry[]; authorCount: number }> {
+  const leaderboardKey = `${NAMED_LEADERBOARD_PREFIX}${seasonYear}`;
+  const [rawLeaderboard, rawCount] = await Promise.all([
+    redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
+    redis.zcard(leaderboardKey).catch(() => 0),
+  ]);
+  const rows = normalizeZrange(rawLeaderboard);
+  const authorCount = typeof rawCount === 'number' ? rawCount : rows.length;
+  if (rows.length === 0) return { entries: [], authorCount };
+
+  const entries = await Promise.all(
+    rows.map(async (row) => {
+      const authorKey = normalizeAuthorKey(row.member);
+      let lifetimeCount = 0;
+      let lastShotAt: number | null = null;
+      if (authorKey) {
+        try {
+          const [lifeRaw, shotRaw] = await Promise.all([
+            redis.get<string | number>(`${NAMED_LIFETIME_PREFIX}${authorKey}`),
+            redis.get<string | number>(`${NAMED_LAST_SHOT_PREFIX}${authorKey}`),
+          ]);
+          lifetimeCount = coerceCount(lifeRaw);
+          lastShotAt = coerceTimestamp(shotRaw);
+        } catch {
+          /* degrade */
+        }
+      }
+      return {
+        author: row.member,
+        seasonCount: row.score,
+        lifetimeCount,
+        lastShotAt,
+      } satisfies NamedEntry;
+    }),
+  );
+  return { entries, authorCount };
+}
+
+/**
+ * Anon entries — ZSET members are tipster HASHES. The hash is NEVER returned
+ * to the client; we resolve each to its codename via getCodename and drop
+ * entries whose codename we can't resolve (shouldn't happen — tip.ts calls
+ * assignCodename on every attack — but a belt-and-suspenders guard).
+ */
+async function fetchAnonEntries(
+  redis: RedisClient,
+  seasonYear: number,
+): Promise<{ entries: AnonEntry[]; authorCount: number }> {
+  const leaderboardKey = `${ANON_LEADERBOARD_PREFIX}${seasonYear}`;
+  const [rawLeaderboard, rawCount] = await Promise.all([
+    redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
+    redis.zcard(leaderboardKey).catch(() => 0),
+  ]);
+  const rows = normalizeZrange(rawLeaderboard);
+  const authorCount = typeof rawCount === 'number' ? rawCount : rows.length;
+  if (rows.length === 0) return { entries: [], authorCount };
+
+  const entries: AnonEntry[] = [];
+  for (const row of rows) {
+    const hashedOwnerId = row.member;
+    let codename: string | null = null;
+    try {
+      codename = await getCodename(redis, hashedOwnerId);
+    } catch {
+      codename = null;
+    }
+    if (!codename) continue; // never leak a raw hash into the response
+
+    let lifetimeCount = 0;
+    let lastShotAt: number | null = null;
+    try {
+      const [lifeRaw, shotRaw] = await Promise.all([
+        redis.get<string | number>(`${ANON_LIFETIME_PREFIX}${hashedOwnerId}`),
+        redis.get<string | number>(`${ANON_LAST_SHOT_PREFIX}${hashedOwnerId}`),
+      ]);
+      lifetimeCount = coerceCount(lifeRaw);
+      lastShotAt = coerceTimestamp(shotRaw);
+    } catch {
+      /* degrade */
+    }
+    entries.push({
+      codename,
+      seasonCount: row.score,
+      lifetimeCount,
+      lastShotAt,
+    });
+  }
+  return { entries, authorCount };
 }
 
 export const GET: APIRoute = async () => {
@@ -153,75 +271,37 @@ export const GET: APIRoute = async () => {
   if (!redis) {
     const empty: StyleBookResponse = {
       seasonYear,
-      entries: [],
-      totals: { seasonShots: 0, authors: 0 },
+      named: { entries: [], totals: { seasonShots: 0, authors: 0 } },
+      anonymous: { entries: [], totals: { seasonShots: 0, authors: 0 } },
     };
     _cache = { data: empty, expiresAt: now + CACHE_TTL_MS };
     return json(empty);
   }
 
-  const leaderboardKey = `${STYLE_BOOK_LEADERBOARD_PREFIX}${seasonYear}`;
-
-  let rawLeaderboard: unknown = [];
-  let authorCount = 0;
+  let named: { entries: NamedEntry[]; authorCount: number };
+  let anonymous: { entries: AnonEntry[]; authorCount: number };
   try {
-    [rawLeaderboard, authorCount] = await Promise.all([
-      redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
-      redis.zcard(leaderboardKey).catch(() => 0),
+    [named, anonymous] = await Promise.all([
+      fetchNamedEntries(redis, seasonYear),
+      fetchAnonEntries(redis, seasonYear),
     ]);
   } catch (err) {
     console.error('[style-book] Read error:', err);
     return json({ error: 'redis_unavailable' }, 503);
   }
 
-  const rows = normalizeZrange(rawLeaderboard);
-  if (rows.length === 0) {
-    const empty: StyleBookResponse = {
-      seasonYear,
-      entries: [],
-      totals: { seasonShots: 0, authors: 0 },
-    };
-    _cache = { data: empty, expiresAt: now + CACHE_TTL_MS };
-    return json(empty);
-  }
-
-  // Fetch lifetime count + last-shot timestamp for each leaderboard entry
-  // in parallel. A single failed lookup degrades that entry (lifetime=0,
-  // lastShotAt=null) without killing the whole response.
-  const entries = await Promise.all(
-    rows.map(async (row) => {
-      const authorKey = normalizeAuthorKey(row.member);
-      let lifetimeCount = 0;
-      let lastShotAt: number | null = null;
-      if (authorKey) {
-        try {
-          const [lifeRaw, shotRaw] = await Promise.all([
-            redis.get<string | number>(`${STYLE_BOOK_LIFETIME_PREFIX}${authorKey}`),
-            redis.get<string | number>(`${STYLE_BOOK_LAST_SHOT_PREFIX}${authorKey}`),
-          ]);
-          lifetimeCount = coerceCount(lifeRaw);
-          lastShotAt = coerceTimestamp(shotRaw);
-        } catch {
-          // Best-effort — leave degraded values.
-        }
-      }
-      return {
-        author: row.member,
-        seasonCount: row.score,
-        lifetimeCount,
-        lastShotAt,
-      } satisfies LeaderboardEntry;
-    }),
-  );
-
-  const seasonShots = entries.reduce((sum, e) => sum + e.seasonCount, 0);
+  const namedTotal = named.entries.reduce((sum, e) => sum + e.seasonCount, 0);
+  const anonTotal = anonymous.entries.reduce((sum, e) => sum + e.seasonCount, 0);
 
   const response: StyleBookResponse = {
     seasonYear,
-    entries,
-    totals: {
-      seasonShots,
-      authors: typeof authorCount === 'number' ? authorCount : entries.length,
+    named: {
+      entries: named.entries,
+      totals: { seasonShots: namedTotal, authors: named.authorCount },
+    },
+    anonymous: {
+      entries: anonymous.entries,
+      totals: { seasonShots: anonTotal, authors: anonymous.authorCount },
     },
   };
 

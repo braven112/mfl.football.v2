@@ -48,37 +48,63 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
           </div>
         </div>
         <p class="sf-page-header__bio">
-          Every shot taken at the bot in the group chat becomes a data point. The file grows with the heat. Bemused beat-reporter dossier — the count is the joke, not the slur.
+          Every shot taken at the bot becomes a data point. Two files — named entries from the group chat, anonymous entries from the tip line. Each side competes against itself. Bemused beat-reporter dossier — the count is the joke, not the slur.
         </p>
       </div>
     </header>
 
-    <section class="style-book-board" aria-labelledby="style-book-board-title" data-style-book>
-      <div class="section-header">
-        <h2 class="section-header__title" id="style-book-board-title">This season's leaderboard</h2>
-        <p class="section-header__sub" data-style-book-sub>Loading the dossier…</p>
-      </div>
+    <div class="style-book-grid">
+      <section class="style-book-board" aria-labelledby="style-book-named-title" data-style-book-named>
+        <div class="section-header">
+          <h2 class="section-header__title" id="style-book-named-title">Group Chat file</h2>
+          <p class="section-header__sub" data-style-book-named-sub>Loading the dossier…</p>
+        </div>
 
-      <div class="style-book-empty" data-style-book-empty hidden>
-        <p class="style-book-empty__line">The dossier is empty this season.</p>
-        <p class="style-book-empty__sub">No shots on record. The bot remains unbothered.</p>
-      </div>
+        <div class="style-book-empty" data-style-book-named-empty hidden>
+          <p class="style-book-empty__line">The group chat file is empty.</p>
+          <p class="style-book-empty__sub">No shots on record from the chat. The bot remains unbothered.</p>
+        </div>
 
-      <ol class="style-book-list" data-style-book-list></ol>
+        <ol class="style-book-list" data-style-book-named-list></ol>
 
-      <p class="style-book-totals" data-style-book-totals hidden></p>
-    </section>
+        <p class="style-book-totals" data-style-book-named-totals hidden></p>
+      </section>
+
+      <section class="style-book-board" aria-labelledby="style-book-anon-title" data-style-book-anon>
+        <div class="section-header">
+          <h2 class="section-header__title" id="style-book-anon-title">Anonymous Tip-line file</h2>
+          <p class="section-header__sub" data-style-book-anon-sub>Loading the dossier…</p>
+        </div>
+
+        <div class="style-book-empty" data-style-book-anon-empty hidden>
+          <p class="style-book-empty__line">The tip-line file is empty.</p>
+          <p class="style-book-empty__sub">Everyone's behaving today. For now.</p>
+        </div>
+
+        <ol class="style-book-list" data-style-book-anon-list></ol>
+
+        <p class="style-book-totals" data-style-book-anon-totals hidden></p>
+      </section>
+    </div>
 
     <section class="style-book-footnote" aria-labelledby="style-book-footnote-title">
       <div class="section-header">
-        <h2 class="section-header__title" id="style-book-footnote-title">How the file works</h2>
+        <h2 class="section-header__title" id="style-book-footnote-title">How the files work</h2>
       </div>
       <ul class="style-book-rules">
         <li class="style-book-rule">
+          <span class="style-book-rule__label">Two pools</span>
+          <p class="style-book-rule__text">
+            Named attackers (GroupMe) compete in one pool. Anonymous web tippers (by codename)
+            compete in the other. Nobody moves between pools.
+          </p>
+        </li>
+        <li class="style-book-rule">
           <span class="style-book-rule__label">Trigger</span>
           <p class="style-book-rule__text">
-            A GroupMe message that calls out Schefter/Claude/Schefty/the bot AND contains a pejorative
-            (sucks, hack, trash, fraud, wrong, clown, etc.) gets logged. Everyone starts at zero.
+            A message that calls out Schefter / Claude / Schefty / "the bot" AND contains a pejorative
+            (sucks, hack, trash, fraud, wrong, clown, etc.) gets logged. "The Roger bot" / "ask Roger"
+            doesn't count — that's Roger's beat.
           </p>
         </li>
         <li class="style-book-rule">
@@ -98,8 +124,8 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
         <li class="style-book-rule">
           <span class="style-book-rule__label">Privacy</span>
           <p class="style-book-rule__text">
-            GroupMe authorship is public by construction — this page only publishes what the chat
-            already showed. No private tip data is ever surfaced here.
+            GroupMe authorship is public by construction. Anonymous tippers are only ever shown
+            by codename — the hash that identifies them internally never leaves Redis.
           </p>
         </li>
       </ul>
@@ -281,6 +307,18 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
     }
   }
 
+  .style-book-grid {
+    display: grid;
+    gap: var(--space-5, 20px);
+  }
+
+  @media (min-width: 900px) {
+    .style-book-grid {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+
   .style-book-rule__label {
     display: inline-block;
     font-size: var(--fs-xs, 12px);
@@ -300,24 +338,27 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
 </style>
 
 <script>
-  type StyleBookEntry = {
+  type NamedEntry = {
     author: string;
     seasonCount: number;
     lifetimeCount: number;
     lastShotAt: number | null;
   };
 
-  type StyleBookResponse = {
-    seasonYear: number;
-    entries: StyleBookEntry[];
-    totals: { seasonShots: number; authors: number };
+  type AnonEntry = {
+    codename: string;
+    seasonCount: number;
+    lifetimeCount: number;
+    lastShotAt: number | null;
   };
 
-  const root = document.querySelector('[data-style-book]');
-  const listEl = document.querySelector('[data-style-book-list]') as HTMLOListElement | null;
-  const emptyEl = document.querySelector('[data-style-book-empty]') as HTMLElement | null;
-  const subEl = document.querySelector('[data-style-book-sub]') as HTMLElement | null;
-  const totalsEl = document.querySelector('[data-style-book-totals]') as HTMLElement | null;
+  type BoardTotals = { seasonShots: number; authors: number };
+
+  type StyleBookResponse = {
+    seasonYear: number;
+    named: { entries: NamedEntry[]; totals: BoardTotals };
+    anonymous: { entries: AnonEntry[]; totals: BoardTotals };
+  };
 
   function formatRelative(ts: number | null): string {
     if (ts === null) return 'never';
@@ -347,12 +388,26 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
     return n === 1 ? 'shot' : 'shots';
   }
 
-  function render(data: StyleBookResponse) {
+  type Handles = {
+    listEl: HTMLOListElement | null;
+    emptyEl: HTMLElement | null;
+    subEl: HTMLElement | null;
+    totalsEl: HTMLElement | null;
+  };
+
+  function renderBoard(
+    label: 'Group Chat' | 'Tip Line',
+    entries: Array<{ displayName: string; seasonCount: number; lifetimeCount: number; lastShotAt: number | null }>,
+    totals: BoardTotals,
+    seasonYear: number,
+    handles: Handles,
+  ) {
+    const { listEl, emptyEl, subEl, totalsEl } = handles;
     if (!listEl || !subEl) return;
 
-    if (data.entries.length === 0) {
+    if (entries.length === 0) {
       if (emptyEl) emptyEl.hidden = false;
-      subEl.textContent = `${data.seasonYear} season · no entries yet`;
+      subEl.textContent = `${seasonYear} season · no entries yet`;
       listEl.innerHTML = '';
       if (totalsEl) totalsEl.hidden = true;
       return;
@@ -360,11 +415,13 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
 
     if (emptyEl) emptyEl.hidden = true;
 
-    const topCount = data.entries[0]?.seasonCount ?? 0;
-    const rows = data.entries.map((entry, idx) => {
+    const topCount = entries[0]?.seasonCount ?? 0;
+    const rows = entries.map((entry, idx) => {
       const rank = idx + 1;
       const isTop = entry.seasonCount === topCount && topCount > 0;
-      const classes = ['style-book-entry', isTop ? 'style-book-entry--top' : ''].filter(Boolean).join(' ');
+      const classes = ['style-book-entry', isTop ? 'style-book-entry--top' : '']
+        .filter(Boolean)
+        .join(' ');
       const lastShotText = entry.lastShotAt ? `last shot ${escapeHtml(formatRelative(entry.lastShotAt))}` : '';
       const lifetimeText = entry.lifetimeCount > entry.seasonCount
         ? `${entry.lifetimeCount} lifetime`
@@ -374,7 +431,7 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
         <li class="${classes}">
           <div class="style-book-entry__rank">#${rank}</div>
           <div class="style-book-entry__author">
-            <div class="style-book-entry__name">${escapeHtml(entry.author)}</div>
+            <div class="style-book-entry__name">${escapeHtml(entry.displayName)}</div>
             ${metaParts ? `<div class="style-book-entry__meta">${metaParts}</div>` : ''}
           </div>
           <div class="style-book-entry__counts">
@@ -386,23 +443,56 @@ const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/asse
     });
     listEl.innerHTML = rows.join('');
 
-    subEl.textContent = `${data.seasonYear} season · top ${data.entries.length} of ${data.totals.authors}`;
+    subEl.textContent = `${seasonYear} season · top ${entries.length} of ${totals.authors}`;
 
     if (totalsEl) {
-      totalsEl.textContent = `${data.totals.seasonShots} ${countLabel(data.totals.seasonShots)} logged across ${data.totals.authors} ${data.totals.authors === 1 ? 'author' : 'authors'} this season.`;
+      const noun = totals.authors === 1 ? (label === 'Tip Line' ? 'tipper' : 'author') : (label === 'Tip Line' ? 'tippers' : 'authors');
+      totalsEl.textContent = `${totals.seasonShots} ${countLabel(totals.seasonShots)} logged across ${totals.authors} ${noun} this season.`;
       totalsEl.hidden = false;
     }
   }
 
+  const namedHandles: Handles = {
+    listEl: document.querySelector('[data-style-book-named-list]'),
+    emptyEl: document.querySelector('[data-style-book-named-empty]'),
+    subEl: document.querySelector('[data-style-book-named-sub]'),
+    totalsEl: document.querySelector('[data-style-book-named-totals]'),
+  };
+
+  const anonHandles: Handles = {
+    listEl: document.querySelector('[data-style-book-anon-list]'),
+    emptyEl: document.querySelector('[data-style-book-anon-empty]'),
+    subEl: document.querySelector('[data-style-book-anon-sub]'),
+    totalsEl: document.querySelector('[data-style-book-anon-totals]'),
+  };
+
+  function render(data: StyleBookResponse) {
+    const namedEntries = data.named.entries.map((e) => ({
+      displayName: e.author,
+      seasonCount: e.seasonCount,
+      lifetimeCount: e.lifetimeCount,
+      lastShotAt: e.lastShotAt,
+    }));
+    const anonEntries = data.anonymous.entries.map((e) => ({
+      displayName: e.codename,
+      seasonCount: e.seasonCount,
+      lifetimeCount: e.lifetimeCount,
+      lastShotAt: e.lastShotAt,
+    }));
+    renderBoard('Group Chat', namedEntries, data.named.totals, data.seasonYear, namedHandles);
+    renderBoard('Tip Line', anonEntries, data.anonymous.totals, data.seasonYear, anonHandles);
+  }
+
   async function load() {
-    if (!root) return;
     try {
       const res = await fetch('/api/schefter/style-book');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: StyleBookResponse = await res.json();
       render(data);
     } catch (err) {
-      if (subEl) subEl.textContent = 'Could not load the dossier right now. Try again in a minute.';
+      const msg = 'Could not load the dossier right now. Try again in a minute.';
+      if (namedHandles.subEl) namedHandles.subEl.textContent = msg;
+      if (anonHandles.subEl) anonHandles.subEl.textContent = msg;
       console.warn('[style-book] load failed:', err);
     }
   }

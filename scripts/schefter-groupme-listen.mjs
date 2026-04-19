@@ -56,6 +56,18 @@ const PATTERN_CLAUDE_SCHEFTER = /\bclaude\s+schefter\b/i;
 const PATTERN_SCHEFTER = /\bschefter\b/i;
 const PATTERN_SCHEFTY = /\bschefty\b/i;
 const PATTERN_CLAUDE = /\bclaude\b/i;
+// Explicit Schefter-bot phrasings (unambiguous — owner said "Schefter bot" / "Claude bot")
+const PATTERN_EXPLICIT_SCHEFTER_BOT = /\b(?:the\s+)?(?:schefter|claude|schefty)\s+bot\b/i;
+// Generic bot reference. TheLeague has TWO bots in the chat — Schefter and Ask
+// Roger. A bare "the bot" is ambiguous, so we accept it as a Schefter mention
+// ONLY when the ROGER_GUARD doesn't also match. Roger handles deadlines; this
+// listener is Schefter's beat.
+const PATTERN_GENERIC_BOT = /\b(?:the|this|that)\s+bot\b/i;
+// Anything that smells Roger-adjacent. If this matches the message text, we
+// treat a generic "the bot" mention as Roger-directed and skip it. Explicit
+// "schefter bot" / "claude bot" phrasings bypass this guard (they say exactly
+// who they mean).
+const ROGER_GUARD = /\b(?:roger|ask\s+roger|the\s+roger\s+bot|roger's\s+bot)\b/i;
 
 // Ack phrases that should NOT trigger (false-positive guard)
 // "Roger that", "Roger dodger", "10-4 Roger", "yeah roger" — but these are
@@ -95,7 +107,9 @@ export function detectMention(rawText) {
     return { match: false, reason: 'too-short' };
   }
 
-  // Find first match (prefer most specific)
+  // Find first match (prefer most specific).
+  // Priority: claude schefter > schefter > schefty > explicit schefter-bot >
+  //           claude > generic "the/this/that bot" (Roger-guarded)
   let matchInfo = null;
   const csMatch = text.match(PATTERN_CLAUDE_SCHEFTER);
   if (csMatch) {
@@ -109,9 +123,26 @@ export function detectMention(rawText) {
       if (styMatch) {
         matchInfo = { variant: 'schefty', index: styMatch.index ?? 0, length: styMatch[0].length };
       } else {
-        const cMatch = text.match(PATTERN_CLAUDE);
-        if (cMatch) {
-          matchInfo = { variant: 'claude', index: cMatch.index ?? 0, length: cMatch[0].length };
+        const esbMatch = text.match(PATTERN_EXPLICIT_SCHEFTER_BOT);
+        if (esbMatch) {
+          // "schefter bot" / "claude bot" — explicit, bypasses Roger guard.
+          matchInfo = { variant: 'schefter-bot', index: esbMatch.index ?? 0, length: esbMatch[0].length };
+        } else {
+          const cMatch = text.match(PATTERN_CLAUDE);
+          if (cMatch) {
+            matchInfo = { variant: 'claude', index: cMatch.index ?? 0, length: cMatch[0].length };
+          } else {
+            const botMatch = text.match(PATTERN_GENERIC_BOT);
+            if (botMatch) {
+              // Generic "the bot" — reject if anything Roger-adjacent appears
+              // in the message. TheLeague chat has two bots; a bare "the bot"
+              // is ambiguous, so we only claim it when Roger is NOT mentioned.
+              if (ROGER_GUARD.test(text)) {
+                return { match: false, reason: 'generic-bot-with-roger-context' };
+              }
+              matchInfo = { variant: 'the-bot', index: botMatch.index ?? 0, length: botMatch[0].length };
+            }
+          }
         }
       }
     }
@@ -276,6 +307,19 @@ export function detectAttackOnSchefter(rawText) {
   const subjectMatch = ATTACK_SUBJECT_PATTERNS.some((re) => re.test(text));
   if (!subjectMatch) {
     return { attack: false, reason: 'no-subject' };
+  }
+
+  // Roger disambiguation — if the ONLY bot mention is a generic "the bot" /
+  // "this bot" / "that bot" AND Roger is also named anywhere in the message,
+  // punt: this is ambiguous enough that we'd rather miss a Schefter attack
+  // than incorrectly log a Roger-directed one against an author's Style Book
+  // file. Explicit "schefter bot" / "claude bot" bypasses this guard since
+  // the author said exactly who they meant.
+  const mentionsRoger = /\b(?:roger|ask\s+roger|the\s+roger\s+bot|roger's\s+bot)\b/i.test(text);
+  const explicitSchefterRef = /\b(?:claude|schefter|schefty)\b/i.test(text);
+  const mentionsGenericBot = /\b(?:the|this|that)\s+bot\b/i.test(text);
+  if (mentionsRoger && mentionsGenericBot && !explicitSchefterRef) {
+    return { attack: false, reason: 'generic-bot-with-roger-context' };
   }
 
   // Tokenize for negation window scanning
