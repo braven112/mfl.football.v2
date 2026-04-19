@@ -67,7 +67,7 @@ jobs:
 
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/schefter-feed.json
+          git add src/data/theleague/schefter-feed.json data/schefter/post-history.json
           git commit -m "chore: schefter rumor-mill — new anonymous-tip post"
           git pull --rebase origin main
           git push
