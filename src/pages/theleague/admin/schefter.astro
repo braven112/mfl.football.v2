@@ -10,8 +10,8 @@
  * All data comes from /api/admin/schefter-stats which reads Redis + the
  * committed feed JSON. No mutations here.
  */
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 
 export const prerender = false;
 
@@ -25,7 +25,7 @@ if (!user || !isCommissionerOrAdmin(user)) {
   <main class="ops-page">
     <header class="ops-header">
       <div>
-        <p class="ops-eyebrow"><a href="/admin">Admin</a> / Schefter Ops</p>
+        <p class="ops-eyebrow"><a href="/theleague/admin">Admin</a> / Schefter Ops</p>
         <h1 class="ops-title">Schefter Operations</h1>
         <p class="ops-sub">
           Validates the rumor mill is actually consuming tips, GroupMe mentions, and trade proposals —
