@@ -38,6 +38,17 @@ const BOT_MESSAGE_IDS_KEY = 'schefter:groupme:bot_message_ids';
 const BOT_MESSAGE_IDS_TTL_SEC = 48 * 60 * 60; // 48h — GroupMe replies older than this are rare
 const MAX_TRACKED_BOT_MESSAGES = 50;
 
+// Style-Book tracker: counts of personal attacks directed at Schefter himself
+// in the group chat. Lifetime counter + per-season counter + leaderboard ZSET
+// + last-shot timestamp. When a new tip is classified as an attack, these
+// keys are updated in the same transaction that pushes to the tips queue,
+// and the tip gains `attackOnSchefter: true` plus the current `styleBookCount`
+// so the LLM can escalate the Style Book bit with running-total flavor.
+const STYLE_BOOK_LIFETIME_PREFIX = 'schefter:style_book:';
+const STYLE_BOOK_SEASON_PREFIX = 'schefter:style_book:season:';
+const STYLE_BOOK_LAST_SHOT_PREFIX = 'schefter:style_book:last_shot_at:';
+const STYLE_BOOK_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
+
 // Regex patterns (case-insensitive)
 // "claude schefter" > "schefter" > "schefty" > "claude" — match all, we only count once.
 // "schefty" is the affectionate group-chat nickname for the bot.
@@ -176,6 +187,168 @@ export function validateReplyContent(rawText) {
   }
 
   return { valid: true };
+}
+
+// Pejoratives that count as "attacking the bot". Kept simple on purpose —
+// false positives are tolerated (the bit is affectionate anyway), false
+// negatives cost nothing (the tip still gets processed normally).
+// Patterns match whole words or "a/an X" forms; case-insensitive.
+const ATTACK_PEJORATIVES = [
+  'sucks',
+  'suck',
+  'bitch',
+  'hack',
+  'trash',
+  'garbage',
+  'dumb',
+  'stupid',
+  'fake',
+  'wrong',
+  'useless',
+  'lame',
+  'clown',
+  'joke',
+  'idiot',
+  'moron',
+  'fraud',
+  'bullshit',
+  'bullshitter',
+  'liar',
+  'lies',
+  'worst',
+  'terrible',
+  'awful',
+  'pathetic',
+];
+
+// Subject patterns — the attack has to be about Schefter/the bot, not just
+// contain a pejorative somewhere in the message.
+const ATTACK_SUBJECT_PATTERNS = [
+  /\bclaude\s+schefter\b/i,
+  /\bschefter\b/i,
+  /\bschefty\b/i,
+  /\bclaude\b/i,
+  /\bthe\s+bot\b/i,
+  /\bthis\s+bot\b/i,
+  /\bthat\s+bot\b/i,
+];
+
+// Negation guards — if the attack keyword is preceded by "not " / "isn't " /
+// "ain't " within 2 words, ignore it. Handles "that's not bad", "ain't wrong",
+// "schefter isn't dumb", etc.
+const NEGATION_WINDOW_WORDS = 2;
+const NEGATION_TOKENS = new Set([
+  'not',
+  "isn't",
+  "ain't",
+  'aint',
+  'never',
+  "wasn't",
+  'no',
+  "doesn't",
+  'doesnt',
+]);
+
+/**
+ * Detect whether a GroupMe message is a personal attack on Schefter himself.
+ * Returns `{ attack: true, keyword, reason }` when a pejorative referring to
+ * the bot is found; `{ attack: false, reason }` otherwise.
+ *
+ * This is intentionally loose — false positives are OK because the Style Book
+ * bit is affectionate ribbing either way. The only thing we really guard
+ * against is matching generic negativity that isn't aimed at Schefter.
+ *
+ * Requirements for a match:
+ *  - Message mentions Claude/Schefter/Schefty/"the bot"
+ *  - Message contains at least one pejorative from ATTACK_PEJORATIVES
+ *  - The pejorative is not preceded by a negation token within the prior 2 words
+ */
+export function detectAttackOnSchefter(rawText) {
+  if (!rawText || typeof rawText !== 'string') {
+    return { attack: false, reason: 'no-text' };
+  }
+  const text = rawText.trim();
+  if (text.length < 5) {
+    return { attack: false, reason: 'too-short' };
+  }
+
+  // Must reference Schefter/Claude/the bot somewhere
+  const subjectMatch = ATTACK_SUBJECT_PATTERNS.some((re) => re.test(text));
+  if (!subjectMatch) {
+    return { attack: false, reason: 'no-subject' };
+  }
+
+  // Tokenize for negation window scanning
+  const lowerTokens = text
+    .toLowerCase()
+    .replace(/[^\w'\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  for (let i = 0; i < lowerTokens.length; i++) {
+    const tok = lowerTokens[i];
+    if (!ATTACK_PEJORATIVES.includes(tok)) continue;
+
+    // Check for a negation token within NEGATION_WINDOW_WORDS prior tokens
+    let negated = false;
+    for (let j = Math.max(0, i - NEGATION_WINDOW_WORDS); j < i; j++) {
+      if (NEGATION_TOKENS.has(lowerTokens[j])) {
+        negated = true;
+        break;
+      }
+    }
+    if (negated) continue;
+
+    return { attack: true, keyword: tok, reason: 'pejorative-match' };
+  }
+
+  return { attack: false, reason: 'no-pejorative' };
+}
+
+/**
+ * Normalize a GroupMe display name into a Redis-safe author key. Lowercases,
+ * trims, and strips any non-alphanumeric characters. Keeps the ID readable
+ * (no hashing) because GroupMe authorship is already public — the leaderboard
+ * will display these names directly.
+ */
+export function normalizeAuthorKey(name) {
+  if (!name || typeof name !== 'string') return '';
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+/**
+ * Compute the league year for style-book counters. Mirrors the rumor-scan's
+ * getSeasonYearForTipster — advances on Feb 14 @ 8:45 PT (= Feb 15 04:45 UTC).
+ */
+function getStyleBookSeasonYear(now = new Date()) {
+  const calendarYear = now.getUTCFullYear();
+  const febCutoff = Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0);
+  return now.getTime() >= febCutoff ? calendarYear : calendarYear - 1;
+}
+
+/**
+ * Increment the Style Book counters for a named attacker. Returns the new
+ * seasonal count (used for LLM escalation) or null on failure. Best-effort —
+ * a Redis failure here should never block tip enqueue.
+ */
+async function bumpStyleBookCounters(redis, authorKey, displayName, nowMs) {
+  if (!redis || !authorKey) return null;
+  const year = getStyleBookSeasonYear(new Date(nowMs));
+  try {
+    const lifetimeKey = `${STYLE_BOOK_LIFETIME_PREFIX}${authorKey}`;
+    const seasonKey = `${STYLE_BOOK_SEASON_PREFIX}${year}:${authorKey}`;
+    const lastShotKey = `${STYLE_BOOK_LAST_SHOT_PREFIX}${authorKey}`;
+    const leaderboardKey = `${STYLE_BOOK_LEADERBOARD_PREFIX}${year}`;
+
+    await redis.incr(lifetimeKey);
+    const seasonCount = await redis.incr(seasonKey);
+    await redis.set(lastShotKey, nowMs);
+    await redis.zincrby(leaderboardKey, 1, displayName || authorKey);
+    return typeof seasonCount === 'number' ? seasonCount : parseInt(seasonCount ?? '0', 10) || 1;
+  } catch (err) {
+    warn(`Style-book bump failed for ${authorKey}: ${err.message}`);
+    return null;
+  }
 }
 
 /**
@@ -392,6 +565,27 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
     }
 
     result.detected += 1;
+
+    // Style Book: detect personal attacks on Schefter and bump counters BEFORE
+    // building the tip so the outgoing payload carries the fresh count. A
+    // Redis failure here must not block enqueue — we null-check seasonCount
+    // downstream and skip the LLM escalation hint when unavailable.
+    const attackCheck = detectAttackOnSchefter(text);
+    let styleBookSeasonCount = null;
+    if (attackCheck.attack) {
+      const authorKey = normalizeAuthorKey(msg.name);
+      if (authorKey) {
+        styleBookSeasonCount = dryRun
+          ? null
+          : await bumpStyleBookCounters(redis, authorKey, msg.name, Date.now());
+        if (dryRun) {
+          log(
+            `  [dry-run] Would bump style-book for ${msg.name} (${authorKey}) — keyword="${attackCheck.keyword}"`,
+          );
+        }
+      }
+    }
+
     const tip = {
       id: `gm_${msg.id}`,
       mentionMessageId: msg.id,
@@ -402,6 +596,12 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
       attributable: true,
       author: msg.name,
       ...(replyTargetId ? { replyToGroupMeId: replyTargetId } : {}),
+      ...(attackCheck.attack
+        ? {
+            attackOnSchefter: true,
+            ...(styleBookSeasonCount !== null ? { styleBookCount: styleBookSeasonCount } : {}),
+          }
+        : {}),
     };
 
     result.accepted.push({
@@ -410,6 +610,7 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
       text: tip.text.slice(0, 80),
       variant: detection.variant,
       signals: detection.signals,
+      ...(attackCheck.attack ? { attack: true, keyword: attackCheck.keyword, styleBookCount: styleBookSeasonCount } : {}),
     });
 
     if (!dryRun) {
@@ -427,6 +628,7 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
           text: tip.text,
           variant: detection.variant,
           at: tip.submittedAt,
+          ...(attackCheck.attack ? { attack: true, keyword: attackCheck.keyword } : {}),
         }));
         await redis.ltrim(RECENT_MENTIONS_KEY, 0, MAX_RECENT_MENTIONS - 1);
         await redis.expire(RECENT_MENTIONS_KEY, RECENT_MENTIONS_TTL_SEC);
