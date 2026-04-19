@@ -270,7 +270,7 @@ async function generateStory(matchupData) {
   const prompt = buildPrompt(matchupData); // See prompt template below
 
   const message = await anthropic.messages.create({
-    model: 'claude-3-5-haiku-20241022', // Fast and cheap
+    model: 'claude-haiku-4-5-20251001', // Fast and cheap
     max_tokens: 500,
     temperature: 0.8, // More creative
     messages: [{
@@ -729,7 +729,7 @@ function identifyTradeNeeds(team, week) {
       "metadata": {
         "wordCount": 287,
         "generatedAt": "2025-12-11T10:00:00Z",
-        "model": "claude-3-5-haiku-20241022"
+        "model": "claude-haiku-4-5-20251001"
       }
     },
     "0002": {
@@ -838,7 +838,7 @@ async function main() {
       metadata: {
         wordCount: story.split(/\s+/).length,
         generatedAt: new Date().toISOString(),
-        model: 'claude-3-5-haiku-20241022'
+        model: 'claude-haiku-4-5-20251001'
       }
     };
 
@@ -849,7 +849,7 @@ async function main() {
       metadata: {
         wordCount: story.split(/\s+/).length,
         generatedAt: new Date().toISOString(),
-        model: 'claude-3-5-haiku-20241022'
+        model: 'claude-haiku-4-5-20251001'
       }
     };
 

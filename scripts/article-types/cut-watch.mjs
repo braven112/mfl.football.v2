@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isCutWindow } from '../article-utils/season-guards.mjs';
 
 const ACTIVE_ROSTER_LIMIT = 22;
@@ -134,8 +134,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Cut Watch
-Channel the urgency of NFL roster cut day. Name names — who's on the chopping block? Which teams are in the toughest spots? Who has easy decisions vs. gut-wrenching ones? Talk about salary implications of keeping vs. cutting players.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Cut Watch
+Channel the urgency of NFL roster cut day. Name names — who's on the chopping block? Which teams are in the toughest spots? Who has easy decisions vs. gut-wrenching ones? Talk about salary implications of keeping vs. cutting players.`);
 }
 
 export function getUserPrompt(factSheet) {

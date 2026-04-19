@@ -337,7 +337,7 @@ async function generateStory(homeTeam, awayTeam, nflMatchupAnalysis, week) {
   console.log('🤖 Calling Claude API...');
 
   const message = await anthropic.messages.create({
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 250,
     temperature: 0.8,
     messages: [{
@@ -403,7 +403,7 @@ async function main() {
     const wordCount = story.split(/\s+/).length;
     console.log(`\n📊 Story Stats:`);
     console.log(`   Word count: ${wordCount}`);
-    console.log(`   Model: claude-3-5-haiku-20241022`);
+    console.log(`   Model: claude-haiku-4-5-20251001`);
     console.log(`   Estimated cost: ~$0.002`);
 
     // Save to file
@@ -419,7 +419,7 @@ async function main() {
       nflGames: nflGames,
       metadata: {
         wordCount,
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5-20251001',
         generatedAt: new Date().toISOString()
       }
     };

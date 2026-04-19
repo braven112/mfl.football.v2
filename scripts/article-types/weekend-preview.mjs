@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 
@@ -118,8 +118,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Weekend Preview
-Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Weekend Preview
+Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.`);
 }
 
 export function getUserPrompt(factSheet) {
