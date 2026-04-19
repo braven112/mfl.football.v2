@@ -144,6 +144,104 @@ const LORE_CALLBACK_PHRASES = [
   'algorithm\'s taking notes',
 ];
 
+// Hostile-tip reframe detection — telemetry only. Records WHICH frame the
+// LLM picked when working a hostile tip into the post, so we can spot
+// overuse of any one mode after a few cycles of live output and tune the
+// HARD RULES / running bits accordingly.
+//
+// Detection is by substring match on the post body. Priority order matters:
+// style-book is the most structurally specific, then intra-division, then
+// reverse-lens (the redirect-to-tipster framing), then rivalry (named beef),
+// and finally league-office (the institutional softener). First match wins.
+//
+// Any line not matching any pattern returns reframeMode === '' — the typical
+// case for a routine, non-hostile post. False positives are tolerated; the
+// signal we care about is direction-of-trend across many posts, not perfect
+// per-post classification.
+const REFRAME_PATTERNS = [
+  {
+    mode: 'style-book',
+    phrases: [
+      'style book',
+      'dossier',
+      'the file grows',
+      "file's getting thick",
+      "scouting report on",
+      'denial is a data point',
+      "every shot's a data point",
+      'adding that to the file',
+      'algorithm noticed',
+      "algorithm's taking notes",
+      'every denial',
+      'power user of the style book',
+      'entries deep on',
+      'first entry in the style book',
+      'second entry in the style book',
+      'third shot',
+      'first shot',
+      'noted, ',
+      'filed.',
+      'the file',
+    ],
+  },
+  {
+    mode: 'intra-division',
+    phrases: [
+      'developing some strong rivalries',
+      'beef brewing inside',
+      'rivalries heating up in',
+      'most personal division',
+      'most personal corner',
+      'is the most personal',
+    ],
+  },
+  {
+    mode: 'reverse-lens',
+    phrases: [
+      "an owner in the northwest isn't",
+      "an owner in the southwest isn't",
+      "an owner in the central isn't",
+      "an owner in the east isn't",
+      'an owner in the northwest is fed up',
+      'an owner in the southwest is fed up',
+      'an owner in the central is fed up',
+      'an owner in the east is fed up',
+      'an owner in the northwest has opinions',
+      'an owner in the southwest has opinions',
+      'an owner in the central has opinions',
+      'an owner in the east has opinions',
+      'somebody in the northwest is fed up',
+      'somebody in the southwest is fed up',
+      'somebody in the central is fed up',
+      'somebody in the east is fed up',
+    ],
+  },
+  {
+    mode: 'rivalry',
+    phrases: [
+      'bad blood between',
+      'feud heats up',
+      'feud escalates',
+      'feud just got',
+      'rivalry just got real',
+      'rivalry escalates',
+      'long memories',
+      'the rivalry heats',
+    ],
+  },
+  {
+    mode: 'league-office',
+    phrases: [
+      'league office',
+      'front office',
+      "commissioner's office",
+      "commissioner's patience",
+      "the office is catching",
+      "office has heat",
+    ],
+  },
+];
+
 // ── File loading (cached) ──
 
 let _cache = null;
@@ -289,6 +387,25 @@ function anySubstringMatch(haystack, needles) {
 }
 
 /**
+ * Detect which hostile-tip reframe (if any) the LLM used in the body. Returns
+ * the highest-priority match or '' if no frame phrase was found. See
+ * REFRAME_PATTERNS for the priority order and the per-mode phrase list.
+ *
+ * Telemetry only — used by tagPost() to write `reframeMode` into post-history
+ * so we can spot overuse and tune frequencies after enough live output.
+ */
+export function detectReframeMode(body) {
+  if (!body || typeof body !== 'string') return '';
+  const lower = body.toLowerCase();
+  for (const { mode, phrases } of REFRAME_PATTERNS) {
+    for (const p of phrases) {
+      if (lower.includes(p.toLowerCase())) return mode;
+    }
+  }
+  return '';
+}
+
+/**
  * Tag a generated post against the personality catalogs. Returns detection
  * fields ready to merge into a post-history entry. All detections are best-
  * effort; an empty string / false means "we didn't recognize this" — that's
@@ -301,6 +418,7 @@ export function tagPost(body) {
       closerUsed: '',
       hadBotWink: false,
       hadLoreCallback: false,
+      reframeMode: '',
     };
   }
 
@@ -318,6 +436,7 @@ export function tagPost(body) {
     closerUsed,
     hadBotWink: anySubstringMatch(body, BOT_WINKS),
     hadLoreCallback: anySubstringMatch(body, LORE_CALLBACK_PHRASES),
+    reframeMode: detectReframeMode(body),
   };
 }
 
@@ -370,6 +489,7 @@ export function buildHistoryEntry({ id, timestamp, body, subject, tipSources }) 
     closerUsed: tags.closerUsed,
     hadBotWink: tags.hadBotWink,
     hadLoreCallback: tags.hadLoreCallback,
+    reframeMode: tags.reframeMode,
     tipSources: Array.isArray(tipSources) ? tipSources : [],
   };
 }
@@ -379,6 +499,7 @@ export const _internals = {
   CLOSERS,
   BOT_WINKS,
   LORE_CALLBACK_PHRASES,
+  REFRAME_PATTERNS,
   MAX_HISTORY_ENTRIES,
   RECENT_POSTS_FOR_PROMPT,
   SALT_NOT_SUGAR_DIRECTIVE,
