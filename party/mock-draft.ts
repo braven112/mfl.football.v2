@@ -29,6 +29,14 @@ import type * as Party from 'partykit/server';
 
 type MockDraftStatus = 'lobby' | 'active' | 'paused' | 'completed';
 
+type MockRankingSource =
+  | 'mfl-rookie'
+  | 'mfl-dynasty'
+  | 'sleeper'
+  | 'ktc'
+  | 'fbg'
+  | 'random';
+
 interface MockDraftSession {
   id: string;
   leagueId: string;
@@ -44,6 +52,8 @@ interface MockDraftSession {
   picks: MockPick[];
   participants: MockParticipant[];
   useRealOrder: boolean;
+  rankingAssignments?: Record<string, MockRankingSource>;
+  defaultRankingSource?: MockRankingSource;
 }
 
 interface MockPick {
@@ -442,21 +452,54 @@ export default class MockDraftServer implements Party.Server {
    * player list in storage for smarter auto-picks.
    */
   private async autoPick(session: MockDraftSession): Promise<void> {
-    // Get ranked players from storage (set by the create API route)
-    const rankedPlayerIds =
-      (await this.room.storage.get<string[]>('ranked-players')) ?? [];
+    // Determine which source this team drafts from. Assignments may live on
+    // the session or in standalone storage (new create route writes both).
+    const onClockFranchise = session.draftOrder[session.currentPickIndex];
+    const assignments =
+      session.rankingAssignments ??
+      (await this.room.storage.get<Record<string, MockRankingSource>>('ranking-assignments')) ??
+      {};
+    const defaultSource: MockRankingSource =
+      session.defaultRankingSource ??
+      (await this.room.storage.get<MockRankingSource>('default-ranking-source')) ??
+      'mfl-rookie';
+    const source: MockRankingSource = assignments[onClockFranchise] ?? defaultSource;
 
-    // Find already-picked player IDs
+    // Per-source lists written by the create route. Legacy single list used
+    // as a fallback for sessions created before the multi-source rollout.
+    const rankedLists =
+      (await this.room.storage.get<Partial<Record<MockRankingSource, string[]>>>('ranked-lists')) ??
+      {};
+    const legacy = (await this.room.storage.get<string[]>('ranked-players')) ?? [];
+
     const pickedPlayerIds = new Set(
       session.picks.filter((p) => p.playerId).map((p) => p.playerId!),
     );
 
-    // Pick the first available from the ranked list
-    const nextPlayerId = rankedPlayerIds.find((id) => !pickedPlayerIds.has(id));
+    const pickFrom = (list: string[] | undefined): string | undefined =>
+      list?.find((id) => !pickedPlayerIds.has(id));
+
+    // 1. Assigned source
+    let nextPlayerId = pickFrom(rankedLists[source]);
+    // 2. Default source
+    if (!nextPlayerId && source !== defaultSource) {
+      nextPlayerId = pickFrom(rankedLists[defaultSource]);
+    }
+    // 3. Legacy flat list
+    if (!nextPlayerId) nextPlayerId = pickFrom(legacy);
+    // 4. Any other source that still has a player
+    if (!nextPlayerId) {
+      for (const [, list] of Object.entries(rankedLists)) {
+        const candidate = pickFrom(list);
+        if (candidate) {
+          nextPlayerId = candidate;
+          break;
+        }
+      }
+    }
 
     if (!nextPlayerId) {
-      // Fallback: if no ranked list or all picked, use a placeholder
-      // This shouldn't happen in practice — the create route seeds enough players
+      // Genuinely out of players — shouldn't happen; create route tops up.
       await this.makePick(session, `auto-${Date.now()}`, true);
       return;
     }
@@ -604,6 +647,16 @@ export default class MockDraftServer implements Party.Server {
         }
         if (body.rankingSource) {
           await this.room.storage.put('ranking-source', body.rankingSource);
+        }
+        // Phase 2: per-source lists + per-team assignments
+        if (body.rankedLists && typeof body.rankedLists === 'object') {
+          await this.room.storage.put('ranked-lists', body.rankedLists);
+        }
+        if (body.rankingAssignments && typeof body.rankingAssignments === 'object') {
+          await this.room.storage.put('ranking-assignments', body.rankingAssignments);
+        }
+        if (body.defaultRankingSource) {
+          await this.room.storage.put('default-ranking-source', body.defaultRankingSource);
         }
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,

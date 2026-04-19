@@ -25,6 +25,24 @@ for (const team of leagueConfigData.teams ?? []) {
   });
 }
 const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
+
+// Ordered franchise list for the Board Settings per-team overrides
+const franchiseList = (leagueConfigData.teams ?? []).map((t: any) => ({
+  franchiseId: t.franchiseId,
+  name: t.nameMedium || t.name,
+}));
+const franchiseListJson = JSON.stringify(franchiseList);
+
+// Source catalog — keep in sync with MockRankingSource in src/types/draft-room.ts
+const rankingSources = [
+  { value: 'mfl-rookie', label: 'MFL Rookie ADP' },
+  { value: 'mfl-dynasty', label: 'MFL Dynasty ADP' },
+  { value: 'sleeper', label: 'Sleeper' },
+  { value: 'ktc', label: 'KeepTradeCut' },
+  { value: 'fbg', label: 'FBG Rookies' },
+  { value: 'random', label: 'Chaos (random)' },
+];
+const rankingSourcesJson = JSON.stringify(rankingSources);
 ---
 
 <TheLeagueLayout title="Mock Draft | The League">
@@ -78,6 +96,31 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
               </div>
             </div>
 
+            <!-- Board Settings: which rankings AI teams draft from -->
+            <div class="mock-lobby__board">
+              <div class="mock-lobby__board-head">
+                <span class="mock-lobby__label">Board settings</span>
+                <span class="mock-lobby__board-hint">How AI opponents draft</span>
+              </div>
+
+              <div class="mock-lobby__form-row">
+                <label class="mock-lobby__sub-label" for="default-source-select">Default board</label>
+                <select class="mock-lobby__select" id="default-source-select"></select>
+              </div>
+
+              <div class="mock-lobby__presets">
+                <button type="button" class="mock-lobby__chip" data-preset="uniform">All MFL</button>
+                <button type="button" class="mock-lobby__chip" data-preset="mixed">Mixed boards</button>
+                <button type="button" class="mock-lobby__chip" data-preset="chaos">Chaos mode</button>
+              </div>
+
+              <button type="button" class="mock-lobby__disclosure" id="per-team-toggle" aria-expanded="false" aria-controls="per-team-panel">
+                <span class="mock-lobby__disclosure-caret" aria-hidden="true">▸</span>
+                Customize per team
+              </button>
+              <div class="mock-lobby__per-team" id="per-team-panel" hidden></div>
+            </div>
+
             <button class="mock-lobby__start-btn" id="start-btn">
               Start Mock Draft
             </button>
@@ -101,8 +144,10 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, partyHost }}>
+<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, partyHost }}>
   const teamMap = JSON.parse(teamMapJson);
+  const franchiseList = JSON.parse(franchiseListJson);
+  const rankingSources = JSON.parse(rankingSourcesJson);
 
   function getTeamName(franchiseId) {
     return teamMap[franchiseId]?.name || `Team ${franchiseId}`;
@@ -133,6 +178,105 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   initChipGroup('round-chips');
   initChipGroup('order-chips');
 
+  // ── Board settings ──
+  // Per-team assignments keyed by franchiseId. Empty = use default.
+  const rankingAssignments = {};
+
+  function fillSelect(sel, selected) {
+    sel.replaceChildren();
+    for (const s of rankingSources) {
+      const opt = document.createElement('option');
+      opt.value = s.value;
+      opt.textContent = s.label;
+      if (s.value === selected) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  const defaultSourceSelect = document.getElementById('default-source-select');
+  if (defaultSourceSelect) fillSelect(defaultSourceSelect, 'mfl-rookie');
+
+  // Per-team override panel — one row per franchise
+  function renderPerTeam() {
+    const panel = document.getElementById('per-team-panel');
+    if (!panel) return;
+    panel.replaceChildren();
+    for (const t of franchiseList) {
+      const row = document.createElement('div');
+      row.className = 'mock-lobby__per-team-row';
+
+      const label = document.createElement('span');
+      label.className = 'mock-lobby__per-team-name';
+      label.textContent = t.name;
+
+      const sel = document.createElement('select');
+      sel.className = 'mock-lobby__select mock-lobby__select--compact';
+      sel.dataset.franchise = t.franchiseId;
+      const current = rankingAssignments[t.franchiseId];
+      // "__default" means: inherit the default — no override recorded.
+      const optDefault = document.createElement('option');
+      optDefault.value = '__default';
+      optDefault.textContent = 'Default';
+      sel.appendChild(optDefault);
+      for (const s of rankingSources) {
+        const opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        sel.appendChild(opt);
+      }
+      sel.value = current ?? '__default';
+      sel.addEventListener('change', () => {
+        if (sel.value === '__default') {
+          delete rankingAssignments[t.franchiseId];
+        } else {
+          rankingAssignments[t.franchiseId] = sel.value;
+        }
+      });
+
+      row.append(label, sel);
+      panel.appendChild(row);
+    }
+  }
+  renderPerTeam();
+
+  // Expand/collapse the per-team panel
+  const perTeamToggle = document.getElementById('per-team-toggle');
+  perTeamToggle?.addEventListener('click', () => {
+    const panel = document.getElementById('per-team-panel');
+    if (!panel) return;
+    const expanded = perTeamToggle.getAttribute('aria-expanded') === 'true';
+    const next = !expanded;
+    perTeamToggle.setAttribute('aria-expanded', String(next));
+    perTeamToggle.classList.toggle('mock-lobby__disclosure--open', next);
+    panel.hidden = !next;
+  });
+
+  // Preset buttons — overwrite assignments
+  document.querySelectorAll('[data-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.dataset.preset;
+      if (preset === 'uniform') {
+        // Clear overrides; default handles everyone.
+        for (const k of Object.keys(rankingAssignments)) delete rankingAssignments[k];
+        if (defaultSourceSelect) defaultSourceSelect.value = 'mfl-rookie';
+      } else if (preset === 'mixed') {
+        // Cycle through non-random sources across teams so no two adjacent
+        // picks come from the same board.
+        const mix = rankingSources.filter((s) => s.value !== 'random').map((s) => s.value);
+        franchiseList.forEach((t, i) => {
+          rankingAssignments[t.franchiseId] = mix[i % mix.length];
+        });
+      } else if (preset === 'chaos') {
+        // Random source per team (may include 'random' which is a shuffled pool)
+        franchiseList.forEach((t) => {
+          const pick = rankingSources[Math.floor(Math.random() * rankingSources.length)];
+          rankingAssignments[t.franchiseId] = pick.value;
+        });
+      }
+      renderPerTeam();
+    });
+  });
+
   // ── Create session ──
   const startBtn = document.getElementById('start-btn');
   const createError = document.getElementById('create-error');
@@ -146,12 +290,19 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
       const timerSeconds = parseInt(getChipValue('timer-chips') || '120');
       const totalRounds = parseInt(getChipValue('round-chips') || '3');
       const useRealOrder = getChipValue('order-chips') === 'real';
+      const defaultRankingSource = defaultSourceSelect?.value || 'mfl-rookie';
 
       try {
         const res = await fetch('/api/mock-draft/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timerSeconds, totalRounds, useRealOrder }),
+          body: JSON.stringify({
+            timerSeconds,
+            totalRounds,
+            useRealOrder,
+            defaultRankingSource,
+            rankingAssignments,
+          }),
         });
 
         const data = await res.json();
@@ -453,6 +604,113 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
 
   .mock-lobby__chip--active:hover {
     color: #fff;
+  }
+
+  /* ── Board Settings ── */
+  .mock-lobby__board {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+  }
+
+  .mock-lobby__board-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .mock-lobby__board-hint {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .mock-lobby__sub-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .mock-lobby__select {
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    background: #fff;
+    color: var(--color-gray-900, #111827);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .mock-lobby__select:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .mock-lobby__select--compact {
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .mock-lobby__presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .mock-lobby__disclosure {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--color-primary, #1c497c);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+
+  .mock-lobby__disclosure-caret {
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+
+  .mock-lobby__disclosure--open .mock-lobby__disclosure-caret {
+    transform: rotate(90deg);
+  }
+
+  .mock-lobby__per-team {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.375rem;
+    padding-top: 0.25rem;
+  }
+
+  .mock-lobby__per-team-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    border-top: 1px dashed var(--color-gray-200, #e5e7eb);
+  }
+
+  .mock-lobby__per-team-row:first-child {
+    border-top: none;
+  }
+
+  .mock-lobby__per-team-name {
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .mock-lobby__start-btn {

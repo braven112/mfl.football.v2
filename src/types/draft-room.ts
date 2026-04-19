@@ -245,6 +245,32 @@ export type MockDraftStatus = 'lobby' | 'active' | 'paused' | 'completed';
 
 export type MockTimerPreset = 60 | 120 | 300;
 
+/**
+ * Ranking source keys the auto-pick engine recognizes. Each AI team may be
+ * assigned a different source so mock drafts produce realistic board variance.
+ *
+ * NOTE: RSP (Matt Waldman's Rookie Scouting Portfolio) is intentionally absent
+ * — it's licensed content gated to franchise 0001 and must never drive a CPU
+ * team, even as a last-resort fallback.
+ */
+export type MockRankingSource =
+  | 'mfl-rookie'
+  | 'mfl-dynasty'
+  | 'sleeper'
+  | 'ktc'
+  | 'fbg'
+  | 'random';
+
+/** Human-readable labels for the lobby dropdown */
+export const MOCK_RANKING_LABELS: Record<MockRankingSource, string> = {
+  'mfl-rookie': 'MFL Rookie ADP',
+  'mfl-dynasty': 'MFL Dynasty ADP',
+  sleeper: 'Sleeper',
+  ktc: 'KeepTradeCut',
+  fbg: 'FBG Rookies',
+  random: 'Chaos (random)',
+};
+
 /** Full mock draft session state — stored in PartyKit Durable Object KV */
 export interface MockDraftSession {
   id: string;
@@ -266,6 +292,14 @@ export interface MockDraftSession {
   participants: MockParticipant[];
   /** true = use real MFL futureDraftPicks order, false = randomized */
   useRealOrder: boolean;
+  /**
+   * Per-franchise ranking-source assignment. Auto-pick reads the source
+   * assigned to the team currently on the clock. Missing entries default to
+   * `defaultRankingSource` (or `'mfl-rookie'` if that's also missing).
+   */
+  rankingAssignments?: Record<string, MockRankingSource>;
+  /** Source applied to any franchise not present in `rankingAssignments`. */
+  defaultRankingSource?: MockRankingSource;
 }
 
 /** A single pick in a mock draft */
