@@ -102,6 +102,29 @@ export interface Tip {
    * opens with continuity language ("Following up on yesterday's chatter…").
    */
   repliesToPostId?: string;
+  /**
+   * Style Book — the tip text attacks Schefter personally (pejorative against
+   * the bot). Set by the detection paths in `scripts/schefter-groupme-listen.mjs`
+   * (named, GroupMe) and `src/pages/api/schefter/tip.ts` (anonymous, web).
+   * Surfaces on the LLM-facing safe object so HARD RULE 15 can fire the Style
+   * Book bit with running-count flavor.
+   */
+  attackOnSchefter?: true;
+  /**
+   * Running seasonal count of attacks from this tipster (GroupMe author OR
+   * anonymous web-tip hash, scoped to its own leaderboard). Drives the count-
+   * based escalation in the Style Book bit (1 = "first entry", 3 = "file's
+   * getting thick", 4+ = "power user").
+   */
+  styleBookCount?: number;
+  /**
+   * Stable codename for an anonymous web tipster (e.g. "Burner Phone").
+   * Set only on `source: 'web'` tips that were flagged as Style Book attacks —
+   * gives Schefter a durable handle to reference in posts without revealing
+   * the tipster's identity. Resolved at submission time from the existing
+   * tipster-codenames system (same key as tipster-stats leaderboard).
+   */
+  tipsterCodename?: string;
 }
 
 /** Max age of a rumor post that whisper-backs can still attach to (ms). */

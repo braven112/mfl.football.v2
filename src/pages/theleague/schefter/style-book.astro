@@ -1,0 +1,501 @@
+---
+/**
+ * The Style Book — /theleague/schefter/style-book
+ *
+ * Public leaderboard of GroupMe personal attacks on Schefter, tallied by
+ * author. The dossier is kept by the beat desk. Bemused ribbing, not a heel
+ * turn — more shots means more entries, which makes the file thicker, which
+ * is the whole joke.
+ *
+ * Data lives in Redis; renders from the /api/schefter/style-book endpoint.
+ * Public surface — GroupMe authorship is already public by construction, so
+ * showing counts doesn't widen the de-anonymization surface.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import '../../../styles/schefter-feed.css';
+
+const schefterAuthor = getAuthor('claude-schefter');
+const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/assets/claude-schefter-avatar.webp';
+---
+
+<TheLeagueLayout title="The Style Book — Schefter Dossier">
+  <main class="style-book-page">
+    <header class="style-book-hero">
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'The Schefter Report', href: '/theleague/news' },
+        { label: 'The Style Book' },
+      ]} />
+      <p class="style-book-hero__eyebrow">The Beat Desk Dossier</p>
+      <div class="sf-page-header style-book-hero__card">
+        <div class="sf-page-header__persona">
+          <img
+            class="sf-page-header__avatar"
+            src={schefterAvatar}
+            alt=""
+            aria-hidden="true"
+            width="48"
+            height="48"
+            loading="eager"
+          />
+          <div>
+            <h1 class="sf-page-header__name">The Style Book</h1>
+            <div class="sf-page-header__handle">by Claude Schefter · updated in real time</div>
+          </div>
+        </div>
+        <p class="sf-page-header__bio">
+          Every shot taken at the bot becomes a data point. Two files — named entries from the group chat, anonymous entries from the tip line. Each side competes against itself. Bemused beat-reporter dossier — the count is the joke, not the slur.
+        </p>
+      </div>
+    </header>
+
+    <div class="style-book-grid">
+      <section class="style-book-board" aria-labelledby="style-book-named-title" data-style-book-named>
+        <div class="section-header">
+          <h2 class="section-header__title" id="style-book-named-title">Group Chat file</h2>
+          <p class="section-header__sub" data-style-book-named-sub>Loading the dossier…</p>
+        </div>
+
+        <div class="style-book-empty" data-style-book-named-empty hidden>
+          <p class="style-book-empty__line">The group chat file is empty.</p>
+          <p class="style-book-empty__sub">No shots on record from the chat. The bot remains unbothered.</p>
+        </div>
+
+        <ol class="style-book-list" data-style-book-named-list></ol>
+
+        <p class="style-book-totals" data-style-book-named-totals hidden></p>
+      </section>
+
+      <section class="style-book-board" aria-labelledby="style-book-anon-title" data-style-book-anon>
+        <div class="section-header">
+          <h2 class="section-header__title" id="style-book-anon-title">Anonymous Tip-line file</h2>
+          <p class="section-header__sub" data-style-book-anon-sub>Loading the dossier…</p>
+        </div>
+
+        <div class="style-book-empty" data-style-book-anon-empty hidden>
+          <p class="style-book-empty__line">The tip-line file is empty.</p>
+          <p class="style-book-empty__sub">Everyone's behaving today. For now.</p>
+        </div>
+
+        <ol class="style-book-list" data-style-book-anon-list></ol>
+
+        <p class="style-book-totals" data-style-book-anon-totals hidden></p>
+      </section>
+    </div>
+
+    <section class="style-book-footnote" aria-labelledby="style-book-footnote-title">
+      <div class="section-header">
+        <h2 class="section-header__title" id="style-book-footnote-title">How the files work</h2>
+      </div>
+      <ul class="style-book-rules">
+        <li class="style-book-rule">
+          <span class="style-book-rule__label">Two pools</span>
+          <p class="style-book-rule__text">
+            Named attackers (GroupMe) compete in one pool. Anonymous web tippers (by codename)
+            compete in the other. Nobody moves between pools.
+          </p>
+        </li>
+        <li class="style-book-rule">
+          <span class="style-book-rule__label">Trigger</span>
+          <p class="style-book-rule__text">
+            A message that calls out Schefter / Claude / Schefty / "the bot" AND contains a pejorative
+            (sucks, hack, trash, fraud, wrong, clown, etc.) gets logged. "The Roger bot" / "ask Roger"
+            doesn't count — that's Roger's beat.
+          </p>
+        </li>
+        <li class="style-book-rule">
+          <span class="style-book-rule__label">Tally</span>
+          <p class="style-book-rule__text">
+            Season counter + lifetime counter per attacker. The season resets on the league-year
+            turnover (Feb 14). Lifetime keeps rolling.
+          </p>
+        </li>
+        <li class="style-book-rule">
+          <span class="style-book-rule__label">Escalation</span>
+          <p class="style-book-rule__text">
+            Schefter's tone scales with the file — first entry gets a "noted", third entry gets a
+            "getting thick", fourth and up gets "power user". Still affectionate.
+          </p>
+        </li>
+        <li class="style-book-rule">
+          <span class="style-book-rule__label">Privacy</span>
+          <p class="style-book-rule__text">
+            GroupMe authorship is public by construction. Anonymous tippers are only ever shown
+            by codename — the hash that identifies them internally never leaves Redis.
+          </p>
+        </li>
+      </ul>
+    </section>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .style-book-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--space-4, 16px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6, 24px);
+  }
+
+  .style-book-hero__eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: var(--fs-xs, 12px);
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0 0 var(--space-2, 8px);
+  }
+
+  .style-book-hero__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+  }
+
+  .style-book-board {
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-5, 20px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4, 16px);
+  }
+
+  .style-book-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+  }
+
+  .style-book-entry {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--space-3, 12px);
+    align-items: center;
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-surface-subtle, #f9fafb);
+    border: 1px solid var(--color-border-subtle, #f3f4f6);
+  }
+
+  .style-book-entry--top {
+    background: linear-gradient(180deg, rgba(220, 38, 38, 0.05), rgba(220, 38, 38, 0.02));
+    border-color: rgba(220, 38, 38, 0.25);
+  }
+
+  .style-book-entry__rank {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: var(--fs-lg, 18px);
+    color: var(--color-text-secondary, #6b7280);
+    width: 2.25rem;
+    text-align: center;
+  }
+
+  .style-book-entry--top .style-book-entry__rank {
+    color: rgb(220, 38, 38);
+  }
+
+  .style-book-entry__author {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .style-book-entry__name {
+    font-weight: 600;
+    font-size: var(--fs-md, 14px);
+    color: var(--color-text-primary, #111827);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .style-book-entry__meta {
+    font-size: var(--fs-xs, 12px);
+    color: var(--color-text-secondary, #6b7280);
+    display: flex;
+    gap: var(--space-2, 8px);
+    flex-wrap: wrap;
+  }
+
+  .style-book-entry__counts {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .style-book-entry__season {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: var(--fs-xl, 20px);
+    color: var(--color-text-primary, #111827);
+    line-height: 1;
+  }
+
+  .style-book-entry--top .style-book-entry__season {
+    color: rgb(220, 38, 38);
+  }
+
+  .style-book-entry__season-label {
+    font-size: var(--fs-xs, 12px);
+    color: var(--color-text-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .style-book-empty {
+    text-align: center;
+    padding: var(--space-6, 24px);
+    border: 1px dashed var(--color-border, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-surface-subtle, #f9fafb);
+  }
+
+  .style-book-empty__line {
+    font-weight: 600;
+    font-size: var(--fs-md, 14px);
+    color: var(--color-text-primary, #111827);
+    margin: 0 0 var(--space-1, 4px);
+  }
+
+  .style-book-empty__sub {
+    font-size: var(--fs-sm, 13px);
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .style-book-totals {
+    font-size: var(--fs-sm, 13px);
+    color: var(--color-text-secondary, #6b7280);
+    text-align: center;
+    margin: 0;
+    padding-top: var(--space-2, 8px);
+    border-top: 1px solid var(--color-border-subtle, #f3f4f6);
+  }
+
+  .style-book-footnote {
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-5, 20px);
+  }
+
+  .style-book-rules {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-3, 12px) 0 0;
+    display: grid;
+    gap: var(--space-3, 12px);
+  }
+
+  @media (min-width: 640px) {
+    .style-book-rules {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .style-book-grid {
+    display: grid;
+    gap: var(--space-5, 20px);
+  }
+
+  @media (min-width: 900px) {
+    .style-book-grid {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .style-book-rule__label {
+    display: inline-block;
+    font-size: var(--fs-xs, 12px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent, rgb(220, 38, 38));
+    margin-bottom: var(--space-1, 4px);
+  }
+
+  .style-book-rule__text {
+    font-size: var(--fs-sm, 13px);
+    color: var(--color-text-primary, #111827);
+    margin: 0;
+    line-height: 1.5;
+  }
+</style>
+
+<script>
+  type NamedEntry = {
+    author: string;
+    seasonCount: number;
+    lifetimeCount: number;
+    lastShotAt: number | null;
+  };
+
+  type AnonEntry = {
+    codename: string;
+    seasonCount: number;
+    lifetimeCount: number;
+    lastShotAt: number | null;
+  };
+
+  type BoardTotals = { seasonShots: number; authors: number };
+
+  type StyleBookResponse = {
+    seasonYear: number;
+    named: { entries: NamedEntry[]; totals: BoardTotals };
+    anonymous: { entries: AnonEntry[]; totals: BoardTotals };
+  };
+
+  function formatRelative(ts: number | null): string {
+    if (ts === null) return 'never';
+    const diffMs = Date.now() - ts;
+    if (diffMs < 0) return 'just now';
+    const mins = Math.floor(diffMs / 60_000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
+  }
+
+  function escapeHtml(s: string): string {
+    return s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function countLabel(n: number): string {
+    return n === 1 ? 'shot' : 'shots';
+  }
+
+  type Handles = {
+    listEl: HTMLOListElement | null;
+    emptyEl: HTMLElement | null;
+    subEl: HTMLElement | null;
+    totalsEl: HTMLElement | null;
+  };
+
+  function renderBoard(
+    label: 'Group Chat' | 'Tip Line',
+    entries: Array<{ displayName: string; seasonCount: number; lifetimeCount: number; lastShotAt: number | null }>,
+    totals: BoardTotals,
+    seasonYear: number,
+    handles: Handles,
+  ) {
+    const { listEl, emptyEl, subEl, totalsEl } = handles;
+    if (!listEl || !subEl) return;
+
+    if (entries.length === 0) {
+      if (emptyEl) emptyEl.hidden = false;
+      subEl.textContent = `${seasonYear} season · no entries yet`;
+      listEl.innerHTML = '';
+      if (totalsEl) totalsEl.hidden = true;
+      return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+
+    const topCount = entries[0]?.seasonCount ?? 0;
+    const rows = entries.map((entry, idx) => {
+      const rank = idx + 1;
+      const isTop = entry.seasonCount === topCount && topCount > 0;
+      const classes = ['style-book-entry', isTop ? 'style-book-entry--top' : '']
+        .filter(Boolean)
+        .join(' ');
+      const lastShotText = entry.lastShotAt ? `last shot ${escapeHtml(formatRelative(entry.lastShotAt))}` : '';
+      const lifetimeText = entry.lifetimeCount > entry.seasonCount
+        ? `${entry.lifetimeCount} lifetime`
+        : '';
+      const metaParts = [lifetimeText, lastShotText].filter(Boolean).join(' · ');
+      return `
+        <li class="${classes}">
+          <div class="style-book-entry__rank">#${rank}</div>
+          <div class="style-book-entry__author">
+            <div class="style-book-entry__name">${escapeHtml(entry.displayName)}</div>
+            ${metaParts ? `<div class="style-book-entry__meta">${metaParts}</div>` : ''}
+          </div>
+          <div class="style-book-entry__counts">
+            <div class="style-book-entry__season">${entry.seasonCount}</div>
+            <div class="style-book-entry__season-label">${countLabel(entry.seasonCount)}</div>
+          </div>
+        </li>
+      `;
+    });
+    listEl.innerHTML = rows.join('');
+
+    subEl.textContent = `${seasonYear} season · top ${entries.length} of ${totals.authors}`;
+
+    if (totalsEl) {
+      const noun = totals.authors === 1 ? (label === 'Tip Line' ? 'tipper' : 'author') : (label === 'Tip Line' ? 'tippers' : 'authors');
+      totalsEl.textContent = `${totals.seasonShots} ${countLabel(totals.seasonShots)} logged across ${totals.authors} ${noun} this season.`;
+      totalsEl.hidden = false;
+    }
+  }
+
+  const namedHandles: Handles = {
+    listEl: document.querySelector('[data-style-book-named-list]'),
+    emptyEl: document.querySelector('[data-style-book-named-empty]'),
+    subEl: document.querySelector('[data-style-book-named-sub]'),
+    totalsEl: document.querySelector('[data-style-book-named-totals]'),
+  };
+
+  const anonHandles: Handles = {
+    listEl: document.querySelector('[data-style-book-anon-list]'),
+    emptyEl: document.querySelector('[data-style-book-anon-empty]'),
+    subEl: document.querySelector('[data-style-book-anon-sub]'),
+    totalsEl: document.querySelector('[data-style-book-anon-totals]'),
+  };
+
+  function render(data: StyleBookResponse) {
+    const namedEntries = data.named.entries.map((e) => ({
+      displayName: e.author,
+      seasonCount: e.seasonCount,
+      lifetimeCount: e.lifetimeCount,
+      lastShotAt: e.lastShotAt,
+    }));
+    const anonEntries = data.anonymous.entries.map((e) => ({
+      displayName: e.codename,
+      seasonCount: e.seasonCount,
+      lifetimeCount: e.lifetimeCount,
+      lastShotAt: e.lastShotAt,
+    }));
+    renderBoard('Group Chat', namedEntries, data.named.totals, data.seasonYear, namedHandles);
+    renderBoard('Tip Line', anonEntries, data.anonymous.totals, data.seasonYear, anonHandles);
+  }
+
+  async function load() {
+    try {
+      const res = await fetch('/api/schefter/style-book');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: StyleBookResponse = await res.json();
+      render(data);
+    } catch (err) {
+      const msg = 'Could not load the dossier right now. Try again in a minute.';
+      if (namedHandles.subEl) namedHandles.subEl.textContent = msg;
+      if (anonHandles.subEl) anonHandles.subEl.textContent = msg;
+      console.warn('[style-book] load failed:', err);
+    }
+  }
+
+  load();
+</script>
