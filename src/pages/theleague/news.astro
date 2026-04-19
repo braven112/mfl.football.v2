@@ -151,11 +151,11 @@ const tabs = [
 
 <TheLeagueLayout title="League News">
   <main class="sf-news-page sf-news-page--with-rail">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'The Schefter Report' },
+    ]} />
     <div class="sf-news-card">
-      <Breadcrumbs items={[
-        { label: 'The League', href: '/theleague' },
-        { label: 'The Schefter Report' },
-      ]} />
       {/* Profile header — every tab has a persona */}
       {isGroupMeTab ? (
         <div class="sf-page-header sf-page-header--feed">
