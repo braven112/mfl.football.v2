@@ -75,6 +75,15 @@ export interface Tip {
   franchiseHint?: string;
   /** Resolved server-side from franchise config when franchiseHint is a franchise id */
   division?: string;
+  /**
+   * Division of the TIPSTER's own franchise (resolved server-side from the
+   * authed user). Used by the rumor scanner for "reverse-the-lens" framing
+   * on hostile tips — "hearing an owner in the [tipsterDivision] isn't happy
+   * with the league office" — which passes on the sentiment while
+   * redirecting attention to the source's division rather than quoting an
+   * insult. Only set for `source: 'web'`.
+   */
+  tipsterDivision?: string;
   topic: TipTopic;
   /** Trimmed, 1–500 chars */
   text: string;

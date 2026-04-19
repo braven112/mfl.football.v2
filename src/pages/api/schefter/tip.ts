@@ -238,11 +238,14 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
+  const tipsterDivision = resolveDivision(user.franchiseId);
+
   const tip: Tip = {
     id: crypto.randomUUID(),
     hashedOwnerId,
     franchiseHint: normalizedHint,
     division,
+    ...(tipsterDivision ? { tipsterDivision } : {}),
     topic: topic as TipTopic,
     text: trimmedText,
     submittedAt: Date.now(),
