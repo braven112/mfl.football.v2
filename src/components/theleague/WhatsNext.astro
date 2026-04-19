@@ -34,7 +34,12 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
   <section class="whats-next" aria-label="Upcoming league events">
     <div class="whats-next__header">
       <h2 class="whats-next__heading">What's Next</h2>
-      <a href={resolveLeaguePath("/theleague/calendar", hideLeaguePrefix)} class="whats-next__calendar-link">View full calendar &rarr;</a>
+      <a href={resolveLeaguePath("/theleague/calendar", hideLeaguePrefix)} class="whats-next__calendar-link">
+        Full calendar
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
     </div>
     <div class:list={['whats-next__grid', { 'whats-next__grid--2col': maxCards === 2 }]}>
       {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}
@@ -100,28 +105,39 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
 
   .whats-next__header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
   }
 
+  /* Editorial section-title pattern — uppercase, 0.06em tracking,
+     2px primary left-border accent. The signature visual pattern. */
   .whats-next__heading {
-    font-size: 1.5rem;
-    color: var(--primary-link-default-text-color, #1c497c);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
     margin: 0;
-    padding-bottom: 0.5rem;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
   }
 
   .whats-next__calendar-link {
-    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-decoration: none;
     white-space: nowrap;
+    transition: gap 0.15s ease;
   }
 
   .whats-next__calendar-link:hover {
-    text-decoration: underline;
+    gap: 0.5rem;
   }
 
   .whats-next__grid {

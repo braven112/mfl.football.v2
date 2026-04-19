@@ -16,6 +16,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import GroupMeChatPanel from '../../components/shared/GroupMeChatPanel.tsx';
 import { getAuthUser } from '../../utils/auth';
@@ -150,6 +151,10 @@ const tabs = [
 
 <TheLeagueLayout title="League News">
   <main class="sf-news-page sf-news-page--with-rail">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'The Schefter Report' },
+    ]} />
     <div class="sf-news-card">
       {/* Profile header — every tab has a persona */}
       {isGroupMeTab ? (
@@ -272,6 +277,10 @@ const tabs = [
     grid-template-columns: minmax(0, 1fr) 240px;
     gap: 1.5rem;
     align-items: start;
+  }
+
+  .sf-news-page > :global(.breadcrumbs) {
+    grid-column: 1 / -1;
   }
 
   .sf-news-rail {

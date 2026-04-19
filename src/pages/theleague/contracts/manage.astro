@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import PlayerCell from '../../../components/theleague/PlayerCell.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
@@ -66,6 +67,10 @@ const getHeadshot = (playerId: string, espnId?: string) => {
   <main class="manage-page">
     <!-- Page header -->
     <header class="page-header">
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Manage Contracts' },
+      ]} />
       <h1 class="page-title">Contract Declarations</h1>
       <p class="page-subtitle">Contract declaration status and history</p>
     </header>
@@ -804,7 +809,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
        Page Layout
        ================================================ */
     .manage-page {
-      max-width: 1120px;
+      max-width: 1180px;
       margin: 0 auto;
       padding: var(--spacing-xl) var(--spacing-md);
     }

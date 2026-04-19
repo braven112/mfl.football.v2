@@ -128,8 +128,9 @@ const metrics: MetricDef[] = [
     --dh-accent: var(--color-primary, #1c497c);
     background: var(--content-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: var(--radius-lg, 0.75rem);
-    padding: 1.5rem 2rem;
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
   }
 
   .hp-snapshot__header {
@@ -230,7 +231,7 @@ const metrics: MetricDef[] = [
 
   /* Guest state */
   .hp-snapshot--guest {
-    padding: 1.25rem 2rem;
+    padding: 1.25rem 1.5rem;
   }
 
   .hp-snapshot__guest-inner {
@@ -264,18 +265,22 @@ const metrics: MetricDef[] = [
 
   .hp-snapshot__guest-btn {
     flex-shrink: 0;
-    padding: 0.375rem 1rem;
+    padding: 0.4375rem 0.875rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #fff;
-    background: var(--dh-accent);
+    color: var(--btn-primary-text, #fff);
+    background: var(--btn-primary-bg, var(--dh-accent));
+    border: 1px solid var(--btn-primary-border, var(--dh-accent));
     border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm);
     text-decoration: none;
-    transition: opacity 0.15s ease;
+    white-space: nowrap;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
 
   .hp-snapshot__guest-btn:hover {
-    opacity: 0.9;
+    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
+    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
   }
 
   @media (max-width: 640px) {
