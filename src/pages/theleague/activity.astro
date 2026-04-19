@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { chooseTeamName } from '../../utils/team-names';
 import {
@@ -256,6 +257,10 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 <TheLeagueLayout title="Owner Activity">
 	<section class="activity-page" aria-labelledby="activity-page-title">
 		<div class="activity-page__header">
+			<Breadcrumbs items={[
+				{ label: 'The League', href: '/theleague' },
+				{ label: 'Owner Activity' },
+			]} />
 			<h1 class="activity-page__title" id="activity-page-title">Owner Activity</h1>
 			<p class="activity-page__subtitle">Last time each owner visited the site</p>
 		</div>
