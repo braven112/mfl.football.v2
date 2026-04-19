@@ -70,11 +70,28 @@ describe('HARD RULE 16 — off-topic personal insults', () => {
     expect(scannerSrc).toMatch(/intraDivision/);
   });
 
-  it('prescribes the "hissy fit" framing as the PREFERRED frame', () => {
-    expect(scannerSrc).toMatch(/PREFERRED: The "hissy fit" framing/);
+  it('splits the phrasing kit into feminine-coded (reserved) and neutral (default)', () => {
+    // Kit (A) — feminine-coded, RESERVED for tips with a gender reference
+    expect(scannerSrc).toMatch(/Feminine-coded kit — RESERVED/);
     expect(scannerSrc).toMatch(/hissy fit/i);
-    expect(scannerSrc).toMatch(/throwing a fit/i);
+    expect(scannerSrc).toMatch(/cat fight/i);
+
+    // Kit (B) — neutral, DEFAULT for all other crude tips
+    expect(scannerSrc).toMatch(/Default neutral kit — use on ALL other/);
     expect(scannerSrc).toMatch(/throwing elbows/i);
+    expect(scannerSrc).toMatch(/throwing a tantrum/i);
+
+    // The split must be HARD so the LLM doesn't mix kits.
+    expect(scannerSrc).toMatch(/The split between kits \(A\) and \(B\) is HARD/);
+    expect(scannerSrc).toMatch(/false positive on kit \(A\)/i);
+  });
+
+  it('lists the gender-marker triggers that unlock kit (A)', () => {
+    // These markers are how the LLM decides a tip is feminine-coded.
+    // "like a girl" / "bitch" / "princess" / etc. are the signal.
+    expect(scannerSrc).toMatch(/plays like a girl/i);
+    expect(scannerSrc).toMatch(/princess/i);
+    expect(scannerSrc).toMatch(/pearl clutcher/i);
   });
 
   it('adds the A=C barometer close with a behavior-driven ladder', () => {
@@ -133,13 +150,22 @@ describe('personality.md — hostile-tips expansion', () => {
     expect(src).toMatch(/throwing elbows at the commissioner/i);
   });
 
-  it('has a dedicated off-topic section with the hissy-fit frame', () => {
+  it('has a dedicated off-topic section with the hissy-fit frame and kit split', () => {
     expect(src).toMatch(/Off-topic personal insults/);
     // Preferred frame callout
     expect(src).toMatch(/the tipster is the story/i);
-    // Phrasing kit
+    // Kit (A) — feminine-coded, reserved
+    expect(src).toMatch(/Kit \(A\)/);
+    expect(src).toMatch(/Feminine-coded/);
     expect(src).toMatch(/hissy fit/i);
+    expect(src).toMatch(/cat fight/i);
+    // Kit (B) — neutral, default
+    expect(src).toMatch(/Kit \(B\)/);
+    expect(src).toMatch(/Default neutral/);
     expect(src).toMatch(/throwing elbows/i);
+    expect(src).toMatch(/throwing a tantrum/i);
+    // Warning about false positives
+    expect(src).toMatch(/false positive on kit \(A\)/i);
   });
 
   it('documents the "every accusation is a confession" barometer', () => {
