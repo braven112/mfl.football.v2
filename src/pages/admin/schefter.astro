@@ -1,0 +1,329 @@
+---
+/**
+ * Schefter Operations Dashboard (admin-only)
+ *
+ * Read-only validation surface for the rumor mill. Lets the commissioner
+ * verify that tips are flowing (web + GroupMe + trade-offer), that the
+ * marinate/daily-cap gates are in the expected state, and that Claude has
+ * actually posted pending-trade announcements.
+ *
+ * All data comes from /api/admin/schefter-stats which reads Redis + the
+ * committed feed JSON. No mutations here.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+
+export const prerender = false;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isCommissionerOrAdmin(user)) {
+  return Astro.redirect('/theleague');
+}
+---
+
+<TheLeagueLayout title="Schefter Ops — Admin">
+  <main class="ops-page">
+    <header class="ops-header">
+      <div>
+        <p class="ops-eyebrow"><a href="/admin">Admin</a> / Schefter Ops</p>
+        <h1 class="ops-title">Schefter Operations</h1>
+        <p class="ops-sub">
+          Validates the rumor mill is actually consuming tips, GroupMe mentions, and trade proposals —
+          and that Claude is announcing pending trades. All counts are read-only.
+        </p>
+      </div>
+      <div class="ops-header__actions">
+        <button id="ops-refresh" class="ops-btn" type="button">Refresh</button>
+        <span id="ops-updated" class="ops-updated" aria-live="polite">—</span>
+      </div>
+    </header>
+
+    <section id="ops-env" class="ops-env" aria-label="Environment configuration">
+      <h2 class="ops-env__title">Environment</h2>
+      <ul class="ops-env__list" id="ops-env-list">
+        <li>Loading…</li>
+      </ul>
+    </section>
+
+    <section class="ops-grid" aria-label="Dashboard stats">
+      <article class="ops-card" aria-labelledby="card-queue">
+        <h2 id="card-queue" class="ops-card__title">Tips Queue (live)</h2>
+        <p class="ops-card__hint">Drained every 15 min by <code>schefter-rumor-scan.mjs</code>.</p>
+        <dl class="ops-dl">
+          <div><dt>Pending in queue</dt><dd data-k="redis.queueDepth">—</dd></div>
+          <div><dt>Marinate started</dt><dd data-k="fmt.marinateStartedAt">—</dd></div>
+          <div><dt>Next earliest post</dt><dd data-k="fmt.nextEarliestPostAt">—</dd></div>
+          <div><dt>Posts today (cap 3)</dt><dd data-k="redis.postsToday">—</dd></div>
+          <div><dt>Last rumor post</dt><dd data-k="fmt.lastRumorPostTs">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-sources">
+        <h2 id="card-sources" class="ops-card__title">Tip Sources (recent archive)</h2>
+        <p class="ops-card__hint">
+          Sampled from <code>schefter:tips:processed</code> (last ~200 drained tips).
+        </p>
+        <dl class="ops-dl">
+          <div><dt>Sample size</dt><dd data-k="redis.tipSampleSize">—</dd></div>
+          <div><dt>Web tips</dt><dd data-k="redis.tipSourceBreakdown.web">—</dd></div>
+          <div><dt>GroupMe tips</dt><dd data-k="redis.tipSourceBreakdown.groupme">—</dd></div>
+          <div><dt>Trade-offer tips</dt><dd data-k="redis.tipSourceBreakdown.trade_offer">—</dd></div>
+          <div><dt>Unknown / unparsed</dt><dd data-k="redis.tipSourceBreakdown.unknown">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-groupme">
+        <h2 id="card-groupme" class="ops-card__title">GroupMe Ingestion</h2>
+        <p class="ops-card__hint">Polling cache in <code>groupme:messages</code> ZSET.</p>
+        <dl class="ops-dl">
+          <div><dt>Messages cached</dt><dd data-k="redis.groupmeMessagesCached">—</dd></div>
+          <div><dt>Last message id</dt><dd data-k="redis.groupmeLastMessageId">—</dd></div>
+          <div><dt>Last sync</dt><dd data-k="fmt.groupmeLastSyncTs">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-offers">
+        <h2 id="card-offers" class="ops-card__title">Trade Offers Ingested</h2>
+        <p class="ops-card__hint">Offers fed into the rumor algo via <code>schefter:trade_offers:seen</code>.</p>
+        <dl class="ops-dl">
+          <div><dt>Distinct offers tracked</dt><dd data-k="redis.tradeOffersSeen">—</dd></div>
+          <div><dt>Pending-trade watermark size</dt><dd data-k="feed.pendingTradeWatermarkSize">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card ops-card--wide" aria-labelledby="card-posts">
+        <h2 id="card-posts" class="ops-card__title">Posts in Feed</h2>
+        <p class="ops-card__hint">Counted from <code>schefter-feed.json</code>.</p>
+        <dl class="ops-dl ops-dl--cols">
+          <div><dt>Total posts</dt><dd data-k="feed.postsTotal">—</dd></div>
+          <div><dt>Rumor-mill posts (all-time)</dt><dd data-k="feed.rumorMillTotal">—</dd></div>
+          <div><dt>Rumor-mill (7d)</dt><dd data-k="feed.rumorMill7d">—</dd></div>
+          <div><dt>Rumor-mill (24h)</dt><dd data-k="feed.rumorMill24h">—</dd></div>
+          <div><dt>Pending trade announcements</dt><dd data-k="feed.pendingTradeTotal">—</dd></div>
+          <div><dt>Pending trade (7d)</dt><dd data-k="feed.pendingTrade7d">—</dd></div>
+          <div><dt>Completed TRADE posts</dt><dd data-k="feed.tradeCompletedTotal">—</dd></div>
+          <div><dt>Claude-authored total</dt><dd data-k="feed.claudeAuthoredTotal">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card ops-card--wide" aria-labelledby="card-authors">
+        <h2 id="card-authors" class="ops-card__title">Posts by Author</h2>
+        <p class="ops-card__hint">Every byline that has ever published into the feed.</p>
+        <table class="ops-table">
+          <thead><tr><th>Author</th><th class="ops-table__num">Count</th></tr></thead>
+          <tbody id="ops-authors-body"><tr><td colspan="2">Loading…</td></tr></tbody>
+        </table>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-subtypes">
+        <h2 id="card-subtypes" class="ops-card__title">Transaction Subtypes</h2>
+        <p class="ops-card__hint">Distribution across the feed (rumor_mill / TRADE / TRADE_PENDING / …).</p>
+        <table class="ops-table">
+          <thead><tr><th>Subtype</th><th class="ops-table__num">Count</th></tr></thead>
+          <tbody id="ops-subtypes-body"><tr><td colspan="2">Loading…</td></tr></tbody>
+        </table>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-tipsters">
+        <h2 id="card-tipsters" class="ops-card__title">Tipster Leaderboard</h2>
+        <p class="ops-card__hint">Distinct tipsters ranked this season.</p>
+        <dl class="ops-dl">
+          <div><dt>Ranked tipsters ({<span data-k="redis.seasonYear">—</span>})</dt><dd data-k="redis.tipsterLeaderboardSize">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-scan">
+        <h2 id="card-scan" class="ops-card__title">Scanner Freshness</h2>
+        <p class="ops-card__hint">From the feed JSON watermarks.</p>
+        <dl class="ops-dl">
+          <div><dt>Last scan</dt><dd data-k="fmt.lastScanTimestamp">—</dd></div>
+          <div><dt>Last MFL txn processed</dt><dd data-k="fmt.lastProcessedMflTimestamp">—</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <p class="ops-foot">
+      Auto-refreshes every 60 seconds. Source: <code>/api/admin/schefter-stats</code>.
+    </p>
+  </main>
+</TheLeagueLayout>
+
+<script>
+  const endpoint = '/api/admin/schefter-stats';
+
+  function fmtTs(ts: unknown): string {
+    if (ts === null || ts === undefined || ts === '' || ts === 0) return '—';
+    const n = typeof ts === 'number' ? ts : parseInt(String(ts), 10);
+    if (!Number.isFinite(n)) return String(ts);
+    const ms = n < 1e12 ? n * 1000 : n;
+    return new Date(ms).toLocaleString();
+  }
+
+  function fmtRel(ts: unknown): string {
+    if (ts === null || ts === undefined || ts === '' || ts === 0) return '—';
+    const n = typeof ts === 'number' ? ts : parseInt(String(ts), 10);
+    if (!Number.isFinite(n)) return String(ts);
+    const ms = n < 1e12 ? n * 1000 : n;
+    const diff = Date.now() - ms;
+    const absMin = Math.round(Math.abs(diff) / 60000);
+    if (absMin < 1) return diff >= 0 ? 'just now' : 'soon';
+    if (absMin < 60) return diff >= 0 ? `${absMin}m ago` : `in ${absMin}m`;
+    const hrs = Math.round(absMin / 60);
+    if (hrs < 48) return diff >= 0 ? `${hrs}h ago` : `in ${hrs}h`;
+    const days = Math.round(hrs / 24);
+    return diff >= 0 ? `${days}d ago` : `in ${days}d`;
+  }
+
+  function lookup(obj: any, path: string): unknown {
+    return path.split('.').reduce<any>((acc, k) => (acc == null ? acc : acc[k]), obj);
+  }
+
+  function render(data: any) {
+    const updated = document.getElementById('ops-updated');
+    if (updated) updated.textContent = `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`;
+
+    const marinate = data.redis?.marinateStartedAt ?? null;
+    const fmt = {
+      marinateStartedAt: marinate ? `${fmtTs(marinate)} (${fmtRel(marinate)})` : '—',
+      nextEarliestPostAt: marinate ? fmtTs(marinate + 60 * 60 * 1000) : '—',
+      lastRumorPostTs: data.redis?.lastRumorPostTs
+        ? `${fmtTs(data.redis.lastRumorPostTs)} (${fmtRel(data.redis.lastRumorPostTs)})`
+        : '—',
+      groupmeLastSyncTs: data.redis?.groupmeLastSyncTs
+        ? `${fmtTs(data.redis.groupmeLastSyncTs)} (${fmtRel(data.redis.groupmeLastSyncTs)})`
+        : '—',
+      lastScanTimestamp: data.feed?.lastScanTimestamp
+        ? `${new Date(data.feed.lastScanTimestamp).toLocaleString()} (${fmtRel(Date.parse(data.feed.lastScanTimestamp))})`
+        : '—',
+      lastProcessedMflTimestamp: data.feed?.lastProcessedMflTimestamp
+        ? `${fmtTs(data.feed.lastProcessedMflTimestamp)} (${fmtRel(data.feed.lastProcessedMflTimestamp)})`
+        : '—',
+    };
+
+    const merged = { ...data, fmt };
+    document.querySelectorAll<HTMLElement>('[data-k]').forEach((el) => {
+      const path = el.dataset.k!;
+      const v = lookup(merged, path);
+      el.textContent = v === null || v === undefined ? '—' : String(v);
+    });
+
+    const env = data.env || {};
+    const envEl = document.getElementById('ops-env-list');
+    if (envEl) {
+      const labels: Array<[string, string]> = [
+        ['rumorMillEnabled', 'SCHEFTER_RUMOR_MILL_ENABLED'],
+        ['groupmeBotConfigured', 'GROUPME_SCHEFTER_BOT_ID'],
+        ['groupmeTokenConfigured', 'GROUPME_SERVICE_TOKEN'],
+        ['anthropicKeyConfigured', 'ANTHROPIC_API_KEY'],
+        ['tipsterSaltConfigured', 'SCHEFTER_TIPSTER_SALT'],
+      ];
+      envEl.innerHTML = labels
+        .map(([k, name]) => {
+          const ok = !!env[k];
+          return `<li class="ops-env__item"><span class="ops-pill ops-pill--${ok ? 'ok' : 'bad'}">${ok ? 'SET' : 'missing'}</span> <code>${name}</code></li>`;
+        })
+        .join('');
+      const redisState = data.redisAvailable
+        ? '<li class="ops-env__item"><span class="ops-pill ops-pill--ok">LIVE</span> Upstash Redis</li>'
+        : '<li class="ops-env__item"><span class="ops-pill ops-pill--bad">offline</span> Upstash Redis — live counters unavailable</li>';
+      envEl.insertAdjacentHTML('beforeend', redisState);
+    }
+
+    const authors = data.feed?.byAuthor || {};
+    const authorsBody = document.getElementById('ops-authors-body');
+    if (authorsBody) {
+      const rows = Object.entries(authors)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .map(([name, count]) => `<tr><td>${name}</td><td class="ops-table__num">${count}</td></tr>`)
+        .join('');
+      authorsBody.innerHTML = rows || '<tr><td colspan="2">No posts yet.</td></tr>';
+    }
+
+    const subtypes = data.feed?.bySubType || {};
+    const subtypesBody = document.getElementById('ops-subtypes-body');
+    if (subtypesBody) {
+      const rows = Object.entries(subtypes)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .map(([k, count]) => `<tr><td><code>${k}</code></td><td class="ops-table__num">${count}</td></tr>`)
+        .join('');
+      subtypesBody.innerHTML = rows || '<tr><td colspan="2">—</td></tr>';
+    }
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(endpoint, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      render(data);
+    } catch (err) {
+      const updated = document.getElementById('ops-updated');
+      if (updated) updated.textContent = `Error: ${(err as Error).message}`;
+    }
+  }
+
+  document.getElementById('ops-refresh')?.addEventListener('click', () => load());
+  load();
+  setInterval(load, 60_000);
+</script>
+
+<style>
+  .ops-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+
+  .ops-header {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    flex-wrap: wrap; margin-bottom: 1.5rem;
+  }
+  .ops-eyebrow { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted, #64748b); margin: 0 0 0.25rem; }
+  .ops-eyebrow a { color: inherit; text-decoration: underline; }
+  .ops-title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--color-text, #0f172a); }
+  .ops-sub { margin: 0; color: var(--color-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
+
+  .ops-header__actions { display: flex; align-items: center; gap: 0.75rem; }
+  .ops-btn {
+    background: var(--color-accent, #0ea5e9); color: white; border: 0;
+    padding: 0.5rem 0.9rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;
+  }
+  .ops-btn:hover { filter: brightness(1.05); }
+  .ops-updated { font-size: 0.8rem; color: var(--color-text-muted, #64748b); }
+
+  .ops-env {
+    background: var(--color-surface, #f8fafc); border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1.25rem;
+  }
+  .ops-env__title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 0.5rem; color: var(--color-text-muted, #64748b); }
+  .ops-env__list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; font-size: 0.85rem; }
+  .ops-env__item { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .ops-pill {
+    display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    padding: 0.15rem 0.45rem; border-radius: 999px; letter-spacing: 0.03em;
+  }
+  .ops-pill--ok { background: #dcfce7; color: #166534; }
+  .ops-pill--bad { background: #fee2e2; color: #991b1b; }
+
+  .ops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .ops-card {
+    background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 12px; padding: 1rem 1.1rem;
+  }
+  .ops-card--wide { grid-column: span 2; }
+  @media (max-width: 720px) { .ops-card--wide { grid-column: auto; } }
+
+  .ops-card__title { font-size: 1rem; margin: 0 0 0.25rem; color: var(--color-text, #0f172a); }
+  .ops-card__hint { font-size: 0.78rem; color: var(--color-text-muted, #64748b); margin: 0 0 0.75rem; }
+  .ops-card__hint code { font-size: 0.75rem; background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+
+  .ops-dl { margin: 0; display: grid; gap: 0.35rem; }
+  .ops-dl--cols { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem 1rem; }
+  .ops-dl > div { display: flex; justify-content: space-between; gap: 0.5rem; border-bottom: 1px dashed var(--color-border, #e2e8f0); padding-bottom: 0.25rem; }
+  .ops-dl dt { font-size: 0.82rem; color: var(--color-text-muted, #64748b); }
+  .ops-dl dd { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--color-text, #0f172a); font-variant-numeric: tabular-nums; text-align: right; }
+
+  .ops-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .ops-table th, .ops-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--color-border, #e2e8f0); text-align: left; }
+  .ops-table__num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ops-table code { font-size: 0.8rem; }
+
+  .ops-foot { margin-top: 1.5rem; font-size: 0.78rem; color: var(--color-text-muted, #64748b); }
+  .ops-foot code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+</style>

@@ -1,0 +1,174 @@
+---
+/**
+ * Admin Hub
+ *
+ * Single-page index of every commissioner / admin-gated surface in the app.
+ * Each link here checks `isCommissionerOrAdmin(user)` either as a hard redirect
+ * or a conditional-render flag — visiting as a non-admin will either bounce
+ * back to /theleague or hide admin-only controls.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+
+export const prerender = false;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isCommissionerOrAdmin(user)) {
+  return Astro.redirect('/theleague');
+}
+
+type AdminLink = {
+  href: string;
+  title: string;
+  blurb: string;
+  gate: 'redirect' | 'conditional';
+};
+
+const sections: Array<{ title: string; links: AdminLink[] }> = [
+  {
+    title: 'Ops & validation',
+    links: [
+      {
+        href: '/admin/schefter',
+        title: 'Schefter Operations',
+        blurb: 'Live dashboard proving the rumor mill is consuming tips, GroupMe mentions, and trade proposals — plus pending-trade announcement counts.',
+        gate: 'redirect',
+      },
+    ],
+  },
+  {
+    title: 'Commissioner tools (hard redirect)',
+    links: [
+      {
+        href: '/theleague/contracts/franchise-tags',
+        title: 'Franchise Tags',
+        blurb: 'Review, approve, or reject franchise-tag declarations.',
+        gate: 'redirect',
+      },
+      {
+        href: '/theleague/cr',
+        title: 'Custom Rankings',
+        blurb: 'Hidden admin-only composite rankings editor with tier breaks.',
+        gate: 'redirect',
+      },
+    ],
+  },
+  {
+    title: 'Admin-aware pages (conditional UI)',
+    links: [
+      {
+        href: '/theleague/contracts/manage',
+        title: 'Manage Contracts',
+        blurb: 'Approve / dismiss contracts — commish-mode cookie unlocks write buttons.',
+        gate: 'conditional',
+      },
+      {
+        href: '/theleague/suggestions',
+        title: 'Suggestion Box',
+        blurb: 'Admin-only moderation controls surfaced inside the component.',
+        gate: 'conditional',
+      },
+      {
+        href: '/theleague/rules-chat',
+        title: 'Rules Chat',
+        blurb: 'Admin flag passed through to the chat component.',
+        gate: 'conditional',
+      },
+      {
+        href: '/theleague/import-rankings',
+        title: 'Import Rankings',
+        blurb: 'Bulk-import ranking sources. Admin-gated UI.',
+        gate: 'conditional',
+      },
+      {
+        href: '/theleague/trade-builder',
+        title: 'Trade Builder',
+        blurb: 'Surplus-value column is admin-only.',
+        gate: 'conditional',
+      },
+      {
+        href: '/theleague/search',
+        title: 'Player Search',
+        blurb: 'Admin view of internal scouting / search.',
+        gate: 'conditional',
+      },
+      {
+        href: '/theleague/players',
+        title: 'Free Agents',
+        blurb: 'Extra admin columns on the free-agent board.',
+        gate: 'conditional',
+      },
+    ],
+  },
+];
+---
+
+<TheLeagueLayout title="Admin Hub">
+  <main class="admin-hub">
+    <header class="admin-hub__header">
+      <h1 class="admin-hub__title">Admin</h1>
+      <p class="admin-hub__sub">
+        Every commissioner-gated surface. <strong>Redirect</strong> pages bounce non-admins to
+        <code>/theleague</code>. <strong>Conditional</strong> pages render for everyone but hide admin-only controls.
+      </p>
+    </header>
+
+    {sections.map((section) => (
+      <section class="admin-hub__section">
+        <h2 class="admin-hub__section-title">{section.title}</h2>
+        <ul class="admin-hub__list">
+          {section.links.map((link) => (
+            <li class="admin-hub__item">
+              <a href={link.href} class="admin-hub__link">
+                <div class="admin-hub__link-head">
+                  <span class="admin-hub__link-title">{link.title}</span>
+                  <span class={`admin-hub__pill admin-hub__pill--${link.gate}`}>{link.gate}</span>
+                </div>
+                <p class="admin-hub__link-blurb">{link.blurb}</p>
+                <code class="admin-hub__link-href">{link.href}</code>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .admin-hub { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .admin-hub__header { margin-bottom: 1.5rem; }
+  .admin-hub__title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--color-text, #0f172a); }
+  .admin-hub__sub { margin: 0; color: var(--color-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
+  .admin-hub__sub code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.8rem; }
+
+  .admin-hub__section { margin-top: 1.75rem; }
+  .admin-hub__section-title {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--color-text-muted, #64748b); margin: 0 0 0.5rem;
+  }
+  .admin-hub__list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem;
+  }
+  .admin-hub__item { display: flex; }
+  .admin-hub__link {
+    display: flex; flex-direction: column; gap: 0.35rem;
+    width: 100%; padding: 0.9rem 1rem;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 10px;
+    text-decoration: none; color: inherit; transition: border-color 0.15s, transform 0.15s;
+  }
+  .admin-hub__link:hover { border-color: var(--color-accent, #0ea5e9); transform: translateY(-1px); }
+  .admin-hub__link-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  .admin-hub__link-title { font-weight: 600; font-size: 0.95rem; color: var(--color-text, #0f172a); }
+  .admin-hub__link-blurb { margin: 0; font-size: 0.82rem; color: var(--color-text-muted, #64748b); }
+  .admin-hub__link-href { font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
+
+  .admin-hub__pill {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0.12rem 0.45rem; border-radius: 999px;
+  }
+  .admin-hub__pill--redirect { background: #fef3c7; color: #92400e; }
+  .admin-hub__pill--conditional { background: #e0f2fe; color: #075985; }
+</style>
