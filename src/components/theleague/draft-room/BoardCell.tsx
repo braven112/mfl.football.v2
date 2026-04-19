@@ -11,11 +11,18 @@ interface BoardCellProps {
   teams?: DraftRoomTeam[];
   isCurrentPick: boolean;
   isUserTeam: boolean;
+  /** True for the most recent pick — triggers a brief flash animation. */
+  isNewPick?: boolean;
 }
 
-export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam }: BoardCellProps) {
+export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam, isNewPick = false }: BoardCellProps) {
   const isMade = !!pick.playerId;
   const posColor = player ? POSITION_COLORS[player.position] || POSITION_COLORS.DEF : undefined;
+  const cellClass = [
+    'dr-cell',
+    isCurrentPick ? 'dr-cell--otc' : '',
+    isNewPick ? 'dr-cell--flash' : '',
+  ].filter(Boolean).join(' ');
 
   // Find original team icon by name for traded picks
   // MFL sometimes prefixes the name with "from " — strip it before matching
@@ -50,6 +57,17 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
     animation: isCurrentPick ? 'dr-otc-pulse 2s ease-in-out infinite' : undefined,
   };
 
+  const tierBadge = player?.rspTier ? (
+    <span
+      className="dr-tier-badge"
+      data-tier={player.rspTier}
+      aria-label={`RSP Tier ${player.rspTier}`}
+      style={{ flexShrink: 0 }}
+    >
+      {player.rspTier}
+    </span>
+  ) : null;
+
   const pickLabelEl = (
     <span style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--color-gray-400, #9ca3af)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em', marginBottom: '0.1875rem' }}>
       {pickLabel}
@@ -68,7 +86,7 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
 
   if (!isMade) {
     return (
-      <div style={cellStyle} aria-label={`Pick ${pickLabel} — ${team?.nameShort || 'TBD'}${isCurrentPick ? ' — On the clock' : ''}`}>
+      <div className={cellClass} style={cellStyle} aria-label={`Pick ${pickLabel} — ${team?.nameShort || 'TBD'}${isCurrentPick ? ' — On the clock' : ''}`}>
         {pickLabelEl}
         <span style={{ color: 'var(--color-gray-400, #9ca3af)', fontStyle: 'italic', fontSize: '0.6875rem' }}>
           {isCurrentPick ? 'On the clock' : '—'}
@@ -108,7 +126,7 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
   };
 
   return (
-    <div style={cellStyle} aria-label={`Pick ${pickLabel} — ${player?.name || 'Unknown'}, ${player?.position || ''}`}>
+    <div className={cellClass} style={cellStyle} aria-label={`Pick ${pickLabel} — ${player?.name || 'Unknown'}, ${player?.position || ''}`}>
       {pickLabelEl}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', minWidth: 0 }}>
         <img
@@ -127,9 +145,10 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
             background: 'var(--color-gray-100, #f3f4f6)',
           }}
         />
-        <span style={{ fontWeight: 600, color: 'var(--color-gray-900, #111827)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontWeight: 600, color: 'var(--color-gray-900, #111827)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
           {player?.name || `Player ${pick.playerId}`}
         </span>
+        {tierBadge}
       </div>
       <span style={{ fontSize: '0.625rem', color: posColor || 'var(--color-gray-500, #6b7280)', fontWeight: 600, marginTop: '0.0625rem' }}>
         {player?.position || ''}{player?.nflTeam ? ` · ${player.nflTeam}` : ''}

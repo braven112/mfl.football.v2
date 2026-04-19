@@ -5,14 +5,42 @@
 
 .draft-room {
   /* ── Layout ── */
-  --dr-timer-height: 56px;
-  --dr-timer-height-mobile: 52px;
+  --dr-timer-height: 64px;
+  --dr-timer-height-mobile: 56px;
   --dr-tab-bar-height: 44px;
   --dr-panel-padding: var(--spacing-md, 1rem);
   --dr-panel-gap: var(--spacing-md, 1rem);
+  --dr-pool-width: 320px;
+  --dr-queue-width: 300px;
+  --dr-chat-width: 360px;
 
-  /* ── Timer ── */
-  --dr-timer-bg: var(--color-primary, #1c497c);
+  /* ── Density scale (use inside draft room to keep rows dense) ── */
+  --dr-density-row-sm: 32px;
+  --dr-density-row-md: 40px;
+  --dr-density-row-lg: 48px;
+  --dr-density-pad-xs: 0.25rem;
+  --dr-density-pad-sm: 0.375rem;
+  --dr-density-pad-md: 0.5rem;
+  --dr-density-gap-xs: 0.25rem;
+  --dr-density-gap-sm: 0.5rem;
+
+  /* ── Timer (per-state tokens) ──
+   * idle      — no one on clock yet (gray)
+   * other     — another team on clock (brand blue)
+   * you       — user is on clock (green → amber gradient to prompt action)
+   * warning   — less than 20% of limit remaining (amber)
+   * danger    — expired or imminent (red)
+   * complete  — draft done (green)
+   * suspended — overnight pause window (neutral, low emphasis)
+   */
+  --dr-timer-bg-idle: var(--color-gray-700, #374151);
+  --dr-timer-bg-other: var(--color-primary, #1c497c);
+  --dr-timer-bg-you: linear-gradient(135deg, #10b981 0%, #059669 60%, #f59e0b 100%);
+  --dr-timer-bg-warning: var(--color-warning, #f59e0b);
+  --dr-timer-bg-danger: var(--color-error, #dc2626);
+  --dr-timer-bg-complete: var(--color-success, #16a34a);
+  --dr-timer-bg-suspended: var(--color-gray-500, #6b7280);
+  --dr-timer-bg: var(--dr-timer-bg-other);
   --dr-timer-text: #ffffff;
   --dr-timer-accent: var(--color-warning, #f59e0b);
   --dr-timer-danger: var(--color-error, #dc2626);
@@ -29,6 +57,7 @@
   --dr-cell-border: var(--content-border, #e2e8f0);
   --dr-header-bg: var(--color-gray-50, #f9fafb);
   --dr-header-text: var(--color-gray-500, #6b7280);
+  --dr-pick-flash-duration: 1.2s;
 
   /* ── Position Colors ── */
   --dr-pos-qb: #dc2626;
@@ -45,10 +74,47 @@
   /* ── Player Pool ── */
   --dr-pool-row-height: 48px;
 
+  /* ── RSP Tier Palette ──
+   * A is elite, F is UDFA watch. Used for tier group headers and badges.
+   * Each tier gets a base (text/accent) and a soft (background) variant.
+   */
+  --dr-tier-a: #7c3aed;
+  --dr-tier-a-soft: rgba(124, 58, 237, 0.1);
+  --dr-tier-b: #1c497c;
+  --dr-tier-b-soft: rgba(28, 73, 124, 0.1);
+  --dr-tier-c: #16a34a;
+  --dr-tier-c-soft: rgba(22, 163, 74, 0.1);
+  --dr-tier-d: #d97706;
+  --dr-tier-d-soft: rgba(217, 119, 6, 0.12);
+  --dr-tier-e: #6b7280;
+  --dr-tier-e-soft: rgba(107, 114, 128, 0.1);
+  --dr-tier-f: #9ca3af;
+  --dr-tier-f-soft: rgba(156, 163, 175, 0.1);
+
+  /* ── ADP value deltas ──
+   * Drafted X+ picks earlier than ADP rank = reach (red)
+   * Drafted X+ picks later than ADP rank = value (green)
+   */
+  --dr-adp-value-reach: var(--color-error, #dc2626);
+  --dr-adp-value-steal: var(--color-success, #16a34a);
+  --dr-adp-value-par: var(--color-gray-400, #9ca3af);
+
+  /* ── Modal (reuse global modal tokens; local overrides for draft context) ── */
+  --dr-modal-bg: var(--content-bg, #ffffff);
+  --dr-modal-overlay: rgba(17, 24, 39, 0.55);
+  --dr-modal-border: var(--content-border, #e2e8f0);
+  --dr-modal-radius: var(--radius-lg, 0.75rem);
+  --dr-modal-shadow: var(--shadow-xl, 0 20px 40px rgba(0, 0, 0, 0.18));
+  --dr-modal-width: min(720px, calc(100vw - 2rem));
+
   /* ── Mobile Tabs ── */
   --dr-tab-active-border: var(--color-primary, #1c497c);
   --dr-tab-inactive-text: var(--color-gray-400, #9ca3af);
   --dr-tab-active-text: var(--color-primary, #1c497c);
+
+  /* ── Motion ── */
+  --dr-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dr-easing-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── Chat Panel ── */
   --dr-chat-bg: var(--content-bg, #ffffff);
@@ -70,14 +136,210 @@
   --dr-chat-mention-color: var(--color-primary, #1c497c);
 }
 
-/* ── Timer pulse animation ── */
+/* ── Tier badge ──
+ * Small A-F letter badge shown in pool rows, board cells, queue rows.
+ * Use `data-tier="A"` attribute for scoped color.
+ */
+.dr-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #ffffff;
+  background: var(--dr-tier-b);
+  font-variant-numeric: tabular-nums;
+}
+.dr-tier-badge[data-tier="A"] { background: var(--dr-tier-a); }
+.dr-tier-badge[data-tier="B"] { background: var(--dr-tier-b); }
+.dr-tier-badge[data-tier="C"] { background: var(--dr-tier-c); }
+.dr-tier-badge[data-tier="D"] { background: var(--dr-tier-d); }
+.dr-tier-badge[data-tier="E"] { background: var(--dr-tier-e); }
+.dr-tier-badge[data-tier="F"] { background: var(--dr-tier-f); }
+
+/* Soft tier background (for group headers / row bg tints) */
+.dr-tier-band[data-tier="A"] { background: var(--dr-tier-a-soft); border-left-color: var(--dr-tier-a); }
+.dr-tier-band[data-tier="B"] { background: var(--dr-tier-b-soft); border-left-color: var(--dr-tier-b); }
+.dr-tier-band[data-tier="C"] { background: var(--dr-tier-c-soft); border-left-color: var(--dr-tier-c); }
+.dr-tier-band[data-tier="D"] { background: var(--dr-tier-d-soft); border-left-color: var(--dr-tier-d); }
+.dr-tier-band[data-tier="E"] { background: var(--dr-tier-e-soft); border-left-color: var(--dr-tier-e); }
+.dr-tier-band[data-tier="F"] { background: var(--dr-tier-f-soft); border-left-color: var(--dr-tier-f); }
+
+/* ── ADP delta chip ──
+ * Small numeric badge showing how many picks this player has gone off ADP.
+ * `data-delta-kind="reach|steal|par"` controls color.
+ */
+.dr-adp-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--dr-adp-value-par);
+  background: transparent;
+}
+.dr-adp-delta[data-delta-kind="reach"] { color: var(--dr-adp-value-reach); }
+.dr-adp-delta[data-delta-kind="steal"] { color: var(--dr-adp-value-steal); }
+.dr-adp-delta[data-delta-kind="par"]   { color: var(--dr-adp-value-par); }
+
+/* ── Timer state banner ──
+ * Base banner — variants set via `data-state` attribute.
+ */
+.dr-timer-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  min-height: var(--dr-timer-height);
+  color: var(--dr-timer-text);
+  background: var(--dr-timer-bg);
+  transition: background 0.25s var(--dr-easing-ease);
+  position: relative;
+  overflow: hidden;
+}
+.dr-timer-banner[data-state="idle"]      { background: var(--dr-timer-bg-idle); }
+.dr-timer-banner[data-state="other"]     { background: var(--dr-timer-bg-other); }
+.dr-timer-banner[data-state="you"]       { background: var(--dr-timer-bg-you); background-size: 200% 200%; animation: dr-timer-you-flow 6s var(--dr-easing-ease) infinite; }
+.dr-timer-banner[data-state="warning"]   { background: var(--dr-timer-bg-warning); }
+.dr-timer-banner[data-state="danger"]    { background: var(--dr-timer-bg-danger); animation: dr-timer-danger-pulse 1.2s ease-in-out infinite; }
+.dr-timer-banner[data-state="complete"]  { background: var(--dr-timer-bg-complete); }
+.dr-timer-banner[data-state="suspended"] { background: var(--dr-timer-bg-suspended); }
+
+@keyframes dr-timer-you-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes dr-timer-danger-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.2); }
+}
+
+/* Timer clock display — tabular + large */
+.dr-timer-clock {
+  font-size: var(--dr-timer-font-size);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+/* ── On-the-clock cell pulse ── */
 @keyframes dr-otc-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--dr-otc-border); }
   50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2); }
 }
 
+/* ── New pick flash ──
+ * Brief background sweep + subtle scale to highlight just-made picks.
+ */
+@keyframes dr-pick-flash {
+  0%   { background-color: rgba(22, 163, 74, 0.35); transform: scale(1); }
+  60%  { background-color: rgba(22, 163, 74, 0.12); }
+  100% { background-color: transparent; transform: scale(1); }
+}
+.dr-cell--flash { animation: dr-pick-flash var(--dr-pick-flash-duration) var(--dr-easing-ease); }
+
 @media (prefers-reduced-motion: reduce) {
-  .dr-cell--otc { animation: none !important; }
+  .dr-cell--otc,
+  .dr-cell--flash,
+  .dr-timer-banner[data-state="you"],
+  .dr-timer-banner[data-state="danger"] {
+    animation: none !important;
+  }
+}
+
+/* ── Positional count strip ──
+ * Horizontal strip showing QB/RB/WR/TE availability counts at a glance.
+ */
+.dr-pos-strip {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+  background: var(--color-gray-50, #f9fafb);
+}
+.dr-pos-strip-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--content-bg, #ffffff);
+  border: 1px solid var(--content-border, #e2e8f0);
+  cursor: pointer;
+  transition: background 0.15s var(--dr-easing-ease), border-color 0.15s var(--dr-easing-ease);
+}
+.dr-pos-strip-item:hover { background: var(--color-gray-100, #f3f4f6); }
+.dr-pos-strip-item[aria-pressed="true"] {
+  background: rgba(28, 73, 124, 0.08);
+  border-color: var(--color-primary, #1c497c);
+}
+.dr-pos-strip-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dr-pos-strip-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-gray-600, #4b5563);
+}
+.dr-pos-strip-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-900, #111827);
+}
+
+/* ── Modal (draft room detail modal) ── */
+.dr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--dr-modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+  animation: dr-modal-fade-in 0.15s var(--dr-easing-ease);
+}
+.dr-modal {
+  width: var(--dr-modal-width);
+  max-height: calc(100vh - 2rem);
+  background: var(--dr-modal-bg);
+  border-radius: var(--dr-modal-radius);
+  box-shadow: var(--dr-modal-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dr-modal-scale-in 0.2s var(--dr-easing-spring);
+}
+@keyframes dr-modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dr-modal-scale-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-modal-overlay, .dr-modal { animation: none !important; }
 }
 
 /* ── Focus styling ── */

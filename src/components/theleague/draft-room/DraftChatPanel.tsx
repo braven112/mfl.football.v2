@@ -17,7 +17,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import PartySocket from 'partysocket';
+import type PartySocket from 'partysocket';
 import type {
   ChatMessage,
   DraftRoomTeam,
@@ -521,41 +521,52 @@ export function DraftChatPanel({
   useEffect(() => {
     if (!partyHost || !roomId) return;
 
-    const params = new URLSearchParams({
-      franchiseId,
-      name: franchiseName,
-      icon: franchiseIcon,
-    });
+    let cancelled = false;
+    let socket: PartySocket | null = null;
 
-    const socket = new PartySocket({
-      host: partyHost,
-      room: roomId,
-      query: Object.fromEntries(params),
-    });
+    // Dynamic import defers partysocket (~12 KB) until chat actually mounts.
+    import('partysocket').then((mod) => {
+      if (cancelled) return;
+      const PartySocketCtor = mod.default;
 
-    socket.addEventListener('open', () => onConnected());
-    socket.addEventListener('close', () => onDisconnected());
+      const params = new URLSearchParams({
+        franchiseId,
+        name: franchiseName,
+        icon: franchiseIcon,
+      });
 
-    socket.addEventListener('message', (evt: MessageEvent) => {
-      try {
-        const data = JSON.parse(evt.data as string);
-        if (data.type === '__history') {
-          onHistory(data.messages || []);
-          return;
+      socket = new PartySocketCtor({
+        host: partyHost,
+        room: roomId,
+        query: Object.fromEntries(params),
+      });
+
+      socket.addEventListener('open', () => onConnected());
+      socket.addEventListener('close', () => onDisconnected());
+
+      socket.addEventListener('message', (evt: MessageEvent) => {
+        try {
+          const data = JSON.parse(evt.data as string);
+          if (data.type === '__history') {
+            onHistory(data.messages || []);
+            return;
+          }
+          if (data.type === 'reaction') {
+            onReaction(data.targetId, data.emoji, data.reactions || {});
+            return;
+          }
+          onMessage(data as ChatMessage);
+        } catch {
+          // ignore malformed messages
         }
-        if (data.type === 'reaction') {
-          onReaction(data.targetId, data.emoji, data.reactions || {});
-          return;
-        }
-        onMessage(data as ChatMessage);
-      } catch {
-        // ignore malformed messages
-      }
+      });
+
+      socketRef.current = socket;
     });
 
-    socketRef.current = socket;
     return () => {
-      socket.close();
+      cancelled = true;
+      if (socket) socket.close();
       socketRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

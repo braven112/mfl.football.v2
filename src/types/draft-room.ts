@@ -46,6 +46,9 @@ export interface DraftRoomTeam {
   icon: string;
 }
 
+/** RSP tier grades A (elite) → F (UDFA watch) */
+export type RspTier = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+
 /** Player in the draft pool */
 export interface DraftRoomPlayer {
   id: string;
@@ -56,6 +59,29 @@ export interface DraftRoomPlayer {
   isRookie?: boolean;
   mflId?: string;
   espnId?: string;
+  /** MFL draft_year (for rookies) */
+  draftYear?: number;
+  /** Player age in years */
+  age?: number;
+  /** College (for rookies) */
+  college?: string;
+
+  // ── RSP scouting (joined server-side from fantasy-expert/sources/rsp) ──
+  rspTier?: RspTier;
+  rspPositionRank?: string;
+  rspScore?: number;
+  rspGrade?: string;
+  rspTypes?: string[];
+  rspComparison?: string;
+  rspFantasyAdvice?: string;
+  rspNotes?: string;
+
+  // ── MFL ADP (joined server-side from mfl-feeds/{year}/adp-dynasty.json) ──
+  adpRank?: number;
+  adpAveragePick?: number;
+  adpMinPick?: number;
+  adpMaxPick?: number;
+  adpDraftSelPct?: number;
 }
 
 /** Data serialized from Astro frontmatter to React island */

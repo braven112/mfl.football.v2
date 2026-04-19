@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import PartySocket from 'partysocket';
+import type PartySocket from 'partysocket';
 import type { MockDraftSession, MockPick, DraftRoomPick, DraftRoomAction } from '../types/draft-room';
 
 interface UseMockDraftSocketOptions {
@@ -58,73 +58,81 @@ export function useMockDraftSocket({
   useEffect(() => {
     if (!enabled || !partyHost || !sessionId || !franchiseId) return;
 
-    const socket = new PartySocket({
-      host: partyHost,
-      room: `mock-${sessionId}`,
-    });
+    let cancelled = false;
+    let socket: PartySocket | null = null;
 
-    socket.addEventListener('open', () => {
-      // Join the session as this franchise
-      socket.send(
-        JSON.stringify({
-          type: 'join',
-          franchiseId,
-          enableAutoPick: false,
-        }),
-      );
-    });
+    // Dynamic import keeps partysocket (~12 KB) out of the initial bundle.
+    // It only loads when a user actually opens a mock-draft session.
+    import('partysocket').then((mod) => {
+      if (cancelled) return;
+      const PartySocketCtor = mod.default;
+      socket = new PartySocketCtor({
+        host: partyHost,
+        room: `mock-${sessionId}`,
+      });
 
-    socket.addEventListener('message', (evt: MessageEvent) => {
-      try {
-        const data = JSON.parse(evt.data as string);
+      socket.addEventListener('open', () => {
+        socket!.send(
+          JSON.stringify({
+            type: 'join',
+            franchiseId,
+            enableAutoPick: false,
+          }),
+        );
+      });
 
-        switch (data.type) {
-          case 'session': {
-            const session = data.session as MockDraftSession;
-            dispatch({ type: 'MOCK_SESSION_SYNC', session });
-            // Also update the shared picks so DraftBoardPanel renders them
-            dispatch({ type: 'POLL_SUCCESS', picks: convertMockPicks(session) });
-            break;
+      socket.addEventListener('message', (evt: MessageEvent) => {
+        try {
+          const data = JSON.parse(evt.data as string);
+
+          switch (data.type) {
+            case 'session': {
+              const session = data.session as MockDraftSession;
+              dispatch({ type: 'MOCK_SESSION_SYNC', session });
+              dispatch({ type: 'POLL_SUCCESS', picks: convertMockPicks(session) });
+              break;
+            }
+
+            case 'pick-made': {
+              const session = data.session as MockDraftSession;
+              const pick = data.pick as MockPick;
+              dispatch({ type: 'MOCK_PICK_MADE', pick, session });
+              dispatch({ type: 'POLL_SUCCESS', picks: convertMockPicks(session) });
+              break;
+            }
+
+            case 'pick-clock': {
+              dispatch({
+                type: 'MOCK_CLOCK_TICK',
+                secondsRemaining: data.secondsRemaining,
+              });
+              break;
+            }
+
+            case 'error': {
+              dispatch({
+                type: 'SET_SUBMIT_ERROR',
+                error: data.message || 'Mock draft error',
+              });
+              break;
+            }
+
+            default:
+              break;
           }
-
-          case 'pick-made': {
-            const session = data.session as MockDraftSession;
-            const pick = data.pick as MockPick;
-            dispatch({ type: 'MOCK_PICK_MADE', pick, session });
-            dispatch({ type: 'POLL_SUCCESS', picks: convertMockPicks(session) });
-            break;
-          }
-
-          case 'pick-clock': {
-            dispatch({
-              type: 'MOCK_CLOCK_TICK',
-              secondsRemaining: data.secondsRemaining,
-            });
-            break;
-          }
-
-          case 'error': {
-            dispatch({
-              type: 'SET_SUBMIT_ERROR',
-              error: data.message || 'Mock draft error',
-            });
-            break;
-          }
-
-          // participant-joined and participant-left are informational —
-          // the full participant list is in the session sync
-          default:
-            break;
+        } catch {
+          // Ignore malformed messages
         }
-      } catch {
-        // Ignore malformed messages
-      }
-    });
+      });
 
-    socketRef.current = socket;
+      socketRef.current = socket;
+    });
 
     return () => {
-      socket.close();
+      cancelled = true;
+      if (socket) {
+        socket.close();
+      }
       socketRef.current = null;
     };
   }, [enabled, partyHost, sessionId, franchiseId, dispatch]);

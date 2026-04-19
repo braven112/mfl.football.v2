@@ -1,5 +1,4 @@
-import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { arrayMove } from '@dnd-kit/sortable';
+import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, lazy, Suspense, type CSSProperties } from 'react';
 import type {
   DraftRoomPageData,
   DraftRoomState,
@@ -15,12 +14,17 @@ import type {
 import { DraftTimerBanner } from './DraftTimerBanner';
 import { DraftBoardPanel } from './DraftBoardPanel';
 import { PlayerPoolPanel } from './PlayerPoolPanel';
-import { DraftQueuePanel } from './DraftQueuePanel';
 import { MobileTabBar } from './MobileTabBar';
 import { DraftChatPanel, broadcastPickToChat } from './DraftChatPanel';
 import { getQueue, saveQueue } from '../../../utils/draft-queue-storage';
 import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
 import '../../../styles/draft-room.css';
+
+// DraftQueuePanel lazy-loaded — @dnd-kit (~40 KB gzipped) only pulled in when
+// the queue tab is opened. Most users never open it.
+const DraftQueuePanel = lazy(() =>
+  import('./DraftQueuePanel').then((mod) => ({ default: mod.DraftQueuePanel })),
+);
 
 interface DraftRoomProps {
   pageData: string;
@@ -111,7 +115,9 @@ function draftRoomReducer(state: DraftRoomState, action: DraftRoomAction): Draft
       return { ...state, queue: updated };
     }
     case 'REORDER_QUEUE': {
-      const updated = arrayMove(state.queue, action.oldIndex, action.newIndex);
+      const updated = state.queue.slice();
+      const [moved] = updated.splice(action.oldIndex, 1);
+      updated.splice(action.newIndex, 0, moved);
       saveQueue(state.leagueId, state.leagueYear, updated);
       return { ...state, queue: updated };
     }
@@ -327,6 +333,59 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     };
   }, [state.leagueYear, isMock]);
 
+  // Keyboard shortcuts
+  // `/` = focus search, 1-6 = position filter, Q = focus queue tab, C = focus chat tab, B = focus board tab
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea/contenteditable
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) {
+          // Allow `/` to still focus search even when not typing
+          if (e.key !== '/') return;
+        }
+      }
+      // Ignore when modifier keys are held (avoid hijacking browser shortcuts)
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const input = document.querySelector<HTMLInputElement>('.draft-room .dr-search-input');
+        if (input) input.focus();
+        return;
+      }
+
+      const posMap: Record<string, string | null> = {
+        '1': null, // ALL
+        '2': 'QB',
+        '3': 'RB',
+        '4': 'WR',
+        '5': 'TE',
+        '6': 'PK',
+      };
+      if (e.key in posMap) {
+        e.preventDefault();
+        dispatch({ type: 'SET_POSITION_FILTER', position: posMap[e.key] });
+        return;
+      }
+
+      const tabMap: Record<string, 'board' | 'players' | 'queue' | 'chat'> = {
+        b: 'board',
+        p: 'players',
+        q: 'queue',
+        c: 'chat',
+      };
+      const keyLower = e.key.toLowerCase();
+      if (keyLower in tabMap) {
+        e.preventDefault();
+        dispatch({ type: 'SET_MOBILE_TAB', tab: tabMap[keyLower] });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // Auto-submit: when user is on clock + autoSubmit on + queue non-empty
   useEffect(() => {
     if (!state.autoSubmit || !isUserTurn || state.queue.length === 0 || state.isSubmittingPick || state.draftComplete) return;
@@ -467,11 +526,29 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   const partyRoomId = `league-${state.leagueId}-draft-${state.leagueYear}`;
   const partyHost = data.partyHost || '';
 
-  // Desktop side panel tab state
-  const [desktopSideTab, setDesktopSideTab] = useState<'players' | 'queue' | 'chat'>('players');
+  // Side panel tab — shared between desktop (tab bar under board) and mobile (MobileTabBar).
+  // On mobile the full activeMobileTab governs which top-level panel is visible (including 'board');
+  // on desktop the board is always visible on top and only players/queue/chat are selectable.
+  // Treat 'board' on desktop as "players" (the default content panel).
+  const sideTab: 'players' | 'queue' | 'chat' =
+    state.activeMobileTab === 'queue' ? 'queue' :
+    state.activeMobileTab === 'chat' ? 'chat' :
+    'players';
+  const setSideTab = useCallback(
+    (tab: 'players' | 'queue' | 'chat') => dispatch({ type: 'SET_MOBILE_TAB', tab }),
+    []
+  );
 
-  // Tab button style helper
-  const sideTabStyle = (tab: typeof desktopSideTab): CSSProperties => ({
+  // Track first visit to queue/chat so the lazy chunks only load on demand,
+  // but stay mounted afterward (preserves DnD sensors, chat socket, scroll pos).
+  const [queueVisited, setQueueVisited] = useState(false);
+  const [chatVisited, setChatVisited] = useState(false);
+  useEffect(() => {
+    if (sideTab === 'queue' && !queueVisited) setQueueVisited(true);
+    if (sideTab === 'chat' && !chatVisited) setChatVisited(true);
+  }, [sideTab, queueVisited, chatVisited]);
+
+  const sideTabStyle = (tab: 'players' | 'queue' | 'chat'): CSSProperties => ({
     flex: 1,
     padding: '0.5rem 0.25rem',
     fontSize: '0.6875rem',
@@ -481,10 +558,10 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     border: 'none',
     background: 'none',
     cursor: 'pointer',
-    borderBottom: desktopSideTab === tab
+    borderBottom: sideTab === tab
       ? '2px solid var(--color-primary, #1c497c)'
       : '2px solid transparent',
-    color: desktopSideTab === tab
+    color: sideTab === tab
       ? 'var(--color-primary, #1c497c)'
       : 'var(--color-gray-400, #9ca3af)',
     transition: 'color 0.15s, border-color 0.15s',
@@ -510,6 +587,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         draftLimitHours={state.draftLimitHours}
         draftTimerSusp={state.draftTimerSusp}
         draftComplete={state.draftComplete}
+        isUserTurn={isUserTurn}
         mockClockSeconds={isMock ? state.mockClockSeconds : undefined}
         actions={isMock ? (
           <button
@@ -592,27 +670,27 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           >
             <button
               role="tab"
-              aria-selected={desktopSideTab === 'players'}
+              aria-selected={sideTab === 'players'}
               aria-controls="dr-panel-players"
-              onClick={() => setDesktopSideTab('players')}
+              onClick={() => setSideTab('players')}
               style={sideTabStyle('players')}
             >
               Players
             </button>
             <button
               role="tab"
-              aria-selected={desktopSideTab === 'queue'}
+              aria-selected={sideTab === 'queue'}
               aria-controls="dr-panel-queue"
-              onClick={() => setDesktopSideTab('queue')}
+              onClick={() => setSideTab('queue')}
               style={sideTabStyle('queue')}
             >
               Queue{state.queue.length > 0 ? ` (${state.queue.length})` : ''}
             </button>
             <button
               role="tab"
-              aria-selected={desktopSideTab === 'chat'}
+              aria-selected={sideTab === 'chat'}
               aria-controls="dr-panel-chat"
-              onClick={() => setDesktopSideTab('chat')}
+              onClick={() => setSideTab('chat')}
               style={sideTabStyle('chat')}
             >
               Chat{state.chatUnread > 0 ? ` (${state.chatUnread})` : ''}
@@ -625,7 +703,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             role="tabpanel"
             aria-labelledby="dr-tab-players"
             className="dr-panel-players"
-            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'players' ? 'flex' : 'none', flexDirection: 'column' }}
+            style={{ flex: 1, overflow: 'hidden', display: sideTab === 'players' ? 'flex' : 'none', flexDirection: 'column' }}
           >
             <PlayerPoolPanel
               players={state.players}
@@ -641,6 +719,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
               draftContext={draftContext}
               isUserTurn={isUserTurn}
               onSubmitPick={handleSubmitPick}
+              currentPick={currentPick}
             />
           </div>
 
@@ -650,23 +729,27 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             role="tabpanel"
             aria-labelledby="dr-tab-queue"
             className="dr-panel-queue"
-            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'queue' ? 'flex' : 'none', flexDirection: 'column' }}
+            style={{ flex: 1, overflow: 'hidden', display: sideTab === 'queue' ? 'flex' : 'none', flexDirection: 'column' }}
           >
-            <DraftQueuePanel
-              queue={state.queue}
-              players={playerMap}
-              picks={state.picks}
-              isUserTurn={isUserTurn}
-              autoSubmit={state.autoSubmit}
-              isSyncingQueue={state.isSyncingQueue}
-              isSubmittingPick={state.isSubmittingPick}
-              submitError={state.submitError}
-              onReorder={handleReorderQueue}
-              onRemove={handleRemoveFromQueue}
-              onSyncToMfl={handleSyncToMfl}
-              onSubmitPick={handleSubmitPick}
-              onToggleAutoSubmit={handleToggleAutoSubmit}
-            />
+            {queueVisited ? (
+              <Suspense fallback={<div style={{ padding: '1rem', color: 'var(--color-gray-500)' }}>Loading queue…</div>}>
+                <DraftQueuePanel
+                  queue={state.queue}
+                  players={playerMap}
+                  picks={state.picks}
+                  isUserTurn={isUserTurn}
+                  autoSubmit={state.autoSubmit}
+                  isSyncingQueue={state.isSyncingQueue}
+                  isSubmittingPick={state.isSubmittingPick}
+                  submitError={state.submitError}
+                  onReorder={handleReorderQueue}
+                  onRemove={handleRemoveFromQueue}
+                  onSyncToMfl={handleSyncToMfl}
+                  onSubmitPick={handleSubmitPick}
+                  onToggleAutoSubmit={handleToggleAutoSubmit}
+                />
+              </Suspense>
+            ) : null}
           </div>
 
           {/* Chat panel */}
@@ -675,9 +758,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             role="tabpanel"
             aria-labelledby="dr-tab-chat"
             className="dr-panel-chat"
-            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'chat' ? 'flex' : 'none', flexDirection: 'column' }}
+            style={{ flex: 1, overflow: 'hidden', display: sideTab === 'chat' ? 'flex' : 'none', flexDirection: 'column' }}
           >
-            {partyHost ? (
+            {chatVisited && partyHost ? (
               <DraftChatPanel
                 partyHost={partyHost}
                 roomId={partyRoomId}
@@ -693,14 +776,14 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
                 onDisconnected={handleChatDisconnected}
                 onHistory={handleChatHistory}
               />
-            ) : (
+            ) : chatVisited ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', textAlign: 'center', color: 'var(--color-gray-400, #9ca3af)', fontSize: '0.8125rem' }}>
                 <div>
                   <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💬</div>
                   Chat requires PartyKit.<br />Set PUBLIC_PARTYKIT_HOST.
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
