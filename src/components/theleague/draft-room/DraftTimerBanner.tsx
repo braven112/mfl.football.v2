@@ -182,11 +182,9 @@ export function DraftTimerBanner({
   if (draftComplete) {
     return (
       <div className="dr-timer-banner" data-state="complete" role="region" aria-label="Draft complete">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+        <div className="dr-timer-banner__complete">
           <DraftTrophyIcon />
-          <span className="dr-timer-clock" style={{ fontSize: '1.25rem', letterSpacing: '0.04em' }}>
-            DRAFT COMPLETE
-          </span>
+          <span className="dr-timer-clock">DRAFT COMPLETE</span>
         </div>
         {actions}
       </div>
@@ -196,9 +194,7 @@ export function DraftTimerBanner({
   if (!currentPick || !currentTeam) {
     return (
       <div className="dr-timer-banner" data-state="idle" role="region" aria-label="Draft waiting to begin">
-        <span style={{ opacity: 0.8, fontSize: '0.875rem', fontWeight: 600 }}>
-          Waiting for draft to begin…
-        </span>
+        <span className="dr-timer-banner__idle">Waiting for draft to begin…</span>
         {actions}
       </div>
     );
@@ -219,66 +215,33 @@ export function DraftTimerBanner({
       role="region"
       aria-label={isUserTurn ? "You're on the clock" : `${teamLabel} is on the clock`}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
+      <div className="dr-timer-banner__team">
         {currentTeam.icon && (
-          <img
-            src={currentTeam.icon}
-            alt=""
-            aria-hidden="true"
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              flexShrink: 0,
-              objectFit: 'cover',
-              boxShadow: '0 0 0 2px rgba(255,255,255,0.4)',
-            }}
-          />
+          <div className="dr-team-avatar" aria-hidden="true">
+            <img src={currentTeam.icon} alt="" />
+          </div>
         )}
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: '0.625rem',
-              fontWeight: 800,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.08em',
-              opacity: 0.85,
-              lineHeight: 1.1,
-            }}
-          >
+        <div className="dr-team-identity">
+          <div className="dr-team-eyebrow">
             {isUserTurn ? "You're Up · " : 'On the Clock · '}{pickLabel}
           </div>
-          <div
-            style={{
-              fontSize: '1rem',
-              fontWeight: 800,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              lineHeight: 1.2,
-            }}
-          >
+          <div className="dr-team-name">
             {isUserTurn ? 'Make Your Pick' : teamLabel}
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-        <div style={{ textAlign: 'right' }}>
+      <div className="dr-timer-banner__meter">
+        <div className="dr-timer-banner__meter-text">
           {timer.isSuspended ? (
-            <div>
-              <div
-                className="dr-timer-clock"
-                style={{ fontSize: '1.25rem', opacity: 0.85 }}
-                role="timer"
-                aria-label="Clock paused"
-              >
+            <>
+              <div className="dr-timer-clock" role="timer" aria-label="Clock paused">
                 CLOCK PAUSED
               </div>
-              <div style={{ fontSize: '0.6875rem', opacity: 0.7, marginTop: '0.125rem' }}>
+              <div className="dr-timer-banner__suspended-hint">
                 Resumes at {getSuspendedEndHour(draftTimerSusp)}:00 AM
               </div>
-            </div>
+            </>
           ) : (
             <div role="timer" aria-label="Time remaining" className="dr-timer-clock">
               {formatTimer(timer, draftKind)}
