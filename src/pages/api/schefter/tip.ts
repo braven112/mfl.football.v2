@@ -54,6 +54,19 @@ const STYLE_BOOK_ANON_SEASON_PREFIX = 'schefter:style_book:anon:season:';
 const STYLE_BOOK_ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
 const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
 
+// Off-topic tip timeline — rolling-window ZSET of "Beef" (commish-scope) tip
+// submissions per tipster. The A=C barometer reads the count of entries in
+// the last OFF_TOPIC_WINDOW_MS; older entries age out so good behavior (not
+// sending mean tips) naturally improves the reading over time.
+//
+// Powers HARD RULE 16's escalation ladder: first-time / recently-quiet
+// tippers get the lighter hissy-fit framing; recent repeat offenders earn
+// the "every accusation is a confession" twist. Keyed on hashedOwnerId;
+// the rolling count is surfaced to the LLM as offTopicCount.
+const OFF_TOPIC_TIMELINE_PREFIX = 'schefter:off_topic:timeline:';
+const OFF_TOPIC_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
+const OFF_TOPIC_TIMELINE_TTL_SEC = 90 * 24 * 60 * 60;   // 90d belt-and-suspenders TTL
+
 type RedisClient = {
   lpush: (key: string, ...values: unknown[]) => Promise<number>;
   incr: (key: string) => Promise<number>;
@@ -64,6 +77,7 @@ type RedisClient = {
   zadd: (key: string, entry: { score: number; member: string }) => Promise<unknown>;
   zincrby: (key: string, increment: number, member: string) => Promise<number | string>;
   zremrangebyscore: (key: string, min: number | string, max: number | string) => Promise<unknown>;
+  zcard: (key: string) => Promise<number>;
   sadd: (key: string, ...members: string[]) => Promise<number>;
   srem: (key: string, ...members: string[]) => Promise<number>;
 };
@@ -300,6 +314,40 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
+  // A=C barometer — rolling-window count of "Beef" (commish-scope) tips
+  // from this tipster in the last OFF_TOPIC_WINDOW_MS. Older entries age out,
+  // so an owner who stops sending mean tips sees their barometer reading
+  // naturally drop over 30 days — the dial is controlled by recent behavior,
+  // not cumulative lifetime history.
+  //
+  // Best-effort — Redis failure never blocks enqueue; offTopicCount just
+  // stays null and the LLM falls back to rule 16's default (hissy fit only).
+  let offTopicCount: number | null = null;
+  if (topic === 'commish') {
+    try {
+      const nowMs = Date.now();
+      const timelineKey = `${OFF_TOPIC_TIMELINE_PREFIX}${hashedOwnerId}`;
+      const tipMarker = crypto.randomUUID();
+
+      // Add this tip to the timeline + prune anything outside the window +
+      // refresh TTL. The TTL is a safety net — if a tipster stops sending
+      // entirely, their timeline disappears after 90 days without intervention.
+      await redis.zadd(timelineKey, { score: nowMs, member: tipMarker });
+      await redis.zremrangebyscore(timelineKey, 0, nowMs - OFF_TOPIC_WINDOW_MS);
+      await redis.expire(timelineKey, OFF_TOPIC_TIMELINE_TTL_SEC);
+
+      // The current barometer reading = entries remaining after the prune.
+      // ZCOUNT is cheap; we could read from the zadd return but this is
+      // more resilient to client-version differences in what zadd returns.
+      const cardRaw = await redis.zcard(timelineKey);
+      offTopicCount = typeof cardRaw === 'number'
+        ? Math.max(1, cardRaw)
+        : Math.max(1, parseInt(String(cardRaw ?? '1'), 10) || 1);
+    } catch (err) {
+      console.warn('[schefter/tip] off-topic timeline bump failed:', err);
+    }
+  }
+
   const tip: Tip = {
     id: crypto.randomUUID(),
     hashedOwnerId,
@@ -311,6 +359,7 @@ export const POST: APIRoute = async ({ request }) => {
     submittedAt: Date.now(),
     source: 'web',
     ...(validatedRepliesToPostId ? { repliesToPostId: validatedRepliesToPostId } : {}),
+    ...(offTopicCount !== null ? { offTopicCount } : {}),
     ...(attackCheck.attack
       ? {
           attackOnSchefter: true,

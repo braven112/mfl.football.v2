@@ -114,4 +114,45 @@ describe('anon Style Book — tip.ts integration', () => {
     // tip still reaches the queue.
     expect(tipSource).toMatch(/\[schefter\/tip\] anon style-book bump failed/);
   });
+
+  // ── A=C barometer plumbing (rolling-window off-topic timeline) ──
+
+  it('uses a rolling-window timeline ZSET (not a lifetime counter)', () => {
+    // The barometer must be rolling — good behavior should let owners
+    // improve their dial by simply not sending mean tips for a while. A
+    // cumulative INCR counter would punish old behavior forever, which
+    // contradicts the design intent.
+    expect(tipSource).toMatch(/schefter:off_topic:timeline:/);
+    expect(tipSource).toMatch(/OFF_TOPIC_WINDOW_MS/);
+  });
+
+  it('defines a 30-day rolling window', () => {
+    expect(tipSource).toMatch(/30 \* 24 \* 60 \* 60 \* 1000/);
+  });
+
+  it('increments timeline only when topic is "commish"', () => {
+    // The Beef topic is the off-topic channel by design. We don't bump on
+    // trade/roster/prediction/other — those are either league-business or
+    // genuinely general.
+    expect(tipSource).toMatch(/if \(topic === 'commish'\)/);
+  });
+
+  it('prunes entries older than the window on every write', () => {
+    // ZREMRANGEBYSCORE ... nowMs - OFF_TOPIC_WINDOW_MS is what lets old
+    // tips age out so the barometer reading reflects recent activity only.
+    expect(tipSource).toMatch(/zremrangebyscore/);
+    expect(tipSource).toMatch(/OFF_TOPIC_WINDOW_MS/);
+  });
+
+  it('reads the rolling count via ZCARD', () => {
+    expect(tipSource).toMatch(/redis\.zcard\(timelineKey\)/);
+  });
+
+  it('stamps offTopicCount on the tip when set', () => {
+    expect(tipSource).toMatch(/offTopicCount/);
+  });
+
+  it('wraps the timeline bump in try/catch (best-effort)', () => {
+    expect(tipSource).toMatch(/\[schefter\/tip\] off-topic timeline bump failed/);
+  });
 });
