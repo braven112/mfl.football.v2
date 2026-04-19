@@ -70,10 +70,13 @@ const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) =>
   icon: team.icon || '',
 }));
 
-// ── Build player pool (shared util; includes RSP + ADP enrichment) ──
+// ── Build player pool (shared util; ADP is public, RSP gated to owner) ──
 // Live draft room sends the full draftable pool — rookies and veterans both
 // appear (e.g. late-round veterans added via waiver are draftable).
-const players = buildDraftPlayers(leagueYear);
+// RSP scouting (licensed content) is only enriched when the viewer owns it.
+const players = buildDraftPlayers(leagueYear, {
+  viewerFranchiseId: user?.franchiseId,
+});
 
 // ── Build picks from draft results ──
 const rawPicks = draftResultsData?.draftResults?.draftUnit?.draftPick;

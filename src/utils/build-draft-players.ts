@@ -18,11 +18,21 @@ import { getPlayerHeadshot, getCollegeHeadshot } from '../constants/roster-const
 import { getPlayerMap } from './player-map';
 import { enrichDraftPlayers, type DraftPlayerEnrichment } from './draft-player-enrichment';
 
+/** Franchise IDs authorized to see licensed RSP (Rookie Scouting Portfolio) data. */
+const RSP_AUTHORIZED_FRANCHISES = new Set(['0001']);
+
 interface BuildDraftPlayersOptions {
   /** When true, only rookies are returned (filters by status=R or draft_year === leagueYear) */
   rookieOnly?: boolean;
-  /** When true, joins RSP tier + ADP metadata onto each player (default: true) */
+  /** When true, joins ADP metadata onto each player (default: true). ADP is public. */
   enrich?: boolean;
+  /**
+   * Authenticated viewer's franchise ID — gates RSP scouting enrichment.
+   * RSP is licensed content (Matt Waldman's Rookie Scouting Portfolio) so
+   * only the subscribing owner sees tiers, grades, scouting notes, and advice.
+   * ADP stays public for everyone.
+   */
+  viewerFranchiseId?: string;
 }
 
 const DRAFTABLE = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']);
@@ -75,7 +85,8 @@ export function buildDraftPlayers(
   leagueYear: number,
   options: BuildDraftPlayersOptions = {}
 ): DraftRoomPlayer[] {
-  const { rookieOnly = false, enrich = true } = options;
+  const { rookieOnly = false, enrich = true, viewerFranchiseId } = options;
+  const includeRsp = !!viewerFranchiseId && RSP_AUTHORIZED_FRANCHISES.has(viewerFranchiseId);
   const leagueYearStr = String(leagueYear);
   const identityMap = getPlayerMap(leagueYear);
   const collegeMap = loadCollegeMap();
@@ -130,7 +141,7 @@ export function buildDraftPlayers(
     };
   });
 
-  return enrich ? enrichDraftPlayers(players, leagueYear) : players;
+  return enrich ? enrichDraftPlayers(players, leagueYear, { includeRsp }) : players;
 }
 
 export type { DraftPlayerEnrichment };

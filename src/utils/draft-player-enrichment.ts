@@ -110,27 +110,33 @@ function loadAdp(leagueYear: number): Map<string, any> {
 
 export function enrichDraftPlayers(
   players: DraftRoomPlayer[],
-  leagueYear: number
+  leagueYear: number,
+  options: { includeRsp?: boolean } = {}
 ): DraftRoomPlayer[] {
-  const rsp = loadRsp(leagueYear);
+  // RSP scouting is licensed content — only surfaced to the owner who pays
+  // for the subscription. ADP is public league data and always enriched.
+  const includeRsp = options.includeRsp === true;
+  const rsp = includeRsp ? loadRsp(leagueYear) : null;
   const adp = loadAdp(leagueYear);
 
   return players.map((p) => {
     const enrichment: DraftPlayerEnrichment = {};
 
-    const rspPlayer = rsp.get(p.id);
-    if (rspPlayer) {
-      enrichment.rspTier = (rspPlayer.tier as DraftPlayerEnrichment['rspTier']) || undefined;
-      enrichment.rspPositionRank = rspPlayer.positionRank;
-      enrichment.rspScore = rspPlayer.preDraftScore;
-      enrichment.rspGrade = rspPlayer.preDraftGrade;
-      enrichment.rspTypes = rspPlayer.types?.length ? rspPlayer.types : undefined;
-      enrichment.rspComparison = rspPlayer.comparison;
-      enrichment.rspFantasyAdvice = rspPlayer.fantasyAdvice;
-      enrichment.rspNotes = rspPlayer.notes;
-      // Also take college from RSP if MFL didn't have it
-      if (!p.college && rspPlayer.school) {
-        p = { ...p, college: rspPlayer.school };
+    if (rsp) {
+      const rspPlayer = rsp.get(p.id);
+      if (rspPlayer) {
+        enrichment.rspTier = (rspPlayer.tier as DraftPlayerEnrichment['rspTier']) || undefined;
+        enrichment.rspPositionRank = rspPlayer.positionRank;
+        enrichment.rspScore = rspPlayer.preDraftScore;
+        enrichment.rspGrade = rspPlayer.preDraftGrade;
+        enrichment.rspTypes = rspPlayer.types?.length ? rspPlayer.types : undefined;
+        enrichment.rspComparison = rspPlayer.comparison;
+        enrichment.rspFantasyAdvice = rspPlayer.fantasyAdvice;
+        enrichment.rspNotes = rspPlayer.notes;
+        // Also take college from RSP if MFL didn't have it
+        if (!p.college && rspPlayer.school) {
+          p = { ...p, college: rspPlayer.school };
+        }
       }
     }
 

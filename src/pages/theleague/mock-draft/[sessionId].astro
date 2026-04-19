@@ -50,7 +50,11 @@ const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) =>
 
 // ── Build player pool (rookies only — mock draft is always rookie draft) ──
 // This drops payload from ~229 KB to ~15 KB vs the previous full-pool version.
-const players = buildDraftPlayers(leagueYear, { rookieOnly: true });
+// RSP scouting (licensed content) is only enriched when the viewer owns it.
+const players = buildDraftPlayers(leagueYear, {
+  rookieOnly: true,
+  viewerFranchiseId: user.franchiseId,
+});
 
 // ── Serialize page data ──
 // Picks start empty — they'll be populated by PartyKit session sync
