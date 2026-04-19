@@ -125,6 +125,15 @@ export interface Tip {
    * tipster-codenames system (same key as tipster-stats leaderboard).
    */
   tipsterCodename?: string;
+  /**
+   * Running seasonal count of "Beef"-topic (commish-scope) tips from this
+   * tipster — tracks how often the same source is sending off-topic / personal
+   * shots through the tip form. Powers the escalation of the "every accusation
+   * is a confession" framing in HARD RULE 16: first-time off-topic tippers
+   * get the lighter hissy-fit framing only, repeat offenders earn the full
+   * confession twist. Only set for `source: 'web'` + `topic: 'commish'`.
+   */
+  offTopicCount?: number;
 }
 
 /** Max age of a rumor post that whisper-backs can still attach to (ms). */

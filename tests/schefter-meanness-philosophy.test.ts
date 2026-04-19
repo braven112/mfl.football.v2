@@ -54,17 +54,65 @@ describe('HARD RULE 16 — off-topic personal insults', () => {
     expect(scannerSrc).toMatch(/trades, rosters, lineups, schedules, auctions, standings/);
   });
 
-  it('forbids redirecting personal content into a sports frame', () => {
-    expect(scannerSrc).toMatch(/DO NOT attempt to redirect the personal content/);
-  });
-
   it('explicitly names attributes that must not surface even obliquely', () => {
     // These are the categories we saw in real tips and want NEVER echoed.
     expect(scannerSrc).toMatch(/athletic skill, appearance, profession/);
   });
 
-  it('prescribes the "tempers running hot" hedge as the default', () => {
-    expect(scannerSrc).toMatch(/tempers running hot/i);
+  it('preserves source-side framing (tipsterDivision / author / codename)', () => {
+    // The earlier too-aggressive version told the LLM to default to "tempers
+    // running hot" generic. We explicitly want SOURCE framing (division,
+    // author, codename) to still come through — only the specific attribute
+    // being mocked drops.
+    expect(scannerSrc).toMatch(/source-side framing DOES still apply/);
+    expect(scannerSrc).toMatch(/tipsterCodename/);
+    expect(scannerSrc).toMatch(/tipsterDivision/);
+    expect(scannerSrc).toMatch(/intraDivision/);
+  });
+
+  it('prescribes the "hissy fit" framing as the PREFERRED frame', () => {
+    expect(scannerSrc).toMatch(/PREFERRED: The "hissy fit" framing/);
+    expect(scannerSrc).toMatch(/hissy fit/i);
+    expect(scannerSrc).toMatch(/throwing a fit/i);
+    expect(scannerSrc).toMatch(/throwing elbows/i);
+  });
+
+  it('adds the A=C barometer close with a behavior-driven ladder', () => {
+    expect(scannerSrc).toMatch(/Every accusation is a confession/);
+    expect(scannerSrc).toMatch(/tells us something about the shooter/i);
+    expect(scannerSrc).toMatch(/projection/i);
+    // The barometer metaphor must be explicit so the LLM understands the
+    // dial is behavior-driven, not a blanket rule.
+    expect(scannerSrc).toMatch(/barometer/i);
+    expect(scannerSrc).toMatch(/offTopicCount/);
+  });
+
+  it('scales A=C weight with offTopicCount across tier breakpoints', () => {
+    // The ladder must call out the 1 / 2 / 3 / 4+ breakpoints so the LLM
+    // doesn't flatten them.
+    expect(scannerSrc).toMatch(/offTopicCount === 1/);
+    expect(scannerSrc).toMatch(/offTopicCount === 2/);
+    expect(scannerSrc).toMatch(/offTopicCount === 3/);
+    expect(scannerSrc).toMatch(/offTopicCount >= 4/);
+  });
+
+  it('documents the rolling window so good behavior can improve the dial', () => {
+    // The rolling-window framing is the key design decision — cumulative
+    // counting would punish old behavior forever. The LLM and future devs
+    // need to know the dial naturally decays.
+    expect(scannerSrc).toMatch(/rolling 30-day/i);
+    expect(scannerSrc).toMatch(/age out/i);
+  });
+
+  it('forbids combining A=C with the Style Book bit', () => {
+    expect(scannerSrc).toMatch(/Do NOT combine A=C with the Style Book bit/);
+  });
+
+  it('flags mutual-beef damping as a future signal', () => {
+    // Leaves the door open for V2 response-detection to damp A=C when the
+    // target reciprocates. This comment in the prompt is intentional so
+    // future devs (and reviewers) can find the extension point.
+    expect(scannerSrc).toMatch(/mutual beef/i);
   });
 });
 
@@ -76,21 +124,58 @@ describe('personality.md — hostile-tips expansion', () => {
     expect(src).toMatch(/The meaner the tip, the softer the output/);
   });
 
-  it('includes the "Brandon plays baseball like a girl" translation example', () => {
-    // Real tip observed in TheLeague. This exact row must be in the
-    // translation table so the LLM sees a concrete crude-input → generic-
-    // output pairing.
+  it('includes the "Brandon plays baseball like a girl" translation example with hissy-fit framing', () => {
     expect(src).toMatch(/Brandon plays baseball like a girl/);
-    expect(src).toMatch(/not in a mood to respect the commissioner's office/);
+    // The translation should carry source framing (Southwest / Dead Cap) and
+    // use the hissy-fit / elbows language — NOT the old "tempers running hot"
+    // generic default we walked back.
+    expect(src).toMatch(/hissy fit from an owner in the Southwest/i);
+    expect(src).toMatch(/throwing elbows at the commissioner/i);
   });
 
-  it('has a dedicated off-topic section named after the canonical example', () => {
-    expect(src).toMatch(/Brandon plays baseball like a girl/);
+  it('has a dedicated off-topic section with the hissy-fit frame', () => {
     expect(src).toMatch(/Off-topic personal insults/);
+    // Preferred frame callout
+    expect(src).toMatch(/the tipster is the story/i);
+    // Phrasing kit
+    expect(src).toMatch(/hissy fit/i);
+    expect(src).toMatch(/throwing elbows/i);
   });
 
-  it('forbids naming the specific attribute being mocked', () => {
-    expect(src).toMatch(/Never reference the specific attribute being mocked/);
+  it('documents the "every accusation is a confession" barometer', () => {
+    // Either phrasing — "every accusation is a confession" or
+    // "every accusation's a confession" — must appear in the phrasing kit.
+    expect(src).toMatch(/every accusation('s| is) a confession/i);
+    expect(src).toMatch(/tells us something about the shooter/i);
+    // The "barometer" / "dial" metaphor is what communicates the design
+    // intent — each owner's behavior tunes their own A=C weight.
+    expect(src).toMatch(/barometer/i);
+    expect(src).toMatch(/every owner's (recent )?behavior tunes their own barometer/i);
+  });
+
+  it('shows the offTopicCount → A=C weight ladder in personality.md', () => {
+    expect(src).toMatch(/offTopicCount/);
+    // Verify each breakpoint row of the ladder table is present.
+    expect(src).toMatch(/light or off/i);
+    expect(src).toMatch(/leaning in/i);
+    expect(src).toMatch(/pointed/i);
+    expect(src).toMatch(/power user/i);
+  });
+
+  it('explains that good behavior can improve the barometer via the rolling window', () => {
+    // The rolling-window framing is essential — without it, the dial only
+    // ever goes up and owners can't recover from old mean tips.
+    expect(src).toMatch(/rolling/i);
+    // Must call out 30 days so the window is documented
+    expect(src).toMatch(/30[- ]day/i);
+    // Must say good behavior improves the reading
+    expect(src).toMatch(/good behavior/i);
+  });
+
+  it('preserves the source-side framing fallback list', () => {
+    expect(src).toMatch(/GroupMe author/);
+    expect(src).toMatch(/Web tipster's division/);
+    expect(src).toMatch(/Intra-division signal/);
   });
 
   it('closes the Restraint section with the dispassion point', () => {
@@ -123,13 +208,20 @@ describe('tip.astro — meanness-welcome UX', () => {
     expect(anonymousIdx).toBeGreaterThan(beMeanIdx);
   });
 
-  it('includes the "Brandon plays baseball like a girl" example pair', () => {
+  it('includes the "Brandon plays baseball like a girl" example pair with hissy-fit output', () => {
     expect(src).toMatch(/Brandon plays baseball like a girl/);
-    // And the sanitized output alongside it.
-    expect(src).toMatch(/not in a mood to respect the commissioner's office/);
+    // Source-side framing survives (Southwest) + mood (hissy fit) + the
+    // optional confession twist. None of the original attack content.
+    expect(src).toMatch(/hissy fit from an owner in the Southwest/i);
+    expect(src).toMatch(/tells us something about the shooter/i);
   });
 
   it('includes a crude owner-on-owner example pair', () => {
     expect(src).toMatch(/Crude owner-on-owner shot/);
+  });
+
+  it('"Be mean" rule explains the hissy-fit framing and confession angle', () => {
+    expect(src).toMatch(/hissy fit/i);
+    expect(src).toMatch(/every accusation's a confession/i);
   });
 });
