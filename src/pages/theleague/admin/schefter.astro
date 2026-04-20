@@ -38,11 +38,20 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </div>
     </header>
 
-    <section id="ops-env" class="ops-env" aria-label="Environment configuration">
-      <h2 class="ops-env__title">Environment</h2>
-      <ul class="ops-env__list" id="ops-env-list">
-        <li>Loading…</li>
-      </ul>
+    <section class="ops-env" aria-label="Vercel runtime environment">
+      <h2 class="ops-env__title">Vercel runtime env</h2>
+      <p class="ops-env__hint">Used by Astro API routes, the tip form, and Redis reads.</p>
+      <ul class="ops-env__list" id="ops-vercel-env-list"><li>Loading…</li></ul>
+    </section>
+
+    <section class="ops-env" aria-label="GitHub Actions environment">
+      <h2 class="ops-env__title">GitHub Actions env <span id="ops-gh-repo" class="ops-env__repo"></span></h2>
+      <p class="ops-env__hint">
+        Used by the scanners running on a cron. Probed via the GitHub REST API —
+        needs a fine-grained PAT on Vercel as <code>GITHUB_ADMIN_TOKEN</code>
+        with <em>Actions:Read + Variables:Read + Secrets:Read</em>.
+      </p>
+      <div id="ops-github-body"><p class="ops-env__hint">Loading…</p></div>
     </section>
 
     <section class="ops-grid" aria-label="Dashboard stats">
@@ -207,26 +216,94 @@ if (!user || !isCommissionerOrAdmin(user)) {
       el.textContent = v === null || v === undefined ? '—' : String(v);
     });
 
-    const env = data.env || {};
-    const envEl = document.getElementById('ops-env-list');
-    if (envEl) {
+    const pill = (state: 'ok' | 'bad' | 'warn', label: string) =>
+      `<span class="ops-pill ops-pill--${state}">${label}</span>`;
+
+    const vercel = data.vercelEnv || {};
+    const vercelEl = document.getElementById('ops-vercel-env-list');
+    if (vercelEl) {
       const labels: Array<[string, string]> = [
-        ['rumorMillEnabled', 'SCHEFTER_RUMOR_MILL_ENABLED'],
-        ['groupmeBotConfigured', 'GROUPME_SCHEFTER_BOT_ID'],
+        ['upstashConfigured', 'UPSTASH_REDIS_REST_URL + TOKEN'],
         ['groupmeTokenConfigured', 'GROUPME_SERVICE_TOKEN'],
         ['anthropicKeyConfigured', 'ANTHROPIC_API_KEY'],
         ['tipsterSaltConfigured', 'SCHEFTER_TIPSTER_SALT'],
       ];
-      envEl.innerHTML = labels
-        .map(([k, name]) => {
-          const ok = !!env[k];
-          return `<li class="ops-env__item"><span class="ops-pill ops-pill--${ok ? 'ok' : 'bad'}">${ok ? 'SET' : 'missing'}</span> <code>${name}</code></li>`;
-        })
-        .join('');
-      const redisState = data.redisAvailable
-        ? '<li class="ops-env__item"><span class="ops-pill ops-pill--ok">LIVE</span> Upstash Redis</li>'
-        : '<li class="ops-env__item"><span class="ops-pill ops-pill--bad">offline</span> Upstash Redis — live counters unavailable</li>';
-      envEl.insertAdjacentHTML('beforeend', redisState);
+      const items = labels.map(([k, name]) => {
+        const ok = !!vercel[k];
+        return `<li class="ops-env__item">${pill(ok ? 'ok' : 'bad', ok ? 'SET' : 'missing')} <code>${name}</code></li>`;
+      });
+      items.push(
+        data.redisAvailable
+          ? `<li class="ops-env__item">${pill('ok', 'LIVE')} Upstash Redis</li>`
+          : `<li class="ops-env__item">${pill('bad', 'offline')} Upstash Redis — live counters unavailable</li>`,
+      );
+      vercelEl.innerHTML = items.join('');
+    }
+
+    const gh = data.github || {};
+    const ghRepoEl = document.getElementById('ops-gh-repo');
+    if (ghRepoEl) ghRepoEl.textContent = gh.repo ? ` · ${gh.repo}` : '';
+    const ghBody = document.getElementById('ops-github-body');
+    if (ghBody) {
+      if (!gh.tokenConfigured) {
+        ghBody.innerHTML =
+          `<p class="ops-env__hint">${pill('warn', 'no PAT')} ${gh.hint || 'GitHub token not configured on Vercel — GitHub validation disabled.'}</p>`;
+      } else {
+        const variables = gh.variables || {};
+        const secrets = gh.secrets || {};
+        const workflows = Array.isArray(gh.workflows) ? gh.workflows : [];
+
+        const varRows = Object.entries(variables)
+          .map(([name, info]: [string, any]) => {
+            if (info?.error) return `<li class="ops-env__item">${pill('warn', 'err')} <code>${name}</code> <span class="ops-env__note">${info.error}</span></li>`;
+            if (info?.exists) {
+              const preview = info.preview ? ` <span class="ops-env__note">= ${info.preview}</span>` : '';
+              return `<li class="ops-env__item">${pill('ok', 'SET')} <code>${name}</code>${preview}</li>`;
+            }
+            return `<li class="ops-env__item">${pill('bad', 'missing')} <code>${name}</code></li>`;
+          })
+          .join('');
+
+        const secRows = Object.entries(secrets)
+          .map(([name, info]: [string, any]) => {
+            if (info?.error) return `<li class="ops-env__item">${pill('warn', 'err')} <code>${name}</code> <span class="ops-env__note">${info.error}</span></li>`;
+            if (info?.exists) return `<li class="ops-env__item">${pill('ok', 'SET')} <code>${name}</code></li>`;
+            return `<li class="ops-env__item">${pill('bad', 'missing')} <code>${name}</code></li>`;
+          })
+          .join('');
+
+        const wfRows = workflows
+          .map((wf: any) => {
+            const r = wf.run || {};
+            if (r.error) return `<tr><td>${wf.label}</td><td colspan="3">${pill('warn', 'err')} ${r.error}</td></tr>`;
+            if (!r.found) return `<tr><td>${wf.label}</td><td colspan="3">${pill('warn', 'no runs')} — workflow never run</td></tr>`;
+            const concl = String(r.conclusion || r.status || 'unknown');
+            const conclState = concl === 'success' ? 'ok' : concl === 'in_progress' || concl === 'queued' ? 'warn' : 'bad';
+            const ts = r.runStartedAt || r.createdAt;
+            const when = ts ? `${new Date(ts).toLocaleString()} (${fmtRel(Date.parse(ts))})` : '—';
+            const link = r.htmlUrl ? `<a href="${r.htmlUrl}" target="_blank" rel="noopener">view →</a>` : '';
+            return `<tr><td>${wf.label}</td><td>${pill(conclState, concl)}</td><td>${when}</td><td>${link}</td></tr>`;
+          })
+          .join('');
+
+        ghBody.innerHTML = `
+          <div class="ops-env__cols">
+            <div>
+              <h3 class="ops-env__subtitle">Variables</h3>
+              <ul class="ops-env__list">${varRows || '<li>—</li>'}</ul>
+            </div>
+            <div>
+              <h3 class="ops-env__subtitle">Secrets <span class="ops-env__note">(existence only — values never exposed)</span></h3>
+              <ul class="ops-env__list">${secRows || '<li>—</li>'}</ul>
+            </div>
+          </div>
+          <h3 class="ops-env__subtitle">Latest workflow runs</h3>
+          <table class="ops-table">
+            <thead><tr><th>Workflow</th><th>Status</th><th>Ran</th><th></th></tr></thead>
+            <tbody>${wfRows || '<tr><td colspan="4">No workflows found.</td></tr>'}</tbody>
+          </table>
+        `;
+      }
     }
 
     const authors = data.feed?.byAuthor || {};
@@ -289,17 +366,25 @@ if (!user || !isCommissionerOrAdmin(user)) {
 
   .ops-env {
     background: var(--color-surface, #f8fafc); border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1.25rem;
+    border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem;
   }
-  .ops-env__title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 0.5rem; color: var(--color-text-muted, #64748b); }
-  .ops-env__list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; font-size: 0.85rem; }
+  .ops-env__title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 0.25rem; color: var(--color-text-muted, #64748b); }
+  .ops-env__repo { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 0.75rem; }
+  .ops-env__subtitle { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted, #64748b); margin: 0.9rem 0 0.4rem; }
+  .ops-env__hint { font-size: 0.78rem; color: var(--color-text-muted, #64748b); margin: 0 0 0.6rem; }
+  .ops-env__hint code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+  .ops-env__note { font-size: 0.7rem; color: var(--color-text-muted, #64748b); }
+  .ops-env__list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.85rem; }
   .ops-env__item { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .ops-env__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 720px) { .ops-env__cols { grid-template-columns: 1fr; } }
   .ops-pill {
     display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     padding: 0.15rem 0.45rem; border-radius: 999px; letter-spacing: 0.03em;
   }
   .ops-pill--ok { background: #dcfce7; color: #166534; }
   .ops-pill--bad { background: #fee2e2; color: #991b1b; }
+  .ops-pill--warn { background: #fef3c7; color: #92400e; }
 
   .ops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
   .ops-card {

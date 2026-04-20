@@ -222,6 +222,158 @@ async function readRedisStats(redis: RedisClient) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// GitHub Actions validation
+// ---------------------------------------------------------------------------
+// The rumor-mill scanners run in GitHub Actions, not Vercel. To confirm their
+// env is wired up we hit the GitHub REST API with a fine-grained PAT scoped to
+// Actions:Read + Variables:Read + Secrets:Read on this repo only. Token name
+// falls back across the common conventions so either a dedicated admin token
+// or a shared GH_TOKEN works.
+
+const GH_REPO = 'braven112/mfl.football.v2';
+const GH_VARIABLES_TO_CHECK = [
+  'SCHEFTER_RUMOR_MILL_ENABLED',
+  'SCHEFTER_TRADE_OFFER_RUMORS_ENABLED',
+  'SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY',
+];
+const GH_SECRETS_TO_CHECK = [
+  'GROUPME_SCHEFTER_BOT_ID',
+  'ANTHROPIC_API_KEY',
+  'SCHEFTER_TIPSTER_SALT',
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'DEPLOY_KEY',
+];
+const GH_WORKFLOWS_TO_CHECK: Array<{ file: string; label: string }> = [
+  { file: 'schefter-rumor-scan.yml', label: 'Rumor Mill Scanner' },
+  { file: 'schefter-scan.yml', label: 'Transaction Scanner' },
+];
+
+function getGitHubToken(): string | null {
+  return (
+    process.env.GITHUB_ADMIN_TOKEN ||
+    process.env.GH_ADMIN_TOKEN ||
+    process.env.GH_TOKEN ||
+    process.env.GITHUB_TOKEN ||
+    null
+  );
+}
+
+async function ghFetch(path: string, token: string): Promise<{ status: number; body: any }> {
+  const res = await fetch(`https://api.github.com${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'mfl-admin-dashboard',
+    },
+  });
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    /* empty body is fine for 404 */
+  }
+  return { status: res.status, body };
+}
+
+async function checkVariable(name: string, token: string) {
+  try {
+    const { status, body } = await ghFetch(
+      `/repos/${GH_REPO}/actions/variables/${encodeURIComponent(name)}`,
+      token,
+    );
+    if (status === 200) {
+      // Value is returned in plaintext for variables (unlike secrets). Mask
+      // anything longer than a single token so we don't leak IDs — surface just
+      // the first char + length, enough to tell it's not empty.
+      const value = typeof body?.value === 'string' ? body.value : '';
+      return {
+        exists: true,
+        preview: value.length <= 8 ? value : `${value.slice(0, 2)}… (${value.length} chars)`,
+      };
+    }
+    if (status === 404) return { exists: false };
+    return { error: `HTTP ${status}` };
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+}
+
+async function checkSecret(name: string, token: string) {
+  try {
+    const { status } = await ghFetch(
+      `/repos/${GH_REPO}/actions/secrets/${encodeURIComponent(name)}`,
+      token,
+    );
+    if (status === 200) return { exists: true };
+    if (status === 404) return { exists: false };
+    if (status === 403) return { error: 'token lacks secrets:read scope' };
+    return { error: `HTTP ${status}` };
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+}
+
+async function checkWorkflow(file: string, token: string) {
+  try {
+    const { status, body } = await ghFetch(
+      `/repos/${GH_REPO}/actions/workflows/${encodeURIComponent(file)}/runs?per_page=1`,
+      token,
+    );
+    if (status !== 200) return { error: `HTTP ${status}` };
+    const run = body?.workflow_runs?.[0];
+    if (!run) return { found: false };
+    return {
+      found: true,
+      runId: run.id,
+      conclusion: run.conclusion,
+      status: run.status,
+      createdAt: run.created_at,
+      runStartedAt: run.run_started_at,
+      htmlUrl: run.html_url,
+      event: run.event,
+    };
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+}
+
+async function readGitHubStats() {
+  const token = getGitHubToken();
+  if (!token) {
+    return {
+      tokenConfigured: false,
+      hint:
+        'Set a fine-grained PAT on Vercel as GITHUB_ADMIN_TOKEN with permissions Actions:Read + Variables:Read + Secrets:Read scoped to this repo.',
+    };
+  }
+
+  const [variables, secrets, workflows] = await Promise.all([
+    Promise.all(
+      GH_VARIABLES_TO_CHECK.map(async (name) => [name, await checkVariable(name, token)] as const),
+    ),
+    Promise.all(
+      GH_SECRETS_TO_CHECK.map(async (name) => [name, await checkSecret(name, token)] as const),
+    ),
+    Promise.all(
+      GH_WORKFLOWS_TO_CHECK.map(async (wf) => ({
+        ...wf,
+        run: await checkWorkflow(wf.file, token),
+      })),
+    ),
+  ]);
+
+  return {
+    tokenConfigured: true,
+    repo: GH_REPO,
+    variables: Object.fromEntries(variables),
+    secrets: Object.fromEntries(secrets),
+    workflows,
+  };
+}
+
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
@@ -238,19 +390,26 @@ export const GET: APIRoute = async ({ request }) => {
       })
     : null;
 
-  const envFlags = {
-    rumorMillEnabled: !!process.env.SCHEFTER_RUMOR_MILL_ENABLED,
-    groupmeBotConfigured: !!process.env.GROUPME_SCHEFTER_BOT_ID,
+  const vercelEnv = {
     groupmeTokenConfigured: !!process.env.GROUPME_SERVICE_TOKEN,
     anthropicKeyConfigured: !!process.env.ANTHROPIC_API_KEY,
     tipsterSaltConfigured: !!process.env.SCHEFTER_TIPSTER_SALT,
+    upstashConfigured:
+      !!(process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+      !!(process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN),
   };
+
+  const github = await readGitHubStats().catch((err) => {
+    console.error('[admin/schefter-stats] GitHub read error:', err);
+    return { tokenConfigured: false, error: (err as Error).message };
+  });
 
   return json({
     generatedAt: Date.now(),
     redis: redisStats,
     redisAvailable: !!redis,
     feed: feedStats,
-    env: envFlags,
+    vercelEnv,
+    github,
   });
 };
