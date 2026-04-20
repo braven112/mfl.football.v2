@@ -123,7 +123,9 @@ const QUIET_HOUR_END = 7;    // 7am PT
 // Public URL of the tip page — appended to every GroupMe rumor post so
 // owners always have a one-tap path to whisper back with intel. The feed
 // card renders the same destination via post.link / post.linkLabel.
-const TIP_PAGE_PATH = '/theleague/schefter/tip';
+// On theleague.us, vercel.json 301s /theleague/:path* → /:path*, so the
+// canonical path is /schefter/tip.
+const TIP_PAGE_PATH = '/schefter/tip';
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
 const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
 const TIP_PAGE_ABSOLUTE_URL = `${PUBLIC_BASE_URL}${TIP_PAGE_PATH}`;

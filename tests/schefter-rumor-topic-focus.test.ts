@@ -120,8 +120,8 @@ describe('rumor-scan LLM prompt — one topic only', () => {
 describe('rumor-scan tip-page link — every post sends readers back to /tip', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('defines the tip page path constant', () => {
-    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*['"]\/theleague\/schefter\/tip['"]/);
+  it('defines the tip page path constant (canonical /schefter/tip on theleague.us)', () => {
+    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*['"]\/schefter\/tip['"]/);
   });
 
   it('defines a user-facing CTA label', () => {
