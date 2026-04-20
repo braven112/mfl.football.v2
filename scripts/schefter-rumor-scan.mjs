@@ -68,8 +68,24 @@ const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
 const ROGER_LAST_RIFF_DATE_KEY = 'schefter:ask_roger:last_riff_date';
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
+// Legacy key (pre-cumulative-probability model). Still read for dedup against
+// offers that were already "burned" under the old one-shot dice-roll system so
+// we don't suddenly re-surface trades that previously failed the roll.
 const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
 const OFFER_SEEN_TTL_SEC = 30 * 24 * 60 * 60;        // 30d
+
+// Cumulative-probability model (p=0.0075/run, 99% by ~day 6.4). Each live
+// offer gets:
+//   - an entry in `first_seen` HASH (offerId → epoch ms of first sighting)
+//     used to compute age → framingHint ('fresh' <48h, 'lingering' ≥48h)
+//   - zero or one SADD into `posted` SET the first time its dice roll passes
+// An offer is retried every run until it posts OR disappears from MFL.
+const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
+const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
+const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on both first_seen HASH and posted SET
+
+const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;   // 48h → framing flip
+
 const OFFER_OWNER_KEY_PREFIX = 'schefter:trade_offers:owner:';
 const OFFER_DIV_KEY_PREFIX = 'schefter:trade_offers:div:';
 const PLAYER_OFFER_HISTORY_PREFIX = 'schefter:player_offer_history:';
@@ -329,6 +345,10 @@ function anonymizeTips(tips, teams, feedPosts = []) {
       safe.pickTokens = tip.pickTokens;
       if (tip.divisionHint) safe.divisionHint = tip.divisionHint;
       if (tip.escalatedPlayer) safe.escalatedPlayer = tip.escalatedPlayer;
+      // Age-based framing — 'lingering' means the offer has been open ≥48h
+      // and nobody has answered; the LLM should swap to a "phones aren't
+      // picking up" frame instead of fresh-rumor energy.
+      safe.framingHint = tip.framingHint ?? 'fresh';
       // Scrub text/author fields that don't apply
       delete safe.text;
       delete safe.author;
@@ -436,14 +456,21 @@ function templateBody(anonymized) {
     }
     if (one.source === 'trade_offer') {
       // Ultra-vague template fallback when AI is unavailable
+      const lingering = one.framingHint === 'lingering';
       if (one.escalatedPlayer?.tier === 'named') {
-        return `I'm told ${one.escalatedPlayer.name}'s name keeps coming up. Still just smoke. Developing.`;
+        return lingering
+          ? `I'm told ${one.escalatedPlayer.name}'s name has been floated for days now. Phones on the other end aren't picking up. Developing.`
+          : `I'm told ${one.escalatedPlayer.name}'s name keeps coming up. Still just smoke. Developing.`;
       }
       if (one.volumeHint === 'serial') {
-        return `Somebody's running up the league's Verizon bill. Multiple offers this week, no deal closed. Developing.`;
+        return lingering
+          ? `Somebody's been running up the league's Verizon bill for days. Still no answer on the other line. Developing.`
+          : `Somebody's running up the league's Verizon bill. Multiple offers this week, no deal closed. Developing.`;
       }
       const posPhrase = one.positionTokens?.length ? `a ${one.positionTokens[0].toLowerCase()}` : 'assets';
-      return `Hearing someone's dangling ${posPhrase} around. Early-week window-shopping or serious business? Developing.`;
+      return lingering
+        ? `Been hearing someone's dangling ${posPhrase} for a while now. Phones on the other end not picking up. Developing.`
+        : `Hearing someone's dangling ${posPhrase} around. Early-week window-shopping or serious business? Developing.`;
     }
     if (one.scope?.kind === 'division') {
       return `Hearing the ${one.scope.division} division is buzzing about something. Developing.`;
@@ -504,6 +531,15 @@ Volume-hint phrasing:
   repeat_offer → "back at it again", "keeping the phones warm", "making another run"
   serial       → "running up the league's Verizon bill", "the league's most active GM this week"
 
+Framing-hint phrasing (HARD — framingHint is authoritative, do not infer from volume alone):
+  fresh     → rumor-mill energy, phones are ringing, something might be cooking. Use the volume-hint language above as normal.
+  lingering → the offer has been open for 48+ hours and the counter-party isn't biting. Pivot the voice to "offered but phones aren't picking up". Examples of the switch:
+              "Been hearing the same name for days now. No answer on the other line."
+              "Offer's been sitting on the table since the weekend. Phones aren't lighting up."
+              "Still shopping the same guy. The rest of the league is letting it age."
+              "One owner's made his pitch. Nobody's returning the call."
+              Do NOT claim the deal is dead, cancelled, or rescinded. The offer still exists — it's the silence on the other end that's the story.
+
 Claude humor layer (dial down, season lightly):
   ${includeBotWink ? 'INCLUDE a single dry self-aware bot wink this post — one clause is enough. Examples: "I see all the phones. Don\'t ask how.", "My sources have sources.", "The bot sees what the bot sees." Do NOT explain the joke.' : 'NO bot wink this post. Straight columnist voice.'}
 
@@ -520,6 +556,12 @@ Example C — tightened_circle (escalatedPlayer.tier=tightened_circle, position=
 
 Example D — named tier (escalatedPlayer.tier=named, name="Some Player", position=WR):
   "I'm told Some Player's name keeps coming up on trade calls. Still just smoke. Nothing imminent. But the phones are ringing. Developing."
+
+Example E — lingering base (framingHint=lingering, volumeHint=first_offer, positionTokens=["RB"], pickTokens=[]):
+  "Somebody's been shopping a back around since the weekend. Phones on the other end aren't picking up. Developing."
+
+Example F — lingering named (framingHint=lingering, escalatedPlayer.tier=named, name="Some Player"):
+  "I'm told Some Player's name has been floated for days. Still just smoke — and the rest of the league is letting it age. We'll see."
 `;
 }
 
@@ -841,34 +883,65 @@ async function scanTradeOffers({ redis, dryRun }) {
   const playerWindowStart = nowMs - PLAYER_HISTORY_WINDOW_MS;
 
   for (const [offerId, { raw, offeringFid }] of offerMap) {
-    // Skip already-seen
-    let alreadySeen = false;
+    // Hard skip: already announced by a prior run. `posted` is an absorbing
+    // state — once we tip it, we never re-tip it.
+    let alreadyPosted = false;
     try {
-      alreadySeen = (await redis.sismember(OFFER_SEEN_KEY, offerId)) === 1;
+      alreadyPosted = (await redis.sismember(OFFER_POSTED_KEY, offerId)) === 1;
     } catch (err) {
-      warn(`  [offer-scan] sismember failed for ${offerId}: ${err.message}`);
+      warn(`  [offer-scan] sismember(posted) failed for ${offerId}: ${err.message}`);
     }
-    if (alreadySeen) {
-      debugLog.push({ offerId, offeringFid, skipped: 'already-seen' });
+    if (alreadyPosted) {
+      debugLog.push({ offerId, offeringFid, skipped: 'already-posted' });
       continue;
     }
 
-    // Mark seen + refresh TTL
-    if (!dryRun) {
+    // Legacy guard: offers marked by the old one-shot model stay burned so we
+    // don't accidentally re-announce trades that previously failed the dice roll.
+    let legacyBurned = false;
+    try {
+      legacyBurned = (await redis.sismember(OFFER_SEEN_KEY, offerId)) === 1;
+    } catch (err) {
+      warn(`  [offer-scan] sismember(seen-legacy) failed for ${offerId}: ${err.message}`);
+    }
+    if (legacyBurned) {
+      debugLog.push({ offerId, offeringFid, skipped: 'legacy-seen' });
+      continue;
+    }
+
+    // First-seen anchor: the timestamp we use to derive framing + track age.
+    // New offer → set now; returning offer → read what we stored on its debut.
+    let firstSeenMs;
+    try {
+      const stored = await redis.hget(OFFER_FIRST_SEEN_KEY, offerId);
+      firstSeenMs = stored ? Number(stored) : NaN;
+      if (!Number.isFinite(firstSeenMs) || firstSeenMs <= 0) firstSeenMs = nowMs;
+    } catch (err) {
+      warn(`  [offer-scan] hget(first_seen) failed for ${offerId}: ${err.message}`);
+      firstSeenMs = nowMs;
+    }
+    const isFirstSighting = firstSeenMs === nowMs;
+    const offerAgeMs = Math.max(0, nowMs - firstSeenMs);
+    const framingHint = offerAgeMs >= OFFER_LINGERING_THRESHOLD_MS ? 'lingering' : 'fresh';
+
+    // Persist the anchor on first sighting only (HSET overwrite would be fine
+    // but this keeps semantics obvious).
+    if (!dryRun && isFirstSighting) {
       try {
-        await redis.sadd(OFFER_SEEN_KEY, offerId);
-        await redis.expire(OFFER_SEEN_KEY, OFFER_SEEN_TTL_SEC);
+        await redis.hset(OFFER_FIRST_SEEN_KEY, { [offerId]: nowMs });
+        await redis.expire(OFFER_FIRST_SEEN_KEY, OFFER_STATE_TTL_SEC);
       } catch (err) {
-        warn(`  [offer-scan] sadd failed: ${err.message}`);
+        warn(`  [offer-scan] hset(first_seen) failed: ${err.message}`);
       }
     }
 
-    // Sorted-set bookkeeping: owner + division + per-player
+    // Sorted-set bookkeeping: owner + division + per-player.
+    // Only add on FIRST sighting — the offer is one event, not 96/day of them.
     const ownerKey = OFFER_OWNER_KEY_PREFIX + offeringFid;
     const division = teams.get(offeringFid)?.division;
     const divKey = division ? OFFER_DIV_KEY_PREFIX + division : null;
 
-    if (!dryRun) {
+    if (!dryRun && isFirstSighting) {
       try {
         await redis.zadd(ownerKey, { score: nowMs, member: offerId });
         await redis.zremrangebyscore(ownerKey, 0, windowStart);
@@ -892,7 +965,9 @@ async function scanTradeOffers({ redis, dryRun }) {
     const playerHistory = new Map(); // playerId -> distinct offerer count last 21d
     for (const pid of playerIds) {
       const pKey = PLAYER_OFFER_HISTORY_PREFIX + pid;
-      if (!dryRun) {
+      // Add the offer to the player history only on first sighting so a single
+      // lingering trade doesn't masquerade as 96 separate offerers.
+      if (!dryRun && isFirstSighting) {
         try {
           await redis.zadd(pKey, { score: nowMs, member: `${offeringFid}:${offerId}` });
           await redis.zremrangebyscore(pKey, 0, playerWindowStart);
@@ -946,6 +1021,8 @@ async function scanTradeOffers({ redis, dryRun }) {
       teamMap: teams,
       counts: { ownerOfferCount7d, divisionOfferCount7d, playerHistory },
       currentYear: year,
+      framingHint,
+      offerAgeMs,
     });
 
     if (redaction.skip) {
@@ -953,16 +1030,21 @@ async function scanTradeOffers({ redis, dryRun }) {
       continue;
     }
 
-    // Dice roll
-    const probability = offerPostProbability(ownerOfferCount7d);
+    // Dice roll — flat p=0.0075 per run, independent of owner volume and age.
+    // Cumulative curve (1 - (1-p)^n) puts most passes in the 1–7 day window.
+    const probability = offerPostProbability();
     const roll = Math.random();
     const passed = roll < probability;
 
+    const ageHours = offerAgeMs / (60 * 60 * 1000);
     const entry = {
       offerId,
       offeringFid,
       ownerOfferCount7d,
       divisionOfferCount7d,
+      framingHint,
+      offerAgeHours: Number(ageHours.toFixed(2)),
+      isFirstSighting,
       probability,
       roll: Number(roll.toFixed(3)),
       passed,
@@ -973,6 +1055,7 @@ async function scanTradeOffers({ redis, dryRun }) {
 
     log(
       `  [offer-scan] offerId=${offerId} fid=${offeringFid} ` +
+        `age=${ageHours.toFixed(1)}h frame=${framingHint} ` +
         `owner7d=${ownerOfferCount7d} div7d=${divisionOfferCount7d} ` +
         `p=${probability} roll=${roll.toFixed(3)} → ${passed ? 'PASS' : 'fail'}` +
         (redaction.tip.escalatedPlayer
@@ -982,10 +1065,21 @@ async function scanTradeOffers({ redis, dryRun }) {
 
     if (!passed) continue;
 
-    // Detection-only: don't queue, just log
+    // Detection-only: don't queue, and DON'T record as posted — we want to
+    // keep observing the cumulative probability curve in detection runs.
     if (detectionOnly && !enabled) {
       log(`  [offer-scan] detection-only: would have queued tip ${redaction.tip.id}`);
       continue;
+    }
+
+    // Absorbing state: mark offer posted so future runs skip it.
+    if (!dryRun) {
+      try {
+        await redis.sadd(OFFER_POSTED_KEY, offerId);
+        await redis.expire(OFFER_POSTED_KEY, OFFER_STATE_TTL_SEC);
+      } catch (err) {
+        warn(`  [offer-scan] sadd(posted) failed: ${err.message}`);
+      }
     }
 
     tips.push(redaction.tip);
@@ -1122,7 +1216,9 @@ async function main() {
     } else if (DRY_RUN && offerScan.tips.length > 0) {
       log(`  [dry-run] Would enqueue ${offerScan.tips.length} trade-offer tip(s):`);
       for (const tip of offerScan.tips) {
-        log(`    + ${tip.id} vol=${tip.volumeHint} pos=[${tip.positionTokens.join(',')}] ` +
+        log(`    + ${tip.id} vol=${tip.volumeHint} frame=${tip.framingHint ?? 'fresh'} ` +
+          `age=${((tip.offerAgeMs ?? 0) / 3600000).toFixed(1)}h ` +
+          `pos=[${tip.positionTokens.join(',')}] ` +
           `picks=[${tip.pickTokens.join(',')}] div=${tip.divisionHint ?? '-'} ` +
           `esc=${tip.escalatedPlayer?.tier ?? 'base'}`);
       }
