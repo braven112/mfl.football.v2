@@ -51,7 +51,9 @@ describe('rumor-scan bucketing — one topic per post', () => {
   });
 
   it('defines a pickPrimaryBucket helper that honors the gossip budget', () => {
-    expect(src).toMatch(/function\s+pickPrimaryBucket\(\s*buckets\s*,\s*\{\s*gossipAllowedToday\s*\}/);
+    // Signature takes the buckets array plus an options object carrying
+    // the day's gossip-allowed flag (and now the cycle clock for age boost).
+    expect(src).toMatch(/function\s+pickPrimaryBucket\(\s*buckets\s*,\s*\{\s*gossipAllowedToday[^}]*\}/);
   });
 
   it('prefers trade-offer tips over topic="trade" web tips on a tie (structured beats speculative)', () => {
@@ -75,9 +77,10 @@ describe('rumor-scan bucketing — one topic per post', () => {
   it('batches tips FROM THE CHOSEN BUCKET ONLY (not the full freshTips list)', () => {
     // The old code did `const batch = freshTips.slice(0, MAX_TIPS_PER_BATCH)`
     // which blended every unrelated topic into one post. We now take the
-    // bucket's tips.
+    // bucket's tips. (The assignment may be a later `let`-based reassignment
+    // because the mailbag path rebinds `batch` without `const`.)
     expect(src).not.toMatch(/const\s+batch\s*=\s*freshTips\.slice/);
-    expect(src).toMatch(/const\s+batch\s*=\s*primaryBucket\.tips\.slice/);
+    expect(src).toMatch(/batch\s*=\s*primaryBucket\.tips\.slice/);
   });
 
   it('holds unused tips in Redis for the next cycle instead of DELing them', () => {
@@ -95,18 +98,18 @@ describe('rumor-scan bucketing — one topic per post', () => {
   });
 });
 
-describe('rumor-scan LLM prompt — one topic only', () => {
+describe('rumor-scan LLM prompt — one topic per beat', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('tells the LLM to stay on ONE TOPIC and refuses "meanwhile…" pivots', () => {
-    expect(src).toMatch(/ONE TOPIC ONLY/);
+  it('tells the LLM to stay on ONE TOPIC per beat and refuses "meanwhile…" pivots', () => {
+    expect(src).toMatch(/ONE TOPIC per beat/);
     expect(src).toMatch(/No "meanwhile/);
   });
 
-  it('caps post length at 1–2 sentences (down from 2–4)', () => {
-    // The HARD RULE 8 line is the authoritative cap; the trade-offer
-    // playbook must defer to it as well.
-    expect(src).toMatch(/Length:\s*1[–-]2 sentences/);
+  it('caps post length at 1–2 sentences per beat', () => {
+    // HARD RULE 8 is the authoritative cap; the trade-offer playbook
+    // must defer to it as well.
+    expect(src).toMatch(/Length:\s*1[–-]2 sentences per beat/);
     expect(src).toMatch(/1[–-]2 sentences TOTAL/);
   });
 
@@ -146,3 +149,171 @@ describe('rumor-scan tip-page link — every post sends readers back to /tip', (
     expect(src).not.toMatch(/await\s+postToGroupMe\(post\.body\)/);
   });
 });
+
+describe('rumor-scan queue TTL — tips survive a full week', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('keeps tips alive for 7 days so the queue can ride a slow news cycle', () => {
+    expect(src).toMatch(/const\s+TIP_EXPIRY_MS\s*=\s*7\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
+  });
+
+  it('defines a 3-day staleness threshold for age-aware voice', () => {
+    expect(src).toMatch(/const\s+TIP_STALE_THRESHOLD_MS\s*=\s*3\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
+  });
+});
+
+describe('rumor-scan age metadata — tips carry ageDays + isStale to the LLM', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('surfaces ageDays on every anonymized tip', () => {
+    expect(src).toMatch(/ageDays,/);
+  });
+
+  it('surfaces an isStale flag for tips ≥ 3 days old', () => {
+    expect(src).toMatch(/isStale:\s*ageMs\s*>=\s*TIP_STALE_THRESHOLD_MS/);
+  });
+
+  it('passes now into anonymizeTips so age is computed against the cycle clock', () => {
+    expect(src).toMatch(/anonymizeTips\(batch,\s*teams,\s*feedForAnonymize\.posts[^,]*,\s*now\)/);
+  });
+});
+
+describe('rumor-scan LLM — age-aware framing rule', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('requires age-reference or hedge phrasing on stale tips (HARD RULE 17)', () => {
+    expect(src).toMatch(/17\.\s*AGE-AWARE FRAMING/);
+    expect(src).toMatch(/NEVER claim a stale tip is fresh/);
+    expect(src).toMatch(/still hearing about/);
+  });
+
+  it('forbids inventing specific calendar labels (only relative phrasing allowed)', () => {
+    expect(src).toMatch(/Never invent a specific date the tip doesn't have/);
+  });
+});
+
+describe('rumor-scan bucket priority — age boost so old tips rise', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('exposes a bucketPriorityScore helper that adds a per-day age boost', () => {
+    expect(src).toMatch(/function\s+bucketPriorityScore\(/);
+    expect(src).toMatch(/oldestAgeDays/);
+    expect(src).toMatch(/return\s+sizeScore\s*\+\s*oldestAgeDays/);
+  });
+
+  it('sorts both trade and gossip buckets by bucketPriorityScore (descending)', () => {
+    const pickFn = src.match(/function\s+pickPrimaryBucket[\s\S]+?\n\}\n/);
+    expect(pickFn).not.toBeNull();
+    const body = pickFn![0];
+    // Used in both the trade-branch and the gossip-branch sort comparators.
+    const scoreCalls = body.match(/bucketPriorityScore\(/g) ?? [];
+    expect(scoreCalls.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('rumor-scan two-beat gossip — second bucket rides along', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('pickPrimaryBucket returns {primary, secondary} so gossip posts can carry two beats', () => {
+    const pickFn = src.match(/function\s+pickPrimaryBucket[\s\S]+?\n\}\n/);
+    expect(pickFn).not.toBeNull();
+    expect(pickFn![0]).toMatch(/return\s*\{\s*primary:[^,]+,\s*secondary/);
+  });
+
+  it('trade-rumor posts never carry a secondary beat (stays strictly one-topic)', () => {
+    const pickFn = src.match(/function\s+pickPrimaryBucket[\s\S]+?\n\}\n/);
+    expect(pickFn).not.toBeNull();
+    // Trade-branch returns secondary: null explicitly.
+    expect(pickFn![0]).toMatch(/primary:\s*tradeBuckets\[0\],\s*secondary:\s*null/);
+  });
+
+  it('main flow only stitches a secondary into gossip posts (never trade)', () => {
+    expect(src).toMatch(/if\s*\(postKind\s*===\s*['"]gossip['"]\s*&&\s*secondaryBucket\)/);
+  });
+
+  it('HARD RULE 18 enforces two short beats with line-break separator', () => {
+    expect(src).toMatch(/18\.\s*TWO-BEAT GOSSIP POSTS/);
+    expect(src).toMatch(/Separate the beats with a line break/);
+  });
+
+  it('passes secondary tips to the LLM via the two-beat user prompt', () => {
+    expect(src).toMatch(/mode:\s*aiMode/);
+    expect(src).toMatch(/secondaryAnonymized/);
+    expect(src).toMatch(/PRIMARY_TIPS/);
+    expect(src).toMatch(/SECONDARY_TIPS/);
+  });
+
+  it('counts a two-beat gossip post as ONE post against the daily caps', () => {
+    // newCount increments once per cycle; the gossip counter also only
+    // increments once when postKind === 'gossip'. No per-beat doubling.
+    const incrCount = (src.match(/redis\.incr\(RUMOR_POSTS_TODAY_KEY\)/g) ?? []).length;
+    expect(incrCount).toBe(1);
+    const gossipIncr = (src.match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g) ?? []).length;
+    expect(gossipIncr).toBe(1);
+  });
+});
+
+describe('rumor-scan adaptive gossip cap — bumps to 2 when queue piles up', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('defines a base cap of 1 and an adaptive cap of 2', () => {
+    expect(src).toMatch(/const\s+MAX_GOSSIP_POSTS_PER_DAY\s*=\s*1\b/);
+    expect(src).toMatch(/const\s+MAX_GOSSIP_POSTS_PER_DAY_ADAPTIVE\s*=\s*2\b/);
+  });
+
+  it('defines the trigger thresholds (queue depth + oldest-tip age)', () => {
+    expect(src).toMatch(/const\s+GOSSIP_BOOST_QUEUE_DEPTH\s*=\s*6\b/);
+    expect(src).toMatch(/const\s+GOSSIP_BOOST_TIP_AGE_MS\s*=\s*3\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
+  });
+
+  it('exports a computeAdaptiveGossipCap helper that returns {cap, reason}', () => {
+    expect(src).toMatch(/function\s+computeAdaptiveGossipCap\(/);
+    expect(src).toMatch(/return\s*\{\s*cap:\s*MAX_GOSSIP_POSTS_PER_DAY_ADAPTIVE/);
+    expect(src).toMatch(/return\s*\{\s*cap:\s*MAX_GOSSIP_POSTS_PER_DAY,\s*reason:\s*['"]default['"]/);
+  });
+
+  it('main() uses the adaptive cap value (not the hard-coded base) for the gate check', () => {
+    expect(src).toMatch(/gossipAllowedToday\s*=\s*gossipToday\s*<\s*adaptiveGossipCap/);
+  });
+});
+
+describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('defines the mailbag done-date key and weekday index', () => {
+    expect(src).toMatch(/const\s+FRIDAY_MAILBAG_DONE_KEY\s*=\s*['"]schefter:mailbag:done_date['"]/);
+    expect(src).toMatch(/const\s+FRIDAY_WEEKDAY_INDEX\s*=\s*5/);
+  });
+
+  it('exports an isFridayPt helper keyed to America/Los_Angeles', () => {
+    expect(src).toMatch(/function\s+isFridayPt\(/);
+    expect(src).toMatch(/timeZone:\s*['"]America\/Los_Angeles['"]/);
+  });
+
+  it('main() runs the mailbag at most once per Friday PT (short-circuits on stored date)', () => {
+    expect(src).toMatch(/if\s*\(isFridayPt\(now\)\)/);
+    expect(src).toMatch(/mailbagDoneDate\s*===\s*todayPtDate/);
+  });
+
+  it('mailbag sweeps the entire gossip pool (up to MAX_TIPS_PER_BATCH)', () => {
+    expect(src).toMatch(/gossipPool\s*=\s*freshTips\.filter\(\(t\)\s*=>\s*classifyTipKind\(t\)\s*===\s*['"]gossip['"]\)/);
+    expect(src).toMatch(/mailbagBatch\s*=\s*gossipPool\.slice\(0,\s*MAX_TIPS_PER_BATCH\)/);
+  });
+
+  it('stamps FRIDAY_MAILBAG_DONE_KEY after a successful mailbag post', () => {
+    expect(src).toMatch(/redis\.set\(FRIDAY_MAILBAG_DONE_KEY,\s*todayPtDate/);
+  });
+
+  it('HARD RULE 19 prescribes bullet-style mailbag voice and caps length', () => {
+    expect(src).toMatch(/19\.\s*MAILBAG POSTS/);
+    expect(src).toMatch(/bullet-style one-liners/);
+    expect(src).toMatch(/Length cap:\s*180 words/);
+  });
+
+  it('user-prompt mode is "mailbag" on Friday mailbag cycles', () => {
+    expect(src).toMatch(/const\s+aiMode\s*=\s*postKind\s*===\s*['"]mailbag['"]/);
+    expect(src).toMatch(/if\s*\(mode\s*===\s*['"]mailbag['"]\)/);
+    expect(src).toMatch(/GOSSIP_TIPS:/);
+  });
+});
+
