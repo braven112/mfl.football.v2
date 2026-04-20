@@ -100,6 +100,19 @@ if (!user || !isCommissionerOrAdmin(user)) {
         </dl>
       </article>
 
+      <article class="ops-card ops-card--wide" aria-labelledby="card-live-trades">
+        <h2 id="card-live-trades" class="ops-card__title">
+          Trade Proposals in MFL (live, league-wide)
+          <span id="ops-live-trades-summary" class="ops-card__badge">—</span>
+        </h2>
+        <p class="ops-card__hint">
+          Every open trade proposal right now — your team plus every other franchise.
+          Pulled from MFL <code>TYPE=pendingTrades</code> in commish mode.
+          If this list is non-empty and <strong>"Pending trade announcements"</strong> stays at 0, the scanner is missing deals.
+        </p>
+        <div id="ops-live-trades-body" class="ops-live-trades">Loading…</div>
+      </article>
+
       <article class="ops-card ops-card--wide" aria-labelledby="card-posts">
         <h2 id="card-posts" class="ops-card__title">Posts in Feed</h2>
         <p class="ops-card__hint">Counted from <code>schefter-feed.json</code>.</p>
@@ -339,8 +352,91 @@ if (!user || !isCommissionerOrAdmin(user)) {
     }
   }
 
-  document.getElementById('ops-refresh')?.addEventListener('click', () => load());
+  function escapeHtml(s: string): string {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+    );
+  }
+
+  function assetLabels(list: any[]): string {
+    if (!Array.isArray(list) || !list.length) return '<em>—</em>';
+    return list
+      .map((a) => {
+        const label = escapeHtml(a?.label || 'Unknown');
+        const pos = a?.position ? ` <span class="ops-asset__pos">${escapeHtml(a.position)}</span>` : '';
+        return `<li>${label}${pos}</li>`;
+      })
+      .join('');
+  }
+
+  async function loadTradeProposals() {
+    const body = document.getElementById('ops-live-trades-body');
+    const summary = document.getElementById('ops-live-trades-summary');
+    if (!body || !summary) return;
+    summary.textContent = '…';
+    body.textContent = 'Loading…';
+    try {
+      const res = await fetch('/api/trades/pending?commish=1', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
+      if (!payload?.success) throw new Error(payload?.message || 'fetch failed');
+
+      const mine = Array.isArray(payload.trades) ? payload.trades : [];
+      const others = Array.isArray(payload.commishTrades) ? payload.commishTrades : [];
+      const total = mine.length + others.length;
+      const all = [...mine, ...others].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      summary.innerHTML = `<span class="ops-pill ops-pill--${total > 0 ? 'ok' : 'warn'}">${total} open</span>`;
+
+      if (!total) {
+        body.innerHTML =
+          '<p class="ops-empty">No open trade proposals in MFL right now. If this stays zero for weeks, either the league is quiet or MFL auth is broken (check your login).</p>';
+        return;
+      }
+
+      const rows = all
+        .map((t: any) => {
+          const by = escapeHtml(t.offeredByName || t.offeredBy || '?');
+          const to = escapeHtml(t.offeredToName || t.offeredTo || '?');
+          const ts = t.timestamp ? new Date(t.timestamp * 1000) : null;
+          const when = ts ? `${ts.toLocaleString()} (${fmtRel(ts.getTime())})` : '—';
+          const give = assetLabels(t.resolvedAssets?.willGiveUp);
+          const recv = assetLabels(t.resolvedAssets?.willReceive);
+          const comments = t.comments ? `<p class="ops-trade__comments">"${escapeHtml(t.comments)}"</p>` : '';
+          return `
+            <article class="ops-trade">
+              <header class="ops-trade__head">
+                <strong>${by}</strong> → <strong>${to}</strong>
+                <span class="ops-trade__meta">offer <code>${escapeHtml(t.tradeId || '')}</code> · ${when}</span>
+              </header>
+              <div class="ops-trade__body">
+                <div class="ops-trade__side">
+                  <h4>${by} gives</h4>
+                  <ul class="ops-asset-list">${give}</ul>
+                </div>
+                <div class="ops-trade__side">
+                  <h4>${to} gives</h4>
+                  <ul class="ops-asset-list">${recv}</ul>
+                </div>
+              </div>
+              ${comments}
+            </article>`;
+        })
+        .join('');
+
+      body.innerHTML = rows;
+    } catch (err) {
+      summary.innerHTML = `<span class="ops-pill ops-pill--bad">err</span>`;
+      body.innerHTML = `<p class="ops-empty">Could not load trade proposals: ${escapeHtml((err as Error).message)}. Are you logged in to MFL?</p>`;
+    }
+  }
+
+  document.getElementById('ops-refresh')?.addEventListener('click', () => {
+    load();
+    loadTradeProposals();
+  });
   load();
+  loadTradeProposals();
   setInterval(load, 60_000);
 </script>
 
@@ -411,4 +507,25 @@ if (!user || !isCommissionerOrAdmin(user)) {
 
   .ops-foot { margin-top: 1.5rem; font-size: 0.78rem; color: var(--color-text-muted, #64748b); }
   .ops-foot code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+
+  .ops-card__badge { font-size: 0.7rem; margin-left: 0.5rem; vertical-align: middle; font-weight: 500; }
+  .ops-empty { font-size: 0.85rem; color: var(--color-text-muted, #64748b); margin: 0.5rem 0 0; padding: 0.5rem 0; }
+
+  .ops-live-trades { display: flex; flex-direction: column; gap: 0.75rem; }
+  .ops-trade {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px;
+    padding: 0.6rem 0.8rem; background: var(--color-surface-alt, #f8fafc);
+  }
+  .ops-trade__head { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; align-items: baseline; font-size: 0.9rem; }
+  .ops-trade__meta { font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
+  .ops-trade__meta code { font-size: 0.7rem; background: white; padding: 0.05rem 0.3rem; border-radius: 3px; }
+  .ops-trade__body { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin-top: 0.5rem; }
+  @media (max-width: 560px) { .ops-trade__body { grid-template-columns: 1fr; } }
+  .ops-trade__side h4 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-text-muted, #64748b); margin: 0 0 0.2rem; }
+  .ops-trade__comments { margin: 0.4rem 0 0; font-size: 0.78rem; font-style: italic; color: var(--color-text-muted, #64748b); }
+  .ops-asset-list { list-style: none; padding: 0; margin: 0; font-size: 0.84rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .ops-asset__pos {
+    font-size: 0.65rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 3px;
+    background: var(--color-border, #e2e8f0); color: var(--color-text-muted, #475569);
+  }
 </style>
