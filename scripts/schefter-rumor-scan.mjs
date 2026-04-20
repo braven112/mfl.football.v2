@@ -18,7 +18,7 @@
  * Environment:
  *   SCHEFTER_RUMOR_MILL_ENABLED  gate flag (required truthy to run)
  *   SCHEFTER_PUBLIC_BASE_URL     absolute site origin for the tip-page link in GroupMe
- *                                (defaults to https://mflfootballv2.vercel.app)
+ *                                (defaults to https://theleague.us)
  *   UPSTASH_REDIS_REST_URL / TOKEN (or KV_*)  Redis credentials
  *   ANTHROPIC_API_KEY            required for AI post; falls back to template
  *   GROUPME_SCHEFTER_BOT_ID      required to post to GroupMe (Roger is NOT a fallback)
@@ -125,7 +125,7 @@ const QUIET_HOUR_END = 7;    // 7am PT
 // card renders the same destination via post.link / post.linkLabel.
 const TIP_PAGE_PATH = '/theleague/schefter/tip';
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
-const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://mflfootballv2.vercel.app').replace(/\/+$/, '');
+const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
 const TIP_PAGE_ABSOLUTE_URL = `${PUBLIC_BASE_URL}${TIP_PAGE_PATH}`;
 
 // ── Logging ──

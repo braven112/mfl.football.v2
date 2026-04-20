@@ -128,9 +128,9 @@ describe('rumor-scan tip-page link — every post sends readers back to /tip', (
     expect(src).toMatch(/const\s+TIP_PAGE_LINK_LABEL\s*=\s*['"]Got a tip\? Whisper to Schefter →['"]/);
   });
 
-  it('derives an absolute tip-page URL from SCHEFTER_PUBLIC_BASE_URL (with sensible default)', () => {
+  it('derives an absolute tip-page URL from SCHEFTER_PUBLIC_BASE_URL (defaults to theleague.us)', () => {
     expect(src).toMatch(/process\.env\.SCHEFTER_PUBLIC_BASE_URL/);
-    expect(src).toMatch(/mflfootballv2\.vercel\.app/);
+    expect(src).toMatch(/https:\/\/theleague\.us/);
     expect(src).toMatch(/const\s+TIP_PAGE_ABSOLUTE_URL\s*=/);
   });
 
