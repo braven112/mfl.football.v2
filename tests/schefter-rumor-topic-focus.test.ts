@@ -22,8 +22,8 @@ function read(rel: string): string {
 describe('rumor-scan daily caps — trade-heavy, gossip-rationed', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('caps daily posts at 2 (prioritizing trade rumors)', () => {
-    expect(src).toMatch(/const\s+MAX_POSTS_PER_DAY\s*=\s*2\b/);
+  it('caps daily posts at 3 (gossip hard-limited to 1/day, so the other 2 slots go to trade rumors)', () => {
+    expect(src).toMatch(/const\s+MAX_POSTS_PER_DAY\s*=\s*3\b/);
   });
 
   it('rations gossip posts to at most 1 per day', () => {

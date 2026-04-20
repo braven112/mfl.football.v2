@@ -108,8 +108,10 @@ const PLAYER_HISTORY_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;  // 21d player escala
 const ROGER_RIFF_PROBABILITY = 0.07;
 
 // Trade rumors eat the bulk of our daily post quota; gossip is rationed
-// to at most one per day so the feed doesn't read like a group-chat burn book.
-const MAX_POSTS_PER_DAY = 2;
+// to at most one per day so the feed doesn't read like a group-chat burn
+// book. With a hard gossip cap of 1/day, the remaining slots are effectively
+// reserved for trade rumors.
+const MAX_POSTS_PER_DAY = 3;
 const MAX_GOSSIP_POSTS_PER_DAY = 1;
 const MIN_SPACING_MS = 4 * 60 * 60 * 1000;
 const MIN_MARINATE_MS = 1 * 60 * 60 * 1000;
