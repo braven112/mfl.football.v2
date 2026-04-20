@@ -101,6 +101,8 @@ export function redactTradeOffer({
   teamMap,
   counts,
   currentYear,
+  framingHint = 'fresh',
+  offerAgeMs = 0,
 }) {
   const {
     ownerOfferCount7d = 1,
@@ -196,6 +198,8 @@ export function redactTradeOffer({
     pickTokens: finalPickTokens,
     divisionHint: finalDivisionHint,
     escalatedPlayer,
+    framingHint,
+    offerAgeMs,
     offerId,
     offeringFranchiseId: offeringFid,
   };
@@ -230,12 +234,22 @@ export function redactTradeOffer({
 }
 
 /**
- * Probability roll — 40% on first offer, 80% on 2nd+ (capped).
+ * Per-run probability for posting a trade-offer rumor.
+ *
+ * Flat p=0.0075 per 15-minute scanner run. With 96 runs/day this compounds
+ * cumulatively to ~54% by 24h, ~79% by 48h, and ~99% by day 6.4. No guaranteed
+ * post — unposted offers can fail forever; that's the design.
+ *
+ * The 48h framing flip from "fresh" to "lingering" ("offered but phones aren't
+ * picking up") is handled in scanTradeOffers, not here. The probability itself
+ * does not change with age.
+ *
  * Exported for tests & dry-run logging.
  */
-export function offerPostProbability(ownerOfferCount7d) {
-  if (ownerOfferCount7d <= 1) return 0.4;
-  return 0.8;
+export const OFFER_POST_PROBABILITY = 0.0075;
+
+export function offerPostProbability() {
+  return OFFER_POST_PROBABILITY;
 }
 
 export { bucketVolumeHint, tierForDistinctOfferers, classifyAsset, parseAssetString };

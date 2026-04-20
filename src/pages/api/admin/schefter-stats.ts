@@ -29,10 +29,16 @@ const GROUPME_LAST_MESSAGE_ID_KEY = 'groupme:last_message_id';
 const GROUPME_LAST_SYNC_KEY = 'groupme:last_sync_ts';
 
 const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
+const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
+const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
+const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 
 type RedisClient = {
   llen: (key: string) => Promise<number>;
   zcard: (key: string) => Promise<number>;
+  scard: (key: string) => Promise<number>;
+  hlen: (key: string) => Promise<number>;
+  hgetall: <T = Record<string, unknown>>(key: string) => Promise<T | null>;
   get: <T = unknown>(key: string) => Promise<T | null>;
   lrange: <T = string>(key: string, start: number, stop: number) => Promise<T[]>;
 };
@@ -173,6 +179,9 @@ async function readRedisStats(redis: RedisClient) {
     groupmeLastSync,
     tradeOffersSeen,
     tipsterLeaderboardSize,
+    tradeOffersInFlight,
+    tradeOffersPosted,
+    tradeOffersFirstSeenMap,
   ] = await Promise.all([
     redis.llen(TIPS_QUEUE_KEY).catch(() => 0),
     redis.llen(TIPS_PROCESSED_KEY).catch(() => 0),
@@ -184,6 +193,9 @@ async function readRedisStats(redis: RedisClient) {
     redis.get<string | number>(GROUPME_LAST_SYNC_KEY).catch(() => null),
     redis.zcard(OFFER_SEEN_KEY).catch(() => 0),
     redis.zcard(`schefter:tipster:leaderboard:${seasonYear}`).catch(() => 0),
+    redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
+    redis.scard(OFFER_POSTED_KEY).catch(() => 0),
+    redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
   ]);
 
   // Sample the processed archive to break down tip sources (web vs groupme vs trade_offer)
@@ -205,6 +217,22 @@ async function readRedisStats(redis: RedisClient) {
     console.warn('[admin/schefter-stats] processed archive read failed:', err);
   }
 
+  // Bucket in-flight offers by fresh vs lingering (≥48h since first_seen)
+  const now = Date.now();
+  let offersFresh = 0;
+  let offersLingering = 0;
+  let oldestOfferAgeMs: number | null = null;
+  if (tradeOffersFirstSeenMap && typeof tradeOffersFirstSeenMap === 'object') {
+    for (const v of Object.values(tradeOffersFirstSeenMap)) {
+      const ts = Number(v);
+      if (!Number.isFinite(ts) || ts <= 0) continue;
+      const age = now - ts;
+      if (age >= OFFER_LINGERING_THRESHOLD_MS) offersLingering += 1;
+      else offersFresh += 1;
+      if (oldestOfferAgeMs === null || age > oldestOfferAgeMs) oldestOfferAgeMs = age;
+    }
+  }
+
   return {
     queueDepth,
     processedArchiveDepth: processedArchive,
@@ -215,6 +243,11 @@ async function readRedisStats(redis: RedisClient) {
     groupmeLastMessageId: groupmeLastMessageId || null,
     groupmeLastSyncTs: coerce(groupmeLastSync),
     tradeOffersSeen,
+    tradeOffersInFlight,
+    tradeOffersPosted,
+    tradeOffersFresh: offersFresh,
+    tradeOffersLingering: offersLingering,
+    tradeOffersOldestAgeMs: oldestOfferAgeMs,
     tipsterLeaderboardSize,
     tipSourceBreakdown,
     tipSampleSize,

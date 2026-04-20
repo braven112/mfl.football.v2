@@ -93,9 +93,18 @@ if (!user || !isCommissionerOrAdmin(user)) {
 
       <article class="ops-card" aria-labelledby="card-offers">
         <h2 id="card-offers" class="ops-card__title">Trade Offers Ingested</h2>
-        <p class="ops-card__hint">Offers fed into the rumor algo via <code>schefter:trade_offers:seen</code>.</p>
+        <p class="ops-card__hint">
+          Cumulative-probability model: <code>p=0.0075</code>/run (99% cumulative by ~day 6.4).
+          In-flight = offers still eligible to post. Posted = offers the rumor mill has already announced.
+          Lingering (≥48h) flips the voice to "phones aren't picking up".
+        </p>
         <dl class="ops-dl">
-          <div><dt>Distinct offers tracked</dt><dd data-k="redis.tradeOffersSeen">—</dd></div>
+          <div><dt>In-flight (eligible)</dt><dd data-k="redis.tradeOffersInFlight">—</dd></div>
+          <div><dt>— fresh (&lt;48h)</dt><dd data-k="redis.tradeOffersFresh">—</dd></div>
+          <div><dt>— lingering (≥48h)</dt><dd data-k="redis.tradeOffersLingering">—</dd></div>
+          <div><dt>Oldest in-flight age</dt><dd data-k="redis.tradeOffersOldestAgeMs" data-fmt="duration">—</dd></div>
+          <div><dt>Posted (30d TTL)</dt><dd data-k="redis.tradeOffersPosted">—</dd></div>
+          <div><dt>Legacy one-shot burned</dt><dd data-k="redis.tradeOffersSeen">—</dd></div>
           <div><dt>Pending-trade watermark size</dt><dd data-k="feed.pendingTradeWatermarkSize">—</dd></div>
         </dl>
       </article>
@@ -222,10 +231,26 @@ if (!user || !isCommissionerOrAdmin(user)) {
         : '—',
     };
 
+    const fmtDuration = (ms: unknown): string => {
+      if (ms === null || ms === undefined) return '—';
+      const n = typeof ms === 'number' ? ms : Number(ms);
+      if (!Number.isFinite(n) || n < 0) return '—';
+      const hours = n / (60 * 60 * 1000);
+      if (hours < 1) return `${Math.round(n / 60000)}m`;
+      if (hours < 48) return `${hours.toFixed(1)}h`;
+      const days = hours / 24;
+      return `${days.toFixed(1)}d`;
+    };
+
     const merged = { ...data, fmt };
     document.querySelectorAll<HTMLElement>('[data-k]').forEach((el) => {
       const path = el.dataset.k!;
       const v = lookup(merged, path);
+      const fmtMode = el.dataset.fmt;
+      if (fmtMode === 'duration') {
+        el.textContent = fmtDuration(v);
+        return;
+      }
       el.textContent = v === null || v === undefined ? '—' : String(v);
     });
 
