@@ -240,6 +240,21 @@ describe('rumor-scan two-post gossip — second bucket ships as its own feed pos
     expect(src).toMatch(/if\s*\(postKind\s*===\s*['"]gossip['"]\s*&&\s*secondaryBucket\)/);
   });
 
+  it('gates the secondary post on real pile-up (>= SECONDARY_GOSSIP_POST_PRESSURE gossip tips queued)', () => {
+    // Under the threshold the scanner ships ONE post and holds the second
+    // bucket for the next cycle. The double-post is a catch-up mechanism,
+    // not the default cadence.
+    expect(src).toMatch(/const\s+SECONDARY_GOSSIP_POST_PRESSURE\s*=\s*4\b/);
+    expect(src).toMatch(/if\s*\(gossipQueueDepth\s*>=\s*SECONDARY_GOSSIP_POST_PRESSURE\)/);
+  });
+
+  it('explicitly holds the secondary bucket for the next cycle when pressure is low', () => {
+    // The "else" branch of the pressure gate logs a hold; we assert the
+    // hold-for-next-cycle path exists so a later refactor can't silently
+    // drop it and fall back to always-ship-two.
+    expect(src).toMatch(/Holding\s+\$\{secondaryBucket\.key\}\s+for next cycle/);
+  });
+
   it('builds a beats[] array so each beat turns into an independent post', () => {
     expect(src).toMatch(/const\s+beats\s*=\s*\[\s*\{\s*batch,\s*anonymized,\s*kind:\s*postKind[^}]*\}/);
     expect(src).toMatch(/beats\.push\(\s*\{\s*batch:\s*secondaryBatch/);

@@ -36,10 +36,13 @@
  * Topic-bucket priority (bucketPriorityScore = (size - 1) * 2 + oldest-age-in-days):
  *   a. Trade rumors (trade_offer source OR topic === "trade")
  *   b. Gossip buckets — largest/oldest wins. When a second distinct gossip
- *      bucket exists, it ships as its OWN independent feed post in the same
- *      cycle (separate post id, reactions, comments, whisper-back thread),
- *      but both posts share one cap slot — MAX_POSTS_PER_DAY /
- *      MAX_GOSSIP_POSTS_PER_DAY (adaptive) each increment by one.
+ *      bucket exists AND the gossip queue has piled up to at least
+ *      SECONDARY_GOSSIP_POST_PRESSURE tips, it ships as its OWN independent
+ *      feed post in the same cycle (separate post id, reactions, comments,
+ *      whisper-back thread), with both posts sharing one cap slot. Below
+ *      that threshold the second bucket waits for the next cycle — the
+ *      quick-double-post is a catch-up mechanism for 2+ days of pile-up,
+ *      not a default cadence.
  *   c. Oldest gossip singleton if nothing else qualifies
  *
  * Special paths:
@@ -131,6 +134,13 @@ const MAX_GOSSIP_POSTS_PER_DAY = 1;
 const MAX_GOSSIP_POSTS_PER_DAY_ADAPTIVE = 2;
 const GOSSIP_BOOST_QUEUE_DEPTH = 6;
 const GOSSIP_BOOST_TIP_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+// The "quick double post" — shipping a secondary gossip post in the same
+// cycle — is reserved for genuine pile-up: a gossip queue of this depth
+// or deeper. With a typical ~1-2 tips/day arrival rate, 4 queued gossip
+// tips means 2+ days of buildup without us clearing it, which is exactly
+// the pattern we want the second post to catch. Below the threshold, the
+// secondary bucket waits its turn on a later cycle.
+const SECONDARY_GOSSIP_POST_PRESSURE = 4;
 const MIN_SPACING_MS = 4 * 60 * 60 * 1000;
 const MIN_MARINATE_MS = 1 * 60 * 60 * 1000;
 const MAX_TIPS_PER_BATCH = 10;
@@ -1657,9 +1667,20 @@ async function main() {
     // post id so reactions, comments, and whisper-back threads stay
     // separate. Trade-rumor posts never carry a secondary — they stay
     // strictly single-topic.
+    //
+    // The secondary only fires under real backlog pressure
+    // (>= SECONDARY_GOSSIP_POST_PRESSURE gossip tips queued). Below that
+    // threshold we ship a single post and let the secondary bucket wait
+    // its turn — the two-post double is a pile-up catch-up mechanism,
+    // not a default cadence.
     if (postKind === 'gossip' && secondaryBucket) {
-      secondaryBatch = secondaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
-      log(`  Second post bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s))`);
+      const gossipQueueDepth = freshTips.filter((t) => classifyTipKind(t) === 'gossip').length;
+      if (gossipQueueDepth >= SECONDARY_GOSSIP_POST_PRESSURE) {
+        secondaryBatch = secondaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
+        log(`  Second post bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s)) — pressure ${gossipQueueDepth}/${SECONDARY_GOSSIP_POST_PRESSURE}`);
+      } else {
+        log(`  Holding ${secondaryBucket.key} for next cycle — gossip queue depth ${gossipQueueDepth} < ${SECONDARY_GOSSIP_POST_PRESSURE} (no pile-up pressure)`);
+      }
     }
   }
 
