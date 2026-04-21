@@ -98,18 +98,25 @@ describe('rumor-scan bucketing — one topic per post', () => {
   });
 });
 
-describe('rumor-scan LLM prompt — one topic per beat', () => {
+describe('rumor-scan LLM prompt — one topic per post', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('tells the LLM to stay on ONE TOPIC per beat and refuses "meanwhile…" pivots', () => {
-    expect(src).toMatch(/ONE TOPIC per beat/);
+  it('tells the LLM to stay on ONE TOPIC per post and refuses "meanwhile…" pivots', () => {
+    expect(src).toMatch(/ONE TOPIC per post/);
     expect(src).toMatch(/No "meanwhile/);
   });
 
-  it('caps post length at 1–2 sentences per beat', () => {
+  it('references the two-separate-posts behavior in the one-topic rule', () => {
+    // The rule explicitly mentions that unrelated gossip ships as TWO
+    // posts rather than one blended post — prevents the LLM from
+    // "helpfully" stitching them back together.
+    expect(src).toMatch(/ships them as TWO separate posts/);
+  });
+
+  it('caps post length at 1–2 sentences', () => {
     // HARD RULE 8 is the authoritative cap; the trade-offer playbook
     // must defer to it as well.
-    expect(src).toMatch(/Length:\s*1[–-]2 sentences per beat/);
+    expect(src).toMatch(/Length:\s*1[–-]2 sentences\./);
     expect(src).toMatch(/1[–-]2 sentences TOTAL/);
   });
 
@@ -142,10 +149,12 @@ describe('rumor-scan tip-page link — every post sends readers back to /tip', (
     expect(src).toMatch(/linkLabel:\s*TIP_PAGE_LINK_LABEL/);
   });
 
-  it('appends the absolute tip-page URL to GroupMe posts', () => {
-    expect(src).toMatch(/const\s+groupMeText\s*=\s*`\$\{post\.body\}\\n\\nGot a tip\? \$\{TIP_PAGE_ABSOLUTE_URL\}`/);
-    // The GroupMe call must use groupMeText (not post.body) so the URL ships.
-    expect(src).toMatch(/await\s+postToGroupMe\(groupMeText\)/);
+  it('appends the absolute tip-page URL to every GroupMe post', () => {
+    // Each beat now ships its own GroupMe message via groupMeTextFor(p),
+    // a closure that formats "body\n\nGot a tip? <URL>".
+    expect(src).toMatch(/const\s+groupMeTextFor\s*=\s*\(p\)\s*=>\s*`\$\{p\.body\}\\n\\nGot a tip\? \$\{TIP_PAGE_ABSOLUTE_URL\}`/);
+    expect(src).toMatch(/await\s+postToGroupMe\(groupMeTextFor\(builtPosts\[i\]\)\)/);
+    // No raw-body GroupMe calls remain — every rumor post gets the CTA.
     expect(src).not.toMatch(/await\s+postToGroupMe\(post\.body\)/);
   });
 });
@@ -211,45 +220,83 @@ describe('rumor-scan bucket priority — age boost so old tips rise', () => {
   });
 });
 
-describe('rumor-scan two-beat gossip — second bucket rides along', () => {
+describe('rumor-scan two-post gossip — second bucket ships as its own feed post', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('pickPrimaryBucket returns {primary, secondary} so gossip posts can carry two beats', () => {
+  it('pickPrimaryBucket returns {primary, secondary} so a second gossip bucket can ride along', () => {
     const pickFn = src.match(/function\s+pickPrimaryBucket[\s\S]+?\n\}\n/);
     expect(pickFn).not.toBeNull();
     expect(pickFn![0]).toMatch(/return\s*\{\s*primary:[^,]+,\s*secondary/);
   });
 
-  it('trade-rumor posts never carry a secondary beat (stays strictly one-topic)', () => {
+  it('trade-rumor posts never carry a secondary (stays strictly one-topic)', () => {
     const pickFn = src.match(/function\s+pickPrimaryBucket[\s\S]+?\n\}\n/);
     expect(pickFn).not.toBeNull();
     // Trade-branch returns secondary: null explicitly.
     expect(pickFn![0]).toMatch(/primary:\s*tradeBuckets\[0\],\s*secondary:\s*null/);
   });
 
-  it('main flow only stitches a secondary into gossip posts (never trade)', () => {
+  it('main flow only adds a secondary beat for gossip posts (never trade)', () => {
     expect(src).toMatch(/if\s*\(postKind\s*===\s*['"]gossip['"]\s*&&\s*secondaryBucket\)/);
   });
 
-  it('HARD RULE 18 enforces two short beats with line-break separator', () => {
-    expect(src).toMatch(/18\.\s*TWO-BEAT GOSSIP POSTS/);
-    expect(src).toMatch(/Separate the beats with a line break/);
+  it('builds a beats[] array so each beat turns into an independent post', () => {
+    expect(src).toMatch(/const\s+beats\s*=\s*\[\s*\{\s*batch,\s*anonymized,\s*kind:\s*postKind[^}]*\}/);
+    expect(src).toMatch(/beats\.push\(\s*\{\s*batch:\s*secondaryBatch/);
   });
 
-  it('passes secondary tips to the LLM via the two-beat user prompt', () => {
-    expect(src).toMatch(/mode:\s*aiMode/);
-    expect(src).toMatch(/secondaryAnonymized/);
-    expect(src).toMatch(/PRIMARY_TIPS/);
-    expect(src).toMatch(/SECONDARY_TIPS/);
+  it('generates one LLM body per beat, in parallel', () => {
+    expect(src).toMatch(/Promise\.all\(\s*beats\.map\(/);
   });
 
-  it('counts a two-beat gossip post as ONE post against the daily caps', () => {
-    // newCount increments once per cycle; the gossip counter also only
-    // increments once when postKind === 'gossip'. No per-beat doubling.
+  it('gives the Roger riff to the PRIMARY beat only (never doubles up)', () => {
+    expect(src).toMatch(/rogerQuote:\s*i\s*===\s*0\s*\?\s*rogerQuote\s*:\s*null/);
+    expect(src).toMatch(/hadRogerRiff:\s*i\s*===\s*0\s*\?\s*hadRogerRiff\s*:\s*false/);
+  });
+
+  it('stamps distinct timestamps per beat so feed ordering is stable', () => {
+    expect(src).toMatch(/new Date\(now\.getTime\(\)\s*\+\s*i\s*\*\s*1000\)/);
+  });
+
+  it('each beat resolves its own whisper-back thread independently', () => {
+    // The thread-resolution loop runs per beat — parent counts are local
+    // to the beat's batch, not the combined batch.
+    expect(src).toMatch(/for \(const tip of beat\.batch\)/);
+  });
+
+  it('writes both posts to the feed in one atomic fs.writeFile call', () => {
+    // Prepend builtPosts in array order so primary lands at index 0
+    // (top of the feed).
+    expect(src).toMatch(/feed\.posts\s*=\s*\[\s*\.\.\.builtPosts,\s*\.\.\.existingPosts\s*\]/);
+    const feedWrites = (src.match(/await fs\.writeFile\(FEED_PATH/g) ?? []).length;
+    expect(feedWrites).toBe(1);
+  });
+
+  it('sends a separate GroupMe message per post (so each is independently replyable)', () => {
+    expect(src).toMatch(/for\s*\(let i\s*=\s*0;\s*i\s*<\s*builtPosts\.length;\s*i\+\+\)\s*\{[\s\S]*?postToGroupMe\(groupMeTextFor\(builtPosts\[i\]\)\)/);
+  });
+
+  it('counts both posts as ONE slot against posts_today and gossip counters', () => {
+    // INCR runs once per cycle even when we ship two posts.
     const incrCount = (src.match(/redis\.incr\(RUMOR_POSTS_TODAY_KEY\)/g) ?? []).length;
     expect(incrCount).toBe(1);
     const gossipIncr = (src.match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g) ?? []).length;
     expect(gossipIncr).toBe(1);
+  });
+
+  it('drops the old HARD RULE 18 "TWO-BEAT" rule (posts are now independent)', () => {
+    expect(src).not.toMatch(/TWO-BEAT GOSSIP POSTS/);
+    expect(src).not.toMatch(/Separate the beats with a line break/);
+  });
+
+  it('does not ship SECONDARY_TIPS through the LLM (each beat is a single-topic prompt)', () => {
+    expect(src).not.toMatch(/SECONDARY_TIPS/);
+    expect(src).not.toMatch(/PRIMARY_TIPS/);
+  });
+
+  it('feed posts do NOT leak internal parent-id marker (kept in a side Map)', () => {
+    expect(src).not.toMatch(/_dominantParentId/);
+    expect(src).toMatch(/parentIdByPostId/);
   });
 });
 
@@ -304,8 +351,8 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
     expect(src).toMatch(/redis\.set\(FRIDAY_MAILBAG_DONE_KEY,\s*todayPtDate/);
   });
 
-  it('HARD RULE 19 prescribes bullet-style mailbag voice and caps length', () => {
-    expect(src).toMatch(/19\.\s*MAILBAG POSTS/);
+  it('HARD RULE 18 prescribes bullet-style mailbag voice and caps length', () => {
+    expect(src).toMatch(/18\.\s*MAILBAG POSTS/);
     expect(src).toMatch(/bullet-style one-liners/);
     expect(src).toMatch(/Length cap:\s*180 words/);
   });

@@ -33,15 +33,18 @@
  *   5. first_tip_ts must be >= MIN_MARINATE_MS old (marinate window)
  *   6. If chosen bucket is "gossip", schefter:rumor:gossip_posts_today < adaptive cap
  *
- * Topic-bucket priority (bucketPriorityScore = size + oldest-age-in-days):
+ * Topic-bucket priority (bucketPriorityScore = (size - 1) * 2 + oldest-age-in-days):
  *   a. Trade rumors (trade_offer source OR topic === "trade")
- *   b. Gossip buckets — largest/oldest wins, with an optional second bucket
- *      ridden along as a second "quick hit" beat in the same post
+ *   b. Gossip buckets — largest/oldest wins. When a second distinct gossip
+ *      bucket exists, it ships as its OWN independent feed post in the same
+ *      cycle (separate post id, reactions, comments, whisper-back thread),
+ *      but both posts share one cap slot — MAX_POSTS_PER_DAY /
+ *      MAX_GOSSIP_POSTS_PER_DAY (adaptive) each increment by one.
  *   c. Oldest gossip singleton if nothing else qualifies
  *
  * Special paths:
  *   - Friday mailbag: on Friday PT, once per day, sweeps ALL gossip tips
- *     still in the queue into a bullet-style roundup (HARD RULE 19). Ensures
+ *     still in the queue into a bullet-style roundup (HARD RULE 18). Ensures
  *     every tip gets a shot at the feed before the 7-day TTL fires.
  *   - Adaptive gossip cap: when gossip queue depth >= 6 OR oldest gossip
  *     tip is >= 3 days old, the day's gossip cap bumps to 2.
@@ -588,10 +591,11 @@ function bucketPriorityScore(bucket, now = new Date()) {
  *   3. Singleton gossip — returned when nothing else qualifies. Age boost
  *      means older singletons rise above newer ones naturally.
  *
- * For gossip posts we also return a SECONDARY bucket when one exists — the
- * caller wires both into a single two-beat post so two distinct gossip
- * topics can share one feed card without triggering a wall-of-text feel.
- * Trade-rumor posts never carry a secondary (they stay strictly one-topic).
+ * For gossip posts we also return a SECONDARY bucket when one exists —
+ * the caller ships the secondary as its OWN independent feed post so
+ * each gossip topic has separate reactions and whisper-back threads.
+ * Both posts consume exactly one slot from the daily cap. Trade-rumor
+ * posts never carry a secondary (they stay strictly single-topic).
  *
  * Returns `{ primary, secondary }` or `null` when nothing qualifies.
  */
@@ -811,7 +815,7 @@ Example F — lingering named (framingHint=lingering, escalatedPlayer.tier=named
 `;
 }
 
-async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', secondaryAnonymized = null } = {}) {
+async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single' } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     warn('  [rumor-scan] ANTHROPIC_API_KEY not set — using template');
@@ -824,7 +828,7 @@ async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, 
   let system = `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You turn owner tips into a columnist-voiced rumor post.
 
 HARD RULES (self-enforce, never violate):
-0. ONE TOPIC per beat. The batch is pre-bucketed so each beat is a single topic/thread. For TRADE-RUMOR posts and MAILBAG posts the rules are different — see rules 18 and 19 for the narrow cases where two distinct gossip beats may share a post. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops on single-beat posts.
+0. ONE TOPIC per post. The batch is pre-bucketed so each post is a single topic/thread. MAILBAG posts are the only exception — see rule 18. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops. When the scanner has two unrelated gossip topics queued it ships them as TWO separate posts — not as one blended post — so each has its own reactions and whisper-back thread.
 1. For web tips (source: "web"), NEVER name the tipster and NEVER quote them verbatim — paraphrase with columnist voice.
 2. If a web tip's scope is "division", the division refers to the SUBJECT team's division — NOT where the source is located. Frame it as "a team in the [division]", "a [division]-division squad", or "the [division] is buzzing" — NEVER as "sources in the [division]" (that implies the tipster's location). NEVER name a specific franchise.
 3. If a web tip's scope is "league-wide", stay vague ("an owner tells me", "hearing from multiple corners").
@@ -832,7 +836,7 @@ HARD RULES (self-enforce, never violate):
 5. If a web tip's scope is "commish", you MAY reference the commissioner's office but PREFER institutional framing — "the league office", "the commissioner's office", "the front office" — over the personal "the commish" or "Brandon". Institutional framing tones down heat while still passing on the sentiment. NEVER name the franchise that holds the office.
 6. For GroupMe tips (source: "groupme", scope: "groupme-public", attributable: true): direct attribution is ENCOURAGED. The author publicly @'d Schefter in the group chat — name them. Riff BACK conversationally, second-person where it fits ("Wabbit, I hear you, but…", "Nice try, Jomar — my sources say otherwise"). Light ribbing is in-voice.
 7. If the batch mixes GroupMe and web tips, they are about the SAME topic — attribute the GroupMe author by name while keeping the web tipster anonymous, still one story.
-8. Length: 1–2 sentences per beat (a single-beat post is 1–2 sentences; a two-beat gossip post is 2–4 total, one per beat). Tight, tease-voice, no throat-clearing. End with "Developing." only when it genuinely fits — don't force it.
+8. Length: 1–2 sentences. Tight, tease-voice, no throat-clearing. End with "Developing." only when it genuinely fits — don't force it.
 9. Do NOT include hashtags, emoji, or @-mentions. Plain prose only.
 10. Do NOT reveal how many tips fed this post. No meta commentary about the rumor mill itself.
 11. Thread continuity: if ANY tip in this batch has a \`threadFollowup\` field (Phase 7 whisper-back), open with continuity language — "Following up on yesterday's…", "More on the…", "Circling back to…", "As a reminder…". Use the parentHeadlineSnippet as a cue, but do not quote it. Still respect every fuzz/anonymity rule above. If no tip has threadFollowup, do not use continuity phrasing.
@@ -917,15 +921,7 @@ HARD RULES (self-enforce, never violate):
 
 17. AGE-AWARE FRAMING. Each tip carries \`ageDays\` (integer) and \`isStale\` (boolean, true when ageDays >= 3). NEVER claim a stale tip is fresh. When ANY tip in the beat has \`isStale: true\`, you MUST either (a) reference when the whisper started — "the chatter that started earlier this week…", "a whisper from a few days back…", "been hearing this for days now…" — OR (b) explicitly hedge the staleness — "still hearing about…", "this one's been sitting with me…", "hasn't gone away…". Pick ONE device per beat; don't stack them. For tips with ageDays === 0 or 1, treat as fresh ("I'm told…", "just hearing…", "late word…"). Never invent a specific date the tip doesn't have (don't say "Monday" unless the tip was actually whispered on Monday — the scanner supplies integer day counts, not calendar labels, so stick to relative language).
 
-18. TWO-BEAT GOSSIP POSTS (only when the batch contains a \`secondaryBucket\` marker — see user message). Two distinct gossip topics share one post. Rules:
-    - Format as TWO short beats, each 1 sentence. Each beat covers ONE of the two topics. Separate the beats with a line break (\\n\\n) and optionally a dash or bullet (— …) so the reader sees two quick hits instead of a wall of text.
-    - Do NOT try to connect the beats thematically. They are independent blurbs.
-    - Still respect every anonymity / hostile-tip rule above per beat.
-    - The beats may include a transition phrase ("— Also") but NEVER the banned "meanwhile" chain.
-    - Example shape:
-        Beat 1 on topic A.\\n\\n— Beat 2 on topic B.
-
-19. MAILBAG POSTS (only when the user message starts with "MAILBAG:" — Friday news-dump). Bundled roundup of every gossip tip still in the queue that would otherwise expire. Rules:
+18. MAILBAG POSTS (only when the user message starts with "MAILBAG:" — Friday news-dump). Bundled roundup of every gossip tip still in the queue that would otherwise expire. Rules:
     - Open with a brief mailbag framing: "Cleaning out the mailbag before the weekend.", "Friday loose-notes dump.", "Before I log off — a few whispers worth airing out."
     - Cover up to 6 bullet-style one-liners, one per topic bucket. Each one-liner is a single clause. Line-break between bullets (\\n\\n• …).
     - Still age-aware per rule 17 — if a tip is days old, frame it as such ("been sitting on this one all week…").
@@ -957,11 +953,9 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
 
   let userMessage;
   if (mode === 'mailbag') {
-    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 19 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
-  } else if (mode === 'two-beat' && Array.isArray(secondaryAnonymized) && secondaryAnonymized.length > 0) {
-    userMessage = `Two-beat gossip post: apply HARD RULE 18. Write ONE short sentence for PRIMARY_TIPS, then a blank line and a bullet (— …) with ONE short sentence for SECONDARY_TIPS. Two distinct topics, two quick hits, no "meanwhile" chain. Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nPRIMARY_TIPS:\n${JSON.stringify(anonymized, null, 2)}\n\nSECONDARY_TIPS:\n${JSON.stringify(secondaryAnonymized, null, 2)}`;
+    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 18 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   } else {
-    userMessage = `Synthesize these tips into ONE rumor-mill post (single beat, 1–2 sentences, one topic). Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   }
 
   if (DRY_RUN) {
@@ -1657,13 +1651,15 @@ async function main() {
     batch = primaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
     postKind = primaryBucket.kind;
 
-    // Two-beat gossip: a second distinct gossip bucket rides along in the
-    // same post, counted as ONE post against the daily + gossip caps.
-    // Trade-rumor posts never carry a secondary — they stay strictly
-    // single-topic.
+    // Two-post gossip: a second distinct gossip bucket ships as its own
+    // independent feed post in the SAME scan cycle. Both posts count as
+    // one slot against the daily + gossip caps, but each has its own
+    // post id so reactions, comments, and whisper-back threads stay
+    // separate. Trade-rumor posts never carry a secondary — they stay
+    // strictly single-topic.
     if (postKind === 'gossip' && secondaryBucket) {
-      secondaryBatch = secondaryBucket.tips.slice(0, Math.max(1, Math.floor(MAX_TIPS_PER_BATCH / 2)));
-      log(`  Second beat bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s))`);
+      secondaryBatch = secondaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
+      log(`  Second post bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s))`);
     }
   }
 
@@ -1719,131 +1715,168 @@ async function main() {
     log(`  [roger-riff] Dice roll failed — no riff this cycle`);
   }
 
-  // Generate post (AI receives Roger directive only if quote is available,
-  // plus assembled lore suffix + recent-post memory when available). The
-  // `mode` flag selects the one-beat / two-beat / mailbag user-prompt shape.
-  const aiMode = postKind === 'mailbag'
-    ? 'mailbag'
-    : (secondaryAnonymized ? 'two-beat' : 'single');
-  const aiBody = await generateAiBody(anonymized, {
-    rogerQuote,
-    lore,
-    recentPostsBlock,
-    mode: aiMode,
-    secondaryAnonymized,
-  });
-  const body = aiBody || templateBody(anonymized);
-  log(`  Post body (${aiBody ? 'AI' : 'template'})${hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
-
-  // Build post — tipIds covers both the primary and (when present) the
-  // secondary two-beat batch so processed-audit + hash-for-tip indexes
-  // see every tip that shipped.
-  const combinedBatch = secondaryBatch ? [...batch, ...secondaryBatch] : batch;
-  const tipIds = combinedBatch.map((t) => t.id);
-
-  // Phase 7 — whisper-back thread resolution. If any tip in the batch is a
-  // follow-up to an existing rumor, the new post joins that thread. We pick
-  // the most-referenced parent in the batch, then resolve its threadId via
-  // the Redis registry (or mint a new one and stamp the parent).
-  const parentCounts = new Map();
-  for (const tip of combinedBatch) {
-    if (tip && typeof tip.repliesToPostId === 'string' && tip.repliesToPostId.length > 0) {
-      parentCounts.set(tip.repliesToPostId, (parentCounts.get(tip.repliesToPostId) ?? 0) + 1);
-    }
+  // Build the list of "beats" — one per independent feed post we'll ship
+  // this cycle. Most post kinds produce exactly one beat; a two-topic
+  // gossip cycle produces TWO beats (independent post IDs, independent
+  // reactions/threads) even though they share the same cap slot.
+  const beats = [
+    { batch, anonymized, kind: postKind },
+  ];
+  if (secondaryBatch && postKind === 'gossip') {
+    beats.push({
+      batch: secondaryBatch,
+      anonymized: secondaryAnonymized,
+      kind: 'gossip',
+    });
   }
-  let dominantParentId = null;
-  if (parentCounts.size > 0) {
-    let best = -1;
-    for (const [id, count] of parentCounts) {
-      if (count > best) {
-        best = count;
-        dominantParentId = id;
+  log(`  Producing ${beats.length} post(s) this cycle`);
+
+  // Generate bodies in parallel. Only the primary beat gets the Roger
+  // riff — the riff is a once-per-day cameo that shouldn't double up.
+  const aiMode = postKind === 'mailbag' ? 'mailbag' : 'single';
+  const aiBodies = await Promise.all(
+    beats.map((beat, i) => generateAiBody(beat.anonymized, {
+      rogerQuote: i === 0 ? rogerQuote : null,
+      lore,
+      recentPostsBlock,
+      mode: aiMode,
+    })),
+  );
+
+  // Build post objects. Each beat resolves its own whisper-back thread
+  // from its own batch's repliesToPostId, so replies to two different
+  // parent rumors land in two different threads — one per post. We keep
+  // the parent-id mapping in a side Map so it never leaks into the feed
+  // JSON or the API response shape.
+  const combinedBatch = beats.flatMap((b) => b.batch);
+  const builtPosts = [];
+  const parentIdByPostId = new Map();
+  for (let i = 0; i < beats.length; i++) {
+    const beat = beats[i];
+    const aiBody = aiBodies[i];
+    const body = aiBody || templateBody(beat.anonymized);
+    log(`  [beat ${i + 1}/${beats.length}] (${aiBody ? 'AI' : 'template'})${i === 0 && hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
+
+    const tipIds = beat.batch.map((t) => t.id);
+
+    // Thread resolution — per beat. Whisper-backs in beat 1 and beat 2
+    // threads stay separate.
+    const parentCounts = new Map();
+    for (const tip of beat.batch) {
+      if (tip && typeof tip.repliesToPostId === 'string' && tip.repliesToPostId.length > 0) {
+        parentCounts.set(tip.repliesToPostId, (parentCounts.get(tip.repliesToPostId) ?? 0) + 1);
       }
     }
-  }
-  let threadId = null;
-  if (dominantParentId) {
-    try {
-      const registered = await redis.get(`schefter:thread_of:${dominantParentId}`);
-      if (typeof registered === 'string' && registered.length > 0) {
-        threadId = registered;
-      } else {
-        // Mint a new threadId rooted at the parent rumor so permalinks are
-        // readable. Stamp the parent via thread_of so future whisper-backs
-        // to the same rumor join the same thread.
+    let dominantParentId = null;
+    if (parentCounts.size > 0) {
+      let best = -1;
+      for (const [id, count] of parentCounts) {
+        if (count > best) {
+          best = count;
+          dominantParentId = id;
+        }
+      }
+    }
+    let threadId = null;
+    if (dominantParentId) {
+      try {
+        const registered = await redis.get(`schefter:thread_of:${dominantParentId}`);
+        threadId = typeof registered === 'string' && registered.length > 0
+          ? registered
+          : dominantParentId;
+      } catch {
         threadId = dominantParentId;
       }
-    } catch {
-      threadId = dominantParentId;
     }
+
+    // Distinct timestamps so feed ordering is stable between beats —
+    // primary (i=0) uses `now`, later beats push out by (i * 1000ms).
+    // Feed prepends primary last so primary ends up at index 0 (top).
+    const beatTs = new Date(now.getTime() + i * 1000);
+
+    const post = {
+      id: generatePostId(),
+      timestamp: beatTs.toISOString(),
+      type: 'transaction',
+      transactionSubType: RUMOR_SUB_TYPE,
+      tier: RUMOR_TIER,
+      headline: 'Schefter hearing…',
+      body,
+      authorId: 'claude',
+      franchiseIds: [],
+      tipIds,
+      hadRogerRiff: i === 0 ? hadRogerRiff : false,
+      league: LEAGUE_SLUG,
+      // Every rumor card links back to the tip page so any reader can
+      // whisper a follow-up with a single tap. SchefterPostCard renders
+      // this as a CTA under the body.
+      link: TIP_PAGE_PATH,
+      linkLabel: TIP_PAGE_LINK_LABEL,
+      ...(threadId ? { threadId } : {}),
+    };
+    if (threadId && dominantParentId) {
+      parentIdByPostId.set(post.id, dominantParentId);
+    }
+    builtPosts.push(post);
   }
 
-  const post = {
-    id: generatePostId(),
-    timestamp: now.toISOString(),
-    type: 'transaction',
-    transactionSubType: RUMOR_SUB_TYPE,
-    tier: RUMOR_TIER,
-    headline: 'Schefter hearing…',
-    body,
-    authorId: 'claude',
-    franchiseIds: [],
-    tipIds,
-    hadRogerRiff,
-    league: LEAGUE_SLUG,
-    // Every rumor card links back to the tip page so any reader can
-    // whisper a follow-up with a single tap. SchefterPostCard renders
-    // this as a CTA under the body.
-    link: TIP_PAGE_PATH,
-    linkLabel: TIP_PAGE_LINK_LABEL,
-    ...(threadId ? { threadId } : {}),
-  };
-
-  // GroupMe gets the body plus the absolute tip-page URL on its own line —
-  // the feed card shows the same call-to-action via post.link.
-  const groupMeText = `${post.body}\n\nGot a tip? ${TIP_PAGE_ABSOLUTE_URL}`;
+  const allTipIds = combinedBatch.map((t) => t.id);
+  // Stable cycle-wide GroupMe payload builder — body + tip-page URL.
+  const groupMeTextFor = (p) => `${p.body}\n\nGot a tip? ${TIP_PAGE_ABSOLUTE_URL}`;
 
   if (DRY_RUN) {
-    log('\n  [dry-run] Would append post to feed:');
-    log(JSON.stringify(post, null, 2));
+    log(`\n  [dry-run] Would append ${builtPosts.length} post(s) to feed:`);
+    for (const p of builtPosts) log(JSON.stringify(p, null, 2));
     log('\n  [dry-run] Would remove the following tipIds from queue:');
-    log(`    ${tipIds.join(', ')}`);
+    log(`    ${allTipIds.join(', ')}`);
     if (unusedTips.length > 0) {
       log(`  [dry-run] Would hold ${unusedTips.length} tip(s) for the next cycle: ${unusedTips.map((t) => t.id).join(', ')}`);
     }
-    log(`  [dry-run] Would increment schefter:rumor:posts_today${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today' : ''}, set last_post_ts${unusedTips.length > 0 ? ', rewrite queue with leftover tips' : ', DEL first_tip_ts'}`);
+    log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''} (even with ${builtPosts.length} posts — counts as one cap slot), set last_post_ts${unusedTips.length > 0 ? ', rewrite queue with leftover tips' : ', DEL first_tip_ts'}`);
     if (hadRogerRiff) {
       log(`  [dry-run] Would set ${ROGER_LAST_RIFF_DATE_KEY}=${todayPt} (ex=48h)`);
     }
-    await postToGroupMe(groupMeText);
+    for (const p of builtPosts) {
+      await postToGroupMe(groupMeTextFor(p));
+    }
     return 0;
   }
 
-  // Write feed
+  // Write feed — prepend in reverse so the primary beat ends up at index 0
+  // (top of the feed). Both posts land in the same fs.writeFile call so
+  // an error on GroupMe can't leave one written and one missing.
   const feed = await loadFeed();
-  feed.posts = [post, ...(feed.posts ?? [])];
+  const existingPosts = feed.posts ?? [];
+  feed.posts = [...builtPosts, ...existingPosts];
   feed.lastScanTimestamp = now.toISOString();
   await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
-  log(`  Appended to feed (total posts: ${feed.posts.length})`);
+  log(`  Appended to feed: ${builtPosts.length} new post(s) (total: ${feed.posts.length})`);
 
-  // GroupMe — body plus the absolute tip-page URL so owners always have a
-  // one-tap path back to whisper a follow-up.
-  await postToGroupMe(groupMeText);
+  // GroupMe — one message per post so each shows up as an independent
+  // reply target in the group chat. Small stagger between to avoid
+  // rate-limiting surprises.
+  for (let i = 0; i < builtPosts.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 250));
+    await postToGroupMe(groupMeTextFor(builtPosts[i]));
+  }
 
-  // Append to rolling post history (best-effort — never crashes the run).
-  // Subject is a short tag derived from dominant tip source/scope.
-  const subject = deriveHistorySubject(combinedBatch, anonymized);
+  // Append each post to the rolling history (one entry per post).
   const tipSources = Array.from(new Set(combinedBatch.map((t) => t.source).filter(Boolean)));
-  await appendPostHistory(
-    buildHistoryEntry({
-      id: post.id,
-      timestamp: post.timestamp,
-      body: post.body,
-      subject,
-      tipSources,
-    }),
-    { log, warn },
-  );
+  for (let i = 0; i < builtPosts.length; i++) {
+    const p = builtPosts[i];
+    const beat = beats[i];
+    const subject = deriveHistorySubject(beat.batch, beat.anonymized);
+    await appendPostHistory(
+      buildHistoryEntry({
+        id: p.id,
+        timestamp: p.timestamp,
+        body: p.body,
+        subject,
+        tipSources,
+      }),
+      { log, warn },
+    );
+  }
 
   // Redis updates: increment counter (with TTL to midnight PT), last post ts,
   // rewrite queue with leftovers from unchosen buckets, record processed
@@ -1891,9 +1924,9 @@ async function main() {
       await redis.del(FIRST_TIP_TS_KEY);
     }
 
-    // Processed audit list (TTL 24h)
-    if (tipIds.length > 0) {
-      await redis.lpush(TIPS_PROCESSED_KEY, ...tipIds);
+    // Processed audit list (TTL 24h) — covers tips from every beat.
+    if (allTipIds.length > 0) {
+      await redis.lpush(TIPS_PROCESSED_KEY, ...allTipIds);
       await redis.expire(TIPS_PROCESSED_KEY, PROCESSED_TTL_SEC);
     }
 
@@ -1927,21 +1960,26 @@ async function main() {
     warn(`  Redis post-write update failed: ${err.message}`);
   }
 
-  // Phase 7 — thread registry. If this post joined an existing thread (or
-  // started one from a whisper-back), record it in Redis so future follow-ups
-  // can look up the thread and the permalink page can render the chain.
-  if (threadId) {
+  // Phase 7 — thread registry. If a post joined an existing thread (or
+  // started one from a whisper-back), record it in Redis so future
+  // follow-ups can look up the thread and the permalink page can render
+  // the chain. Each beat has its own (possibly null) threadId, so we
+  // loop and treat them independently.
+  for (const p of builtPosts) {
+    if (!p.threadId) continue;
+    const threadId = p.threadId;
+    const dominantParentId = parentIdByPostId.get(p.id);
     try {
       const threadZsetKey = `schefter:thread:${threadId}`;
       const threadOfParentKey = `schefter:thread_of:${dominantParentId}`;
-      const threadOfNewKey = `schefter:thread_of:${post.id}`;
+      const threadOfNewKey = `schefter:thread_of:${p.id}`;
       const threadTtlSec = 14 * 24 * 60 * 60;
 
-      await redis.zadd(threadZsetKey, { score: new Date(post.timestamp).getTime(), member: post.id });
+      await redis.zadd(threadZsetKey, { score: new Date(p.timestamp).getTime(), member: p.id });
       // If the thread is new (rooted at the parent), also index the parent in
       // the zset so the permalink view always opens with it.
       if (dominantParentId && dominantParentId === threadId) {
-        const parentPost = (feedForAnonymize.posts ?? []).find((p) => p.id === dominantParentId);
+        const parentPost = (feedForAnonymize.posts ?? []).find((pp) => pp.id === dominantParentId);
         if (parentPost) {
           await redis.zadd(threadZsetKey, {
             score: new Date(parentPost.timestamp).getTime(),
@@ -1954,9 +1992,9 @@ async function main() {
       await redis.set(threadOfNewKey, threadId, { ex: threadTtlSec });
       await redis.expire(threadZsetKey, threadTtlSec);
 
-      log(`  [thread] Registered ${post.id} in thread ${threadId}`);
+      log(`  [thread] Registered ${p.id} in thread ${threadId}`);
     } catch (err) {
-      warn(`  [thread] Registry update failed: ${err.message}`);
+      warn(`  [thread] Registry update failed for ${p.id}: ${err.message}`);
     }
   }
 
