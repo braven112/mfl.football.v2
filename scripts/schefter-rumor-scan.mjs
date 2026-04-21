@@ -34,16 +34,29 @@
  *   6. If chosen bucket is "gossip", schefter:rumor:gossip_posts_today < adaptive cap
  *
  * Topic-bucket priority (bucketPriorityScore = (size - 1) * 2 + oldest-age-in-days):
- *   a. Trade rumors (trade_offer source OR topic === "trade")
- *   b. Gossip buckets — largest/oldest wins. When a second distinct gossip
- *      bucket exists AND the gossip queue has piled up to at least
- *      SECONDARY_GOSSIP_POST_PRESSURE tips, it ships as its OWN independent
- *      feed post in the same cycle (separate post id, reactions, comments,
- *      whisper-back thread), with both posts sharing one cap slot. Below
- *      that threshold the second bucket waits for the next cycle — the
- *      quick-double-post is a catch-up mechanism for 2+ days of pile-up,
- *      not a default cadence.
+ *   a. Trade-offer bucket — actual MFL pending offers (source === "trade_offer").
+ *      This is the only "trade" lane. Web/groupme tips with topic === "trade"
+ *      are speculation, not confirmed offers — they ride the gossip lane.
+ *   b. Gossip buckets — largest/oldest wins. Gossip covers commish, roster,
+ *      prediction, "other", AND web/groupme trade-rumor speculation. When
+ *      a second distinct gossip bucket exists AND the gossip queue has
+ *      piled up to at least SECONDARY_GOSSIP_POST_PRESSURE tips, it ships
+ *      as its OWN independent feed post in the same cycle (separate post
+ *      id, reactions, comments, whisper-back thread), with both posts
+ *      sharing one cap slot. Below that threshold the second bucket waits
+ *      for the next cycle — the quick-double-post is a catch-up mechanism
+ *      for 2+ days of pile-up, not a default cadence.
  *   c. Oldest gossip singleton if nothing else qualifies
+ *
+ * Web/groupme bucket key is `topic:<topic>:<franchiseHint || "league-wide">`
+ * so two trade-rumor tips with different scopes (one named-franchise, one
+ * league-wide) split into separate buckets and ship as separate posts.
+ *
+ * Anonymization redacts franchise-name mentions from raw tip `text` when
+ * the scope is fuzzed (single-source franchise → division, league-wide,
+ * commish). The tipster could type "the Geeks are looking for an RB" but
+ * the LLM sees "[a team] are looking for an RB" — anonymity by deletion,
+ * not by polite request.
  *
  * Special paths:
  *   - Friday mailbag: on Friday PT, once per day, sweeps ALL gossip tips
@@ -288,6 +301,57 @@ function pickTeamName(team) {
   return team.nameShort || team.nameMedium || team.name || null;
 }
 
+/**
+ * Build a list of all known franchise-name tokens (long/medium/short/abbrev)
+ * across the teams map. Used to redact franchise mentions from tip text
+ * when the tip's scope has been fuzzed away from naming a specific franchise.
+ *
+ * Keeps tokens length-sorted descending so a regex alternation matches the
+ * longest form first (e.g. "Nashville Geeks" wins over "Geeks").
+ */
+function collectFranchiseNameTokens(teams) {
+  const tokens = new Set();
+  for (const team of teams.values()) {
+    for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) {
+      const v = team?.[field];
+      if (typeof v === 'string' && v.trim().length >= 2) {
+        tokens.add(v.trim());
+      }
+    }
+  }
+  return [...tokens].sort((a, b) => b.length - a.length);
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Redact franchise-name mentions from anonymized tip text.
+ *
+ * The safe.scope guides what stays:
+ *   - kind === 'franchise-multi-source' → keep ONLY the named franchise
+ *     (HARD RULE 4 lets Schefter name it), redact every other team
+ *   - kind === 'division' / 'commish' / 'league-wide' → redact every team
+ *
+ * Matches are case-insensitive with word boundaries. Replaces with
+ * "[a team]" so the LLM literally cannot leak a name even if the tipster
+ * typed one in the raw text. Returns the redacted string (no mutation).
+ */
+function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
+  if (typeof text !== 'string' || text.length === 0) return text;
+  const tokens = collectFranchiseNameTokens(teams);
+  if (tokens.length === 0) return text;
+  const keepLower = typeof keepFranchise === 'string' ? keepFranchise.toLowerCase() : null;
+  let out = text;
+  for (const token of tokens) {
+    if (keepLower && token.toLowerCase() === keepLower) continue;
+    const re = new RegExp(`\\b${escapeRegExp(token)}\\b`, 'gi');
+    out = out.replace(re, '[a team]');
+  }
+  return out;
+}
+
 // ── GroupMe ──
 
 async function postToGroupMe(text) {
@@ -502,6 +566,16 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
       safe.intraDivision = true;
     }
 
+    // Text redaction — strip franchise mentions from `text` so the LLM can't
+    // leak a name even when the tipster typed one in. Multi-source scope
+    // keeps the named franchise (HARD RULE 4 lets Schefter use it); every
+    // other scope fuzzes to "[a team]" for ALL franchise names. GroupMe and
+    // trade_offer paths returned earlier and bypass this block.
+    const keepFranchise = safe.scope?.kind === 'franchise-multi-source'
+      ? safe.scope.franchise
+      : null;
+    safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise });
+
     return safe;
   });
 }
@@ -510,28 +584,33 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
 
 /**
  * Classify each tip into a "kind" that drives daily-cap accounting.
- *   - trade  : source === 'trade_offer' OR topic === 'trade'
- *   - gossip : everything else (commish beef, predictions, roster gripes,
- *              off-topic shots, GroupMe riffs). Rationed to 1 post/day.
+ *   - trade  : source === 'trade_offer' ONLY. Real MFL pending offers are
+ *              the trade-rumor headline material — they get priority over
+ *              every other bucket and aren't subject to the gossip cap.
+ *   - gossip : everything else, INCLUDING web/groupme tips with topic === 'trade'.
+ *              An owner saying "I think the Geeks are looking for an RB" is
+ *              speculation, not a confirmed offer — it rides the gossip lane
+ *              with commish beef, roster gripes, and predictions, and is
+ *              subject to MAX_GOSSIP_POSTS_PER_DAY (adaptive).
  */
 function classifyTipKind(tip) {
   if (!tip) return 'gossip';
   if (tip.source === 'trade_offer') return 'trade';
-  if (tip.topic === 'trade') return 'trade';
   return 'gossip';
 }
 
 /**
  * Group tips into single-topic buckets. Bucket keys:
- *   - trade_offer tips         → 'trade:offer'
- *   - web/groupme trade tips   → 'trade:web'
- *   - whisper-back followups   → 'thread:<parentPostId>'
- *   - everything else          → 'topic:<topic>' (commish / roster / prediction / other)
+ *   - trade_offer tips           → 'trade:offer'
+ *   - whisper-back followups     → 'thread:<parentPostId>'
+ *   - web/groupme tips           → 'topic:<topic>:<scope>'
  *
- * Trade-offer tips and web trade tips land in separate buckets because they
- * read as different stories even though both are trade rumors — we only want
- * one in a given post. When multiple trade buckets exist, the priority
- * selector prefers the larger one (ties broken by trade-offer > web).
+ * Web/groupme keys include the franchiseHint (or 'league-wide') as a
+ * scope discriminator so two `topic: 'trade'` tips from different sources
+ * (one about a specific franchise, one league-wide) don't collapse into
+ * a single combined post. Multi-source clustering still works: two
+ * tippers naming the SAME franchise on the SAME topic share a key and
+ * cluster correctly.
  */
 function buildTopicBuckets(tips) {
   const map = new Map();
@@ -539,12 +618,14 @@ function buildTopicBuckets(tips) {
     let key;
     if (tip.source === 'trade_offer') {
       key = 'trade:offer';
-    } else if (tip.topic === 'trade') {
-      key = 'trade:web';
     } else if (typeof tip.repliesToPostId === 'string' && tip.repliesToPostId.length > 0) {
       key = `thread:${tip.repliesToPostId}`;
     } else {
-      key = `topic:${tip.topic ?? 'other'}`;
+      const topic = tip.topic ?? 'other';
+      const scope = tip.franchiseHint && tip.franchiseHint !== 'league-wide'
+        ? tip.franchiseHint
+        : 'league-wide';
+      key = `topic:${topic}:${scope}`;
     }
     let bucket = map.get(key);
     if (!bucket) {
@@ -594,33 +675,29 @@ function bucketPriorityScore(bucket, now = new Date()) {
  * Pick the bucket(s) to post about this cycle.
  *
  * Priority order:
- *   1. Trade rumors — ranked by bucketPriorityScore (size + age boost). Ties
- *      prefer trade-offer over web-trade because trade-offer is structured
- *      data from MFL, less noisy than owner speculation.
- *   2. Gossip buckets with ≥2 tips (multi-tip topic clusters) — bucketPriorityScore ranks.
+ *   1. Trade-offer bucket — actual MFL pending offers. Always wins. Web/
+ *      groupme trade-rumor speculation does NOT live here — it rides the
+ *      gossip lane (see classifyTipKind).
+ *   2. Gossip buckets — bucketPriorityScore (size + age boost) ranks them.
+ *      Includes commish, roster, prediction, "other", AND web/groupme
+ *      trade rumor tips.
  *   3. Singleton gossip — returned when nothing else qualifies. Age boost
  *      means older singletons rise above newer ones naturally.
  *
  * For gossip posts we also return a SECONDARY bucket when one exists —
  * the caller ships the secondary as its OWN independent feed post so
  * each gossip topic has separate reactions and whisper-back threads.
- * Both posts consume exactly one slot from the daily cap. Trade-rumor
- * posts never carry a secondary (they stay strictly single-topic).
+ * Both posts consume exactly one slot from the daily cap. The trade-
+ * offer post never carries a secondary (single-topic only).
  *
  * Returns `{ primary, secondary }` or `null` when nothing qualifies.
  */
 function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date() } = {}) {
   const tradeBuckets = buckets.filter((b) => b.kind === 'trade');
   if (tradeBuckets.length > 0) {
-    tradeBuckets.sort((a, b) => {
-      const sa = bucketPriorityScore(a, now);
-      const sb = bucketPriorityScore(b, now);
-      if (sb !== sa) return sb - sa;
-      // Prefer trade-offer over web-trade on ties
-      if (a.key === 'trade:offer' && b.key !== 'trade:offer') return -1;
-      if (b.key === 'trade:offer' && a.key !== 'trade:offer') return 1;
-      return 0;
-    });
+    // Only one bucket key (trade:offer) maps to kind === 'trade' under the
+    // new classification, but sort defensively in case that ever changes.
+    tradeBuckets.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
     return { primary: tradeBuckets[0], secondary: null };
   }
 
