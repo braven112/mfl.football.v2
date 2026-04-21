@@ -56,16 +56,29 @@ describe('rumor-scan bucketing — one topic per post', () => {
     expect(src).toMatch(/function\s+pickPrimaryBucket\(\s*buckets\s*,\s*\{\s*gossipAllowedToday[^}]*\}/);
   });
 
-  it('prefers trade-offer tips over topic="trade" web tips on a tie (structured beats speculative)', () => {
-    // Inside pickPrimaryBucket the tie-breaker has to favor "trade:offer"
-    // so structured MFL-derived offers outrank owner speculation. This
-    // pins the comparator so a future refactor doesn't accidentally
-    // reverse it.
-    const pickFn = src.match(/function\s+pickPrimaryBucket[\s\S]+?\n\}\n/);
-    expect(pickFn).not.toBeNull();
-    const body = pickFn![0];
-    expect(body).toMatch(/a\.key\s*===\s*['"]trade:offer['"]/);
-    expect(body).toMatch(/return\s*-1/);
+  it('classifies ONLY trade_offer tips as the trade kind (web/groupme trade rumors are gossip)', () => {
+    // Real MFL pending offers are the trade-rumor headline material.
+    // Web/groupme tips with topic === 'trade' are speculation and ride
+    // the gossip lane subject to the gossip cap.
+    const fn = src.match(/function\s+classifyTipKind[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    const body = fn![0];
+    expect(body).toMatch(/source\s*===\s*['"]trade_offer['"]\)\s*return\s+['"]trade['"]/);
+    // No fall-through that promotes topic === 'trade' to 'trade' kind.
+    expect(body).not.toMatch(/topic\s*===\s*['"]trade['"]\)\s*return\s+['"]trade['"]/);
+  });
+
+  it('web/groupme bucket key includes the franchise scope so different scopes split into separate posts', () => {
+    // Two `topic: 'trade'` web tips — one naming a franchise, one
+    // league-wide — must NOT collapse into one post. The key is
+    // `topic:<topic>:<franchiseHint || 'league-wide'>` so they bucket
+    // independently and ship as two separate posts (subject to the
+    // pressure gate).
+    const fn = src.match(/function\s+buildTopicBuckets[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    const body = fn![0];
+    expect(body).toMatch(/key\s*=\s*`topic:\$\{topic\}:\$\{scope\}`/);
+    expect(body).toMatch(/scope\s*=\s*tip\.franchiseHint[\s\S]*?['"]league-wide['"]/);
   });
 
   it('only considers gossip buckets when the gossip daily budget is still open', () => {
@@ -156,6 +169,49 @@ describe('rumor-scan tip-page link — every post sends readers back to /tip', (
     expect(src).toMatch(/await\s+postToGroupMe\(groupMeTextFor\(builtPosts\[i\]\)\)/);
     // No raw-body GroupMe calls remain — every rumor post gets the CTA.
     expect(src).not.toMatch(/await\s+postToGroupMe\(post\.body\)/);
+  });
+});
+
+describe('rumor-scan text redaction — franchise names cannot leak through tip text', () => {
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('exposes a redactFranchiseNamesInText helper', () => {
+    expect(src).toMatch(/function\s+redactFranchiseNamesInText\(/);
+  });
+
+  it('collects every franchise name form (long/medium/short/abbrev) for matching', () => {
+    expect(src).toMatch(/function\s+collectFranchiseNameTokens\(/);
+    const fn = src.match(/function\s+collectFranchiseNameTokens[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    expect(fn![0]).toMatch(/['"]name['"],\s*['"]nameMedium['"],\s*['"]nameShort['"],\s*['"]abbrev['"]/);
+  });
+
+  it('replaces matched franchise names with a generic "[a team]" placeholder', () => {
+    const fn = src.match(/function\s+redactFranchiseNamesInText[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    expect(fn![0]).toMatch(/replace\(re,\s*['"]\[a team\]['"]\)/);
+  });
+
+  it('keeps the named franchise on multi-source scope, redacts everything else', () => {
+    // The keepFranchise param lets HARD RULE 4's named-franchise stay
+    // while still scrubbing collateral mentions of OTHER teams.
+    const fn = src.match(/function\s+redactFranchiseNamesInText[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    expect(fn![0]).toMatch(/keepFranchise/);
+  });
+
+  it('uses word-boundary case-insensitive regex (so "Geeks" matches but "geeky" does not)', () => {
+    const fn = src.match(/function\s+redactFranchiseNamesInText[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    expect(fn![0]).toMatch(/new RegExp\(`\\\\b\$\{escapeRegExp\(token\)\}\\\\b`,\s*['"]gi['"]\)/);
+  });
+
+  it('runs redaction at the end of the web-tip anonymization path', () => {
+    // The keep-franchise lookup uses the just-set safe.scope so the
+    // multi-source named franchise survives while every other team
+    // gets stripped from the raw text the LLM sees.
+    expect(src).toMatch(/safe\.scope\?\.kind\s*===\s*['"]franchise-multi-source['"]/);
+    expect(src).toMatch(/safe\.text\s*=\s*redactFranchiseNamesInText\(safe\.text,\s*teams,/);
   });
 });
 
