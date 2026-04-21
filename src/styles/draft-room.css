@@ -236,7 +236,116 @@
   letter-spacing: 0.01em;
 }
 
-/* ── On-the-Clock Team Block ──
+/* ── Board Cell (single pick on the grid) ──
+ * Base cell, OTC pulse, user-team tint, and position-colored left border.
+ */
+.dr-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 0.25rem 0.5rem 0.375rem;
+  min-height: var(--dr-cell-height, 56px);
+  font-size: 0.75rem;
+  background: var(--dr-cell-bg, #ffffff);
+  border-bottom: 1px solid var(--dr-cell-border, #e2e8f0);
+  border-left: 3px solid transparent;
+  transition: background 0.2s var(--dr-easing-ease);
+}
+.dr-cell--user { background: var(--dr-cell-bg-user, rgba(28, 73, 124, 0.06)); }
+.dr-cell--otc {
+  background: var(--dr-otc-bg, #fef3c7);
+  animation: dr-otc-pulse 2s var(--dr-easing-ease) infinite;
+}
+.dr-cell--pos-qb  { border-left-color: var(--dr-pos-qb); }
+.dr-cell--pos-rb  { border-left-color: var(--dr-pos-rb); }
+.dr-cell--pos-wr  { border-left-color: var(--dr-pos-wr); }
+.dr-cell--pos-te  { border-left-color: var(--dr-pos-te); }
+.dr-cell--pos-pk  { border-left-color: var(--dr-pos-pk); }
+.dr-cell--pos-def { border-left-color: var(--dr-pos-def); }
+
+.dr-cell__pick {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-400, #9ca3af);
+  margin-bottom: 0.1875rem;
+}
+.dr-cell__body {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.dr-cell__avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full, 9999px);
+  object-fit: cover;
+  object-position: top;
+  flex-shrink: 0;
+  background: var(--color-gray-100, #f3f4f6);
+}
+.dr-cell__avatar--def {
+  border-radius: 0;
+  object-fit: contain;
+}
+.dr-cell__name {
+  font-weight: 600;
+  color: var(--color-gray-900, #111827);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+.dr-cell__meta {
+  font-size: 0.625rem;
+  font-weight: 600;
+  margin-top: 0.0625rem;
+  color: var(--color-gray-500, #6b7280);
+}
+.dr-cell__meta--pos-qb  { color: var(--dr-pos-qb); }
+.dr-cell__meta--pos-rb  { color: var(--dr-pos-rb); }
+.dr-cell__meta--pos-wr  { color: var(--dr-pos-wr); }
+.dr-cell__meta--pos-te  { color: var(--dr-pos-te); }
+.dr-cell__meta--pos-pk  { color: var(--dr-pos-pk); }
+.dr-cell__meta--pos-def { color: var(--dr-pos-def); }
+.dr-cell__empty {
+  font-size: 0.6875rem;
+  font-style: italic;
+  color: var(--color-gray-400, #9ca3af);
+}
+
+/* Traded-pick "via" row */
+.dr-cell__trade {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.125rem;
+}
+.dr-cell__trade-label {
+  font-size: 0.5rem;
+  color: var(--color-gray-400, #9ca3af);
+  letter-spacing: 0.04em;
+}
+.dr-cell__trade-logo {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full, 9999px);
+  object-fit: cover;
+  display: block;
+}
+.dr-cell__trade-name {
+  font-size: 0.5rem;
+  color: var(--color-gray-400, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
  * Team lockup inside the timer banner. Follows the design-system profile
  * pattern (44px rounded avatar + stacked identity) translated for a dark
  * background surface.
