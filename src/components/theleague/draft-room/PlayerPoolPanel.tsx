@@ -146,17 +146,7 @@ export function PlayerPoolPanel({
           </span>
         )}
         {player.rspPositionRank && (
-          <span
-            style={{
-              marginLeft: '0.25rem',
-              fontSize: '0.5625rem',
-              fontWeight: 700,
-              color: 'var(--color-gray-500, #6b7280)',
-              fontVariantNumeric: 'tabular-nums',
-              letterSpacing: '0.02em',
-            }}
-            aria-label={`RSP rank ${player.rspPositionRank}`}
-          >
+          <span className="dr-player-row__rank" aria-label={`RSP rank ${player.rspPositionRank}`}>
             · {player.rspPositionRank}
           </span>
         )}
@@ -172,13 +162,7 @@ export function PlayerPoolPanel({
         )}
         {slotSalary && (
           <span
-            style={{
-              marginLeft: 'auto',
-              fontSize: '0.5625rem',
-              fontWeight: 700,
-              color: 'var(--color-gray-600, #4b5563)',
-              fontVariantNumeric: 'tabular-nums',
-            }}
+            className="dr-player-row__salary"
             aria-label={`Year 1 salary if drafted at this pick: ${slotSalary}`}
           >
             {slotSalary >= 1_000_000 ? `$${(slotSalary / 1_000_000).toFixed(1)}M` : `$${Math.round(slotSalary / 1000)}K`}
@@ -188,30 +172,12 @@ export function PlayerPoolPanel({
     );
 
     return (
-      <div
-        key={player.id}
-        className="dr-player-row"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.375rem 0.75rem',
-          borderBottom: '1px solid var(--color-gray-50, #f9fafb)',
-          gap: '0.5rem',
-        }}
-      >
+      <div key={player.id} className="dr-player-row">
         <button
           type="button"
           onClick={() => setDetailPlayerId(player.id)}
           aria-label={`View details for ${player.name}`}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: 0,
-            border: 'none',
-            background: 'transparent',
-            textAlign: 'left',
-            cursor: 'pointer',
-          }}
+          className="dr-player-row__trigger"
         >
           <PlayerCell
             name={player.name}
@@ -226,53 +192,21 @@ export function PlayerPoolPanel({
         </button>
         {isUserTurn && onSubmitPick && (
           <button
+            type="button"
             onClick={() => onSubmitPick(player.id)}
             aria-label={`Draft ${player.name}`}
             className="dr-draft-btn"
-            style={{
-              flexShrink: 0,
-              padding: '0.25rem 0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: 'none',
-              borderRadius: 'var(--radius-sm, 0.25rem)',
-              background: 'var(--color-success, #16a34a)',
-              color: '#ffffff',
-              cursor: 'pointer',
-              fontSize: '0.625rem',
-              fontWeight: 700,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.04em',
-              lineHeight: 1,
-            }}
           >
             Draft
           </button>
         )}
         <button
+          type="button"
           onClick={() => !isQueued && onAddToQueue(player.id)}
           aria-label={isQueued ? `${player.name} is in your queue` : `Add ${player.name} to queue`}
           disabled={isQueued}
+          aria-pressed={isQueued}
           className="dr-add-queue-btn"
-          style={{
-            flexShrink: 0,
-            width: '1.5rem',
-            height: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1.5px solid',
-            borderColor: isQueued ? 'var(--color-primary, #1c497c)' : 'var(--color-gray-300, #d1d5db)',
-            borderRadius: 'var(--radius-sm, 0.25rem)',
-            background: isQueued ? 'var(--color-primary, #1c497c)' : 'transparent',
-            color: isQueued ? '#ffffff' : 'var(--color-gray-400, #9ca3af)',
-            cursor: isQueued ? 'default' : 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: 700,
-            lineHeight: 1,
-            padding: 0,
-          }}
         >
           {isQueued ? '✓' : '+'}
         </button>
@@ -281,41 +215,13 @@ export function PlayerPoolPanel({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="dr-pool">
       {/* Header */}
-      <div
-        style={{
-          padding: '0.5rem 0.75rem',
-          borderBottom: '1px solid var(--content-border, #e2e8f0)',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <span
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.06em',
-              color: 'var(--color-gray-900, #111827)',
-              paddingLeft: '0.625rem',
-              borderLeft: '2px solid var(--color-primary, #1c497c)',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Available
-          </span>
-          <span
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--color-gray-400, #9ca3af)',
-              fontWeight: 500,
-              fontVariantNumeric: 'tabular-nums',
-              marginLeft: 'auto',
-            }}
-          >
-            <strong style={{ color: 'var(--color-gray-700, #374151)', fontWeight: 700 }}>{totalMatches}</strong>
+      <div className="dr-pool__header">
+        <div className="dr-pool__title-row">
+          <span className="dr-pool__title">Available</span>
+          <span className="dr-pool__count">
+            <strong>{totalMatches}</strong>
             {totalMatches > 100 && ' · top 100 shown'}
           </span>
         </div>
@@ -327,14 +233,6 @@ export function PlayerPoolPanel({
           onChange={(e) => onSearchChange(e.target.value)}
           aria-label="Filter players"
           className="dr-search-input"
-          style={{
-            width: '100%',
-            padding: '0.375rem 0.625rem',
-            border: '1px solid var(--content-border, #e2e8f0)',
-            borderRadius: 'var(--radius-md, 0.5rem)',
-            fontSize: '0.8125rem',
-            background: 'var(--color-gray-50, #f9fafb)',
-          }}
         />
 
         {draftContext === 'rookie' && (
@@ -344,75 +242,25 @@ export function PlayerPoolPanel({
             aria-pressed={rookiesOnly}
             aria-label={rookiesOnly ? `Showing rookies only` : `Showing all players`}
             onClick={() => onRookiesOnlyChange(!rookiesOnly)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              marginTop: '0.375rem',
-              marginBottom: '0.125rem',
-              padding: '0.25rem 0.625rem',
-              borderRadius: 'var(--radius-full, 9999px)',
-              border: rookiesOnly
-                ? '1.5px solid var(--color-primary, #1c497c)'
-                : '1.5px dashed var(--color-gray-300, #d1d5db)',
-              background: rookiesOnly ? 'var(--color-primary, #1c497c)' : 'transparent',
-              color: rookiesOnly ? '#ffffff' : 'var(--color-gray-500, #6b7280)',
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.04em',
-              cursor: 'pointer',
-              fontVariantNumeric: 'tabular-nums',
-            }}
+            className="dr-rookies-toggle"
           >
             Rookies
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '1.125rem',
-                height: '1.125rem',
-                padding: '0 0.25rem',
-                borderRadius: 'var(--radius-full, 9999px)',
-                fontSize: '0.5625rem',
-                fontWeight: 700,
-                background: rookiesOnly ? 'rgba(255,255,255,0.2)' : 'var(--color-gray-100, #f3f4f6)',
-                color: rookiesOnly ? '#ffffff' : 'var(--color-gray-600, #4b5563)',
-              }}
-            >
-              {rookieCount}
-            </span>
+            <span className="dr-rookies-toggle__count">{rookieCount}</span>
           </button>
         )}
 
-        <div
-          role="radiogroup"
-          aria-label="Filter by position"
-          style={{ display: 'flex', gap: '0.25rem', marginTop: '0.375rem', flexWrap: 'wrap' }}
-        >
+        <div className="dr-pos-filter-group" role="radiogroup" aria-label="Filter by position">
           {POSITIONS.map((pos) => {
             const isActive = pos === 'ALL' ? !positionFilter : positionFilter === pos;
             return (
               <button
                 key={pos}
+                type="button"
                 role="radio"
                 aria-checked={isActive}
                 aria-label={`Filter by ${pos === 'ALL' ? 'all positions' : pos + ' position'}`}
                 onClick={() => onPositionFilterChange(pos === 'ALL' ? null : pos)}
                 className="dr-pos-filter"
-                style={{
-                  padding: '0.1875rem 0.5rem',
-                  borderRadius: 'var(--radius-full, 9999px)',
-                  border: 'none',
-                  fontSize: '0.625rem',
-                  fontWeight: 700,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.04em',
-                  cursor: 'pointer',
-                  background: isActive ? 'var(--color-primary, #1c497c)' : 'var(--color-gray-100, #f3f4f6)',
-                  color: isActive ? '#ffffff' : 'var(--color-gray-500, #6b7280)',
-                }}
               >
                 {pos}
               </button>
@@ -448,16 +296,9 @@ export function PlayerPoolPanel({
       )}
 
       {/* Player list */}
-      <div style={{ flex: 1, overflow: 'auto' }} aria-label="Available players list">
+      <div className="dr-pool__list" aria-label="Available players list">
         {filteredPlayers.length === 0 ? (
-          <div
-            style={{
-              padding: '2rem 1rem',
-              textAlign: 'center',
-              color: 'var(--color-gray-400, #9ca3af)',
-              fontSize: '0.8125rem',
-            }}
-          >
+          <div className="dr-pool__empty">
             {searchQuery || positionFilter ? 'No players match your filters.' : 'No players available.'}
           </div>
         ) : groupedByTier ? (
@@ -468,29 +309,11 @@ export function PlayerPoolPanel({
                 <section key={tier} aria-labelledby={`dr-tier-h-${tier}`}>
                   <h3
                     id={`dr-tier-h-${tier}`}
-                    className="dr-tier-band"
+                    className="dr-tier-header dr-tier-band"
                     data-tier={tier}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                      margin: 0,
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.625rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      color: 'var(--color-gray-700, #374151)',
-                      borderLeft: '3px solid',
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 1,
-                    }}
                   >
                     <span>Tier {tier}</span>
-                    <span style={{ color: 'var(--color-gray-500, #6b7280)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                      · {group.length}
-                    </span>
+                    <span className="dr-tier-header__count">· {group.length}</span>
                   </h3>
                   {group.map(renderRow)}
                 </section>
@@ -501,23 +324,7 @@ export function PlayerPoolPanel({
               if (untiered.length === 0) return null;
               return (
                 <section aria-labelledby="dr-tier-h-untiered">
-                  <h3
-                    id="dr-tier-h-untiered"
-                    style={{
-                      margin: 0,
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.625rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      color: 'var(--color-gray-500, #6b7280)',
-                      background: 'var(--color-gray-50, #f9fafb)',
-                      borderLeft: '3px solid var(--color-gray-300, #d1d5db)',
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 1,
-                    }}
-                  >
+                  <h3 id="dr-tier-h-untiered" className="dr-tier-header dr-tier-header--untiered">
                     Unranked · {untiered.length}
                   </h3>
                   {untiered.map(renderRow)}
@@ -525,15 +332,7 @@ export function PlayerPoolPanel({
               );
             })()}
             {totalMatches > 100 && (
-              <div
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  fontSize: '0.6875rem',
-                  color: 'var(--color-gray-400, #9ca3af)',
-                  textAlign: 'center',
-                  borderTop: '1px solid var(--color-gray-50, #f9fafb)',
-                }}
-              >
+              <div className="dr-pool__overflow-note">
                 Showing 100 of {totalMatches} — refine your search
               </div>
             )}
@@ -542,15 +341,7 @@ export function PlayerPoolPanel({
           <div>
             {filteredPlayers.map(renderRow)}
             {totalMatches > 100 && (
-              <div
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  fontSize: '0.6875rem',
-                  color: 'var(--color-gray-400, #9ca3af)',
-                  textAlign: 'center',
-                  borderTop: '1px solid var(--color-gray-50, #f9fafb)',
-                }}
-              >
+              <div className="dr-pool__overflow-note">
                 Showing 100 of {totalMatches} — refine your search
               </div>
             )}
