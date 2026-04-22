@@ -264,7 +264,13 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   // ── Board settings ──
   // Per-team assignments keyed by franchiseId. Empty = use default.
+  // Seed the user's own team to 'my-rank' — most common intent for a
+  // solo mock is "draft against my personal ranks", and this keeps the
+  // default consistent with how the user's row is highlighted below.
   const rankingAssignments = {};
+  if (userFranchiseId) {
+    rankingAssignments[userFranchiseId] = 'my-rank';
+  }
 
   function fillSelect(sel, selected) {
     sel.replaceChildren();
@@ -286,12 +292,23 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     if (!panel) return;
     panel.replaceChildren();
     for (const t of franchiseList) {
+      const isYou = t.franchiseId === userFranchiseId;
       const row = document.createElement('div');
-      row.className = 'mock-lobby__per-team-row';
+      row.className = isYou
+        ? 'mock-lobby__per-team-row mock-lobby__per-team-row--yours'
+        : 'mock-lobby__per-team-row';
 
       const label = document.createElement('span');
       label.className = 'mock-lobby__per-team-name';
-      label.textContent = t.name;
+      if (isYou) {
+        label.append(document.createTextNode(`${t.name} `));
+        const youBadge = document.createElement('span');
+        youBadge.className = 'mock-lobby__you-badge';
+        youBadge.textContent = 'You';
+        label.appendChild(youBadge);
+      } else {
+        label.textContent = t.name;
+      }
 
       const sel = document.createElement('select');
       sel.className = 'mock-lobby__select mock-lobby__select--compact';
@@ -864,6 +881,13 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     padding-top: 0.25rem;
   }
 
+  /* `display: flex` above wins against the native HTML `hidden` attribute.
+     This selector restores hidden-means-hidden when the disclosure is
+     collapsed. */
+  .mock-lobby__per-team[hidden] {
+    display: none;
+  }
+
   .mock-lobby__per-team-row {
     display: flex;
     align-items: center;
@@ -877,6 +901,15 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     border-bottom: none;
   }
 
+  /* Your own team — left-rail accent, bold label, subtle tint so the row
+     stands out at a glance when the user scans the list. */
+  .mock-lobby__per-team-row--yours {
+    padding-left: 0.625rem;
+    margin-left: -0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    background: rgba(28, 73, 124, 0.04);
+  }
+
   .mock-lobby__per-team-name {
     flex: 1;
     min-width: 0;
@@ -886,6 +919,26 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .mock-lobby__per-team-row--yours .mock-lobby__per-team-name {
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* Inline pill after the team name for the user's own row. */
+  .mock-lobby__you-badge {
+    display: inline-block;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.125rem 0.375rem;
+    margin-left: 0.25rem;
+    border-radius: 999px;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    vertical-align: middle;
   }
 
   .mock-lobby__start-btn {
