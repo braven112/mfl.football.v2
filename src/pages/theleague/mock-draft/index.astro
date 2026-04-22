@@ -6,7 +6,7 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import leagueConfigData from '../../../data/theleague.config.json';
 
@@ -16,6 +16,7 @@ const user = getAuthUser(Astro.request);
 const leagueYear = getCurrentLeagueYear();
 const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
 const leagueId = user?.leagueId || '13522';
+const isAdmin = user ? isCommissionerOrAdmin(user) : false;
 
 // Build team lookup for display
 const teamMap = new Map<string, { name: string; icon: string }>();
@@ -148,7 +149,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, partyHost, leagueId, leagueYear }}>
+<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, partyHost, leagueId, leagueYear, isAdmin }}>
   const teamMap = JSON.parse(teamMapJson);
   const franchiseList = JSON.parse(franchiseListJson);
   const rankingSources = JSON.parse(rankingSourcesJson);
@@ -420,6 +421,48 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     statusBadge.textContent = statusLabels[s.status] || s.status;
 
     ownerRow.append(avatar, ownerInfo, statusBadge);
+
+    // Delete affordance — creator always, or anyone if admin. Rendered
+    // as an absolutely-positioned button inside the card so it doesn't
+    // affect the card grid; stopPropagation prevents the surrounding
+    // <a> from navigating when the user clicks it.
+    if (isYours || isAdmin) {
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'mock-lobby__session-delete';
+      delBtn.setAttribute('aria-label', `Delete mock draft started by ${creator.name}`);
+      delBtn.title = 'Delete mock draft';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', async (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        const confirmMsg = isYours
+          ? 'Delete this mock draft?'
+          : `Delete ${creator.name}'s mock draft? (admin override)`;
+        if (!window.confirm(confirmMsg)) return;
+        delBtn.disabled = true;
+        try {
+          const res = await fetch('/api/mock-draft/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: s.id }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success) {
+            card.remove();
+          } else {
+            delBtn.disabled = false;
+            window.alert(data.message || 'Could not delete that session.');
+          }
+        } catch {
+          delBtn.disabled = false;
+          window.alert('Network error — please try again.');
+        }
+      });
+      // Sit next to the status badge in the owner row (not absolute-
+      // positioned, which would collide with the badge).
+      ownerRow.appendChild(delBtn);
+    }
 
     // Detail row — compact progress + timer
     const detailRow = document.createElement('div');
@@ -814,12 +857,16 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
    * Status-colored left rail is set via --session-accent (matches the
    * --card-category-color idiom from CalendarEventCard).
    */
+  /* ── Session card ──
+   * Follows the `calendar-card` design-system pattern: rounded container
+   * with a base shadow, border-left status accent, and a hover lift.
+   */
   .mock-lobby__session-card {
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
     padding: 1rem 1.125rem;
-    background: var(--content-bg, #fff);
+    background: var(--card-bg, #fff);
     border-radius: 0.75rem;
     box-shadow: var(--box-shadow-lg, 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06));
     border-left: 4px solid var(--session-accent, var(--color-gray-300, #d1d5db));
@@ -846,15 +893,48 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     opacity: 0.7;
   }
 
-  /* "Yours" — override rail to primary blue + tinted fill so it reads as
-     the owner's draft regardless of status */
+  /* "Yours" — rail in primary blue; no background override so the card
+     keeps the shared --card-bg token. */
   .mock-lobby__session-card--yours {
     --session-accent: var(--color-primary, #1c497c);
-    background: linear-gradient(
-      180deg,
-      rgba(28, 73, 124, 0.04) 0%,
-      rgba(28, 73, 124, 0.01) 100%
-    );
+  }
+
+  /* Delete affordance — creators + admins see it. Sits inside the owner
+     row as a flex sibling, next to the status badge. Faint at rest so it
+     doesn't steal attention from the status; fills in on card hover. */
+  .mock-lobby__session-delete {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.875rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 999px;
+    opacity: 0.35;
+    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+
+  .mock-lobby__session-card:hover .mock-lobby__session-delete,
+  .mock-lobby__session-card:focus-within .mock-lobby__session-delete,
+  .mock-lobby__session-delete:focus-visible {
+    opacity: 1;
+  }
+
+  .mock-lobby__session-delete:hover {
+    background: var(--color-error-light, #fee2e2);
+    color: var(--color-error, #dc2626);
+  }
+
+  .mock-lobby__session-delete:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .mock-lobby__session-owner {
@@ -873,15 +953,15 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-gray-100, #f3f4f6);
     font-size: 0.8125rem;
     font-weight: 700;
     color: var(--color-gray-500, #6b7280);
-    box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--color-gray-200, #e5e7eb);
   }
 
-  .mock-lobby__session-card--yours .mock-lobby__session-avatar {
-    box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--color-primary, #1c497c);
+  /* Placeholder (initials) — needs a soft background to render; icon
+     avatars don't because the <img> fills the circle edge-to-edge. */
+  .mock-lobby__session-avatar--placeholder {
+    background: var(--color-gray-100, #f3f4f6);
   }
 
   .mock-lobby__session-avatar img {
