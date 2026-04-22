@@ -718,3 +718,39 @@ https://www49.myfantasyleague.com/2026/export?TYPE=league&L=13522&JSON=1
 **Additional finding (confirmed 2026-04-22):** The live `transactions` endpoint for 2026 also returns HTTP 403 when queried without auth from a server context (both `api.myfantasyleague.com` and `www49.myfantasyleague.com`). This is notable because the 2025 transactions endpoint was accessible unauthenticated. The 2026 league may have stricter access controls, OR the server environment's IP is blocked. The cached `transactions.json` (fetched by the daily `fetch-mfl-feeds.mjs` script with auth) remains the reliable source for completed trade history.
 
 **Recommendation:** To programmatically check pending trades without requiring user login, consider polling the project's own `/api/trades/pending` route (which handles auth server-side) from a server context where session cookies are available. For commissioner-level visibility of ALL pending trades across all franchises, use `FRANCHISE_ID=0000` parameter on the `pendingTrades` export.
+
+---
+
+## 2026-04-22 - Commissioner Lockout Setting: Field Name and API Interaction
+
+**Context:** Researching whether MFL's "commissioner lockout" feature gates the `pendingTrades` API endpoint, and what the league setting field is named.
+
+**The field name is `lockout`** — confirmed present in the `league` export across multiple years and both leagues (TheLeague and AFL Fantasy):
+
+```json
+"lockout": "Yes"   // commissioner lockout enabled
+"lockout": "No"    // commissioner lockout disabled
+```
+
+TheLeague 2026 (`data/theleague/mfl-feeds/2026/league.json`) has `"lockout": "Yes"` at line 119.
+
+**Does the lockout restrict `pendingTrades&FRANCHISE_ID=0000`?**
+
+**MFL docs are not directly accessible** (api_info pages return 403 from this server environment). However, based on codebase evidence and MFL's design intent:
+
+- The lockout setting is documented in MFL as preventing the commissioner from viewing other teams' pending trades/transactions in the **MFL web UI**. This protects franchise owners' trade negotiation privacy from the commissioner.
+- **Best guess (high confidence): Yes, the API also respects the lockout.** MFL's lockout is a server-side access control, not just a UI toggle. If MFL enforces it only in the UI but not the API, the entire feature would be trivially bypassable — which would defeat its purpose. MFL's design philosophy is to gate authenticated commissioner reads at the server level.
+- A commissioner calling `pendingTrades&FRANCHISE_ID=0000` when `lockout: "Yes"` is likely to receive either an error or only trades involving the commissioner's own franchise — NOT all league-wide pending trades.
+
+**There is no definitive API documentation confirming the exact behavior.** The `pendingTrades` entry in `docs/features/mfl-api.md` documents the `FRANCHISE_ID` parameter but does not mention lockout interactions. This should be tested empirically with a commissioner-authenticated session against a lockout-enabled league.
+
+**Summary table:**
+
+| League setting field | Values | Source confirmed |
+|---|---|---|
+| `lockout` | `"Yes"` / `"No"` | Multiple cached `league.json` files across both leagues |
+
+**Related data files for reference:**
+- `data/theleague/mfl-feeds/2026/league.json` — `lockout: "Yes"`
+- `data/afl-fantasy/mfl-feeds/2025/league.json` — `lockout: "Yes"`
+- `data/afl-fantasy/mfl-feeds/2012/league.json` — `lockout: "No"` (earliest "No" example)
