@@ -687,3 +687,34 @@ https://www49.myfantasyleague.com/2026/export?TYPE=transactions&L=13522&TRANS_TY
 https://www49.myfantasyleague.com/2026/export?TYPE=auctionResults&L=13522&JSON=1
 https://www49.myfantasyleague.com/2026/export?TYPE=league&L=13522&JSON=1
 ```
+
+---
+
+## 2026-04-22 - `pendingTrades` Requires Authentication; Completed Trades in `transactions`
+
+**Context:** Querying pending trade proposals for TheLeague (13522, 2026) to report current trade activity.
+
+**Insight:** The `pendingTrades` export endpoint requires owner-level authentication (`MFL_USER_ID` cookie). Without credentials it returns HTTP 403 — not a JSON error body, just a 403. This differs from some other endpoints that return a JSON error message when unauthenticated.
+
+**Workaround for read-only trade inspection:** Completed (accepted) trades appear in the `transactions` export as `type: "TRADE"` entries. This IS accessible without auth via the cached `transactions.json`. However, it only shows trades that have already been processed — not proposals still pending a response.
+
+**TRADE transaction field notes (confirmed from 2026 TheLeague data):**
+- `franchise` = the originating franchise (who sent the proposal)
+- `franchise2` = the receiving franchise (who got the offer)
+- `franchise1_gave_up` = comma-separated assets given by `franchise` (trailing comma present)
+- `franchise2_gave_up` = comma-separated assets given by `franchise2` (trailing comma present)
+- `timestamp` = Unix seconds when the trade was ACCEPTED/PROCESSED (not when it was proposed)
+- `expires` = Unix seconds of the original proposal's expiration deadline (still present even on completed trades)
+- `by_commish: "1"` = trade was initiated or processed by the commissioner
+
+**Draft pick decoding in transaction data:**
+- `DP_2_10` = current-year pick, round 3, pick 11 (both indices are zero-based: add 1 to each)
+- `FP_{franchiseId}_{year}_{round}` = future-year pick (round is 1-based here, no offset needed)
+
+**2026 TheLeague trade activity (as of April 22 cache):**
+- Only 1 completed trade in 2026: Bring the Pain (0008) traded their 2026 Round 3/Pick 11 to Computer Jocks (0010) for Isiah Pacheco (RB, DET). Processed 2026-03-11, commissioner-initiated.
+- No pending trades could be confirmed without auth, but the `transactions` cache (fetched 2026-04-22T04:57Z, most recent activity 2026-03-28) shows no additional trade activity.
+
+**Additional finding (confirmed 2026-04-22):** The live `transactions` endpoint for 2026 also returns HTTP 403 when queried without auth from a server context (both `api.myfantasyleague.com` and `www49.myfantasyleague.com`). This is notable because the 2025 transactions endpoint was accessible unauthenticated. The 2026 league may have stricter access controls, OR the server environment's IP is blocked. The cached `transactions.json` (fetched by the daily `fetch-mfl-feeds.mjs` script with auth) remains the reliable source for completed trade history.
+
+**Recommendation:** To programmatically check pending trades without requiring user login, consider polling the project's own `/api/trades/pending` route (which handles auth server-side) from a server context where session cookies are available. For commissioner-level visibility of ALL pending trades across all franchises, use `FRANCHISE_ID=0000` parameter on the `pendingTrades` export.
