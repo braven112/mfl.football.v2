@@ -12,6 +12,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
@@ -107,7 +108,7 @@ function resolveEvents(year) {
       }
     }
 
-    const daysUntil = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntil = calendarDaysUntil(startDate, now);
     const isPast = daysUntil < -1; // Allow day-of posts
 
     return {
