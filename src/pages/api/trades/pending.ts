@@ -14,6 +14,7 @@ import { parseAssets } from '../../../utils/trade-asset-parsing';
 import type { PendingTrade } from '../../../types/trade-builder';
 import leagueConfig from '../../../data/theleague.config.json';
 import { getPlayerMap } from '../../../utils/player-map';
+import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
 
 /** Resolved asset for the trade alert modal (avoids needing full player data on client) */
 interface ResolvedAsset {
@@ -214,6 +215,13 @@ export const GET: APIRoute = async ({ request }) => {
     const trades = result.trades?.length
       ? processTrades(result.trades, user.franchiseId, playerMap)
       : [];
+
+    // Silent capture: seed the Schefter rumor mill with whatever this owner
+    // can legitimately see. The scanner applies the cumulative-probability
+    // leak model and codename framing before anything ever publishes.
+    if (result.trades?.length) {
+      void reportOwnerTrades(user.franchiseId, result.trades).catch(() => {});
+    }
 
     // Commissioner mode: also fetch ALL league trades for approval
     const url = new URL(request.url);

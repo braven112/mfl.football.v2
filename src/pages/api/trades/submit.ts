@@ -20,6 +20,7 @@ import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../../utils/mfl-matchup-api';
+import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -135,6 +136,28 @@ export const POST: APIRoute = async ({ request }) => {
         { status: 502, headers: JSON_HEADERS }
       );
     }
+
+    // Silent capture: re-read pendingTrades to grab MFL's assigned trade_id
+    // for the offer we just sent, then feed it into the Schefter rumor mill.
+    // MFL's tradeProposal response doesn't return the offer id, so a refetch
+    // is the reliable way to record it. Fire-and-forget — a capture failure
+    // must never reject the submit.
+    void (async () => {
+      try {
+        const url = `https://api.myfantasyleague.com/${year}/export?TYPE=pendingTrades&L=${leagueId}&JSON=1`;
+        const res = await mflFetch({ url, method: 'GET', mflUserCookie: user.id });
+        if (!res.ok) return;
+        const text = await res.text();
+        const data = JSON.parse(text);
+        const pending = data?.pendingTrades;
+        const raw = pending?.pendingTrade ?? pending?.trade;
+        if (!raw) return;
+        const rows = Array.isArray(raw) ? raw : [raw];
+        await reportOwnerTrades(user.franchiseId!, rows);
+      } catch {
+        // swallow — capture is best-effort
+      }
+    })();
 
     return new Response(
       JSON.stringify({ success: true, message: 'Trade proposal submitted' }),
