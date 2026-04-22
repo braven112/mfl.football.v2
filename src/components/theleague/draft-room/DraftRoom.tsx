@@ -248,15 +248,15 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   );
   const currentTeam = currentPick ? teamMap.get(currentPick.franchiseId) || null : null;
 
-  // Is it the user's turn? In both live and mock mode the human owns a
-  // single franchise — AI teams auto-pick server-side so the user only
-  // ever actually submits for their own team.
-  const isUserTurn = !!(
-    currentPick &&
-    userTeamId &&
-    currentPick.franchiseId === userTeamId &&
-    !state.draftComplete
-  );
+  // Is it the user's turn?
+  // Live: only when the on-clock pick is for the user's franchise.
+  // Mock: the creator is authorised to pick for any team (server auto-picks
+  //   franchises whose real owner isn't connected; this keeps the creator
+  //   able to intervene if the server hasn't caught up or an override is
+  //   wanted).
+  const isUserTurn = isMock
+    ? !!(currentPick && !state.draftComplete)
+    : !!(currentPick && userTeamId && currentPick.franchiseId === userTeamId);
 
   // Previous pick for timer calculation
   const previousPick = useMemo(() => {
