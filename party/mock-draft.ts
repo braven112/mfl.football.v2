@@ -234,7 +234,7 @@ export default class MockDraftServer implements Party.Server {
       session.status = 'active';
       await this.saveSession(session);
       this.broadcastSession(session);
-      this.startTimer(session);
+      this.scheduleNextPick(session);
       return;
     }
 
@@ -304,7 +304,7 @@ export default class MockDraftServer implements Party.Server {
     session.status = 'active';
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.startTimer(session);
+    this.scheduleNextPick(session);
   }
 
   private async handlePause(msg: PauseMessage) {
@@ -338,7 +338,7 @@ export default class MockDraftServer implements Party.Server {
     session.status = 'active';
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.startTimer(session);
+    this.scheduleNextPick(session);
   }
 
   private async handleSkip(msg: SkipMessage) {
@@ -386,7 +386,7 @@ export default class MockDraftServer implements Party.Server {
 
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.startTimer(session);
+    this.scheduleNextPick(session);
   }
 
   // ── Pick logic ────────────────────────────────────────────────────────────
@@ -436,9 +436,10 @@ export default class MockDraftServer implements Party.Server {
     // Broadcast the pick
     this.room.broadcast(JSON.stringify({ type: 'pick-made', pick, session }));
 
-    // Start timer for next pick if still active
+    // Schedule the next pick: either AI auto-picks on a short delay or
+    // the human gets their full configured timer.
     if (session.status === 'active') {
-      this.startTimer(session);
+      this.scheduleNextPick(session);
     }
   }
 
@@ -508,6 +509,56 @@ export default class MockDraftServer implements Party.Server {
   }
 
   // ── Timer ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Decide what to do after a pick lands (or when a draft starts/resets).
+   *
+   * Solo-mock convention: the session creator is the only human. Anyone
+   * else on the clock is an AI, and we auto-pick for them quickly so the
+   * draft flows without pauses. When the human is up we run the full
+   * user-configured timer so they have time to think.
+   *
+   * The short delay between AI picks (~550ms) gives the client enough
+   * time to animate the new pick cell + board row before the next one
+   * lands, and keeps the server's broadcast tempo tolerable.
+   */
+  private scheduleNextPick(session: MockDraftSession): void {
+    if (session.status !== 'active') return;
+
+    const onClockFranchise = session.draftOrder[session.currentPickIndex];
+    const isHumanTurn = onClockFranchise === session.createdBy;
+
+    if (isHumanTurn) {
+      this.startTimer(session);
+      return;
+    }
+
+    // AI on the clock — stop any running timer and fire autoPick shortly.
+    this.stopTimer();
+    this.room.broadcast(
+      JSON.stringify({ type: 'pick-clock', secondsRemaining: 0 }),
+    );
+
+    setTimeout(() => {
+      this.runAiAutoPick().catch((err) => {
+        console.error('[mock-draft] AI auto-pick failed:', err);
+      });
+    }, 550);
+  }
+
+  /**
+   * Re-read the session before auto-picking to guard against races (a
+   * reset, a manual pick, or a disconnect in the intervening ms).
+   */
+  private async runAiAutoPick(): Promise<void> {
+    const session = await this.getSession();
+    if (!session || session.status !== 'active') return;
+
+    const onClockFranchise = session.draftOrder[session.currentPickIndex];
+    if (onClockFranchise === session.createdBy) return;
+
+    await this.autoPick(session);
+  }
 
   private startTimer(session: MockDraftSession): void {
     this.stopTimer();
