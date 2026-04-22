@@ -258,7 +258,7 @@ export type MockRankingSource =
   | 'mfl-dynasty'
   | 'sleeper'
   | 'ktc'
-  | 'fbg'
+  | 'my-rank'
   | 'random';
 
 /** Human-readable labels for the lobby dropdown */
@@ -267,7 +267,7 @@ export const MOCK_RANKING_LABELS: Record<MockRankingSource, string> = {
   'mfl-dynasty': 'MFL Dynasty ADP',
   sleeper: 'Sleeper',
   ktc: 'KeepTradeCut',
-  fbg: 'FBG Rookies',
+  'my-rank': 'My Rank',
   random: 'Chaos (random)',
 };
 

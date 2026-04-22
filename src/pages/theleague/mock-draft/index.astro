@@ -15,6 +15,7 @@ export const prerender = false;
 const user = getAuthUser(Astro.request);
 const leagueYear = getCurrentLeagueYear();
 const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
+const leagueId = user?.leagueId || '13522';
 
 // Build team lookup for display
 const teamMap = new Map<string, { name: string; icon: string }>();
@@ -39,7 +40,7 @@ const rankingSources = [
   { value: 'mfl-dynasty', label: 'MFL Dynasty ADP' },
   { value: 'sleeper', label: 'Sleeper' },
   { value: 'ktc', label: 'KeepTradeCut' },
-  { value: 'fbg', label: 'FBG Rookies' },
+  { value: 'my-rank', label: 'My Rank' },
   { value: 'random', label: 'Chaos (random)' },
 ];
 const rankingSourcesJson = JSON.stringify(rankingSources);
@@ -147,7 +148,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, partyHost }}>
+<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, partyHost, leagueId, leagueYear }}>
   const teamMap = JSON.parse(teamMapJson);
   const franchiseList = JSON.parse(franchiseListJson);
   const rankingSources = JSON.parse(rankingSourcesJson);
@@ -295,6 +296,22 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
       const useRealOrder = getChipValue('order-chips') === 'real';
       const defaultRankingSource = defaultSourceSelect?.value || 'mfl-rookie';
 
+      // Read the user's personal queue from localStorage to back the
+      // `my-rank` source. If the queue is empty the server falls back to
+      // its alphabetical top-up, which is fine but low-signal.
+      let myRankPlayerIds = [];
+      try {
+        const queueRaw = localStorage.getItem(`draft.queue.${leagueId}.${leagueYear}`);
+        if (queueRaw) {
+          const queue = JSON.parse(queueRaw);
+          if (Array.isArray(queue)) {
+            myRankPlayerIds = queue.map((i) => i && i.playerId).filter((id) => typeof id === 'string');
+          }
+        }
+      } catch {
+        // ignore malformed queue — fall back to empty array
+      }
+
       try {
         const res = await fetch('/api/mock-draft/create', {
           method: 'POST',
@@ -305,6 +322,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
             useRealOrder,
             defaultRankingSource,
             rankingAssignments,
+            myRankPlayerIds,
           }),
         });
 
@@ -363,7 +381,8 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
     const card = document.createElement('a');
     card.href = `/theleague/mock-draft/${encodeURIComponent(s.id)}`;
-    card.className = 'mock-lobby__session-card' + (isYours ? ' mock-lobby__session-card--yours' : '');
+    const statusClass = `mock-lobby__session-card--${s.status}`;
+    card.className = `mock-lobby__session-card ${statusClass}` + (isYours ? ' mock-lobby__session-card--yours' : '');
 
     // Owner block — icon + name dominate the card
     const ownerRow = document.createElement('div');
@@ -789,37 +808,53 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     padding: 2rem 0;
   }
 
+  /* ── Session card ──
+   * Follows the `calendar-card` design-system pattern: rounded container
+   * with a base shadow, border-left status accent, and a hover lift.
+   * Status-colored left rail is set via --session-accent (matches the
+   * --card-category-color idiom from CalendarEventCard).
+   */
   .mock-lobby__session-card {
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
-    padding: 0.875rem 1rem;
-    background: #fff;
-    border: 1px solid var(--color-gray-200, #e5e7eb);
-    border-radius: 0.625rem;
+    padding: 1rem 1.125rem;
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06));
+    border-left: 4px solid var(--session-accent, var(--color-gray-300, #d1d5db));
     text-decoration: none;
     color: inherit;
     min-height: 64px;
-    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
   }
 
   .mock-lobby__session-card:hover,
   .mock-lobby__session-card:focus-visible {
-    border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06);
-    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
+    transform: translateY(-2px);
+    outline: none;
   }
 
-  /* "Yours" — current user started this session. Prominent accent so it
-     can't be confused with another owner's draft. */
+  /* Status variants — set the left-rail color */
+  .mock-lobby__session-card--lobby { --session-accent: var(--color-blue-500, #3b82f6); }
+  .mock-lobby__session-card--active { --session-accent: var(--color-green-500, #22c55e); }
+  .mock-lobby__session-card--paused { --session-accent: var(--color-yellow-500, #eab308); }
+  .mock-lobby__session-card--completed {
+    --session-accent: var(--color-gray-300, #d1d5db);
+    opacity: 0.7;
+  }
+
+  /* "Yours" — override rail to primary blue + tinted fill so it reads as
+     the owner's draft regardless of status */
   .mock-lobby__session-card--yours {
-    border-color: var(--color-primary, #1c497c);
+    --session-accent: var(--color-primary, #1c497c);
     background: linear-gradient(
       180deg,
       rgba(28, 73, 124, 0.04) 0%,
       rgba(28, 73, 124, 0.01) 100%
     );
-    box-shadow: inset 3px 0 0 var(--color-primary, #1c497c);
   }
 
   .mock-lobby__session-owner {

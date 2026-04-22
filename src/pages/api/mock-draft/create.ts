@@ -26,7 +26,7 @@ const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-dynasty',
   'sleeper',
   'ktc',
-  'fbg',
+  'my-rank',
   'random',
 ];
 const RANKING_SOURCE_SET = new Set<MockRankingSource>(ALL_RANKING_SOURCES);
@@ -302,23 +302,17 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // FBG rookies
+    // My Rank — player IDs pulled from the caller's personal draft queue
+    // (localStorage on the client). Sent in the request body so the server
+    // has no dependency on user-private client state.
     {
-      const fbg = loadJsonFile(`data/fantasy-expert/sources/fbg/${leagueYearStr}-rookies.json`);
-      const fbgPlayers: any[] = fbg?.players || fbg?.rankings || [];
-      if (fbgPlayers.length) {
-        const ordered = fbgPlayers
-          .slice()
-          .sort((a: any, b: any) => (a.rank ?? 9999) - (b.rank ?? 9999))
-          .map((p) =>
-            resolveMflId(rookieNameLookup, p.name || p.playerName || '', {
-              position: p.position,
-              team: p.team || p.nflTeam,
-            }),
-          )
-          .filter((id): id is string => !!id);
-        const deduped = dedupe(ordered);
-        if (deduped.length > 0) rankedLists.fbg = topUp(deduped);
+      const raw = body.myRankPlayerIds;
+      if (Array.isArray(raw)) {
+        const ids = raw
+          .filter((v): v is string => typeof v === 'string')
+          .filter((id) => rookieIdSet.has(id));
+        const deduped = dedupe(ids);
+        if (deduped.length > 0) rankedLists['my-rank'] = topUp(deduped);
       }
     }
 
@@ -336,7 +330,7 @@ export const POST: APIRoute = async ({ request }) => {
       'mfl-dynasty',
       'sleeper',
       'ktc',
-      'fbg',
+      'my-rank',
       'random',
     ];
     const fallbackDefault: MockRankingSource =
