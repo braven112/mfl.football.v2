@@ -87,9 +87,9 @@ export const POST: APIRoute = async ({ request }) => {
     const useRealOrder = body.useRealOrder ?? true;
 
     // Validate timer presets
-    if (![60, 120, 300].includes(timerSeconds)) {
+    if (![10, 60, 120, 300].includes(timerSeconds)) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Invalid timer. Use 60, 120, or 300 seconds.' }),
+        JSON.stringify({ success: false, message: 'Invalid timer. Use 10, 60, 120, or 300 seconds.' }),
         { status: 400, headers: JSON_HEADERS },
       );
     }
