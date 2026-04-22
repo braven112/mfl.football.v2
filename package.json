@@ -17,6 +17,7 @@
     "build:bookmarklets": "node scripts/build-bookmarklets.mjs",
     "prebuild": "node scripts/prebuild.mjs",
     "fetch:adp": "node scripts/fetch-adp.mjs",
+    "fetch:nfl-draft-date": "node scripts/fetch-nfl-draft-date.mjs",
     "fetch:trade-bait": "MFL_LEAGUE_ID=13522 MFL_LEAGUE_SLUG=theleague node scripts/fetch-trade-bait.mjs",
     "fetch:live:lineups": "node scripts/fetch-live-lineups.mjs",
     "fetch:live:odds": "node scripts/fetch-live-odds.mjs",
