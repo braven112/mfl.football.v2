@@ -64,9 +64,9 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
       <>
         <!-- Create section -->
         <section class="mock-lobby__create">
-          <div class="section-header">
-            <h2 class="section-header__title">Start a Mock Draft</h2>
-            <p class="section-header__sub">Configure and launch a new session</p>
+          <div class="mock-lobby__section-header">
+            <h2 class="mock-lobby__section-header-title">Start a Mock Draft</h2>
+            <p class="mock-lobby__section-header-sub">Configure and launch a new session</p>
           </div>
 
           <div class="mock-lobby__create-form" id="create-form">
@@ -133,9 +133,9 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
         <!-- Active sessions -->
         <section class="mock-lobby__sessions">
-          <div class="section-header">
-            <h2 class="section-header__title">Active Sessions</h2>
-            <p class="section-header__sub">Join an in-progress mock draft</p>
+          <div class="mock-lobby__section-header">
+            <h2 class="mock-lobby__section-header-title">Active Sessions</h2>
+            <p class="mock-lobby__section-header-sub">Join an in-progress mock draft</p>
           </div>
 
           <div id="sessions-list" class="mock-lobby__sessions-list">
@@ -480,7 +480,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   });
 </script>
 
-<style>
+<style is:global>
   .mock-lobby {
     max-width: 640px;
     margin: 0 auto;
@@ -506,13 +506,13 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   }
 
   /* ── Section headers (editorial pattern) ── */
-  .section-header {
+  .mock-lobby__section-header {
     padding-left: 0.625rem;
     border-left: 2px solid var(--color-primary, #1c497c);
     margin-bottom: 1rem;
   }
 
-  .section-header__title {
+  .mock-lobby__section-header-title {
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -521,7 +521,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     margin: 0;
   }
 
-  .section-header__sub {
+  .mock-lobby__section-header-sub {
     font-size: 0.8125rem;
     color: var(--color-gray-400, #9ca3af);
     margin: 0.25rem 0 0;
