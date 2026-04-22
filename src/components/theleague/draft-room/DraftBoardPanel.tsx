@@ -42,8 +42,7 @@ export function DraftBoardPanel({
   const roundNumbers = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Round selector pills */}
+    <div className="dr-board">
       <div className="dr-board-toolbar">
         <span className="dr-board-toolbar__title">Draft Board</span>
         {roundNumbers.map((r) => (
@@ -59,19 +58,13 @@ export function DraftBoardPanel({
         ))}
       </div>
 
-      {/* Grid */}
-      <div style={{ overflow: 'auto' }} role="region" aria-label="Draft board">
+      <div className="dr-board__scroll" role="region" aria-label="Draft board">
         <table
           role="grid"
           aria-label={`Round ${activeRound} draft picks`}
-          style={{
-            width: 'max-content',
-            minWidth: '100%',
-            borderCollapse: 'separate',
-            borderSpacing: 0,
-          }}
+          className="dr-board__grid"
         >
-          <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
+          <thead>
             <tr>
               {roundPicks.map((pick) => {
                 const team = teamMap.get(pick.franchiseId);
@@ -93,13 +86,12 @@ export function DraftBoardPanel({
             </tr>
           </thead>
           <tbody>
-            {/* One column per pick slot — each cell is exactly one pick */}
             <tr>
               {roundPicks.map((pick) => {
                 const team = teamMap.get(pick.franchiseId);
                 const player = pick.playerId ? players.get(pick.playerId) : undefined;
                 return (
-                  <td key={pick.overallPickNumber} role="gridcell" style={{ padding: 0, verticalAlign: 'top' }}>
+                  <td key={pick.overallPickNumber} role="gridcell">
                     <BoardCell
                       pick={pick}
                       player={player}
@@ -115,8 +107,7 @@ export function DraftBoardPanel({
           </tbody>
         </table>
 
-        {/* Mobile list view — shown at smaller screens */}
-        <div className="dr-mobile-list" style={{ display: 'none' }}>
+        <div className="dr-mobile-list">
           {roundPicks.map((pick) => {
             const team = teamMap.get(pick.franchiseId);
             const player = pick.playerId ? players.get(pick.playerId) : undefined;
@@ -160,13 +151,6 @@ export function DraftBoardPanel({
           })}
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 767px) {
-          .dr-mobile-list { display: block !important; }
-          table[role="grid"] { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 }

@@ -582,6 +582,38 @@
 .dr-board-row__meta--pos-pk { color: var(--dr-pos-pk); }
 .dr-board-row__meta--pos-def { color: var(--dr-pos-def); }
 
+/* ── Board grid container ── */
+.dr-board {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dr-board__scroll {
+  overflow: auto;
+}
+.dr-board__grid {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.dr-board__grid thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.dr-board__grid td {
+  padding: 0;
+  vertical-align: top;
+}
+
+.dr-mobile-list { display: none; }
+
+@media (max-width: 767px) {
+  .dr-board__grid { display: none; }
+  .dr-board .dr-mobile-list { display: block; }
+}
+
 /* ── Player Pool Panel ── */
 .dr-pool {
   display: flex;
@@ -1619,6 +1651,23 @@
   .dr-timer-banner[data-state="you"],
   .dr-timer-banner[data-state="danger"] {
     animation: none !important;
+  }
+  .dr-reaction-quick-btn,
+  .dr-sync-btn,
+  .dr-submit-pick-btn,
+  .dr-send-btn,
+  .dr-gif-btn,
+  .dr-round-pill,
+  .dr-tab-btn,
+  .dr-side-tab-btn,
+  .dr-auto-submit-switch,
+  .dr-auto-submit-switch__thumb,
+  .dr-remove-btn,
+  .dr-reset-btn {
+    transition: none !important;
+  }
+  .dr-reaction-quick-btn:hover {
+    transform: none !important;
   }
 }
 
