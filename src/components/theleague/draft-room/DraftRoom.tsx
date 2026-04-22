@@ -1,4 +1,4 @@
-import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, lazy, Suspense, type CSSProperties } from 'react';
+import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import type {
   DraftRoomPageData,
   DraftRoomState,
@@ -548,38 +548,13 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     if (sideTab === 'chat' && !chatVisited) setChatVisited(true);
   }, [sideTab, queueVisited, chatVisited]);
 
-  const sideTabStyle = (tab: 'players' | 'queue' | 'chat'): CSSProperties => ({
-    flex: 1,
-    padding: '0.5rem 0.25rem',
-    fontSize: '0.6875rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    borderBottom: sideTab === tab
-      ? '2px solid var(--color-primary, #1c497c)'
-      : '2px solid transparent',
-    color: sideTab === tab
-      ? 'var(--color-primary, #1c497c)'
-      : 'var(--color-gray-400, #9ca3af)',
-    transition: 'color 0.15s, border-color 0.15s',
-  });
-
   return (
-    <div className="draft-room" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: 'calc(100vh - var(--header-height, 60px))',
-      overflow: 'hidden',
-    }}>
+    <div className="draft-room" data-active-mobile-tab={state.activeMobileTab}>
       {/* Screen reader announcements */}
       <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
         {announcement}
       </div>
 
-      {/* Timer Banner — same component for live + mock */}
       <DraftTimerBanner
         currentPick={previousPick ? { ...currentPick!, timestamp: previousPick.timestamp } : currentPick}
         currentTeam={currentTeam}
@@ -591,27 +566,15 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         mockClockSeconds={isMock ? state.mockClockSeconds : undefined}
         actions={isMock ? (
           <button
+            type="button"
             onClick={() => mockSend({ type: 'reset', franchiseId: userTeamId })}
-            style={{
-              padding: '0.25rem 0.75rem',
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '0.25rem',
-              background: 'rgba(255,255,255,0.15)',
-              color: '#fff',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
+            className="dr-reset-btn"
           >
             Reset Draft
           </button>
         ) : undefined}
       />
 
-      {/* Mobile Tab Bar */}
       <div className="dr-mobile-tabs">
         <MobileTabBar
           activeTab={state.activeMobileTab}
@@ -621,22 +584,12 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         />
       </div>
 
-      {/* Main content area — desktop: board row on top, tabbed panel row below */}
-      <div className="dr-main" style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1px',
-        background: 'var(--content-border, #e2e8f0)',
-        overflow: 'hidden',
-      }}>
-        {/* Board panel — top row, full width, natural height */}
+      <div className="dr-main">
         <div
           id="dr-panel-board"
           role="tabpanel"
           aria-labelledby="dr-tab-board"
           className="dr-panel-board"
-          style={{ flexShrink: 0, background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
         >
           <DraftBoardPanel
             picks={state.picks}
@@ -651,59 +604,45 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           />
         </div>
 
-        {/* Bottom panel — Players / Queue / Chat tabs, full width, fills remaining */}
-        <div
-          className="dr-side-panel"
-          style={{ flex: 1, minHeight: 0, background: 'var(--content-bg, #ffffff)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-        >
-          {/* Tab bar (desktop only — hidden on mobile via .dr-side-tab-bar) */}
-          <div
-            role="tablist"
-            aria-label="Side panel tabs"
-            className="dr-side-tab-bar"
-            style={{
-              display: 'flex',
-              borderBottom: '1px solid var(--content-border, #e2e8f0)',
-              background: 'var(--color-gray-50, #f9fafb)',
-              flexShrink: 0,
-            }}
-          >
+        <div className="dr-side-panel" data-side-tab={sideTab}>
+          <div role="tablist" aria-label="Side panel tabs" className="dr-side-tab-bar">
             <button
+              type="button"
               role="tab"
               aria-selected={sideTab === 'players'}
               aria-controls="dr-panel-players"
               onClick={() => setSideTab('players')}
-              style={sideTabStyle('players')}
+              className="dr-side-tab-btn"
             >
               Players
             </button>
             <button
+              type="button"
               role="tab"
               aria-selected={sideTab === 'queue'}
               aria-controls="dr-panel-queue"
               onClick={() => setSideTab('queue')}
-              style={sideTabStyle('queue')}
+              className="dr-side-tab-btn"
             >
               Queue{state.queue.length > 0 ? ` (${state.queue.length})` : ''}
             </button>
             <button
+              type="button"
               role="tab"
               aria-selected={sideTab === 'chat'}
               aria-controls="dr-panel-chat"
               onClick={() => setSideTab('chat')}
-              style={sideTabStyle('chat')}
+              className="dr-side-tab-btn"
             >
               Chat{state.chatUnread > 0 ? ` (${state.chatUnread})` : ''}
             </button>
           </div>
 
-          {/* Player pool panel */}
           <div
             id="dr-panel-players"
             role="tabpanel"
             aria-labelledby="dr-tab-players"
             className="dr-panel-players"
-            style={{ flex: 1, overflow: 'hidden', display: sideTab === 'players' ? 'flex' : 'none', flexDirection: 'column' }}
           >
             <PlayerPoolPanel
               players={state.players}
@@ -723,16 +662,14 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             />
           </div>
 
-          {/* Queue panel */}
           <div
             id="dr-panel-queue"
             role="tabpanel"
             aria-labelledby="dr-tab-queue"
             className="dr-panel-queue"
-            style={{ flex: 1, overflow: 'hidden', display: sideTab === 'queue' ? 'flex' : 'none', flexDirection: 'column' }}
           >
             {queueVisited ? (
-              <Suspense fallback={<div style={{ padding: '1rem', color: 'var(--color-gray-500)' }}>Loading queue…</div>}>
+              <Suspense fallback={<div className="dr-panel-loading">Loading queue…</div>}>
                 <DraftQueuePanel
                   queue={state.queue}
                   players={playerMap}
@@ -752,13 +689,11 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             ) : null}
           </div>
 
-          {/* Chat panel */}
           <div
             id="dr-panel-chat"
             role="tabpanel"
             aria-labelledby="dr-tab-chat"
             className="dr-panel-chat"
-            style={{ flex: 1, overflow: 'hidden', display: sideTab === 'chat' ? 'flex' : 'none', flexDirection: 'column' }}
           >
             {chatVisited && partyHost ? (
               <DraftChatPanel
@@ -777,9 +712,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
                 onHistory={handleChatHistory}
               />
             ) : chatVisited ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', textAlign: 'center', color: 'var(--color-gray-400, #9ca3af)', fontSize: '0.8125rem' }}>
+              <div className="dr-chat-missing">
                 <div>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💬</div>
+                  <span className="dr-chat-missing__icon" aria-hidden="true">💬</span>
                   Chat requires PartyKit.<br />Set PUBLIC_PARTYKIT_HOST.
                 </div>
               </div>
@@ -788,60 +723,11 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         </div>
       </div>
 
-      {/* Poll error indicator */}
       {state.pollError && (
-        <div style={{
-          position: 'fixed',
-          bottom: '1rem',
-          right: '1rem',
-          background: 'var(--color-error-light, #fee2e2)',
-          color: 'var(--color-error-dark, #b91c1c)',
-          padding: '0.5rem 0.75rem',
-          borderRadius: 'var(--radius-md, 0.5rem)',
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          boxShadow: 'var(--shadow-md)',
-          zIndex: 50,
-        }}>
+        <div className="dr-poll-error" role="status">
           Connection issue — retrying...
         </div>
       )}
-
-      <style>{`
-        .dr-mobile-tabs {
-          display: none;
-        }
-        @media (max-width: 767px) {
-          .dr-mobile-tabs {
-            display: block;
-          }
-          /* On mobile, board fills when board tab active, otherwise side panel fills */
-          .dr-panel-board {
-            display: ${state.activeMobileTab === 'board' ? 'block' : 'none'};
-            flex: none !important;
-          }
-          .dr-side-panel {
-            display: ${state.activeMobileTab !== 'board' ? 'flex' : 'none'} !important;
-            height: auto !important;
-            flex: 1 !important;
-          }
-          /* Hide the desktop tab bar inside the side panel — mobile uses MobileTabBar */
-          .dr-side-tab-bar {
-            display: none !important;
-          }
-          /* Show the correct panel inside the side panel */
-          .dr-panel-players {
-            display: ${state.activeMobileTab === 'players' ? 'flex' : 'none'} !important;
-          }
-          .dr-panel-queue {
-            display: ${state.activeMobileTab === 'queue' ? 'flex' : 'none'} !important;
-          }
-          .dr-panel-chat {
-            display: ${state.activeMobileTab === 'chat' ? 'flex' : 'none'} !important;
-          }
-        }
-        /* Tablet: same 2-row layout, no overrides needed */
-      `}</style>
     </div>
   );
 }

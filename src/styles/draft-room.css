@@ -1861,3 +1861,177 @@
     min-height: 44px;
   }
 }
+
+/* ── DraftRoom shell layout ──
+ * Desktop: board row on top, tabbed side panel below.
+ * Mobile:  single panel driven by [data-active-mobile-tab] on the root.
+ */
+.draft-room {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--header-height, 60px));
+  overflow: hidden;
+}
+.dr-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--content-border, #e2e8f0);
+  overflow: hidden;
+}
+.dr-panel-board {
+  flex-shrink: 0;
+  background: var(--content-bg, #ffffff);
+  overflow: hidden;
+}
+.dr-side-panel {
+  flex: 1;
+  min-height: 0;
+  background: var(--content-bg, #ffffff);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dr-side-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+  background: var(--color-gray-50, #f9fafb);
+  flex-shrink: 0;
+}
+.dr-side-tab-btn {
+  flex: 1;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-gray-400, #9ca3af);
+  cursor: pointer;
+  transition: color 0.15s var(--dr-easing-ease), border-color 0.15s var(--dr-easing-ease);
+}
+.dr-side-tab-btn[aria-selected="true"] {
+  border-bottom-color: var(--color-primary, #1c497c);
+  color: var(--color-primary, #1c497c);
+}
+.dr-side-tab-btn:hover:not([aria-selected="true"]) {
+  color: var(--color-gray-700, #374151);
+}
+
+/* Side-panel bodies: hide all, show the one matching [data-side-tab] */
+.dr-panel-players,
+.dr-panel-queue,
+.dr-panel-chat {
+  flex: 1;
+  overflow: hidden;
+  flex-direction: column;
+  display: none;
+}
+.dr-side-panel[data-side-tab="players"] .dr-panel-players,
+.dr-side-panel[data-side-tab="queue"]   .dr-panel-queue,
+.dr-side-panel[data-side-tab="chat"]    .dr-panel-chat {
+  display: flex;
+}
+
+/* Reset-draft button (lives inside DraftTimerBanner via `actions` slot) */
+.dr-reset-btn {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s var(--dr-easing-ease);
+}
+.dr-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Panel loading + chat-missing fallback */
+.dr-panel-loading {
+  padding: 1rem;
+  color: var(--color-gray-500, #6b7280);
+  font-size: 0.8125rem;
+}
+.dr-chat-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-gray-400, #9ca3af);
+  font-size: 0.8125rem;
+}
+.dr-chat-missing__icon {
+  display: block;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Poll-error toast */
+.dr-poll-error {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: var(--color-error-light, #fee2e2);
+  color: var(--color-error-dark, #b91c1c);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+}
+
+/* ── Mobile shell ──
+ * MobileTabBar swaps the visible panel. The active tab is read from
+ * [data-active-mobile-tab] on .draft-room (set by the DraftRoom component).
+ */
+.dr-mobile-tabs { display: none; }
+
+@media (max-width: 767px) {
+  .dr-mobile-tabs { display: block; }
+
+  .draft-room[data-active-mobile-tab="board"] .dr-panel-board {
+    display: block;
+    flex: none;
+  }
+  .draft-room:not([data-active-mobile-tab="board"]) .dr-panel-board {
+    display: none;
+  }
+  .draft-room[data-active-mobile-tab="board"] .dr-side-panel {
+    display: none !important;
+  }
+  .draft-room:not([data-active-mobile-tab="board"]) .dr-side-panel {
+    display: flex !important;
+    height: auto !important;
+    flex: 1 !important;
+  }
+
+  /* Desktop side-panel tab bar is redundant on mobile — MobileTabBar handles it. */
+  .dr-side-tab-bar { display: none !important; }
+
+  /* Show only the panel matching the active mobile tab. */
+  .draft-room[data-active-mobile-tab="players"] .dr-panel-players,
+  .draft-room[data-active-mobile-tab="queue"]   .dr-panel-queue,
+  .draft-room[data-active-mobile-tab="chat"]    .dr-panel-chat {
+    display: flex !important;
+  }
+  .draft-room[data-active-mobile-tab="players"] .dr-panel-queue,
+  .draft-room[data-active-mobile-tab="players"] .dr-panel-chat,
+  .draft-room[data-active-mobile-tab="queue"]   .dr-panel-players,
+  .draft-room[data-active-mobile-tab="queue"]   .dr-panel-chat,
+  .draft-room[data-active-mobile-tab="chat"]    .dr-panel-players,
+  .draft-room[data-active-mobile-tab="chat"]    .dr-panel-queue {
+    display: none !important;
+  }
+}
