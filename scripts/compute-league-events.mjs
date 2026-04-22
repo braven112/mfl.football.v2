@@ -12,6 +12,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
@@ -107,13 +108,7 @@ function resolveEvents(year) {
       }
     }
 
-    // Calendar-day diff (local midnight → local midnight). Using Math.ceil on
-    // the raw timestamp delta caused "tomorrow" to round to daysUntil=1 when
-    // the start was only a few hours away, which combined with the ±1 tolerance
-    // in schefter-scan to fire the "dayof" reminder a day early.
-    const startMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
-    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const daysUntil = Math.round((startMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
+    const daysUntil = calendarDaysUntil(startDate, now);
     const isPast = daysUntil < -1; // Allow day-of posts
 
     return {
