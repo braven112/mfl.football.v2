@@ -11,6 +11,7 @@ import type {
   DraftContext,
   DraftRoomMode,
 } from '../../../types/draft-room';
+import { ConfirmDialog } from './ConfirmDialog';
 import { DraftTimerBanner } from './DraftTimerBanner';
 import { DraftBoardPanel } from './DraftBoardPanel';
 import { PlayerPoolPanel } from './PlayerPoolPanel';
@@ -270,6 +271,12 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   // Screen reader announcement for new picks
   const [announcement, setAnnouncement] = useState('');
   const prevPickNumberRef = useRef(state.currentPickNumber);
+
+  // Which destructive action is currently awaiting confirmation. Null when
+  // nothing is pending. Only used in mock mode.
+  const [pendingAction, setPendingAction] = useState<null | 'reset' | 'undo'>(null);
+
+  const hasUndoablePick = state.picks.some((p) => !!p.playerId);
 
   useEffect(() => {
     if (state.currentPickNumber !== prevPickNumberRef.current && prevPickNumberRef.current > 0) {
@@ -570,15 +577,52 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         isUserTurn={isUserTurn}
         mockClockSeconds={isMock ? state.mockClockSeconds : undefined}
         actions={isMock ? (
-          <button
-            type="button"
-            onClick={() => mockSend({ type: 'reset', franchiseId: userTeamId })}
-            className="dr-reset-btn"
-          >
-            Reset Draft
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setPendingAction('undo')}
+              className="dr-reset-btn"
+              disabled={!hasUndoablePick}
+              title={hasUndoablePick ? 'Undo the last pick' : 'No pick to undo'}
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingAction('reset')}
+              className="dr-reset-btn"
+            >
+              Reset Draft
+            </button>
+          </>
         ) : undefined}
       />
+
+      {pendingAction === 'reset' && (
+        <ConfirmDialog
+          title="Reset mock draft?"
+          message="Every pick will be cleared and the draft will restart from Pick 1. This cannot be undone."
+          confirmLabel="Reset draft"
+          destructive
+          onCancel={() => setPendingAction(null)}
+          onConfirm={() => {
+            mockSend({ type: 'reset', franchiseId: userTeamId });
+            setPendingAction(null);
+          }}
+        />
+      )}
+      {pendingAction === 'undo' && (
+        <ConfirmDialog
+          title="Undo last pick?"
+          message="The most recent pick will be cleared and that slot will go back on the clock."
+          confirmLabel="Undo pick"
+          onCancel={() => setPendingAction(null)}
+          onConfirm={() => {
+            mockSend({ type: 'undo', franchiseId: userTeamId });
+            setPendingAction(null);
+          }}
+        />
+      )}
 
       <div className="dr-mobile-tabs">
         <MobileTabBar

@@ -117,6 +117,11 @@ interface ResetMessage {
   franchiseId: string;
 }
 
+interface UndoMessage {
+  type: 'undo';
+  franchiseId: string;
+}
+
 type ClientMessage =
   | JoinMessage
   | PickMessage
@@ -125,7 +130,8 @@ type ClientMessage =
   | PauseMessage
   | ResumeMessage
   | SkipMessage
-  | ResetMessage;
+  | ResetMessage
+  | UndoMessage;
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -176,6 +182,8 @@ export default class MockDraftServer implements Party.Server {
         return this.handleSkip(msg);
       case 'reset':
         return this.handleReset(msg);
+      case 'undo':
+        return this.handleUndo(msg);
   }
 
   async onClose(conn: Party.Connection) {
@@ -383,6 +391,45 @@ export default class MockDraftServer implements Party.Server {
         franchiseId: session.draftOrder[i],
       });
     }
+
+    await this.saveSession(session);
+    this.broadcastSession(session);
+    this.scheduleNextPick(session);
+  }
+
+  /**
+   * Revert the most recent pick so the slot goes back on the clock. Used
+   * by the creator to un-do an AI auto-pick they didn't like (or a
+   * mis-click of their own). Re-opens the draft if it had just completed.
+   */
+  private async handleUndo(msg: UndoMessage) {
+    const session = await this.getSession();
+    if (!session) return;
+
+    if (msg.franchiseId !== session.createdBy) {
+      this.sendError(msg.franchiseId, 'Only the session creator can undo');
+      return;
+    }
+
+    if (session.currentPickIndex <= 0) {
+      this.sendError(msg.franchiseId, 'No pick to undo');
+      return;
+    }
+
+    this.stopTimer();
+
+    const lastIndex = session.currentPickIndex - 1;
+    const lastSlot = session.picks[lastIndex];
+    if (lastSlot) {
+      session.picks[lastIndex] = {
+        overallPickNumber: lastSlot.overallPickNumber,
+        round: lastSlot.round,
+        pickInRound: lastSlot.pickInRound,
+        franchiseId: lastSlot.franchiseId,
+      };
+    }
+    session.currentPickIndex = lastIndex;
+    if (session.status === 'completed') session.status = 'active';
 
     await this.saveSession(session);
     this.broadcastSession(session);
