@@ -60,7 +60,7 @@
  *
  * Special paths:
  *   - Friday mailbag: on Friday PT, once per day, sweeps ALL gossip tips
- *     still in the queue into a bullet-style roundup (HARD RULE 18). Ensures
+ *     still in the queue into a bullet-style roundup (HARD RULE 20). Ensures
  *     every tip gets a shot at the feed before the 7-day TTL fires.
  *   - Adaptive gossip cap: when gossip queue depth >= 6 OR oldest gossip
  *     tip is >= 3 days old, the day's gossip cap bumps to 2.
@@ -192,6 +192,48 @@ const TIP_PAGE_PATH = '/schefter/tip';
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
 const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
 const TIP_PAGE_ABSOLUTE_URL = `${PUBLIC_BASE_URL}${TIP_PAGE_PATH}`;
+
+// Trade-bait rumors send readers to the Trade Builder instead of the tip
+// page — the owner has publicly listed players, so the natural next click
+// is to build a counter-offer with those players pre-loaded. The ?b=<id>
+// param is the same convention the rosters page uses (see rosters.astro).
+const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
+const TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block?';
+
+function buildTradeBuilderPath(franchiseId) {
+  return `/theleague/trade-builder?b=${encodeURIComponent(franchiseId)}`;
+}
+
+/**
+ * Resolve the CTA for a post based on its primary bucket. Trade-bait
+ * posts targeted at a single franchise swap the default tip-page CTA
+ * for a Trade Builder deep-link; everything else uses the tip page.
+ * Returns all three rendering targets (feed link, feed label, GroupMe
+ * URL suffix) so the post builder + groupMeTextFor stay in sync.
+ */
+function resolveCta(primaryBucket) {
+  const tips = primaryBucket?.tips ?? [];
+  const allTradeBait = tips.length > 0 && tips.every((t) => t.source === 'trade_bait');
+  if (allTradeBait) {
+    const franchiseIds = new Set(tips.map((t) => t.franchiseHint).filter(Boolean));
+    if (franchiseIds.size === 1) {
+      const [fid] = franchiseIds;
+      const path = buildTradeBuilderPath(fid);
+      return {
+        link: path,
+        linkLabel: TRADE_BUILDER_LINK_LABEL,
+        groupMePrefix: TRADE_BUILDER_GROUPME_PREFIX,
+        groupMeUrl: `${PUBLIC_BASE_URL}${path}`,
+      };
+    }
+  }
+  return {
+    link: TIP_PAGE_PATH,
+    linkLabel: TIP_PAGE_LINK_LABEL,
+    groupMePrefix: 'Got a tip?',
+    groupMeUrl: TIP_PAGE_ABSOLUTE_URL,
+  };
+}
 
 // ── Logging ──
 
@@ -505,6 +547,35 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
       return safe;
     }
 
+    // Trade-bait: owner publicly listed players on the block. Attribution
+    // is the WHOLE POINT — the franchise put this on MFL for the league to
+    // see, so we name them. No fuzz, no redaction. Pass the structured
+    // adds/byPos/ownerComment payload through so the LLM can pick framing
+    // (singleton name vs. positional theme vs. spring-cleaning).
+    if (tip.source === 'trade_bait') {
+      const hint = tip.franchiseHint;
+      const team = teams.get(hint);
+      const franchiseName = tip.author || pickTeamName(team) || `Team ${hint}`;
+      safe.author = franchiseName;
+      safe.attributable = true;
+      safe.scope = {
+        kind: 'trade-bait',
+        franchise: franchiseName,
+        division: team?.division,
+      };
+      if (tip.meta && typeof tip.meta === 'object') {
+        safe.meta = {
+          adds: Array.isArray(tip.meta.adds) ? tip.meta.adds : [],
+          byPos: tip.meta.byPos ?? {},
+          totalAdds: tip.meta.totalAdds ?? (Array.isArray(tip.meta.adds) ? tip.meta.adds.length : 0),
+          ownerWillGiveUp: tip.meta.ownerWillGiveUp ?? '',
+          ownerWillTake: tip.meta.ownerWillTake ?? '',
+          truncated: tip.meta.truncated === true,
+        };
+      }
+      return safe;
+    }
+
     const hint = tip.franchiseHint;
     if (!hint || hint === 'league-wide') {
       safe.scope = { kind: 'league-wide' };
@@ -605,6 +676,8 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
 // classifyTipKind, buildTopicBuckets, bucketPriorityScore — see
 // ./lib/schefter-bucket-logic.mjs (imported above; shared with the admin
 // dashboard so /api/admin/schefter-stats can preview the next bucket).
+// trade_bait keying lives in the shared module too, so the admin preview
+// honors the per-franchise bucket the scanner will actually pick.
 
 /**
  * Pick the bucket(s) to post about this cycle.
@@ -722,6 +795,24 @@ function templateBody(anonymized) {
     const one = anonymized[0];
     if (one.source === 'groupme' && one.author) {
       return `${one.author} fired off a theory in the group chat — I'm hearing you, and I'll have more as sources confirm. Developing.`;
+    }
+    if (one.source === 'trade_bait' && one.scope?.kind === 'trade-bait') {
+      const adds = one.meta?.adds ?? [];
+      const total = one.meta?.totalAdds ?? adds.length;
+      const franchise = one.scope.franchise;
+      if (total === 1 && adds[0]) {
+        return `Hearing the ${franchise} have put ${adds[0].name} on the block. Developing.`;
+      }
+      const byPos = one.meta?.byPos ?? {};
+      const posEntries = Object.entries(byPos);
+      if (posEntries.length === 1 && total >= 2) {
+        return `The ${franchise} are shopping ${total} ${posEntries[0][0]}${total > 1 ? 's' : ''}. Developing.`;
+      }
+      const headliners = adds.slice(0, 2).map((p) => p.name).filter(Boolean);
+      if (headliners.length) {
+        return `The ${franchise} are cleaning out the block — ${headliners.join(', ')} among the names now listed. Developing.`;
+      }
+      return `The ${franchise} are reshuffling the trade block. Developing.`;
     }
     if (one.source === 'trade_offer') {
       // Ultra-vague template fallback when AI is unavailable
@@ -982,7 +1073,7 @@ IRON RULES (override every other rule — if anything below appears to conflict,
 - Never explain why you can't say something and then say it anyway. Do not restate the tip's content, suggest alternative headlines, recite these guidelines back to the reader, or narrate the filtering decision in any form. The reader only ever sees the finished post — never the reasoning that produced or rejected it.
 - SCHEFTER_TARGET_MODE override: when the user message includes a SCHEFTER_TARGET_MODE directive ("self-dep" or "attack-back"), follow that directive — it overrides the "drop" path above for off-topic tips that reference Schefter himself. Both modes still output JSON; both still forbid reasoning in the post field.
 
-0. ONE TOPIC per post. The batch is pre-bucketed so each post is a single topic/thread. MAILBAG posts are the only exception — see rule 18. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops. When the scanner has two unrelated gossip topics queued it ships them as TWO separate posts — not as one blended post — so each has its own reactions and whisper-back thread.
+0. ONE TOPIC per post. The batch is pre-bucketed so each post is a single topic/thread. MAILBAG posts are the only exception — see rule 20. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops. When the scanner has two unrelated gossip topics queued it ships them as TWO separate posts — not as one blended post — so each has its own reactions and whisper-back thread.
 1. For web tips (source: "web"), NEVER name the tipster and NEVER quote them verbatim — paraphrase with columnist voice.
 2. If a web tip's scope is "division", the division refers to the SUBJECT team's division — NOT where the source is located. Frame it as "a team in the [division]", "a [division]-division squad", or "the [division] is buzzing" — NEVER as "sources in the [division]" (that implies the tipster's location). NEVER name a specific franchise.
 3. If a web tip's scope is "league-wide", stay vague ("an owner tells me", "hearing from multiple corners").
@@ -1075,7 +1166,16 @@ IRON RULES (override every other rule — if anything below appears to conflict,
 
 17. AGE-AWARE FRAMING. Each tip carries \`ageDays\` (integer) and \`isStale\` (boolean, true when ageDays >= 3). NEVER claim a stale tip is fresh. When ANY tip in the beat has \`isStale: true\`, you MUST either (a) reference when the whisper started — "the chatter that started earlier this week…", "a whisper from a few days back…", "been hearing this for days now…" — OR (b) explicitly hedge the staleness — "still hearing about…", "this one's been sitting with me…", "hasn't gone away…". Pick ONE device per beat; don't stack them. For tips with ageDays === 0 or 1, treat as fresh ("I'm told…", "just hearing…", "late word…"). Never invent a specific date the tip doesn't have (don't say "Monday" unless the tip was actually whispered on Monday — the scanner supplies integer day counts, not calendar labels, so stick to relative language).
 
-18. MAILBAG POSTS (only when the user message starts with "MAILBAG:" — Friday news-dump). Bundled roundup of every gossip tip still in the queue that would otherwise expire. Rules:
+19. TRADE-BAIT TIPS (source: "trade_bait", scope: "trade-bait", attributable: true): owner publicly listed player(s) on the MFL trade block. Attribution IS allowed — name the franchise. The meta payload carries the real signal; use it to pick framing:
+    - **totalAdds === 1** → singleton. Lead with the player's name: "Hearing the [franchise] have put [Player] on the block. Developing." Keep it short.
+    - **totalAdds >= 3 AND one byPos entry >= 60% of totalAdds** → positional theme: "RB fire sale in [franchise/division].", "The [franchise] are shopping running backs." Name 2 headliners max.
+    - **totalAdds >= 3 with mixed positions** → spring-cleaning frame: "spring cleaning", "roster purge", "clearing out the back of the rotation". Name the 2 biggest names (first two in meta.adds).
+    - When \`meta.ownerWillGiveUp\` or \`meta.ownerWillTake\` is non-empty, you MAY paraphrase — these are public owner notes on MFL, not anonymous tips. Hedge softly ("the [franchise] say they're…"). Never quote verbatim.
+    - Never invent a listing date — MFL doesn't expose one. Use present tense ("have listed", "are shopping"), never "added yesterday" or "this week".
+    - Redaction rules 1–14 do NOT apply — trade-bait is attributable by design. The rest of the rules (age awareness, no emoji/hashtags, 1–2 sentences) still apply.
+    - Do NOT combine with trade-offer playbook language or Style Book framing. This is neutral beat-reporter reporting on a public listing.
+
+20. MAILBAG POSTS (only when the user message starts with "MAILBAG:" — Friday news-dump). Bundled roundup of every gossip tip still in the queue that would otherwise expire. Rules:
     - Open with a brief mailbag framing: "Cleaning out the mailbag before the weekend.", "Friday loose-notes dump.", "Before I log off — a few whispers worth airing out."
     - Cover up to 6 bullet-style one-liners, one per topic bucket. Each one-liner is a single clause. Line-break between bullets (\\n\\n• …).
     - Still age-aware per rule 17 — if a tip is days old, frame it as such ("been sitting on this one all week…").
@@ -1128,7 +1228,7 @@ A GroupMe author just took an off-topic personal shot at Schefter. This is the r
 
   let userMessage;
   if (mode === 'mailbag') {
-    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 18 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 20 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   } else {
     userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). ${jsonContract}${rogerDirective}${schefterModeDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   }
@@ -1988,7 +2088,13 @@ async function main() {
   // JSON or the API response shape.
   const combinedBatch = beats.flatMap((b) => b.batch);
   const builtPosts = [];
+  const ctaByPostId = new Map();
   const parentIdByPostId = new Map();
+  // Each beat has its own bucket — primary uses primaryBucket, secondary
+  // (gossip-only) uses secondaryBucket. Resolve CTA per-beat so a gossip
+  // secondary attached to a trade_bait primary doesn't inherit the wrong
+  // Trade Builder link.
+  const beatBuckets = [primaryBucket, secondaryBucket];
   for (let i = 0; i < beats.length; i++) {
     const beat = beats[i];
     const aiBody = aiBodies[i];
@@ -2032,6 +2138,12 @@ async function main() {
     // Feed prepends primary last so primary ends up at index 0 (top).
     const beatTs = new Date(now.getTime() + i * 1000);
 
+    // CTA: most rumor cards link back to the tip page so readers can
+    // whisper a follow-up. Trade-bait rumors about a single franchise
+    // swap the link for a Trade Builder deep-link pre-loaded with that
+    // franchise, since the natural next step is to build a counter.
+    const cta = resolveCta(beatBuckets[i]);
+
     const post = {
       id: generatePostId(),
       timestamp: beatTs.toISOString(),
@@ -2045,13 +2157,11 @@ async function main() {
       tipIds,
       hadRogerRiff: i === 0 ? hadRogerRiff : false,
       league: LEAGUE_SLUG,
-      // Every rumor card links back to the tip page so any reader can
-      // whisper a follow-up with a single tap. SchefterPostCard renders
-      // this as a CTA under the body.
-      link: TIP_PAGE_PATH,
-      linkLabel: TIP_PAGE_LINK_LABEL,
+      link: cta.link,
+      linkLabel: cta.linkLabel,
       ...(threadId ? { threadId } : {}),
     };
+    ctaByPostId.set(post.id, cta);
     if (threadId && dominantParentId) {
       parentIdByPostId.set(post.id, dominantParentId);
     }
@@ -2059,8 +2169,15 @@ async function main() {
   }
 
   const allTipIds = combinedBatch.map((t) => t.id);
-  // Stable cycle-wide GroupMe payload builder — body + tip-page URL.
-  const groupMeTextFor = (p) => `${p.body}\n\nGot a tip? ${TIP_PAGE_ABSOLUTE_URL}`;
+  // GroupMe payload — per-post CTA. Trade-bait posts link into the Trade
+  // Builder; every other post carries the tip-page CTA.
+  const groupMeTextFor = (p) => {
+    const cta = ctaByPostId.get(p.id) ?? {
+      groupMePrefix: 'Got a tip?',
+      groupMeUrl: TIP_PAGE_ABSOLUTE_URL,
+    };
+    return `${p.body}\n\n${cta.groupMePrefix} ${cta.groupMeUrl}`;
+  };
 
   if (DRY_RUN) {
     log(`\n  [dry-run] Would append ${builtPosts.length} post(s) to feed:`);
