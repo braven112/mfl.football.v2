@@ -274,9 +274,10 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
 
   // Which destructive action is currently awaiting confirmation. Null when
   // nothing is pending. Only used in mock mode.
-  const [pendingAction, setPendingAction] = useState<null | 'reset' | 'undo'>(null);
+  const [pendingAction, setPendingAction] = useState<null | 'reset' | 'goback'>(null);
 
   const hasUndoablePick = state.picks.some((p) => !!p.playerId);
+  const isMockPaused = isMock && state.mockSession?.status === 'paused';
 
   useEffect(() => {
     if (state.currentPickNumber !== prevPickNumberRef.current && prevPickNumberRef.current > 0) {
@@ -580,12 +581,25 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           <>
             <button
               type="button"
-              onClick={() => setPendingAction('undo')}
+              onClick={() => setPendingAction('goback')}
               className="dr-reset-btn"
               disabled={!hasUndoablePick}
-              title={hasUndoablePick ? 'Undo the last pick' : 'No pick to undo'}
+              title={hasUndoablePick ? 'Revert the last pick' : 'No pick to go back to'}
             >
-              Undo
+              Go Back
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                mockSend({
+                  type: isMockPaused ? 'resume' : 'pause',
+                  franchiseId: userTeamId,
+                })
+              }
+              className="dr-reset-btn"
+              title={isMockPaused ? 'Resume the timer' : 'Pause the timer'}
+            >
+              {isMockPaused ? 'Resume' : 'Pause'}
             </button>
             <button
               type="button"
@@ -611,11 +625,11 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           }}
         />
       )}
-      {pendingAction === 'undo' && (
+      {pendingAction === 'goback' && (
         <ConfirmDialog
-          title="Undo last pick?"
-          message="The most recent pick will be cleared and that slot will go back on the clock."
-          confirmLabel="Undo pick"
+          title="Go back one pick?"
+          message="The most recent pick will be cleared and that slot will go back on the clock. You can keep pressing Go Back to rewind further."
+          confirmLabel="Go back"
           onCancel={() => setPendingAction(null)}
           onConfirm={() => {
             mockSend({ type: 'undo', franchiseId: userTeamId });

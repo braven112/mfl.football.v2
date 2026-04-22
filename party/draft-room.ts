@@ -485,18 +485,25 @@ export default class DraftRoomServer implements Party.Server {
   /**
    * Revert the most recent pick so the slot goes back on the clock.
    * Re-opens the draft if the undo lands on a completed draft.
+   *
+   * Crucially we do NOT call scheduleNextPick here. If the reverted slot
+   * belongs to an AI team, scheduleNextPick would immediately auto-pick
+   * for them — usually re-selecting the same player — making the undo
+   * feel like a no-op. Instead we stop the timer and leave the slot
+   * empty. The creator can then either pick manually for that team or
+   * keep hitting Go Back to walk further up the chain.
    */
   private async handleUndo(msg: UndoMessage) {
     const session = await this.getSession();
     if (!session) return;
 
     if (msg.franchiseId !== session.createdBy) {
-      this.sendMockError(msg.franchiseId, 'Only the session creator can undo');
+      this.sendMockError(msg.franchiseId, 'Only the session creator can go back');
       return;
     }
 
     if (session.currentPickIndex <= 0) {
-      this.sendMockError(msg.franchiseId, 'No pick to undo');
+      this.sendMockError(msg.franchiseId, 'No pick to go back to');
       return;
     }
 
@@ -517,7 +524,17 @@ export default class DraftRoomServer implements Party.Server {
 
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.scheduleNextPick(session);
+
+    // Start the clock if the creator is on-clock after the rollback;
+    // otherwise stay paused so the user can decide what to do next.
+    const onClock = session.draftOrder[session.currentPickIndex];
+    if (onClock === session.createdBy) {
+      this.startTimer(session);
+    } else {
+      this.room.broadcast(
+        JSON.stringify({ type: 'pick-clock', secondsRemaining: 0 }),
+      );
+    }
   }
 
   // ── Pick logic ──

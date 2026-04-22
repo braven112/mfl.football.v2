@@ -82,14 +82,14 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const timerSeconds = body.timerSeconds ?? 120;
+    const timerSeconds = body.timerSeconds ?? 10;
     const totalRounds = body.totalRounds ?? 3;
     const useRealOrder = body.useRealOrder ?? true;
 
     // Validate timer presets
-    if (![10, 60, 120, 300].includes(timerSeconds)) {
+    if (![1, 3, 10, 15].includes(timerSeconds)) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Invalid timer. Use 10, 60, 120, or 300 seconds.' }),
+        JSON.stringify({ success: false, message: 'Invalid timer. Use 1, 3, 10, or 15 seconds.' }),
         { status: 400, headers: JSON_HEADERS },
       );
     }

@@ -75,10 +75,10 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
             <div class="mock-lobby__form-row">
               <label class="mock-lobby__label">Timer per pick</label>
               <div class="mock-lobby__timer-chips" id="timer-chips">
-                <button class="mock-lobby__chip" data-value="10">10 sec</button>
-                <button class="mock-lobby__chip" data-value="60">1 min</button>
-                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="120">2 min</button>
-                <button class="mock-lobby__chip" data-value="300">5 min</button>
+                <button class="mock-lobby__chip" data-value="1">1 sec</button>
+                <button class="mock-lobby__chip" data-value="3">3 sec</button>
+                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="10">10 sec</button>
+                <button class="mock-lobby__chip" data-value="15">15 sec</button>
               </div>
             </div>
 
@@ -388,7 +388,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
       startBtn.textContent = 'Creating…';
       if (createError) createError.textContent = '';
 
-      const timerSeconds = parseInt(getChipValue('timer-chips') || '120');
+      const timerSeconds = parseInt(getChipValue('timer-chips') || '10');
       const totalRounds = parseInt(getChipValue('round-chips') || '3');
       const useRealOrder = getChipValue('order-chips') === 'real';
       const defaultRankingSource = defaultSourceSelect?.value || 'mfl-rookie';
