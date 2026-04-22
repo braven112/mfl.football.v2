@@ -7,7 +7,7 @@
 
 ## TL;DR
 
-When owners add players to their MFL trade block (the "trade bait" list — signaling availability, not an offer), Schefter turns that into natural rumor-mill posts. Core mechanic: a **settle window** debounces per-franchise activity so a dump of six players fires as one clustered post, not six. Adds that cancel out within the window emit nothing. Structured payload (position counts + names + owner comments) lets the LLM pick the right voice: single name on one-offs, positional-theme language on clusters. Launches with a silent seed + one hand-fired "State of the Block" kickoff post.
+When owners add players to their MFL trade block (the "trade bait" list — signaling availability, not an offer), Schefter turns that into natural rumor-mill posts. Core mechanic: a **settle window** debounces per-franchise activity so a dump of six players fires as one clustered post, not six. Adds that cancel out within the window emit nothing. Structured payload (position counts + names + owner comments) lets the LLM pick the right voice: single name on one-offs, positional-theme language on clusters. Launches with a **silent seed only** — no announcement post; the feature debuts on the first real owner delta post-deploy.
 
 ---
 
@@ -188,6 +188,23 @@ Structured data in + concise English `text` = LLM picks the right voice.
 
 ---
 
+## Post CTA — Trade Builder, Not Tip Page
+
+Every rumor post today carries a single CTA: `link = TIP_PAGE_PATH` / `linkLabel = "Got a tip? Whisper to Schefter →"` (`schefter-rumor-scan.mjs:182-184, 1917-1918`). GroupMe payloads append `TIP_PAGE_ABSOLUTE_URL`.
+
+For trade_bait posts this is the wrong destination — a reader who sees "Pigskins dumped three RBs" wants to open the block in the trade builder, not the tip form.
+
+**Override contract** (driven off the primary bucket):
+
+- When the primary bucket is a `trade_bait` bucket with a single `franchiseHint`, override the post:
+  - `link` → `/theleague/trade-builder?b=<franchiseHint>`
+  - `linkLabel` → `Open in Trade Builder →` (generic — franchise name is already in the body via attribution)
+  - GroupMe suffix → absolute trade-builder URL (`${PUBLIC_BASE_URL}/theleague/trade-builder?b=<franchiseHint>`) in place of the tip-page URL
+- Any other bucket (including mixed buckets that happen to include a trade_bait tip) retains the existing tip-page CTA.
+- Trade-builder query-param precedent: `rosters.astro:2413` / `:6981` already link with `?b=<franchiseId>` — same convention.
+
+**Implementation note:** simplest to compute both CTAs per post and pick based on primary-bucket introspection in the same block that sets `link`/`linkLabel` today (`schefter-rumor-scan.mjs:1901-1920`). Expose a helper like `resolveCta(primaryBucket)` returning `{ link, linkLabel, groupMeUrl }` so the post-build site and the `groupMeTextFor` builder stay in sync.
+
 ## Bucket Integration
 
 Reuses the existing rumor-scan bucketing with minimal changes:
@@ -205,9 +222,9 @@ No changes needed to `pickPrimaryBucket` — the existing gossip-bucket selectio
 
 **Problem:** 17 players currently on the block. A naive first run would interpret all 17 as fresh adds and flood.
 
-**Solution:** silent seed + optional kickoff post.
+**Decision:** silent seed only. No kickoff post, no launch announcement — the feature starts existing, and the first real owner delta is the first post.
 
-### Silent seed (automatic, always runs first)
+### Silent seed (automatic, first run)
 
 On the first detection pass where `feed.tradeBaitState` is absent or a franchise has no entry:
 - Set `committedBlock = currentBlock` for every franchise
@@ -217,31 +234,9 @@ On the first detection pass where `feed.tradeBaitState` is absent or a franchise
 
 Next real delta (post-seed) is the first real post. Clean debut; no noise.
 
-### Optional kickoff post (hand-fired, one-time)
+### Rejected: hand-fired kickoff post
 
-A CLI flag on the scan script for the launch moment:
-
-```bash
-node scripts/schefter-scan.mjs --kickoff-trade-bait
-```
-
-When the flag is present AND `feed.tradeBaitState` is empty (belt-and-suspenders: can't re-fire on accident):
-
-1. Run the fetch + franchise mapping
-2. Generate ONE aggregate tip with the full current block as `meta.adds` across all franchises, grouped
-3. LLM prompt variant: "State of the Block — launch day inventory. Acknowledge this is a snapshot, not breaking news. Hit 3–5 headliners across the league. Tease that Schefter is now tracking the block going forward."
-4. Post to feed + GroupMe
-5. Seed state (same as silent seed)
-6. Done — subsequent scans operate normally
-
-Kickoff post is NEVER cron-invoked. Only the commish (or Brandon, directly) runs it when the feature's debut is ready.
-
-### Voice constraint for kickoff
-
-- Present tense only — no "added this week" / "listed yesterday" claims (MFL doesn't expose timestamps)
-- One post, ≤ 4 sentences in the body
-- Names 3–5 players max, prioritizing stars
-- Signs off with a "tracking going forward" beat
+Earlier draft included a `--kickoff-trade-bait` CLI flag for a "State of the Block" snapshot post on launch day. Dropped in favor of letting the feature surface organically on the first real owner action. If demand materializes later, the flag is an easy additive layer — state schema + tip payload already support it.
 
 ---
 
@@ -264,7 +259,7 @@ Kickoff post is NEVER cron-invoked. Only the commish (or Brandon, directly) runs
 
 **Modify:**
 - `scripts/fetch-trade-bait.mjs` — preserve franchise mapping, emit new `tradeBait-by-franchise.json` alongside existing flat cache
-- `scripts/schefter-scan.mjs` — new detector section mirroring the pending-trade watcher; `--kickoff-trade-bait` flag handling
+- `scripts/schefter-scan.mjs` — new detector section mirroring the pending-trade watcher
 - `scripts/schefter-rumor-scan.mjs` — recognize `source: 'trade_bait'` and `topic: 'trade_bait'` in bucketing + anonymization (bypass anonymization since `attributable: true`)
 - `.claude/agents/schefter.md` (or the rumor-mill skill doc) — add trade_bait voice directive block
 
@@ -281,7 +276,7 @@ Kickoff post is NEVER cron-invoked. Only the commish (or Brandon, directly) runs
 6. Re-add after silent remove → new post fires
 7. `MAX_SETTLE_WAIT_MS` force-fires when drift never stabilizes
 8. Pure removes never fire
-9. Kickoff flag fires once, then no-ops on repeat runs (state already seeded)
+9. CTA override — trade_bait primary bucket sets `link = /theleague/trade-builder?b=<franchiseId>`; non-trade_bait buckets keep tip-page CTA
 
 ---
 
@@ -299,15 +294,14 @@ Kickoff post is NEVER cron-invoked. Only the commish (or Brandon, directly) runs
 - Verify clustering language vs. singleton language on real posts
 - Iterate on prompt if voice is off
 
-### Phase 3 — Kickoff post
-- Implement `--kickoff-trade-bait` flag
-- Dry-run to preview the post
-- Brandon fires it on launch day; announce in GroupMe
-
-### Phase 4 (future) — Staleness surfacing
+### Phase 3 (future) — Staleness surfacing
 - Track `listedAt` per player from state
 - Optional post: "X has been on the block for 3 weeks with no takers"
 - Opt-in; easy to layer once v1 is stable
+
+### Phase 4 (future, if demand) — Hand-fired "State of the Block" post
+- Restore the `--kickoff-trade-bait` path if we later decide an announcement post is worth it
+- State schema + tip payload already support it; purely additive
 
 ---
 
