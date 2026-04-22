@@ -560,57 +560,49 @@ export default class MockDraftServer implements Party.Server {
   /**
    * Decide what to do after a pick lands (or when a draft starts/resets).
    *
-   * Rule: a franchise with no connected participant is treated as an AI
-   * seat and auto-picks on a short delay. A franchise that has an owner
-   * currently in the room gets the full user-configured timer.
-   *
-   * This generalises the solo-mock case (only the creator connects, so
-   * every other team is AI) and the multi-human case (each connected
-   * owner drives their own pick) without any explicit mode flag.
-   *
-   * The short delay between AI picks (~550ms) lets the client animate
-   * the new pick cell + board row before the next one lands.
+   * Only use case the mock draft supports: a solo drafter vs AI.
+   * → The creator's team gets the full user-configured timer.
+   * → Every other seat auto-picks immediately. The chain keeps rattling
+   *   through AI seats until we hit the creator's slot or the draft
+   *   finishes, so 17 back-to-back AI picks happen in < 50ms rather
+   *   than blocking on a half-second delay per seat.
    */
   private scheduleNextPick(session: MockDraftSession): void {
     if (session.status !== 'active') return;
 
     const onClockFranchise = session.draftOrder[session.currentPickIndex];
-    const hasConnectedOwner = session.participants.some(
-      (p) => p.franchiseId === onClockFranchise && p.isConnected,
-    );
+    const isCreatorTurn = onClockFranchise === session.createdBy;
 
-    if (hasConnectedOwner) {
+    if (isCreatorTurn) {
       this.startTimer(session);
       return;
     }
 
-    // No human present for this slot — stop any running timer and fire
-    // autoPick shortly.
+    // AI seat — no timer. Fire the auto-pick on a microtask so the
+    // current broadcast flushes to the socket first, otherwise the
+    // client receives a burst of interleaved pick-made events.
     this.stopTimer();
     this.room.broadcast(
       JSON.stringify({ type: 'pick-clock', secondsRemaining: 0 }),
     );
 
-    setTimeout(() => {
+    Promise.resolve().then(() => {
       this.runAiAutoPick().catch((err) => {
         console.error('[mock-draft] AI auto-pick failed:', err);
       });
-    }, 550);
+    });
   }
 
   /**
-   * Re-read the session before auto-picking to guard against races (a
-   * reset, a manual pick, or an owner joining in the intervening ms).
+   * Re-read the session before auto-picking to guard against a reset or
+   * a manual creator pick landing in between.
    */
   private async runAiAutoPick(): Promise<void> {
     const session = await this.getSession();
     if (!session || session.status !== 'active') return;
 
     const onClockFranchise = session.draftOrder[session.currentPickIndex];
-    const hasConnectedOwner = session.participants.some(
-      (p) => p.franchiseId === onClockFranchise && p.isConnected,
-    );
-    if (hasConnectedOwner) return;
+    if (onClockFranchise === session.createdBy) return;
 
     await this.autoPick(session);
   }
