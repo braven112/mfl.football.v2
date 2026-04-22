@@ -109,6 +109,21 @@ if (!user || !isCommissionerOrAdmin(user)) {
         </dl>
       </article>
 
+      <article class="ops-card" aria-labelledby="card-owner-reports">
+        <h2 id="card-owner-reports" class="ops-card__title">Owner-Sourced Intake</h2>
+        <p class="ops-card__hint">
+          Populated whenever an owner loads <code>/api/trades/pending</code> or sends a proposal
+          through <code>/api/trades/submit</code>. Merged into the offer pool each scan cycle so the
+          rumor mill keeps working even with MFL's commissioner lockout on. See
+          <code>schefter:trade_offers:owner_reports</code> (30d TTL).
+        </p>
+        <dl class="ops-dl">
+          <div><dt>Active reports</dt><dd data-k="redis.ownerReportsCount">—</dd></div>
+          <div><dt>Distinct reporters</dt><dd data-k="redis.ownerReportsDistinctReporters">—</dd></div>
+          <div><dt>Last report</dt><dd data-k="fmt.ownerReportsLastSeenTs">—</dd></div>
+        </dl>
+      </article>
+
       <article class="ops-card ops-card--wide" aria-labelledby="card-live-trades">
         <h2 id="card-live-trades" class="ops-card__title">
           Trade Proposals in MFL (live, league-wide)
@@ -222,6 +237,9 @@ if (!user || !isCommissionerOrAdmin(user)) {
         : '—',
       groupmeLastSyncTs: data.redis?.groupmeLastSyncTs
         ? `${fmtTs(data.redis.groupmeLastSyncTs)} (${fmtRel(data.redis.groupmeLastSyncTs)})`
+        : '—',
+      ownerReportsLastSeenTs: data.redis?.ownerReportsLastSeenTs
+        ? `${fmtTs(data.redis.ownerReportsLastSeenTs)} (${fmtRel(data.redis.ownerReportsLastSeenTs)})`
         : '—',
       lastScanTimestamp: data.feed?.lastScanTimestamp
         ? `${new Date(data.feed.lastScanTimestamp).toLocaleString()} (${fmtRel(Date.parse(data.feed.lastScanTimestamp))})`

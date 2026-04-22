@@ -31,6 +31,7 @@ const GROUPME_LAST_SYNC_KEY = 'groupme:last_sync_ts';
 const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
 const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
 const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
+const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 
 type RedisClient = {
@@ -74,6 +75,10 @@ function coerce(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === '') return null;
   const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
   return Number.isFinite(n) ? n : null;
+}
+
+function safeParse(s: string): unknown {
+  try { return JSON.parse(s); } catch { return null; }
 }
 
 function json(data: unknown, status = 200): Response {
@@ -182,6 +187,7 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersInFlight,
     tradeOffersPosted,
     tradeOffersFirstSeenMap,
+    ownerReportsMap,
   ] = await Promise.all([
     redis.llen(TIPS_QUEUE_KEY).catch(() => 0),
     redis.llen(TIPS_PROCESSED_KEY).catch(() => 0),
@@ -196,6 +202,7 @@ async function readRedisStats(redis: RedisClient) {
     redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
     redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
+    redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
   ]);
 
   // Sample the processed archive to break down tip sources (web vs groupme vs trade_offer)
@@ -233,6 +240,28 @@ async function readRedisStats(redis: RedisClient) {
     }
   }
 
+  // Owner-sourced reports: count unique offerIds and find the most recent report
+  let ownerReportsCount = 0;
+  let ownerReportsLastSeenTs: number | null = null;
+  let ownerReportsDistinctReporters = 0;
+  if (ownerReportsMap && typeof ownerReportsMap === 'object') {
+    const reporters = new Set<string>();
+    for (const entry of Object.values(ownerReportsMap)) {
+      ownerReportsCount += 1;
+      const parsed = typeof entry === 'string' ? safeParse(entry) : entry;
+      if (!parsed || typeof parsed !== 'object') continue;
+      const lastSeen = Number((parsed as { lastSeenAt?: unknown }).lastSeenAt);
+      if (Number.isFinite(lastSeen) && (ownerReportsLastSeenTs === null || lastSeen > ownerReportsLastSeenTs)) {
+        ownerReportsLastSeenTs = lastSeen;
+      }
+      const reportedBy = (parsed as { reportedBy?: unknown }).reportedBy;
+      if (Array.isArray(reportedBy)) {
+        for (const fid of reportedBy) reporters.add(String(fid));
+      }
+    }
+    ownerReportsDistinctReporters = reporters.size;
+  }
+
   return {
     queueDepth,
     processedArchiveDepth: processedArchive,
@@ -248,6 +277,9 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersFresh: offersFresh,
     tradeOffersLingering: offersLingering,
     tradeOffersOldestAgeMs: oldestOfferAgeMs,
+    ownerReportsCount,
+    ownerReportsLastSeenTs,
+    ownerReportsDistinctReporters,
     tipsterLeaderboardSize,
     tipSourceBreakdown,
     tipSampleSize,

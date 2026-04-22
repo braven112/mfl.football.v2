@@ -131,6 +131,10 @@ const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;   // 48h → framing f
 
 const OFFER_OWNER_KEY_PREFIX = 'schefter:trade_offers:owner:';
 const OFFER_DIV_KEY_PREFIX = 'schefter:trade_offers:div:';
+// Owner-sourced intake: owners populate this hash from /api/trades/pending
+// and /api/trades/submit. See src/utils/owner-trade-reports.ts. Read-only
+// from this scanner — the API routes own the writes and TTL.
+const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
 const PLAYER_OFFER_HISTORY_PREFIX = 'schefter:player_offer_history:';
 const OFFER_ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;    // 7d owner + div
 const PLAYER_HISTORY_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;  // 21d player escalation
@@ -1234,6 +1238,38 @@ async function scanTradeOffers({ redis, dryRun }) {
       warn(`  [offer-scan] fetch failed for franchise ${fid}: ${err.message} — continuing`);
     }
   }
+  const commishSourcedCount = offerMap.size;
+
+  // Step 2b: merge owner-reported offers. When commissioner lockout hides
+  // league-wide reads, the franchise iteration above returns only the
+  // commish's own trades — but owners populate `schefter:trade_offers:owner_reports`
+  // each time they load the trades page or send a proposal through the app.
+  // Those reports are legitimate self-views, so surfacing them here respects
+  // the lockout's intent. Dedup by offerId — commish-sourced wins when both
+  // exist. See src/utils/owner-trade-reports.ts for the write side.
+  try {
+    const ownerReports = await redis.hgetall(OFFER_OWNER_REPORTS_KEY);
+    let mergedCount = 0;
+    if (ownerReports) {
+      for (const [offerId, entry] of Object.entries(ownerReports)) {
+        if (!offerId || offerMap.has(offerId)) continue;
+        if (commishPending.has(offerId)) continue;
+        // Upstash auto-deserializes JSON values; guard against string too.
+        const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
+        const raw = parsed?.raw;
+        if (!raw) continue;
+        const originator = String(raw.franchise || '').padStart(4, '0');
+        offerMap.set(offerId, { raw, offeringFid: originator });
+        mergedCount += 1;
+      }
+    }
+    if (mergedCount > 0) {
+      log(`  [offer-scan] Merged ${mergedCount} owner-reported offers (commish sourced ${commishSourcedCount})`);
+    }
+  } catch (err) {
+    warn(`  [offer-scan] owner-reports merge failed: ${err.message}`);
+  }
+
   log(`  [offer-scan] Distinct counter-party-awaiting offers: ${offerMap.size}`);
 
   const tips = [];
