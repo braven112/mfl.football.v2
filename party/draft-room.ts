@@ -84,10 +84,11 @@ interface PauseMessage { type: 'pause'; franchiseId: string; }
 interface ResumeMessage { type: 'resume'; franchiseId: string; }
 interface SkipMessage { type: 'skip'; franchiseId: string; }
 interface ResetMessage { type: 'reset'; franchiseId: string; }
+interface UndoMessage { type: 'undo'; franchiseId: string; }
 
 type MockClientMessage =
   | JoinMessage | PickMessage | ToggleAutoMessage
-  | StartMessage | PauseMessage | ResumeMessage | SkipMessage | ResetMessage;
+  | StartMessage | PauseMessage | ResumeMessage | SkipMessage | ResetMessage | UndoMessage;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Constants
@@ -277,6 +278,8 @@ export default class DraftRoomServer implements Party.Server {
         return this.handleSkip(msg);
       case 'reset':
         return this.handleReset(msg);
+      case 'undo':
+        return this.handleUndo(msg);
     }
   }
 
@@ -333,7 +336,7 @@ export default class DraftRoomServer implements Party.Server {
       session.status = 'active';
       await this.saveSession(session);
       this.broadcastSession(session);
-      this.startTimer(session);
+      this.scheduleNextPick(session);
       return;
     }
 
@@ -398,7 +401,7 @@ export default class DraftRoomServer implements Party.Server {
     session.status = 'active';
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.startTimer(session);
+    this.scheduleNextPick(session);
   }
 
   private async handlePause(msg: PauseMessage) {
@@ -432,7 +435,7 @@ export default class DraftRoomServer implements Party.Server {
     session.status = 'active';
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.startTimer(session);
+    this.scheduleNextPick(session);
   }
 
   private async handleSkip(msg: SkipMessage) {
@@ -476,7 +479,45 @@ export default class DraftRoomServer implements Party.Server {
 
     await this.saveSession(session);
     this.broadcastSession(session);
-    this.startTimer(session);
+    this.scheduleNextPick(session);
+  }
+
+  /**
+   * Revert the most recent pick so the slot goes back on the clock.
+   * Re-opens the draft if the undo lands on a completed draft.
+   */
+  private async handleUndo(msg: UndoMessage) {
+    const session = await this.getSession();
+    if (!session) return;
+
+    if (msg.franchiseId !== session.createdBy) {
+      this.sendMockError(msg.franchiseId, 'Only the session creator can undo');
+      return;
+    }
+
+    if (session.currentPickIndex <= 0) {
+      this.sendMockError(msg.franchiseId, 'No pick to undo');
+      return;
+    }
+
+    this.stopTimer();
+
+    const lastIndex = session.currentPickIndex - 1;
+    const lastSlot = session.picks[lastIndex];
+    if (lastSlot) {
+      session.picks[lastIndex] = {
+        overallPickNumber: lastSlot.overallPickNumber,
+        round: lastSlot.round,
+        pickInRound: lastSlot.pickInRound,
+        franchiseId: lastSlot.franchiseId,
+      };
+    }
+    session.currentPickIndex = lastIndex;
+    if (session.status === 'completed') session.status = 'active';
+
+    await this.saveSession(session);
+    this.broadcastSession(session);
+    this.scheduleNextPick(session);
   }
 
   // ── Pick logic ──
@@ -516,14 +557,53 @@ export default class DraftRoomServer implements Party.Server {
     this.room.broadcast(JSON.stringify({ type: 'pick-made', pick, session }));
 
     if (session.status === 'active') {
-      this.startTimer(session);
+      this.scheduleNextPick(session);
     }
   }
 
+  /**
+   * Pick for the AI team that's currently on the clock.
+   *
+   * Lookup order (first hit wins):
+   *   1. The source assigned to this franchise in rankingAssignments
+   *   2. The session's defaultRankingSource
+   *   3. The legacy flat ranked-players list (used by older sessions)
+   *   4. Any other source that still has at least one un-drafted player
+   *
+   * If absolutely every list is exhausted we fall back to a synthetic
+   * `auto-{timestamp}` id; the create route tops each list up with an
+   * alphabetised tail so this branch effectively never fires.
+   */
   private async autoPick(session: MockDraftSession): Promise<void> {
-    const rankedPlayerIds = (await this.room.storage.get<string[]>('ranked-players')) ?? [];
-    const pickedPlayerIds = new Set(session.picks.filter((p) => p.playerId).map((p) => p.playerId!));
-    const nextPlayerId = rankedPlayerIds.find((id) => !pickedPlayerIds.has(id));
+    const onClockFranchise = session.draftOrder[session.currentPickIndex];
+
+    const assignments =
+      (await this.room.storage.get<Record<string, string>>('ranking-assignments')) ?? {};
+    const defaultSource =
+      (await this.room.storage.get<string>('default-ranking-source')) ?? 'mfl-rookie';
+    const source: string = assignments[onClockFranchise] ?? defaultSource;
+
+    const rankedLists =
+      (await this.room.storage.get<Record<string, string[]>>('ranked-lists')) ?? {};
+    const legacy = (await this.room.storage.get<string[]>('ranked-players')) ?? [];
+
+    const pickedPlayerIds = new Set(
+      session.picks.filter((p) => p.playerId).map((p) => p.playerId!),
+    );
+    const pickFrom = (list: string[] | undefined): string | undefined =>
+      list?.find((id) => !pickedPlayerIds.has(id));
+
+    let nextPlayerId = pickFrom(rankedLists[source]);
+    if (!nextPlayerId && source !== defaultSource) {
+      nextPlayerId = pickFrom(rankedLists[defaultSource]);
+    }
+    if (!nextPlayerId) nextPlayerId = pickFrom(legacy);
+    if (!nextPlayerId) {
+      for (const list of Object.values(rankedLists)) {
+        const candidate = pickFrom(list);
+        if (candidate) { nextPlayerId = candidate; break; }
+      }
+    }
 
     if (!nextPlayerId) {
       await this.makePick(session, `auto-${Date.now()}`, true);
@@ -533,7 +613,46 @@ export default class DraftRoomServer implements Party.Server {
     await this.makePick(session, nextPlayerId, true);
   }
 
-  // ── Timer ──
+  // ── Timer / scheduler ──
+
+  /**
+   * After a pick lands (or at draft start/resume/reset), decide what
+   * happens next:
+   *   - Creator's team on the clock → run the full user-configured timer.
+   *   - Anyone else (AI) → no timer; auto-pick immediately.
+   *
+   * AI picks chain through makePick → scheduleNextPick → autoPick with
+   * zero delay — the Promise microtask lets the current broadcast flush
+   * first so the client receives events in order rather than as one
+   * interleaved batch.
+   */
+  private scheduleNextPick(session: MockDraftSession): void {
+    if (session.status !== 'active') return;
+
+    const onClockFranchise = session.draftOrder[session.currentPickIndex];
+    if (onClockFranchise === session.createdBy) {
+      this.startTimer(session);
+      return;
+    }
+
+    this.stopTimer();
+    this.room.broadcast(
+      JSON.stringify({ type: 'pick-clock', secondsRemaining: 0 }),
+    );
+    Promise.resolve().then(() => {
+      this.runAiAutoPick().catch((err) => {
+        console.error('[mock-draft] AI auto-pick failed:', err);
+      });
+    });
+  }
+
+  private async runAiAutoPick(): Promise<void> {
+    const session = await this.getSession();
+    if (!session || session.status !== 'active') return;
+    const onClockFranchise = session.draftOrder[session.currentPickIndex];
+    if (onClockFranchise === session.createdBy) return;
+    await this.autoPick(session);
+  }
 
   private startTimer(session: MockDraftSession): void {
     this.stopTimer();
@@ -642,6 +761,15 @@ export default class DraftRoomServer implements Party.Server {
         }
         if (body.rankedPlayerIds) {
           await this.room.storage.put('ranked-players', body.rankedPlayerIds);
+        }
+        if (body.rankedLists && typeof body.rankedLists === 'object') {
+          await this.room.storage.put('ranked-lists', body.rankedLists);
+        }
+        if (body.rankingAssignments && typeof body.rankingAssignments === 'object') {
+          await this.room.storage.put('ranking-assignments', body.rankingAssignments);
+        }
+        if (typeof body.defaultRankingSource === 'string') {
+          await this.room.storage.put('default-ranking-source', body.defaultRankingSource);
         }
         return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_CT });
       } catch {
