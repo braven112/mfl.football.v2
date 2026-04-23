@@ -190,6 +190,14 @@
       "leagueOnly": "theleague",
       "links": [
         {
+          "id": "power-rankings",
+          "label": "Power Rankings",
+          "icon": "standings",
+          "path": "/power-rankings",
+          "external": false,
+          "description": "Composite power scores and team scouting reports"
+        },
+        {
           "id": "league-summary",
           "label": "League Summary",
           "icon": "spreadsheet",
@@ -311,6 +319,7 @@
     "/whats-new": "/whats-new",
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
+    "/power-rankings": "/power-rankings",
     "/about": "/about",
     "/rules": "/rules",
     "/activity": "/activity",
