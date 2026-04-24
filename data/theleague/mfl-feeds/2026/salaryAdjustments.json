@@ -1,14 +1,12 @@
 {
-  "version": "1.0",
-  "encoding": "utf-8",
   "salaryAdjustments": {
     "salaryAdjustment": [
       {
-        "timestamp": "1771139599",
-        "franchise_id": "0001",
+        "id": "0",
         "amount": "636125",
         "description": "2026 Dead Money",
-        "id": "0"
+        "franchise_id": "0001",
+        "timestamp": "1771139599"
       },
       {
         "id": "1",
@@ -18,16 +16,16 @@
         "timestamp": "1771139599"
       },
       {
-        "amount": "552736",
-        "description": "2026 Dead Money",
-        "id": "10",
+        "franchise_id": "0012",
         "timestamp": "1771139599",
-        "franchise_id": "0012"
+        "id": "10",
+        "amount": "552736",
+        "description": "2026 Dead Money"
       },
       {
         "id": "11",
-        "description": "2026 Dead Money",
         "amount": "4633500",
+        "description": "2026 Dead Money",
         "franchise_id": "0013",
         "timestamp": "1771139599"
       },
@@ -41,62 +39,62 @@
       {
         "timestamp": "1771139599",
         "franchise_id": "0015",
-        "amount": "693875",
         "description": "2026 Dead Money",
+        "amount": "693875",
         "id": "13"
       },
       {
-        "timestamp": "1771139599",
-        "franchise_id": "0016",
+        "description": "2026 Dead Money",
         "amount": "136125",
-        "description": "2026 Dead Money",
-        "id": "14"
+        "id": "14",
+        "timestamp": "1771139599",
+        "franchise_id": "0016"
       },
       {
-        "amount": "233750",
-        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)",
         "id": "15",
-        "timestamp": "1774116905",
-        "franchise_id": "0013"
-      },
-      {
-        "timestamp": "1774116905",
-        "franchise_id": "0013",
+        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)",
         "amount": "233750",
-        "description": "Dropped Palmer, Joshua BUF WR (Salary: $467,500, Years: 4)",
-        "id": "16"
+        "franchise_id": "0013",
+        "timestamp": "1774116905"
       },
       {
-        "amount": "840125",
+        "franchise_id": "0013",
+        "timestamp": "1774116905",
+        "id": "16",
+        "amount": "233750",
+        "description": "Dropped Palmer, Joshua BUF WR (Salary: $467,500, Years: 4)"
+      },
+      {
         "description": "2026 Dead Money",
+        "amount": "840125",
         "id": "2",
         "timestamp": "1771139599",
         "franchise_id": "0003"
       },
       {
-        "description": "2026 Dead Money",
         "amount": "1783750",
+        "description": "2026 Dead Money",
         "id": "3",
         "timestamp": "1771139599",
         "franchise_id": "0005"
       },
       {
-        "franchise_id": "0006",
-        "timestamp": "1771139599",
         "id": "4",
-        "amount": "450771",
-        "description": "2026 Dead Money"
-      },
-      {
-        "id": "5",
-        "amount": "1061500",
         "description": "2026 Dead Money",
-        "franchise_id": "0007",
+        "amount": "450771",
+        "franchise_id": "0006",
         "timestamp": "1771139599"
       },
       {
         "description": "2026 Dead Money",
+        "amount": "1061500",
+        "id": "5",
+        "timestamp": "1771139599",
+        "franchise_id": "0007"
+      },
+      {
         "amount": "3022396",
+        "description": "2026 Dead Money",
         "id": "6",
         "timestamp": "1771139599",
         "franchise_id": "0008"
@@ -109,19 +107,21 @@
         "description": "2026 Dead Money"
       },
       {
-        "description": "2026 Dead Money",
-        "amount": "1440601",
-        "id": "8",
         "timestamp": "1771139599",
-        "franchise_id": "0010"
+        "franchise_id": "0010",
+        "amount": "1440601",
+        "description": "2026 Dead Money",
+        "id": "8"
       },
       {
-        "id": "9",
         "description": "2026 Dead Money",
         "amount": "741813",
-        "franchise_id": "0011",
-        "timestamp": "1771139599"
+        "id": "9",
+        "timestamp": "1771139599",
+        "franchise_id": "0011"
       }
     ]
-  }
+  },
+  "version": "1.0",
+  "encoding": "utf-8"
 }
