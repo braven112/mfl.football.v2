@@ -44,10 +44,13 @@ export function PlayerCell({
   const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
   const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
-  // ESPN is the primary headshot source when espnId is available
-  const resolvedHeadshot = espnId
-    ? getPlayerHeadshot(mflId, espnId)
-    : (headshot ?? DEFAULT_HEADSHOT_URL);
+  // Prefer the caller-supplied headshot URL — server-side builders pick the
+  // right endpoint (NFL combiner, college-football, or MFL photo) based on
+  // which IDs are available. Falling through to getPlayerHeadshot(mflId,
+  // espnId) assumes the espnId is always an NFL ID, which is wrong for
+  // pre-draft rookies that only have a college ESPN ID.
+  const resolvedHeadshot =
+    headshot || (espnId ? getPlayerHeadshot(mflId, espnId) : DEFAULT_HEADSHOT_URL);
   const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
   const nflLogoUrl = isDef ? '' : (explicitNflLogo ?? teamLogoUrl);
 

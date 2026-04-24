@@ -11,11 +11,9 @@ import leagueConfigData from '../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
-import { getPlayerHeadshot, getCollegeHeadshot } from '../../constants/roster-constants';
-import { getPlayerMap } from '../../utils/player-map';
 import { parseTradeFromComment } from '../../utils/draft-utils';
-import type { DraftRoomPageData, DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../types/draft-room';
-import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+import { buildDraftPlayers } from '../../utils/build-draft-players';
+import type { DraftRoomPageData, DraftRoomPick, DraftRoomTeam } from '../../types/draft-room';
 
 export const prerender = false;
 
@@ -52,16 +50,6 @@ const draftResultsData = draftResultsKey
   ? getModuleData(draftResultsFeeds[draftResultsKey])
   : null;
 
-// Players
-const playersFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
-  { eager: true }
-);
-const playersKey = Object.keys(playersFeeds).find(
-  (path) => extractFeedSeason(path) === leagueYearStr
-);
-const playersData = playersKey ? getModuleData(playersFeeds[playersKey]) : null;
-
 // League config for draft settings
 const leagueFeeds = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/league.json',
@@ -82,65 +70,12 @@ const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) =>
   icon: team.icon || '',
 }));
 
-// ── Build player lookup ──
-const rawPlayers = playersData?.players?.player;
-const playerArray: any[] = rawPlayers
-  ? Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers]
-  : [];
-
-// Normalize MFL position codes
-const normPos = (pos: string): string => {
-  if (!pos) return '';
-  const upper = pos.toUpperCase();
-  if (upper.startsWith('TM') || upper === 'DEF' || upper === 'D/ST') return 'DEF';
-  if (upper === 'PK' || upper === 'K') return 'PK';
-  return upper;
-};
-
-// Build MFL name → display name (MFL uses "Last, First")
-const formatName = (mflName: string): string => {
-  if (!mflName) return '';
-  const parts = mflName.split(', ');
-  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : mflName;
-};
-
-const espnCollegeMap = (espnCollegeIds as any)?.players || {};
-const draftPlayerIdentityMap = getPlayerMap(leagueYear);
-
-const players: DraftRoomPlayer[] = playerArray.map((p: any) => {
-  const identity = draftPlayerIdentityMap.get(p.id);
-
-  // Use identity map for headshot (handles college fallback internally)
-  // But for rookies without NFL espn_id, prefer college headshot directly
-  let headshot: string;
-  if (identity) {
-    headshot = identity.headshot;
-  } else {
-    const nflEspnId = p.espn_id || '';
-    const collegeEspnId = espnCollegeMap[p.id]?.espnCollegeId || '';
-    if (nflEspnId) {
-      headshot = getPlayerHeadshot(p.id, nflEspnId);
-    } else if (collegeEspnId) {
-      headshot = getCollegeHeadshot(collegeEspnId);
-    } else {
-      headshot = getPlayerHeadshot(p.id);
-    }
-  }
-
-  return {
-    id: p.id,
-    name: identity?.name ?? formatName(p.name || ''),
-    position: identity?.position ?? normPos(p.position || ''),
-    nflTeam: identity?.nflTeam ?? (p.team || '').toUpperCase(),
-    headshot,
-    isRookie: p.status === 'R' || p.draft_year === leagueYearStr,
-    mflId: p.id,
-    espnId: identity?.espnId ?? (p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || undefined),
-  };
-}).filter((p: DraftRoomPlayer) => {
-  // Filter to draftable positions
-  const pos = p.position;
-  return pos === 'QB' || pos === 'RB' || pos === 'WR' || pos === 'TE' || pos === 'PK' || pos === 'DEF';
+// ── Build player pool (shared util; ADP is public, RSP gated to owner) ──
+// Live draft room sends the full draftable pool — rookies and veterans both
+// appear (e.g. late-round veterans added via waiver are draftable).
+// RSP scouting (licensed content) is only enriched when the viewer owns it.
+const players = buildDraftPlayers(leagueYear, {
+  viewerFranchiseId: user?.franchiseId,
 });
 
 // ── Build picks from draft results ──

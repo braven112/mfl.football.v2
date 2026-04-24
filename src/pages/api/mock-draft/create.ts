@@ -10,8 +10,26 @@
  */
 
 import type { APIRoute } from 'astro';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import type { MockRankingSource } from '../../../types/draft-room';
+import {
+  buildMflNameLookup,
+  resolveMflId,
+  formatMflName,
+} from '../../../utils/player-name-matching';
+
+const ALL_RANKING_SOURCES: MockRankingSource[] = [
+  'mfl-rookie',
+  'mfl-dynasty',
+  'sleeper',
+  'ktc',
+  'my-rank',
+  'random',
+];
+const RANKING_SOURCE_SET = new Set<MockRankingSource>(ALL_RANKING_SOURCES);
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -64,14 +82,14 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const timerSeconds = body.timerSeconds ?? 120;
+    const timerSeconds = body.timerSeconds ?? 10;
     const totalRounds = body.totalRounds ?? 3;
     const useRealOrder = body.useRealOrder ?? true;
 
     // Validate timer presets
-    if (![60, 120, 300].includes(timerSeconds)) {
+    if (![1, 3, 10, 15].includes(timerSeconds)) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Invalid timer. Use 60, 120, or 300 seconds.' }),
+        JSON.stringify({ success: false, message: 'Invalid timer. Use 1, 3, 10, or 15 seconds.' }),
         { status: 400, headers: JSON_HEADERS },
       );
     }
@@ -137,52 +155,215 @@ export const POST: APIRoute = async ({ request }) => {
     const picksPerRound = franchiseOrder.length;
     const draftOrder = buildSnakeOrder(franchiseOrder, totalRounds);
 
-    // ── Build ranked rookie player list for auto-pick (MFL Rookie ADP) ──
-    let rankedPlayerIds: string[] = [];
+    // ── Load MFL player catalog (needed by every ranking source below) ──
+    // We ship the players feed with the build; third-party sources (Sleeper,
+    // KTC, FBG) give us names, so we match them back to MFL IDs here.
+    const playersFeeds = import.meta.glob(
+      '../../../../data/theleague/mfl-feeds/*/players.json',
+      { eager: true },
+    );
+    const playersKey = Object.keys(playersFeeds).find(
+      (p) => p.includes(`/${leagueYearStr}/`),
+    );
+    const playersMod = playersKey ? (playersFeeds[playersKey] as any) : null;
+    const playersData = playersMod && typeof playersMod === 'object' && 'default' in playersMod
+      ? playersMod.default
+      : playersMod;
+    const allPlayersRaw = playersData?.players?.player;
+    const allPlayers: any[] = allPlayersRaw
+      ? (Array.isArray(allPlayersRaw) ? allPlayersRaw : [allPlayersRaw])
+      : [];
+    const rookiePool = allPlayers.filter(
+      (p: any) => p.status === 'R' || p.draft_year === leagueYearStr,
+    );
+    const rookieIdSet = new Set(rookiePool.map((p: any) => p.id));
 
-    // Try MFL's live rookie ADP first
+    // Normalized "first last" → MFL id for fuzzy matching (rookies only;
+    // the auto-pick list should never include veterans).
+    const rookieNameLookup = buildMflNameLookup(
+      rookiePool.map((p: any) => ({
+        id: p.id,
+        name: p.name, // MFL "Last, First"
+        position: p.position,
+        team: p.team,
+      })),
+      { includePosition: true },
+    );
+
+    /** Convert a list of MFL IDs into the fallback-safe ranked list. */
+    const dedupe = (ids: string[]): string[] => {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const id of ids) {
+        if (!id || seen.has(id)) continue;
+        if (!rookieIdSet.has(id)) continue; // only keep confirmed rookies
+        seen.add(id);
+        out.push(id);
+      }
+      return out;
+    };
+
+    // ── Build ranked rookie player lists — one per source ──
+    // Each AI team can be assigned a different source so mock drafts produce
+    // realistic board variance. RSP is intentionally omitted: it's licensed
+    // content gated to franchise 0001 and must never drive a CPU team.
+    const loadJsonFile = (relPath: string): any => {
+      try {
+        const abs = join(process.cwd(), relPath);
+        if (!existsSync(abs)) return null;
+        return JSON.parse(readFileSync(abs, 'utf-8'));
+      } catch (err) {
+        console.warn(`[mock-draft/create] Could not read ${relPath}:`, (err as Error).message);
+        return null;
+      }
+    };
+
+    /**
+     * Any rookies not yet in `ids` are appended alphabetically so the list
+     * always has enough players to carry a draft to completion.
+     */
+    const topUp = (ids: string[]): string[] => {
+      if (ids.length >= rookiePool.length) return ids;
+      const covered = new Set(ids);
+      const tail = rookiePool
+        .filter((p: any) => !covered.has(p.id))
+        .sort((a: any, b: any) =>
+          formatMflName(a.name || '').localeCompare(formatMflName(b.name || '')),
+        )
+        .map((p: any) => p.id as string);
+      return ids.concat(tail);
+    };
+
+    const rankedLists: Partial<Record<MockRankingSource, string[]>> = {};
+
+    // MFL rookie ADP (live, pre-draft cutoff 3)
     try {
       const mflHost = `https://www55.myfantasyleague.com/${leagueYearStr}`;
       const adpUrl = `${mflHost}/export?TYPE=adp&L=${leagueId}&FCOUNT=12&IS_PPR=3&IS_KEEPER=3&IS_MOCK=0&CUTOFF=3&ROOKIES=1&JSON=1`;
       const adpRes = await fetch(adpUrl, { signal: AbortSignal.timeout(5000) });
       if (adpRes.ok) {
         const adpData = await adpRes.json();
-        const adpPlayers = adpData?.adp?.player;
-        const adpArray: any[] = adpPlayers ? (Array.isArray(adpPlayers) ? adpPlayers : [adpPlayers]) : [];
-        rankedPlayerIds = adpArray
-          .sort((a: any, b: any) => parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'))
-          .map((p: any) => p.id as string)
-          .filter(Boolean);
+        const raw = adpData?.adp?.player;
+        const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+        const ordered = arr
+          .sort(
+            (a: any, b: any) =>
+              parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'),
+          )
+          .map((p: any) => p.id as string);
+        const deduped = dedupe(ordered);
+        if (deduped.length > 0) rankedLists['mfl-rookie'] = topUp(deduped);
       }
     } catch {
-      console.warn('[mock-draft/create] MFL rookie ADP fetch failed, using local fallback');
+      // fall through — absent source just won't be in rankedLists
     }
 
-    // Fallback: rookies from local players feed sorted by ID (MFL assigns IDs roughly in draft order)
-    if (rankedPlayerIds.length === 0) {
-      try {
-        const playersFeeds = import.meta.glob(
-          '../../../../data/theleague/mfl-feeds/*/players.json',
-          { eager: true },
-        );
-        const playersKey = Object.keys(playersFeeds).find(
-          (path) => path.includes(`/${leagueYearStr}/`),
-        );
-        if (playersKey) {
-          const mod = playersFeeds[playersKey] as any;
-          const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-          const allPlayers = data?.players?.player;
-          const playerArray: any[] = allPlayers ? (Array.isArray(allPlayers) ? allPlayers : [allPlayers]) : [];
-          rankedPlayerIds = playerArray
-            .filter((p: any) => p.status === 'R' || p.draft_year === leagueYearStr)
-            .sort((a: any, b: any) => parseInt(a.id || '99999') - parseInt(b.id || '99999'))
-            .map((p: any) => p.id as string)
-            .filter(Boolean);
-        }
-      } catch {
-        console.warn('[mock-draft/create] Could not load players feed for rookie fallback');
+    // MFL dynasty ADP (local feed, filter to rookies)
+    {
+      const dynasty = loadJsonFile(`data/theleague/mfl-feeds/${leagueYearStr}/adp-dynasty.json`);
+      const raw = dynasty?.adp?.player;
+      const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      const ordered = arr
+        .filter((p: any) => rookieIdSet.has(p.id))
+        .sort(
+          (a: any, b: any) =>
+            parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'),
+        )
+        .map((p: any) => p.id as string);
+      const deduped = dedupe(ordered);
+      if (deduped.length > 0) rankedLists['mfl-dynasty'] = topUp(deduped);
+    }
+
+    // Sleeper (cached)
+    {
+      const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${leagueYearStr}.json`);
+      if (sleeper?.players?.length) {
+        const ids = (sleeper.players as any[])
+          .map((p) =>
+            resolveMflId(rookieNameLookup, p.name, { position: p.position, team: p.team }),
+          )
+          .filter((id): id is string => !!id);
+        const deduped = dedupe(ids);
+        if (deduped.length > 0) rankedLists.sleeper = topUp(deduped);
       }
     }
+
+    // KTC (cached, 1QB)
+    {
+      const ktc = loadJsonFile(`data/adp/ktc-rookies-${leagueYearStr}.json`);
+      if (ktc?.players?.length) {
+        const ids = (ktc.players as any[])
+          .map((p) =>
+            resolveMflId(rookieNameLookup, p.name, { position: p.position, team: p.team }),
+          )
+          .filter((id): id is string => !!id);
+        const deduped = dedupe(ids);
+        if (deduped.length > 0) rankedLists.ktc = topUp(deduped);
+      }
+    }
+
+    // My Rank — player IDs pulled from the caller's personal draft queue
+    // (localStorage on the client). Sent in the request body so the server
+    // has no dependency on user-private client state.
+    {
+      const raw = body.myRankPlayerIds;
+      if (Array.isArray(raw)) {
+        const ids = raw
+          .filter((v): v is string => typeof v === 'string')
+          .filter((id) => rookieIdSet.has(id));
+        const deduped = dedupe(ids);
+        if (deduped.length > 0) rankedLists['my-rank'] = topUp(deduped);
+      }
+    }
+
+    // Random (shuffled rookie pool) — always available
+    {
+      const shuffled = shuffle(rookiePool.map((p: any) => p.id as string));
+      rankedLists.random = shuffled;
+    }
+
+    // Pick a usable default in priority order so if the caller doesn't
+    // specify one, we use the freshest/most-authoritative source that loaded.
+    const availableSources = Object.keys(rankedLists) as MockRankingSource[];
+    const defaultPriority: MockRankingSource[] = [
+      'mfl-rookie',
+      'mfl-dynasty',
+      'sleeper',
+      'ktc',
+      'my-rank',
+      'random',
+    ];
+    const fallbackDefault: MockRankingSource =
+      defaultPriority.find((s) => rankedLists[s] && rankedLists[s]!.length > 0) ?? 'random';
+
+    // ── Parse caller-specified ranking config ──
+    const sanitizeSource = (s: unknown): MockRankingSource | null => {
+      if (typeof s !== 'string') return null;
+      return RANKING_SOURCE_SET.has(s as MockRankingSource) ? (s as MockRankingSource) : null;
+    };
+
+    const requestedDefault = sanitizeSource(body.defaultRankingSource);
+    // Only honour the caller's default if we actually built that list.
+    const defaultRankingSource: MockRankingSource =
+      requestedDefault && rankedLists[requestedDefault] ? requestedDefault : fallbackDefault;
+
+    const rankingAssignments: Record<string, MockRankingSource> = {};
+    if (body.rankingAssignments && typeof body.rankingAssignments === 'object') {
+      for (const [fid, src] of Object.entries(body.rankingAssignments as Record<string, unknown>)) {
+        const sanitized = sanitizeSource(src);
+        if (sanitized && rankedLists[sanitized] && franchiseOrder.includes(fid)) {
+          rankingAssignments[fid] = sanitized;
+        }
+      }
+    }
+
+    // For backwards compat with the autoPick fallback, also ship a flat list
+    // using the default source.
+    const rankedPlayerIds: string[] = rankedLists[defaultRankingSource] ?? [];
+
+    console.log(
+      `[mock-draft/create] Sources=${availableSources.join(',')} default=${defaultRankingSource} assignments=${Object.keys(rankingAssignments).length}`,
+    );
 
     // ── Build pre-populated pick slots ──
     const totalPicks = totalRounds * picksPerRound;
@@ -215,6 +396,8 @@ export const POST: APIRoute = async ({ request }) => {
       picks,
       participants: [],
       useRealOrder,
+      rankingAssignments,
+      defaultRankingSource,
     };
 
     // ── Write session to PartyKit storage via HTTP ──
@@ -235,7 +418,17 @@ export const POST: APIRoute = async ({ request }) => {
     const partyRes = await fetch(partyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session, rankedPlayerIds }),
+      body: JSON.stringify({
+        session,
+        // Legacy single-list field (kept so older party code still works)
+        rankedPlayerIds,
+        // Tracks which source produced `rankedPlayerIds`
+        rankingSource: defaultRankingSource,
+        // Phase 2: per-source lists + per-team assignments
+        rankedLists,
+        rankingAssignments,
+        defaultRankingSource,
+      }),
     });
 
     if (!partyRes.ok) {

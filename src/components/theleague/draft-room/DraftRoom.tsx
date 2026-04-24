@@ -1,5 +1,4 @@
-import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { arrayMove } from '@dnd-kit/sortable';
+import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import type {
   DraftRoomPageData,
   DraftRoomState,
@@ -12,15 +11,21 @@ import type {
   DraftContext,
   DraftRoomMode,
 } from '../../../types/draft-room';
+import { ConfirmDialog } from './ConfirmDialog';
 import { DraftTimerBanner } from './DraftTimerBanner';
 import { DraftBoardPanel } from './DraftBoardPanel';
 import { PlayerPoolPanel } from './PlayerPoolPanel';
-import { DraftQueuePanel } from './DraftQueuePanel';
 import { MobileTabBar } from './MobileTabBar';
 import { DraftChatPanel, broadcastPickToChat } from './DraftChatPanel';
 import { getQueue, saveQueue } from '../../../utils/draft-queue-storage';
 import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
 import '../../../styles/draft-room.css';
+
+// DraftQueuePanel lazy-loaded — @dnd-kit (~40 KB gzipped) only pulled in when
+// the queue tab is opened. Most users never open it.
+const DraftQueuePanel = lazy(() =>
+  import('./DraftQueuePanel').then((mod) => ({ default: mod.DraftQueuePanel })),
+);
 
 interface DraftRoomProps {
   pageData: string;
@@ -111,7 +116,9 @@ function draftRoomReducer(state: DraftRoomState, action: DraftRoomAction): Draft
       return { ...state, queue: updated };
     }
     case 'REORDER_QUEUE': {
-      const updated = arrayMove(state.queue, action.oldIndex, action.newIndex);
+      const updated = state.queue.slice();
+      const [moved] = updated.splice(action.oldIndex, 1);
+      updated.splice(action.newIndex, 0, moved);
       saveQueue(state.leagueId, state.leagueYear, updated);
       return { ...state, queue: updated };
     }
@@ -242,7 +249,12 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   );
   const currentTeam = currentPick ? teamMap.get(currentPick.franchiseId) || null : null;
 
-  // Is it the user's turn? In mock mode, the creator can always pick for any team.
+  // Is it the user's turn?
+  // Live: only when the on-clock pick is for the user's franchise.
+  // Mock: the creator is authorised to pick for any team (server auto-picks
+  //   franchises whose real owner isn't connected; this keeps the creator
+  //   able to intervene if the server hasn't caught up or an override is
+  //   wanted).
   const isUserTurn = isMock
     ? !!(currentPick && !state.draftComplete)
     : !!(currentPick && userTeamId && currentPick.franchiseId === userTeamId);
@@ -259,6 +271,13 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   // Screen reader announcement for new picks
   const [announcement, setAnnouncement] = useState('');
   const prevPickNumberRef = useRef(state.currentPickNumber);
+
+  // Which destructive action is currently awaiting confirmation. Null when
+  // nothing is pending. Only used in mock mode.
+  const [pendingAction, setPendingAction] = useState<null | 'reset' | 'goback'>(null);
+
+  const hasUndoablePick = state.picks.some((p) => !!p.playerId);
+  const isMockPaused = isMock && state.mockSession?.status === 'paused';
 
   useEffect(() => {
     if (state.currentPickNumber !== prevPickNumberRef.current && prevPickNumberRef.current > 0) {
@@ -326,6 +345,59 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
       clearTimeout(timeoutId);
     };
   }, [state.leagueYear, isMock]);
+
+  // Keyboard shortcuts
+  // `/` = focus search, 1-6 = position filter, Q = focus queue tab, C = focus chat tab, B = focus board tab
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea/contenteditable
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) {
+          // Allow `/` to still focus search even when not typing
+          if (e.key !== '/') return;
+        }
+      }
+      // Ignore when modifier keys are held (avoid hijacking browser shortcuts)
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const input = document.querySelector<HTMLInputElement>('.draft-room .dr-search-input');
+        if (input) input.focus();
+        return;
+      }
+
+      const posMap: Record<string, string | null> = {
+        '1': null, // ALL
+        '2': 'QB',
+        '3': 'RB',
+        '4': 'WR',
+        '5': 'TE',
+        '6': 'PK',
+      };
+      if (e.key in posMap) {
+        e.preventDefault();
+        dispatch({ type: 'SET_POSITION_FILTER', position: posMap[e.key] });
+        return;
+      }
+
+      const tabMap: Record<string, 'board' | 'players' | 'queue' | 'chat'> = {
+        b: 'board',
+        p: 'players',
+        q: 'queue',
+        c: 'chat',
+      };
+      const keyLower = e.key.toLowerCase();
+      if (keyLower in tabMap) {
+        e.preventDefault();
+        dispatch({ type: 'SET_MOBILE_TAB', tab: tabMap[keyLower] });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Auto-submit: when user is on clock + autoSubmit on + queue non-empty
   useEffect(() => {
@@ -467,42 +539,35 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   const partyRoomId = `league-${state.leagueId}-draft-${state.leagueYear}`;
   const partyHost = data.partyHost || '';
 
-  // Desktop side panel tab state
-  const [desktopSideTab, setDesktopSideTab] = useState<'players' | 'queue' | 'chat'>('players');
+  // Side panel tab — shared between desktop (tab bar under board) and mobile (MobileTabBar).
+  // On mobile the full activeMobileTab governs which top-level panel is visible (including 'board');
+  // on desktop the board is always visible on top and only players/queue/chat are selectable.
+  // Treat 'board' on desktop as "players" (the default content panel).
+  const sideTab: 'players' | 'queue' | 'chat' =
+    state.activeMobileTab === 'queue' ? 'queue' :
+    state.activeMobileTab === 'chat' ? 'chat' :
+    'players';
+  const setSideTab = useCallback(
+    (tab: 'players' | 'queue' | 'chat') => dispatch({ type: 'SET_MOBILE_TAB', tab }),
+    []
+  );
 
-  // Tab button style helper
-  const sideTabStyle = (tab: typeof desktopSideTab): CSSProperties => ({
-    flex: 1,
-    padding: '0.5rem 0.25rem',
-    fontSize: '0.6875rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    borderBottom: desktopSideTab === tab
-      ? '2px solid var(--color-primary, #1c497c)'
-      : '2px solid transparent',
-    color: desktopSideTab === tab
-      ? 'var(--color-primary, #1c497c)'
-      : 'var(--color-gray-400, #9ca3af)',
-    transition: 'color 0.15s, border-color 0.15s',
-  });
+  // Track first visit to queue/chat so the lazy chunks only load on demand,
+  // but stay mounted afterward (preserves DnD sensors, chat socket, scroll pos).
+  const [queueVisited, setQueueVisited] = useState(false);
+  const [chatVisited, setChatVisited] = useState(false);
+  useEffect(() => {
+    if (sideTab === 'queue' && !queueVisited) setQueueVisited(true);
+    if (sideTab === 'chat' && !chatVisited) setChatVisited(true);
+  }, [sideTab, queueVisited, chatVisited]);
 
   return (
-    <div className="draft-room" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: 'calc(100vh - var(--header-height, 60px))',
-      overflow: 'hidden',
-    }}>
+    <div className="draft-room" data-active-mobile-tab={state.activeMobileTab}>
       {/* Screen reader announcements */}
       <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
         {announcement}
       </div>
 
-      {/* Timer Banner — same component for live + mock */}
       <DraftTimerBanner
         currentPick={previousPick ? { ...currentPick!, timestamp: previousPick.timestamp } : currentPick}
         currentTeam={currentTeam}
@@ -510,30 +575,69 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         draftLimitHours={state.draftLimitHours}
         draftTimerSusp={state.draftTimerSusp}
         draftComplete={state.draftComplete}
+        isUserTurn={isUserTurn}
         mockClockSeconds={isMock ? state.mockClockSeconds : undefined}
         actions={isMock ? (
-          <button
-            onClick={() => mockSend({ type: 'reset', franchiseId: userTeamId })}
-            style={{
-              padding: '0.25rem 0.75rem',
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '0.25rem',
-              background: 'rgba(255,255,255,0.15)',
-              color: '#fff',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Reset Draft
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setPendingAction('goback')}
+              className="dr-reset-btn"
+              disabled={!hasUndoablePick}
+              title={hasUndoablePick ? 'Revert the last pick' : 'No pick to go back to'}
+            >
+              Go Back
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                mockSend({
+                  type: isMockPaused ? 'resume' : 'pause',
+                  franchiseId: userTeamId,
+                })
+              }
+              className="dr-reset-btn"
+              title={isMockPaused ? 'Resume the timer' : 'Pause the timer'}
+            >
+              {isMockPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingAction('reset')}
+              className="dr-reset-btn"
+            >
+              Reset Draft
+            </button>
+          </>
         ) : undefined}
       />
 
-      {/* Mobile Tab Bar */}
+      {pendingAction === 'reset' && (
+        <ConfirmDialog
+          title="Reset mock draft?"
+          message="Every pick will be cleared and the draft will restart from Pick 1. This cannot be undone."
+          confirmLabel="Reset draft"
+          destructive
+          onCancel={() => setPendingAction(null)}
+          onConfirm={() => {
+            mockSend({ type: 'reset', franchiseId: userTeamId });
+            setPendingAction(null);
+          }}
+        />
+      )}
+      {pendingAction === 'goback' && (
+        <ConfirmDialog
+          title="Go back one pick?"
+          message="The most recent pick will be cleared and that slot will go back on the clock. You can keep pressing Go Back to rewind further."
+          confirmLabel="Go back"
+          onCancel={() => setPendingAction(null)}
+          onConfirm={() => {
+            mockSend({ type: 'undo', franchiseId: userTeamId });
+            setPendingAction(null);
+          }}
+        />
+      )}
+
       <div className="dr-mobile-tabs">
         <MobileTabBar
           activeTab={state.activeMobileTab}
@@ -543,22 +647,12 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         />
       </div>
 
-      {/* Main content area — desktop: board row on top, tabbed panel row below */}
-      <div className="dr-main" style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1px',
-        background: 'var(--content-border, #e2e8f0)',
-        overflow: 'hidden',
-      }}>
-        {/* Board panel — top row, full width, natural height */}
+      <div className="dr-main">
         <div
           id="dr-panel-board"
           role="tabpanel"
           aria-labelledby="dr-tab-board"
           className="dr-panel-board"
-          style={{ flexShrink: 0, background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
         >
           <DraftBoardPanel
             picks={state.picks}
@@ -573,59 +667,45 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           />
         </div>
 
-        {/* Bottom panel — Players / Queue / Chat tabs, full width, fills remaining */}
-        <div
-          className="dr-side-panel"
-          style={{ flex: 1, minHeight: 0, background: 'var(--content-bg, #ffffff)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-        >
-          {/* Tab bar (desktop only — hidden on mobile via .dr-side-tab-bar) */}
-          <div
-            role="tablist"
-            aria-label="Side panel tabs"
-            className="dr-side-tab-bar"
-            style={{
-              display: 'flex',
-              borderBottom: '1px solid var(--content-border, #e2e8f0)',
-              background: 'var(--color-gray-50, #f9fafb)',
-              flexShrink: 0,
-            }}
-          >
+        <div className="dr-side-panel" data-side-tab={sideTab}>
+          <div role="tablist" aria-label="Side panel tabs" className="dr-side-tab-bar">
             <button
+              type="button"
               role="tab"
-              aria-selected={desktopSideTab === 'players'}
+              aria-selected={sideTab === 'players'}
               aria-controls="dr-panel-players"
-              onClick={() => setDesktopSideTab('players')}
-              style={sideTabStyle('players')}
+              onClick={() => setSideTab('players')}
+              className="dr-side-tab-btn"
             >
               Players
             </button>
             <button
+              type="button"
               role="tab"
-              aria-selected={desktopSideTab === 'queue'}
+              aria-selected={sideTab === 'queue'}
               aria-controls="dr-panel-queue"
-              onClick={() => setDesktopSideTab('queue')}
-              style={sideTabStyle('queue')}
+              onClick={() => setSideTab('queue')}
+              className="dr-side-tab-btn"
             >
               Queue{state.queue.length > 0 ? ` (${state.queue.length})` : ''}
             </button>
             <button
+              type="button"
               role="tab"
-              aria-selected={desktopSideTab === 'chat'}
+              aria-selected={sideTab === 'chat'}
               aria-controls="dr-panel-chat"
-              onClick={() => setDesktopSideTab('chat')}
-              style={sideTabStyle('chat')}
+              onClick={() => setSideTab('chat')}
+              className="dr-side-tab-btn"
             >
               Chat{state.chatUnread > 0 ? ` (${state.chatUnread})` : ''}
             </button>
           </div>
 
-          {/* Player pool panel */}
           <div
             id="dr-panel-players"
             role="tabpanel"
             aria-labelledby="dr-tab-players"
             className="dr-panel-players"
-            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'players' ? 'flex' : 'none', flexDirection: 'column' }}
           >
             <PlayerPoolPanel
               players={state.players}
@@ -641,43 +721,44 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
               draftContext={draftContext}
               isUserTurn={isUserTurn}
               onSubmitPick={handleSubmitPick}
+              currentPick={currentPick}
             />
           </div>
 
-          {/* Queue panel */}
           <div
             id="dr-panel-queue"
             role="tabpanel"
             aria-labelledby="dr-tab-queue"
             className="dr-panel-queue"
-            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'queue' ? 'flex' : 'none', flexDirection: 'column' }}
           >
-            <DraftQueuePanel
-              queue={state.queue}
-              players={playerMap}
-              picks={state.picks}
-              isUserTurn={isUserTurn}
-              autoSubmit={state.autoSubmit}
-              isSyncingQueue={state.isSyncingQueue}
-              isSubmittingPick={state.isSubmittingPick}
-              submitError={state.submitError}
-              onReorder={handleReorderQueue}
-              onRemove={handleRemoveFromQueue}
-              onSyncToMfl={handleSyncToMfl}
-              onSubmitPick={handleSubmitPick}
-              onToggleAutoSubmit={handleToggleAutoSubmit}
-            />
+            {queueVisited ? (
+              <Suspense fallback={<div className="dr-panel-loading">Loading queue…</div>}>
+                <DraftQueuePanel
+                  queue={state.queue}
+                  players={playerMap}
+                  picks={state.picks}
+                  isUserTurn={isUserTurn}
+                  autoSubmit={state.autoSubmit}
+                  isSyncingQueue={state.isSyncingQueue}
+                  isSubmittingPick={state.isSubmittingPick}
+                  submitError={state.submitError}
+                  onReorder={handleReorderQueue}
+                  onRemove={handleRemoveFromQueue}
+                  onSyncToMfl={handleSyncToMfl}
+                  onSubmitPick={handleSubmitPick}
+                  onToggleAutoSubmit={handleToggleAutoSubmit}
+                />
+              </Suspense>
+            ) : null}
           </div>
 
-          {/* Chat panel */}
           <div
             id="dr-panel-chat"
             role="tabpanel"
             aria-labelledby="dr-tab-chat"
             className="dr-panel-chat"
-            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'chat' ? 'flex' : 'none', flexDirection: 'column' }}
           >
-            {partyHost ? (
+            {chatVisited && partyHost ? (
               <DraftChatPanel
                 partyHost={partyHost}
                 roomId={partyRoomId}
@@ -693,72 +774,23 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
                 onDisconnected={handleChatDisconnected}
                 onHistory={handleChatHistory}
               />
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', textAlign: 'center', color: 'var(--color-gray-400, #9ca3af)', fontSize: '0.8125rem' }}>
+            ) : chatVisited ? (
+              <div className="dr-chat-missing">
                 <div>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💬</div>
+                  <span className="dr-chat-missing__icon" aria-hidden="true">💬</span>
                   Chat requires PartyKit.<br />Set PUBLIC_PARTYKIT_HOST.
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Poll error indicator */}
       {state.pollError && (
-        <div style={{
-          position: 'fixed',
-          bottom: '1rem',
-          right: '1rem',
-          background: 'var(--color-error-light, #fee2e2)',
-          color: 'var(--color-error-dark, #b91c1c)',
-          padding: '0.5rem 0.75rem',
-          borderRadius: 'var(--radius-md, 0.5rem)',
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          boxShadow: 'var(--shadow-md)',
-          zIndex: 50,
-        }}>
+        <div className="dr-poll-error" role="status">
           Connection issue — retrying...
         </div>
       )}
-
-      <style>{`
-        .dr-mobile-tabs {
-          display: none;
-        }
-        @media (max-width: 767px) {
-          .dr-mobile-tabs {
-            display: block;
-          }
-          /* On mobile, board fills when board tab active, otherwise side panel fills */
-          .dr-panel-board {
-            display: ${state.activeMobileTab === 'board' ? 'block' : 'none'};
-            flex: none !important;
-          }
-          .dr-side-panel {
-            display: ${state.activeMobileTab !== 'board' ? 'flex' : 'none'} !important;
-            height: auto !important;
-            flex: 1 !important;
-          }
-          /* Hide the desktop tab bar inside the side panel — mobile uses MobileTabBar */
-          .dr-side-tab-bar {
-            display: none !important;
-          }
-          /* Show the correct panel inside the side panel */
-          .dr-panel-players {
-            display: ${state.activeMobileTab === 'players' ? 'flex' : 'none'} !important;
-          }
-          .dr-panel-queue {
-            display: ${state.activeMobileTab === 'queue' ? 'flex' : 'none'} !important;
-          }
-          .dr-panel-chat {
-            display: ${state.activeMobileTab === 'chat' ? 'flex' : 'none'} !important;
-          }
-        }
-        /* Tablet: same 2-row layout, no overrides needed */
-      `}</style>
     </div>
   );
 }

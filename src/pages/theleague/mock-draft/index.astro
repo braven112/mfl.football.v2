@@ -6,7 +6,7 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import leagueConfigData from '../../../data/theleague.config.json';
 
@@ -15,6 +15,8 @@ export const prerender = false;
 const user = getAuthUser(Astro.request);
 const leagueYear = getCurrentLeagueYear();
 const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
+const leagueId = user?.leagueId || '13522';
+const isAdmin = user ? isCommissionerOrAdmin(user) : false;
 
 // Build team lookup for display
 const teamMap = new Map<string, { name: string; icon: string }>();
@@ -25,6 +27,24 @@ for (const team of leagueConfigData.teams ?? []) {
   });
 }
 const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
+
+// Ordered franchise list for the Board Settings per-team overrides
+const franchiseList = (leagueConfigData.teams ?? []).map((t: any) => ({
+  franchiseId: t.franchiseId,
+  name: t.nameMedium || t.name,
+}));
+const franchiseListJson = JSON.stringify(franchiseList);
+
+// Source catalog — keep in sync with MockRankingSource in src/types/draft-room.ts
+const rankingSources = [
+  { value: 'mfl-rookie', label: 'MFL Rookie ADP' },
+  { value: 'mfl-dynasty', label: 'MFL Dynasty ADP' },
+  { value: 'sleeper', label: 'Sleeper' },
+  { value: 'ktc', label: 'KeepTradeCut' },
+  { value: 'my-rank', label: 'My Rank' },
+  { value: 'random', label: 'Chaos (random)' },
+];
+const rankingSourcesJson = JSON.stringify(rankingSources);
 ---
 
 <TheLeagueLayout title="Mock Draft | The League">
@@ -46,18 +66,19 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
       <>
         <!-- Create section -->
         <section class="mock-lobby__create">
-          <div class="section-header">
-            <h2 class="section-header__title">Start a Mock Draft</h2>
-            <p class="section-header__sub">Configure and launch a new session</p>
+          <div class="mock-lobby__section-header">
+            <h2 class="mock-lobby__section-header-title">Start a Mock Draft</h2>
+            <p class="mock-lobby__section-header-sub">Configure and launch a new session</p>
           </div>
 
           <div class="mock-lobby__create-form" id="create-form">
             <div class="mock-lobby__form-row">
               <label class="mock-lobby__label">Timer per pick</label>
               <div class="mock-lobby__timer-chips" id="timer-chips">
-                <button class="mock-lobby__chip" data-value="60">1 min</button>
-                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="120">2 min</button>
-                <button class="mock-lobby__chip" data-value="300">5 min</button>
+                <button class="mock-lobby__chip" data-value="1">1 sec</button>
+                <button class="mock-lobby__chip" data-value="3">3 sec</button>
+                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="10">10 sec</button>
+                <button class="mock-lobby__chip" data-value="15">15 sec</button>
               </div>
             </div>
 
@@ -78,6 +99,34 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
               </div>
             </div>
 
+            <!-- Board Settings: which rankings AI teams draft from -->
+            <div class="mock-lobby__board">
+              <div class="mock-lobby__board-head">
+                <h3 class="mock-lobby__board-title">Board Settings</h3>
+                <p class="mock-lobby__board-hint">How AI opponents draft</p>
+              </div>
+
+              <div class="mock-lobby__form-row">
+                <label class="mock-lobby__sub-label" for="default-source-select">Default board</label>
+                <select class="mock-lobby__select" id="default-source-select"></select>
+              </div>
+
+              <div class="mock-lobby__form-row">
+                <span class="mock-lobby__sub-label">Presets</span>
+                <div class="mock-lobby__presets">
+                  <button type="button" class="mock-lobby__chip" data-preset="uniform">All MFL</button>
+                  <button type="button" class="mock-lobby__chip" data-preset="mixed">Mixed boards</button>
+                  <button type="button" class="mock-lobby__chip" data-preset="chaos">Chaos mode</button>
+                </div>
+              </div>
+
+              <button type="button" class="mock-lobby__disclosure" id="per-team-toggle" aria-expanded="false" aria-controls="per-team-panel">
+                <span class="mock-lobby__disclosure-caret" aria-hidden="true">▸</span>
+                Customize per team
+              </button>
+              <div class="mock-lobby__per-team" id="per-team-panel" hidden></div>
+            </div>
+
             <button class="mock-lobby__start-btn" id="start-btn">
               Start Mock Draft
             </button>
@@ -87,9 +136,9 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
 
         <!-- Active sessions -->
         <section class="mock-lobby__sessions">
-          <div class="section-header">
-            <h2 class="section-header__title">Active Sessions</h2>
-            <p class="section-header__sub">Join an in-progress mock draft</p>
+          <div class="mock-lobby__section-header">
+            <h2 class="mock-lobby__section-header-title">Active Sessions</h2>
+            <p class="mock-lobby__section-header-sub">Join an in-progress mock draft</p>
           </div>
 
           <div id="sessions-list" class="mock-lobby__sessions-list">
@@ -101,11 +150,91 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, partyHost }}>
+<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, partyHost, leagueId, leagueYear, isAdmin }}>
   const teamMap = JSON.parse(teamMapJson);
+  const franchiseList = JSON.parse(franchiseListJson);
+  const rankingSources = JSON.parse(rankingSourcesJson);
 
   function getTeamName(franchiseId) {
     return teamMap[franchiseId]?.name || `Team ${franchiseId}`;
+  }
+
+  // ── Toasts ──
+  // Replaces window.alert — site-style floating notification that slides in
+  // from the top-right corner and auto-dismisses after ~4.5s.
+  const toastContainer = document.createElement('div');
+  toastContainer.className = 'mock-lobby__toast-container';
+  document.body.appendChild(toastContainer);
+
+  function showToast(message, variant) {
+    const v = variant || 'error';
+    const toast = document.createElement('div');
+    toast.className = `mock-lobby__toast mock-lobby__toast--${v}`;
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('mock-lobby__toast--visible'));
+    setTimeout(() => {
+      toast.classList.remove('mock-lobby__toast--visible');
+      toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    }, 4500);
+  }
+
+  // ── Confirm modal ──
+  // Replaces window.confirm. Returns a Promise that resolves true/false.
+  // Destructive-true paints the confirm button red.
+  function confirmDialog({ title, message, confirmLabel, cancelLabel, destructive }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'mock-lobby__confirm-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+
+      const dialog = document.createElement('div');
+      dialog.className = 'mock-lobby__confirm-dialog';
+
+      const h = document.createElement('h2');
+      h.className = 'mock-lobby__confirm-title';
+      h.textContent = title;
+
+      const p = document.createElement('p');
+      p.className = 'mock-lobby__confirm-body';
+      p.textContent = message;
+
+      const actions = document.createElement('div');
+      actions.className = 'mock-lobby__confirm-actions';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'mock-lobby__confirm-cancel';
+      cancelBtn.textContent = cancelLabel || 'Cancel';
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = destructive
+        ? 'mock-lobby__confirm-confirm mock-lobby__confirm-confirm--destructive'
+        : 'mock-lobby__confirm-confirm';
+      confirmBtn.textContent = confirmLabel || 'Confirm';
+
+      actions.append(cancelBtn, confirmBtn);
+      dialog.append(h, p, actions);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      confirmBtn.focus();
+
+      const cleanup = (result) => {
+        document.body.style.overflow = prevOverflow;
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        resolve(result);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') cleanup(false); };
+      document.addEventListener('keydown', onKey);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(false); });
+      cancelBtn.addEventListener('click', () => cleanup(false));
+      confirmBtn.addEventListener('click', () => cleanup(true));
+    });
   }
 
   // ── Chip selection ──
@@ -133,6 +262,122 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   initChipGroup('round-chips');
   initChipGroup('order-chips');
 
+  // ── Board settings ──
+  // Per-team assignments keyed by franchiseId. Empty = use default.
+  // Seed the user's own team to 'my-rank' — most common intent for a
+  // solo mock is "draft against my personal ranks", and this keeps the
+  // default consistent with how the user's row is highlighted below.
+  const rankingAssignments = {};
+  if (userFranchiseId) {
+    rankingAssignments[userFranchiseId] = 'my-rank';
+  }
+
+  function fillSelect(sel, selected) {
+    sel.replaceChildren();
+    for (const s of rankingSources) {
+      const opt = document.createElement('option');
+      opt.value = s.value;
+      opt.textContent = s.label;
+      if (s.value === selected) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  const defaultSourceSelect = document.getElementById('default-source-select');
+  if (defaultSourceSelect) fillSelect(defaultSourceSelect, 'mfl-rookie');
+
+  // Per-team override panel — one row per franchise
+  function renderPerTeam() {
+    const panel = document.getElementById('per-team-panel');
+    if (!panel) return;
+    panel.replaceChildren();
+    for (const t of franchiseList) {
+      const isYou = t.franchiseId === userFranchiseId;
+      const row = document.createElement('div');
+      row.className = isYou
+        ? 'mock-lobby__per-team-row mock-lobby__per-team-row--yours'
+        : 'mock-lobby__per-team-row';
+
+      const label = document.createElement('span');
+      label.className = 'mock-lobby__per-team-name';
+      if (isYou) {
+        label.append(document.createTextNode(`${t.name} `));
+        const youBadge = document.createElement('span');
+        youBadge.className = 'mock-lobby__you-badge';
+        youBadge.textContent = 'You';
+        label.appendChild(youBadge);
+      } else {
+        label.textContent = t.name;
+      }
+
+      const sel = document.createElement('select');
+      sel.className = 'mock-lobby__select mock-lobby__select--compact';
+      sel.dataset.franchise = t.franchiseId;
+      const current = rankingAssignments[t.franchiseId];
+      // "__default" means: inherit the default — no override recorded.
+      const optDefault = document.createElement('option');
+      optDefault.value = '__default';
+      optDefault.textContent = 'Default';
+      sel.appendChild(optDefault);
+      for (const s of rankingSources) {
+        const opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        sel.appendChild(opt);
+      }
+      sel.value = current ?? '__default';
+      sel.addEventListener('change', () => {
+        if (sel.value === '__default') {
+          delete rankingAssignments[t.franchiseId];
+        } else {
+          rankingAssignments[t.franchiseId] = sel.value;
+        }
+      });
+
+      row.append(label, sel);
+      panel.appendChild(row);
+    }
+  }
+  renderPerTeam();
+
+  // Expand/collapse the per-team panel
+  const perTeamToggle = document.getElementById('per-team-toggle');
+  perTeamToggle?.addEventListener('click', () => {
+    const panel = document.getElementById('per-team-panel');
+    if (!panel) return;
+    const expanded = perTeamToggle.getAttribute('aria-expanded') === 'true';
+    const next = !expanded;
+    perTeamToggle.setAttribute('aria-expanded', String(next));
+    perTeamToggle.classList.toggle('mock-lobby__disclosure--open', next);
+    panel.hidden = !next;
+  });
+
+  // Preset buttons — overwrite assignments
+  document.querySelectorAll('[data-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.dataset.preset;
+      if (preset === 'uniform') {
+        // Clear overrides; default handles everyone.
+        for (const k of Object.keys(rankingAssignments)) delete rankingAssignments[k];
+        if (defaultSourceSelect) defaultSourceSelect.value = 'mfl-rookie';
+      } else if (preset === 'mixed') {
+        // Cycle through non-random sources across teams so no two adjacent
+        // picks come from the same board.
+        const mix = rankingSources.filter((s) => s.value !== 'random').map((s) => s.value);
+        franchiseList.forEach((t, i) => {
+          rankingAssignments[t.franchiseId] = mix[i % mix.length];
+        });
+      } else if (preset === 'chaos') {
+        // Random source per team (may include 'random' which is a shuffled pool)
+        franchiseList.forEach((t) => {
+          const pick = rankingSources[Math.floor(Math.random() * rankingSources.length)];
+          rankingAssignments[t.franchiseId] = pick.value;
+        });
+      }
+      renderPerTeam();
+    });
+  });
+
   // ── Create session ──
   const startBtn = document.getElementById('start-btn');
   const createError = document.getElementById('create-error');
@@ -143,15 +388,39 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
       startBtn.textContent = 'Creating…';
       if (createError) createError.textContent = '';
 
-      const timerSeconds = parseInt(getChipValue('timer-chips') || '120');
+      const timerSeconds = parseInt(getChipValue('timer-chips') || '10');
       const totalRounds = parseInt(getChipValue('round-chips') || '3');
       const useRealOrder = getChipValue('order-chips') === 'real';
+      const defaultRankingSource = defaultSourceSelect?.value || 'mfl-rookie';
+
+      // Read the user's personal queue from localStorage to back the
+      // `my-rank` source. If the queue is empty the server falls back to
+      // its alphabetical top-up, which is fine but low-signal.
+      let myRankPlayerIds = [];
+      try {
+        const queueRaw = localStorage.getItem(`draft.queue.${leagueId}.${leagueYear}`);
+        if (queueRaw) {
+          const queue = JSON.parse(queueRaw);
+          if (Array.isArray(queue)) {
+            myRankPlayerIds = queue.map((i) => i && i.playerId).filter((id) => typeof id === 'string');
+          }
+        }
+      } catch {
+        // ignore malformed queue — fall back to empty array
+      }
 
       try {
         const res = await fetch('/api/mock-draft/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timerSeconds, totalRounds, useRealOrder }),
+          body: JSON.stringify({
+            timerSeconds,
+            totalRounds,
+            useRealOrder,
+            defaultRankingSource,
+            rankingAssignments,
+            myRankPlayerIds,
+          }),
         });
 
         const data = await res.json();
@@ -172,6 +441,30 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   }
 
   // ── Load sessions ──
+  function formatRelativeTime(iso) {
+    if (!iso) return '';
+    const then = new Date(iso).getTime();
+    if (!Number.isFinite(then)) return '';
+    const now = Date.now();
+    const seconds = Math.round((now - then) / 1000);
+    if (seconds < 45) return 'just now';
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} hr ago`;
+    const days = Math.round(hours / 24);
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${days} days ago`;
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function formatAbsoluteTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
   function createSessionCard(s) {
     const statusLabels = {
       lobby: 'Waiting',
@@ -180,42 +473,122 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
       completed: 'Completed',
     };
 
+    const creator = teamMap[s.createdBy] || { name: `Team ${s.createdBy}`, icon: '' };
+    const isYours = s.createdBy === userFranchiseId;
+
     const card = document.createElement('a');
     card.href = `/theleague/mock-draft/${encodeURIComponent(s.id)}`;
-    card.className = 'mock-lobby__session-card';
+    const statusClass = `mock-lobby__session-card--${s.status}`;
+    card.className = `mock-lobby__session-card ${statusClass}` + (isYours ? ' mock-lobby__session-card--yours' : '');
 
-    // Top row: status + timer
-    const topRow = document.createElement('div');
-    topRow.className = 'mock-lobby__session-top';
+    // Owner block — icon + name dominate the card
+    const ownerRow = document.createElement('div');
+    ownerRow.className = 'mock-lobby__session-owner';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'mock-lobby__session-avatar';
+    if (creator.icon) {
+      const img = document.createElement('img');
+      img.src = creator.icon;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = creator.name.slice(0, 2).toUpperCase();
+      avatar.classList.add('mock-lobby__session-avatar--placeholder');
+    }
+
+    const ownerInfo = document.createElement('div');
+    ownerInfo.className = 'mock-lobby__session-owner-info';
+
+    const ownerName = document.createElement('div');
+    ownerName.className = 'mock-lobby__session-owner-name';
+    ownerName.textContent = isYours ? `${creator.name} (you)` : creator.name;
+
+    const ownerSub = document.createElement('div');
+    ownerSub.className = 'mock-lobby__session-owner-sub';
+    ownerSub.textContent = formatRelativeTime(s.createdAt) || 'Started recently';
+
+    ownerInfo.append(ownerName, ownerSub);
 
     const statusBadge = document.createElement('span');
     statusBadge.className = `mock-lobby__status mock-lobby__status--${s.status}`;
     statusBadge.textContent = statusLabels[s.status] || s.status;
 
-    const timerLabel = document.createElement('span');
-    timerLabel.className = 'mock-lobby__session-timer';
-    timerLabel.textContent = `${s.timerSeconds}s / pick`;
+    ownerRow.append(avatar, ownerInfo, statusBadge);
 
-    topRow.append(statusBadge, timerLabel);
+    // Delete affordance — creator always, or anyone if admin. Rendered
+    // as an absolutely-positioned button inside the card so it doesn't
+    // affect the card grid; stopPropagation prevents the surrounding
+    // <a> from navigating when the user clicks it.
+    if (isYours || isAdmin) {
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'mock-lobby__session-delete';
+      delBtn.setAttribute('aria-label', `Delete mock draft started by ${creator.name}`);
+      delBtn.title = 'Delete mock draft';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', async (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        const confirmed = await confirmDialog({
+          title: isYours ? 'Delete this mock draft?' : `Delete ${creator.name}'s mock draft?`,
+          message: isYours
+            ? 'This session will be removed from the lobby. This cannot be undone.'
+            : `Admin override — this removes ${creator.name}'s session from the lobby. This cannot be undone.`,
+          confirmLabel: 'Delete',
+          destructive: true,
+        });
+        if (!confirmed) return;
+        delBtn.disabled = true;
+        try {
+          const res = await fetch('/api/mock-draft/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: s.id }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success) {
+            card.remove();
+            showToast('Mock draft deleted.', 'success');
+          } else {
+            delBtn.disabled = false;
+            showToast(data.message || 'Could not delete that session.', 'error');
+          }
+        } catch {
+          delBtn.disabled = false;
+          showToast('Network error — please try again.', 'error');
+        }
+      });
+      // Sit next to the status badge in the owner row (not absolute-
+      // positioned, which would collide with the badge).
+      ownerRow.appendChild(delBtn);
+    }
 
-    // Meta row: creator + participants
-    const metaRow = document.createElement('div');
-    metaRow.className = 'mock-lobby__session-meta';
+    // Detail row — compact progress + timer
+    const detailRow = document.createElement('div');
+    detailRow.className = 'mock-lobby__session-details';
 
-    const creator = document.createElement('span');
-    creator.textContent = `Created by ${getTeamName(s.createdBy)}`;
+    const progress = document.createElement('span');
+    progress.className = 'mock-lobby__session-detail';
+    progress.innerHTML = `<strong>R${s.currentRound}·P${s.currentPickInRound}</strong> of ${s.totalRounds} rd`;
 
     const joined = document.createElement('span');
-    joined.textContent = `${s.participantCount}/${s.totalTeams} joined`;
+    joined.className = 'mock-lobby__session-detail';
+    joined.innerHTML = `<strong>${s.participantCount}</strong>/${s.totalTeams} joined`;
 
-    metaRow.append(creator, joined);
+    const timer = document.createElement('span');
+    timer.className = 'mock-lobby__session-detail';
+    timer.innerHTML = `<strong>${s.timerSeconds}s</strong>/pick`;
 
-    // Progress row
-    const progress = document.createElement('div');
-    progress.className = 'mock-lobby__session-progress';
-    progress.textContent = `Round ${s.currentRound} · Pick ${s.currentPickInRound} · ${s.totalRounds} rounds`;
+    const absTime = document.createElement('span');
+    absTime.className = 'mock-lobby__session-detail mock-lobby__session-detail--time';
+    absTime.textContent = formatAbsoluteTime(s.createdAt);
 
-    card.append(topRow, metaRow, progress);
+    detailRow.append(progress, joined, timer, absTime);
+
+    card.append(ownerRow, detailRow);
     return card;
   }
 
@@ -224,7 +597,7 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
     if (!container) return;
 
     try {
-      const res = await fetch('/api/mock-draft/list');
+      const res = await fetch('/api/mock-draft/list', { cache: 'no-store' });
       const data = await res.json();
       const sessions = data.sessions || [];
 
@@ -237,6 +610,14 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
         container.appendChild(empty);
         return;
       }
+
+      // Surface sessions you started first, then newest first
+      sessions.sort((a, b) => {
+        if ((a.createdBy === userFranchiseId) !== (b.createdBy === userFranchiseId)) {
+          return a.createdBy === userFranchiseId ? -1 : 1;
+        }
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
 
       for (const s of sessions) {
         container.appendChild(createSessionCard(s));
@@ -251,9 +632,19 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   }
 
   loadSessions();
+
+  // iOS Safari and mobile Chrome restore pages from bfcache on back-nav, which
+  // skips the script re-run above. Re-fetch sessions when the page becomes
+  // visible again (back button, tab focus) so stale lists don't linger.
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) loadSessions();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadSessions();
+  });
 </script>
 
-<style>
+<style is:global>
   .mock-lobby {
     max-width: 640px;
     margin: 0 auto;
@@ -279,13 +670,13 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
   }
 
   /* ── Section headers (editorial pattern) ── */
-  .section-header {
+  .mock-lobby__section-header {
     padding-left: 0.625rem;
     border-left: 2px solid var(--color-primary, #1c497c);
     margin-bottom: 1rem;
   }
 
-  .section-header__title {
+  .mock-lobby__section-header-title {
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -294,7 +685,7 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
     margin: 0;
   }
 
-  .section-header__sub {
+  .mock-lobby__section-header-sub {
     font-size: 0.8125rem;
     color: var(--color-gray-400, #9ca3af);
     margin: 0.25rem 0 0;
@@ -382,6 +773,174 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
     color: #fff;
   }
 
+  /* ── Board Settings ──
+   * Inset card with the editorial section-header pattern (2px primary
+   * left-border title) and a ds-detail-row-style per-team list.
+   */
+  .mock-lobby__board {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .mock-lobby__board-head {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+  }
+
+  .mock-lobby__board-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .mock-lobby__board-hint {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    line-height: 1.35;
+  }
+
+  .mock-lobby__sub-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .mock-lobby__select {
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-sm, 0.375rem);
+    background: #fff;
+    color: var(--color-gray-900, #111827);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .mock-lobby__select:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .mock-lobby__select--compact {
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .mock-lobby__presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .mock-lobby__disclosure {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0;
+    background: none;
+    border: none;
+    color: var(--color-primary, #1c497c);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: color 0.15s ease;
+  }
+
+  .mock-lobby__disclosure:hover {
+    color: var(--btn-primary-bg-hover, #164066);
+  }
+
+  .mock-lobby__disclosure-caret {
+    display: inline-block;
+    transition: transform 0.15s ease;
+    font-size: 0.6875rem;
+    line-height: 1;
+  }
+
+  .mock-lobby__disclosure--open .mock-lobby__disclosure-caret {
+    transform: rotate(90deg);
+  }
+
+  .mock-lobby__per-team {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0.25rem;
+  }
+
+  /* `display: flex` above wins against the native HTML `hidden` attribute.
+     This selector restores hidden-means-hidden when the disclosure is
+     collapsed. */
+  .mock-lobby__per-team[hidden] {
+    display: none;
+  }
+
+  .mock-lobby__per-team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .mock-lobby__per-team-row:last-child {
+    border-bottom: none;
+  }
+
+  /* Your own team — left-rail accent, bold label, subtle tint so the row
+     stands out at a glance when the user scans the list. */
+  .mock-lobby__per-team-row--yours {
+    padding-left: 0.625rem;
+    margin-left: -0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    background: rgba(28, 73, 124, 0.04);
+  }
+
+  .mock-lobby__per-team-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-700, #374151);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mock-lobby__per-team-row--yours .mock-lobby__per-team-name {
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* Inline pill after the team name for the user's own row. */
+  .mock-lobby__you-badge {
+    display: inline-block;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.125rem 0.375rem;
+    margin-left: 0.25rem;
+    border-radius: 999px;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    vertical-align: middle;
+  }
+
   .mock-lobby__start-btn {
     margin-top: 0.5rem;
     padding: 0.625rem 1.5rem;
@@ -430,35 +989,158 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
     padding: 2rem 0;
   }
 
+  /* ── Session card ──
+   * Follows the `calendar-card` design-system pattern: rounded container
+   * with a base shadow, border-left status accent, and a hover lift.
+   * Status-colored left rail is set via --session-accent (matches the
+   * --card-category-color idiom from CalendarEventCard).
+   */
+  /* ── Session card ──
+   * Follows the `calendar-card` design-system pattern: rounded container
+   * with a base shadow, border-left status accent, and a hover lift.
+   */
   .mock-lobby__session-card {
-    display: block;
-    padding: 0.875rem 1rem;
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--color-gray-100, #f3f4f6);
-    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 1rem 1.125rem;
+    background: var(--card-bg, #fff);
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06));
+    border-left: 4px solid var(--session-accent, var(--color-gray-300, #d1d5db));
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s ease;
+    min-height: 64px;
+    position: relative;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
   }
 
-  .mock-lobby__session-card:hover {
-    border-color: var(--color-primary, #1c497c);
+  .mock-lobby__session-card:hover,
+  .mock-lobby__session-card:focus-visible {
+    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
+    transform: translateY(-2px);
+    outline: none;
   }
 
-  .mock-lobby__session-top {
-    display: flex;
-    justify-content: space-between;
+  /* Status variants — set the left-rail color */
+  .mock-lobby__session-card--lobby { --session-accent: var(--color-blue-500, #3b82f6); }
+  .mock-lobby__session-card--active { --session-accent: var(--color-green-500, #22c55e); }
+  .mock-lobby__session-card--paused { --session-accent: var(--color-yellow-500, #eab308); }
+  .mock-lobby__session-card--completed {
+    --session-accent: var(--color-gray-300, #d1d5db);
+    opacity: 0.7;
+  }
+
+  /* "Yours" — rail in primary blue; no background override so the card
+     keeps the shared --card-bg token. */
+  .mock-lobby__session-card--yours {
+    --session-accent: var(--color-primary, #1c497c);
+  }
+
+  /* Delete affordance — creators + admins see it. Sits inside the owner
+     row as a flex sibling, next to the status badge. Faint at rest so it
+     doesn't steal attention from the status; fills in on card hover. */
+  .mock-lobby__session-delete {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
     align-items: center;
-    margin-bottom: 0.375rem;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.875rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 999px;
+    opacity: 0.35;
+    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+
+  .mock-lobby__session-card:hover .mock-lobby__session-delete,
+  .mock-lobby__session-card:focus-within .mock-lobby__session-delete,
+  .mock-lobby__session-delete:focus-visible {
+    opacity: 1;
+  }
+
+  .mock-lobby__session-delete:hover {
+    background: var(--color-error-light, #fee2e2);
+    color: var(--color-error, #dc2626);
+  }
+
+  .mock-lobby__session-delete:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .mock-lobby__session-owner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .mock-lobby__session-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Placeholder (initials) — needs a soft background to render; icon
+     avatars don't because the <img> fills the circle edge-to-edge. */
+  .mock-lobby__session-avatar--placeholder {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .mock-lobby__session-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .mock-lobby__session-owner-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .mock-lobby__session-owner-name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mock-lobby__session-owner-sub {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
   }
 
   .mock-lobby__status {
-    font-size: 0.6875rem;
+    font-size: 0.625rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.125rem 0.5rem;
+    letter-spacing: 0.06em;
+    padding: 0.1875rem 0.5rem;
     border-radius: 999px;
+    flex-shrink: 0;
+    align-self: center;
   }
 
   .mock-lobby__status--lobby {
@@ -481,23 +1163,144 @@ const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
     color: var(--color-gray-500, #6b7280);
   }
 
-  .mock-lobby__session-timer {
-    font-size: 0.75rem;
-    color: var(--color-gray-400, #9ca3af);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .mock-lobby__session-meta {
+  .mock-lobby__session-details {
     display: flex;
-    justify-content: space-between;
-    font-size: 0.8125rem;
-    color: var(--color-gray-600, #4b5563);
-    margin-bottom: 0.25rem;
+    flex-wrap: wrap;
+    gap: 0.375rem 0.75rem;
+    padding-left: calc(44px + 0.75rem); /* align with owner name */
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
   }
 
-  .mock-lobby__session-progress {
-    font-size: 0.75rem;
+  .mock-lobby__session-detail strong {
+    font-weight: 700;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .mock-lobby__session-detail--time {
+    margin-left: auto;
+    font-size: 0.6875rem;
     color: var(--color-gray-400, #9ca3af);
-    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 480px) {
+    .mock-lobby__session-details {
+      padding-left: 0;
+    }
+  }
+
+  /* ── Toast notifications ── */
+  .mock-lobby__toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+  }
+  .mock-lobby__toast {
+    pointer-events: auto;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    max-width: 22rem;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateX(1rem);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .mock-lobby__toast--visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .mock-lobby__toast--error { background: var(--color-error, #dc2626); }
+  .mock-lobby__toast--success { background: var(--color-success, #16a34a); }
+  .mock-lobby__toast--info { background: var(--color-info, #2563eb); }
+
+  /* ── Confirmation modal ── */
+  .mock-lobby__confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 90;
+    padding: 1rem;
+    animation: mock-lobby-confirm-fade 0.12s ease-out;
+  }
+  .mock-lobby__confirm-dialog {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+    padding: 1.25rem 1.375rem 1.125rem;
+    width: min(26rem, calc(100vw - 2rem));
+    animation: mock-lobby-confirm-slide 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .mock-lobby__confirm-title {
+    margin: 0 0 0.375rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+  .mock-lobby__confirm-body {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.5;
+  }
+  .mock-lobby__confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .mock-lobby__confirm-cancel {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-700, #374151);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .mock-lobby__confirm-cancel:hover {
+    background: var(--color-gray-100, #f3f4f6);
+    border-color: var(--color-gray-300, #d1d5db);
+  }
+  .mock-lobby__confirm-confirm {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .mock-lobby__confirm-confirm:hover {
+    background: var(--btn-primary-bg-hover, #164066);
+  }
+  .mock-lobby__confirm-confirm--destructive {
+    background: var(--color-error, #dc2626);
+  }
+  .mock-lobby__confirm-confirm--destructive:hover {
+    background: var(--color-error-dark, #b91c1c);
+  }
+  @keyframes mock-lobby-confirm-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes mock-lobby-confirm-slide {
+    from { opacity: 0; transform: translateY(4px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 </style>

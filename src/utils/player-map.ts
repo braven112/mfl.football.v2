@@ -20,7 +20,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { normalizeTeamCode } from './nfl-logo';
-import { getPlayerHeadshot, resolveEspnId } from '../constants/roster-constants';
+import {
+  getCollegeHeadshot,
+  getPlayerHeadshot,
+  getPlayerImageUrl,
+  resolveEspnId,
+} from '../constants/roster-constants';
 
 export interface PlayerIdentity {
   mflId: string;
@@ -108,8 +113,18 @@ export function getPlayerMap(year: number): Map<string, PlayerIdentity> {
       const mflId = p.id;
       const normalizedPosition = normalizePosition(position);
       const nflTeam = normalizeTeamCode(p.team || '');
+      const nflEspnId = p.espn_id || '';
+      const collegeEspnId = collegeIds[mflId]?.espnCollegeId || '';
+      // Keep `espnId` as the best-guess ID for callers that need one, but
+      // build `headshot` from the *matching* URL — ESPN's NFL headshot
+      // endpoint returns 404 for a college ID, so a rookie with only a
+      // college ESPN ID has to use the college-football URL instead.
       const espnId = resolveEspnId(mflId, p as { espn_id?: string }, collegeIds);
-      const headshot = getPlayerHeadshot(mflId, espnId || undefined);
+      const headshot = nflEspnId
+        ? getPlayerHeadshot(mflId, nflEspnId)
+        : collegeEspnId
+          ? getCollegeHeadshot(collegeEspnId)
+          : getPlayerImageUrl(mflId);
       const name = formatName(p.name || '', position);
 
       playerMap.set(mflId, {

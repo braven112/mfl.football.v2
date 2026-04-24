@@ -81,10 +81,13 @@ const isDef = position?.toUpperCase() === 'DEF';
 const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
-// ESPN is the primary headshot source when espnId is available
-const resolvedHeadshot = resolvedEspnId
-  ? getPlayerHeadshot(resolvedMflId, resolvedEspnId)
-  : (headshot ?? DEFAULT_HEADSHOT_URL);
+// Prefer the caller-supplied headshot URL — server-side builders pick the
+// right endpoint (NFL combiner, college-football, or MFL photo) based on
+// which IDs are available. Only fall back to getPlayerHeadshot when nothing
+// was passed in; that path assumes an NFL ID, which breaks for pre-draft
+// rookies that only have a college ESPN ID.
+const resolvedHeadshot =
+  headshot || (resolvedEspnId ? getPlayerHeadshot(resolvedMflId, resolvedEspnId) : DEFAULT_HEADSHOT_URL);
 // Avatar: DEF uses team logo, others use headshot
 const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
 
