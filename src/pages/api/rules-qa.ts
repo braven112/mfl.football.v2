@@ -138,6 +138,25 @@ THE LEAGUE CONSTITUTION (this is the complete, authoritative rulebook):
 
 ${LEAGUE_CONSTITUTION}`;
 
+/** Build the per-request "current date" block (Pacific Time) */
+function buildDateBlock(now: Date = new Date()): string {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const iso = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  return `CURRENT DATE: ${fmt.format(now)} (${iso}, Pacific Time).
+Use this as the authoritative "today" when owners ask about timing, deadlines, or upcoming events. Do not claim an event is "today" unless its calendar date matches the ISO date above.`;
+}
+
 async function callHaiku(question: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
@@ -145,11 +164,26 @@ async function callHaiku(question: string): Promise<string> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const client = new Anthropic({ apiKey });
 
+  // The static prompt embeds the full league constitution, so mark it as an
+  // ephemeral cache block. Subsequent questions within the 5-minute window
+  // hit the cache and skip re-tokenizing ~constitution-size of input.
+  // The date block is appended AFTER the cached block so cache reuse is
+  // preserved even though the date changes daily.
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 500,
     temperature: 0.3,
-    system: SYSTEM_PROMPT,
+    system: [
+      {
+        type: 'text',
+        text: SYSTEM_PROMPT,
+        cache_control: { type: 'ephemeral' },
+      },
+      {
+        type: 'text',
+        text: buildDateBlock(),
+      },
+    ],
     messages: [{ role: 'user', content: question }],
   });
 

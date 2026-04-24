@@ -90,7 +90,9 @@ describe('Phase 7 — scanner thread persistence', () => {
 
   it('records thread_of mapping for both parent and new post', () => {
     expect(scanner).toMatch(/thread_of:\$\{dominantParentId\}/);
-    expect(scanner).toMatch(/thread_of:\$\{post\.id\}/);
+    // Loop variable is `p` now (we iterate over builtPosts per beat), but
+    // the key shape is the same: `thread_of:${postId}`.
+    expect(scanner).toMatch(/thread_of:\$\{(?:post|p)\.id\}/);
   });
 
   it('tells the LLM to open with continuity language when a threadFollowup is present', () => {

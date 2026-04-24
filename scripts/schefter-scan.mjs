@@ -23,6 +23,7 @@ import {
   appendPostHistory,
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
+import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -1165,12 +1166,7 @@ async function scanEventReminders(league) {
       // Check if this event tier qualifies for this touch
       if ((TIER_RANK[event.tier] || 0) < (TIER_RANK[touch.minTier] || 0)) continue;
 
-      // Check if we're in the right window (within 1 day of the target)
-      const targetDays = touch.daysOut;
-      if (event.daysUntil > targetDays + 1 || event.daysUntil < targetDays - 1) continue;
-
-      // Day-of: only fire when daysUntil is 0 or -1 (still same day)
-      if (touch.id === 'dayof' && event.daysUntil > 1) continue;
+      if (!shouldFireReminder(touch.daysOut, event.daysUntil)) continue;
 
       const postId = `roger_${event.id}_${touch.id}`;
 

@@ -31,6 +31,16 @@ export type PlayerEscalationTier = 'base' | 'tightened_circle' | 'named';
 /** "first_offer" = 1 offer in 7d window, "repeat_offer" = 2-3, "serial" = 4+. */
 export type TradeOfferVolumeHint = 'first_offer' | 'repeat_offer' | 'serial';
 
+/**
+ * Age-based framing hint for the LLM voice.
+ * - `fresh`    : first_seen less than 48h ago → rumor-mill voice (phones ringing)
+ * - `lingering`: first_seen 48h+ ago → "offered but phones aren't picking up"
+ *
+ * No guaranteed post — the per-run dice roll (p=0.0075) still gates emission.
+ * Lingering offers can still fail the roll forever; that's the design.
+ */
+export type TradeOfferFramingHint = 'fresh' | 'lingering';
+
 export interface EscalatedPlayer {
   name: string;
   position: string;
@@ -60,6 +70,13 @@ export interface TradeOfferTip extends Omit<Tip, 'source' | 'text'> {
   divisionHint?: string;
   /** Set when escalation tier is tightened_circle or named */
   escalatedPlayer?: EscalatedPlayer;
+  /**
+   * Age-based voice hint resolved from `first_seen` timestamp at scan time.
+   * 'fresh' = <48h since first observed, 'lingering' = 48h+.
+   */
+  framingHint: TradeOfferFramingHint;
+  /** Age in ms since first observed — audit / debug only */
+  offerAgeMs: number;
   /** Raw offer id — audit only, never pass to the LLM */
   offerId: string;
   /** Franchise who originated the offer — audit only, never to LLM */
@@ -125,6 +142,15 @@ export interface Tip {
    * tipster-codenames system (same key as tipster-stats leaderboard).
    */
   tipsterCodename?: string;
+  /**
+   * Running seasonal count of "Beef"-topic (commish-scope) tips from this
+   * tipster — tracks how often the same source is sending off-topic / personal
+   * shots through the tip form. Powers the escalation of the "every accusation
+   * is a confession" framing in HARD RULE 16: first-time off-topic tippers
+   * get the lighter hissy-fit framing only, repeat offenders earn the full
+   * confession twist. Only set for `source: 'web'` + `topic: 'commish'`.
+   */
+  offTopicCount?: number;
 }
 
 /** Max age of a rumor post that whisper-backs can still attach to (ms). */

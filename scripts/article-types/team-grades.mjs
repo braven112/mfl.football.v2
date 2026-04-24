@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 
 const SALARY_CAP = 45_000_000;
 const VALID_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
@@ -142,8 +142,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Pre-Season Team Grades
-Grade every roster top to bottom. Who's a contender? Who's rebuilding? Who's stuck in the middle with no plan? Factor in cap health, contract structure, projected starters, and bench depth. This is the definitive pre-season power ranking in grade form.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Pre-Season Team Grades
+Grade every roster top to bottom. Who's a contender? Who's rebuilding? Who's stuck in the middle with no plan? Factor in cap health, contract structure, projected starters, and bench depth. This is the definitive pre-season power ranking in grade form.`);
 }
 
 export function getUserPrompt(factSheet) {

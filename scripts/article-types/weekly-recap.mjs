@@ -7,7 +7,7 @@
  */
 
 import { loadPlayers, loadTeams, formatSalary } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 
 export const config = {
@@ -135,8 +135,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Weekly Recap
-Write like a Monday morning ESPN column. Lead with the biggest story of the week — the biggest upset, the highest score, or the most dramatic finish. Weave in standings implications. End with a look-ahead to next week.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Weekly Recap
+Write like a Monday morning ESPN column. Lead with the biggest story of the week — the biggest upset, the highest score, or the most dramatic finish. Weave in standings implications. End with a look-ahead to next week.`);
 }
 
 export function getUserPrompt(factSheet) {

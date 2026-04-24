@@ -10,7 +10,7 @@
  *
  * Env:
  *   ANTHROPIC_API_KEY - required to call Claude
- *   MODEL_NAME        - optional override (default: claude-3-5-haiku-20241022)
+ *   MODEL_NAME        - optional override (default: claude-haiku-4-5-20251001)
  *   SCHEDULE_PATH     - optional path to nfl-cache file (default: data/theleague/nfl-cache/week15-2024.json)
  *   PLAYERS_PATH      - optional path to players.json (default: data/theleague/mfl-feeds/2025/players.json)
  *   PROJECTIONS_PATH  - optional path to projectedScores.json (default: data/theleague/mfl-feeds/2025/projectedScores.json)
@@ -40,7 +40,7 @@ const paths = {
   output: path.join(root, process.env.OUTPUT_PATH || defaults.output)
 };
 
-const modelName = process.env.MODEL_NAME || 'claude-3-5-haiku-20241022';
+const modelName = process.env.MODEL_NAME || 'claude-haiku-4-5-20251001';
 
 function loadJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));

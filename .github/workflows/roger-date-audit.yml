@@ -1,0 +1,77 @@
+name: Roger Date Audit
+
+# Daily sanity check for Roger's date pipeline.
+#
+# 1. Runs the reminder-window regression tests (tests/roger-reminder-window.test.ts).
+#    If these ever go red, either the fix has regressed or the contract changed.
+# 2. Fetches the NFL Draft date from ESPN and diffs it against the committed
+#    src/data/theleague/nfl-draft-dates-fetched.json. If ESPN has moved the
+#    date (or the file drifted for some other reason), the workflow fails
+#    so the mismatch is visible in the Actions tab and via email.
+#
+# When the audit fails due to date drift, the fix is:
+#   pnpm fetch:nfl-draft-date
+#   git add src/data/theleague/nfl-draft-dates-fetched.json
+#   git commit -m "chore: refresh NFL draft date from ESPN"
+#   git push
+#
+# When the audit fails on the vitest step, fix the regression — the reminder
+# window and calendar-day diff are load-bearing (see CLAUDE.md).
+
+on:
+  schedule:
+    # 15:17 UTC = ~8am Pacific. Avoid the top-of-hour cron stampede.
+    - cron: "17 15 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: roger-date-audit
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.24.0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run reminder-window regression tests
+        run: pnpm vitest run tests/roger-reminder-window.test.ts
+
+      - name: Fetch latest draft date from ESPN
+        run: node scripts/fetch-nfl-draft-date.mjs
+
+      - name: Fail if ESPN disagrees with committed JSON
+        run: |
+          if [ -z "$(git status --porcelain src/data/theleague/nfl-draft-dates-fetched.json)" ]; then
+            echo "ESPN draft date matches the committed JSON. All good."
+            exit 0
+          fi
+          echo "::error::ESPN returned a different NFL Draft date than what's committed."
+          echo "Diff:"
+          git --no-pager diff src/data/theleague/nfl-draft-dates-fetched.json
+          echo ""
+          echo "To accept the new date, run locally:"
+          echo "  pnpm fetch:nfl-draft-date"
+          echo "  git add src/data/theleague/nfl-draft-dates-fetched.json"
+          echo "  git commit -m 'chore: refresh NFL draft date from ESPN'"
+          echo "  git push"
+          exit 1

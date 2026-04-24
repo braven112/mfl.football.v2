@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isDraftComplete } from '../article-utils/season-guards.mjs';
 
 const VALID_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
@@ -129,8 +129,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Draft Grades
-Grade each team's rookie draft class. Be harsh with reaches (players picked too early relative to projections), praise value picks. Dynasty drafts are about upside — young players with high ceilings are more valuable. Consider roster fit and how many picks each team had to work with.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Draft Grades
+Grade each team's rookie draft class. Be harsh with reaches (players picked too early relative to projections), praise value picks. Dynasty drafts are about upside — young players with high ceilings are more valuable. Consider roster fit and how many picks each team had to work with.`);
 }
 
 export function getUserPrompt(factSheet) {
