@@ -2134,9 +2134,24 @@
 @media (max-width: 767px) {
   .dr-mobile-tabs { display: block; }
 
+  /* Board tab fills the remaining viewport and scrolls internally so all picks
+   * in the round are reachable. Without this, .dr-panel-board defaults to its
+   * content height while .draft-room clips overflow, so picks past the fold
+   * are unscrollable. */
   .draft-room[data-active-mobile-tab="board"] .dr-panel-board {
-    display: block;
-    flex: none;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .draft-room[data-active-mobile-tab="board"] .dr-board {
+    flex: 1;
+    min-height: 0;
+  }
+  .draft-room[data-active-mobile-tab="board"] .dr-board__scroll {
+    flex: 1;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
   }
   .draft-room:not([data-active-mobile-tab="board"]) .dr-panel-board {
     display: none;
