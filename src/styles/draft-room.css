@@ -430,8 +430,34 @@
 }
 
 @media (max-width: 640px) {
-  .dr-team-avatar { width: 36px; height: 36px; }
+  /* Stack the banner so team identity + clock/actions never collide on
+   * narrow screens (especially in mock mode where 3 buttons share the row
+   * with the timer). */
+  .dr-timer-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    min-height: var(--dr-timer-height-mobile);
+  }
+  .dr-timer-banner__team {
+    width: 100%;
+    gap: 0.5rem;
+  }
+  .dr-team-avatar { width: 32px; height: 32px; }
   .dr-team-name { font-size: 0.9375rem; }
+  .dr-team-eyebrow { font-size: 0.5625rem; }
+
+  .dr-timer-banner__meter {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    row-gap: 0.375rem;
+  }
+  .dr-timer-banner__meter-text { text-align: left; }
+  .dr-timer-clock { font-size: var(--dr-timer-font-size-mobile); }
+  .dr-timer-banner__complete .dr-timer-clock { font-size: 1.125rem; }
 }
 
 /* ── Draft Board Header Toolbar ──
