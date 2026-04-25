@@ -23,9 +23,11 @@ interface Props {
   year?: string | number;
   staticHost?: string;
   hideLeaguePrefix?: boolean;
+  hideMobileNavIcons?: boolean;
 }
 
 const hideLeaguePrefix = Astro.props.hideLeaguePrefix ?? false;
+const hideMobileNavIcons = Astro.props.hideMobileNavIcons ?? false;
 
 const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
@@ -118,7 +120,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       </div>
       <div class="col right">
         <!-- Desktop Navigation Icons -->
-        <nav class="desktop-nav" aria-label="Main navigation">
+        <nav class:list={["desktop-nav", { "desktop-nav--hide-mobile": hideMobileNavIcons }]} aria-label="Main navigation">
           {!isAFL && (
             <a href="/theleague/schefter/tip" class="nav-icon-link" title="Tip Schefter">
               <svg class="nav-icon" aria-hidden="true">
@@ -640,6 +642,19 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   @media (max-width: 960px) {
     .theleague-header {
       padding-bottom: 1rem;
+    }
+  }
+
+  /* Page-level opt-out: hide the horizontal nav-icon strip on mobile so
+   * dense pages (e.g. Draft Room, Mock Draft) get more vertical room. */
+  @media (max-width: 991px) {
+    .desktop-nav.desktop-nav--hide-mobile {
+      display: none;
+    }
+    /* Header collapses to a single tight row; no empty space below the logo. */
+    .theleague-header:has(.desktop-nav--hide-mobile) {
+      padding: 0.5rem 0;
+      margin-bottom: 0.75rem;
     }
   }
 

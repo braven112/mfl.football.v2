@@ -37,9 +37,10 @@ export interface Props {
 	leagueId?: string;
 	year?: string | number;
 	staticHost?: string;
+	hideMobileNavIcons?: boolean;
 }
 
-const { title, host, leagueId, year, staticHost } = Astro.props as Props;
+const { title, host, leagueId, year, staticHost, hideMobileNavIcons } = Astro.props as Props;
 const navOpenCookie = Astro.cookies.get(NAV_COOKIES.NAV_OPEN);
 const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 
@@ -197,6 +198,7 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 				year={year}
 				staticHost={staticHost}
 				hideLeaguePrefix={hideLeaguePrefix}
+				hideMobileNavIcons={hideMobileNavIcons}
 			/>
 			<main>
 				<slot />
