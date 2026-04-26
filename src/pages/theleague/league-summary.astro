@@ -1,5 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import LeagueSummaryTable from '../../components/theleague/LeagueSummaryTable.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { SALARY_YEARS } from '../../utils/salary-calculations';
@@ -212,6 +214,11 @@ const teamsForDisplay = teamSummaries.map((team) => {
 
 <TheLeagueLayout title="League Summary">
   <div class="league-summary-container">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Stats & Reports', href: '/theleague/stats' },
+      { label: 'League Summary' },
+    ]} />
     <h1>League Summary <span class="subtitle">{displayYears[0]}–{displayYears[displayYears.length - 1]}</span></h1>
 
     <LeagueSummaryTable
@@ -219,6 +226,8 @@ const teamsForDisplay = teamSummaries.map((team) => {
       years={displayYears}
       categories={CATEGORY_DEFINITIONS}
     />
+
+    <RelatedReports currentId="league-summary" />
   </div>
 </TheLeagueLayout>
 

@@ -11,7 +11,10 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
@@ -338,10 +341,18 @@ function formatSalary(salary: number): string {
   if (salary >= 1_000) return `$${(salary / 1_000).toFixed(0)}K`;
   return `$${salary}`;
 }
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Projected Free Agents | TheLeague">
   <div class="pfa-page">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Stats & Reports', href: '/theleague/stats' },
+      { label: 'Projected Free Agents' },
+    ]} />
     <!-- Hero -->
     <div class="pfa-hero">
       <div class="hero-top">
@@ -349,6 +360,12 @@ function formatSalary(salary: number): string {
           <h1 class="hero-title">Projected Free Agents</h1>
           <span class="hero-subtitle">{currentYear} players in their final contract year</span>
         </div>
+        <a href={r('/theleague/players')} class="hero-cross-link">
+          Browse current Free Agents
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
       </div>
     </div>
 
@@ -463,6 +480,8 @@ function formatSalary(salary: number): string {
     <div class="pfa-empty" id="pfa-empty" style="display: none;">
       <p>No expiring contracts found matching your filters.</p>
     </div>
+
+    <RelatedReports currentId="projected-free-agents" />
   </div>
   <PlayerDetailsModal />
 
@@ -922,6 +941,14 @@ function formatSalary(salary: number): string {
     padding: 2rem 0 1.25rem;
   }
 
+  .hero-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
   .hero-title {
     font-size: 1.35rem;
     font-weight: 700;
@@ -935,6 +962,23 @@ function formatSalary(salary: number): string {
     color: var(--color-gray-400, #9ca3af);
     margin-top: 0.25rem;
     display: block;
+  }
+
+  .hero-cross-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .hero-cross-link:hover {
+    gap: 0.5rem;
+    text-decoration: underline;
   }
 
   /* ── Metrics ── */

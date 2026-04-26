@@ -253,12 +253,24 @@
     "popularity": 20
   },
   {
+    "id": "stats",
+    "title": "Stats & Reports",
+    "description": "Hub for league analytics — salary benchmarks, awards, projected free agents, and multi-year team comparisons",
+    "path": "/stats",
+    "icon": "bar-chart",
+    "category": "reports",
+    "tags": ["stats", "reports", "analytics", "hub", "stats hub", "advanced reports", "analysis", "data", "salary", "awards", "mvp", "dead money", "projected free agents", "league summary", "salary history", "salary archive", "benchmarks", "comparisons"],
+    "visibility": "all",
+    "popularity": 70
+  },
+  {
     "id": "league-summary",
     "title": "League Summary",
     "description": "Compare all teams across cap, roster, and contract metrics over 5 years",
     "path": "/league-summary",
     "icon": "spreadsheet",
     "category": "reports",
+    "subcategory": "team-comparisons",
     "tags": ["league summary", "summary", "compare", "comparison", "all teams", "overview", "table", "spreadsheet", "grid", "metrics", "cap", "roster", "contracts", "5 year", "five year", "multi year", "trend", "trends", "analysis", "snapshot", "health", "strength", "weakness", "gap", "projected cap space", "cap space", "room", "available money", "budget", "flexibility", "dead money", "dead cap", "wasted", "sunk cost", "bad contracts", "effective cap space", "usable cap", "net cap", "average age", "age", "old", "young", "aging", "window", "rebuild", "contend", "players under contract", "locked in", "committed", "signed", "retained", "expiring contracts", "expiring", "upcoming free agents", "unrestricted", "walk", "leaving", "positional depth", "depth", "deep", "shallow", "thin", "stacked", "qb depth", "rb depth", "wr depth", "te depth", "pk depth", "def depth", "avg contract length", "contract length", "duration", "short", "long", "years remaining", "committed salary", "committed salary percent", "locked up", "percentage", "roster holes", "holes", "needs", "weak spots", "gaps", "missing", "top player retention", "retention", "kept", "star players", "core", "best players", "salary weighted age", "weighted age", "expensive age", "positional spend", "positional spend percent", "spending by position", "qb spend", "rb spend", "wr spend", "te spend", "allocation", "investment", "draft capital", "draft picks", "picks", "future picks", "capital", "ammunition", "assets", "trade assets"],
     "visibility": "all",
     "popularity": 72
@@ -270,6 +282,7 @@
     "path": "/salary",
     "icon": "bar-chart",
     "category": "reports",
+    "subcategory": "salary-analytics",
     "tags": ["salary", "salaries", "analytics", "analysis", "benchmark", "benchmarks", "spending", "spend", "money", "cap", "position", "positions", "average", "median", "market", "value", "price", "cost", "expensive", "cheap", "bargain", "overpaid", "underpaid", "qb", "rb", "wr", "te", "chart", "graph", "bar chart", "comparison", "compare", "breakdown", "distribution", "position breakdown", "top earners", "franchise tag", "extension", "team option", "top 3 avg", "top 5 avg", "top 10 avg", "starter avg", "starter med", "avg salary", "med salary", "quarterback", "running back", "wide receiver", "tight end", "kicker", "defense", "export to excel", "original spreadsheet"],
     "visibility": "all",
     "popularity": 73
@@ -281,6 +294,7 @@
     "path": "/salary-history",
     "icon": "standings-2",
     "category": "reports",
+    "subcategory": "salary-analytics",
     "tags": ["salary history", "history", "historical", "trends", "trend", "over time", "year over year", "change", "growth", "chart", "line chart", "graph", "timeline", "past", "previous", "cap", "spending", "evolution", "progression", "salary trends over time", "franchise tag", "extension", "team option", "top 3 salaries", "top 5 salaries", "top 10 salaries", "qb", "rb", "wr", "te", "k", "def", "view data as table"],
     "visibility": "all",
     "popularity": 38
@@ -292,6 +306,7 @@
     "path": "/salary-archive",
     "icon": "vault",
     "category": "reports",
+    "subcategory": "salary-analytics",
     "tags": ["salary archive", "archive", "historical", "old", "past", "previous", "spreadsheet", "spreadsheets", "download", "excel", "csv", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "season", "year", "vault", "records", "data dump"],
     "visibility": "all",
     "popularity": 18
@@ -303,6 +318,7 @@
     "path": "/mvp",
     "icon": "standings",
     "category": "reports",
+    "subcategory": "awards",
     "tags": ["mvp", "mvps", "most valuable", "best", "top", "performers", "performance", "salary adjusted", "value", "bang for buck", "efficient", "efficiency", "production", "points per dollar", "bargain", "steal", "outperform", "overperform", "rankings", "award", "awards", "season", "weekly", "gm mvp awards", "team of the year", "all-time team", "all-time mvps", "quarterback", "running back", "wide receiver", "tight end", "kicker", "defense", "points", "contract", "cost per point"],
     "visibility": "all",
     "popularity": 52
@@ -314,6 +330,7 @@
     "path": "/dead-money",
     "icon": "tombstone",
     "category": "reports",
+    "subcategory": "awards",
     "tags": ["dead money", "dead cap", "worst", "bad", "bust", "busts", "overpaid", "underperform", "waste", "wasted", "money", "contracts", "expensive", "disappointment", "regret", "cut", "release", "sunk cost", "tombstone", "rip", "awards", "shame", "wall of shame", "jerry jones award", "brock osweiler award", "starting lineup", "full roster", "all-time", "financial mismanagement", "cost per point", "quarterback", "running back", "wide receiver", "tight end", "kicker", "defense", "flex"],
     "visibility": "all",
     "popularity": 42
@@ -336,6 +353,7 @@
     "path": "/projected-free-agents",
     "icon": "binoculars",
     "category": "reports",
+    "subcategory": "free-agency",
     "tags": ["projected", "free agents", "expiring", "contracts", "final year", "upcoming", "salary", "cap", "free agency", "projections", "offseason", "auction", "targets", "ending", "contract year", "available", "report", "scouting", "fa", "expiring contracts"],
     "visibility": "all",
     "popularity": 60
