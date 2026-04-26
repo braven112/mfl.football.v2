@@ -11,6 +11,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
@@ -342,6 +343,11 @@ function formatSalary(salary: number): string {
 
 <TheLeagueLayout title="Projected Free Agents | TheLeague">
   <div class="pfa-page">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Stats & Reports', href: '/theleague/stats' },
+      { label: 'Projected Free Agents' },
+    ]} />
     <!-- Hero -->
     <div class="pfa-hero">
       <div class="hero-top">

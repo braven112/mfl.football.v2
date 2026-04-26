@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 
 const summaryModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
@@ -89,6 +90,11 @@ function formatCurrency(val: number | null): string {
 <TheLeagueLayout title="Salary Trends">
   <section class="salary-history">
     <header class="page-hero">
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Stats & Reports', href: '/theleague/stats' },
+        { label: 'Salary Trends' },
+      ]} />
       <h1 class="page-hero__title">Salary Trends Over Time</h1>
       <p class="page-hero__desc">
         Tracking the average of the top three (franchise tag), top five

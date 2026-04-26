@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
@@ -257,6 +258,11 @@ const formatCostPerPoint = (costPerPoint: number) => {
   <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="filter-announcer"></div>
   <section class="dead-money">
     <header class="page-header">
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Stats & Reports', href: '/theleague/stats' },
+        { label: 'Dead Money Awards' },
+      ]} />
       <h1>The Dead Money Awards</h1>
       <p class="page-subtitle">
         Celebrating the league's finest examples of financial mismanagement.
