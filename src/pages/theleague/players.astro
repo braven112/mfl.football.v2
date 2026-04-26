@@ -9,6 +9,7 @@
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
@@ -559,6 +560,9 @@ const nflTeamsJson = JSON.stringify(nflTeamsList);
 // Admin gate: Value view is only visible to admin franchises (same auth as nav sidebar)
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Free Agents | TheLeague">
@@ -601,6 +605,12 @@ const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
           <h1 class="hero-title">Free Agents</h1>
           <span class="hero-count">{freeAgents.length} available players</span>
         </div>
+        <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
+          See projected FAs
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
       </div>
 
       <!-- Search -->
@@ -2657,6 +2667,23 @@ const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .hero-cross-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+    white-space: nowrap;
+  }
+  .hero-cross-link:hover {
+    gap: 0.5rem;
+    text-decoration: underline;
   }
   .hero-title-group {
     display: flex;

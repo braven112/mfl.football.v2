@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
-import { resolveLeaguePath } from '../../utils/nav-utils';
+import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueAssets from '../../data/theleague.assets.json';
 import archiveUrls from '../../data/theleague/salary-archive-urls.json';
 
@@ -141,9 +141,6 @@ const serializedConfig = JSON.stringify({
   franchiseMeta: franchiseLookup,
   archiveUrls: archiveUrls ?? {},
 });
-
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Salary Analytics">
@@ -303,14 +300,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       })}
     </div>
 
-    <nav class="salary-footer" aria-label="Related pages">
-      <a href={r("/theleague/salary-archive")} class="salary-footer__link">
-        View Historical Spreadsheets (2009&ndash;2025) &rarr;
-      </a>
-      <a href={r("/theleague/salary-history")} class="salary-footer__link">
-        View Salary Trends Over Time &rarr;
-      </a>
-    </nav>
+    <RelatedReports currentId="salary-analytics" />
   </section>
 </TheLeagueLayout>
 
@@ -700,30 +690,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     margin: 0;
     text-align: center;
     padding: 1.5rem 0;
-  }
-
-  /* ── Footer Links ── */
-  .salary-footer {
-    display: flex;
-    gap: 1.5rem;
-    padding-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .salary-footer__link {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-  }
-
-  .salary-footer__link:hover {
-    text-decoration: underline;
-  }
-
-  .salary-footer__link:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
   }
 
   /* ── Visually Hidden ── */

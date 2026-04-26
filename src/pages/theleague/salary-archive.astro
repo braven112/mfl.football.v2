@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import archiveLinks from '../../data/theleague/salary-archive-links.json';
 ---
 
@@ -45,6 +46,8 @@ import archiveLinks from '../../data/theleague/salary-archive-links.json';
         ))}
       </tbody>
     </table>
+
+    <RelatedReports currentId="salary-archive" />
   </section>
 </TheLeagueLayout>
 

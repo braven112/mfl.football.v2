@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
@@ -586,6 +587,8 @@ const formatCostPerPoint = (costPerPoint: number) => {
         );
       })}
     </section>
+
+    <RelatedReports currentId="dead-money" />
   </section>
 </TheLeagueLayout>
 

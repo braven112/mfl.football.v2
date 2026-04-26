@@ -1,0 +1,197 @@
+---
+/**
+ * RelatedReports — sibling-page discovery strip for the Stats & Reports hub.
+ *
+ * Renders a "Related reports" section at the bottom of a report page,
+ * showing other pages that share the same `subcategory` in
+ * page-directory.json. Falls back to nothing if there are no siblings.
+ *
+ * Usage:
+ *   <RelatedReports currentId="salary-analytics" />
+ */
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { spriteUrl } from '../../utils/sprite-url';
+import pageDirectory from '../../data/page-directory.json';
+
+interface Props {
+  /** The `id` of the current page in page-directory.json. */
+  currentId: string;
+}
+
+interface PageEntry {
+  id: string;
+  title: string;
+  description: string;
+  path: string;
+  icon: string;
+  category: string;
+  subcategory?: string;
+  visibility: string;
+  popularity: number;
+}
+
+const { currentId } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+const allPages = pageDirectory as PageEntry[];
+const current = allPages.find((p) => p.id === currentId);
+const siblings = current?.subcategory
+  ? allPages
+    .filter((p) =>
+      p.id !== currentId &&
+      p.subcategory === current.subcategory &&
+      p.visibility === 'all'
+    )
+    .sort((a, b) => b.popularity - a.popularity)
+  : [];
+---
+
+{siblings.length > 0 ? (
+  <aside class="related-reports" aria-labelledby="related-reports-heading">
+    <div class="related-reports__header">
+      <h2 class="related-reports__title" id="related-reports-heading">Related reports</h2>
+      <a href={r('/theleague/stats')} class="related-reports__cta">
+        All stats &amp; reports
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+    <div class="related-reports__grid">
+      {siblings.map((page) => (
+        <a class="related-reports__card" href={r(`/theleague${page.path}`)}>
+          <svg class="related-reports__icon" width="20" height="20" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-${page.icon}`} />
+          </svg>
+          <div class="related-reports__text">
+            <span class="related-reports__name">{page.title}</span>
+            <span class="related-reports__desc">{page.description}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </aside>
+) : (
+  <aside class="related-reports related-reports--solo" aria-labelledby="related-reports-heading">
+    <div class="related-reports__header">
+      <h2 class="related-reports__title" id="related-reports-heading">More stats &amp; reports</h2>
+      <a href={r('/theleague/stats')} class="related-reports__cta">
+        Back to Stats &amp; Reports
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+  </aside>
+)}
+
+<style>
+  .related-reports {
+    --rr-accent: var(--color-primary, #1c497c);
+    margin-top: 2.5rem;
+    padding: 1.5rem;
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+  }
+
+  .related-reports__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  .related-reports__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--rr-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .related-reports__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--rr-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .related-reports__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .related-reports__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .related-reports__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-gray-50, #f9fafb);
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .related-reports__card:hover {
+    background: var(--color-gray-100, #f3f4f6);
+    transform: translateY(-1px);
+  }
+
+  .related-reports__icon {
+    flex-shrink: 0;
+    color: var(--rr-accent);
+    margin-top: 0.125rem;
+  }
+
+  .related-reports__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .related-reports__name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.3;
+  }
+
+  .related-reports__desc {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .related-reports {
+      padding: 1.25rem;
+    }
+
+    .related-reports__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
