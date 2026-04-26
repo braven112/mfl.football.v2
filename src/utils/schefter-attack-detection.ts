@@ -125,6 +125,32 @@ export function detectAttackOnSchefter(rawText: string | null | undefined): Atta
   return { attack: false, reason: 'no-pejorative' };
 }
 
+/**
+ * Lighter-weight check: does the text mention Schefter at all (subject only,
+ * no pejorative requirement)? Used to route off-topic, Schefter-targeted
+ * tips into the self-deprecating / attack-back lane even when the joke
+ * doesn't include a flagged pejorative (e.g. "Claude was seen at a resort").
+ *
+ * Mirrors the subject-only half of detectAttackOnSchefter — same Roger
+ * disambiguation rule. Kept in lockstep with the .mjs sibling via the
+ * parity test in tests/schefter-attack-detection-parity.test.ts.
+ */
+export function mentionsSchefter(rawText: string | null | undefined): boolean {
+  if (!rawText || typeof rawText !== 'string') return false;
+  const text = rawText.trim();
+  if (text.length < 5) return false;
+
+  const subjectMatch = ATTACK_SUBJECT_PATTERNS.some((re) => re.test(text));
+  if (!subjectMatch) return false;
+
+  const mentionsRoger = ROGER_GUARD_RE.test(text);
+  const explicitSchefterRef = EXPLICIT_SCHEFTER_RE.test(text);
+  const mentionsGenericBot = GENERIC_BOT_RE.test(text);
+  if (mentionsRoger && mentionsGenericBot && !explicitSchefterRef) return false;
+
+  return true;
+}
+
 export const _internals = {
   ATTACK_PEJORATIVES,
   ATTACK_SUBJECT_PATTERNS,

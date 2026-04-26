@@ -350,6 +350,32 @@ export function detectAttackOnSchefter(rawText) {
 }
 
 /**
+ * Lighter-weight check: does the text mention Schefter at all (subject only,
+ * no pejorative requirement)? Used to route off-topic, Schefter-targeted
+ * tips into the self-deprecating / attack-back lane even when the joke
+ * doesn't include a flagged pejorative (e.g. "Claude was seen at a resort").
+ *
+ * Mirrors the subject-only half of detectAttackOnSchefter — same Roger
+ * disambiguation rule. Kept in lockstep with the TS sibling via the parity
+ * test in tests/schefter-attack-detection-parity.test.ts.
+ */
+export function mentionsSchefter(rawText) {
+  if (!rawText || typeof rawText !== 'string') return false;
+  const text = rawText.trim();
+  if (text.length < 5) return false;
+
+  const subjectMatch = ATTACK_SUBJECT_PATTERNS.some((re) => re.test(text));
+  if (!subjectMatch) return false;
+
+  const mentionsRoger = /\b(?:roger|ask\s+roger|the\s+roger\s+bot|roger's\s+bot)\b/i.test(text);
+  const explicitSchefterRef = /\b(?:claude|schefter|schefty)\b/i.test(text);
+  const mentionsGenericBot = /\b(?:the|this|that)\s+bot\b/i.test(text);
+  if (mentionsRoger && mentionsGenericBot && !explicitSchefterRef) return false;
+
+  return true;
+}
+
+/**
  * Normalize a GroupMe display name into a Redis-safe author key. Lowercases,
  * trims, and strips any non-alphanumeric characters. Keeps the ID readable
  * (no hashing) because GroupMe authorship is already public — the leaderboard

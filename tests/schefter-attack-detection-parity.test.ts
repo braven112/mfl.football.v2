@@ -10,9 +10,13 @@
  * fail until both are in sync.
  */
 import { describe, it, expect } from 'vitest';
-import { detectAttackOnSchefter as tsDetect } from '../src/utils/schefter-attack-detection';
+import {
+  detectAttackOnSchefter as tsDetect,
+  mentionsSchefter as tsMentions,
+} from '../src/utils/schefter-attack-detection';
 import {
   detectAttackOnSchefter as jsDetect,
+  mentionsSchefter as jsMentions,
   // @ts-ignore — .mjs via allowJs
 } from '../scripts/schefter-groupme-listen.mjs';
 
@@ -67,6 +71,43 @@ describe('detectAttackOnSchefter — TS vs JS parity', () => {
       }
       // Reasons should agree too; if they ever diverge we want to know.
       expect(ts.reason).toBe(js.reason);
+    });
+  }
+});
+
+// `mentionsSchefter` is the lighter subject-only check used to route
+// off-topic, no-pejorative jokes (e.g. "Claude was seen at a resort") into
+// the self-deprecating lane. Same Roger disambiguation, no pejorative
+// requirement. Parity must hold or the web/GroupMe paths diverge.
+const MENTIONS_CASES: Array<[string, boolean]> = [
+  // Plain Schefter mentions — true
+  ['Rumor has it Claude and Vit were at a resort', true],
+  ['hey schefter, any rumors?', true],
+  ['Schefty out here filing reports again', true],
+  ['the bot is working overtime', true],
+  ['this bot makes me laugh', true],
+  // No subject — false
+  ['rumor about an owner', false],
+  ['the waiver wire is a mess', false],
+  // Roger disambiguation — generic bot + Roger named, no explicit Schefter ref
+  ['the bot is broken, ask Roger', false],
+  ["roger's bot just posted", false],
+  // Roger named but Schefter explicitly named — true
+  ['schefter is on fire even though Roger is fine', true],
+  ['Claude has thoughts and ask Roger does too', true],
+  // Edge cases
+  ['', false],
+  ['   ', false],
+  ['hey', false],
+];
+
+describe('mentionsSchefter — TS vs JS parity', () => {
+  for (const [input, expected] of MENTIONS_CASES) {
+    it(`parity: ${JSON.stringify(input).slice(0, 60)} → ${expected}`, () => {
+      const ts = tsMentions(input);
+      const js = jsMentions(input);
+      expect(ts).toBe(js);
+      expect(ts).toBe(expected);
     });
   }
 });

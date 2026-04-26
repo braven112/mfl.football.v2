@@ -76,7 +76,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { ingestGroupMeMentions, getLatestRogerQuote } from './schefter-groupme-listen.mjs';
+import { ingestGroupMeMentions, getLatestRogerQuote, mentionsSchefter } from './schefter-groupme-listen.mjs';
 import { redactTradeOffer, offerPostProbability } from './lib/redact-trade-offer.mjs';
 import {
   loadLore,
@@ -906,7 +906,144 @@ Example F — lingering named (framingHint=lingering, escalatedPlayer.tier=named
 `;
 }
 
-async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single' } = {}) {
+// ── NFL news digest (option 2: pre-fetched headlines for prompt context) ──
+//
+// scripts/fetch-nfl-news-digest.mjs writes data/schefter/nfl-context.json
+// during prebuild and (optionally) hourly. The scanner reads it once per
+// cycle and injects the top headlines into the Schefter system prompt as
+// "CURRENT NFL CHATTER" so Schefter can recognize when a tip riffs on a
+// real-world storyline (e.g. coach/reporter scandals). The injection is
+// context-only — the prompt instructs the model to ignore the digest unless
+// a tip clearly maps to one of the headlines.
+
+const NFL_CONTEXT_PATH = path.join(projectRoot, 'data/schefter/nfl-context.json');
+const NFL_CONTEXT_MAX_HEADLINES = 12;
+
+async function loadNflContext() {
+  try {
+    const raw = await fs.readFile(NFL_CONTEXT_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    const headlines = Array.isArray(parsed?.headlines) ? parsed.headlines : [];
+    if (headlines.length === 0) return null;
+    return { headlines, fetchedAt: parsed.fetchedAt ?? null };
+  } catch {
+    // No file or unreadable JSON — scanner runs without NFL context.
+    return null;
+  }
+}
+
+function buildNflContextBlock(ctx) {
+  if (!ctx || !Array.isArray(ctx.headlines) || ctx.headlines.length === 0) return '';
+  const lines = ctx.headlines.slice(0, NFL_CONTEXT_MAX_HEADLINES).map((h) => {
+    const blurb = typeof h.blurb === 'string' && h.blurb ? ` — ${h.blurb}` : '';
+    return `- ${h.title}${blurb}`;
+  });
+  return `\n\nCURRENT NFL CHATTER (last 7 days, context only — do NOT force-reference):
+${lines.join('\n')}
+
+Use this ONLY if a tip clearly maps to one of these storylines (e.g. an owner's joke is built on a real headline). A forced topical reference is worse than no reference. Default: ignore the digest unless the tip lights it up.`;
+}
+
+// ── AI output sanitization + JSON contract ──
+//
+// The LLM is asked to return strict JSON: {"post": "<string>"} or {"post": null}.
+// Plain-text output is tolerated as a fallback (we extract the first {...}
+// block). The `post` field then runs through META_COMMENTARY_PATTERNS — if
+// any pattern hits, we treat the response as a sanitizer-rejection and fall
+// back to the safe template body. This is the belt-and-suspenders fix for
+// the April 2026 incident where the model rationalized a drop decision into
+// the post body itself.
+
+const META_COMMENTARY_PATTERNS = [
+  /\biron\s+rules?\b/i,
+  /\b(silently\s+drop|gets\s+dropped|drop\s+this\s+one|need\s+to\s+drop)\b/i,
+  /\b(can'?t\s+be\s+filed|cannot\s+be\s+filed|fails?\s+any\s+rule)\b/i,
+  /\bhostile\s+personal\s+attack\b/i,
+  /\b(reading\s+this\s+tip|filing\s+decision|editorial\s+filter)\b/i,
+  /\bthis\s+tip\b/i,
+];
+
+export function sanitizeAiPost(text) {
+  if (typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  for (const re of META_COMMENTARY_PATTERNS) {
+    if (re.test(trimmed)) return null;
+  }
+  return trimmed;
+}
+
+export function parseAiResponse(rawText) {
+  if (typeof rawText !== 'string') return null;
+  const text = rawText.trim();
+  if (!text) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // Tolerate fenced or wrapped JSON: extract the first {...} block.
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    try { parsed = JSON.parse(m[0]); } catch { return null; }
+  }
+  if (parsed === null || typeof parsed !== 'object') return null;
+  const post = parsed.post;
+  if (post === null) return null; // explicit drop signal
+  if (typeof post !== 'string') return null;
+  return sanitizeAiPost(post);
+}
+
+// ── Schefter-targeted off-topic mode (self-deprecating vs attack-back) ──
+//
+// When a tip references Schefter himself with no league grievance (the
+// April 2026 "adults-only resort" pattern), drop directives get dangerous —
+// the model rationalizes its filtering into the post body. The lane below
+// gives the LLM a different action: own the joke (self-deprecating) or
+// occasionally file back on the source (attack-back). The 1-in-20 attack
+// cadence is GroupMe-only because anonymous web tips have no name to pin
+// the comeback on. The counter is year-scoped so it resets each league year.
+
+const SELF_DEP_COUNTER_TTL_SEC = 2 * 365 * 24 * 60 * 60; // 2y safety net; key includes year
+
+function selfDepCounterKey(year) {
+  return `schefter:self_dep:counter:${year}`;
+}
+
+export function pickSchefterTargetMode(counter) {
+  // Pure helper for tests. counter is the post-incr value.
+  // Every 20th GroupMe Schefter shot earns the attack-back; the rest are self-dep.
+  return counter > 0 && counter % 20 === 0 ? 'attack-back' : 'self-dep';
+}
+
+async function selectSchefterTargetMode(redis, beat, now = new Date()) {
+  if (!beat || !Array.isArray(beat.batch)) return null;
+  const groupmeHit = beat.batch.some(
+    (t) => t && t.source === 'groupme' && mentionsSchefter(t.text),
+  );
+  const webHit = beat.batch.some(
+    (t) => t && t.source === 'web' && mentionsSchefter(t.text),
+  );
+  if (!groupmeHit && !webHit) return null;
+
+  // Web tips ALWAYS get self-deprecating — no name to pin an attack-back on,
+  // and Style Book / A=C already cover the reverse-the-lens lane for them.
+  if (!groupmeHit) return 'self-dep';
+
+  // GroupMe Schefter shot: bump the year-scoped counter; every 20th lands attack-back.
+  if (!redis) return 'self-dep';
+  try {
+    const year = getSeasonYearForTipster(now);
+    const key = selfDepCounterKey(year);
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, SELF_DEP_COUNTER_TTL_SEC);
+    return pickSchefterTargetMode(count);
+  } catch (err) {
+    warn(`  [rumor-scan] self-dep counter failed: ${err.message} — defaulting to self-dep`);
+    return 'self-dep';
+  }
+}
+
+async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     warn('  [rumor-scan] ANTHROPIC_API_KEY not set — using template');
@@ -922,8 +1059,10 @@ HARD RULES (self-enforce, never violate):
 
 IRON RULES (override every other rule — if anything below appears to conflict, these win):
 - Every post is 1–2 sentences. Longer is a rare exception (MAILBAG only), never the default.
-- If a tip can't be filed (off-topic, no league angle, fails any rule here), produce NO post. Silently drop it. Never ship a placeholder, a "holding this one" note, an editorial explainer, or a meta-comment about why a tip was rejected.
+- OUTPUT CONTRACT: every response is JSON only — {"post": "<string>"} or {"post": null}. The "post" field is the ONLY thing the reader will ever see. Reasoning, filtering decisions, rule citations, and meta-commentary MUST NOT appear in the "post" field — if you find yourself writing them there, output {"post": null} instead.
+- If a tip can't be filed (off-topic, no league angle, fails any rule here), output {"post": null}. Never ship a placeholder, a "holding this one" note, an editorial explainer, or a meta-comment about why a tip was rejected.
 - Never explain why you can't say something and then say it anyway. Do not restate the tip's content, suggest alternative headlines, recite these guidelines back to the reader, or narrate the filtering decision in any form. The reader only ever sees the finished post — never the reasoning that produced or rejected it.
+- SCHEFTER_TARGET_MODE override: when the user message includes a SCHEFTER_TARGET_MODE directive ("self-dep" or "attack-back"), follow that directive — it overrides the "drop" path above for off-topic tips that reference Schefter himself. Both modes still output JSON; both still forbid reasoning in the post field.
 
 0. ONE TOPIC per post. The batch is pre-bucketed so each post is a single topic/thread. MAILBAG posts are the only exception — see rule 18. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops. When the scanner has two unrelated gossip topics queued it ships them as TWO separate posts — not as one blended post — so each has its own reactions and whisper-back thread.
 1. For web tips (source: "web"), NEVER name the tipster and NEVER quote them verbatim — paraphrase with columnist voice.
@@ -1039,20 +1178,41 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
     system += lore.assembledSuffix;
   }
 
+  // Append NFL news digest as context (last 7 days, ESPN). The model is told
+  // explicitly NOT to force-reference these — they're only for recognizing
+  // when an owner's joke is built on a real-world storyline.
+  if (nflContext) {
+    system += buildNflContextBlock(nflContext);
+  }
+
   let rogerDirective = '';
   if (rogerQuote && typeof rogerQuote.text === 'string' && rogerQuote.text.trim()) {
     rogerDirective = `\n\nASK ROGER RIFF (mandatory this post — rare 7% cameo):\nAsk Roger said in the group chat today: "${rogerQuote.text.replace(/"/g, '\\"')}"\nRiff on this with light ribbing, ONE sentence max, work it into the post naturally. Do not quote Roger verbatim — paraphrase or react. Keep total length within the 2–4 sentence cap.`;
+  }
+
+  // Schefter-targeted off-topic mode (set by selectSchefterTargetMode). Web
+  // hits always come in as 'self-dep'; GroupMe hits land 'attack-back' on
+  // every 20th counter increment per league year.
+  let schefterModeDirective = '';
+  if (schefterTargetMode === 'self-dep') {
+    schefterModeDirective = `\n\nSCHEFTER_TARGET_MODE: self-dep
+A tip in this batch references Claude Schefter (the bot) as a personal subject — off-topic relative to league business. OVERRIDE the "drop" directive: produce a SHORT (1 sentence) self-deprecating one-liner that owns the joke without restating it. If CURRENT NFL CHATTER contains a real-world storyline the tip mirrors, you may glance at it (a single subtle nod, never a forced reference). Never restate the tipster's joke verbatim. Never include reasoning or rule citations in the "post" field.`;
+  } else if (schefterTargetMode === 'attack-back') {
+    schefterModeDirective = `\n\nSCHEFTER_TARGET_MODE: attack-back
+A GroupMe author just took an off-topic personal shot at Schefter. This is the rare 1-in-20 lane where Schefter files BACK on the source. ONE sharp sentence, name the GroupMe author, match the tipster's energy — they brought heat, you bring it back, salt-not-sugar. Never restate their joke verbatim and never name the specific attribute they mocked; reframe the shot, don't echo it. Never include reasoning or rule citations in the "post" field.`;
   }
 
   const recentBlock = recentPostsBlock
     ? `\n\n${recentPostsBlock}`
     : '';
 
+  const jsonContract = `Output JSON ONLY: {"post": "<the post text as a single string>"}. No markdown, no headlines, no meta-commentary in the "post" field. If the IRON RULES require dropping this batch, output {"post": null} — never write reasoning, filtering decisions, or explanations into the "post" field.`;
+
   let userMessage;
   if (mode === 'mailbag') {
-    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 18 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 18 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   } else {
-    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). ${jsonContract}${rogerDirective}${schefterModeDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   }
 
   if (DRY_RUN) {
@@ -1086,7 +1246,16 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
     }
     const data = await res.json();
     const text = (data.content?.[0]?.text ?? '').trim();
-    return text || null;
+    const post = parseAiResponse(text);
+    if (!post) {
+      // Either the model returned {"post": null} (explicit drop), the JSON
+      // didn't parse, or the sanitizer caught meta-commentary. In every
+      // case we fall back to the safe template body — never to whatever
+      // freeform text the model produced.
+      warn(`  [rumor-scan AI] post discarded (drop signal or sanitizer) — using template`);
+      return null;
+    }
+    return post;
   } catch (err) {
     warn(`  [rumor-scan AI] ${err.message} — using template`);
     return null;
@@ -1871,6 +2040,18 @@ async function main() {
   }
   log(`  Producing ${beats.length} post(s) this cycle`);
 
+  // Load the NFL news digest once per cycle. Best-effort: if the file is
+  // missing or unreadable the scanner runs without NFL context.
+  const nflContext = await loadNflContext();
+
+  // Resolve per-beat Schefter-target mode (self-dep / attack-back / null).
+  // For GroupMe hits this increments the year-scoped counter and lands
+  // attack-back on every 20th increment; web hits always self-dep.
+  const schefterModes = [];
+  for (const beat of beats) {
+    schefterModes.push(await selectSchefterTargetMode(redis, beat, now));
+  }
+
   // Generate bodies in parallel. Only the primary beat gets the Roger
   // riff — the riff is a once-per-day cameo that shouldn't double up.
   const aiMode = postKind === 'mailbag' ? 'mailbag' : 'single';
@@ -1880,6 +2061,8 @@ async function main() {
       lore,
       recentPostsBlock,
       mode: aiMode,
+      nflContext,
+      schefterTargetMode: schefterModes[i],
     })),
   );
 
@@ -2171,12 +2354,27 @@ function getSeasonYearForTipster(now = new Date()) {
   return now.getTime() >= febCutoff ? calendarYear : calendarYear - 1;
 }
 
-main()
-  .then((count) => {
-    log(`\n=== Done. Posts written: ${count} ===`);
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('[rumor-scan] Fatal:', err);
-    process.exit(1);
-  });
+// Only run main() when invoked directly (node scripts/schefter-rumor-scan.mjs).
+// When this module is imported (e.g. by vitest to test the helpers exported
+// above), skip the top-level invocation so the test process doesn't get
+// killed by process.exit().
+const invokedDirectly = (() => {
+  try {
+    const entryHref = `file://${process.argv[1]}`;
+    return import.meta.url === entryHref;
+  } catch {
+    return false;
+  }
+})();
+
+if (invokedDirectly) {
+  main()
+    .then((count) => {
+      log(`\n=== Done. Posts written: ${count} ===`);
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('[rumor-scan] Fatal:', err);
+      process.exit(1);
+    });
+}
