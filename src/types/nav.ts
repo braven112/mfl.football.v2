@@ -87,6 +87,29 @@ export interface NavLink {
 }
 
 /**
+ * Calendar phase used to drive section ordering and default open state.
+ * - 'in-season': Labor Day → Feb 14 cutoff (regular season + playoffs + comp picks)
+ * - 'off-season': Feb 14 cutoff → Labor Day (auction, rookie draft, summer)
+ */
+export type LeaguePhase = 'in-season' | 'off-season';
+
+/**
+ * When a section should be open by default (before the user's stored preference).
+ * - 'always': open in both phases
+ * - 'in-season' | 'off-season': open only during that phase
+ * - 'never': always start collapsed
+ */
+export type NavSectionDefaultOpen = 'always' | 'in-season' | 'off-season' | 'never';
+
+/**
+ * Per-phase ordering for a section. Lower number = nearer the top of the nav.
+ */
+export interface NavSectionPhaseOrder {
+  inSeason: number;
+  offSeason: number;
+}
+
+/**
  * Navigation section (group of links)
  */
 export interface NavSection {
@@ -105,11 +128,11 @@ export interface NavSection {
   /** Restrict section to specific league */
   leagueOnly?: LeagueSlug;
 
-  /** Whether section is collapsible (future feature) */
-  collapsible?: boolean;
+  /** Per-phase ordering. If absent, section keeps its config-file order. */
+  phaseOrder?: NavSectionPhaseOrder;
 
-  /** Whether section starts collapsed (future feature) */
-  defaultCollapsed?: boolean;
+  /** Default expanded state (overridden by user's persisted preference) */
+  defaultOpen?: NavSectionDefaultOpen;
 }
 
 /**
@@ -343,6 +366,9 @@ export const NAV_COOKIES = {
 
   /** Stores commissioner mode toggle state */
   COMMISH_MODE: 'commish-mode',
+
+  /** Stores per-section open/closed state as JSON: { [sectionId]: 'open' | 'closed' } */
+  NAV_SECTIONS: 'nav-sections-v1',
 } as const;
 
 /**
