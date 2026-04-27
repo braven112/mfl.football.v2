@@ -932,11 +932,11 @@ export function parseAiResponse(rawText) {
 // gives the LLM a different action: own the joke (self-deprecating) or
 // occasionally file back on the source (attack-back). Attack-back is
 // GroupMe-only because anonymous web tips have no name to pin the comeback
-// on, and is treated as an INDEPENDENT 5% probability per event — not a
+// on, and is treated as an INDEPENDENT 7.5% probability per event — not a
 // counter — so two attack-backs in a row are possible (just unlikely) and
 // a long quiet stretch between them is also possible.
 
-const ATTACK_BACK_PROBABILITY = 0.05;
+const ATTACK_BACK_PROBABILITY = 0.075;
 
 export function pickSchefterTargetMode(rng = Math.random) {
   // Pure helper. Caller passes a 0..1 RNG so tests can pin the threshold.
@@ -957,7 +957,7 @@ function selectSchefterTargetMode(beat) {
   // and Style Book / A=C already cover the reverse-the-lens lane for them.
   if (!groupmeHit) return 'self-dep';
 
-  // GroupMe Schefter shot: 5% probability of attack-back, otherwise self-dep.
+  // GroupMe Schefter shot: 7.5% probability of attack-back, otherwise self-dep.
   return pickSchefterTargetMode();
 }
 
@@ -1109,7 +1109,7 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
   }
 
   // Schefter-targeted off-topic mode (set by selectSchefterTargetMode). Web
-  // hits always come in as 'self-dep'; GroupMe hits roll a 5% probability
+  // hits always come in as 'self-dep'; GroupMe hits roll a 7.5% probability
   // of 'attack-back' per beat (independent draws — no counter, no reset).
   let schefterModeDirective = '';
   if (schefterTargetMode === 'self-dep') {
@@ -1117,7 +1117,7 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
 A tip in this batch references Claude Schefter (the bot) as a personal subject — off-topic relative to league business. OVERRIDE the "drop" directive: produce a SHORT (1 sentence) self-deprecating one-liner that owns the joke without restating it. If CURRENT NFL CHATTER contains a real-world storyline the tip mirrors, you may glance at it (a single subtle nod, never a forced reference). Never restate the tipster's joke verbatim. Never include reasoning or rule citations in the "post" field.`;
   } else if (schefterTargetMode === 'attack-back') {
     schefterModeDirective = `\n\nSCHEFTER_TARGET_MODE: attack-back
-A GroupMe author just took an off-topic personal shot at Schefter. This is the rare attack-back lane (~5% of GroupMe Schefter shots) where Schefter files BACK on the source. ONE sharp sentence, name the GroupMe author, match the tipster's energy — they brought heat, you bring it back, salt-not-sugar. Never restate their joke verbatim and never name the specific attribute they mocked; reframe the shot, don't echo it. Never include reasoning or rule citations in the "post" field.`;
+A GroupMe author just took an off-topic personal shot at Schefter. This is the rare attack-back lane (~7.5% of GroupMe Schefter shots) where Schefter files BACK on the source. ONE sharp sentence, name the GroupMe author, match the tipster's energy — they brought heat, you bring it back, salt-not-sugar. Never restate their joke verbatim and never name the specific attribute they mocked; reframe the shot, don't echo it. Never include reasoning or rule citations in the "post" field.`;
   }
 
   const recentBlock = recentPostsBlock
@@ -1963,7 +1963,7 @@ async function main() {
   const nflContext = await loadNflContext();
 
   // Resolve per-beat Schefter-target mode (self-dep / attack-back / null).
-  // GroupMe Schefter mentions get a 5% probability of attack-back per beat;
+  // GroupMe Schefter mentions get a 7.5% probability of attack-back per beat;
   // web hits always self-dep. No state — independent draw each scan.
   const schefterModes = beats.map((beat) => selectSchefterTargetMode(beat));
 

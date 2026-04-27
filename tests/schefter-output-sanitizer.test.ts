@@ -117,15 +117,15 @@ describe('parseAiResponse — JSON contract', () => {
   });
 });
 
-describe('pickSchefterTargetMode — 5% probability', () => {
+describe('pickSchefterTargetMode — 7.5% probability', () => {
   it('returns attack-back when rng yields a value below the threshold', () => {
     expect(pickSchefterTargetMode(() => 0)).toBe('attack-back');
-    expect(pickSchefterTargetMode(() => 0.04)).toBe('attack-back');
-    expect(pickSchefterTargetMode(() => 0.0499)).toBe('attack-back');
+    expect(pickSchefterTargetMode(() => 0.05)).toBe('attack-back');
+    expect(pickSchefterTargetMode(() => 0.0749)).toBe('attack-back');
   });
 
   it('returns self-dep when rng yields the threshold or above', () => {
-    expect(pickSchefterTargetMode(() => 0.05)).toBe('self-dep');
+    expect(pickSchefterTargetMode(() => 0.075)).toBe('self-dep');
     expect(pickSchefterTargetMode(() => 0.5)).toBe('self-dep');
     expect(pickSchefterTargetMode(() => 0.99)).toBe('self-dep');
   });
@@ -136,16 +136,16 @@ describe('pickSchefterTargetMode — 5% probability', () => {
     expect(['self-dep', 'attack-back']).toContain(result);
   });
 
-  it('produces ~5% attack-back across a large sample with a real RNG', () => {
-    // 10,000 trials at p=0.05 → expected 500, std-dev ≈ 21.8.
-    // ±5σ window (391..609) keeps this test from flaking on any cosmic-ray
-    // RNG run while still catching a real regression (e.g. p=0.10 would give
-    // ~1000 hits, well outside the window).
+  it('produces ~7.5% attack-back across a large sample with a real RNG', () => {
+    // 10,000 trials at p=0.075 → expected 750, std-dev ≈ 26.3.
+    // ±5σ window (618..882) keeps this test from flaking on any cosmic-ray
+    // RNG run while still catching a real regression (e.g. p=0.05 would
+    // give ~500 hits and p=0.15 would give ~1500 — both well outside).
     let attacks = 0;
     for (let i = 0; i < 10000; i++) {
       if (pickSchefterTargetMode() === 'attack-back') attacks++;
     }
-    expect(attacks).toBeGreaterThanOrEqual(391);
-    expect(attacks).toBeLessThanOrEqual(609);
+    expect(attacks).toBeGreaterThanOrEqual(618);
+    expect(attacks).toBeLessThanOrEqual(882);
   });
 });
