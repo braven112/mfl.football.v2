@@ -45,9 +45,14 @@ describe('rumor-scan daily caps — trade-heavy, gossip-rationed', () => {
 
 describe('rumor-scan bucketing — one topic per post', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
+  // classifyTipKind / buildTopicBuckets / bucketPriorityScore moved to a
+  // shared module so the admin dashboard can preview the next bucket.
+  // The scanner imports from there; function-body assertions now read
+  // the shared module's source.
+  const bucketSrc = read('scripts/lib/schefter-bucket-logic.mjs');
 
   it('defines a buildTopicBuckets helper that groups tips by topic/thread', () => {
-    expect(src).toMatch(/function\s+buildTopicBuckets\(/);
+    expect(bucketSrc).toMatch(/function\s+buildTopicBuckets\(/);
   });
 
   it('defines a pickPrimaryBucket helper that honors the gossip budget', () => {
@@ -60,7 +65,7 @@ describe('rumor-scan bucketing — one topic per post', () => {
     // Real MFL pending offers are the trade-rumor headline material.
     // Web/groupme tips with topic === 'trade' are speculation and ride
     // the gossip lane subject to the gossip cap.
-    const fn = src.match(/function\s+classifyTipKind[\s\S]+?\n\}/);
+    const fn = bucketSrc.match(/function\s+classifyTipKind[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
     const body = fn![0];
     expect(body).toMatch(/source\s*===\s*['"]trade_offer['"]\)\s*return\s+['"]trade['"]/);
@@ -74,7 +79,7 @@ describe('rumor-scan bucketing — one topic per post', () => {
     // `topic:<topic>:<franchiseHint || 'league-wide'>` so they bucket
     // independently and ship as two separate posts (subject to the
     // pressure gate).
-    const fn = src.match(/function\s+buildTopicBuckets[\s\S]+?\n\}/);
+    const fn = bucketSrc.match(/function\s+buildTopicBuckets[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
     const body = fn![0];
     expect(body).toMatch(/key\s*=\s*`topic:\$\{topic\}:\$\{scope\}`/);
@@ -271,11 +276,12 @@ describe('rumor-scan LLM — age-aware framing rule', () => {
 
 describe('rumor-scan bucket priority — age boost so old tips rise', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
+  const bucketSrc = read('scripts/lib/schefter-bucket-logic.mjs');
 
   it('exposes a bucketPriorityScore helper that adds a per-day age boost', () => {
-    expect(src).toMatch(/function\s+bucketPriorityScore\(/);
-    expect(src).toMatch(/oldestAgeDays/);
-    expect(src).toMatch(/return\s+sizeScore\s*\+\s*oldestAgeDays/);
+    expect(bucketSrc).toMatch(/function\s+bucketPriorityScore\(/);
+    expect(bucketSrc).toMatch(/oldestAgeDays/);
+    expect(bucketSrc).toMatch(/return\s+sizeScore\s*\+\s*oldestAgeDays/);
   });
 
   it('sorts both trade and gossip buckets by bucketPriorityScore (descending)', () => {
