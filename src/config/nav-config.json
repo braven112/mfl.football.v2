@@ -1,53 +1,80 @@
 {
   "sections": [
     {
-      "id": "popular",
-      "label": "Popular",
+      "id": "news-updates",
+      "label": "News & Updates",
+      "phaseOrder": { "inSeason": 2, "offSeason": 1 },
+      "defaultOpen": "always",
       "links": [
         {
-          "id": "forum",
-          "label": "Message Board",
-          "icon": "comments",
-          "url": "https://theleague.us/forum/index.php",
+          "id": "news",
+          "label": "News",
+          "icon": "news",
+          "path": "/news",
           "external": false,
           "leagueOnly": "theleague",
-          "description": "Discussion forum for league members"
+          "description": "The Schefter Report — breaking news, transactions, and league chatter"
         },
         {
-          "id": "rosters",
-          "label": "Roster/Salary",
-          "labelAFL": "Rosters",
-          "icon": "banknote",
-          "iconAFL": "helmet",
-          "path": "/rosters",
-          "external": false,
-          "description": "View all team rosters and salary cap details"
-        },
-        {
-          "id": "players",
-          "label": "Free Agents",
-          "icon": "binoculars",
-          "path": "/players",
+          "id": "tip-schefter",
+          "label": "Tip Schefter",
+          "icon": "user-secret",
+          "path": "/schefter/tip",
           "external": false,
           "leagueOnly": "theleague",
-          "description": "Browse available free agents with ADP and points data"
+          "description": "Drop an anonymous tip into the Schefter Rumor Mill"
         },
         {
-          "id": "next-year",
-          "label": "League Planner",
-          "icon": "chalkboard",
-          "path": "/rosters?view=planner",
+          "id": "league-calendar",
+          "label": "League Calendar",
+          "icon": "calendar",
+          "path": "/calendar",
           "external": false,
           "leagueOnly": "theleague",
-          "description": "Phase-aware offseason planner with free agent needs analysis"
+          "description": "View upcoming league events and deadlines"
         },
         {
-          "id": "draft-predictor",
-          "label": "Draft Order",
-          "icon": "draft-podium",
-          "path": "/draft-predictor",
+          "id": "whats-new",
+          "label": "What's New",
+          "icon": "star",
+          "path": "/whats-new",
           "external": false,
-          "description": "View projected draft order"
+          "leagueOnly": "theleague",
+          "description": "See the latest features and improvements"
+        }
+      ]
+    },
+    {
+      "id": "this-week",
+      "label": "This Week",
+      "phaseOrder": { "inSeason": 1, "offSeason": 4 },
+      "defaultOpen": "in-season",
+      "links": [
+        {
+          "id": "submit-lineup",
+          "label": "Set Lineup",
+          "icon": "lineup",
+          "path": "/theleague/lineup",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Set your starting lineup"
+        },
+        {
+          "id": "coach-tab",
+          "label": "Coach Tab",
+          "icon": "submit",
+          "path": "/rosters?view=coach",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Coach mode with matchups & odds"
+        },
+        {
+          "id": "live-scoring",
+          "label": "Live Scoring",
+          "icon": "goals",
+          "urlTemplate": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE6",
+          "external": true,
+          "description": "Real-time scoring on MFL"
         },
         {
           "id": "standings",
@@ -75,62 +102,56 @@
           "description": "Playoff bracket and results"
         },
         {
-          "id": "league-calendar",
-          "label": "League Calendar",
-          "icon": "calendar",
-          "path": "/calendar",
+          "id": "players",
+          "label": "Free Agents",
+          "icon": "binoculars",
+          "path": "/players",
           "external": false,
           "leagueOnly": "theleague",
-          "description": "View upcoming league events and deadlines"
+          "description": "Browse available free agents with ADP and points data"
         },
         {
-          "id": "whats-new",
-          "label": "What's New",
-          "icon": "star",
-          "path": "/whats-new",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "See the latest features and improvements"
-        },
-        {
-          "id": "rules",
-          "label": "Rules",
-          "icon": "gavel",
-          "path": "/rules",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "League rules and bylaws"
+          "id": "add-drop",
+          "label": "Add/Drop",
+          "icon": "plus",
+          "urlTemplate": "https://{host}/{year}/add_drop?L={leagueId}",
+          "external": true,
+          "description": "Add or drop players on MFL"
         }
       ]
     },
     {
-      "id": "my-team",
-      "label": "My Team",
+      "id": "offseason-war-room",
+      "label": "Offseason War Room",
+      "phaseOrder": { "inSeason": 5, "offSeason": 2 },
+      "defaultOpen": "off-season",
       "leagueOnly": "theleague",
       "links": [
         {
-          "id": "coach-tab",
-          "label": "Coach Tab",
-          "icon": "submit",
-          "path": "/rosters?view=coach",
+          "id": "mock-draft",
+          "label": "Mock Draft",
+          "icon": "podium-persona",
+          "path": "/mock-draft",
           "external": false,
-          "description": "Coach mode with matchups & odds"
+          "leagueOnly": "theleague",
+          "description": "Run a mock auction or rookie draft simulation"
         },
         {
-          "id": "contracts",
-          "label": "Contracts",
-          "icon": "file-text",
-          "path": "/contracts/manage",
+          "id": "draft-predictor",
+          "label": "Draft Order",
+          "icon": "draft-podium",
+          "path": "/draft-predictor",
           "external": false,
-          "description": "View and manage your contract declarations"
+          "description": "View projected draft order"
         },
         {
-          "id": "trade-builder",
-          "label": "Trade Builder",
-          "icon": "transactions-2",
-          "path": "/trade-builder",
+          "id": "next-year",
+          "label": "League Planner",
+          "icon": "chalkboard",
+          "path": "/rosters?view=planner",
           "external": false,
-          "description": "Simulate trades and see cap impact"
+          "leagueOnly": "theleague",
+          "description": "Phase-aware offseason planner with free agent needs analysis"
         },
         {
           "id": "import-rankings",
@@ -138,6 +159,7 @@
           "icon": "clipboard",
           "path": "/import-rankings",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "Import player rankings from external sites using bookmarklets"
         },
         {
@@ -148,45 +170,60 @@
           "external": false,
           "visibility": "admin",
           "description": "Personalized player rankings with drag-and-drop reordering"
-        },
-        {
-          "id": "submit-lineup",
-          "label": "Set Lineup",
-          "icon": "lineup",
-          "path": "/theleague/lineup",
-          "external": false,
-          "description": "Set your starting lineup"
-        },
-        {
-          "id": "tip-schefter",
-          "label": "Tip Schefter",
-          "icon": "news",
-          "path": "/theleague/schefter/tip",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "Drop an anonymous tip into the Schefter Rumor Mill"
-        },
-        {
-          "id": "add-drop",
-          "label": "Add/Drop",
-          "icon": "plus",
-          "urlTemplate": "https://{host}/{year}/add_drop?L={leagueId}",
-          "external": true,
-          "description": "Add or drop players on MFL"
-        },
-        {
-          "id": "live-scoring",
-          "label": "Live Scoring",
-          "icon": "goals",
-          "urlTemplate": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE6",
-          "external": true,
-          "description": "Real-time scoring on MFL"
         }
       ]
     },
     {
-      "id": "reports",
-      "label": "Advanced Reports",
+      "id": "cap-contracts",
+      "label": "Cap & Contracts",
+      "phaseOrder": { "inSeason": 3, "offSeason": 3 },
+      "defaultOpen": "never",
+      "leagueOnly": "theleague",
+      "links": [
+        {
+          "id": "rosters",
+          "label": "Roster/Salary",
+          "labelAFL": "Rosters",
+          "icon": "banknote",
+          "iconAFL": "helmet",
+          "path": "/rosters",
+          "external": false,
+          "description": "View all team rosters and salary cap details"
+        },
+        {
+          "id": "contracts",
+          "label": "Contracts",
+          "icon": "file-text",
+          "path": "/contracts/manage",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "View and manage your contract declarations"
+        },
+        {
+          "id": "trade-builder",
+          "label": "Trade Builder",
+          "icon": "transactions-2",
+          "path": "/trade-builder",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Simulate trades and see cap impact"
+        },
+        {
+          "id": "projected-free-agents",
+          "label": "Projected Free Agents",
+          "icon": "binoculars-front",
+          "path": "/projected-free-agents",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Players in their final contract year heading to free agency"
+        }
+      ]
+    },
+    {
+      "id": "league-history",
+      "label": "League History",
+      "phaseOrder": { "inSeason": 4, "offSeason": 5 },
+      "defaultOpen": "never",
       "leagueOnly": "theleague",
       "links": [
         {
@@ -246,22 +283,33 @@
           "external": false,
           "leagueOnly": "theleague",
           "description": "See when each franchise owner last visited the site"
-        },
-        {
-          "id": "projected-free-agents",
-          "label": "Projected Free Agents",
-          "icon": "binoculars",
-          "path": "/projected-free-agents",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "Players in their final contract year heading to free agency"
         }
       ]
     },
     {
-      "id": "leagues",
-      "label": "Leagues",
+      "id": "reference",
+      "label": "Reference",
+      "phaseOrder": { "inSeason": 6, "offSeason": 6 },
+      "defaultOpen": "never",
       "links": [
+        {
+          "id": "rules",
+          "label": "Rules",
+          "icon": "gavel",
+          "path": "/rules",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "League rules and bylaws"
+        },
+        {
+          "id": "suggestions",
+          "label": "Suggestions",
+          "icon": "info",
+          "path": "/suggestions",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Submit feature requests and feedback"
+        },
         {
           "id": "theleague-site",
           "label": "TheLeague.us",
@@ -314,7 +362,10 @@
     "/about": "/about",
     "/rules": "/rules",
     "/activity": "/activity",
-    "/search": "/search"
+    "/search": "/search",
+    "/news": "/news",
+    "/mock-draft": "/mock-draft",
+    "/suggestions": "/suggestions"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
