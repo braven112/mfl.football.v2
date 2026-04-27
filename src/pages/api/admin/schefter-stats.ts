@@ -42,7 +42,14 @@ type RedisClient = {
   hgetall: <T = Record<string, unknown>>(key: string) => Promise<T | null>;
   get: <T = unknown>(key: string) => Promise<T | null>;
   lrange: <T = string>(key: string, start: number, stop: number) => Promise<T[]>;
+  zrange: <T = string>(key: string, min: number, max: number, opts?: { rev?: boolean }) => Promise<T[]>;
 };
+
+// Imported from the scanner's shared lib so the admin preview matches the
+// scanner's bucket selection exactly. Both consumers must agree.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — .mjs via allowJs
+import { buildTopicBuckets, bucketPriorityScore, rankBuckets } from '../../../../scripts/lib/schefter-bucket-logic.mjs';
 
 let _redis: RedisClient | null | undefined;
 
@@ -188,6 +195,8 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersPosted,
     tradeOffersFirstSeenMap,
     ownerReportsMap,
+    pendingTipsRaw,
+    recentGroupMeRaw,
   ] = await Promise.all([
     redis.llen(TIPS_QUEUE_KEY).catch(() => 0),
     redis.llen(TIPS_PROCESSED_KEY).catch(() => 0),
@@ -203,7 +212,68 @@ async function readRedisStats(redis: RedisClient) {
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
     redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
     redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
+    // Pull the actual queue contents (not just LLEN) so the admin page can
+    // render a "what's next to post" list. Cap at 50 — the queue rarely
+    // grows past a handful, and 50 is a safe upper bound for payload size.
+    redis.lrange<string>(TIPS_QUEUE_KEY, 0, 49).catch(() => [] as string[]),
+    // Pull the recent GroupMe message cache so the admin can see every
+    // message that came through the chat — both the ones Schefter detected
+    // and the ones he ignored. Cap at 50; the cache itself holds 500.
+    redis.zrange<string>(GROUPME_MESSAGES_KEY, 0, 49, { rev: true }).catch(() => [] as string[]),
   ]);
+
+  // Parse the queue snapshot into admin-safe tip objects. We strip the
+  // hashedOwnerId — admins should never see that field; it's a stable
+  // identifier across tips and would let the commish de-anonymize a web
+  // tipster across a session. Everything else (text, source, author,
+  // submittedAt, attackOnSchefter, etc.) is fine to surface.
+  const pendingTips: Array<Record<string, unknown>> = [];
+  for (const raw of pendingTipsRaw ?? []) {
+    try {
+      const tip = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (tip && typeof tip === 'object') {
+        const { hashedOwnerId: _hid, ...safe } = tip as Record<string, unknown>;
+        pendingTips.push(safe);
+      }
+    } catch {
+      // Skip unparseable entries — shouldn't happen but degrade gracefully.
+    }
+  }
+  // Order oldest-first (next to post — they've marinated longest).
+  pendingTips.sort((a, b) => {
+    const ax = typeof a.submittedAt === 'number' ? a.submittedAt : 0;
+    const bx = typeof b.submittedAt === 'number' ? b.submittedAt : 0;
+    return ax - bx;
+  });
+
+  // Recent GroupMe messages — latest 50, newest first. Surface as-is so the
+  // admin can scan the chat stream and see which messages Schefter picked
+  // up vs. ignored. We cross-reference against pendingTips below so the
+  // page can mark messages already enqueued as tips.
+  const recentGroupMe: Array<Record<string, unknown>> = [];
+  for (const raw of recentGroupMeRaw ?? []) {
+    try {
+      const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (msg && typeof msg === 'object') recentGroupMe.push(msg as Record<string, unknown>);
+    } catch {
+      // Skip unparseable entries.
+    }
+  }
+
+  // Predicted post order — runs the same bucket logic the scanner uses,
+  // so the admin sees an honest preview of the next post(s). Trade buckets
+  // win first (always), then gossip buckets sorted by descending
+  // priorityScore (size + age boost). The first entry is what the next
+  // scanner cycle would pick if marinate + cap gates pass.
+  const ranked = rankBuckets(buildTopicBuckets(pendingTips), new Date());
+  const predictedPostOrder = ranked.map((b: { key: string; kind: string; tips: unknown[]; oldestSubmittedAt: number }) => ({
+    key: b.key,
+    kind: b.kind,
+    tipCount: b.tips.length,
+    tipIds: (b.tips as Array<{ id?: unknown }>).map((t) => (typeof t.id === 'string' ? t.id : null)).filter((x): x is string => !!x),
+    oldestSubmittedAt: b.oldestSubmittedAt,
+    priorityScore: bucketPriorityScore(b, new Date()),
+  }));
 
   // Sample the processed archive to break down tip sources (web vs groupme vs trade_offer)
   let tipSourceBreakdown: Record<string, number> = { web: 0, groupme: 0, trade_offer: 0, unknown: 0 };
@@ -284,6 +354,9 @@ async function readRedisStats(redis: RedisClient) {
     tipSourceBreakdown,
     tipSampleSize,
     seasonYear,
+    pendingTips,
+    recentGroupMe,
+    predictedPostOrder,
   };
 }
 

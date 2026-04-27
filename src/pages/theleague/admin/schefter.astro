@@ -137,6 +137,47 @@ if (!user || !isCommissionerOrAdmin(user)) {
         <div id="ops-live-trades-body" class="ops-live-trades">Loading…</div>
       </article>
 
+      <article class="ops-card ops-card--wide" aria-labelledby="card-predicted">
+        <h2 id="card-predicted" class="ops-card__title">
+          Predicted Post Order
+          <span id="ops-predicted-summary" class="ops-card__badge">—</span>
+        </h2>
+        <p class="ops-card__hint">
+          Runs the same bucket logic the scanner uses — trade-offer buckets win first,
+          then gossip ranked by <code>(size − 1) × 2 + ageDays</code>. The top row is what
+          the next scanner cycle would pick if the marinate + daily-cap gates pass.
+          Order is predictive only; new tips and gates can shuffle it.
+        </p>
+        <div id="ops-predicted-body" class="ops-buckets">Loading…</div>
+      </article>
+
+      <article class="ops-card ops-card--wide" aria-labelledby="card-pending-tips">
+        <h2 id="card-pending-tips" class="ops-card__title">
+          Pending Tips (oldest first)
+          <span id="ops-pending-tips-summary" class="ops-card__badge">—</span>
+        </h2>
+        <p class="ops-card__hint">
+          Raw queue of <code>schefter:tips:queue</code>. Tipster identity
+          (<code>hashedOwnerId</code>) is stripped before this response leaves
+          the server — anonymity preserved even from the commish.
+        </p>
+        <div id="ops-pending-tips-body" class="ops-tips">Loading…</div>
+      </article>
+
+      <article class="ops-card ops-card--wide" aria-labelledby="card-recent-groupme">
+        <h2 id="card-recent-groupme" class="ops-card__title">
+          Recent GroupMe (last 50)
+          <span id="ops-recent-groupme-summary" class="ops-card__badge">—</span>
+        </h2>
+        <p class="ops-card__hint">
+          The chat stream Schefter is watching. Messages tagged
+          <span class="ops-pill ops-pill--ok">picked up</span> already became tips
+          (matched by <code>gm_&lt;message_id&gt;</code> in the queue);
+          the rest were ignored or are still being processed.
+        </p>
+        <div id="ops-recent-groupme-body" class="ops-gm">Loading…</div>
+      </article>
+
       <article class="ops-card ops-card--wide" aria-labelledby="card-posts">
         <h2 id="card-posts" class="ops-card__title">Posts in Feed</h2>
         <p class="ops-card__hint">Counted from <code>schefter-feed.json</code>.</p>
@@ -381,6 +422,138 @@ if (!user || !isCommissionerOrAdmin(user)) {
         .join('');
       subtypesBody.innerHTML = rows || '<tr><td colspan="2">—</td></tr>';
     }
+
+    const predicted: any[] = Array.isArray(data.redis?.predictedPostOrder) ? data.redis.predictedPostOrder : [];
+    const predictedSummary = document.getElementById('ops-predicted-summary');
+    const predictedBody = document.getElementById('ops-predicted-body');
+    if (predictedSummary) {
+      predictedSummary.innerHTML = predicted.length
+        ? `<span class="ops-pill ops-pill--ok">${predicted.length} bucket${predicted.length === 1 ? '' : 's'}</span>`
+        : `<span class="ops-pill ops-pill--warn">empty</span>`;
+    }
+    if (predictedBody) {
+      if (!predicted.length) {
+        predictedBody.innerHTML = '<p class="ops-empty">No buckets pending. Next post will form once a tip lands and the 1h marinate window clears.</p>';
+      } else {
+        predictedBody.innerHTML = predicted
+          .map((b, i) => {
+            const order = i === 0 ? '<span class="ops-pill ops-pill--ok">NEXT</span>' : `<span class="ops-bucket__rank">#${i + 1}</span>`;
+            const kindPill = b.kind === 'trade'
+              ? '<span class="ops-pill ops-pill--ok">trade</span>'
+              : '<span class="ops-pill ops-pill--warn">gossip</span>';
+            const oldestRel = b.oldestSubmittedAt ? fmtRel(b.oldestSubmittedAt) : '—';
+            return `
+              <article class="ops-bucket">
+                <header class="ops-bucket__head">
+                  ${order}
+                  ${kindPill}
+                  <code class="ops-bucket__key">${escapeHtml(String(b.key))}</code>
+                  <span class="ops-bucket__meta">${b.tipCount} tip${b.tipCount === 1 ? '' : 's'} · oldest ${oldestRel} · score ${b.priorityScore}</span>
+                </header>
+              </article>`;
+          })
+          .join('');
+      }
+    }
+
+    const pendingTips: any[] = Array.isArray(data.redis?.pendingTips) ? data.redis.pendingTips : [];
+    const pendingSummary = document.getElementById('ops-pending-tips-summary');
+    const pendingBody = document.getElementById('ops-pending-tips-body');
+    if (pendingSummary) {
+      pendingSummary.innerHTML = `<span class="ops-pill ops-pill--${pendingTips.length > 0 ? 'ok' : 'warn'}">${pendingTips.length} queued</span>`;
+    }
+    // Build a Set of GroupMe message ids that already became tips so we can
+    // tag the chat stream below with a "picked up" pill.
+    const groupmeTipIds = new Set<string>(
+      pendingTips
+        .map((t: any) => (typeof t.id === 'string' && t.id.startsWith('gm_') ? t.id.slice(3) : null))
+        .filter((x: string | null): x is string => !!x),
+    );
+
+    if (pendingBody) {
+      if (!pendingTips.length) {
+        pendingBody.innerHTML = '<p class="ops-empty">Queue is empty. Next post will be the next tip that comes in (after the 1h marinate window).</p>';
+      } else {
+        pendingBody.innerHTML = pendingTips
+          .map((t) => {
+            const source = String(t.source || 'unknown');
+            const sourcePill = source === 'web'
+              ? `<span class="ops-pill ops-pill--ok">web</span>`
+              : source === 'groupme'
+                ? `<span class="ops-pill ops-pill--warn">groupme</span>`
+                : source === 'trade_offer'
+                  ? `<span class="ops-pill ops-pill--ok">trade-offer</span>`
+                  : `<span class="ops-pill ops-pill--bad">${escapeHtml(source)}</span>`;
+            const author = source === 'groupme' && t.author
+              ? `<strong class="ops-tip__author">${escapeHtml(String(t.author))}</strong>`
+              : source === 'web'
+                ? `<span class="ops-tip__author ops-tip__author--anon">anon web tipster</span>`
+                : '';
+            const submittedMs = typeof t.submittedAt === 'number' ? t.submittedAt : 0;
+            const when = submittedMs ? `${new Date(submittedMs).toLocaleString()} (${fmtRel(submittedMs)})` : '—';
+            const topic = t.topic ? ` <span class="ops-tip__topic">topic: <code>${escapeHtml(String(t.topic))}</code></span>` : '';
+            const hint = t.franchiseHint
+              ? ` <span class="ops-tip__hint">target: <code>${escapeHtml(String(t.franchiseHint))}</code></span>`
+              : '';
+            const flags: string[] = [];
+            if (t.attackOnSchefter) flags.push('<span class="ops-pill ops-pill--bad">attack-on-schefter</span>');
+            if (t.repliesToPostId) flags.push('<span class="ops-pill ops-pill--ok">whisper-back</span>');
+            const flagsHtml = flags.length ? ` ${flags.join(' ')}` : '';
+            const text = t.text ? `<p class="ops-tip__text">${escapeHtml(String(t.text))}</p>` : '';
+            return `
+              <article class="ops-tip">
+                <header class="ops-tip__head">
+                  ${sourcePill}
+                  ${author}
+                  ${flagsHtml}
+                  <span class="ops-tip__when">${when}</span>
+                </header>
+                <p class="ops-tip__meta">${topic}${hint}</p>
+                ${text}
+              </article>`;
+          })
+          .join('');
+      }
+    }
+
+    const recentGm: any[] = Array.isArray(data.redis?.recentGroupMe) ? data.redis.recentGroupMe : [];
+    const gmSummary = document.getElementById('ops-recent-groupme-summary');
+    const gmBody = document.getElementById('ops-recent-groupme-body');
+    if (gmSummary) {
+      gmSummary.innerHTML = recentGm.length
+        ? `<span class="ops-pill ops-pill--ok">${recentGm.length} cached</span>`
+        : `<span class="ops-pill ops-pill--warn">empty</span>`;
+    }
+    if (gmBody) {
+      if (!recentGm.length) {
+        gmBody.innerHTML = '<p class="ops-empty">No GroupMe messages cached. Either the listener hasn\'t run yet or the chat is quiet.</p>';
+      } else {
+        gmBody.innerHTML = recentGm
+          .map((msg) => {
+            const text = typeof msg.text === 'string' ? msg.text : '';
+            const name = escapeHtml(String(msg.name ?? msg.senderName ?? 'unknown'));
+            const createdMs = typeof msg.createdAt === 'number' ? msg.createdAt * 1000 : 0;
+            const when = createdMs ? `${new Date(createdMs).toLocaleString()} (${fmtRel(createdMs)})` : '—';
+            const id = String(msg.id ?? '');
+            const pickedUp = groupmeTipIds.has(id);
+            const pill = pickedUp
+              ? '<span class="ops-pill ops-pill--ok">picked up</span>'
+              : '<span class="ops-pill ops-pill--warn">ignored</span>';
+            const isBot = msg.senderType === 'bot' || /schefter|claude|roger/i.test(name);
+            const senderClass = isBot ? 'ops-gm__author ops-gm__author--bot' : 'ops-gm__author';
+            return `
+              <article class="ops-gm-msg">
+                <header class="ops-gm-msg__head">
+                  <strong class="${senderClass}">${name}</strong>
+                  ${pill}
+                  <span class="ops-gm-msg__when">${when}</span>
+                </header>
+                ${text ? `<p class="ops-gm-msg__text">${escapeHtml(text)}</p>` : '<p class="ops-gm-msg__text ops-gm-msg__text--empty"><em>(no text — attachment-only)</em></p>'}
+              </article>`;
+          })
+          .join('');
+      }
+    }
   }
 
   async function load() {
@@ -570,5 +743,62 @@ if (!user || !isCommissionerOrAdmin(user)) {
   .ops-asset__pos {
     font-size: 0.65rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 3px;
     background: var(--color-border, #e2e8f0); color: var(--color-text-muted, #475569);
+  }
+
+  .ops-tips { display: flex; flex-direction: column; gap: 0.6rem; }
+  .ops-tip {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px;
+    padding: 0.55rem 0.7rem; background: var(--color-surface-alt, #f8fafc);
+  }
+  .ops-tip__head {
+    display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; align-items: baseline;
+    font-size: 0.85rem;
+  }
+  .ops-tip__author { font-size: 0.85rem; }
+  .ops-tip__author--anon { color: var(--color-text-muted, #64748b); font-style: italic; font-weight: 400; }
+  .ops-tip__when { font-size: 0.72rem; color: var(--color-text-muted, #64748b); margin-left: auto; }
+  .ops-tip__meta { margin: 0.25rem 0 0; font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
+  .ops-tip__meta code { background: white; padding: 0.05rem 0.3rem; border-radius: 3px; }
+  .ops-tip__topic, .ops-tip__hint { display: inline-block; margin-right: 0.6rem; }
+  .ops-tip__text {
+    margin: 0.4rem 0 0; font-size: 0.88rem; line-height: 1.4;
+    color: var(--color-text, #0f172a); white-space: pre-wrap; word-break: break-word;
+  }
+  @media (max-width: 560px) {
+    .ops-tip__when { margin-left: 0; flex-basis: 100%; }
+  }
+
+  .ops-buckets { display: flex; flex-direction: column; gap: 0.4rem; }
+  .ops-bucket {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px;
+    padding: 0.4rem 0.7rem; background: var(--color-surface-alt, #f8fafc);
+  }
+  .ops-bucket__head {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem; align-items: baseline;
+    font-size: 0.85rem;
+  }
+  .ops-bucket__rank { font-size: 0.72rem; font-weight: 700; color: var(--color-text-muted, #64748b); }
+  .ops-bucket__key { font-size: 0.78rem; background: white; padding: 0.05rem 0.35rem; border-radius: 3px; }
+  .ops-bucket__meta { font-size: 0.72rem; color: var(--color-text-muted, #64748b); margin-left: auto; }
+  @media (max-width: 560px) {
+    .ops-bucket__meta { margin-left: 0; flex-basis: 100%; }
+  }
+
+  .ops-gm { display: flex; flex-direction: column; gap: 0.45rem; max-height: 70vh; overflow-y: auto; }
+  .ops-gm-msg {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px;
+    padding: 0.45rem 0.65rem; background: var(--color-surface-alt, #f8fafc);
+  }
+  .ops-gm-msg__head {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem; align-items: baseline;
+    font-size: 0.85rem;
+  }
+  .ops-gm__author { font-size: 0.85rem; }
+  .ops-gm__author--bot { color: var(--color-accent, #0ea5e9); }
+  .ops-gm-msg__when { font-size: 0.7rem; color: var(--color-text-muted, #64748b); margin-left: auto; }
+  .ops-gm-msg__text { margin: 0.3rem 0 0; font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .ops-gm-msg__text--empty { color: var(--color-text-muted, #64748b); font-size: 0.78rem; }
+  @media (max-width: 560px) {
+    .ops-gm-msg__when { margin-left: 0; flex-basis: 100%; }
   }
 </style>

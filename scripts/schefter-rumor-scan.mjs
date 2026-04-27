@@ -86,6 +86,11 @@ import {
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters } from './lib/schefter-tipster-counters.mjs';
+import {
+  classifyTipKind,
+  buildTopicBuckets,
+  bucketPriorityScore,
+} from './lib/schefter-bucket-logic.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -597,83 +602,9 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
  *              with commish beef, roster gripes, and predictions, and is
  *              subject to MAX_GOSSIP_POSTS_PER_DAY (adaptive).
  */
-function classifyTipKind(tip) {
-  if (!tip) return 'gossip';
-  if (tip.source === 'trade_offer') return 'trade';
-  return 'gossip';
-}
-
-/**
- * Group tips into single-topic buckets. Bucket keys:
- *   - trade_offer tips           → 'trade:offer'
- *   - whisper-back followups     → 'thread:<parentPostId>'
- *   - web/groupme tips           → 'topic:<topic>:<scope>'
- *
- * Web/groupme keys include the franchiseHint (or 'league-wide') as a
- * scope discriminator so two `topic: 'trade'` tips from different sources
- * (one about a specific franchise, one league-wide) don't collapse into
- * a single combined post. Multi-source clustering still works: two
- * tippers naming the SAME franchise on the SAME topic share a key and
- * cluster correctly.
- */
-function buildTopicBuckets(tips) {
-  const map = new Map();
-  for (const tip of tips) {
-    let key;
-    if (tip.source === 'trade_offer') {
-      key = 'trade:offer';
-    } else if (typeof tip.repliesToPostId === 'string' && tip.repliesToPostId.length > 0) {
-      key = `thread:${tip.repliesToPostId}`;
-    } else {
-      const topic = tip.topic ?? 'other';
-      const scope = tip.franchiseHint && tip.franchiseHint !== 'league-wide'
-        ? tip.franchiseHint
-        : 'league-wide';
-      key = `topic:${topic}:${scope}`;
-    }
-    let bucket = map.get(key);
-    if (!bucket) {
-      bucket = {
-        key,
-        kind: classifyTipKind(tip),
-        tips: [],
-        oldestSubmittedAt: tip.submittedAt ?? Date.now(),
-      };
-      map.set(key, bucket);
-    }
-    bucket.tips.push(tip);
-    if ((tip.submittedAt ?? Date.now()) < bucket.oldestSubmittedAt) {
-      bucket.oldestSubmittedAt = tip.submittedAt ?? Date.now();
-    }
-    // Promote bucket kind to 'trade' if ANY tip in it is trade-classified —
-    // shouldn't happen given the bucketing above, but safety-first.
-    if (classifyTipKind(tip) === 'trade') bucket.kind = 'trade';
-  }
-  return [...map.values()];
-}
-
-/**
- * Score a bucket for priority selection. Higher = better.
- *
- * Scoring weights (chosen so clusters normally beat singletons, but
- * aging-out singletons eventually overtake fresh clusters before they
- * expire):
- *   - Each additional tip in the bucket: +2 (a 2-tip cluster = +2, 3-tip = +4)
- *   - Each day the oldest tip has been queued: +1
- *
- * Examples:
- *   - Fresh 2-tip cluster        → 2 + 0 = 2
- *   - 2-day-old singleton         → 0 + 2 = 2 (tied; tie-break favors the older one)
- *   - 5-day-old singleton         → 0 + 5 = 5 (beats the fresh cluster — near expiry)
- *   - 5-day-old 2-tip cluster     → 2 + 5 = 7 (top of the queue)
- */
-function bucketPriorityScore(bucket, now = new Date()) {
-  const refMs = now instanceof Date ? now.getTime() : Date.now();
-  const oldestAgeMs = Math.max(0, refMs - (bucket.oldestSubmittedAt ?? refMs));
-  const oldestAgeDays = Math.floor(oldestAgeMs / (24 * 60 * 60 * 1000));
-  const sizeScore = Math.max(0, bucket.tips.length - 1) * 2;
-  return sizeScore + oldestAgeDays;
-}
+// classifyTipKind, buildTopicBuckets, bucketPriorityScore — see
+// ./lib/schefter-bucket-logic.mjs (imported above; shared with the admin
+// dashboard so /api/admin/schefter-stats can preview the next bucket).
 
 /**
  * Pick the bucket(s) to post about this cycle.
@@ -999,23 +930,20 @@ export function parseAiResponse(rawText) {
 // April 2026 "adults-only resort" pattern), drop directives get dangerous —
 // the model rationalizes its filtering into the post body. The lane below
 // gives the LLM a different action: own the joke (self-deprecating) or
-// occasionally file back on the source (attack-back). The 1-in-20 attack
-// cadence is GroupMe-only because anonymous web tips have no name to pin
-// the comeback on. The counter is year-scoped so it resets each league year.
+// occasionally file back on the source (attack-back). Attack-back is
+// GroupMe-only because anonymous web tips have no name to pin the comeback
+// on, and is treated as an INDEPENDENT 7.5% probability per event — not a
+// counter — so two attack-backs in a row are possible (just unlikely) and
+// a long quiet stretch between them is also possible.
 
-const SELF_DEP_COUNTER_TTL_SEC = 2 * 365 * 24 * 60 * 60; // 2y safety net; key includes year
+const ATTACK_BACK_PROBABILITY = 0.075;
 
-function selfDepCounterKey(year) {
-  return `schefter:self_dep:counter:${year}`;
+export function pickSchefterTargetMode(rng = Math.random) {
+  // Pure helper. Caller passes a 0..1 RNG so tests can pin the threshold.
+  return rng() < ATTACK_BACK_PROBABILITY ? 'attack-back' : 'self-dep';
 }
 
-export function pickSchefterTargetMode(counter) {
-  // Pure helper for tests. counter is the post-incr value.
-  // Every 20th GroupMe Schefter shot earns the attack-back; the rest are self-dep.
-  return counter > 0 && counter % 20 === 0 ? 'attack-back' : 'self-dep';
-}
-
-async function selectSchefterTargetMode(redis, beat, now = new Date()) {
+function selectSchefterTargetMode(beat) {
   if (!beat || !Array.isArray(beat.batch)) return null;
   const groupmeHit = beat.batch.some(
     (t) => t && t.source === 'groupme' && mentionsSchefter(t.text),
@@ -1029,18 +957,8 @@ async function selectSchefterTargetMode(redis, beat, now = new Date()) {
   // and Style Book / A=C already cover the reverse-the-lens lane for them.
   if (!groupmeHit) return 'self-dep';
 
-  // GroupMe Schefter shot: bump the year-scoped counter; every 20th lands attack-back.
-  if (!redis) return 'self-dep';
-  try {
-    const year = getSeasonYearForTipster(now);
-    const key = selfDepCounterKey(year);
-    const count = await redis.incr(key);
-    if (count === 1) await redis.expire(key, SELF_DEP_COUNTER_TTL_SEC);
-    return pickSchefterTargetMode(count);
-  } catch (err) {
-    warn(`  [rumor-scan] self-dep counter failed: ${err.message} — defaulting to self-dep`);
-    return 'self-dep';
-  }
+  // GroupMe Schefter shot: 7.5% probability of attack-back, otherwise self-dep.
+  return pickSchefterTargetMode();
 }
 
 async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null } = {}) {
@@ -1191,15 +1109,15 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
   }
 
   // Schefter-targeted off-topic mode (set by selectSchefterTargetMode). Web
-  // hits always come in as 'self-dep'; GroupMe hits land 'attack-back' on
-  // every 20th counter increment per league year.
+  // hits always come in as 'self-dep'; GroupMe hits roll a 7.5% probability
+  // of 'attack-back' per beat (independent draws — no counter, no reset).
   let schefterModeDirective = '';
   if (schefterTargetMode === 'self-dep') {
     schefterModeDirective = `\n\nSCHEFTER_TARGET_MODE: self-dep
 A tip in this batch references Claude Schefter (the bot) as a personal subject — off-topic relative to league business. OVERRIDE the "drop" directive: produce a SHORT (1 sentence) self-deprecating one-liner that owns the joke without restating it. If CURRENT NFL CHATTER contains a real-world storyline the tip mirrors, you may glance at it (a single subtle nod, never a forced reference). Never restate the tipster's joke verbatim. Never include reasoning or rule citations in the "post" field.`;
   } else if (schefterTargetMode === 'attack-back') {
     schefterModeDirective = `\n\nSCHEFTER_TARGET_MODE: attack-back
-A GroupMe author just took an off-topic personal shot at Schefter. This is the rare 1-in-20 lane where Schefter files BACK on the source. ONE sharp sentence, name the GroupMe author, match the tipster's energy — they brought heat, you bring it back, salt-not-sugar. Never restate their joke verbatim and never name the specific attribute they mocked; reframe the shot, don't echo it. Never include reasoning or rule citations in the "post" field.`;
+A GroupMe author just took an off-topic personal shot at Schefter. This is the rare attack-back lane (~7.5% of GroupMe Schefter shots) where Schefter files BACK on the source. ONE sharp sentence, name the GroupMe author, match the tipster's energy — they brought heat, you bring it back, salt-not-sugar. Never restate their joke verbatim and never name the specific attribute they mocked; reframe the shot, don't echo it. Never include reasoning or rule citations in the "post" field.`;
   }
 
   const recentBlock = recentPostsBlock
@@ -2045,12 +1963,9 @@ async function main() {
   const nflContext = await loadNflContext();
 
   // Resolve per-beat Schefter-target mode (self-dep / attack-back / null).
-  // For GroupMe hits this increments the year-scoped counter and lands
-  // attack-back on every 20th increment; web hits always self-dep.
-  const schefterModes = [];
-  for (const beat of beats) {
-    schefterModes.push(await selectSchefterTargetMode(redis, beat, now));
-  }
+  // GroupMe Schefter mentions get a 7.5% probability of attack-back per beat;
+  // web hits always self-dep. No state — independent draw each scan.
+  const schefterModes = beats.map((beat) => selectSchefterTargetMode(beat));
 
   // Generate bodies in parallel. Only the primary beat gets the Roger
   // riff — the riff is a once-per-day cameo that shouldn't double up.

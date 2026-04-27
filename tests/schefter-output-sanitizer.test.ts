@@ -117,28 +117,35 @@ describe('parseAiResponse — JSON contract', () => {
   });
 });
 
-describe('pickSchefterTargetMode — 1-in-20 cadence', () => {
-  it('returns self-dep for counters 1..19', () => {
-    for (let i = 1; i <= 19; i++) {
-      expect(pickSchefterTargetMode(i)).toBe('self-dep');
-    }
+describe('pickSchefterTargetMode — 7.5% probability', () => {
+  it('returns attack-back when rng yields a value below the threshold', () => {
+    expect(pickSchefterTargetMode(() => 0)).toBe('attack-back');
+    expect(pickSchefterTargetMode(() => 0.05)).toBe('attack-back');
+    expect(pickSchefterTargetMode(() => 0.0749)).toBe('attack-back');
   });
 
-  it('returns attack-back exactly on every multiple of 20', () => {
-    expect(pickSchefterTargetMode(20)).toBe('attack-back');
-    expect(pickSchefterTargetMode(40)).toBe('attack-back');
-    expect(pickSchefterTargetMode(60)).toBe('attack-back');
+  it('returns self-dep when rng yields the threshold or above', () => {
+    expect(pickSchefterTargetMode(() => 0.075)).toBe('self-dep');
+    expect(pickSchefterTargetMode(() => 0.5)).toBe('self-dep');
+    expect(pickSchefterTargetMode(() => 0.99)).toBe('self-dep');
   });
 
-  it('returns self-dep on counter 0 (defensive)', () => {
-    expect(pickSchefterTargetMode(0)).toBe('self-dep');
+  it('defaults to Math.random when no rng is passed', () => {
+    // Just verify it returns one of the two valid modes — exercising the default arg.
+    const result = pickSchefterTargetMode();
+    expect(['self-dep', 'attack-back']).toContain(result);
   });
 
-  it('produces 1 attack-back per 20 across a full cycle', () => {
+  it('produces ~7.5% attack-back across a large sample with a real RNG', () => {
+    // 10,000 trials at p=0.075 → expected 750, std-dev ≈ 26.3.
+    // ±5σ window (618..882) keeps this test from flaking on any cosmic-ray
+    // RNG run while still catching a real regression (e.g. p=0.05 would
+    // give ~500 hits and p=0.15 would give ~1500 — both well outside).
     let attacks = 0;
-    for (let i = 1; i <= 100; i++) {
-      if (pickSchefterTargetMode(i) === 'attack-back') attacks++;
+    for (let i = 0; i < 10000; i++) {
+      if (pickSchefterTargetMode() === 'attack-back') attacks++;
     }
-    expect(attacks).toBe(5);
+    expect(attacks).toBeGreaterThanOrEqual(618);
+    expect(attacks).toBeLessThanOrEqual(882);
   });
 });
