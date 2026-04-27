@@ -236,7 +236,7 @@ export function redactTradeOffer({
 /**
  * Per-run probability for posting a trade-offer rumor.
  *
- * Flat p=0.0075 per 15-minute scanner run. With 96 runs/day this compounds
+ * Base p=0.0075 per 15-minute scanner run. With 96 runs/day this compounds
  * cumulatively to ~54% by 24h, ~79% by 48h, and ~99% by day 6.4. No guaranteed
  * post — unposted offers can fail forever; that's the design.
  *
@@ -244,12 +244,30 @@ export function redactTradeOffer({
  * picking up") is handled in scanTradeOffers, not here. The probability itself
  * does not change with age.
  *
+ * Exponential scaling on shopping volume: when the *effective* distinct
+ * offerers for the most-shopped player in this offer is ≥2, multiply the
+ * base by `OFFER_VOLUME_BOOST_FACTOR ^ (effectiveOfferers - 1)` and cap at
+ * `OFFER_VOLUME_BOOST_MAX` so the per-run probability never exceeds ~3%.
+ * Effective count blends real submitted offerers (full weight) with saved
+ * trade-builder drafts (0.4 weight, computed in the scanner).
+ *
+ * The exponential growth is intentional — it keeps the per-run probability
+ * vague at low volume (owner can't tell whether their move tipped Schefter)
+ * while accelerating the pass on heavily-shopped players. Combined with the
+ * tier-cap on draft-only contribution, this gives Schefter speed without
+ * letting him name names from soft signals.
+ *
  * Exported for tests & dry-run logging.
  */
 export const OFFER_POST_PROBABILITY = 0.0075;
+export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
+export const OFFER_VOLUME_BOOST_MAX = 4;
 
-export function offerPostProbability() {
-  return OFFER_POST_PROBABILITY;
+export function offerPostProbability(effectiveOfferers = 1) {
+  const n = Number.isFinite(effectiveOfferers) ? Math.max(1, effectiveOfferers) : 1;
+  const raw = Math.pow(OFFER_VOLUME_BOOST_FACTOR, n - 1);
+  const multiplier = Math.min(OFFER_VOLUME_BOOST_MAX, raw);
+  return OFFER_POST_PROBABILITY * multiplier;
 }
 
 export { bucketVolumeHint, tierForDistinctOfferers, classifyAsset, parseAssetString };

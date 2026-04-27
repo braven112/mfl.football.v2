@@ -77,7 +77,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { ingestGroupMeMentions, getLatestRogerQuote, mentionsSchefter } from './schefter-groupme-listen.mjs';
-import { redactTradeOffer, offerPostProbability } from './lib/redact-trade-offer.mjs';
+import {
+  redactTradeOffer,
+  offerPostProbability,
+  tierForDistinctOfferers,
+} from './lib/redact-trade-offer.mjs';
+import {
+  scanDraftTrades,
+  getDraftOfferersForPlayer,
+  getOwnerDraftCount,
+  TB_DRAFT_OFFERER_WEIGHT,
+} from './lib/scan-draft-trades.mjs';
 import {
   loadLore,
   loadPostHistory,
@@ -1400,6 +1410,17 @@ async function scanTradeOffers({ redis, dryRun }) {
   const teams = await loadTeamsWithDivisions();
   const players = await loadPlayers(year);
 
+  // Step 0: fold each franchise's saved trade-builder drafts into the
+  // shopping-signal sorted sets. Drafts feed the player-escalation tier
+  // (capped at tightened_circle) and owner volume hint via discounted
+  // weight, but never on their own create a rumor — the loop below only
+  // iterates real pending offers from MFL / owner reports.
+  try {
+    await scanDraftTrades({ redis, teams, dryRun, log, warn });
+  } catch (err) {
+    warn(`  [offer-scan] tb-drafts scan failed: ${err.message} — continuing without draft signals`);
+  }
+
   // Step 1: figure out which offerIds are in commish-approval state
   // (Phase 1 handles those — skip them here).
   const commishPending = await fetchCommishPendingOfferIds(LEAGUE_ID, year, mflCookie);
@@ -1544,7 +1565,8 @@ async function scanTradeOffers({ redis, dryRun }) {
       .map((s) => s.trim())
       .filter((tok) => tok && !/^(DP_|FP_|BB_)/.test(tok));
 
-    const playerHistory = new Map(); // playerId -> distinct offerer count last 21d
+    const playerHistory = new Map();    // playerId -> effective distinct offerer count
+    const playerDraftStats = new Map(); // playerId -> { realCount, draftCount, effectiveCount, capped }
     for (const pid of playerIds) {
       const pKey = PLAYER_OFFER_HISTORY_PREFIX + pid;
       // Add the offer to the player history only on first sighting so a single
@@ -1565,12 +1587,40 @@ async function scanTradeOffers({ redis, dryRun }) {
       } catch {
         members = [];
       }
-      const distinctFids = new Set(
+      const realFids = new Set(
         (members || []).map((m) => String(m).split(':')[0]),
       );
       // Include the current offering franchise (it was just added — or would be in live mode)
-      distinctFids.add(offeringFid);
-      playerHistory.set(pid, distinctFids.size);
+      realFids.add(offeringFid);
+
+      // Blend in trade-builder draft signals (3-day window, weight=0.4).
+      // Drafts contribute distinct franchise ids that DO NOT already have a
+      // real offer logged for this player. This is a *softer* shopping signal,
+      // intentional but not committed.
+      const draftFids = await getDraftOfferersForPlayer({ redis, playerId: pid, nowMs });
+      const newDraftFids = new Set();
+      for (const f of draftFids) {
+        if (!realFids.has(f)) newDraftFids.add(f);
+      }
+
+      const realCount = realFids.size;
+      const draftCount = newDraftFids.size;
+      const blended = realCount + TB_DRAFT_OFFERER_WEIGHT * draftCount;
+      let effectiveCount = Math.floor(blended);
+
+      // Tier cap: drafts can elevate base → tightened_circle (n=3) but
+      // MUST NOT unlock the `named` tier (n>=4) on their own. The named
+      // tier authorizes Schefter to drop a player's name in the post —
+      // gated to *real* submitted offers only.
+      const realTier = tierForDistinctOfferers(realCount);
+      let capped = false;
+      if (realTier !== 'named' && tierForDistinctOfferers(effectiveCount) === 'named') {
+        effectiveCount = 3;
+        capped = true;
+      }
+
+      playerHistory.set(pid, effectiveCount);
+      playerDraftStats.set(pid, { realCount, draftCount, effectiveCount, capped });
     }
 
     // Counts
@@ -1588,6 +1638,19 @@ async function scanTradeOffers({ redis, dryRun }) {
       } catch {
         divisionOfferCount7d = 0;
       }
+    }
+
+    // Blend owner draft volume into the 7-day count. Drafts saved by this
+    // owner are an aggressiveness signal — they bump volumeHint toward
+    // serial without affecting whether a player can be named (that's gated
+    // separately by playerHistory's tier cap above).
+    const ownerDraftCount = await getOwnerDraftCount({
+      redis,
+      franchiseId: offeringFid,
+      nowMs,
+    });
+    if (ownerDraftCount > 0) {
+      ownerOfferCount7d += Math.floor(TB_DRAFT_OFFERER_WEIGHT * ownerDraftCount);
     }
 
     // In dry-run mode we didn't mutate, so nudge counts up by 1 to simulate "this offer counts"
@@ -1612,24 +1675,37 @@ async function scanTradeOffers({ redis, dryRun }) {
       continue;
     }
 
-    // Dice roll — flat p=0.0075 per run, independent of owner volume and age.
-    // Cumulative curve (1 - (1-p)^n) puts most passes in the 1–7 day window.
-    const probability = offerPostProbability();
+    // Dice roll — base p=0.0075 per run, scaled exponentially by the most-
+    // shopped player's effective distinct-offerer count (real + 0.4*draft).
+    // Capped at 4× base. Cumulative curve still keeps most passes in the
+    // 1–7 day window for low-volume players; serial-shopped players
+    // accelerate. Owner can't tell whether their submission or any
+    // particular other-team draft tipped the dice — that's the point.
+    const maxEffectiveOfferers = playerHistory.size > 0
+      ? Math.max(1, ...Array.from(playerHistory.values()))
+      : 1;
+    const probability = offerPostProbability(maxEffectiveOfferers);
     const roll = Math.random();
     const passed = roll < probability;
 
     const ageHours = offerAgeMs / (60 * 60 * 1000);
+    const draftStatsArray = Array.from(playerDraftStats.entries()).map(
+      ([pid, s]) => ({ pid, ...s }),
+    );
     const entry = {
       offerId,
       offeringFid,
       ownerOfferCount7d,
+      ownerDraftCount,
       divisionOfferCount7d,
       framingHint,
       offerAgeHours: Number(ageHours.toFixed(2)),
       isFirstSighting,
+      maxEffectiveOfferers,
       probability,
       roll: Number(roll.toFixed(3)),
       passed,
+      draftStats: draftStatsArray,
       redaction: redaction.debug,
       tipPreview: redaction.tip,
     };
@@ -1638,8 +1714,9 @@ async function scanTradeOffers({ redis, dryRun }) {
     log(
       `  [offer-scan] offerId=${offerId} fid=${offeringFid} ` +
         `age=${ageHours.toFixed(1)}h frame=${framingHint} ` +
-        `owner7d=${ownerOfferCount7d} div7d=${divisionOfferCount7d} ` +
-        `p=${probability} roll=${roll.toFixed(3)} → ${passed ? 'PASS' : 'fail'}` +
+        `owner7d=${ownerOfferCount7d}(drafts=${ownerDraftCount}) div7d=${divisionOfferCount7d} ` +
+        `effOff=${maxEffectiveOfferers} ` +
+        `p=${probability.toFixed(4)} roll=${roll.toFixed(3)} → ${passed ? 'PASS' : 'fail'}` +
         (redaction.tip.escalatedPlayer
           ? ` [escalation=${redaction.tip.escalatedPlayer.tier}/${redaction.tip.escalatedPlayer.distinctOfferers}]`
           : ''),
