@@ -24,6 +24,7 @@ import {
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
 import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
+import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -939,6 +940,263 @@ async function scanPendingTrades(league) {
   if (dropped.length) console.log(`  [rumor-mill] Dropped ${dropped.length} resolved trade(s) from watermark`);
   console.log(`  Wrote ${newPosts.length} pending-trade rumor post(s). Watermark size: ${feed.pendingTradeWatermark.length}`);
   return newPosts.length;
+}
+
+// ── Schefter Rumor Mill: Trade-Bait Detector ──
+// Owners add players to their MFL trade block to publicly signal availability.
+// This scan diffs per-franchise blocks against a committed state, debounces
+// activity via a per-franchise settle window (so a six-player dump fires as
+// one post, not six), and enqueues attributable rumor-bait tips into the
+// same Redis tips queue that the rumor-mill scanner consumes. The detector
+// itself is pure (scripts/lib/trade-bait-detector.mjs) and unit-tested;
+// everything here is I/O glue.
+//
+// Silent-seed launch: on the first run for a league, the detector records
+// the current block as the committed state and emits nothing. The feature
+// surfaces on the first real owner delta post-deploy.
+
+const TRADE_BAIT_SOURCE = 'trade_bait';
+const TRADE_BAIT_TOPIC = 'trade_bait';
+
+async function fetchTradeBaitRaw(leagueId, year) {
+  const url = `https://${MFL_HOST}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'schefter-scan/1.0' } });
+  if (!res.ok) throw new Error(`MFL HTTP ${res.status}`);
+  const text = await res.text();
+  if (text.trim().startsWith('<')) throw new Error('MFL returned HTML for tradeBait');
+  return JSON.parse(text);
+}
+
+function parseTradeBaitByFranchise(data) {
+  const out = {};
+  let entries = data?.tradeBaits?.tradeBait;
+  if (!entries) return out;
+  if (!Array.isArray(entries)) entries = [entries];
+  for (const item of entries) {
+    const franchiseId = String(
+      item?.franchise_id ?? item?.franchiseId ?? item?.franchise ?? '',
+    ).trim();
+    if (!franchiseId) continue;
+    const ids = item?.willGiveUp
+      ? (typeof item.willGiveUp === 'string'
+          ? item.willGiveUp.split(',').map((s) => s.trim())
+          : [String(item.willGiveUp)])
+      : [];
+    out[franchiseId] = {
+      playerIds: ids.filter((id) => id && /^\d{4,}$/.test(id)),
+      willGiveUpComment: typeof item?.willGiveUpComments === 'string'
+        ? item.willGiveUpComments.trim()
+        : '',
+      willTakeComment: typeof item?.willTakeComments === 'string'
+        ? item.willTakeComments.trim()
+        : '',
+    };
+  }
+  return out;
+}
+
+/**
+ * Minimal Upstash Redis adapter — mirrors the pattern in
+ * schefter-rumor-scan.mjs so both scripts can share the tips queue.
+ * Returns null when credentials are missing (the trade-bait scan then
+ * skips so we don't silently advance committedBlock without enqueueing).
+ */
+async function getTradeBaitRedis() {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.KV_REST_API_URL ||
+    process.env.STORAGE_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.KV_REST_API_TOKEN ||
+    process.env.STORAGE_REST_API_TOKEN;
+  if (!url || !token) return null;
+  try {
+    const { Redis } = await import('@upstash/redis');
+    return new Redis({ url, token });
+  } catch (err) {
+    console.warn(`  [trade-bait] Redis import failed: ${err.message}`);
+    return null;
+  }
+}
+
+const TIPS_QUEUE_KEY = 'schefter:tips:queue';
+const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
+
+function buildTradeBaitTip({
+  franchiseId,
+  emission,
+  franchiseName,
+  players,
+  nowMs,
+}) {
+  const addedPlayers = emission.netAdds.map((id) => {
+    const p = players.get(id);
+    return {
+      id,
+      name: p?.name ?? `Player ${id}`,
+      pos: p?.position ?? '',
+      nflTeam: p?.nflTeam ?? '',
+    };
+  });
+
+  const byPos = {};
+  for (const p of addedPlayers) {
+    if (!p.pos) continue;
+    byPos[p.pos] = (byPos[p.pos] ?? 0) + 1;
+  }
+
+  const displayedAdds = addedPlayers.slice(0, 10);
+  const truncated = emission.truncated || addedPlayers.length > displayedAdds.length;
+
+  const nameList = displayedAdds
+    .map((p) => p.pos ? `${p.name} (${p.pos})` : p.name)
+    .join(', ');
+  const commentSuffix = emission.willGiveUpComment
+    ? ` Owner note: "${emission.willGiveUpComment}"`
+    : '';
+  const text = `${franchiseName} added to the trade block: ${nameList}.${commentSuffix}`;
+
+  const id = `sf_tradebait_${franchiseId}_${nowMs}`;
+  return {
+    id,
+    source: TRADE_BAIT_SOURCE,
+    topic: TRADE_BAIT_TOPIC,
+    attributable: true,
+    author: franchiseName,
+    franchiseHint: franchiseId,
+    submittedAt: nowMs,
+    text,
+    meta: {
+      adds: displayedAdds,
+      removes: emission.netRemoves,
+      byPos,
+      totalAdds: addedPlayers.length,
+      ownerWillGiveUp: emission.willGiveUpComment ?? '',
+      ownerWillTake: emission.willTakeComment ?? '',
+      truncated,
+      reason: emission.reason,
+    },
+  };
+}
+
+async function scanTradeBait(league) {
+  if (!process.env.SCHEFTER_RUMOR_MILL_ENABLED ||
+      process.env.SCHEFTER_RUMOR_MILL_ENABLED === '0' ||
+      process.env.SCHEFTER_RUMOR_MILL_ENABLED.toLowerCase() === 'false') {
+    return 0;
+  }
+  if (league.slug !== 'theleague') return 0;
+
+  console.log(`\n=== Scanning Trade Bait (Rumor Mill) for ${league.slug} ===`);
+
+  const feed = await loadFeed(league.feedPath);
+  const prevState = feed.tradeBaitState && typeof feed.tradeBaitState === 'object'
+    ? feed.tradeBaitState
+    : {};
+
+  const now = new Date();
+  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+
+  let raw;
+  try {
+    raw = await fetchTradeBaitRaw(league.leagueId, year);
+  } catch (err) {
+    console.log(`  [trade-bait] Fetch failed: ${err.message} — holding state`);
+    return 0;
+  }
+  const currentByFranchise = parseTradeBaitByFranchise(raw);
+  const franchiseCount = Object.keys(currentByFranchise).length;
+  console.log(`  [trade-bait] MFL returned ${franchiseCount} franchise(s) with listings`);
+
+  const { nextState, emissions, reasons } = detectTradeBaitChanges({
+    currentByFranchise,
+    prevState,
+    nowMs: now.getTime(),
+  });
+
+  const changeSummary = Object.entries(reasons)
+    .filter(([, reason]) => reason !== 'seed' && reason !== 'no_change')
+    .map(([fid, reason]) => `${fid}=${reason}`);
+  if (changeSummary.length) {
+    console.log(`  [trade-bait] Drift summary: ${changeSummary.join(', ')}`);
+  } else if (!Object.keys(prevState).length) {
+    console.log('  [trade-bait] Silent-seed run — no tips emitted, state captured');
+  } else {
+    console.log('  [trade-bait] Nothing drifting — state unchanged');
+  }
+
+  if (emissions.length === 0) {
+    if (DRY_RUN) {
+      console.log('  [dry-run] Would write tradeBaitState (no tips to enqueue)');
+      return 0;
+    }
+    // Always persist state even on no-op so seed + no-change advances
+    // drop the drift timers and committed blocks stay current.
+    feed.tradeBaitState = nextState;
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    return 0;
+  }
+
+  // We have tips to enqueue. Redis is required — without it we cannot push
+  // to the rumor-mill queue, so we must NOT advance committedBlock (which
+  // would swallow the signal). Back off cleanly instead.
+  const redis = await getTradeBaitRedis();
+  if (!redis && !DRY_RUN) {
+    console.warn('  [trade-bait] Redis unavailable — holding state, will retry next cycle');
+    return 0;
+  }
+
+  const teams = await loadTeamsWithShortNames(league.configPath);
+  const players = await loadPlayers(league.playersPath(year));
+  const tips = emissions.map((emission) => {
+    const team = teams.get(emission.franchiseId);
+    const franchiseName = pickTeamDisplayName(team) ?? `Team ${emission.franchiseId}`;
+    return buildTradeBaitTip({
+      franchiseId: emission.franchiseId,
+      emission,
+      franchiseName,
+      players,
+      nowMs: now.getTime(),
+    });
+  });
+
+  for (const tip of tips) {
+    console.log(`  [trade-bait] emit ${tip.id} — ${tip.meta.totalAdds} add(s), byPos=${JSON.stringify(tip.meta.byPos)}`);
+  }
+
+  if (DRY_RUN) {
+    console.log('  [dry-run] Would enqueue the following trade-bait tip(s):');
+    for (const tip of tips) console.log(JSON.stringify(tip, null, 2));
+    console.log('  [dry-run] Would write tradeBaitState advancing committedBlock');
+    return 0;
+  }
+
+  // Ensure the first-tip anchor exists so rumor-scan's marinate gate passes.
+  try {
+    const existing = await redis.get(FIRST_TIP_TS_KEY);
+    if (!existing) await redis.set(FIRST_TIP_TS_KEY, now.getTime());
+  } catch (err) {
+    console.warn(`  [trade-bait] first_tip_ts anchor failed: ${err.message}`);
+  }
+
+  try {
+    for (const tip of tips) {
+      await redis.rpush(TIPS_QUEUE_KEY, JSON.stringify(tip));
+    }
+    console.log(`  [trade-bait] Enqueued ${tips.length} tip(s) to Redis`);
+  } catch (err) {
+    console.warn(`  [trade-bait] Redis push failed: ${err.message} — holding state`);
+    return 0;
+  }
+
+  // Only after the push succeeds do we advance committedBlock. If any part
+  // of the push failed above, the early return kept committedBlock on the
+  // prior value so the next cycle retries cleanly.
+  feed.tradeBaitState = nextState;
+  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+
+  return tips.length;
 }
 
 // ── ESPN Integration ──
@@ -1865,6 +2123,8 @@ for (const league of LEAGUES) {
     totalPosts += await scanLeague(league);
     // Scan pending trades (Schefter Rumor Mill — Phase 1)
     totalPosts += await scanPendingTrades(league);
+    // Scan trade bait (per-franchise availability listings → rumor-mill tips)
+    totalPosts += await scanTradeBait(league);
     // Scan ESPN contributors
     totalPosts += await scanEspn(league);
     // Scan event reminders (Ask Roger)

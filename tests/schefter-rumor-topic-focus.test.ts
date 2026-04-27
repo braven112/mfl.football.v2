@@ -45,9 +45,14 @@ describe('rumor-scan daily caps — trade-heavy, gossip-rationed', () => {
 
 describe('rumor-scan bucketing — one topic per post', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
+  // classifyTipKind / buildTopicBuckets / bucketPriorityScore moved to a
+  // shared module so the admin dashboard can preview the next bucket.
+  // The scanner imports from there; function-body assertions now read
+  // the shared module's source.
+  const bucketSrc = read('scripts/lib/schefter-bucket-logic.mjs');
 
   it('defines a buildTopicBuckets helper that groups tips by topic/thread', () => {
-    expect(src).toMatch(/function\s+buildTopicBuckets\(/);
+    expect(bucketSrc).toMatch(/function\s+buildTopicBuckets\(/);
   });
 
   it('defines a pickPrimaryBucket helper that honors the gossip budget', () => {
@@ -60,7 +65,7 @@ describe('rumor-scan bucketing — one topic per post', () => {
     // Real MFL pending offers are the trade-rumor headline material.
     // Web/groupme tips with topic === 'trade' are speculation and ride
     // the gossip lane subject to the gossip cap.
-    const fn = src.match(/function\s+classifyTipKind[\s\S]+?\n\}/);
+    const fn = bucketSrc.match(/function\s+classifyTipKind[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
     const body = fn![0];
     expect(body).toMatch(/source\s*===\s*['"]trade_offer['"]\)\s*return\s+['"]trade['"]/);
@@ -74,7 +79,7 @@ describe('rumor-scan bucketing — one topic per post', () => {
     // `topic:<topic>:<franchiseHint || 'league-wide'>` so they bucket
     // independently and ship as two separate posts (subject to the
     // pressure gate).
-    const fn = src.match(/function\s+buildTopicBuckets[\s\S]+?\n\}/);
+    const fn = bucketSrc.match(/function\s+buildTopicBuckets[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
     const body = fn![0];
     expect(body).toMatch(/key\s*=\s*`topic:\$\{topic\}:\$\{scope\}`/);
@@ -158,14 +163,26 @@ describe('rumor-scan tip-page link — every post sends readers back to /tip', (
   });
 
   it('attaches link + linkLabel to every feed post it generates', () => {
-    expect(src).toMatch(/link:\s*TIP_PAGE_PATH/);
-    expect(src).toMatch(/linkLabel:\s*TIP_PAGE_LINK_LABEL/);
+    // Default CTA for non-trade-bait posts still resolves to the tip page.
+    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*['"]\/schefter\/tip['"]/);
+    expect(src).toMatch(/const\s+TIP_PAGE_LINK_LABEL\s*=/);
+    // Post builder pulls link/linkLabel from a per-beat CTA object, which
+    // falls back to the tip-page default for everything that isn't
+    // trade_bait with a single franchise.
+    expect(src).toMatch(/link:\s*cta\.link/);
+    expect(src).toMatch(/linkLabel:\s*cta\.linkLabel/);
+    expect(src).toMatch(/link:\s*TIP_PAGE_PATH,\s*\n\s*linkLabel:\s*TIP_PAGE_LINK_LABEL/);
   });
 
-  it('appends the absolute tip-page URL to every GroupMe post', () => {
-    // Each beat now ships its own GroupMe message via groupMeTextFor(p),
-    // a closure that formats "body\n\nGot a tip? <URL>".
-    expect(src).toMatch(/const\s+groupMeTextFor\s*=\s*\(p\)\s*=>\s*`\$\{p\.body\}\\n\\nGot a tip\? \$\{TIP_PAGE_ABSOLUTE_URL\}`/);
+  it('appends a per-post CTA URL to every GroupMe post (tip page by default)', () => {
+    // Each beat ships its own GroupMe message via groupMeTextFor(p), which
+    // resolves the CTA per-post through ctaByPostId. Trade-bait posts swap
+    // the tip-page URL for a Trade Builder deep-link; everything else
+    // falls back to the tip-page CTA.
+    expect(src).toMatch(/const\s+groupMeTextFor\s*=\s*\(p\)\s*=>\s*\{/);
+    expect(src).toMatch(/ctaByPostId\.get\(p\.id\)/);
+    expect(src).toMatch(/groupMeUrl:\s*TIP_PAGE_ABSOLUTE_URL/);
+    expect(src).toMatch(/\$\{cta\.groupMePrefix\}\s*\$\{cta\.groupMeUrl\}/);
     expect(src).toMatch(/await\s+postToGroupMe\(groupMeTextFor\(builtPosts\[i\]\)\)/);
     // No raw-body GroupMe calls remain — every rumor post gets the CTA.
     expect(src).not.toMatch(/await\s+postToGroupMe\(post\.body\)/);
@@ -259,11 +276,12 @@ describe('rumor-scan LLM — age-aware framing rule', () => {
 
 describe('rumor-scan bucket priority — age boost so old tips rise', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
+  const bucketSrc = read('scripts/lib/schefter-bucket-logic.mjs');
 
   it('exposes a bucketPriorityScore helper that adds a per-day age boost', () => {
-    expect(src).toMatch(/function\s+bucketPriorityScore\(/);
-    expect(src).toMatch(/oldestAgeDays/);
-    expect(src).toMatch(/return\s+sizeScore\s*\+\s*oldestAgeDays/);
+    expect(bucketSrc).toMatch(/function\s+bucketPriorityScore\(/);
+    expect(bucketSrc).toMatch(/oldestAgeDays/);
+    expect(bucketSrc).toMatch(/return\s+sizeScore\s*\+\s*oldestAgeDays/);
   });
 
   it('sorts both trade and gossip buckets by bucketPriorityScore (descending)', () => {
@@ -422,8 +440,10 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
     expect(src).toMatch(/redis\.set\(FRIDAY_MAILBAG_DONE_KEY,\s*todayPtDate/);
   });
 
-  it('HARD RULE 18 prescribes bullet-style mailbag voice and caps length', () => {
-    expect(src).toMatch(/18\.\s*MAILBAG POSTS/);
+  it('HARD RULE 20 prescribes bullet-style mailbag voice and caps length', () => {
+    // Rule was renumbered from 18 → 20 when the trade-bait directive
+    // (rule 19) was inserted between age-aware framing and the mailbag.
+    expect(src).toMatch(/20\.\s*MAILBAG POSTS/);
     expect(src).toMatch(/bullet-style one-liners/);
     expect(src).toMatch(/Length cap:\s*180 words/);
   });

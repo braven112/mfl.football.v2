@@ -19,6 +19,7 @@ export function classifyTipKind(tip) {
 /**
  * Group tips into single-topic buckets. Bucket keys:
  *   - trade_offer tips           → 'trade:offer'
+ *   - trade_bait tips            → 'topic:trade_bait:<franchiseId>'
  *   - whisper-back followups     → 'thread:<parentPostId>'
  *   - web/groupme tips           → 'topic:<topic>:<scope>'
  *
@@ -27,7 +28,8 @@ export function classifyTipKind(tip) {
  * (one about a specific franchise, one league-wide) don't collapse into
  * a single combined post. Multi-source clustering still works: two
  * tippers naming the SAME franchise on the SAME topic share a key and
- * cluster correctly.
+ * cluster correctly. Trade-bait tips key per-franchise so an owner's
+ * dump only ever produces one post per cycle.
  */
 export function buildTopicBuckets(tips) {
   const map = new Map();
@@ -35,6 +37,9 @@ export function buildTopicBuckets(tips) {
     let key;
     if (tip.source === 'trade_offer') {
       key = 'trade:offer';
+    } else if (tip.source === 'trade_bait') {
+      const scope = tip.franchiseHint ?? 'league-wide';
+      key = `topic:trade_bait:${scope}`;
     } else if (typeof tip.repliesToPostId === 'string' && tip.repliesToPostId.length > 0) {
       key = `thread:${tip.repliesToPostId}`;
     } else {

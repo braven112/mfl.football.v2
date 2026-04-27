@@ -57,29 +57,55 @@ const year = String(now >= febCutoff ? Math.max(baseYear + 1, now.getFullYear())
 const outDir = path.join('data', leagueName, 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });
 
+const extractPlayerIds = (willGiveUp) => {
+  if (!willGiveUp) return [];
+  const ids = typeof willGiveUp === 'string'
+    ? willGiveUp.split(',').map((id) => id.trim())
+    : [String(willGiveUp)];
+  return ids.filter((id) => id && /^\d{4,}$/.test(id));
+};
+
+/**
+ * Parse the MFL tradeBait response into two shapes:
+ *   - flat: unique player-id array (legacy; UI consumes this)
+ *   - byFranchise: { [franchiseId]: { playerIds, willGiveUpComment, willTakeComment } }
+ *     Fresh shape needed by the Schefter trade-bait detector so it can
+ *     diff per-franchise activity instead of league-wide aggregates.
+ */
 const parseTradeBait = (data) => {
   const playerIds = new Set();
-  if (typeof data === 'object' && data !== null) {
-    let tradeBaitArray = data?.tradeBaits?.tradeBait;
-    if (tradeBaitArray && !Array.isArray(tradeBaitArray)) {
-      tradeBaitArray = [tradeBaitArray];
-    }
-    if (Array.isArray(tradeBaitArray)) {
-      tradeBaitArray.forEach((item) => {
-        if (item.willGiveUp) {
-          const ids = typeof item.willGiveUp === 'string'
-            ? item.willGiveUp.split(',').map(id => id.trim())
-            : [item.willGiveUp];
-          ids.forEach((id) => {
-            if (id && /^\d{4,}$/.test(id)) {
-              playerIds.add(id);
-            }
-          });
-        }
-      });
-    }
+  const byFranchise = {};
+  if (typeof data !== 'object' || data === null) {
+    return { flat: [], byFranchise };
   }
-  return Array.from(playerIds);
+  let tradeBaitArray = data?.tradeBaits?.tradeBait;
+  if (tradeBaitArray && !Array.isArray(tradeBaitArray)) {
+    tradeBaitArray = [tradeBaitArray];
+  }
+  if (!Array.isArray(tradeBaitArray)) return { flat: [], byFranchise };
+
+  for (const item of tradeBaitArray) {
+    const ids = extractPlayerIds(item?.willGiveUp);
+    ids.forEach((id) => playerIds.add(id));
+
+    // MFL uses `franchise_id` on tradeBait entries. Fall back to other
+    // common capitalizations just in case the API changes.
+    const franchiseId = String(
+      item?.franchise_id ?? item?.franchiseId ?? item?.franchise ?? '',
+    ).trim();
+    if (!franchiseId) continue;
+
+    byFranchise[franchiseId] = {
+      playerIds: ids,
+      willGiveUpComment: typeof item?.willGiveUpComments === 'string'
+        ? item.willGiveUpComments.trim()
+        : '',
+      willTakeComment: typeof item?.willTakeComments === 'string'
+        ? item.willTakeComments.trim()
+        : '',
+    };
+  }
+  return { flat: Array.from(playerIds), byFranchise };
 };
 
 const url = `${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
@@ -89,10 +115,19 @@ try {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
-  const parsed = parseTradeBait(JSON.parse(text));
+  const { flat, byFranchise } = parseTradeBait(JSON.parse(text));
   const file = path.join(outDir, 'tradeBait.json');
-  fs.writeFileSync(file, JSON.stringify(parsed, null, 2), 'utf8');
-  console.log(`Saved ${parsed.length} trade bait player(s) -> ${file}`);
+  fs.writeFileSync(file, JSON.stringify(flat, null, 2), 'utf8');
+  console.log(`Saved ${flat.length} trade bait player(s) -> ${file}`);
+
+  const byFranchiseFile = path.join(outDir, 'tradeBait-by-franchise.json');
+  const byFranchisePayload = {
+    fetchedAt: Date.now(),
+    franchises: byFranchise,
+  };
+  fs.writeFileSync(byFranchiseFile, JSON.stringify(byFranchisePayload, null, 2), 'utf8');
+  const franchiseCount = Object.keys(byFranchise).length;
+  console.log(`Saved per-franchise trade bait (${franchiseCount} franchise(s)) -> ${byFranchiseFile}`);
 } catch (err) {
   console.error(`Failed to fetch trade bait: ${err.message}`);
   // Don't fail the build — trade bait is non-critical

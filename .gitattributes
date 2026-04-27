@@ -1,0 +1,16 @@
+# Merge drivers — keep rebase conflicts to a minimum.
+# See CLAUDE.md "Merge conflicts" section for the full policy.
+
+# package.json: concatenate both sides' added deps. Conflicts on the same
+# key still surface, but pure-add conflicts (different sections) auto-fix.
+package.json merge=union
+
+# Lock files: never try to hand-merge. Regenerate via `pnpm install` post-rebase.
+pnpm-lock.yaml merge=binary
+
+# Auto-generated league/feed snapshots — main is always more recent than a
+# branch (cron writes there), so keeping incoming wins on conflict.
+src/data/theleague/schefter-feed.json merge=binary
+src/data/theleague/post-history.json merge=binary
+data/theleague/mfl-feeds/** merge=binary
+data/afl-fantasy/mfl-feeds/** merge=binary
