@@ -220,60 +220,19 @@
       ]
     },
     {
-      "id": "league-history",
-      "label": "League History",
+      "id": "league-reports",
+      "label": "League Reports",
       "phaseOrder": { "inSeason": 4, "offSeason": 5 },
       "defaultOpen": "never",
       "leagueOnly": "theleague",
       "links": [
         {
-          "id": "league-summary",
-          "label": "League Summary",
-          "icon": "spreadsheet",
-          "path": "/league-summary",
-          "external": false,
-          "description": "Compare all teams across cap, roster, and contract metrics over 5 years"
-        },
-        {
-          "id": "salary-benchmarks",
-          "label": "Salary Analytics",
+          "id": "stats-hub",
+          "label": "Stats & Reports",
           "icon": "bar-chart",
-          "path": "/salary",
+          "path": "/stats",
           "external": false,
-          "description": "Compare salary spending across positions"
-        },
-        {
-          "id": "salary-history",
-          "label": "Historical Salary Trends",
-          "icon": "standings-2",
-          "path": "/salary-history",
-          "external": false,
-          "description": "Historical salary cap trends"
-        },
-        {
-          "id": "salary-archive",
-          "label": "Salary Archive",
-          "icon": "vault",
-          "path": "/salary-archive",
-          "external": false,
-          "description": "Historical salary spreadsheets (2009–2025)"
-        },
-        {
-          "id": "mvp",
-          "label": "Salary-Adjusted MVPs",
-          "icon": "standings",
-          "path": "/mvp",
-          "external": false,
-          "description": "Top performers relative to salary"
-        },
-        {
-          "id": "dead-money",
-          "label": "Dead Money Awards",
-          "icon": "tombstone",
-          "path": "/dead-money",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "Worst contracts and roster efficiency by season"
+          "description": "League analytics hub — salary benchmarks, awards, projected free agents, and team comparisons"
         },
         {
           "id": "owner-activity",
@@ -281,50 +240,40 @@
           "icon": "activity",
           "path": "/activity",
           "external": false,
-          "leagueOnly": "theleague",
           "description": "See when each franchise owner last visited the site"
         }
       ]
     },
     {
-      "id": "reference",
-      "label": "Reference",
+      "id": "rules",
+      "label": "Rules",
       "phaseOrder": { "inSeason": 6, "offSeason": 6 },
       "defaultOpen": "never",
+      "leagueOnly": "theleague",
       "links": [
         {
           "id": "rules",
-          "label": "Rules",
+          "label": "Constitution",
           "icon": "gavel",
           "path": "/rules",
           "external": false,
-          "leagueOnly": "theleague",
           "description": "League rules and bylaws"
         },
         {
+          "id": "ask-roger",
+          "label": "Ask Roger",
+          "icon": "whistle",
+          "path": "/rules-chat",
+          "external": false,
+          "description": "Ask our AI rules expert any rules question"
+        },
+        {
           "id": "suggestions",
-          "label": "Suggestions",
-          "icon": "info",
+          "label": "Suggestion Box",
+          "icon": "commenting",
           "path": "/suggestions",
           "external": false,
-          "leagueOnly": "theleague",
-          "description": "Submit feature requests and feedback"
-        },
-        {
-          "id": "theleague-site",
-          "label": "TheLeague.us",
-          "icon": "shield",
-          "url": "https://theleague.us",
-          "external": true,
-          "description": "TheLeague main website"
-        },
-        {
-          "id": "afl-site",
-          "label": "AFL Fantasy",
-          "icon": "helmet",
-          "url": "https://afl-fantasy.com",
-          "external": true,
-          "description": "AFL Fantasy main website"
+          "description": "Pitch rule changes, suggest features, or float ideas"
         }
       ]
     }
@@ -365,7 +314,9 @@
     "/search": "/search",
     "/news": "/news",
     "/mock-draft": "/mock-draft",
-    "/suggestions": "/suggestions"
+    "/suggestions": "/suggestions",
+    "/stats": "/stats",
+    "/rules-chat": "/rules-chat"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
