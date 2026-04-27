@@ -173,24 +173,9 @@ export const POST: APIRoute = async ({ request }) => {
     const allPlayers: any[] = allPlayersRaw
       ? (Array.isArray(allPlayersRaw) ? allPlayersRaw : [allPlayersRaw])
       : [];
-    // Mirror the client's `buildDraftPlayers` filter: this league only drafts
-    // skill positions + PK/DEF. Source feeds (dynasty ADP, KTC, Sleeper) include
-    // IDPs (LB/DE/DT/CB/S) which are valid rookies but render blank on the
-    // board because the client's playerMap excludes them. Drop them at the
-    // source so AI auto-picks never produce a slot the UI can't render.
-    const DRAFTABLE = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']);
-    const normPos = (pos: string): string => {
-      if (!pos) return '';
-      const upper = pos.toUpperCase();
-      if (upper.startsWith('TM') || upper === 'DEF' || upper === 'D/ST') return 'DEF';
-      if (upper === 'PK' || upper === 'K') return 'PK';
-      return upper;
-    };
-    const rookiePool = allPlayers.filter((p: any) => {
-      const isRookie = p.status === 'R' || p.draft_year === leagueYearStr;
-      if (!isRookie) return false;
-      return DRAFTABLE.has(normPos(p.position || ''));
-    });
+    const rookiePool = allPlayers.filter(
+      (p: any) => p.status === 'R' || p.draft_year === leagueYearStr,
+    );
     const rookieIdSet = new Set(rookiePool.map((p: any) => p.id));
 
     // Normalized "first last" → MFL id for fuzzy matching (rookies only;
