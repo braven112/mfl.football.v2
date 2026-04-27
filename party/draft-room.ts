@@ -356,10 +356,12 @@ export default class DraftRoomServer implements Party.Server {
       return;
     }
 
-    // In mock drafts, allow the session creator to pick for any team on the clock
+    // Only the on-clock franchise's owner can submit a pick. Other teams are
+    // AI-driven via autoPick — letting a connected user (even the creator)
+    // pick for them races with the auto-pick microtask and can leave a slot
+    // with a synthetic playerId that renders blank on the board.
     const currentFranchise = session.draftOrder[session.currentPickIndex];
-    const isCreator = msg.franchiseId === session.createdBy;
-    if (currentFranchise !== msg.franchiseId && !isCreator) {
+    if (currentFranchise !== msg.franchiseId) {
       sender.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
       return;
     }
