@@ -1,0 +1,59 @@
+name: Deploy PartyKit
+
+# Redeploys the PartyKit server (party/draft-room.ts) when changes land on main.
+#
+# Vercel auto-redeploys the Astro app on every push to main, but PartyKit is
+# a separate service that only updates when `partykit deploy` runs. Without
+# this workflow, edits to party/** would sit in main without ever reaching
+# the live WebSocket server.
+#
+# Path filter scopes deploys to changes that actually affect PartyKit so we
+# don't burn a deploy on every doc tweak. workflow_dispatch is included so
+# you can trigger a manual redeploy from the Actions tab.
+#
+# Auth: PartyKit's CLI looks for PARTYKIT_LOGIN + PARTYKIT_TOKEN env vars in
+# CI. Get them once locally with `npx partykit login` (writes to
+# ~/.config/partykit/config.json) then copy the values into repo Secrets.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'party/**'
+      - 'partykit.json'
+      - '.github/workflows/partykit-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: partykit-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.24.0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy to PartyKit
+        env:
+          PARTYKIT_LOGIN: ${{ secrets.PARTYKIT_LOGIN }}
+          PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_TOKEN }}
+        run: pnpm party:deploy
