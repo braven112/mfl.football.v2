@@ -1,22 +1,22 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { resolveLeaguePath } from '../../utils/nav-utils';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import archiveLinks from '../../data/theleague/salary-archive-links.json';
-
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Salary Archive">
   <section class="salary-archive">
     <header class="salary-archive__intro">
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Stats & Reports', href: '/theleague/stats' },
+        { label: 'Salary Archive' },
+      ]} />
       <h1>Salary Archive</h1>
       <p>
         Historical salary spreadsheets from 2009&ndash;2025. These Google Sheets
         were manually maintained before salary data was generated from the MFL API.
-      </p>
-      <p class="salary-archive__back">
-        <a href={r("/theleague/salary")}>&larr; Back to Salary Analytics</a>
       </p>
     </header>
 
@@ -46,6 +46,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         ))}
       </tbody>
     </table>
+
+    <RelatedReports currentId="salary-archive" />
   </section>
 </TheLeagueLayout>
 

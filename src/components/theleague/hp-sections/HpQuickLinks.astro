@@ -40,7 +40,13 @@ const sorted = [...visible].sort((a, b) => {
   return b.popularity - a.popularity;
 });
 
-const pages = sorted.slice(0, 8);
+// Pin the Stats & Reports hub so it always surfaces on the homepage.
+const PINNED_IDS = ['stats'];
+const pinned = PINNED_IDS
+  .map(id => visible.find(p => p.id === id))
+  .filter((p): p is PageEntry => Boolean(p));
+const rest = sorted.filter(p => !PINNED_IDS.includes(p.id));
+const pages = [...pinned, ...rest].slice(0, 8);
 ---
 
 <section class="hp-links" aria-label="Quick links">
