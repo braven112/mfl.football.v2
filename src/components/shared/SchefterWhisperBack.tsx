@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import type { TipTopic } from '../../types/schefter-tips';
 
 /**
  * Whisper-back — inline follow-up tip form for rumor cards (Phase 7).
@@ -19,7 +20,7 @@ const MAX_CHARS = 500;
 export default function SchefterWhisperBack({ postId, isAuthenticated }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const [topic, setTopic] = useState<'trade' | 'roster' | 'prediction' | 'commish' | 'other'>('other');
+  const [topic, setTopic] = useState<TipTopic>('other');
   const [status, setStatus] = useState<{ kind: 'idle' | 'success' | 'error'; message: string }>(
     { kind: 'idle', message: '' },
   );
@@ -96,14 +97,15 @@ export default function SchefterWhisperBack({ postId, isAuthenticated }: Props) 
           <select
             className="sfc-whisper__topic"
             value={topic}
-            onChange={(e) => setTopic(e.target.value as typeof topic)}
+            onChange={(e) => setTopic(e.target.value as TipTopic)}
             disabled={loading}
           >
             <option value="trade">Trade interest</option>
+            <option value="draft">Draft buzz</option>
+            <option value="extension">Extension watch</option>
             <option value="roster">Roster gripe</option>
-            <option value="prediction">Bold prediction</option>
             <option value="commish">Beef</option>
-            <option value="other">Other</option>
+            <option value="other">Hot take / other</option>
           </select>
         </label>
         <span className="sfc-whisper__counter">{text.length} / {MAX_CHARS}</span>

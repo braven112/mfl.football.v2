@@ -144,10 +144,11 @@ const franchiseOptions = teams.map((t) => ({
           <label class="tip-field__label" for="tip-topic">Topic</label>
           <select class="tip-field__select" id="tip-topic" name="topic" required>
             <option value="trade">Trade interest</option>
+            <option value="draft">Draft buzz</option>
+            <option value="extension">Extension watch</option>
             <option value="roster">Roster gripe</option>
-            <option value="prediction">Bold prediction</option>
             <option value="commish">Beef</option>
-            <option value="other">Other</option>
+            <option value="other">Hot take / other</option>
           </select>
         </div>
 
@@ -1101,12 +1102,16 @@ const franchiseOptions = teams.map((t) => ({
   const remainingChip = document.getElementById('tip-remaining') as HTMLElement | null;
   const remainingText = document.getElementById('tip-remaining-text');
 
+  // The commish isn't a valid target for league-business topics — he doesn't
+  // trade, doesn't draft, and doesn't extend players. Mirrors the server-side
+  // FRANCHISE_ONLY_TOPICS guard in src/types/schefter-tips.ts.
+  const FRANCHISE_ONLY_TOPICS = new Set(['trade', 'draft', 'extension']);
   function syncCommishOption() {
     if (!topicSelect || !franchiseSelect || !commishOption) return;
-    const isTrade = topicSelect.value === 'trade';
-    commishOption.hidden = isTrade;
-    commishOption.disabled = isTrade;
-    if (isTrade && franchiseSelect.value === 'commish') {
+    const isFranchiseOnly = FRANCHISE_ONLY_TOPICS.has(topicSelect.value);
+    commishOption.hidden = isFranchiseOnly;
+    commishOption.disabled = isFranchiseOnly;
+    if (isFranchiseOnly && franchiseSelect.value === 'commish') {
       franchiseSelect.value = 'league-wide';
     }
   }
@@ -1116,10 +1121,11 @@ const franchiseOptions = teams.map((t) => ({
   // Phase 3 — rotating placeholders by topic
   const PLACEHOLDERS: Record<string, string> = {
     trade: "e.g. Hearing the Northwest is shopping their 1st for a vet WR…",
+    draft: "e.g. Hearing the Magicians are zeroed in on a WR with the 1.04…",
+    extension: "e.g. Word is the Geeks are letting Breece Hall walk for the comp pick…",
     roster: "e.g. Somebody in the East just gave up on their rebuild…",
-    prediction: "e.g. Calling it now — Breece Hall isn't making it through Week 8…",
     commish: "e.g. The Commish keeps scheduling the auction when I'm on vacation. I see you.",
-    other: "Tell me what's brewing.",
+    other: "Bold takes, league chaos, anything Schefter should be hearing.",
   };
   function syncPlaceholder() {
     if (!topicSelect || !textarea) return;
@@ -1323,10 +1329,11 @@ const franchiseOptions = teams.map((t) => ({
   // Phase 9 — hot topics chips.
   const TOPIC_LABELS: Record<string, string> = {
     trade: 'Trade interest',
+    draft: 'Draft buzz',
+    extension: 'Extension watch',
     roster: 'Roster gripe',
-    prediction: 'Bold prediction',
     commish: 'Beef',
-    other: 'Other',
+    other: 'Hot take / other',
   };
   const hotChipsEl = document.querySelector('[data-hot-topics-chips]') as HTMLElement | null;
 

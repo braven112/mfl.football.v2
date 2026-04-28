@@ -31,6 +31,7 @@ import {
   LEAGUE_WIDE_HINT,
   COMMISH_HINT,
   WHISPER_BACK_MAX_AGE_MS,
+  isFranchiseOnlyTopic,
   type Tip,
   type TipTopic,
 } from '../../../types/schefter-tips';
@@ -184,8 +185,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (franchiseHint === LEAGUE_WIDE_HINT) {
       normalizedHint = LEAGUE_WIDE_HINT;
     } else if (franchiseHint === COMMISH_HINT) {
-      if (topic === 'trade') {
-        return errorResponse('bad_hint', 'The commissioner is not a valid target for trade-interest tips.', 400);
+      if (isFranchiseOnlyTopic(topic)) {
+        return errorResponse(
+          'bad_hint',
+          'The commissioner is not a valid target for trade, draft, or extension tips.',
+          400,
+        );
       }
       normalizedHint = COMMISH_HINT;
     } else if (isValidFranchiseId(franchiseHint)) {

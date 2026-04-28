@@ -132,8 +132,8 @@ describe('anon Style Book — tip.ts integration', () => {
 
   it('increments timeline only when topic is "commish"', () => {
     // The Beef topic is the off-topic channel by design. We don't bump on
-    // trade/roster/prediction/other — those are either league-business or
-    // genuinely general.
+    // trade/draft/extension/roster/other — those are either league-business
+    // or genuinely general.
     expect(tipSource).toMatch(/if \(topic === 'commish'\)/);
   });
 

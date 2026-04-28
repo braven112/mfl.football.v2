@@ -9,8 +9,21 @@
  * `${userId}${SCHEFTER_TIPSTER_SALT}` (see utils/schefter-tipster-hash.ts).
  */
 
-export const TIP_TOPICS = ['trade', 'roster', 'prediction', 'commish', 'other'] as const;
+export const TIP_TOPICS = ['trade', 'draft', 'extension', 'roster', 'commish', 'other'] as const;
 export type TipTopic = (typeof TIP_TOPICS)[number];
+
+/**
+ * League-business topics where the commissioner is not a sensible target.
+ * Tips with `franchiseHint === 'commish'` on these topics are rejected at
+ * submission time — the commish doesn't draft, doesn't extend, and isn't
+ * trading with himself.
+ */
+export const FRANCHISE_ONLY_TOPICS = ['trade', 'draft', 'extension'] as const;
+export type FranchiseOnlyTopic = (typeof FRANCHISE_ONLY_TOPICS)[number];
+
+export function isFranchiseOnlyTopic(topic: string): topic is FranchiseOnlyTopic {
+  return (FRANCHISE_ONLY_TOPICS as readonly string[]).includes(topic);
+}
 
 export const LEAGUE_WIDE_HINT = 'league-wide';
 export const COMMISH_HINT = 'commish';
