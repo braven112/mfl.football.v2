@@ -1,0 +1,309 @@
+---
+/**
+ * /admin/scouting — Scouting System hub
+ *
+ * Admin-only landing page listing every event report (rookie draft, season
+ * start, trade deadline, playoffs, year-end) plus the franchise dossiers.
+ * Each report card links to the detail page; missing reports surface a
+ * "Not generated yet" state with the regen command.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import type { ReportMeta, EventType } from '../../../types/scouting-system';
+
+export const prerender = false;
+
+// ── Auth gate ───────────────────────────────────────────────────────
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect('/login?next=/admin/scouting');
+if (!isCommissionerOrAdmin(user)) return Astro.redirect('/');
+
+// ── Discover all reports on disk ────────────────────────────────────
+const reportMetaModules = import.meta.glob(
+  '../../../../data/fantasy-expert/scouting-system/reports/*/meta.json',
+  { eager: true },
+);
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod
+    ? (mod as { default: unknown }).default
+    : mod;
+
+type ReportCard = {
+  year: number;
+  eventType: EventType;
+  href: string;
+  meta: ReportMeta | null;
+};
+
+// Reports we know about, in the order they appear on the calendar.
+const KNOWN_EVENTS: { eventType: EventType; label: string; description: string }[] = [
+  { eventType: 'rookie-draft', label: 'Rookie Draft', description: 'Per-owner targets + 3-round mock' },
+  { eventType: 'season-start', label: 'Season Start', description: 'Win totals, breakout/bust calls' },
+  { eventType: 'trade-deadline', label: 'Trade Deadline', description: 'Buyers, sellers, likely deals' },
+  { eventType: 'playoffs', label: 'Playoffs', description: 'Bracket projections, upset risks' },
+  { eventType: 'year-end', label: 'Year-End Review', description: 'Extensions, tags, comp picks' },
+];
+
+const currentSeason = new Date().getFullYear();
+const seasonsToShow = [currentSeason, currentSeason - 1];
+
+const cards: ReportCard[] = [];
+for (const year of seasonsToShow) {
+  for (const ev of KNOWN_EVENTS) {
+    const metaPath = `../../../../data/fantasy-expert/scouting-system/reports/${year}-${ev.eventType}/meta.json`;
+    const metaModule = reportMetaModules[metaPath];
+    const meta = metaModule ? (getModuleData(metaModule) as ReportMeta) : null;
+    cards.push({
+      year,
+      eventType: ev.eventType,
+      href: `/admin/scouting/${year}-${ev.eventType}`,
+      meta,
+    });
+  }
+}
+
+// ── Franchise dossier discovery ─────────────────────────────────────
+const dossierModules = import.meta.glob(
+  '../../../../data/fantasy-expert/scouting-system/franchises/*.json',
+  { eager: true },
+);
+const dossierCount = Object.keys(dossierModules).length;
+
+// ── Ledger metrics ──────────────────────────────────────────────────
+let totalPredictions = 0;
+let resolvedPredictions = 0;
+let correctPredictions = 0;
+try {
+  const ledgerModule = await import(
+    '../../../../data/fantasy-expert/scouting-system/predictions-ledger.json'
+  );
+  const ledger = ledgerModule.default as { predictions: { outcome?: { correct: boolean } }[] };
+  totalPredictions = ledger.predictions.length;
+  resolvedPredictions = ledger.predictions.filter(p => p.outcome).length;
+  correctPredictions = ledger.predictions.filter(p => p.outcome?.correct).length;
+} catch {
+  // ledger missing — leave at 0
+}
+
+const accuracyPct = resolvedPredictions > 0
+  ? Math.round((correctPredictions / resolvedPredictions) * 100)
+  : null;
+
+const eventLabel = (et: EventType): string =>
+  KNOWN_EVENTS.find(e => e.eventType === et)?.label ?? et;
+const eventDesc = (et: EventType): string =>
+  KNOWN_EVENTS.find(e => e.eventType === et)?.description ?? '';
+---
+
+<TheLeagueLayout title="Scouting System">
+  <div class="scouting-hub">
+
+    <header class="hub-hero">
+      <div class="hub-hero__eyebrow">Admin · Scouting System</div>
+      <h1 class="hub-hero__title">All-Year GM Intelligence</h1>
+      <p class="hub-hero__meta">
+        Per-franchise dossiers updated by every event report. Predictions are recorded and scored.
+      </p>
+    </header>
+
+    <div class="hub-metrics">
+      <div class="hub-metric">
+        <span class="hub-metric__value">{dossierCount}</span>
+        <span class="hub-metric__label">Franchise Dossiers</span>
+      </div>
+      <div class="hub-metric">
+        <span class="hub-metric__value">{totalPredictions}</span>
+        <span class="hub-metric__label">Predictions Logged</span>
+      </div>
+      <div class="hub-metric">
+        <span class="hub-metric__value">{resolvedPredictions}</span>
+        <span class="hub-metric__label">Resolved</span>
+      </div>
+      <div class="hub-metric">
+        <span class="hub-metric__value">{accuracyPct === null ? '—' : `${accuracyPct}%`}</span>
+        <span class="hub-metric__label">Accuracy</span>
+      </div>
+    </div>
+
+    {seasonsToShow.map(year => (
+      <section class="hub-season">
+        <h2 class="hub-season__title">{year} Season</h2>
+        <div class="hub-grid">
+          {cards.filter(c => c.year === year).map(card => (
+            <a href={card.href} class:list={['hub-card', !card.meta && 'hub-card--empty']}>
+              <div class="hub-card__header">
+                <span class="hub-card__event">{eventLabel(card.eventType)}</span>
+                <span class:list={['hub-card__status', card.meta ? 'hub-card__status--ready' : 'hub-card__status--empty']}>
+                  {card.meta ? 'Ready' : 'Not generated'}
+                </span>
+              </div>
+              <p class="hub-card__desc">{eventDesc(card.eventType)}</p>
+              {card.meta && (
+                <div class="hub-card__meta">
+                  <span>Generated {new Date(card.meta.generatedAt).toLocaleDateString()}</span>
+                  <span>·</span>
+                  <span>{card.meta.agentCallCount} agent calls</span>
+                </div>
+              )}
+              {!card.meta && (
+                <div class="hub-card__cmd">
+                  <code>pnpm scout:{card.eventType} {card.year}</code>
+                </div>
+              )}
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .scouting-hub {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .hub-hero { margin-bottom: 1.5rem; }
+  .hub-hero__eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    margin-bottom: 0.375rem;
+  }
+  .hub-hero__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 0.375rem;
+    color: var(--color-gray-900, #111827);
+  }
+  .hub-hero__meta {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  .hub-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .hub-metric {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+  }
+  .hub-metric__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .hub-metric__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .hub-season { margin-bottom: 2rem; }
+  .hub-season__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 1rem;
+  }
+
+  .hub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 0.75rem;
+  }
+
+  .hub-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--color-white, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .hub-card:hover {
+    border-color: var(--color-primary, #1c497c);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  .hub-card--empty {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .hub-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .hub-card__event {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+  .hub-card__status {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+  }
+  .hub-card__status--ready { background: #dcfce7; color: #15803d; }
+  .hub-card__status--empty { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-500, #6b7280); }
+
+  .hub-card__desc {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .hub-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .hub-card__cmd {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .hub-card__cmd code {
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.6875rem;
+  }
+</style>
