@@ -79,6 +79,29 @@ const franchiseOptions = teams.map((t) => ({
   ),
   division: t.division,
 }));
+
+// Pre-select a franchise on form load when the visitor arrived via a
+// whisper-back CTA on a Schefter post (e.g. /theleague/schefter/tip?target=0008).
+// The matching <option> gets `selected` so the dropdown opens with the
+// targeted team chosen, and a banner above the form sets the response context.
+const targetParam = Astro.url.searchParams.get('target');
+const preselectTeam = (() => {
+  if (!targetParam) return null;
+  const t = teams.find((team) => team.franchiseId === targetParam);
+  if (!t) return null;
+  return {
+    franchiseId: t.franchiseId,
+    shortName: chooseTeamName(
+      {
+        fullName: t.name,
+        nameMedium: t.nameMedium,
+        nameShort: t.nameShort,
+        abbrev: t.abbrev,
+      },
+      'short',
+    ),
+  };
+})();
 ---
 
 <TheLeagueLayout title="Tip Schefter">
@@ -117,6 +140,22 @@ const franchiseOptions = teams.map((t) => ({
         </p>
       </header>
 
+      {preselectTeam && (
+        <aside
+          class="tip-preselect"
+          role="note"
+          aria-labelledby="tip-preselect-title"
+        >
+          <span class="tip-preselect__eyebrow" id="tip-preselect-title">
+            Responding to a story
+          </span>
+          <p class="tip-preselect__body">
+            Responding to the <strong>{preselectTeam.shortName}</strong> story —
+            they're pre-selected. <span class="tip-preselect__cta">Speak your piece.</span>
+          </p>
+        </aside>
+      )}
+
       <form class="tip-card tip-form" id="tip-form" novalidate>
       <div class="section-header">
         <h2 class="section-header__title">Your tip</h2>
@@ -153,13 +192,27 @@ const franchiseOptions = teams.map((t) => ({
 
         <div class="tip-field">
           <label class="tip-field__label" for="tip-franchise">About which team?</label>
-          <select class="tip-field__select" id="tip-franchise" name="franchiseHint">
-            <option value="league-wide">League-wide</option>
+          <select
+            class="tip-field__select"
+            id="tip-franchise"
+            name="franchiseHint"
+            aria-describedby="tip-franchise-help"
+          >
+            <option value="league-wide" selected={!preselectTeam}>League-wide</option>
             <option value="commish" data-commish>The Commish</option>
             {franchiseOptions.map((t) => (
-              <option value={t.franchiseId}>{t.label}{t.division ? ` — ${t.division}` : ''}</option>
+              <option
+                value={t.franchiseId}
+                selected={t.franchiseId === preselectTeam?.franchiseId}
+              >
+                {t.label}{t.division ? ` — ${t.division}` : ''}
+              </option>
             ))}
           </select>
+          <p class="tip-field__help" id="tip-franchise-help">
+            Picking a team unlocks direct naming for this tip. Leave it generic to keep
+            the post about a division.
+          </p>
         </div>
       </div>
 
@@ -553,6 +606,61 @@ const franchiseOptions = teams.map((t) => ({
     letter-spacing: 0.04em;
     color: var(--color-gray-500, #6b7280);
   }
+  /* Pre-select banner — surfaces only when ?target= resolves a valid franchise.
+     Sets the response context for the form action below. Non-dismissible. */
+  .tip-preselect {
+    margin: 0 0 1rem;
+    padding: 0.625rem 0.875rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--sf-border, var(--color-gray-200, #e5e7eb));
+    border-left: 3px solid var(--sf-accent, var(--color-primary, #1c497c));
+    border-radius: var(--radius-md, 0.5rem);
+  }
+  .tip-preselect__eyebrow {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sf-accent, var(--color-primary, #1c497c));
+    margin-bottom: 0.1875rem;
+  }
+  .tip-preselect__body {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-gray-800, #1f2937);
+  }
+  .tip-preselect__body strong {
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+  .tip-preselect__cta {
+    color: var(--color-gray-600, #4b5563);
+    font-style: italic;
+  }
+  @media (prefers-color-scheme: dark) {
+    .tip-preselect {
+      background: var(--color-gray-900, #111827);
+      border-color: var(--color-gray-700, #374151);
+      border-left-color: var(--sf-accent, var(--color-primary, #1c497c));
+    }
+    .tip-preselect__body { color: var(--color-gray-100, #f3f4f6); }
+    .tip-preselect__body strong { color: #fff; }
+  }
+
+  /* Inline help text under the franchise dropdown — sets expectations that
+     picking a team unlocks direct naming on the resulting Schefter post. */
+  .tip-field__help {
+    margin: 0.375rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--color-gray-500, #6b7280); /* WCAG AA on white at 0.75rem */
+  }
+  @media (prefers-color-scheme: dark) {
+    .tip-field__help { color: var(--color-gray-400, #9ca3af); }
+  }
+
   .tip-field__textarea,
   .tip-field__select {
     font: inherit;

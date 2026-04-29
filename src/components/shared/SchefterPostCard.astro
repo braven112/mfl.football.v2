@@ -219,9 +219,15 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
         {post.link && (
           <a
             href={post.link}
-            class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}`}
+            class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}${typeof post.link === 'string' && post.link.includes('?target=') ? ' sf-post__link--directed' : ''}`}
             {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           >
+            {typeof post.link === 'string' && post.link.includes('?target=') && (
+              <svg class="sf-post__link-icon" width="14" height="14" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true">
+                <path d="M3 11l15-7v16L3 13zM3 11v2M8 13v4a2 2 0 0 0 4 0v-3" />
+              </svg>
+            )}
             {post.linkLabel ?? (isExternal ? 'Read on ESPN →' : 'View details')}
             {isExternal && <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">(opens in new tab)</span>}
           </a>

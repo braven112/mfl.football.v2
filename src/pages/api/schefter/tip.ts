@@ -23,6 +23,8 @@ import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { detectAttackOnSchefter } from '../../../utils/schefter-attack-detection';
 import { assignCodename } from '../../../utils/schefter-codenames';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+// @ts-expect-error — JS module without bundled types; runtime exports verified.
+import { incrementNamingTarget } from '../../../../scripts/lib/schefter-naming-rate-limit.mjs';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import {
   TIP_TOPICS,
@@ -345,6 +347,24 @@ export const POST: APIRoute = async ({ request }) => {
         : Math.max(1, parseInt(String(cardRaw ?? '1'), 10) || 1);
     } catch (err) {
       console.warn('[schefter/tip] off-topic timeline bump failed:', err);
+    }
+  }
+
+  // Naming rate limiter — when the tipster picked a real franchise from the
+  // dropdown, increment the per-(tipster, target) counter that the scanner
+  // uses to decide whether this tip unlocks direct naming (under cap) or
+  // silently demotes to division-fuzz (over cap). Best-effort: a Redis
+  // failure here must not block tip submission — the tip still queues, the
+  // scanner just falls back to division-fuzz when it can't read the counter.
+  if (
+    normalizedHint &&
+    normalizedHint !== LEAGUE_WIDE_HINT &&
+    normalizedHint !== COMMISH_HINT
+  ) {
+    try {
+      await incrementNamingTarget(hashedOwnerId, normalizedHint, redis);
+    } catch (err) {
+      console.warn('[schefter/tip] naming rate-limit increment failed:', err);
     }
   }
 

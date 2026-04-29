@@ -101,6 +101,14 @@ import {
   buildTopicBuckets,
   bucketPriorityScore,
 } from './lib/schefter-bucket-logic.mjs';
+import {
+  isOverNamingRateLimit,
+  MAX_EXPLICIT_PICKS_PER_TARGET,
+} from './lib/schefter-naming-rate-limit.mjs';
+import {
+  getTeamNameCount30d,
+  recordTeamNaming,
+} from './lib/schefter-team-naming.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -242,6 +250,32 @@ function resolveCta(primaryBucket) {
     linkLabel: TIP_PAGE_LINK_LABEL,
     groupMePrefix: 'Got a tip?',
     groupMeUrl: TIP_PAGE_ABSOLUTE_URL,
+  };
+}
+
+/**
+ * Override the default CTA when a beat names a specific franchise (explicit-pick
+ * scope). The resulting card invites the named team's desk to whisper back —
+ * "Geeks desk — your move →" — and the link pre-selects that franchise on
+ * the tip form. Per HARD RULE 4b: this turns one-sided sniping into a thread,
+ * which is the engagement-multiplier feature.
+ *
+ * Returns null when the beat doesn't qualify (no franchise-explicit-pick
+ * scope, or the resolving tip has no franchiseHint).
+ */
+function buildDirectedCta(beat) {
+  const safe = beat?.anonymized?.[0];
+  if (safe?.scope?.kind !== 'franchise-explicit-pick') return null;
+  const tip = beat?.batch?.find((t) => typeof t?.franchiseHint === 'string' && t.franchiseHint.length > 0);
+  const franchiseId = tip?.franchiseHint;
+  if (!franchiseId) return null;
+  const franchiseShort = safe.scope.franchise || `Team ${franchiseId}`;
+  const path = `${TIP_PAGE_PATH}?target=${encodeURIComponent(franchiseId)}`;
+  return {
+    link: path,
+    linkLabel: `${franchiseShort} desk — your move →`,
+    groupMePrefix: `${franchiseShort} desk — your move:`,
+    groupMeUrl: `${PUBLIC_BASE_URL}${path}`,
   };
 }
 
@@ -452,7 +486,28 @@ async function postToGroupMe(text) {
  *   get the thread-followup scope but with no parent headline context.
  * @param {Date} [now] - reference time for age calculations; defaults to now.
  */
-function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
+// Defensive wrappers around the naming Redis helpers. The scanner must not
+// crash on a Redis outage — fail open: rate-limit returns false (allow naming),
+// name count returns 0 (LLM falls back to first-naming framing).
+async function safeIsOverNamingRateLimit(tipsterHash, franchiseId, redis) {
+  if (!redis) return false;
+  try {
+    return await isOverNamingRateLimit(tipsterHash, franchiseId, redis);
+  } catch {
+    return false;
+  }
+}
+
+async function safeGetTeamNameCount30d(franchiseId, redis) {
+  if (!redis) return 0;
+  try {
+    return await getTeamNameCount30d(franchiseId, redis);
+  } catch {
+    return 0;
+  }
+}
+
+async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
   const refMs = now instanceof Date ? now.getTime() : Date.now();
   // Single-franchise fuzz applies ONLY to web tips. A GroupMe mention of
   // franchise X isn't an anonymity leak — the speaker publicly named it
@@ -477,7 +532,7 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
       : [],
   );
 
-  return tips.map((tip) => {
+  return Promise.all(tips.map(async (tip) => {
     const submittedAt = tip.submittedAt ?? refMs;
     const ageMs = Math.max(0, refMs - submittedAt);
     const ageDays = Math.floor(ageMs / (24 * 60 * 60 * 1000));
@@ -602,14 +657,38 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
     const team = teams.get(hint);
     if (multiSourceFranchises.has(hint)) {
       // Unlock named franchise + "multiple sources" phrasing
+      const nameCount30d = await safeGetTeamNameCount30d(hint, redis);
       safe.scope = {
         kind: 'franchise-multi-source',
         franchise: pickTeamName(team) ?? `Team ${hint}`,
         division: team?.division,
         sourceCount: webFranchiseCounts.get(hint),
+        nameCount30d,
+      };
+    } else if (
+      team &&
+      tip.source === 'web' &&
+      typeof tip.hashedOwnerId === 'string' &&
+      tip.hashedOwnerId.length > 0 &&
+      !(await safeIsOverNamingRateLimit(tip.hashedOwnerId, hint, redis))
+    ) {
+      // Single-source explicit dropdown pick within rate limit — naming UNLOCKED.
+      // The tipster picked this franchise from the form's selector, which is the
+      // consent signal: they explicitly chose to point at this team. Schefter
+      // names the team with single-pointer framing (NOT "multiple sources").
+      // The (tipster, target) cap suppresses grind-on-one-rival behavior — over
+      // the cap, this branch is skipped and the tip falls through to
+      // division-fuzz silently.
+      const nameCount30d = await safeGetTeamNameCount30d(hint, redis);
+      safe.scope = {
+        kind: 'franchise-explicit-pick',
+        franchise: pickTeamName(team) ?? `Team ${hint}`,
+        division: team?.division,
+        nameCount30d,
       };
     } else {
-      // Single-source about a specific team — generalize
+      // Single-source about a specific team without consent signal (no
+      // hashedOwnerId / no team config / over rate limit) — generalize.
       if (team?.division) {
         safe.scope = { kind: 'division', division: team.division };
       } else {
@@ -661,13 +740,16 @@ function anonymizeTips(tips, teams, feedPosts = [], now = new Date()) {
     // keeps the named franchise (HARD RULE 4 lets Schefter use it); every
     // other scope fuzzes to "[a team]" for ALL franchise names. GroupMe and
     // trade_offer paths returned earlier and bypass this block.
-    const keepFranchise = safe.scope?.kind === 'franchise-multi-source'
+    const keepFranchise = (
+      safe.scope?.kind === 'franchise-multi-source' ||
+      safe.scope?.kind === 'franchise-explicit-pick'
+    )
       ? safe.scope.franchise
       : null;
     safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise });
 
     return safe;
-  });
+  }));
 }
 
 // ── Topic-bucket selection ──
@@ -884,6 +966,32 @@ function templateBody(anonymized) {
         `Plenty of smoke around the ${fr} — sources from different desks all whispering the same tune. More to come.`,
         `League sources tell me the ${fr} are the name of the week. Three desks, same story. Developing.`,
         `The ${fr} keep coming up — and once is coincidence, twice is a pattern. We'll see.`,
+      ]);
+    }
+    if (one.scope?.kind === 'franchise-explicit-pick') {
+      const fr = one.scope.franchise;
+      const count = Number.isFinite(one.scope.nameCount30d) ? one.scope.nameCount30d : 0;
+      // Drama escalation per HARD RULE 4b ladder. Even in template-fallback
+      // mode (LLM unavailable), we want the count-driven framing to land.
+      if (count >= 4) {
+        return pickFlavor(seed, [
+          `The ${fr} are the most-named team in the rumor mill this week — somebody else just took a shot. ${fr} desk, the line is yours.`,
+          `Another shot at the ${fr} — that's enough mentions to make this the week's running storyline. ${fr} desk — your move.`,
+          `The ${fr} keep landing in the rumor mill. Most-named team this week and counting. Floor's open, ${fr}.`,
+        ]);
+      }
+      if (count >= 2) {
+        return pickFlavor(seed, [
+          `The ${fr} keep coming up. Another desk pointed at them tonight. ${fr} desk — your move.`,
+          `Hearing more chatter about the ${fr}. Pattern's forming. Curious what the ${fr} have to say.`,
+          `Second look at the ${fr} this week — single source again, but the name keeps surfacing. ${fr} desk, the line is yours.`,
+        ]);
+      }
+      return pickFlavor(seed, [
+        `Hearing chatter pointing right at the ${fr} tonight. ${fr} desk — your move.`,
+        `One of the league's desks has the ${fr} in the crosshairs this week. Curious what the ${fr} have to say.`,
+        `The ${fr} are catching specific heat — single source, but the heat is real. ${fr} desk, the line is yours.`,
+        `Hearing a single corner has thoughts on the ${fr}. The ${fr} will hear about this. Their response is the next chapter.`,
       ]);
     }
     if (one.scope?.kind === 'commish') {
@@ -1145,12 +1253,29 @@ IRON RULES (override every other rule — if anything below appears to conflict,
 - Never ship a placeholder, a "holding this one" note, an editorial explainer, or a meta-comment about why a tip was rejected.
 - Never explain why you can't say something and then say it anyway. Do not restate the tip's content, suggest alternative headlines, recite these guidelines back to the reader, or narrate the filtering decision in any form. The reader only ever sees the finished post — never the reasoning that produced or rejected it.
 - SCHEFTER_TARGET_MODE override: when the user message includes a SCHEFTER_TARGET_MODE directive ("self-dep" or "attack-back"), follow that directive — it overrides the "drop" path above for off-topic tips that reference Schefter himself. Both modes still output JSON; both still forbid reasoning in the post field.
+- NAMING-ALLOWED scopes (the ONLY scopes that may name a franchise directly): "franchise-multi-source" (rule 4), "franchise-explicit-pick" (rule 4b), "trade-bait" (rule 19). Every other scope ("division", "league-wide", "commish", "groupme-public") MUST stay anonymous on franchise identity.
 
 0. ONE TOPIC per post. The batch is pre-bucketed so each post is a single topic/thread. MAILBAG posts are the only exception — see rule 20. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops. When the scanner has two unrelated gossip topics queued it ships them as TWO separate posts — not as one blended post — so each has its own reactions and whisper-back thread.
 1. For web tips (source: "web"), NEVER name the tipster and NEVER quote them verbatim — paraphrase with columnist voice.
 2. If a web tip's scope is "division", the division refers to the SUBJECT team's division — NOT where the source is located. Frame it as "a team in the [division]", "a [division]-division squad", or "the [division] is buzzing" — NEVER as "sources in the [division]" (that implies the tipster's location). NEVER name a specific franchise.
 3. If a web tip's scope is "league-wide", stay vague ("an owner tells me", "hearing from multiple corners").
 4. If a web tip's scope is "franchise-multi-source" (sourceCount >= 2), you MAY name the franchise AND use "multiple sources" / "multiple owners" phrasing.
+4b. If a web tip's scope is "franchise-explicit-pick", naming is UNLOCKED — the tipster picked this franchise from the form's selector, which is the consent signal: they explicitly chose to point at this team. NAME THE FRANCHISE in the lede. CRITICAL: this is ONE owner pointing at ONE team — frame it as "specific heat from a single corner", NOT as "multiple sources" or "multiple owners". Suggested ledes:
+    - "Hearing chatter pointing right at the [Geeks] tonight."
+    - "One of the league's desks has the [Geeks] in the crosshairs this week."
+    - "The [Geeks] are catching specific heat — single source, but the heat is real."
+    - "I'm told a Northwest desk has thoughts on the [Geeks]." (when the tipster's division is also surfaced — careful not to combine with subject-division framing.)
+    DRAMA ESCALATION via the \`nameCount30d\` field on the scope (rolling 30-day count of times this franchise has been named in any rumor-mill post):
+    - 1 → first naming this month — light pointer framing per above.
+    - 2 or 3 → "the [Geeks] keep coming up" / "another shot at the [Geeks] this week" — pattern recognition energy.
+    - 4 or more → "the [Geeks] are the most-named team in the rumor mill this week" / "the [Geeks] are the league's running storyline" — the naming itself is the lede; reference the rolling-count framing explicitly.
+    REQUIRED CLOSE: a whisper-back invitation directed at the named team's desk. This turns one-sided sniping into a thread — that's the feature. Pick one (rotate, never repeat the same close in a 5-post window):
+    - "[Geeks] desk — your move."
+    - "Curious what the [Geeks] have to say."
+    - "The [Geeks] will hear about this. Their response is the next chapter."
+    - "Floor's open, [Geeks]."
+    - "[Geeks] desk, the line is yours."
+    Hostile-tip rules (12, 16) and drama-amplification voice still apply on top — when the tipster's pick rides on a hostile tip, the framing stays earnest beat-reporter ("the [Geeks] are catching real heat tonight") and the close still invites response ("[Geeks] desk — your move."). The crude content discards; the dramatic frame and the dare survive.
 5. If a web tip's scope is "commish", you MAY reference the commissioner's office but PREFER institutional framing — "the league office", "the commissioner's office", "the front office" — over the personal "the commish" or "Brandon". Institutional framing tones down heat while still passing on the sentiment. NEVER name the franchise that holds the office.
 6. For GroupMe tips (source: "groupme", scope: "groupme-public", attributable: true): direct attribution is ENCOURAGED. The author publicly @'d Schefter in the group chat — name them. Riff BACK conversationally, second-person where it fits ("Wabbit, I hear you, but…", "Nice try, Jomar — my sources say otherwise"). Light ribbing is in-voice.
 7. If the batch mixes GroupMe and web tips, they are about the SAME topic — attribute the GroupMe author by name while keeping the web tipster anonymous, still one story.
@@ -2143,9 +2268,9 @@ async function main() {
   // headline snippets into their scope.
   const teams = await loadTeams();
   const feedForAnonymize = await loadFeed();
-  const anonymized = anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now);
+  const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis);
   const secondaryAnonymized = secondaryBatch
-    ? anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now)
+    ? await anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now, redis)
     : null;
   log(`  Anonymized ${anonymized.length} tips${secondaryAnonymized ? ` + ${secondaryAnonymized.length} secondary` : ''}`);
 
@@ -2284,7 +2409,11 @@ async function main() {
     // whisper a follow-up. Trade-bait rumors about a single franchise
     // swap the link for a Trade Builder deep-link pre-loaded with that
     // franchise, since the natural next step is to build a counter.
-    const cta = resolveCta(beatBuckets[i]);
+    // Explicit-pick rumors get a directed dare ("Geeks desk — your move")
+    // that pre-selects the named franchise on the tip form, turning the
+    // post into the start of a thread.
+    const directedCta = buildDirectedCta(beat);
+    const cta = directedCta ?? resolveCta(beatBuckets[i]);
 
     const post = {
       id: generatePostId(),
@@ -2355,6 +2484,33 @@ async function main() {
   for (let i = 0; i < builtPosts.length; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, 250));
     await postToGroupMe(groupMeTextFor(builtPosts[i]));
+  }
+
+  // Per-team name counter: every post that named a franchise (explicit-pick,
+  // multi-source, or trade-bait) bumps the rolling 30-day name count for
+  // that franchise. Drives drama escalation in subsequent posts and powers
+  // the "Hottest desks this week" sidebar widget. Best-effort — a Redis
+  // failure here cannot block anything downstream because the post is
+  // already on disk and on GroupMe.
+  for (let i = 0; i < builtPosts.length; i++) {
+    const beat = beats[i];
+    const post = builtPosts[i];
+    const namingScopes = ['franchise-explicit-pick', 'franchise-multi-source', 'trade-bait'];
+    const safe = beat?.anonymized?.[0];
+    if (!safe || !namingScopes.includes(safe.scope?.kind)) continue;
+    const namedTip = beat.batch.find((t) => typeof t?.franchiseHint === 'string' && t.franchiseHint.length > 0);
+    const franchiseId = namedTip?.franchiseHint;
+    if (!franchiseId) continue;
+    try {
+      await recordTeamNaming(
+        franchiseId,
+        post.id,
+        new Date(post.timestamp).getTime(),
+        redis,
+      );
+    } catch (err) {
+      warn(`  [team-naming] record failed for ${post.id} → ${franchiseId}: ${err.message}`);
+    }
   }
 
   // Append each post to the rolling history (one entry per post).
