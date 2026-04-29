@@ -794,8 +794,27 @@ function generatePostId() {
   return `sf_rumor_${Date.now()}_${hash}`;
 }
 
+function pickFlavor(seed, options) {
+  // Deterministic round-robin across `options` based on a string seed
+  // (typically the tip id). Same seed → same pick across runs, which keeps
+  // template-fallback debugging stable while still giving variety across
+  // different tips.
+  if (!options || options.length === 0) return '';
+  if (options.length === 1) return options[0];
+  const s = String(seed ?? '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return options[Math.abs(h) % options.length];
+}
+
 function templateBody(anonymized) {
-  // Minimal fallback when Claude is unavailable. Intentionally vague.
+  // Fallback when Claude is unavailable (no API key, API outage, JSON
+  // parse failure). Voice still leans drama-amplification — Schefter
+  // plays a slow news day straight rather than shipping "buzzing about
+  // something" as a placeholder. Each scope gets several variants so
+  // the same fallback line doesn't fire identically every time.
   const scopes = anonymized.map((t) => t.scope?.kind);
   const divisions = [...new Set(anonymized.map((t) => t.scope?.division).filter(Boolean))];
   const groupmeAuthors = anonymized
@@ -803,8 +822,14 @@ function templateBody(anonymized) {
     .map((t) => t.author);
   if (anonymized.length === 1) {
     const one = anonymized[0];
+    const seed = String(one.id ?? '');
     if (one.source === 'groupme' && one.author) {
-      return `${one.author} fired off a theory in the group chat — I'm hearing you, and I'll have more as sources confirm. Developing.`;
+      return pickFlavor(seed, [
+        `${one.author} fired off a theory in the group chat — I'm hearing you, working sources to confirm. Developing.`,
+        `${one.author} dropped a take in the group thread tonight. Phones still moving on this one. We'll see.`,
+        `${one.author} pushing something in the chat — and it's not the worst smoke I've heard this week. More to come.`,
+        `Group-chat dispatch from ${one.author} — sources working overtime to confirm. Stay tuned.`,
+      ]);
     }
     if (one.source === 'trade_bait' && one.scope?.kind === 'trade-bait') {
       const adds = one.meta?.adds ?? [];
@@ -843,27 +868,64 @@ function templateBody(anonymized) {
         : `Hearing someone's dangling ${posPhrase} around. Early-week window-shopping or serious business? Developing.`;
     }
     if (one.scope?.kind === 'division') {
-      return `Hearing the ${one.scope.division} division is buzzing about something. Developing.`;
+      const div = one.scope.division;
+      return pickFlavor(seed, [
+        `Real chatter inside the ${div} this week — multiple owners whispering the same tune. Developing.`,
+        `Hearing genuine heat from the ${div} desks tonight. Worth watching. More to come.`,
+        `The ${div} division has a story brewing — owners pushing the same energy. We'll see.`,
+        `Sources around the ${div} are lit up — somebody's not happy and the phones are moving. Developing.`,
+        `Quiet but persistent rumble from the ${div} — the kind of week that usually breaks something open. Stay tuned.`,
+      ]);
     }
     if (one.scope?.kind === 'franchise-multi-source') {
-      return `League sources tell me multiple owners are talking about the ${one.scope.franchise}. Worth watching.`;
+      const fr = one.scope.franchise;
+      return pickFlavor(seed, [
+        `Multiple owners pointing at the ${fr} this week — same name keeps surfacing. Worth watching.`,
+        `Plenty of smoke around the ${fr} — sources from different desks all whispering the same tune. More to come.`,
+        `League sources tell me the ${fr} are the name of the week. Three desks, same story. Developing.`,
+        `The ${fr} keep coming up — and once is coincidence, twice is a pattern. We'll see.`,
+      ]);
     }
     if (one.scope?.kind === 'commish') {
-      return `Word around the league is the commissioner's office is drawing some static. Developing.`;
+      return pickFlavor(seed, [
+        `League office catching real heat this week — front office says everything's under control. We'll see.`,
+        `Real static around the commissioner's office — multiple owners pushing back. Developing.`,
+        `Front office under fire — owners not thrilled with how things are running. More to come.`,
+        `Hearing genuine chatter about the league office — the playbook's getting questioned. Developing.`,
+        `Quiet but pointed feedback flowing toward the front office tonight. Stay tuned.`,
+      ]);
     }
-    return `I'm told there's chatter in the league about something brewing. Stay tuned.`;
+    return pickFlavor(seed, [
+      `Real chatter rippling around the league this week — quiet but it's moving. Stay tuned.`,
+      `Sources tell me something's brewing — too early to say what, but the phones are warm. Developing.`,
+      `Plenty of league-wide whispers right now. The kind that usually means more later. We'll see.`,
+      `Hearing energy from multiple corners of the league. Smoke worth watching. More to come.`,
+    ]);
   }
   if (groupmeAuthors.length >= 2) {
     const [a, b] = groupmeAuthors;
-    return `${a} and ${b} are saying the same thing in the group chat — and sources tell me they're not alone. Developing.`;
+    return pickFlavor(`gm-${a}-${b}`, [
+      `${a} and ${b} pushing the same line in the group chat — and sources tell me they're not alone. Developing.`,
+      `Hearing the same tune from ${a} and ${b} in the chat tonight. Multiple desks confirming. We'll see.`,
+      `${a} and ${b} aligned on something — that's worth a listen. More to come.`,
+    ]);
   }
   if (divisions.length === 1) {
-    return `League sources tell me the ${divisions[0]} division is buzzing — multiple owners whispering the same tune. Developing.`;
+    const div = divisions[0];
+    return pickFlavor(`div-${div}-${anonymized.length}`, [
+      `League sources tell me the ${div} is buzzing — multiple owners whispering the same tune. Developing.`,
+      `The ${div} is the most active corner of the league this week. Several desks pushing the same story. More to come.`,
+      `Real heat inside the ${div} — owners aligned on something and the phones are moving. We'll see.`,
+    ]);
   }
   // Single-topic fallback: the batch agrees on one subject even if the
   // LLM can't articulate it. Lead with "multiple sources" — the batch
   // size already earned that phrasing.
-  return `Multiple sources around the league are pushing the same tune right now. More as it clears.`;
+  return pickFlavor(`multi-${anonymized.length}`, [
+    `Multiple sources around the league pushing the same tune right now. More as it clears.`,
+    `Hearing the same story from different corners tonight. Worth watching. Developing.`,
+    `League-wide hum on something — multiple desks, same energy. We'll see.`,
+  ]);
 }
 
 /**
