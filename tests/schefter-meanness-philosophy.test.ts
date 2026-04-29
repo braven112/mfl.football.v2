@@ -19,19 +19,45 @@ function read(rel: string): string {
 describe('HARD RULE 12 — editorial-filter design principle', () => {
   const scannerSrc = read('scripts/schefter-rumor-scan.mjs');
 
-  it('states the editorial filter is the feature', () => {
+  it('states the editorial filter is the feature AND that the feature is drama', () => {
     expect(scannerSrc).toMatch(/THE EDITORIAL FILTER IS THE FEATURE/);
+    // The direction shift: drama amplification is the bit, not muted dispassion.
+    expect(scannerSrc).toMatch(/THE FEATURE IS DRAMA/);
   });
 
-  it('explicitly tells the LLM that meaner input gets softer output', () => {
-    // The design principle: the meaner the tip, the more the filter earns
-    // its keep. This phrasing must appear verbatim or near-verbatim so the
-    // LLM understands it's its JOB to translate, not to clean up and pass.
-    expect(scannerSrc).toMatch(/meaner the input/i);
+  it('frames hostile tips as drama amplification, not muted reporting', () => {
+    // Schefter plays petty material completely straight, like a real beat
+    // reporter on a slow news day. Over-the-top earnest, ridiculous on
+    // purpose. This phrasing must be present so the LLM understands the
+    // tone target.
+    expect(scannerSrc).toMatch(/REAL DRAMA/);
+    expect(scannerSrc).toMatch(/playing petty group-chat shit-talk completely straight/i);
+    expect(scannerSrc).toMatch(/over-the-top earnest, NOT muted/);
   });
 
   it('forbids preserving any literal content from a hostile tip', () => {
     expect(scannerSrc).toMatch(/Never preserve any literal content/);
+  });
+
+  it('forbids dropping hostile tips at the IRON RULES level', () => {
+    // The IRON RULES no longer authorize dropping hostile content. Only
+    // genuinely empty/blank tips trip the {"post": null} path. This pins
+    // the no-drop policy so a future regression to "silently drop" gets
+    // caught here.
+    expect(scannerSrc).toMatch(/EVERY non-empty tip ships/);
+    expect(scannerSrc).toMatch(/empty \/ blank \/ no-content/);
+    expect(scannerSrc).toMatch(/Translate, don't drop/);
+  });
+
+  it('describes football flavor as occasional seasoning, never the centerpiece', () => {
+    // Football double-entendres are a small ingredient — the user's
+    // explicit dial-back. The prompt must call out the sparing use AND
+    // the no-content-encoding rule (puns are mood vocabulary, never echo
+    // the specific attack).
+    expect(scannerSrc).toMatch(/Football flavor — sparingly/);
+    expect(scannerSrc).toMatch(/AT MOST one football-flavor phrase per post/);
+    expect(scannerSrc).toMatch(/never use a football phrase that winks at the specific attack content/i);
+    expect(scannerSrc).toMatch(/drama-coloring, not content-encoding/);
   });
 
   it('explicitly names the tip categories that hit this rule', () => {
@@ -138,7 +164,16 @@ describe('personality.md — hostile-tips expansion', () => {
 
   it('states the design principle at the top of the section', () => {
     expect(src).toMatch(/The editorial filter IS the product/);
-    expect(src).toMatch(/The meaner the tip, the softer the output/);
+    // Direction shift: meaner input gets MORE DRAMATIC reporting (not softer).
+    // Schefter plays petty material straight; the drama amplification is the bit.
+    expect(src).toMatch(/The meaner the tip, the more dramatically Schefter reports it/);
+  });
+
+  it('forbids dropping hostile tips in the personality bible', () => {
+    // Personality.md Iron Rule 2 must mirror the scanner IRON RULE so the
+    // lore-loaded prompt and the inline prompt agree.
+    expect(src).toMatch(/Every non-empty tip ships/);
+    expect(src).toMatch(/Translate, don't drop/);
   });
 
   it('includes the "Brandon plays baseball like a girl" translation example with hissy-fit framing', () => {
@@ -204,8 +239,21 @@ describe('personality.md — hostile-tips expansion', () => {
     expect(src).toMatch(/Intra-division signal/);
   });
 
-  it('closes the Restraint section with the dispassion point', () => {
-    expect(src).toMatch(/The bit is dispassion/);
+  it('frames the bit as drama amplification (not dispassion)', () => {
+    // Direction shift: the section was previously titled "Restraint" and
+    // closed with "The bit is dispassion." It now reads as drama
+    // amplification — Schefter plays petty material completely straight,
+    // ridiculous-on-purpose. Pin both the new section header and the
+    // PG-but-dramatic framing so this can't silently regress.
+    expect(src).toMatch(/Drama amplification \(the bit\)/);
+    expect(src).toMatch(/ridiculous-on-purpose/);
+    expect(src).toMatch(/breathless beat-reporter earnestness/i);
+  });
+
+  it('describes football flavor as sparing seasoning in the personality bible', () => {
+    expect(src).toMatch(/Football flavor — sparingly/);
+    expect(src).toMatch(/AT MOST one football-flavor phrase per post/);
+    expect(src).toMatch(/drama-coloring, not content-encoding/);
   });
 });
 
