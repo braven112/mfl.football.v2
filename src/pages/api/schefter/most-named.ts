@@ -44,7 +44,31 @@ const DEFAULT_LIMIT = 5;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 16;
 
-type RedisClient = unknown;
+type ScanResult = [number | string, string[]] | { cursor: number | string; keys: string[] };
+
+type ZRangeOptions = {
+  byScore?: boolean;
+  rev?: boolean;
+  offset?: number;
+  count?: number;
+  withScores?: boolean;
+};
+
+/**
+ * Minimal interface against @upstash/redis — only the methods we actually
+ * call. Lets the typechecker catch arity/typo mistakes without coupling us
+ * to a particular client version's full surface area.
+ */
+type RedisClient = {
+  scan: (cursor: number | string, opts?: { match?: string; count?: number }) => Promise<ScanResult>;
+  zcount: (key: string, min: number | string, max: number | string) => Promise<number>;
+  zrange: (
+    key: string,
+    min: number | string,
+    max: number | string,
+    opts?: ZRangeOptions,
+  ) => Promise<Array<string | number>>;
+};
 
 let _redis: RedisClient | null | undefined;
 
