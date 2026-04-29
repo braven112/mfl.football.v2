@@ -3,7 +3,7 @@ name: franchise-gm-simulator
 description: "Role-plays an arbitrary TheLeague franchise's GM for the scouting system. Stateless and parameterized — you tell it which franchise to simulate via the prompt, and it produces a GM brief (top targets, positional priority, cap posture, taxi candidates, wildcard) for whatever event the scouting system is generating. Used by scripts/scouting/* generation scripts; not for direct user invocation. The fantasy-expert agent stays Pigskins-loyal — this agent has no team affinity and reasons purely from the data fed to it.\n\nExamples:\n\n<example>\nContext: Scouting system needs a per-franchise rookie-draft brief.\nuser: \"Generate the GM brief for franchise 0007 for the 2026 rookie draft.\"\nassistant: \"I'll launch the franchise-gm-simulator agent with the franchise 0007 dossier, board data, and pick ownership to produce their GM brief.\"\n<commentary>\nThe scouting generator script invokes this agent once per franchise, never the fantasy-expert (which is Pigskins-biased).\n</commentary>\n</example>\n\n<example>\nContext: Year-end review needs extension predictions per franchise.\nuser: \"Predict whether franchise 0011 will extend their RB1.\"\nassistant: \"I'll use the franchise-gm-simulator with their dossier and contract data to predict the extension decision and reasoning.\"\n<commentary>\nThis agent handles all per-franchise event predictions, factoring in cap, history, and behavioral notes.\n</commentary>\n</example>"
 model: opus
 color: blue
-tools: Read, Grep, Glob, Bash
+tools: Read, Write, Grep, Glob, Bash
 memory: project
 maxTurns: 10
 ---
