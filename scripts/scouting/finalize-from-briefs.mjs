@@ -98,6 +98,7 @@ const targetPicks = inputs.pickOwnership.filter(p => p.round <= ROUNDS_TO_PREDIC
 const mock = assembleMock({
   briefs,
   pickOwnership: targetPicks,
+  consensusBoard: inputs.consensusBoard,
   rspBoard: inputs.rspBoard,
   rookieAdp: inputs.rookieAdp,
   teamById,

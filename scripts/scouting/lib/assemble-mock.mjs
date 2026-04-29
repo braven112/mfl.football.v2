@@ -13,14 +13,29 @@ function normalizeName(s) {
 }
 
 /**
- * Build a global "best available" board from RSP + ADP. Used as the fallback
- * when a franchise's named targets are all gone.
+ * Build a global "best available" board for the BPA fallback.
+ * Priority: Consensus (post-NFL-draft, tiered, primary 50% weight) → RSP →
+ * MFL ADP. Used when a franchise's named targets are all picked.
  */
-function buildBoard(rspBoard, rookieAdp) {
+function buildBoard(consensusBoard, rspBoard, rookieAdp) {
   const seen = new Set();
   const board = [];
 
-  // RSP first (sorted by preDraftScore desc)
+  // Consensus first — it's the primary 50% weight for every franchise.
+  for (const p of consensusBoard) {
+    const key = normalizeName(p.name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    board.push({
+      name: p.name,
+      position: p.position,
+      consensusRank: p.rank,
+      consensusTier: p.tier,
+      nflTeam: p.nflTeam,
+    });
+  }
+
+  // RSP fills gaps for players Consensus doesn't have (or weights low)
   const rspSorted = [...rspBoard].sort((a, b) => (b.preDraftScore || 0) - (a.preDraftScore || 0));
   for (const p of rspSorted) {
     const key = normalizeName(p.name);
@@ -34,7 +49,7 @@ function buildBoard(rspBoard, rookieAdp) {
     });
   }
 
-  // ADP fills any gaps (rookies on the board no RSP grade)
+  // ADP last — picks up any remaining names
   for (const a of rookieAdp) {
     const key = normalizeName(a.name);
     if (!key || seen.has(key)) continue;
@@ -66,13 +81,14 @@ function pickBestAvailable(board, taken) {
  * @param {object} args
  * @param {Array} args.briefs - GMBrief[]
  * @param {Array} args.pickOwnership - [{round, pick, franchiseId}, ...]
+ * @param {Array} [args.consensusBoard] - Consensus rookie rankings (primary)
  * @param {Array} args.rspBoard - RSP players
  * @param {Array} args.rookieAdp - filtered ADP entries
  * @param {Map} args.teamById - franchiseId → team config
  * @returns {Array} MockPick[]
  */
-export function assembleMock({ briefs, pickOwnership, rspBoard, rookieAdp, teamById }) {
-  const board = buildBoard(rspBoard, rookieAdp);
+export function assembleMock({ briefs, pickOwnership, consensusBoard = [], rspBoard, rookieAdp, teamById }) {
+  const board = buildBoard(consensusBoard, rspBoard, rookieAdp);
   const briefById = new Map(briefs.map(b => [b.franchiseId, b]));
   const taken = new Set();
   const mock = [];
@@ -123,12 +139,18 @@ export function assembleMock({ briefs, pickOwnership, rspBoard, rookieAdp, teamB
     if (!chosen) {
       const bpa = pickBestAvailable(board, taken);
       if (bpa) {
+        let bpaReason;
+        if (bpa.consensusRank !== undefined) {
+          bpaReason = `Best available — Consensus #${bpa.consensusRank} (${bpa.consensusTier})`;
+        } else if (bpa.rspScore !== undefined) {
+          bpaReason = `Best available — RSP rank ${bpa.rspRank}`;
+        } else {
+          bpaReason = `Best available — ADP rank ${bpa.adpRank}`;
+        }
         chosen = {
           name: bpa.name,
           position: bpa.position,
-          reasoning: bpa.rspScore !== undefined
-            ? `Best available — RSP rank ${bpa.rspRank}`
-            : `Best available — ADP rank ${bpa.adpRank}`,
+          reasoning: bpaReason,
           desire: 0.5,
         };
         pickType = 'BPA';

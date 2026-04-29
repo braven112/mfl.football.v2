@@ -41,6 +41,7 @@ export function loadRookieDraftInputs(year) {
 
   const rspBoard = readJSON('data/fantasy-expert/sources/rsp/2026-pre-draft.json');
   const fbgRookies = tryReadJSON('data/fantasy-expert/sources/fbg/2026-rookies.json');
+  const consensusBoard = tryReadJSON('data/fantasy-expert/sources/consensus/2026-post-draft.json');
   const rspOwnership = readJSON('data/theleague/rsp-league-ownership.json');
 
   // Build player-id → metadata map
@@ -112,6 +113,7 @@ export function loadRookieDraftInputs(year) {
     rookieAdp,
     rspBoard: rspBoard.players ?? [],
     fbgRookies: fbgRookies?.players ?? [],
+    consensusBoard: consensusBoard?.players ?? [],
     rspAffinity,
   };
 }

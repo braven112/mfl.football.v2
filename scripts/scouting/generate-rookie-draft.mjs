@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 /**
- * Rookie-draft scouting report generator.
+ * Rookie-draft scouting report generator (direct Anthropic API path).
+ *
+ * NOTE: dump-prompts.mjs + finalize-from-briefs.mjs is the active agent-based
+ * path used in this repo (Plan B — no API key needed). This script's prompt
+ * template lags behind dump-prompts.mjs. Sync with dump-prompts.mjs before
+ * using it, especially the consensus-board / RSP-affinity weighting block.
  *
  * Usage:
  *   pnpm scout:rookie-draft 2026

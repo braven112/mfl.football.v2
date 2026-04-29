@@ -42,6 +42,11 @@ function topAdpText(n = 30) {
     `${a.rank}. ${a.name} (${a.position}) — ADP ${a.averagePick?.toFixed(2) ?? '?'}`
   ).join('\n');
 }
+function topConsensusText(n = 50) {
+  return inputs.consensusBoard.slice(0, n).map(p =>
+    `${p.rank}. ${p.name} (${p.position}${p.positionRank}, ${p.nflTeam || 'FA'}) — ${p.tier}`
+  ).join('\n');
+}
 function pickOwnershipText() {
   const targetRounds = inputs.pickOwnership.filter(p => p.round <= ROUNDS_TO_PREDICT);
   const byFranchise = new Map();
@@ -60,7 +65,18 @@ function pickOwnershipText() {
 
 const rspBoardText = topRspText(30);
 const adpBoardText = topAdpText(30);
+const consensusBoardText = topConsensusText(50);
 const allPicksText = pickOwnershipText();
+
+// Per-franchise board weighting based on RSP affinity.
+// Primary: 50% Consensus (post-NFL-draft, all teams use it the same).
+// Other 50% split between RSP and MFL ADP, weighted by affinity.
+function affinityWeights(score) {
+  // Returns { consensus, rsp, adp } summing to 100.
+  if (score === 'high') return { consensus: 50, rsp: 40, adp: 10 };
+  if (score === 'medium') return { consensus: 50, rsp: 25, adp: 25 };
+  return { consensus: 50, rsp: 10, adp: 40 };
+}
 
 const SYSTEM_PROMPT = `You are a franchise GM simulator for TheLeague (MFL 13522), a 16-team dynasty salary cap fantasy football league.
 
@@ -71,12 +87,22 @@ LEAGUE RULES (relevant for rookie draft):
 - Contracts 1-5 years, 10% annual escalation
 - Active roster minimum 20 players Week 1-17
 
-You will be given one franchise to role-play. Reason as their GM would, using their roster, cap posture, RSP affinity, and any behavioral notes. Do NOT recommend the optimal pick — predict what THIS GM would actually do.
+You will be given one franchise to role-play. Reason as their GM would, using their roster, cap posture, RSP affinity, behavioral notes, and the BOARD WEIGHTING described in the prompt. Do NOT recommend the optimal pick — predict what THIS GM would actually do.
+
+═══ HOW TO WEIGHT THE BOARDS ═══
+
+Every franchise builds a personal board from three sources. The PRIMARY board is the Consensus list (post-NFL-draft, tiered, with NFL team assignments) — every franchise weights it 50%. The other 50% splits between RSP (Matt Waldman, deep scouting) and MFL Dynasty ADP (market price), based on the franchise's RSP affinity:
+
+- HIGH RSP affinity   →  50% Consensus + 40% RSP + 10% MFL ADP   (Waldman devotees; will reach for RSP-loved sleepers)
+- MEDIUM RSP affinity →  50% Consensus + 25% RSP + 25% MFL ADP   (blend pragmatically)
+- LOW RSP affinity    →  50% Consensus + 10% RSP + 40% MFL ADP   (ADP-driven; chase consensus and big names)
+
+You don't need to compute exact weighted scores — just reason as a GM with that bias would. A high-affinity GM at 1.10 might pick the player Waldman ranks #6 if Consensus has him in Tier 2. A low-affinity GM at the same slot would never reach past Consensus Tier 2 unless ADP also confirms.
 
 OUTPUT CONTRACT — your final action MUST be to write the brief JSON to the exact file path given in the prompt. The JSON must match this schema (no markdown, no commentary in the file — just JSON):
 {
   "topTargets": [
-    { "name": "Full Name", "position": "QB|RB|WR|TE", "reasoning": "1-2 sentences citing specific data (RSP rank, position need, cap fit)", "desire": 0.0-1.0 }
+    { "name": "Full Name", "position": "QB|RB|WR|TE", "reasoning": "1-2 sentences citing specific board positions (Consensus #X Tier Y, RSP DoT score, ADP rank) and roster need", "desire": 0.0-1.0 }
   ],
   "positionalPriority": ["RB", "WR", ...],
   "capPosture": "1 sentence — e.g. 'Cap-strapped at $44.2M used; rookies must go taxi'",
@@ -133,6 +159,8 @@ for (const franchise of inputs.franchises) {
 
   const briefOutFile = path.join(briefsOutDir, `${fid}.json`);
 
+  const weights = affinityWeights(dossier.rspAffinity.score);
+
   const userPrompt = `You are simulating: ${franchise.name} (${franchise.abbrev}, ${franchise.division} Division)
 
 YOUR PICKS in rounds 1-${ROUNDS_TO_PREDICT}: ${picksLine}
@@ -144,20 +172,27 @@ YOUR ROSTER (${rosterSummary.players.length} players):
 - Contracts expiring after this year: ${rosterSummary.contractsExpiring}
 
 RSP AFFINITY: ${dossier.rspAffinity.score} (${dossier.rspAffinity.abCount} A/B-tier RSP players currently rostered, ${dossier.rspAffinity.abPct}%)
-${dossier.rspAffinity.score === 'high' ? 'You read Waldman religiously and weight RSP rankings heavily.' : ''}
-${dossier.rspAffinity.score === 'medium' ? 'You blend RSP with consensus boards.' : ''}
-${dossier.rspAffinity.score === 'low' ? 'You chase consensus ADP and big names; RSP rankings carry less weight for you.' : ''}
+
+YOUR PERSONAL BOARD WEIGHTING:
+- ${weights.consensus}% Consensus (primary, all GMs anchor here)
+- ${weights.rsp}% RSP (Waldman scouting)
+- ${weights.adp}% MFL Dynasty ADP (market price)
 
 BEHAVIORAL NOTES from prior reports:
 ${behavioralNotesText}
 
 ═══ THE BOARDS ═══
 
-RSP TOP 30 (Matt Waldman, pre-draft, DoT score):
+▶ PRIMARY: CONSENSUS TOP 50 (post-NFL-draft, tiered, with NFL team assignments — weight 50% for ALL franchises):
+${consensusBoardText}
+
+▶ RSP TOP 30 (Matt Waldman, pre-draft, DoT score — weight ${weights.rsp}% for you):
 ${rspBoardText}
 
-MFL DYNASTY ADP TOP 30 (rookies only):
-${adpBoardText || '(no rookie ADP data available — defer to RSP)'}
+▶ MFL DYNASTY ADP TOP 30 (rookies only — weight ${weights.adp}% for you):
+${adpBoardText || '(no rookie ADP data available — defer to other boards)'}
+
+Note: RSP is pre-NFL-draft scouting; Consensus is post-NFL-draft (NFL fit + landing spot baked in). When the boards conflict, lean toward your weighting — but be willing to take a Consensus Tier-1 over an RSP-favored player two tiers down.
 
 ═══ MARKET CONTEXT ═══
 
@@ -166,8 +201,9 @@ ${allPicksText}
 
 ═══ TASK ═══
 
-Produce the GM brief JSON for ${franchise.name}. Cite specific players from the boards above.
-Anchor reasoning in roster shape, cap, and RSP affinity. Do not pick players who already left the boards above unless you have strong reason.
+Produce the GM brief JSON for ${franchise.name}. Cite specific players from the boards (e.g. "Consensus #5 Tier 2, RSP DoT 86.3").
+Apply YOUR weighting (${weights.consensus}% / ${weights.rsp}% / ${weights.adp}%) — don't reason as a generic GM.
+Anchor reasoning in roster shape, cap, and your weighting bias.
 
 WRITE THE FINAL JSON to this file path (no other output, no commentary in the file):
 ${path.relative(process.cwd(), briefOutFile)}`;

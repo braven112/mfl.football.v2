@@ -7,34 +7,88 @@
       "franchiseName": "Pacific Pigskins",
       "topTargets": [
         {
-          "name": "Skyler Bell",
+          "name": "Malachi Fields",
           "position": "WR",
-          "reasoning": "Quintessential RSP arbitrage play — Waldman ranks him #6 (DoT 85.9, Ja'Marr Chase high-end comp) but he's off the MFL ADP top 30, meaning he likely lasts to 1.10. As a high-RSP-affinity GM reading Waldman religiously, Pigskins take the value over consensus.",
-          "desire": 0.82
+          "reasoning": "Classic high-RSP-affinity reach: Consensus has him #22 Tier 3 (likely available at 1.10) but RSP DoT 87.2 ranks him as the WR4 in the entire class with a Nico Collins comp. ADP 0 (off market top 30) provides a hidden value; Pigskins WR room is deep (9) but Fields is a starter-grade plug-and-play talent.",
+          "desire": 0.78
         },
         {
           "name": "KC Concepcion",
           "position": "WR",
-          "reasoning": "RSP #5 (DoT 86.3, Starter grade) but only ADP #20 — exactly the kind of Waldman-loved-market-cool gap a high-RSP team pounces on at 1.10. Scheme-versatile flanker/slot fits a deep WR room as the future starter.",
-          "desire": 0.78
+          "reasoning": "Consensus #8 Tier 2 (CLE landing spot), RSP DoT 86.3 (WR5, Starter grade), MFL ADP 13.57. If he slips past 1.07-1.09 he's the cleanest board-blender at 1.10 — Tier 2 consensus AND top-5 RSP WR. Heavy WR room but Concepcion's slot/return profile is positionally distinct.",
+          "desire": 0.72
         },
         {
           "name": "Emmett Johnson",
           "position": "RB",
-          "reasoning": "RSP #8 (DoT 84.6, Harold Fannin trajectory comp) and completely absent from MFL ADP top 30 — pure RSP signal. With 5 contracts expiring this year, Pigskins can absorb a young RB on a 4-year rookie deal as future depth.",
-          "desire": 0.7
+          "reasoning": "Consensus #13 Tier 2 (KC landing spot is elite), RSP DoT 84.6 with a Harold Fannin trajectory comp — this is the kind of RSP-loved RB a high-affinity GM grabs at 1.10 if Fields/Concepcion are off the board. RB room is 7 deep but only Penix/Pollard/Allen are core; KC backfield opens immediate volume.",
+          "desire": 0.66
+        },
+        {
+          "name": "Skyler Bell",
+          "position": "WR",
+          "reasoning": "RSP DoT 85.9 with a Ja'Marr Chase high-end comp — Waldman's #6 overall — but Consensus has him in 'Free Agents' tier (#33) and ADP doesn't list him. Pure 2.10/3.10 lottery ticket that perfectly fits high-RSP-affinity behavior; goes to taxi where the 50% cap hit is survivable on the $2.3M space.",
+          "desire": 0.62
         },
         {
           "name": "Chris Brazzell II",
           "position": "WR",
-          "reasoning": "RSP #12 (DoT 84.2, George Pickens-like traits) and ADP #48 — a screaming RSP-vs-market gap. Ideal 2.10 swing if he slides; high-affinity GM trusts Waldman over the field.",
-          "desire": 0.62
+          "reasoning": "Consensus #15 Tier 2 (CAR), RSP DoT 84.2 with a George Pickens comp, MFL ADP 26.47. Realistic 2.10 target — Tier 2 consensus aligned with RSP top-15, and the Carolina depth chart has WR1 reps available. Fits a contention-window team adding ceiling.",
+          "desire": 0.58
+        }
+      ],
+      "positionalPriority": [
+        "WR",
+        "RB",
+        "TE"
+      ],
+      "capPosture": "Cap-strapped at $42.7M used with $2.3M space and 28 active — rookies MUST go taxi (50% base hit) until the 5 expiring contracts roll off.",
+      "taxiCandidates": [
+        "Skyler Bell",
+        "Emmett Johnson",
+        "Chris Brazzell II"
+      ],
+      "wildcard": {
+        "name": "Eli Stowers",
+        "position": "TE",
+        "reasoning": "Consensus #21 Tier 3 (PHI), RSP DoT 84.4 'on cusp of Starter tier' with a classic move-TE profile. High-RSP-affinity GMs love converted-QB TE archetypes; if Pigskins skip TE early but Stowers slips to 3.10, the Philly target share is a real lottery ticket at the taxi cap rate.",
+        "desire": 0.4
+      },
+      "summary": "Pacific Pigskins are a contention-window roster with a deep WR/RB room but a hard cap squeeze ($2.3M space) — every rookie pick goes to taxi by necessity. With high RSP affinity (40% Waldman weight), the GM will fade pure consensus chalk and reach for Waldman-graded sleepers: Malachi Fields at 1.10 is the prototype move (Consensus Tier 3 / RSP DoT 87.2). 2.10 and 3.10 become RSP-board mining trips for Skyler Bell, Emmett Johnson, and Brazzell — high-ceiling taxi stashes that exploit the 50% cap hit while the 5 expiring contracts open active-roster space in 2027."
+    },
+    {
+      "franchiseId": "0002",
+      "franchiseName": "Da Dangsters",
+      "topTargets": [
+        {
+          "name": "Denzel Boston",
+          "position": "WR",
+          "reasoning": "Primary 1.13 target: Consensus #9 WR5 Tier 2 (CLE landing spot) and ADP 16.11 — sits right at my pick by market price, exactly the kind of consensus-confirmed WR a low-RSP-affinity GM takes. Roster has 6 WRs vs 8 RBs, so WR is the clean need, and Boston's Consensus/ADP alignment beats Waldman's lukewarm RSP #25 grade for my weighting (I weight ADP 4x heavier than RSP).",
+          "desire": 0.78
+        },
+        {
+          "name": "Omar Cooper Jr.",
+          "position": "WR",
+          "reasoning": "Backup at 1.13 if Boston gone: Consensus #12 WR6 Tier 2 (NYJ) with ADP 17.20 — both boards anchor him as a late-1st value. 50% Consensus + 40% ADP both put him squarely in my range; RSP DoT 83.9 with the Deebo comp doesn't move me much given low affinity, but it's not a red flag either.",
+          "desire": 0.7
+        },
+        {
+          "name": "Jadarian Price",
+          "position": "RB",
+          "reasoning": "Available-at-1.13 fallback: Consensus #7 RB2 Tier 2 (SEA) with ADP 16.05 — strongest ADP-confirmed name likely sliding to me. Already at 8 RBs so it's a luxury, but if both Boston and Cooper Jr. are gone the consensus/market gap is too big to pass; I'd rather take the BPA per ADP than reach down a full tier for a WR.",
+          "desire": 0.55
         },
         {
           "name": "Antonio Williams",
           "position": "WR",
-          "reasoning": "RSP #18 (Jayden Reed comp, Waldman-fave profile) at ADP #55 — exactly the second-round bargain Waldman explicitly flags. Pigskins take this kind of pick almost reflexively.",
-          "desire": 0.55
+          "reasoning": "2.13 target (~pick 29): ADP 29.06 lands exactly at my slot, Consensus #24 WR14 Tier 4 (WAS). Market-priced perfectly for a low-RSP GM — I don't need Waldman's RSP #18 Jayden Reed comp to take a player both Consensus and ADP agree on at this spot.",
+          "desire": 0.62
+        },
+        {
+          "name": "Chris Bell",
+          "position": "WR",
+          "reasoning": "2.13 alt: Consensus #19 WR10 Tier 2 (MIA) with ADP 28.24 — a Tier 2 falling to early 2nd is exactly the Consensus-anchored value play my weighting rewards. AJ Brown comp upside per RSP is gravy, not the reason; I'm taking the higher Consensus tier here over Williams if Bell is on the board.",
+          "desire": 0.6
         }
       ],
       "positionalPriority": [
@@ -43,128 +97,74 @@
         "TE",
         "QB"
       ],
-      "capPosture": "Cap-tight at $42.7M used / $2.3M space — all rookies must land on taxi (50% hit) since active-rostering a 1.10 base salary blows the cap.",
+      "capPosture": "Tight at $41.9M of $45M used with 23 active and 8 contracts expiring; rookies must go taxi (50% hit) to fit, which works since taxi is empty.",
       "taxiCandidates": [
-        "Skyler Bell",
-        "KC Concepcion",
-        "Emmett Johnson"
+        "Denzel Boston",
+        "Antonio Williams",
+        "Chris Bell"
       ],
       "wildcard": {
-        "name": "Kenyon Sadiq",
-        "position": "TE",
-        "reasoning": "RSP #30 (Brock Bowers high-end comp, Combine explosion) at ADP #19 — market is hotter than Waldman, but Pigskins have only 4 TEs and a high-RSP GM may chase the athletic upside in round 3 if he falls.",
-        "desire": 0.4
-      },
-      "summary": "Pacific Pigskins enter 2026 cap-strapped ($2.3M space) with a deep WR/RB room but real long-term need behind 5 expiring contracts. As a religious Waldman reader, they hunt RSP-vs-ADP arbitrage at 1.10 — preferring Skyler Bell or KC Concepcion over chasing consensus names — and stack rookies on taxi to fit the cap. Round 2 and 3 are RSP dart throws (Brazzell, Antonio Williams, maybe Sadiq) where Waldman's grade beats the market."
-    },
-    {
-      "franchiseId": "0002",
-      "franchiseName": "Da Dangsters",
-      "topTargets": [
-        {
-          "name": "Jordyn Tyson",
-          "position": "WR",
-          "reasoning": "Consensus name with MFL ADP 12.71 — exactly the kind of big-name WR a low-RSP-affinity GM chases at 1.13. Fills the thin WR room (only 6) and his industry buzz outweighs RSP's boom-bust warning for this owner.",
-          "desire": 0.82
-        },
-        {
-          "name": "KC Concepcion",
-          "position": "WR",
-          "reasoning": "MFL ADP 13.57 makes him a name-brand pick around 1.13, and the dual flanker/slot/return profile is a household-name path. Low-RSP GM grabs the consensus WR over RSP's sleeper picks.",
-          "desire": 0.74
-        },
-        {
-          "name": "Malachi Fields",
-          "position": "WR",
-          "reasoning": "Notre Dame size-speed prospect with a Nico Collins comp — fits the chase-the-name profile. Addresses the WR depth gap behind a heavy RB room (8 RBs vs 6 WRs).",
-          "desire": 0.68
-        },
-        {
-          "name": "Kenyon Sadiq",
-          "position": "TE",
-          "reasoning": "MFL ADP 13.11 with Brock Bowers comp and viral combine numbers — pure name-driven appeal. TE room is just 2 deep, so the positional need lines up if Tyson/Concepcion/Fields are all gone at 1.13.",
-          "desire": 0.55
-        },
-        {
-          "name": "Denzel Boston",
-          "position": "WR",
-          "reasoning": "ADP 16.11 lands him squarely at 2.13 value. Big-school Washington WR with a clean profile — exactly the consensus name a low-RSP GM takes in round 2 over RSP sleepers like Brazzell or Sarratt.",
-          "desire": 0.5
-        }
-      ],
-      "positionalPriority": [
-        "WR",
-        "TE",
-        "QB",
-        "RB"
-      ],
-      "capPosture": "Tight at $41.9M of $45M used with only $3.1M space and 8 expiring contracts; rookie cap hits will mostly need to land on the taxi until cuts and expirations open the active roster.",
-      "taxiCandidates": [
-        "Jordyn Tyson",
-        "KC Concepcion",
-        "Malachi Fields"
-      ],
-      "wildcard": {
-        "name": "Fernando Mendoza",
+        "name": "Ty Simpson",
         "position": "QB",
-        "reasoning": "Top consensus QB (MFL ADP 11.39, RSP QB1) with the kind of national name a low-RSP-affinity GM finds hard to pass on if he slides to 1.13. QB room is already 3 deep, so it's a luxury reach driven by name recognition rather than need.",
+        "reasoning": "3.13 dart throw: Consensus #37 QB2 (LAR backup) with ADP 23.81 — ADP loves him way more than Consensus, and as a low-RSP/high-ADP GM I'd chase the market on a backup QB lottery ticket in round 3 with 8 contracts expiring next year and only 3 QBs rostered.",
         "desire": 0.35
       },
-      "summary": "Da Dangsters draft from a tight-cap, RB-heavy, WR-thin roster and lean on consensus ADP rather than RSP sleepers. Expect a name-brand WR (Tyson, Concepcion, or Fields) at 1.13, with 2.13 and 3.13 used to keep stacking pass-catchers — Boston in round 2 and another mid-ADP WR/TE in round 3. Most rookies will start on taxi to manage the $3.1M of cap headroom."
+      "summary": "Da Dangsters enter 1.13 cap-strapped but with empty taxi slots, so the plan is to take ADP-confirmed talent that fits the 50/40/10 board lean and stash on taxi. WR is the positional priority (6 WRs vs 8 RBs) and the 1.13 board sets up beautifully — Boston, Cooper Jr., and Price all carry ADPs of 16-17, meaning at least one falls to me. Round 2 and 3 follow the same script: take the highest Consensus tier where ADP confirms, ignore Waldman-only sleepers like Skyler Bell or Myles Montgomery."
     },
     {
       "franchiseId": "0003",
       "franchiseName": "Maverick",
       "topTargets": [
         {
-          "name": "Malachi Fields",
-          "position": "WR",
-          "reasoning": "RSP #4 overall (DoT 87.2, Starter grade) with a Nico Collins comp — exactly the kind of size/speed Waldman-anointed prospect a high-RSP-affinity GM targets at 1.05. Likely to slip past the top 4 (Tate/Love/Lemon/Mendoza or Fields swap) and represents best player available per the board Maverick actually reads.",
-          "desire": 0.85
-        },
-        {
           "name": "KC Concepcion",
           "position": "WR",
-          "reasoning": "RSP #5 (DoT 86.3, Starter grade) and ADP 13.57 — a flanker/slot fit that Waldman explicitly grades as first-round value. If Fields is gone at 1.05, Concepcion is the next RSP-anointed name on the board and an easy pivot.",
+          "reasoning": "Best RSP-Consensus alignment available at 1.05 — Consensus #8 Tier 2 (CLE) and RSP #5 DoT 86.3 Starter grade. As a high-RSP-affinity GM I weight Waldman's top-5 placement heavily, and Concepcion's flanker/slot versatility plus return-game upside is exactly the Tier-2 anchor I need with the top 4 (Love/Tate/Tyson/Lemon) off the board.",
           "desire": 0.78
         },
         {
-          "name": "Emmett Johnson",
-          "position": "RB",
-          "reasoning": "RSP #8 (DoT 84.6) with a Harold Fannin trajectory comp — Maverick's roster has only 4 RBs vs 10 WRs, so 2.05 is the natural place to address the thinnest skill room with a Waldman favorite who is undervalued vs MFL ADP.",
-          "desire": 0.72
-        },
-        {
-          "name": "Demond Claiborne",
-          "position": "RB",
-          "reasoning": "RSP #9 (DoT 84.5, LeSean McCoy comp) labeled a second-round rookie pick regardless of weight concerns — fits the 2.05 slot perfectly and addresses the RB shortage. High-RSP-affinity GM trusts the board over ADP noise.",
-          "desire": 0.68
+          "name": "Kenyon Sadiq",
+          "position": "TE",
+          "reasoning": "Consensus #5 Tier 2 (TE1, NYJ) — only Tier 2 player whose drop past 1.05 would be a steal. My roster is critically thin at TE (1 rostered) and Brock Bowers high-end comp from RSP is enticing despite RSP only ranking him #30. Consensus tier wins this tiebreak; landing spot bakes in NFL fit RSP's pre-draft list missed.",
+          "desire": 0.65
         },
         {
           "name": "Eli Stowers",
           "position": "TE",
-          "reasoning": "RSP #11 (DoT 84.4, classic move TE on cusp of Starter tier) — Maverick is rostering only 1 TE and Stowers at 3.05 is a Waldman-endorsed positional fix at a need spot. Cap-friendly third-rounder fits the $10.3M space without forcing taxi.",
-          "desire": 0.65
+          "reasoning": "Prime 2.05 target — Consensus #21 Tier 3 (PHI) but RSP #11 DoT 84.4 'on cusp of Starter tier.' Classic high-affinity RSP value gap (10 spots) at a position of dire roster need. Move TE in Philly's offense fits my contention timeline given 5 contracts expiring.",
+          "desire": 0.72
+        },
+        {
+          "name": "Malachi Fields",
+          "position": "WR",
+          "reasoning": "Massive RSP-Consensus arbitrage if he falls to 2.05 — RSP #4 DoT 87.2 Starter grade with Nico Collins comp, but Consensus only #22 Tier 3 (NYG). My 40% RSP weighting screams here even though I'm WR-deep (10 WRs); Waldman top-5 talent at a Round 2 price is the kind of swing a high-affinity GM cannot pass.",
+          "desire": 0.68
+        },
+        {
+          "name": "Jadarian Price",
+          "position": "RB",
+          "reasoning": "Backup 1.05 target if Concepcion goes earlier — Consensus #7 Tier 2 (RB2, SEA) and RSP #21 DoT 83.5 with 'ceiling as high as RBs 2-5.' RB room is only 4 deep with contracts turning over, and Seattle landing spot post-draft elevates him above where pure RSP scouting placed him.",
+          "desire": 0.62
         }
       ],
       "positionalPriority": [
-        "WR",
+        "TE",
         "RB",
-        "TE"
+        "WR",
+        "QB"
       ],
-      "capPosture": "Workable: $10.3M space with 5 expiring contracts — can absorb a 1st-round rookie on active roster and stash later picks on taxi at 50% cost.",
+      "capPosture": "Workable cap at $34.7M used / $10.3M space — 1.05 rookie can go active roster, but 2.05 and 3.05 likely route through taxi (50% hit) to preserve flexibility for the 5 expiring contracts.",
       "taxiCandidates": [
         "Eli Stowers",
-        "Jadarian Price",
-        "Myles Montgomery"
+        "Malachi Fields",
+        "Skyler Bell"
       ],
       "wildcard": {
-        "name": "Myles Montgomery",
-        "position": "RB",
-        "reasoning": "RSP #13 explicitly tagged the MOST UNDERRATED skill talent in the 2026 class — a high-RSP-affinity GM who reads Waldman religiously is exactly the type to gamble a 3.05 or taxi spot on this Hula Bowl standout despite likely UDFA status.",
-        "desire": 0.4
+        "name": "Skyler Bell",
+        "position": "WR",
+        "reasoning": "Quintessential high-RSP-affinity 3.05 reach — RSP #6 DoT 85.9 Starter grade with Ja'Marr Chase high-end comp, but Consensus has him in the Free Agents tier (#33) and MFL ADP doesn't crack the top 30. As a Waldman devotee with 38% A/B-tier RSP players already rostered, this is exactly the lottery ticket I bet on while ADP-driven GMs ignore him.",
+        "desire": 0.55
       },
-      "summary": "Maverick is a Waldman disciple drafting from a WR-glutted, RB-thin roster with comfortable cap room. Expect a best-RSP-available WR at 1.05 (Fields or Concepcion), then a hard pivot to RB in round 2 (Emmett Johnson or Claiborne), and a Waldman-favorite TE or sleeper RB at 3.05. RSP grade will trump consensus ADP at every turn."
+      "summary": "Maverick is a high-RSP-affinity contention-window team (5 contracts expiring) with a glaring TE hole and a workable but not generous cap. The plan: anchor 1.05 on the best RSP-Consensus overlap (Concepcion or Sadiq for positional need), exploit Waldman value gaps at 2.05 (Stowers or Fields), and swing for a Bell-style RSP sleeper at 3.05 to taxi. Active-roster the first-rounder, taxi the rest to keep cap room for the post-expiration roster reshape."
     },
     {
       "franchiseId": "0004",
@@ -173,32 +173,32 @@
         {
           "name": "Carnell Tate",
           "position": "WR",
-          "reasoning": "RSP's only Franchise-tier grade in the class (DoT 92.3, Moss comp) and ADP 9.46 says he is the consensus 1.02 if Love goes 1.01. WR-thin roster (6 WRs vs 8 RBs) makes this a need-and-BPA fit; $12.9M cap space absorbs the rookie hit comfortably without taxi.",
-          "desire": 0.95
+          "reasoning": "If Love goes 1.01 to FRA, Tate is the medium-affinity slam dunk at 1.02 — Consensus #2 Tier 1 (TEN), RSP #1 with the highest DoT score in the entire 2026 class (92.3, Franchise grade, Moss comp), and MFL ADP #2 rookie (9.46). All three boards agree, which is exactly what a 50/25/25 weighting rewards.",
+          "desire": 0.92
         },
         {
           "name": "Jeremiyah Love",
           "position": "RB",
-          "reasoning": "If Fire Ready Aim breaks ADP and takes Tate at 1.01, Love (RSP #2, DoT 89.3, All-Pro ceiling per Waldman, Kamara comp) is the obvious consolation at 1.02. ADP 3.59 means he is the truer consensus 1.01 and almost certainly off the board, but DEAD happily takes him if he falls.",
-          "desire": 0.9
+          "reasoning": "Consensus #1 Tier 1 (ARI), RSP #2 DoT 89.3 Starter grade with All-Pro upside (Kamara comp), ADP #2 rookie (3.59 — actually the cheapest of the elite tier). If FRA somehow passes at 1.01 (unlikely), Love is the no-brainer at 1.02 even with 8 RBs already rostered — talent this clean across all three boards trumps positional balance.",
+          "desire": 0.88
+        },
+        {
+          "name": "Jordyn Tyson",
+          "position": "WR",
+          "reasoning": "Consensus #3 Tier 1 (NO), RSP #10 DoT 84.5 Rotational Starter, ADP #18 (12.71). The third-best WR on Consensus and a clean fallback if both Love and Tate are gone. Medium-affinity GM doesn't reach past Consensus Tier 1 here — Tyson is the floor.",
+          "desire": 0.55
         },
         {
           "name": "Makai Lemon",
           "position": "WR",
-          "reasoning": "Pure fallback contingency at 1.02 if both Tate and Love are gone (very unlikely with only one pick ahead). RSP #3 (DoT 88.8, Amon-Ra comp) and ADP 11.18 makes him the next-best WR available and addresses the same WR need.",
-          "desire": 0.35
+          "reasoning": "Consensus #4 Tier 1 (PHI), RSP #3 DoT 88.8 Starter grade (Amon-Ra comp), ADP #11 (11.18). Strong on all three boards. Pivot option if the top two go and the GM prefers PHI landing spot over Tyson's NO situation.",
+          "desire": 0.5
         },
         {
           "name": "Antonio Williams",
           "position": "WR",
-          "reasoning": "Realistic 3.14 target — RSP #18 (DoT 83.9) with Jayden Reed comp, ADP 29.06 puts him squarely in the third-round range. Medium-RSP-affinity GM blending boards loves the value gap between ADP and Waldman's grade here, and stacks the WR room further.",
-          "desire": 0.55
-        },
-        {
-          "name": "Chris Bell",
-          "position": "WR",
-          "reasoning": "Alternate 3.14 dart — RSP #16 (DoT 83.9) with A.J. Brown high-end comp, ADP 28.24. Waldman explicitly says 'wait for second round if falls,' which is exactly what a 3.14 represents. Same WR-need logic.",
-          "desire": 0.5
+          "reasoning": "At 3.14, this is the kind of value a 50/25/25 GM hunts: Consensus #24 Tier 4 (WAS) but RSP #18 DoT 83.9 Rotational Starter (Jayden Reed comp) and ADP #55 (29.06). RSP flag plus consensus presence makes him a defensible upside swing late in round 3.",
+          "desire": 0.42
         }
       ],
       "positionalPriority": [
@@ -207,73 +207,73 @@
         "TE",
         "QB"
       ],
-      "capPosture": "Healthy — $12.9M of $45M open, easily absorbs a 1.02 rookie on the active roster with no taxi gymnastics required.",
+      "capPosture": "Healthy at $32.1M of $45M used ($12.9M space) with 4 expirings — can comfortably active-roster the 1.02 rookie at full salary; no need to manipulate taxi for cap relief.",
       "taxiCandidates": [
         "Antonio Williams",
-        "Chris Bell"
+        "Eli Stowers"
       ],
       "wildcard": {
         "name": "Eli Stowers",
         "position": "TE",
-        "reasoning": "Only 2 TEs on the roster and RSP #11 (DoT 84.4, on-cusp Starter, classic move TE) with ADP 21.25 means he could slip into 3.14 range if WRs run early. Medium-RSP-affinity GM might break consensus to grab a positional scarcity play.",
-        "desire": 0.3
+        "reasoning": "Roster has only 2 TEs — a real positional thin spot. Stowers is Consensus #21 Tier 3 (PHI), RSP #11 DoT 84.4 (classic move TE, on cusp of Starter tier), ADP #35 (21.25). At 3.14 he could still be on the board, and a medium-affinity GM trusts the RSP signal enough to grab a TE2 with starter ceiling over another WR dart.",
+        "desire": 0.38
       },
-      "summary": "Dead Cap Walking sits at 1.02 with cap flexibility and a clear WR need, so the play is simple: take whichever of Tate/Love survives Fire Ready Aim's 1.01 — almost certainly Tate given Love's much stronger ADP. At 3.14, target a WR with RSP-board value above ADP (Antonio Williams or Chris Bell) to keep stacking the thin pass-catcher room. No need to play taxi games — the cap absorbs the rookie hit cleanly."
+      "summary": "Dead Cap Walking is in a 'take the best player available' posture at 1.02 — cap is healthy enough to absorb the rookie active, and the medium-affinity 50/25/25 weighting points squarely at Tate (or Love if FRA passes), since both win on Consensus, RSP, and ADP simultaneously. The 3.14 pick is a developmental swing, with the TE-thin roster pushing Stowers as a credible target alongside RSP-loved WR fliers like Antonio Williams."
     },
     {
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "topTargets": [
         {
-          "name": "Makai Lemon",
-          "position": "WR",
-          "reasoning": "RSP WR3 (DoT 88.8, Starter grade with Amon-Ra St. Brown comp) and ADP 11.18 lines up perfectly at 1.07. Top-3 board players (Tate, Love, Lemon by RSP) are unlikely to all reach 1.07, but Lemon is the most plausible elite WR to fall and fits a roster already deep at WR (7) by adding genuine ceiling.",
-          "desire": 0.85
-        },
-        {
-          "name": "Malachi Fields",
-          "position": "WR",
-          "reasoning": "RSP WR4 (DoT 87.2, Nico Collins comp, Starter grade). Size/speed profile that the medium-RSP-affinity GM can blend with consensus. Likely available at 1.07 if a QB or RB run starts ahead.",
-          "desire": 0.72
-        },
-        {
-          "name": "Fernando Mendoza",
-          "position": "QB",
-          "reasoning": "RSP QB1 (DoT 85.6) and ADP 11.39 — sits right at this slot. Roster has only 2 QBs with 6 contracts expiring, so dynasty QB anchor is on the table. Cap-tight ($4.1M space) makes a long-term QB1 attractive vs. paying veteran QB.",
-          "desire": 0.62
-        },
-        {
           "name": "KC Concepcion",
           "position": "WR",
-          "reasoning": "RSP WR5 (DoT 86.3, Starter grade, first-round value per Waldman) and ADP 13.57. Plausible 1.07 pivot if Lemon/Fields are gone, and a medium-affinity GM can justify by citing both RSP and consensus alignment.",
-          "desire": 0.58
+          "reasoning": "Sweet spot of my 50/25/25 weighting at 1.07: Consensus #8 Tier 2 (CLE landing spot), RSP DoT 86.3 (#5 overall, Starter grade), and MFL ADP 13.57 (#20). Roster has 7 WRs but several on expiring deals (6 contracts up); a flanker/slot starter with return-game upside is the cleanest BPA-meets-future-need pick if Mendoza/Sadiq are off the board.",
+          "desire": 0.72
         },
         {
           "name": "Jadarian Price",
           "position": "RB",
-          "reasoning": "Realistic 2.17 target — RSP RB6 (DoT 83.5, Rotational Starter, ceiling as high as RBs 2-5 per Waldman) and ADP 16.05. Roster has 5 RBs but no clear high-ceiling young back; Price's pre-draft media bump as Love's backfield mate could push him into reach territory at 2.17.",
+          "reasoning": "Consensus #7 Tier 2 (SEA), RSP DoT 83.5 with 'ceiling as high as RBs 2-5' note, ADP 16.05. RB is my thinnest skill room (5) and Price's three-board confluence at 1.07 fits medium-RSP weighting. Seattle backfield offers real touches; not a reach by any of my three inputs.",
+          "desire": 0.68
+        },
+        {
+          "name": "Kenyon Sadiq",
+          "position": "TE",
+          "reasoning": "Highest Consensus-ranked player likely to be on the board: #5 Tier 2 (NYJ, TE1), confirmed by ADP 13.11. RSP is cooler at DoT 82.3 (#30) but Brock Bowers high-end comp keeps it defensible. With 4 TEs already rostered I'd only take him if Concepcion and Price are gone — he's the consensus floor pick.",
+          "desire": 0.55
+        },
+        {
+          "name": "Fernando Mendoza",
+          "position": "QB",
+          "reasoning": "Consensus #6 Tier 2 (LV1, QB1), RSP DoT 85.6 (#7, RSP QB1), ADP 11.39. With only 2 QBs rostered and 6 contracts expiring, a Tier-2 QB1 with all three boards aligned is hard to pass at 1.07. Salary risk on a QB is the main concern given $4.1M cap room.",
+          "desire": 0.5
+        },
+        {
+          "name": "Antonio Williams",
+          "position": "WR",
+          "reasoning": "Round 2 target at 2.17. RSP DoT 83.9 with Jayden Reed comp ('worth second-round consideration and a potential bargain'), Consensus #24 Tier 4 (WAS), ADP 29.06 — all three signals converge in late round 2. Medium-RSP weighting nudges me toward this kind of well-scored Tier-4 over a sliding name.",
           "desire": 0.55
         }
       ],
       "positionalPriority": [
         "WR",
         "RB",
-        "QB",
-        "TE"
+        "TE",
+        "QB"
       ],
-      "capPosture": "Tight at $40.9M used / $4.1M space — rookies almost certainly need to start on taxi (50% cap hit) to stay legal, especially if 1.07 lands a top-tier salary.",
+      "capPosture": "Tight at $40.9M used / $4.1M space — round 1 rookie's $1.2M base pushes me close, so 1.07 likely starts on taxi (50% hit) and 2.17 definitely goes taxi; 6 expiring contracts give me real flexibility next offseason if I hit on the picks.",
       "taxiCandidates": [
-        "Jadarian Price",
-        "Eli Stowers",
-        "Kenyon Sadiq"
+        "KC Concepcion",
+        "Antonio Williams",
+        "Jadarian Price"
       ],
       "wildcard": {
         "name": "Eli Stowers",
         "position": "TE",
-        "reasoning": "RSP TE1 in this group (DoT 84.4, classic move TE on cusp of Starter tier). Roster has 4 TEs but no young anchor; medium-affinity GM blending RSP could reach for him at 2.17 over a consensus WR if a TE run starts.",
+        "reasoning": "If I go Concepcion or Price at 1.07, Stowers at 2.17 is a sneaky Round-2 fit: Consensus #21 Tier 3 (PHI), RSP DoT 84.4 ('on cusp of Starter tier'), ADP 21.25. Already 4 TEs but several on expiring deals; classic move-TE in Philly is the kind of upside swing a medium-RSP GM justifies in round 2.",
         "desire": 0.35
       },
-      "summary": "The Mariachi Ninjas enter the draft cap-tight ($4.1M space) with a balanced roster and 6 expiring contracts, so the play at 1.07 is best-WR-available — Lemon if he falls, otherwise Fields or a Mendoza pivot for long-term QB stability. Medium RSP affinity means the GM blends Waldman's board with MFL ADP rather than reaching purely on DoT score, so expect a name where both boards align. At 2.17, Price or Stowers are taxi-bound lottery tickets that fit the cap reality."
+      "summary": "Tight cap and a stale-but-deep roster (22/22, 6 expiring contracts) push me toward best-skill-available with future-asset framing rather than chasing a contention-window QB. At 1.07 I'm targeting the player where my 50/25/25 weighting converges — KC Concepcion is the cleanest hit, with Price (RB need) and Sadiq (Consensus floor) as fallbacks. Round 2 at 2.17 is a taxi-stash lottery ticket on a Williams/Stowers-type whose RSP and ADP both validate the Consensus-tier they sit in."
     },
     {
       "franchiseId": "0006",
@@ -282,305 +282,308 @@
         {
           "name": "Makai Lemon",
           "position": "WR",
-          "reasoning": "Consensus ADP 11.18 makes Lemon a likely 1.04 target if Love/Tate go 1-2 and Mendoza goes 1.03. Big-name USC pedigree with Amon-Ra St. Brown comp checks the 'name' box this GM chases.",
+          "reasoning": "At 1.04, Lemon is the cleanest BPA if Love/Tate/Tyson are gone — Consensus #4 Tier 1 (PHI), ADP 11.18, RSP DoT 88.8. All three boards align, which is exactly what a low-RSP/high-ADP GM wants: no reach risk, consensus-anchored. WR depth (6) is fine but 7 contracts expiring means turnover is coming.",
           "desire": 0.78
-        },
-        {
-          "name": "Fernando Mendoza",
-          "position": "QB",
-          "reasoning": "ADP 11.39 and the consensus QB1 of the class. With 3 QBs already rostered need is low, but a low-RSP-affinity GM chasing big names will absolutely take the top QB at 1.04 if he slides past 1.03.",
-          "desire": 0.72
-        },
-        {
-          "name": "Jordyn Tyson",
-          "position": "WR",
-          "reasoning": "ADP 12.71 — 'considered one of the best WR prospects by much of the industry.' That industry-buzz framing is exactly what an ADP-chaser with low RSP affinity weights heavily. Realistic 1.04 fallback.",
-          "desire": 0.62
         },
         {
           "name": "Kenyon Sadiq",
           "position": "TE",
-          "reasoning": "ADP 13.11 with Brock Bowers high-end comp and Combine fireworks — exactly the type of name-brand splash a consensus chaser loves at 2.15 to anchor a TE2 spot behind the existing two.",
-          "desire": 0.55
+          "reasoning": "Consensus #5 Tier 2 (NYJ TE1), ADP 13.11. RSP buries him at #30 but with only 10% RSP weight that barely registers — the 50/40 Consensus+ADP combo loves him. Roster has only 2 TEs, making this a clean need-meets-value pick at 1.04. NYJ landing spot (post-draft signal) is exactly the data a low-RSP GM trusts most.",
+          "desire": 0.62
+        },
+        {
+          "name": "Jadarian Price",
+          "position": "RB",
+          "reasoning": "Consensus #7 Tier 2 (SEA RB2), ADP 16.05, RSP #21. If Lemon and Sadiq are off the board at 1.04, Price becomes the consensus-safe RB swing. Only 4 RBs rostered and Price's SEA landing spot post-draft is the kind of confirmation low-RSP GMs anchor to.",
+          "desire": 0.5
         },
         {
           "name": "KC Concepcion",
           "position": "WR",
-          "reasoning": "ADP 13.57, first-round value per consensus. If 2.15 is on the clock and Concepcion has slipped (possible — boards have him as a fringe 1st), this GM grabs the recognizable name over an RSP darling.",
-          "desire": 0.48
+          "reasoning": "Consensus #8 Tier 2 (CLE), ADP 13.57, RSP DoT 86.3 (#5). Strong triple-board overlap inside ADP top 20. Realistic 2.15 fallback if he slides — but more likely a stretch consideration at 1.04 only if Lemon/Sadiq/Price all gone.",
+          "desire": 0.4
+        },
+        {
+          "name": "Caleb Douglas",
+          "position": "WR",
+          "reasoning": "Realistic 2.15 target — Consensus #27 Tier 4 (MIA WR15). Low-RSP GMs at 2.15 chase consensus names with NFL landing spots; Douglas fits with no RSP top-30 noise to distract. Late-round-2 dart at WR depth.",
+          "desire": 0.38
         }
       ],
       "positionalPriority": [
         "WR",
-        "QB",
         "TE",
-        "RB"
+        "RB",
+        "QB"
       ],
-      "capPosture": "Comfortable at $36.2M used with $8.8M space and 7 contracts expiring — can absorb a 1.04 active-roster rookie deal without forcing taxi.",
+      "capPosture": "Healthy at $36.2M used / $8.8M space — can absorb a 1.04 active-roster contract, no taxi-forcing required, but 7 expiring deals mean cap will get reshuffled regardless.",
       "taxiCandidates": [
-        "Eli Stowers",
-        "Nicholas Singleton"
+        "Caleb Douglas",
+        "Reggie Virgil"
       ],
       "wildcard": {
-        "name": "Nicholas Singleton",
-        "position": "RB",
-        "reasoning": "ADP 25.83, Penn State name brand, top recruited back coming out of HS — the kind of recognizable college star a low-RSP-affinity GM reaches for at 2.15 when chasing names over Waldman's underrated picks.",
-        "desire": 0.4
+        "name": "Fernando Mendoza",
+        "position": "QB",
+        "reasoning": "Consensus #6 Tier 2 (LV QB1), ADP 11.39, RSP #7 — three boards all top-12. Already rostering 3 QBs makes it a stretch, but a low-RSP/ADP-driven GM staring at the consensus QB1 at 1.04 might bite on the name-brand value, especially if a starter contract is among the 7 expiring deals.",
+        "desire": 0.28
       },
-      "summary": "Music City Mafia comes into the draft with cap flexibility ($8.8M) and a need to backfill 7 expiring contracts, but as a consensus-ADP chaser with zero current RSP affinity, this GM is taking the biggest name still on the board at 1.04 — likely Lemon or Mendoza if they slide. At 2.15 they hunt brand recognition (Sadiq, Concepcion, or a Penn State back like Singleton) rather than mining Waldman's underrated tier. Expect a WR-first plan reinforcing an already WR-heavy roster, because that's where the consensus names live."
+      "summary": "Music City Mafia at 1.04 with low RSP affinity will anchor hard on Consensus and ADP overlap — meaning Makai Lemon is the heavy favorite if available, with Kenyon Sadiq (TE need + post-draft NYJ landing) the cleanest fallback. With 7 contracts expiring and only 18 roster spots filled, this is a refresh draft, not a rebuild — they want a Tier 1/2 contributor at 1.04 and a consensus-ADP name at 2.15, not a Waldman sleeper."
     },
     {
       "franchiseId": "0007",
       "franchiseName": "Fire Ready Aim",
       "topTargets": [
         {
-          "name": "Carnell Tate",
-          "position": "WR",
-          "reasoning": "The 1.01 lock. RSP DoT 92.3 (highest in entire 2026 class at any position), Franchise tier with a Randy Moss comp, and consensus ADP 9.46 confirms he is universally the 1.01-or-1.02. With $11.4M cap space and medium RSP affinity, FIRE has zero reason to overthink this — RSP and consensus agree.",
-          "desire": 0.95
-        },
-        {
           "name": "Jeremiyah Love",
           "position": "RB",
-          "reasoning": "If Tate goes 1.01, Love is the only realistic 1.01 alternative — RSP #2 (DoT 89.3, All-Pro ceiling, Kamara comp) and consensus ADP 3.59 (the highest-ranked rookie on MFL ADP). FIRE's RB room is just 5 deep and needs a workhorse anchor; medium RSP affinity means consensus ADP 3.59 sways them.",
-          "desire": 0.55
+          "reasoning": "Lock at 1.01 — Consensus #1 Tier 1 (RB1, ARI), RSP DoT 89.3 Starter grade with All-Pro/Kamara comp, MFL ADP 3.59. All three boards converge and our RB room (only 5 deep) needs the alpha.",
+          "desire": 0.98
         },
         {
-          "name": "Fernando Mendoza",
-          "position": "QB",
-          "reasoning": "Logical 1.14 target. RSP QB1 at #7 overall (DoT 85.6, 'one of the best' downfield creators) and consensus ADP 11.39 puts him squarely in 1.14 range. With only 2 QBs rostered and 3 contracts expiring, a franchise QB on a rookie deal is high-leverage roster work.",
+          "name": "Emmett Johnson",
+          "position": "RB",
+          "reasoning": "Top target at 1.14 — Consensus #13 Tier 2 (RB5, KC) and RSP DoT 84.6 #8 (Rotational Starter, Harold Fannin trajectory comp). Medium RSP weight rewards a Consensus+RSP double-up at our shallowest skill spot, and KC landing spot is league-defining.",
+          "desire": 0.78
+        },
+        {
+          "name": "Mike Washington Jr.",
+          "position": "RB",
+          "reasoning": "Backup plan at 1.14 if E. Johnson is gone — Consensus #11 Tier 2 (RB4, LV), RSP #28 DoT 82.5, ADP 24.09. Consensus loves the LV opportunity even if RSP is cooler; with 50% Consensus weight he is in range.",
           "desire": 0.7
         },
         {
-          "name": "Jadarian Price",
-          "position": "RB",
-          "reasoning": "2.01 sweet spot. RSP #21 (DoT 83.5, 'ceiling as high as RBs 2-5') with consensus ADP 16.05 making him a turn-of-round 2 value. Doubles down on the RB-thin room behind a potential Love selection or stands alone if Tate went 1.01.",
-          "desire": 0.6
+          "name": "Elijah Sarratt",
+          "position": "WR",
+          "reasoning": "2.01 target — Consensus #20 Tier 3 (WR11, BAL), RSP #17 DoT 83.9 'safest WR option among 10-16'. WR depth isn't a need but BAL target share + cross-board agreement is too clean to pass at the round-2 turn.",
+          "desire": 0.65
         },
         {
-          "name": "Eli Stowers",
-          "position": "TE",
-          "reasoning": "3.01 swing. RSP #11 (DoT 84.4, 'classic move TE, on cusp of Starter tier') but consensus ADP 21.25 suggests he slides into round 3. Even with 5 TEs already rostered, 3 contracts expiring means churn is coming, and Stowers is a clear value gap pick at 3.01.",
-          "desire": 0.5
+          "name": "Demond Claiborne",
+          "position": "RB",
+          "reasoning": "2.16 target — Consensus #26 Tier 4 (RB8, MIN) but RSP #9 DoT 84.5 with Shady McCoy comp. Exactly the late-2nd convergence the medium-affinity GM exploits: 25% RSP weight pushes him above straight Consensus and triples down on RB scarcity behind Love.",
+          "desire": 0.6
         }
       ],
       "positionalPriority": [
-        "WR",
         "RB",
+        "WR",
         "QB",
         "TE"
       ],
-      "capPosture": "Healthy — $11.4M of $45M cap space with no taxi/IR usage, easily absorbs all five rookie contracts; can active-roster the top-2 picks and taxi the rest.",
+      "capPosture": "Healthy — $11.4M space on $45M cap; can absorb rookie active-roster contracts without taxi gymnastics, but late picks (2.16, 3.01) still likely go taxi for development.",
       "taxiCandidates": [
-        "Eli Stowers",
-        "Jadarian Price",
-        "Bryce Lance"
+        "Demond Claiborne",
+        "Reggie Virgil",
+        "Skyler Bell"
       ],
       "wildcard": {
         "name": "Skyler Bell",
         "position": "WR",
-        "reasoning": "RSP #6 (DoT 85.9, Ja'Marr Chase high-end comp) but completely absent from MFL dynasty ADP top 30 — a classic medium-affinity blend pick at 2.16 where the RSP gap over consensus is largest. FIRE has 10 WRs already so they can afford a high-variance dart.",
-        "desire": 0.35
+        "reasoning": "3.01 RSP-driven swing — RSP #6 DoT 85.9 Starter grade with Ja'Marr Chase high-end comp, but Consensus #33 (Free Agents tier, BUF). Medium affinity (25% RSP) gives just enough cover to reach for the lottery ticket on a taxi stash when Tier 5 Consensus names (Virgil, Randall, Stribling) are uninspiring.",
+        "desire": 0.4
       },
-      "summary": "FIRE is sitting on a premium hand — 1.01, 1.14, 2.01, 2.16, 3.01 — with healthy cap and a roster that needs RB depth and a QB-of-the-future more than another WR. Expected play: take Tate at 1.01 (RSP and consensus both scream it), grab Mendoza or the best RB at 1.14, then double-dip on RB/TE value at 2.01 and 3.01. Wildcard at 2.16 is where their medium RSP affinity shows up — a Skyler Bell-type RSP-darling, consensus-fader."
+      "summary": "FIRE owns the 1.01 plus the round 1/2/3 turns and uses that leverage to fix a thin RB room behind a Love-led core. Expect a Love-anchored draft that doubles up on RB (E. Johnson or M. Washington at 1.14, Claiborne at 2.16) with a BAL WR (Sarratt) at 2.01 for value. The 3.01 is where medium RSP affinity bites — willing to deviate from Consensus Tier 5 for a Waldman favorite like Skyler Bell on a taxi flier."
     },
     {
       "franchiseId": "0008",
       "franchiseName": "Bring The Pain",
       "topTargets": [
         {
-          "name": "Demond Claiborne",
+          "name": "Nicholas Singleton",
           "position": "RB",
-          "reasoning": "RSP RB3 (DoT 84.5) with LeSean McCoy comp and a 'second-round pick regardless of NFL Draft' tag — perfect 2.04 value for a roster carrying only 4 RBs behind 10 WRs. Likely available after Tate/Love/Lemon/Mendoza tier clears in round 1.",
+          "reasoning": "Consensus #17 Tier 2 (RB7, TEN landing), RSP #14 DoT 84.1, ADP 25.83 — all three boards converge near our 2.04 slot, and RB is our thinnest skill spot at 4 deep. The Tennessee opportunity plus blue-chip recruit pedigree makes him the cleanest value at 2.04 if he slides past picks 1.13-1.17.",
           "desire": 0.78
         },
         {
           "name": "Emmett Johnson",
           "position": "RB",
-          "reasoning": "RSP RB2 at DoT 84.6 with Harold Fannin trajectory comp; addresses the same RB-thin roster shape and slots cleanly into the $4.3M cap as an active-roster contributor on a rookie deal.",
-          "desire": 0.72
+          "reasoning": "Consensus #13 Tier 2 (RB5, KC), RSP #8 DoT 84.6 'Rotational Starter' — RSP loves him more than market does, and KC backfield path is real. With my 25% RSP weight he's a viable 2.04 if Singleton's gone; medium-affinity GM doesn't reach for him over Consensus, but he sits at the top of Tier 2 RB.",
+          "desire": 0.62
         },
         {
-          "name": "Jordyn Tyson",
-          "position": "WR",
-          "reasoning": "Industry darling (MFL ADP 12.71) at RSP DoT 84.5 — a medium-RSP-affinity GM blends boards, and Tyson's consensus first-round value at 2.04 is hard to pass even with WR depth. Boom-bust profile fits a 'best WR upside left' bet.",
-          "desire": 0.65
-        },
-        {
-          "name": "Nicholas Singleton",
-          "position": "RB",
-          "reasoning": "RSP DoT 84.1, Penn State pedigree, consensus MFL ADP 25.83 — natural 2.11 target if Claiborne/Johnson are gone in round 2. Doubles down on the RB need without reaching.",
+          "name": "Eli Stowers",
+          "position": "TE",
+          "reasoning": "Consensus #21 Tier 3 (TE2, PHI), RSP #11 DoT 84.4, ADP 21.25 — Philly landing with a converted-QB athletic profile. At 2.11 (~pick 27) he's the RSP/ADP sweet spot, and even with 4 TEs rostered he's a clear long-term TE1 upgrade over depth pieces.",
           "desire": 0.6
         },
         {
-          "name": "Omar Cooper Jr.",
-          "position": "WR",
-          "reasoning": "DoT 83.9, ADP 17.20 — Deebo Samuel comp gives versatility to a deep WR room as a flex/utility piece. Strong 2.11 value blending RSP and consensus.",
+          "name": "Demond Claiborne",
+          "position": "RB",
+          "reasoning": "Consensus #26 Tier 4 (RB8, MIN), RSP #9 DoT 84.5 — RSP has him 17 spots higher than Consensus does. Classic medium-affinity buy at 2.11: Vikings backfield is unsettled, RSP comp is Shady McCoy, and RB need lets me weight the 25% RSP signal hard here.",
+          "desire": 0.58
+        },
+        {
+          "name": "Kaytron Allen",
+          "position": "RB",
+          "reasoning": "Consensus #14 Tier 2 (RB6, WAS) — pure Consensus play if he drops. WAS workload path is the cleanest in this RB tier. RSP doesn't list him in top 30, so my medium weighting still backs the pick because Consensus is 50% of my board and RB need is real.",
           "desire": 0.55
         }
       ],
       "positionalPriority": [
         "RB",
-        "WR",
-        "QB",
-        "TE"
+        "TE",
+        "WR"
       ],
-      "capPosture": "Workable at $4.3M space — can absorb one active rookie deal and stash a second on taxi (50% hit) without restructuring; 3 expirings give breathing room next year.",
+      "capPosture": "Tight at $4.3M space with 24 active and 3 contracts expiring; rookies likely go taxi (50% hit) to stay under the $45M cap, especially the 2.04 pick.",
       "taxiCandidates": [
         "Nicholas Singleton",
-        "Omar Cooper Jr.",
-        "Chris Brazzell II"
+        "Emmett Johnson",
+        "Demond Claiborne"
       ],
       "wildcard": {
-        "name": "Eli Stowers",
-        "position": "TE",
-        "reasoning": "RSP TE1 at DoT 84.4 (Vanderbilt move TE) — TE room already has 4 bodies but RSP-leaning GMs chase Stowers' ceiling, and his ADP 21.25 lines up cleanly with the 2.11 slot.",
-        "desire": 0.35
+        "name": "Antonio Williams",
+        "position": "WR",
+        "reasoning": "Consensus #24 Tier 4 (WR14, WAS), RSP #18 DoT 83.9 — RSP comps him to Jayden Reed and tags him a 'potential bargain.' At 2.11 if RB run thins the board, the medium-affinity GM peeks at the RSP-favored WR despite being WR-heavy already.",
+        "desire": 0.32
       },
-      "summary": "Bring The Pain enters the draft WR-saturated (10 on roster) and RB-light (4), so the 2.04 pick should target the best RB available in the RSP/consensus overlap — Claiborne or Johnson. With $4.3M cap space and a medium RSP affinity, this GM blends boards rather than reaching, and the 2.11 pick becomes a depth swing at either a second RB (Singleton) or a high-upside WR/TE on taxi to defer cap (Cooper Jr., Brazzell, Stowers)."
+      "summary": "With no first-rounder and a WR-stacked, RB-thin roster, Bring The Pain is hunting RB depth at 2.04 and best-available with RSP lean at 2.11. Cap squeeze ($4.3M) forces both picks onto the taxi squad at 50% salary. Medium RSP affinity means I anchor on Consensus Tier 2 RBs (Singleton, Johnson, Allen) at 2.04, then let RSP's voice break ties at 2.11 between Stowers, Claiborne, and Williams."
     },
     {
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "topTargets": [
         {
-          "name": "Emmett Johnson",
-          "position": "RB",
-          "reasoning": "RSP #8 (DoT 84.6) with a Waldman trajectory comp to Harold Fannin — exactly the type of underrated talent a high-RSP-affinity owner reaches for at 1.15 when consensus names are gone. ADP slips him outside the top 30, so he is realistically available and gives WABS a fresh RB to refresh a 6-deep but aging room.",
+          "name": "Chris Brazzell II",
+          "position": "WR",
+          "reasoning": "Perfect 1.15 fit for an RSP-high GM: Consensus #15 Tier 2 (likely available), but RSP DoT 84.2 ranks him #12 with a George Pickens comp — Waldman calls out 'High ceiling with Pickens-like traits.' Carolina landing spot is a target-share opportunity. WR room is deep (7) but mostly in win-now; this is the upside swing my weighting demands.",
           "desire": 0.78
         },
         {
-          "name": "Eli Stowers",
-          "position": "TE",
-          "reasoning": "RSP #11 (DoT 84.4), classic move TE on the cusp of Starter tier — Waldman loyalists love this archetype, and ADP 21.25 makes him plausible at 1.15. WABS already runs 4 TEs so this is purely a 'best RSP grade left on the board' dart, which is exactly how high-affinity owners draft.",
-          "desire": 0.7
+          "name": "Chris Bell",
+          "position": "WR",
+          "reasoning": "Consensus #19 Tier 2, RSP DoT 83.9 (#16) with an A.J. Brown high-end comp — RSP says 'Wait for second round if falls' but at 1.15 he's right in the slot. Miami landing is fine. With my 40% RSP weight, the Brown comp plays louder than ADP 28.24 suggests.",
+          "desire": 0.72
         },
         {
-          "name": "Demond Claiborne",
+          "name": "Nicholas Singleton",
           "position": "RB",
-          "reasoning": "RSP #9 (DoT 84.5) with a Shady McCoy comp and Waldman explicitly calling him a second-rounder regardless of weight concern — premium RSP value if he slips to 1.15. WABS' RB room is quantity over quality, so a high-ceiling lead-back profile justifies the pick.",
+          "reasoning": "Consensus #17 Tier 2, RSP DoT 84.1 (#14), TEN landing. RB depth is 6 but contracts shrink fast — Singleton hits both win-now (Tier 2 talent) and dynasty (RSP Rotational Starter grade). Safer floor than Brazzell/Bell if I want a back at 1.15.",
           "desire": 0.62
         },
         {
-          "name": "Myles Montgomery",
-          "position": "RB",
-          "reasoning": "RSP #13 and explicitly tagged 'MOST UNDERRATED skill talent in the 2026 class' — a religious Waldman reader cannot pass this at 3.02 even with likely UDFA status. With $4.3M cap and zero taxi used, WABS can stash him essentially free at 50% rookie minimum.",
-          "desire": 0.68
+          "name": "Antonio Williams",
+          "position": "WR",
+          "reasoning": "Prime 3.02 RSP-special: Consensus #24 Tier 4 but RSP DoT 83.9 (#18) with a Jayden Reed comp — Waldman literally tags him 'a potential bargain.' WAS landing. ADP 29.06 confirms market hasn't caught up. With my 50/40/10, Williams jumps two tiers above Consensus.",
+          "desire": 0.7
         },
         {
-          "name": "Bryce Lance",
+          "name": "Elijah Sarratt",
           "position": "WR",
-          "reasoning": "RSP #22 with an A.J. Green high-end comp and 'must-draft' flag from Waldman in deeper formats — perfect 3.04 RSP-affinity flier. WABS is 7-deep at WR but high-affinity owners chase Waldman's must-draft tags regardless of room.",
+          "reasoning": "Consensus #20 Tier 3, RSP DoT 83.9 (#17) — RSP names him 'safest option by RSP scoring among WRs 10-16.' BAL landing has long-term target room. At 3.04 this is a value floor pick that aligns with Waldman's safety bias.",
           "desire": 0.6
         }
       ],
       "positionalPriority": [
-        "RB",
         "WR",
+        "RB",
         "TE"
       ],
-      "capPosture": "Workable: $4.3M space against $45M cap with zero taxi spots used — can comfortably absorb a 1st-round rookie on the active roster and stash both 3rds on taxi at 50% base salary.",
+      "capPosture": "Cap-tight at $40.7M used / $4.3M space — all three rookies must go taxi (50% hit = ~$500K each fits; full active rookie deals would not).",
       "taxiCandidates": [
-        "Myles Montgomery",
-        "Bryce Lance",
-        "Robert Henry Jr."
+        "Chris Brazzell II",
+        "Antonio Williams",
+        "Elijah Sarratt"
       ],
       "wildcard": {
-        "name": "Robert Henry Jr.",
-        "position": "RB",
-        "reasoning": "RSP #24 (DoT 83.4) with Achane/Aaron Jones/James Cook comp from Waldman and not even on MFL ADP top 30 — pure RSP-affinity special at 3.04 that consensus owners would never touch.",
-        "desire": 0.45
+        "name": "Bryce Lance",
+        "position": "WR",
+        "reasoning": "Pure RSP-high GM swing at 3.04: Consensus has him at #38 (Free Agents tier), but RSP DoT 83.5 (#22) with an A.J. Green high-end comp and 'must-draft' tag in deep leagues. NO landing. 40% RSP weight makes him a defensible reach where most GMs won't blink until round 4.",
+        "desire": 0.42
       },
-      "summary": "WABS is a high-RSP-affinity owner picking 1.15 with $4.3M cap room and an empty taxi — primed to chase Waldman's underrated names rather than consensus ADP. Expect a Waldman-favorite RB or move-TE in round 1 (Johnson/Stowers/Claiborne over the obvious WR-only fits) followed by deep-RSP fliers in round 3 (Montgomery, Lance, Henry Jr.) stashed on taxi at half salary."
+      "summary": "Wascawy Wabbits is a deep, cap-strapped roster (23 players, $4.3M space, only 2 expirings) with no urgency to active-roster rookies — every 2026 pick goes to taxi. With high RSP affinity, the play at 1.15 is a Waldman-favored upside WR (Brazzell II or Bell) over a positional reach, then mining 3.02/3.04 for RSP sleepers like Antonio Williams (Reed comp) and Sarratt/Lance where my 40% RSP weighting reaches farther than the Consensus crowd. This is a developmental class — stockpile A/B-tier RSP graded talent on the cheap taxi shelf and re-evaluate next summer."
     },
     {
       "franchiseId": "0010",
       "franchiseName": "Computer Jocks",
       "topTargets": [
         {
-          "name": "Jadarian Price",
+          "name": "Nicholas Singleton",
           "position": "RB",
-          "reasoning": "At 1.16 with only 4 RBs rostered, Price is the highest-upside RB likely available — RSP DoT 83.5 (RB6 on the board) with ceiling 'as high as RBs 2-5' and ADP 16.05 lines up almost exactly with this slot. Cheapest path to a starting-caliber dynasty back without trading up.",
+          "reasoning": "Consensus #17 Tier 2 (RB7, TEN) and RSP #14 DoT 84.1 — both boards confirm late-Tier-2 value, and at 1.16 he's the cleanest Tier-2 RB likely to slip given the WR-heavy run ahead. Roster is RB-thin (only 4) versus 7 WRs and 5 TEs, so positional need aligns with board value.",
           "desire": 0.78
         },
         {
-          "name": "Denzel Boston",
+          "name": "Malachi Fields",
           "position": "WR",
-          "reasoning": "RSP DoT 83.1 with 'quality pick in late first' note and ADP 16.11 — a perfect 1.16 value where RSP and consensus agree. Boundary size profile diversifies a WR room that already runs 7 deep but lacks a clear young alpha.",
-          "desire": 0.7
+          "reasoning": "Consensus #22 Tier 3 looks like a reach at 1.16, but RSP has him #4 overall (DoT 87.2, Nico Collins comp) — medium-RSP weighting (25%) pulls him up enough to consider if Singleton is gone. NYG landing spot is tepid, which is why Consensus dropped him; Waldman thinks the talent overrides it.",
+          "desire": 0.62
         },
         {
-          "name": "Kenyon Sadiq",
-          "position": "TE",
-          "reasoning": "ADP 13.11 says he may not even reach 1.16, but if the run on RBs/WRs at the turn pushes him down, the Brock Bowers high-end comp and combine athleticism are too good to pass — even with 5 TEs, the room lacks an ascending young athlete.",
+          "name": "Chris Bell",
+          "position": "WR",
+          "reasoning": "Consensus #19 Tier 2 (WR10, MIA) and RSP #16 DoT 83.9 with an A.J. Brown high-end comp. Last surviving Tier-2 name at 1.16 in many scenarios; medium-RSP GM is comfortable taking him here because both boards corroborate.",
           "desire": 0.55
         },
         {
-          "name": "Omar Cooper Jr.",
+          "name": "Antonio Williams",
           "position": "WR",
-          "reasoning": "RSP DoT 83.9 with explicit 'worth second-round consideration' note; ADP 17.20. If Price and Boston both go in the 1.13-1.15 range, Cooper is the next tier of upside WR with a Deebo Samuel ceiling.",
-          "desire": 0.5
+          "reasoning": "Round 3 target at 3.11 — Consensus #24 Tier 4 (WR14, WAS), RSP #18 DoT 83.9 with a Jayden Reed comp Waldman likes, ADP #55 (29.06) confirms market discount. Classic medium-RSP value play in the 30s-40s where my 25/25 blend rewards confluence.",
+          "desire": 0.52
         },
         {
-          "name": "Nicholas Singleton",
-          "position": "RB",
-          "reasoning": "Primary 3.11 target — ADP 25.83 lands right in this range. RSP DoT 84.1 with 'second- or third-round pick in rookie drafts' note makes him a textbook value for an RB-light roster grabbing depth.",
-          "desire": 0.62
+          "name": "Bryce Lance",
+          "position": "WR",
+          "reasoning": "Consensus #38 (WR23, NO) but RSP #22 DoT 83.5 with an A.J. Green high-end comp — exactly the kind of late-round lottery ticket a medium-RSP GM weights up at 3.11 when Consensus has him as a free-agent-tier flier. NO offense is a real opportunity.",
+          "desire": 0.45
         }
       ],
       "positionalPriority": [
         "RB",
         "WR",
-        "TE",
         "QB"
       ],
-      "capPosture": "Comfortable at $33.9M used with $11.1M space — can absorb a 1.16 active-roster rookie contract and still flex 3.11 to taxi if needed.",
+      "capPosture": "Healthy: $33.9M used of $45M ($11.1M space) with 0 taxi slots filled — can active-roster either rookie or stash on taxi at 50% to bank flexibility for in-season moves.",
       "taxiCandidates": [
-        "Nicholas Singleton",
-        "Omar Cooper Jr.",
-        "Mike Washington Jr."
+        "Bryce Lance",
+        "Antonio Williams"
       ],
       "wildcard": {
         "name": "Eli Stowers",
         "position": "TE",
-        "reasoning": "RSP DoT 84.4 with 'on cusp of Starter tier' and classic move-TE profile; ADP 21.25 makes him a 3.11 reach but the medium RSP-affinity GM might trust Waldman's grade over consensus. Adds an athletic young TE to a stale 5-deep room.",
-        "desire": 0.4
+        "reasoning": "Already 5 TEs rostered so the position is saturated, but Consensus #21 Tier 3 (TE2, PHI) and RSP #11 DoT 84.4 with a classic move-TE profile is hard to ignore at 1.16 if both Singleton and Fields are gone. Medium-RSP blend rewards the dual-board confluence even against positional logic — would mean a TE cull elsewhere.",
+        "desire": 0.32
       },
-      "summary": "Computer Jocks pick at the back of round 1 and middle of round 3 with healthy cap and a roster heavy on WR/TE depth but thin at RB. The brief blends RSP and ADP boards (medium affinity) to target an RB at 1.16 — Jadarian Price is the bullseye where both boards converge — with Denzel Boston as the WR fallback if RBs run early. At 3.11, expect another RB swing (Singleton) or a Cooper Jr./Stowers upside dart, with one of the three 3.11 candidates likely going to taxi to preserve cap flexibility."
+      "summary": "JOCKS at 1.16 is hunting the best Tier-2 survivor with RB lean, given a 4-RB room behind 7 WRs and 5 TEs. Medium RSP affinity keeps me anchored to Consensus tiers but willing to accept Fields one tier early because RSP #4 + 25% weight makes him look underpriced. At 3.11 I'm chasing RSP/Consensus confluence sleepers (Antonio Williams, Bryce Lance) rather than ADP-only names — taxi is wide open, so the round 3 pick can be a pure development bet."
     },
     {
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "topTargets": [
         {
-          "name": "Malachi Fields",
+          "name": "KC Concepcion",
           "position": "WR",
-          "reasoning": "RSP DoT 87.2 Starter grade with Nico Collins comp, almost certainly available at 1.08 (FBG/ADP top-10 but behind the consensus elite). Addresses a clear WR need (only 3 on roster) and the size/speed profile fits a 'best WR available' pivot at the back end of round 1.",
+          "reasoning": "At 1.08 the Tier 1 quartet (Love, Tate, Tyson, Lemon) is gone and Sadiq/Mendoza/Price likely off too. Concepcion is Consensus #8 Tier 2 (CLE) and RSP DoT 86.3 (#5 overall, Starter grade) with MFL ADP 13.57 — all three boards converge here, which under our 50/25/25 blend makes him the cleanest WR value at the slot. Roster only has 3 WRs, so the need is real.",
           "desire": 0.78
         },
         {
-          "name": "KC Concepcion",
-          "position": "WR",
-          "reasoning": "RSP DoT 86.3 Starter with ADP 13.57 — true first-round value who often slips into the 1.08-1.10 range. Versatile flanker/slot fit and return-game upside makes him a low-bust pick for a roster that needs WR depth and has $12.6M cap room to absorb a Y1 contract.",
-          "desire": 0.72
-        },
-        {
-          "name": "Jordyn Tyson",
-          "position": "WR",
-          "reasoning": "Industry darling (ADP 12.71) RSP grade at 84.5. With medium RSP affinity, MWS will weight the consensus heavily — if Tyson is on the board at 1.08 the boom-bust ceiling is hard to pass on for a team trying to find a long-term WR1.",
-          "desire": 0.65
+          "name": "Jonah Coleman",
+          "position": "RB",
+          "reasoning": "If Concepcion is sniped, Coleman (Consensus #10 Tier 2, DEN) is the fallback at 1.08 — ADP 20.19 is a slight reach but Consensus Tier 2 RB to Denver is the kind of post-draft landing spot a medium-affinity GM trusts. Backfield is 4-deep but turnover is coming with 6 expiring contracts.",
+          "desire": 0.62
         },
         {
           "name": "Emmett Johnson",
           "position": "RB",
-          "reasoning": "RSP 84.6 Rotational Starter, undervalued by ADP. With back-to-back 2.02/2.07 and four picks in round 2, MWS can grab a bell-cow profile here without overpaying. Six expiring contracts mean cheap rookie deals matter.",
-          "desire": 0.58
+          "reasoning": "Round 2 anchor target across our five 2nd-rounders. Consensus #13 Tier 2 (KC), RSP DoT 84.6 (#8, Rotational Starter, Waldman comps to Harold Fannin). Likely available at 2.07 or 2.08. KC landing spot is a tiebreaker that medium-affinity owners reward heavily.",
+          "desire": 0.7
+        },
+        {
+          "name": "Omar Cooper Jr.",
+          "position": "WR",
+          "reasoning": "Consensus #12 Tier 2 (NYJ paired with Sadiq), RSP DoT 83.9 (#15), MFL ADP 17.20 — the rare board where all three sources rank him within five spots. Realistic 2.02 target if he slides past the early-2nd RB run. Deebo-clone profile fits a thin WR room.",
+          "desire": 0.66
         },
         {
           "name": "Eli Stowers",
           "position": "TE",
-          "reasoning": "RSP 84.4 with Starter-tier upside as a former QB-turned-move-TE. Already 3 TEs but only one rookie-cost asset; at 2.07/2.08 or 2.14, Stowers is an RSP-favored value pick that fits the 'blend RSP with consensus' style.",
-          "desire": 0.5
+          "reasoning": "Consensus #21 Tier 3 (PHI), RSP DoT 84.4 (#11, on-cusp Starter), ADP 21.25 — a perfect 2.14/2.18 value. Roster has 3 TEs but no clear young anchor; Stowers in Philly's offense is an asymmetric bet a balanced board respects.",
+          "desire": 0.6
+        },
+        {
+          "name": "Mike Washington Jr.",
+          "position": "RB",
+          "reasoning": "Consensus #11 Tier 2 (LV), RSP DoT 82.5, ADP 24.09. The Consensus/ADP gap (#11 vs ADP 24) is exactly the kind of arbitrage a 10-pick portfolio exploits — likely available at 2.14 or 2.18 well below his Consensus rank.",
+          "desire": 0.55
         }
       ],
       "positionalPriority": [
@@ -589,109 +592,107 @@
         "TE",
         "QB"
       ],
-      "capPosture": "Healthy at $32.4M used / $12.6M space; can active-roster two rookie deals comfortably, but with 10 picks in R1-3 and only 18 roster spots, several Day-3 selections will go to taxi or be stashed.",
+      "capPosture": "Comfortable at $32.4M of $45M used ($12.6M space), but 10 incoming picks across R1-3 forces aggressive taxi usage and likely 2-3 trade-downs or pick packages — cannot active-roster all 10 rookies even at 50% taxi rates.",
       "taxiCandidates": [
-        "Myles Montgomery",
-        "Bryce Lance",
-        "Robert Henry Jr.",
-        "Jadarian Price"
+        "Emmett Johnson",
+        "Eli Stowers",
+        "Mike Washington Jr."
       ],
       "wildcard": {
-        "name": "Skyler Bell",
+        "name": "Antonio Williams",
         "position": "WR",
-        "reasoning": "RSP DoT 85.9 with a Ja'Marr Chase high-end comp but no ADP presence — pure RSP-affinity dart. With four R2 picks (2.02, 2.07, 2.08, 2.14), MWS can absorb a contrarian swing here while still hitting consensus value elsewhere.",
-        "desire": 0.4
+        "reasoning": "Consensus #24 Tier 4 (WAS) but RSP DoT 83.9 (#18, Jayden Reed comp) — RSP loves him a full tier above Consensus, and ADP 29.06 confirms he's available at 3.07 or 3.08. Medium-affinity GM with Round 3 ammo and a thin WR room takes the RSP-flavored swing.",
+        "desire": 0.42
       },
-      "summary": "Midwestside Connection is sitting on 10 picks in the top 3 rounds with $12.6M cap space and 6 expiring contracts — this is a reload draft. Expect a WR-heavy approach starting with the best receiver available at 1.08 (Fields/Concepcion/Tyson tier), a round-2 RB to refresh the backfield, and several lottery-ticket taxi stashes in round 3. Medium RSP affinity means they'll lean consensus in R1 but reach for Waldman favorites once the volume picks start in R2-R3."
+      "summary": "MWS owns 10 of the first 48 picks and is running a volume-and-value strategy, not a star-hunt. With WR (3) and RB (4) thin and 6 contracts expiring, the brief is to leave the draft with 2-3 immediate-contributor skill players plus 4-5 taxi-stash dart throws. At 1.08 they take the Consensus Tier 2 WR or RB whose ADP confirms (Concepcion ideal, Coleman fallback), then mine the Consensus/ADP arbitrage in rounds 2-3 — Emmett Johnson, Stowers, Washington Jr., Antonio Williams — rather than chasing names. Cap room is fine if discipline holds and most rookies hit taxi at 50% base."
     },
     {
       "franchiseId": "0012",
       "franchiseName": "Vitside Mafia",
       "topTargets": [
         {
-          "name": "Jordyn Tyson",
+          "name": "Omar Cooper Jr.",
           "position": "WR",
-          "reasoning": "Most likely best WR on the board at 1.12 — RSP DoT 84.5 (RSP WR7) and MFL ADP 12.71 align cleanly with this slot. Consensus and RSP both view him as a first-round rookie pick despite boom-bust volatility, and WR is the thinnest position group on the roster (only 4 rostered).",
+          "reasoning": "Best blended value at 1.12 across all three boards: Consensus #12 Tier 2 (NYJ landing spot), RSP #15 DoT 83.9 with Deebo Samuel clone upside, MFL ADP #27. With WR:4 the thinnest skill room and 50/25/25 weighting, Cooper is the only player where all three boards point to this slot.",
           "desire": 0.78
-        },
-        {
-          "name": "KC Concepcion",
-          "position": "WR",
-          "reasoning": "RSP DoT 86.3 (Starter grade, RSP WR4) but ADP 13.57 means he could slip to 1.12 — exactly the kind of RSP/consensus gap a medium-affinity GM exploits. Versatile flanker/slot fit addresses the WR shortage with first-round rookie value per Waldman.",
-          "desire": 0.72
-        },
-        {
-          "name": "Eli Stowers",
-          "position": "TE",
-          "reasoning": "RSP DoT 84.4, ADP 21.25 makes him a strong 2.12 target. With 10 contracts expiring this year, retooling at TE on a cheap rookie deal is sensible despite TE:5 — most of those TEs are likely on expiring deals given the turnover.",
-          "desire": 0.62
-        },
-        {
-          "name": "Nicholas Singleton",
-          "position": "RB",
-          "reasoning": "RSP DoT 84.1 with second/third-round rookie value per Waldman, ADP 25.83 — perfect 2.12 or 3.12 fit. High-pedigree Penn State back is a low-risk depth swing as RB contracts roll over.",
-          "desire": 0.55
         },
         {
           "name": "Chris Brazzell II",
           "position": "WR",
-          "reasoning": "RSP DoT 84.2 (RSP WR9) but ADP 26.47 — classic RSP-over-consensus value at 3.12 for a medium-affinity blender. George Pickens-like ceiling is exactly the upside swing you take in round 3 with a thin WR room.",
-          "desire": 0.52
+          "reasoning": "Consensus #15 Tier 2 (CAR), RSP #12 DoT 84.2 with George Pickens comp — RSP slightly higher than Consensus, which a medium-affinity GM rewards. ADP #48 is a discount. Direct fit for thin WR room and a ceiling play with 10 contracts expiring (need youth that pays in 2027+).",
+          "desire": 0.7
+        },
+        {
+          "name": "Emmett Johnson",
+          "position": "RB",
+          "reasoning": "Consensus #13 Tier 2 (KC backfield) and RSP #8 DoT 84.6 — RSP grades him meaningfully higher than market (not in ADP top 30), which my 25% RSP slice rewards. KC opportunity is real even with RB:5 already, since 10 deals expire and dynasty value matters.",
+          "desire": 0.55
+        },
+        {
+          "name": "Antonio Williams",
+          "position": "WR",
+          "reasoning": "Round 2 target at 2.12. Consensus #24 Tier 4 (WAS) but RSP #18 DoT 83.9 with Jayden Reed comp — exactly the RSP-favored Tier-4 Consensus player a medium-affinity GM grabs at pick ~28. ADP #55 confirms market discount. Stacks WR room cheaply.",
+          "desire": 0.5
+        },
+        {
+          "name": "Bryce Lance",
+          "position": "WR",
+          "reasoning": "Round 3 target at 3.12. Consensus #38 Free Agents (NO) but RSP #22 DoT 83.5 with A.J. Green high-end comp. Late-round RSP lean fits medium-affinity bias when the cost is a 3rd-rounder with ~$500K base (taxi-able at $250K).",
+          "desire": 0.45
         }
       ],
       "positionalPriority": [
         "WR",
         "RB",
-        "TE",
-        "QB"
+        "TE"
       ],
-      "capPosture": "Tight but workable at $42.6M of $45.0M used ($2.4M space) — rookies likely need taxi treatment to fit, especially the 1.12 base salary; one active-roster slot is open.",
+      "capPosture": "Tight at $42.6M of $45M used ($2.4M space) — 1.12 rookie must go taxi (~$600K hit at 50%); a 22nd active body cut is likely needed before draft day with 10 contracts expiring.",
       "taxiCandidates": [
-        "Jordyn Tyson",
+        "Omar Cooper Jr.",
         "Chris Brazzell II",
-        "Nicholas Singleton"
+        "Emmett Johnson"
       ],
       "wildcard": {
-        "name": "Myles Montgomery",
-        "position": "RB",
-        "reasoning": "RSP DoT 84.1 with the explicit 'MOST UNDERRATED skill talent in the 2026 class' tag and likely UDFA — a medium-affinity GM blending RSP signal could grab him with 3.12 as a taxi flier rather than chasing an ADP name.",
-        "desire": 0.35
+        "name": "Skyler Bell",
+        "position": "WR",
+        "reasoning": "Pure RSP-love play: RSP #6 DoT 85.9 with Ja'Marr Chase high-end comp, but Consensus dropped him to #33 Free Agents and he's not in MFL ADP top 30. A medium-affinity GM with a 3rd-round flier and a thin WR room takes the RSP-only swing at 3.12 if Lance is gone.",
+        "desire": 0.3
       },
-      "summary": "Vitside Mafia is in a mid-cycle retool with 10 expiring contracts and tight cap — this draft is about cheap rookie deals to backfill churn, not contention pieces. Expect WR-first at 1.12 (Tyson or Concepcion if he slips), a TE or RB swing at 2.12 (Stowers/Singleton), and an RSP-favored upside flier at 3.12. With only $2.4M of cap space, all three picks likely route to taxi at 50% hits to preserve flexibility for veteran re-signings."
+      "summary": "Vitside Mafia is a soft-rebuilder: 21 actives, TE:5 bloat, WR:4 thin, $2.4M cap, 10 expiring deals. The plan is WR-WR with the first two picks — Cooper Jr. at 1.12 because all three boards align, Antonio Williams or Brazzell at 2.12 as an RSP-tilted Consensus Tier-4 grab. Round 3 stays on the WR vine with an RSP darling (Lance, or Skyler Bell as the wildcard) since this GM's 25% RSP slice rewards Waldman calls the market hasn't priced. TE is off the board despite Stowers/Klare value — already 5 deep there."
     },
     {
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "topTargets": [
         {
-          "name": "Malachi Fields",
-          "position": "WR",
-          "reasoning": "RSP DoT 87.2 Starter grade with Nico Collins comp; likely on the board at 1.09 after Tate/Lemon/Love come off. Geeks are WR-heavy (9) but their affinity is medium so they'll still take a top-10 RSP board talent over a need pick if BPA is this clear.",
+          "name": "Jonah Coleman",
+          "position": "RB",
+          "reasoning": "Consensus #10 RB3 Tier 2 (DEN), MFL ADP 20.19 — best RB likely to fall to 1.09 after Love and Price are gone. Roster has only 4 RBs vs 9 WRs, so RB is the clearest need and Coleman's Denver landing gives him a real touch path.",
           "desire": 0.78
+        },
+        {
+          "name": "Mike Washington Jr.",
+          "position": "RB",
+          "reasoning": "Consensus #11 RB4 Tier 2 (LV), RSP DoT 82.5, ADP 24.09. Big-bodied LV back with 'better opportunity than ranking suggests' per Waldman — fills the RB hole if Coleman is taken at 1.07/1.08.",
+          "desire": 0.62
+        },
+        {
+          "name": "Omar Cooper Jr.",
+          "position": "WR",
+          "reasoning": "Consensus #12 WR6 Tier 2 (NYJ), RSP DoT 83.9, ADP 17.20 — three-board consensus Tier 2 talent. WR room is deep but Cooper as a Deebo-clone in NYJ is BPA insurance if both top RBs go ahead.",
+          "desire": 0.55
         },
         {
           "name": "Emmett Johnson",
           "position": "RB",
-          "reasoning": "RSP RB3 (DoT 84.6) addresses the thin RB room (only 4 rostered). Sliding ADP makes him plausible at 1.09 or as a trade-back target; cap-friendly rookie deal fits the $5.9M room.",
-          "desire": 0.72
+          "reasoning": "Consensus #13 RB5 Tier 2 (KC), RSP DoT 84.6 (RSP RB3 overall ahead of Coleman/Washington), ADP outside top 30. KC backfield + Waldman's Harold Fannin trajectory comp makes him the medium-RSP value play if board breaks for him.",
+          "desire": 0.5
         },
         {
-          "name": "KC Concepcion",
-          "position": "WR",
-          "reasoning": "Starter grade (DoT 86.3) and ADP 13.57 puts him in range at 1.09. Medium RSP affinity means they trust the board; consensus and RSP align here, lowering risk.",
-          "desire": 0.7
-        },
-        {
-          "name": "Demond Claiborne",
+          "name": "Kaytron Allen",
           "position": "RB",
-          "reasoning": "RSP DoT 84.5 with Shady McCoy comp — fits as a 2.09 lottery ticket on a thin RB room. ADP slips him to round 2 due to weight concerns, exactly the value Geeks chase with medium RSP lean.",
-          "desire": 0.62
-        },
-        {
-          "name": "Eli Stowers",
-          "position": "TE",
-          "reasoning": "RSP TE2 (DoT 84.4) with ADP 21.25 lines up as a 3.09 target. Geeks only have 2 TEs and 5 contracts expiring — adding a cheap rookie TE on a multi-year deal hedges roster turnover.",
-          "desire": 0.55
+          "reasoning": "Consensus #14 RB6 Tier 2 (WAS). Pure positional-need fallback — by 1.09 if Coleman, Washington, and Johnson are all off the board, Allen keeps the RB-priority plan alive without reaching past Tier 2.",
+          "desire": 0.4
         }
       ],
       "positionalPriority": [
@@ -700,19 +701,18 @@
         "WR",
         "QB"
       ],
-      "capPosture": "Tight but workable at $5.9M space; can active-roster all three rookies if they stay in expected slots, with one possible taxi stash to preserve flexibility against the 5 expiring contracts.",
+      "capPosture": "Tight at $39.1M of $45M used ($5.9M space) with 5 expirings — can absorb the 1.09 active-roster cost but rounds 2-3 likely need to go taxi at 50% to preserve 20-man minimum and FA flexibility.",
       "taxiCandidates": [
-        "Eli Stowers",
-        "Jadarian Price",
-        "Robert Henry Jr."
+        "2.09 selection",
+        "3.09 selection"
       ],
       "wildcard": {
-        "name": "Fernando Mendoza",
-        "position": "QB",
-        "reasoning": "RSP QB1 (DoT 85.6) at 1.09 would be a reach, but Geeks roster only 2 QBs with contracts churning. Medium RSP affinity could tip them toward Waldman's top overall prospect if WR/RB runs clear the board.",
-        "desire": 0.35
+        "name": "Eli Stowers",
+        "position": "TE",
+        "reasoning": "Consensus #21 TE2 Tier 3 (PHI), RSP DoT 84.4. TE is a 2-deep need and Stowers as a converted-QB move-TE in Philly is a 2.09 home-run swing that fits a medium-RSP GM blending Waldman love with Consensus Tier-3 floor.",
+        "desire": 0.45
       },
-      "summary": "Gridiron Geeks enter 1.09 with a glaring positional imbalance — 9 WRs but only 4 RBs and 2 TEs — and $5.9M of cap room to absorb rookie deals. Expect them to take the best available RB/TE/WR per their blended RSP+consensus board, with Fields, Johnson, or Concepcion as the realistic 1.09. Rounds 2-3 will target a thunder back (Claiborne) and a developmental TE (Stowers) to stabilize the depth chart against 5 expiring contracts."
+      "summary": "Gridiron Geeks attack 1.09 with a clear RB-first mandate — 9 WRs vs 4 RBs makes Coleman/Washington/Johnson the target tree, all Consensus Tier 2 and all defensible under the 50/25/25 weighting. Rounds 2 and 3 lean taxi to protect the $5.9M cap cushion, with TE (Stowers) as the secondary need behind RB. Medium RSP affinity means no reaching past Consensus Tier 2 in round 1, but Waldman's grades break ties between similarly-ranked Tier-2 RBs."
     },
     {
       "franchiseId": "0014",
@@ -721,140 +721,139 @@
         {
           "name": "Makai Lemon",
           "position": "WR",
-          "reasoning": "At 1.03 with Tate (RSP #1) and Love (RSP #2) almost certainly off the board, Lemon is the cleanest RSP/consensus overlap available — RSP #3 (DoT 88.8, Starter grade, Amon-Ra St. Brown comp) and ADP 11.18. Medium RSP affinity means I trust the board when RSP and ADP agree, and $10.5M cap space comfortably absorbs a 1.03 contract.",
-          "desire": 0.78
+          "reasoning": "Consensus #4 Tier 1 (WR3, PHI) AND RSP DoT 88.8 Starter grade with Amon-Ra St. Brown comp — both primary boards converge, which my 50/25/25 weighting rewards heavily. ADP 11.18 confirms market value at 1.03; safest Tier 1 WR likely on the board after Love/Tate go 1.01-1.02.",
+          "desire": 0.82
         },
         {
-          "name": "Malachi Fields",
+          "name": "Jordyn Tyson",
           "position": "WR",
-          "reasoning": "RSP #4 (DoT 87.2, Nico Collins comp) and a top-10 ADP target. Size/speed boundary WR profile fits a roster already 7-deep at WR but thin on long-term anchors with 6 contracts expiring. Strong fallback if Lemon goes 1.02.",
+          "reasoning": "Consensus #3 Tier 1 (WR2, NO) with ADP 12.71 — Consensus and ADP both rank him ahead of Lemon, but RSP DoT 84.5 'boom-bust volatility' is a yellow flag. At medium RSP affinity I won't fully discount Waldman's caution, so he ranks behind Lemon despite higher Consensus slot.",
           "desire": 0.7
         },
         {
-          "name": "Jeremiyah Love",
-          "position": "RB",
-          "reasoning": "Long shot at 1.03 (ADP 3.59, RSP #2 with All-Pro upside, Kamara comp) but if Dead Cap Walking surprises at 1.02 with a non-RB, Love is the obvious pivot. RB7 on the roster is misleading — most are flex bodies, not anchors, and Love is a true RB1 building block.",
+          "name": "Eli Stowers",
+          "position": "TE",
+          "reasoning": "Consensus #21 Tier 3 (TE2, PHI) and RSP DoT 84.4 'on cusp of Starter tier' — best-available TE at 2.03 in the dead zone between Sadiq (gone top 6) and Klare (#25). My TE room is 4 deep but aging; Stowers is a long-term plug at a thin position with two boards in agreement.",
+          "desire": 0.62
+        },
+        {
+          "name": "Chris Bell",
+          "position": "WR",
+          "reasoning": "Consensus #19 Tier 2 (WR10, MIA), RSP DoT 83.9 with A.J. Brown high-end comp, ADP 28.24. Falls right at 2.03 with Tier 2 value still available. RSP says 'wait for second round if falls' — that's exactly the slot I'm picking.",
           "desire": 0.55
         },
         {
-          "name": "Fernando Mendoza",
-          "position": "QB",
-          "reasoning": "RSP QB1 (DoT 85.6) and ADP 11.39 — value at 1.03 if all three top WRs are gone. Six QBs rostered makes this redundant in a vacuum, but with 6 contracts expiring this year, a long-term QB asset slots in cleanly and trade value at QB1 is real if I don't keep him.",
-          "desire": 0.45
-        },
-        {
-          "name": "KC Concepcion",
+          "name": "Antonio Williams",
           "position": "WR",
-          "reasoning": "2.03 target — RSP #5 (DoT 86.3, Starter grade) and ADP 13.57. Best chance of a top-6 RSP WR sliding into round 2 if the room chases consensus names like Tyson and Mendoza. Slot/flanker versatility plus return-game value is exactly the medium-affinity sweet spot.",
-          "desire": 0.65
+          "reasoning": "Consensus #24 Tier 4 (WR14, WAS), RSP DoT 83.9 with Jayden Reed comp — RSP flags as 'potential bargain' and ADP 29.06 confirms. Perfect 3.03 lottery ticket where RSP and ADP both see late-round value.",
+          "desire": 0.5
         }
       ],
       "positionalPriority": [
         "WR",
-        "RB",
         "TE",
-        "QB"
+        "RB"
       ],
-      "capPosture": "Comfortable at $34.5M used / $10.5M space — can active-roster all three picks (1.03, 2.03, 3.03) without taxi pressure, though 6 expiring contracts mean I need rookies who can play, not just dev assets.",
+      "capPosture": "Comfortable at $34.5M of $45M ($10.5M space) with 6 contracts expiring — can active-roster all three rookies without forcing taxi, but will likely taxi the 3rd-rounder for the 50% discount.",
       "taxiCandidates": [
-        "Myles Montgomery",
-        "Bryce Lance"
+        "Antonio Williams",
+        "Chris Bell"
       ],
       "wildcard": {
-        "name": "Eli Stowers",
-        "position": "TE",
-        "reasoning": "3.03 dart — RSP #11 (DoT 84.4) move TE with QB-convert athletic profile and ADP 21.25 lining up perfectly with the pick slot. TE depth chart is 4 but aging/expiring, and a swing at a developmental TE with Starter-tier upside fits the medium-RSP blend.",
+        "name": "Skyler Bell",
+        "position": "WR",
+        "reasoning": "RSP DoT 85.9 Starter grade with Ja'Marr Chase high-end comp — Waldman's biggest RSP-Consensus delta (RSP #6 vs Consensus #33 FA tier). At medium affinity I won't reach in round 1, but at 3.03 he's the exact dart RSP rewards.",
         "desire": 0.4
       },
-      "summary": "Cowboy Up is picking 1.03 with healthy cap and a roster that needs long-term skill anchors as 6 contracts expire. The plan is to take the best WR available — Lemon if Dead Cap Walking goes RB at 1.02, Fields otherwise — then attack value WRs in round 2 (Concepcion) and a developmental upside swing in round 3. Medium RSP affinity steers me toward names where RSP and ADP agree, avoiding pure consensus reaches like Tyson."
+      "summary": "Cowboy Up enters the draft with three picks at the 0.03 slot, $10.5M cap room, and a balanced 27-man roster — no desperate need to reach. Medium RSP affinity means I anchor on Consensus Tier 1 at 1.03 (Lemon over Tyson because RSP confirms) then hunt Tier 2/3 WR with both-board agreement at 2.03 and a small RSP-driven lottery ticket at 3.03. Goal: add 2-3 starting-caliber pass catchers to a roster with 6 contracts expiring this year."
     },
     {
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "topTargets": [
         {
-          "name": "Fernando Mendoza",
-          "position": "QB",
-          "reasoning": "RSP QB1 with DoT 85.6 and ADP 11.39 — sits right at the 1.11 turn. With only 3 QBs rostered and a 1-year contract expiring, Mendoza is the cleanest BPA + need overlap available.",
+          "name": "Emmett Johnson",
+          "position": "RB",
+          "reasoning": "Consensus #13 Tier 2 (KC), RSP DoT 84.6 (#8 — RSP loves him as Harold Fannin trajectory comp), no ADP top-30 (market lag). Medium-affinity GM weights the RSP+Consensus alignment: cross-board Tier-2 RB at thinnest position (RB:3) with elite KC landing. The ADP gap means he could even fall, making 1.11 a fair value rather than a reach.",
           "desire": 0.78
         },
         {
-          "name": "Emmett Johnson",
-          "position": "RB",
-          "reasoning": "RSP RB3 (DoT 84.6) and only 3 RBs on roster. Goes off-board at 1.11 vs ADP but medium RSP affinity gives Waldman's 'underrated talent' tag real weight here.",
-          "desire": 0.7
+          "name": "Omar Cooper Jr.",
+          "position": "WR",
+          "reasoning": "Consensus #12 Tier 2 (NYJ), RSP DoT 83.9 (#15), ADP 17.20 (#27) — cleanest triple-board Tier-2 player likely on the board at 1.11. NYJ landing pairs with Sadiq buzz. Even with WR:7, a Deebo-clone outside-WR profile fits a roster trying to harvest upside on its only top-3-round pick.",
+          "desire": 0.72
         },
         {
-          "name": "Skyler Bell",
-          "position": "WR",
-          "reasoning": "RSP WR4 with Ja'Marr Chase high-end comp at DoT 85.9. Doesn't appear on MFL ADP top 30, meaning he'll be available — classic blended-board reach for a Starter-grade WR.",
+          "name": "Mike Washington Jr.",
+          "position": "RB",
+          "reasoning": "Consensus #11 Tier 2 (LV) — the literal Consensus rank match for slot 1.11. RSP cooler at DoT 82.5 (#28) but ADP 24.09 (#42) is the floor. Medium-affinity GM still anchors 50% to Consensus and the RB:3 need pushes them past the RSP/ADP lag. The exact-rank-meets-slot logic is the cleanest pure-Consensus floor.",
           "desire": 0.62
         },
         {
-          "name": "Jordyn Tyson",
+          "name": "Chris Brazzell II",
           "position": "WR",
-          "reasoning": "Industry favorite at ADP 12.71 — very likely on the board at 1.11. Adds to an already deep WR room (7) but consensus value is hard to pass on with $5.1M cap and only 1 pick.",
+          "reasoning": "Consensus #15 Tier 2 (CAR), RSP DoT 84.2 (#12 — Pickens comp), ADP 26.47 (#48). Three-board agreement in Tier-2/late-Tier-2 range. Slight reach at 1.11 but the RSP love and high-ceiling profile fit a one-pick-only team that needs upside, not floor.",
           "desire": 0.55
         },
         {
-          "name": "Demond Claiborne",
+          "name": "Nicholas Singleton",
           "position": "RB",
-          "reasoning": "RSP RB4 (DoT 84.5) with Shady McCoy traits. Falls past 1.11 on most boards but addresses RB-3 depth and fits taxi-eligible pricing if cap forces a low-base contract.",
-          "desire": 0.45
+          "reasoning": "Consensus #17 Tier 2 (TEN), RSP DoT 84.1 (#14), ADP 25.83 (#46). Solid cross-board signal at thinnest position. A reach at 1.11 by Consensus rank, but RB:3 need plus the RSP/ADP confirmation makes him a viable backup plan if Johnson and Washington Jr. are both gone.",
+          "desire": 0.48
         }
       ],
       "positionalPriority": [
-        "QB",
         "RB",
-        "WR"
+        "WR",
+        "TE"
       ],
-      "capPosture": "Tight at $39.9M used / $5.1M space — a single round-1 rookie fits on the active roster but a $1M+ base salary likely forces taxi placement to preserve flexibility.",
+      "capPosture": "Tight at $39.9M used / $5.1M space — the 1.11 rookie almost certainly goes to taxi (50% base hit) to preserve flex for in-season moves; only 1 expiring contract means little natural relief is coming.",
       "taxiCandidates": [
-        "Demond Claiborne",
         "Emmett Johnson",
-        "Skyler Bell"
+        "Omar Cooper Jr.",
+        "Mike Washington Jr."
       ],
       "wildcard": {
         "name": "Eli Stowers",
         "position": "TE",
-        "reasoning": "Already deep at TE (5) so logic says pass, but RSP DoT 84.4 with classic move-TE profile and a former QB pedigree is the kind of value a medium-RSP-affinity GM with one pick might gamble on if the QB/RB tier breaks badly.",
+        "reasoning": "Consensus #21 Tier 3 (PHI), RSP DoT 84.4 (#11 — RSP top-15 with strong Move-TE upside), ADP 21.25 (#35). TE:5 is already crowded so this is unlikely, but a medium-RSP GM could rationalize it as BPA + Eagles offense + RSP edge. The crowded TE room is the primary blocker.",
         "desire": 0.25
       },
-      "summary": "DMOC enters with a single bullet at 1.11 and a cap-tight roster that's WR/TE-heavy and thin at QB and RB. The most likely play is Fernando Mendoza if he slides — addressing the expiring contract and 3-deep QB room — with Emmett Johnson or Demond Claiborne as the RB pivot if a contender jumps Mendoza. Expect taxi placement to manage the $5.1M cap squeeze."
+      "summary": "DMOC owns only 1.11 — no R2 or R3 picks — so this is a one-shot draft and they cannot afford to miss. With RB:3 the thinnest position, the GM targets the Tier-2 RB cluster (Emmett Johnson primary on RSP+Consensus alignment, Washington Jr. as the rank-match Consensus floor) while keeping Cooper Jr. as the WR fallback if both RBs are gone. Cap reality forces the rookie to taxi to keep $5.1M of flex intact through the season."
     },
     {
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "topTargets": [
         {
-          "name": "Malachi Fields",
+          "name": "KC Concepcion",
           "position": "WR",
-          "reasoning": "Most likely best WR on board at 1.06 after Tate/Lemon likely gone (ADP 9.46/11.18). RSP DoT 87.2 Starter grade with Nico Collins comp aligns with both RSP and consensus boards — exactly the type of pick a medium-RSP-affinity GM blends to.",
+          "reasoning": "Strongest board convergence available at 1.06: Consensus #8 Tier 2, RSP #5 DoT 86.3 (Starter grade), MFL ADP 13.57. Lands in CLE with real target share runway. Medium RSP affinity rewards a player both Waldman and Consensus love, and our 50/25/25 weighting puts him squarely in range when the four Tier-1s and likely Sadiq/Mendoza are gone.",
           "desire": 0.78
         },
         {
-          "name": "KC Concepcion",
-          "position": "WR",
-          "reasoning": "Likely available at 1.06 if Fields is gone. RSP DoT 86.3 Starter grade and ADP 13.57 give consensus-plus-RSP overlap. Versatile flanker/slot fits a WR room that already has 7 bodies but lacks a clear young alpha.",
-          "desire": 0.7
+          "name": "Jadarian Price",
+          "position": "RB",
+          "reasoning": "Consensus #7 Tier 2 (RB2 overall, SEA) — best 'positional value' fallback at 1.06 if Concepcion is gone. RSP #21 DoT 83.5 is tepid (Waldman flags him as Love's sidekick), but our weighting still has him as a justifiable Tier 2 pick. RB room is already 6 deep, so this is contingency rather than preferred.",
+          "desire": 0.55
         },
         {
           "name": "Eli Stowers",
           "position": "TE",
-          "reasoning": "Premier 1.17 target — only 2 TEs on the roster makes TE the clearest positional need. RSP DoT 84.4 Rotational Starter on cusp of Starter tier with classic move-TE profile, ADP 21.25 means he'll likely still be there at 1.17.",
+          "reasoning": "Realistic 1.17 target. Consensus #21 Tier 3, RSP #11 DoT 84.4 (TE2 by Waldman, on cusp of Starter), MFL ADP 21.25 — all three boards align in this range. Roster has only 2 TEs, lands in PHI with target tree opening up. Medium RSP affinity gives the Waldman bump just enough lift to take him over a similarly-ranked WR.",
+          "desire": 0.7
+        },
+        {
+          "name": "Malachi Fields",
+          "position": "WR",
+          "reasoning": "The 2.06 dream scenario. Consensus #22 Tier 3 (WR12, NYG) but RSP #4 DoT 87.2 (Starter, Nico Collins comp) — massive RSP-vs-Consensus arbitrage that our 25% RSP weight rewards. If he slides to 2.06 it's an easy click; even at fair value he is the highest-ceiling WR likely available there.",
           "desire": 0.72
         },
         {
-          "name": "Jordyn Tyson",
+          "name": "Antonio Williams",
           "position": "WR",
-          "reasoning": "If he slides to 1.06 (ADP 12.71) the value is too good to pass — boom-bust profile but RSP Rotational Starter at 84.5 DoT. Fits a $2.9M cap squeeze better as a taxi stash than a high-floor active piece.",
-          "desire": 0.6
-        },
-        {
-          "name": "Nicholas Singleton",
-          "position": "RB",
-          "reasoning": "Round 2 (2.06) target despite having 6 RBs — RSP DoT 84.1 with elite recruiting pedigree, ADP 25.83 means he'll be available. With 4 contracts expiring this year, RB depth turnover is plausible and Singleton offers second/third-round value per RSP.",
-          "desire": 0.55
+          "reasoning": "Round 3 / late 2.06 fallback. Consensus #24 Tier 4, RSP #18 DoT 83.9 (Jayden Reed comp), MFL ADP 29.06. Lands in WAS with snap path. Cheap rookie contract fits cap-strapped posture, and Waldman bump justifies him over straight ADP names.",
+          "desire": 0.5
         }
       ],
       "positionalPriority": [
@@ -863,19 +862,19 @@
         "RB",
         "QB"
       ],
-      "capPosture": "Tight at $2.9M cap space against $45M cap — 1.06 rookie minimum salary likely forces a taxi designation (50% hit) or shedding an expiring veteran before activation.",
+      "capPosture": "Cap-tight at $42.1M of $45M ($2.9M space) with 23 active and 0 taxi — every rookie taken almost certainly goes to taxi (50% cap hit) and we cannot afford more than ~2 active rookies even on minimums.",
       "taxiCandidates": [
-        "Jordyn Tyson",
-        "Nicholas Singleton",
-        "Bryce Lance"
+        "KC Concepcion",
+        "Eli Stowers",
+        "Malachi Fields"
       ],
       "wildcard": {
-        "name": "Kenyon Sadiq",
-        "position": "TE",
-        "reasoning": "If Stowers is gone by 1.17, Sadiq becomes the TE pivot — RSP DoT 82.3 with Brock Bowers high-end comp and elite Combine numbers (ADP 13.11 suggests he could be a reach at 1.17 but a steal at 2.06 if he falls). Doubles down on the TE-is-thin reality.",
-        "desire": 0.4
+        "name": "Skyler Bell",
+        "position": "WR",
+        "reasoning": "Pure 3.06 RSP swing: Consensus has him in 'Free Agents' tier at #33 but RSP #6 DoT 85.9 with a Ja'Marr Chase high-end comp. Medium RSP affinity makes this defensible as a taxi lottery ticket at virtually no cap cost — exactly the asymmetric bet a 23-roster, cap-strapped team should make in round 3.",
+        "desire": 0.35
       },
-      "summary": "Running down the Dream enters with balanced positional counts but a clear TE deficit (only 2) and a $2.9M cap crunch that forces creative roster construction. Expect a best-WR-available swing at 1.06 (Fields or Concepcion), a deliberate TE grab at 1.17 (Stowers preferred, Sadiq as fallback), and developmental upside picks in rounds 2-3 that can sit on taxi at half-price while expiring contracts roll off."
+      "summary": "DREAM is a roster-full, cap-strapped contender drafting around the edges — the goal is to land 1-2 high-conviction taxi stashes (Concepcion at 1.06, Stowers at 1.17 to fix a 2-TE room) and use 2.06/3.06 to chase RSP-vs-Consensus arbitrage (Fields, Skyler Bell). With medium RSP affinity and a 50/25/25 board, the GM won't reach past Consensus Tier 2 on a Waldman fave, but will gladly take a Tier-3 Consensus name when RSP grades him as a top-10 talent."
     }
   ],
   "mock": [
@@ -886,13 +885,13 @@
       "franchiseId": "0007",
       "franchiseName": "Fire Ready Aim",
       "player": {
-        "name": "Carnell Tate",
-        "position": "WR",
-        "reasoning": "The 1.01 lock. RSP DoT 92.3 (highest in entire 2026 class at any position), Franchise tier with a Randy Moss comp, and consensus ADP 9.46 confirms he is universally the 1.01-or-1.02. With $11.4M cap space and medium RSP affinity, FIRE has zero reason to overthink this — RSP and consensus agree.",
-        "desire": 0.95
+        "name": "Jeremiyah Love",
+        "position": "RB",
+        "reasoning": "Lock at 1.01 — Consensus #1 Tier 1 (RB1, ARI), RSP DoT 89.3 Starter grade with All-Pro/Kamara comp, MFL ADP 3.59. All three boards converge and our RB room (only 5 deep) needs the alpha.",
+        "desire": 0.98
       },
       "pickType": "Target",
-      "reasoning": "The 1.01 lock. RSP DoT 92.3 (highest in entire 2026 class at any position), Franchise tier with a Randy Moss comp, and consensus ADP 9.46 confirms he is universally the 1.01-or-1.02. With $11.4M cap space and medium RSP affinity, FIRE has zero reason to overthink this — RSP and consensus agree.",
+      "reasoning": "Lock at 1.01 — Consensus #1 Tier 1 (RB1, ARI), RSP DoT 89.3 Starter grade with All-Pro/Kamara comp, MFL ADP 3.59. All three boards converge and our RB room (only 5 deep) needs the alpha.",
       "alsoWantedBy": [
         "Dead Cap"
       ]
@@ -904,17 +903,13 @@
       "franchiseId": "0004",
       "franchiseName": "Dead Cap Walking",
       "player": {
-        "name": "Jeremiyah Love",
-        "position": "RB",
-        "reasoning": "If Fire Ready Aim breaks ADP and takes Tate at 1.01, Love (RSP #2, DoT 89.3, All-Pro ceiling per Waldman, Kamara comp) is the obvious consolation at 1.02. ADP 3.59 means he is the truer consensus 1.01 and almost certainly off the board, but DEAD happily takes him if he falls.",
-        "desire": 0.9
+        "name": "Carnell Tate",
+        "position": "WR",
+        "reasoning": "If Love goes 1.01 to FRA, Tate is the medium-affinity slam dunk at 1.02 — Consensus #2 Tier 1 (TEN), RSP #1 with the highest DoT score in the entire 2026 class (92.3, Franchise grade, Moss comp), and MFL ADP #2 rookie (9.46). All three boards agree, which is exactly what a 50/25/25 weighting rewards.",
+        "desire": 0.92
       },
       "pickType": "Target",
-      "reasoning": "If Fire Ready Aim breaks ADP and takes Tate at 1.01, Love (RSP #2, DoT 89.3, All-Pro ceiling per Waldman, Kamara comp) is the obvious consolation at 1.02. ADP 3.59 means he is the truer consensus 1.01 and almost certainly off the board, but DEAD happily takes him if he falls.",
-      "alsoWantedBy": [
-        "Fire",
-        "Cowboy Up"
-      ]
+      "reasoning": "If Love goes 1.01 to FRA, Tate is the medium-affinity slam dunk at 1.02 — Consensus #2 Tier 1 (TEN), RSP #1 with the highest DoT score in the entire 2026 class (92.3, Franchise grade, Moss comp), and MFL ADP #2 rookie (9.46). All three boards agree, which is exactly what a 50/25/25 weighting rewards."
     },
     {
       "overallPick": 3,
@@ -925,14 +920,13 @@
       "player": {
         "name": "Makai Lemon",
         "position": "WR",
-        "reasoning": "At 1.03 with Tate (RSP #1) and Love (RSP #2) almost certainly off the board, Lemon is the cleanest RSP/consensus overlap available — RSP #3 (DoT 88.8, Starter grade, Amon-Ra St. Brown comp) and ADP 11.18. Medium RSP affinity means I trust the board when RSP and ADP agree, and $10.5M cap space comfortably absorbs a 1.03 contract.",
-        "desire": 0.78
+        "reasoning": "Consensus #4 Tier 1 (WR3, PHI) AND RSP DoT 88.8 Starter grade with Amon-Ra St. Brown comp — both primary boards converge, which my 50/25/25 weighting rewards heavily. ADP 11.18 confirms market value at 1.03; safest Tier 1 WR likely on the board after Love/Tate go 1.01-1.02.",
+        "desire": 0.82
       },
       "pickType": "Target",
-      "reasoning": "At 1.03 with Tate (RSP #1) and Love (RSP #2) almost certainly off the board, Lemon is the cleanest RSP/consensus overlap available — RSP #3 (DoT 88.8, Starter grade, Amon-Ra St. Brown comp) and ADP 11.18. Medium RSP affinity means I trust the board when RSP and ADP agree, and $10.5M cap space comfortably absorbs a 1.03 contract.",
+      "reasoning": "Consensus #4 Tier 1 (WR3, PHI) AND RSP DoT 88.8 Starter grade with Amon-Ra St. Brown comp — both primary boards converge, which my 50/25/25 weighting rewards heavily. ADP 11.18 confirms market value at 1.03; safest Tier 1 WR likely on the board after Love/Tate go 1.01-1.02.",
       "alsoWantedBy": [
         "Dead Cap",
-        "Ninjas",
         "Music City"
       ]
     },
@@ -943,18 +937,16 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "player": {
-        "name": "Fernando Mendoza",
-        "position": "QB",
-        "reasoning": "ADP 11.39 and the consensus QB1 of the class. With 3 QBs already rostered need is low, but a low-RSP-affinity GM chasing big names will absolutely take the top QB at 1.04 if he slides past 1.03.",
-        "desire": 0.72
+        "name": "Kenyon Sadiq",
+        "position": "TE",
+        "reasoning": "Consensus #5 Tier 2 (NYJ TE1), ADP 13.11. RSP buries him at #30 but with only 10% RSP weight that barely registers — the 50/40 Consensus+ADP combo loves him. Roster has only 2 TEs, making this a clean need-meets-value pick at 1.04. NYJ landing spot (post-draft signal) is exactly the data a low-RSP GM trusts most.",
+        "desire": 0.62
       },
       "pickType": "Target",
-      "reasoning": "ADP 11.39 and the consensus QB1 of the class. With 3 QBs already rostered need is low, but a low-RSP-affinity GM chasing big names will absolutely take the top QB at 1.04 if he slides past 1.03.",
+      "reasoning": "Consensus #5 Tier 2 (NYJ TE1), ADP 13.11. RSP buries him at #30 but with only 10% RSP weight that barely registers — the 50/40 Consensus+ADP combo loves him. Roster has only 2 TEs, making this a clean need-meets-value pick at 1.04. NYJ landing spot (post-draft signal) is exactly the data a low-RSP GM trusts most.",
       "alsoWantedBy": [
-        "Ninjas",
-        "Fire",
-        "Cowboy Up",
-        "Magicians"
+        "Mavericks",
+        "Ninjas"
       ]
     },
     {
@@ -964,19 +956,18 @@
       "franchiseId": "0003",
       "franchiseName": "Maverick",
       "player": {
-        "name": "Malachi Fields",
+        "name": "KC Concepcion",
         "position": "WR",
-        "reasoning": "RSP #4 overall (DoT 87.2, Starter grade) with a Nico Collins comp — exactly the kind of size/speed Waldman-anointed prospect a high-RSP-affinity GM targets at 1.05. Likely to slip past the top 4 (Tate/Love/Lemon/Mendoza or Fields swap) and represents best player available per the board Maverick actually reads.",
-        "desire": 0.85
+        "reasoning": "Best RSP-Consensus alignment available at 1.05 — Consensus #8 Tier 2 (CLE) and RSP #5 DoT 86.3 Starter grade. As a high-RSP-affinity GM I weight Waldman's top-5 placement heavily, and Concepcion's flanker/slot versatility plus return-game upside is exactly the Tier-2 anchor I need with the top 4 (Love/Tate/Tyson/Lemon) off the board.",
+        "desire": 0.78
       },
       "pickType": "Target",
-      "reasoning": "RSP #4 overall (DoT 87.2, Starter grade) with a Nico Collins comp — exactly the kind of size/speed Waldman-anointed prospect a high-RSP-affinity GM targets at 1.05. Likely to slip past the top 4 (Tate/Love/Lemon/Mendoza or Fields swap) and represents best player available per the board Maverick actually reads.",
+      "reasoning": "Best RSP-Consensus alignment available at 1.05 — Consensus #8 Tier 2 (CLE) and RSP #5 DoT 86.3 Starter grade. As a high-RSP-affinity GM I weight Waldman's top-5 placement heavily, and Concepcion's flanker/slot versatility plus return-game upside is exactly the Tier-2 anchor I need with the top 4 (Love/Tate/Tyson/Lemon) off the board.",
       "alsoWantedBy": [
-        "Dangsters",
+        "Pigskins",
         "Ninjas",
+        "Music City",
         "Midwest",
-        "Geeks",
-        "Cowboy Up",
         "The Dream"
       ]
     },
@@ -987,20 +978,17 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "player": {
-        "name": "Eli Stowers",
-        "position": "TE",
-        "reasoning": "Premier 1.17 target — only 2 TEs on the roster makes TE the clearest positional need. RSP DoT 84.4 Rotational Starter on cusp of Starter tier with classic move-TE profile, ADP 21.25 means he'll likely still be there at 1.17.",
+        "name": "Malachi Fields",
+        "position": "WR",
+        "reasoning": "The 2.06 dream scenario. Consensus #22 Tier 3 (WR12, NYG) but RSP #4 DoT 87.2 (Starter, Nico Collins comp) — massive RSP-vs-Consensus arbitrage that our 25% RSP weight rewards. If he slides to 2.06 it's an easy click; even at fair value he is the highest-ceiling WR likely available there.",
         "desire": 0.72
       },
       "pickType": "Target",
-      "reasoning": "Premier 1.17 target — only 2 TEs on the roster makes TE the clearest positional need. RSP DoT 84.4 Rotational Starter on cusp of Starter tier with classic move-TE profile, ADP 21.25 means he'll likely still be there at 1.17.",
+      "reasoning": "The 2.06 dream scenario. Consensus #22 Tier 3 (WR12, NYG) but RSP #4 DoT 87.2 (Starter, Nico Collins comp) — massive RSP-vs-Consensus arbitrage that our 25% RSP weight rewards. If he slides to 2.06 it's an easy click; even at fair value he is the highest-ceiling WR likely available there.",
       "alsoWantedBy": [
+        "Pigskins",
         "Mavericks",
-        "Fire",
-        "Wabbits",
-        "Midwest",
-        "Vitside",
-        "Geeks"
+        "CPU Jocks"
       ]
     },
     {
@@ -1010,22 +998,17 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "player": {
-        "name": "KC Concepcion",
-        "position": "WR",
-        "reasoning": "RSP WR5 (DoT 86.3, Starter grade, first-round value per Waldman) and ADP 13.57. Plausible 1.07 pivot if Lemon/Fields are gone, and a medium-affinity GM can justify by citing both RSP and consensus alignment.",
-        "desire": 0.58
+        "name": "Jadarian Price",
+        "position": "RB",
+        "reasoning": "Consensus #7 Tier 2 (SEA), RSP DoT 83.5 with 'ceiling as high as RBs 2-5' note, ADP 16.05. RB is my thinnest skill room (5) and Price's three-board confluence at 1.07 fits medium-RSP weighting. Seattle backfield offers real touches; not a reach by any of my three inputs.",
+        "desire": 0.68
       },
       "pickType": "Target",
-      "reasoning": "RSP WR5 (DoT 86.3, Starter grade, first-round value per Waldman) and ADP 13.57. Plausible 1.07 pivot if Lemon/Fields are gone, and a medium-affinity GM can justify by citing both RSP and consensus alignment.",
+      "reasoning": "Consensus #7 Tier 2 (SEA), RSP DoT 83.5 with 'ceiling as high as RBs 2-5' note, ADP 16.05. RB is my thinnest skill room (5) and Price's three-board confluence at 1.07 fits medium-RSP weighting. Seattle backfield offers real touches; not a reach by any of my three inputs.",
       "alsoWantedBy": [
-        "Pigskins",
         "Dangsters",
         "Mavericks",
         "Music City",
-        "Midwest",
-        "Vitside",
-        "Geeks",
-        "Cowboy Up",
         "The Dream"
       ]
     },
@@ -1036,20 +1019,20 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Jordyn Tyson",
-        "position": "WR",
-        "reasoning": "Industry darling (ADP 12.71) RSP grade at 84.5. With medium RSP affinity, MWS will weight the consensus heavily — if Tyson is on the board at 1.08 the boom-bust ceiling is hard to pass on for a team trying to find a long-term WR1.",
-        "desire": 0.65
+        "name": "Emmett Johnson",
+        "position": "RB",
+        "reasoning": "Round 2 anchor target across our five 2nd-rounders. Consensus #13 Tier 2 (KC), RSP DoT 84.6 (#8, Rotational Starter, Waldman comps to Harold Fannin). Likely available at 2.07 or 2.08. KC landing spot is a tiebreaker that medium-affinity owners reward heavily.",
+        "desire": 0.7
       },
       "pickType": "Target",
-      "reasoning": "Industry darling (ADP 12.71) RSP grade at 84.5. With medium RSP affinity, MWS will weight the consensus heavily — if Tyson is on the board at 1.08 the boom-bust ceiling is hard to pass on for a team trying to find a long-term WR1.",
+      "reasoning": "Round 2 anchor target across our five 2nd-rounders. Consensus #13 Tier 2 (KC), RSP DoT 84.6 (#8, Rotational Starter, Waldman comps to Harold Fannin). Likely available at 2.07 or 2.08. KC landing spot is a tiebreaker that medium-affinity owners reward heavily.",
       "alsoWantedBy": [
-        "Dangsters",
-        "Music City",
+        "Pigskins",
+        "Fire",
         "Pain",
         "Vitside",
-        "Magicians",
-        "The Dream"
+        "Geeks",
+        "Magicians"
       ]
     },
     {
@@ -1059,20 +1042,15 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "player": {
-        "name": "Emmett Johnson",
+        "name": "Jonah Coleman",
         "position": "RB",
-        "reasoning": "RSP RB3 (DoT 84.6) addresses the thin RB room (only 4 rostered). Sliding ADP makes him plausible at 1.09 or as a trade-back target; cap-friendly rookie deal fits the $5.9M room.",
-        "desire": 0.72
+        "reasoning": "Consensus #10 RB3 Tier 2 (DEN), MFL ADP 20.19 — best RB likely to fall to 1.09 after Love and Price are gone. Roster has only 4 RBs vs 9 WRs, so RB is the clearest need and Coleman's Denver landing gives him a real touch path.",
+        "desire": 0.78
       },
       "pickType": "Target",
-      "reasoning": "RSP RB3 (DoT 84.6) addresses the thin RB room (only 4 rostered). Sliding ADP makes him plausible at 1.09 or as a trade-back target; cap-friendly rookie deal fits the $5.9M room.",
+      "reasoning": "Consensus #10 RB3 Tier 2 (DEN), MFL ADP 20.19 — best RB likely to fall to 1.09 after Love and Price are gone. Roster has only 4 RBs vs 9 WRs, so RB is the clearest need and Coleman's Denver landing gives him a real touch path.",
       "alsoWantedBy": [
-        "Pigskins",
-        "Mavericks",
-        "Pain",
-        "Wabbits",
-        "Midwest",
-        "Magicians"
+        "Midwest"
       ]
     },
     {
@@ -1084,14 +1062,11 @@
       "player": {
         "name": "Skyler Bell",
         "position": "WR",
-        "reasoning": "Quintessential RSP arbitrage play — Waldman ranks him #6 (DoT 85.9, Ja'Marr Chase high-end comp) but he's off the MFL ADP top 30, meaning he likely lasts to 1.10. As a high-RSP-affinity GM reading Waldman religiously, Pigskins take the value over consensus.",
-        "desire": 0.82
+        "reasoning": "RSP DoT 85.9 with a Ja'Marr Chase high-end comp — Waldman's #6 overall — but Consensus has him in 'Free Agents' tier (#33) and ADP doesn't list him. Pure 2.10/3.10 lottery ticket that perfectly fits high-RSP-affinity behavior; goes to taxi where the 50% cap hit is survivable on the $2.3M space.",
+        "desire": 0.62
       },
       "pickType": "Target",
-      "reasoning": "Quintessential RSP arbitrage play — Waldman ranks him #6 (DoT 85.9, Ja'Marr Chase high-end comp) but he's off the MFL ADP top 30, meaning he likely lasts to 1.10. As a high-RSP-affinity GM reading Waldman religiously, Pigskins take the value over consensus.",
-      "alsoWantedBy": [
-        "Magicians"
-      ]
+      "reasoning": "RSP DoT 85.9 with a Ja'Marr Chase high-end comp — Waldman's #6 overall — but Consensus has him in 'Free Agents' tier (#33) and ADP doesn't list him. Pure 2.10/3.10 lottery ticket that perfectly fits high-RSP-affinity behavior; goes to taxi where the 50% cap hit is survivable on the $2.3M space."
     },
     {
       "overallPick": 11,
@@ -1100,17 +1075,17 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "player": {
-        "name": "Demond Claiborne",
-        "position": "RB",
-        "reasoning": "RSP RB4 (DoT 84.5) with Shady McCoy traits. Falls past 1.11 on most boards but addresses RB-3 depth and fits taxi-eligible pricing if cap forces a low-base contract.",
-        "desire": 0.45
+        "name": "Omar Cooper Jr.",
+        "position": "WR",
+        "reasoning": "Consensus #12 Tier 2 (NYJ), RSP DoT 83.9 (#15), ADP 17.20 (#27) — cleanest triple-board Tier-2 player likely on the board at 1.11. NYJ landing pairs with Sadiq buzz. Even with WR:7, a Deebo-clone outside-WR profile fits a roster trying to harvest upside on its only top-3-round pick.",
+        "desire": 0.72
       },
       "pickType": "Target",
-      "reasoning": "RSP RB4 (DoT 84.5) with Shady McCoy traits. Falls past 1.11 on most boards but addresses RB-3 depth and fits taxi-eligible pricing if cap forces a low-base contract.",
+      "reasoning": "Consensus #12 Tier 2 (NYJ), RSP DoT 83.9 (#15), ADP 17.20 (#27) — cleanest triple-board Tier-2 player likely on the board at 1.11. NYJ landing pairs with Sadiq buzz. Even with WR:7, a Deebo-clone outside-WR profile fits a roster trying to harvest upside on its only top-3-round pick.",
       "alsoWantedBy": [
-        "Mavericks",
-        "Pain",
-        "Wabbits",
+        "Dangsters",
+        "Midwest",
+        "Vitside",
         "Geeks"
       ]
     },
@@ -1121,17 +1096,17 @@
       "franchiseId": "0012",
       "franchiseName": "Vitside Mafia",
       "player": {
-        "name": "Nicholas Singleton",
-        "position": "RB",
-        "reasoning": "RSP DoT 84.1 with second/third-round rookie value per Waldman, ADP 25.83 — perfect 2.12 or 3.12 fit. High-pedigree Penn State back is a low-risk depth swing as RB contracts roll over.",
-        "desire": 0.55
+        "name": "Chris Brazzell II",
+        "position": "WR",
+        "reasoning": "Consensus #15 Tier 2 (CAR), RSP #12 DoT 84.2 with George Pickens comp — RSP slightly higher than Consensus, which a medium-affinity GM rewards. ADP #48 is a discount. Direct fit for thin WR room and a ceiling play with 10 contracts expiring (need youth that pays in 2027+).",
+        "desire": 0.7
       },
       "pickType": "Target",
-      "reasoning": "RSP DoT 84.1 with second/third-round rookie value per Waldman, ADP 25.83 — perfect 2.12 or 3.12 fit. High-pedigree Penn State back is a low-risk depth swing as RB contracts roll over.",
+      "reasoning": "Consensus #15 Tier 2 (CAR), RSP #12 DoT 84.2 with George Pickens comp — RSP slightly higher than Consensus, which a medium-affinity GM rewards. ADP #48 is a discount. Direct fit for thin WR room and a ceiling play with 10 contracts expiring (need youth that pays in 2027+).",
       "alsoWantedBy": [
-        "Pain",
-        "CPU Jocks",
-        "The Dream"
+        "Pigskins",
+        "Wabbits",
+        "Magicians"
       ]
     },
     {
@@ -1141,17 +1116,13 @@
       "franchiseId": "0002",
       "franchiseName": "Da Dangsters",
       "player": {
-        "name": "Kenyon Sadiq",
-        "position": "TE",
-        "reasoning": "MFL ADP 13.11 with Brock Bowers comp and viral combine numbers — pure name-driven appeal. TE room is just 2 deep, so the positional need lines up if Tyson/Concepcion/Fields are all gone at 1.13.",
-        "desire": 0.55
+        "name": "Denzel Boston",
+        "position": "WR",
+        "reasoning": "Primary 1.13 target: Consensus #9 WR5 Tier 2 (CLE landing spot) and ADP 16.11 — sits right at my pick by market price, exactly the kind of consensus-confirmed WR a low-RSP-affinity GM takes. Roster has 6 WRs vs 8 RBs, so WR is the clean need, and Boston's Consensus/ADP alignment beats Waldman's lukewarm RSP #25 grade for my weighting (I weight ADP 4x heavier than RSP).",
+        "desire": 0.78
       },
       "pickType": "Target",
-      "reasoning": "MFL ADP 13.11 with Brock Bowers comp and viral combine numbers — pure name-driven appeal. TE room is just 2 deep, so the positional need lines up if Tyson/Concepcion/Fields are all gone at 1.13.",
-      "alsoWantedBy": [
-        "Music City",
-        "CPU Jocks"
-      ]
+      "reasoning": "Primary 1.13 target: Consensus #9 WR5 Tier 2 (CLE landing spot) and ADP 16.11 — sits right at my pick by market price, exactly the kind of consensus-confirmed WR a low-RSP-affinity GM takes. Roster has 6 WRs vs 8 RBs, so WR is the clean need, and Boston's Consensus/ADP alignment beats Waldman's lukewarm RSP #25 grade for my weighting (I weight ADP 4x heavier than RSP)."
     },
     {
       "overallPick": 14,
@@ -1160,16 +1131,17 @@
       "franchiseId": "0007",
       "franchiseName": "Fire Ready Aim",
       "player": {
-        "name": "Jadarian Price",
+        "name": "Mike Washington Jr.",
         "position": "RB",
-        "reasoning": "2.01 sweet spot. RSP #21 (DoT 83.5, 'ceiling as high as RBs 2-5') with consensus ADP 16.05 making him a turn-of-round 2 value. Doubles down on the RB-thin room behind a potential Love selection or stands alone if Tate went 1.01.",
-        "desire": 0.6
+        "reasoning": "Backup plan at 1.14 if E. Johnson is gone — Consensus #11 Tier 2 (RB4, LV), RSP #28 DoT 82.5, ADP 24.09. Consensus loves the LV opportunity even if RSP is cooler; with 50% Consensus weight he is in range.",
+        "desire": 0.7
       },
       "pickType": "Target",
-      "reasoning": "2.01 sweet spot. RSP #21 (DoT 83.5, 'ceiling as high as RBs 2-5') with consensus ADP 16.05 making him a turn-of-round 2 value. Doubles down on the RB-thin room behind a potential Love selection or stands alone if Tate went 1.01.",
+      "reasoning": "Backup plan at 1.14 if E. Johnson is gone — Consensus #11 Tier 2 (RB4, LV), RSP #28 DoT 82.5, ADP 24.09. Consensus loves the LV opportunity even if RSP is cooler; with 50% Consensus weight he is in range.",
       "alsoWantedBy": [
-        "Ninjas",
-        "CPU Jocks"
+        "Midwest",
+        "Geeks",
+        "Magicians"
       ]
     },
     {
@@ -1179,13 +1151,18 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "player": {
-        "name": "Myles Montgomery",
-        "position": "RB",
-        "reasoning": "RSP #13 and explicitly tagged 'MOST UNDERRATED skill talent in the 2026 class' — a religious Waldman reader cannot pass this at 3.02 even with likely UDFA status. With $4.3M cap and zero taxi used, WABS can stash him essentially free at 50% rookie minimum.",
-        "desire": 0.68
+        "name": "Chris Bell",
+        "position": "WR",
+        "reasoning": "Consensus #19 Tier 2, RSP DoT 83.9 (#16) with an A.J. Brown high-end comp — RSP says 'Wait for second round if falls' but at 1.15 he's right in the slot. Miami landing is fine. With my 40% RSP weight, the Brown comp plays louder than ADP 28.24 suggests.",
+        "desire": 0.72
       },
       "pickType": "Target",
-      "reasoning": "RSP #13 and explicitly tagged 'MOST UNDERRATED skill talent in the 2026 class' — a religious Waldman reader cannot pass this at 3.02 even with likely UDFA status. With $4.3M cap and zero taxi used, WABS can stash him essentially free at 50% rookie minimum."
+      "reasoning": "Consensus #19 Tier 2, RSP DoT 83.9 (#16) with an A.J. Brown high-end comp — RSP says 'Wait for second round if falls' but at 1.15 he's right in the slot. Miami landing is fine. With my 40% RSP weight, the Brown comp plays louder than ADP 28.24 suggests.",
+      "alsoWantedBy": [
+        "Dangsters",
+        "CPU Jocks",
+        "Cowboy Up"
+      ]
     },
     {
       "overallPick": 16,
@@ -1194,15 +1171,17 @@
       "franchiseId": "0010",
       "franchiseName": "Computer Jocks",
       "player": {
-        "name": "Denzel Boston",
-        "position": "WR",
-        "reasoning": "RSP DoT 83.1 with 'quality pick in late first' note and ADP 16.11 — a perfect 1.16 value where RSP and consensus agree. Boundary size profile diversifies a WR room that already runs 7 deep but lacks a clear young alpha.",
-        "desire": 0.7
+        "name": "Nicholas Singleton",
+        "position": "RB",
+        "reasoning": "Consensus #17 Tier 2 (RB7, TEN) and RSP #14 DoT 84.1 — both boards confirm late-Tier-2 value, and at 1.16 he's the cleanest Tier-2 RB likely to slip given the WR-heavy run ahead. Roster is RB-thin (only 4) versus 7 WRs and 5 TEs, so positional need aligns with board value.",
+        "desire": 0.78
       },
       "pickType": "Target",
-      "reasoning": "RSP DoT 83.1 with 'quality pick in late first' note and ADP 16.11 — a perfect 1.16 value where RSP and consensus agree. Boundary size profile diversifies a WR room that already runs 7 deep but lacks a clear young alpha.",
+      "reasoning": "Consensus #17 Tier 2 (RB7, TEN) and RSP #14 DoT 84.1 — both boards confirm late-Tier-2 value, and at 1.16 he's the cleanest Tier-2 RB likely to slip given the WR-heavy run ahead. Roster is RB-thin (only 4) versus 7 WRs and 5 TEs, so positional need aligns with board value.",
       "alsoWantedBy": [
-        "Dangsters"
+        "Pain",
+        "Wabbits",
+        "Magicians"
       ]
     },
     {
@@ -1212,16 +1191,18 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "player": {
-        "name": "Chris Brazzell II",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 12",
-        "desire": 0.5
+        "name": "Eli Stowers",
+        "position": "TE",
+        "reasoning": "Realistic 1.17 target. Consensus #21 Tier 3, RSP #11 DoT 84.4 (TE2 by Waldman, on cusp of Starter), MFL ADP 21.25 — all three boards align in this range. Roster has only 2 TEs, lands in PHI with target tree opening up. Medium RSP affinity gives the Waldman bump just enough lift to take him over a similarly-ranked WR.",
+        "desire": 0.7
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 12",
+      "pickType": "Target",
+      "reasoning": "Realistic 1.17 target. Consensus #21 Tier 3, RSP #11 DoT 84.4 (TE2 by Waldman, on cusp of Starter), MFL ADP 21.25 — all three boards align in this range. Roster has only 2 TEs, lands in PHI with target tree opening up. Medium RSP affinity gives the Waldman bump just enough lift to take him over a similarly-ranked WR.",
       "alsoWantedBy": [
-        "Pigskins",
-        "Vitside"
+        "Mavericks",
+        "Pain",
+        "Midwest",
+        "Cowboy Up"
       ]
     },
     {
@@ -1231,16 +1212,15 @@
       "franchiseId": "0007",
       "franchiseName": "Fire Ready Aim",
       "player": {
-        "name": "Omar Cooper Jr.",
+        "name": "Elijah Sarratt",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 15",
-        "desire": 0.5
+        "reasoning": "2.01 target — Consensus #20 Tier 3 (WR11, BAL), RSP #17 DoT 83.9 'safest WR option among 10-16'. WR depth isn't a need but BAL target share + cross-board agreement is too clean to pass at the round-2 turn.",
+        "desire": 0.65
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 15",
+      "pickType": "Target",
+      "reasoning": "2.01 target — Consensus #20 Tier 3 (WR11, BAL), RSP #17 DoT 83.9 'safest WR option among 10-16'. WR depth isn't a need but BAL target share + cross-board agreement is too clean to pass at the round-2 turn.",
       "alsoWantedBy": [
-        "Pain",
-        "CPU Jocks"
+        "Wabbits"
       ]
     },
     {
@@ -1250,15 +1230,22 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Chris Bell",
+        "name": "Antonio Williams",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 16",
-        "desire": 0.5
+        "reasoning": "Consensus #24 Tier 4 (WAS) but RSP DoT 83.9 (#18, Jayden Reed comp) — RSP loves him a full tier above Consensus, and ADP 29.06 confirms he's available at 3.07 or 3.08. Medium-affinity GM with Round 3 ammo and a thin WR room takes the RSP-flavored swing.",
+        "desire": 0.42
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 16",
+      "pickType": "Wildcard",
+      "reasoning": "Consensus #24 Tier 4 (WAS) but RSP DoT 83.9 (#18, Jayden Reed comp) — RSP loves him a full tier above Consensus, and ADP 29.06 confirms he's available at 3.07 or 3.08. Medium-affinity GM with Round 3 ammo and a thin WR room takes the RSP-flavored swing.",
       "alsoWantedBy": [
-        "Dead Cap"
+        "Dangsters",
+        "Dead Cap",
+        "Ninjas",
+        "Wabbits",
+        "CPU Jocks",
+        "Vitside",
+        "Cowboy Up",
+        "The Dream"
       ]
     },
     {
@@ -1268,13 +1255,16 @@
       "franchiseId": "0014",
       "franchiseName": "Cowboy Up",
       "player": {
-        "name": "Elijah Sarratt",
+        "name": "Jordyn Tyson",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 17",
-        "desire": 0.5
+        "reasoning": "Consensus #3 Tier 1 (WR2, NO) with ADP 12.71 — Consensus and ADP both rank him ahead of Lemon, but RSP DoT 84.5 'boom-bust volatility' is a yellow flag. At medium RSP affinity I won't fully discount Waldman's caution, so he ranks behind Lemon despite higher Consensus slot.",
+        "desire": 0.7
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 17"
+      "pickType": "Target",
+      "reasoning": "Consensus #3 Tier 1 (WR2, NO) with ADP 12.71 — Consensus and ADP both rank him ahead of Lemon, but RSP DoT 84.5 'boom-bust volatility' is a yellow flag. At medium RSP affinity I won't fully discount Waldman's caution, so he ranks behind Lemon despite higher Consensus slot.",
+      "alsoWantedBy": [
+        "Dead Cap"
+      ]
     },
     {
       "overallPick": 20,
@@ -1283,16 +1273,15 @@
       "franchiseId": "0008",
       "franchiseName": "Bring The Pain",
       "player": {
-        "name": "Antonio Williams",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 18",
-        "desire": 0.5
+        "name": "Demond Claiborne",
+        "position": "RB",
+        "reasoning": "Consensus #26 Tier 4 (RB8, MIN), RSP #9 DoT 84.5 — RSP has him 17 spots higher than Consensus does. Classic medium-affinity buy at 2.11: Vikings backfield is unsettled, RSP comp is Shady McCoy, and RB need lets me weight the 25% RSP signal hard here.",
+        "desire": 0.58
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 18",
+      "pickType": "Target",
+      "reasoning": "Consensus #26 Tier 4 (RB8, MIN), RSP #9 DoT 84.5 — RSP has him 17 spots higher than Consensus does. Classic medium-affinity buy at 2.11: Vikings backfield is unsettled, RSP comp is Shady McCoy, and RB need lets me weight the 25% RSP signal hard here.",
       "alsoWantedBy": [
-        "Pigskins",
-        "Dead Cap"
+        "Fire"
       ]
     },
     {
@@ -1302,13 +1291,16 @@
       "franchiseId": "0003",
       "franchiseName": "Maverick",
       "player": {
-        "name": "Josh Cameron",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 19",
+        "name": "Fernando Mendoza",
+        "position": "QB",
+        "reasoning": "Best available — Consensus #6 (Tier 2)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 19"
+      "reasoning": "Best available — Consensus #6 (Tier 2)",
+      "alsoWantedBy": [
+        "Ninjas"
+      ]
     },
     {
       "overallPick": 22,
@@ -1317,13 +1309,17 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "player": {
-        "name": "Germie Bernard",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 20",
+        "name": "Kaytron Allen",
+        "position": "RB",
+        "reasoning": "Best available — Consensus #14 (Tier 2)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 20"
+      "reasoning": "Best available — Consensus #14 (Tier 2)",
+      "alsoWantedBy": [
+        "Pain",
+        "Geeks"
+      ]
     },
     {
       "overallPick": 23,
@@ -1332,16 +1328,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Bryce Lance",
+        "name": "Germie Bernard",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 22",
+        "reasoning": "Best available — Consensus #16 (Tier 2)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 22",
-      "alsoWantedBy": [
-        "Wabbits"
-      ]
+      "reasoning": "Best available — Consensus #16 (Tier 2)"
     },
     {
       "overallPick": 24,
@@ -1350,13 +1343,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Michael Trigg",
-        "position": "TE",
-        "reasoning": "Best available — RSP rank 23",
+        "name": "Zachariah Branch",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #18 (Tier 2)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 23"
+      "reasoning": "Best available — Consensus #18 (Tier 2)"
     },
     {
       "overallPick": 25,
@@ -1365,13 +1358,13 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "player": {
-        "name": "Robert Henry Jr.",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 24",
+        "name": "Ja'Kobi Lane",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #23 (Tier 3)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 24"
+      "reasoning": "Best available — Consensus #23 (Tier 3)"
     },
     {
       "overallPick": 26,
@@ -1380,13 +1373,13 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "player": {
-        "name": "J. Michael Sturdivant",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 26",
+        "name": "Max Klare",
+        "position": "TE",
+        "reasoning": "Best available — Consensus #25 (Tier 4)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 26"
+      "reasoning": "Best available — Consensus #25 (Tier 4)"
     },
     {
       "overallPick": 27,
@@ -1395,13 +1388,16 @@
       "franchiseId": "0008",
       "franchiseName": "Bring The Pain",
       "player": {
-        "name": "Zachariah Branch",
+        "name": "Caleb Douglas",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 27",
+        "reasoning": "Best available — Consensus #27 (Tier 4)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 27"
+      "reasoning": "Best available — Consensus #27 (Tier 4)",
+      "alsoWantedBy": [
+        "Music City"
+      ]
     },
     {
       "overallPick": 28,
@@ -1410,13 +1406,16 @@
       "franchiseId": "0012",
       "franchiseName": "Vitside Mafia",
       "player": {
-        "name": "Mike Washington Jr.",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 28",
-        "desire": 0.5
+        "name": "Bryce Lance",
+        "position": "WR",
+        "reasoning": "Round 3 target at 3.12. Consensus #38 Free Agents (NO) but RSP #22 DoT 83.5 with A.J. Green high-end comp. Late-round RSP lean fits medium-affinity bias when the cost is a 3rd-rounder with ~$500K base (taxi-able at $250K).",
+        "desire": 0.45
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 28"
+      "pickType": "Target",
+      "reasoning": "Round 3 target at 3.12. Consensus #38 Free Agents (NO) but RSP #22 DoT 83.5 with A.J. Green high-end comp. Late-round RSP lean fits medium-affinity bias when the cost is a 3rd-rounder with ~$500K base (taxi-able at $250K).",
+      "alsoWantedBy": [
+        "CPU Jocks"
+      ]
     },
     {
       "overallPick": 29,
@@ -1425,13 +1424,13 @@
       "franchiseId": "0002",
       "franchiseName": "Da Dangsters",
       "player": {
-        "name": "Kevin Coleman Jr.",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 29",
-        "desire": 0.5
+        "name": "Ty Simpson",
+        "position": "QB",
+        "reasoning": "3.13 dart throw: Consensus #37 QB2 (LAR backup) with ADP 23.81 — ADP loves him way more than Consensus, and as a low-RSP/high-ADP GM I'd chase the market on a backup QB lottery ticket in round 3 with 8 contracts expiring next year and only 3 QBs rostered.",
+        "desire": 0.35
       },
-      "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 29"
+      "pickType": "Wildcard",
+      "reasoning": "3.13 dart throw: Consensus #37 QB2 (LAR backup) with ADP 23.81 — ADP loves him way more than Consensus, and as a low-RSP/high-ADP GM I'd chase the market on a backup QB lottery ticket in round 3 with 8 contracts expiring next year and only 3 QBs rostered."
     },
     {
       "overallPick": 30,
@@ -1440,13 +1439,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Jamal Haynes",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 31",
+        "name": "Reggie Virgil",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #28 (Tier 5)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 31"
+      "reasoning": "Best available — Consensus #28 (Tier 5)"
     },
     {
       "overallPick": 31,
@@ -1455,13 +1454,13 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "player": {
-        "name": "TJ Harden",
+        "name": "Adam Randall",
         "position": "RB",
-        "reasoning": "Best available — RSP rank 32",
+        "reasoning": "Best available — Consensus #29 (Tier 5)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 32"
+      "reasoning": "Best available — Consensus #29 (Tier 5)"
     },
     {
       "overallPick": 32,
@@ -1470,13 +1469,13 @@
       "franchiseId": "0007",
       "franchiseName": "Fire Ready Aim",
       "player": {
-        "name": "Eric McAlister",
+        "name": "De'Zhaun Stribling",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 33",
+        "reasoning": "Best available — Consensus #30 (Tier 5)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 33"
+      "reasoning": "Best available — Consensus #30 (Tier 5)"
     },
     {
       "overallPick": 33,
@@ -1485,13 +1484,13 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "player": {
-        "name": "Ja'Kobi Lane",
+        "name": "Deion Burks",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 34",
+        "reasoning": "Best available — Consensus #31 (Tier 5)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 34"
+      "reasoning": "Best available — Consensus #31 (Tier 5)"
     },
     {
       "overallPick": 34,
@@ -1500,13 +1499,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Deion Burks",
+        "name": "Brenen Thompson",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 35",
+        "reasoning": "Best available — Consensus #32 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 35"
+      "reasoning": "Best available — Consensus #32 (Free Agents)"
     },
     {
       "overallPick": 33,
@@ -1515,13 +1514,13 @@
       "franchiseId": "0007",
       "franchiseName": "Fire Ready Aim",
       "player": {
-        "name": "Davon Booth",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 36",
+        "name": "Ted Hurst",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #34 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 36"
+      "reasoning": "Best available — Consensus #34 (Free Agents)"
     },
     {
       "overallPick": 34,
@@ -1530,13 +1529,13 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "player": {
-        "name": "Ted Hurst",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 37",
+        "name": "Le'Veon Moss",
+        "position": "RB",
+        "reasoning": "Best available — Consensus #35 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 37"
+      "reasoning": "Best available — Consensus #35 (Free Agents)"
     },
     {
       "overallPick": 35,
@@ -1545,13 +1544,13 @@
       "franchiseId": "0014",
       "franchiseName": "Cowboy Up",
       "player": {
-        "name": "Malik Benson",
+        "name": "Kevin Coleman Jr.",
         "position": "WR",
-        "reasoning": "Best available — RSP rank 38",
+        "reasoning": "Best available — Consensus #36 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 38"
+      "reasoning": "Best available — Consensus #36 (Free Agents)"
     },
     {
       "overallPick": 36,
@@ -1560,13 +1559,13 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "player": {
-        "name": "Justin Joly",
-        "position": "TE",
-        "reasoning": "Best available — RSP rank 39",
+        "name": "Seth McGowan",
+        "position": "RB",
+        "reasoning": "Best available — Consensus #39 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 39"
+      "reasoning": "Best available — Consensus #39 (Free Agents)"
     },
     {
       "overallPick": 37,
@@ -1575,13 +1574,13 @@
       "franchiseId": "0003",
       "franchiseName": "Maverick",
       "player": {
-        "name": "Junior Vandeross III",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 40",
+        "name": "Justin Joly",
+        "position": "TE",
+        "reasoning": "Best available — Consensus #40 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 40"
+      "reasoning": "Best available — Consensus #40 (Free Agents)"
     },
     {
       "overallPick": 38,
@@ -1590,13 +1589,13 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "player": {
-        "name": "Jordan Hudson",
-        "position": "WR",
-        "reasoning": "Best available — RSP rank 41",
+        "name": "J'Mari Taylor",
+        "position": "RB",
+        "reasoning": "Best available — Consensus #41 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 41"
+      "reasoning": "Best available — Consensus #41 (Free Agents)"
     },
     {
       "overallPick": 39,
@@ -1605,13 +1604,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Carsen Ryan",
+        "name": "Michael Trigg",
         "position": "TE",
-        "reasoning": "Best available — RSP rank 42",
+        "reasoning": "Best available — Consensus #42 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 42"
+      "reasoning": "Best available — Consensus #42 (Free Agents)"
     },
     {
       "overallPick": 40,
@@ -1620,13 +1619,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Sam Roush",
-        "position": "TE",
-        "reasoning": "Best available — RSP rank 43",
+        "name": "Kaelon Black",
+        "position": "RB",
+        "reasoning": "Best available — Consensus #43 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 43"
+      "reasoning": "Best available — Consensus #43 (Free Agents)"
     },
     {
       "overallPick": 41,
@@ -1635,13 +1634,13 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "player": {
-        "name": "Joshua Cuevas",
-        "position": "TE",
-        "reasoning": "Best available — RSP rank 44",
+        "name": "Barion Brown",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #44 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 44"
+      "reasoning": "Best available — Consensus #44 (Free Agents)"
     },
     {
       "overallPick": 42,
@@ -1650,13 +1649,13 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "player": {
-        "name": "J'Mari Taylor",
+        "name": "CJ Donaldson",
         "position": "RB",
-        "reasoning": "Best available — RSP rank 45",
+        "reasoning": "Best available — Consensus #45 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 45"
+      "reasoning": "Best available — Consensus #45 (Free Agents)"
     },
     {
       "overallPick": 43,
@@ -1665,13 +1664,13 @@
       "franchiseId": "0010",
       "franchiseName": "Computer Jocks",
       "player": {
-        "name": "Le'Veon Moss",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 46",
+        "name": "Jack Endries",
+        "position": "TE",
+        "reasoning": "Best available — Consensus #46 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 46"
+      "reasoning": "Best available — Consensus #46 (Free Agents)"
     },
     {
       "overallPick": 44,
@@ -1680,13 +1679,13 @@
       "franchiseId": "0012",
       "franchiseName": "Vitside Mafia",
       "player": {
-        "name": "Roman Hemby",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 47",
+        "name": "Aaron Anderson",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #47 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 47"
+      "reasoning": "Best available — Consensus #47 (Free Agents)"
     },
     {
       "overallPick": 45,
@@ -1695,13 +1694,13 @@
       "franchiseId": "0002",
       "franchiseName": "Da Dangsters",
       "player": {
-        "name": "Riley Nowakowski",
-        "position": "TE",
-        "reasoning": "Best available — RSP rank 48",
+        "name": "Garrett Nussmeier",
+        "position": "QB",
+        "reasoning": "Best available — Consensus #48 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 48"
+      "reasoning": "Best available — Consensus #48 (Free Agents)"
     },
     {
       "overallPick": 46,
@@ -1710,13 +1709,13 @@
       "franchiseId": "0004",
       "franchiseName": "Dead Cap Walking",
       "player": {
-        "name": "Leshon Williams",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 49",
+        "name": "Vinny Anthony II",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #49 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 49"
+      "reasoning": "Best available — Consensus #49 (Free Agents)"
     },
     {
       "overallPick": 47,
@@ -1725,13 +1724,13 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Kaytron Allen",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 50",
+        "name": "Joe Royer",
+        "position": "TE",
+        "reasoning": "Best available — Consensus #50 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 50"
+      "reasoning": "Best available — Consensus #50 (Free Agents)"
     },
     {
       "overallPick": 48,
@@ -1740,19 +1739,19 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "player": {
-        "name": "Kaelon Black",
-        "position": "RB",
-        "reasoning": "Best available — RSP rank 51",
+        "name": "Lewis Bond",
+        "position": "WR",
+        "reasoning": "Best available — Consensus #51 (Free Agents)",
         "desire": 0.5
       },
       "pickType": "BPA",
-      "reasoning": "Best available — RSP rank 51"
+      "reasoning": "Best available — Consensus #51 (Free Agents)"
     }
   ],
   "marketNotes": [
-    "Heavily contested: KC Concepcion (WR) is a top-target for 10 different franchises.",
-    "Heavily contested: Malachi Fields (WR) is a top-target for 7 different franchises.",
     "Heavily contested: Emmett Johnson (RB) is a top-target for 7 different franchises.",
-    "Heavily contested: Jordyn Tyson (WR) is a top-target for 7 different franchises."
+    "Heavily contested: Antonio Williams (WR) is a top-target for 8 different franchises.",
+    "Heavily contested: KC Concepcion (WR) is a top-target for 6 different franchises.",
+    "Heavily contested: Omar Cooper Jr. (WR) is a top-target for 5 different franchises."
   ]
 }
