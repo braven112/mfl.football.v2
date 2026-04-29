@@ -102,7 +102,7 @@ You don't need to compute exact weighted scores — just reason as a GM with tha
 OUTPUT CONTRACT — your final action MUST be to write the brief JSON to the exact file path given in the prompt. The JSON must match this schema (no markdown, no commentary in the file — just JSON):
 {
   "topTargets": [
-    { "name": "Full Name", "position": "QB|RB|WR|TE", "reasoning": "1-2 sentences citing specific board positions (Consensus #X Tier Y, RSP DoT score, ADP rank) and roster need", "desire": 0.0-1.0 }
+    { "name": "Full Name", "position": "QB|RB|WR|TE", "reasoning": "1-2 sentences citing specific board positions (Consensus #X Tier Y, RSP DoT score, ADP rank) and roster need", "desire": 0.0-1.0, "preferredRound": 1 }
   ],
   "positionalPriority": ["RB", "WR", ...],
   "capPosture": "1 sentence — e.g. 'Cap-strapped at $44.2M used; rookies must go taxi'",
@@ -111,7 +111,9 @@ OUTPUT CONTRACT — your final action MUST be to write the brief JSON to the exa
   "summary": "2-3 sentence narrative — what this GM is trying to do in this draft and why"
 }
 
-Provide 3-5 topTargets ordered by desire (highest first). Wildcard is optional but recommended — a lower-confidence pick that fits this GM's tendencies but isn't a consensus target.`;
+Provide 3-5 topTargets ordered by desire (highest first). Wildcard is optional but recommended — a lower-confidence pick that fits this GM's tendencies but isn't a consensus target.
+
+CRITICAL: \`preferredRound\` (default 1) tells the mock-assembler the EARLIEST round you'd take that player. If a behavioral note or the GM's strategy says "Player X is a Round 2 target, don't take in R1", set \`preferredRound: 2\` even if desire is high. The assembler will skip the player when the current pick is in an earlier round.`;
 
 fs.writeFileSync(path.join(outDir, '_system.txt'), SYSTEM_PROMPT);
 
@@ -159,7 +161,17 @@ for (const franchise of inputs.franchises) {
 
   const briefOutFile = path.join(briefsOutDir, `${fid}.json`);
 
-  const weights = affinityWeights(dossier.rspAffinity.score);
+  // Per-franchise weighting: dossier override > affinity-based default
+  const weights = dossier.weightingOverride
+    ? {
+        consensus: dossier.weightingOverride.consensus,
+        rsp: dossier.weightingOverride.rsp,
+        adp: dossier.weightingOverride.adp,
+      }
+    : affinityWeights(dossier.rspAffinity.score);
+  const weightingNote = dossier.weightingOverride?.reason
+    ? `OWNER OVERRIDE: ${dossier.weightingOverride.reason}`
+    : null;
 
   const userPrompt = `You are simulating: ${franchise.name} (${franchise.abbrev}, ${franchise.division} Division)
 
@@ -174,10 +186,10 @@ YOUR ROSTER (${rosterSummary.players.length} players):
 RSP AFFINITY: ${dossier.rspAffinity.score} (${dossier.rspAffinity.abCount} A/B-tier RSP players currently rostered, ${dossier.rspAffinity.abPct}%)
 
 YOUR PERSONAL BOARD WEIGHTING:
-- ${weights.consensus}% Consensus (primary, all GMs anchor here)
+- ${weights.consensus}% Consensus (primary)
 - ${weights.rsp}% RSP (Waldman scouting)
 - ${weights.adp}% MFL Dynasty ADP (market price)
-
+${weightingNote ? `\n${weightingNote}\n` : ''}
 BEHAVIORAL NOTES from prior reports:
 ${behavioralNotesText}
 

@@ -102,6 +102,13 @@ export interface TargetPlayer {
   reasoning: string;
   /** Likelihood the owner picks him IF he's available, 0-1. */
   desire: number;
+  /**
+   * Earliest round the owner is willing to spend on this player. Defaults
+   * to 1 (i.e. willing to take in any round). Use 2+ to mark a "second-round
+   * value" or "trade-up target" that shouldn't be reached in earlier rounds.
+   * The mock-assembler skips the target if `currentRound < preferredRound`.
+   */
+  preferredRound?: number;
 }
 
 /** A single mock pick in the assembled draft. */

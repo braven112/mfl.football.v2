@@ -111,10 +111,10 @@ export function assembleMock({ briefs, pickOwnership, consensusBoard = [], rspBo
       const orderedTargets = [...brief.topTargets].sort((a, b) => (b.desire || 0) - (a.desire || 0));
       for (const t of orderedTargets) {
         const key = normalizeName(t.name);
-        if (taken.has(key)) {
-          // Check if anyone else still wanted them — only meaningful for nice-to-have data
-          continue;
-        }
+        if (taken.has(key)) continue;
+        // Honor preferredRound — a target marked as a R2/R3 pick shouldn't be
+        // taken earlier just because their desire ranks high in the absolute board.
+        if (t.preferredRound && slot.round < t.preferredRound) continue;
         chosen = {
           name: t.name,
           position: t.position,

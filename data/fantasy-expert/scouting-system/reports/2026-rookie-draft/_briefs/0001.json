@@ -1,44 +1,45 @@
 {
   "topTargets": [
     {
-      "name": "Malachi Fields",
+      "name": "KC Concepcion",
       "position": "WR",
-      "reasoning": "Classic high-RSP-affinity reach: Consensus has him #22 Tier 3 (likely available at 1.10) but RSP DoT 87.2 ranks him as the WR4 in the entire class with a Nico Collins comp. ADP 0 (off market top 30) provides a hidden value; Pigskins WR room is deep (9) but Fields is a starter-grade plug-and-play talent.",
+      "reasoning": "Best triple-board Tier 2 fit if he slides to 1.10: Consensus #8 Tier 2 (WR4, CLE landing spot), RSP DoT 86.3 (#5 in Waldman's class, 'first-round value'), and ADP 13.57 — all three boards align under the new 60/20/20 weighting. Owner directive says target a Consensus Tier 2 player at 1.10, and Concepcion is the highest-floor name realistically still on the board.",
       "desire": 0.78
     },
     {
-      "name": "KC Concepcion",
-      "position": "WR",
-      "reasoning": "Consensus #8 Tier 2 (CLE landing spot), RSP DoT 86.3 (WR5, Starter grade), MFL ADP 13.57. If he slips past 1.07-1.09 he's the cleanest board-blender at 1.10 — Tier 2 consensus AND top-5 RSP WR. Heavy WR room but Concepcion's slot/return profile is positionally distinct.",
+      "name": "Jonah Coleman",
+      "position": "RB",
+      "reasoning": "Cleanest Tier 2 RB likely to be there at 1.10: Consensus #10 Tier 2 (RB3, DEN), ADP 20.19. Pigskins have 7 RBs but 5 contracts expiring this year — RB room thins fast. Consensus-primary weighting (60%) makes a Tier 2 RB with a real NFL backfield more attractive than reaching for an RSP-only WR.",
       "desire": 0.72
     },
     {
-      "name": "Emmett Johnson",
-      "position": "RB",
-      "reasoning": "Consensus #13 Tier 2 (KC landing spot is elite), RSP DoT 84.6 with a Harold Fannin trajectory comp — this is the kind of RSP-loved RB a high-affinity GM grabs at 1.10 if Fields/Concepcion are off the board. RB room is 7 deep but only Penix/Pollard/Allen are core; KC backfield opens immediate volume.",
-      "desire": 0.66
+      "name": "Omar Cooper Jr.",
+      "position": "WR",
+      "reasoning": "Consensus #12 Tier 2 (WR6, NYJ), RSP DoT 83.9 ('Deebo clone' upside, 'worth second-round consideration'), ADP 17.20. Tier 2 across all three boards under 60/20/20. Acceptable 1.10 fallback if Concepcion and Coleman are gone — still a Consensus Tier 2 selection per owner directive.",
+      "desire": 0.62
     },
     {
       "name": "Skyler Bell",
       "position": "WR",
-      "reasoning": "RSP DoT 85.9 with a Ja'Marr Chase high-end comp — Waldman's #6 overall — but Consensus has him in 'Free Agents' tier (#33) and ADP doesn't list him. Pure 2.10/3.10 lottery ticket that perfectly fits high-RSP-affinity behavior; goes to taxi where the 50% cap hit is survivable on the $2.3M space.",
-      "desire": 0.62
+      "reasoning": "Owner-directed 2.10 priority target. Consensus #33 (Free Agents tier, BUF) keeps the market price low, but RSP DoT 85.9 ('Ja'Marr Chase high-end comp') flags him as the elite arbitrage swing. With Bell well outside Consensus top 30 he should fall to 2.10 (pick 26 overall) without a trade-up — the new RSP zone for the Pigskins is Round 2.",
+      "desire": 0.70,
+      "preferredRound": 2
     },
     {
-      "name": "Chris Brazzell II",
-      "position": "WR",
-      "reasoning": "Consensus #15 Tier 2 (CAR), RSP DoT 84.2 with a George Pickens comp, MFL ADP 26.47. Realistic 2.10 target — Tier 2 consensus aligned with RSP top-15, and the Carolina depth chart has WR1 reps available. Fits a contention-window team adding ceiling.",
-      "desire": 0.58
+      "name": "Emmett Johnson",
+      "position": "RB",
+      "reasoning": "Consensus #13 Tier 2 (RB5, KC), RSP DoT 84.6 ('Harold Fannin trajectory, underrated talent'). Backup 1.10 option if the top-three Tier 2 fits all go 1.05-1.09; KC landing spot is a real fantasy environment. Also viable as a 2.10 pivot if Bell is gone.",
+      "desire": 0.55
     }
   ],
   "positionalPriority": ["WR", "RB", "TE"],
-  "capPosture": "Cap-strapped at $42.7M used with $2.3M space and 28 active — rookies MUST go taxi (50% base hit) until the 5 expiring contracts roll off.",
-  "taxiCandidates": ["Skyler Bell", "Emmett Johnson", "Chris Brazzell II"],
+  "capPosture": "Cap-strapped at $42.7M used / $2.3M space — all three rookies effectively must go taxi (50% base hit) to avoid blowing the $45M ceiling, especially with a 28-man active roster already.",
+  "taxiCandidates": ["KC Concepcion", "Skyler Bell", "Late R3 RSP swing"],
   "wildcard": {
-    "name": "Eli Stowers",
-    "position": "TE",
-    "reasoning": "Consensus #21 Tier 3 (PHI), RSP DoT 84.4 'on cusp of Starter tier' with a classic move-TE profile. High-RSP-affinity GMs love converted-QB TE archetypes; if Pigskins skip TE early but Stowers slips to 3.10, the Philly target share is a real lottery ticket at the taxi cap rate.",
-    "desire": 0.4
+    "name": "Myles Montgomery",
+    "position": "RB",
+    "reasoning": "RSP #13 DoT 84.1, tagged 'MOST UNDERRATED skill talent in the 2026 class' and likely UDFA. Off Consensus top 50 entirely. Classic 3.10 RSP-zone swing for a high-RSP-affinity owner who has down-weighted RSP at 1.10 but kept it live for late-round lottery tickets — exactly the spot owner directive carves out.",
+    "desire": 0.35
   },
-  "summary": "Pacific Pigskins are a contention-window roster with a deep WR/RB room but a hard cap squeeze ($2.3M space) — every rookie pick goes to taxi by necessity. With high RSP affinity (40% Waldman weight), the GM will fade pure consensus chalk and reach for Waldman-graded sleepers: Malachi Fields at 1.10 is the prototype move (Consensus Tier 3 / RSP DoT 87.2). 2.10 and 3.10 become RSP-board mining trips for Skyler Bell, Emmett Johnson, and Brazzell — high-ceiling taxi stashes that exploit the 50% cap hit while the 5 expiring contracts open active-roster space in 2027."
+  "summary": "With the owner override to 60/20/20 (Consensus primary), the Pigskins use 1.10 on a Consensus Tier 2 player — Concepcion if he falls, otherwise Coleman or Cooper Jr. — and explicitly do NOT take Skyler Bell in Round 1. Round 2 becomes the RSP zone: Bell at 2.10 is the headline target given his Consensus #33 / RSP DoT 85.9 split, and because Bell sits outside Consensus top 30 he is highly likely to be there at 2.10 without a trade-up — recommend HOLDING 2.10 + future 3rd rather than packaging them. Round 3 (3.10) is reserved for a Waldman-flavored swing like Myles Montgomery, with all three picks ticketed for taxi to manage the $2.3M cap squeeze."
 }

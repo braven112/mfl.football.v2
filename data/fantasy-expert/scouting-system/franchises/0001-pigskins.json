@@ -13,13 +13,40 @@
     "taxiCount": 0,
     "irCount": 0,
     "contractsExpiring": 5,
-    "capturedAt": "2026-04-29T07:02:11.000Z"
+    "capturedAt": "2026-04-29T07:10:17.018Z"
   },
-  "behavioralNotes": [],
+  "behavioralNotes": [
+    {
+      "id": "note_skyler_bell_r2_target",
+      "addedAt": "2026-04-29T07:30:00.000Z",
+      "source": {
+        "eventType": "rookie-draft",
+        "year": 2026
+      },
+      "text": "Owner explicitly directs: Skyler Bell is a ROUND 2 target (or trade-up target), NOT a Round 1 reach. Do not take Bell at 1.10. Bell would be a 2.10 priority target if he falls; otherwise consider trading 2.10 + a future 3rd to move up.",
+      "confidence": 1
+    },
+    {
+      "id": "note_consensus_primary",
+      "addedAt": "2026-04-29T07:30:00.000Z",
+      "source": {
+        "eventType": "rookie-draft",
+        "year": 2026
+      },
+      "text": "Owner has down-weighted RSP-driven reaches. Treat the Consensus board as PRIMARY. RSP scouting still informs late-round / wildcard picks, but at 1.10 the Pigskins target a Consensus Tier 2 player, not an RSP arbitrage swing.",
+      "confidence": 1
+    }
+  ],
   "rspAffinity": {
     "score": "high",
     "abCount": 6,
     "abPct": 21.4
   },
-  "lastUpdated": "2026-04-29T07:02:11.000Z"
+  "weightingOverride": {
+    "consensus": 60,
+    "rsp": 20,
+    "adp": 20,
+    "reason": "Owner directive 2026-04-29: lower RSP factor; consensus is primary"
+  },
+  "lastUpdated": "2026-04-29T07:10:17.018Z"
 }
