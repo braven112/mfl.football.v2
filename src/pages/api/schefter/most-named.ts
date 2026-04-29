@@ -36,7 +36,14 @@ import { getTopNamedTeams } from '../../../../scripts/lib/schefter-team-naming.m
 
 export const prerender = false;
 
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+// Edge-cacheable: the leaderboard is non-personalized (counts per franchise
+// over a public window), so a short shared cache absorbs bursts without
+// losing freshness. SWR keeps the response warm for an extra minute past
+// expiry while a background revalidation fetches a fresh count.
+const JSON_HEADERS = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+};
 const DEFAULT_DAYS = 7;
 const MIN_DAYS = 1;
 const MAX_DAYS = 30;
