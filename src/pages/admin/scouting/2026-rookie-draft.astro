@@ -22,25 +22,26 @@ const REPORT_YEAR = 2026;
 const EVENT_TYPE = 'rookie-draft';
 
 // ── Load report (if generated) ──────────────────────────────────────
-let report: EventReport | null = null;
-let meta: ReportMeta | null = null;
+// import.meta.glob is graceful when files are missing — needed because the
+// page must build even before the generator has written its output.
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod
+    ? (mod as { default: unknown }).default
+    : mod;
 
-try {
-  const reportModule = await import(
-    '../../../../data/fantasy-expert/scouting-system/reports/2026-rookie-draft/predictions.json'
-  );
-  report = reportModule.default as EventReport;
-} catch {
-  report = null;
-}
-try {
-  const metaModule = await import(
-    '../../../../data/fantasy-expert/scouting-system/reports/2026-rookie-draft/meta.json'
-  );
-  meta = metaModule.default as ReportMeta;
-} catch {
-  meta = null;
-}
+const reportModules = import.meta.glob(
+  '../../../../data/fantasy-expert/scouting-system/reports/2026-rookie-draft/predictions.json',
+  { eager: true },
+);
+const metaModules = import.meta.glob(
+  '../../../../data/fantasy-expert/scouting-system/reports/2026-rookie-draft/meta.json',
+  { eager: true },
+);
+
+const reportKey = Object.keys(reportModules)[0];
+const metaKey = Object.keys(metaModules)[0];
+const report = reportKey ? (getModuleData(reportModules[reportKey]) as EventReport) : null;
+const meta = metaKey ? (getModuleData(metaModules[metaKey]) as ReportMeta) : null;
 
 // ── Team config lookup ──────────────────────────────────────────────
 type TeamCfg = { franchiseId: string; name: string; nameShort: string; abbrev: string; division: string; icon: string; color: string };

@@ -74,16 +74,18 @@ const dossierCount = Object.keys(dossierModules).length;
 let totalPredictions = 0;
 let resolvedPredictions = 0;
 let correctPredictions = 0;
-try {
-  const ledgerModule = await import(
-    '../../../../data/fantasy-expert/scouting-system/predictions-ledger.json'
-  );
-  const ledger = ledgerModule.default as { predictions: { outcome?: { correct: boolean } }[] };
+const ledgerModules = import.meta.glob(
+  '../../../../data/fantasy-expert/scouting-system/predictions-ledger.json',
+  { eager: true },
+);
+const ledgerKey = Object.keys(ledgerModules)[0];
+if (ledgerKey) {
+  const ledger = getModuleData(ledgerModules[ledgerKey]) as {
+    predictions: { outcome?: { correct: boolean } }[];
+  };
   totalPredictions = ledger.predictions.length;
   resolvedPredictions = ledger.predictions.filter(p => p.outcome).length;
   correctPredictions = ledger.predictions.filter(p => p.outcome?.correct).length;
-} catch {
-  // ledger missing — leave at 0
 }
 
 const accuracyPct = resolvedPredictions > 0
