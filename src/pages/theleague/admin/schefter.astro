@@ -38,37 +38,86 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </div>
     </header>
 
-    <section class="ops-env" aria-label="Vercel runtime environment">
-      <h2 class="ops-env__title">Vercel runtime env</h2>
-      <p class="ops-env__hint">Used by Astro API routes, the tip form, and Redis reads.</p>
-      <ul class="ops-env__list" id="ops-vercel-env-list"><li>Loading…</li></ul>
+    <section class="ops-hero" aria-labelledby="hero-channel-mix">
+      <header class="ops-hero__head">
+        <h2 id="hero-channel-mix" class="ops-card__title">Channel Mix</h2>
+        <p class="ops-card__hint">
+          What's feeding Schefter's GroupMe posts.
+          <strong>Coming Next</strong> = current tip queue (the next post is forming from this).
+          <strong>7 days</strong> + <strong>All-time</strong> = byline posts that already shipped, by source.
+          Wire/ESPN syndication is excluded — that's not Schefter writing.
+        </p>
+      </header>
+
+      <div class="ops-chx ops-chx--queue" data-window="queue">
+        <div class="ops-chx__label">
+          <span id="hero-chx-queue-label">Coming Next · queue composition</span>
+          <span class="ops-chx__total" data-k="redis.queueChannelMix.total">—</span>
+        </div>
+        <div
+          class="ops-chx__bar ops-chx__bar--tall"
+          role="img"
+          aria-labelledby="hero-chx-queue-label"
+          aria-describedby="ops-chx-queue-sr"
+          data-chx-bar="queue"
+        >
+          <span class="ops-chx__seg ops-chx--empty" style="--w:100%;" aria-hidden="true">
+            <span class="ops-chx__seg-label">Loading…</span>
+          </span>
+        </div>
+        <p id="ops-chx-queue-sr" class="ops-sr-only" data-chx-sr="queue">Loading queue composition.</p>
+        <ul class="ops-chx__legend" data-chx-legend="queue"></ul>
+      </div>
+
+      <div class="ops-chx" data-window="7d">
+        <div class="ops-chx__label">
+          <span id="hero-chx-7d-label">Last 7 days · byline shipped</span>
+          <span class="ops-chx__total" data-k="feed.channelMix.windows.7d.total">—</span>
+        </div>
+        <div
+          class="ops-chx__bar"
+          role="img"
+          aria-labelledby="hero-chx-7d-label"
+          aria-describedby="ops-chx-7d-sr"
+          data-chx-bar="7d"
+        >
+          <span class="ops-chx__seg ops-chx--empty" style="--w:100%;" aria-hidden="true">
+            <span class="ops-chx__seg-label">Loading…</span>
+          </span>
+        </div>
+        <p id="ops-chx-7d-sr" class="ops-sr-only" data-chx-sr="7d">Loading channel mix.</p>
+      </div>
+
+      <div class="ops-chx ops-chx--secondary" data-window="allTime">
+        <div class="ops-chx__label">
+          <span id="hero-chx-allTime-label">All-time · byline baseline</span>
+          <span class="ops-chx__total" data-k="feed.channelMix.windows.allTime.total">—</span>
+        </div>
+        <div
+          class="ops-chx__bar ops-chx__bar--thin"
+          role="img"
+          aria-labelledby="hero-chx-allTime-label"
+          aria-describedby="ops-chx-allTime-sr"
+          data-chx-bar="allTime"
+        >
+          <span class="ops-chx__seg ops-chx--empty" style="--w:100%;" aria-hidden="true">
+            <span class="ops-chx__seg-label">Loading…</span>
+          </span>
+        </div>
+        <p id="ops-chx-allTime-sr" class="ops-sr-only" data-chx-sr="allTime">Loading channel mix.</p>
+      </div>
+
+      <p class="ops-hero__zero-state" data-chx-zero hidden></p>
     </section>
 
-    <section class="ops-env" aria-label="GitHub Actions environment">
-      <h2 class="ops-env__title">GitHub Actions env <span id="ops-gh-repo" class="ops-env__repo"></span></h2>
-      <p class="ops-env__hint">
-        Used by the scanners running on a cron. Probed via the GitHub REST API —
-        needs a fine-grained PAT on Vercel as <code>GITHUB_ADMIN_TOKEN</code>
-        with <em>Actions:Read + Variables:Read + Secrets:Read</em>.
-      </p>
-      <div id="ops-github-body"><p class="ops-env__hint">Loading…</p></div>
-    </section>
-
-    <section class="ops-grid" aria-label="Dashboard stats">
-      <article class="ops-card" aria-labelledby="card-queue">
-        <h2 id="card-queue" class="ops-card__title">Tips Queue (live)</h2>
-        <p class="ops-card__hint">Drained every 15 min by <code>schefter-rumor-scan.mjs</code>.</p>
-        <dl class="ops-dl">
-          <div><dt>Pending in queue</dt><dd data-k="redis.queueDepth">—</dd></div>
-          <div><dt>Marinate started</dt><dd data-k="fmt.marinateStartedAt">—</dd></div>
-          <div><dt>Next earliest post</dt><dd data-k="fmt.nextEarliestPostAt">—</dd></div>
-          <div><dt>Posts today (cap 3)</dt><dd data-k="redis.postsToday">—</dd></div>
-          <div><dt>Last rumor post</dt><dd data-k="fmt.lastRumorPostTs">—</dd></div>
-        </dl>
-      </article>
-
+    <section class="ops-cluster" aria-labelledby="cluster-intake">
+      <h2 class="ops-cluster__title" id="cluster-intake">
+        Channel Intake
+        <span class="ops-cluster__sub">Where tips come from, before the queue.</span>
+      </h2>
+      <div class="ops-grid">
       <article class="ops-card" aria-labelledby="card-sources">
-        <h2 id="card-sources" class="ops-card__title">Tip Sources (recent archive)</h2>
+        <h3 id="card-sources" class="ops-card__title">Tip Sources (recent archive)</h3>
         <p class="ops-card__hint">
           Sampled from <code>schefter:tips:processed</code> (last ~200 drained tips).
         </p>
@@ -82,7 +131,7 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </article>
 
       <article class="ops-card" aria-labelledby="card-groupme">
-        <h2 id="card-groupme" class="ops-card__title">GroupMe Ingestion</h2>
+        <h3 id="card-groupme" class="ops-card__title">GroupMe Ingestion</h3>
         <p class="ops-card__hint">Polling cache in <code>groupme:messages</code> ZSET.</p>
         <dl class="ops-dl">
           <div><dt>Messages cached</dt><dd data-k="redis.groupmeMessagesCached">—</dd></div>
@@ -92,10 +141,12 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </article>
 
       <article class="ops-card" aria-labelledby="card-offers">
-        <h2 id="card-offers" class="ops-card__title">Trade Offers Ingested</h2>
+        <h3 id="card-offers" class="ops-card__title">Trade Offers Ingested</h3>
         <p class="ops-card__hint">
-          Cumulative-probability model: <code>p=0.0075</code>/run (99% cumulative by ~day 6.4).
-          In-flight = offers still eligible to post. Posted = offers the rumor mill has already announced.
+          Cumulative-probability model: <code>p=0.025</code>/run (~91% by 24h, ~99% by 48h).
+          Bumped 2026-04-30 from 0.0075 — trade proposals are the league's highest-engagement
+          posts, so we report them faster. In-flight = offers still eligible to post.
+          Posted = offers the rumor mill has already announced.
           Lingering (≥48h) flips the voice to "phones aren't picking up".
         </p>
         <dl class="ops-dl">
@@ -108,40 +159,20 @@ if (!user || !isCommissionerOrAdmin(user)) {
           <div><dt>Pending-trade watermark size</dt><dd data-k="feed.pendingTradeWatermarkSize">—</dd></div>
         </dl>
       </article>
+      </div>
+    </section>
 
-      <article class="ops-card" aria-labelledby="card-owner-reports">
-        <h2 id="card-owner-reports" class="ops-card__title">Owner-Sourced Intake</h2>
-        <p class="ops-card__hint">
-          Populated whenever an owner loads <code>/api/trades/pending</code> or sends a proposal
-          through <code>/api/trades/submit</code>. Merged into the offer pool each scan cycle so the
-          rumor mill keeps working even with MFL's commissioner lockout on. See
-          <code>schefter:trade_offers:owner_reports</code> (30d TTL).
-        </p>
-        <dl class="ops-dl">
-          <div><dt>Active reports</dt><dd data-k="redis.ownerReportsCount">—</dd></div>
-          <div><dt>Distinct reporters</dt><dd data-k="redis.ownerReportsDistinctReporters">—</dd></div>
-          <div><dt>Last report</dt><dd data-k="fmt.ownerReportsLastSeenTs">—</dd></div>
-        </dl>
-      </article>
-
-      <article class="ops-card ops-card--wide" aria-labelledby="card-live-trades">
-        <h2 id="card-live-trades" class="ops-card__title">
-          Trade Proposals in MFL (live, league-wide)
-          <span id="ops-live-trades-summary" class="ops-card__badge">—</span>
-        </h2>
-        <p class="ops-card__hint">
-          Every open trade proposal right now — your team plus every other franchise.
-          Pulled from MFL <code>TYPE=pendingTrades</code> in commish mode.
-          If this list is non-empty and <strong>"Pending trade announcements"</strong> stays at 0, the scanner is missing deals.
-        </p>
-        <div id="ops-live-trades-body" class="ops-live-trades">Loading…</div>
-      </article>
-
+    <section class="ops-cluster" aria-labelledby="cluster-next">
+      <h2 class="ops-cluster__title" id="cluster-next">
+        Coming Next
+        <span class="ops-cluster__sub">What the scanner will post in the next cycle.</span>
+      </h2>
+      <div class="ops-grid">
       <article class="ops-card ops-card--wide" aria-labelledby="card-predicted">
-        <h2 id="card-predicted" class="ops-card__title">
+        <h3 id="card-predicted" class="ops-card__title">
           Predicted Post Order
           <span id="ops-predicted-summary" class="ops-card__badge">—</span>
-        </h2>
+        </h3>
         <p class="ops-card__hint">
           Runs the same bucket logic the scanner uses — trade-offer buckets win first,
           then gossip ranked by <code>(size − 1) × 2 + ageDays</code>. The top row is what
@@ -152,10 +183,10 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </article>
 
       <article class="ops-card ops-card--wide" aria-labelledby="card-pending-tips">
-        <h2 id="card-pending-tips" class="ops-card__title">
+        <h3 id="card-pending-tips" class="ops-card__title">
           Pending Tips (oldest first)
           <span id="ops-pending-tips-summary" class="ops-card__badge">—</span>
-        </h2>
+        </h3>
         <p class="ops-card__hint">
           Raw queue of <code>schefter:tips:queue</code>. Tipster identity
           (<code>hashedOwnerId</code>) is stripped before this response leaves
@@ -164,22 +195,29 @@ if (!user || !isCommissionerOrAdmin(user)) {
         <div id="ops-pending-tips-body" class="ops-tips">Loading…</div>
       </article>
 
-      <article class="ops-card ops-card--wide" aria-labelledby="card-recent-groupme">
-        <h2 id="card-recent-groupme" class="ops-card__title">
-          Recent GroupMe (last 50)
-          <span id="ops-recent-groupme-summary" class="ops-card__badge">—</span>
-        </h2>
+      <article class="ops-card ops-card--wide" aria-labelledby="card-live-trades">
+        <h3 id="card-live-trades" class="ops-card__title">
+          Trade Proposals in MFL (live, league-wide)
+          <span id="ops-live-trades-summary" class="ops-card__badge">—</span>
+        </h3>
         <p class="ops-card__hint">
-          The chat stream Schefter is watching. Messages tagged
-          <span class="ops-pill ops-pill--ok">picked up</span> already became tips
-          (matched by <code>gm_&lt;message_id&gt;</code> in the queue);
-          the rest were ignored or are still being processed.
+          Every open trade proposal right now — your team plus every other franchise.
+          Pulled from MFL <code>TYPE=pendingTrades</code> in commish mode.
+          If this list is non-empty and <strong>"Pending trade announcements"</strong> stays at 0, the scanner is missing deals.
         </p>
-        <div id="ops-recent-groupme-body" class="ops-gm">Loading…</div>
+        <div id="ops-live-trades-body" class="ops-live-trades">Loading…</div>
       </article>
+      </div>
+    </section>
 
+    <section class="ops-cluster" aria-labelledby="cluster-stats">
+      <h2 class="ops-cluster__title" id="cluster-stats">
+        Activity &amp; Stats
+        <span class="ops-cluster__sub">Counters from the feed JSON and Redis.</span>
+      </h2>
+      <div class="ops-grid">
       <article class="ops-card ops-card--wide" aria-labelledby="card-posts">
-        <h2 id="card-posts" class="ops-card__title">Posts in Feed</h2>
+        <h3 id="card-posts" class="ops-card__title">Posts in Feed</h3>
         <p class="ops-card__hint">Counted from <code>schefter-feed.json</code>.</p>
         <dl class="ops-dl ops-dl--cols">
           <div><dt>Total posts</dt><dd data-k="feed.postsTotal">—</dd></div>
@@ -193,8 +231,52 @@ if (!user || !isCommissionerOrAdmin(user)) {
         </dl>
       </article>
 
+      <article class="ops-card" aria-labelledby="card-queue">
+        <h3 id="card-queue" class="ops-card__title">Tips Queue (live)</h3>
+        <p class="ops-card__hint">Drained every 15 min by <code>schefter-rumor-scan.mjs</code>.</p>
+        <dl class="ops-dl">
+          <div><dt>Pending in queue</dt><dd data-k="redis.queueDepth">—</dd></div>
+          <div><dt>Marinate started</dt><dd data-k="fmt.marinateStartedAt">—</dd></div>
+          <div><dt>Next earliest post</dt><dd data-k="fmt.nextEarliestPostAt">—</dd></div>
+          <div><dt>Posts today (cap 3)</dt><dd data-k="redis.postsToday">—</dd></div>
+          <div><dt>Last rumor post</dt><dd data-k="fmt.lastRumorPostTs">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-owner-reports">
+        <h3 id="card-owner-reports" class="ops-card__title">Owner-Sourced Intake</h3>
+        <p class="ops-card__hint">
+          Populated whenever an owner loads <code>/api/trades/pending</code> or sends a proposal
+          through <code>/api/trades/submit</code>. Merged into the offer pool each scan cycle so the
+          rumor mill keeps working even with MFL's commissioner lockout on. See
+          <code>schefter:trade_offers:owner_reports</code> (30d TTL).
+        </p>
+        <dl class="ops-dl">
+          <div><dt>Active reports</dt><dd data-k="redis.ownerReportsCount">—</dd></div>
+          <div><dt>Distinct reporters</dt><dd data-k="redis.ownerReportsDistinctReporters">—</dd></div>
+          <div><dt>Last report</dt><dd data-k="fmt.ownerReportsLastSeenTs">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-tipsters">
+        <h3 id="card-tipsters" class="ops-card__title">Tipster Leaderboard</h3>
+        <p class="ops-card__hint">Distinct tipsters ranked this season.</p>
+        <dl class="ops-dl">
+          <div><dt>Ranked tipsters ({<span data-k="redis.seasonYear">—</span>})</dt><dd data-k="redis.tipsterLeaderboardSize">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-scan">
+        <h3 id="card-scan" class="ops-card__title">Scanner Freshness</h3>
+        <p class="ops-card__hint">From the feed JSON watermarks.</p>
+        <dl class="ops-dl">
+          <div><dt>Last scan</dt><dd data-k="fmt.lastScanTimestamp">—</dd></div>
+          <div><dt>Last MFL txn processed</dt><dd data-k="fmt.lastProcessedMflTimestamp">—</dd></div>
+        </dl>
+      </article>
+
       <article class="ops-card ops-card--wide" aria-labelledby="card-authors">
-        <h2 id="card-authors" class="ops-card__title">Posts by Author</h2>
+        <h3 id="card-authors" class="ops-card__title">Posts by Author</h3>
         <p class="ops-card__hint">Every byline that has ever published into the feed.</p>
         <table class="ops-table">
           <thead><tr><th>Author</th><th class="ops-table__num">Count</th></tr></thead>
@@ -203,31 +285,62 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </article>
 
       <article class="ops-card" aria-labelledby="card-subtypes">
-        <h2 id="card-subtypes" class="ops-card__title">Transaction Subtypes</h2>
+        <h3 id="card-subtypes" class="ops-card__title">Transaction Subtypes</h3>
         <p class="ops-card__hint">Distribution across the feed (rumor_mill / TRADE / TRADE_PENDING / …).</p>
         <table class="ops-table">
           <thead><tr><th>Subtype</th><th class="ops-table__num">Count</th></tr></thead>
           <tbody id="ops-subtypes-body"><tr><td colspan="2">Loading…</td></tr></tbody>
         </table>
       </article>
-
-      <article class="ops-card" aria-labelledby="card-tipsters">
-        <h2 id="card-tipsters" class="ops-card__title">Tipster Leaderboard</h2>
-        <p class="ops-card__hint">Distinct tipsters ranked this season.</p>
-        <dl class="ops-dl">
-          <div><dt>Ranked tipsters ({<span data-k="redis.seasonYear">—</span>})</dt><dd data-k="redis.tipsterLeaderboardSize">—</dd></div>
-        </dl>
-      </article>
-
-      <article class="ops-card" aria-labelledby="card-scan">
-        <h2 id="card-scan" class="ops-card__title">Scanner Freshness</h2>
-        <p class="ops-card__hint">From the feed JSON watermarks.</p>
-        <dl class="ops-dl">
-          <div><dt>Last scan</dt><dd data-k="fmt.lastScanTimestamp">—</dd></div>
-          <div><dt>Last MFL txn processed</dt><dd data-k="fmt.lastProcessedMflTimestamp">—</dd></div>
-        </dl>
-      </article>
+      </div>
     </section>
+
+    <section class="ops-cluster" aria-labelledby="cluster-stream">
+      <h2 class="ops-cluster__title" id="cluster-stream">
+        Diagnostic Stream
+        <span class="ops-cluster__sub">Live GroupMe traffic and how Schefter classified it.</span>
+      </h2>
+      <div class="ops-grid">
+      <article class="ops-card ops-card--wide" aria-labelledby="card-recent-groupme">
+        <h3 id="card-recent-groupme" class="ops-card__title">
+          Recent GroupMe (last 50)
+          <span id="ops-recent-groupme-summary" class="ops-card__badge">—</span>
+        </h3>
+        <p class="ops-card__hint">
+          The chat stream Schefter is watching. Each message is tagged with one of four states:
+          <span class="ops-pill ops-pill--info">posted</span> became a published post,
+          <span class="ops-pill ops-pill--ok">pending</span> is in the live tips queue,
+          <span class="ops-pill ops-pill--warn">expired</span> matched the regex but aged out (24h TTL),
+          <span class="ops-pill ops-pill--mute">no match</span> didn't address Schefter so was never queued.
+        </p>
+        <div id="ops-recent-groupme-body" class="ops-gm">Loading…</div>
+      </article>
+      </div>
+    </section>
+
+    <details class="ops-diag" id="ops-diag">
+      <summary class="ops-diag__summary">
+        <span class="ops-diag__chev" aria-hidden="true">▸</span>
+        Diagnostics &amp; Environment
+        <span class="ops-diag__hint">Vercel runtime + GitHub Actions config</span>
+      </summary>
+
+      <section class="ops-env" aria-label="Vercel runtime environment">
+        <h4 class="ops-env__title">Vercel runtime env</h4>
+        <p class="ops-env__hint">Used by Astro API routes, the tip form, and Redis reads.</p>
+        <ul class="ops-env__list" id="ops-vercel-env-list"><li>Loading…</li></ul>
+      </section>
+
+      <section class="ops-env" aria-label="GitHub Actions environment">
+        <h4 class="ops-env__title">GitHub Actions env <span id="ops-gh-repo" class="ops-env__repo"></span></h4>
+        <p class="ops-env__hint">
+          Used by the scanners running on a cron. Probed via the GitHub REST API —
+          needs a fine-grained PAT on Vercel as <code>GITHUB_ADMIN_TOKEN</code>
+          with <em>Actions:Read + Variables:Read + Secrets:Read</em>.
+        </p>
+        <div id="ops-github-body"><p class="ops-env__hint">Loading…</p></div>
+      </section>
+    </details>
 
     <p class="ops-foot">
       Auto-refreshes every 60 seconds. Source: <code>/api/admin/schefter-stats</code>.
@@ -300,6 +413,94 @@ if (!user || !isCommissionerOrAdmin(user)) {
       const days = hours / 24;
       return `${days.toFixed(1)}d`;
     };
+
+    // Channel Mix hero — render two stacked bars (7d + all-time) using the
+    // server-derived counts. Segments with zero counts are dropped from the
+    // bar but kept in the legend so the picture stays honest.
+    type ChannelKey = 'groupme' | 'web' | 'trade';
+    const CHANNELS: Array<{ key: ChannelKey; label: string; cls: string }> = [
+      { key: 'groupme', label: 'GroupMe', cls: 'ops-chx--groupme' },
+      { key: 'web',     label: 'Web',     cls: 'ops-chx--web' },
+      { key: 'trade',   label: 'Trade',   cls: 'ops-chx--trade' },
+    ];
+    type WindowKey = '7d' | 'allTime' | 'queue';
+    function getMix(windowKey: WindowKey): { groupme: number; web: number; trade: number; total: number } | null {
+      if (windowKey === 'queue') {
+        const m = data.redis?.queueChannelMix;
+        return m && typeof m === 'object' ? m : null;
+      }
+      return data.feed?.channelMix?.windows?.[windowKey] ?? null;
+    }
+    const WINDOW_LABELS: Record<WindowKey, string> = {
+      queue: 'Coming Next (queue)',
+      '7d': 'Last 7 days',
+      allTime: 'All-time',
+    };
+    const QUEUE_EMPTY_TEXT = 'Queue empty — Schefter is between rumors. Next post forms when a tip lands.';
+    const HISTORICAL_EMPTY_TEXT = 'No byline posts yet in this window.';
+    function renderChannelMix(windowKey: WindowKey) {
+      const w = getMix(windowKey);
+      const bar = document.querySelector(`[data-chx-bar="${windowKey}"]`);
+      const sr  = document.querySelector(`[data-chx-sr="${windowKey}"]`);
+      const leg = document.querySelector(`[data-chx-legend="${windowKey}"]`);
+      if (!bar) return;
+      const total = (w && typeof w.total === 'number') ? w.total : 0;
+      const windowLabel = WINDOW_LABELS[windowKey];
+      if (!total) {
+        const emptyText = windowKey === 'queue' ? QUEUE_EMPTY_TEXT : HISTORICAL_EMPTY_TEXT;
+        bar.innerHTML = `<span class="ops-chx__seg ops-chx--empty" style="--w:100%;" aria-hidden="true">
+          <span class="ops-chx__seg-label">${escapeHtml(emptyText)}</span></span>`;
+        if (sr) sr.textContent = `${windowLabel}: ${emptyText}`;
+        if (leg) leg.innerHTML = '';
+        return;
+      }
+      const segs = CHANNELS.map((c) => {
+        const n = (w && typeof w[c.key] === 'number') ? w[c.key] : 0;
+        const pct = total > 0 ? (n / total) * 100 : 0;
+        return { ...c, n, pct };
+      });
+      const drawn = segs.filter((s) => s.n > 0);
+      bar.innerHTML = drawn.map((s) => `
+        <span class="ops-chx__seg ${s.cls}"
+              style="--w:${s.pct.toFixed(2)}%;"
+              ${s.pct < 12 ? 'data-narrow="true"' : ''}
+              title="${s.label} — ${s.n} of ${total} (${Math.round(s.pct)}%)"
+              aria-hidden="true">
+          <span class="ops-chx__seg-label">${s.label} ${Math.round(s.pct)}%</span>
+        </span>`).join('');
+      if (sr) {
+        const phrase = drawn.map((s) => `${s.label} ${s.n} (${Math.round(s.pct)} percent)`).join(', ');
+        sr.textContent = `${windowLabel}, ${total} ${windowKey === 'queue' ? 'tips queued' : 'posts'}. ${phrase}.`;
+      }
+      if (leg) {
+        leg.innerHTML = segs.map((s) => `
+          <li><span class="ops-chx__swatch ${s.cls}" aria-hidden="true"></span>
+            ${s.label} <strong>${s.n}</strong>${s.n === 0 ? ' <em class="ops-chx__never">— never</em>' : ''}</li>`).join('');
+      }
+    }
+    renderChannelMix('queue');
+    renderChannelMix('7d');
+    renderChannelMix('allTime');
+
+    // "Never shipped" callout — surfaces channels that have ZERO all-time
+    // byline posts. The user's specific ask: see at a glance whether any
+    // trade proposal has ever driven a Schefter post. If so, this disappears.
+    const allTime = data.feed?.channelMix?.windows?.allTime;
+    const zeroEl = document.querySelector<HTMLElement>('[data-chx-zero]');
+    if (zeroEl) {
+      const neverShipped: string[] = [];
+      if (allTime) {
+        for (const c of CHANNELS) if ((allTime as any)[c.key] === 0) neverShipped.push(c.label);
+      }
+      if (neverShipped.length === 0) {
+        zeroEl.hidden = true;
+        zeroEl.textContent = '';
+      } else {
+        zeroEl.hidden = false;
+        const list = neverShipped.join(' · ');
+        zeroEl.innerHTML = `<strong>Never shipped:</strong> ${list}. <em>No byline post has ever come from ${neverShipped.length === 1 ? 'this lane' : 'these lanes'}.</em>`;
+      }
+    }
 
     const merged = { ...data, fmt };
     document.querySelectorAll<HTMLElement>('[data-k]').forEach((el) => {
@@ -386,15 +587,15 @@ if (!user || !isCommissionerOrAdmin(user)) {
         ghBody.innerHTML = `
           <div class="ops-env__cols">
             <div>
-              <h3 class="ops-env__subtitle">Variables</h3>
+              <h5 class="ops-env__subtitle">Variables</h5>
               <ul class="ops-env__list">${varRows || '<li>—</li>'}</ul>
             </div>
             <div>
-              <h3 class="ops-env__subtitle">Secrets <span class="ops-env__note">(existence only — values never exposed)</span></h3>
+              <h5 class="ops-env__subtitle">Secrets <span class="ops-env__note">(existence only — values never exposed)</span></h5>
               <ul class="ops-env__list">${secRows || '<li>—</li>'}</ul>
             </div>
           </div>
-          <h3 class="ops-env__subtitle">Latest workflow runs</h3>
+          <h5 class="ops-env__subtitle">Latest workflow runs</h5>
           <table class="ops-table">
             <thead><tr><th>Workflow</th><th>Status</th><th>Ran</th><th></th></tr></thead>
             <tbody>${wfRows || '<tr><td colspan="4">No workflows found.</td></tr>'}</tbody>
@@ -517,12 +718,58 @@ if (!user || !isCommissionerOrAdmin(user)) {
     }
 
     const recentGm: any[] = Array.isArray(data.redis?.recentGroupMe) ? data.redis.recentGroupMe : [];
+    const postedGmMap: Record<string, string> =
+      (data.feed?.postedGmIdToPostId && typeof data.feed.postedGmIdToPostId === 'object')
+        ? data.feed.postedGmIdToPostId
+        : {};
+    const TIP_TTL_MS = 24 * 60 * 60 * 1000;
+    type GmPillState = 'posted' | 'pending' | 'expired' | 'no-match';
+    const gmCounts: Record<GmPillState, number> = { posted: 0, pending: 0, expired: 0, 'no-match': 0 };
+    function gmStateFor(msg: any): { state: GmPillState; postId?: string } {
+      if (!msg || typeof msg !== 'object') return { state: 'no-match' };
+      const id = String(msg.id ?? '');
+      const createdMs = typeof msg.createdAt === 'number' ? msg.createdAt * 1000 : 0;
+      const ageMs = Date.now() - createdMs;
+      if (id && postedGmMap[id]) return { state: 'posted', postId: postedGmMap[id] };
+      if (id && groupmeTipIds.has(id)) return { state: 'pending' };
+      const detected = !!msg.schefterDetected;
+      if (!detected) return { state: 'no-match' };
+      if (ageMs > TIP_TTL_MS) return { state: 'expired' };
+      // Detected, fresh, but not in queue and not posted — race window after
+      // a scan pulled it from the queue. Treat visually as still pending.
+      return { state: 'pending' };
+    }
+    function gmPillHTML(s: { state: GmPillState; postId?: string }): string {
+      switch (s.state) {
+        case 'posted': {
+          const safePid = s.postId ? encodeURIComponent(s.postId) : '';
+          if (!safePid) return '<span class="ops-pill ops-pill--info">posted</span>';
+          const labelPid = escapeHtml(String(s.postId ?? ''));
+          return `<a class="ops-pill ops-pill--info ops-pill--link" href="/theleague/news#post-${safePid}" aria-label="Posted — view post ${labelPid} on the news feed" title="Open post on /news (newest 100 shown there)">posted</a>`;
+        }
+        case 'pending':
+          return '<span class="ops-pill ops-pill--ok">pending</span>';
+        case 'expired':
+          return '<span class="ops-pill ops-pill--warn">expired</span>';
+        case 'no-match':
+        default:
+          return '<span class="ops-pill ops-pill--mute">no match</span>';
+      }
+    }
+    for (const m of recentGm) gmCounts[gmStateFor(m).state] += 1;
     const gmSummary = document.getElementById('ops-recent-groupme-summary');
     const gmBody = document.getElementById('ops-recent-groupme-body');
     if (gmSummary) {
-      gmSummary.innerHTML = recentGm.length
-        ? `<span class="ops-pill ops-pill--ok">${recentGm.length} cached</span>`
-        : `<span class="ops-pill ops-pill--warn">empty</span>`;
+      if (!recentGm.length) {
+        gmSummary.innerHTML = `<span class="ops-pill ops-pill--warn">empty</span>`;
+      } else {
+        gmSummary.innerHTML = `
+          <span class="ops-pill ops-pill--info" title="Posted">${gmCounts.posted}</span>
+          <span class="ops-pill ops-pill--ok" title="Pending">${gmCounts.pending}</span>
+          <span class="ops-pill ops-pill--warn" title="Expired">${gmCounts.expired}</span>
+          <span class="ops-pill ops-pill--mute" title="No match">${gmCounts['no-match']}</span>
+        `;
+      }
     }
     if (gmBody) {
       if (!recentGm.length) {
@@ -534,11 +781,7 @@ if (!user || !isCommissionerOrAdmin(user)) {
             const name = escapeHtml(String(msg.name ?? msg.senderName ?? 'unknown'));
             const createdMs = typeof msg.createdAt === 'number' ? msg.createdAt * 1000 : 0;
             const when = createdMs ? `${new Date(createdMs).toLocaleString()} (${fmtRel(createdMs)})` : '—';
-            const id = String(msg.id ?? '');
-            const pickedUp = groupmeTipIds.has(id);
-            const pill = pickedUp
-              ? '<span class="ops-pill ops-pill--ok">picked up</span>'
-              : '<span class="ops-pill ops-pill--warn">ignored</span>';
+            const pill = gmPillHTML(gmStateFor(msg));
             const isBot = msg.senderType === 'bot' || /schefter|claude|roger/i.test(name);
             const senderClass = isBot ? 'ops-gm__author ops-gm__author--bot' : 'ops-gm__author';
             return `
@@ -653,7 +896,12 @@ if (!user || !isCommissionerOrAdmin(user)) {
   });
   load();
   loadTradeProposals();
-  setInterval(load, 60_000);
+  // Auto-refresh both the stats endpoint and the live trades endpoint —
+  // the footer text promises a 60s refresh, so both sources need to tick.
+  setInterval(() => {
+    load();
+    loadTradeProposals();
+  }, 60_000);
 </script>
 
 <style>
@@ -697,6 +945,173 @@ if (!user || !isCommissionerOrAdmin(user)) {
   .ops-pill--ok { background: #dcfce7; color: #166534; }
   .ops-pill--bad { background: #fee2e2; color: #991b1b; }
   .ops-pill--warn { background: #fef3c7; color: #92400e; }
+  /* New pill states for the four-state GroupMe stream — light bg + dark text
+     family, contrast verified at body size (≥6:1 each). */
+  .ops-pill--info { background: #dbeafe; color: #1e3a8a; }
+  .ops-pill--mute { background: #e2e8f0; color: #475569; }
+  /* Anchor variant of the pill — used when the "posted" pill links to the
+     published post on /theleague/news. Native focus ring + invisible touch
+     hit-area to clear the 44×44 minimum on a desktop-only admin page. */
+  .ops-pill--link {
+    text-decoration: none; cursor: pointer; position: relative;
+  }
+  .ops-pill--link:hover { filter: brightness(0.96); text-decoration: underline; }
+  .ops-pill--link:focus-visible {
+    outline: 2px solid var(--color-accent, #0ea5e9);
+    outline-offset: 2px;
+  }
+  /* Invisible hit-area extension to clear the WCAG 2.5.5 44×44 minimum on
+     a small pill (~22px × ~60px). The visual pill is unchanged. */
+  .ops-pill--link::after {
+    content: ''; position: absolute; inset: -12px -10px;
+  }
+
+  /* Hero: Channel Mix — sits above the cluster grid */
+  .ops-hero {
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-left: 4px solid var(--color-accent, #0ea5e9);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  .ops-hero__head { margin-bottom: 0.6rem; }
+  .ops-chx { display: grid; gap: 0.4rem; margin-top: 0.6rem; }
+  .ops-chx__label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.78rem; color: var(--color-text-muted, #64748b);
+    text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+  }
+  .ops-chx__total {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text, #0f172a);
+  }
+  .ops-chx__bar {
+    display: flex; width: 100%; height: 28px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 6px; overflow: hidden; background: #f1f5f9;
+    /* Visible 2px white seam between segments — keeps adjacent lanes
+       readable as distinct bars, not a single gradient. */
+    gap: 2px;
+  }
+  .ops-chx__bar--thin { height: 14px; }
+  .ops-chx__bar--tall { height: 36px; }
+  .ops-chx__seg {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: var(--w, 0%);
+    background: var(--seg-bg);
+    color: var(--seg-fg);
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; white-space: nowrap;
+    transition: width 200ms ease-out;
+    min-width: 0; overflow: hidden;
+  }
+  .ops-chx__seg-label { padding: 0 0.4rem; text-overflow: ellipsis; overflow: hidden; }
+  .ops-chx__seg[data-narrow="true"] .ops-chx__seg-label { display: none; }
+  /* Bolder, saturated lane colors so the bar reads as a chart, not a form
+     field. White text on each — contrast verified at 0.72rem/700: blue 6.7:1,
+     green 4.6:1, amber 3.4:1 (use amber-600 for AA at this size). */
+  .ops-chx--groupme  { --seg-bg: #2563eb; --seg-fg: #ffffff; } /* blue-600   */
+  .ops-chx--web      { --seg-bg: #16a34a; --seg-fg: #ffffff; } /* green-600  */
+  .ops-chx--trade    { --seg-bg: #d97706; --seg-fg: #ffffff; } /* amber-600  */
+  .ops-chx--empty    { --seg-bg: #f1f5f9; --seg-fg: #64748b; }
+  .ops-chx__legend {
+    list-style: none; padding: 0; margin: 0.4rem 0 0;
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1rem;
+    font-size: 0.78rem; color: var(--color-text-muted, #64748b);
+  }
+  .ops-chx__legend li { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .ops-chx__swatch {
+    width: 10px; height: 10px; border-radius: 2px; background: var(--seg-bg);
+    border: 1px solid var(--color-border, #e2e8f0);
+  }
+  .ops-chx__legend strong { color: var(--color-text, #0f172a); font-variant-numeric: tabular-nums; }
+  .ops-chx__never {
+    color: #b45309; /* amber-700 — same family as trade lane, signals "watch this" */
+    font-style: normal; font-weight: 600; font-size: 0.72rem;
+  }
+  /* "Never shipped" callout under the bars — surfaces channels with zero
+     all-time byline posts, so the commish can see at a glance that (e.g.)
+     trade-proposal-driven posts have never happened. */
+  .ops-hero__zero-state {
+    margin: 0.6rem 0 0;
+    padding: 0.5rem 0.75rem;
+    background: #fffbeb; /* amber-50 */
+    border-left: 3px solid #d97706; /* amber-600 to match trade lane */
+    border-radius: 4px;
+    font-size: 0.78rem;
+    color: var(--color-text, #0f172a);
+  }
+  .ops-hero__zero-state strong { color: #92400e; /* amber-800 */ }
+  .ops-hero__zero-state em { color: var(--color-text-muted, #64748b); font-style: italic; }
+  /* Queue bar gets a subtle accent so it visually leads the hero stack. */
+  .ops-chx--queue .ops-chx__label { color: var(--color-text, #0f172a); }
+  .ops-chx--queue .ops-chx__bar { box-shadow: inset 0 0 0 1px var(--color-accent, #0ea5e9); }
+  .ops-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ops-chx__seg { transition: none; }
+  }
+
+  /* Cluster section heading — utility eyebrow + dashed divider, NOT the
+     editorial section-title pattern (this is an admin diagnostic page). */
+  .ops-cluster { margin-top: 1.5rem; }
+  .ops-cluster:first-of-type { margin-top: 1rem; }
+  .ops-cluster__title {
+    font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--color-text-muted, #64748b);
+    margin: 0 0 0.6rem;
+    padding: 0 0 0.4rem;
+    border-bottom: 1px dashed var(--color-border, #e2e8f0);
+    display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap;
+  }
+  .ops-cluster__sub {
+    font-size: 0.78rem; font-weight: 400; text-transform: none;
+    letter-spacing: 0; color: var(--color-text-muted, #64748b);
+  }
+
+  /* Diagnostics & Environment — collapsed by default */
+  .ops-diag {
+    margin-top: 2rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 10px;
+    background: var(--color-surface, #f8fafc);
+  }
+  .ops-diag__summary {
+    list-style: none; cursor: pointer;
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem; font-weight: 700;
+    color: var(--color-text, #0f172a);
+    display: flex; align-items: center; gap: 0.5rem;
+    border-radius: 10px;
+  }
+  .ops-diag__summary::-webkit-details-marker { display: none; }
+  .ops-diag__hint {
+    font-weight: 400; font-size: 0.78rem;
+    color: var(--color-text-muted, #64748b);
+    margin-left: auto;
+  }
+  .ops-diag__chev {
+    display: inline-block; transition: transform 150ms ease;
+    font-size: 0.85rem; color: var(--color-text-muted, #64748b);
+  }
+  .ops-diag[open] .ops-diag__chev { transform: rotate(90deg); }
+  .ops-diag[open] .ops-diag__summary {
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 10px 10px 0 0;
+  }
+  .ops-diag__summary:focus-visible {
+    outline: 2px solid var(--color-accent, #0ea5e9);
+    outline-offset: -2px;
+  }
+  .ops-diag .ops-env { border: 0; background: transparent; margin: 0; }
+  .ops-diag .ops-env + .ops-env { border-top: 1px dashed var(--color-border, #e2e8f0); border-radius: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .ops-diag__chev { transition: none; }
+  }
 
   .ops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
   .ops-card {

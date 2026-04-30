@@ -482,6 +482,7 @@ const tabs = [
     wrapper.setAttribute('data-feed-index', '0');
 
     const article = document.createElement('article');
+    article.id = `post-${post.id}`;
     article.className = 'sf-post sf-post--groupme';
     article.dataset.postId = post.id;
     article.dataset.tier = 'standard';

@@ -81,7 +81,7 @@ for (const url of allUrlsToStrip) {
 gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 ---
 
-<article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumor ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumor ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
   <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">

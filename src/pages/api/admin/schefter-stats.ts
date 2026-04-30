@@ -50,6 +50,14 @@ type RedisClient = {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .mjs via allowJs
 import { buildTopicBuckets, bucketPriorityScore, rankBuckets } from '../../../../scripts/lib/schefter-bucket-logic.mjs';
+// Reuse the listener's exact mention regex so the admin's "schefterDetected"
+// flag matches what the live scanner would have done with the same text.
+// Native-reply detection isn't reproducible here (it requires the bot-message
+// id cache), so reply-routed pickups may show as "no match" — that's a
+// deliberate, conservative undercount.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — .mjs via allowJs
+import { detectMention } from '../../../../scripts/schefter-groupme-listen.mjs';
 
 let _redis: RedisClient | null | undefined;
 
@@ -102,7 +110,59 @@ type FeedPost = {
   authorId?: string;
   franchiseIds?: string[];
   league?: string;
+  tipIds?: string[];
 };
+
+export type ChannelKey = 'groupme' | 'web' | 'trade';
+
+export type ChannelCounts = { groupme: number; web: number; trade: number; total: number };
+
+function emptyChannelCounts(): ChannelCounts {
+  return { groupme: 0, web: 0, trade: 0, total: 0 };
+}
+
+/**
+ * Infer the byline channel for a published feed post. Returns null for posts
+ * that are NOT Schefter byline content (wire/external/ESPN syndication and
+ * completed-trade announcements that aren't proposal-driven). Those posts
+ * don't belong in the "what feeds Schefter's GroupMe posts?" rollup —
+ * including them swamps the meaningful signal with ESPN noise.
+ *
+ * Tip-ID prefixes (set by their respective producers):
+ *   `gm_<msgId>`  — GroupMe listener (`scripts/schefter-groupme-listen.mjs`)
+ *   `to_<offerId>`— Trade-offer detector (`scripts/lib/redact-trade-offer.mjs`)
+ *   UUID          — Anonymous web tip form (`/api/schefter-tip`)
+ *
+ * A `rumor_mill` post is keyed by the FIRST identifying prefix in its
+ * tipIds array, in priority order: trade > groupme > web. That priority
+ * matters for multi-source posts (a rumor synthesized from a trade-offer
+ * tip + a web tip should count as Trade — the trade signal is the more
+ * load-bearing one).
+ */
+function inferChannel(p: FeedPost): ChannelKey | null {
+  const sub = p.transactionSubType;
+  const tipIds = Array.isArray(p.tipIds) ? p.tipIds : [];
+  const hasTradeOffer = tipIds.some((id) => typeof id === 'string' && id.startsWith('to_'));
+  const hasGm = tipIds.some((id) => typeof id === 'string' && id.startsWith('gm_'));
+  if (sub === 'rumor_mill') {
+    if (hasTradeOffer) return 'trade';
+    if (hasGm) return 'groupme';
+    return 'web';
+  }
+  if (sub === 'TRADE_PENDING') return 'trade';
+  return null;
+}
+
+/**
+ * Map a queue tip's `source` to a byline channel for the "Coming Next"
+ * preview. `trade_offer` is the only real-proposal source — `trade_bait`
+ * (player-listed-as-available rumors) is gossip-grade and lumps with web.
+ */
+function inferTipChannel(source: unknown): ChannelKey {
+  if (source === 'groupme') return 'groupme';
+  if (source === 'trade_offer') return 'trade';
+  return 'web';
+}
 
 type FeedShape = {
   lastScanTimestamp?: string;
@@ -133,6 +193,15 @@ function deriveFeedStats(feed: FeedShape) {
   let tradeCompletedTotal = 0;
   let claudeAuthoredTotal = 0;
 
+  const channelMix7d = emptyChannelCounts();
+  const channelMixAllTime = emptyChannelCounts();
+  const lastPostByChannel: Record<ChannelKey, number | null> = {
+    groupme: null, web: null, trade: null,
+  };
+  // Map: GroupMe message id (without `gm_` prefix) → published post id.
+  // Used by the admin client to flip GroupMe stream pills to "posted".
+  const postedGmIdToPostId: Record<string, string> = {};
+
   for (const p of posts) {
     const ts = postTs(p);
     const ageMs = now - ts;
@@ -153,6 +222,33 @@ function deriveFeedStats(feed: FeedShape) {
     }
     if (p.transactionSubType === 'TRADE') tradeCompletedTotal += 1;
     if (p.authorId === 'claude') claudeAuthoredTotal += 1;
+
+    const channel = inferChannel(p);
+    if (channel) {
+      channelMixAllTime[channel] += 1;
+      channelMixAllTime.total += 1;
+      if (ageMs <= 7 * day) {
+        channelMix7d[channel] += 1;
+        channelMix7d.total += 1;
+      }
+      if (ts && (lastPostByChannel[channel] === null || ts > (lastPostByChannel[channel] as number))) {
+        lastPostByChannel[channel] = ts;
+      }
+    }
+
+    if (Array.isArray(p.tipIds)) {
+      for (const tid of p.tipIds) {
+        if (typeof tid === 'string' && tid.startsWith('gm_')) {
+          const msgId = tid.slice(3);
+          // First wins on collision. The posts array is iterated in file
+          // order — we don't sort by timestamp — so the "first" post is
+          // whichever happens to come first in the JSON. Either match is
+          // truthful (the message did become a post); the user-visible
+          // effect of a collision is just which post the link goes to.
+          if (msgId && !postedGmIdToPostId[msgId]) postedGmIdToPostId[msgId] = p.id;
+        }
+      }
+    }
   }
 
   const watermark = Array.isArray(feed.pendingTradeWatermark)
@@ -174,6 +270,11 @@ function deriveFeedStats(feed: FeedShape) {
     pendingTradeWatermarkSize: watermark,
     lastScanTimestamp: feed.lastScanTimestamp || null,
     lastProcessedMflTimestamp: feed.lastProcessedMflTimestamp || null,
+    channelMix: {
+      windows: { '7d': channelMix7d, allTime: channelMixAllTime },
+      lastPostByChannel,
+    },
+    postedGmIdToPostId,
   };
 }
 
@@ -246,15 +347,41 @@ async function readRedisStats(redis: RedisClient) {
     return ax - bx;
   });
 
+  // Queue composition by byline channel — what's actually feeding the next
+  // post(s). This is the most operationally important number on the page:
+  // a Schefter byline post is forming any moment, and the commish wants to
+  // know which lane is supplying it. `trade_offer` is the only "real
+  // proposal" source; `trade_bait` (player-listed-as-available) is gossip
+  // and folds into the web lane.
+  const queueChannelMix: ChannelCounts = emptyChannelCounts();
+  for (const tip of pendingTips) {
+    const ch = inferTipChannel((tip as { source?: unknown }).source);
+    queueChannelMix[ch] += 1;
+    queueChannelMix.total += 1;
+  }
+
   // Recent GroupMe messages — latest 50, newest first. Surface as-is so the
   // admin can scan the chat stream and see which messages Schefter picked
   // up vs. ignored. We cross-reference against pendingTips below so the
-  // page can mark messages already enqueued as tips.
+  // page can mark messages already enqueued as tips. We also re-run the
+  // listener's mention regex here so each cached message gets a
+  // `schefterDetected` flag — that's how the client distinguishes "expired"
+  // (was eligible, aged out) from "no match" (regex never fired).
   const recentGroupMe: Array<Record<string, unknown>> = [];
   for (const raw of recentGroupMeRaw ?? []) {
     try {
       const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (msg && typeof msg === 'object') recentGroupMe.push(msg as Record<string, unknown>);
+      if (msg && typeof msg === 'object') {
+        const text = typeof (msg as { text?: unknown }).text === 'string' ? (msg as { text: string }).text : '';
+        let schefterDetected = false;
+        try {
+          const det = detectMention(text);
+          schefterDetected = !!(det && det.match);
+        } catch {
+          // Defensive — never let a regex error break the admin endpoint.
+        }
+        recentGroupMe.push({ ...(msg as Record<string, unknown>), schefterDetected });
+      }
     } catch {
       // Skip unparseable entries.
     }
@@ -357,6 +484,7 @@ async function readRedisStats(redis: RedisClient) {
     pendingTips,
     recentGroupMe,
     predictedPostOrder,
+    queueChannelMix,
   };
 }
 

@@ -76,7 +76,7 @@ if (firstEmbedUrl) {
 }
 ---
 
-<article class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
   <img class={`sfc-avatar${isGroupMe ? ' sfc-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="32" height="32" loading="lazy" />
 
   <div class="sfc-post__content">

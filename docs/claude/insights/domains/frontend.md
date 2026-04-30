@@ -242,3 +242,15 @@ Future franchise rebrandings just need a new history entry added to the config.
 ```
 
 **Evidence:** `src/pages/theleague/salary.astro` — editorial table with JS-injected player rows.
+
+---
+
+## 2026-04-30 - Status Pill Source-of-Truth Pattern
+
+**Context:** The Schefter admin dashboard tagged GroupMe messages "picked up" or "ignored" based purely on whether their id was in the *current* tips queue. Tips have a 24h TTL and are removed once consumed, so any message older than 24h showed "ignored" forever — including ones that successfully became published posts.
+
+**Insight:** Status pills derived from transient storage (queues, caches with TTL) only show *current* state, not historical outcome. For pills that need to remain accurate across an item's full lifetime, cross-reference against a durable record (the published feed, the persisted record, the audit log).
+
+**Evidence:** `src/pages/theleague/admin/schefter.astro` four-state pill system (`posted` / `pending` / `expired` / `no-match`). Server builds `postedGmIdToPostId` map from `feed.posts[].tipIds` (durable) and ships it down once per fetch. Client checks the durable lookup BEFORE the queue lookup.
+
+**Recommendation:** When designing status indicators, identify the durable source first. If the durable source requires a server-side join/aggregation, do it once in the API route (in a lookup table, not row-by-row from the client). Document the four states explicitly so future readers don't conflate "not in queue" with "never picked up".
