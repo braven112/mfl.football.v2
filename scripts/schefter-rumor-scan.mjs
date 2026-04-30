@@ -223,27 +223,59 @@ function buildTradeBuilderPath(franchiseId) {
 }
 
 /**
- * Resolve the CTA for a post based on its primary bucket. Trade-bait
- * posts targeted at a single franchise swap the default tip-page CTA
- * for a Trade Builder deep-link; everything else uses the tip page.
- * Returns all three rendering targets (feed link, feed label, GroupMe
- * URL suffix) so the post builder + groupMeTextFor stay in sync.
+ * A tip is "trade-flavored" if it's about trades in any way — actual MFL
+ * pending offers, owner-listed trade bait, or web/groupme speculation with
+ * topic === 'trade'. All three send readers to the Trade Builder so the
+ * natural next click is to build a counter-offer, not to whisper back.
+ *
+ * Whisper-back tips (`repliesToPostId`) are excluded — the user explicitly
+ * chose to reply to a non-trade rumor; we honor that lane.
+ */
+function isTradeFlavoredTip(tip) {
+  if (!tip) return false;
+  if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return true;
+  if (tip.repliesToPostId) return false;
+  return tip.topic === 'trade';
+}
+
+/**
+ * Bare Trade Builder path used when a trade-flavored rumor doesn't resolve
+ * to a single franchise (league-wide speculation, or a multi-franchise
+ * cluster). Owners land on the empty builder and pick from there.
+ */
+const TRADE_BUILDER_PATH = '/theleague/trade-builder';
+
+/**
+ * Resolve the CTA for a post based on its primary bucket.
+ *
+ * Trade-flavored beats (any tip with source 'trade_offer'/'trade_bait' or
+ * topic 'trade') route to the Trade Builder — single-franchise scope
+ * pre-loads via `?b=<fid>`, multi-franchise or league-wide drops to the
+ * bare builder. Everything else (commish beef, roster gripes, predictions,
+ * other) keeps the tip-page CTA so readers can whisper a follow-up.
+ *
+ * Returns the feed link, feed label, GroupMe prefix, and absolute GroupMe
+ * URL so the post builder + groupMeTextFor stay in sync.
  */
 function resolveCta(primaryBucket) {
   const tips = primaryBucket?.tips ?? [];
-  const allTradeBait = tips.length > 0 && tips.every((t) => t.source === 'trade_bait');
-  if (allTradeBait) {
-    const franchiseIds = new Set(tips.map((t) => t.franchiseHint).filter(Boolean));
-    if (franchiseIds.size === 1) {
-      const [fid] = franchiseIds;
-      const path = buildTradeBuilderPath(fid);
-      return {
-        link: path,
-        linkLabel: TRADE_BUILDER_LINK_LABEL,
-        groupMePrefix: TRADE_BUILDER_GROUPME_PREFIX,
-        groupMeUrl: `${PUBLIC_BASE_URL}${path}`,
-      };
-    }
+  const tradeFlavored = tips.length > 0 && tips.some(isTradeFlavoredTip);
+  if (tradeFlavored) {
+    const franchiseIds = new Set(
+      tips
+        .filter(isTradeFlavoredTip)
+        .map((t) => t.franchiseHint)
+        .filter((fid) => typeof fid === 'string' && fid !== 'league-wide' && fid !== 'commish'),
+    );
+    const path = franchiseIds.size === 1
+      ? buildTradeBuilderPath([...franchiseIds][0])
+      : TRADE_BUILDER_PATH;
+    return {
+      link: path,
+      linkLabel: TRADE_BUILDER_LINK_LABEL,
+      groupMePrefix: TRADE_BUILDER_GROUPME_PREFIX,
+      groupMeUrl: `${PUBLIC_BASE_URL}${path}`,
+    };
   }
   return {
     link: TIP_PAGE_PATH,
@@ -260,13 +292,20 @@ function resolveCta(primaryBucket) {
  * the tip form. Per HARD RULE 4b: this turns one-sided sniping into a thread,
  * which is the engagement-multiplier feature.
  *
+ * Skipped for trade-flavored beats — those route to the Trade Builder via
+ * resolveCta, and a directed tip-form link would override that. Owners who
+ * want to whisper back on a trade rumor can still tap the regular tip page.
+ *
  * Returns null when the beat doesn't qualify (no franchise-explicit-pick
- * scope, or the resolving tip has no franchiseHint).
+ * scope, the resolving tip has no franchiseHint, or any tip in the batch
+ * is trade-flavored).
  */
 function buildDirectedCta(beat) {
   const safe = beat?.anonymized?.[0];
   if (safe?.scope?.kind !== 'franchise-explicit-pick') return null;
-  const tip = beat?.batch?.find((t) => typeof t?.franchiseHint === 'string' && t.franchiseHint.length > 0);
+  const batch = beat?.batch ?? [];
+  if (batch.some(isTradeFlavoredTip)) return null;
+  const tip = batch.find((t) => typeof t?.franchiseHint === 'string' && t.franchiseHint.length > 0);
   const franchiseId = tip?.franchiseHint;
   if (!franchiseId) return null;
   const franchiseShort = safe.scope.franchise || `Team ${franchiseId}`;
