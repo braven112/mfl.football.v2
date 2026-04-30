@@ -32,6 +32,9 @@ export interface TradeBuilderDraftPick {
   round: string;
   originalPickFor: string;
   originalTeamName: string;
+  /** 1-based pick-in-round (e.g. 2 for the 2nd pick of the round). Only set
+   *  for current-year picks where MFL has assigned the actual draft slot. */
+  pickInRound?: number;
 }
 
 /** Processed team data passed from Astro to React */
