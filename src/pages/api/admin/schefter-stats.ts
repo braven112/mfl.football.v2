@@ -127,12 +127,28 @@ function emptyChannelCounts(): ChannelCounts {
  * completed-trade announcements that aren't proposal-driven). Those posts
  * don't belong in the "what feeds Schefter's GroupMe posts?" rollup —
  * including them swamps the meaningful signal with ESPN noise.
+ *
+ * Tip-ID prefixes (set by their respective producers):
+ *   `gm_<msgId>`  — GroupMe listener (`scripts/schefter-groupme-listen.mjs`)
+ *   `to_<offerId>`— Trade-offer detector (`scripts/lib/redact-trade-offer.mjs`)
+ *   UUID          — Anonymous web tip form (`/api/schefter-tip`)
+ *
+ * A `rumor_mill` post is keyed by the FIRST identifying prefix in its
+ * tipIds array, in priority order: trade > groupme > web. That priority
+ * matters for multi-source posts (a rumor synthesized from a trade-offer
+ * tip + a web tip should count as Trade — the trade signal is the more
+ * load-bearing one).
  */
 function inferChannel(p: FeedPost): ChannelKey | null {
   const sub = p.transactionSubType;
   const tipIds = Array.isArray(p.tipIds) ? p.tipIds : [];
+  const hasTradeOffer = tipIds.some((id) => typeof id === 'string' && id.startsWith('to_'));
   const hasGm = tipIds.some((id) => typeof id === 'string' && id.startsWith('gm_'));
-  if (sub === 'rumor_mill') return hasGm ? 'groupme' : 'web';
+  if (sub === 'rumor_mill') {
+    if (hasTradeOffer) return 'trade';
+    if (hasGm) return 'groupme';
+    return 'web';
+  }
   if (sub === 'TRADE_PENDING') return 'trade';
   return null;
 }

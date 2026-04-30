@@ -110,6 +110,58 @@ if (!user || !isCommissionerOrAdmin(user)) {
       <p class="ops-hero__zero-state" data-chx-zero hidden></p>
     </section>
 
+    <section class="ops-cluster" aria-labelledby="cluster-intake">
+      <h2 class="ops-cluster__title" id="cluster-intake">
+        Channel Intake
+        <span class="ops-cluster__sub">Where tips come from, before the queue.</span>
+      </h2>
+      <div class="ops-grid">
+      <article class="ops-card" aria-labelledby="card-sources">
+        <h3 id="card-sources" class="ops-card__title">Tip Sources (recent archive)</h3>
+        <p class="ops-card__hint">
+          Sampled from <code>schefter:tips:processed</code> (last ~200 drained tips).
+        </p>
+        <dl class="ops-dl">
+          <div><dt>Sample size</dt><dd data-k="redis.tipSampleSize">—</dd></div>
+          <div><dt>Web tips</dt><dd data-k="redis.tipSourceBreakdown.web">—</dd></div>
+          <div><dt>GroupMe tips</dt><dd data-k="redis.tipSourceBreakdown.groupme">—</dd></div>
+          <div><dt>Trade-offer tips</dt><dd data-k="redis.tipSourceBreakdown.trade_offer">—</dd></div>
+          <div><dt>Unknown / unparsed</dt><dd data-k="redis.tipSourceBreakdown.unknown">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-groupme">
+        <h3 id="card-groupme" class="ops-card__title">GroupMe Ingestion</h3>
+        <p class="ops-card__hint">Polling cache in <code>groupme:messages</code> ZSET.</p>
+        <dl class="ops-dl">
+          <div><dt>Messages cached</dt><dd data-k="redis.groupmeMessagesCached">—</dd></div>
+          <div><dt>Last message id</dt><dd data-k="redis.groupmeLastMessageId">—</dd></div>
+          <div><dt>Last sync</dt><dd data-k="fmt.groupmeLastSyncTs">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="ops-card" aria-labelledby="card-offers">
+        <h3 id="card-offers" class="ops-card__title">Trade Offers Ingested</h3>
+        <p class="ops-card__hint">
+          Cumulative-probability model: <code>p=0.025</code>/run (~91% by 24h, ~99% by 48h).
+          Bumped 2026-04-30 from 0.0075 — trade proposals are the league's highest-engagement
+          posts, so we report them faster. In-flight = offers still eligible to post.
+          Posted = offers the rumor mill has already announced.
+          Lingering (≥48h) flips the voice to "phones aren't picking up".
+        </p>
+        <dl class="ops-dl">
+          <div><dt>In-flight (eligible)</dt><dd data-k="redis.tradeOffersInFlight">—</dd></div>
+          <div><dt>— fresh (&lt;48h)</dt><dd data-k="redis.tradeOffersFresh">—</dd></div>
+          <div><dt>— lingering (≥48h)</dt><dd data-k="redis.tradeOffersLingering">—</dd></div>
+          <div><dt>Oldest in-flight age</dt><dd data-k="redis.tradeOffersOldestAgeMs" data-fmt="duration">—</dd></div>
+          <div><dt>Posted (30d TTL)</dt><dd data-k="redis.tradeOffersPosted">—</dd></div>
+          <div><dt>Legacy one-shot burned</dt><dd data-k="redis.tradeOffersSeen">—</dd></div>
+          <div><dt>Pending-trade watermark size</dt><dd data-k="feed.pendingTradeWatermarkSize">—</dd></div>
+        </dl>
+      </article>
+      </div>
+    </section>
+
     <section class="ops-cluster" aria-labelledby="cluster-next">
       <h2 class="ops-cluster__title" id="cluster-next">
         Coming Next
@@ -188,48 +240,6 @@ if (!user || !isCommissionerOrAdmin(user)) {
           <div><dt>Next earliest post</dt><dd data-k="fmt.nextEarliestPostAt">—</dd></div>
           <div><dt>Posts today (cap 3)</dt><dd data-k="redis.postsToday">—</dd></div>
           <div><dt>Last rumor post</dt><dd data-k="fmt.lastRumorPostTs">—</dd></div>
-        </dl>
-      </article>
-
-      <article class="ops-card" aria-labelledby="card-sources">
-        <h3 id="card-sources" class="ops-card__title">Tip Sources (recent archive)</h3>
-        <p class="ops-card__hint">
-          Sampled from <code>schefter:tips:processed</code> (last ~200 drained tips).
-        </p>
-        <dl class="ops-dl">
-          <div><dt>Sample size</dt><dd data-k="redis.tipSampleSize">—</dd></div>
-          <div><dt>Web tips</dt><dd data-k="redis.tipSourceBreakdown.web">—</dd></div>
-          <div><dt>GroupMe tips</dt><dd data-k="redis.tipSourceBreakdown.groupme">—</dd></div>
-          <div><dt>Trade-offer tips</dt><dd data-k="redis.tipSourceBreakdown.trade_offer">—</dd></div>
-          <div><dt>Unknown / unparsed</dt><dd data-k="redis.tipSourceBreakdown.unknown">—</dd></div>
-        </dl>
-      </article>
-
-      <article class="ops-card" aria-labelledby="card-groupme">
-        <h3 id="card-groupme" class="ops-card__title">GroupMe Ingestion</h3>
-        <p class="ops-card__hint">Polling cache in <code>groupme:messages</code> ZSET.</p>
-        <dl class="ops-dl">
-          <div><dt>Messages cached</dt><dd data-k="redis.groupmeMessagesCached">—</dd></div>
-          <div><dt>Last message id</dt><dd data-k="redis.groupmeLastMessageId">—</dd></div>
-          <div><dt>Last sync</dt><dd data-k="fmt.groupmeLastSyncTs">—</dd></div>
-        </dl>
-      </article>
-
-      <article class="ops-card" aria-labelledby="card-offers">
-        <h3 id="card-offers" class="ops-card__title">Trade Offers Ingested</h3>
-        <p class="ops-card__hint">
-          Cumulative-probability model: <code>p=0.0075</code>/run (99% cumulative by ~day 6.4).
-          In-flight = offers still eligible to post. Posted = offers the rumor mill has already announced.
-          Lingering (≥48h) flips the voice to "phones aren't picking up".
-        </p>
-        <dl class="ops-dl">
-          <div><dt>In-flight (eligible)</dt><dd data-k="redis.tradeOffersInFlight">—</dd></div>
-          <div><dt>— fresh (&lt;48h)</dt><dd data-k="redis.tradeOffersFresh">—</dd></div>
-          <div><dt>— lingering (≥48h)</dt><dd data-k="redis.tradeOffersLingering">—</dd></div>
-          <div><dt>Oldest in-flight age</dt><dd data-k="redis.tradeOffersOldestAgeMs" data-fmt="duration">—</dd></div>
-          <div><dt>Posted (30d TTL)</dt><dd data-k="redis.tradeOffersPosted">—</dd></div>
-          <div><dt>Legacy one-shot burned</dt><dd data-k="redis.tradeOffersSeen">—</dd></div>
-          <div><dt>Pending-trade watermark size</dt><dd data-k="feed.pendingTradeWatermarkSize">—</dd></div>
         </dl>
       </article>
 
