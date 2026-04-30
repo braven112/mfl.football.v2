@@ -143,11 +143,14 @@ if (!user || !isCommissionerOrAdmin(user)) {
       <article class="ops-card" aria-labelledby="card-offers">
         <h3 id="card-offers" class="ops-card__title">Trade Offers Ingested</h3>
         <p class="ops-card__hint">
-          Cumulative-probability model: <code>p=0.025</code>/run (~91% by 24h, ~99% by 48h).
-          Bumped 2026-04-30 from 0.0075 — trade proposals are the league's highest-engagement
-          posts, so we report them faster. In-flight = offers still eligible to post.
-          Posted = offers the rumor mill has already announced.
-          Lingering (≥48h) flips the voice to "phones aren't picking up".
+          Cumulative-probability model: <code>p=0.05</code>/run.
+          GitHub Actions cron is <code>*/15</code> but actually fires every ~28-30 min
+          on free runners, so realistic cadence is ~48 runs/day. At that rate offers
+          fire ~92% by 24h, ~99% by 48h. Bumped 2026-04-30 from 0.0075 (which took
+          ~6 days to clear) because trade proposals drive the most chat reactions.
+          In-flight = offers still eligible to post. Posted = offers the rumor mill
+          has already announced. Lingering (≥48h) flips the voice to "phones aren't
+          picking up".
         </p>
         <dl class="ops-dl">
           <div><dt>In-flight (eligible)</dt><dd data-k="redis.tradeOffersInFlight">—</dd></div>

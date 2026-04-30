@@ -236,13 +236,17 @@ export function redactTradeOffer({
 /**
  * Per-run probability for posting a trade-offer rumor.
  *
- * Base p=0.025 per 15-minute scanner run. With 96 runs/day this compounds
- * cumulatively to ~91% by 24h and ~99% by 48h. No guaranteed post — unposted
- * offers can fail forever; that's still the design, just on a faster clock.
+ * Base p=0.05 per scanner run. The cron is "every 15 min" but the realistic
+ * firing rate on free GitHub runners is every ~28-30 min (skipped runs under
+ * load), so plan on ~48 runs/day, not 96.
+ * At that cadence the cumulative curve is ~92% by 24h, ~99% by 48h. No
+ * guaranteed post — unposted offers can theoretically fail forever; the
+ * privacy property "owner can't tell which signal tipped Schefter" still
+ * holds because the per-run roll is independent of any specific submitter.
  *
- * (Was 0.0075 → ~54%/24h, ~79%/48h, ~99% by 6.4d. Bumped 2026-04-30: trade
- * proposals are the highest-engagement Schefter content in TheLeague's
- * GroupMe, so we'd rather report them quickly than have them age out.)
+ * (Was 0.0075 → ~30%/24h, ~85% by 6 days at 48 r/d. Bumped 2026-04-30: trade
+ * proposals are the league's highest-engagement Schefter content, so we'd
+ * rather report them on a 1-2 day timeline than have them age out unreported.)
  *
  * The 48h framing flip from "fresh" to "lingering" ("offered but phones aren't
  * picking up") is handled in scanTradeOffers, not here. The probability itself
@@ -251,7 +255,7 @@ export function redactTradeOffer({
  * Exponential scaling on shopping volume: when the *effective* distinct
  * offerers for the most-shopped player in this offer is ≥2, multiply the
  * base by `OFFER_VOLUME_BOOST_FACTOR ^ (effectiveOfferers - 1)` and cap at
- * `OFFER_VOLUME_BOOST_MAX` so the per-run probability never exceeds ~10%.
+ * `OFFER_VOLUME_BOOST_MAX` so the per-run probability never exceeds ~20%.
  * Effective count blends real submitted offerers (full weight) with saved
  * trade-builder drafts (0.4 weight, computed in the scanner).
  *
@@ -263,11 +267,16 @@ export function redactTradeOffer({
  *
  * Exported for tests & dry-run logging.
  */
-// Bumped 2026-04-30 from 0.0075 → 0.025 (3.3× higher) to make trade-proposal
-// posts more frequent — they're the league's highest-engagement Schefter
-// content. New cumulative curve: ~91% by day 1, ~99% by day 2 (was ~51% / 6.4
-// days). Heavily-shopped players still get the volume boost on top.
-export const OFFER_POST_PROBABILITY = 0.025;
+// Bumped 2026-04-30 from 0.0075 → 0.05 (6.7× higher) to make trade-proposal
+// posts the dominant Schefter content in TheLeague's GroupMe — they drive
+// the most chat reactions and are the biggest engagement multiplier.
+//
+// Cadence math: GitHub Actions cron is set to */15 but actually fires every
+// ~28-30 min in practice (skipped runs under load on free runners), so the
+// realistic rate is ~48 runs/day, not 96. New cumulative curve at 48 r/d:
+// ~92% by 24h, ~99% by 48h, ~100% by 72h (was ~30%/24h, ~85% by 6d).
+// Per-run cap with the 4× volume boost: 0.20 — still a roll, not a guarantee.
+export const OFFER_POST_PROBABILITY = 0.05;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;
 
