@@ -448,6 +448,15 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
       const data = await res.json();
 
       if (data.success) {
+        // Invalidate the trade-alert modal's cached pending trades so the
+        // bell on other pages shows the newly-submitted offer instead of
+        // "No Pending Trades". The modal debounces API calls for 60s via
+        // sessionStorage; clearing the key + dispatching the event forces
+        // an immediate refetch the next time it polls.
+        try {
+          sessionStorage.removeItem('mfl:trade-alert-last-check');
+          document.dispatchEvent(new CustomEvent('mfl:trades-changed'));
+        } catch { /* sessionStorage / CustomEvent unavailable — non-fatal */ }
         setSubmissionStatus({ status: 'success', errorMessage: null });
       } else {
         setSubmissionStatus({

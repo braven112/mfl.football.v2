@@ -1067,3 +1067,11 @@ async function tamPoll() {
 }
 
 document.addEventListener('astro:page-load', tamPoll);
+
+// Force an immediate fresh poll when a trade is submitted/accepted/rejected
+// elsewhere in the app, bypassing the 60s debounce so the bell badge and
+// modal reflect the new state without waiting for a navigation.
+document.addEventListener('mfl:trades-changed', () => {
+  try { sessionStorage.removeItem(TAM_DEBOUNCE_KEY); } catch {}
+  tamPoll();
+});
