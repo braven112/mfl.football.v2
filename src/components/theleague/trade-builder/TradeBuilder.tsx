@@ -310,10 +310,12 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     [teamB, state.teamB.playerIds]
   );
 
-  // Compute trade impact
+  // Compute trade impact. We compute even when no players are involved
+  // (picks-only trades) so the confirmation modal — which is gated on these
+  // being non-null — still renders. computeTeamTradeImpact handles empty
+  // player arrays cleanly: cap deltas are zero and salaries are unchanged.
   const tradeImpactA = useMemo(() => {
-    if (!teamA || (teamAPlayers.length === 0 && teamBPlayers.length === 0))
-      return null;
+    if (!teamA) return null;
     return computeTeamTradeImpact(
       teamA,
       teamAPlayers,
@@ -323,8 +325,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
   }, [teamA, teamAPlayers, teamBPlayers, state.teamA.rookieExtensions]);
 
   const tradeImpactB = useMemo(() => {
-    if (!teamB || (teamAPlayers.length === 0 && teamBPlayers.length === 0))
-      return null;
+    if (!teamB) return null;
     return computeTeamTradeImpact(
       teamB,
       teamBPlayers,
