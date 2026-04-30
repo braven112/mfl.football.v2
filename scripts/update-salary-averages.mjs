@@ -49,7 +49,9 @@ const outputSummary = path.join(dataDir, leagueKey, `mfl-salary-averages-${seaso
 const outputSummaryRoot = path.join(dataDir, `mfl-salary-averages-${season}.json`);
 const historyDir = path.join(dataDir, 'salary-history', leagueKey, season);
 const seasonStateFile = path.join(dataDir, `mfl-season-state-${leagueKey}.json`);
-const cachedRostersFile = path.join(dataDir, 'mfl-feeds', leagueKey, season, 'rosters.json');
+const feedsCacheDir = path.join(projectRoot, 'data', leagueKey, 'mfl-feeds', season);
+const cachedRostersFile = path.join(feedsCacheDir, 'rosters.json');
+const cachedPlayersFile = path.join(feedsCacheDir, 'players.json');
 const DEFAULT_HEADSHOT_URL =
   'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
@@ -156,20 +158,37 @@ const buildUrl = (type, params = {}, options = {}) => {
   return url;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const fetchExport = async (type, params = {}, options = {}) => {
   const url = buildUrl(type, params, options);
-  const response = await fetch(url);
-  if (!response.ok) {
+  const maxAttempts = 4;
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const response = await fetch(url);
+    if (response.ok) {
+      const payload = await response.json();
+      if (payload?.error?.$t) {
+        throw new Error(payload.error.$t);
+      }
+      return payload;
+    }
     const text = await response.text();
-    throw new Error(
+    const transient = response.status === 429 || response.status >= 500;
+    lastError = new Error(
       `Unable to fetch ${type} (${response.status}): ${text.slice(0, 200)}`
     );
+    if (!transient || attempt === maxAttempts) throw lastError;
+    const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '', 10);
+    const wait = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1000
+      : 1500 * 2 ** (attempt - 1);
+    console.warn(
+      `[salary-averages] ${type} returned ${response.status}; retrying in ${wait}ms (attempt ${attempt}/${maxAttempts - 1})`
+    );
+    await sleep(wait);
   }
-  const payload = await response.json();
-  if (payload?.error?.$t) {
-    throw new Error(payload.error.$t);
-  }
-  return payload;
+  throw lastError;
 };
 
 const chunkArray = (items, size = 100) => {
@@ -312,35 +331,75 @@ const fetchNflverseSnapCounts = async (seasonYear) => {
   }
 };
 
-const fetchPlayerMeta = async (playerIds) => {
-  const chunks = chunkArray(playerIds, 150);
-  const results = [];
-  for (const chunk of chunks) {
-    const payload = await fetchExport(
-      'players',
-      { DETAILS: '1', PLAYERS: chunk.join(',') },
-      { includeWeek: false }
+const buildMetaEntry = (player) => {
+  const id = player?.id;
+  if (!id) return null;
+  return [id, {
+    id,
+    name: normalizeName(player),
+    position: player?.position,
+    team: normalizeTeamCode(player?.team) || null,
+    draftYear: player?.draft_year ? Number.parseInt(player.draft_year, 10) : null,
+    draftTeam: player?.draft_team ?? null,
+    birthdate: player?.birthdate ? Number.parseInt(player.birthdate, 10) : null,
+  }];
+};
+
+const loadCachedPlayerDirectory = async () => {
+  try {
+    const raw = await fs.readFile(cachedPlayersFile, 'utf8');
+    const payload = JSON.parse(raw);
+    const directory = new Map();
+    ensureArray(payload?.players?.player).forEach((player) => {
+      if (player?.id) directory.set(player.id, player);
+    });
+    if (directory.size) {
+      console.log(
+        `[salary-averages] Loaded ${directory.size} players from cached ${path.relative(projectRoot, cachedPlayersFile)}.`
+      );
+    }
+    return { directory, payload };
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      console.warn(`[salary-averages] Could not read cached players file: ${error.message}`);
+    }
+    return { directory: new Map(), payload: null };
+  }
+};
+
+const fetchPlayerMeta = async (playerIds, cachedDirectory = new Map()) => {
+  const meta = new Map();
+  const rawPayloads = [];
+  const missing = [];
+
+  playerIds.forEach((id) => {
+    const cached = cachedDirectory.get(id);
+    const entry = cached ? buildMetaEntry(cached) : null;
+    if (entry) meta.set(entry[0], entry[1]);
+    else missing.push(id);
+  });
+
+  if (missing.length) {
+    console.log(
+      `[salary-averages] Fetching API metadata for ${missing.length} players not in cache...`
     );
-    results.push(payload);
+    const chunks = chunkArray(missing, 100);
+    for (let i = 0; i < chunks.length; i++) {
+      if (i > 0) await sleep(750);
+      const payload = await fetchExport(
+        'players',
+        { DETAILS: '1', PLAYERS: chunks[i].join(',') },
+        { includeWeek: false }
+      );
+      rawPayloads.push(payload);
+      ensureArray(payload?.players?.player).forEach((player) => {
+        const entry = buildMetaEntry(player);
+        if (entry) meta.set(entry[0], entry[1]);
+      });
+    }
   }
 
-  const meta = new Map();
-  results.forEach((payload) => {
-    ensureArray(payload?.players?.player).forEach((player) => {
-      const id = player?.id;
-      if (!id) return;
-      meta.set(id, {
-        id,
-        name: normalizeName(player),
-        position: player?.position,
-        team: normalizeTeamCode(player?.team) || null,
-        draftYear: player?.draft_year ? Number.parseInt(player.draft_year, 10) : null,
-        draftTeam: player?.draft_team ?? null,
-        birthdate: player?.birthdate ? Number.parseInt(player.birthdate, 10) : null,
-      });
-    });
-  });
-  return { meta, rawPayloads: results };
+  return { meta, rawPayloads };
 };
 
 const matchSleeperPlayer = (meta, sleeperByKey) => {
@@ -876,10 +935,12 @@ const run = async () => {
   }
 
   console.log(
-    `[salary-averages] Fetching metadata for ${rosterPlayers.size} players...`
+    `[salary-averages] Resolving metadata for ${rosterPlayers.size} players...`
   );
+  const { directory: cachedPlayerDirectory } = await loadCachedPlayerDirectory();
   const { meta: playerMeta, rawPayloads: playerPayloads } = await fetchPlayerMeta(
-    Array.from(rosterPlayers)
+    Array.from(rosterPlayers),
+    cachedPlayerDirectory
   );
 
   let sleeperDirectory = { byKey: new Map(), payload: null };
@@ -1149,8 +1210,8 @@ const run = async () => {
         if (currentRosterPlayers.size) {
           const newPlayerIds = [...currentRosterPlayers].filter((id) => !playerMeta.has(id));
           if (newPlayerIds.length) {
-            console.log(`[salary-averages] Fetching metadata for ${newPlayerIds.length} new players...`);
-            const { meta: newMeta } = await fetchPlayerMeta(newPlayerIds);
+            console.log(`[salary-averages] Resolving metadata for ${newPlayerIds.length} new players...`);
+            const { meta: newMeta } = await fetchPlayerMeta(newPlayerIds, cachedPlayerDirectory);
             newMeta.forEach((value, key) => playerMeta.set(key, value));
           }
 
