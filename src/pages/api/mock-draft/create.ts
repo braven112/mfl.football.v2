@@ -20,6 +20,7 @@ import {
   resolveMflId,
   formatMflName,
 } from '../../../utils/player-name-matching';
+import { isDraftablePosition } from '../../../utils/build-draft-players';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
@@ -173,8 +174,16 @@ export const POST: APIRoute = async ({ request }) => {
     const allPlayers: any[] = allPlayersRaw
       ? (Array.isArray(allPlayersRaw) ? allPlayersRaw : [allPlayersRaw])
       : [];
+    // Filter to draftable offensive rookies. Without the position gate, the
+    // pool includes IDPs (DE/DT/LB/CB/S) that show up in MFL's rookie ADP and
+    // get auto-picked by AI teams — but the client's player map (built via
+    // build-draft-players → DRAFTABLE_POSITIONS) excludes them, so those
+    // slots render blank ("—") on the board even though the server thinks
+    // the pick was made.
     const rookiePool = allPlayers.filter(
-      (p: any) => p.status === 'R' || p.draft_year === leagueYearStr,
+      (p: any) =>
+        (p.status === 'R' || p.draft_year === leagueYearStr) &&
+        isDraftablePosition(p.position || ''),
     );
     const rookieIdSet = new Set(rookiePool.map((p: any) => p.id));
 
