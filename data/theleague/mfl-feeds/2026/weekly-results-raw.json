@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.0",
+    "encoding": "utf-8",
     "weeklyResults": {
       "week": "1",
       "matchup": [
@@ -8,16 +8,17 @@
           "regularSeason": "1",
           "franchise": [
             {
-              "id": "0015",
-              "spread": "0",
               "result": "T",
+              "spread": "0",
+              "id": "0015",
               "isHome": "0"
             },
             {
-              "spread": "0",
-              "result": "T",
-              "nonstarters": "16176,16207,16586,0508,15981,14105,13319,17077,12616,",
               "starters": "14056,15972,16165,13629,15282,15798,15329,13832,0514,",
+              "spread": "0",
+              "nonstarters": "16176,16207,16586,0508,15981,14105,13319,17077,12616,",
+              "result": "T",
+              "isHome": "1",
               "id": "0006",
               "player": [
                 {
@@ -25,20 +26,20 @@
                   "status": "starter"
                 },
                 {
-                  "id": "15972",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "15972"
                 },
                 {
-                  "id": "16165",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "16165"
                 },
                 {
                   "id": "13629",
                   "status": "starter"
                 },
                 {
-                  "id": "15282",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "15282"
                 },
                 {
                   "id": "15798",
@@ -49,8 +50,8 @@
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "13832"
+                  "id": "13832",
+                  "status": "starter"
                 },
                 {
                   "status": "starter",
@@ -61,24 +62,24 @@
                   "status": "nonstarter"
                 },
                 {
-                  "id": "16207",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16207"
                 },
                 {
                   "status": "nonstarter",
                   "id": "16586"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "0508"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "15981"
-                },
-                {
-                  "id": "14105",
+                  "id": "0508",
                   "status": "nonstarter"
+                },
+                {
+                  "id": "15981",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "14105"
                 },
                 {
                   "id": "13319",
@@ -92,12 +93,12 @@
                   "id": "12616",
                   "status": "nonstarter"
                 }
-              ],
-              "isHome": "1"
+              ]
             }
           ]
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
@@ -107,15 +108,14 @@
             },
             {
               "starters": "16579,16164,15738,13132,16186,17074,13672,16843,0521,",
-              "spread": "0",
-              "result": "T",
               "nonstarters": "13354,16188,16635,17031,13133,16788,16757,14080,14122,15241,14143,0506,15259,15254,",
+              "result": "T",
+              "spread": "0",
               "isHome": "1",
-              "id": "0004",
               "player": [
                 {
-                  "id": "16579",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "16579"
                 },
                 {
                   "id": "16164",
@@ -126,28 +126,28 @@
                   "id": "15738"
                 },
                 {
-                  "id": "13132",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "13132"
                 },
                 {
-                  "id": "16186",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "16186"
                 },
                 {
                   "id": "17074",
                   "status": "starter"
                 },
                 {
-                  "id": "13672",
-                  "status": "starter"
-                },
-                {
-                  "id": "16843",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "13672"
                 },
                 {
                   "status": "starter",
-                  "id": "0521"
+                  "id": "16843"
+                },
+                {
+                  "id": "0521",
+                  "status": "starter"
                 },
                 {
                   "status": "nonstarter",
@@ -158,36 +158,36 @@
                   "id": "16188"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "16635"
+                  "id": "16635",
+                  "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
                   "id": "17031"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "13133"
+                  "id": "13133",
+                  "status": "nonstarter"
                 },
                 {
                   "id": "16788",
                   "status": "nonstarter"
                 },
                 {
-                  "id": "16757",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16757"
                 },
                 {
-                  "id": "14080",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "14080"
                 },
                 {
                   "status": "nonstarter",
                   "id": "14122"
                 },
                 {
-                  "id": "15241",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "15241"
                 },
                 {
                   "status": "nonstarter",
@@ -205,27 +205,27 @@
                   "id": "15254",
                   "status": "nonstarter"
                 }
-              ]
+              ],
+              "id": "0004"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
-              "spread": "0",
               "id": "0007",
-              "result": "T"
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
             },
             {
               "isHome": "1",
+              "result": "T",
               "spread": "0",
-              "id": "0011",
-              "result": "T"
+              "id": "0011"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
@@ -236,14 +236,11 @@
               "result": "T"
             },
             {
-              "nonstarters": "15802,16195,16287,15787,17171,17080,17048,14059,17098,13630,14600,",
-              "result": "T",
-              "spread": "0",
-              "starters": "14782,16167,14797,15711,15281,15789,11244,12860,0518,",
+              "isHome": "1",
               "player": [
                 {
-                  "status": "starter",
-                  "id": "14782"
+                  "id": "14782",
+                  "status": "starter"
                 },
                 {
                   "status": "starter",
@@ -262,56 +259,56 @@
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "15789"
+                  "id": "15789",
+                  "status": "starter"
                 },
                 {
                   "status": "starter",
                   "id": "11244"
                 },
                 {
-                  "status": "starter",
-                  "id": "12860"
+                  "id": "12860",
+                  "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "0518"
+                  "id": "0518",
+                  "status": "starter"
                 },
                 {
-                  "id": "15802",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "15802"
                 },
                 {
                   "status": "nonstarter",
                   "id": "16195"
                 },
                 {
-                  "id": "16287",
+                  "status": "nonstarter",
+                  "id": "16287"
+                },
+                {
+                  "id": "15787",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "15787"
+                  "id": "17171"
                 },
                 {
-                  "id": "17171",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "17080"
                 },
                 {
-                  "id": "17080",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "17048",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "17048"
                 },
                 {
                   "id": "14059",
                   "status": "nonstarter"
                 },
                 {
-                  "id": "17098",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "17098"
                 },
                 {
                   "status": "nonstarter",
@@ -323,7 +320,10 @@
                 }
               ],
               "id": "0013",
-              "isHome": "1"
+              "starters": "14782,16167,14797,15711,15281,15789,11244,12860,0518,",
+              "nonstarters": "15802,16195,16287,15787,17171,17080,17048,14059,17098,13630,14600,",
+              "result": "T",
+              "spread": "0"
             }
           ],
           "regularSeason": "1"
@@ -332,92 +332,95 @@
           "regularSeason": "1",
           "franchise": [
             {
+              "isHome": "0",
               "result": "T",
               "id": "0014",
-              "spread": "0",
-              "isHome": "0"
+              "spread": "0"
             },
             {
-              "isHome": "1",
-              "spread": "0",
+              "result": "T",
               "id": "0002",
-              "result": "T"
+              "spread": "0",
+              "isHome": "1"
             }
           ]
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
-              "id": "0008",
+              "result": "T",
+              "nonstarters": "15777,16187,0503,16629,17053,16626,15797,16628,17034,17078,17107,17076,15749,15786,0529,",
+              "spread": "0",
+              "starters": "16582,13604,16162,14104,17081,15799,16214,15368,0511,",
               "player": [
                 {
                   "status": "starter",
                   "id": "16582"
                 },
                 {
-                  "id": "13604",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "13604"
                 },
                 {
                   "status": "starter",
                   "id": "16162"
                 },
                 {
-                  "id": "14104",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "14104"
                 },
                 {
-                  "id": "17081",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "17081"
                 },
                 {
                   "status": "starter",
                   "id": "15799"
                 },
                 {
-                  "status": "starter",
-                  "id": "16214"
+                  "id": "16214",
+                  "status": "starter"
                 },
                 {
-                  "id": "15368",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "15368"
                 },
                 {
                   "id": "0511",
                   "status": "starter"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "15777"
-                },
-                {
-                  "id": "16187",
+                  "id": "15777",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "0503"
+                  "id": "16187"
                 },
                 {
-                  "id": "16629",
+                  "id": "0503",
                   "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16629"
                 },
                 {
                   "id": "17053",
                   "status": "nonstarter"
                 },
                 {
-                  "id": "16626",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16626"
                 },
                 {
-                  "id": "15797",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "15797"
                 },
                 {
-                  "id": "16628",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16628"
                 },
                 {
                   "status": "nonstarter",
@@ -428,49 +431,447 @@
                   "status": "nonstarter"
                 },
                 {
-                  "id": "17107",
+                  "status": "nonstarter",
+                  "id": "17107"
+                },
+                {
+                  "id": "17076",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "15749",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "17076"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "15749"
-                },
-                {
-                  "id": "15786",
-                  "status": "nonstarter"
+                  "id": "15786"
                 },
                 {
                   "status": "nonstarter",
                   "id": "0529"
                 }
               ],
-              "starters": "16582,13604,16162,14104,17081,15799,16214,15368,0511,",
-              "spread": "0",
-              "result": "T",
-              "nonstarters": "15777,16187,0503,16629,17053,16626,15797,16628,17034,17078,17107,17076,15749,15786,0529,"
+              "id": "0008",
+              "isHome": "0"
             },
             {
-              "isHome": "1",
-              "id": "0012",
               "spread": "0",
-              "result": "T"
+              "id": "0012",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0005"
+            },
+            {
+              "starters": "16580,16161,17071,14127,16615,15756,16269,17220,0512,",
+              "spread": "0",
+              "nonstarters": "16150,16747,16178,16212,16643,14842,13163,16809,17056,17108,16645,",
+              "result": "T",
+              "isHome": "1",
+              "id": "0010",
+              "player": [
+                {
+                  "id": "16580",
+                  "status": "starter"
+                },
+                {
+                  "id": "16161",
+                  "status": "starter"
+                },
+                {
+                  "id": "17071",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "14127"
+                },
+                {
+                  "status": "starter",
+                  "id": "16615"
+                },
+                {
+                  "id": "15756",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "16269"
+                },
+                {
+                  "id": "17220",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "0512"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16150"
+                },
+                {
+                  "id": "16747",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16178"
+                },
+                {
+                  "id": "16212",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "16643",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "14842",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "13163"
+                },
+                {
+                  "id": "16809",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "17056",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "17108"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16645"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "id": "0003",
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "starters": "13593,15742,11675,13635,15284,16192,17104,11936,0516,",
+              "spread": "0",
+              "result": "T",
+              "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,12611,14823,",
+              "isHome": "1",
+              "id": "0001",
+              "player": [
+                {
+                  "id": "13593",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "15742"
+                },
+                {
+                  "status": "starter",
+                  "id": "11675"
+                },
+                {
+                  "id": "13635",
+                  "status": "starter"
+                },
+                {
+                  "id": "15284",
+                  "status": "starter"
+                },
+                {
+                  "id": "16192",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "17104"
+                },
+                {
+                  "id": "11936",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "0516"
+                },
+                {
+                  "id": "16617",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "16080",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16610"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "0507"
+                },
+                {
+                  "id": "14974",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "15255",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16778"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "13424"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16432"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16642"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "14800"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "14079"
+                },
+                {
+                  "id": "17096",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "17033"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "0513"
+                },
+                {
+                  "id": "14138",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "13592"
+                },
+                {
+                  "id": "12611",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "14823",
+                  "status": "nonstarter"
+                }
+              ]
             }
           ],
           "regularSeason": "1"
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "result": "T",
-              "id": "0005",
               "spread": "0",
+              "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,12611,14823,",
+              "result": "T",
+              "starters": "13593,15742,11675,13635,15284,16192,17104,11936,0516,",
+              "id": "0001",
+              "player": [
+                {
+                  "status": "starter",
+                  "id": "13593"
+                },
+                {
+                  "status": "starter",
+                  "id": "15742"
+                },
+                {
+                  "status": "starter",
+                  "id": "11675"
+                },
+                {
+                  "status": "starter",
+                  "id": "13635"
+                },
+                {
+                  "id": "15284",
+                  "status": "starter"
+                },
+                {
+                  "id": "16192",
+                  "status": "starter"
+                },
+                {
+                  "status": "starter",
+                  "id": "17104"
+                },
+                {
+                  "status": "starter",
+                  "id": "11936"
+                },
+                {
+                  "id": "0516",
+                  "status": "starter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16617"
+                },
+                {
+                  "id": "16080",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "16610",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "0507",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "14974"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "15255"
+                },
+                {
+                  "id": "16778",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "13424",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16432"
+                },
+                {
+                  "id": "16642",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "14800",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "14079",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "17096",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "17033"
+                },
+                {
+                  "id": "0513",
+                  "status": "nonstarter"
+                },
+                {
+                  "id": "14138",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "13592"
+                },
+                {
+                  "id": "12611",
+                  "status": "nonstarter"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "14823"
+                }
+              ],
               "isHome": "0"
             },
             {
+              "spread": "0",
+              "id": "0016",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0002",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0007",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0012"
+            },
+            {
+              "spread": "0",
+              "id": "0015",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "result": "T",
+              "nonstarters": "16150,16747,16178,16212,16643,14842,13163,16809,17056,17108,16645,",
+              "starters": "16580,16161,17071,14127,16615,15756,16269,17220,0512,",
+              "id": "0010",
               "player": [
                 {
                   "status": "starter",
@@ -505,12 +906,12 @@
                   "id": "17220"
                 },
                 {
-                  "id": "0512",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "0512"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "16150"
+                  "id": "16150",
+                  "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
@@ -529,8 +930,8 @@
                   "id": "16643"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "14842"
+                  "id": "14842",
+                  "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
@@ -549,438 +950,32 @@
                   "status": "nonstarter"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "16645"
+                  "id": "16645",
+                  "status": "nonstarter"
                 }
               ],
-              "id": "0010",
-              "isHome": "1",
-              "nonstarters": "16150,16747,16178,16212,16643,14842,13163,16809,17056,17108,16645,",
-              "result": "T",
-              "spread": "0",
-              "starters": "16580,16161,17071,14127,16615,15756,16269,17220,0512,"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "id": "0003",
-              "spread": "0",
-              "result": "T",
               "isHome": "0"
             },
             {
-              "starters": "13593,15742,11675,13635,15284,16192,17104,11936,0516,",
-              "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,12611,14823,",
               "result": "T",
-              "spread": "0",
-              "isHome": "1",
-              "player": [
-                {
-                  "status": "starter",
-                  "id": "13593"
-                },
-                {
-                  "status": "starter",
-                  "id": "15742"
-                },
-                {
-                  "id": "11675",
-                  "status": "starter"
-                },
-                {
-                  "id": "13635",
-                  "status": "starter"
-                },
-                {
-                  "id": "15284",
-                  "status": "starter"
-                },
-                {
-                  "id": "16192",
-                  "status": "starter"
-                },
-                {
-                  "id": "17104",
-                  "status": "starter"
-                },
-                {
-                  "status": "starter",
-                  "id": "11936"
-                },
-                {
-                  "status": "starter",
-                  "id": "0516"
-                },
-                {
-                  "id": "16617",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "16080",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "16610",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "0507",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "14974"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "15255"
-                },
-                {
-                  "id": "16778",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "13424"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16432"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16642"
-                },
-                {
-                  "id": "14800",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "14079"
-                },
-                {
-                  "id": "17096",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "17033"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "0513"
-                },
-                {
-                  "id": "14138",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "13592"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "12611"
-                },
-                {
-                  "id": "14823",
-                  "status": "nonstarter"
-                }
-              ],
-              "id": "0001"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "player": [
-                {
-                  "id": "13593",
-                  "status": "starter"
-                },
-                {
-                  "status": "starter",
-                  "id": "15742"
-                },
-                {
-                  "status": "starter",
-                  "id": "11675"
-                },
-                {
-                  "status": "starter",
-                  "id": "13635"
-                },
-                {
-                  "status": "starter",
-                  "id": "15284"
-                },
-                {
-                  "id": "16192",
-                  "status": "starter"
-                },
-                {
-                  "id": "17104",
-                  "status": "starter"
-                },
-                {
-                  "status": "starter",
-                  "id": "11936"
-                },
-                {
-                  "id": "0516",
-                  "status": "starter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16617"
-                },
-                {
-                  "id": "16080",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "16610",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "0507",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "14974",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "15255"
-                },
-                {
-                  "id": "16778",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "13424",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16432"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16642"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "14800"
-                },
-                {
-                  "id": "14079",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "17096"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "17033"
-                },
-                {
-                  "id": "0513",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "14138",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "13592"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "12611"
-                },
-                {
-                  "id": "14823",
-                  "status": "nonstarter"
-                }
-              ],
-              "id": "0001",
-              "starters": "13593,15742,11675,13635,15284,16192,17104,11936,0516,",
-              "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,12611,14823,",
-              "result": "T",
-              "spread": "0"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0016",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "id": "0002",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "spread": "0",
-              "id": "0007"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "id": "0012",
-              "spread": "0",
-              "result": "T"
-            },
-            {
-              "id": "0015",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "id": "0010",
-              "player": [
-                {
-                  "status": "starter",
-                  "id": "16580"
-                },
-                {
-                  "status": "starter",
-                  "id": "16161"
-                },
-                {
-                  "status": "starter",
-                  "id": "17071"
-                },
-                {
-                  "id": "14127",
-                  "status": "starter"
-                },
-                {
-                  "status": "starter",
-                  "id": "16615"
-                },
-                {
-                  "id": "15756",
-                  "status": "starter"
-                },
-                {
-                  "id": "16269",
-                  "status": "starter"
-                },
-                {
-                  "id": "17220",
-                  "status": "starter"
-                },
-                {
-                  "id": "0512",
-                  "status": "starter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16150"
-                },
-                {
-                  "id": "16747",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16178"
-                },
-                {
-                  "id": "16212",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16643"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "14842"
-                },
-                {
-                  "id": "13163",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16809"
-                },
-                {
-                  "id": "17056",
-                  "status": "nonstarter"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "17108"
-                },
-                {
-                  "status": "nonstarter",
-                  "id": "16645"
-                }
-              ],
-              "isHome": "0",
-              "spread": "0",
-              "nonstarters": "16150,16747,16178,16212,16643,14842,13163,16809,17056,17108,16645,",
-              "result": "T",
-              "starters": "16580,16161,17071,14127,16615,15756,16269,17220,0512,"
-            },
-            {
-              "spread": "0",
               "id": "0009",
-              "result": "T",
+              "spread": "0",
               "isHome": "1"
             }
           ]
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
-              "starters": "16579,16164,15738,13132,16186,17074,13672,16843,0521,",
-              "nonstarters": "13354,16188,16635,17031,13133,16788,16757,14080,14122,15241,14143,0506,15259,15254,",
-              "result": "T",
-              "spread": "0",
-              "isHome": "0",
+              "id": "0004",
               "player": [
                 {
-                  "status": "starter",
-                  "id": "16579"
+                  "id": "16579",
+                  "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "16164"
+                  "id": "16164",
+                  "status": "starter"
                 },
                 {
                   "id": "15738",
@@ -991,8 +986,8 @@
                   "status": "starter"
                 },
                 {
-                  "id": "16186",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "16186"
                 },
                 {
                   "id": "17074",
@@ -1003,8 +998,8 @@
                   "id": "13672"
                 },
                 {
-                  "id": "16843",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "16843"
                 },
                 {
                   "id": "0521",
@@ -1035,46 +1030,50 @@
                   "status": "nonstarter"
                 },
                 {
-                  "id": "16757",
+                  "status": "nonstarter",
+                  "id": "16757"
+                },
+                {
+                  "id": "14080",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "14080"
+                  "id": "14122"
                 },
                 {
-                  "id": "14122",
+                  "id": "15241",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "15241"
-                },
-                {
-                  "id": "14143",
-                  "status": "nonstarter"
+                  "id": "14143"
                 },
                 {
                   "id": "0506",
                   "status": "nonstarter"
                 },
                 {
-                  "id": "15259",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "15259"
                 },
                 {
                   "id": "15254",
                   "status": "nonstarter"
                 }
               ],
-              "id": "0004"
+              "isHome": "0",
+              "spread": "0",
+              "nonstarters": "13354,16188,16635,17031,13133,16788,16757,14080,14122,15241,14143,0506,15259,15254,",
+              "result": "T",
+              "starters": "16579,16164,15738,13132,16186,17074,13672,16843,0521,"
             },
             {
               "isHome": "1",
               "player": [
                 {
-                  "status": "starter",
-                  "id": "16582"
+                  "id": "16582",
+                  "status": "starter"
                 },
                 {
                   "id": "13604",
@@ -1085,8 +1084,8 @@
                   "id": "16162"
                 },
                 {
-                  "id": "14104",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "14104"
                 },
                 {
                   "id": "17081",
@@ -1101,36 +1100,36 @@
                   "id": "16214"
                 },
                 {
-                  "status": "starter",
-                  "id": "15368"
+                  "id": "15368",
+                  "status": "starter"
                 },
                 {
                   "id": "0511",
                   "status": "starter"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "15777"
+                  "id": "15777",
+                  "status": "nonstarter"
                 },
                 {
                   "id": "16187",
                   "status": "nonstarter"
                 },
                 {
-                  "id": "0503",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "0503"
                 },
                 {
                   "id": "16629",
                   "status": "nonstarter"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "17053"
+                  "id": "17053",
+                  "status": "nonstarter"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "16626"
+                  "id": "16626",
+                  "status": "nonstarter"
                 },
                 {
                   "id": "15797",
@@ -1145,8 +1144,8 @@
                   "id": "17034"
                 },
                 {
-                  "id": "17078",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "17078"
                 },
                 {
                   "id": "17107",
@@ -1157,46 +1156,42 @@
                   "id": "17076"
                 },
                 {
+                  "id": "15749",
+                  "status": "nonstarter"
+                },
+                {
                   "status": "nonstarter",
-                  "id": "15749"
+                  "id": "15786"
                 },
                 {
-                  "id": "15786",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "0529",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "0529"
                 }
               ],
               "id": "0008",
               "starters": "16582,13604,16162,14104,17081,15799,16214,15368,0511,",
-              "nonstarters": "15777,16187,0503,16629,17053,16626,15797,16628,17034,17078,17107,17076,15749,15786,0529,",
               "result": "T",
+              "nonstarters": "15777,16187,0503,16629,17053,16626,15797,16628,17034,17078,17107,17076,15749,15786,0529,",
               "spread": "0"
             }
-          ]
+          ],
+          "regularSeason": "1"
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
-              "result": "T",
-              "nonstarters": "16176,16207,16586,0508,15981,14105,13319,17077,12616,",
-              "spread": "0",
-              "starters": "14056,15972,16165,13629,15282,15798,15329,13832,0514,",
               "player": [
                 {
-                  "id": "14056",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "14056"
                 },
                 {
                   "id": "15972",
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "16165"
+                  "id": "16165",
+                  "status": "starter"
                 },
                 {
                   "id": "13629",
@@ -1215,20 +1210,20 @@
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "13832"
+                  "id": "13832",
+                  "status": "starter"
                 },
                 {
-                  "id": "0514",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "0514"
                 },
                 {
                   "status": "nonstarter",
                   "id": "16176"
                 },
                 {
-                  "id": "16207",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16207"
                 },
                 {
                   "status": "nonstarter",
@@ -1239,20 +1234,20 @@
                   "id": "0508"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "15981"
+                  "id": "15981",
+                  "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
                   "id": "14105"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "13319"
+                  "id": "13319",
+                  "status": "nonstarter"
                 },
                 {
-                  "id": "17077",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "17077"
                 },
                 {
                   "status": "nonstarter",
@@ -1260,19 +1255,29 @@
                 }
               ],
               "id": "0006",
-              "isHome": "0"
+              "isHome": "0",
+              "result": "T",
+              "nonstarters": "16176,16207,16586,0508,15981,14105,13319,17077,12616,",
+              "spread": "0",
+              "starters": "14056,15972,16165,13629,15282,15798,15329,13832,0514,"
             },
             {
-              "isHome": "1",
-              "spread": "0",
               "id": "0014",
-              "result": "T"
+              "spread": "0",
+              "result": "T",
+              "isHome": "1"
             }
-          ]
+          ],
+          "regularSeason": "1"
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
+              "starters": "14782,16167,14797,15711,15281,15789,11244,12860,0518,",
+              "result": "T",
+              "nonstarters": "15802,16195,16287,15787,17171,17080,17048,14059,17098,13630,14600,",
+              "spread": "0",
               "isHome": "0",
               "player": [
                 {
@@ -1280,12 +1285,12 @@
                   "id": "14782"
                 },
                 {
-                  "status": "starter",
-                  "id": "16167"
+                  "id": "16167",
+                  "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "14797"
+                  "id": "14797",
+                  "status": "starter"
                 },
                 {
                   "id": "15711",
@@ -1296,44 +1301,44 @@
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "15789"
+                  "id": "15789",
+                  "status": "starter"
                 },
                 {
                   "id": "11244",
                   "status": "starter"
                 },
                 {
-                  "id": "12860",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "12860"
                 },
                 {
-                  "id": "0518",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "0518"
                 },
                 {
-                  "id": "15802",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "15802"
                 },
                 {
-                  "id": "16195",
+                  "status": "nonstarter",
+                  "id": "16195"
+                },
+                {
+                  "id": "16287",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "16287"
-                },
-                {
-                  "id": "15787",
-                  "status": "nonstarter"
+                  "id": "15787"
                 },
                 {
                   "status": "nonstarter",
                   "id": "17171"
                 },
                 {
-                  "id": "17080",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "17080"
                 },
                 {
                   "status": "nonstarter",
@@ -1344,39 +1349,34 @@
                   "id": "14059"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "17098"
+                  "id": "17098",
+                  "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
                   "id": "13630"
                 },
                 {
-                  "id": "14600",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "14600"
                 }
               ],
-              "id": "0013",
-              "starters": "14782,16167,14797,15711,15281,15789,11244,12860,0518,",
-              "nonstarters": "15802,16195,16287,15787,17171,17080,17048,14059,17098,13630,14600,",
-              "result": "T",
-              "spread": "0"
+              "id": "0013"
             },
             {
-              "spread": "0",
-              "id": "0003",
+              "isHome": "1",
               "result": "T",
-              "isHome": "1"
+              "id": "0003",
+              "spread": "0"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
             {
               "isHome": "0",
-              "id": "0011",
               "spread": "0",
+              "id": "0011",
               "result": "T"
             },
             {
@@ -1390,7 +1390,7 @@
         }
       ]
     },
-    "encoding": "utf-8"
+    "version": "1.0"
   },
   {
     "encoding": "utf-8",
@@ -1398,35 +1398,205 @@
       "week": "2",
       "matchup": [
         {
-          "regularSeason": "1",
           "franchise": [
             {
               "result": "T",
-              "id": "0011",
               "spread": "0",
+              "id": "0011",
               "isHome": "0"
             },
             {
-              "isHome": "1",
+              "id": "0008",
+              "spread": "0",
+              "result": "T",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0013",
+              "spread": "0"
+            },
+            {
               "result": "T",
               "spread": "0",
-              "id": "0008"
+              "id": "0005",
+              "isHome": "1"
             }
           ]
         },
         {
           "franchise": [
             {
-              "id": "0013",
-              "spread": "0",
               "result": "T",
+              "id": "0006",
+              "spread": "0",
               "isHome": "0"
             },
             {
               "isHome": "1",
               "result": "T",
-              "id": "0005",
+              "spread": "0",
+              "id": "0003"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0004",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0014",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "spread": "0",
+              "id": "0010",
+              "result": "T"
+            },
+            {
+              "id": "0016",
+              "spread": "0",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0012"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "id": "0009",
               "spread": "0"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0002",
+              "spread": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "spread": "0",
+              "id": "0015"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0001",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0007",
+              "spread": "0",
+              "result": "T"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0016",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "spread": "0",
+              "id": "0015"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0009",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0007",
+              "spread": "0",
+              "result": "T"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0003",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0014",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0008",
+              "isHome": "0"
+            },
+            {
+              "result": "T",
+              "id": "0005",
+              "spread": "0",
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
@@ -1440,198 +1610,28 @@
               "id": "0006"
             },
             {
-              "id": "0003",
+              "result": "T",
               "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
               "id": "0004",
-              "spread": "0"
-            },
-            {
-              "isHome": "1",
-              "spread": "0",
-              "id": "0014",
-              "result": "T"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0010",
-              "isHome": "0"
-            },
-            {
-              "id": "0016",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0012"
-            },
-            {
-              "isHome": "1",
-              "id": "0009",
-              "spread": "0",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "id": "0002",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "id": "0015",
-              "spread": "0",
-              "result": "T",
               "isHome": "1"
             }
           ],
           "regularSeason": "1"
         },
         {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0001"
-            },
-            {
-              "isHome": "1",
-              "id": "0007",
-              "spread": "0",
-              "result": "T"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0016",
-              "spread": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "spread": "0",
-              "id": "0015"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0009",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0007",
-              "spread": "0"
-            }
-          ]
-        },
-        {
           "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
               "result": "T",
-              "spread": "0",
-              "id": "0003"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "spread": "0",
-              "id": "0014"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "spread": "0",
-              "id": "0008",
-              "result": "T"
-            },
-            {
-              "isHome": "1",
-              "id": "0005",
-              "spread": "0",
-              "result": "T"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0006",
-              "spread": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "spread": "0",
-              "id": "0004"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
               "id": "0011",
-              "isHome": "0"
+              "spread": "0"
             },
             {
-              "isHome": "1",
               "result": "T",
               "spread": "0",
-              "id": "0013"
+              "id": "0013",
+              "isHome": "1"
             }
           ]
         },
@@ -1645,29 +1645,29 @@
               "isHome": "0"
             },
             {
-              "spread": "0",
+              "isHome": "1",
               "id": "0012",
-              "result": "T",
-              "isHome": "1"
+              "spread": "0",
+              "result": "T"
             }
           ]
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
+              "isHome": "0",
               "result": "T",
               "spread": "0",
-              "id": "0010",
-              "isHome": "0"
+              "id": "0010"
             },
             {
               "isHome": "1",
               "result": "T",
-              "spread": "0",
-              "id": "0001"
+              "id": "0001",
+              "spread": "0"
             }
-          ],
-          "regularSeason": "1"
+          ]
         }
       ]
     },
@@ -1675,11 +1675,12 @@
   },
   {
     "weeklyResults": {
+      "week": "3",
       "matchup": [
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
               "id": "0001",
               "player": [
                 {
@@ -1687,20 +1688,20 @@
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "15742"
+                  "id": "15742",
+                  "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "11675"
+                  "id": "11675",
+                  "status": "starter"
                 },
                 {
                   "status": "starter",
                   "id": "13635"
                 },
                 {
-                  "status": "starter",
-                  "id": "15284"
+                  "id": "15284",
+                  "status": "starter"
                 },
                 {
                   "id": "16192",
@@ -1715,24 +1716,24 @@
                   "id": "11936"
                 },
                 {
-                  "id": "0516",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "0516"
                 },
                 {
-                  "id": "16617",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16617"
                 },
                 {
-                  "id": "16080",
+                  "status": "nonstarter",
+                  "id": "16080"
+                },
+                {
+                  "id": "16610",
                   "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "16610"
-                },
-                {
-                  "id": "0507",
-                  "status": "nonstarter"
+                  "id": "0507"
                 },
                 {
                   "status": "nonstarter",
@@ -1743,20 +1744,20 @@
                   "id": "15255"
                 },
                 {
-                  "id": "16778",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "13424",
-                  "status": "nonstarter"
-                },
-                {
-                  "id": "16432",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16778"
                 },
                 {
                   "status": "nonstarter",
-                  "id": "16642"
+                  "id": "13424"
+                },
+                {
+                  "status": "nonstarter",
+                  "id": "16432"
+                },
+                {
+                  "id": "16642",
+                  "status": "nonstarter"
                 },
                 {
                   "id": "14800",
@@ -1795,50 +1796,33 @@
                   "id": "13593"
                 }
               ],
-              "starters": "12611,15742,11675,13635,15284,16192,17104,11936,0516,",
+              "isHome": "0",
               "spread": "-94.5",
               "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,14823,13593,",
-              "result": "T"
-            },
-            {
-              "spread": "94.5",
-              "id": "0002",
               "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0010",
-              "spread": "0"
+              "starters": "12611,15742,11675,13635,15284,16192,17104,11936,0516,"
             },
             {
               "isHome": "1",
-              "id": "0012",
-              "spread": "0",
-              "result": "T"
+              "result": "T",
+              "spread": "94.5",
+              "id": "0002"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
             {
-              "result": "T",
-              "id": "0013",
               "spread": "0",
+              "id": "0010",
+              "result": "T",
               "isHome": "0"
             },
             {
-              "isHome": "1",
+              "id": "0012",
               "spread": "0",
-              "id": "0006",
-              "result": "T"
+              "result": "T",
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
@@ -1848,15 +1832,15 @@
           "franchise": [
             {
               "isHome": "0",
+              "id": "0013",
               "spread": "0",
-              "id": "0011",
               "result": "T"
             },
             {
-              "isHome": "1",
-              "id": "0004",
+              "result": "T",
+              "id": "0006",
               "spread": "0",
-              "result": "T"
+              "isHome": "1"
             }
           ]
         },
@@ -1865,9 +1849,26 @@
           "franchise": [
             {
               "spread": "0",
-              "id": "0005",
+              "id": "0011",
               "result": "T",
               "isHome": "0"
+            },
+            {
+              "spread": "0",
+              "id": "0004",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "spread": "0",
+              "id": "0005",
+              "result": "T"
             },
             {
               "spread": "0",
@@ -1880,16 +1881,16 @@
         {
           "franchise": [
             {
-              "isHome": "0",
-              "result": "T",
               "id": "0008",
-              "spread": "0"
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
             },
             {
               "isHome": "1",
-              "id": "0014",
+              "result": "T",
               "spread": "0",
-              "result": "T"
+              "id": "0014"
             }
           ],
           "regularSeason": "1"
@@ -1898,31 +1899,31 @@
           "regularSeason": "1",
           "franchise": [
             {
-              "result": "T",
-              "spread": "0",
               "id": "0007",
+              "spread": "0",
+              "result": "T",
               "isHome": "0"
             },
             {
+              "isHome": "1",
               "result": "T",
-              "spread": "0",
               "id": "0016",
-              "isHome": "1"
+              "spread": "0"
             }
           ]
         },
         {
           "franchise": [
             {
-              "isHome": "0",
-              "result": "T",
+              "spread": "0",
               "id": "0009",
-              "spread": "0"
+              "result": "T",
+              "isHome": "0"
             },
             {
-              "result": "T",
-              "id": "0015",
               "spread": "0",
+              "id": "0015",
+              "result": "T",
               "isHome": "1"
             }
           ],
@@ -1932,12 +1933,7 @@
           "regularSeason": "1",
           "franchise": [
             {
-              "starters": "12611,15742,11675,13635,15284,16192,17104,11936,0516,",
-              "spread": "-94.5",
-              "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,14823,13593,",
-              "result": "T",
               "isHome": "0",
-              "id": "0001",
               "player": [
                 {
                   "id": "12611",
@@ -1948,12 +1944,12 @@
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "11675"
+                  "id": "11675",
+                  "status": "starter"
                 },
                 {
-                  "id": "13635",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "13635"
                 },
                 {
                   "status": "starter",
@@ -1964,28 +1960,28 @@
                   "status": "starter"
                 },
                 {
-                  "id": "17104",
-                  "status": "starter"
+                  "status": "starter",
+                  "id": "17104"
                 },
                 {
                   "id": "11936",
                   "status": "starter"
                 },
                 {
-                  "status": "starter",
-                  "id": "0516"
+                  "id": "0516",
+                  "status": "starter"
                 },
                 {
                   "id": "16617",
                   "status": "nonstarter"
                 },
                 {
-                  "id": "16080",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16080"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "16610"
+                  "id": "16610",
+                  "status": "nonstarter"
                 },
                 {
                   "id": "0507",
@@ -2012,12 +2008,12 @@
                   "id": "16432"
                 },
                 {
-                  "id": "16642",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "16642"
                 },
                 {
-                  "status": "nonstarter",
-                  "id": "14800"
+                  "id": "14800",
+                  "status": "nonstarter"
                 },
                 {
                   "status": "nonstarter",
@@ -2036,94 +2032,48 @@
                   "id": "0513"
                 },
                 {
-                  "id": "14138",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "14138"
                 },
                 {
-                  "id": "13592",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "13592"
                 },
                 {
-                  "id": "14823",
-                  "status": "nonstarter"
+                  "status": "nonstarter",
+                  "id": "14823"
                 },
                 {
                   "id": "13593",
                   "status": "nonstarter"
                 }
-              ]
+              ],
+              "id": "0001",
+              "starters": "12611,15742,11675,13635,15284,16192,17104,11936,0516,",
+              "nonstarters": "16617,16080,16610,0507,14974,15255,16778,13424,16432,16642,14800,14079,17096,17033,0513,14138,13592,14823,13593,",
+              "result": "T",
+              "spread": "-94.5"
             },
             {
               "isHome": "1",
               "result": "T",
-              "spread": "94.5",
-              "id": "0015"
+              "id": "0015",
+              "spread": "94.5"
             }
           ]
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
+              "isHome": "0",
               "id": "0002",
               "spread": "0",
-              "result": "T",
-              "isHome": "0"
+              "result": "T"
             },
             {
-              "isHome": "1",
+              "result": "T",
               "id": "0009",
               "spread": "0",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "id": "0012",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0016",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0010",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "spread": "0",
-              "id": "0007",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "id": "0004",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0003",
               "isHome": "1"
             }
           ],
@@ -2134,9 +2084,60 @@
           "franchise": [
             {
               "isHome": "0",
+              "id": "0012",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "isHome": "1",
+              "spread": "0",
+              "id": "0016",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0010",
               "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0007",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0004",
+              "isHome": "0"
+            },
+            {
+              "id": "0003",
+              "spread": "0",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
               "id": "0006",
-              "spread": "0"
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
             },
             {
               "isHome": "1",
@@ -2147,7 +2148,6 @@
           ]
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
@@ -2156,103 +2156,10 @@
               "result": "T"
             },
             {
-              "spread": "0",
-              "id": "0008",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0011",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0014",
-              "isHome": "1"
-            }
-          ]
-        }
-      ],
-      "week": "3"
-    },
-    "encoding": "utf-8",
-    "version": "1.0"
-  },
-  {
-    "weeklyResults": {
-      "matchup": [
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0007",
-              "isHome": "0"
-            },
-            {
               "isHome": "1",
-              "result": "T",
-              "id": "0015",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "id": "0009",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "spread": "0",
-              "id": "0016"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0005",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "id": "0014",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
               "id": "0008",
-              "isHome": "0"
-            },
-            {
-              "id": "0003",
               "spread": "0",
-              "result": "T",
-              "isHome": "1"
+              "result": "T"
             }
           ],
           "regularSeason": "1"
@@ -2261,87 +2168,182 @@
           "franchise": [
             {
               "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0013"
-            },
-            {
-              "id": "0004",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
               "id": "0011",
-              "isHome": "0"
-            },
-            {
-              "id": "0006",
               "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "spread": "0",
-              "id": "0001",
               "result": "T"
             },
             {
-              "spread": "0",
-              "id": "0012",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0010",
-              "isHome": "0"
-            },
-            {
               "isHome": "1",
-              "id": "0002",
               "spread": "0",
+              "id": "0014",
               "result": "T"
             }
           ],
           "regularSeason": "1"
         }
-      ],
-      "week": "4"
+      ]
     },
     "encoding": "utf-8",
     "version": "1.0"
   },
   {
     "version": "1.0",
+    "encoding": "utf-8",
     "weeklyResults": {
+      "week": "4",
       "matchup": [
+        {
+          "franchise": [
+            {
+              "id": "0007",
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "spread": "0",
+              "id": "0015"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0009"
+            },
+            {
+              "isHome": "1",
+              "id": "0016",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0005",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "result": "T",
+              "id": "0014",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0008",
+              "spread": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0003",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0013",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "result": "T",
+              "id": "0004",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0011",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0006",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
         {
           "franchise": [
             {
               "isHome": "0",
               "result": "T",
-              "id": "0007",
-              "spread": "0"
+              "spread": "0",
+              "id": "0001"
+            },
+            {
+              "result": "T",
+              "id": "0012",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0010",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0002",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "weeklyResults": {
+      "week": "5",
+      "matchup": [
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0007"
             },
             {
               "spread": "0",
@@ -2349,21 +2351,20 @@
               "result": "T",
               "isHome": "1"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
             {
+              "isHome": "0",
               "id": "0016",
               "spread": "0",
-              "result": "T",
-              "isHome": "0"
+              "result": "T"
             },
             {
+              "result": "T",
               "spread": "0",
               "id": "0014",
-              "result": "T",
               "isHome": "1"
             }
           ],
@@ -2373,21 +2374,20 @@
           "franchise": [
             {
               "isHome": "0",
-              "result": "T",
               "spread": "0",
-              "id": "0015"
+              "id": "0015",
+              "result": "T"
             },
             {
-              "isHome": "1",
-              "result": "T",
+              "spread": "0",
               "id": "0008",
-              "spread": "0"
+              "result": "T",
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
               "result": "T",
@@ -2396,42 +2396,9 @@
               "isHome": "0"
             },
             {
-              "spread": "0",
+              "result": "T",
               "id": "0005",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "id": "0013",
               "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0002",
-              "spread": "0"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0006",
-              "spread": "0"
-            },
-            {
-              "id": "0012",
-              "spread": "0",
-              "result": "T",
               "isHome": "1"
             }
           ],
@@ -2442,25 +2409,59 @@
           "franchise": [
             {
               "result": "T",
+              "id": "0013",
               "spread": "0",
-              "id": "0004",
               "isHome": "0"
             },
             {
-              "isHome": "1",
               "result": "T",
-              "id": "0010",
-              "spread": "0"
+              "id": "0002",
+              "spread": "0",
+              "isHome": "1"
             }
           ]
         },
         {
           "franchise": [
             {
+              "isHome": "0",
+              "id": "0006",
+              "spread": "0",
+              "result": "T"
+            },
+            {
               "result": "T",
               "spread": "0",
+              "id": "0012",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0004",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "id": "0010",
+              "spread": "0",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
               "id": "0011",
-              "isHome": "0"
+              "spread": "0",
+              "result": "T"
             },
             {
               "result": "T",
@@ -2471,8 +2472,7 @@
           ],
           "regularSeason": "1"
         }
-      ],
-      "week": "5"
+      ]
     },
     "encoding": "utf-8"
   },
@@ -2499,7 +2499,6 @@
           ]
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
@@ -2508,10 +2507,28 @@
               "spread": "0"
             },
             {
-              "result": "T",
-              "id": "0006",
               "spread": "0",
+              "id": "0006",
+              "result": "T",
               "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0012",
+              "spread": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "id": "0013",
+              "spread": "0"
             }
           ]
         },
@@ -2519,16 +2536,16 @@
           "regularSeason": "1",
           "franchise": [
             {
-              "result": "T",
-              "id": "0012",
               "spread": "0",
+              "id": "0002",
+              "result": "T",
               "isHome": "0"
             },
             {
-              "id": "0013",
-              "spread": "0",
+              "isHome": "1",
               "result": "T",
-              "isHome": "1"
+              "spread": "0",
+              "id": "0011"
             }
           ]
         },
@@ -2538,82 +2555,65 @@
             {
               "isHome": "0",
               "result": "T",
-              "id": "0002",
+              "id": "0005",
               "spread": "0"
             },
             {
-              "result": "T",
-              "id": "0011",
               "spread": "0",
+              "id": "0015",
+              "result": "T",
               "isHome": "1"
             }
           ]
         },
         {
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0008",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "result": "T",
+              "id": "0016",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "spread": "0",
+              "id": "0014",
+              "result": "T"
+            },
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0007",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
           "regularSeason": "1",
           "franchise": [
             {
-              "spread": "0",
-              "id": "0005",
+              "isHome": "0",
               "result": "T",
-              "isHome": "0"
+              "spread": "0",
+              "id": "0003"
             },
             {
               "isHome": "1",
               "spread": "0",
-              "id": "0015",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0008",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "id": "0016",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0014",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
-              "id": "0007",
-              "spread": "0",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "id": "0003",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
               "id": "0009",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
+              "result": "T"
             }
           ]
         }
@@ -2622,40 +2622,167 @@
     "encoding": "utf-8"
   },
   {
-    "version": "1.0",
     "encoding": "utf-8",
     "weeklyResults": {
+      "week": "7",
       "matchup": [
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "result": "T",
               "id": "0015",
               "spread": "0",
+              "result": "T",
               "isHome": "0"
             },
             {
-              "spread": "0",
               "id": "0003",
+              "spread": "0",
               "result": "T",
               "isHome": "1"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
+              "isHome": "0",
               "spread": "0",
               "id": "0009",
-              "result": "T",
-              "isHome": "0"
+              "result": "T"
             },
             {
               "isHome": "1",
               "spread": "0",
               "id": "0014",
               "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0007",
+              "spread": "0"
+            },
+            {
+              "isHome": "1",
+              "spread": "0",
+              "id": "0008",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0016",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "spread": "0",
+              "id": "0005"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0004",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0002",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0011",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0012",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0013",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "isHome": "1",
+              "id": "0010",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0006"
+            },
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0001",
+              "isHome": "1"
+            }
+          ]
+        }
+      ]
+    },
+    "version": "1.0"
+  },
+  {
+    "weeklyResults": {
+      "week": "8",
+      "matchup": [
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0001",
+              "isHome": "0"
+            },
+            {
+              "spread": "0",
+              "id": "0014",
+              "result": "T",
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
@@ -2665,14 +2792,14 @@
           "franchise": [
             {
               "isHome": "0",
-              "result": "T",
+              "id": "0010",
               "spread": "0",
-              "id": "0007"
+              "result": "T"
             },
             {
               "isHome": "1",
-              "id": "0008",
               "spread": "0",
+              "id": "0003",
               "result": "T"
             }
           ]
@@ -2680,10 +2807,10 @@
         {
           "franchise": [
             {
-              "isHome": "0",
+              "result": "T",
+              "id": "0012",
               "spread": "0",
-              "id": "0016",
-              "result": "T"
+              "isHome": "0"
             },
             {
               "result": "T",
@@ -2697,32 +2824,15 @@
         {
           "franchise": [
             {
-              "id": "0004",
-              "spread": "0",
+              "isHome": "0",
               "result": "T",
-              "isHome": "0"
-            },
-            {
               "id": "0002",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0011",
-              "spread": "0",
-              "isHome": "0"
+              "spread": "0"
             },
             {
-              "result": "T",
               "spread": "0",
-              "id": "0012",
+              "id": "0008",
+              "result": "T",
               "isHome": "1"
             }
           ],
@@ -2731,15 +2841,49 @@
         {
           "franchise": [
             {
+              "isHome": "0",
               "id": "0013",
               "spread": "0",
-              "result": "T",
-              "isHome": "0"
+              "result": "T"
             },
             {
               "isHome": "1",
-              "id": "0010",
+              "id": "0015",
               "spread": "0",
+              "result": "T"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0011",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "spread": "0",
+              "id": "0016",
+              "result": "T",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "spread": "0",
+              "id": "0004",
+              "result": "T"
+            },
+            {
+              "isHome": "1",
+              "spread": "0",
+              "id": "0007",
               "result": "T"
             }
           ],
@@ -2748,74 +2892,42 @@
         {
           "franchise": [
             {
+              "spread": "0",
+              "id": "0006",
               "result": "T",
+              "isHome": "0"
+            },
+            {
+              "spread": "0",
+              "id": "0009",
+              "result": "T",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        }
+      ]
+    },
+    "encoding": "utf-8",
+    "version": "1.0"
+  },
+  {
+    "version": "1.0",
+    "encoding": "utf-8",
+    "weeklyResults": {
+      "matchup": [
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0007",
+              "spread": "0"
+            },
+            {
               "id": "0006",
               "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "spread": "0",
-              "id": "0001",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        }
-      ],
-      "week": "7"
-    }
-  },
-  {
-    "version": "1.0",
-    "weeklyResults": {
-      "matchup": [
-        {
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0001",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "spread": "0",
-              "id": "0014",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0010",
-              "isHome": "0"
-            },
-            {
-              "spread": "0",
-              "id": "0003",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0012",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "id": "0005",
-              "spread": "0",
               "result": "T",
               "isHome": "1"
             }
@@ -2824,128 +2936,33 @@
         {
           "franchise": [
             {
-              "spread": "0",
-              "id": "0002",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0008",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0013",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "spread": "0",
-              "id": "0015",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
               "isHome": "0",
-              "result": "T",
-              "id": "0011",
-              "spread": "0"
-            },
-            {
-              "isHome": "1",
               "id": "0016",
               "spread": "0",
               "result": "T"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
+            },
             {
-              "result": "T",
+              "isHome": "1",
+              "spread": "0",
               "id": "0004",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "id": "0007",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
+              "result": "T"
             }
-          ]
+          ],
+          "regularSeason": "1"
         },
         {
           "franchise": [
             {
               "isHome": "0",
-              "result": "T",
+              "id": "0015",
               "spread": "0",
-              "id": "0006"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0009",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        }
-      ],
-      "week": "8"
-    },
-    "encoding": "utf-8"
-  },
-  {
-    "version": "1.0",
-    "encoding": "utf-8",
-    "weeklyResults": {
-      "matchup": [
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "spread": "0",
-              "id": "0007",
               "result": "T"
             },
             {
               "isHome": "1",
-              "result": "T",
               "spread": "0",
-              "id": "0006"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0016"
-            },
-            {
-              "spread": "0",
-              "id": "0004",
-              "result": "T",
-              "isHome": "1"
+              "id": "0011",
+              "result": "T"
             }
           ],
           "regularSeason": "1"
@@ -2954,38 +2971,20 @@
           "regularSeason": "1",
           "franchise": [
             {
-              "id": "0015",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "spread": "0",
-              "id": "0011",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
               "isHome": "0",
-              "spread": "0",
               "id": "0009",
+              "spread": "0",
               "result": "T"
             },
             {
+              "result": "T",
               "spread": "0",
               "id": "0013",
-              "result": "T",
               "isHome": "1"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
@@ -2995,11 +2994,12 @@
             },
             {
               "isHome": "1",
-              "id": "0002",
               "spread": "0",
+              "id": "0002",
               "result": "T"
             }
-          ]
+          ],
+          "regularSeason": "1"
         },
         {
           "franchise": [
@@ -3010,9 +3010,9 @@
               "result": "T"
             },
             {
+              "result": "T",
               "spread": "0",
               "id": "0012",
-              "result": "T",
               "isHome": "1"
             }
           ],
@@ -3022,15 +3022,15 @@
           "franchise": [
             {
               "isHome": "0",
-              "spread": "0",
+              "result": "T",
               "id": "0014",
-              "result": "T"
+              "spread": "0"
             },
             {
-              "isHome": "1",
               "spread": "0",
               "id": "0010",
-              "result": "T"
+              "result": "T",
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
@@ -3058,19 +3058,183 @@
   },
   {
     "weeklyResults": {
+      "week": "10",
       "matchup": [
         {
           "regularSeason": "1",
           "franchise": [
             {
+              "isHome": "0",
+              "result": "T",
               "spread": "0",
-              "id": "0001",
+              "id": "0001"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "spread": "0",
+              "id": "0013"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "id": "0010",
+              "spread": "0",
               "result": "T",
               "isHome": "0"
             },
             {
+              "result": "T",
+              "id": "0011",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0012",
+              "spread": "0",
+              "result": "T"
+            },
+            {
               "isHome": "1",
-              "id": "0013",
+              "spread": "0",
+              "id": "0004",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "spread": "0",
+              "id": "0002",
+              "result": "T"
+            },
+            {
+              "isHome": "1",
+              "spread": "0",
+              "id": "0006",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0005"
+            },
+            {
+              "spread": "0",
+              "id": "0007",
+              "result": "T",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0008",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "result": "T",
+              "id": "0009",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0014",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "id": "0015",
+              "spread": "0",
+              "result": "T",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "id": "0003",
+              "spread": "0"
+            },
+            {
+              "result": "T",
+              "id": "0016",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        }
+      ]
+    },
+    "encoding": "utf-8",
+    "version": "1.0"
+  },
+  {
+    "version": "1.0",
+    "encoding": "utf-8",
+    "weeklyResults": {
+      "matchup": [
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0001"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "id": "0005",
+              "spread": "0"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0010",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "isHome": "1",
+              "id": "0008",
               "spread": "0",
               "result": "T"
             }
@@ -3079,7 +3243,152 @@
         {
           "franchise": [
             {
+              "spread": "0",
+              "id": "0012",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "spread": "0",
+              "id": "0014",
+              "result": "T",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "id": "0002",
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0003",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0013",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0007",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "id": "0011",
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "id": "0009",
+              "spread": "0"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0004",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "result": "T",
+              "spread": "0",
+              "id": "0015",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0006",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "isHome": "1",
+              "spread": "0",
+              "id": "0016",
+              "result": "T"
+            }
+          ],
+          "regularSeason": "1"
+        }
+      ],
+      "week": "11"
+    }
+  },
+  {
+    "version": "1.0",
+    "encoding": "utf-8",
+    "weeklyResults": {
+      "matchup": [
+        {
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0001"
+            },
+            {
+              "result": "T",
               "id": "0010",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "id": "0012",
+              "spread": "0",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "result": "T",
+              "spread": "0",
+              "id": "0002"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "id": "0013",
               "spread": "0",
               "result": "T",
               "isHome": "0"
@@ -3094,30 +3403,12 @@
           "regularSeason": "1"
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
-              "id": "0012",
+              "id": "0004",
               "spread": "0",
               "result": "T",
               "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0004",
-              "spread": "0"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "id": "0002",
-              "spread": "0",
-              "result": "T"
             },
             {
               "isHome": "1",
@@ -3125,20 +3416,21 @@
               "spread": "0",
               "result": "T"
             }
-          ]
+          ],
+          "regularSeason": "1"
         },
         {
           "franchise": [
             {
-              "result": "T",
+              "isHome": "0",
               "spread": "0",
               "id": "0005",
-              "isHome": "0"
+              "result": "T"
             },
             {
               "isHome": "1",
-              "id": "0007",
               "spread": "0",
+              "id": "0008",
               "result": "T"
             }
           ],
@@ -3148,9 +3440,25 @@
           "regularSeason": "1",
           "franchise": [
             {
+              "isHome": "0",
               "result": "T",
+              "id": "0014",
+              "spread": "0"
+            },
+            {
+              "isHome": "1",
               "spread": "0",
-              "id": "0008",
+              "id": "0003",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0007",
+              "spread": "0",
               "isHome": "0"
             },
             {
@@ -3159,318 +3467,10 @@
               "spread": "0",
               "result": "T"
             }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0014",
-              "spread": "0"
-            },
-            {
-              "isHome": "1",
-              "id": "0015",
-              "spread": "0",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0003"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0016",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        }
-      ],
-      "week": "10"
-    },
-    "encoding": "utf-8",
-    "version": "1.0"
-  },
-  {
-    "version": "1.0",
-    "weeklyResults": {
-      "matchup": [
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0001",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "spread": "0",
-              "id": "0005",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0010",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "spread": "0",
-              "id": "0008",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0012",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "id": "0014",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "id": "0002",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "spread": "0",
-              "id": "0003",
-              "result": "T"
-            }
           ],
           "regularSeason": "1"
         },
         {
-          "franchise": [
-            {
-              "isHome": "0",
-              "id": "0013",
-              "spread": "0",
-              "result": "T"
-            },
-            {
-              "isHome": "1",
-              "id": "0007",
-              "spread": "0",
-              "result": "T"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "id": "0011",
-              "spread": "0",
-              "result": "T"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "spread": "0",
-              "id": "0009"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0004",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0015",
-              "spread": "0"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0006",
-              "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
-              "id": "0016",
-              "spread": "0",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        }
-      ],
-      "week": "11"
-    },
-    "encoding": "utf-8"
-  },
-  {
-    "version": "1.0",
-    "weeklyResults": {
-      "matchup": [
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "id": "0001",
-              "spread": "0",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "id": "0010",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0012",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0002",
-              "spread": "0"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0013"
-            },
-            {
-              "spread": "0",
-              "id": "0011",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0004",
-              "result": "T",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0006",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0005",
-              "spread": "0"
-            },
-            {
-              "result": "T",
-              "id": "0008",
-              "spread": "0",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "spread": "0",
-              "id": "0014",
-              "result": "T"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0003",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0007",
-              "spread": "0"
-            },
-            {
-              "isHome": "1",
-              "result": "T",
-              "id": "0009",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
@@ -3484,47 +3484,46 @@
               "spread": "0",
               "id": "0016"
             }
-          ]
+          ],
+          "regularSeason": "1"
         }
       ],
       "week": "12"
-    },
-    "encoding": "utf-8"
+    }
   },
   {
-    "encoding": "utf-8",
     "weeklyResults": {
       "week": "13",
       "matchup": [
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
               "spread": "0",
               "id": "0002",
-              "result": "T"
+              "result": "T",
+              "isHome": "0"
             },
             {
-              "result": "T",
+              "isHome": "1",
               "id": "0010",
               "spread": "0",
-              "isHome": "1"
+              "result": "T"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
             {
               "isHome": "0",
-              "result": "T",
+              "spread": "0",
               "id": "0012",
-              "spread": "0"
+              "result": "T"
             },
             {
               "result": "T",
-              "spread": "0",
               "id": "0001",
+              "spread": "0",
               "isHome": "1"
             }
           ],
@@ -3534,49 +3533,32 @@
           "regularSeason": "1",
           "franchise": [
             {
+              "result": "T",
               "id": "0006",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0011",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
+        },
+        {
+          "franchise": [
+            {
+              "id": "0004",
               "spread": "0",
               "result": "T",
               "isHome": "0"
             },
             {
-              "result": "T",
-              "spread": "0",
-              "id": "0011",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "regularSeason": "1",
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "id": "0004",
-              "spread": "0"
-            },
-            {
-              "spread": "0",
+              "isHome": "1",
               "id": "0013",
-              "result": "T",
-              "isHome": "1"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "id": "0003",
               "spread": "0",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0008",
-              "isHome": "1"
+              "result": "T"
             }
           ],
           "regularSeason": "1"
@@ -3585,18 +3567,35 @@
           "franchise": [
             {
               "isHome": "0",
-              "id": "0014",
+              "id": "0003",
               "spread": "0",
               "result": "T"
             },
             {
-              "isHome": "1",
               "spread": "0",
-              "id": "0005",
-              "result": "T"
+              "id": "0008",
+              "result": "T",
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "result": "T",
+              "id": "0014",
+              "spread": "0",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0005",
+              "spread": "0",
+              "result": "T"
+            }
+          ]
         },
         {
           "franchise": [
@@ -3608,40 +3607,6 @@
             },
             {
               "isHome": "1",
-              "result": "T",
-              "id": "0009",
-              "spread": "0"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "isHome": "0",
-              "result": "T",
-              "spread": "0",
-              "id": "0015"
-            },
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0007",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0001",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
               "spread": "0",
               "id": "0009",
               "result": "T"
@@ -3650,6 +3615,41 @@
           "regularSeason": "1"
         },
         {
+          "franchise": [
+            {
+              "spread": "0",
+              "id": "0015",
+              "result": "T",
+              "isHome": "0"
+            },
+            {
+              "isHome": "1",
+              "id": "0007",
+              "spread": "0",
+              "result": "T"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0001"
+            },
+            {
+              "result": "T",
+              "id": "0009",
+              "spread": "0",
+              "isHome": "1"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
@@ -3663,49 +3663,48 @@
               "id": "0016",
               "isHome": "1"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
+              "spread": "0",
               "id": "0012",
-              "spread": "0",
-              "result": "T"
-            },
-            {
-              "id": "0007",
-              "spread": "0",
-              "result": "T",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "spread": "0",
-              "id": "0010",
               "result": "T",
               "isHome": "0"
             },
             {
               "isHome": "1",
-              "id": "0015",
+              "result": "T",
               "spread": "0",
+              "id": "0007"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "result": "T",
+              "spread": "0",
+              "id": "0010"
+            },
+            {
+              "isHome": "1",
+              "spread": "0",
+              "id": "0015",
               "result": "T"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
             {
-              "spread": "0",
-              "id": "0004",
               "result": "T",
+              "id": "0004",
+              "spread": "0",
               "isHome": "0"
             },
             {
@@ -3721,16 +3720,33 @@
           "regularSeason": "1",
           "franchise": [
             {
-              "spread": "0",
-              "id": "0006",
               "result": "T",
+              "id": "0006",
+              "spread": "0",
               "isHome": "0"
             },
             {
               "isHome": "1",
-              "spread": "0",
               "id": "0008",
+              "spread": "0",
               "result": "T"
+            }
+          ]
+        },
+        {
+          "regularSeason": "1",
+          "franchise": [
+            {
+              "isHome": "0",
+              "id": "0013",
+              "spread": "0",
+              "result": "T"
+            },
+            {
+              "result": "T",
+              "id": "0014",
+              "spread": "0",
+              "isHome": "1"
             }
           ]
         },
@@ -3740,63 +3756,44 @@
               "isHome": "0",
               "result": "T",
               "spread": "0",
-              "id": "0013"
+              "id": "0011"
             },
             {
-              "result": "T",
-              "spread": "0",
-              "id": "0014",
-              "isHome": "1"
-            }
-          ],
-          "regularSeason": "1"
-        },
-        {
-          "franchise": [
-            {
-              "result": "T",
-              "spread": "0",
-              "id": "0011",
-              "isHome": "0"
-            },
-            {
-              "result": "T",
+              "isHome": "1",
               "spread": "0",
               "id": "0003",
-              "isHome": "1"
+              "result": "T"
             }
           ],
           "regularSeason": "1"
         }
       ]
     },
+    "encoding": "utf-8",
     "version": "1.0"
   },
   {
     "version": "1.0",
-    "encoding": "utf-8",
     "weeklyResults": {
-      "week": "14",
       "matchup": [
         {
           "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
+              "result": "T",
               "spread": "0",
               "id": "0002",
-              "result": "T"
+              "isHome": "0"
             },
             {
+              "isHome": "1",
               "spread": "0",
               "id": "0001",
-              "result": "T",
-              "isHome": "1"
+              "result": "T"
             }
           ]
         },
         {
-          "regularSeason": "1",
           "franchise": [
             {
               "result": "T",
@@ -3805,26 +3802,10 @@
               "isHome": "0"
             },
             {
-              "isHome": "1",
-              "spread": "0",
               "id": "0010",
-              "result": "T"
-            }
-          ]
-        },
-        {
-          "franchise": [
-            {
               "spread": "0",
-              "id": "0006",
               "result": "T",
-              "isHome": "0"
-            },
-            {
-              "isHome": "1",
-              "id": "0013",
-              "spread": "0",
-              "result": "T"
+              "isHome": "1"
             }
           ],
           "regularSeason": "1"
@@ -3832,10 +3813,27 @@
         {
           "franchise": [
             {
-              "isHome": "0",
+              "result": "T",
               "spread": "0",
+              "id": "0006",
+              "isHome": "0"
+            },
+            {
+              "spread": "0",
+              "id": "0013",
+              "result": "T",
+              "isHome": "1"
+            }
+          ],
+          "regularSeason": "1"
+        },
+        {
+          "franchise": [
+            {
+              "result": "T",
               "id": "0004",
-              "result": "T"
+              "spread": "0",
+              "isHome": "0"
             },
             {
               "isHome": "1",
@@ -3847,35 +3845,35 @@
           "regularSeason": "1"
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
               "isHome": "0",
-              "spread": "0",
               "id": "0003",
+              "spread": "0",
               "result": "T"
             },
             {
               "isHome": "1",
-              "result": "T",
               "id": "0005",
-              "spread": "0"
+              "spread": "0",
+              "result": "T"
             }
-          ],
-          "regularSeason": "1"
+          ]
         },
         {
           "franchise": [
             {
+              "isHome": "0",
               "id": "0014",
               "spread": "0",
-              "result": "T",
-              "isHome": "0"
+              "result": "T"
             },
             {
-              "id": "0008",
+              "isHome": "1",
               "spread": "0",
-              "result": "T",
-              "isHome": "1"
+              "id": "0008",
+              "result": "T"
             }
           ],
           "regularSeason": "1"
@@ -3898,29 +3896,29 @@
           "regularSeason": "1"
         },
         {
+          "regularSeason": "1",
           "franchise": [
             {
-              "isHome": "0",
-              "spread": "0",
+              "result": "T",
               "id": "0015",
-              "result": "T"
+              "spread": "0",
+              "isHome": "0"
             },
             {
               "isHome": "1",
+              "result": "T",
               "spread": "0",
-              "id": "0009",
-              "result": "T"
+              "id": "0009"
             }
-          ],
-          "regularSeason": "1"
+          ]
         }
-      ]
-    }
+      ],
+      "week": "14"
+    },
+    "encoding": "utf-8"
   },
   {
-    "encoding": "utf-8",
     "weeklyResults": {
-      "week": "15",
       "franchise": [
         {
           "id": "0001"
@@ -3970,11 +3968,14 @@
         {
           "id": "0016"
         }
-      ]
+      ],
+      "week": "15"
     },
+    "encoding": "utf-8",
     "version": "1.0"
   },
   {
+    "version": "1.0",
     "weeklyResults": {
       "week": "16",
       "franchise": [
@@ -4028,12 +4029,12 @@
         }
       ]
     },
-    "encoding": "utf-8",
-    "version": "1.0"
+    "encoding": "utf-8"
   },
   {
-    "encoding": "utf-8",
+    "version": "1.0",
     "weeklyResults": {
+      "week": "17",
       "franchise": [
         {
           "id": "0001"
@@ -4083,9 +4084,8 @@
         {
           "id": "0016"
         }
-      ],
-      "week": "17"
+      ]
     },
-    "version": "1.0"
+    "encoding": "utf-8"
   }
 ]
