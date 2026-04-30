@@ -45,10 +45,19 @@ export default function DraftPickSelector({
         originalPickFor: dp.originalPickFor,
       })
     );
-    return { ...sp, originalTeamName: detail?.originalTeamName ?? sp.originalPickFor };
+    return {
+      ...sp,
+      originalTeamName: detail?.originalTeamName ?? sp.originalPickFor,
+      pickInRound: detail?.pickInRound,
+    };
   });
 
-  const formatRound = (round: string) => {
+  // Format the round portion of a pick label.
+  // Current-year picks have a known slot → "2.02"; future picks fall back to "2nd".
+  const formatRound = (round: string, pickInRound?: number) => {
+    if (pickInRound != null) {
+      return `${round}.${String(pickInRound).padStart(2, '0')}`;
+    }
     const num = parseInt(round, 10);
     if (num === 1) return '1st';
     if (num === 2) return '2nd';
@@ -97,7 +106,7 @@ export default function DraftPickSelector({
                   className="draft-picks__badge"
                 >
                   <span>
-                    {pick.year} {formatRound(pick.round)}
+                    {pick.year} {formatRound(pick.round, pick.pickInRound)}
                     {pick.originalPickFor !== teamFranchiseId && (
                       <span className="draft-picks__via"> via {pick.originalTeamName}</span>
                     )}
@@ -129,7 +138,7 @@ export default function DraftPickSelector({
                     className="draft-picks__option"
                     onClick={() => onAdd(key)}
                   >
-                    {formatRound(dp.round)}
+                    {formatRound(dp.round, dp.pickInRound)}
                     {dp.originalPickFor !== teamFranchiseId && (
                       <span className="draft-picks__via"> (via {dp.originalTeamName})</span>
                     )}

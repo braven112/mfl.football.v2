@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo } from 'react';
-import type { TradeBuilderPlayer, PlayerSurplusData, DraftPickKey, DraftPickValueData } from '../../../types/trade-builder';
+import type { TradeBuilderPlayer, TradeBuilderTeam, PlayerSurplusData, DraftPickKey, DraftPickValueData } from '../../../types/trade-builder';
 import { formatCompactNumber } from '../../../utils/formatters';
 import type { RankingLookup } from '../../../utils/rankings-lookup';
 import { getPlayerRank, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
@@ -21,6 +21,8 @@ interface Props {
   teamBPlayers: TradeBuilderPlayer[];
   teamADraftPicks: DraftPickKey[];
   teamBDraftPicks: DraftPickKey[];
+  /** Used to resolve `pickInRound` for current-year picks. */
+  allTeams: TradeBuilderTeam[];
   surplusMap: Record<string, PlayerSurplusData>;
   pickValueMap?: Record<string, DraftPickValueData>;
   rankingLookup?: RankingLookup | null;
@@ -44,10 +46,25 @@ export default function TradeValueAnalysis({
   teamBPlayers,
   teamADraftPicks,
   teamBDraftPicks,
+  allTeams,
   surplusMap,
   pickValueMap,
   rankingLookup,
 }: Props) {
+  // Resolve a pick's pre-computed pickInRound (set only for current-year picks)
+  // by matching against any team's draftPicks list.
+  const lookupPickInRound = (pick: DraftPickKey): number | undefined => {
+    for (const t of allTeams) {
+      const dp = t.draftPicks.find(
+        d =>
+          d.year === pick.year &&
+          d.round === pick.round &&
+          d.originalPickFor === pick.originalPickFor,
+      );
+      if (dp) return dp.pickInRound;
+    }
+    return undefined;
+  };
   const analysis = useMemo(() => {
     const sumPlayerSurplus = (players: TradeBuilderPlayer[]) =>
       players.reduce((sum, p) => sum + (surplusMap[p.id]?.surplusValue ?? 0), 0);
@@ -118,11 +135,15 @@ export default function TradeValueAnalysis({
   const renderDraftPick = (pick: DraftPickKey) => {
     const val = pickValueMap?.[pickKey(pick)];
     const hasPkValue = val && val.surplusValue !== 0;
+    const pickInRound = lookupPickInRound(pick);
+    const roundLabel = pickInRound != null
+      ? `${pick.round}.${String(pickInRound).padStart(2, '0')}`
+      : `Rd ${pick.round}`;
 
     return (
       <div key={pickKey(pick)} className="tva__player">
         <span className="tva__player-name">
-          {pick.year} Rd {pick.round}
+          {pick.year} {roundLabel}
         </span>
         {hasPkValue ? (
           <span className="tva__player-value tva__player-value--positive">
