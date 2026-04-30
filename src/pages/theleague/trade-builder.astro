@@ -227,11 +227,13 @@ for (const pick of rawDraftResultPicks) {
   currentYearDpMap[dpKey] = dpCode;
   dpReverseMap[dpCode] = { year: leagueYearStr, round, originalPickFor };
 
+  const pickInRoundNum = parseInt(pick.pick, 10);
   const draftPick = {
     year: leagueYearStr,
     round,
     originalPickFor,
     originalTeamName,
+    ...(Number.isFinite(pickInRoundNum) ? { pickInRound: pickInRoundNum } : {}),
   };
 
   if (!currentYearPicksByFranchise.has(currentOwner)) {

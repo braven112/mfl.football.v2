@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type {
   TradeBuilderTeam,
   TradeBuilderPlayer,
+  TradeBuilderDraftPick,
   DraftPickKey,
   RookieExtensionSim,
   TeamTradeImpact,
@@ -100,16 +101,37 @@ export default function TradeConfirmationModal({
 
   // No auto-close — user clicks "Done" or "View My Trades" after success
 
-  const formatPickLabel = (pick: DraftPickKey, teams: TradeBuilderTeam[]) => {
-    const originalTeam = teams.find(t =>
-      t.draftPicks.some(dp =>
-        dp.year === pick.year && dp.round === pick.round && dp.originalPickFor === pick.originalPickFor
-      )
-    );
-    const via = pick.originalPickFor && originalTeam
-      ? ` (via ${originalTeam.nameShort || originalTeam.abbrev})`
-      : '';
-    return `${pick.year} Rd ${pick.round}${via}`;
+  const formatPickLabel = (
+    pick: DraftPickKey,
+    teams: TradeBuilderTeam[],
+    holdingTeam: TradeBuilderTeam,
+  ) => {
+    // Find the matching pick entry on any team — its `originalTeamName` and
+    // `pickInRound` are already pre-computed by the page loader. We must NOT
+    // use the *holding* team's name as the "via" — that's whoever currently
+    // owns the pick, not the team it originated from.
+    let dpEntry: TradeBuilderDraftPick | undefined;
+    for (const t of teams) {
+      dpEntry = t.draftPicks.find(
+        dp =>
+          dp.year === pick.year &&
+          dp.round === pick.round &&
+          dp.originalPickFor === pick.originalPickFor,
+      );
+      if (dpEntry) break;
+    }
+
+    const roundLabel = dpEntry?.pickInRound != null
+      ? `${pick.round}.${String(dpEntry.pickInRound).padStart(2, '0')}`
+      : `Rd ${pick.round}`;
+
+    // Suppress "(via X)" when the holding team is the original owner —
+    // it's their own pick, redundant to display.
+    const showVia = pick.originalPickFor !== holdingTeam.franchiseId;
+    const viaName = dpEntry?.originalTeamName;
+    const via = showVia && viaName ? ` (via ${viaName})` : '';
+
+    return `${pick.year} ${roundLabel}${via}`;
   };
 
   const renderTeamSection = (
@@ -140,7 +162,7 @@ export default function TradeConfirmationModal({
         })}
         {picks.map((pick, i) => (
           <div key={`pick-${i}`} className="tcm-asset-row tcm-asset-row--pick">
-            <span className="tcm-asset-name">{formatPickLabel(pick, allTeams)}</span>
+            <span className="tcm-asset-name">{formatPickLabel(pick, allTeams, team)}</span>
             <span className="tcm-asset-pos">PICK</span>
           </div>
         ))}

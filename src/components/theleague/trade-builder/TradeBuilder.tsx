@@ -663,6 +663,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
               teamBPlayers={teamBPlayers}
               teamADraftPicks={state.teamA.draftPicks}
               teamBDraftPicks={state.teamB.draftPicks}
+              allTeams={data.teams}
               surplusMap={data.surplusMap}
               pickValueMap={data.pickValueMap}
               rankingLookup={rankingLookup}
