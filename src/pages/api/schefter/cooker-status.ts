@@ -13,8 +13,25 @@
  *     postsToday: number,
  *     dailyCap: number,
  *     dailyCapHit: boolean,
- *     marinateWindowMs: number
+ *     marinateWindowMs: number,
+ *     heat: 'quiet' | 'simmer' | 'rolling' | 'boil' | 'overflow',
+ *     backloggedHint: boolean
  *   }
+ *
+ * `heat` is the soft popularity signal — a tier derived from queueDepth that
+ * the tip page renders as a badge so owners can see Schefter heating up
+ * without exposing exact counts as the only signal. Thresholds align with
+ * the scanner's own pressure points so the public copy stays in sync with
+ * the scanner's internal escalation:
+ *   - 0           quiet     — empty queue
+ *   - 1–3         simmer    — normal trickle
+ *   - 4–5         rolling   — secondary-gossip-post pressure (SECONDARY_GOSSIP_POST_PRESSURE)
+ *   - 6–9         boil      — gossip cap auto-bumps to 2/day (GOSSIP_BOOST_QUEUE_DEPTH)
+ *   - 10+         overflow  — exceeds MAX_TIPS_PER_BATCH; leftovers will roll to next cycle
+ *
+ * `backloggedHint` is true when heat ∈ {boil, overflow} — the tip page uses
+ * it to append a "your tip may marinate longer than usual" note so owners
+ * self-throttle without us hard-rejecting on submit.
  *
  * No identity signal — returns counts only. Queue contents are NEVER returned.
  */
@@ -32,6 +49,24 @@ const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
 const MARINATE_WINDOW_MS = 60 * 60 * 1000;
 const DAILY_CAP = 3;
 
+// Heat tier thresholds — kept in sync with the scanner's escalation in
+// scripts/schefter-rumor-scan.mjs. Both endpoints read the same Redis list,
+// so when scanner-side constants change these MUST move with them.
+export const HEAT_SIMMER_MIN = 1;     // 1-3 tips
+export const HEAT_ROLLING_MIN = 4;    // SECONDARY_GOSSIP_POST_PRESSURE
+export const HEAT_BOIL_MIN = 6;       // GOSSIP_BOOST_QUEUE_DEPTH
+export const HEAT_OVERFLOW_MIN = 10;  // MAX_TIPS_PER_BATCH
+
+export type Heat = 'quiet' | 'simmer' | 'rolling' | 'boil' | 'overflow';
+
+export function classifyHeat(queueDepth: number): Heat {
+  if (queueDepth >= HEAT_OVERFLOW_MIN) return 'overflow';
+  if (queueDepth >= HEAT_BOIL_MIN) return 'boil';
+  if (queueDepth >= HEAT_ROLLING_MIN) return 'rolling';
+  if (queueDepth >= HEAT_SIMMER_MIN) return 'simmer';
+  return 'quiet';
+}
+
 // In-process cache. The client polls /api/schefter/cooker-status every 60s
 // per open tab; under any concurrency at all we rack up Redis commands fast
 // (3 per request: LLEN + 2× GET). Cooker state changes slowly enough that a
@@ -47,6 +82,8 @@ type CookerSnapshot = {
   dailyCap: number;
   dailyCapHit: boolean;
   marinateWindowMs: number;
+  heat: Heat;
+  backloggedHint: boolean;
 };
 let _cache: { data: CookerSnapshot; expiresAt: number } | null = null;
 
@@ -115,6 +152,8 @@ export const GET: APIRoute = async () => {
       dailyCap: DAILY_CAP,
       dailyCapHit: false,
       marinateWindowMs: MARINATE_WINDOW_MS,
+      heat: 'quiet',
+      backloggedHint: false,
     };
     // Cache the zero state too — prevents a hot-path of Redis-missing
     // requests from re-running the import every poll.
@@ -143,6 +182,8 @@ export const GET: APIRoute = async () => {
   const dailyCapHit = postsToday >= DAILY_CAP;
   const nextEarliestPostAt =
     marinateStartedAt !== null ? marinateStartedAt + MARINATE_WINDOW_MS : null;
+  const heat = classifyHeat(queueDepth);
+  const backloggedHint = heat === 'boil' || heat === 'overflow';
 
   const snapshot: CookerSnapshot = {
     queueDepth,
@@ -152,6 +193,8 @@ export const GET: APIRoute = async () => {
     dailyCap: DAILY_CAP,
     dailyCapHit,
     marinateWindowMs: MARINATE_WINDOW_MS,
+    heat,
+    backloggedHint,
   };
   _cache = { data: snapshot, expiresAt: now + CACHE_TTL_MS };
   return json(snapshot);
