@@ -1,0 +1,279 @@
+---
+/**
+ * HottestDesksWidget — sidebar leaderboard of most-named franchises in the
+ * Schefter rumor mill (last 7 days by default). Pure SSR, no hydration.
+ *
+ * The page that mounts this widget passes pre-resolved rows in via the
+ * `desks` prop. The widget resolves franchise display details from the
+ * theleague config and renders a ranked leaderboard with per-row whisper-back
+ * micro-links pointing at /theleague/schefter/tip?target={franchiseId}.
+ *
+ * Per HARD RULE 4b in the scanner prompt: a tipster who picks a team via
+ * that URL parameter unlocks direct naming on the resulting Schefter post.
+ * The widget is the visible engine of that loop — see who's hot, go take
+ * a shot.
+ */
+import theLeagueConfig from '../../data/theleague.config.json';
+import { chooseTeamName } from '../../utils/team-names';
+
+export interface HottestDeskEntry {
+  /** MFL franchiseId (e.g., "0001") — must resolve in theleague.config.json */
+  franchiseId: string;
+  /** Mention count over the window */
+  mentions: number;
+}
+
+export interface Props {
+  /** Top-N rows, already sorted desc by mentions, from the Redis counter. */
+  desks: HottestDeskEntry[];
+  /** Window label shown in the header (default "this week") */
+  windowLabel?: string;
+}
+
+type TeamConfig = {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  icon?: string;
+};
+
+const { desks, windowLabel = 'this week' } = Astro.props;
+
+const teamsById = new Map<string, TeamConfig>(
+  ((theLeagueConfig as { teams?: TeamConfig[] }).teams ?? []).map((t) => [t.franchiseId, t]),
+);
+
+const rows = desks
+  .map((d) => {
+    const team = teamsById.get(d.franchiseId);
+    if (!team) return null; // defensive: drop unresolved IDs
+    return {
+      franchiseId: d.franchiseId,
+      shortName: chooseTeamName(
+        {
+          fullName: team.name,
+          nameMedium: team.nameMedium,
+          nameShort: team.nameShort,
+          abbrev: team.abbrev,
+        },
+        'short',
+      ),
+      icon: team.icon ?? '',
+      mentions: d.mentions,
+    };
+  })
+  .filter((row): row is NonNullable<typeof row> => row !== null)
+  .slice(0, 5);
+
+const isEmpty = rows.length === 0;
+---
+
+<section
+  class="sf-rail-section sf-rail-hottest"
+  aria-labelledby="hottest-desks-title"
+>
+  <h2 class="sf-rail-section__title" id="hottest-desks-title">
+    Hottest desks {windowLabel}
+  </h2>
+
+  {isEmpty ? (
+    <p class="sf-rail-hottest__empty">
+      Quiet week. Be the first to whisper.
+      <a class="sf-rail-hottest__empty-link" href="/theleague/schefter/tip">
+        Tip Schefter <span aria-hidden="true">→</span>
+      </a>
+    </p>
+  ) : (
+    <ol
+      class="sf-rail-hottest__list"
+      aria-label={`Top ${rows.length} most-named franchises in the rumor mill ${windowLabel}`}
+    >
+      {rows.map((row, idx) => (
+        <li class="sf-rail-hottest__item">
+          <span class="sf-rail-hottest__rank" aria-hidden="true">{idx + 1}</span>
+          {row.icon ? (
+            <img
+              class="sf-rail-hottest__icon"
+              src={row.icon}
+              alt=""
+              width="18"
+              height="18"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span class="sf-rail-hottest__icon sf-rail-hottest__icon--placeholder" aria-hidden="true"></span>
+          )}
+          <span class="sf-rail-hottest__name">{row.shortName}</span>
+          <span
+            class="sf-rail-hottest__count"
+            aria-label={`${row.mentions} ${row.mentions === 1 ? 'mention' : 'mentions'}`}
+          >
+            {row.mentions}
+          </span>
+          <a
+            class="sf-rail-hottest__cta"
+            href={`/theleague/schefter/tip?target=${row.franchiseId}`}
+            aria-label={`Tip Schefter about the ${row.shortName}`}
+          >
+            tip about them <span aria-hidden="true">→</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  )}
+</section>
+
+<style>
+  .sf-rail-hottest {
+    /* sits in the sf-news-rail flex column; no extra card chrome —
+       the widget reads as a typographic leaderboard, not a panel. */
+  }
+
+  .sf-rail-hottest__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sf-rail-hottest__item {
+    display: grid;
+    /* rank | icon | name (flex) | count                        */
+    /* under: blank | blank | cta (spans name+count)            */
+    grid-template-columns: 1.125rem 18px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 0.5rem;
+    row-gap: 0.0625rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .sf-rail-hottest__item:last-child {
+    border-bottom: none;
+  }
+
+  .sf-rail-hottest__rank {
+    grid-row: 1;
+    grid-column: 1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-500, #6b7280);
+    text-align: right;
+    line-height: 1;
+  }
+
+  .sf-rail-hottest__icon {
+    grid-row: 1;
+    grid-column: 2;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .sf-rail-hottest__icon--placeholder {
+    /* renders the same 18px circle so rows stay aligned when a team
+       icon is missing in config */
+    display: inline-block;
+  }
+
+  .sf-rail-hottest__name {
+    grid-row: 1;
+    grid-column: 3;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+    /* short form is short, but defend against config drift */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sf-rail-hottest__count {
+    grid-row: 1;
+    grid-column: 4;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+    line-height: 1;
+  }
+
+  .sf-rail-hottest__cta {
+    grid-row: 2;
+    grid-column: 3 / -1;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-gray-500, #6b7280);
+    text-decoration: none;
+    line-height: 1.3;
+    transition: color 0.15s ease;
+  }
+
+  .sf-rail-hottest__cta:hover,
+  .sf-rail-hottest__cta:focus-visible {
+    color: var(--sf-accent, var(--color-primary, #1c497c));
+    text-decoration: underline;
+  }
+
+  .sf-rail-hottest__cta:focus-visible {
+    outline: 2px solid var(--sf-accent, var(--color-primary, #1c497c));
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  /* Empty state */
+  .sf-rail-hottest__empty {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .sf-rail-hottest__empty-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.25rem;
+    font-weight: 600;
+    color: var(--sf-accent, var(--color-primary, #1c497c));
+    text-decoration: none;
+  }
+
+  .sf-rail-hottest__empty-link:hover,
+  .sf-rail-hottest__empty-link:focus-visible {
+    text-decoration: underline;
+  }
+
+  .sf-rail-hottest__empty-link:focus-visible {
+    outline: 2px solid var(--sf-accent, var(--color-primary, #1c497c));
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  /* Dark mode — mirror schefter-feed.css pattern (token-driven, no overrides
+     needed because every color above is a CSS var with a light fallback).
+     Belt-and-suspenders: tighten the divider in dark mode if the global
+     gray-50 fallback isn't dark-mode-aware. */
+  @media (prefers-color-scheme: dark) {
+    .sf-rail-hottest__item {
+      border-bottom-color: var(--color-gray-800, #1f2937);
+    }
+  }
+
+  /* Mobile — let team names wrap once horizontal real-estate opens up
+     (the parent rail collapses to full-width below 768px). */
+  @media (max-width: 768px) {
+    .sf-rail-hottest__name {
+      white-space: normal;
+    }
+  }
+</style>

@@ -224,6 +224,29 @@
   color: var(--color-secondary, #2e8743);
 }
 
+/* Directed CTA — fires on franchise-explicit-pick posts (link contains
+   ?target=). The directed dare ("Geeks desk — your move →") is a different
+   speech act than the open prompt ("Got a tip? Whisper to Schefter →") so
+   the visual gets a small differentiator: leading megaphone icon + heavier
+   weight. Same accent color, no background, stays in the typographic flow
+   so it doesn't compete with the reaction bar. */
+.sf-post__link--directed {
+  font-weight: 600;
+  color: var(--sf-accent, var(--color-primary, #1c497c));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.sf-post__link--directed:hover,
+.sf-post__link--directed:focus-visible {
+  color: var(--color-primary-dark, #164066);
+  text-decoration: underline;
+}
+.sf-post__link-icon {
+  flex-shrink: 0;
+  vertical-align: -2px;
+}
+
 /* ── Reaction Bar ── */
 .sf-reactions {
   display: flex;

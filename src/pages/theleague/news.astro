@@ -19,6 +19,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import GroupMeChatPanel from '../../components/shared/GroupMeChatPanel.tsx';
+import HottestDesksWidget from '../../components/theleague/HottestDesksWidget.astro';
+// @ts-expect-error — JS module without bundled types; runtime exports verified.
+import { getTopNamedTeams } from '../../../scripts/lib/schefter-team-naming.mjs';
 import { getAuthUser } from '../../utils/auth';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../../types/schefter';
 import type { SchefterPost } from '../../types/schefter';
@@ -38,6 +41,32 @@ const schefterArticles = feed.posts
   .filter((p: any) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))
   .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   .slice(0, 5);
+
+// Hottest desks (most-named franchises in the rumor mill, last 7d). Powers
+// the sidebar leaderboard widget. Best-effort SSR Redis read — if Redis is
+// unavailable or empty the widget renders its own empty state.
+let hottestDesks: Array<{ franchiseId: string; mentions: number }> = [];
+try {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.KV_REST_API_URL ||
+    process.env.STORAGE_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.KV_REST_API_TOKEN ||
+    process.env.STORAGE_REST_API_TOKEN;
+  if (url && token) {
+    const { Redis } = await import('@upstash/redis');
+    const redis = new Redis({ url, token });
+    const rows = await getTopNamedTeams(redis, 7, 5);
+    hottestDesks = (rows ?? []).map((r: { franchiseId: string; count: number }) => ({
+      franchiseId: r.franchiseId,
+      mentions: r.count,
+    }));
+  }
+} catch (err) {
+  console.warn('[news] hottest-desks load failed:', err);
+}
 
 // Resolve team info for reply composer avatar
 let userTeamName: string | undefined;
@@ -236,6 +265,8 @@ const tabs = [
           <path d="M9 18l6-6-6-6"/>
         </svg>
       </a>
+
+      <HottestDesksWidget desks={hottestDesks} windowLabel="this week" />
 
       {schefterArticles.length > 0 && (
         <section class="sf-rail-section" aria-label="Featured articles from Claude Schefter">

@@ -180,6 +180,18 @@
   border-radius: var(--radius-sm, 0.25rem);
 }
 
+/* Directed CTA — see schefter-feed.css for rationale. */
+.sfc-post__link--directed {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.sfc-post__link-icon {
+  flex-shrink: 0;
+  vertical-align: -2px;
+}
+
 /* ── Post Actions (reply toggle + reactions on same line) ── */
 .sfc-post__actions {
   display: flex;
