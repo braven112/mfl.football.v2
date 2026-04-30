@@ -113,21 +113,39 @@ type FeedPost = {
   tipIds?: string[];
 };
 
-export type ChannelKey = 'groupme' | 'web' | 'trade' | 'wire';
+export type ChannelKey = 'groupme' | 'web' | 'trade';
 
-export type ChannelCounts = { groupme: number; web: number; trade: number; wire: number; total: number };
+export type ChannelCounts = { groupme: number; web: number; trade: number; total: number };
 
 function emptyChannelCounts(): ChannelCounts {
-  return { groupme: 0, web: 0, trade: 0, wire: 0, total: 0 };
+  return { groupme: 0, web: 0, trade: 0, total: 0 };
 }
 
-function inferChannel(p: FeedPost): ChannelKey {
+/**
+ * Infer the byline channel for a published feed post. Returns null for posts
+ * that are NOT Schefter byline content (wire/external/ESPN syndication and
+ * completed-trade announcements that aren't proposal-driven). Those posts
+ * don't belong in the "what feeds Schefter's GroupMe posts?" rollup —
+ * including them swamps the meaningful signal with ESPN noise.
+ */
+function inferChannel(p: FeedPost): ChannelKey | null {
   const sub = p.transactionSubType;
   const tipIds = Array.isArray(p.tipIds) ? p.tipIds : [];
   const hasGm = tipIds.some((id) => typeof id === 'string' && id.startsWith('gm_'));
   if (sub === 'rumor_mill') return hasGm ? 'groupme' : 'web';
   if (sub === 'TRADE_PENDING') return 'trade';
-  return 'wire';
+  return null;
+}
+
+/**
+ * Map a queue tip's `source` to a byline channel for the "Coming Next"
+ * preview. `trade_offer` is the only real-proposal source — `trade_bait`
+ * (player-listed-as-available rumors) is gossip-grade and lumps with web.
+ */
+function inferTipChannel(source: unknown): ChannelKey {
+  if (source === 'groupme') return 'groupme';
+  if (source === 'trade_offer') return 'trade';
+  return 'web';
 }
 
 type FeedShape = {
@@ -162,7 +180,7 @@ function deriveFeedStats(feed: FeedShape) {
   const channelMix7d = emptyChannelCounts();
   const channelMixAllTime = emptyChannelCounts();
   const lastPostByChannel: Record<ChannelKey, number | null> = {
-    groupme: null, web: null, trade: null, wire: null,
+    groupme: null, web: null, trade: null,
   };
   // Map: GroupMe message id (without `gm_` prefix) → published post id.
   // Used by the admin client to flip GroupMe stream pills to "posted".
@@ -190,14 +208,16 @@ function deriveFeedStats(feed: FeedShape) {
     if (p.authorId === 'claude') claudeAuthoredTotal += 1;
 
     const channel = inferChannel(p);
-    channelMixAllTime[channel] += 1;
-    channelMixAllTime.total += 1;
-    if (ageMs <= 7 * day) {
-      channelMix7d[channel] += 1;
-      channelMix7d.total += 1;
-    }
-    if (ts && (lastPostByChannel[channel] === null || ts > (lastPostByChannel[channel] as number))) {
-      lastPostByChannel[channel] = ts;
+    if (channel) {
+      channelMixAllTime[channel] += 1;
+      channelMixAllTime.total += 1;
+      if (ageMs <= 7 * day) {
+        channelMix7d[channel] += 1;
+        channelMix7d.total += 1;
+      }
+      if (ts && (lastPostByChannel[channel] === null || ts > (lastPostByChannel[channel] as number))) {
+        lastPostByChannel[channel] = ts;
+      }
     }
 
     if (Array.isArray(p.tipIds)) {
@@ -310,6 +330,19 @@ async function readRedisStats(redis: RedisClient) {
     const bx = typeof b.submittedAt === 'number' ? b.submittedAt : 0;
     return ax - bx;
   });
+
+  // Queue composition by byline channel — what's actually feeding the next
+  // post(s). This is the most operationally important number on the page:
+  // a Schefter byline post is forming any moment, and the commish wants to
+  // know which lane is supplying it. `trade_offer` is the only "real
+  // proposal" source; `trade_bait` (player-listed-as-available) is gossip
+  // and folds into the web lane.
+  const queueChannelMix: ChannelCounts = emptyChannelCounts();
+  for (const tip of pendingTips) {
+    const ch = inferTipChannel((tip as { source?: unknown }).source);
+    queueChannelMix[ch] += 1;
+    queueChannelMix.total += 1;
+  }
 
   // Recent GroupMe messages — latest 50, newest first. Surface as-is so the
   // admin can scan the chat stream and see which messages Schefter picked
@@ -435,6 +468,7 @@ async function readRedisStats(redis: RedisClient) {
     pendingTips,
     recentGroupMe,
     predictedPostOrder,
+    queueChannelMix,
   };
 }
 

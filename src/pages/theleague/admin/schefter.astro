@@ -42,14 +42,36 @@ if (!user || !isCommissionerOrAdmin(user)) {
       <header class="ops-hero__head">
         <h2 id="hero-channel-mix" class="ops-card__title">Channel Mix</h2>
         <p class="ops-card__hint">
-          Where Schefter's posts are coming from. Top bar = last 7 days
-          (what's hot now). Bottom bar = all-time baseline.
+          What's feeding Schefter's GroupMe posts.
+          <strong>Coming Next</strong> = current tip queue (the next post is forming from this).
+          <strong>7 days</strong> + <strong>All-time</strong> = byline posts that already shipped, by source.
+          Wire/ESPN syndication is excluded — that's not Schefter writing.
         </p>
       </header>
 
+      <div class="ops-chx ops-chx--queue" data-window="queue">
+        <div class="ops-chx__label">
+          <span id="hero-chx-queue-label">Coming Next · queue composition</span>
+          <span class="ops-chx__total" data-k="redis.queueChannelMix.total">—</span>
+        </div>
+        <div
+          class="ops-chx__bar ops-chx__bar--tall"
+          role="img"
+          aria-labelledby="hero-chx-queue-label"
+          aria-describedby="ops-chx-queue-sr"
+          data-chx-bar="queue"
+        >
+          <span class="ops-chx__seg ops-chx--empty" style="--w:100%;" aria-hidden="true">
+            <span class="ops-chx__seg-label">Loading…</span>
+          </span>
+        </div>
+        <p id="ops-chx-queue-sr" class="ops-sr-only" data-chx-sr="queue">Loading queue composition.</p>
+        <ul class="ops-chx__legend" data-chx-legend="queue"></ul>
+      </div>
+
       <div class="ops-chx" data-window="7d">
         <div class="ops-chx__label">
-          <span id="hero-chx-7d-label">Last 7 days</span>
+          <span id="hero-chx-7d-label">Last 7 days · byline shipped</span>
           <span class="ops-chx__total" data-k="feed.channelMix.windows.7d.total">—</span>
         </div>
         <div
@@ -64,12 +86,11 @@ if (!user || !isCommissionerOrAdmin(user)) {
           </span>
         </div>
         <p id="ops-chx-7d-sr" class="ops-sr-only" data-chx-sr="7d">Loading channel mix.</p>
-        <ul class="ops-chx__legend" data-chx-legend="7d"></ul>
       </div>
 
       <div class="ops-chx ops-chx--secondary" data-window="allTime">
         <div class="ops-chx__label">
-          <span id="hero-chx-allTime-label">All-time</span>
+          <span id="hero-chx-allTime-label">All-time · byline baseline</span>
           <span class="ops-chx__total" data-k="feed.channelMix.windows.allTime.total">—</span>
         </div>
         <div
@@ -85,6 +106,8 @@ if (!user || !isCommissionerOrAdmin(user)) {
         </div>
         <p id="ops-chx-allTime-sr" class="ops-sr-only" data-chx-sr="allTime">Loading channel mix.</p>
       </div>
+
+      <p class="ops-hero__zero-state" data-chx-zero hidden></p>
     </section>
 
     <section class="ops-cluster" aria-labelledby="cluster-next">
@@ -384,24 +407,40 @@ if (!user || !isCommissionerOrAdmin(user)) {
     // Channel Mix hero — render two stacked bars (7d + all-time) using the
     // server-derived counts. Segments with zero counts are dropped from the
     // bar but kept in the legend so the picture stays honest.
-    const CHANNELS: Array<{ key: 'groupme' | 'web' | 'trade' | 'wire'; label: string; cls: string }> = [
+    type ChannelKey = 'groupme' | 'web' | 'trade';
+    const CHANNELS: Array<{ key: ChannelKey; label: string; cls: string }> = [
       { key: 'groupme', label: 'GroupMe', cls: 'ops-chx--groupme' },
       { key: 'web',     label: 'Web',     cls: 'ops-chx--web' },
       { key: 'trade',   label: 'Trade',   cls: 'ops-chx--trade' },
-      { key: 'wire',    label: 'Wire',    cls: 'ops-chx--wire' },
     ];
-    function renderChannelMix(windowKey: '7d' | 'allTime') {
-      const w = data.feed?.channelMix?.windows?.[windowKey] ?? null;
+    type WindowKey = '7d' | 'allTime' | 'queue';
+    function getMix(windowKey: WindowKey): { groupme: number; web: number; trade: number; total: number } | null {
+      if (windowKey === 'queue') {
+        const m = data.redis?.queueChannelMix;
+        return m && typeof m === 'object' ? m : null;
+      }
+      return data.feed?.channelMix?.windows?.[windowKey] ?? null;
+    }
+    const WINDOW_LABELS: Record<WindowKey, string> = {
+      queue: 'Coming Next (queue)',
+      '7d': 'Last 7 days',
+      allTime: 'All-time',
+    };
+    const QUEUE_EMPTY_TEXT = 'Queue empty — Schefter is between rumors. Next post forms when a tip lands.';
+    const HISTORICAL_EMPTY_TEXT = 'No byline posts yet in this window.';
+    function renderChannelMix(windowKey: WindowKey) {
+      const w = getMix(windowKey);
       const bar = document.querySelector(`[data-chx-bar="${windowKey}"]`);
       const sr  = document.querySelector(`[data-chx-sr="${windowKey}"]`);
       const leg = document.querySelector(`[data-chx-legend="${windowKey}"]`);
       if (!bar) return;
       const total = (w && typeof w.total === 'number') ? w.total : 0;
-      const windowLabel = windowKey === '7d' ? 'Last 7 days' : 'All-time';
+      const windowLabel = WINDOW_LABELS[windowKey];
       if (!total) {
+        const emptyText = windowKey === 'queue' ? QUEUE_EMPTY_TEXT : HISTORICAL_EMPTY_TEXT;
         bar.innerHTML = `<span class="ops-chx__seg ops-chx--empty" style="--w:100%;" aria-hidden="true">
-          <span class="ops-chx__seg-label">No posts yet</span></span>`;
-        if (sr) sr.textContent = `${windowLabel}: no posts yet.`;
+          <span class="ops-chx__seg-label">${escapeHtml(emptyText)}</span></span>`;
+        if (sr) sr.textContent = `${windowLabel}: ${emptyText}`;
         if (leg) leg.innerHTML = '';
         return;
       }
@@ -421,17 +460,37 @@ if (!user || !isCommissionerOrAdmin(user)) {
         </span>`).join('');
       if (sr) {
         const phrase = drawn.map((s) => `${s.label} ${s.n} (${Math.round(s.pct)} percent)`).join(', ');
-        sr.textContent = `${windowLabel}, ${total} posts. ${phrase}.`;
+        sr.textContent = `${windowLabel}, ${total} ${windowKey === 'queue' ? 'tips queued' : 'posts'}. ${phrase}.`;
       }
       if (leg) {
-        // Render only on 7d (the all-time bar omits the legend per the design).
         leg.innerHTML = segs.map((s) => `
           <li><span class="ops-chx__swatch ${s.cls}" aria-hidden="true"></span>
-            ${s.label} <strong>${s.n}</strong></li>`).join('');
+            ${s.label} <strong>${s.n}</strong>${s.n === 0 ? ' <em class="ops-chx__never">— never</em>' : ''}</li>`).join('');
       }
     }
+    renderChannelMix('queue');
     renderChannelMix('7d');
     renderChannelMix('allTime');
+
+    // "Never shipped" callout — surfaces channels that have ZERO all-time
+    // byline posts. The user's specific ask: see at a glance whether any
+    // trade proposal has ever driven a Schefter post. If so, this disappears.
+    const allTime = data.feed?.channelMix?.windows?.allTime;
+    const zeroEl = document.querySelector<HTMLElement>('[data-chx-zero]');
+    if (zeroEl) {
+      const neverShipped: string[] = [];
+      if (allTime) {
+        for (const c of CHANNELS) if ((allTime as any)[c.key] === 0) neverShipped.push(c.label);
+      }
+      if (neverShipped.length === 0) {
+        zeroEl.hidden = true;
+        zeroEl.textContent = '';
+      } else {
+        zeroEl.hidden = false;
+        const list = neverShipped.join(' · ');
+        zeroEl.innerHTML = `<strong>Never shipped:</strong> ${list}. <em>No byline post has ever come from ${neverShipped.length === 1 ? 'this lane' : 'these lanes'}.</em>`;
+      }
+    }
 
     const merged = { ...data, fmt };
     document.querySelectorAll<HTMLElement>('[data-k]').forEach((el) => {
@@ -921,25 +980,30 @@ if (!user || !isCommissionerOrAdmin(user)) {
     display: flex; width: 100%; height: 28px;
     border: 1px solid var(--color-border, #e2e8f0);
     border-radius: 6px; overflow: hidden; background: #f1f5f9;
+    /* Visible 2px white seam between segments — keeps adjacent lanes
+       readable as distinct bars, not a single gradient. */
+    gap: 2px;
   }
   .ops-chx__bar--thin { height: 14px; }
+  .ops-chx__bar--tall { height: 36px; }
   .ops-chx__seg {
     display: inline-flex; align-items: center; justify-content: center;
     width: var(--w, 0%);
     background: var(--seg-bg);
     color: var(--seg-fg);
-    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.03em; white-space: nowrap;
     transition: width 200ms ease-out;
     min-width: 0; overflow: hidden;
   }
-  .ops-chx__seg + .ops-chx__seg { border-left: 1px solid rgba(255,255,255,0.6); }
-  .ops-chx__seg-label { padding: 0 0.35rem; text-overflow: ellipsis; overflow: hidden; }
+  .ops-chx__seg-label { padding: 0 0.4rem; text-overflow: ellipsis; overflow: hidden; }
   .ops-chx__seg[data-narrow="true"] .ops-chx__seg-label { display: none; }
-  .ops-chx--groupme  { --seg-bg: #dbeafe; --seg-fg: #1e3a8a; }
-  .ops-chx--web      { --seg-bg: #dcfce7; --seg-fg: #166534; }
-  .ops-chx--trade    { --seg-bg: #fef3c7; --seg-fg: #92400e; }
-  .ops-chx--wire     { --seg-bg: #ede9fe; --seg-fg: #5b21b6; }
+  /* Bolder, saturated lane colors so the bar reads as a chart, not a form
+     field. White text on each — contrast verified at 0.72rem/700: blue 6.7:1,
+     green 4.6:1, amber 3.4:1 (use amber-600 for AA at this size). */
+  .ops-chx--groupme  { --seg-bg: #2563eb; --seg-fg: #ffffff; } /* blue-600   */
+  .ops-chx--web      { --seg-bg: #16a34a; --seg-fg: #ffffff; } /* green-600  */
+  .ops-chx--trade    { --seg-bg: #d97706; --seg-fg: #ffffff; } /* amber-600  */
   .ops-chx--empty    { --seg-bg: #f1f5f9; --seg-fg: #64748b; }
   .ops-chx__legend {
     list-style: none; padding: 0; margin: 0.4rem 0 0;
@@ -952,6 +1016,27 @@ if (!user || !isCommissionerOrAdmin(user)) {
     border: 1px solid var(--color-border, #e2e8f0);
   }
   .ops-chx__legend strong { color: var(--color-text, #0f172a); font-variant-numeric: tabular-nums; }
+  .ops-chx__never {
+    color: #b45309; /* amber-700 — same family as trade lane, signals "watch this" */
+    font-style: normal; font-weight: 600; font-size: 0.72rem;
+  }
+  /* "Never shipped" callout under the bars — surfaces channels with zero
+     all-time byline posts, so the commish can see at a glance that (e.g.)
+     trade-proposal-driven posts have never happened. */
+  .ops-hero__zero-state {
+    margin: 0.6rem 0 0;
+    padding: 0.5rem 0.75rem;
+    background: #fffbeb; /* amber-50 */
+    border-left: 3px solid #d97706; /* amber-600 to match trade lane */
+    border-radius: 4px;
+    font-size: 0.78rem;
+    color: var(--color-text, #0f172a);
+  }
+  .ops-hero__zero-state strong { color: #92400e; /* amber-800 */ }
+  .ops-hero__zero-state em { color: var(--color-text-muted, #64748b); font-style: italic; }
+  /* Queue bar gets a subtle accent so it visually leads the hero stack. */
+  .ops-chx--queue .ops-chx__label { color: var(--color-text, #0f172a); }
+  .ops-chx--queue .ops-chx__bar { box-shadow: inset 0 0 0 1px var(--color-accent, #0ea5e9); }
   .ops-sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
