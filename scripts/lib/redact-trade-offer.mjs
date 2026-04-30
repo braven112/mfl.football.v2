@@ -236,23 +236,20 @@ export function redactTradeOffer({
 /**
  * Per-run probability for posting a trade-offer rumor.
  *
- * Base p=0.03 per 15-minute scanner run (4× the original 0.0075). The cron
- * is `*\/15 * * * *` but GitHub Actions skips/queues cron jobs under platform
- * load AND quiet-hours (23:00–07:00 PT) hard-skip ~32 cycles/day, so the
- * effective dice-roll count is closer to 30–50 rolls/day per offer than the
- * nominal 96. At the 4× base:
- *   - 30 rolls/day → ~60% by 24h, ~84% by 48h
- *   - 50 rolls/day → ~78% by 24h, ~95% by 48h
- *   - 96 rolls/day → ~94% by 24h
- * The bump shifts trade offers from "rare news" to "Schefter usually files
- * within a day" while keeping a real per-run dice roll — unposted offers
- * can still fail forever; that's the design.
+ * Base p=0.025 per 15-minute scanner run. The cron is `*\/15 * * * *` but
+ * GitHub Actions skips/queues cron jobs under platform load AND quiet-hours
+ * (23:00–07:00 PT) hard-skip ~32 cycles/day, so the effective dice-roll
+ * count is closer to 30–50 rolls/day per offer than the nominal 96. At the
+ * current base:
+ *   - 30 rolls/day → ~53% by 24h, ~78% by 48h
+ *   - 50 rolls/day → ~72% by 24h, ~92% by 48h
+ *   - 96 rolls/day → ~91% by 24h, ~99% by 48h
+ * Trade offers usually file within a day or two while keeping a real per-run
+ * dice roll — unposted offers can still fail forever; that's the design.
  *
- * History: was 0.0075 (~20%/24h at realistic cadence). First bumped to 0.025
- * on 2026-04-30 (PR #141, ~91%/24h under the optimistic 96/day model). Bumped
- * again to 0.03 here once we accounted for actual GitHub Actions cron miss
- * rates. Trade proposals are TheLeague's highest-engagement Schefter content,
- * so we'd rather report them quickly than have them age out.
+ * History: was 0.0075 (~20%/24h at realistic cadence). Bumped to 0.025 on
+ * 2026-04-30 (PR #141): trade proposals are TheLeague's highest-engagement
+ * Schefter content, so we'd rather report them quickly than have them age out.
  *
  * The 48h framing flip from "fresh" to "lingering" ("offered but phones aren't
  * picking up") is handled in scanTradeOffers, not here. The probability itself
@@ -261,7 +258,7 @@ export function redactTradeOffer({
  * Exponential scaling on shopping volume: when the *effective* distinct
  * offerers for the most-shopped player in this offer is ≥2, multiply the
  * base by `OFFER_VOLUME_BOOST_FACTOR ^ (effectiveOfferers - 1)` and cap at
- * `OFFER_VOLUME_BOOST_MAX` so the per-run probability never exceeds ~12%.
+ * `OFFER_VOLUME_BOOST_MAX` so the per-run probability never exceeds ~10%.
  * Effective count blends real submitted offerers (full weight) with saved
  * trade-builder drafts (0.4 weight, computed in the scanner).
  *
@@ -273,7 +270,7 @@ export function redactTradeOffer({
  *
  * Exported for tests & dry-run logging.
  */
-export const OFFER_POST_PROBABILITY = 0.03;
+export const OFFER_POST_PROBABILITY = 0.025;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;
 
