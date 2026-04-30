@@ -1371,6 +1371,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
 
     .pfa-controls__search {
+      /* Reset desktop's `flex: 1 1 200px` — in column flex the 200px basis applies
+         to height, stretching the container so the absolute icon at top:50% lands
+         well below the input. */
+      flex: 0 0 auto;
       max-width: none;
     }
 
