@@ -35,7 +35,7 @@ interface BuildDraftPlayersOptions {
   viewerFranchiseId?: string;
 }
 
-const DRAFTABLE = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']);
+export const DRAFTABLE_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']);
 
 function normPos(pos: string): string {
   if (!pos) return '';
@@ -44,6 +44,12 @@ function normPos(pos: string): string {
   if (upper === 'PK' || upper === 'K') return 'PK';
   return upper;
 }
+
+export function isDraftablePosition(pos: string): boolean {
+  return DRAFTABLE_POSITIONS.has(normPos(pos));
+}
+
+const DRAFTABLE = DRAFTABLE_POSITIONS;
 
 function formatName(mflName: string): string {
   if (!mflName) return '';
