@@ -141,6 +141,18 @@ describe('MORNING_GREETING_CONTEXT directive in the LLM prompt', () => {
     expect(SCANNER_SRC).toMatch(/Set your coffee down\./);
   });
 
+  it('lists Adam Schefter signature cold-opens (real voice tics)', () => {
+    // Schefter's actual sourcing tics adapted for morning context — keeps
+    // the bot's voice anchored to the real reporter on top of the broader
+    // news-broadcasting tradition above. See conversation history for
+    // the rationale behind including this register.
+    expect(SCANNER_SRC).toMatch(/Just got off the phone, league\./);
+    expect(SCANNER_SRC).toMatch(/Sources up early\./);
+    expect(SCANNER_SRC).toMatch(/Per my sources, morning brief\./);
+    expect(SCANNER_SRC).toMatch(/I'm told the league's already moving\./);
+    expect(SCANNER_SRC).toMatch(/BREAKING: morning brief\./);
+  });
+
   it('includes the Howard Cosell echo gated to single-franchise scopes', () => {
     expect(SCANNER_SRC).toMatch(
       /Good morning to everyone except the \[Franchise\]/,

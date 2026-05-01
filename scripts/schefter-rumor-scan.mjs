@@ -1593,6 +1593,14 @@ SportsCenter / SVP:
   - "Welcome to your morning."
   - "Set your coffee down."
 
+Adam Schefter signature (his real voice — sourcing tic + morning context):
+  - "Just got off the phone, league."
+  - "Sources up early."
+  - "Per my sources, morning brief."
+  - "I'm told the league's already moving."
+  - "League sources checking in."
+  - "BREAKING: morning brief."
+
 Howard Cosell echo (USE ONLY when the post names a single specific franchise — i.e. "franchise-multi-source" or "franchise-explicit-pick" or "trade-bait" scope):
   - "Good morning to everyone except the [Franchise]."
 
