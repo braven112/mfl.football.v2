@@ -185,6 +185,22 @@ export function redactTradeOffer({
 
   const offerId = String(rawOffer.id || rawOffer.trade_id || '');
 
+  // Partner franchise — the team being offered to. Used by the corroboration
+  // matcher to detect when a web/groupme tip's franchiseHint is on either
+  // side of this offer. Internal-only metadata; never reaches the LLM (the
+  // anonymizer drops it before the LLM sees the safe-shape tip).
+  const partnerFranchiseId = String(
+    offeringFid === String(rawOffer.franchise) ? rawOffer.franchise2 : rawOffer.franchise,
+  );
+
+  // Lower-cased player names for substring matching against web tip text.
+  // Internal-only — never surfaces to the LLM. Even at non-named tier where
+  // the LLM can't print the player's name, the matcher needs the name to
+  // detect web tips that referenced the same player.
+  const playerNames = allAssets
+    .filter((a) => a.kind === 'player' && typeof a.name === 'string' && a.name.length > 0)
+    .map((a) => a.name.toLowerCase());
+
   /** @type {import('../../src/types/schefter-tips').TradeOfferTip} */
   const tip = {
     id: `to_${offerId}`,
@@ -202,6 +218,8 @@ export function redactTradeOffer({
     offerAgeMs,
     offerId,
     offeringFranchiseId: offeringFid,
+    partnerFranchiseId,
+    playerNames,
   };
 
   const debug = {

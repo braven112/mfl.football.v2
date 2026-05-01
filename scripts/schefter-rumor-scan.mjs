@@ -195,6 +195,16 @@ const PROCESSED_TTL_SEC = 24 * 60 * 60;
 const QUIET_HOUR_START = 23; // 11pm PT
 const QUIET_HOUR_END = 7;    // 7am PT
 
+// Busy-morning catch-up window. Trade-offer rumors accumulate in the queue
+// overnight (dice rolls keep happening, but checkGates blocks the actual
+// post during quiet hours). When the morning window opens and there's a
+// backlog of 2+ trade tips, the scanner emits TWO trade-offer beats per
+// cycle instead of one — both consuming a single MAX_POSTS_PER_DAY slot —
+// so the backlog clears faster. Each beat carries a "busy morning" tone
+// marker so Schefter acknowledges the overnight volume in-voice.
+const BUSY_MORNING_END_HOUR = 10; // 7:00–9:59 PT
+const BUSY_MORNING_TRADE_THRESHOLD = 2;
+
 // Friday mailbag — one big roundup that sweeps the queue so nothing
 // expires unseen. Runs once per Friday PT. Same Redis-key TTL pattern as
 // the other daily counters.
@@ -318,6 +328,58 @@ function buildDirectedCta(beat) {
   };
 }
 
+/**
+ * Cross-corroboration matcher. Detects when a real MFL pending offer
+ * (`source: 'trade_offer'`) is being whispered about independently in the
+ * web/groupme tip queue. When a match exists, the trade-offer tip gets
+ * a `corroboratingSourceCount` and the LLM upgrades to direct-knowledge
+ * voice ("multiple sources with direct knowledge", "spoke on the condition
+ * of anonymity").
+ *
+ * Match signals (any of):
+ *   1. Web/groupme tip has `topic === 'trade'` AND `franchiseHint` matches
+ *      either side of the offer (offering franchise OR partner). This is
+ *      the strong signal — deliberate scope on a trade-flavored tip.
+ *   2. Web/groupme tip's `text` contains a player name from this offer
+ *      (lower-cased substring match). Catches league-wide speculation that
+ *      named the player without choosing a franchise scope.
+ *
+ * Trade-offer-to-trade-offer matching is excluded — corroboration is
+ * specifically about INDEPENDENT tipster sources confirming a real offer.
+ *
+ * Returns the array of corroborating tip ids (deduped).
+ */
+function findCorroboratingTips(tradeOfferTip, otherTips) {
+  if (!tradeOfferTip || tradeOfferTip.source !== 'trade_offer') return [];
+  const offeringFid = tradeOfferTip.offeringFranchiseId;
+  const partnerFid = tradeOfferTip.partnerFranchiseId;
+  const playerNames = Array.isArray(tradeOfferTip.playerNames) ? tradeOfferTip.playerNames : [];
+  const matchingFids = new Set([offeringFid, partnerFid].filter((fid) => typeof fid === 'string' && fid && fid !== 'league-wide' && fid !== 'commish'));
+
+  const matches = new Set();
+  for (const tip of otherTips) {
+    if (!tip || tip.source === 'trade_offer') continue;
+    let matched = false;
+
+    if (tip.topic === 'trade' && tip.franchiseHint && matchingFids.has(tip.franchiseHint)) {
+      matched = true;
+    }
+
+    if (!matched && playerNames.length > 0 && typeof tip.text === 'string' && tip.text.length > 0) {
+      const textLower = tip.text.toLowerCase();
+      for (const name of playerNames) {
+        if (name && textLower.includes(name)) {
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    if (matched) matches.add(tip.id);
+  }
+  return [...matches];
+}
+
 // ── Logging ──
 
 function log(...args) {
@@ -373,6 +435,12 @@ function isQuietHours(now = new Date()) {
   const h = getPtHour(now);
   // quiet from 23:00 (inclusive) through 06:59 (wraps midnight)
   return h >= QUIET_HOUR_START || h < QUIET_HOUR_END;
+}
+
+function isBusyMorningWindow(now = new Date()) {
+  const h = getPtHour(now);
+  // morning catch-up: 07:00 (inclusive) through 09:59 PT
+  return h >= QUIET_HOUR_END && h < BUSY_MORNING_END_HOUR;
 }
 
 function getPtDateString(now = new Date()) {
@@ -641,6 +709,14 @@ async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redi
       safe.pickTokens = tip.pickTokens;
       if (tip.divisionHint) safe.divisionHint = tip.divisionHint;
       if (tip.escalatedPlayer) safe.escalatedPlayer = tip.escalatedPlayer;
+      // Cross-corroboration: when independent web/groupme tips name the
+      // same trade, the LLM upgrades to direct-knowledge voice. The count
+      // is anonymous metadata — no source ids, no franchise names leak.
+      // Internal-only fields (partnerFranchiseId, playerNames) used by the
+      // matcher upstream are NEVER passed to the LLM.
+      if (typeof tip.corroboratingSourceCount === 'number' && tip.corroboratingSourceCount > 0) {
+        safe.corroboratingSourceCount = tip.corroboratingSourceCount;
+      }
       // Age-based framing — 'lingering' means the offer has been open ≥48h
       // and nobody has answered; the LLM should swap to a "phones aren't
       // picking up" frame instead of fresh-rumor energy.
@@ -1271,7 +1347,7 @@ function selectSchefterTargetMode(beat) {
   return pickSchefterTargetMode();
 }
 
-async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null } = {}) {
+async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null, busyMorning = false, busyMorningBacklog = 0 } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     warn('  [rumor-scan] ANTHROPIC_API_KEY not set — using template');
@@ -1463,13 +1539,41 @@ A GroupMe author just took an off-topic personal shot at Schefter. This is the r
     ? `\n\n${recentPostsBlock}`
     : '';
 
+  // Busy-morning ack — fires only on trade-offer beats during the first
+  // morning catch-up cycle when a backlog of 2+ trade tips accumulated
+  // overnight. The directive nudges Schefter into investigative-reporter
+  // tone: a one-line nod to overnight volume, then the actual offer. The
+  // tone reference matters — proposed trades are the prestige-content
+  // lane, NOT breathless-headline-shouting lane.
+  let busyMorningDirective = '';
+  if (busyMorning && busyMorningBacklog >= 2) {
+    busyMorningDirective = `\n\nBUSY_MORNING_CONTEXT: ${busyMorningBacklog} trade proposals crossed the desk overnight; this is one of two trade reports being filed this morning. Open with a brief, in-voice acknowledgment of the overnight volume — beat-reporter cadence ("phone's been ringing since 7", "plenty crossing the desk this morning", "league sources kept the desk up overnight", "stack of message slips waiting", "busy morning around the league"). Vary the phrasing across posts; never stack two posts with the same opener. The acknowledgment is a tone marker on the lede, NOT the whole post — file the actual offer in the same 1–2 sentences. Investigative-reporter energy on proposed-trade rumors: phone calls, anonymous sources, message slips. NOT breathless headline shouting.`;
+  }
+
+  // Corroboration upgrade — when an MFL pending offer is being whispered
+  // about independently (a tip in the queue carries
+  // corroboratingSourceCount >= 1), elevate the voice to direct-knowledge
+  // framing. This is the highest-credibility lane in the rumor mill: the
+  // story is BOTH a real pending offer AND independently named by tipsters.
+  // Schefter graduates from "I'm hearing chatter" to "multiple sources with
+  // direct knowledge spoke on the condition of anonymity."
+  const maxCorroboration = anonymized.reduce((max, t) => {
+    const n = typeof t?.corroboratingSourceCount === 'number' ? t.corroboratingSourceCount : 0;
+    return n > max ? n : max;
+  }, 0);
+  let corroborationDirective = '';
+  if (maxCorroboration >= 1) {
+    const sourceWord = maxCorroboration === 1 ? 'source' : 'sources';
+    corroborationDirective = `\n\nCORROBORATION_CONTEXT: ${maxCorroboration} independent ${sourceWord} ${maxCorroboration === 1 ? 'is' : 'are'} pointing at this same trade — a real pending offer on the books AND tipsters whispering about it. Upgrade voice to direct-knowledge framing. Use one of these patterns (rotate, vary across posts, never stack two identical openers in a row): "I'm told by multiple sources with direct knowledge", "a high-level source spoke on the condition of anonymity", "two independent sources confirm", "league sources with direct knowledge tell me", "multiple corners of the league are pointing at the same deal", "sources close to the negotiations". Drop the hedge words ("hearing chatter", "buzzing", "developing") — this is more solid intel than a typical rumor. Still respect every anonymity rule (no franchise names unless the existing scope rules already permit it; no player names unless escalation tier already permits). Direct-knowledge framing is about CREDIBILITY of the source, not LIBERTY to name names. Stack on top of any other directives (busy-morning, framing flips, etc.).`;
+  }
+
   const jsonContract = `Output JSON ONLY: {"post": "<the post text as a single string>"}. No markdown, no headlines, no meta-commentary in the "post" field. If the IRON RULES require dropping this batch, output {"post": null} — never write reasoning, filtering decisions, or explanations into the "post" field.`;
 
   let userMessage;
   if (mode === 'mailbag') {
-    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 20 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 20 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${busyMorningDirective}${corroborationDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   } else {
-    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). ${jsonContract}${rogerDirective}${schefterModeDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). ${jsonContract}${rogerDirective}${schefterModeDirective}${busyMorningDirective}${corroborationDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   }
 
   if (DRY_RUN) {
@@ -2254,6 +2358,14 @@ async function main() {
   let postKind; // 'trade' | 'gossip' | 'mailbag'
   let batch;
   let secondaryBatch = null;
+  // Busy-morning catch-up: when the morning window opens with 2+ trade
+  // tips waiting, the scanner ships TWO trade-offer beats this cycle
+  // (each its own post; both consume one MAX_POSTS_PER_DAY slot). The
+  // flag below is also passed into the LLM so Schefter acknowledges the
+  // overnight volume in-voice (rule: investigative-reporter energy, not
+  // breathless headline shouting).
+  let busyMorning = false;
+  let busyMorningBacklog = 0;
 
   if (mailbagBatch) {
     postKind = 'mailbag';
@@ -2277,10 +2389,10 @@ async function main() {
     // independent feed post in the SAME scan cycle. Both posts count as
     // one slot against the daily + gossip caps, but each has its own
     // post id so reactions, comments, and whisper-back threads stay
-    // separate. Trade-rumor posts never carry a secondary — they stay
-    // strictly single-topic.
+    // separate. Trade-rumor posts get the same two-post pattern under the
+    // busy-morning catch-up rule below — see BUSY_MORNING_END_HOUR.
     //
-    // The secondary only fires under real backlog pressure
+    // The gossip secondary only fires under real backlog pressure
     // (>= SECONDARY_GOSSIP_POST_PRESSURE gossip tips queued). Below that
     // threshold we ship a single post and let the secondary bucket wait
     // its turn — the two-post double is a pile-up catch-up mechanism,
@@ -2294,6 +2406,27 @@ async function main() {
         log(`  Holding ${secondaryBucket.key} for next cycle — gossip queue depth ${gossipQueueDepth} < ${SECONDARY_GOSSIP_POST_PRESSURE} (no pile-up pressure)`);
       }
     }
+
+    // Busy-morning trade catch-up: the trade bucket key is `trade:offer`
+    // (all trade-offer tips share one bucket — see schefter-bucket-logic
+    // .mjs), so pickPrimaryBucket only ever returns one trade bucket.
+    // To ship 2 trade-offer posts in this cycle, we split the trade
+    // bucket's tips: oldest tip → primary beat, next-oldest → secondary
+    // beat. Each becomes its own post with its own anonymization pass.
+    if (
+      postKind === 'trade' &&
+      primaryBucket.tips.length >= BUSY_MORNING_TRADE_THRESHOLD &&
+      isBusyMorningWindow(now)
+    ) {
+      busyMorning = true;
+      busyMorningBacklog = primaryBucket.tips.length;
+      const sortedTips = [...primaryBucket.tips].sort(
+        (a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0),
+      );
+      batch = sortedTips.slice(0, 1);
+      secondaryBatch = sortedTips.slice(1, 2);
+      log(`  [busy-morning] Trade backlog ${busyMorningBacklog} — splitting into 2 beats (one slot)`);
+    }
   }
 
   const batchIds = new Set([
@@ -2302,6 +2435,26 @@ async function main() {
   ]);
   const unusedTips = freshTips.filter((t) => !batchIds.has(t.id));
   log(`  Processing batch of ${batch.length}${secondaryBatch ? ` + ${secondaryBatch.length} secondary` : ''} (holding ${unusedTips.length} for next cycle)`);
+
+  // Cross-corroboration. For each trade-offer tip about to ship, check
+  // whether the rest of the queue contains independent web/groupme tips
+  // pointing at the same offer (matching franchise scope on a trade-topic
+  // tip, or a player-name substring match in the text). The resulting
+  // count flows through anonymization to the LLM, which upgrades to
+  // direct-knowledge voice. Mutates the tip objects in place — the
+  // anonymizer reads the count off the tip and surfaces it to the LLM.
+  const corroborationCandidates = freshTips; // include batch + leftovers
+  for (const tipBatch of [batch, secondaryBatch].filter(Boolean)) {
+    for (const tip of tipBatch) {
+      if (tip.source !== 'trade_offer') continue;
+      const others = corroborationCandidates.filter((t) => t.id !== tip.id);
+      const matches = findCorroboratingTips(tip, others);
+      if (matches.length > 0) {
+        tip.corroboratingSourceCount = matches.length;
+        log(`  [corroboration] ${tip.id} matched ${matches.length} independent tip(s): ${matches.join(', ')}`);
+      }
+    }
+  }
 
   // Anonymize — load the feed early so whisper-back tips can pull parent
   // headline snippets into their scope.
@@ -2351,15 +2504,17 @@ async function main() {
   // Build the list of "beats" — one per independent feed post we'll ship
   // this cycle. Most post kinds produce exactly one beat; a two-topic
   // gossip cycle produces TWO beats (independent post IDs, independent
-  // reactions/threads) even though they share the same cap slot.
+  // reactions/threads) even though they share the same cap slot. Trade
+  // beats also produce two posts in busy-morning catch-up mode — see
+  // BUSY_MORNING_END_HOUR / BUSY_MORNING_TRADE_THRESHOLD above.
   const beats = [
     { batch, anonymized, kind: postKind },
   ];
-  if (secondaryBatch && postKind === 'gossip') {
+  if (secondaryBatch && (postKind === 'gossip' || (postKind === 'trade' && busyMorning))) {
     beats.push({
       batch: secondaryBatch,
       anonymized: secondaryAnonymized,
-      kind: 'gossip',
+      kind: postKind,
     });
   }
   log(`  Producing ${beats.length} post(s) this cycle`);
@@ -2384,6 +2539,8 @@ async function main() {
       mode: aiMode,
       nflContext,
       schefterTargetMode: schefterModes[i],
+      busyMorning: busyMorning && beat.kind === 'trade',
+      busyMorningBacklog: busyMorning ? busyMorningBacklog : 0,
     })),
   );
 
