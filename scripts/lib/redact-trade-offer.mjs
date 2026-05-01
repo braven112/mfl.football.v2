@@ -185,6 +185,22 @@ export function redactTradeOffer({
 
   const offerId = String(rawOffer.id || rawOffer.trade_id || '');
 
+  // Partner franchise — the team being offered to. Used by the corroboration
+  // matcher to detect when a web/groupme tip's franchiseHint is on either
+  // side of this offer. Internal-only metadata; never reaches the LLM (the
+  // anonymizer drops it before the LLM sees the safe-shape tip).
+  const partnerFranchiseId = String(
+    offeringFid === String(rawOffer.franchise) ? rawOffer.franchise2 : rawOffer.franchise,
+  );
+
+  // Lower-cased player names for substring matching against web tip text.
+  // Internal-only — never surfaces to the LLM. Even at non-named tier where
+  // the LLM can't print the player's name, the matcher needs the name to
+  // detect web tips that referenced the same player.
+  const playerNames = allAssets
+    .filter((a) => a.kind === 'player' && typeof a.name === 'string' && a.name.length > 0)
+    .map((a) => a.name.toLowerCase());
+
   /** @type {import('../../src/types/schefter-tips').TradeOfferTip} */
   const tip = {
     id: `to_${offerId}`,
@@ -202,6 +218,8 @@ export function redactTradeOffer({
     offerAgeMs,
     offerId,
     offeringFranchiseId: offeringFid,
+    partnerFranchiseId,
+    playerNames,
   };
 
   const debug = {
@@ -236,13 +254,20 @@ export function redactTradeOffer({
 /**
  * Per-run probability for posting a trade-offer rumor.
  *
- * Base p=0.025 per 15-minute scanner run. With 96 runs/day this compounds
- * cumulatively to ~91% by 24h and ~99% by 48h. No guaranteed post — unposted
- * offers can fail forever; that's still the design, just on a faster clock.
+ * Base p=0.025 per 15-minute scanner run. The cron is `*\/15 * * * *` but
+ * GitHub Actions skips/queues cron jobs under platform load AND quiet-hours
+ * (23:00–07:00 PT) hard-skip ~32 cycles/day, so the effective dice-roll
+ * count is closer to 30–50 rolls/day per offer than the nominal 96. At the
+ * current base:
+ *   - 30 rolls/day → ~53% by 24h, ~78% by 48h
+ *   - 50 rolls/day → ~72% by 24h, ~92% by 48h
+ *   - 96 rolls/day → ~91% by 24h, ~99% by 48h
+ * Trade offers usually file within a day or two while keeping a real per-run
+ * dice roll — unposted offers can still fail forever; that's the design.
  *
- * (Was 0.0075 → ~54%/24h, ~79%/48h, ~99% by 6.4d. Bumped 2026-04-30: trade
- * proposals are the highest-engagement Schefter content in TheLeague's
- * GroupMe, so we'd rather report them quickly than have them age out.)
+ * History: was 0.0075 (~20%/24h at realistic cadence). Bumped to 0.025 on
+ * 2026-04-30 (PR #141): trade proposals are TheLeague's highest-engagement
+ * Schefter content, so we'd rather report them quickly than have them age out.
  *
  * The 48h framing flip from "fresh" to "lingering" ("offered but phones aren't
  * picking up") is handled in scanTradeOffers, not here. The probability itself
@@ -263,10 +288,6 @@ export function redactTradeOffer({
  *
  * Exported for tests & dry-run logging.
  */
-// Bumped 2026-04-30 from 0.0075 → 0.025 (3.3× higher) to make trade-proposal
-// posts more frequent — they're the league's highest-engagement Schefter
-// content. New cumulative curve: ~91% by day 1, ~99% by day 2 (was ~51% / 6.4
-// days). Heavily-shopped players still get the volume boost on top.
 export const OFFER_POST_PROBABILITY = 0.025;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;

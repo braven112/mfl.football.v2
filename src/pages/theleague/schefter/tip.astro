@@ -385,7 +385,15 @@ const preselectTeam = (() => {
           <h2 class="section-header__title" id="cooker-title">Schefter's kitchen</h2>
           <p class="section-header__sub" data-cooker-sub>Checking on the pot…</p>
         </div>
+        <div class="tip-rail-cooker__heat" data-cooker-heat hidden>
+          <span class="tip-rail-cooker__heat-dot" aria-hidden="true"></span>
+          <span class="tip-rail-cooker__heat-label" data-cooker-heat-label></span>
+        </div>
         <p class="tip-rail-cooker__body" data-cooker-body>Loading…</p>
+        <p class="tip-rail-cooker__hint" data-cooker-hint hidden>
+          Schefter's slammed — tips coming in faster than he can file. Yours
+          may marinate longer than usual before it surfaces.
+        </p>
       </section>
 
       <section class="tip-rail-card tip-rail-hot" aria-labelledby="hot-title" data-hot-topics>
@@ -882,6 +890,73 @@ const preselectTeam = (() => {
     font-variant-numeric: tabular-nums;
   }
 
+  /* Heat badge — soft popularity signal. Color escalates with queue depth.
+     The dot pulses on boil/overflow as a passive "we hear you" indicator. */
+  .tip-rail-cooker__heat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.1875rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    align-self: flex-start;
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-600, #4b5563);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+  .tip-rail-cooker__heat-dot {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .tip-rail-cooker[data-heat="quiet"] .tip-rail-cooker__heat {
+    color: var(--color-gray-500, #6b7280);
+  }
+  .tip-rail-cooker[data-heat="simmer"] .tip-rail-cooker__heat {
+    color: #047857;
+    background: color-mix(in srgb, #047857 8%, transparent);
+    border-color: color-mix(in srgb, #047857 20%, transparent);
+  }
+  .tip-rail-cooker[data-heat="rolling"] .tip-rail-cooker__heat {
+    color: #b45309;
+    background: color-mix(in srgb, #b45309 10%, transparent);
+    border-color: color-mix(in srgb, #b45309 24%, transparent);
+  }
+  .tip-rail-cooker[data-heat="boil"] .tip-rail-cooker__heat,
+  .tip-rail-cooker[data-heat="overflow"] .tip-rail-cooker__heat {
+    color: var(--color-error-dark, #b91c1c);
+    background: color-mix(in srgb, var(--color-error-dark, #b91c1c) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-error-dark, #b91c1c) 28%, transparent);
+  }
+  .tip-rail-cooker[data-heat="boil"] .tip-rail-cooker__heat-dot,
+  .tip-rail-cooker[data-heat="overflow"] .tip-rail-cooker__heat-dot {
+    animation: cooker-heat-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes cooker-heat-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tip-rail-cooker__heat-dot { animation: none; }
+  }
+  .tip-rail-cooker__hint {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    font-style: italic;
+    color: var(--color-gray-600, #4b5563);
+    border-left: 2px solid color-mix(in srgb, var(--color-error-dark, #b91c1c) 35%, transparent);
+    padding-left: 0.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    .tip-rail-cooker__hint { color: var(--color-gray-300, #d1d5db); }
+  }
+
   .tip-rail-hot__chips {
     display: flex;
     flex-wrap: wrap;
@@ -1367,6 +1442,36 @@ const preselectTeam = (() => {
   const cookerRoot = document.querySelector('[data-cooker-status]') as HTMLElement | null;
   const cookerBody = document.querySelector('[data-cooker-body]') as HTMLElement | null;
   const cookerSub = document.querySelector('[data-cooker-sub]') as HTMLElement | null;
+  const cookerHeat = document.querySelector('[data-cooker-heat]') as HTMLElement | null;
+  const cookerHeatLabel = document.querySelector('[data-cooker-heat-label]') as HTMLElement | null;
+  const cookerHint = document.querySelector('[data-cooker-hint]') as HTMLElement | null;
+
+  type Heat = 'quiet' | 'simmer' | 'rolling' | 'boil' | 'overflow';
+  // Soft popularity signal — labels escalate with queue depth so owners can
+  // see Schefter heating up. Tracks the server's heat thresholds in
+  // src/pages/api/schefter/cooker-status.ts.
+  const HEAT_LABELS: Record<Heat, string> = {
+    quiet: 'Quiet',
+    simmer: 'Simmer',
+    rolling: 'Rolling',
+    boil: 'On the boil',
+    overflow: 'Slammed',
+  };
+  function classifyHeatFallback(queueDepth: number): Heat {
+    if (queueDepth >= 10) return 'overflow';
+    if (queueDepth >= 6) return 'boil';
+    if (queueDepth >= 4) return 'rolling';
+    if (queueDepth >= 1) return 'simmer';
+    return 'quiet';
+  }
+  function applyHeat(heat: Heat, backloggedHint: boolean) {
+    if (cookerRoot) cookerRoot.setAttribute('data-heat', heat);
+    if (cookerHeat && cookerHeatLabel) {
+      cookerHeatLabel.textContent = HEAT_LABELS[heat];
+      cookerHeat.hidden = false;
+    }
+    if (cookerHint) cookerHint.hidden = !backloggedHint;
+  }
 
   function formatCountdown(ms: number): string {
     if (ms <= 0) return 'any minute now';
@@ -1393,6 +1498,13 @@ const preselectTeam = (() => {
       const postsToday = Number(data?.postsToday ?? 0);
       const dailyCap = Number(data?.dailyCap ?? 3);
       const dailyCapHit = data?.dailyCapHit === true || postsToday >= dailyCap;
+      // Heat tier — server classifies, but we fall back to the same thresholds
+      // if an old client hits a freshly-deployed server (or vice versa).
+      const heat: Heat = (typeof data?.heat === 'string' && (data.heat as Heat) in HEAT_LABELS)
+        ? (data.heat as Heat)
+        : classifyHeatFallback(queueDepth);
+      const backloggedHint = data?.backloggedHint === true;
+      applyHeat(heat, backloggedHint);
 
       if (dailyCapHit) {
         cookerRoot.setAttribute('data-state', 'capped');
