@@ -132,6 +132,7 @@ const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
 const TIPS_QUEUE_KEY = 'schefter:tips:queue';
 const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
 const ROGER_LAST_RIFF_DATE_KEY = 'schefter:ask_roger:last_riff_date';
+const MORNING_GREETING_DATE_KEY = 'schefter:morning_greeting:last_used_date';
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
 // Legacy key (pre-cumulative-probability model). Still read for dedup against
@@ -204,6 +205,14 @@ const QUIET_HOUR_END = 7;    // 7am PT
 // marker so Schefter acknowledges the overnight volume in-voice.
 const BUSY_MORNING_END_HOUR = 10; // 7:00–9:59 PT
 const BUSY_MORNING_TRADE_THRESHOLD = 2;
+
+// Morning-greeting window. The first post of the day (any kind, any tier)
+// in this window gets a "good morning, league" cold-open from the classic-
+// news / SportsCenter playbook. Once-per-PT-day — subsequent morning posts
+// go out greeting-less so we don't spam openers. Slightly wider than the
+// busy-morning window so a post that lands at 10:30 (just after the
+// catch-up window closes) still gets the greeting.
+const MORNING_GREETING_END_HOUR = 11; // 7:00–10:59 PT
 
 // Friday mailbag — one big roundup that sweeps the queue so nothing
 // expires unseen. Runs once per Friday PT. Same Redis-key TTL pattern as
@@ -441,6 +450,12 @@ function isBusyMorningWindow(now = new Date()) {
   const h = getPtHour(now);
   // morning catch-up: 07:00 (inclusive) through 09:59 PT
   return h >= QUIET_HOUR_END && h < BUSY_MORNING_END_HOUR;
+}
+
+function isMorningGreetingWindow(now = new Date()) {
+  const h = getPtHour(now);
+  // morning greeting: 07:00 (inclusive) through 10:59 PT
+  return h >= QUIET_HOUR_END && h < MORNING_GREETING_END_HOUR;
 }
 
 function getPtDateString(now = new Date()) {
@@ -1347,7 +1362,7 @@ function selectSchefterTargetMode(beat) {
   return pickSchefterTargetMode();
 }
 
-async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null, busyMorning = false, busyMorningBacklog = 0 } = {}) {
+async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null, busyMorning = false, busyMorningBacklog = 0, morningGreeting = false } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     warn('  [rumor-scan] ANTHROPIC_API_KEY not set — using template');
@@ -1550,6 +1565,40 @@ A GroupMe author just took an off-topic personal shot at Schefter. This is the r
     busyMorningDirective = `\n\nBUSY_MORNING_CONTEXT: ${busyMorningBacklog} trade proposals crossed the desk overnight; this is one of two trade reports being filed this morning. Open with a brief, in-voice acknowledgment of the overnight volume — beat-reporter cadence ("phone's been ringing since 7", "plenty crossing the desk this morning", "league sources kept the desk up overnight", "stack of message slips waiting", "busy morning around the league"). Vary the phrasing across posts; never stack two posts with the same opener. The acknowledgment is a tone marker on the lede, NOT the whole post — file the actual offer in the same 1–2 sentences. Investigative-reporter energy on proposed-trade rumors: phone calls, anonymous sources, message slips. NOT breathless headline shouting.`;
   }
 
+  // Morning greeting — once-per-day cold-open from the classic-news /
+  // SportsCenter playbook when the first post of the morning lands in
+  // the 07:00–10:59 PT window. The directive lists rotating phrasings so
+  // each morning sounds different. Stacks naturally with BUSY_MORNING_CONTEXT:
+  // if both fire, the LLM is instructed to merge them into ONE opener
+  // (e.g. "Morning, league. Phone's been ringing since 7.") instead of
+  // double-stacking two separate ledes.
+  let morningGreetingDirective = '';
+  if (morningGreeting) {
+    morningGreetingDirective = `\n\nMORNING_GREETING_CONTEXT: this is the first Schefter post of the day (PT). Cold-open with a brief, in-voice "good morning" line in the classic-news / sports-columnist tradition. Pick ONE pattern from the playbook (rotate across days; never reuse the same opener two days in a row):
+
+Beat-reporter / column openers:
+  - "Morning, league."
+  - "Top of the morning."
+  - "Pour yourself a cup."
+  - "First cup says it all."
+  - "Coffee's hot, so's the chatter."
+  - "Wake up to this."
+  - "Morning brief, league."
+
+Bryant Gumbel / Today Show:
+  - "Up and at 'em."
+  - "Bright and early."
+
+SportsCenter / SVP:
+  - "Welcome to your morning."
+  - "Set your coffee down."
+
+Howard Cosell echo (USE ONLY when the post names a single specific franchise — i.e. "franchise-multi-source" or "franchise-explicit-pick" or "trade-bait" scope):
+  - "Good morning to everyone except the [Franchise]."
+
+The greeting is a SHORT (2–6 words) cold-open BEFORE the actual post body — a tone marker, not the whole post. Keep total length 1–2 sentences. If BUSY_MORNING_CONTEXT also fires, MERGE the two — one combined opener (e.g. "Morning, league. Phone's been ringing since 7.") — never two separate ledes. NEVER use the Cosell pattern with anonymous / division / league-wide / commish scope (it requires naming a franchise; doing so on an anonymous-scope post leaks identity).`;
+  }
+
   // Corroboration upgrade — when an MFL pending offer is being whispered
   // about independently (a tip in the queue carries
   // corroboratingSourceCount >= 1), elevate the voice to direct-knowledge
@@ -1571,9 +1620,9 @@ A GroupMe author just took an off-topic personal shot at Schefter. This is the r
 
   let userMessage;
   if (mode === 'mailbag') {
-    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 20 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${busyMorningDirective}${corroborationDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `MAILBAG: Friday news-dump. Apply HARD RULE 20 — bullet each topic in the GOSSIP_TIPS array as a one-liner (≤6 bullets). Open with a mailbag framing and sign off at the end. ${jsonContract} (Newlines inside the post string are fine for bullets.)${rogerDirective}${schefterModeDirective}${morningGreetingDirective}${busyMorningDirective}${corroborationDirective}${recentBlock}\n\nGOSSIP_TIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   } else {
-    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). ${jsonContract}${rogerDirective}${schefterModeDirective}${busyMorningDirective}${corroborationDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+    userMessage = `Synthesize these tips into ONE rumor-mill post (1–2 sentences, one topic). ${jsonContract}${rogerDirective}${schefterModeDirective}${morningGreetingDirective}${busyMorningDirective}${corroborationDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
   }
 
   if (DRY_RUN) {
@@ -2501,6 +2550,21 @@ async function main() {
     log(`  [roger-riff] Dice roll failed — no riff this cycle`);
   }
 
+  // Morning greeting — once per PT day, when the first post lands in the
+  // 07:00–10:59 PT window, the LLM gets a directive to cold-open with a
+  // classic-news / sports-column "good morning" line. The Redis key is
+  // stamped only on successful post commit (alongside last_post_ts and
+  // ROGER_LAST_RIFF_DATE_KEY) so a failed cycle doesn't burn the slot.
+  let morningGreeting = false;
+  let lastMorningGreetingDate = null;
+  if (isMorningGreetingWindow(now)) {
+    try {
+      lastMorningGreetingDate = await redis.get(MORNING_GREETING_DATE_KEY);
+    } catch { /* tolerate */ }
+    morningGreeting = lastMorningGreetingDate !== todayPt;
+    log(`  [morning-greeting] window open, todayPT=${todayPt}, lastUsed=${lastMorningGreetingDate ?? '(none)'} → ${morningGreeting ? 'will fire on primary beat' : 'already greeted today'}`);
+  }
+
   // Build the list of "beats" — one per independent feed post we'll ship
   // this cycle. Most post kinds produce exactly one beat; a two-topic
   // gossip cycle produces TWO beats (independent post IDs, independent
@@ -2529,7 +2593,8 @@ async function main() {
   const schefterModes = beats.map((beat) => selectSchefterTargetMode(beat));
 
   // Generate bodies in parallel. Only the primary beat gets the Roger
-  // riff — the riff is a once-per-day cameo that shouldn't double up.
+  // riff and the morning greeting — both are once-per-day cameos that
+  // shouldn't double up across beats in the same cycle.
   const aiMode = postKind === 'mailbag' ? 'mailbag' : 'single';
   const aiBodies = await Promise.all(
     beats.map((beat, i) => generateAiBody(beat.anonymized, {
@@ -2541,6 +2606,7 @@ async function main() {
       schefterTargetMode: schefterModes[i],
       busyMorning: busyMorning && beat.kind === 'trade',
       busyMorningBacklog: busyMorning ? busyMorningBacklog : 0,
+      morningGreeting: i === 0 && morningGreeting,
     })),
   );
 
@@ -2804,7 +2870,14 @@ async function main() {
       await redis.set(ROGER_LAST_RIFF_DATE_KEY, todayPt, { ex: 48 * 60 * 60 });
     }
 
-    log(`  Redis updated: posts_today=${newCount}, queue drained, processed archived${hadRogerRiff ? ', roger riff date stamped' : ''}`);
+    // Morning greeting date stamp — only set when we actually fired the
+    // greeting on this cycle, so a failed post doesn't burn the slot. 48h
+    // TTL mirrors the Roger pattern so clock skew can't strand the key.
+    if (morningGreeting) {
+      await redis.set(MORNING_GREETING_DATE_KEY, todayPt, { ex: 48 * 60 * 60 });
+    }
+
+    log(`  Redis updated: posts_today=${newCount}, queue drained, processed archived${hadRogerRiff ? ', roger riff date stamped' : ''}${morningGreeting ? ', morning greeting stamped' : ''}`);
   } catch (err) {
     warn(`  Redis post-write update failed: ${err.message}`);
   }
