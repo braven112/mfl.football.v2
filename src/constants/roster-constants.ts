@@ -3,6 +3,8 @@
  * Shared across roster, salary, and MVP pages
  */
 
+import { normalizeTeamCode } from '../utils/nfl-logo';
+
 /**
  * Standard position order for sorting players
  */
@@ -116,8 +118,9 @@ export function buildHeadshotOnerror(mflId?: string, espnId?: string): string {
  * @returns URL to NFL team logo SVG (served locally)
  */
 export function getNflLogoUrl(teamCode?: string): string {
-  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
-  return `/assets/nfl-logos/${teamCode}.svg`;
+  const normalized = normalizeTeamCode(teamCode ?? '');
+  if (!normalized || normalized === 'NFL') return '/assets/nfl-logos/NFL.svg';
+  return `/assets/nfl-logos/${normalized}.svg`;
 }
 
 /**

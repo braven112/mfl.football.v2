@@ -642,37 +642,47 @@ function tamOpenFromBell() {
 
 let tamDocKeydownBound = false;
 
+function tamBindClickOnce(el: HTMLElement | null, key: string, handler: EventListener): void {
+  if (!el) return;
+
+  const attr = `data-tam-bound-${key}`;
+  if (el.getAttribute(attr) === '1') return;
+
+  el.setAttribute(attr, '1');
+  el.addEventListener('click', handler);
+}
+
 function tamAttachHandlers() {
   // Element handlers — re-bind to fresh DOM after each View Transition
-  tamEl('tam-overlay')?.addEventListener('click', tamClose);
-  tamEl('tam-close')?.addEventListener('click', tamClose);
+  tamBindClickOnce(tamEl('tam-overlay'), 'close', tamClose);
+  tamBindClickOnce(tamEl('tam-close'), 'close', tamClose);
 
   // Nav bell click
-  tamEl('nav-trade-bell')?.addEventListener('click', tamOpenFromBell);
+  tamBindClickOnce(tamEl('nav-trade-bell'), 'open-bell', tamOpenFromBell);
 
   // Back
-  tamEl('tam-back')?.addEventListener('click', () => tamShowListView());
+  tamBindClickOnce(tamEl('tam-back'), 'back', () => tamShowListView());
 
   // Accept / Reject / Dismiss — routed by current trade type
-  tamEl('tam-accept')?.addEventListener('click', () =>
+  tamBindClickOnce(tamEl('tam-accept'), 'accept', () =>
     tamShowConfirm(tamCurrentTradeType === 'commish' ? 'approve' : 'accept')
   );
-  tamEl('tam-reject')?.addEventListener('click', () => {
+  tamBindClickOnce(tamEl('tam-reject'), 'reject', () => {
     if (tamCurrentTradeType === 'commish') tamShowConfirm('veto');
     else if (tamCurrentTradeType === 'sent') tamShowConfirm('revoke');
     else tamShowConfirm('reject');
   });
-  tamEl('tam-dismiss')?.addEventListener('click', () => {
+  tamBindClickOnce(tamEl('tam-dismiss'), 'dismiss', () => {
     const trade = tamGetCurrentTrade();
     if (trade) tamDismissTrade(trade.tradeId);
     tamRemoveCurrentTrade();
   });
 
   // Confirm / Cancel
-  tamEl('tam-confirm-yes')?.addEventListener('click', () => {
+  tamBindClickOnce(tamEl('tam-confirm-yes'), 'confirm-yes', () => {
     if (tamConfirmAction) tamExecuteAction(tamConfirmAction);
   });
-  tamEl('tam-confirm-no')?.addEventListener('click', () => tamResetFooter());
+  tamBindClickOnce(tamEl('tam-confirm-no'), 'confirm-no', () => tamResetFooter());
 
   // ESC + focus trap — document-level, survives View Transitions, attach once
   if (!tamDocKeydownBound) {
