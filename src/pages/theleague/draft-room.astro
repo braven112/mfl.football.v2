@@ -119,6 +119,12 @@ const draftKind = leagueConfig.draft_kind === 'live' ? 'live' : 'email';
 const draftLimitHours = leagueConfig.draftLimitHours || '12:00';
 const draftTimerSusp = leagueConfig.draftTimerSusp || '03 07';
 
+// MFL "Make Pick" deep-link. baseURL rotates between www49/www48/etc per
+// MFL's load balancer; fall back to www49 if the feed lacks it.
+const leagueId = '13522';
+const mflBaseURL = (leagueConfig.baseURL as string | undefined) || 'https://www49.myfantasyleague.com';
+const mflPickUrl = `${mflBaseURL.replace(/\/$/, '')}/${leagueYearStr}/options?L=${leagueId}&O=17`;
+
 // ── Serialize page data ──
 const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
 
@@ -133,7 +139,8 @@ const pageData: DraftRoomPageData = {
   picks,
   players,
   partyHost,
-  leagueId: '13522',
+  leagueId,
+  mflPickUrl,
 };
 ---
 

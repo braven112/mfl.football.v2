@@ -128,6 +128,15 @@
       "leagueOnly": "theleague",
       "links": [
         {
+          "id": "draft-room",
+          "label": "Draft Room",
+          "icon": "draft-podium",
+          "path": "/draft-room",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Live rookie draft board with picks, queue, and chat"
+        },
+        {
           "id": "mock-draft",
           "label": "Mock Draft",
           "icon": "podium-persona",
@@ -314,6 +323,7 @@
     "/search": "/search",
     "/news": "/news",
     "/mock-draft": "/mock-draft",
+    "/draft-room": "/draft-room",
     "/suggestions": "/suggestions",
     "/stats": "/stats",
     "/rules-chat": "/rules-chat"

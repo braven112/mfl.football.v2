@@ -23,6 +23,12 @@ interface PlayerPoolPanelProps {
   isUserTurn?: boolean;
   onSubmitPick?: (playerId: string) => void;
   currentPick?: DraftRoomPick | null;
+  /**
+   * MFL deep-link to "Make Pick" (live mode only). When set, the per-row
+   * Draft button becomes an external anchor that opens MFL in a new tab
+   * — actual pick submission happens there. Undefined in mock mode.
+   */
+  mflPickUrl?: string;
 }
 
 function rankCompare(a: DraftRoomPlayer, b: DraftRoomPlayer): number {
@@ -65,6 +71,7 @@ export function PlayerPoolPanel({
   isUserTurn = false,
   onSubmitPick,
   currentPick = null,
+  mflPickUrl,
 }: PlayerPoolPanelProps) {
   const [detailPlayerId, setDetailPlayerId] = useState<string | null>(null);
 
@@ -190,7 +197,18 @@ export function PlayerPoolPanel({
             metaSlot={meta}
           />
         </button>
-        {isUserTurn && onSubmitPick && (
+        {isUserTurn && mflPickUrl ? (
+          <a
+            href={mflPickUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open MFL to draft ${player.name}`}
+            title="Make your pick on MFL"
+            className="dr-draft-btn"
+          >
+            MFL ↗
+          </a>
+        ) : isUserTurn && onSubmitPick ? (
           <button
             type="button"
             onClick={() => onSubmitPick(player.id)}
@@ -199,7 +217,7 @@ export function PlayerPoolPanel({
           >
             Draft
           </button>
-        )}
+        ) : null}
         <button
           type="button"
           onClick={() => !isQueued && onAddToQueue(player.id)}
@@ -355,6 +373,7 @@ export function PlayerPoolPanel({
         currentPick={currentPick}
         isQueued={detailPlayer ? queuedIds.has(detailPlayer.id) : false}
         isUserTurn={isUserTurn}
+        mflPickUrl={mflPickUrl}
         onClose={() => setDetailPlayerId(null)}
         onAddToQueue={(id) => {
           onAddToQueue(id);

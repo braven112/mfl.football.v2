@@ -9,6 +9,8 @@ interface PlayerDetailModalProps {
   currentPick: DraftRoomPick | null;
   isQueued: boolean;
   isUserTurn: boolean;
+  /** When set (live drafts), the Draft button becomes an MFL deep-link. */
+  mflPickUrl?: string;
   onClose: () => void;
   onAddToQueue: (playerId: string) => void;
   onDraft: (playerId: string) => void;
@@ -41,6 +43,7 @@ export function PlayerDetailModal({
   currentPick,
   isQueued,
   isUserTurn,
+  mflPickUrl,
   onClose,
   onAddToQueue,
   onDraft,
@@ -372,7 +375,31 @@ export function PlayerDetailModal({
           >
             {isQueued ? '✓ In Queue' : '+ Add to Queue'}
           </button>
-          {isUserTurn && (
+          {isUserTurn && mflPickUrl ? (
+            <a
+              href={mflPickUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1,
+                padding: '0.625rem 0.75rem',
+                fontSize: '0.8125rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                border: 'none',
+                borderRadius: 'var(--radius-md, 0.5rem)',
+                background: 'var(--color-success, #16a34a)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                textAlign: 'center',
+                textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+              }}
+            >
+              Pick on MFL ↗
+            </a>
+          ) : isUserTurn ? (
             <button
               type="button"
               onClick={() => onDraft(player.id)}
@@ -393,7 +420,7 @@ export function PlayerDetailModal({
             >
               Draft {player.name.split(' ')[0]}
             </button>
-          )}
+          ) : null}
         </footer>
       </div>
     </div>

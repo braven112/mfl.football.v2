@@ -401,86 +401,34 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Auto-submit: when user is on clock + autoSubmit on + queue non-empty
+  // Auto-submit: when user is on clock + autoSubmit on + queue non-empty.
+  // Mock mode only — live drafts use the MFL deep-link instead.
   useEffect(() => {
+    if (!isMock) return;
     if (!state.autoSubmit || !isUserTurn || state.queue.length === 0 || state.isSubmittingPick || state.draftComplete) return;
 
     const draftedIds = new Set(state.picks.filter((p) => p.playerId).map((p) => p.playerId));
     const topItem = state.queue.find((i) => !draftedIds.has(i.playerId));
     if (!topItem) return;
 
-    if (isMock) {
-      // Mock mode: send pick via WebSocket
-      mockSend({ type: 'pick', franchiseId: userTeamId, playerId: topItem.playerId });
-      dispatch({ type: 'REMOVE_FROM_QUEUE', id: topItem.id });
-      return;
-    }
-
-    dispatch({ type: 'SUBMIT_PICK_START' });
-    fetch('/api/draft/submit-pick', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerId: topItem.playerId }),
-    })
-      .then((r) => r.json())
-      .then((result) => {
-        if (result.success) {
-          dispatch({ type: 'REMOVE_FROM_QUEUE', id: topItem.id });
-          dispatch({ type: 'SUBMIT_PICK_DONE' });
-        } else {
-          dispatch({ type: 'SET_SUBMIT_ERROR', error: result.message || 'Failed to submit pick' });
-        }
-      })
-      .catch((e) => {
-        dispatch({ type: 'SET_SUBMIT_ERROR', error: (e as Error).message });
-      });
+    mockSend({ type: 'pick', franchiseId: userTeamId, playerId: topItem.playerId });
+    dispatch({ type: 'REMOVE_FROM_QUEUE', id: topItem.id });
   }, [state.autoSubmit, isUserTurn, state.queue, state.isSubmittingPick, state.draftComplete, state.picks, isMock, mockSend, userTeamId]);
 
-  // Sync queue to MFL (no-op in mock mode — queue is local only)
+  // Sync queue to MFL — not yet implemented for live drafts (would require
+  // MFL auth + the rankings/queue write endpoint). Mock mode keeps its queue
+  // local too. Kept as a no-op so the prop wire-up stays stable; the button
+  // is hidden in live mode (see DraftQueuePanel mflPickUrl branch).
   const handleSyncToMfl = useCallback(async () => {
-    if (isMock || state.isSyncingQueue || state.queue.length === 0) return;
-    dispatch({ type: 'SYNC_QUEUE_START' });
-    try {
-      await fetch('/api/draft/queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerIds: state.queue.map((i) => i.playerId) }),
-      });
-    } catch {
-      // Fire-and-forget — no user-facing error needed
-    } finally {
-      dispatch({ type: 'SYNC_QUEUE_DONE' });
-    }
-  }, [state.queue, state.isSyncingQueue, isMock]);
+    /* no-op */
+  }, []);
 
-  // Manual pick submission
+  // Manual pick submission — only used in mock mode (live drafts deep-link
+  // to MFL via mflPickUrl since we don't yet have an auth'd write endpoint).
   const handleSubmitPick = useCallback((playerId: string) => {
+    if (!isMock) return;
     if (state.isSubmittingPick) return;
-
-    if (isMock) {
-      // Mock mode: send pick via WebSocket — server validates and broadcasts
-      // Send userTeamId (creator) so the server allows picking for any team on the clock
-      mockSend({ type: 'pick', franchiseId: userTeamId, playerId });
-      return;
-    }
-
-    dispatch({ type: 'SUBMIT_PICK_START' });
-    fetch('/api/draft/submit-pick', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerId }),
-    })
-      .then((r) => r.json())
-      .then((result) => {
-        if (!result.success) {
-          dispatch({ type: 'SET_SUBMIT_ERROR', error: result.message || 'Failed to submit pick' });
-        } else {
-          dispatch({ type: 'SUBMIT_PICK_DONE' });
-        }
-      })
-      .catch((e) => {
-        dispatch({ type: 'SET_SUBMIT_ERROR', error: (e as Error).message });
-      });
+    mockSend({ type: 'pick', franchiseId: userTeamId, playerId });
   }, [state.isSubmittingPick, isMock, mockSend, userTeamId]);
 
   // Callbacks
@@ -579,7 +527,16 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         draftComplete={state.draftComplete}
         isUserTurn={isUserTurn}
         mockClockSeconds={isMock ? state.mockClockSeconds : undefined}
-        actions={isMock ? (
+        actions={!isMock && isUserTurn && data.mflPickUrl ? (
+          <a
+            href={data.mflPickUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="dr-mfl-pick-link"
+          >
+            Pick on MFL →
+          </a>
+        ) : isMock ? (
           <>
             <button
               type="button"
@@ -724,6 +681,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
               isUserTurn={isUserTurn}
               onSubmitPick={handleSubmitPick}
               currentPick={currentPick}
+              mflPickUrl={!isMock ? data.mflPickUrl : undefined}
             />
           </div>
 
@@ -749,6 +707,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
                   onSyncToMfl={handleSyncToMfl}
                   onSubmitPick={handleSubmitPick}
                   onToggleAutoSubmit={handleToggleAutoSubmit}
+                  mflPickUrl={!isMock ? data.mflPickUrl : undefined}
                 />
               </Suspense>
             ) : null}
