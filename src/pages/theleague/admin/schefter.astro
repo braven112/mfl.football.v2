@@ -218,6 +218,32 @@ if (!user || !isCommissionerOrAdmin(user)) {
       </div>
     </section>
 
+    <section class="ops-cluster" aria-labelledby="cluster-archive">
+      <h2 class="ops-cluster__title" id="cluster-archive">
+        Trade Offers Archive
+        <span class="ops-cluster__sub">Running total of every offer the scanner has ever ingested.</span>
+      </h2>
+      <div class="ops-grid">
+      <article class="ops-card ops-card--wide" aria-labelledby="card-archive">
+        <h3 id="card-archive" class="ops-card__title">
+          Captured Trades
+          <span id="ops-archive-summary" class="ops-card__badge">—</span>
+        </h3>
+        <p class="ops-card__hint">
+          Every trade offer the rumor-mill scanner has caught. Stored permanently
+          in <code>schefter:trade_offers:archive</code>. Each row shows the
+          owners involved; expand the accordion for the assets exchanged.
+          The roll counter (<code>schefter:trade_offers:rolls</code>) tells you
+          how many GitHub Actions runs had a chance to leak the rumor — every
+          15 minutes the scanner rolls a die against <code>p</code> while the
+          offer is in-flight. If a post shipped, the link drops you on the
+          news feed where Schefter announced it (same content as GroupMe).
+        </p>
+        <div id="ops-archive-body" class="ops-archive">Loading…</div>
+      </article>
+      </div>
+    </section>
+
     <section class="ops-cluster" aria-labelledby="cluster-stats">
       <h2 class="ops-cluster__title" id="cluster-stats">
         Activity &amp; Stats
@@ -396,12 +422,124 @@ if (!user || !isCommissionerOrAdmin(user)) {
     liveIds: null,
   };
 
+  // Archive of every offer ever captured. Same liveIds Set powers the
+  // "still in MFL" pill — separate state object keeps render concerns
+  // isolated from the in-flight diagnostic list above.
+  type ArchiveAsset = { type: string; label: string; position?: string };
+  type ArchiveEntry = {
+    offerId: string;
+    offeringFid: string;
+    offeringName: string;
+    partnerFid: string;
+    partnerName: string;
+    firstSeenMs: number;
+    rollCount: number;
+    posted: boolean;
+    postId: string | null;
+    postTimestamp: string | null;
+    legacyBackfill: boolean;
+    assets: { willGiveUp: ArchiveAsset[]; willReceive: ArchiveAsset[] };
+    comments: string;
+  };
+  const archiveState: { entries: ArchiveEntry[] | null; total: number } = {
+    entries: null,
+    total: 0,
+  };
+
   function fmtAge(ms: number): string {
     if (!Number.isFinite(ms) || ms < 0) return '—';
     const hours = ms / (60 * 60 * 1000);
     if (hours < 1) return `${Math.max(1, Math.round(ms / 60000))}m`;
     if (hours < 48) return `${hours.toFixed(1)}h`;
     return `${(hours / 24).toFixed(1)}d`;
+  }
+
+  function paintArchive() {
+    const body = document.getElementById('ops-archive-body');
+    const summary = document.getElementById('ops-archive-summary');
+    if (!body) return;
+    const list = archiveState.entries;
+    if (!list) {
+      if (summary) summary.textContent = '…';
+      body.textContent = 'Loading…';
+      return;
+    }
+    const total = archiveState.total ?? list.length;
+    if (summary) {
+      summary.innerHTML = total > 0
+        ? `<span class="ops-pill ops-pill--ok">${total} captured</span>`
+        : `<span class="ops-pill ops-pill--warn">none yet</span>`;
+    }
+    if (!list.length) {
+      body.innerHTML = '<p class="ops-empty">No trades captured yet. Once the scanner ingests its first offer (every 15 min), this fills in.</p>';
+      return;
+    }
+    const liveIds = offerState.liveIds; // null → MFL fetch hasn't completed yet
+
+    const renderAssetList = (items: ArchiveAsset[]) => {
+      if (!Array.isArray(items) || !items.length) return '<em class="ops-archive__empty">—</em>';
+      return items.map((a) => {
+        const label = escapeHtml(a?.label || 'Unknown');
+        const pos = a?.position ? ` <span class="ops-asset__pos">${escapeHtml(a.position)}</span>` : '';
+        return `<li>${label}${pos}</li>`;
+      }).join('');
+    };
+
+    body.innerHTML = list.map((e) => {
+      const ownersLabel = e.legacyBackfill
+        ? `<span class="ops-archive__legacy">owners not recorded</span>`
+        : `<strong>${escapeHtml(e.offeringName || `Team ${e.offeringFid}` || '?')}</strong>
+           → <strong>${escapeHtml(e.partnerName || `Team ${e.partnerFid}` || '?')}</strong>`;
+      const seen = e.firstSeenMs ? `${new Date(e.firstSeenMs).toLocaleString()} (${fmtRel(e.firstSeenMs)})` : '—';
+      const rollLabel = `${e.rollCount} roll${e.rollCount === 1 ? '' : 's'}`;
+      const pills: string[] = [];
+      if (e.posted) {
+        if (e.postId) {
+          const safePid = encodeURIComponent(e.postId);
+          pills.push(`<a class="ops-pill ops-pill--info ops-pill--link" href="/theleague/news#post-${safePid}" title="View Schefter's post">posted</a>`);
+        } else {
+          pills.push('<span class="ops-pill ops-pill--info">posted</span>');
+        }
+      }
+      if (liveIds) {
+        pills.push(liveIds.has(e.offerId)
+          ? '<span class="ops-pill ops-pill--ok">in MFL</span>'
+          : (e.posted
+              ? '<span class="ops-pill ops-pill--mute">closed</span>'
+              : '<span class="ops-pill ops-pill--warn">stale</span>'));
+      }
+      if (e.legacyBackfill) {
+        pills.push('<span class="ops-pill ops-pill--mute" title="Captured before the archive was wired up — owners and assets unknown">legacy</span>');
+      }
+      const detailsBody = e.legacyBackfill
+        ? `<p class="ops-archive__note">Captured before the archive was wired up — owners and assets aren't recorded for this entry.</p>`
+        : `
+          <div class="ops-trade__body">
+            <div class="ops-trade__side">
+              <h4>${escapeHtml(e.offeringName || `Team ${e.offeringFid}` || '?')} gives</h4>
+              <ul class="ops-asset-list">${renderAssetList(e.assets?.willGiveUp || [])}</ul>
+            </div>
+            <div class="ops-trade__side">
+              <h4>${escapeHtml(e.partnerName || `Team ${e.partnerFid}` || '?')} gives</h4>
+              <ul class="ops-asset-list">${renderAssetList(e.assets?.willReceive || [])}</ul>
+            </div>
+          </div>
+          ${e.comments ? `<p class="ops-trade__comments">"${escapeHtml(e.comments)}"</p>` : ''}
+        `;
+      const offerIdRow = `<p class="ops-archive__meta">offer <code>${escapeHtml(e.offerId)}</code> · first seen ${seen}</p>`;
+      return `
+        <details class="ops-archive__row">
+          <summary class="ops-archive__summary">
+            <span class="ops-archive__owners">${ownersLabel}</span>
+            <span class="ops-archive__pills">${pills.join(' ')}</span>
+            <span class="ops-archive__rolls" title="GitHub Actions runs that had a chance to leak this rumor">${rollLabel}</span>
+          </summary>
+          <div class="ops-archive__details">
+            ${offerIdRow}
+            ${detailsBody}
+          </div>
+        </details>`;
+    }).join('');
   }
 
   function paintOffersInFlight() {
@@ -586,6 +724,14 @@ if (!user || !isCommissionerOrAdmin(user)) {
       ? data.redis.tradeOffersInFlightList
       : [];
     paintOffersInFlight();
+
+    archiveState.entries = Array.isArray(data.redis?.tradeOffersArchive)
+      ? data.redis.tradeOffersArchive
+      : [];
+    archiveState.total = typeof data.redis?.tradeOffersArchiveTotal === 'number'
+      ? data.redis.tradeOffersArchiveTotal
+      : archiveState.entries.length;
+    paintArchive();
 
     const pill = (state: 'ok' | 'bad' | 'warn', label: string) =>
       `<span class="ops-pill ops-pill--${state}">${label}</span>`;
@@ -920,6 +1066,7 @@ if (!user || !isCommissionerOrAdmin(user)) {
 
       offerState.liveIds = new Set(all.map((t: any) => String(t.tradeId || '')).filter(Boolean));
       paintOffersInFlight();
+      paintArchive();
 
       summary.innerHTML = `<span class="ops-pill ops-pill--${total > 0 ? 'ok' : 'warn'}">${total} open</span>`;
 
@@ -965,6 +1112,7 @@ if (!user || !isCommissionerOrAdmin(user)) {
       // list drops the in-MFL/stale pills until a successful fetch lands.
       offerState.liveIds = null;
       paintOffersInFlight();
+      paintArchive();
       summary.innerHTML = `<span class="ops-pill ops-pill--bad">err</span>`;
       body.innerHTML = `<p class="ops-empty">Could not load trade proposals: ${escapeHtml((err as Error).message)}. Are you logged in to MFL?</p>`;
     }
@@ -1242,6 +1390,42 @@ if (!user || !isCommissionerOrAdmin(user)) {
   .ops-offer__age { font-size: 0.72rem; color: var(--color-text-muted, #64748b); margin-left: auto; }
   .ops-offer__meta { margin: 0.2rem 0 0; font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
   @media (max-width: 560px) { .ops-offer__age { margin-left: 0; flex-basis: 100%; } }
+
+  .ops-archive { display: flex; flex-direction: column; gap: 0.4rem; }
+  .ops-archive__row {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px;
+    background: var(--color-surface-alt, #f8fafc);
+  }
+  .ops-archive__row[open] { background: white; }
+  .ops-archive__summary {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; align-items: baseline;
+    padding: 0.55rem 0.75rem; cursor: pointer; font-size: 0.9rem;
+    list-style: none;
+  }
+  .ops-archive__summary::-webkit-details-marker { display: none; }
+  .ops-archive__summary::before {
+    content: '▸'; display: inline-block; width: 0.8rem;
+    color: var(--color-text-muted, #64748b); transition: transform 0.15s ease;
+  }
+  .ops-archive__row[open] .ops-archive__summary::before { transform: rotate(90deg); }
+  .ops-archive__owners { flex: 1 1 auto; min-width: 0; }
+  .ops-archive__pills { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
+  .ops-archive__rolls {
+    font-size: 0.72rem; color: var(--color-text-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-archive__legacy { color: var(--color-text-muted, #64748b); font-style: italic; }
+  .ops-archive__details { padding: 0 0.75rem 0.7rem; border-top: 1px solid var(--color-border, #e2e8f0); }
+  .ops-archive__meta {
+    margin: 0.5rem 0 0.4rem; font-size: 0.72rem;
+    color: var(--color-text-muted, #64748b);
+  }
+  .ops-archive__meta code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 3px; }
+  .ops-archive__note { margin: 0.5rem 0 0; font-size: 0.78rem; color: var(--color-text-muted, #64748b); font-style: italic; }
+  .ops-archive__empty { color: var(--color-text-muted, #94a3b8); }
+  @media (max-width: 560px) {
+    .ops-archive__rolls { flex-basis: 100%; }
+  }
 
   .ops-live-trades { display: flex; flex-direction: column; gap: 0.75rem; }
   .ops-trade {
