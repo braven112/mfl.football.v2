@@ -300,7 +300,7 @@ export function getCutCandidates(leagueYear: number): CutCandidateRaw[] {
     results.push({
       franchiseId: franchise.id,
       activeCount: activePlayers.length,
-      cutCandidates: selected,
+      cutCandidates: selected.sort((a, b) => a.salary - b.salary),
     });
   }
 

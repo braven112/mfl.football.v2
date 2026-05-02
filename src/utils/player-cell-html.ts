@@ -19,20 +19,8 @@
  */
 
 import type { PlayerModalData } from './player-modal-trigger';
-import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getPlayerHeadshot } from '../constants/roster-constants';
-
-/** Map MFL team codes to standard codes (must match nfl-logo.ts) */
-const TEAM_CODE_MAP: Record<string, string> = {
-  WAS: 'WSH', JAC: 'JAX', GBP: 'GB', KCC: 'KC',
-  NEP: 'NE', NOS: 'NO', SFO: 'SF', TBB: 'TB',
-  LVR: 'LV', HST: 'HOU', BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI',
-};
-
-function normalizeTeam(code: string): string {
-  if (!code) return '';
-  const upper = code.toUpperCase();
-  return TEAM_CODE_MAP[upper] || upper;
-}
+import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
+import { normalizeTeamCode } from './nfl-logo';
 
 export interface PlayerCellOptions {
   name: string;
@@ -82,8 +70,8 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 
   const isDef = position?.toUpperCase() === 'DEF';
-  const normalized = nflTeam ? normalizeTeam(nflTeam) : '';
-  const teamLogo = normalized ? `/assets/nfl-logos/${normalized}.svg` : '';
+  const normalized = nflTeam ? normalizeTeamCode(nflTeam) : '';
+  const teamLogo = normalized ? getNflLogoUrl(normalized) : '';
 
   // ESPN is the primary headshot source when espnId is available
   const resolvedHeadshot = resolvedEspnId

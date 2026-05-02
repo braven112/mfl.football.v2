@@ -221,8 +221,9 @@ const showCommish = isCommissioner && isCommishMode;
   function initCommishToggle() {
     const COOKIE_NAME = 'commish-mode';
     const toggle = document.querySelector('[data-commish-toggle]') as HTMLButtonElement | null;
-    const announcer = document.querySelector('[data-commish-announce]');
     if (!toggle) return;
+    if (toggle.dataset.commishToggleBound === '1') return;
+    toggle.dataset.commishToggleBound = '1';
 
     function isCommishMode(): boolean {
       return document.cookie.split('; ').some(c => c === `${COOKIE_NAME}=true`);
@@ -246,7 +247,12 @@ const showCommish = isCommissioner && isCommishMode;
 
 {/* Client-side auth:login handler — swaps "Verify Your Team" → team info when login happens without page reload */}
 <script>
+  let navFooterAuthLoginBound = false;
+
   function initAuthLoginListener() {
+    if (navFooterAuthLoginBound) return;
+    navFooterAuthLoginBound = true;
+
     window.addEventListener('auth:login', ((e: CustomEvent<{ franchiseId: string }>) => {
       const footer = document.querySelector('[data-nav-footer]') as HTMLElement | null;
       if (!footer) return;
