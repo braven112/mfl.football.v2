@@ -29,6 +29,10 @@ pnpm-debug.log*
 data/salary-history-archive/
 data/*/salary-history/
 
+# Contract declarations: local-dev-only filesystem fallback. Production reads
+# from Upstash Redis. See src/utils/contract-storage.ts.
+data/*/contract-declarations.json
+
 # Salary history - only keep summary-week-*.json files
 src/data/salary-history/**/raw-*.json
 src/data/salary-history/**/summary-2*.json
