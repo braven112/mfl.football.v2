@@ -158,6 +158,14 @@ if (!user || !isCommissionerOrAdmin(user)) {
           <div><dt>Legacy one-shot burned</dt><dd data-k="redis.tradeOffersSeen">—</dd></div>
           <div><dt>Pending-trade watermark size</dt><dd data-k="feed.pendingTradeWatermarkSize">—</dd></div>
         </dl>
+        <h4 class="ops-subhead">In-flight offer IDs (oldest first)</h4>
+        <p class="ops-card__hint ops-card__hint--tight">
+          Each row is an entry in <code>schefter:trade_offers:first_seen</code>.
+          A <strong>stale</strong> pill means MFL no longer lists the offer as open —
+          the scanner is holding bookkeeping for an offer that's been retracted or
+          accepted. <strong>Posted</strong> entries already shipped a rumor-mill post.
+        </p>
+        <div id="ops-offers-inflight-body" class="ops-offers-inflight">Loading…</div>
       </article>
       </div>
     </section>
@@ -378,6 +386,66 @@ if (!user || !isCommissionerOrAdmin(user)) {
     return path.split('.').reduce<any>((acc, k) => (acc == null ? acc : acc[k]), obj);
   }
 
+  // Shared between the stats endpoint render and the live-MFL render. The
+  // commish needs to see both the in-flight offer list (from Redis) AND
+  // which of those IDs MFL still considers open (from the pendingTrades
+  // fetch). Either source landing repaints the list.
+  type InFlightOffer = { offerId: string; firstSeenMs: number; ageMs: number; lingering: boolean; posted: boolean };
+  const offerState: { inFlight: InFlightOffer[] | null; liveIds: Set<string> | null } = {
+    inFlight: null,
+    liveIds: null,
+  };
+
+  function fmtAge(ms: number): string {
+    if (!Number.isFinite(ms) || ms < 0) return '—';
+    const hours = ms / (60 * 60 * 1000);
+    if (hours < 1) return `${Math.max(1, Math.round(ms / 60000))}m`;
+    if (hours < 48) return `${hours.toFixed(1)}h`;
+    return `${(hours / 24).toFixed(1)}d`;
+  }
+
+  function paintOffersInFlight() {
+    const body = document.getElementById('ops-offers-inflight-body');
+    if (!body) return;
+    const list = offerState.inFlight;
+    if (!list) {
+      body.textContent = 'Loading…';
+      return;
+    }
+    if (!list.length) {
+      body.innerHTML = '<p class="ops-empty">No offers in <code>schefter:trade_offers:first_seen</code>. The hash is empty (or the 30d TTL elapsed).</p>';
+      return;
+    }
+    const liveIds = offerState.liveIds; // null = MFL fetch hasn't completed yet
+    body.innerHTML = list
+      .map((o) => {
+        const ageLabel = fmtAge(o.ageMs);
+        const whenLabel = o.firstSeenMs ? `${new Date(o.firstSeenMs).toLocaleString()} (${fmtRel(o.firstSeenMs)})` : '—';
+        const pills: string[] = [];
+        pills.push(o.lingering
+          ? '<span class="ops-pill ops-pill--warn">lingering</span>'
+          : '<span class="ops-pill ops-pill--ok">fresh</span>');
+        if (o.posted) {
+          pills.push('<span class="ops-pill ops-pill--info">posted</span>');
+        }
+        if (liveIds) {
+          pills.push(liveIds.has(o.offerId)
+            ? '<span class="ops-pill ops-pill--ok">in MFL</span>'
+            : '<span class="ops-pill ops-pill--bad">stale</span>');
+        }
+        return `
+          <article class="ops-offer">
+            <header class="ops-offer__head">
+              <code class="ops-offer__id">${escapeHtml(o.offerId)}</code>
+              ${pills.join(' ')}
+              <span class="ops-offer__age">age ${ageLabel}</span>
+            </header>
+            <p class="ops-offer__meta">first seen ${whenLabel}</p>
+          </article>`;
+      })
+      .join('');
+  }
+
   function render(data: any) {
     const updated = document.getElementById('ops-updated');
     if (updated) updated.textContent = `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`;
@@ -513,6 +581,11 @@ if (!user || !isCommissionerOrAdmin(user)) {
       }
       el.textContent = v === null || v === undefined ? '—' : String(v);
     });
+
+    offerState.inFlight = Array.isArray(data.redis?.tradeOffersInFlightList)
+      ? data.redis.tradeOffersInFlightList
+      : [];
+    paintOffersInFlight();
 
     const pill = (state: 'ok' | 'bad' | 'warn', label: string) =>
       `<span class="ops-pill ops-pill--${state}">${label}</span>`;
@@ -845,6 +918,9 @@ if (!user || !isCommissionerOrAdmin(user)) {
       const total = mine.length + others.length;
       const all = [...mine, ...others].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
 
+      offerState.liveIds = new Set(all.map((t: any) => String(t.tradeId || '')).filter(Boolean));
+      paintOffersInFlight();
+
       summary.innerHTML = `<span class="ops-pill ops-pill--${total > 0 ? 'ok' : 'warn'}">${total} open</span>`;
 
       if (!total) {
@@ -885,6 +961,10 @@ if (!user || !isCommissionerOrAdmin(user)) {
 
       body.innerHTML = rows;
     } catch (err) {
+      // Don't repaint with a stale liveIds set — clear it so the in-flight
+      // list drops the in-MFL/stale pills until a successful fetch lands.
+      offerState.liveIds = null;
+      paintOffersInFlight();
       summary.innerHTML = `<span class="ops-pill ops-pill--bad">err</span>`;
       body.innerHTML = `<p class="ops-empty">Could not load trade proposals: ${escapeHtml((err as Error).message)}. Are you logged in to MFL?</p>`;
     }
@@ -1141,6 +1221,27 @@ if (!user || !isCommissionerOrAdmin(user)) {
 
   .ops-card__badge { font-size: 0.7rem; margin-left: 0.5rem; vertical-align: middle; font-weight: 500; }
   .ops-empty { font-size: 0.85rem; color: var(--color-text-muted, #64748b); margin: 0.5rem 0 0; padding: 0.5rem 0; }
+
+  .ops-subhead {
+    margin: 0.9rem 0 0.25rem; font-size: 0.78rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--color-text-muted, #475569);
+  }
+  .ops-card__hint--tight { margin: 0.1rem 0 0.5rem; font-size: 0.78rem; }
+
+  .ops-offers-inflight { display: flex; flex-direction: column; gap: 0.4rem; }
+  .ops-offer {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px;
+    padding: 0.4rem 0.6rem; background: var(--color-surface-alt, #f8fafc);
+  }
+  .ops-offer__head {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; align-items: baseline;
+    font-size: 0.85rem;
+  }
+  .ops-offer__id { font-size: 0.78rem; background: white; padding: 0.05rem 0.35rem; border-radius: 3px; }
+  .ops-offer__age { font-size: 0.72rem; color: var(--color-text-muted, #64748b); margin-left: auto; }
+  .ops-offer__meta { margin: 0.2rem 0 0; font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
+  @media (max-width: 560px) { .ops-offer__age { margin-left: 0; flex-basis: 100%; } }
 
   .ops-live-trades { display: flex; flex-direction: column; gap: 0.75rem; }
   .ops-trade {

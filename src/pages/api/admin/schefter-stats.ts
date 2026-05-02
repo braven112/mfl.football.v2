@@ -43,6 +43,7 @@ type RedisClient = {
   get: <T = unknown>(key: string) => Promise<T | null>;
   lrange: <T = string>(key: string, start: number, stop: number) => Promise<T[]>;
   zrange: <T = string>(key: string, min: number, max: number, opts?: { rev?: boolean }) => Promise<T[]>;
+  smembers: <T = string>(key: string) => Promise<T[]>;
 };
 
 // Imported from the scanner's shared lib so the admin preview matches the
@@ -295,6 +296,7 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersInFlight,
     tradeOffersPosted,
     tradeOffersFirstSeenMap,
+    tradeOffersPostedMembers,
     ownerReportsMap,
     pendingTipsRaw,
     recentGroupMeRaw,
@@ -312,6 +314,7 @@ async function readRedisStats(redis: RedisClient) {
     redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
     redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
+    redis.smembers<string>(OFFER_POSTED_KEY).catch(() => [] as string[]),
     redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
     // Pull the actual queue contents (not just LLEN) so the admin page can
     // render a "what's next to post" list. Cap at 50 — the queue rarely
@@ -421,21 +424,44 @@ async function readRedisStats(redis: RedisClient) {
     console.warn('[admin/schefter-stats] processed archive read failed:', err);
   }
 
-  // Bucket in-flight offers by fresh vs lingering (≥48h since first_seen)
+  // Bucket in-flight offers by fresh vs lingering (≥48h since first_seen).
+  // Also build a per-offer list so the admin can SEE which offerIds are
+  // tracked. Without the list, a stat like "5 in-flight, 9.8d oldest age"
+  // is impossible to reconcile against the live MFL pendingTrades feed —
+  // the commish can't tell which ones are stale (no longer open in MFL).
   const now = Date.now();
   let offersFresh = 0;
   let offersLingering = 0;
   let oldestOfferAgeMs: number | null = null;
+  const postedSet = new Set(Array.isArray(tradeOffersPostedMembers) ? tradeOffersPostedMembers.map(String) : []);
+  const tradeOffersInFlightList: Array<{
+    offerId: string;
+    firstSeenMs: number;
+    ageMs: number;
+    lingering: boolean;
+    posted: boolean;
+  }> = [];
   if (tradeOffersFirstSeenMap && typeof tradeOffersFirstSeenMap === 'object') {
-    for (const v of Object.values(tradeOffersFirstSeenMap)) {
+    for (const [offerId, v] of Object.entries(tradeOffersFirstSeenMap)) {
       const ts = Number(v);
       if (!Number.isFinite(ts) || ts <= 0) continue;
       const age = now - ts;
-      if (age >= OFFER_LINGERING_THRESHOLD_MS) offersLingering += 1;
+      const lingering = age >= OFFER_LINGERING_THRESHOLD_MS;
+      if (lingering) offersLingering += 1;
       else offersFresh += 1;
       if (oldestOfferAgeMs === null || age > oldestOfferAgeMs) oldestOfferAgeMs = age;
+      tradeOffersInFlightList.push({
+        offerId,
+        firstSeenMs: ts,
+        ageMs: age,
+        lingering,
+        posted: postedSet.has(offerId),
+      });
     }
   }
+  // Oldest first — that's what the commish wants to see (stalest entries
+  // are the ones most likely to be stale-and-stuck).
+  tradeOffersInFlightList.sort((a, b) => b.ageMs - a.ageMs);
 
   // Owner-sourced reports: count unique offerIds and find the most recent report
   let ownerReportsCount = 0;
@@ -474,6 +500,7 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersFresh: offersFresh,
     tradeOffersLingering: offersLingering,
     tradeOffersOldestAgeMs: oldestOfferAgeMs,
+    tradeOffersInFlightList,
     ownerReportsCount,
     ownerReportsLastSeenTs,
     ownerReportsDistinctReporters,
