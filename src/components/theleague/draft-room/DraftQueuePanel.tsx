@@ -39,6 +39,13 @@ interface DraftQueuePanelProps {
   onSyncToMfl: () => void;
   onSubmitPick: (playerId: string) => void;
   onToggleAutoSubmit: () => void;
+  /**
+   * Live-mode MFL "Make Pick" deep-link. When set, the queue is treated as
+   * local-only — Sync to MFL and Auto-pick toggles hide (those rely on a
+   * write endpoint we don't have yet) and the on-clock CTA links to MFL
+   * instead of POSTing the top-of-queue pick.
+   */
+  mflPickUrl?: string;
 }
 
 export function DraftQueuePanel({
@@ -55,7 +62,10 @@ export function DraftQueuePanel({
   onSyncToMfl,
   onSubmitPick,
   onToggleAutoSubmit,
+  mflPickUrl,
 }: DraftQueuePanelProps) {
+  // In live mode the queue is local-only — no MFL-side persistence yet.
+  const isLocalOnly = !!mflPickUrl;
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -101,31 +111,41 @@ export function DraftQueuePanel({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleSyncToMfl}
-            disabled={isSyncingQueue || queue.length === 0}
-            title="Sync queue to your MFL draft board"
-            className="dr-sync-btn"
-            data-state={syncSuccess ? 'success' : undefined}
-          >
-            {isSyncingQueue ? 'Syncing…' : syncSuccess ? '✓ Synced' : 'Sync to MFL'}
-          </button>
+          {!isLocalOnly && (
+            <button
+              type="button"
+              onClick={handleSyncToMfl}
+              disabled={isSyncingQueue || queue.length === 0}
+              title="Sync queue to your MFL draft board"
+              className="dr-sync-btn"
+              data-state={syncSuccess ? 'success' : undefined}
+            >
+              {isSyncingQueue ? 'Syncing…' : syncSuccess ? '✓ Synced' : 'Sync to MFL'}
+            </button>
+          )}
         </div>
 
-        <label className="dr-auto-submit-label" onClick={onToggleAutoSubmit}>
-          <span
-            role="switch"
-            aria-checked={autoSubmit}
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleAutoSubmit(); } }}
-            onClick={(e) => { e.stopPropagation(); onToggleAutoSubmit(); }}
-            className="dr-auto-submit-switch"
-          >
-            <span className="dr-auto-submit-switch__thumb" />
-          </span>
-          <span className="dr-auto-submit-label__text">Auto-pick from queue</span>
-        </label>
+        {!isLocalOnly && (
+          <label className="dr-auto-submit-label" onClick={onToggleAutoSubmit}>
+            <span
+              role="switch"
+              aria-checked={autoSubmit}
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleAutoSubmit(); } }}
+              onClick={(e) => { e.stopPropagation(); onToggleAutoSubmit(); }}
+              className="dr-auto-submit-switch"
+            >
+              <span className="dr-auto-submit-switch__thumb" />
+            </span>
+            <span className="dr-auto-submit-label__text">Auto-pick from queue</span>
+          </label>
+        )}
+
+        {isLocalOnly && (
+          <p className="dr-queue__hint">
+            Queue is saved on this device only. Make picks on MFL when you're on the clock.
+          </p>
+        )}
       </div>
 
       <div className="dr-queue__list">
@@ -159,7 +179,19 @@ export function DraftQueuePanel({
         )}
       </div>
 
-      {isUserTurn && (
+      {isUserTurn && isLocalOnly && (
+        <div className="dr-queue__cta">
+          <a
+            href={mflPickUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="dr-submit-pick-btn"
+          >
+            Pick on MFL ↗
+          </a>
+        </div>
+      )}
+      {isUserTurn && !isLocalOnly && (
         <div className="dr-queue__cta">
           {submitError && (
             <div className="dr-queue__cta-error">{submitError}</div>

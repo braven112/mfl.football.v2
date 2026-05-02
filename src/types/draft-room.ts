@@ -99,6 +99,12 @@ export interface DraftRoomPageData {
   partyHost: string;
   /** MFL league ID — used when polling /api/draft/status */
   leagueId: string;
+  /**
+   * MFL "Make Pick" URL (host/options?L={leagueId}&O=17). Present in live mode
+   * so submit-pick UI can deep-link out to MFL where the pick is actually
+   * made. Undefined in mock mode (mock picks go through PartyKit).
+   */
+  mflPickUrl?: string;
 }
 
 /** Response from /api/draft/status */

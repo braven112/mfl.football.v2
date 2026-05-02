@@ -2209,3 +2209,40 @@
     display: none !important;
   }
 }
+
+/* ── MFL deep-link styling (live mode) ─────────────────────────────────── */
+
+/* Timer-banner action: opens MFL "Make Pick" page when on the clock. */
+.dr-mfl-pick-link {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm, 0.25rem);
+  background: #ffffff;
+  color: var(--color-primary, #1c497c);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s var(--dr-easing-ease);
+}
+.dr-mfl-pick-link:hover,
+.dr-mfl-pick-link:focus-visible {
+  background: var(--color-gray-100, #f3f4f6);
+  outline: none;
+}
+
+/* Anchor variant of .dr-submit-pick-btn — strip the underline & center text. */
+a.dr-submit-pick-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
+/* Local-only queue hint (replaces auto-pick label in live mode). */
+.dr-queue__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-gray-500, #6b7280);
+  line-height: 1.4;
+}
