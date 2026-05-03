@@ -151,6 +151,19 @@ const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
 const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
 const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on both first_seen HASH and posted SET
 
+// Permanent archive of every offer the scanner has ever ingested. Distinct
+// from `first_seen` because we want the running total to outlive the 30-day
+// TTL — the admin page's "Trade Offers Archive" card needs to show offers
+// from months/years ago, including ones that were never posted (retracted
+// before the dice roll fired). Entry is JSON-encoded {offerId, offeringFid,
+// partnerFid, willGiveUp, willReceive, comments, mflTimestamp, firstSeenMs}.
+const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
+// Per-offer roll counter: hincrby on every offer-scan iteration that gets to
+// the dice roll (i.e., offers still eligible — not already-posted, not
+// legacy-burned). Tells the commish how many GitHub Actions runs had a chance
+// to leak the rumor before MFL dropped the offer.
+const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
+
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;   // 48h → framing flip
 
 const OFFER_OWNER_KEY_PREFIX = 'schefter:trade_offers:owner:';
@@ -1926,6 +1939,27 @@ async function scanTradeOffers({ redis, dryRun }) {
       } catch (err) {
         warn(`  [offer-scan] hset(first_seen) failed: ${err.message}`);
       }
+
+      // Permanent archive — one entry per offer ever seen. No TTL: this is
+      // the running history feed for the admin "Trade Offers Archive" card.
+      // We only write on first sighting so a returning offer keeps its
+      // original metadata (raw can shift if MFL re-orders fields).
+      try {
+        const partnerFid = String(raw.offeredto || raw.franchise2 || '').padStart(4, '0');
+        const archiveEntry = JSON.stringify({
+          offerId,
+          offeringFid,
+          partnerFid,
+          willGiveUp: raw.will_give_up || raw.franchise1_gave_up || '',
+          willReceive: raw.will_receive || raw.franchise2_gave_up || '',
+          comments: raw.comments || '',
+          mflTimestamp: Number(raw.timestamp || 0) || null,
+          firstSeenMs: nowMs,
+        });
+        await redis.hset(OFFER_ARCHIVE_KEY, { [offerId]: archiveEntry });
+      } catch (err) {
+        warn(`  [offer-scan] hset(archive) failed: ${err.message}`);
+      }
     }
 
     // Sorted-set bookkeeping: owner + division + per-player.
@@ -2111,6 +2145,19 @@ async function scanTradeOffers({ redis, dryRun }) {
           ? ` [escalation=${redaction.tip.escalatedPlayer.tier}/${redaction.tip.escalatedPlayer.distinctOfferers}]`
           : ''),
     );
+
+    // Roll counter — increment regardless of pass/fail so the admin can see
+    // how many chances each offer had to leak before MFL dropped it.
+    // Detection-only runs still count: the dice was rolled, the chance was
+    // real, even if we suppressed the post. Dry-run does NOT increment —
+    // it didn't actually mutate anything.
+    if (!dryRun) {
+      try {
+        await redis.hincrby(OFFER_ROLLS_KEY, offerId, 1);
+      } catch (err) {
+        warn(`  [offer-scan] hincrby(rolls) failed: ${err.message}`);
+      }
+    }
 
     if (!passed) continue;
 

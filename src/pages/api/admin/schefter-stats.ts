@@ -13,6 +13,10 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import feedData from '../../../data/theleague/schefter-feed.json';
+import leagueConfig from '../../../data/theleague.config.json';
+import { parseAssets } from '../../../utils/trade-asset-parsing';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
 
 export const prerender = false;
 
@@ -32,6 +36,8 @@ const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
 const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
 const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
 const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
+const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
+const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 
 type RedisClient = {
@@ -43,6 +49,7 @@ type RedisClient = {
   get: <T = unknown>(key: string) => Promise<T | null>;
   lrange: <T = string>(key: string, start: number, stop: number) => Promise<T[]>;
   zrange: <T = string>(key: string, min: number, max: number, opts?: { rev?: boolean }) => Promise<T[]>;
+  smembers: <T = string>(key: string) => Promise<T[]>;
 };
 
 // Imported from the scanner's shared lib so the admin preview matches the
@@ -94,6 +101,86 @@ function coerce(raw: unknown): number | null {
 
 function safeParse(s: string): unknown {
   try { return JSON.parse(s); } catch { return null; }
+}
+
+// Module-level team lookup (franchiseId → {name, abbrev, nameShort}). Same
+// shape the live trades endpoint exposes — we're rendering the same kind
+// of card, just for offers MFL no longer lists.
+const teamLookup = new Map<string, { name: string; abbrev: string; nameShort: string }>();
+for (const team of (leagueConfig as { teams?: Array<{ franchiseId: string; name?: string; abbrev?: string; nameShort?: string }> }).teams ?? []) {
+  if (team.franchiseId) {
+    teamLookup.set(team.franchiseId, {
+      name: team.name || '',
+      abbrev: team.abbrev || '',
+      nameShort: team.nameShort || '',
+    });
+  }
+}
+
+type ResolvedArchiveAsset = { type: 'player' | 'pick' | 'bbid'; label: string; position?: string };
+
+/**
+ * Resolve a raw MFL asset string into human-readable labels for the admin
+ * archive view. Mirrors the live-trades endpoint's resolver but trimmed:
+ * we only need the label + position, not full ESPN/headshot wiring.
+ */
+function resolveArchiveAssets(
+  assetString: string,
+  playerMap: Map<string, { name: string; position: string; team: string }>,
+): ResolvedArchiveAsset[] {
+  const { playerIds, draftPicks, blindBid } = parseAssets(assetString);
+  const resolved: ResolvedArchiveAsset[] = [];
+  for (const id of playerIds) {
+    const p = playerMap.get(id);
+    if (p) resolved.push({ type: 'player', label: p.name, position: p.position });
+    else resolved.push({ type: 'player', label: `Unknown Player (${id})` });
+  }
+  for (const code of draftPicks) {
+    if (code.startsWith('FP_')) {
+      const parts = code.split('_');
+      const franchise = parts[1];
+      const yr = parts[2];
+      const round = parts[3];
+      const team = teamLookup.get(franchise);
+      const via = team ? ` (via ${team.abbrev || team.nameShort})` : '';
+      resolved.push({ type: 'pick', label: `${yr} Rd ${round}${via}` });
+    } else if (code.startsWith('DP_')) {
+      const round = parseInt(code.split('_')[1], 10) + 1;
+      resolved.push({ type: 'pick', label: `Current Rd ${round}` });
+    }
+  }
+  if (blindBid !== null) {
+    const formatted = blindBid >= 1_000_000
+      ? `$${(blindBid / 1_000_000).toFixed(1)}M`
+      : `$${Math.round(blindBid / 1_000).toLocaleString()}K`;
+    resolved.push({ type: 'bbid', label: `${formatted} BBID` });
+  }
+  return resolved;
+}
+
+/**
+ * Build offerId → {postId, postTimestamp} index from the static feed JSON.
+ * Trade-offer rumors carry tip ids of the form `to_<offerId>` (set by
+ * `scripts/lib/redact-trade-offer.mjs`) — when the scanner promotes a tip
+ * to a published post the original tipId rides through into `post.tipIds`.
+ */
+function buildOfferToPostIndex(): Map<string, { postId: string; postTimestamp: string }> {
+  const index = new Map<string, { postId: string; postTimestamp: string }>();
+  const posts = (feedData as { posts?: Array<{ id?: unknown; timestamp?: unknown; tipIds?: unknown }> }).posts ?? [];
+  for (const post of posts) {
+    if (!post || typeof post !== 'object') continue;
+    const tipIds = Array.isArray(post.tipIds) ? post.tipIds : [];
+    for (const raw of tipIds) {
+      if (typeof raw !== 'string' || !raw.startsWith('to_')) continue;
+      const offerId = raw.slice(3);
+      if (!offerId || index.has(offerId)) continue;
+      index.set(offerId, {
+        postId: typeof post.id === 'string' ? post.id : '',
+        postTimestamp: typeof post.timestamp === 'string' ? post.timestamp : '',
+      });
+    }
+  }
+  return index;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -295,6 +382,9 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersInFlight,
     tradeOffersPosted,
     tradeOffersFirstSeenMap,
+    tradeOffersPostedMembers,
+    tradeOffersArchiveMap,
+    tradeOffersRollsMap,
     ownerReportsMap,
     pendingTipsRaw,
     recentGroupMeRaw,
@@ -312,6 +402,9 @@ async function readRedisStats(redis: RedisClient) {
     redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
     redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
+    redis.smembers<string>(OFFER_POSTED_KEY).catch(() => [] as string[]),
+    redis.hgetall<Record<string, string>>(OFFER_ARCHIVE_KEY).catch(() => null),
+    redis.hgetall<Record<string, string>>(OFFER_ROLLS_KEY).catch(() => null),
     redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
     // Pull the actual queue contents (not just LLEN) so the admin page can
     // render a "what's next to post" list. Cap at 50 — the queue rarely
@@ -421,21 +514,170 @@ async function readRedisStats(redis: RedisClient) {
     console.warn('[admin/schefter-stats] processed archive read failed:', err);
   }
 
-  // Bucket in-flight offers by fresh vs lingering (≥48h since first_seen)
+  // Bucket in-flight offers by fresh vs lingering (≥48h since first_seen).
+  // Also build a per-offer list so the admin can SEE which offerIds are
+  // tracked. Without the list, a stat like "5 in-flight, 9.8d oldest age"
+  // is impossible to reconcile against the live MFL pendingTrades feed —
+  // the commish can't tell which ones are stale (no longer open in MFL).
   const now = Date.now();
   let offersFresh = 0;
   let offersLingering = 0;
   let oldestOfferAgeMs: number | null = null;
+  const postedSet = new Set(Array.isArray(tradeOffersPostedMembers) ? tradeOffersPostedMembers.map(String) : []);
+  const tradeOffersInFlightList: Array<{
+    offerId: string;
+    firstSeenMs: number;
+    ageMs: number;
+    lingering: boolean;
+    posted: boolean;
+  }> = [];
   if (tradeOffersFirstSeenMap && typeof tradeOffersFirstSeenMap === 'object') {
-    for (const v of Object.values(tradeOffersFirstSeenMap)) {
+    for (const [offerId, v] of Object.entries(tradeOffersFirstSeenMap)) {
       const ts = Number(v);
       if (!Number.isFinite(ts) || ts <= 0) continue;
       const age = now - ts;
-      if (age >= OFFER_LINGERING_THRESHOLD_MS) offersLingering += 1;
+      const lingering = age >= OFFER_LINGERING_THRESHOLD_MS;
+      if (lingering) offersLingering += 1;
       else offersFresh += 1;
       if (oldestOfferAgeMs === null || age > oldestOfferAgeMs) oldestOfferAgeMs = age;
+      tradeOffersInFlightList.push({
+        offerId,
+        firstSeenMs: ts,
+        ageMs: age,
+        lingering,
+        posted: postedSet.has(offerId),
+      });
     }
   }
+  // Oldest first — that's what the commish wants to see (stalest entries
+  // are the ones most likely to be stale-and-stuck).
+  tradeOffersInFlightList.sort((a, b) => b.ageMs - a.ageMs);
+
+  // Trade Offers Archive — running history of every offer ever ingested.
+  // Joins three Redis hashes + the static feed JSON:
+  //   archive[offerId] → metadata (owners + raw asset strings + first-seen)
+  //   rolls[offerId]   → counter of dice-roll opportunities while in-flight
+  //   posted SET       → which offerIds have been promoted to a Schefter post
+  //   feed.posts       → the actual post (id + timestamp) when one exists
+  // Entries that exist only in `first_seen` (not yet migrated to archive,
+  // i.e. captured before this commit landed) get a placeholder record so
+  // the running total stays honest — they're shown with offerId only.
+  const offerToPostIndex = buildOfferToPostIndex();
+  const playerMap = (() => {
+    try {
+      const identityMap = getPlayerMap(getCurrentLeagueYear());
+      const m = new Map<string, { name: string; position: string; team: string }>();
+      for (const [id, identity] of identityMap) {
+        m.set(id, { name: identity.name, position: identity.position, team: identity.nflTeam });
+      }
+      return m;
+    } catch (err) {
+      console.warn('[admin/schefter-stats] player map load failed:', err);
+      return new Map<string, { name: string; position: string; team: string }>();
+    }
+  })();
+
+  type ArchiveAssets = { willGiveUp: ResolvedArchiveAsset[]; willReceive: ResolvedArchiveAsset[] };
+  type ArchiveEntry = {
+    offerId: string;
+    offeringFid: string;
+    offeringName: string;
+    partnerFid: string;
+    partnerName: string;
+    firstSeenMs: number;
+    rollCount: number;
+    posted: boolean;
+    postId: string | null;
+    postTimestamp: string | null;
+    legacyBackfill: boolean;
+    assets: ArchiveAssets;
+    comments: string;
+  };
+
+  const tradeOffersArchive: ArchiveEntry[] = [];
+  const archiveSeen = new Set<string>();
+  const rollsLookup = new Map<string, number>();
+  if (tradeOffersRollsMap && typeof tradeOffersRollsMap === 'object') {
+    for (const [k, v] of Object.entries(tradeOffersRollsMap)) {
+      const n = Number(v);
+      if (Number.isFinite(n)) rollsLookup.set(k, n);
+    }
+  }
+
+  function teamName(fid: string): string {
+    if (!fid) return '';
+    return teamLookup.get(fid)?.name || `Team ${fid}`;
+  }
+
+  if (tradeOffersArchiveMap && typeof tradeOffersArchiveMap === 'object') {
+    for (const [offerId, raw] of Object.entries(tradeOffersArchiveMap)) {
+      const parsed = typeof raw === 'string' ? safeParse(raw) : raw;
+      if (!parsed || typeof parsed !== 'object') continue;
+      const m = parsed as {
+        offeringFid?: unknown;
+        partnerFid?: unknown;
+        willGiveUp?: unknown;
+        willReceive?: unknown;
+        comments?: unknown;
+        firstSeenMs?: unknown;
+      };
+      const offeringFid = String(m.offeringFid ?? '');
+      const partnerFid = String(m.partnerFid ?? '');
+      const firstSeenMs = Number(m.firstSeenMs ?? 0) || 0;
+      const link = offerToPostIndex.get(offerId);
+      tradeOffersArchive.push({
+        offerId,
+        offeringFid,
+        offeringName: teamName(offeringFid),
+        partnerFid,
+        partnerName: teamName(partnerFid),
+        firstSeenMs,
+        rollCount: rollsLookup.get(offerId) ?? 0,
+        posted: postedSet.has(offerId),
+        postId: link?.postId || null,
+        postTimestamp: link?.postTimestamp || null,
+        legacyBackfill: false,
+        assets: {
+          willGiveUp: resolveArchiveAssets(typeof m.willGiveUp === 'string' ? m.willGiveUp : '', playerMap),
+          willReceive: resolveArchiveAssets(typeof m.willReceive === 'string' ? m.willReceive : '', playerMap),
+        },
+        comments: typeof m.comments === 'string' ? m.comments : '',
+      });
+      archiveSeen.add(offerId);
+    }
+  }
+
+  // Backfill: any offerId that exists in first_seen but doesn't have an
+  // archive entry yet (captured before this commit landed) gets a stub so
+  // it still shows up in the running total. Owners + assets are unknown
+  // for these; the UI labels them as legacy entries.
+  if (tradeOffersFirstSeenMap && typeof tradeOffersFirstSeenMap === 'object') {
+    for (const [offerId, ts] of Object.entries(tradeOffersFirstSeenMap)) {
+      if (archiveSeen.has(offerId)) continue;
+      const firstSeenMs = Number(ts);
+      if (!Number.isFinite(firstSeenMs) || firstSeenMs <= 0) continue;
+      const link = offerToPostIndex.get(offerId);
+      tradeOffersArchive.push({
+        offerId,
+        offeringFid: '',
+        offeringName: '',
+        partnerFid: '',
+        partnerName: '',
+        firstSeenMs,
+        rollCount: rollsLookup.get(offerId) ?? 0,
+        posted: postedSet.has(offerId),
+        postId: link?.postId || null,
+        postTimestamp: link?.postTimestamp || null,
+        legacyBackfill: true,
+        assets: { willGiveUp: [], willReceive: [] },
+        comments: '',
+      });
+    }
+  }
+
+  // Newest first — running history reads naturally with the latest at top.
+  tradeOffersArchive.sort((a, b) => b.firstSeenMs - a.firstSeenMs);
+  const tradeOffersArchiveTotal = tradeOffersArchive.length;
 
   // Owner-sourced reports: count unique offerIds and find the most recent report
   let ownerReportsCount = 0;
@@ -474,6 +716,9 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersFresh: offersFresh,
     tradeOffersLingering: offersLingering,
     tradeOffersOldestAgeMs: oldestOfferAgeMs,
+    tradeOffersInFlightList,
+    tradeOffersArchive,
+    tradeOffersArchiveTotal,
     ownerReportsCount,
     ownerReportsLastSeenTs,
     ownerReportsDistinctReporters,
