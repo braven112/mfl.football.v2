@@ -18,6 +18,8 @@
  * 30-day TTL matches OFFER_STATE_TTL_SEC in scripts/schefter-rumor-scan.mjs.
  */
 
+import leagueConfig from '../data/theleague.config.json';
+
 const HASH_KEY = 'schefter:trade_offers:owner_reports';
 const TTL_SECONDS = 30 * 24 * 60 * 60;
 
@@ -64,6 +66,44 @@ function offerIdOf(raw: Record<string, unknown>): string | null {
   return s.length > 0 ? s : null;
 }
 
+const teamNameToFid = new Map<string, string>();
+for (const team of (leagueConfig as { teams?: Array<{ name?: string; franchiseId?: string }> }).teams ?? []) {
+  if (team?.name && team?.franchiseId) {
+    teamNameToFid.set(String(team.name).toLowerCase(), String(team.franchiseId));
+  }
+}
+
+/**
+ * MFL's owner-view `pendingTrades` payload omits the `franchise` (originator)
+ * field — it only carries `offeredto` (the partner) plus a `description` like
+ * "Pacific Pigskins proposed a trade to ...". Mirror the resolver in
+ * `src/pages/api/trades/pending.ts#resolveProposer` so the rumor scanner's
+ * downstream `String(raw.franchise || '').padStart(4, '0')` doesn't collapse
+ * to `'0000'` and surface as "Team 0000" in the admin archive.
+ */
+export function resolveOriginatorFid(
+  raw: Record<string, unknown>,
+  reportingFranchiseId: string,
+): string {
+  const reporterPadded = String(reportingFranchiseId).padStart(4, '0');
+  const existing = String(raw.franchise ?? '').trim();
+  if (existing) return existing.padStart(4, '0');
+
+  const partner = String(raw.offeredto ?? raw.franchise2 ?? '').trim().padStart(4, '0');
+  // Owner view: `offeredto` is always the counter-party. If the reporter is
+  // not the partner, the reporter authored the offer.
+  if (partner && partner !== reporterPadded) return reporterPadded;
+
+  // Reporter is the recipient — pull the proposer's name from the description.
+  const desc = String(raw.description ?? '');
+  const match = desc.match(/^(.+?)\s+proposed a trade to\s/i);
+  if (match) {
+    const fid = teamNameToFid.get(match[1].trim().toLowerCase());
+    if (fid) return fid.padStart(4, '0');
+  }
+  return '';
+}
+
 /**
  * MFL returns different field names for owner-view vs commish-view
  * `pendingTrades`. The rumor scanner expects commish-view shape
@@ -79,22 +119,27 @@ function normalizeRaw(
   raw: Record<string, unknown>,
   reportingFranchiseId: string,
 ): Record<string, unknown> {
+  // Even commish-shaped rows can be missing `franchise` if MFL changes the
+  // field set; populate it unconditionally so downstream never sees `'0000'`.
+  const originator = resolveOriginatorFid(raw, reportingFranchiseId);
+
   if (raw.franchise1_gave_up !== undefined || raw.franchise2_gave_up !== undefined) {
-    return raw;
+    return originator && !raw.franchise ? { ...raw, franchise: originator } : raw;
   }
 
   const willGiveUp = raw.will_give_up;
   const willReceive = raw.will_receive;
   if (willGiveUp === undefined && willReceive === undefined) return raw;
 
-  const originator = String(raw.franchise ?? '').padStart(4, '0');
-  const ownerIsOriginator = originator === reportingFranchiseId.padStart(4, '0');
+  const reporterPadded = String(reportingFranchiseId).padStart(4, '0');
+  const ownerIsOriginator = originator === reporterPadded;
 
   const f1 = ownerIsOriginator ? willGiveUp : willReceive;
   const f2 = ownerIsOriginator ? willReceive : willGiveUp;
 
   return {
     ...raw,
+    franchise: originator || (raw.franchise as string | undefined) || '',
     franchise1_gave_up: f1 ?? '',
     franchise2_gave_up: f2 ?? '',
     franchise2: raw.franchise2 ?? raw.offeredto ?? '',
