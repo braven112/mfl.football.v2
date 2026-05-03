@@ -141,8 +141,10 @@ const MORNING_GREETING_DATE_KEY = 'schefter:morning_greeting:last_used_date';
 const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
 const OFFER_SEEN_TTL_SEC = 30 * 24 * 60 * 60;        // 30d
 
-// Cumulative-probability model (p=0.0075/run, 99% by ~day 6.4). Each live
-// offer gets:
+// Cumulative-probability model. The base per-run probability lives in
+// `scripts/lib/redact-trade-offer.mjs#OFFER_POST_PROBABILITY` (currently 0.05);
+// see that file for the cumulative-curve breakdown by realistic cadence.
+// Each live offer gets:
 //   - an entry in `first_seen` HASH (offerId → epoch ms of first sighting)
 //     used to compute age → framingHint ('fresh' <48h, 'lingering' ≥48h)
 //   - zero or one SADD into `posted` SET the first time its dice roll passes
@@ -2177,7 +2179,8 @@ async function scanTradeOffers({ redis, dryRun }) {
       continue;
     }
 
-    // Dice roll — base p=0.0075 per run, scaled exponentially by the most-
+    // Dice roll — base probability is OFFER_POST_PROBABILITY (see
+    // `scripts/lib/redact-trade-offer.mjs`), scaled exponentially by the most-
     // shopped player's effective distinct-offerer count (real + 0.4*draft).
     // Capped at 4× base. Cumulative curve still keeps most passes in the
     // 1–7 day window for low-volume players; serial-shopped players

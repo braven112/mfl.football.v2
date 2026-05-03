@@ -12,6 +12,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { OFFER_POST_PROBABILITY } from '../../../../scripts/lib/redact-trade-offer.mjs';
 
 export const prerender = false;
 
@@ -19,6 +20,19 @@ const user = getAuthUser(Astro.request);
 if (!user || !isCommissionerOrAdmin(user)) {
   return Astro.redirect('/theleague');
 }
+
+// Cumulative-probability copy is rendered from the same constant the scanner
+// uses, so the admin hint can never drift from the actual roll. Realistic
+// cadence is ~50 rolls/day (96 nominal cron ticks minus quiet hours and the
+// occasional GitHub Actions skip).
+const ROLLS_PER_DAY = 50;
+const cumulativeAfter = (hours: number) =>
+  1 - Math.pow(1 - OFFER_POST_PROBABILITY, (hours / 24) * ROLLS_PER_DAY);
+const fmtProb = (p: number) => p.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+const fmtPct = (p: number) => `${Math.round(p * 100)}%`;
+const offerProbStr = fmtProb(OFFER_POST_PROBABILITY);
+const offerCum24h = fmtPct(cumulativeAfter(24));
+const offerCum48h = fmtPct(cumulativeAfter(48));
 ---
 
 <TheLeagueLayout title="Schefter Ops — Admin">
@@ -143,9 +157,10 @@ if (!user || !isCommissionerOrAdmin(user)) {
       <article class="ops-card" aria-labelledby="card-offers">
         <h3 id="card-offers" class="ops-card__title">Trade Offers Ingested</h3>
         <p class="ops-card__hint">
-          Cumulative-probability model: <code>p=0.025</code>/run (~91% by 24h, ~99% by 48h).
-          Bumped 2026-04-30 from 0.0075 — trade proposals are the league's highest-engagement
-          posts, so we report them faster. In-flight = offers still eligible to post.
+          Cumulative-probability model: <code>p={offerProbStr}</code>/run (~{offerCum24h} by 24h, ~{offerCum48h} by 48h
+          at ~{ROLLS_PER_DAY} rolls/day after quiet hours and Actions skips).
+          Value is read live from <code>OFFER_POST_PROBABILITY</code> in <code>scripts/lib/redact-trade-offer.mjs</code>,
+          so this hint never drifts from the scanner. In-flight = offers still eligible to post.
           Posted = offers the rumor mill has already announced.
           Lingering (≥48h) flips the voice to "phones aren't picking up".
         </p>
