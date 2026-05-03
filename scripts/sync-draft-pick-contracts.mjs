@@ -2,28 +2,41 @@
 /**
  * Sync Draft Pick Contracts
  *
- * After each MFL feed fetch, scan draftResults.json for newly-completed picks
- * and create a pending `rookie-override` contract declaration for each one.
- * The slot-based rookie salary is auto-populated from
- * scripts/lib/rookie-salary-slots.mjs so the owner only has to choose
- * contract years (1-3, vs the default 4yr RC) on the contracts page.
+ * After each MFL feed fetch, scan draftResults.json for newly-completed
+ * picks and write the league's standard rookie contract directly to MFL:
+ *   contractInfo = "RC"
+ *   contractYear = "4"      (default RC length; owners reduce to 1-3 via the
+ *                            existing rookie-override flow before the August
+ *                            cutdown)
+ *   salary       = slot-based rookie salary by round/pick/position
  *
- * Idempotent: skips picks that already have a declaration for that
- * player+franchise.
+ * Why direct write instead of pending-declaration model:
+ *   MFL does NOT auto-apply RC on drafted players. Without this script
+ *   stamping RC, the rosters-page rookie-override button never appears
+ *   (eligibility check requires contractInfo === 'RC'). By writing RC + the
+ *   slot salary up front, owners can self-serve their year choice 1-3 from
+ *   the rosters page until the August cutdown. The commissioner is no
+ *   longer the critical-path step.
  *
- * Storage:
- *   - Upstash Redis when UPSTASH_REDIS_REST_URL/TOKEN (or KV_*) are set
- *   - Filesystem fallback at data/<league>/contract-declarations.json
- *     (mirrors the runtime behavior of src/utils/contract-storage.ts)
+ * Idempotency: queries current MFL salaries first and skips any drafted
+ * player who already has contractInfo === 'RC'. Safe to run on every
+ * roster-sync tick (every 5 min).
+ *
+ * Audit trail: also writes an `applied` ContractDeclaration record into
+ * storage (Upstash Redis or local JSON) so the change shows up in the
+ * Applied Contracts section on /theleague/contracts/manage.
  *
  * Usage:
- *   node scripts/sync-draft-pick-contracts.mjs              # theleague, latest year
+ *   node scripts/sync-draft-pick-contracts.mjs              # write to MFL
+ *   node scripts/sync-draft-pick-contracts.mjs --dry-run    # just print
  *   node scripts/sync-draft-pick-contracts.mjs --league afl --year 2026
  *
  * Env:
- *   MFL_LEAGUE_SLUG              defaults to 'theleague'
- *   MFL_YEAR / PUBLIC_BASE_YEAR  optional explicit year
- *   UPSTASH_REDIS_REST_URL/TOKEN OR KV_REST_API_URL/TOKEN — production storage
+ *   MFL_USERNAME, MFL_PASSWORD     required for MFL writes (any league commish)
+ *   MFL_LEAGUE_ID                  defaults to '13522'
+ *   MFL_LEAGUE_SLUG                defaults to 'theleague'
+ *   MFL_YEAR / PUBLIC_BASE_YEAR    optional explicit year override
+ *   UPSTASH_REDIS_REST_URL/TOKEN   audit trail in production
  */
 
 import { promises as fs } from 'node:fs';
@@ -36,37 +49,26 @@ import {
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const REDIS_KEY = 'contract-declarations';
+const RC_DEFAULT_YEARS = 4;
+const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
+const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
 
 // ── Pure logic (testable) ──────────────────────────────────────────────
 
 /**
- * Build the set of contract declarations that should exist for the given
- * draft results. Returns ONLY new declarations (skips ones already in
- * `existingDeclarations` by playerId+franchiseId).
+ * Build the list of MFL contract writes that should happen for the given
+ * draft results, skipping any pick that already has contractInfo='RC' on
+ * MFL.
  *
  * @param {object} args
- * @param {object} args.draftResults  The parsed draftResults.json content
+ * @param {object} args.draftResults  Parsed draftResults.json
  * @param {Map<string, {position: string, name: string}>} args.playerIndex
- * @param {Map<string, string>} args.franchiseNameMap  franchiseId → display name
- * @param {string} args.leagueId
- * @param {Array<{playerId: string, franchiseId: string}>} args.existingDeclarations
- * @param {() => string} [args.idGenerator]  For deterministic test output
- * @param {() => Date} [args.now]  Override "now" for tests
+ * @param {Map<string, {salary: string, contractYear: string, contractInfo: string}>} args.mflSalaries
+ *   Player ID → current MFL contract state
  */
-export function buildDraftPickDeclarations({
-  draftResults,
-  playerIndex,
-  franchiseNameMap,
-  leagueId,
-  existingDeclarations,
-  idGenerator = generateId,
-  now = () => new Date(),
-}) {
+export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries }) {
   const draftPicks = draftResults?.draftResults?.draftUnit?.draftPick ?? [];
-  const existing = new Set(
-    existingDeclarations.map((d) => `${d.franchiseId}:${d.playerId}`),
-  );
-  const created = [];
+  const writes = [];
 
   for (const pick of draftPicks) {
     const playerId = String(pick.player ?? '').trim();
@@ -76,8 +78,9 @@ export function buildDraftPickDeclarations({
     const franchiseId = String(pick.franchise ?? '').trim();
     if (!franchiseId) continue;
 
-    const key = `${franchiseId}:${playerId}`;
-    if (existing.has(key)) continue;
+    // Skip if this player already has RC stamped on MFL
+    const current = mflSalaries.get(playerId);
+    if (current?.contractInfo === 'RC') continue;
 
     const round = parseInt(pick.round, 10);
     const pickInRound = parseInt(pick.pick, 10);
@@ -88,42 +91,196 @@ export function buildDraftPickDeclarations({
     const position = player?.position ?? 'WR';
     const playerName = player?.name ?? `Player ${playerId}`;
     const salary = getRookieSlotSalary(round, overallPick, position);
-
     const tsSec = parseInt(ts, 10);
-    const submittedAt = Number.isFinite(tsSec)
-      ? new Date(tsSec * 1000).toISOString()
-      : now().toISOString();
 
-    created.push({
-      id: idGenerator(),
-      type: 'rookie-override',
+    writes.push({
       playerId,
       playerName,
       franchiseId,
-      franchiseName: franchiseNameMap.get(franchiseId) ?? `Team ${franchiseId}`,
-      leagueId,
-      currentYears: 4,
-      currentSalary: salary,
-      currentContractInfo: 'RC',
-      requestedYears: 4,
-      requestedSalary: salary,
-      requestedContractInfo: 'RC',
-      status: 'pending',
-      submittedBy: 'Draft Auto-Sync',
-      submittedAt,
-      mflSynced: false,
+      round,
+      pickInRound,
+      position,
+      salary,
+      contractYear: String(RC_DEFAULT_YEARS),
+      contractInfo: 'RC',
       acquisitionTimestamp: Number.isFinite(tsSec) ? tsSec : undefined,
     });
   }
 
-  return created;
+  return writes;
 }
 
-function generateId() {
-  return `DECL_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+// ── MFL auth + fetch (mirrors src/utils/mfl-login.ts + mfl-fetch.ts) ──
+
+/**
+ * Manual-redirect fetch that re-attaches the Cookie header on every hop.
+ * Required because Node.js undici strips Cookie on cross-origin 302s, and
+ * MFL's api.* host always redirects to www49.* for authenticated calls.
+ */
+async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs = 10_000 }) {
+  let currentUrl = url;
+  let currentMethod = method;
+  let currentBody = body;
+  const cookieHeader = Object.entries(cookies)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('; ');
+
+  for (let hop = 0; hop <= 3; hop++) {
+    const headers = { Cookie: cookieHeader };
+    if (currentMethod === 'POST' && currentBody) {
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    }
+    const res = await fetch(currentUrl, {
+      method: currentMethod,
+      headers,
+      body: currentMethod === 'POST' ? currentBody : undefined,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.status < 300 || res.status >= 400) return res;
+    const location = res.headers.get('location');
+    if (!location) return res;
+    currentUrl = location.startsWith('http')
+      ? location
+      : new URL(location, currentUrl).href;
+    if (res.status === 302 || res.status === 303) {
+      if (currentMethod === 'POST' && currentBody) {
+        const sep = currentUrl.includes('?') ? '&' : '?';
+        currentUrl = `${currentUrl}${sep}${currentBody}`;
+      }
+      currentMethod = 'GET';
+      currentBody = undefined;
+    }
+  }
+  throw new Error(`mflFetch exceeded redirect limit for ${url}`);
 }
 
-// ── Storage layer ──────────────────────────────────────────────────────
+/**
+ * Log into MFL with username/password and return MFL_USER_ID + (optional)
+ * MFL_IS_COMMISH cookies. Mirrors src/utils/mfl-login.ts but stripped to
+ * just the cookie acquisition (no franchise-resolution step).
+ */
+async function loginToMFL(username, password) {
+  const year = new Date().getFullYear();
+  const loginUrl = `https://api.myfantasyleague.com/${year}/login`;
+  const params = new URLSearchParams({ USERNAME: username, PASSWORD: password, XML: '1' });
+
+  const allSetCookies = [];
+  let url = loginUrl;
+  let method = 'POST';
+  let body = params.toString();
+  let finalText = '';
+
+  for (let hop = 0; hop <= 3; hop++) {
+    const headers = method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {};
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: method === 'POST' ? body : undefined,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(8000),
+    });
+    const hopCookies = res.headers.getSetCookie?.() ?? [];
+    allSetCookies.push(...hopCookies);
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) {
+        finalText = await res.text();
+        break;
+      }
+      url = location.startsWith('http') ? location : new URL(location, url).href;
+      if (res.status === 302 || res.status === 303) {
+        if (method === 'POST' && body) {
+          const sep = url.includes('?') ? '&' : '?';
+          url = `${url}${sep}${body}`;
+        }
+        method = 'GET';
+        body = undefined;
+      }
+      continue;
+    }
+    finalText = await res.text();
+    break;
+  }
+
+  // Fall back to GET-with-params if POST returned empty
+  if (!finalText.trim()) {
+    const fallbackUrl = `${loginUrl}?${params.toString()}`;
+    const res = await fetch(fallbackUrl, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
+    finalText = await res.text();
+    const hopCookies = res.headers.getSetCookie?.() ?? [];
+    allSetCookies.push(...hopCookies);
+  }
+
+  const errorMatch = finalText.match(/<error[^>]*>(.*?)<\/error>/s);
+  if (errorMatch) throw new Error(`MFL login failed: ${errorMatch[1].trim()}`);
+
+  const cookieMatch = finalText.match(/MFL_USER_ID="([^"]+)"/);
+  if (!cookieMatch) throw new Error(`MFL login: no MFL_USER_ID in response: ${finalText.slice(0, 200)}`);
+
+  let commishCookie;
+  for (const cookieStr of allSetCookies) {
+    const m = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
+    if (m) {
+      commishCookie = m[1];
+      break;
+    }
+  }
+
+  return { mflUserId: cookieMatch[1], mflIsCommish: commishCookie };
+}
+
+async function fetchCurrentMFLSalaries({ leagueId, year, cookies }) {
+  const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${leagueId}&JSON=1`;
+  const res = await mflFetch({ url, cookies });
+  if (!res.ok) throw new Error(`MFL salaries fetch failed: ${res.status}`);
+  const data = await res.json();
+  const players = data?.salaries?.leagueUnit?.player ?? [];
+  const map = new Map();
+  for (const p of players) {
+    map.set(String(p.id), {
+      salary: p.salary,
+      contractYear: p.contractYear,
+      contractInfo: p.contractInfo,
+    });
+  }
+  return map;
+}
+
+async function writeContractsToMFL({ leagueId, year, cookies, writes }) {
+  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=salaries&L=${leagueId}&APPEND=1`;
+  const playerXml = writes
+    .map(
+      (w) =>
+        `<player id="${w.playerId}" salary="${w.salary}" contractYear="${w.contractYear}" contractInfo="${w.contractInfo}" />`,
+    )
+    .join('');
+  const xml = `<salaries><leagueUnit unit="LEAGUE">${playerXml}</leagueUnit></salaries>`;
+  const body = new URLSearchParams({ DATA: xml }).toString();
+
+  const delays = [500, 1500];
+  let lastError = '';
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    const res = await mflFetch({ url, method: 'POST', cookies, body });
+    if (res.ok) {
+      const text = await res.text();
+      if (text.toLowerCase().includes('error')) {
+        lastError = `MFL error response: ${text.slice(0, 200)}`;
+      } else {
+        return { success: true, attempts: attempt + 1, response: text.slice(0, 200) };
+      }
+    } else {
+      lastError = `HTTP ${res.status}`;
+    }
+    if (attempt < delays.length) {
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+  }
+  return { success: false, attempts: delays.length + 1, error: lastError };
+}
+
+// ── Audit-trail declaration storage (best-effort) ──────────────────────
 
 function getRedisConfig() {
   const url =
@@ -138,93 +295,82 @@ function getRedisConfig() {
   return { url, token };
 }
 
-async function readDeclarationsFromRedis(redis) {
-  const res = await fetch(`${redis.url}/hgetall/${encodeURIComponent(REDIS_KEY)}`, {
-    headers: { Authorization: `Bearer ${redis.token}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Redis hgetall failed: ${res.status} ${await res.text()}`);
-  }
-  const json = await res.json();
-  const result = json?.result;
-  if (!result) return [];
+async function writeAuditDeclarations(declarations, leagueSlug) {
+  if (declarations.length === 0) return;
 
-  // Upstash REST returns an object {field: value, ...} for hgetall
-  if (typeof result === 'object' && !Array.isArray(result)) {
-    return Object.values(result).map(parseRedisValue).filter(Boolean);
-  }
-
-  // Legacy flat-array form: [field, value, field, value, ...]
-  if (Array.isArray(result)) {
-    const out = [];
-    for (let i = 1; i < result.length; i += 2) {
-      const parsed = parseRedisValue(result[i]);
-      if (parsed) out.push(parsed);
+  const redis = getRedisConfig();
+  if (redis) {
+    const body = [REDIS_KEY];
+    for (const d of declarations) body.push(d.id, JSON.stringify(d));
+    const res = await fetch(`${redis.url}/hset`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${redis.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.warn(`[draft-pick-sync] audit write to Redis failed: ${res.status} ${await res.text()}`);
     }
-    return out;
+    return;
   }
 
-  return [];
-}
-
-function parseRedisValue(v) {
-  if (v == null) return null;
-  if (typeof v === 'object') return v;
+  // Local dev fallback
+  const filePath = path.join(projectRoot, 'data', leagueSlug, 'contract-declarations.json');
+  let existing = { version: '1.0', lastUpdated: '', declarations: [] };
   try {
-    return JSON.parse(v);
-  } catch {
-    return null;
-  }
-}
-
-async function writeDeclarationsToRedis(redis, declarations) {
-  // Upstash supports HSET with multiple field/value pairs in one call.
-  // Build args: [REDIS_KEY, field1, value1, field2, value2, ...]
-  const body = [REDIS_KEY];
-  for (const d of declarations) {
-    body.push(d.id, JSON.stringify(d));
-  }
-  const res = await fetch(`${redis.url}/hset`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${redis.token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Redis hset failed: ${res.status} ${await res.text()}`);
-  }
-}
-
-async function readDeclarationsFromFile(filePath) {
-  try {
-    const raw = await fs.readFile(filePath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return parsed.declarations ?? [];
+    existing = JSON.parse(await fs.readFile(filePath, 'utf-8'));
   } catch (err) {
-    if (err.code === 'ENOENT') return [];
-    throw err;
+    if (err.code !== 'ENOENT') throw err;
   }
-}
-
-async function writeDeclarationsToFile(filePath, declarations) {
+  existing.lastUpdated = new Date().toISOString();
+  existing.declarations = [...declarations, ...(existing.declarations ?? [])];
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const file = {
-    version: '1.0',
-    lastUpdated: new Date().toISOString(),
-    declarations,
-  };
-  await fs.writeFile(filePath, JSON.stringify(file, null, 2), 'utf-8');
+  await fs.writeFile(filePath, JSON.stringify(existing, null, 2), 'utf-8');
 }
 
-// ── CLI entry point ────────────────────────────────────────────────────
+function generateDeclarationId() {
+  return `DECL_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function buildAuditDeclaration({ write, leagueId, franchiseNameMap }) {
+  const submittedAt = write.acquisitionTimestamp
+    ? new Date(write.acquisitionTimestamp * 1000).toISOString()
+    : new Date().toISOString();
+  return {
+    id: generateDeclarationId(),
+    type: 'rookie-override',
+    playerId: write.playerId,
+    playerName: write.playerName,
+    franchiseId: write.franchiseId,
+    franchiseName: franchiseNameMap.get(write.franchiseId) ?? `Team ${write.franchiseId}`,
+    leagueId,
+    currentYears: 0,
+    currentSalary: 0,
+    currentContractInfo: '',
+    requestedYears: RC_DEFAULT_YEARS,
+    requestedSalary: write.salary,
+    requestedContractInfo: 'RC',
+    status: 'applied',
+    submittedBy: 'Draft Auto-Sync',
+    submittedAt,
+    reviewedBy: 'Draft Auto-Sync',
+    reviewedAt: new Date().toISOString(),
+    mflSynced: true,
+    mflSyncedAt: new Date().toISOString(),
+    acquisitionTimestamp: write.acquisitionTimestamp,
+  };
+}
+
+// ── CLI ────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { league: undefined, year: undefined };
+  const args = { league: undefined, year: undefined, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--league') args.league = argv[++i];
     else if (argv[i] === '--year') args.year = argv[++i];
+    else if (argv[i] === '--dry-run') args.dryRun = true;
   }
   return args;
 }
@@ -235,9 +381,6 @@ function getCurrentDraftYear() {
     process.env.PUBLIC_BASE_YEAR ||
     process.env.MFL_SEASON;
   if (env) return parseInt(env, 10);
-  // The draft happens in the spring of the current calendar year for that
-  // year's season. Default to the current calendar year — the script also
-  // tolerates a missing draftResults.json by exiting cleanly.
   return new Date().getFullYear();
 }
 
@@ -249,14 +392,8 @@ async function main() {
   const feedsDir = path.join(projectRoot, 'data', leagueSlug, 'mfl-feeds', year);
   const draftResultsPath = path.join(feedsDir, 'draftResults.json');
   const playersPath = path.join(feedsDir, 'players.json');
-  const leagueConfigPath = path.join(
-    projectRoot,
-    'src',
-    'data',
-    `${leagueSlug}.config.json`,
-  );
+  const leagueConfigPath = path.join(projectRoot, 'src', 'data', `${leagueSlug}.config.json`);
 
-  // Bail cleanly if no draft data yet
   let draftResults;
   try {
     draftResults = JSON.parse(await fs.readFile(draftResultsPath, 'utf-8'));
@@ -282,54 +419,61 @@ async function main() {
       team.nameShort || team.nameMedium || team.name || `Team ${team.franchiseId}`,
     );
   }
-  const leagueId = String(
-    leagueConfig.leagueId || process.env.MFL_LEAGUE_ID || '13522',
-  );
+  const leagueId = String(leagueConfig.leagueId || process.env.MFL_LEAGUE_ID || '13522');
 
-  // Read existing declarations (Redis preferred, file fallback)
-  const redis = getRedisConfig();
-  const filePath = path.join(
-    projectRoot,
-    'data',
-    leagueSlug,
-    'contract-declarations.json',
-  );
-
-  let existingDeclarations;
-  if (redis) {
-    existingDeclarations = await readDeclarationsFromRedis(redis);
-  } else {
-    existingDeclarations = await readDeclarationsFromFile(filePath);
+  // Auth — required for both reading current salaries and writing
+  const username = process.env.MFL_USERNAME;
+  const password = process.env.MFL_PASSWORD;
+  if (!username || !password) {
+    throw new Error('MFL_USERNAME and MFL_PASSWORD are required for draft pick sync.');
   }
+  const { mflUserId, mflIsCommish } = await loginToMFL(username, password);
+  const cookies = { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };
+  console.log(
+    `[draft-pick-sync] Logged into MFL${mflIsCommish ? ' (commish cookie present)' : ''}.`,
+  );
 
-  const newDeclarations = buildDraftPickDeclarations({
-    draftResults,
-    playerIndex,
-    franchiseNameMap,
-    leagueId,
-    existingDeclarations,
-  });
+  // Fetch current MFL salaries to detect which picks still need RC stamped
+  const mflSalaries = await fetchCurrentMFLSalaries({ leagueId, year, cookies });
 
-  if (newDeclarations.length === 0) {
-    console.log('[draft-pick-sync] No new draft picks to process.');
+  const writes = buildDraftPickWrites({ draftResults, playerIndex, mflSalaries });
+
+  if (writes.length === 0) {
+    console.log('[draft-pick-sync] All drafted players already have RC stamped. Nothing to do.');
     return;
   }
 
-  if (redis) {
-    await writeDeclarationsToRedis(redis, newDeclarations);
-  } else {
-    const merged = [...newDeclarations, ...existingDeclarations];
-    await writeDeclarationsToFile(filePath, merged);
+  console.log(`[draft-pick-sync] ${writes.length} draft pick(s) need RC + slot salary stamped:`);
+  for (const w of writes) {
+    console.log(
+      `  ${(franchiseNameMap.get(w.franchiseId) ?? w.franchiseId).padEnd(14)} ` +
+        `R${w.round}.${String(w.pickInRound).padStart(2, '0')} ${w.position.padEnd(3)} ` +
+        `${w.playerName.padEnd(28)} → $${w.salary.toLocaleString()} / ${w.contractYear}yr / ${w.contractInfo}`,
+    );
   }
 
-  console.log(`[draft-pick-sync] Created ${newDeclarations.length} new rookie-override declaration(s):`);
-  for (const d of newDeclarations) {
-    const fmtSalary = `$${d.currentSalary.toLocaleString()}`;
-    console.log(`  ${d.franchiseName.padEnd(14)} → ${d.playerName} (${fmtSalary})`);
+  if (cli.dryRun) {
+    console.log('[draft-pick-sync] --dry-run: not writing to MFL.');
+    return;
+  }
+
+  const result = await writeContractsToMFL({ leagueId, year, cookies, writes });
+  if (!result.success) {
+    throw new Error(`MFL write failed after ${result.attempts} attempt(s): ${result.error}`);
+  }
+  console.log(`[draft-pick-sync] MFL write succeeded (attempt ${result.attempts}).`);
+
+  const auditDeclarations = writes.map((w) =>
+    buildAuditDeclaration({ write: w, leagueId, franchiseNameMap }),
+  );
+  try {
+    await writeAuditDeclarations(auditDeclarations, leagueSlug);
+    console.log(`[draft-pick-sync] Recorded ${auditDeclarations.length} audit-trail declaration(s).`);
+  } catch (err) {
+    console.warn(`[draft-pick-sync] Audit-trail write failed (MFL write already succeeded): ${err.message}`);
   }
 }
 
-// Run only when invoked directly (not when imported by tests)
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((err) => {
     console.error('[draft-pick-sync] Failed:', err);
