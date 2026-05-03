@@ -32,7 +32,8 @@
  *   node scripts/sync-draft-pick-contracts.mjs --league afl --year 2026
  *
  * Env:
- *   MFL_USERNAME, MFL_PASSWORD     required for MFL writes (any league commish)
+ *   MFL_USER_ID + (optional) MFL_IS_COMMISH  preferred (cookie-based, no login)
+ *   MFL_USERNAME + MFL_PASSWORD              fallback (logs in to get cookie)
  *   MFL_LEAGUE_ID                  defaults to '13522'
  *   MFL_LEAGUE_SLUG                defaults to 'theleague'
  *   MFL_YEAR / PUBLIC_BASE_YEAR    optional explicit year override
@@ -421,17 +422,33 @@ async function main() {
   }
   const leagueId = String(leagueConfig.leagueId || process.env.MFL_LEAGUE_ID || '13522');
 
-  // Auth — required for both reading current salaries and writing
+  // Auth — prefer cookies if present (matches existing repo patterns); fall
+  // back to username/password login. Either yields the same cookie pair used
+  // by mfl-contract-writer.ts.
+  const envUserId = process.env.MFL_USER_ID;
+  const envCommish = process.env.MFL_IS_COMMISH;
   const username = process.env.MFL_USERNAME;
   const password = process.env.MFL_PASSWORD;
-  if (!username || !password) {
-    throw new Error('MFL_USERNAME and MFL_PASSWORD are required for draft pick sync.');
+
+  let mflUserId;
+  let mflIsCommish;
+  if (envUserId) {
+    mflUserId = envUserId;
+    mflIsCommish = envCommish;
+    console.log(
+      `[draft-pick-sync] Using MFL_USER_ID cookie from env${envCommish ? ' (commish cookie present)' : ''}.`,
+    );
+  } else if (username && password) {
+    ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
+    console.log(
+      `[draft-pick-sync] Logged into MFL via MFL_USERNAME/MFL_PASSWORD${mflIsCommish ? ' (commish cookie present)' : ''}.`,
+    );
+  } else {
+    throw new Error(
+      'No MFL credentials available. Set MFL_USER_ID (preferred) or MFL_USERNAME + MFL_PASSWORD.',
+    );
   }
-  const { mflUserId, mflIsCommish } = await loginToMFL(username, password);
   const cookies = { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };
-  console.log(
-    `[draft-pick-sync] Logged into MFL${mflIsCommish ? ' (commish cookie present)' : ''}.`,
-  );
 
   // Fetch current MFL salaries to detect which picks still need RC stamped
   const mflSalaries = await fetchCurrentMFLSalaries({ leagueId, year, cookies });

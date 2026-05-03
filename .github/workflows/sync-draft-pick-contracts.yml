@@ -62,6 +62,8 @@ jobs:
           MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
           MFL_LEAGUE_SLUG: ${{ inputs.league_slug }}
           MFL_HOST: ${{ vars.MFL_HOST }}
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
