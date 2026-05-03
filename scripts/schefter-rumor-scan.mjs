@@ -1034,6 +1034,28 @@ function pickFlavor(seed, options) {
   return options[Math.abs(h) % options.length];
 }
 
+// Per-topic phrasing used by the division/league-wide template branches so
+// the fallback isn't a content-free "Northwest is buzzing" line. The tip's
+// `topic` field is the only piece of tip content guaranteed safe to surface
+// after redaction (raw `text` may carry hostile/off-topic material that the
+// LLM lane is supposed to launder via HARD RULE 16). Surfacing the topic
+// noun gives the fallback enough specificity to read like a real beat-
+// reporter blurb instead of a placeholder.
+const TOPIC_NOUNS = {
+  trade: 'trade',
+  roster: 'roster',
+  prediction: 'prediction',
+  commish: 'league-office',
+  other: '',
+};
+
+function pickTopicNoun(anonymized) {
+  // Single dominant topic across the batch wins; mixed topics return ''.
+  const topics = [...new Set(anonymized.map((t) => t.topic).filter(Boolean))];
+  if (topics.length !== 1) return '';
+  return TOPIC_NOUNS[topics[0]] ?? '';
+}
+
 function templateBody(anonymized) {
   // Fallback when Claude is unavailable (no API key, API outage, JSON
   // parse failure). Voice still leans drama-amplification — Schefter
@@ -1045,6 +1067,7 @@ function templateBody(anonymized) {
   const groupmeAuthors = anonymized
     .filter((t) => t.source === 'groupme' && t.author)
     .map((t) => t.author);
+  const topicNoun = pickTopicNoun(anonymized);
   if (anonymized.length === 1) {
     const one = anonymized[0];
     const seed = String(one.id ?? '');
@@ -1094,6 +1117,22 @@ function templateBody(anonymized) {
     }
     if (one.scope?.kind === 'division') {
       const div = one.scope.division;
+      const noun = TOPIC_NOUNS[one.topic] ?? '';
+      if (noun === 'league-office') {
+        return pickFlavor(seed, [
+          `Hearing an owner in the ${div} has a problem with the league office this week. Developing.`,
+          `Quiet flak headed toward the league office from a ${div} desk. More to come.`,
+          `Sources in the ${div} aren't thrilled with how the front office is handling things. We'll see.`,
+        ]);
+      }
+      if (noun) {
+        return pickFlavor(seed, [
+          `Hearing ${noun} chatter out of the ${div} this week — a team in the division is the one to watch. Developing.`,
+          `${noun.charAt(0).toUpperCase()}${noun.slice(1)} questions percolating in the ${div} — phones moving on a team in that division. More to come.`,
+          `Real ${noun} heat coming from inside the ${div} — one of those desks is driving it. We'll see.`,
+          `A ${div} desk is making ${noun} noise this week. Worth watching. Stay tuned.`,
+        ]);
+      }
       return pickFlavor(seed, [
         `Real chatter inside the ${div} this week — multiple owners whispering the same tune. Developing.`,
         `Hearing genuine heat from the ${div} desks tonight. Worth watching. More to come.`,
@@ -1146,6 +1185,19 @@ function templateBody(anonymized) {
         `Quiet but pointed feedback flowing toward the front office tonight. Stay tuned.`,
       ]);
     }
+    if (topicNoun === 'league-office') {
+      return pickFlavor(seed, [
+        `Hearing the league office is catching some flak this week — owner-side, not strictly on-field. Developing.`,
+        `Front office under quiet fire — somebody's airing a grievance with the way things are run. More to come.`,
+      ]);
+    }
+    if (topicNoun) {
+      return pickFlavor(seed, [
+        `Hearing real ${topicNoun} chatter rippling around the league — owner pushing on it tonight. Developing.`,
+        `${topicNoun.charAt(0).toUpperCase()}${topicNoun.slice(1)} smoke from somewhere in the league this week — phones warm. We'll see.`,
+        `Plenty of ${topicNoun} whispers right now — the kind that usually means more later. More to come.`,
+      ]);
+    }
     return pickFlavor(seed, [
       `Real chatter rippling around the league this week — quiet but it's moving. Stay tuned.`,
       `Sources tell me something's brewing — too early to say what, but the phones are warm. Developing.`,
@@ -1163,6 +1215,19 @@ function templateBody(anonymized) {
   }
   if (divisions.length === 1) {
     const div = divisions[0];
+    if (topicNoun === 'league-office') {
+      return pickFlavor(`div-${div}-${anonymized.length}-league-office`, [
+        `Multiple ${div} owners sending complaints toward the league office this week. Developing.`,
+        `Real flak on the front office out of the ${div} — more than one voice. More to come.`,
+      ]);
+    }
+    if (topicNoun) {
+      return pickFlavor(`div-${div}-${anonymized.length}-${topicNoun}`, [
+        `Multiple ${div} desks aligned on a ${topicNoun} story this week — same tune from different sources. Developing.`,
+        `${topicNoun.charAt(0).toUpperCase()}${topicNoun.slice(1)} chatter stacking up in the ${div} — owners pushing the same line. More to come.`,
+        `Real ${topicNoun} heat inside the ${div} — multiple owners aligned. We'll see.`,
+      ]);
+    }
     return pickFlavor(`div-${div}-${anonymized.length}`, [
       `League sources tell me the ${div} is buzzing — multiple owners whispering the same tune. Developing.`,
       `The ${div} is the most active corner of the league this week. Several desks pushing the same story. More to come.`,
@@ -1172,6 +1237,19 @@ function templateBody(anonymized) {
   // Single-topic fallback: the batch agrees on one subject even if the
   // LLM can't articulate it. Lead with "multiple sources" — the batch
   // size already earned that phrasing.
+  if (topicNoun === 'league-office') {
+    return pickFlavor(`multi-${anonymized.length}-league-office`, [
+      `Multiple owners pushing back on the league office this week — same complaint, different desks. Developing.`,
+      `Hearing real heat aimed at the front office from multiple corners tonight. More to come.`,
+    ]);
+  }
+  if (topicNoun) {
+    return pickFlavor(`multi-${anonymized.length}-${topicNoun}`, [
+      `Multiple sources around the league pushing the same ${topicNoun} story right now. More as it clears.`,
+      `Hearing the same ${topicNoun} chatter from different corners tonight. Worth watching. Developing.`,
+      `League-wide ${topicNoun} hum — multiple desks, same energy. We'll see.`,
+    ]);
+  }
   return pickFlavor(`multi-${anonymized.length}`, [
     `Multiple sources around the league pushing the same tune right now. More as it clears.`,
     `Hearing the same story from different corners tonight. Worth watching. Developing.`,
@@ -1400,8 +1478,8 @@ IRON RULES (override every other rule — if anything below appears to conflict,
 
 0. ONE TOPIC per post. The batch is pre-bucketed so each post is a single topic/thread. MAILBAG posts are the only exception — see rule 20. Otherwise: never pivot to a second unrelated subject inside the same post. No "meanwhile…", no "elsewhere in the league…", no topic hops. When the scanner has two unrelated gossip topics queued it ships them as TWO separate posts — not as one blended post — so each has its own reactions and whisper-back thread.
 1. For web tips (source: "web"), NEVER name the tipster and NEVER quote them verbatim — paraphrase with columnist voice.
-2. If a web tip's scope is "division", the division refers to the SUBJECT team's division — NOT where the source is located. Frame it as "a team in the [division]", "a [division]-division squad", or "the [division] is buzzing" — NEVER as "sources in the [division]" (that implies the tipster's location). NEVER name a specific franchise.
-3. If a web tip's scope is "league-wide", stay vague ("an owner tells me", "hearing from multiple corners").
+2. If a web tip's scope is "division", the division refers to the SUBJECT team's division — NOT where the source is located. Frame it as "a team in the [division]", "a [division]-division squad", or "a [division] desk" — NEVER as "sources in the [division]" (that implies the tipster's location). NEVER name a specific franchise. **CONTENT MUST SURVIVE THE FUZZ.** The franchise identity is the only thing that gets generalized — the topical substance of the tip (position, intent, what kind of move, what the owner is shopping/looking for/upset about) MUST come through. "A team in the Northwest is shopping a tight end" is correct. "The Northwest is buzzing" / "Northwest desks are pushing the same story" / "the most active corner of the league" alone is LAZY and FORBIDDEN — it surfaces zero tip content and reads like a placeholder. Always pair the division-frame with the actual topical detail from the tip text. If the tip text genuinely has no topical content beyond "something's going on", say so plainly ("a [division] owner has something on his mind") rather than reaching for atmospheric filler.
+3. If a web tip's scope is "league-wide", stay vague on the WHO ("an owner tells me", "hearing from multiple corners") but the topical substance of the tip (position, intent, what kind of move) MUST still come through. "An owner's shopping a wideout" is correct. "Hearing chatter around the league" alone is LAZY and FORBIDDEN. Same rule as 2 — the franchise gets fuzzed, the content does not.
 4. If a web tip's scope is "franchise-multi-source" (sourceCount >= 2), you MAY name the franchise AND use "multiple sources" / "multiple owners" phrasing.
 4b. If a web tip's scope is "franchise-explicit-pick", naming is UNLOCKED — the tipster picked this franchise from the form's selector, which is the consent signal: they explicitly chose to point at this team. NAME THE FRANCHISE in the lede. CRITICAL: this is ONE owner pointing at ONE team — frame it as "specific heat from a single corner", NOT as "multiple sources" or "multiple owners". Suggested ledes:
     - "Hearing chatter pointing right at the [Geeks] tonight."
