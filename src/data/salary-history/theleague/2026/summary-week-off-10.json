@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-05-03T07-32-27.270Z",
+  "snapshot": "2026-05-03T08-19-22.810Z",
   "week": "off-10",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-03T07:32:27.418Z",
+    "fetchedAt": "2026-05-03T08:19:22.916Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-10).",
-    "generatedAt": "2026-05-03T07:32:27.418Z"
+    "generatedAt": "2026-05-03T08:19:22.916Z"
   },
   "positions": {
     "WR": {
@@ -26,11 +26,11 @@
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
-      "starterAverage": 3999527.89,
+      "starterAverage": 4024238.15,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 2026869.14,
-      "medianSalary": 862125,
+      "averageSalary": 2056106.43,
+      "medianSalary": 915832.5,
       "topPlayers": [
         {
           "id": "15287",
@@ -231,6 +231,12 @@
           "franchiseId": "0016"
         },
         {
+          "id": "17498",
+          "name": "Tyson, Jordyn",
+          "salary": 2300000,
+          "franchiseId": "0003"
+        },
+        {
           "id": "14127",
           "name": "Meyers, Jakobi",
           "salary": 2227500,
@@ -265,6 +271,12 @@
           "name": "Washington, Parker",
           "salary": 2000000,
           "franchiseId": "0001"
+        },
+        {
+          "id": "17499",
+          "name": "Lemon, Makai",
+          "salary": 2000000,
+          "franchiseId": "0016"
         },
         {
           "id": "15756",
@@ -727,18 +739,6 @@
           "name": "Metchie, John",
           "salary": 425000,
           "franchiseId": "0003"
-        },
-        {
-          "id": "17498",
-          "name": "Tyson, Jordyn",
-          "salary": 425000,
-          "franchiseId": "0003"
-        },
-        {
-          "id": "17499",
-          "name": "Lemon, Makai",
-          "salary": 425000,
-          "franchiseId": "0016"
         }
       ]
     },
