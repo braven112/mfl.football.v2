@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-03T02:03:31.100Z"
+    "fetchedAt": "2026-05-03T04:43:41.766Z"
   },
   "players": [
     {
@@ -4528,10 +4528,10 @@
       "id": "17543",
       "name": "Sadiq, Kenyon",
       "position": "TE",
-      "salary": 425000,
+      "salary": 2100000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "4",
       "points": 0,
       "team": "NYJ",
       "draftYear": 2026,
@@ -6554,6 +6554,65 @@
       ]
     },
     {
+      "id": "17473",
+      "name": "Price, Jadarian",
+      "position": "RB",
+      "salary": 2200000,
+      "franchiseId": "0006",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 0,
+      "team": "SEA",
+      "draftYear": 2026,
+      "draftTeam": "SEA",
+      "birthdate": 1065672000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17473_thumb.jpg",
+      "externalIds": {
+        "mfl": "17473",
+        "sleeper": "13286",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13286",
+        "fullName": "Jadarian Price",
+        "team": "SEA",
+        "age": 22,
+        "height": "71",
+        "weight": "210",
+        "number": 8,
+        "college": "Notre Dame",
+        "birthDate": "2003-10-09",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "16169",
+          "name": "Charbonnet, Zach"
+        },
+        {
+          "id": "16432",
+          "name": "Wilson, Emanuel"
+        },
+        {
+          "id": "16608",
+          "name": "Holani, George"
+        }
+      ]
+    },
+    {
       "id": "15751",
       "name": "London, Drake",
       "position": "WR",
@@ -7756,10 +7815,10 @@
       "id": "17472",
       "name": "Love, Jeremiyah",
       "position": "RB",
-      "salary": 425000,
+      "salary": 3400000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "4",
       "points": 0,
       "team": "ARI",
       "draftYear": 2026,
@@ -15019,6 +15078,73 @@
         {
           "id": "14777",
           "name": "Burrow, Joe"
+        }
+      ]
+    },
+    {
+      "id": "17497",
+      "name": "Tate, Carnell",
+      "position": "WR",
+      "salary": 2900000,
+      "franchiseId": "0014",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 0,
+      "team": "TEN",
+      "draftYear": 2026,
+      "draftTeam": "TEN",
+      "birthdate": 1106110800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17497_thumb.jpg",
+      "externalIds": {
+        "mfl": "17497",
+        "sleeper": "13279",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13279",
+        "fullName": "Carnell Tate",
+        "team": "TEN",
+        "age": 21,
+        "height": "75",
+        "weight": "195",
+        "number": 14,
+        "college": "Ohio State",
+        "birthDate": "2005-01-19",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "13629",
+          "name": "Ridley, Calvin"
+        },
+        {
+          "id": "15757",
+          "name": "Robinson, Wan'Dale"
+        },
+        {
+          "id": "17073",
+          "name": "Ayomanor, Elic"
+        },
+        {
+          "id": "17171",
+          "name": "Dike, Chimere"
+        },
+        {
+          "id": "17077",
+          "name": "Restrepo, Xavier"
         }
       ]
     },
