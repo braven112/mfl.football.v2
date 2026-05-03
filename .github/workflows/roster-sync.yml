@@ -52,23 +52,9 @@ jobs:
           MFL_LEAGUE_SLUG: theleague
         run: node ./scripts/update-salary-averages.mjs
 
-      - name: Sync draft-pick contracts (theleague)
-        env:
-          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
-          MFL_LEAGUE_SLUG: theleague
-          MFL_HOST: ${{ vars.MFL_HOST }}
-          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
-          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
-          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
-          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
-          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
-        # Running with --dry-run while we verify the first batch. Drop the
-        # flag to enable live MFL writes (RC + slot salary + 4yr default
-        # for newly drafted players who don't yet have RC stamped).
-        run: node ./scripts/sync-draft-pick-contracts.mjs --dry-run
+      # Note: draft-pick contract sync runs in its own workflow
+      # (sync-draft-pick-contracts.yml), May-only cron, since the rookie
+      # draft is the only window that needs it.
 
       - name: Fetch live NFL odds
         run: node ./scripts/fetch-live-odds.mjs
