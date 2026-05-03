@@ -4,22 +4,28 @@
  *
  * After each MFL feed fetch, scan draftResults.json for newly-completed
  * picks and write the league's standard rookie contract directly to MFL:
- *   contractInfo = "RC"
- *   contractYear = "4"      (default RC length; owners reduce to 1-3 via the
- *                            existing rookie-override flow before the August
- *                            cutdown)
+ *   contractInfo = "RC" for rounds 2-3, and rounds 1 in years before 2026
+ *   contractInfo = "TO" for round 1 picks in 2026 and later (5th-year team
+ *                       option flag — required for the rosters page to offer
+ *                       the team-option action when the player has 1 year left)
+ *   contractYear = "4"  (default RC length; owners reduce to 1-3 via the
+ *                        existing rookie-override flow before the August
+ *                        cutdown)
  *   salary       = slot-based rookie salary by round/pick/position
  *
  * Why direct write instead of pending-declaration model:
  *   MFL does NOT auto-apply RC on drafted players. Without this script
- *   stamping RC, the rosters-page rookie-override button never appears
- *   (eligibility check requires contractInfo === 'RC'). By writing RC + the
- *   slot salary up front, owners can self-serve their year choice 1-3 from
- *   the rosters page until the August cutdown. The commissioner is no
- *   longer the critical-path step.
+ *   stamping a contractInfo, the rosters-page rookie-override button never
+ *   appears (eligibility check requires contractInfo === 'RC' or 'TO'). By
+ *   writing the right tag + the slot salary up front, owners can self-serve
+ *   their year choice 1-3 from the rosters page until the August cutdown.
+ *   The commissioner is no longer the critical-path step.
  *
  * Idempotency: queries current MFL salaries first and skips any drafted
- * player who already has contractInfo === 'RC'. Safe to run on every
+ * player whose contractInfo already matches what we'd write. A 1st-round
+ * pick that was previously stamped 'RC' (before this script knew about TO)
+ * gets re-stamped as 'TO' on the next run — preserving any reduced
+ * contractYear from the rookie-override flow. Safe to run on every
  * roster-sync tick (every 5 min).
  *
  * Audit trail: also writes an `applied` ContractDeclaration record into
@@ -57,17 +63,30 @@ const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasylea
 // ── Pure logic (testable) ──────────────────────────────────────────────
 
 /**
+ * Returns the contractInfo tag that a freshly-drafted pick of the given
+ * round/year should carry. 1st-round picks from 2026 onward get 'TO' (5th-
+ * year team option); everything else gets 'RC'. Per league constitution
+ * (FIRST-ROUND TEAM OPTION section).
+ */
+export function getExpectedRookieContractInfo(round, year) {
+  const yr = parseInt(year, 10);
+  if (round === 1 && Number.isFinite(yr) && yr >= 2026) return 'TO';
+  return 'RC';
+}
+
+/**
  * Build the list of MFL contract writes that should happen for the given
- * draft results, skipping any pick that already has contractInfo='RC' on
- * MFL.
+ * draft results, skipping any pick whose current MFL contractInfo already
+ * matches the expected value for its round/year.
  *
  * @param {object} args
  * @param {object} args.draftResults  Parsed draftResults.json
  * @param {Map<string, {position: string, name: string}>} args.playerIndex
  * @param {Map<string, {salary: string, contractYear: string, contractInfo: string}>} args.mflSalaries
  *   Player ID → current MFL contract state
+ * @param {string|number} args.year  Draft year (e.g. '2026')
  */
-export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries }) {
+export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries, year }) {
   const draftPicks = draftResults?.draftResults?.draftUnit?.draftPick ?? [];
   const writes = [];
 
@@ -79,13 +98,26 @@ export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries })
     const franchiseId = String(pick.franchise ?? '').trim();
     if (!franchiseId) continue;
 
-    // Skip if this player already has RC stamped on MFL
-    const current = mflSalaries.get(playerId);
-    if (current?.contractInfo === 'RC') continue;
-
     const round = parseInt(pick.round, 10);
     const pickInRound = parseInt(pick.pick, 10);
     if (!Number.isFinite(round) || !Number.isFinite(pickInRound)) continue;
+
+    const expectedContractInfo = getExpectedRookieContractInfo(round, year);
+
+    // Skip if MFL already has the expected tag — intent-aware so a 1st-rounder
+    // previously stamped 'RC' gets re-stamped to 'TO' on the next run.
+    const current = mflSalaries.get(playerId);
+    if (current?.contractInfo === expectedContractInfo) continue;
+
+    // Preserve the existing contractYear when re-stamping a player who was
+    // already given a rookie tag (their year may have been reduced via the
+    // rookie-override flow). Otherwise default to the standard 4-year RC.
+    const wasAlreadyStamped = current?.contractInfo === 'RC' || current?.contractInfo === 'TO';
+    const existingYear = wasAlreadyStamped ? parseInt(current?.contractYear ?? '', 10) : NaN;
+    const contractYear =
+      Number.isFinite(existingYear) && existingYear >= 1 && existingYear <= 5
+        ? String(existingYear)
+        : String(RC_DEFAULT_YEARS);
 
     const overallPick = overallPickFromRoundPick(round, pickInRound);
     const player = playerIndex.get(playerId);
@@ -102,8 +134,8 @@ export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries })
       pickInRound,
       position,
       salary,
-      contractYear: String(RC_DEFAULT_YEARS),
-      contractInfo: 'RC',
+      contractYear,
+      contractInfo: expectedContractInfo,
       acquisitionTimestamp: Number.isFinite(tsSec) ? tsSec : undefined,
     });
   }
@@ -350,9 +382,9 @@ function buildAuditDeclaration({ write, leagueId, franchiseNameMap }) {
     currentYears: 0,
     currentSalary: 0,
     currentContractInfo: '',
-    requestedYears: RC_DEFAULT_YEARS,
+    requestedYears: parseInt(write.contractYear, 10) || RC_DEFAULT_YEARS,
     requestedSalary: write.salary,
-    requestedContractInfo: 'RC',
+    requestedContractInfo: write.contractInfo,
     status: 'applied',
     submittedBy: 'Draft Auto-Sync',
     submittedAt,
@@ -453,14 +485,14 @@ async function main() {
   // Fetch current MFL salaries to detect which picks still need RC stamped
   const mflSalaries = await fetchCurrentMFLSalaries({ leagueId, year, cookies });
 
-  const writes = buildDraftPickWrites({ draftResults, playerIndex, mflSalaries });
+  const writes = buildDraftPickWrites({ draftResults, playerIndex, mflSalaries, year });
 
   if (writes.length === 0) {
-    console.log('[draft-pick-sync] All drafted players already have RC stamped. Nothing to do.');
+    console.log('[draft-pick-sync] All drafted players already have the expected contractInfo stamped. Nothing to do.');
     return;
   }
 
-  console.log(`[draft-pick-sync] ${writes.length} draft pick(s) need RC + slot salary stamped:`);
+  console.log(`[draft-pick-sync] ${writes.length} draft pick(s) need contract stamped:`);
   for (const w of writes) {
     console.log(
       `  ${(franchiseNameMap.get(w.franchiseId) ?? w.franchiseId).padEnd(14)} ` +
