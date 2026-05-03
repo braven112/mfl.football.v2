@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-03T19:09:09.002Z"
+    "fetchedAt": "2026-05-03T19:34:49.906Z"
   },
   "players": [
     {
@@ -1321,6 +1321,65 @@
         {
           "id": "13630",
           "name": "Sutton, Courtland"
+        }
+      ]
+    },
+    {
+      "id": "17512",
+      "name": "Williams, Antonio",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "WAS",
+      "draftYear": 2026,
+      "draftTeam": "WAS",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17512_thumb.jpg",
+      "externalIds": {
+        "mfl": "17512",
+        "sleeper": "13301",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13301",
+        "fullName": "Antonio Williams",
+        "team": "WAS",
+        "age": 21,
+        "height": "71",
+        "weight": "190",
+        "number": null,
+        "college": "Clemson",
+        "birthDate": "2004-07-14",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        },
+        {
+          "id": "17184",
+          "name": "Lane, Jaylin"
+        },
+        {
+          "id": "16635",
+          "name": "McCaffrey, Luke"
         }
       ]
     },
