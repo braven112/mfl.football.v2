@@ -254,3 +254,38 @@ Future franchise rebrandings just need a new history entry added to the config.
 **Evidence:** `src/pages/theleague/admin/schefter.astro` four-state pill system (`posted` / `pending` / `expired` / `no-match`). Server builds `postedGmIdToPostId` map from `feed.posts[].tipIds` (durable) and ships it down once per fetch. Client checks the durable lookup BEFORE the queue lookup.
 
 **Recommendation:** When designing status indicators, identify the durable source first. If the durable source requires a server-side join/aggregation, do it once in the API route (in a lookup table, not row-by-row from the client). Document the four states explicitly so future readers don't conflate "not in queue" with "never picked up".
+
+---
+
+## 2026-05-04 - Multi-Section Tables: Mutating Source Arrays Isn't Enough
+
+**Context:** Built a roster-move action button on `src/pages/theleague/rosters.astro`. After a successful MFL write, the local-state-update function moved the player object between `teamData.players` / `teamData.injuredReserve` / `teamData.practiceSquad` arrays and updated the row's CSS class. The user reported: "I moved a guy to practice squad but he's still on the active roster."
+
+**Insight:** The rosters page renders Active / Practice Squad / IR as visually-distinct sections built from the three bucket arrays. The DOM layout — which `<tr>` sits in which section — comes from the rendering pass that walks those arrays in order, not from the row's CSS class. Mutating the bucket arrays without re-running the render keeps the row in its original DOM position, even though the data thinks it has moved.
+
+This is the trade-block flow's blind spot: trade-block adds/removes a small badge inside an existing row, so a class flip is sufficient. Roster moves cross section boundaries, so they aren't.
+
+**Evidence:** `src/pages/theleague/rosters.astro` — `applyLocalRosterMove` (~line 8914) was correctly mutating `teamData.players` / `.practiceSquad` / `.injuredReserve` and toggling `roster-row--{tag}` classes, but the player visually stayed on the active roster until a hard reload.
+
+**Recommendation:** For any state change that re-classifies a row across multi-section table boundaries, call the page's full re-render function (`updateView()` in this codebase) after mutating the source arrays. Don't try to surgically move DOM nodes — the render function already handles section ordering, sort, contract-action overlays, cap math, and re-attaching click handlers. Any DOM-only "move the row" approach skips those side effects.
+
+Pattern:
+```js
+// 1. POST to server, await success
+// 2. Mutate the source-of-truth arrays (teamData.* buckets)
+// 3. Update any persistent UI state that survives re-render (e.g. data-attrs on the action button)
+// 4. Call updateView() to re-render from the mutated state
+```
+
+---
+
+## 2026-05-04 - `player.status` in Rosters Page Is the Bucket, Not MFL Rookie Classification
+
+**Context:** Wiring a UI gate to show "Move to Practice Squad" only for rookies. The naive read of MFL's player record uses `status === 'R'` for rookies. Tried plumbing `player.status` from the action button into the gate.
+
+**Insight:** In `src/pages/theleague/rosters.astro`, `player.status` is the BUCKET status from the rosters API — `'ROSTER'` / `'INJURED_RESERVE'` / `'TAXI_SQUAD'`. The MFL rookie classification (`'R'`) only exists on the players export, NOT on the roster export. The two endpoints share a field name with completely different meanings. A naive `player.status === 'R'` check will NEVER match.
+
+**Evidence:** rosters.astro line ~1029 sets `status: liveData.status ?? salaryPlayer.status ?? 'ROSTER'` from the live rosters data. The same `player.status` field flows through `mapPlayers()` and into the row data passed to the SSR template.
+
+**Recommendation:** For client-side rookie detection on the rosters page, use `contractInfo === 'RC' || contractInfo === 'TO'`. TheLeague's auto-stamp script (`scripts/sync-draft-pick-contracts.mjs`) writes one of those tags onto every drafted rookie within minutes of the pick, so it's a reliable proxy for "is this player a current rookie." For server-side authoritative checks, fetch the players export and check `status === 'R'` — that's MFL's own classification and the right gate for any irreversible action.
+
