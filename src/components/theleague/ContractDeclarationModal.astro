@@ -1113,12 +1113,16 @@
     color: var(--color-gray-700, #374151);
     font-variant-numeric: tabular-nums;
   }
-  .cdm-action-options :global(.cdm-roster-move-card__delta--neg) {
-    color: var(--color-success-dark, #047857);
+  .cdm-action-options :global(.cdm-roster-move-card__delta--savings) {
+    color: var(--color-success-dark, #059669);
     font-weight: 600;
   }
-  .cdm-action-options :global(.cdm-roster-move-card__delta--pos) {
+  .cdm-action-options :global(.cdm-roster-move-card__delta--cost) {
     color: var(--color-error-dark, #b91c1c);
+    font-weight: 600;
+  }
+  .cdm-action-options :global(.cdm-roster-move-card__status--warning) {
+    color: var(--color-warning-dark, #d97706);
     font-weight: 600;
   }
 
@@ -1170,10 +1174,10 @@
     cursor: not-allowed;
   }
   .cdm-action-options :global(.cdm-roster-move-cta--success) {
-    background: var(--color-success-dark, #047857);
+    background: var(--color-success-dark, #059669);
   }
   .cdm-action-options :global(.cdm-roster-move-cta--success:hover) {
-    background: var(--color-success-dark, #047857);
+    background: var(--color-success-dark, #059669);
   }
 
   /* ================================================================

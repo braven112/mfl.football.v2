@@ -603,24 +603,23 @@ async function main() {
   }
 
   if (cli.dryRun) {
-    console.log('[draft-pick-sync] --dry-run: not writing to MFL.');
-    return;
-  }
+    console.log('[draft-pick-sync] --dry-run: not writing contracts to MFL.');
+  } else {
+    const result = await writeContractsToMFL({ leagueId, year, cookies, writes });
+    if (!result.success) {
+      throw new Error(`MFL write failed after ${result.attempts} attempt(s): ${result.error}`);
+    }
+    console.log(`[draft-pick-sync] MFL write succeeded (attempt ${result.attempts}).`);
 
-  const result = await writeContractsToMFL({ leagueId, year, cookies, writes });
-  if (!result.success) {
-    throw new Error(`MFL write failed after ${result.attempts} attempt(s): ${result.error}`);
-  }
-  console.log(`[draft-pick-sync] MFL write succeeded (attempt ${result.attempts}).`);
-
-  const auditDeclarations = writes.map((w) =>
-    buildAuditDeclaration({ write: w, leagueId, franchiseNameMap }),
-  );
-  try {
-    await writeAuditDeclarations(auditDeclarations, leagueSlug);
-    console.log(`[draft-pick-sync] Recorded ${auditDeclarations.length} audit-trail declaration(s).`);
-  } catch (err) {
-    console.warn(`[draft-pick-sync] Audit-trail write failed (MFL write already succeeded): ${err.message}`);
+    const auditDeclarations = writes.map((w) =>
+      buildAuditDeclaration({ write: w, leagueId, franchiseNameMap }),
+    );
+    try {
+      await writeAuditDeclarations(auditDeclarations, leagueSlug);
+      console.log(`[draft-pick-sync] Recorded ${auditDeclarations.length} audit-trail declaration(s).`);
+    } catch (err) {
+      console.warn(`[draft-pick-sync] Audit-trail write failed (MFL write already succeeded): ${err.message}`);
+    }
   }
 
   // Auto-taxi: promote freshly-drafted picks onto the practice squad in

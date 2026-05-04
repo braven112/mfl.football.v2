@@ -232,19 +232,44 @@ export class MFLMatchupApiClient {
   }
 
   /**
-   * Fetch roster data for all teams
+   * Fetch roster data for all teams.
+   *
+   * When an MFL_USER_ID cookie is configured, route through mflFetch() so the
+   * Cookie header survives the api → www49 redirect (Node's undici strips
+   * sensitive headers on cross-origin redirects). Required for any caller
+   * that uses the result for auth-gated decisions like roster-membership
+   * preflight on write endpoints.
    */
   async getRosters(week?: number): Promise<Record<string, string[]>> {
     const params: Record<string, string> = week ? { W: week.toString() } : {};
     const url = this.buildUrl('rosters', params);
-    const response = await this.makeRequest<MFLRosterResponse>(url);
+
+    let response: MFLRosterResponse;
+    if (this.config.mflUserId) {
+      const res = await mflFetch({
+        url,
+        method: 'GET',
+        mflUserCookie: this.config.mflUserId,
+        timeoutMs: 8000,
+      });
+      if (!res.ok) {
+        throw new Error(`MFL rosters fetch failed: ${res.status}`);
+      }
+      response = (await res.json()) as MFLRosterResponse;
+    } else {
+      response = await this.makeRequest<MFLRosterResponse>(url);
+    }
+
+    type RosterFranchise = MFLRosterResponse['rosters']['franchise'][number];
+    const isFranchise = (x: unknown): x is RosterFranchise =>
+      !!x && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string';
 
     const rosters: Record<string, string[]> = {};
-
-    if (response.rosters?.franchise) {
-      response.rosters.franchise.forEach(franchise => {
-        rosters[franchise.id] = franchise.player?.map(p => p.id) || [];
-      });
+    const raw: unknown = response.rosters?.franchise;
+    const list: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    for (const item of list) {
+      if (!isFranchise(item)) continue;
+      rosters[item.id] = item.player?.map((p) => p.id) || [];
     }
 
     return rosters;

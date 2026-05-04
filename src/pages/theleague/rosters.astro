@@ -2545,9 +2545,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                     data-player-headshot={player.headshot || ''}
                     data-player-salary={player.salary || 0}
                     data-player-years={player.contractYears || 1}
+                    data-player-contract-info={(player as any).contractInfo || ''}
                     data-player-injury-status={player.injuryStatus || ''}
                     data-player-franchise-id={player.franchiseId || ''}
-                    data-player-status={(player as any).status || ''}
                     data-player-display-tag={(player as any).displayTag || 'active'}
                     title="Manage Contract"
                   >
@@ -6796,7 +6796,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 data-player-injury-status="${player.injuryStatus || ''}"
                 data-player-franchise-id="${player.franchiseId || ''}"
                 data-player-trade-bait="${player.tradeBait ? 'true' : 'false'}"
-                data-player-status="${player.status || ''}"
                 data-player-display-tag="${player.displayTag || 'active'}"
                 ${actionType ? 'data-action-type="' + actionType + '"' : ''}
                 title="Manage Contract"
@@ -7066,7 +7065,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               birthdate: birthdateRaw ? Number(birthdateRaw) : null,
               franchiseId: btn.dataset.playerFranchiseId || '',
               tradeBait: btn.dataset.playerTradeBait === 'true',
-              status: btn.dataset.playerStatus || '',
               displayTag: btn.dataset.playerDisplayTag || 'active',
             };
             // Look up real eligibility to get contractInfo/isRookieContract for action filtering
@@ -7084,7 +7082,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 currentYears: playerYears,
                 contractInfo,
                 isRookieContract,
-                mflStatus: rawPlayer.status,
                 displayTag: rawPlayer.displayTag,
               },
               _rawPlayer: rawPlayer,
@@ -8447,11 +8444,17 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         ));
       }
 
-      // Roster moves (IR / Practice Squad) — owner-only, on the user's own team
+      // Roster moves (IR / Practice Squad) — owner-only, on the user's own team.
+      // Rookie gate uses contractInfo (RC | TO) — TheLeague's auto-stamp script
+      // writes one of these on every drafted rookie, so it's a reliable proxy
+      // for MFL's own status === 'R' classification (which the server-side
+      // /api/move-to-practice route enforces as the authoritative gate).
+      // Practice-squad rookies retain the IR option so a practice player who
+      // gets injured can still be moved to IR without leaving this menu.
       const isOwnTeam = !!config.authUser?.franchiseId && config.authUser.franchiseId === currentTeam;
       if (isOwnTeam) {
         const tag = (elig.displayTag || 'active').toString();
-        const isRookie = elig.mflStatus === 'R';
+        const isRookie = elig.contractInfo === 'RC' || elig.contractInfo === 'TO';
 
         if (tag === 'active') {
           actionOptions.appendChild(makeCdmActionBtn(
@@ -8472,11 +8475,18 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             () => goToRosterMoveStep('ir', 'from'),
             false, 'icon-medkit'
           ));
-        } else if (tag === 'practice' && isRookie) {
+        } else if (tag === 'practice') {
+          if (isRookie) {
+            actionOptions.appendChild(makeCdmActionBtn(
+              'promote-from-practice', 'Promote from Practice', 'Move rookie to active roster',
+              () => goToRosterMoveStep('practice', 'from'),
+              false, 'icon-bookmark'
+            ));
+          }
           actionOptions.appendChild(makeCdmActionBtn(
-            'promote-from-practice', 'Promote from Practice', 'Move rookie to active roster',
-            () => goToRosterMoveStep('practice', 'from'),
-            false, 'icon-bookmark'
+            'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
+            () => goToRosterMoveStep('ir', 'to'),
+            false, 'icon-medkit'
           ));
         }
       }
@@ -8739,10 +8749,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const fmt = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
         const pct = (p) => (p * 100).toFixed(0) + '%';
         const sign = delta < 0 ? '−' : delta > 0 ? '+' : '';
+        // Class names describe the user-facing meaning, not the math sign:
+        // delta < 0 means cap savings (good), delta > 0 means cap cost (bad).
         const deltaClass = delta < 0
-          ? 'cdm-roster-move-card__delta cdm-roster-move-card__delta--neg'
+          ? 'cdm-roster-move-card__delta cdm-roster-move-card__delta--savings'
           : delta > 0
-            ? 'cdm-roster-move-card__delta cdm-roster-move-card__delta--pos'
+            ? 'cdm-roster-move-card__delta cdm-roster-move-card__delta--cost'
             : 'cdm-roster-move-card__delta';
 
         const rows = [
@@ -8771,7 +8783,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           fullLabel.className = 'cdm-roster-move-card__label';
           fullLabel.textContent = 'PRACTICE SQUAD';
           const fullValue = document.createElement('span');
-          fullValue.className = 'cdm-roster-move-card__value cdm-roster-move-card__delta--pos';
+          fullValue.className = 'cdm-roster-move-card__value cdm-roster-move-card__status--warning';
           fullValue.textContent = 'Full (' + practiceCount + '/3)';
           fullRow.appendChild(fullLabel);
           fullRow.appendChild(fullValue);
@@ -8883,6 +8895,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           backBtn.disabled = false;
           cta.textContent = origLabel;
           if (errEl) {
+            // Set role BEFORE text so AT/SR combos that key off role-change-with-content
+            // (rather than aria-live) reliably announce the alert.
             errEl.setAttribute('role', 'alert');
             errEl.textContent = (err && err.message) ? err.message : 'Something went wrong. Try again.';
             errEl.focus();
@@ -8925,6 +8939,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (idx < 0) return;
       const [moved] = fromArr.splice(idx, 1);
       moved.displayTag = newDisplayTag;
+      // Keep moved.status in sync with the new bucket so any code that reads
+      // it (cap calc, etc.) sees a consistent value across the page
       moved.status = newDisplayTag === 'practice'
         ? 'TAXI_SQUAD'
         : newDisplayTag === 'injured' ? 'INJURED_RESERVE' : 'ROSTER';

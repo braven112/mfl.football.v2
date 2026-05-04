@@ -30,7 +30,7 @@ interface MflPlayerRecord {
 }
 
 async function fetchPlayerStatus(
-  year: number,
+  year: string,
   leagueId: string,
   playerId: string,
 ): Promise<MflPlayerRecord | null> {
@@ -55,7 +55,7 @@ async function fetchPlayerStatus(
 }
 
 async function fetchPracticeSquadCount(
-  year: number,
+  year: string,
   leagueId: string,
   franchiseId: string,
 ): Promise<number | null> {
@@ -118,12 +118,12 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const year = getCurrentLeagueYear();
+    const year = String(getCurrentLeagueYear());
     const leagueId = user.leagueId || '13522';
 
     const mflClient = createMFLApiClient({
       leagueId,
-      year: String(year),
+      year,
       mflUserId: user.id,
     });
 
