@@ -28,6 +28,11 @@
  * contractYear from the rookie-override flow. Safe to run on every
  * roster-sync tick (every 5 min).
  *
+ * Auto-taxi: after the contract write succeeds, freshly-drafted picks
+ * are promoted onto each franchise's practice squad in pick order until
+ * the taxi cap is filled. Only fresh picks from this run are considered
+ * — already-rostered rookies are never swept. See buildTaxiPromotions.
+ *
  * Audit trail: also writes an `applied` ContractDeclaration record into
  * storage (Upstash Redis or local JSON) so the change shows up in the
  * Applied Contracts section on /theleague/contracts/manage.
@@ -141,6 +146,61 @@ export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries, y
   }
 
   return writes;
+}
+
+/**
+ * Pure-logic builder for auto-taxi promotions.
+ *
+ * Given the draft-pick writes from this run plus current per-franchise
+ * practice-squad counts, returns the list of newly-drafted picks that
+ * should be promoted onto the taxi squad — strictly limited to fresh
+ * picks in this tick, filling each franchise's open slots in PICK
+ * ORDER (lowest overall pick first).
+ *
+ * Non-rookie pools (already-rostered players) are NEVER swept. The
+ * promotion list is bounded by `(taxiLimit - currentCount)` per
+ * franchise. Idempotent: a pick whose franchise is already at the
+ * limit produces no entry.
+ *
+ * @param {object} args
+ * @param {Array<{playerId: string, playerName: string, franchiseId: string, round: number, pickInRound: number}>} args.writes
+ *   The draft-pick writes for this run (already filtered to fresh picks).
+ * @param {Map<string, number>} args.taxiCounts
+ *   Map of franchiseId → current practice-squad size (count of TAXI_SQUAD players).
+ * @param {number} [args.taxiLimit=3]  Per-franchise practice-squad cap.
+ */
+export function buildTaxiPromotions({ writes, taxiCounts, taxiLimit = 3 }) {
+  const byFranchise = new Map();
+  for (const w of writes) {
+    if (!byFranchise.has(w.franchiseId)) byFranchise.set(w.franchiseId, []);
+    byFranchise.get(w.franchiseId).push(w);
+  }
+
+  const promotions = [];
+  for (const [franchiseId, picks] of byFranchise) {
+    const current = taxiCounts.get(franchiseId) ?? 0;
+    const slots = Math.max(0, taxiLimit - current);
+    if (slots === 0) continue;
+
+    // Sort ascending by overall pick (round, then pickInRound) so earlier
+    // picks fill open slots first — Policy B from the design discussion.
+    const sorted = [...picks].sort((a, b) => {
+      if (a.round !== b.round) return a.round - b.round;
+      return a.pickInRound - b.pickInRound;
+    });
+
+    for (const pick of sorted.slice(0, slots)) {
+      promotions.push({
+        playerId: pick.playerId,
+        playerName: pick.playerName,
+        franchiseId: pick.franchiseId,
+        round: pick.round,
+        pickInRound: pick.pickInRound,
+      });
+    }
+  }
+
+  return promotions;
 }
 
 // ── MFL auth + fetch (mirrors src/utils/mfl-login.ts + mfl-fetch.ts) ──
@@ -311,6 +371,47 @@ async function writeContractsToMFL({ leagueId, year, cookies, writes }) {
     }
   }
   return { success: false, attempts: delays.length + 1, error: lastError };
+}
+
+// ── Auto-taxi (practice-squad) promotion ───────────────────────────────
+
+/**
+ * Fetch per-franchise practice-squad counts from MFL.
+ * Returns a Map<franchiseId, count> — number of players currently in
+ * the TAXI_SQUAD bucket per franchise. Missing franchises map to 0.
+ */
+async function fetchTaxiSquadCounts({ leagueId, year, cookies }) {
+  const url = `${MFL_READ_HOST}/${year}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
+  const res = await mflFetch({ url, cookies });
+  if (!res.ok) throw new Error(`MFL rosters fetch failed: ${res.status}`);
+  const data = await res.json();
+  const raw = data?.rosters?.franchise;
+  const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  const counts = new Map();
+  for (const fr of list) {
+    const players = Array.isArray(fr.player) ? fr.player : fr.player ? [fr.player] : [];
+    counts.set(String(fr.id), players.filter((p) => p.status === 'TAXI_SQUAD').length);
+  }
+  return counts;
+}
+
+/**
+ * POST a single taxi_squad promotion to MFL. Returns { success, error? }.
+ * Uses serial calls (one player per request) so partial failures don't
+ * block the rest — matches MFL's documented PROMOTED/DEMOTED single-id
+ * behavior and keeps audit per-pick clear.
+ */
+async function promoteOneToTaxi({ leagueId, year, cookies, playerId }) {
+  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=taxi_squad&L=${leagueId}`;
+  const body = new URLSearchParams({ PROMOTED: playerId, DEMOTED: '' }).toString();
+  const res = await mflFetch({ url, method: 'POST', cookies, body });
+  const text = await res.text();
+  if (text.includes('<error>')) {
+    const m = text.match(/<error[^>]*>(.*?)<\/error>/s);
+    return { success: false, error: m?.[1] || 'MFL rejected promotion' };
+  }
+  if (!res.ok) return { success: false, error: `HTTP ${res.status}` };
+  return { success: true };
 }
 
 // ── Audit-trail declaration storage (best-effort) ──────────────────────
@@ -520,6 +621,39 @@ async function main() {
     console.log(`[draft-pick-sync] Recorded ${auditDeclarations.length} audit-trail declaration(s).`);
   } catch (err) {
     console.warn(`[draft-pick-sync] Audit-trail write failed (MFL write already succeeded): ${err.message}`);
+  }
+
+  // Auto-taxi: promote freshly-drafted picks onto the practice squad in
+  // pick order, up to each franchise's open slots. Newly-drafted only —
+  // existing rookies are never swept. See buildTaxiPromotions for policy.
+  try {
+    const taxiCounts = await fetchTaxiSquadCounts({ leagueId, year, cookies });
+    const promotions = buildTaxiPromotions({ writes, taxiCounts });
+    if (promotions.length === 0) {
+      console.log('[draft-pick-sync] No auto-taxi promotions (all rosters at practice-squad cap or no fresh picks).');
+    } else {
+      console.log(`[draft-pick-sync] Auto-taxi: promoting ${promotions.length} rookie(s) to practice squad:`);
+      for (const p of promotions) {
+        const fname = (franchiseNameMap.get(p.franchiseId) ?? p.franchiseId).padEnd(14);
+        console.log(`  ${fname} R${p.round}.${String(p.pickInRound).padStart(2, '0')} ${p.playerName}`);
+      }
+      if (cli.dryRun) {
+        console.log('[draft-pick-sync] --dry-run: not writing taxi promotions to MFL.');
+      } else {
+        let okCount = 0;
+        for (const p of promotions) {
+          const r = await promoteOneToTaxi({ leagueId, year, cookies, playerId: p.playerId });
+          if (r.success) {
+            okCount++;
+          } else {
+            console.warn(`[draft-pick-sync] Auto-taxi failed for ${p.playerName} (${p.playerId}): ${r.error}`);
+          }
+        }
+        console.log(`[draft-pick-sync] Auto-taxi: ${okCount}/${promotions.length} promotion(s) succeeded.`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[draft-pick-sync] Auto-taxi step failed (contract writes already succeeded): ${err.message}`);
   }
 }
 
