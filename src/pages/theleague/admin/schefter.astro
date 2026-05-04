@@ -1251,6 +1251,11 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
   }
   .ops-chx__seg-label { padding: 0 0.4rem; text-overflow: ellipsis; overflow: hidden; }
   .ops-chx__seg[data-narrow="true"] .ops-chx__seg-label { display: none; }
+  /* The thin baseline bar is too short (14px) to fit the 0.72rem label
+     without vertical clipping — drop labels there. The legend underneath
+     the bars already names the channels, and segment width carries the
+     ratio. Same rationale as the data-narrow rule above. */
+  .ops-chx__bar--thin .ops-chx__seg-label { display: none; }
   /* Bolder, saturated lane colors so the bar reads as a chart, not a form
      field. White text on each — contrast verified at 0.72rem/700: blue 6.7:1,
      green 4.6:1, amber 3.4:1 (use amber-600 for AA at this size). */
