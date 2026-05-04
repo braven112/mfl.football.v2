@@ -1,96 +1,97 @@
 /**
- * API endpoint for moving players to IR
- * Handles one-click IR moves through MFL API
+ * POST /api/move-to-ir
  *
- * Security: Uses the authenticated user's MFL cookie, NOT commish credentials.
- * Validates the player belongs to the user's roster before allowing the move.
+ * Move a player to / from the user's Injured Reserve via MFL's
+ * import?TYPE=ir endpoint. Owner-mode auth only — never uses commish creds.
+ *
+ * Body: { playerId: string, direction?: 'to' | 'from' }
+ *   direction='to'   (default) — move ACTIVE → IR
+ *   direction='from'           — move IR → ACTIVE
+ *
+ * Validates that the player is on the user's roster before submitting.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { createMFLApiClient } from '../../utils/mfl-matchup-api';
+
+const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 export const POST: APIRoute = async ({ request }) => {
+  const user = getAuthUser(request);
+
+  if (!user) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'Authentication required. Please sign in to manage your roster.' }),
+      { status: 401, headers: JSON_HEADERS },
+    );
+  }
+
+  if (!user.id) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'MFL session not found. Please sign in again.' }),
+      { status: 401, headers: JSON_HEADERS },
+    );
+  }
+
+  if (!user.franchiseId) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'No franchise associated with your account.' }),
+      { status: 403, headers: JSON_HEADERS },
+    );
+  }
+
   try {
-    // 1. Authenticate — must have a logged-in user with an MFL cookie
-    const user = getAuthUser(request);
-    if (!user) {
+    const body = await request.json();
+    const playerId = body?.playerId ? String(body.playerId) : '';
+    const direction: 'to' | 'from' = body?.direction === 'from' ? 'from' : 'to';
+
+    if (!playerId || !/^\d+$/.test(playerId)) {
       return new Response(
-        JSON.stringify({ error: 'Authentication required. Please sign in to manage your roster.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } },
+        JSON.stringify({ success: false, message: 'Missing or invalid playerId' }),
+        { status: 400, headers: JSON_HEADERS },
       );
     }
 
-    if (!user.id) {
-      return new Response(
-        JSON.stringify({ error: 'MFL session not found. Please sign in again.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
+    const year = getCurrentLeagueYear();
+    const leagueId = user.leagueId || '13522';
 
-    if (!user.franchiseId) {
-      return new Response(
-        JSON.stringify({ error: 'No franchise associated with your account.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
-
-    const { playerId } = await request.json();
-
-    if (!playerId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameter: playerId' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // 2. Create MFL API client with the USER's cookie (not commish env var)
-    const leagueYear = getCurrentLeagueYear();
     const mflClient = createMFLApiClient({
-      leagueId: user.leagueId || '13522',
-      year: String(leagueYear),
-      mflUserId: user.id, // Per-user auth
+      leagueId,
+      year: String(year),
+      mflUserId: user.id,
     });
 
-    // 3. SECURITY: Verify the player belongs to the user's roster
+    // Verify the player is on the user's roster (active OR currently on IR)
     const rosters = await mflClient.getRosters();
-    const userRoster = rosters[user.franchiseId];
-
-    if (!userRoster || !userRoster.includes(playerId)) {
+    const userRoster = rosters[user.franchiseId] || [];
+    if (!userRoster.includes(playerId)) {
       return new Response(
-        JSON.stringify({ error: 'You can only move players from your own roster to IR.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } },
+        JSON.stringify({ success: false, message: 'You can only move players from your own roster.' }),
+        { status: 403, headers: JSON_HEADERS },
       );
     }
 
-    // 4. Attempt to move player to IR using the user's own credentials
-    const success = await mflClient.movePlayerToIR(playerId, user.franchiseId);
+    const result = await mflClient.movePlayerToIR(playerId, user.franchiseId, direction);
 
-    if (success) {
+    if (!result.success) {
       return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Player successfully moved to IR',
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      );
-    } else {
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to move player to IR. Please check authentication or try manually.',
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
+        JSON.stringify({ success: false, message: result.error || 'MFL rejected the IR move.' }),
+        { status: 400, headers: JSON_HEADERS },
       );
     }
-  } catch (error) {
-    console.error('IR move API error:', error);
 
+    const message = direction === 'to' ? 'Player moved to IR' : 'Player activated from IR';
     return new Response(
-      JSON.stringify({
-        error: 'Internal server error. Please try again or use manual IR move.',
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ success: true, message }),
+      { status: 200, headers: JSON_HEADERS },
+    );
+  } catch (error) {
+    console.error('[move-to-ir] Error:', error);
+    return new Response(
+      JSON.stringify({ success: false, message: 'Internal server error. Please try again.' }),
+      { status: 500, headers: JSON_HEADERS },
     );
   }
 };

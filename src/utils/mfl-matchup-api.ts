@@ -539,36 +539,114 @@ export class MFLMatchupApiClient {
   }
 
   /**
-   * Submit IR move for a player (requires authentication)
+   * Move a player to / from Injured Reserve via MFL's import?TYPE=ir endpoint.
+   *
+   * Owner-mode auth (MFL_USER_ID cookie). Uses mflFetch() to survive the
+   * api → www49 redirect that strips Cookie headers from raw fetch().
+   *
+   * direction='to'   → ACTIVATED=<id> (player moves ONTO IR)
+   * direction='from' → DEACTIVATED=<id> (player moves OFF IR back to active)
+   *
+   * MFL's transaction record uses the same field names — `ACTIVATED` is the
+   * player who has been "activated to IR status," not "activated to play."
    */
-  async movePlayerToIR(playerId: string, franchiseId: string): Promise<boolean> {
+  async movePlayerToIR(
+    playerId: string,
+    _franchiseId: string,
+    direction: 'to' | 'from' = 'to',
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.runRosterMove({
+      type: 'ir',
+      onParam: 'ACTIVATED',
+      offParam: 'DEACTIVATED',
+      playerId,
+      direction,
+    });
+  }
+
+  /**
+   * Move a rookie to / from the Taxi (Practice) Squad via MFL's
+   * import?TYPE=taxi_squad endpoint.
+   *
+   * direction='to'   → PROMOTED=<id> (player moves ONTO taxi)
+   * direction='from' → DEMOTED=<id>  (player moves OFF taxi back to active)
+   *
+   * MFL enforces taxi-squad cap and rookie eligibility based on league rules;
+   * caller should preflight where possible for friendlier UX.
+   */
+  async movePlayerToTaxi(
+    playerId: string,
+    _franchiseId: string,
+    direction: 'to' | 'from' = 'to',
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.runRosterMove({
+      type: 'taxi_squad',
+      onParam: 'PROMOTED',
+      offParam: 'DEMOTED',
+      playerId,
+      direction,
+    });
+  }
+
+  /**
+   * Shared internal helper for owner-mode roster bucket moves
+   * (IR + Taxi share the exact same call shape, only param names differ).
+   */
+  private async runRosterMove(opts: {
+    type: 'ir' | 'taxi_squad';
+    onParam: 'ACTIVATED' | 'PROMOTED';
+    offParam: 'DEACTIVATED' | 'DEMOTED';
+    playerId: string;
+    direction: 'to' | 'from';
+  }): Promise<{ success: boolean; error?: string }> {
     if (!this.config.mflUserId) {
-      throw new Error('Authentication required for IR moves');
+      return { success: false, error: 'Authentication required for roster moves' };
     }
 
     try {
-      const url = `${this.baseUrl}/${this.config.year}/freeagency`;
-      const params = new URLSearchParams({
-        TYPE: 'moveToIR',
-        L: this.config.leagueId,
-        PLAYER: playerId,
-        FRANCHISE: franchiseId,
-      });
+      const url = `${this.baseUrl}/${this.config.year}/import`;
+      const params = new URLSearchParams();
+      params.set('TYPE', opts.type);
+      params.set('L', this.config.leagueId);
+      if (opts.direction === 'to') {
+        params.set(opts.onParam, opts.playerId);
+        params.set(opts.offParam, '');
+      } else {
+        params.set(opts.onParam, '');
+        params.set(opts.offParam, opts.playerId);
+      }
 
-      const response = await fetch(url, {
+      const response = await mflFetch({
+        url,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cookie': `MFL_USER_ID=${this.config.mflUserId}`,
-        },
+        mflUserCookie: this.config.mflUserId,
         body: params.toString(),
-        signal: AbortSignal.timeout(8000),
       });
 
-      return response.ok;
+      const text = await response.text();
+
+      if (text.includes('<error>') || text.includes('"error"')) {
+        const errorMatch =
+          text.match(/<error[^>]*>(.*?)<\/error>/s) ||
+          text.match(/"error"\s*:\s*"([^"]+)"/);
+        return { success: false, error: errorMatch?.[1] || 'MFL rejected the request' };
+      }
+
+      if (!response.ok) {
+        return { success: false, error: `MFL API error: ${response.status}` };
+      }
+
+      if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+        return { success: false, error: 'MFL did not process the request. Try again.' };
+      }
+
+      return { success: true };
     } catch (error) {
-      console.error('Failed to move player to IR:', error);
-      return false;
+      console.error(`Failed to ${opts.direction === 'to' ? 'move to' : 'remove from'} ${opts.type}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Roster move failed',
+      };
     }
   }
 }
