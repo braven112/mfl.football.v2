@@ -893,3 +893,37 @@ Recommend migrating to `/import?TYPE=ir` with `ACTIVATED`/`DEACTIVATED` params v
 - `data/theleague/mfl-feeds/2026/transactions.json` — TAXI transactions confirmed same structure
 - `data/theleague/mfl-feeds/2026/rosters.json` — TAXI_SQUAD status players with `contractInfo: "TO"`
 - `data/theleague/mfl-feeds/2026/league.json` — `taxiSquad: "3"`, `draftPlayerPool: "Rookie"`
+
+---
+
+## 2026-05-04 - getRosters() Was Stripping Cookies on api→www49 Redirect
+
+**Context:** Building owner-mode roster-move endpoints (`/api/move-to-ir`, `/api/move-to-practice`) that preflight by calling `mflClient.getRosters()` to verify the player belongs to the user's roster before submitting the write.
+
+**Insight:** `MFLMatchupApiClient.getRosters()` in `src/utils/mfl-matchup-api.ts` used the internal `makeRequest()` helper (raw `fetch()` with `redirect: 'follow'`). Node's undici strips sensitive headers — including `Cookie` — on cross-origin redirects, and `api.myfantasyleague.com` always 302-redirects authenticated GETs to `www49.myfantasyleague.com`. The `MFL_USER_ID` cookie was silently dropped on the redirect, so the response came back as if unauthenticated.
+
+If MFL ever auth-gates the rosters export (the 2026 transactions endpoint is already auth-gated — see 2026-04-22 entry), `getRosters()` would silently return `{}`, and every roster-membership preflight check on top of it would yield a spurious "You can only move players from your own roster" 403.
+
+This is the exact same redirect-strip bug previously fixed for trade endpoints and `move-to-ir` write calls. `getRosters()` was missed because reads "looked fine" — until they didn't.
+
+**Evidence:** `src/utils/mfl-matchup-api.ts:237` (before fix). Five callers across the codebase relied on it: `move-to-ir.ts`, `move-to-practice.ts`, `trade-bait.ts`, `trades/submit.ts`, `cut-player.ts`. All were affected.
+
+**Recommendation:** Any MFL fetch carrying an auth cookie must go through `mflFetch()` from `src/utils/mfl-fetch.ts` — even for reads. Default-on rule: if you're attaching `Cookie: MFL_USER_ID=...`, you're using `mflFetch`. If you're hitting a public endpoint with no cookie, raw `fetch()` is fine. The fix path: when `mflUserId` is configured, route through `mflFetch`; otherwise fall back to the unauthenticated `makeRequest` for non-auth callers.
+
+---
+
+## 2026-05-04 - MFL `players` Export Single-Object Quirk on Single-ID Queries
+
+**Context:** Server-side rookie-status gate in `/api/move-to-practice` queries `TYPE=players&PLAYERS={id}&DETAILS=1` for one player at a time.
+
+**Insight:** When the `PLAYERS` filter narrows the response to exactly one player, MFL returns `players.player` as a SINGLE OBJECT — not a one-element array. This is the same single-vs-array shape quirk documented for `myleagues` and other filtered exports. Code that does `data.players.player.find(...)` will throw because `.find` doesn't exist on a plain object.
+
+**Evidence:** `src/pages/api/move-to-practice.ts:fetchPlayerStatus` normalizes with `Array.isArray(raw) ? raw : [raw]` before `.find`.
+
+**Recommendation:** Always normalize. Standard pattern across the codebase:
+```ts
+const raw = data?.players?.player;
+const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+```
+The triple-step (`Array.isArray ? : (raw ? [raw] : [])`) handles all three shapes: array, single object, and missing. Reuse this pattern wherever you read filtered MFL exports.
+
