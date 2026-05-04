@@ -8,8 +8,9 @@
  * reads.
  *
  * The rumor scanner already implements the cumulative-probability leak model
- * (p=0.0075/run, codenames, vague framing). This module is just the intake
- * pipe — it never decides what gets published.
+ * (base probability in scripts/lib/redact-trade-offer.mjs#OFFER_POST_PROBABILITY,
+ * codenames, vague framing). This module is just the intake pipe — it never
+ * decides what gets published.
  *
  * Hash: `schefter:trade_offers:owner_reports`
  *   field: offerId (MFL trade_id)
