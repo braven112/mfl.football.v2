@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-05-04T22-58-14.041Z",
+  "snapshot": "2026-05-04T23-19-52.868Z",
   "week": "off-11",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-04T22:58:14.342Z",
+    "fetchedAt": "2026-05-04T23:19:53.040Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-11).",
-    "generatedAt": "2026-05-04T22:58:14.342Z"
+    "generatedAt": "2026-05-04T23:19:53.040Z"
   },
   "positions": {
     "WR": {
@@ -786,8 +786,8 @@
       "starterAverage": 4154739.15,
       "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1842182.52,
-      "medianSalary": 660000,
+      "averageSalary": 1845343.44,
+      "medianSalary": 700000,
       "topPlayers": [
         {
           "id": "13130",
@@ -1048,6 +1048,12 @@
           "franchiseId": "0011"
         },
         {
+          "id": "17477",
+          "name": "Coleman, Jonah",
+          "salary": 700000,
+          "franchiseId": "0010"
+        },
+        {
           "id": "17045",
           "name": "Skattebo, Cam",
           "salary": 660000,
@@ -1304,12 +1310,6 @@
           "name": "Harris, Najee",
           "salary": 425000,
           "franchiseId": "0004"
-        },
-        {
-          "id": "17477",
-          "name": "Coleman, Jonah",
-          "salary": 425000,
-          "franchiseId": "0010"
         }
       ]
     },
@@ -2037,15 +2037,15 @@
       ]
     },
     "QB": {
-      "totalPlayers": 49,
+      "totalPlayers": 50,
       "top3Average": 7408333.33,
       "top5Average": 6495000,
       "top10Average": 5275000,
       "starterAverage": 4383017.19,
       "starterMedian": 3887500,
       "starterCount": 16,
-      "averageSalary": 1956874.34,
-      "medianSalary": 968000,
+      "averageSalary": 1926236.85,
+      "medianSalary": 937750,
       "topPlayers": [
         {
           "id": "13589",
@@ -2338,6 +2338,12 @@
         {
           "id": "15252",
           "name": "Mills, Davis",
+          "salary": 425000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "17463",
+          "name": "Simpson, Ty",
           "salary": 425000,
           "franchiseId": "0016"
         }

@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-04T22:58:14.036Z"
+    "fetchedAt": "2026-05-04T23:19:52.864Z"
   },
   "players": [
     {
@@ -11376,10 +11376,10 @@
       "id": "17477",
       "name": "Coleman, Jonah",
       "position": "RB",
-      "salary": 425000,
+      "salary": 700000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "4",
       "points": 0,
       "team": "DEN",
       "draftYear": 2026,
@@ -17869,6 +17869,61 @@
         {
           "id": "16625",
           "name": "Wilson, Johnny"
+        }
+      ]
+    },
+    {
+      "id": "17463",
+      "name": "Simpson, Ty",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "TAXI_SQUAD",
+      "contractYear": "1",
+      "points": 0,
+      "team": "LAR",
+      "draftYear": 2026,
+      "draftTeam": "LAR",
+      "birthdate": 1040446800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17463_thumb.jpg",
+      "externalIds": {
+        "mfl": "17463",
+        "sleeper": "13275",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13275",
+        "fullName": "Ty Simpson",
+        "team": "LAR",
+        "age": 23,
+        "height": "74",
+        "weight": "208",
+        "number": 15,
+        "college": "Alabama",
+        "birthDate": "2002-12-21",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "9431",
+          "name": "Stafford, Matthew"
+        },
+        {
+          "id": "16153",
+          "name": "Bennett, Stetson"
         }
       ]
     }
