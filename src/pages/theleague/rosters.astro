@@ -8952,12 +8952,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         ufaBtn.dataset.playerDisplayTag = newDisplayTag;
       }
 
-      // Update the row class so visual styling reflects the move
-      const row = document.querySelector('tr[data-player-id="' + playerId + '"]');
-      if (row) {
-        row.classList.remove('roster-row--active', 'roster-row--practice', 'roster-row--injured');
-        row.classList.add('roster-row--' + newDisplayTag);
-      }
+      // Re-render the table from teamData. The page renders Active / Practice
+      // / IR as separate sections, so a class change on the existing <tr> is
+      // not enough — the row must move to its new section. updateView()
+      // rebuilds rows from the bucket arrays we just mutated.
+      updateView();
     };
 
     // ----------------------------------------------------------------
