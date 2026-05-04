@@ -2545,8 +2545,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                     data-player-headshot={player.headshot || ''}
                     data-player-salary={player.salary || 0}
                     data-player-years={player.contractYears || 1}
+                    data-player-contract-info={(player as any).contractInfo || ''}
                     data-player-injury-status={player.injuryStatus || ''}
                     data-player-franchise-id={player.franchiseId || ''}
+                    data-player-display-tag={(player as any).displayTag || 'active'}
                     title="Manage Contract"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -6794,6 +6796,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 data-player-injury-status="${player.injuryStatus || ''}"
                 data-player-franchise-id="${player.franchiseId || ''}"
                 data-player-trade-bait="${player.tradeBait ? 'true' : 'false'}"
+                data-player-display-tag="${player.displayTag || 'active'}"
                 ${actionType ? 'data-action-type="' + actionType + '"' : ''}
                 title="Manage Contract"
               >
@@ -7062,6 +7065,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               birthdate: birthdateRaw ? Number(birthdateRaw) : null,
               franchiseId: btn.dataset.playerFranchiseId || '',
               tradeBait: btn.dataset.playerTradeBait === 'true',
+              displayTag: btn.dataset.playerDisplayTag || 'active',
             };
             // Look up real eligibility to get contractInfo/isRookieContract for action filtering
             // Fall back to currentTeam since playerFranchiseId may not be set on the button
@@ -7078,6 +7082,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 currentYears: playerYears,
                 contractInfo,
                 isRookieContract,
+                displayTag: rawPlayer.displayTag,
               },
               _rawPlayer: rawPlayer,
             });
@@ -8439,6 +8444,53 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         ));
       }
 
+      // Roster moves (IR / Practice Squad) — owner-only, on the user's own team.
+      // Rookie gate uses contractInfo (RC | TO) — TheLeague's auto-stamp script
+      // writes one of these on every drafted rookie, so it's a reliable proxy
+      // for MFL's own status === 'R' classification (which the server-side
+      // /api/move-to-practice route enforces as the authoritative gate).
+      // Practice-squad rookies retain the IR option so a practice player who
+      // gets injured can still be moved to IR without leaving this menu.
+      const isOwnTeam = !!config.authUser?.franchiseId && config.authUser.franchiseId === currentTeam;
+      if (isOwnTeam) {
+        const tag = (elig.displayTag || 'active').toString();
+        const isRookie = elig.contractInfo === 'RC' || elig.contractInfo === 'TO';
+
+        if (tag === 'active') {
+          actionOptions.appendChild(makeCdmActionBtn(
+            'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
+            () => goToRosterMoveStep('ir', 'to'),
+            false, 'icon-medkit'
+          ));
+          if (isRookie) {
+            actionOptions.appendChild(makeCdmActionBtn(
+              'move-to-practice', 'Move to Practice Squad', 'Stash a rookie — reduced cap charge',
+              () => goToRosterMoveStep('practice', 'to'),
+              false, 'icon-bookmark'
+            ));
+          }
+        } else if (tag === 'injured') {
+          actionOptions.appendChild(makeCdmActionBtn(
+            'activate-from-ir', 'Activate from IR', 'Restore to active roster',
+            () => goToRosterMoveStep('ir', 'from'),
+            false, 'icon-medkit'
+          ));
+        } else if (tag === 'practice') {
+          if (isRookie) {
+            actionOptions.appendChild(makeCdmActionBtn(
+              'promote-from-practice', 'Promote from Practice', 'Move rookie to active roster',
+              () => goToRosterMoveStep('practice', 'from'),
+              false, 'icon-bookmark'
+            ));
+          }
+          actionOptions.appendChild(makeCdmActionBtn(
+            'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
+            () => goToRosterMoveStep('ir', 'to'),
+            false, 'icon-medkit'
+          ));
+        }
+      }
+
       actionOptions.appendChild(makeCdmActionBtn(
         'cut', 'Cut Player', '50% cap hit + future penalties',
         () => goToCutStep2(),
@@ -8620,6 +8672,292 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         },
         false, 'icon-transactions-2'
       ));
+    };
+
+    // ----------------------------------------------------------------
+    // goToRosterMoveStep — IR / Practice Squad confirmation sub-step
+    //   target: 'ir' | 'practice'
+    //   direction: 'to' | 'from'
+    // ----------------------------------------------------------------
+    const goToRosterMoveStep = (target, direction) => {
+      const actionOptions = document.getElementById('cdm-action-options');
+      if (!actionOptions) return;
+      actionOptions.replaceChildren();
+
+      cdmCurrentStep = 2;
+      cdmFlowType = target === 'ir' ? 'roster-move-ir' : 'roster-move-practice';
+
+      // Advance stepper
+      const dot1 = document.getElementById('cdm-step-dot-1');
+      const dot2 = document.getElementById('cdm-step-dot-2');
+      const line1 = document.getElementById('cdm-step-line-1');
+      const stepLabel = document.getElementById('cdm-stepper-label');
+      if (dot2) dot2.style.display = '';
+      if (line1) line1.style.display = '';
+      if (dot1) { dot1.classList.remove('active'); dot1.classList.add('completed'); }
+      if (dot2) { dot2.classList.remove('completed'); dot2.classList.add('active'); }
+      if (line1) line1.classList.add('completed');
+      if (stepLabel) stepLabel.textContent = 'Step 2 of 2';
+
+      // Back button
+      const backBtn = document.createElement('button');
+      backBtn.className = 'cdm-action-back';
+      backBtn.textContent = '← Back to Actions';
+      backBtn.addEventListener('click', () => {
+        goToActionSelectStep();
+        populateCdmActionOptions(cdmPlayerData.eligibility);
+      });
+      actionOptions.appendChild(backBtn);
+
+      const playerName = cdmPlayerData?._rawPlayer?.name || cdmPlayerData?.name || 'this player';
+      const playerId = cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '';
+
+      // Subtitle
+      const subtitle = document.createElement('p');
+      subtitle.className = 'cdm-roster-move-subtitle';
+      const subtitleText = (() => {
+        if (target === 'ir' && direction === 'to') return 'Move ' + playerName + ' to Injured Reserve';
+        if (target === 'ir' && direction === 'from') return 'Activate ' + playerName + ' from IR';
+        if (target === 'practice' && direction === 'to') return 'Move ' + playerName + ' to the Practice Squad';
+        return 'Promote ' + playerName + ' to the active roster';
+      })();
+      subtitle.textContent = subtitleText;
+      actionOptions.appendChild(subtitle);
+
+      // Cap impact card — Practice only (IR is 100% cap-counted in TheLeague,
+      // so the card would always read $0 difference and waste space).
+      let practiceFull = false;
+      if (target === 'practice') {
+        const { teamData } = getTeamData();
+        const practiceCount = (teamData?.practiceSquad ?? []).length;
+        practiceFull = direction === 'to' && practiceCount >= 3;
+
+        const card = document.createElement('div');
+        card.className = 'cdm-roster-move-card';
+        card.setAttribute('role', 'group');
+        card.setAttribute('aria-label', 'Cap impact preview');
+
+        const baseSalary = Number(cdmPlayerData?._rawPlayer?.salary ?? 0);
+        const activePct = (typeof getCapPercent === 'function') ? getCapPercent('ACTIVE', true) : 1;
+        const practicePct = (typeof getCapPercent === 'function') ? getCapPercent('PRACTICE', true) : 0.1;
+        const fromPct = direction === 'to' ? activePct : practicePct;
+        const toPct = direction === 'to' ? practicePct : activePct;
+        const currentHit = baseSalary * fromPct;
+        const newHit = baseSalary * toPct;
+        const delta = newHit - currentHit;
+
+        const fmt = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+        const pct = (p) => (p * 100).toFixed(0) + '%';
+        const sign = delta < 0 ? '−' : delta > 0 ? '+' : '';
+        // Class names describe the user-facing meaning, not the math sign:
+        // delta < 0 means cap savings (good), delta > 0 means cap cost (bad).
+        const deltaClass = delta < 0
+          ? 'cdm-roster-move-card__delta cdm-roster-move-card__delta--savings'
+          : delta > 0
+            ? 'cdm-roster-move-card__delta cdm-roster-move-card__delta--cost'
+            : 'cdm-roster-move-card__delta';
+
+        const rows = [
+          { label: 'CURRENT CAP HIT', value: fmt(currentHit) + '  ' + pct(fromPct), cls: '' },
+          { label: 'NEW CAP HIT', value: fmt(newHit) + '  ' + pct(toPct), cls: '' },
+          { label: 'DIFFERENCE', value: sign + fmt(Math.abs(delta)), cls: deltaClass },
+        ];
+        rows.forEach(r => {
+          const row = document.createElement('div');
+          row.className = 'cdm-roster-move-card__row';
+          const labelEl = document.createElement('span');
+          labelEl.className = 'cdm-roster-move-card__label';
+          labelEl.textContent = r.label;
+          const valueEl = document.createElement('span');
+          valueEl.className = 'cdm-roster-move-card__value' + (r.cls ? ' ' + r.cls : '');
+          valueEl.textContent = r.value;
+          row.appendChild(labelEl);
+          row.appendChild(valueEl);
+          card.appendChild(row);
+        });
+
+        if (practiceFull) {
+          const fullRow = document.createElement('div');
+          fullRow.className = 'cdm-roster-move-card__row';
+          const fullLabel = document.createElement('span');
+          fullLabel.className = 'cdm-roster-move-card__label';
+          fullLabel.textContent = 'PRACTICE SQUAD';
+          const fullValue = document.createElement('span');
+          fullValue.className = 'cdm-roster-move-card__value cdm-roster-move-card__status--warning';
+          fullValue.textContent = 'Full (' + practiceCount + '/3)';
+          fullRow.appendChild(fullLabel);
+          fullRow.appendChild(fullValue);
+          card.appendChild(fullRow);
+        }
+        actionOptions.appendChild(card);
+      } else {
+        // IR: simple explanatory copy instead of cap card
+        const note = document.createElement('p');
+        note.className = 'cdm-roster-move-note';
+        note.textContent = direction === 'to'
+          ? 'IR pauses participation. Cap charge is unchanged in TheLeague.'
+          : 'Activating restores the player to the active roster.';
+        actionOptions.appendChild(note);
+      }
+
+      // Inline error region
+      const errorRegion = document.createElement('div');
+      errorRegion.className = 'cdm-roster-move-error';
+      errorRegion.id = 'cdm-roster-move-error';
+      errorRegion.setAttribute('aria-live', 'polite');
+      errorRegion.setAttribute('tabindex', '-1');
+      if (practiceFull) {
+        errorRegion.setAttribute('role', 'status');
+        errorRegion.textContent = 'Your practice squad is full. Demote a rookie first to free a slot.';
+      }
+      actionOptions.appendChild(errorRegion);
+
+      // Primary CTA
+      const ctaLabel = (() => {
+        if (target === 'ir' && direction === 'to') return 'Move to IR';
+        if (target === 'ir' && direction === 'from') return 'Activate';
+        if (target === 'practice' && direction === 'to') return 'Move to Practice Squad';
+        return 'Promote to Active';
+      })();
+      const cta = document.createElement('button');
+      cta.className = 'cdm-roster-move-cta';
+      cta.type = 'button';
+      cta.textContent = ctaLabel;
+      if (practiceFull) {
+        cta.disabled = true;
+        cta.setAttribute('aria-disabled', 'true');
+        cta.title = 'Practice squad is full (3/3)';
+      }
+
+      cta.addEventListener('click', async () => {
+        if (cta.disabled) return;
+        const errEl = document.getElementById('cdm-roster-move-error');
+        if (errEl) {
+          errEl.removeAttribute('role');
+          errEl.textContent = '';
+        }
+
+        // Loading state
+        const origLabel = cta.textContent;
+        cta.disabled = true;
+        backBtn.disabled = true;
+        const card = actionOptions.querySelector('.cdm-roster-move-card');
+        if (card) card.style.opacity = '0.6';
+        cta.textContent = (() => {
+          if (target === 'ir' && direction === 'to') return 'Moving to IR…';
+          if (target === 'ir' && direction === 'from') return 'Activating…';
+          if (target === 'practice' && direction === 'to') return 'Moving to Practice…';
+          return 'Promoting…';
+        })();
+
+        const endpoint = target === 'ir' ? '/api/move-to-ir' : '/api/move-to-practice';
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId, direction }),
+          });
+          const result = await res.json();
+
+          if (!res.ok || !result?.success) {
+            throw new Error(result?.message || 'MFL rejected the request.');
+          }
+
+          // Success — local state update: move player between buckets so the
+          // UI reflects the move without a page reload (mirrors trade-block).
+          applyLocalRosterMove(playerId, target, direction);
+
+          if (card) card.style.opacity = '';
+          cta.classList.add('cdm-roster-move-cta--success');
+          cta.textContent = (() => {
+            if (target === 'ir' && direction === 'to') return 'Moved to IR ✓';
+            if (target === 'ir' && direction === 'from') return 'Activated ✓';
+            if (target === 'practice' && direction === 'to') return 'Moved to Practice ✓';
+            return 'Promoted ✓';
+          })();
+
+          // Announce via global CDM live region if present
+          const announcer = document.getElementById('cdm-announcer');
+          if (announcer) {
+            announcer.textContent = (() => {
+              if (target === 'ir' && direction === 'to') return 'Player moved to injured reserve';
+              if (target === 'ir' && direction === 'from') return 'Player activated from injured reserve';
+              if (target === 'practice' && direction === 'to') return 'Player moved to practice squad';
+              return 'Player promoted to active roster';
+            })();
+            setTimeout(() => { announcer.textContent = ''; }, 1500);
+          }
+
+          setTimeout(closeDeclarationModal, 1200);
+        } catch (err) {
+          if (card) card.style.opacity = '';
+          cta.disabled = false;
+          backBtn.disabled = false;
+          cta.textContent = origLabel;
+          if (errEl) {
+            // Set role BEFORE text so AT/SR combos that key off role-change-with-content
+            // (rather than aria-live) reliably announce the alert.
+            errEl.setAttribute('role', 'alert');
+            errEl.textContent = (err && err.message) ? err.message : 'Something went wrong. Try again.';
+            errEl.focus();
+          }
+        }
+      });
+      actionOptions.appendChild(cta);
+
+      // Move focus to the back button (predictable re-entry, avoids surprise focus on destructive CTA)
+      setTimeout(() => backBtn.focus(), 0);
+    };
+
+    // applyLocalRosterMove — move the player object between teamData buckets
+    // and re-render the table row so the UI reflects MFL's new state.
+    const applyLocalRosterMove = (playerId, target, direction) => {
+      const { teamData } = getTeamData();
+      if (!teamData) return;
+      const buckets = {
+        active: teamData.players ?? (teamData.players = []),
+        practice: teamData.practiceSquad ?? (teamData.practiceSquad = []),
+        injured: teamData.injuredReserve ?? (teamData.injuredReserve = []),
+      };
+
+      const fromKey = (() => {
+        if (target === 'ir' && direction === 'to') return 'active';
+        if (target === 'ir' && direction === 'from') return 'injured';
+        if (target === 'practice' && direction === 'to') return 'active';
+        return 'practice';
+      })();
+      const toKey = (() => {
+        if (target === 'ir' && direction === 'to') return 'injured';
+        if (target === 'ir' && direction === 'from') return 'active';
+        if (target === 'practice' && direction === 'to') return 'practice';
+        return 'active';
+      })();
+      const newDisplayTag = toKey;
+
+      const fromArr = buckets[fromKey];
+      const idx = fromArr.findIndex(p => String(p.id) === String(playerId));
+      if (idx < 0) return;
+      const [moved] = fromArr.splice(idx, 1);
+      moved.displayTag = newDisplayTag;
+      // Keep moved.status in sync with the new bucket so any code that reads
+      // it (cap calc, etc.) sees a consistent value across the page
+      moved.status = newDisplayTag === 'practice'
+        ? 'TAXI_SQUAD'
+        : newDisplayTag === 'injured' ? 'INJURED_RESERVE' : 'ROSTER';
+      buckets[toKey].push(moved);
+
+      // Update the action button's data attrs so the next CDM open sees the new state
+      const ufaBtn = document.querySelector('.ufa-action-btn[data-player-id="' + playerId + '"]');
+      if (ufaBtn) {
+        ufaBtn.dataset.playerDisplayTag = newDisplayTag;
+      }
+
+      // Update the row class so visual styling reflects the move
+      const row = document.querySelector('tr[data-player-id="' + playerId + '"]');
+      if (row) {
+        row.classList.remove('roster-row--active', 'roster-row--practice', 'roster-row--injured');
+        row.classList.add('roster-row--' + newDisplayTag);
+      }
     };
 
     // ----------------------------------------------------------------

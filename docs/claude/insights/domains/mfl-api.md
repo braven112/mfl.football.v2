@@ -754,3 +754,142 @@ TheLeague 2026 (`data/theleague/mfl-feeds/2026/league.json`) has `"lockout": "Ye
 - `data/theleague/mfl-feeds/2026/league.json` — `lockout: "Yes"`
 - `data/afl-fantasy/mfl-feeds/2025/league.json` — `lockout: "Yes"`
 - `data/afl-fantasy/mfl-feeds/2012/league.json` — `lockout: "No"` (earliest "No" example)
+
+---
+
+## 2026-05-04 - IR and Taxi Squad Write Endpoints: Authoritative Specification from Transaction Evidence
+
+**Context:** Researching the correct owner-level write endpoints for IR moves and taxi squad moves for TheLeague (L=13522, 2026). The MFL api_info pages return 403 from this server environment. Authoritative data was extracted from the cached `transactions.json` files (2025: 1152 transactions, 2026: 759 transactions).
+
+### Evidence Source
+
+The `transactions` export uses the SAME field names as the corresponding import endpoint parameters. MFL's API design is consistent: the import parameters are named to match what appears in the transaction log. This is confirmed by comparison across multiple known endpoints (e.g., `tradeProposal` → TRADE transaction uses `franchise`, `franchise2`, `franchise1_gave_up`/`franchise2_gave_up`; `lineup` → `starters` field).
+
+### IR Transactions: Confirmed Field Names
+
+From 90 IR transactions in the 2025 data (0 had `by_commish: "1"` — ALL were owner-initiated):
+
+```json
+{"type": "IR", "franchise": "0001", "activated": "14800,", "deactivated": "", "timestamp": "..."}
+{"type": "IR", "franchise": "0009", "deactivated": "13113,", "activated": "", "timestamp": "..."}
+{"type": "IR", "franchise": "0010", "activated": "16269,", "deactivated": "16175,", "timestamp": "..."}
+```
+
+**Transaction field semantics:**
+- `activated` = players MOVED TO IR (activated onto the IR list) — comma-separated with trailing comma
+- `deactivated` = players REMOVED FROM IR (returned to active roster) — comma-separated with trailing comma
+- `franchise` = the owning franchise (4-digit string)
+- No `by_commish` field — all IR moves in 2025 were done by owners, not commissioner
+
+**CRITICAL IMPLICATION:** The transaction terminology (`activated`/`deactivated`) maps directly to the import parameter names. This means the `import?TYPE=ir` endpoint almost certainly uses `ACTIVATED` and `DEACTIVATED` parameters (not `PLAYER` singular, not `MOVE=ACTIVATE/DEACTIVATE`).
+
+### IR Endpoint: Inferred Write Specification
+
+The `import?TYPE=ir` endpoint is the **canonical** owner-level IR endpoint, NOT `freeagency?TYPE=moveToIR`. Evidence:
+
+1. The MFL api_info (confirmed from the agents README at line 88) lists both:
+   - Commissioner-impersonable endpoints include `ir` (documented in the 2026-03-13 insight above)
+   - The `freeagency` endpoint is a separate legacy path
+
+2. The transaction type is `IR`, matching `TYPE=ir` — not `TYPE=moveToIR` or `TYPE=freeagency`
+
+3. The `freeagency?TYPE=moveToIR` path appears to be a LEGACY endpoint. The current implementation in `mfl-matchup-api.ts:544` uses this legacy form and appears to be functionally incorrect for the modern MFL API.
+
+**Likely correct import endpoint:**
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=ir&L={LEAGUE_ID}
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={userCookie}
+
+ACTIVATED={player_id_1},{player_id_2}&DEACTIVATED={player_id_3}&FRANCHISE_ID={franchise_id}
+```
+
+**Parameters (inferred from transaction data):**
+- `ACTIVATED` — comma-separated player IDs to place ON the IR (move from active roster to IR)
+- `DEACTIVATED` — comma-separated player IDs to return FROM IR to active roster
+- Either or both can be populated in a single call (swap supported)
+- `FRANCHISE_ID` — required for commissioner impersonation; behavior for owner mode TBD (may or may not be required when owner calls with their own cookie)
+
+**Confidence: Medium** — The field name mapping from transactions is strong evidence, but the exact parameter names for the write endpoint have not been verified by a live API call or documentation access.
+
+**The existing `freeagency?TYPE=moveToIR` implementation:**
+
+```typescript
+// src/utils/mfl-matchup-api.ts:544 (current implementation)
+const url = `${this.baseUrl}/${this.config.year}/freeagency`;
+params: { TYPE: 'moveToIR', L: ..., PLAYER: playerId, FRANCHISE: franchiseId }
+```
+
+This uses:
+- Path: `/freeagency` (not `/import?TYPE=ir`)
+- `PLAYER` singular (not `PLAYERS` or `ACTIVATED`)
+- `FRANCHISE` (not `FRANCHISE_ID`)
+
+This may still work if MFL kept the legacy endpoint functional, but it is NOT the canonical documented import endpoint. The `src/pages/api/move-to-ir.ts` uses this via `mflClient.movePlayerToIR()` which also uses raw `fetch()` with `redirect: 'follow'` — this is a double problem: wrong endpoint AND missing redirect safety.
+
+### TAXI Transactions: Confirmed Field Names
+
+From 113 TAXI transactions in the 2025 data (107 were owner-initiated, only 6 had `by_commish: "1"`):
+
+```json
+{"type": "TAXI", "franchise": "0001", "promoted": "17096,", "demoted": "", "timestamp": "..."}
+{"type": "TAXI", "franchise": "0008", "promoted": "17037,", "demoted": "17076,", "timestamp": "..."}
+{"type": "TAXI", "franchise": "0011", "promoted": "", "demoted": "17036,", "timestamp": "..."}
+```
+
+**Transaction field semantics:**
+- `promoted` = players MOVED TO TAXI SQUAD (promoted from free agent/active to taxi) — comma-separated with trailing comma
+- `demoted` = players REMOVED FROM TAXI SQUAD (demoted from taxi to active or released) — comma-separated with trailing comma
+- `franchise` = the owning franchise (4-digit string)
+- Most taxi moves (107/113 = 94.7%) did NOT have `by_commish: "1"` — owners DO this themselves
+
+**CRITICAL IMPLICATION:** The import endpoint almost certainly uses `PROMOTED` and `DEMOTED` parameters.
+
+### Taxi Squad Endpoint: Inferred Write Specification
+
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=taxi_squad&L={LEAGUE_ID}
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={userCookie}
+
+PROMOTED={player_id_1},{player_id_2}&DEMOTED={player_id_3}&FRANCHISE_ID={franchise_id}
+```
+
+**Parameters (inferred from transaction data):**
+- `PROMOTED` — comma-separated player IDs to place ON the taxi squad
+- `DEMOTED` — comma-separated player IDs to remove FROM the taxi squad
+- Either or both can be populated (swap-style operations confirmed in transactions)
+- `FRANCHISE_ID` — optional for owner mode; required for commissioner impersonation
+
+**Owner mode authentication:** The 107 owner-initiated taxi moves confirm that owner-level auth (`MFL_USER_ID` cookie alone, no `MFL_IS_COMMISH`) IS sufficient for taxi squad moves on the owner's own roster.
+
+### Eligibility Rules (From League Config and Transaction Evidence)
+
+**Taxi squad size:** TheLeague has `taxiSquad: "3"` — maximum 3 players on taxi at any time.
+
+**Rookie-only restriction:** Examining all taxi squad players in 2025 and 2026:
+- All 2025 taxi players: IDs 17033, 17064, 17074, 17031, 17076, 17108, 17056, 17036, 17243
+- All 2026 taxi players: IDs 17462, 17501, 17499
+- The IDs 17xxx are all 2024/2025/2026 rookies — the range is consistent with recent draft classes
+- There is no counter-example of a veteran (ID < 15000) on taxi squad in the entire dataset
+
+**Conclusion:** In TheLeague, taxi squad IS restricted to rookies in practice. This is likely enforced by MFL based on the `draftPlayerPool: "Rookie"` league setting, though no explicit `taxiSquadEligibility` field is exposed in the league API.
+
+**`contractInfo: "TO"` field:** The 2026 taxi players all have `contractInfo: "TO"`. This appears to mean "Taxi Option" — a special contract status for taxi squad players. The 2025 taxi players have `contractInfo: ""` (empty). This field change between 2025 and 2026 likely reflects a league rule change for how taxi contracts are recorded.
+
+**Player must be on active roster first:** Transaction evidence shows all `promoted` moves are players transitioning from roster status to taxi status, not from free agent. The player must be on the franchise's active roster before being taxied.
+
+### Implications for Existing Implementation
+
+The current `movePlayerToIR()` in `mfl-matchup-api.ts:544` has three issues:
+1. Uses `/freeagency` path instead of `/import?TYPE=ir`
+2. Uses `PLAYER` singular instead of `ACTIVATED`/`DEACTIVATED`
+3. Uses raw `fetch()` with default redirect behavior (will silently drop Cookie on redirect)
+
+Recommend migrating to `/import?TYPE=ir` with `ACTIVATED`/`DEACTIVATED` params via `mflFetch()`.
+
+**Evidence files:**
+- `data/theleague/mfl-feeds/2025/transactions.json` — 90 IR + 113 TAXI transactions analyzed
+- `data/theleague/mfl-feeds/2026/transactions.json` — TAXI transactions confirmed same structure
+- `data/theleague/mfl-feeds/2026/rosters.json` — TAXI_SQUAD status players with `contractInfo: "TO"`
+- `data/theleague/mfl-feeds/2026/league.json` — `taxiSquad: "3"`, `draftPlayerPool: "Rookie"`

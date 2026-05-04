@@ -1056,17 +1056,108 @@ Note: `weeklyResults` only has data after the week is processed. For a live/curr
 
 ---
 
-#### `moveToIR` (via /freeagency endpoint)
-**Purpose:** Move player to Injured Reserve
+#### `ir` (Import) — WRITE ENDPOINT
+**Purpose:** Move player(s) to Injured Reserve and/or activate player(s) from IR back to active roster. Owner-level — no commissioner access required.
 
-**Parameters:**
-- Required: `L` (league ID), player data
-- Auth: Owner (requires MFL_USER_ID cookie)
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=ir&L={LEAGUE_ID}
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={userCookie}
+```
+
+**Parameters (inferred from transaction data — NOT verified by direct API docs access):**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `L` | Yes | League ID |
+| `ACTIVATED` | Conditional | Comma-separated player IDs to PLACE ON IR (move from active roster to IR). At least one of ACTIVATED or DEACTIVATED must be present. |
+| `DEACTIVATED` | Conditional | Comma-separated player IDs to REMOVE FROM IR (return to active roster). |
+| `FRANCHISE_ID` | No | Commissioner impersonation only. For owner mode, the franchise is determined by the auth cookie. |
+
+**Authentication:** Owner (`MFL_USER_ID` cookie only). Use `mflFetch()` from `src/utils/mfl-fetch.ts`.
+
+**Example — Place one player on IR:**
+```
+ACTIVATED=14800&L=13522
+```
+
+**Example — Return player from IR to active (and optionally place a different player on IR simultaneously):**
+```
+DEACTIVATED=14800&ACTIVATED=16642&L=13522
+```
+
+**Key Insights (added 2026-05-04):**
+- `ACTIVATED` means "activated onto the IR list" (i.e., placed on IR)
+- `DEACTIVATED` means "deactivated from IR" (i.e., returned to active roster)
+- Terminology is counter-intuitive — "activated" = going TO IR, not coming off it
+- Owner mode requires only `MFL_USER_ID` cookie; ALL 90 IR transactions in 2025 data had no `by_commish` flag
+- Commissioner impersonation supported via `FRANCHISE_ID` (+ `MFL_IS_COMMISH` cookie)
+- TheLeague has `injuredReserve: "50"` — 50-slot IR limit (effectively unlimited for practical purposes)
+- IR players count 100% toward salary cap (`includeIRWithSalary: "100"`)
+- **IMPORTANT:** The existing implementation in `src/utils/mfl-matchup-api.ts:544` uses `/freeagency?TYPE=moveToIR` with `PLAYER` (singular) and `FRANCHISE` params — this is a LEGACY path that may still function but is NOT the documented canonical endpoint. The canonical endpoint is `import?TYPE=ir` with `ACTIVATED`/`DEACTIVATED`.
+- **REDIRECT BUG:** The existing implementation also uses raw `fetch()` with default `redirect: 'follow'` which will silently drop the Cookie header on redirect to www49. Use `mflFetch()` instead.
+
+**Confidence:** Medium — inferred from 90 IR transaction records in the 2025 cached data. Parameter names match transaction field names. Direct API documentation was inaccessible (403) from the server environment.
 
 **Used In:**
-- [src/pages/api/move-to-ir.ts](src/pages/api/move-to-ir.ts)
+- [src/pages/api/move-to-ir.ts](src/pages/api/move-to-ir.ts) — uses the legacy `/freeagency` path via `mfl-matchup-api.ts:544`
 
-**Notes:** POST request to `/freeagency` endpoint with `TYPE=moveToIR`
+---
+
+#### `taxi_squad` (Import) — WRITE ENDPOINT
+**Purpose:** Move player(s) onto or off of the taxi (practice) squad. Owner-level — no commissioner access required.
+
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=taxi_squad&L={LEAGUE_ID}
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={userCookie}
+```
+
+**Parameters (inferred from transaction data — NOT verified by direct API docs access):**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `L` | Yes | League ID |
+| `PROMOTED` | Conditional | Comma-separated player IDs to place ON the taxi squad. At least one of PROMOTED or DEMOTED must be present. |
+| `DEMOTED` | Conditional | Comma-separated player IDs to remove FROM the taxi squad (return to active roster or release). |
+| `FRANCHISE_ID` | No | Commissioner impersonation only. For owner mode, franchise is determined by auth cookie. |
+
+**Authentication:** Owner (`MFL_USER_ID` cookie only). Use `mflFetch()` from `src/utils/mfl-fetch.ts`.
+
+**Example — Move rookie to taxi squad:**
+```
+PROMOTED=17096&L=13522
+```
+
+**Example — Swap: move one player off taxi, one player on:**
+```
+PROMOTED=17037&DEMOTED=17076&L=13522
+```
+
+**Example — Remove player from taxi squad:**
+```
+DEMOTED=17096&L=13522
+```
+
+**Key Insights (added 2026-05-04):**
+- `PROMOTED` = moving a player TO the taxi squad (promoted onto taxi)
+- `DEMOTED` = removing a player FROM the taxi squad
+- Owner mode is sufficient — 107 of 113 TAXI transactions in 2025 data had no `by_commish` flag
+- Swap operations (PROMOTED + DEMOTED in one call) are fully supported — confirmed in transaction data
+- TheLeague taxi squad size limit: `taxiSquad: "3"` — max 3 players at any time
+- Taxi squad players count 50% toward salary cap (`includeTaxiWithSalary: "50"`)
+- **Eligibility (TheLeague-specific):** In practice, only rookies (IDs 17xxx) are eligible. All 9 taxi players in 2025 and all 3 in 2026 are from recent draft classes. This is enforced by MFL based on league rules, not an API parameter.
+- **Player must already be on active roster:** Taxi squad moves require the player to be on the franchise's active roster first (status: ROSTER). Cannot taxi a free agent directly.
+- `contractInfo: "TO"` appears on 2026 taxi players — likely "Taxi Option" contract status, may be a 2026 league rule change.
+- Commissioner impersonation supported via `FRANCHISE_ID` parameter (+ `MFL_IS_COMMISH` cookie)
+
+**Confidence:** Medium — inferred from 113 TAXI transaction records in the 2025 cached data. Parameter names match transaction field names. Direct API documentation was inaccessible (403) from the server environment.
+
+**Related:**
+- `src/utils/mfl-fetch.ts` — required for authenticated writes
+- `data/theleague/mfl-feeds/2025/transactions.json` — source of TAXI transaction evidence
 
 ---
 

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 // @ts-expect-error - .mjs without types
 import {
   buildDraftPickWrites,
+  buildTaxiPromotions,
   getExpectedRookieContractInfo,
 } from '../scripts/sync-draft-pick-contracts.mjs';
 // @ts-expect-error - .mjs without types
@@ -232,5 +233,117 @@ describe('buildDraftPickWrites', () => {
     const writes = buildDraftPickWrites({ draftResults, playerIndex, mflSalaries, year: '2026' });
 
     expect(writes).toHaveLength(0);
+  });
+});
+
+describe('buildTaxiPromotions', () => {
+  type Write = {
+    playerId: string;
+    playerName: string;
+    franchiseId: string;
+    round: number;
+    pickInRound: number;
+  };
+
+  const makeWrite = (
+    playerId: string,
+    franchiseId: string,
+    round: number,
+    pickInRound: number,
+  ): Write => ({
+    playerId,
+    playerName: `Player ${playerId}`,
+    franchiseId,
+    round,
+    pickInRound,
+  });
+
+  it('promotes fresh picks in pick order, filling each franchise to the cap', () => {
+    const writes: Write[] = [
+      // Franchise 0001 — 4 picks, 0/3 used → fills first 3 in pick order
+      makeWrite('1001', '0001', 1, 5),
+      makeWrite('1002', '0001', 4, 16),
+      makeWrite('1003', '0001', 2, 8),
+      makeWrite('1004', '0001', 3, 12),
+      // Franchise 0002 — 1 pick, 2/3 used → fills 1 remaining slot
+      makeWrite('2001', '0002', 4, 14),
+    ];
+    const taxiCounts = new Map<string, number>([
+      ['0001', 0],
+      ['0002', 2],
+    ]);
+
+    const result = buildTaxiPromotions({ writes, taxiCounts });
+
+    const ids = result.map((p) => p.playerId).sort();
+    // 0001 picks sorted by (round,pick): R1.5=1001, R2.8=1003, R3.12=1004, R4.16=1002
+    // → first 3 fill the empty practice squad; R4.16 (1002) gets excluded.
+    // 0002: R4.14=2001 fills the only open slot.
+    expect(ids).toEqual(['1001', '1003', '1004', '2001'].sort());
+    expect(result.find((p) => p.playerId === '1002')).toBeUndefined();
+  });
+
+  it('emits no promotions for franchises already at the cap', () => {
+    const writes: Write[] = [makeWrite('1001', '0001', 2, 5), makeWrite('1002', '0001', 3, 9)];
+    const taxiCounts = new Map<string, number>([['0001', 3]]);
+
+    const result = buildTaxiPromotions({ writes, taxiCounts });
+
+    expect(result).toEqual([]);
+  });
+
+  it('treats missing taxi counts as zero (assumes empty practice squad)', () => {
+    const writes: Write[] = [makeWrite('1001', '0001', 4, 10)];
+    const taxiCounts = new Map<string, number>(); // franchise 0001 absent
+
+    const result = buildTaxiPromotions({ writes, taxiCounts });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].playerId).toBe('1001');
+  });
+
+  it('respects a custom taxiLimit when the league cap differs', () => {
+    const writes: Write[] = [
+      makeWrite('1001', '0001', 1, 1),
+      makeWrite('1002', '0001', 2, 1),
+      makeWrite('1003', '0001', 3, 1),
+    ];
+    const taxiCounts = new Map<string, number>([['0001', 0]]);
+
+    const result = buildTaxiPromotions({ writes, taxiCounts, taxiLimit: 1 });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].playerId).toBe('1001'); // earliest pick wins
+  });
+
+  it('does not sweep franchises that have no fresh picks in this run', () => {
+    const writes: Write[] = [makeWrite('1001', '0001', 4, 10)];
+    const taxiCounts = new Map<string, number>([
+      ['0001', 0],
+      ['0002', 0], // 0/3 but no fresh picks for 0002
+    ]);
+
+    const result = buildTaxiPromotions({ writes, taxiCounts });
+
+    expect(result).toHaveLength(1);
+    expect(result.every((p) => p.franchiseId === '0001')).toBe(true);
+  });
+
+  it('orders multi-franchise output deterministically via per-franchise pick order', () => {
+    const writes: Write[] = [
+      makeWrite('A2', '0001', 2, 5),
+      makeWrite('A1', '0001', 1, 5),
+      makeWrite('B2', '0002', 3, 7),
+      makeWrite('B1', '0002', 1, 7),
+    ];
+    const taxiCounts = new Map<string, number>([['0001', 0], ['0002', 0]]);
+
+    const result = buildTaxiPromotions({ writes, taxiCounts });
+
+    // Each franchise's promotions should be in ascending round/pick order.
+    const f1 = result.filter((p) => p.franchiseId === '0001').map((p) => p.playerId);
+    const f2 = result.filter((p) => p.franchiseId === '0002').map((p) => p.playerId);
+    expect(f1).toEqual(['A1', 'A2']);
+    expect(f2).toEqual(['B1', 'B2']);
   });
 });

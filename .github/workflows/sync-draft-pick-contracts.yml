@@ -1,8 +1,10 @@
 name: Sync Draft Pick Contracts
 
 # Stamps RC + slot-based rookie salary + 4yr default on newly-drafted
-# players directly to MFL. Idempotent — re-runs skip players who already
-# have RC stamped.
+# players directly to MFL, and auto-promotes those fresh picks onto the
+# practice squad in pick order until each franchise's taxi cap is full.
+# Idempotent — re-runs skip players who already have RC stamped, and
+# franchises already at the practice-squad cap produce no promotions.
 #
 # Schedule: every 5 min during May only (the rookie draft window in
 # TheLeague). Outside May the workflow does not fire at all. Update the
@@ -12,7 +14,8 @@ name: Sync Draft Pick Contracts
 # testing or off-cycle runs:
 #   GitHub UI → Actions → Sync Draft Pick Contracts → Run workflow
 #   - dry_run: leave checked to PRINT the would-be writes without
-#              touching MFL. Uncheck to actually write.
+#              touching MFL (covers both contracts and auto-taxi).
+#              Uncheck to actually write.
 
 on:
   schedule:
