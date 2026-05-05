@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-05T00:10:14.371Z"
+    "fetchedAt": "2026-05-05T01:06:36.025Z"
   },
   "players": [
     {
@@ -700,7 +700,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "KR",
+        "depthChartPosition": "SWR",
         "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
@@ -712,7 +712,20 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17075",
+          "name": "Golden, Matthew"
+        },
+        {
+          "id": "16184",
+          "name": "Reed, Jayden"
+        },
+        {
+          "id": "15789",
+          "name": "Watson, Christian"
+        }
+      ]
     },
     {
       "id": "17033",
@@ -5319,7 +5332,7 @@
         "id": "4137",
         "fullName": "James Conner",
         "team": "ARI",
-        "age": 30,
+        "age": 31,
         "height": "73",
         "weight": "233",
         "number": 6,
