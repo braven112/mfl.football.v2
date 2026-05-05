@@ -46,3 +46,6 @@ src/data/salary-history/**/summary-2*.json
 .claude/worktrees/
 .claude/memory/
 .env*.local
+
+# One-shot Redis migration cursor checkpoint (scripts/migrate-redis.mjs)
+.migrate-redis.state.json

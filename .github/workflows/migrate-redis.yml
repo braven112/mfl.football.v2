@@ -1,0 +1,131 @@
+name: Migrate Redis (old Vercel KV → new Upstash)
+
+# One-shot, augment-only backfill from the old Vercel KV into the current
+# Upstash Redis. Manually triggered from the GitHub UI.
+#
+# Default policy is "current data wins":
+#   string : copied only when absent on destination
+#   hash   : missing fields filled in; existing fields untouched
+#   set    : missing members added; existing untouched
+#   zset   : missing members added with ZADD NX (existing scores preserved)
+#   list   : copied only when absent (lists can't be merged safely)
+#
+# The SCAN cursor is checkpointed to .migrate-redis.state.json and uploaded
+# as an artifact every run. Set "resume" to true on a follow-up run to
+# pick up where the prior run left off — useful when the Upstash command
+# budget caps a single run short of a full pass.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no writes to destination — verify behavior first)'
+        type: boolean
+        default: true
+      prefix:
+        description: 'Only migrate keys with this prefix (e.g. activity:). Leave blank for all.'
+        type: string
+        default: ''
+      limit:
+        description: 'Stop after N keys this run. Leave blank for unlimited.'
+        type: string
+        default: ''
+      resume:
+        description: 'Resume from the cursor saved on the previous run.'
+        type: boolean
+        default: false
+      batch:
+        description: 'SCAN COUNT hint (default 200).'
+        type: string
+        default: ''
+
+concurrency:
+  group: migrate-redis
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read   # for `gh run download` to fetch the prior state artifact
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.24.0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore migration state from previous run
+        if: ${{ inputs.resume }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          PRIOR_RUN_ID="$(gh run list \
+            --workflow migrate-redis.yml \
+            --status completed \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)"
+          if [ -z "$PRIOR_RUN_ID" ] || [ "$PRIOR_RUN_ID" = "null" ]; then
+            echo "::warning::No prior completed run found — starting from cursor 0."
+            exit 0
+          fi
+          echo "Downloading state artifact from run $PRIOR_RUN_ID"
+          gh run download "$PRIOR_RUN_ID" --name migrate-redis-state --dir . \
+            || echo "::warning::No state artifact on run $PRIOR_RUN_ID — starting from cursor 0."
+          if [ -f .migrate-redis.state.json ]; then
+            echo "State restored:"
+            cat .migrate-redis.state.json
+          fi
+
+      - name: Run migration
+        env:
+          # Source DB (old Vercel KV — populated automatically by the Vercel
+          # integration; STORAGE_* are the legacy aliases). At least one of
+          # the URL/TOKEN pairs below must be set as a repo secret.
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          STORAGE_REST_API_URL: ${{ secrets.STORAGE_REST_API_URL }}
+          STORAGE_REST_API_TOKEN: ${{ secrets.STORAGE_REST_API_TOKEN }}
+          # Destination DB (current Upstash).
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          # Inputs piped through env to avoid shell-injection from the form.
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_RESUME: ${{ inputs.resume }}
+          INPUT_PREFIX: ${{ inputs.prefix }}
+          INPUT_LIMIT: ${{ inputs.limit }}
+          INPUT_BATCH: ${{ inputs.batch }}
+        run: |
+          ARGS=()
+          [ "$INPUT_DRY_RUN" = "true" ] && ARGS+=(--dry-run)
+          [ "$INPUT_RESUME" = "true" ] && ARGS+=(--resume)
+          [ -n "$INPUT_PREFIX" ] && ARGS+=("--prefix=$INPUT_PREFIX")
+          [ -n "$INPUT_LIMIT" ] && ARGS+=("--limit=$INPUT_LIMIT")
+          [ -n "$INPUT_BATCH" ] && ARGS+=("--batch=$INPUT_BATCH")
+          echo "Running: node scripts/migrate-redis.mjs ${ARGS[*]}"
+          node scripts/migrate-redis.mjs "${ARGS[@]}"
+
+      - name: Upload migration state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrate-redis-state
+          path: .migrate-redis.state.json
+          if-no-files-found: ignore
+          retention-days: 30
