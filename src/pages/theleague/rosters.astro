@@ -8460,7 +8460,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           actionOptions.appendChild(makeCdmActionBtn(
             'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
             () => goToRosterMoveStep('ir', 'to'),
-            false, 'icon-medkit'
+            false, 'icon-ambulance'
           ));
           if (isRookie) {
             actionOptions.appendChild(makeCdmActionBtn(
@@ -8473,7 +8473,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           actionOptions.appendChild(makeCdmActionBtn(
             'activate-from-ir', 'Activate from IR', 'Restore to active roster',
             () => goToRosterMoveStep('ir', 'from'),
-            false, 'icon-medkit'
+            false, 'icon-ambulance'
           ));
         } else if (tag === 'practice') {
           if (isRookie) {
@@ -8486,7 +8486,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           actionOptions.appendChild(makeCdmActionBtn(
             'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
             () => goToRosterMoveStep('ir', 'to'),
-            false, 'icon-medkit'
+            false, 'icon-ambulance'
           ));
         }
       }
