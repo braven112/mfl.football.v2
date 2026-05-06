@@ -410,6 +410,41 @@ describe('getPlayerEligibility', () => {
       // Without MFL rookie status, RC player gets rookie-extension instead of override
       expect(result.declarationType).not.toBe('rookie-override');
     });
+
+    it('marks 1st-round TO rookie as eligible for override with 1-4 year options', () => {
+      // 1st-round 2026 pick: contractInfo is "TO", default 4-year rookie deal.
+      // Even at currentYears=1 (which would normally fail the team-option check)
+      // the just-drafted rookie must remain adjustable until August.
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo({ status: 'R', draft_year: String(currentYear) });
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('rookie-override');
+      expect(result.yearOptions).toEqual([1, 2, 3, 4]);
+    });
+
+    it('marks TO rookie as override when default 4-year contract is set', () => {
+      const roster = makeRosterPlayer({ contractYear: '4', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo({ status: 'R', draft_year: String(currentYear) });
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('rookie-override');
+      expect(result.declarationType).not.toBe('team-option');
+      expect(result.yearOptions).toEqual([1, 2, 3, 4]);
+    });
+
+    it('does not mark TO veteran (non-rookie) for override', () => {
+      // Existing TO player whose rookie window has closed — should still flow
+      // into team-option for the Year 4 decision, not rookie-override.
+      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo({ status: 'A', draft_year: '2024' });
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.declarationType).not.toBe('rookie-override');
+      expect(result.declarationType).toBe('team-option');
+    });
   });
 
   describe('franchise-tag eligibility', () => {
