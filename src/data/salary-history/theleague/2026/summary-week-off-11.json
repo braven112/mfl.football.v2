@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-05-06T16-20-50.241Z",
+  "snapshot": "2026-05-06T16-59-18.416Z",
   "week": "off-11",
   "metadata": {
     "leagueId": "13522",
@@ -15,22 +15,22 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-06T16:20:50.615Z",
+    "fetchedAt": "2026-05-06T16:59:18.810Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-11).",
-    "generatedAt": "2026-05-06T16:20:50.615Z"
+    "generatedAt": "2026-05-06T16:59:18.810Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 130,
+      "totalPlayers": 131,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
       "starterAverage": 4024238.15,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 1952465.84,
-      "medianSalary": 915832.5,
+      "averageSalary": 1941569.15,
+      "medianSalary": 880000,
       "topPlayers": [
         {
           "id": "15287",
@@ -693,6 +693,12 @@
           "franchiseId": "0013"
         },
         {
+          "id": "17517",
+          "name": "Lane, Ja'Kobi",
+          "salary": 525000,
+          "franchiseId": "0012"
+        },
+        {
           "id": "17082",
           "name": "Bryant, Pat",
           "salary": 522500,
@@ -807,10 +813,10 @@
           "franchiseId": "0003"
         },
         {
-          "id": "17517",
-          "name": "Lane, Ja'Kobi",
+          "id": "17505",
+          "name": "Sarratt, Elijah",
           "salary": 425000,
-          "franchiseId": "0012"
+          "franchiseId": "0011"
         }
       ]
     },
@@ -1748,15 +1754,15 @@
       ]
     },
     "TE": {
-      "totalPlayers": 58,
+      "totalPlayers": 59,
       "top3Average": 5583333.33,
       "top5Average": 5142672,
       "top10Average": 4266237.25,
       "starterAverage": 3126490.14,
       "starterMedian": 2637500,
       "starterCount": 18,
-      "averageSalary": 1415382.37,
-      "medianSalary": 716922.5,
+      "averageSalary": 1398596.23,
+      "medianSalary": 658845,
       "topPlayers": [
         {
           "id": "13299",
@@ -2095,6 +2101,12 @@
           "franchiseId": "0015"
         },
         {
+          "id": "17607",
+          "name": "Raridon, Eli",
+          "salary": 425000,
+          "franchiseId": "0002"
+        },
+        {
           "id": "16645",
           "name": "All, Erick",
           "salary": 425000,
@@ -2109,15 +2121,15 @@
       ]
     },
     "QB": {
-      "totalPlayers": 50,
+      "totalPlayers": 51,
       "top3Average": 7408333.33,
       "top5Average": 6495000,
       "top10Average": 5275000,
       "starterAverage": 4383017.19,
       "starterMedian": 3887500,
       "starterCount": 16,
-      "averageSalary": 1930236.85,
-      "medianSalary": 937750,
+      "averageSalary": 1900722.4,
+      "medianSalary": 907500,
       "topPlayers": [
         {
           "id": "13589",
@@ -2400,6 +2412,12 @@
           "name": "Howard, Will",
           "salary": 495000,
           "franchiseId": "0011"
+        },
+        {
+          "id": "17466",
+          "name": "Beck, Carson",
+          "salary": 425000,
+          "franchiseId": "0006"
         },
         {
           "id": "10700",
