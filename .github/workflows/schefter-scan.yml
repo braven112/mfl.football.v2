@@ -53,7 +53,47 @@ jobs:
 
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json data/schefter/post-history.json
+          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json data/schefter/post-history.json data/schefter/groupme-suppressions.json
           git commit -m "chore: schefter scan — new transaction posts"
           git pull --rebase origin main
           git push
+
+      - name: File issue for suppressed GroupMe sends
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPORT=data/schefter/groupme-suppressions.json
+          if [ ! -f "$REPORT" ]; then
+            echo "No suppressions report — nothing to file."
+            exit 0
+          fi
+
+          COUNT=$(node -e "const r=require('./'+process.argv[1]);process.stdout.write(String((r.suppressions||[]).length))" "$REPORT")
+          if [ "$COUNT" = "0" ]; then
+            echo "No suppressed GroupMe sends."
+            exit 0
+          fi
+
+          BODY=$(node -e '
+            const r = require("./" + process.argv[1]);
+            const lines = [];
+            lines.push(`The Schefter quality gate suppressed **${r.suppressions.length}** GroupMe send(s) this run.`);
+            lines.push("");
+            lines.push("These posts still landed on the website feed but were judged not worth pinging the league chat. Review and decide whether to send a corrected version manually via GroupMe.");
+            lines.push("");
+            for (const s of r.suppressions) {
+              lines.push(`- **${s.score ?? "?"}/10** \`${s.id}\` (${s.league}) — ${s.reason ?? "no reason"}`);
+              lines.push(`  > ${s.headline}`);
+              if (s.body) lines.push(`  > ${s.body}`);
+            }
+            lines.push("");
+            lines.push(`Generated ${r.generatedAt}.`);
+            process.stdout.write(lines.join("\n"));
+          ' "$REPORT")
+
+          gh issue create \
+            --title "Schefter quality gate: $COUNT GroupMe send(s) suppressed" \
+            --label "schefter,quality-gate" \
+            --body "$BODY" \
+            || echo "Issue creation failed (continuing)"
