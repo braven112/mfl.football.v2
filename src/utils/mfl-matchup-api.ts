@@ -632,16 +632,16 @@ export class MFLMatchupApiClient {
     }
 
     try {
-      // POST directly to the league host (www49) — api.myfantasyleague.com 302s
-      // here and mflFetch converts POST → GET on redirect, which silently no-ops
-      // MFL's import endpoint (it serves the landing page and returns no error).
-      const writeHost = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
-      const url = `${writeHost}/${this.config.year}/import?TYPE=${opts.type}&L=${this.config.leagueId}`;
-      const params = new URLSearchParams();
-      // FRANCHISE_ID in the body matches the working pattern in cut-player.ts /
-      // mfl-contract-writer.ts. Owner mode tolerates it (cookie franchise must
-      // match), and it's required if MFL flips into commissioner-mode parsing.
-      params.set('FRANCHISE_ID', opts.franchiseId);
+      // Mirrors the proven owner-mode write pattern in src/pages/api/cut-player.ts:
+      // POST to api.myfantasyleague.com (mflFetch handles the cross-origin
+      // redirect to www49 and re-attaches the cookie), put every parameter in
+      // the body, owner cookie only — never send MFL_IS_COMMISH.
+      const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
+      const params = new URLSearchParams({
+        TYPE: opts.type,
+        L: this.config.leagueId,
+        FRANCHISE_ID: opts.franchiseId,
+      });
       if (opts.direction === 'to') {
         params.set(opts.onParam, opts.playerId);
         params.set(opts.offParam, '');
@@ -651,7 +651,7 @@ export class MFLMatchupApiClient {
       }
 
       console.log(
-        `[runRosterMove] POST ${url} body=${params.toString()} userCookie=${this.config.mflUserId ? 'present' : 'MISSING'}`,
+        `[runRosterMove] POST ${url} (type=${opts.type}, franchise=${opts.franchiseId}, ${opts.direction === 'to' ? opts.onParam : opts.offParam}=${opts.playerId})`,
       );
 
       const response = await mflFetch({

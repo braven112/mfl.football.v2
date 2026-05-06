@@ -1,10 +1,16 @@
 name: Sync Draft Pick Contracts
 
 # Stamps RC + slot-based rookie salary + 4yr default on newly-drafted
-# players directly to MFL, and auto-promotes those fresh picks onto the
-# practice squad in pick order until each franchise's taxi cap is full.
-# Idempotent — re-runs skip players who already have RC stamped, and
-# franchises already at the practice-squad cap produce no promotions.
+# players directly to MFL. Idempotent — re-runs skip players who already
+# have the expected contractInfo stamped.
+#
+# Practice-squad placement is NOT handled here: MFL blocks commissioner
+# impersonation when the league has `lockout: "Yes"` (TheLeague keeps it
+# on year-round), so a script-driven auto-taxi step always fails with
+# `"Can not impersonate another franchise when LOCKOUT is on."` Owners
+# move their own picks to the practice squad via the rosters page UI
+# (POST /api/move-to-practice), which uses each owner's session cookie
+# and doesn't impersonate.
 #
 # Schedule: every 5 min during May only (the rookie draft window in
 # TheLeague). Outside May the workflow does not fire at all. Update the
@@ -14,8 +20,7 @@ name: Sync Draft Pick Contracts
 # testing or off-cycle runs:
 #   GitHub UI → Actions → Sync Draft Pick Contracts → Run workflow
 #   - dry_run: leave checked to PRINT the would-be writes without
-#              touching MFL (covers both contracts and auto-taxi).
-#              Uncheck to actually write.
+#              touching MFL. Uncheck to actually write.
 
 on:
   schedule:
