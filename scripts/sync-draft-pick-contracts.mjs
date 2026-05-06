@@ -400,9 +400,16 @@ async function fetchTaxiSquadCounts({ leagueId, year, cookies }) {
  * Uses serial calls (one player per request) so partial failures don't
  * block the rest — matches MFL's documented PROMOTED/DEMOTED single-id
  * behavior and keeps audit per-pick clear.
+ *
+ * `FRANCHISE_ID` is required when running with commissioner cookies
+ * (`MFL_USER_ID` + `MFL_IS_COMMISH`), which is how this script auths.
+ * Without it, MFL applies the promotion to the commissioner's own
+ * franchise (or silently no-ops), which is why prior runs produced
+ * the salary write but no taxi move. See
+ * docs/claude/insights/domains/mfl-api.md (2026-03-13 entry).
  */
-async function promoteOneToTaxi({ leagueId, year, cookies, playerId }) {
-  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=taxi_squad&L=${leagueId}`;
+async function promoteOneToTaxi({ leagueId, year, cookies, playerId, franchiseId }) {
+  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=taxi_squad&L=${leagueId}&FRANCHISE_ID=${franchiseId}`;
   const body = new URLSearchParams({ PROMOTED: playerId, DEMOTED: '' }).toString();
   const res = await mflFetch({ url, method: 'POST', cookies, body });
   const text = await res.text();
@@ -411,6 +418,13 @@ async function promoteOneToTaxi({ leagueId, year, cookies, playerId }) {
     return { success: false, error: m?.[1] || 'MFL rejected promotion' };
   }
   if (!res.ok) return { success: false, error: `HTTP ${res.status}` };
+  // MFL's import endpoint returns the import landing page (HTML) when it
+  // silently no-ops — e.g. missing required param or unauthorized op.
+  // Treat any HTML body as a failed write so silent failures surface
+  // instead of being logged as success.
+  if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+    return { success: false, error: 'MFL did not process the promotion (received HTML landing page).' };
+  }
   return { success: true };
 }
 
@@ -641,7 +655,13 @@ async function main() {
       } else {
         let okCount = 0;
         for (const p of promotions) {
-          const r = await promoteOneToTaxi({ leagueId, year, cookies, playerId: p.playerId });
+          const r = await promoteOneToTaxi({
+            leagueId,
+            year,
+            cookies,
+            playerId: p.playerId,
+            franchiseId: p.franchiseId,
+          });
           if (r.success) {
             okCount++;
           } else {
