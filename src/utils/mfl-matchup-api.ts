@@ -629,10 +629,15 @@ export class MFLMatchupApiClient {
     }
 
     try {
-      const url = `${this.baseUrl}/${this.config.year}/import`;
+      // POST directly to the league host (www49) — going through api.myfantasyleague.com
+      // returns a 302 to www49, and mflFetch converts the POST → GET on redirect (the
+      // body is preserved by appending to the URL, but the method is not). MFL's import
+      // endpoint silently no-ops on GET — it serves the import landing page, returns
+      // no <error> tag, and the call falls through as success while the write never
+      // executes. Same pattern used by mfl-contract-writer.ts and sync-draft-pick-contracts.mjs.
+      const writeHost = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
+      const url = `${writeHost}/${this.config.year}/import?TYPE=${opts.type}&L=${this.config.leagueId}`;
       const params = new URLSearchParams();
-      params.set('TYPE', opts.type);
-      params.set('L', this.config.leagueId);
       if (opts.direction === 'to') {
         params.set(opts.onParam, opts.playerId);
         params.set(opts.offParam, '');
