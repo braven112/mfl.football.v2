@@ -25,6 +25,7 @@ import {
 } from './lib/schefter-lore.mjs';
 import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
+import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -432,6 +433,15 @@ async function generateBreakingCommentary(post, raw) {
 }
 
 // ── GroupMe Bot ──
+
+// Suppressions tracker — populated by the quality gate when it blocks a
+// GroupMe send. Flushed to data/schefter/groupme-suppressions.json after
+// the scan loop so the workflow can file a follow-up issue.
+const groupMeSuppressions = [];
+function recordGroupMeSuppression(entry) {
+  console.warn(`  [quality-gate] SUPPRESSED GroupMe: ${entry.id} (score ${entry.score}) — ${entry.reason}`);
+  groupMeSuppressions.push(entry);
+}
 
 async function postToGroupMe(text, { botIdOverride } = {}) {
   const botId = botIdOverride || process.env.GROUPME_ROGER_BOT_ID;
@@ -900,8 +910,27 @@ async function scanPendingTrades(league) {
       } else if (DRY_RUN) {
         console.log(`  [dry-run] Would post to GroupMe:\n${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`);
       } else {
-        const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
-        await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
+        // Quality gate the GroupMe ping — the website feed is forgiving, the
+        // group chat is not. Feed write above already persisted; we only
+        // suppress the chat ping for low-scoring posts.
+        const gate = await checkGroupMeQuality(
+          { headline: post.headline, body: post.body, tier: post.tier },
+          { apiKey: process.env.ANTHROPIC_API_KEY },
+        );
+        if (!gate.allow) {
+          recordGroupMeSuppression({
+            id: post.id,
+            league: leagueSlug,
+            headline: post.headline,
+            body: post.body,
+            score: gate.score,
+            reason: gate.reason,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
+          await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
+        }
       }
 
       // Append to rolling post history (skipped in dry-run). Best-effort.
@@ -2138,6 +2167,23 @@ for (const league of LEAGUES) {
   } catch (err) {
     console.error(`  Error scanning ${league.slug}:`, err.message);
   }
+}
+
+// Flush GroupMe quality-gate suppressions for the workflow to act on. We
+// always write the file (even when empty) so the workflow's "did anything
+// get suppressed?" check is a single read, not a does-the-file-exist dance.
+try {
+  const suppressionsPath = path.join(projectRoot, 'data', 'schefter', 'groupme-suppressions.json');
+  await fs.mkdir(path.dirname(suppressionsPath), { recursive: true });
+  await fs.writeFile(
+    suppressionsPath,
+    JSON.stringify({ generatedAt: new Date().toISOString(), suppressions: groupMeSuppressions }, null, 2) + '\n',
+  );
+  if (groupMeSuppressions.length > 0) {
+    console.log(`⚠️  Suppressed ${groupMeSuppressions.length} GroupMe send(s) (see ${path.relative(projectRoot, suppressionsPath)})`);
+  }
+} catch (err) {
+  console.warn(`Failed to write GroupMe suppressions log: ${err.message}`);
 }
 
 console.log(`\n✅ Done. Generated ${totalPosts} new posts.`);

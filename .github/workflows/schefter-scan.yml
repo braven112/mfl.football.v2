@@ -38,17 +38,12 @@ jobs:
           GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
+          SCHEFTER_QUALITY_THRESHOLD: ${{ vars.SCHEFTER_QUALITY_THRESHOLD }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: node scripts/schefter-scan.mjs
-
-      - name: Schefter quality gate
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SCHEFTER_QUALITY_THRESHOLD: ${{ vars.SCHEFTER_QUALITY_THRESHOLD }}
-        run: node scripts/schefter-quality-gate.mjs
 
       - name: Commit and push feed updates
         run: |
@@ -59,51 +54,47 @@ jobs:
 
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json data/schefter/post-history.json data/schefter/quality-report.json
+          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json data/schefter/post-history.json data/schefter/groupme-suppressions.json
           git commit -m "chore: schefter scan — new transaction posts"
           git pull --rebase origin main
           git push
 
-      - name: File issue for rejected posts
+      - name: File issue for suppressed GroupMe sends
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REPORT=data/schefter/quality-report.json
+          REPORT=data/schefter/groupme-suppressions.json
           if [ ! -f "$REPORT" ]; then
-            echo "No quality report — nothing to file."
+            echo "No suppressions report — nothing to file."
             exit 0
           fi
 
-          REMOVED=$(node -e "const r=require('./'+process.argv[1]);process.stdout.write(String(r.totals?.removed||0))" "$REPORT")
-          if [ "$REMOVED" = "0" ]; then
-            echo "No rejected posts."
+          COUNT=$(node -e "const r=require('./'+process.argv[1]);process.stdout.write(String((r.suppressions||[]).length))" "$REPORT")
+          if [ "$COUNT" = "0" ]; then
+            echo "No suppressed GroupMe sends."
             exit 0
           fi
 
           BODY=$(node -e '
             const r = require("./" + process.argv[1]);
             const lines = [];
-            lines.push(`Schefter quality gate rejected **${r.totals.removed}** post(s) at threshold ${r.threshold}/10 (model: ${r.model}).`);
+            lines.push(`The Schefter quality gate suppressed **${r.suppressions.length}** GroupMe send(s) this run.`);
             lines.push("");
-            lines.push("These posts were removed from the website feed before commit. They may already have been sent to GroupMe — review the chat and decide whether to send a corrected version manually.");
+            lines.push("These posts still landed on the website feed but were judged not worth pinging the league chat. Review and decide whether to send a corrected version manually via GroupMe.");
             lines.push("");
-            for (const lg of r.leagues) {
-              const rejected = (lg.scored || []).filter(s => s.action === "rejected");
-              if (!rejected.length) continue;
-              lines.push(`### ${lg.league}`);
-              for (const s of rejected) {
-                lines.push(`- **${s.score}/10** — \`${s.id}\`: ${s.reason}`);
-                lines.push(`  > ${s.headline}`);
-              }
+            for (const s of r.suppressions) {
+              lines.push(`- **${s.score ?? "?"}/10** \`${s.id}\` (${s.league}) — ${s.reason ?? "no reason"}`);
+              lines.push(`  > ${s.headline}`);
+              if (s.body) lines.push(`  > ${s.body}`);
             }
             lines.push("");
-            lines.push(`Report: \`${process.argv[1]}\` (committed alongside the feed).`);
+            lines.push(`Generated ${r.generatedAt}.`);
             process.stdout.write(lines.join("\n"));
           ' "$REPORT")
 
           gh issue create \
-            --title "Schefter quality gate: $REMOVED post(s) rejected" \
+            --title "Schefter quality gate: $COUNT GroupMe send(s) suppressed" \
             --label "schefter,quality-gate" \
             --body "$BODY" \
             || echo "Issue creation failed (continuing)"
