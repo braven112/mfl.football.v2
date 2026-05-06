@@ -44,6 +44,12 @@ jobs:
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: node scripts/schefter-scan.mjs
 
+      - name: Schefter quality gate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SCHEFTER_QUALITY_THRESHOLD: ${{ vars.SCHEFTER_QUALITY_THRESHOLD }}
+        run: node scripts/schefter-quality-gate.mjs
+
       - name: Commit and push feed updates
         run: |
           if [ -z "$(git status --porcelain)" ]; then
@@ -53,7 +59,51 @@ jobs:
 
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json data/schefter/post-history.json
+          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json data/schefter/post-history.json data/schefter/quality-report.json
           git commit -m "chore: schefter scan — new transaction posts"
           git pull --rebase origin main
           git push
+
+      - name: File issue for rejected posts
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPORT=data/schefter/quality-report.json
+          if [ ! -f "$REPORT" ]; then
+            echo "No quality report — nothing to file."
+            exit 0
+          fi
+
+          REMOVED=$(node -e "const r=require('./'+process.argv[1]);process.stdout.write(String(r.totals?.removed||0))" "$REPORT")
+          if [ "$REMOVED" = "0" ]; then
+            echo "No rejected posts."
+            exit 0
+          fi
+
+          BODY=$(node -e '
+            const r = require("./" + process.argv[1]);
+            const lines = [];
+            lines.push(`Schefter quality gate rejected **${r.totals.removed}** post(s) at threshold ${r.threshold}/10 (model: ${r.model}).`);
+            lines.push("");
+            lines.push("These posts were removed from the website feed before commit. They may already have been sent to GroupMe — review the chat and decide whether to send a corrected version manually.");
+            lines.push("");
+            for (const lg of r.leagues) {
+              const rejected = (lg.scored || []).filter(s => s.action === "rejected");
+              if (!rejected.length) continue;
+              lines.push(`### ${lg.league}`);
+              for (const s of rejected) {
+                lines.push(`- **${s.score}/10** — \`${s.id}\`: ${s.reason}`);
+                lines.push(`  > ${s.headline}`);
+              }
+            }
+            lines.push("");
+            lines.push(`Report: \`${process.argv[1]}\` (committed alongside the feed).`);
+            process.stdout.write(lines.join("\n"));
+          ' "$REPORT")
+
+          gh issue create \
+            --title "Schefter quality gate: $REMOVED post(s) rejected" \
+            --label "schefter,quality-gate" \
+            --body "$BODY" \
+            || echo "Issue creation failed (continuing)"
