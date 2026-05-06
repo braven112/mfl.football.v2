@@ -10,8 +10,11 @@
 // to allowing the send. Suppressing legitimate posts because Anthropic is
 // rate-limited is worse than letting an occasional flat post through.
 
+// Posts scoring below this (1-10 scale) are suppressed from GroupMe.
+// Edit this value to tune strictness — 6 is the default sweet spot.
+export const QUALITY_THRESHOLD = 6;
+
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
-const DEFAULT_THRESHOLD = 6;
 
 const SCORING_PROMPT = `You score a single Schefter Report post for whether it's worth pinging an entire fantasy football GroupMe chat about.
 
@@ -34,11 +37,6 @@ Score 1-10:
 - 1-3: Hallucinated, contradictory, or off-topic. Definitely suppress.
 
 Respond with JSON only: {"score": <int 1-10>, "reason": "<one short sentence>"}`;
-
-export function getThreshold(env = process.env) {
-  const raw = parseInt(env.SCHEFTER_QUALITY_THRESHOLD || '', 10);
-  return Number.isFinite(raw) && raw >= 1 && raw <= 10 ? raw : DEFAULT_THRESHOLD;
-}
 
 export function parseScorerResponse(text) {
   const match = String(text || '').match(/\{[\s\S]*\}/);
@@ -87,7 +85,7 @@ export async function checkGroupMeQuality(post, { apiKey, model, threshold, log 
     log('  [quality-gate] no ANTHROPIC_API_KEY — allowing GroupMe send');
     return { allow: true, score: null, reason: 'no-api-key', error: null };
   }
-  const t = threshold ?? getThreshold();
+  const t = threshold ?? QUALITY_THRESHOLD;
   try {
     const { score, reason } = await scoreSchefterPost(post, { apiKey, model });
     const allow = score >= t;

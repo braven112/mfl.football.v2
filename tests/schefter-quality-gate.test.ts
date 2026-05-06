@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 // @ts-expect-error — sibling .mjs module, no .d.ts
-import { parseScorerResponse, getThreshold, checkGroupMeQuality, scoreSchefterPost } from '../scripts/lib/schefter-quality-gate.mjs';
+import { parseScorerResponse, checkGroupMeQuality, scoreSchefterPost, QUALITY_THRESHOLD } from '../scripts/lib/schefter-quality-gate.mjs';
 
 describe('parseScorerResponse', () => {
   it('extracts JSON from a clean response', () => {
@@ -31,19 +31,10 @@ describe('parseScorerResponse', () => {
   });
 });
 
-describe('getThreshold', () => {
-  it('defaults to 6 when env var is unset', () => {
-    expect(getThreshold({})).toBe(6);
-  });
-
-  it('reads SCHEFTER_QUALITY_THRESHOLD when valid', () => {
-    expect(getThreshold({ SCHEFTER_QUALITY_THRESHOLD: '8' })).toBe(8);
-  });
-
-  it('falls back to 6 for out-of-range or non-numeric values', () => {
-    expect(getThreshold({ SCHEFTER_QUALITY_THRESHOLD: '0' })).toBe(6);
-    expect(getThreshold({ SCHEFTER_QUALITY_THRESHOLD: '11' })).toBe(6);
-    expect(getThreshold({ SCHEFTER_QUALITY_THRESHOLD: 'high' })).toBe(6);
+describe('QUALITY_THRESHOLD', () => {
+  it('is in the valid 1-10 range', () => {
+    expect(QUALITY_THRESHOLD).toBeGreaterThanOrEqual(1);
+    expect(QUALITY_THRESHOLD).toBeLessThanOrEqual(10);
   });
 });
 
