@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-06T04:15:06.264Z"
+    "fetchedAt": "2026-05-06T05:28:29.185Z"
   },
   "players": [
     {
@@ -1341,10 +1341,10 @@
       "id": "17482",
       "name": "Washington Jr., Mike",
       "position": "RB",
-      "salary": 425000,
+      "salary": 475000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "4",
       "points": 0,
       "team": "LV",
       "draftYear": 2026,
@@ -9488,6 +9488,57 @@
         {
           "id": "17079",
           "name": "Johnson, Tez"
+        }
+      ]
+    },
+    {
+      "id": "17567",
+      "name": "Delp, Oscar",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "TAXI_SQUAD",
+      "contractYear": "1",
+      "points": 0,
+      "team": "NO",
+      "draftYear": 2026,
+      "draftTeam": "NOS",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17567_thumb.jpg",
+      "externalIds": {
+        "mfl": "17567",
+        "sleeper": "13319",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13319",
+        "fullName": "Oscar Delp",
+        "team": "NO",
+        "age": 22,
+        "height": "77",
+        "weight": "245",
+        "number": 88,
+        "college": "Georgia",
+        "birthDate": "2003-08-04",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "14861",
+          "name": "Johnson, Juwan"
         }
       ]
     },
