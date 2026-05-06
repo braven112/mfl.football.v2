@@ -577,7 +577,7 @@ export class MFLMatchupApiClient {
    */
   async movePlayerToIR(
     playerId: string,
-    _franchiseId: string,
+    franchiseId: string,
     direction: 'to' | 'from' = 'to',
   ): Promise<{ success: boolean; error?: string }> {
     return this.runRosterMove({
@@ -585,6 +585,7 @@ export class MFLMatchupApiClient {
       onParam: 'ACTIVATED',
       offParam: 'DEACTIVATED',
       playerId,
+      franchiseId,
       direction,
     });
   }
@@ -601,7 +602,7 @@ export class MFLMatchupApiClient {
    */
   async movePlayerToTaxi(
     playerId: string,
-    _franchiseId: string,
+    franchiseId: string,
     direction: 'to' | 'from' = 'to',
   ): Promise<{ success: boolean; error?: string }> {
     return this.runRosterMove({
@@ -609,6 +610,7 @@ export class MFLMatchupApiClient {
       onParam: 'PROMOTED',
       offParam: 'DEMOTED',
       playerId,
+      franchiseId,
       direction,
     });
   }
@@ -622,6 +624,7 @@ export class MFLMatchupApiClient {
     onParam: 'ACTIVATED' | 'PROMOTED';
     offParam: 'DEACTIVATED' | 'DEMOTED';
     playerId: string;
+    franchiseId: string;
     direction: 'to' | 'from';
   }): Promise<{ success: boolean; error?: string }> {
     if (!this.config.mflUserId) {
@@ -629,15 +632,16 @@ export class MFLMatchupApiClient {
     }
 
     try {
-      // POST directly to the league host (www49) — going through api.myfantasyleague.com
-      // returns a 302 to www49, and mflFetch converts the POST → GET on redirect (the
-      // body is preserved by appending to the URL, but the method is not). MFL's import
-      // endpoint silently no-ops on GET — it serves the import landing page, returns
-      // no <error> tag, and the call falls through as success while the write never
-      // executes. Same pattern used by mfl-contract-writer.ts and sync-draft-pick-contracts.mjs.
+      // POST directly to the league host (www49) — api.myfantasyleague.com 302s
+      // here and mflFetch converts POST → GET on redirect, which silently no-ops
+      // MFL's import endpoint (it serves the landing page and returns no error).
       const writeHost = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
       const url = `${writeHost}/${this.config.year}/import?TYPE=${opts.type}&L=${this.config.leagueId}`;
       const params = new URLSearchParams();
+      // FRANCHISE_ID in the body matches the working pattern in cut-player.ts /
+      // mfl-contract-writer.ts. Owner mode tolerates it (cookie franchise must
+      // match), and it's required if MFL flips into commissioner-mode parsing.
+      params.set('FRANCHISE_ID', opts.franchiseId);
       if (opts.direction === 'to') {
         params.set(opts.onParam, opts.playerId);
         params.set(opts.offParam, '');
@@ -645,6 +649,10 @@ export class MFLMatchupApiClient {
         params.set(opts.onParam, '');
         params.set(opts.offParam, opts.playerId);
       }
+
+      console.log(
+        `[runRosterMove] POST ${url} body=${params.toString()} userCookie=${this.config.mflUserId ? 'present' : 'MISSING'}`,
+      );
 
       const response = await mflFetch({
         url,
@@ -654,6 +662,9 @@ export class MFLMatchupApiClient {
       });
 
       const text = await response.text();
+      console.log(
+        `[runRosterMove] MFL response: ${response.status} ${response.headers.get('content-type') ?? ''} | body=${text.slice(0, 500)}`,
+      );
 
       if (text.includes('<error>') || text.includes('"error"')) {
         const errorMatch =
