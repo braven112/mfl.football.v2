@@ -109,6 +109,10 @@ import {
   getTeamNameCount30d,
   recordTeamNaming,
 } from './lib/schefter-team-naming.mjs';
+import {
+  tipReferencesCompletedPick,
+  loadDraftPicksForYear,
+} from './lib/draft-pick-detector.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -2464,12 +2468,29 @@ async function main() {
 
   // Drop expired
   const now = new Date();
-  const freshTips = parsedTips.filter((t) => {
+  let freshTips = parsedTips.filter((t) => {
     const age = now.getTime() - (t.submittedAt ?? 0);
     return age <= TIP_EXPIRY_MS;
   });
   const expiredCount = parsedTips.length - freshTips.length;
   if (expiredCount > 0) log(`  Expired tips (>24h): ${expiredCount}`);
+
+  // Drop tips referencing draft picks that have already been made. Tips
+  // marinate in the queue for up to TIP_EXPIRY_MS (7d), so a "Vitside
+  // taking TE at 1.12" whisper submitted before the pick can still be
+  // sitting in the queue 24h after Vitside actually picked. Posting it
+  // then reads as a hallucination — drop the tip instead. Anchored to
+  // the league year so the matcher loads the right draftResults.json.
+  const seasonYear = getSeasonYearForTipster(now);
+  const draftPicks = await loadDraftPicksForYear({ projectRoot, leagueYear: seasonYear });
+  if (draftPicks && draftPicks.length > 0) {
+    const beforeCount = freshTips.length;
+    freshTips = freshTips.filter((t) => !tipReferencesCompletedPick(t.text ?? '', draftPicks));
+    const droppedCount = beforeCount - freshTips.length;
+    if (droppedCount > 0) {
+      log(`  Dropped tips referencing already-made picks: ${droppedCount}`);
+    }
+  }
 
   if (freshTips.length === 0) {
     log('  No fresh tips — clearing stale queue');
