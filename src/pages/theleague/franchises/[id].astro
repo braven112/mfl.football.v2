@@ -27,6 +27,23 @@ type Era = {
   banner?: string;
   icon?: string;
   isCurrent: boolean;
+  sourceFranchiseId?: string | null;
+};
+
+// Resolve the identity (name/banner/icon) for a given franchise ID + year by
+// reading its config history. Used when one team's owner held a different
+// franchise ID for some years.
+const lookupIdentityFor = (franchiseId: string, year: number) => {
+  const t = (leagueConfig.teams as any[]).find((x) => x.franchiseId === franchiseId);
+  if (!t) return null;
+  if (Array.isArray(t.history)) {
+    for (const h of t.history) {
+      if (year >= h.yearStart && year <= h.yearEnd) {
+        return { name: h.name, nameMedium: h.nameMedium ?? h.name, banner: h.banner, icon: h.icon };
+      }
+    }
+  }
+  return { name: t.name, nameMedium: t.nameMedium ?? t.name, banner: t.banner, icon: t.icon };
 };
 const normalizeIdentity = (s: string): string =>
   (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
@@ -81,7 +98,15 @@ const buildEraFromGroup = (group: EraGroup): Era => {
 
 const pushOrExtend = (entry: Era) => {
   const last = eras[eras.length - 1];
-  if (last && normalizeIdentity(last.name) === normalizeIdentity(entry.name)) {
+  // Only merge if the name AND the underlying franchise are the same — two
+  // separate stints that share a name (e.g. Midwestside on 0010 then on
+  // 0011) should remain visually distinct so the gap between them is
+  // visible.
+  if (
+    last &&
+    normalizeIdentity(last.name) === normalizeIdentity(entry.name) &&
+    (last.sourceFranchiseId ?? null) === (entry.sourceFranchiseId ?? null)
+  ) {
     last.yearEnd = Math.max(last.yearEnd, entry.yearEnd);
     last.yearStart = Math.min(last.yearStart, entry.yearStart);
     if (entry.isCurrent) last.isCurrent = true;
@@ -92,7 +117,30 @@ const pushOrExtend = (entry: Era) => {
   eras.push(entry);
 };
 
-if (Array.isArray(team?.history) && team.history.length > 0) {
+if (Array.isArray(team?.ownerHistory) && team.ownerHistory.length > 0) {
+  // Owner-driven era construction — one era per ownerHistory entry, with
+  // the identity sourced from the relevant franchise's history config.
+  // Keeps both stints (e.g. Midwestside Connection on 0010 in 2012-2015
+  // and on 0011 in 2019+) on the same page.
+  const sortedOwner = [...team.ownerHistory].sort((a: any, b: any) => a.yearStart - b.yearStart);
+  for (const entry of sortedOwner) {
+    const cap = Math.min(entry.yearEnd, maxYear, new Date().getFullYear());
+    if (cap < entry.yearStart) continue;
+    const midYear = entry.yearStart + Math.floor((cap - entry.yearStart) / 2);
+    const ident = lookupIdentityFor(entry.franchiseId, midYear);
+    if (!ident) continue;
+    pushOrExtend({
+      name: ident.name,
+      nameMedium: ident.nameMedium,
+      yearStart: entry.yearStart,
+      yearEnd: entry.yearEnd >= 9999 ? 9999 : entry.yearEnd,
+      banner: ident.banner ?? team.banner,
+      icon: ident.icon ?? team.icon,
+      isCurrent: entry.franchiseId === team.franchiseId && entry.yearEnd >= 9999,
+      sourceFranchiseId: entry.franchiseId !== team.franchiseId ? entry.franchiseId : null,
+    });
+  }
+} else if (Array.isArray(team?.history) && team.history.length > 0) {
   for (const group of groupHistory(team.history)) {
     pushOrExtend(buildEraFromGroup(group));
   }
@@ -357,7 +405,9 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
 
     <section class="eras">
       <h2>Era History</h2>
-      {eraStats.map(({ era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers }) => (
+      {eraStats
+        .filter(({ seasons }) => seasons.length > 0)
+        .map(({ era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers }) => (
         <div class="era" id={`era-${era.yearStart}`}>
           <div class="era-header">
             {era.icon && <img src={era.icon} alt="" class="era-icon" />}
@@ -365,6 +415,9 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
               <h3>
                 {era.name}
                 {era.isCurrent && <span class="current-tag">Current</span>}
+                {era.sourceFranchiseId && (
+                  <span class="prior-franchise-tag">as franchise {era.sourceFranchiseId}</span>
+                )}
               </h3>
               <p class="meta">
                 {era.yearStart === era.yearEnd || era.yearEnd === 9999
@@ -642,6 +695,18 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+  .prior-franchise-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--surface-2, #f0f0f0);
+    color: var(--text-secondary, #555);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
     vertical-align: middle;
   }
 

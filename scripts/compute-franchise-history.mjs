@@ -85,6 +85,81 @@ const getIdentityForYear = (franchiseId, year) => {
   };
 };
 
+// --- Owner-history attribution ---
+// Some franchises moved IDs over the years (e.g. the current Midwestside
+// Connection owner held franchise 0010 from 2012-2015 then took over 0011
+// in 2019). For each (sourceFranchiseId, year) the attribution map returns
+// the franchise that should get credit.
+const teamsWithOwnerHistory = currentTeams.filter((t) => Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0);
+
+const normalizeName = (s) => (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
+// Infer the year the current owner took over for each franchise. Used to
+// exclude former-owner years from the franchise's career stats.
+//
+//   1. If the team has an ownerHistory: earliest yearStart across entries.
+//   2. Else if the most recent history entry's name matches the current
+//      top-level name: walk backwards including consecutive entries that
+//      share the same name OR the same ownerEra → return earliest yearStart
+//      of that run.
+//   3. Else if there's a history but no name match: yearEnd of the last
+//      history entry + 1 (current owner started after the prior owner).
+//   4. Else (no history at all): null → include all years.
+const inferCurrentOwnerSince = (team) => {
+  if (Array.isArray(team.ownerHistory) && team.ownerHistory.length > 0) {
+    return Math.min(...team.ownerHistory.map((h) => h.yearStart));
+  }
+  if (!Array.isArray(team.history) || team.history.length === 0) {
+    return null;
+  }
+  const sorted = [...team.history].sort((a, b) => a.yearStart - b.yearStart);
+  const last = sorted[sorted.length - 1];
+  const currentNorm = normalizeName(team.name);
+  if (normalizeName(last.name) !== currentNorm) {
+    return last.yearEnd + 1;
+  }
+  let i = sorted.length - 1;
+  while (i > 0) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    const sameName = normalizeName(prev.name) === normalizeName(cur.name);
+    const sameEra =
+      prev.ownerEra != null && cur.ownerEra != null && prev.ownerEra === cur.ownerEra;
+    if (sameName || sameEra) i--;
+    else break;
+  }
+  return sorted[i].yearStart;
+};
+
+const currentOwnerSinceMap = new Map();
+for (const team of currentTeams) {
+  currentOwnerSinceMap.set(team.franchiseId, inferCurrentOwnerSince(team));
+}
+
+const attributeYear = (sourceId, year) => {
+  // Cross-franchise ownerHistory claim wins first.
+  for (const team of teamsWithOwnerHistory) {
+    for (const entry of team.ownerHistory) {
+      if (entry.franchiseId === sourceId && year >= entry.yearStart && year <= entry.yearEnd) {
+        return team.franchiseId;
+      }
+    }
+  }
+  const sourceTeam = currentTeams.find((t) => t.franchiseId === sourceId);
+  // If the source team itself has an ownerHistory but none of its entries
+  // cover this year, the year belongs to a former owner we don't track.
+  if (Array.isArray(sourceTeam?.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
+    return null;
+  }
+  // For teams without explicit ownerHistory, drop years before the inferred
+  // currentOwnerSince — those belong to a former owner.
+  const since = currentOwnerSinceMap.get(sourceId);
+  if (since != null && year < since) {
+    return null;
+  }
+  return sourceId;
+};
+
 // --- Helpers for playoff bracket parsing ---
 function getChampionshipResult(playoffBrackets) {
   if (!playoffBrackets) return null;
@@ -359,9 +434,13 @@ for (const year of years) {
   // Awards from salaries
   const awards = computeAwardsForYear(salaryData);
 
-  // Per-franchise per-year row
+  // Per-franchise per-year row — apply ownerHistory attribution so years
+  // follow the human owner across franchise-ID changes.
   for (const row of standingsRows) {
-    const fr = ensureFranchise(row.franchiseId);
+    const targetId = attributeYear(row.franchiseId, year);
+    if (!targetId) continue; // skip — former-owner year on a team that has ownerHistory
+
+    const fr = ensureFranchise(targetId);
     const identity = getIdentityForYear(row.franchiseId, year);
 
     let playoffResult = playoffParticipants.has(row.franchiseId) ? 'playoffs' : 'missed';
@@ -380,6 +459,7 @@ for (const year of years) {
       icon: identity.icon,
       banner: identity.banner,
       isHistorical: identity.isHistorical,
+      sourceFranchiseId: row.franchiseId !== targetId ? row.franchiseId : null,
       wins: row.wins,
       losses: row.losses,
       ties: row.ties,
@@ -415,52 +495,65 @@ for (const year of years) {
     }
   }
 
-  // Award winners
+  // Award winners — re-attribute by ownerHistory too.
+  const attributeAwardFranchise = (franchiseId) => attributeYear(franchiseId, year);
+
   if (awards?.mvp) {
-    const fr = ensureFranchise(awards.mvp.franchiseId);
-    fr.mvpAwards.push({
-      year,
-      playerId: awards.mvp.id,
-      playerName: awards.mvp.name,
-      position: awards.mvp.position,
-      points: awards.mvp.points,
-      salary: awards.mvp.salary,
-    });
+    const target = attributeAwardFranchise(awards.mvp.franchiseId);
+    if (target) {
+      ensureFranchise(target).mvpAwards.push({
+        year,
+        playerId: awards.mvp.id,
+        playerName: awards.mvp.name,
+        position: awards.mvp.position,
+        points: awards.mvp.points,
+        salary: awards.mvp.salary,
+        sourceFranchiseId: awards.mvp.franchiseId !== target ? awards.mvp.franchiseId : null,
+      });
+    }
   }
   if (awards?.osweiler) {
-    const fr = ensureFranchise(awards.osweiler.franchiseId);
-    fr.brockOsweilerAwards.push({
-      year,
-      playerId: awards.osweiler.id,
-      playerName: awards.osweiler.name,
-      position: awards.osweiler.position,
-      points: awards.osweiler.points,
-      salary: awards.osweiler.salary,
-    });
+    const target = attributeAwardFranchise(awards.osweiler.franchiseId);
+    if (target) {
+      ensureFranchise(target).brockOsweilerAwards.push({
+        year,
+        playerId: awards.osweiler.id,
+        playerName: awards.osweiler.name,
+        position: awards.osweiler.position,
+        points: awards.osweiler.points,
+        salary: awards.osweiler.salary,
+        sourceFranchiseId: awards.osweiler.franchiseId !== target ? awards.osweiler.franchiseId : null,
+      });
+    }
   }
   if (awards?.jerryJones) {
-    const fr = ensureFranchise(awards.jerryJones.franchiseId);
-    fr.jerryJonesAwards.push({
-      year,
-      costPerPoint: awards.jerryJones.costPerPoint,
-      totalSalary: awards.jerryJones.totalSalary,
-      totalPoints: awards.jerryJones.totalPoints,
-    });
+    const target = attributeAwardFranchise(awards.jerryJones.franchiseId);
+    if (target) {
+      ensureFranchise(target).jerryJonesAwards.push({
+        year,
+        costPerPoint: awards.jerryJones.costPerPoint,
+        totalSalary: awards.jerryJones.totalSalary,
+        totalPoints: awards.jerryJones.totalPoints,
+        sourceFranchiseId: awards.jerryJones.franchiseId !== target ? awards.jerryJones.franchiseId : null,
+      });
+    }
   }
 
-  // Single-game highlights from weekly results
+  // Single-game highlights from weekly results — also re-attribute.
   if (weeklyResults?.weeks) {
     weeklyResults.weeks.forEach((week) => {
       const weekNum = parseNum(week.week);
       Object.entries(week.scores || {}).forEach(([fid, raw]) => {
         const score = parseNum(raw);
         if (score <= 0) return;
-        const fr = ensureFranchise(fid);
+        const target = attributeYear(fid, year);
+        if (!target) return;
+        const fr = ensureFranchise(target);
         if (!fr.highlights.highestSingleGame || score > fr.highlights.highestSingleGame.score) {
-          fr.highlights.highestSingleGame = { year, week: weekNum, score };
+          fr.highlights.highestSingleGame = { year, week: weekNum, score, sourceFranchiseId: fid !== target ? fid : null };
         }
         if (!fr.highlights.lowestSingleGame || score < fr.highlights.lowestSingleGame.score) {
-          fr.highlights.lowestSingleGame = { year, week: weekNum, score };
+          fr.highlights.lowestSingleGame = { year, week: weekNum, score, sourceFranchiseId: fid !== target ? fid : null };
         }
       });
     });
@@ -499,6 +592,7 @@ for (const [id, fr] of franchiseMap) {
   fr.currentBanner = team?.banner ?? null;
   fr.currentDivision = team?.division ?? null;
   fr.currentColor = team?.color ?? null;
+  fr.currentOwnerSince = currentOwnerSinceMap.get(id) ?? null;
 
   franchises[id] = fr;
 }
