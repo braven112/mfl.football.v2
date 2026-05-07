@@ -20,6 +20,7 @@ const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
   { name: 'build:bookmarklets', cmd: 'pnpm run build:bookmarklets' },
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
+  { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history' },
 ];
 
 const PARALLEL = [
