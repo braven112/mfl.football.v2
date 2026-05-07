@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-07T04:16:24.121Z"
+    "fetchedAt": "2026-05-07T05:32:15.469Z"
   },
   "players": [
     {
@@ -619,30 +619,6 @@
           "name": "Harvey, RJ"
         }
       ]
-    },
-    {
-      "id": "14079",
-      "name": "Sanders, Miles",
-      "position": "RB",
-      "salary": 467500,
-      "franchiseId": "0001",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 0,
-      "team": "DAL",
-      "draftYear": 2019,
-      "draftTeam": "PHI",
-      "birthdate": 862462800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14079_thumb.jpg",
-      "externalIds": {
-        "mfl": "14079",
-        "sleeper": null,
-        "gsis": null
-      },
-      "sleeper": null,
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": null
     },
     {
       "id": "17096",
@@ -1314,61 +1290,6 @@
       ]
     },
     {
-      "id": "17549",
-      "name": "Roush, Sam",
-      "position": "TE",
-      "salary": 425000,
-      "franchiseId": "0001",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 0,
-      "team": "CHI",
-      "draftYear": 2026,
-      "draftTeam": "CHI",
-      "birthdate": null,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17549_thumb.jpg",
-      "externalIds": {
-        "mfl": "17549",
-        "sleeper": "13322",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13322",
-        "fullName": "Sam Roush",
-        "team": "CHI",
-        "age": 22,
-        "height": "77",
-        "weight": "260",
-        "number": null,
-        "college": "Stanford",
-        "birthDate": "2003-09-06",
-        "status": "Active",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "17104",
-          "name": "Loveland, Colston"
-        },
-        {
-          "id": "14867",
-          "name": "Kmet, Cole"
-        }
-      ]
-    },
-    {
       "id": "17512",
       "name": "Williams, Antonio",
       "position": "WR",
@@ -1450,6 +1371,61 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "17549",
+      "name": "Roush, Sam",
+      "position": "TE",
+      "salary": 450000,
+      "franchiseId": "0001",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 0,
+      "team": "CHI",
+      "draftYear": 2026,
+      "draftTeam": "CHI",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17549_thumb.jpg",
+      "externalIds": {
+        "mfl": "17549",
+        "sleeper": "13322",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13322",
+        "fullName": "Sam Roush",
+        "team": "CHI",
+        "age": 22,
+        "height": "77",
+        "weight": "260",
+        "number": null,
+        "college": "Stanford",
+        "birthDate": "2003-09-06",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "17104",
+          "name": "Loveland, Colston"
+        },
+        {
+          "id": "14867",
+          "name": "Kmet, Cole"
+        }
+      ]
     },
     {
       "id": "14717",
@@ -15281,12 +15257,71 @@
       "depthChartAhead": null
     },
     {
+      "id": "17501",
+      "name": "Concepcion, KC",
+      "position": "WR",
+      "salary": 1550000,
+      "franchiseId": "0013",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 0,
+      "team": "CLE",
+      "draftYear": 2026,
+      "draftTeam": "CLE",
+      "birthdate": 1095998400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17501_thumb.jpg",
+      "externalIds": {
+        "mfl": "17501",
+        "sleeper": "13298",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13298",
+        "fullName": "KC Concepcion",
+        "team": "CLE",
+        "age": 21,
+        "height": "71",
+        "weight": "196",
+        "number": 17,
+        "college": "Texas A&M",
+        "birthDate": "2004-09-23",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
+        },
+        {
+          "id": "16191",
+          "name": "Tillman, Cedric"
+        },
+        {
+          "id": "17076",
+          "name": "Bond, Isaiah"
+        }
+      ]
+    },
+    {
       "id": "17519",
       "name": "Lance, Bryce",
       "position": "WR",
       "salary": 475000,
       "franchiseId": "0013",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "4",
       "points": 0,
       "team": "NO",
@@ -15349,7 +15384,7 @@
       "position": "RB",
       "salary": 475000,
       "franchiseId": "0013",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "4",
       "points": 0,
       "team": "WAS",
@@ -15399,65 +15434,6 @@
         {
           "id": "15721",
           "name": "White, Rachaad"
-        }
-      ]
-    },
-    {
-      "id": "17501",
-      "name": "Concepcion, KC",
-      "position": "WR",
-      "salary": 1550000,
-      "franchiseId": "0013",
-      "status": "TAXI_SQUAD",
-      "contractYear": "4",
-      "points": 0,
-      "team": "CLE",
-      "draftYear": 2026,
-      "draftTeam": "CLE",
-      "birthdate": 1095998400,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17501_thumb.jpg",
-      "externalIds": {
-        "mfl": "17501",
-        "sleeper": "13298",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13298",
-        "fullName": "KC Concepcion",
-        "team": "CLE",
-        "age": 21,
-        "height": "71",
-        "weight": "196",
-        "number": 17,
-        "college": "Texas A&M",
-        "birthDate": "2004-09-23",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "SWR",
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
-          "id": "16191",
-          "name": "Tillman, Cedric"
-        },
-        {
-          "id": "17076",
-          "name": "Bond, Isaiah"
         }
       ]
     },
