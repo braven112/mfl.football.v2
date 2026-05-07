@@ -455,8 +455,9 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     line-height: 0;
   }
   .hero-banner img {
-    width: 100%;
+    width: calc(100% + 20px);
     height: auto;
+    margin-left: -10px;
     display: block;
   }
   .crown {
