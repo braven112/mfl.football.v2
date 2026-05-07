@@ -37,6 +37,48 @@ const minYear = Math.min(...yearsForFranchise);
 const maxYear = Math.max(...yearsForFranchise);
 const currentNorm = normalizeIdentity(team?.name ?? '');
 
+// Group history entries by ownerEra (when set) so multiple aliases under one
+// owner collapse to a single era card with a combined name like "Poker in
+// the Rear / Generals". Entries without ownerEra fall back to name-grouping.
+type EraGroup = { entries: any[]; key: string };
+const groupHistory = (history: any[]): EraGroup[] => {
+  const groups: EraGroup[] = [];
+  for (const h of history) {
+    const key = h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.entries.push(h);
+    } else {
+      groups.push({ key, entries: [h] });
+    }
+  }
+  return groups;
+};
+
+const buildEraFromGroup = (group: EraGroup): Era => {
+  const tally = new Map<string, number>();
+  for (const e of group.entries) {
+    const span = e.yearEnd - e.yearStart + 1;
+    tally.set(e.name, (tally.get(e.name) || 0) + span);
+  }
+  const sortedNames = Array.from(tally.entries()).sort((a, b) => b[1] - a[1]);
+  const dominantName = sortedNames[0][0];
+  const displayName =
+    sortedNames.length > 1
+      ? sortedNames.map(([n]) => n).join(' / ')
+      : dominantName;
+  const dominantEntry = group.entries.find((e) => e.name === dominantName) ?? group.entries[0];
+  return {
+    name: displayName,
+    nameMedium: displayName,
+    yearStart: Math.min(...group.entries.map((e: any) => e.yearStart)),
+    yearEnd: Math.max(...group.entries.map((e: any) => e.yearEnd)),
+    banner: dominantEntry.banner,
+    icon: dominantEntry.icon,
+    isCurrent: normalizeIdentity(dominantName) === currentNorm,
+  };
+};
+
 const pushOrExtend = (entry: Era) => {
   const last = eras[eras.length - 1];
   if (last && normalizeIdentity(last.name) === normalizeIdentity(entry.name)) {
@@ -51,16 +93,8 @@ const pushOrExtend = (entry: Era) => {
 };
 
 if (Array.isArray(team?.history) && team.history.length > 0) {
-  for (const h of team.history) {
-    pushOrExtend({
-      name: h.name,
-      nameMedium: h.nameMedium ?? h.name,
-      yearStart: h.yearStart,
-      yearEnd: h.yearEnd,
-      banner: h.banner,
-      icon: h.icon,
-      isCurrent: normalizeIdentity(h.name) === currentNorm,
-    });
+  for (const group of groupHistory(team.history)) {
+    pushOrExtend(buildEraFromGroup(group));
   }
   const earliestHistoryYear = Math.min(...team.history.map((h: any) => h.yearStart));
   const latestHistoryYear = Math.max(...team.history.map((h: any) => h.yearEnd));
@@ -417,13 +451,12 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     position: relative;
     border-radius: 0.75rem;
     overflow: hidden;
-    aspect-ratio: 3 / 1;
     background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
+    line-height: 0;
   }
   .hero-banner img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
     display: block;
   }
   .crown {

@@ -74,29 +74,39 @@ const historicalIdentities: HistoricalIdentity[] = [];
 for (const team of leagueConfig.teams as any[]) {
   if (!Array.isArray(team.history)) continue;
   const currentNorm = normalizeIdentity(team.name);
-  // Group all entries by normalized name (non-adjacent runs collapse too —
-  // e.g. "Poker in the Rear" appears in 2012-2013 and 2015 with Generals
-  // between, but it should still show as one row with the union range).
-  const byName = new Map<string, HistoricalIdentity>();
+  // Group entries by ownerEra when set (multiple aliases under one owner —
+  // e.g. franchise 0003's Poker in the Rear / Generals run), otherwise by
+  // normalized name. Skip groups that match the current franchise name.
+  const groups = new Map<string, { entries: typeof team.history; nameTally: Map<string, number> }>();
   for (const h of team.history) {
-    const key = normalizeIdentity(h.name);
-    if (key === currentNorm) continue;
-    const existing = byName.get(key);
-    if (existing) {
-      existing.yearEnd = Math.max(existing.yearEnd, h.yearEnd);
-      existing.yearStart = Math.min(existing.yearStart, h.yearStart);
-      existing.banner = existing.banner ?? h.banner ?? null;
-    } else {
-      byName.set(key, {
-        franchiseId: team.franchiseId,
-        name: h.name,
-        yearStart: h.yearStart,
-        yearEnd: h.yearEnd,
-        banner: h.banner ?? null,
-      });
+    const groupKey =
+      h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, { entries: [], nameTally: new Map() });
     }
+    const g = groups.get(groupKey)!;
+    g.entries.push(h);
+    const yearSpan = h.yearEnd - h.yearStart + 1;
+    g.nameTally.set(h.name, (g.nameTally.get(h.name) || 0) + yearSpan);
   }
-  historicalIdentities.push(...byName.values());
+  for (const { entries, nameTally } of groups.values()) {
+    const uniqueNames = Array.from(nameTally.entries()).sort((a, b) => b[1] - a[1]);
+    const dominantName = uniqueNames[0][0];
+    if (normalizeIdentity(dominantName) === currentNorm) continue;
+    const yearStart = Math.min(...entries.map((e: any) => e.yearStart));
+    const yearEnd = Math.max(...entries.map((e: any) => e.yearEnd));
+    const displayName =
+      uniqueNames.length > 1
+        ? uniqueNames.map(([name]) => name).join(' / ')
+        : dominantName;
+    historicalIdentities.push({
+      franchiseId: team.franchiseId,
+      name: displayName,
+      yearStart,
+      yearEnd,
+      banner: entries[0].banner ?? null,
+    });
+  }
 }
 historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yearStart);
 ---
@@ -249,14 +259,13 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
   }
 
   .banner {
-    aspect-ratio: 3 / 1;
     background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
     overflow: hidden;
+    line-height: 0;
   }
   .banner img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
     display: block;
   }
 
