@@ -540,6 +540,12 @@ for (const year of years) {
       ? Array.from(divisionTitleHolders.entries()).find(([, id]) => id === row.franchiseId)?.[0]
       : null;
 
+    // Suppress preseason placeholder standings: when a season has zero
+    // games played, MFL's standings still report a regSeasonRank and
+    // mark a division leader by tiebreaker. Treat those as "not played"
+    // so unplayed years don't claim a rank or division title.
+    const seasonNotStarted = row.wins === 0 && row.losses === 0 && row.ties === 0;
+
     fr.yearByYear.push({
       year,
       name: identity.name,
@@ -552,10 +558,10 @@ for (const year of years) {
       losses: row.losses,
       ties: row.ties,
       pointsFor: row.pointsFor,
-      regSeasonRank: row.regSeasonRank,
+      regSeasonRank: seasonNotStarted ? null : row.regSeasonRank,
       divisionId: row.divisionId,
       divisionName: row.divisionId ? divisionNames.get(row.divisionId) : null,
-      wonDivision: !!wonDivision,
+      wonDivision: !seasonNotStarted && !!wonDivision,
       playoffResult,
     });
 
@@ -574,7 +580,7 @@ for (const year of years) {
       fr.thirdPlaces.push(year);
     }
 
-    if (wonDivision) {
+    if (wonDivision && !seasonNotStarted) {
       fr.divisionTitles.push({
         year,
         divisionId: wonDivision,
