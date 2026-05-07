@@ -93,8 +93,8 @@ export function valuePlayer({ player, adpRankById }) {
 }
 
 function valueDraftPick(/* pick */) {
-  // Phase 1 doesn't include picks in speculation. Reserved for Phase 3 when
-  // we're ready to model rookie draft slots and future-pick discounting.
+  // Picks aren't modeled yet. Reserved for a future phase when we're ready
+  // to value rookie draft slots + future-pick discounting.
   return 0;
 }
 

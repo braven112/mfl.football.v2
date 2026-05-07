@@ -4,7 +4,7 @@
  * + roster + cap state into Schefter-voiced speculation posts on the news feed.
  *
  * Phase 1 scope (per docs/plans/schefter-trade-speculation.md):
- *   - Two-team match search (no three-team yet)
+ *   - Two-team match search
  *   - Schefter blurb via Claude API (falls back to template on API failure)
  *   - Append to src/data/theleague/schefter-feed.json
  *   - Append to data/theleague/derived/speculation-history.json (rotation gate)

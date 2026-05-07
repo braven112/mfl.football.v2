@@ -6,11 +6,6 @@ on:
     # scripts/lib/speculation-cadence.mjs) decides whether to actually post —
     # the cron just gives the scanner a once-a-day chance.
     - cron: "0 20 * * *"
-    # Extra Monday slot at 7pm UTC = noon Pacific. Phase 1 still uses the
-    # same two-team matcher; the three-team blockbuster lands in Phase 3
-    # but the daily slot already exists so we don't need a workflow change
-    # when that ships.
-    - cron: "0 19 * * 1"
   workflow_dispatch:
     inputs:
       dry_run:
