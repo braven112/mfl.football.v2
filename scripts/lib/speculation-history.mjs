@@ -76,6 +76,24 @@ export function tradeSignature({ seller, buyer, marqueeId, returnPkgIds }) {
   return `${franchisePair}|${sellerIds.join(',')}|${buyerIds.join(',')}`;
 }
 
+/**
+ * Canonical signature for a three-team cycle. Order-independent on the
+ * franchise triple AND on the per-team piece sets — `(a:p1, b:p2, c:p3)` and
+ * `(b:p2, c:p3, a:p1)` collapse to the same key, so a candidate doesn't
+ * sneak past rotation just because the cycle was traversed from a different
+ * starting node.
+ */
+export function threeTeamTradeSignature({ a, b, c, fromAIds, fromBIds, fromCIds }) {
+  const tuples = [
+    { fid: String(a), pieces: [...fromAIds.map(String)].sort() },
+    { fid: String(b), pieces: [...fromBIds.map(String)].sort() },
+    { fid: String(c), pieces: [...fromCIds.map(String)].sort() },
+  ].sort((x, y) => (x.fid < y.fid ? -1 : x.fid > y.fid ? 1 : 0));
+  return tuples
+    .map((t) => `${t.fid}:${t.pieces.join(',')}`)
+    .join('|');
+}
+
 export function recentlyPostedTrade(ledger, signature, now = new Date()) {
   const cutoff = now.getTime() - SAME_TRADE_ROTATION_MS;
   return (ledger.entries ?? []).some(

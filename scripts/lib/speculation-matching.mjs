@@ -355,6 +355,222 @@ export function findTwoTeamCandidates({
   return candidates.slice(0, limit);
 }
 
+// ── Three-team match search (Phase 3) ─────────────────────────────────────
+//
+// A three-team blockbuster is an A → B → C → A cycle in which each leg sends
+// a piece the receiving team wants. The trade is "balanced" when all three
+// outgoing pieces sit within a relaxed parity window — three-team deals
+// historically tolerate slightly more value variance than two-team because
+// a third party's pick or depth piece smooths the gap.
+//
+// The finder enumerates ordered triples (A, B, C) and, for each, asks the
+// top haves from each team to fill the cycle. Only the top THREE_TEAM_HAVES_PER_TEAM
+// haves per team are tried; this keeps the search space well-bounded
+// (12 × 11 × 10 × k³ where k is small).
+
+const THREE_TEAM_PARITY_TOLERANCE = 0.22;
+const THREE_TEAM_HAVES_PER_TEAM = 4;
+const MIN_THREE_TEAM_PIECE_VALUE = 30;
+
+/**
+ * Returns true when the three given values are within parity, i.e. the
+ * (max − min) gap is at most THREE_TEAM_PARITY_TOLERANCE × the mean. The mean
+ * (not the max) is used to keep a single-outlier high value from dragging
+ * the threshold up.
+ */
+function isThreeWayParity(a, b, c) {
+  if (a <= 0 || b <= 0 || c <= 0) return false;
+  const max = Math.max(a, b, c);
+  const min = Math.min(a, b, c);
+  const mean = (a + b + c) / 3;
+  if (mean <= 0) return false;
+  return (max - min) / mean <= THREE_TEAM_PARITY_TOLERANCE;
+}
+
+/**
+ * Score a three-team candidate. Higher is better. Components:
+ *   - Parity: tighter spread → higher score (max 60).
+ *   - Drama: how many of the three pairs are divisional rivals (max 30).
+ *   - Trade-bait bonus: each piece on its team's tradeBait listing adds 5.
+ */
+function scoreThreeTeamCandidate({ pieces, divisions }) {
+  const values = [pieces.fromA.value, pieces.fromB.value, pieces.fromC.value];
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const mean = (values[0] + values[1] + values[2]) / 3;
+  const spreadFraction = mean > 0 ? (max - min) / mean : 1;
+  // 0 spread → 60, full tolerance (0.22) → 0
+  const parityScore = Math.max(
+    0,
+    Math.round(60 * (1 - spreadFraction / THREE_TEAM_PARITY_TOLERANCE)),
+  );
+  // Drama: count divisional rivalries among the 3 pairs (A-B, B-C, C-A).
+  const pairs = [
+    [divisions.a, divisions.b],
+    [divisions.b, divisions.c],
+    [divisions.c, divisions.a],
+  ];
+  let rivalryHits = 0;
+  for (const [d1, d2] of pairs) {
+    if (d1 && d2 && d1 === d2) rivalryHits += 1;
+  }
+  const dramaScore = rivalryHits * 10;
+  const baitBonus =
+    (pieces.fromA.onTradeBait ? 5 : 0) +
+    (pieces.fromB.onTradeBait ? 5 : 0) +
+    (pieces.fromC.onTradeBait ? 5 : 0);
+  return Math.round(parityScore + dramaScore + baitBonus);
+}
+
+/**
+ * Pick the highest-value have from `srcHaves` whose position is in
+ * `wantedPositions`, fits the receiving team's cap room, and isn't equal to
+ * any already-claimed piece id.
+ */
+function pickPieceFor({ srcHaves, wantedPositions, dstCapRoom, claimedIds }) {
+  for (const have of srcHaves) {
+    if (have.value < MIN_THREE_TEAM_PIECE_VALUE) continue;
+    if (claimedIds.has(have.id)) continue;
+    if (!wantedPositions.includes(have.position)) continue;
+    if (Number(have.salary) > dstCapRoom) continue;
+    return have;
+  }
+  return null;
+}
+
+/**
+ * Find the single highest-scoring 3-cycle across the league. Returns null
+ * when no triple satisfies the parity + cap + want constraints.
+ *
+ * Output shape (when non-null):
+ *   {
+ *     a, b, c,                       // franchise IDs in cycle order (A→B→C→A)
+ *     pieces: { fromA, fromB, fromC },// pieces leaving each team
+ *     score,
+ *     divisionsAreRivals: boolean,
+ *     anyOnTradeBait: boolean,
+ *   }
+ */
+export function findThreeTeamCandidate({
+  playersByFranchise,
+  tradeBaitByFranchise,
+  adpRankById,
+  teams,
+  medians: medianOverride = null,
+}) {
+  const franchiseIds = Array.from(playersByFranchise.keys());
+  if (franchiseIds.length < 3) return null;
+
+  const haves = new Map();
+  const wants = new Map();
+  const capRoom = new Map();
+  const medians = medianOverride ?? computeLeagueMedians(playersByFranchise);
+
+  for (const fid of franchiseIds) {
+    const players = playersByFranchise.get(fid) ?? [];
+    haves.set(
+      fid,
+      buildHaves({
+        franchisePlayers: players,
+        tradeBaitIds: tradeBaitByFranchise.get(fid) ?? [],
+        adpRankById,
+      }).slice(0, THREE_TEAM_HAVES_PER_TEAM),
+    );
+    wants.set(fid, buildPositionalWantsRelative(players, medians));
+    capRoom.set(fid, franchiseCapSpace({ franchisePlayers: players }));
+  }
+
+  let best = null;
+
+  for (const a of franchiseIds) {
+    const havesA = haves.get(a) ?? [];
+    if (havesA.length === 0) continue;
+    const wantsA = wants.get(a) ?? [];
+    if (wantsA.length === 0) continue;
+
+    for (const b of franchiseIds) {
+      if (b === a) continue;
+      const wantsB = wants.get(b) ?? [];
+      if (wantsB.length === 0) continue;
+      const havesB = haves.get(b) ?? [];
+      if (havesB.length === 0) continue;
+      const capB = capRoom.get(b) ?? 0;
+
+      // A → B: pick A's marquee that B wants and B can afford
+      const fromA = pickPieceFor({
+        srcHaves: havesA,
+        wantedPositions: wantsB,
+        dstCapRoom: capB,
+        claimedIds: new Set(),
+      });
+      if (!fromA) continue;
+
+      for (const c of franchiseIds) {
+        if (c === a || c === b) continue;
+        const wantsC = wants.get(c) ?? [];
+        if (wantsC.length === 0) continue;
+        const havesC = haves.get(c) ?? [];
+        if (havesC.length === 0) continue;
+        const capC = capRoom.get(c) ?? 0;
+        const capA = capRoom.get(a) ?? 0;
+
+        // B → C: pick B's piece that C wants
+        const fromB = pickPieceFor({
+          srcHaves: havesB,
+          wantedPositions: wantsC,
+          dstCapRoom: capC,
+          claimedIds: new Set([fromA.id]),
+        });
+        if (!fromB) continue;
+
+        // C → A: pick C's piece that A wants
+        const fromC = pickPieceFor({
+          srcHaves: havesC,
+          wantedPositions: wantsA,
+          dstCapRoom: capA,
+          claimedIds: new Set([fromA.id, fromB.id]),
+        });
+        if (!fromC) continue;
+
+        if (!isThreeWayParity(fromA.value, fromB.value, fromC.value)) continue;
+
+        const teamA = teams.get(a);
+        const teamB = teams.get(b);
+        const teamC = teams.get(c);
+        const score = scoreThreeTeamCandidate({
+          pieces: { fromA, fromB, fromC },
+          divisions: {
+            a: teamA?.division ?? null,
+            b: teamB?.division ?? null,
+            c: teamC?.division ?? null,
+          },
+        });
+
+        if (!best || score > best.score) {
+          best = {
+            a,
+            b,
+            c,
+            pieces: { fromA, fromB, fromC },
+            score,
+            divisionsAreRivals:
+              !!teamA &&
+              !!teamB &&
+              !!teamC &&
+              (teamA.division === teamB.division ||
+                teamB.division === teamC.division ||
+                teamC.division === teamA.division),
+            anyOnTradeBait:
+              fromA.onTradeBait || fromB.onTradeBait || fromC.onTradeBait,
+          };
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
 export const __testing__ = {
   adpRankToValue,
   ageMultiplier,
@@ -364,4 +580,10 @@ export const __testing__ = {
   MIN_MARQUEE_VALUE,
   scoreCandidate,
   assembleReturnPackage,
+  THREE_TEAM_PARITY_TOLERANCE,
+  THREE_TEAM_HAVES_PER_TEAM,
+  MIN_THREE_TEAM_PIECE_VALUE,
+  isThreeWayParity,
+  scoreThreeTeamCandidate,
+  pickPieceFor,
 };
