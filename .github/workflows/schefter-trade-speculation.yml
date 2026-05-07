@@ -1,0 +1,83 @@
+name: Schefter Trade Speculation
+
+on:
+  schedule:
+    # Daily at 8pm UTC = 1pm Pacific. NFL-calendar-aware cadence (per
+    # scripts/lib/speculation-cadence.mjs) decides whether to actually post —
+    # the cron just gives the scanner a once-a-day chance.
+    - cron: "0 20 * * *"
+    # Extra Monday slot at 7pm UTC = noon Pacific. Phase 1 still uses the
+    # same two-team matcher; the three-team blockbuster lands in Phase 3
+    # but the daily slot already exists so we don't need a workflow change
+    # when that ships.
+    - cron: "0 19 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run without mutating feed/ledger"
+        required: false
+        default: "false"
+
+concurrency:
+  group: schefter-trade-speculation
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  speculate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
+
+      - name: Refresh trade-bait feed
+        env:
+          MFL_LEAGUE_ID: "13522"
+          MFL_LEAGUE_SLUG: theleague
+        run: node scripts/fetch-trade-bait.mjs
+
+      - name: Run speculation scanner
+        env:
+          SCHEFTER_TRADE_SPECULATION_ENABLED: ${{ vars.SCHEFTER_TRADE_SPECULATION_ENABLED }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN_INPUT" = "true" ]; then
+            node scripts/schefter-trade-speculation.mjs --dry-run
+          else
+            node scripts/schefter-trade-speculation.mjs
+          fi
+
+      - name: Commit and push feed + ledger updates
+        env:
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No speculation post produced."
+            exit 0
+          fi
+
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/theleague/schefter-feed.json data/theleague/derived/speculation-history.json data/theleague/mfl-feeds
+          git commit -m "chore: schefter speculation — new trade speculation post"
+          git pull --rebase origin main
+          git push

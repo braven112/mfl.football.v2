@@ -79,19 +79,31 @@ Reject any candidate that:
 
 Use Claude API. System prompt enforces:
 - Schefter voice (mirror `data/schefter/league-lore.md`)
-- Speculation framing — "sources tell me", "circling", "kicking the tires", "in talks"
+- **Local-media / fan-chatter framing** — the speculation does NOT come from
+  owners or front offices. It comes from beat writers, talk-radio callers,
+  fan boards, and barstool chatter. Schefter REPORTS on that buzz; he is
+  not relaying a leak from inside either team. Both front offices should be
+  framed as silent or non-committal ("neither front office has commented",
+  "[team] hasn't acknowledged", "this isn't coming from the building").
+- Phrases to lean on: "the talk-radio crowd in [team]-country", "fan boards
+  are floating", "local beat writers have been speculating", "season-ticket
+  holders have been wondering aloud", "a Wednesday call-in show floated".
+- Phrases to AVOID: "sources tell me [team] is shopping/circling", "in talks",
+  "front-office sources" — those imply a leak from inside the team and
+  defeat the framing.
 - Lead with the marquee player; reference cap or pick context as the angle
 - Cap at 3 sentences
 - Never fabricate names of players not in the candidate package
 - Tag both franchises with their `nameMedium` for GroupMe formatting
 
-Sample outputs to aim for:
+Sample outputs to aim for (note the local-media / fan-chatter framing —
+NOT a leak from either team):
 
-> 🟡 *Sources tell me Bring The Pain has been kicking the tires on Wabbits WR Drake London. The ask is steep — multiple sources point to Davante Adams and a 2027 1st as the starting point. Pain is short on cap room to absorb London's $14M, so a third team may need to facilitate.*
+> 🟡 *The talk-radio crowd in Bring-The-Pain country has spent the week chewing on whether Drake London makes sense in their offense. Local boards are floating Davante Adams and a 2027 1st as the kind of return Wabbits would have to consider — neither front office has acknowledged the chatter.*
 
-> 🟢 *Computer Jocks are signaling they want to win now. Sources say they've reached out to Maverick about a Patrick Mahomes / 2027 2nd swap. Maverick is reportedly listening — the pick alone isn't enough but Jocks might be willing to attach a bench piece.*
+> 🟢 *Computer Jocks fan boards have been wondering aloud whether a Patrick Mahomes / 2027 2nd swap with Maverick fits both teams' timelines. The buzz is coming from outside the buildings — Maverick has not commented and Jocks have stayed quiet.*
 
-> 🔴 *Three-team buzz: Pigskins, Vitside, and Music City are reportedly working on a deal that would send Saquon to the Pigskins, Justin Jefferson to Vitside, and a haul of picks to Music City. None of the three have confirmed but sources say the framework is real.*
+> 🔴 *Three-team mock-up making the rounds on Wednesday's regional shows: Saquon to Pigskins, Justin Jefferson to Vitside, and a haul of picks to Music City. All three front offices have stayed silent — this is fan-driven speculation, not a deal anyone's confirmed.*
 
 Color emojis for tier:
 - 🔴 Three-team mega-deal (Mondays only)
