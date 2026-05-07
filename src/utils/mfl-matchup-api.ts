@@ -593,6 +593,12 @@ export class MFLMatchupApiClient {
    *
    * MFL's transaction record uses the same field names — `ACTIVATED` is the
    * player who has been "activated to IR status," not "activated to play."
+   *
+   * MFL parameter names (per the live api_info spec, verified 2026-05-07):
+   * - DEACTIVATE: list of player ids to move FROM Active TO IR
+   * - ACTIVATE:   list of player ids to move FROM IR TO Active
+   * Note: these are verb-form (no D), opposite of the past-tense field names
+   * used in transaction logs ("activated"/"deactivated").
    */
   async movePlayerToIR(
     playerId: string,
@@ -601,8 +607,8 @@ export class MFLMatchupApiClient {
   ): Promise<RosterMoveResult> {
     return this.runRosterMove({
       type: 'ir',
-      onParam: 'ACTIVATED',
-      offParam: 'DEACTIVATED',
+      onParam: 'DEACTIVATE',
+      offParam: 'ACTIVATE',
       playerId,
       franchiseId,
       direction,
@@ -613,8 +619,13 @@ export class MFLMatchupApiClient {
    * Move a rookie to / from the Taxi (Practice) Squad via MFL's
    * import?TYPE=taxi_squad endpoint.
    *
-   * direction='to'   → PROMOTED=<id> (player moves ONTO taxi)
-   * direction='from' → DEMOTED=<id>  (player moves OFF taxi back to active)
+   * MFL parameter names (per the live api_info spec, verified 2026-05-07):
+   * - DEMOTE:  list of player ids to move FROM Active TO Taxi Squad (demote down)
+   * - PROMOTE: list of player ids to move FROM Taxi Squad TO Active (promote up)
+   * Note: these are verb-form (no D), and PROMOTE/DEMOTE here are the OPPOSITE
+   * of how the transaction log's `promoted`/`demoted` fields read — those
+   * record "promoted ONTO the taxi", whereas the import verbs treat the
+   * active roster as the higher status.
    *
    * MFL enforces taxi-squad cap and rookie eligibility based on league rules;
    * caller should preflight where possible for friendlier UX.
@@ -626,8 +637,8 @@ export class MFLMatchupApiClient {
   ): Promise<RosterMoveResult> {
     return this.runRosterMove({
       type: 'taxi_squad',
-      onParam: 'PROMOTED',
-      offParam: 'DEMOTED',
+      onParam: 'DEMOTE',
+      offParam: 'PROMOTE',
       playerId,
       franchiseId,
       direction,
@@ -640,8 +651,8 @@ export class MFLMatchupApiClient {
    */
   private async runRosterMove(opts: {
     type: 'ir' | 'taxi_squad';
-    onParam: 'ACTIVATED' | 'PROMOTED';
-    offParam: 'DEACTIVATED' | 'DEMOTED';
+    onParam: 'DEACTIVATE' | 'DEMOTE';
+    offParam: 'ACTIVATE' | 'PROMOTE';
     playerId: string;
     franchiseId: string;
     direction: 'to' | 'from';
@@ -650,43 +661,32 @@ export class MFLMatchupApiClient {
       return { success: false, error: 'Authentication required for roster moves' };
     }
 
-    // Use MFL's legacy `/freeagency` endpoint with `TYPE=moveToIR` /
-    // `TYPE=moveToTaxi` and `PLAYER` / `FRANCHISE` (singular, no _ID suffix).
+    // POST to MFL's import endpoint with the parameter names from the live
+    // api_info spec page (verified 2026-05-07 by Brandon copying the
+    // taxi_squad and ir entries directly from MFL's API Test Form):
     //
-    // Brandon's 2026-05-07 debug captures confirmed that the "canonical"
-    // `import?TYPE=ir` and `import?TYPE=taxi_squad` endpoints (inferred from
-    // transaction logs) silently no-op: MFL returns 200 + `<status>OK</status>`
-    // but the move never persists. We tried every variant — api.* with redirect,
-    // www49 direct, with/without FRANCHISE_ID, single param vs both — same
-    // silent ack on every shape.
+    //   IR:    L, ACTIVATE (off IR → active), DEACTIVATE (active → IR)
+    //   Taxi:  L, PROMOTE (taxi → active), DEMOTE (active → taxi)
     //
-    // The `/freeagency?TYPE=moveToIR` path is documented in
-    // .claude/agents/qa-principal-engineer.md and qa-api-debugger.md as the
-    // working owner-mode IR write. By analogy we try `TYPE=moveToTaxi` for
-    // taxi-squad moves; if MFL's parser rejects that name we'll see a real
-    // error in the on-page debug panel and adjust.
+    // The verb-form names (no trailing D) differ from the past-tense
+    // transaction-log fields (`activated`/`deactivated`/`promoted`/`demoted`)
+    // we previously inferred from. That misinference was the root cause of
+    // the silent `<status>OK</status>` no-op we'd been chasing — MFL accepted
+    // the request shape but didn't recognize the parameter names.
     //
-    // For 'from' direction (off IR / promote from practice), the legacy verb
-    // is also unverified — best guess is the same TYPE with the player
-    // implied to leave the bucket. We'll iterate based on whatever debug
-    // surface comes back.
-    const moveType =
-      opts.type === 'ir'
-        ? (opts.direction === 'to' ? 'moveToIR' : 'activateFromIR')
-        : (opts.direction === 'to' ? 'moveToTaxi' : 'activateFromTaxi');
-
-    // The legacy /freeagency endpoint lives at api.myfantasyleague.com, NOT
-    // www49 — Brandon's 2026-05-07 capture against www49 returned 404. The
-    // original implementation referenced in our agent docs (qa-principal-
-    // engineer.md, qa-api-debugger.md) used `this.baseUrl` which defaults
-    // to api.myfantasyleague.com. mflFetch handles the cross-origin redirect.
-    const url = `https://api.myfantasyleague.com/${this.config.year}/freeagency`;
+    // FRANCHISE_ID is only required when the commissioner is impersonating
+    // an owner; for owner-mode (cookie-only auth) the franchise is implied.
+    // Don't send it — adding it on a non-impersonating request is the same
+    // class of issue that broke the cron under league lockout.
+    //
+    // Single-direction body matches the cut-player.ts working pattern.
+    const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
     const params = new URLSearchParams({
-      TYPE: moveType,
+      TYPE: opts.type,
       L: this.config.leagueId,
-      FRANCHISE: opts.franchiseId,
-      PLAYER: opts.playerId,
     });
+    const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
+    params.set(activeParam, opts.playerId);
 
     const requestBody = params.toString();
     console.log(
