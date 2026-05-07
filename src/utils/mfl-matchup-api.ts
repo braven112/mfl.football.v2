@@ -660,11 +660,20 @@ export class MFLMatchupApiClient {
     // companion as an empty string causes MFL's import endpoint to
     // silently no-op while still returning a success-shaped response
     // (no <error>, no HTML).
+    //
+    // Do NOT send FRANCHISE_ID. Brandon's debug capture on 2026-05-07
+    // showed MFL returning `<status>OK</status>` while the move didn't
+    // persist on the roster — the same silent-failure pattern the cron
+    // auto-taxi hit when sending FRANCHISE_ID with commish cookies
+    // ("Can not impersonate another franchise when LOCKOUT is on.").
+    // Hypothesis: any presence of FRANCHISE_ID on import?TYPE=taxi_squad
+    // routes through MFL's impersonation check, which silently rejects
+    // under `lockout: "Yes"`. The MFL_USER_ID cookie already identifies
+    // the owner's franchise, so FRANCHISE_ID is redundant in owner mode.
     const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
     const params = new URLSearchParams({
       TYPE: opts.type,
       L: this.config.leagueId,
-      FRANCHISE_ID: opts.franchiseId,
     });
     const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
     params.set(activeParam, opts.playerId);
