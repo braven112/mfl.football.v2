@@ -1,0 +1,24 @@
+{
+  "$comment": "Hand-curated league championship history. Used by compute-franchise-history.mjs to fill in the years where MFL's playoff-brackets export returns metadata only (no franchise winners). Each entry maps a year to the franchise IDs that finished 1st and 2nd. Names are recorded as they were AT THAT TIME — to find the franchise ID, cross-reference data/theleague/mfl-feeds/<year>/league.json.",
+  "championships": [
+    { "year": 2007, "champion": "0015", "runnerUp": "0007", "championName": "Dark Magicians of Chaos", "runnerUpName": "Acer FC Edge" },
+    { "year": 2008, "champion": "0015", "runnerUp": "0008", "championName": "Dark Magicians of Chaos", "runnerUpName": "Bring the Pain" },
+    { "year": 2009, "champion": "0004", "runnerUp": "0006", "championName": "Las Vegas Elite", "runnerUpName": "LBer-DeCleaters" },
+    { "year": 2010, "champion": "0007", "runnerUp": "0006", "championName": "Fire Ready Aim", "runnerUpName": "LBer-DeCleaters" },
+    { "year": 2011, "champion": "0013", "runnerUp": "0007", "championName": "Sabertooths", "runnerUpName": "Fire Ready Aim" },
+    { "year": 2012, "champion": "0014", "runnerUp": "0012", "championName": "Devil Dogs", "runnerUpName": "Vitside Mafia" },
+    { "year": 2013, "champion": "0014", "runnerUp": "0003", "championName": "Devil Dogs", "runnerUpName": "Poker in the Rear" },
+    { "year": 2014, "champion": "0008", "runnerUp": "0001", "championName": "Bring the Pain", "runnerUpName": "Pacific Pigskins" },
+    { "year": 2015, "champion": "0011", "runnerUp": "0005", "championName": "Amish Rakefighters", "runnerUpName": "The Executioners" },
+    { "year": 2016, "champion": "0006", "runnerUp": "0015", "championName": "LBer-DeCleaters", "runnerUpName": "Dark Magicians of Chaos" },
+    { "year": 2017, "champion": "0007", "runnerUp": "0013", "championName": "Fire Ready Aim", "runnerUpName": "Gridiron Geeks" },
+    { "year": 2018, "champion": "0011", "runnerUp": "0004", "championName": "Under Siege", "runnerUpName": "The Art of War" },
+    { "year": 2019, "champion": "0008", "runnerUp": "0011", "championName": "Bring the Pain", "runnerUpName": "Midwestside Connection" },
+    { "year": 2020, "champion": "0008", "runnerUp": "0016", "championName": "Bring the Pain", "runnerUpName": "Running Down The Dream" },
+    { "year": 2021, "champion": "0011", "runnerUp": "0008", "championName": "Midwestside Connection", "runnerUpName": "Bring the Pain" },
+    { "year": 2022, "champion": "0012", "runnerUp": "0015", "championName": "Vitside Mafia", "runnerUpName": "Dark Magicians of Chaos" },
+    { "year": 2023, "champion": "0007", "runnerUp": "0002", "championName": "Fire Ready Aim", "runnerUpName": "Da Dangsters" },
+    { "year": 2024, "champion": "0009", "runnerUp": "0002", "championName": "Wascawy Wabbits", "runnerUpName": "Da Dangsters" },
+    { "year": 2025, "champion": "0010", "runnerUp": "0015", "championName": "Computer Jocks", "runnerUpName": "Dark Magicians of Chaos" }
+  ]
+}

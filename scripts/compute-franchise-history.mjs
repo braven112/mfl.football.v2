@@ -23,6 +23,7 @@ const ROOT = path.resolve(__dirname, '..');
 const FEEDS_DIR = path.join(ROOT, 'data/theleague/mfl-feeds');
 const SALARIES_DIR = path.join(ROOT, 'data/theleague');
 const LEAGUE_CONFIG_PATH = path.join(ROOT, 'src/data/theleague.config.json');
+const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, 'data/theleague/championship-history.json');
 const OUTPUT_PATH = path.join(ROOT, 'data/theleague/derived/franchise-history.json');
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
@@ -59,6 +60,18 @@ const years = fs
 // --- Load league config for current identities ---
 const leagueConfig = readJson(LEAGUE_CONFIG_PATH);
 const currentTeams = leagueConfig.teams || [];
+
+// Hand-curated championship history for years where MFL's playoff-bracket
+// export has metadata only (2007-2019, plus in-season years where the
+// bracket isn't decided yet). Maps year → { champion, runnerUp } with
+// franchise IDs that owned those slots at the time.
+const championshipHistory = readJson(CHAMPIONSHIP_HISTORY_PATH);
+const championshipManualByYear = new Map();
+if (championshipHistory?.championships) {
+  for (const entry of championshipHistory.championships) {
+    championshipManualByYear.set(entry.year, entry);
+  }
+}
 
 const getIdentityForYear = (franchiseId, year) => {
   const team = currentTeams.find((t) => t.franchiseId === franchiseId);
@@ -349,7 +362,13 @@ const ensureFranchise = (id) => {
       careerTies: 0,
       careerPointsFor: 0,
       yearsActive: 0,
-      highlights: { highestSingleGame: null, lowestSingleGame: null },
+      highlights: {
+        highestSingleGame: null,
+        lowestSingleGame: null,
+        biggestBlowoutWin: null,
+        biggestBlowoutLoss: null,
+      },
+      headToHead: {}, // opponentFranchiseId -> { wins, losses, ties }
     });
   }
   return franchiseMap.get(id);
@@ -428,7 +447,20 @@ for (const year of years) {
   }
 
   // Championship results
-  const champResult = getChampionshipResult(playoffBrackets);
+  // Prefer MFL's bracket data when it has actual franchise winners; otherwise
+  // fall back to the hand-curated championship-history.json. MFL's pre-2020
+  // brackets are metadata-only.
+  let champResult = getChampionshipResult(playoffBrackets);
+  if (!champResult) {
+    const manual = championshipManualByYear.get(year);
+    if (manual?.champion || manual?.runnerUp) {
+      champResult = {
+        champion: manual.champion ?? null,
+        runnerUp: manual.runnerUp ?? null,
+        thirdPlace: manual.thirdPlace ?? null,
+      };
+    }
+  }
   const playoffParticipants = getPlayoffParticipants(playoffBrackets);
 
   // Awards from salaries
@@ -557,6 +589,79 @@ for (const year of years) {
         }
       });
     });
+  }
+
+  // Head-to-head records + biggest blowouts from weekly-results-raw (which
+  // has matchup pairings — weekly-results.json only has scores).
+  const weeklyRaw = readJson(path.join(yearDir, 'weekly-results-raw.json'));
+  if (Array.isArray(weeklyRaw)) {
+    for (const wkPayload of weeklyRaw) {
+      const weekNum = parseNum(wkPayload?.weeklyResults?.week);
+      const matchups = toArray(wkPayload?.weeklyResults?.matchup);
+      for (const m of matchups) {
+        const fr = toArray(m?.franchise);
+        if (fr.length !== 2) continue;
+        const a = fr[0], b = fr[1];
+        const aId = a?.id, bId = b?.id;
+        const aScore = parseNum(a?.score);
+        const bScore = parseNum(b?.score);
+        if (!aId || !bId) continue;
+        if (aScore === 0 && bScore === 0) continue; // unplayed week
+
+        const aTarget = attributeYear(aId, year);
+        const bTarget = attributeYear(bId, year);
+
+        // Skip games where either side belongs to a former owner (target null).
+        // Each side gets credit independently — even if one franchise's owner
+        // changed mid-season, we still record the other side's H2H + blowout.
+        if (aTarget) {
+          const frA = ensureFranchise(aTarget);
+          // H2H opponent is the OTHER side's source franchise (stable across
+          // owner changes — Phase 2 rivalry pages key off this).
+          if (!frA.headToHead[bId]) frA.headToHead[bId] = { wins: 0, losses: 0, ties: 0 };
+          if (aScore > bScore) frA.headToHead[bId].wins++;
+          else if (aScore < bScore) frA.headToHead[bId].losses++;
+          else frA.headToHead[bId].ties++;
+
+          const margin = aScore - bScore;
+          const game = {
+            year, week: weekNum,
+            score: aScore, opponentScore: bScore,
+            opponentFranchiseId: bId,
+            margin: Math.abs(margin),
+            sourceFranchiseId: aId !== aTarget ? aId : null,
+          };
+          if (margin > 0 && (!frA.highlights.biggestBlowoutWin || margin > frA.highlights.biggestBlowoutWin.margin)) {
+            frA.highlights.biggestBlowoutWin = game;
+          }
+          if (margin < 0 && (!frA.highlights.biggestBlowoutLoss || -margin > frA.highlights.biggestBlowoutLoss.margin)) {
+            frA.highlights.biggestBlowoutLoss = game;
+          }
+        }
+        if (bTarget) {
+          const frB = ensureFranchise(bTarget);
+          if (!frB.headToHead[aId]) frB.headToHead[aId] = { wins: 0, losses: 0, ties: 0 };
+          if (bScore > aScore) frB.headToHead[aId].wins++;
+          else if (bScore < aScore) frB.headToHead[aId].losses++;
+          else frB.headToHead[aId].ties++;
+
+          const margin = bScore - aScore;
+          const game = {
+            year, week: weekNum,
+            score: bScore, opponentScore: aScore,
+            opponentFranchiseId: aId,
+            margin: Math.abs(margin),
+            sourceFranchiseId: bId !== bTarget ? bId : null,
+          };
+          if (margin > 0 && (!frB.highlights.biggestBlowoutWin || margin > frB.highlights.biggestBlowoutWin.margin)) {
+            frB.highlights.biggestBlowoutWin = game;
+          }
+          if (margin < 0 && (!frB.highlights.biggestBlowoutLoss || -margin > frB.highlights.biggestBlowoutLoss.margin)) {
+            frB.highlights.biggestBlowoutLoss = game;
+          }
+        }
+      }
+    }
   }
 
   yearSummaries.push({

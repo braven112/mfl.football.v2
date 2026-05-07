@@ -16,6 +16,39 @@ if (!fr) {
 
 const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === id);
 
+// franchiseId → display name lookup, used by H2H/blowout opponent labels.
+const franchiseNameLookup: Record<string, string> = Object.fromEntries(
+  (leagueConfig.teams as any[]).map((t) => [
+    t.franchiseId,
+    t.nameMedium ?? t.name ?? t.franchiseId,
+  ])
+);
+
+// Many older config history entries point at retired theleague.us/
+// mfladdons.com icon URLs that 404. Resolve every year-by-year row to a
+// local /assets icon: prefer one whose franchise NAME matches the row
+// (so a "Midwestside Connection" row rendered for 0011's 2010-2015
+// stint on franchise 0010 still gets the Midwestside icon), otherwise
+// fall back to the row's source franchise per-id icon.
+const normalize = (s: string): string =>
+  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
+const localIcon = (path: string | undefined): boolean =>
+  !!path && path.startsWith('/assets/');
+
+const nameToIconLookup: Record<string, string> = {};
+for (const t of leagueConfig.teams as any[]) {
+  if (localIcon(t.icon)) nameToIconLookup[normalize(t.name)] = t.icon;
+}
+
+const resolveRowIcon = (s: any): string => {
+  if (localIcon(s.icon)) return s.icon!;
+  const byName = nameToIconLookup[normalize(s.name || '')];
+  if (byName) return byName;
+  const sourceId = s.sourceFranchiseId ?? id;
+  return `/assets/theleague/icons/${sourceId}.png`;
+};
+
 // Build eras keyed by NAME CHANGES only — config history entries that share
 // the current name (or each other) are banner refreshes, not real eras, so
 // they get merged into one continuous span.
@@ -317,7 +350,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
       </div>
     </section>
 
-    {(fr.highlights?.highestSingleGame || fr.highlights?.lowestSingleGame) && (
+    {(fr.highlights?.highestSingleGame || fr.highlights?.lowestSingleGame || fr.highlights?.biggestBlowoutWin || fr.highlights?.biggestBlowoutLoss) && (
       <section class="highlights">
         <h2>Single-Game Highlights</h2>
         <div class="highlight-grid">
@@ -335,8 +368,63 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
               <div class="hl-context">Week {fr.highlights.lowestSingleGame.week}, {fr.highlights.lowestSingleGame.year}</div>
             </div>
           )}
+          {fr.highlights.biggestBlowoutWin && (
+            <div class="highlight highlight--win">
+              <div class="hl-label">Biggest Blowout Win</div>
+              <div class="hl-value">+{fr.highlights.biggestBlowoutWin.margin.toFixed(2)}</div>
+              <div class="hl-context">
+                {fr.highlights.biggestBlowoutWin.score.toFixed(1)}–{fr.highlights.biggestBlowoutWin.opponentScore.toFixed(1)}
+                {' vs '}
+                {franchiseNameLookup[fr.highlights.biggestBlowoutWin.opponentFranchiseId] ?? fr.highlights.biggestBlowoutWin.opponentFranchiseId}
+                <br />Week {fr.highlights.biggestBlowoutWin.week}, {fr.highlights.biggestBlowoutWin.year}
+              </div>
+            </div>
+          )}
+          {fr.highlights.biggestBlowoutLoss && (
+            <div class="highlight highlight--loss">
+              <div class="hl-label">Biggest Blowout Loss</div>
+              <div class="hl-value">−{fr.highlights.biggestBlowoutLoss.margin.toFixed(2)}</div>
+              <div class="hl-context">
+                {fr.highlights.biggestBlowoutLoss.score.toFixed(1)}–{fr.highlights.biggestBlowoutLoss.opponentScore.toFixed(1)}
+                {' vs '}
+                {franchiseNameLookup[fr.highlights.biggestBlowoutLoss.opponentFranchiseId] ?? fr.highlights.biggestBlowoutLoss.opponentFranchiseId}
+                <br />Week {fr.highlights.biggestBlowoutLoss.week}, {fr.highlights.biggestBlowoutLoss.year}
+              </div>
+            </div>
+          )}
         </div>
-        <p class="dim small">Single-game data available 2019+</p>
+      </section>
+    )}
+
+    {fr.yearByYear && fr.yearByYear.length > 0 && (
+      <section class="scoring-chart-section">
+        <h2>Points by Season</h2>
+        {(() => {
+          const seasons = [...fr.yearByYear].sort((a: any, b: any) => a.year - b.year);
+          const max = Math.max(...seasons.map((s: any) => s.pointsFor));
+          const min = Math.min(...seasons.map((s: any) => s.pointsFor));
+          const span = max - min || 1;
+          const barWidth = 100 / seasons.length;
+          return (
+            <div class="scoring-chart" role="img" aria-label="Points scored per season">
+              {seasons.map((s: any) => {
+                const heightPct = ((s.pointsFor - min) / span) * 90 + 10;
+                const isChamp = fr.championships.includes(s.year);
+                const isRunnerUp = fr.runnerUps?.includes(s.year);
+                return (
+                  <div
+                    class={`bar ${isChamp ? 'bar--champ' : ''} ${isRunnerUp ? 'bar--runnerup' : ''}`}
+                    style={`height: ${heightPct.toFixed(1)}%; width: ${barWidth.toFixed(2)}%;`}
+                    title={`${s.year}: ${Math.round(s.pointsFor)} pts (${formatRecord(s.wins, s.losses, s.ties)})${isChamp ? ' 🏆' : isRunnerUp ? ' 🥈' : ''}`}
+                  >
+                    <span class="bar-label">{String(s.year).slice(-2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+        <p class="dim small">Bar height = points-for. 🏆 = championship · 🥈 = runner-up. Hover/tap for season detail.</p>
       </section>
     )}
 
@@ -428,6 +516,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
             </div>
           </div>
           {seasons.length > 0 ? (
+            <div class="year-by-year-scroll">
             <table class="year-by-year">
               <thead>
                 <tr>
@@ -444,7 +533,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
                   <tr>
                     <td>{s.year}</td>
                     <td>
-                      {s.icon && <img src={s.icon} alt="" class="row-icon" />}
+                      <img src={resolveRowIcon(s)} alt="" class="row-icon" loading="lazy" />
                       {s.nameMedium || s.name}
                     </td>
                     <td>{formatRecord(s.wins, s.losses, s.ties)}</td>
@@ -458,6 +547,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <p class="dim">No games played in this era yet.</p>
           )}
@@ -629,6 +719,50 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
   .hl-context {
     font-size: 0.8125rem;
     color: var(--text-secondary, #666);
+    line-height: 1.4;
+  }
+  .highlight--win { background: #e6f7e6; }
+  .highlight--win .hl-value { color: #1f5d2d; }
+  .highlight--loss { background: #fff5f3; }
+  .highlight--loss .hl-value { color: #8b2a1f; }
+
+  .scoring-chart-section {
+    margin: 2.5rem 0;
+  }
+  .scoring-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 180px;
+    padding: 0.5rem 0.25rem 1.5rem;
+    background: var(--surface-2, #f5f5f5);
+    border-radius: 0.5rem;
+  }
+  .bar {
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    position: relative;
+    min-height: 4px;
+    transition: filter 0.15s ease;
+    cursor: default;
+  }
+  .bar:hover { filter: brightness(1.15); }
+  .bar--champ {
+    background: linear-gradient(180deg, #fff3c4 0%, #d4a000 100%);
+    box-shadow: 0 0 0 1px #b58a00;
+  }
+  .bar--runnerup {
+    background: linear-gradient(180deg, #e0e0e0 0%, #888 100%);
+  }
+  .bar-label {
+    position: absolute;
+    bottom: -1.25rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.625rem;
+    color: var(--text-tertiary, #888);
+    font-variant-numeric: tabular-nums;
   }
 
   .awards-grid {
@@ -666,6 +800,25 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     padding: 1rem 1.25rem;
     border: 1px solid var(--border, #e5e5e5);
     border-radius: 0.625rem;
+    background: #fff;
+  }
+  .year-by-year-scroll {
+    max-height: 480px;
+    overflow-y: auto;
+    margin: 0 -0.25rem;
+    padding: 0 0.25rem;
+    /* contain scrolling so a fast scroll inside the table doesn't bubble
+       up and start scrolling the page once it hits the boundary */
+    overscroll-behavior: contain;
+    border-radius: 0.375rem;
+    background: #fff;
+  }
+  .year-by-year-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 var(--border, #ececec);
   }
   .era-header {
     display: flex;
