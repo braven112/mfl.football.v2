@@ -7,6 +7,8 @@ import leagueConfig from '../../../data/theleague.config.json';
 
 export const prerender = false;
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 const { pair } = Astro.params;
 
 // Parse the URL slug: "0001-vs-0007". Strict format check — anything else
@@ -14,21 +16,21 @@ const { pair } = Astro.params;
 // first; reversed order issues a 301 to the canonical.
 const slugMatch = pair?.match(/^(\d{4})-vs-(\d{4})$/);
 if (!slugMatch) {
-  return Astro.redirect(resolveLeaguePath('/rivalries'));
+  return Astro.redirect(resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix));
 }
 const [, idA, idB] = slugMatch;
 if (idA === idB) {
-  return Astro.redirect(resolveLeaguePath('/rivalries'));
+  return Astro.redirect(resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix));
 }
 const [smaller, bigger] = [idA, idB].sort();
 if (`${smaller}-vs-${bigger}` !== pair) {
-  return Astro.redirect(resolveLeaguePath(`/rivalries/${smaller}-vs-${bigger}`), 301);
+  return Astro.redirect(resolveLeaguePath(`/theleague/rivalries/${smaller}-vs-${bigger}`, hideLeaguePrefix), 301);
 }
 
 const frA: any = (franchiseHistory.franchises as any)[smaller];
 const frB: any = (franchiseHistory.franchises as any)[bigger];
 if (!frA || !frB) {
-  return Astro.redirect(resolveLeaguePath('/rivalries'));
+  return Astro.redirect(resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix));
 }
 
 const playerNames = (franchiseHistory as any).playerNames as Record<string, { name: string; position: string; team: string }>;
@@ -184,7 +186,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
 
     <header class="hero">
       <div class="side side--a" style={frA.currentColor ? `--accent: ${frA.currentColor};` : ''}>
-        <a href={resolveLeaguePath(`/franchises/${frA.franchiseId}`)} class="side-link">
+        <a href={resolveLeaguePath(`/theleague/franchises/${frA.franchiseId}`, hideLeaguePrefix)} class="side-link">
           {frA.currentBanner && <img src={frA.currentBanner} alt="" class="banner" />}
           <div class="side-name">
             {frA.currentIcon && <img src={frA.currentIcon} alt="" class="logo" />}
@@ -217,7 +219,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
         )}
       </div>
       <div class="side side--b" style={frB.currentColor ? `--accent: ${frB.currentColor};` : ''}>
-        <a href={resolveLeaguePath(`/franchises/${frB.franchiseId}`)} class="side-link">
+        <a href={resolveLeaguePath(`/theleague/franchises/${frB.franchiseId}`, hideLeaguePrefix)} class="side-link">
           {frB.currentBanner && <img src={frB.currentBanner} alt="" class="banner" />}
           <div class="side-name">
             {frB.currentIcon && <img src={frB.currentIcon} alt="" class="logo" />}
@@ -508,7 +510,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     </section>
 
     <p class="footnote">
-      <a href={resolveLeaguePath('/rivalries')}>← All rivalries</a>
+      <a href={resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix)}>← All rivalries</a>
     </p>
   </article>
 </TheLeagueLayout>

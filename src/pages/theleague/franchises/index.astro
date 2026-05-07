@@ -28,6 +28,8 @@ interface FranchiseRow {
 
 export const prerender = false;
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 const allFranchises: FranchiseRow[] = Object.values(franchiseHistory.franchises as Record<string, FranchiseRow>);
 
 allFranchises.sort((a, b) => {
@@ -130,7 +132,7 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     <div class="franchise-grid">
       {allFranchises.map((f) => (
         <a
-          href={resolveLeaguePath(`/franchises/${f.franchiseId}`)}
+          href={resolveLeaguePath(`/theleague/franchises/${f.franchiseId}`, hideLeaguePrefix)}
           class="franchise-card"
           style={f.currentColor ? `--accent: ${f.currentColor};` : ''}
         >
@@ -203,7 +205,7 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
         <ul class="identity-list">
           {historicalIdentities.map((h) => (
             <li>
-              <a href={resolveLeaguePath(`/franchises/${h.franchiseId}#era-${h.yearStart}`)}>
+              <a href={resolveLeaguePath(`/theleague/franchises/${h.franchiseId}#era-${h.yearStart}`, hideLeaguePrefix)}>
                 <strong>{h.name}</strong>
                 <span class="dim">{h.yearStart === h.yearEnd ? h.yearStart : `${h.yearStart}–${h.yearEnd}`}</span>
               </a>

@@ -7,6 +7,8 @@ import leagueConfig from '../../../data/theleague.config.json';
 
 export const prerender = false;
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 interface FranchiseRow {
   franchiseId: string;
   currentName: string;
@@ -123,7 +125,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
         <ul class="hot-list">
           {top.map(({ a, b, record }) => (
             <li>
-              <a class="hot-card" href={resolveLeaguePath(`/rivalries/${canonicalPair(a.franchiseId, b.franchiseId)}`)}>
+              <a class="hot-card" href={resolveLeaguePath(`/theleague/rivalries/${canonicalPair(a.franchiseId, b.franchiseId)}`, hideLeaguePrefix)}>
                 <div class="hot-teams">
                   {a.currentIcon && <img src={a.currentIcon} alt="" loading="lazy" />}
                   <span class="hot-vs">vs</span>
@@ -156,7 +158,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
               <th class="corner" scope="col" aria-label="Franchise"></th>
               {allFranchises.map((f) => (
                 <th class="col-header" scope="col" title={f.currentName}>
-                  <a href={resolveLeaguePath(`/franchises/${f.franchiseId}`)}>
+                  <a href={resolveLeaguePath(`/theleague/franchises/${f.franchiseId}`, hideLeaguePrefix)}>
                     {f.currentIcon
                       ? <img src={f.currentIcon} alt={f.currentName} loading="lazy" />
                       : <span class="initials">{(f.currentAbbrev || f.currentNameShort || f.currentName).slice(0, 3)}</span>}
@@ -169,7 +171,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
             {allFranchises.map((row) => (
               <tr>
                 <th class="row-header" scope="row" title={row.currentName}>
-                  <a href={resolveLeaguePath(`/franchises/${row.franchiseId}`)}>
+                  <a href={resolveLeaguePath(`/theleague/franchises/${row.franchiseId}`, hideLeaguePrefix)}>
                     {row.currentIcon && <img src={row.currentIcon} alt="" loading="lazy" />}
                     <span class="row-name">{row.currentNameShort || row.currentNameMedium}</span>
                   </a>
@@ -196,7 +198,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
                       style={`--intensity: ${intsPct.toFixed(2)};`}
                     >
                       <a
-                        href={resolveLeaguePath(`/rivalries/${canonicalPair(row.franchiseId, col.franchiseId)}`)}
+                        href={resolveLeaguePath(`/theleague/rivalries/${canonicalPair(row.franchiseId, col.franchiseId)}`, hideLeaguePrefix)}
                         title={`${row.currentName} vs ${col.currentName}: ${recordLabel(rec)} (${rec.games} game${rec.games === 1 ? '' : 's'}${rec.playoffGames > 0 ? `, ${rec.playoffGames} playoff` : ''})`}
                       >
                         {recordLabel(rec)}

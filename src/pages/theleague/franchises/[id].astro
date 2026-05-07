@@ -7,11 +7,13 @@ import leagueConfig from '../../../data/theleague.config.json';
 
 export const prerender = false;
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 const { id } = Astro.params;
 const fr: any = id ? (franchiseHistory.franchises as any)[id] : null;
 
 if (!fr) {
-  return Astro.redirect(resolveLeaguePath('/franchises'));
+  return Astro.redirect(resolveLeaguePath('/theleague/franchises', hideLeaguePrefix));
 }
 
 const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === id);
@@ -464,7 +466,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
             const iconSrc = meta?.icon || `/assets/theleague/icons/${r.opponentId}.png`;
             return (
               <li>
-                <a class="rival-card" href={resolveLeaguePath(`/rivalries/${canonicalRivalryPair(id!, r.opponentId)}`)}>
+                <a class="rival-card" href={resolveLeaguePath(`/theleague/rivalries/${canonicalRivalryPair(id!, r.opponentId)}`, hideLeaguePrefix)}>
                   <img src={iconSrc} alt="" class="rival-icon" loading="lazy" />
                   <div class="rival-text">
                     <div class="rival-name">{name}</div>
@@ -484,7 +486,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
           })}
         </ul>
         <p class="dim small">
-          <a href={resolveLeaguePath('/rivalries')}>See full rivalry matrix →</a>
+          <a href={resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix)}>See full rivalry matrix →</a>
         </p>
       </section>
     )}
@@ -658,7 +660,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
     </section>
 
     <p class="footnote">
-      <a href={resolveLeaguePath('/franchises')}>← All franchises</a>
+      <a href={resolveLeaguePath('/theleague/franchises', hideLeaguePrefix)}>← All franchises</a>
     </p>
   </article>
 </TheLeagueLayout>
