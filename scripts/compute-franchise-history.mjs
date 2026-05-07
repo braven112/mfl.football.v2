@@ -23,6 +23,7 @@ const ROOT = path.resolve(__dirname, '..');
 const FEEDS_DIR = path.join(ROOT, 'data/theleague/mfl-feeds');
 const SALARIES_DIR = path.join(ROOT, 'data/theleague');
 const LEAGUE_CONFIG_PATH = path.join(ROOT, 'src/data/theleague.config.json');
+const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, 'data/theleague/championship-history.json');
 const OUTPUT_PATH = path.join(ROOT, 'data/theleague/derived/franchise-history.json');
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
@@ -59,6 +60,18 @@ const years = fs
 // --- Load league config for current identities ---
 const leagueConfig = readJson(LEAGUE_CONFIG_PATH);
 const currentTeams = leagueConfig.teams || [];
+
+// Hand-curated championship history for years where MFL's playoff-bracket
+// export has metadata only (2007-2019, plus in-season years where the
+// bracket isn't decided yet). Maps year → { champion, runnerUp } with
+// franchise IDs that owned those slots at the time.
+const championshipHistory = readJson(CHAMPIONSHIP_HISTORY_PATH);
+const championshipManualByYear = new Map();
+if (championshipHistory?.championships) {
+  for (const entry of championshipHistory.championships) {
+    championshipManualByYear.set(entry.year, entry);
+  }
+}
 
 const getIdentityForYear = (franchiseId, year) => {
   const team = currentTeams.find((t) => t.franchiseId === franchiseId);
@@ -434,7 +447,20 @@ for (const year of years) {
   }
 
   // Championship results
-  const champResult = getChampionshipResult(playoffBrackets);
+  // Prefer MFL's bracket data when it has actual franchise winners; otherwise
+  // fall back to the hand-curated championship-history.json. MFL's pre-2020
+  // brackets are metadata-only.
+  let champResult = getChampionshipResult(playoffBrackets);
+  if (!champResult) {
+    const manual = championshipManualByYear.get(year);
+    if (manual?.champion || manual?.runnerUp) {
+      champResult = {
+        champion: manual.champion ?? null,
+        runnerUp: manual.runnerUp ?? null,
+        thirdPlace: manual.thirdPlace ?? null,
+      };
+    }
+  }
   const playoffParticipants = getPlayoffParticipants(playoffBrackets);
 
   // Awards from salaries
