@@ -1,8 +1,13 @@
 # Schefter Trade Speculation Posts (GroupMe)
 
+> **Scope note (post-Phase-2):** Three-team / cycle speculation is **out of
+> scope** for this plan. Only two-team speculation ships. Any mention of
+> three-team / 3-way / 3-cycle in earlier drafts is historical — the matcher
+> only enumerates two-team candidates.
+
 ## Context
 
-Original idea #14 was a "Trade Block Matchmaker" — algorithm that takes everyone's `tradeBait.json` listings and surfaces viable two- and three-way trades. Brandon's reframe: **don't make this an interactive page; turn it into Schefter speculation posts that drop into GroupMe periodically.** Owners will use them for smack talk, jokes, and occasional "wait actually, let's do this" moments.
+Original idea #14 was a "Trade Block Matchmaker" — algorithm that takes everyone's `tradeBait.json` listings and surfaces viable two-team trades. Brandon's reframe: **don't make this an interactive page; turn it into Schefter speculation posts that drop into GroupMe periodically.** Owners will use them for smack talk, jokes, and occasional "wait actually, let's do this" moments.
 
 This is a content-generation feature, not a tool. Output is GroupMe posts (and Schefter feed entries) that read like:
 
@@ -12,10 +17,7 @@ The post is **speculation** — not a real trade offer. Built from `tradeBait.js
 
 ## Cadence
 
-Two flavors:
-
-1. **Daily quiet drops** — once a day at a randomized time (1 PM Pacific, ±2hrs jitter) drop ONE speculation post. Keeps the feed alive without being spammy.
-2. **Block-buster Mondays** — every Monday at 11 AM Pacific, drop the **best three-way trade speculation** of the week. This is the marquee one — uses 3-team graph search and surfaces the most absurd-but-mathematically-viable swap.
+**Daily quiet drops** — once a day at a randomized time (1 PM Pacific, ±2hrs jitter) drop ONE two-team speculation post. Keeps the feed alive without being spammy. NFL-calendar-aware cadence (`scripts/lib/speculation-cadence.mjs`) ramps the frequency up around the trade deadline / draft / FA windows and dials it down in quiet stretches.
 
 ## Routes / surfaces
 
@@ -57,17 +59,7 @@ For each pair (Buyer, Seller):
   - Cap-relief drama (does it dump a Brock Osweiler-tier contract?)
 - Top 5 highest-scoring pairs become candidate posts
 
-### Step 3: Three-team match search (Monday only)
-
-Build a graph: every franchise's wants/haves as nodes. Find a 3-cycle where:
-- A trades to B (B wants what A has)
-- B trades to C
-- C trades to A
-- All three have ~equal dynasty value swings
-
-Surface the best one weekly.
-
-### Step 4: Quality gate
+### Step 3: Quality gate
 
 Reject any candidate that:
 - Has shown up in actual MFL trade activity in the last 14 days (boring)
@@ -75,7 +67,7 @@ Reject any candidate that:
 - Has a participant who hasn't logged into the site in 14+ days (dead franchise)
 - Involves a player on IR or with major injury status (insensitive)
 
-### Step 5: Schefter blurb generation
+### Step 4: Schefter blurb generation
 
 Use Claude API. System prompt enforces:
 - Schefter voice (mirror `data/schefter/league-lore.md`)
@@ -103,14 +95,11 @@ NOT a leak from either team):
 
 > 🟢 *Computer Jocks fan boards have been wondering aloud whether a Patrick Mahomes / 2027 2nd swap with Maverick fits both teams' timelines. The buzz is coming from outside the buildings — Maverick has not commented and Jocks have stayed quiet.*
 
-> 🔴 *Three-team mock-up making the rounds on Wednesday's regional shows: Saquon to Pigskins, Justin Jefferson to Vitside, and a haul of picks to Music City. All three front offices have stayed silent — this is fan-driven speculation, not a deal anyone's confirmed.*
-
 Color emojis for tier:
-- 🔴 Three-team mega-deal (Mondays only)
 - 🟡 Two-team blockbuster (high dynasty value)
 - 🟢 Two-team value pick-up (depth move)
 
-### Step 6: Posting
+### Step 5: Posting
 
 - Append to `src/data/theleague/schefter-feed.json` with `type: "trade-speculation"` and the franchises involved
 - Post to GroupMe via the existing `scripts/schefter-groupme-listen.mjs` posting hook (or its underlying primitive — check current pattern). Include a deep link back to a specific Schefter feed post URL.
@@ -130,20 +119,19 @@ The whole point is to bait owners into reacting. The blurbs should include conve
 
 - **GitHub Actions** — `.github/workflows/schefter-trade-speculation.yml`
   - Daily cron at 8 PM UTC = 1 PM Pacific (well within league active hours)
-  - Monday cron at 7 PM UTC = noon Pacific for the three-team blockbuster
-  - Both runs commit to main with the new feed entry + speculation-history ledger
+  - Runs commit to main with the new feed entry + speculation-history ledger
 - **Off-season behavior** — speculation actually increases during off-season (auction/draft prep is when trades happen). Don't disable seasonally.
 - **Owner opt-out** — let any franchise mute speculation posts about themselves via a config field (e.g. `theleague.config.json`'s team config: `"speculationMute": true`). For owners who don't want to be public targets.
 
 ## Phasing
 
-| Phase | Scope | Effort |
-|---|---|---|
-| 1 | Two-team matching algorithm + Schefter blurb generation + Schefter feed post (no GroupMe yet) | 1.5 days |
-| 2 | GroupMe posting hook + speculation-history ledger for rotation | 0.5 day |
-| 3 | Three-team match search + Monday block-buster cadence | 1 day |
-| 4 | Per-franchise pinned "Latest Trade Buzz" card on detail pages | 0.5 day |
-| 5 | Quality-gate refinements + dynasty-value model tuning against historical real trades | open-ended |
+| Phase | Scope | Effort | Status |
+|---|---|---|---|
+| 1 | Two-team matching algorithm + Schefter blurb generation + Schefter feed post (no GroupMe yet) | 1.5 days | ✅ shipped (PR #184) |
+| 2 | GroupMe posting hook + deep link back to feed entry | 0.5 day | ✅ shipped |
+| 3 | ~~Three-team match search + Monday block-buster cadence~~ | — | ❌ cancelled (out of scope) |
+| 4 | Per-franchise pinned "Latest Trade Buzz" card on detail pages | 0.5 day | pending |
+| 5 | Quality-gate refinements + dynasty-value model tuning against historical real trades | open-ended | pending |
 
 ## Risk / failure modes
 
