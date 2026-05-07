@@ -1,0 +1,657 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
+import leagueConfig from '../../../data/theleague.config.json';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+const fr: any = id ? (franchiseHistory.franchises as any)[id] : null;
+
+if (!fr) {
+  return Astro.redirect(resolveLeaguePath('/franchises'));
+}
+
+const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === id);
+
+// Build eras: each entry in team.history + the current top-level identity (if not already in history)
+type Era = {
+  name: string;
+  nameMedium?: string;
+  yearStart: number;
+  yearEnd: number;
+  banner?: string;
+  icon?: string;
+  isCurrent: boolean;
+};
+const eras: Era[] = [];
+const yearsForFranchise = fr.yearByYear.map((y: any) => y.year);
+const minYear = Math.min(...yearsForFranchise);
+const maxYear = Math.max(...yearsForFranchise);
+
+if (Array.isArray(team?.history) && team.history.length > 0) {
+  for (const h of team.history) {
+    eras.push({
+      name: h.name,
+      nameMedium: h.nameMedium ?? h.name,
+      yearStart: h.yearStart,
+      yearEnd: h.yearEnd,
+      banner: h.banner,
+      icon: h.icon,
+      isCurrent: false,
+    });
+  }
+  // Find earliest history entry — anything before is "unrecorded era"
+  const earliestHistoryYear = Math.min(...team.history.map((h: any) => h.yearStart));
+  // Latest history entry end
+  const latestHistoryYear = Math.max(...team.history.map((h: any) => h.yearEnd));
+  // Current era starts after latest history entry
+  if (latestHistoryYear < maxYear || latestHistoryYear < new Date().getFullYear()) {
+    eras.push({
+      name: team.name,
+      nameMedium: team.nameMedium ?? team.name,
+      yearStart: latestHistoryYear + 1,
+      yearEnd: 9999,
+      banner: team.banner,
+      icon: team.icon,
+      isCurrent: true,
+    });
+  }
+  // Pre-history era (years that fall before any history entry)
+  if (minYear < earliestHistoryYear) {
+    eras.unshift({
+      name: 'Earlier eras',
+      nameMedium: 'Earlier eras',
+      yearStart: minYear,
+      yearEnd: earliestHistoryYear - 1,
+      banner: undefined,
+      icon: undefined,
+      isCurrent: false,
+    });
+  }
+} else if (team) {
+  eras.push({
+    name: team.name,
+    nameMedium: team.nameMedium ?? team.name,
+    yearStart: minYear,
+    yearEnd: 9999,
+    banner: team.banner,
+    icon: team.icon,
+    isCurrent: true,
+  });
+}
+eras.sort((a, b) => a.yearStart - b.yearStart);
+
+function eraForYear(year: number): Era | null {
+  return eras.find((e) => year >= e.yearStart && year <= e.yearEnd) ?? null;
+}
+
+// Career derived stats
+const totalGames = fr.careerWins + fr.careerLosses + fr.careerTies;
+const winPct = totalGames
+  ? ((fr.careerWins + fr.careerTies * 0.5) / totalGames).toFixed(3).replace(/^0/, '')
+  : '.000';
+const recordString = fr.careerTies > 0
+  ? `${fr.careerWins}-${fr.careerLosses}-${fr.careerTies}`
+  : `${fr.careerWins}-${fr.careerLosses}`;
+
+const ppg = totalGames ? (fr.careerPointsFor / totalGames).toFixed(1) : '0.0';
+
+// Per-era career stats
+const eraStats = eras.map((era) => {
+  const seasons = fr.yearByYear.filter((y: any) => y.year >= era.yearStart && y.year <= era.yearEnd);
+  const w = seasons.reduce((s: number, y: any) => s + y.wins, 0);
+  const l = seasons.reduce((s: number, y: any) => s + y.losses, 0);
+  const t = seasons.reduce((s: number, y: any) => s + y.ties, 0);
+  const pf = seasons.reduce((s: number, y: any) => s + y.pointsFor, 0);
+  const champs = fr.championships.filter((y: number) => y >= era.yearStart && y <= era.yearEnd);
+  const divTitles = fr.divisionTitles.filter((d: any) => d.year >= era.yearStart && d.year <= era.yearEnd);
+  const mvps = fr.mvpAwards.filter((a: any) => a.year >= era.yearStart && a.year <= era.yearEnd);
+  const jerrys = fr.jerryJonesAwards.filter((a: any) => a.year >= era.yearStart && a.year <= era.yearEnd);
+  const osweilers = fr.brockOsweilerAwards.filter((a: any) => a.year >= era.yearStart && a.year <= era.yearEnd);
+  return { era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers };
+});
+
+const playoffResultLabel: Record<string, string> = {
+  'champion': '🏆 Champion',
+  'runner-up': '🥈 Runner-up',
+  'third-place': '🥉 3rd place',
+  'playoffs': 'Playoffs',
+  'missed': '—',
+};
+
+const formatRecord = (w: number, l: number, t: number) =>
+  t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`;
+
+const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
+---
+
+<TheLeagueLayout title={`${fr.currentName} — Franchise History`}>
+  <article class="franchise-detail" style={fr.currentColor ? `--accent: ${fr.currentColor};` : ''}>
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Franchises', href: '/theleague/franchises' },
+      { label: fr.currentNameMedium || fr.currentName },
+    ]} />
+
+    <header class="hero">
+      {fr.currentBanner && (
+        <div class="hero-banner">
+          <img src={fr.currentBanner} alt="" />
+          {fr.championships.length > 0 && (
+            <div class="crown" title={`${fr.championships.length}x Champion`}>
+              <span aria-hidden="true">👑</span>
+              <span class="crown-count">{fr.championships.length}</span>
+            </div>
+          )}
+        </div>
+      )}
+      <div class="hero-text">
+        <h1>{fr.currentName}</h1>
+        {fr.currentDivision && <p class="meta">{fr.currentDivision} Division · est. {minYear}</p>}
+        <ul class="badges-bar">
+          {fr.championships.length > 0 && (
+            <li class="badge badge--championship">
+              <span aria-hidden="true">🏆</span>
+              {fr.championships.length}x League Title{fr.championships.length > 1 ? 's' : ''}
+              <span class="badge-detail">{fr.championships.join(', ')}</span>
+            </li>
+          )}
+          {fr.runnerUps?.length > 0 && (
+            <li class="badge badge--runnerup">
+              <span aria-hidden="true">🥈</span>
+              {fr.runnerUps.length}x Runner-up
+              <span class="badge-detail">{fr.runnerUps.join(', ')}</span>
+            </li>
+          )}
+          {fr.divisionTitles.length > 0 && (
+            <li class="badge badge--division">
+              <span aria-hidden="true">🛡</span>
+              {fr.divisionTitles.length}x Division Title{fr.divisionTitles.length > 1 ? 's' : ''}
+            </li>
+          )}
+          {fr.mvpAwards.length > 0 && (
+            <li class="badge badge--mvp">
+              <span aria-hidden="true">⭐</span>
+              {fr.mvpAwards.length}x MVP
+            </li>
+          )}
+          {fr.jerryJonesAwards.length > 0 && (
+            <li class="badge badge--jerry">
+              <span aria-hidden="true">💸</span>
+              {fr.jerryJonesAwards.length}x Jerry Jones
+            </li>
+          )}
+          {fr.brockOsweilerAwards.length > 0 && (
+            <li class="badge badge--osweiler">
+              <span aria-hidden="true">📉</span>
+              {fr.brockOsweilerAwards.length}x Brock Osweiler
+            </li>
+          )}
+        </ul>
+      </div>
+    </header>
+
+    <section class="quick-stats">
+      <div class="stat">
+        <div class="stat-label">All-Time Record</div>
+        <div class="stat-value">{recordString}</div>
+        <div class="stat-sub">{winPct} win pct</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Seasons</div>
+        <div class="stat-value">{fr.yearsActive}</div>
+        <div class="stat-sub">{minYear}–{maxYear}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Points</div>
+        <div class="stat-value">{Math.round(fr.careerPointsFor).toLocaleString()}</div>
+        <div class="stat-sub">{ppg} ppg</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Playoff Apps</div>
+        <div class="stat-value">{fr.playoffAppearances}</div>
+        <div class="stat-sub">{fr.championships.length} title{fr.championships.length === 1 ? '' : 's'}</div>
+      </div>
+    </section>
+
+    {(fr.highlights?.highestSingleGame || fr.highlights?.lowestSingleGame) && (
+      <section class="highlights">
+        <h2>Single-Game Highlights</h2>
+        <div class="highlight-grid">
+          {fr.highlights.highestSingleGame && (
+            <div class="highlight">
+              <div class="hl-label">Highest Score</div>
+              <div class="hl-value">{fr.highlights.highestSingleGame.score.toFixed(2)}</div>
+              <div class="hl-context">Week {fr.highlights.highestSingleGame.week}, {fr.highlights.highestSingleGame.year}</div>
+            </div>
+          )}
+          {fr.highlights.lowestSingleGame && (
+            <div class="highlight">
+              <div class="hl-label">Lowest Score</div>
+              <div class="hl-value">{fr.highlights.lowestSingleGame.score.toFixed(2)}</div>
+              <div class="hl-context">Week {fr.highlights.lowestSingleGame.week}, {fr.highlights.lowestSingleGame.year}</div>
+            </div>
+          )}
+        </div>
+        <p class="dim small">Single-game data available 2019+</p>
+      </section>
+    )}
+
+    <section class="awards">
+      <h2>Awards Honor Roll</h2>
+      <div class="awards-grid">
+        {fr.championships.length > 0 && (
+          <div class="award-card award--championship">
+            <h3>🏆 League Titles ({fr.championships.length})</h3>
+            <ul>{fr.championships.map((y: number) => <li>{y}</li>)}</ul>
+          </div>
+        )}
+        {fr.runnerUps?.length > 0 && (
+          <div class="award-card award--runnerup">
+            <h3>🥈 Runners-up ({fr.runnerUps.length})</h3>
+            <ul>{fr.runnerUps.map((y: number) => <li>{y}</li>)}</ul>
+          </div>
+        )}
+        {fr.divisionTitles.length > 0 && (
+          <div class="award-card award--division">
+            <h3>🛡 Division Titles ({fr.divisionTitles.length})</h3>
+            <ul>{fr.divisionTitles.map((d: any) => <li>{d.year} · {d.divisionName}</li>)}</ul>
+          </div>
+        )}
+        {fr.mvpAwards.length > 0 && (
+          <div class="award-card award--mvp">
+            <h3>⭐ MVP Awards ({fr.mvpAwards.length})</h3>
+            <ul>
+              {fr.mvpAwards.map((a: any) => (
+                <li>{a.year} · {a.playerName} ({a.position}) · {a.points.toFixed(1)} pts at {formatCurrency(a.salary)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fr.jerryJonesAwards.length > 0 && (
+          <div class="award-card award--jerry">
+            <h3>💸 Jerry Jones Awards ({fr.jerryJonesAwards.length})</h3>
+            <p class="award-note dim small">Worst team starting-lineup cost-per-point that season.</p>
+            <ul>
+              {fr.jerryJonesAwards.map((a: any) => (
+                <li>{a.year} · {formatCurrency(a.totalSalary)} for {a.totalPoints.toFixed(0)} pts</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fr.brockOsweilerAwards.length > 0 && (
+          <div class="award-card award--osweiler">
+            <h3>📉 Brock Osweiler Awards ({fr.brockOsweilerAwards.length})</h3>
+            <p class="award-note dim small">Worst single player $/point at $1.5M+ salary that season.</p>
+            <ul>
+              {fr.brockOsweilerAwards.map((a: any) => (
+                <li>{a.year} · {a.playerName} ({a.position}) · {a.points.toFixed(1)} pts at {formatCurrency(a.salary)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fr.championships.length === 0 && fr.divisionTitles.length === 0
+          && fr.mvpAwards.length === 0 && fr.jerryJonesAwards.length === 0
+          && fr.brockOsweilerAwards.length === 0 && (
+          <div class="award-card empty">
+            <p class="dim">No award honors yet.</p>
+          </div>
+        )}
+      </div>
+    </section>
+
+    <section class="eras">
+      <h2>Era History</h2>
+      {eraStats.map(({ era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers }) => (
+        <div class="era" id={`era-${era.yearStart}`}>
+          <div class="era-header">
+            {era.icon && <img src={era.icon} alt="" class="era-icon" />}
+            <div>
+              <h3>
+                {era.name}
+                {era.isCurrent && <span class="current-tag">Current</span>}
+              </h3>
+              <p class="meta">
+                {era.yearStart === era.yearEnd || era.yearEnd === 9999
+                  ? `${era.yearStart}–${era.yearEnd === 9999 ? 'present' : era.yearEnd}`
+                  : `${era.yearStart}–${era.yearEnd}`}
+                {seasons.length > 0 && ` · ${seasons.length} season${seasons.length === 1 ? '' : 's'} · ${formatRecord(w, l, t)}`}
+              </p>
+            </div>
+          </div>
+          {seasons.length > 0 ? (
+            <table class="year-by-year">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Identity</th>
+                  <th>Record</th>
+                  <th>Points</th>
+                  <th>Reg. Rank</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {seasons.sort((a: any, b: any) => b.year - a.year).map((s: any) => (
+                  <tr>
+                    <td>{s.year}</td>
+                    <td>
+                      {s.icon && <img src={s.icon} alt="" class="row-icon" />}
+                      {s.nameMedium || s.name}
+                    </td>
+                    <td>{formatRecord(s.wins, s.losses, s.ties)}</td>
+                    <td>{Math.round(s.pointsFor).toLocaleString()}</td>
+                    <td>{s.regSeasonRank ? `#${s.regSeasonRank}` : '—'}</td>
+                    <td>
+                      {playoffResultLabel[s.playoffResult] ?? '—'}
+                      {s.wonDivision && <span class="div-tag">🛡 {s.divisionName}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p class="dim">No games played in this era yet.</p>
+          )}
+          {(champs.length > 0 || divTitles.length > 0 || mvps.length > 0 || jerrys.length > 0 || osweilers.length > 0) && (
+            <div class="era-awards">
+              {champs.length > 0 && <span class="era-award">🏆 {champs.length} title{champs.length === 1 ? '' : 's'}</span>}
+              {divTitles.length > 0 && <span class="era-award">🛡 {divTitles.length} division</span>}
+              {mvps.length > 0 && <span class="era-award">⭐ {mvps.length} MVP</span>}
+              {jerrys.length > 0 && <span class="era-award">💸 {jerrys.length} Jerry Jones</span>}
+              {osweilers.length > 0 && <span class="era-award">📉 {osweilers.length} Osweiler</span>}
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+
+    <p class="footnote">
+      <a href={resolveLeaguePath('/franchises')}>← All franchises</a>
+    </p>
+  </article>
+</TheLeagueLayout>
+
+<style>
+  .franchise-detail {
+    --accent: var(--color-primary, #cc2936);
+    padding: 1.5rem 1rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    margin: 1rem 0 2rem;
+  }
+  @media (min-width: 768px) {
+    .hero {
+      grid-template-columns: minmax(0, 320px) 1fr;
+      align-items: center;
+    }
+  }
+  .hero-banner {
+    position: relative;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    aspect-ratio: 3 / 1;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
+  }
+  .hero-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .crown {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    color: #ffd54a;
+    border-radius: 999px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .crown-count { font-size: 0.875rem; }
+
+  .hero-text h1 {
+    margin: 0 0 0.25rem;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+  }
+  .meta {
+    margin: 0 0 0.75rem;
+    color: var(--text-secondary, #666);
+    font-size: 0.875rem;
+  }
+
+  .badges-bar {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background: var(--surface-2, #f5f5f5);
+  }
+  .badge-detail {
+    font-size: 0.6875rem;
+    opacity: 0.7;
+    font-weight: 400;
+    margin-left: 0.25rem;
+  }
+  .badge--championship { background: #fff3c4; color: #7a5b00; }
+  .badge--runnerup { background: #f0f0f0; color: #555; }
+  .badge--division { background: #d6e4ff; color: #1a3d7c; }
+  .badge--mvp { background: #e6f7e6; color: #1f5d2d; }
+  .badge--jerry { background: #ffe4e1; color: #8b2a1f; }
+  .badge--osweiler { background: #f0e6f7; color: #4d2c66; }
+
+  .quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 2rem;
+    padding: 1rem;
+    background: var(--surface-2, #f5f5f5);
+    border-radius: 0.75rem;
+  }
+  .stat { display: flex; flex-direction: column; gap: 0.125rem; }
+  .stat-label {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary, #888);
+    font-weight: 600;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-sub {
+    font-size: 0.75rem;
+    color: var(--text-tertiary, #888);
+  }
+
+  .highlights, .awards, .eras {
+    margin: 2.5rem 0;
+  }
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.375rem;
+  }
+
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+  .highlight {
+    padding: 1rem;
+    background: var(--surface-2, #f5f5f5);
+    border-radius: 0.5rem;
+  }
+  .hl-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-tertiary, #888);
+    font-weight: 600;
+  }
+  .hl-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hl-context {
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #666);
+  }
+
+  .awards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.875rem;
+  }
+  .award-card {
+    padding: 1rem;
+    border-radius: 0.625rem;
+    background: var(--surface-2, #f5f5f5);
+    border-left: 4px solid var(--text-tertiary, #ccc);
+  }
+  .award-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+  .award-card ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .award-card.empty { border-left-color: transparent; }
+  .award-note { margin: 0 0 0.5rem; }
+  .award--championship { border-left-color: #b58a00; background: #fffbe8; }
+  .award--runnerup { border-left-color: #888; }
+  .award--division { border-left-color: #1a3d7c; background: #f0f5ff; }
+  .award--mvp { border-left-color: #1f5d2d; background: #f0fbf0; }
+  .award--jerry { border-left-color: #8b2a1f; background: #fff5f3; }
+  .award--osweiler { border-left-color: #4d2c66; background: #f9f4fc; }
+
+  .era {
+    margin-bottom: 2rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 0.625rem;
+  }
+  .era-header {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+  .era-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+    background: var(--surface, #fff);
+  }
+  .era-header h3 {
+    margin: 0 0 0.125rem;
+    font-size: 1.125rem;
+  }
+  .current-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+
+  .year-by-year {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .year-by-year th, .year-by-year td {
+    padding: 0.5rem 0.625rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border, #ececec);
+    font-variant-numeric: tabular-nums;
+  }
+  .year-by-year th {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary, #888);
+    font-weight: 600;
+  }
+  .year-by-year tbody tr:hover { background: var(--surface-2, #f5f5f5); }
+  .row-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    margin-right: 0.375rem;
+    vertical-align: middle;
+  }
+  .div-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.0625rem 0.375rem;
+    background: #d6e4ff;
+    color: #1a3d7c;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  .era-awards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border, #e5e5e5);
+  }
+  .era-award {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--surface-2, #f5f5f5);
+    color: var(--text-secondary, #555);
+    font-weight: 600;
+  }
+
+  .dim { color: var(--text-tertiary, #888); }
+  .small { font-size: 0.75rem; }
+  .footnote {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.875rem;
+  }
+</style>

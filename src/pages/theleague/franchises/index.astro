@@ -1,0 +1,351 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
+import leagueConfig from '../../../data/theleague.config.json';
+
+interface FranchiseRow {
+  franchiseId: string;
+  currentName: string;
+  currentNameMedium: string;
+  currentBanner: string | null;
+  currentIcon: string | null;
+  currentColor: string | null;
+  currentDivision: string | null;
+  yearsActive: number;
+  careerWins: number;
+  careerLosses: number;
+  careerTies: number;
+  careerPointsFor: number;
+  championships: number[];
+  divisionTitles: { year: number }[];
+  mvpAwards: { year: number }[];
+  jerryJonesAwards: { year: number }[];
+  brockOsweilerAwards: { year: number }[];
+  yearByYear: any[];
+}
+
+export const prerender = false;
+
+const allFranchises: FranchiseRow[] = Object.values(franchiseHistory.franchises as Record<string, FranchiseRow>);
+
+allFranchises.sort((a, b) => {
+  // Sort by championships desc, then career wins desc
+  const aTitles = a.championships.length;
+  const bTitles = b.championships.length;
+  if (aTitles !== bTitles) return bTitles - aTitles;
+  return b.careerWins - a.careerWins;
+});
+
+function recordString(f: FranchiseRow): string {
+  return f.careerTies > 0
+    ? `${f.careerWins}-${f.careerLosses}-${f.careerTies}`
+    : `${f.careerWins}-${f.careerLosses}`;
+}
+
+function winPct(f: FranchiseRow): string {
+  const total = f.careerWins + f.careerLosses + f.careerTies;
+  if (!total) return '.000';
+  const pct = (f.careerWins + f.careerTies * 0.5) / total;
+  return pct.toFixed(3).replace(/^0/, '');
+}
+
+// Latest year for header context
+const yearsCovered = (franchiseHistory.yearsCovered as number[]).slice().sort((a, b) => a - b);
+const firstYear = yearsCovered[0];
+const lastYear = yearsCovered[yearsCovered.length - 1];
+
+// Build a list of every distinct historical identity for the discovery strip
+type HistoricalIdentity = {
+  franchiseId: string;
+  name: string;
+  yearStart: number;
+  yearEnd: number;
+  banner: string | null;
+};
+const historicalIdentities: HistoricalIdentity[] = [];
+for (const team of leagueConfig.teams as any[]) {
+  if (Array.isArray(team.history)) {
+    for (const h of team.history) {
+      historicalIdentities.push({
+        franchiseId: team.franchiseId,
+        name: h.name,
+        yearStart: h.yearStart,
+        yearEnd: h.yearEnd,
+        banner: h.banner ?? null,
+      });
+    }
+  }
+}
+historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd);
+---
+
+<TheLeagueLayout title="Franchise History">
+  <section class="franchises-index">
+    <header>
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Stats & Reports', href: '/theleague/stats' },
+        { label: 'Franchise History' },
+      ]} />
+      <h1>Franchise History</h1>
+      <p class="lede">
+        Career records, championships, division titles, and award honors for
+        all 16 franchises across {firstYear}–{lastYear}. Click a card for the
+        full franchise page.
+      </p>
+    </header>
+
+    <div class="franchise-grid">
+      {allFranchises.map((f) => (
+        <a
+          href={resolveLeaguePath(`/franchises/${f.franchiseId}`)}
+          class="franchise-card"
+          style={f.currentColor ? `--accent: ${f.currentColor};` : ''}
+        >
+          {f.currentBanner && (
+            <div class="banner">
+              <img src={f.currentBanner} alt="" loading="lazy" />
+            </div>
+          )}
+          <div class="card-body">
+            <h2 class="name">{f.currentNameMedium || f.currentName}</h2>
+            {f.currentDivision && <p class="division">{f.currentDivision} Division</p>}
+            <dl class="stats">
+              <div>
+                <dt>All-Time</dt>
+                <dd>{recordString(f)} <span class="dim">({winPct(f)})</span></dd>
+              </div>
+              <div>
+                <dt>Seasons</dt>
+                <dd>{f.yearsActive}</dd>
+              </div>
+              <div>
+                <dt>Points</dt>
+                <dd>{Math.round(f.careerPointsFor).toLocaleString()}</dd>
+              </div>
+            </dl>
+            <ul class="badges" aria-label="Awards">
+              {f.championships.length > 0 && (
+                <li class="badge badge--championship" title={`Champion: ${f.championships.join(', ')}`}>
+                  <span class="icon" aria-hidden="true">🏆</span>
+                  <span>{f.championships.length}</span>
+                </li>
+              )}
+              {f.divisionTitles.length > 0 && (
+                <li class="badge badge--division" title={`Division titles: ${f.divisionTitles.length}`}>
+                  <span class="icon" aria-hidden="true">🛡</span>
+                  <span>{f.divisionTitles.length}</span>
+                </li>
+              )}
+              {f.mvpAwards.length > 0 && (
+                <li class="badge badge--mvp" title={`MVPs: ${f.mvpAwards.length}`}>
+                  <span class="icon" aria-hidden="true">⭐</span>
+                  <span>{f.mvpAwards.length}</span>
+                </li>
+              )}
+              {f.jerryJonesAwards.length > 0 && (
+                <li class="badge badge--jerry" title={`Jerry Jones Awards: ${f.jerryJonesAwards.length}`}>
+                  <span class="icon" aria-hidden="true">💸</span>
+                  <span>{f.jerryJonesAwards.length}</span>
+                </li>
+              )}
+              {f.brockOsweilerAwards.length > 0 && (
+                <li class="badge badge--osweiler" title={`Brock Osweiler Awards: ${f.brockOsweilerAwards.length}`}>
+                  <span class="icon" aria-hidden="true">📉</span>
+                  <span>{f.brockOsweilerAwards.length}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+        </a>
+      ))}
+    </div>
+
+    {historicalIdentities.length > 0 && (
+      <section class="historical-identities">
+        <h2>Former Identities</h2>
+        <p class="dim">
+          Historical names this league has used. These eras are displayed
+          inline on the relevant franchise page.
+        </p>
+        <ul class="identity-list">
+          {historicalIdentities.map((h) => (
+            <li>
+              <a href={resolveLeaguePath(`/franchises/${h.franchiseId}#era-${h.yearStart}`)}>
+                <strong>{h.name}</strong>
+                <span class="dim">{h.yearStart === h.yearEnd ? h.yearStart : `${h.yearStart}–${h.yearEnd}`}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .franchises-index {
+    padding: 1.5rem 1rem 4rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  header {
+    margin-bottom: 2rem;
+  }
+  h1 {
+    margin: 0.25rem 0 0.5rem;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+  }
+  .lede {
+    margin: 0;
+    color: var(--text-secondary, #666);
+    max-width: 60ch;
+  }
+
+  .franchise-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .franchise-card {
+    --accent: var(--color-primary, #cc2936);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .franchise-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
+  }
+
+  .banner {
+    aspect-ratio: 3 / 1;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
+    overflow: hidden;
+  }
+  .banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .card-body {
+    padding: 0.875rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    flex: 1;
+  }
+
+  .name {
+    margin: 0;
+    font-size: 1.125rem;
+    line-height: 1.2;
+  }
+  .division {
+    margin: 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary, #888);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .stats > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .stats dt {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary, #888);
+    font-weight: 600;
+  }
+  .stats dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .dim {
+    color: var(--text-tertiary, #888);
+    font-weight: 400;
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    margin-top: auto;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--surface-2, #f5f5f5);
+    color: var(--text-secondary, #555);
+  }
+  .badge .icon { font-size: 0.875rem; line-height: 1; }
+  .badge--championship { background: #fff3c4; color: #7a5b00; }
+  .badge--division { background: #d6e4ff; color: #1a3d7c; }
+  .badge--mvp { background: #e6f7e6; color: #1f5d2d; }
+  .badge--jerry { background: #ffe4e1; color: #8b2a1f; }
+  .badge--osweiler { background: #f0e6f7; color: #4d2c66; }
+
+  .historical-identities {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border, #e5e5e5);
+  }
+  .historical-identities h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.25rem;
+  }
+  .historical-identities p { margin: 0 0 1rem; }
+  .identity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.5rem;
+  }
+  .identity-list a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--surface-2, #f5f5f5);
+    text-decoration: none;
+    color: inherit;
+    font-size: 0.875rem;
+  }
+  .identity-list a:hover { background: var(--surface-3, #ebebeb); }
+</style>
