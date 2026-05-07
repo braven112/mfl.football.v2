@@ -650,32 +650,39 @@ export class MFLMatchupApiClient {
       return { success: false, error: 'Authentication required for roster moves' };
     }
 
-    // Mirrors the proven owner-mode write pattern in src/pages/api/cut-player.ts:
-    // owner cookie only — never send MFL_IS_COMMISH.
+    // Use MFL's legacy `/freeagency` endpoint with `TYPE=moveToIR` /
+    // `TYPE=moveToTaxi` and `PLAYER` / `FRANCHISE` (singular, no _ID suffix).
     //
-    // POST DIRECTLY TO www49 (not api.myfantasyleague.com). MFL's api.* host
-    // 302-redirects to www49, and mflFetch follows that redirect by converting
-    // POST → GET per HTTP spec (body appended to the URL). MFL's import
-    // endpoint accepts GETs for some TYPEs (e.g. fcfsWaiver, which is why
-    // Cut Player works through api.*) but appears to silently no-op on GETs
-    // for TYPE=taxi_squad and TYPE=ir — the response is `<status>OK</status>`
-    // without the move actually persisting. Brandon's 2026-05-07 debug
-    // capture confirmed this: status 200, body `<status>OK</status>`, no
-    // persistence on refresh. POSTing directly to www49 keeps the method
-    // and body intact so the import handler runs.
+    // Brandon's 2026-05-07 debug captures confirmed that the "canonical"
+    // `import?TYPE=ir` and `import?TYPE=taxi_squad` endpoints (inferred from
+    // transaction logs) silently no-op: MFL returns 200 + `<status>OK</status>`
+    // but the move never persists. We tried every variant — api.* with redirect,
+    // www49 direct, with/without FRANCHISE_ID, single param vs both — same
+    // silent ack on every shape.
     //
-    // Send ONLY the active param (PROMOTED or DEMOTED, ACTIVATED or
-    // DEACTIVATED). The empty companion silently no-ops.
+    // The `/freeagency?TYPE=moveToIR` path is documented in
+    // .claude/agents/qa-principal-engineer.md and qa-api-debugger.md as the
+    // working owner-mode IR write. By analogy we try `TYPE=moveToTaxi` for
+    // taxi-squad moves; if MFL's parser rejects that name we'll see a real
+    // error in the on-page debug panel and adjust.
     //
-    // Do NOT send FRANCHISE_ID — owner cookie identifies the franchise.
+    // For 'from' direction (off IR / promote from practice), the legacy verb
+    // is also unverified — best guess is the same TYPE with the player
+    // implied to leave the bucket. We'll iterate based on whatever debug
+    // surface comes back.
+    const moveType =
+      opts.type === 'ir'
+        ? (opts.direction === 'to' ? 'moveToIR' : 'activateFromIR')
+        : (opts.direction === 'to' ? 'moveToTaxi' : 'activateFromTaxi');
+
     const writeHost = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
-    const url = `${writeHost}/${this.config.year}/import`;
+    const url = `${writeHost}/${this.config.year}/freeagency`;
     const params = new URLSearchParams({
-      TYPE: opts.type,
+      TYPE: moveType,
       L: this.config.leagueId,
+      FRANCHISE: opts.franchiseId,
+      PLAYER: opts.playerId,
     });
-    const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
-    params.set(activeParam, opts.playerId);
 
     const requestBody = params.toString();
     console.log(
