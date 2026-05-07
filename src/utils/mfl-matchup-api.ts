@@ -18,6 +18,25 @@ export interface MFLApiConfig {
 }
 
 /**
+ * Diagnostic capture from a roster-move write — surfaced all the way to the
+ * UI so we can see what MFL actually responded with on a phone, without
+ * needing DevTools / Vercel logs.
+ */
+export interface RosterMoveDebug {
+  requestUrl: string;
+  requestBody: string;
+  responseStatus: number;
+  responseContentType: string;
+  responseBody: string;
+}
+
+export interface RosterMoveResult {
+  success: boolean;
+  error?: string;
+  debug?: RosterMoveDebug;
+}
+
+/**
  * Raw MFL roster response
  */
 interface MFLRosterResponse {
@@ -579,7 +598,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     franchiseId: string,
     direction: 'to' | 'from' = 'to',
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<RosterMoveResult> {
     return this.runRosterMove({
       type: 'ir',
       onParam: 'ACTIVATED',
@@ -604,7 +623,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     franchiseId: string,
     direction: 'to' | 'from' = 'to',
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<RosterMoveResult> {
     return this.runRosterMove({
       type: 'taxi_squad',
       onParam: 'PROMOTED',
@@ -626,67 +645,83 @@ export class MFLMatchupApiClient {
     playerId: string;
     franchiseId: string;
     direction: 'to' | 'from';
-  }): Promise<{ success: boolean; error?: string }> {
+  }): Promise<RosterMoveResult> {
     if (!this.config.mflUserId) {
       return { success: false, error: 'Authentication required for roster moves' };
     }
 
+    // Mirrors the proven owner-mode write pattern in src/pages/api/cut-player.ts:
+    // POST to api.myfantasyleague.com (mflFetch handles the cross-origin
+    // redirect to www49 and re-attaches the cookie), put every parameter in
+    // the body, owner cookie only — never send MFL_IS_COMMISH.
+    //
+    // Send ONLY the active param (PROMOTED or DEMOTED, ACTIVATED or
+    // DEACTIVATED) for the move's direction. Sending the inactive
+    // companion as an empty string causes MFL's import endpoint to
+    // silently no-op while still returning a success-shaped response
+    // (no <error>, no HTML).
+    const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
+    const params = new URLSearchParams({
+      TYPE: opts.type,
+      L: this.config.leagueId,
+      FRANCHISE_ID: opts.franchiseId,
+    });
+    const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
+    params.set(activeParam, opts.playerId);
+
+    const requestBody = params.toString();
+    console.log(
+      `[runRosterMove] POST ${url} body=${requestBody}`,
+    );
+
     try {
-      // Mirrors the proven owner-mode write pattern in src/pages/api/cut-player.ts:
-      // POST to api.myfantasyleague.com (mflFetch handles the cross-origin
-      // redirect to www49 and re-attaches the cookie), put every parameter in
-      // the body, owner cookie only — never send MFL_IS_COMMISH.
-      const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
-      const params = new URLSearchParams({
-        TYPE: opts.type,
-        L: this.config.leagueId,
-        FRANCHISE_ID: opts.franchiseId,
-      });
-      if (opts.direction === 'to') {
-        params.set(opts.onParam, opts.playerId);
-        params.set(opts.offParam, '');
-      } else {
-        params.set(opts.onParam, '');
-        params.set(opts.offParam, opts.playerId);
-      }
-
-      console.log(
-        `[runRosterMove] POST ${url} (type=${opts.type}, franchise=${opts.franchiseId}, ${opts.direction === 'to' ? opts.onParam : opts.offParam}=${opts.playerId})`,
-      );
-
       const response = await mflFetch({
         url,
         method: 'POST',
         mflUserCookie: this.config.mflUserId,
-        body: params.toString(),
+        body: requestBody,
       });
 
       const text = await response.text();
+      const debug: RosterMoveDebug = {
+        requestUrl: url,
+        requestBody,
+        responseStatus: response.status,
+        responseContentType: response.headers.get('content-type') || '',
+        responseBody: text.slice(0, 1500),
+      };
       console.log(
-        `[runRosterMove] MFL response: ${response.status} ${response.headers.get('content-type') ?? ''} | body=${text.slice(0, 500)}`,
+        `[runRosterMove] MFL response: ${debug.responseStatus} ${debug.responseContentType} | body=${debug.responseBody.slice(0, 500)}`,
       );
 
       if (text.includes('<error>') || text.includes('"error"')) {
         const errorMatch =
           text.match(/<error[^>]*>(.*?)<\/error>/s) ||
           text.match(/"error"\s*:\s*"([^"]+)"/);
-        return { success: false, error: errorMatch?.[1] || 'MFL rejected the request' };
+        return { success: false, error: errorMatch?.[1] || 'MFL rejected the request', debug };
       }
 
       if (!response.ok) {
-        return { success: false, error: `MFL API error: ${response.status}` };
+        return { success: false, error: `MFL API error: ${response.status}`, debug };
       }
 
       if (text.includes('<html') || text.includes('<!DOCTYPE')) {
-        return { success: false, error: 'MFL did not process the request. Try again.' };
+        return { success: false, error: 'MFL did not process the request. Try again.', debug };
       }
 
-      return { success: true };
+      return { success: true, debug };
     } catch (error) {
       console.error(`Failed to ${opts.direction === 'to' ? 'move to' : 'remove from'} ${opts.type}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Roster move failed',
+        debug: {
+          requestUrl: url,
+          requestBody,
+          responseStatus: 0,
+          responseContentType: '',
+          responseBody: error instanceof Error ? error.message : String(error),
+        },
       };
     }
   }
