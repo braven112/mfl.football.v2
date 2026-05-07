@@ -8850,6 +8850,32 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           return 'Promoting…';
         })();
 
+        // TEMP DEBUG: show MFL's actual response on-page so we can diagnose
+        // the IR/taxi silent-failure on a phone without DevTools or Vercel
+        // function logs. Remove once the persistence bug is fixed.
+        const renderDebugPanel = (debug) => {
+          if (!debug) return;
+          const panel = document.createElement('details');
+          panel.open = true;
+          panel.style.cssText = 'margin-top:12px;padding:10px;border:1px solid #888;border-radius:6px;background:#111;color:#eee;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.4;';
+          const summary = document.createElement('summary');
+          summary.textContent = 'MFL response (debug)';
+          summary.style.cssText = 'cursor:pointer;font-weight:bold;margin-bottom:6px;';
+          panel.appendChild(summary);
+          const lines = [
+            'POST ' + (debug.requestUrl || ''),
+            'BODY ' + (debug.requestBody || ''),
+            '',
+            'STATUS ' + (debug.responseStatus ?? '') + ' ' + (debug.responseContentType || ''),
+            (debug.responseBody || '').toString(),
+          ].join('\n');
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'white-space:pre-wrap;word-break:break-all;margin:0;max-height:240px;overflow:auto;';
+          pre.textContent = lines;
+          panel.appendChild(pre);
+          actionOptions.appendChild(panel);
+        };
+
         const endpoint = target === 'ir' ? '/api/move-to-ir' : '/api/move-to-practice';
         try {
           const res = await fetch(endpoint, {
@@ -8858,6 +8884,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             body: JSON.stringify({ playerId, direction }),
           });
           const result = await res.json();
+          renderDebugPanel(result?.debug);
 
           if (!res.ok || !result?.success) {
             throw new Error(result?.message || 'MFL rejected the request.');
@@ -8888,7 +8915,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             setTimeout(() => { announcer.textContent = ''; }, 1500);
           }
 
-          setTimeout(closeDeclarationModal, 1200);
+          // While the debug panel is in place, leave the modal open so the
+          // response is readable. Re-add `setTimeout(closeDeclarationModal, 1200);`
+          // here once the panel is removed.
         } catch (err) {
           if (card) card.style.opacity = '';
           cta.disabled = false;

@@ -77,14 +77,18 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (!result.success) {
       return new Response(
-        JSON.stringify({ success: false, message: result.error || 'MFL rejected the IR move.' }),
+        JSON.stringify({
+          success: false,
+          message: result.error || 'MFL rejected the IR move.',
+          debug: result.debug,
+        }),
         { status: 400, headers: JSON_HEADERS },
       );
     }
 
     const message = direction === 'to' ? 'Player moved to IR' : 'Player activated from IR';
     return new Response(
-      JSON.stringify({ success: true, message }),
+      JSON.stringify({ success: true, message, debug: result.debug }),
       { status: 200, headers: JSON_HEADERS },
     );
   } catch (error) {
