@@ -2,13 +2,14 @@ name: Schefter Trade Speculation
 
 on:
   schedule:
-    # Daily at 8pm UTC = 1pm Pacific. Two-team lane. NFL-calendar-aware
-    # cadence (scripts/lib/speculation-cadence.mjs) decides whether to
-    # actually post — the cron just gives the scanner a once-a-day chance.
+    # Daily at 8pm UTC = 1pm Pacific. NFL-calendar-aware cadence (per
+    # scripts/lib/speculation-cadence.mjs) decides whether to actually post —
+    # the cron just gives the scanner a once-a-day chance.
     - cron: "0 20 * * *"
-    # Monday at 7pm UTC = noon Pacific. Three-team blockbuster lane (Phase 3).
-    # Detected via github.event.schedule so the same workflow file drives
-    # both lanes — see the "Run speculation scanner" step.
+    # Extra Monday slot at 7pm UTC = noon Pacific. Phase 1 still uses the
+    # same two-team matcher; the three-team blockbuster lands in Phase 3
+    # but the daily slot already exists so we don't need a workflow change
+    # when that ships.
     - cron: "0 19 * * 1"
   workflow_dispatch:
     inputs:
@@ -16,14 +17,6 @@ on:
         description: "Run without mutating feed/ledger"
         required: false
         default: "false"
-      mode:
-        description: "Lane (two-team | three-team)"
-        required: false
-        default: "two-team"
-        type: choice
-        options:
-          - two-team
-          - three-team
 
 concurrency:
   group: schefter-trade-speculation
@@ -63,33 +56,17 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
-          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
-          # The Monday-noon cron fires the three-team blockbuster lane; every
-          # other trigger (daily 1pm cron, manual without override) defaults
-          # to the two-team lane. workflow_dispatch can override via the
-          # `mode` input.
-          SCHEDULE_TRIGGER: ${{ github.event.schedule }}
-          MODE_INPUT: ${{ github.event.inputs.mode }}
         run: |
-          if [ -n "$MODE_INPUT" ]; then
-            mode="$MODE_INPUT"
-          elif [ "$SCHEDULE_TRIGGER" = "0 19 * * 1" ]; then
-            mode="three-team"
-          else
-            mode="two-team"
-          fi
-          echo "Speculation lane: $mode"
           if [ "$DRY_RUN_INPUT" = "true" ]; then
-            node scripts/schefter-trade-speculation.mjs --mode="$mode" --dry-run
+            node scripts/schefter-trade-speculation.mjs --dry-run
           else
-            node scripts/schefter-trade-speculation.mjs --mode="$mode"
+            node scripts/schefter-trade-speculation.mjs
           fi
 
       - name: Commit and push feed + ledger updates
         env:
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
-          SCHEDULE_TRIGGER: ${{ github.event.schedule }}
         if: github.event.inputs.dry_run != 'true'
         run: |
           if [ -z "$(git status --porcelain)" ]; then
@@ -100,13 +77,6 @@ jobs:
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
           git add src/data/theleague/schefter-feed.json data/theleague/derived/speculation-history.json data/theleague/mfl-feeds
-          # Commit msg distinguishes the two lanes for git log readability;
-          # falls back to the daily phrasing on manual runs.
-          if [ "$SCHEDULE_TRIGGER" = "0 19 * * 1" ]; then
-            commit_msg="chore: schefter speculation — Monday three-team blockbuster"
-          else
-            commit_msg="chore: schefter speculation — new trade speculation post"
-          fi
-          git commit -m "$commit_msg"
+          git commit -m "chore: schefter speculation — new trade speculation post"
           git pull --rebase origin main
           git push

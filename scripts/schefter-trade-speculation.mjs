@@ -20,19 +20,9 @@
  *     — the feed + ledger are already persisted by the time we attempt the
  *     GroupMe call, so a chat outage cannot block the run or break rotation.
  *
- * Phase 3 scope (added):
- *   - --mode=three-team flag flips the runner into the Monday blockbuster
- *     lane: it runs findThreeTeamCandidate instead of findTwoTeamCandidates,
- *     uses 🔴 tier emoji, and writes a transaction sub-type of
- *     'trade_speculation_three_team' so the feed UI can style it differently
- *     from the daily 🟡 two-team drops. Rotation is enforced via a separate
- *     three-team trade signature (threeTeamTradeSignature) so a three-team
- *     deal doesn't crowd out two-team rotation slots and vice versa.
- *
  * Usage:
- *   node scripts/schefter-trade-speculation.mjs                  # daily two-team
- *   node scripts/schefter-trade-speculation.mjs --mode=three-team # Monday blockbuster
- *   node scripts/schefter-trade-speculation.mjs --dry-run         # any mode, no mutations
+ *   node scripts/schefter-trade-speculation.mjs           # live run
+ *   node scripts/schefter-trade-speculation.mjs --dry-run # no mutations
  *
  * Env (required for live posting):
  *   ANTHROPIC_API_KEY            Claude API key for blurb generation
@@ -58,7 +48,6 @@ import {
 } from './lib/speculation-cadence.mjs';
 import {
   findTwoTeamCandidates,
-  findThreeTeamCandidate,
   valuePlayer,
 } from './lib/speculation-matching.mjs';
 import {
@@ -71,7 +60,6 @@ import {
   recentlyPostedTrade,
   franchiseInRecentRotation,
   tradeSignature,
-  threeTeamTradeSignature,
 } from './lib/speculation-history.mjs';
 import {
   checkGlobalBudgetGate,
@@ -82,21 +70,6 @@ import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
-
-// Mode selection. Default = two-team daily lane; --mode=three-team flips into
-// the Monday blockbuster lane. The flag is intentionally explicit (not
-// auto-detected from `new Date().getDay()`) so the workflow file is the
-// single source of truth on when each lane fires — easier to audit, easier
-// to test, and immune to clock-skew surprises in cron triggers.
-function detectMode(argv = process.argv) {
-  const flag = argv.find((a) => a.startsWith('--mode='));
-  if (!flag) return 'two-team';
-  const value = flag.slice('--mode='.length).trim();
-  if (value === 'three-team') return 'three-team';
-  if (value === 'two-team') return 'two-team';
-  throw new Error(`[speculation] unknown --mode=${value} (expected: two-team | three-team)`);
-}
-const MODE = detectMode();
 
 // ── Constants ──
 
@@ -118,14 +91,7 @@ const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://thelea
 // speculation posts (those make no sense for algorithmic content).
 const SPECULATION_POST_TYPE = 'transaction';
 const SPECULATION_POST_TIER = 'rumor';
-const SPECULATION_SUB_TYPE_TWO_TEAM = 'trade_speculation';
-const SPECULATION_SUB_TYPE_THREE_TEAM = 'trade_speculation_three_team';
-
-// Tier emoji is the visual spine of the post — see the plan doc:
-//   🟡 two-team blockbuster (daily lane)
-//   🔴 three-team mega-deal (Monday lane)
-const TIER_EMOJI_TWO_TEAM = '🟡';
-const TIER_EMOJI_THREE_TEAM = '🔴';
+const SPECULATION_SUB_TYPE = 'trade_speculation';
 
 const log = (...args) => console.log(...args);
 const warn = (...args) => console.warn(...args);
@@ -299,6 +265,8 @@ async function loadFeed() {
 
 // ── Schefter blurb generation ──
 
+const TIER_EMOJI = '🟡';
+
 // MFL stores names as "Last, First" but speculation copy reads better as
 // "First Last". Defensive on edge cases (suffixes, single-token names).
 function normalizeName(raw) {
@@ -317,29 +285,13 @@ function templateBlurb({ marquee, returnPkg, sellerName, buyerName, capRelief })
   const pkgStr = returnPkg.map((p) => normalizeName(p.name)).join(' and ');
   const marqueeName = normalizeName(marquee.name);
   const lines = [
-    `${TIER_EMOJI_TWO_TEAM} The talk-radio crowd in ${buyerName}-country has been chewing on a fit for ${sellerName} ${marquee.position} ${marqueeName}.`,
+    `${TIER_EMOJI} The talk-radio crowd in ${buyerName}-country has been chewing on a fit for ${sellerName} ${marquee.position} ${marqueeName}.`,
     `Local fan boards are floating ${pkgStr} as the kind of return ${sellerName} would have to take seriously — neither front office has commented.`,
   ];
   if (capRelief) {
     lines.push(`${sellerName} would clear meaningful cap room in any version of this deal, which is half the reason the speculation has legs.`);
   }
   return lines.join(' ');
-}
-
-// Three-team blockbuster template fallback. Same fan-chatter framing as the
-// two-team version but the lead beat is "mock-up making the rounds" — a
-// cycle is too speculative to hang on real local-media chatter.
-function templateThreeTeamBlurb({ pieces, names }) {
-  const pA = normalizeName(pieces.fromA.name);
-  const pB = normalizeName(pieces.fromB.name);
-  const pC = normalizeName(pieces.fromC.name);
-  return (
-    `${TIER_EMOJI_THREE_TEAM} Three-team mock-up making the rounds on Wednesday's regional shows: ` +
-    `${pA} from ${names.a} to ${names.b}, ` +
-    `${pB} from ${names.b} to ${names.c}, and ` +
-    `${pC} from ${names.c} to ${names.a}. ` +
-    `All three front offices have stayed silent — this is fan-driven speculation, not a deal anyone's confirmed.`
-  );
 }
 
 async function generateBlurbWithClaude({ marquee, returnPkg, sellerName, buyerName, capRelief }) {
@@ -408,73 +360,6 @@ ${JSON.stringify(
   }
 }
 
-async function generateThreeTeamBlurbWithClaude({ pieces, names }) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey || DRY_RUN) {
-    return null;
-  }
-
-  const system = `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's voice.
-You are writing a SPECULATION post about a hypothetical THREE-team trade cycle. The trade is NOT real — it has NOT been offered. It is a fan/media mock-up generated from publicly-listed trade-bait + roster fits + cap math.
-
-CRITICAL FRAMING (self-enforce):
-- The speculation comes from LOCAL MEDIA and FANS — talk-radio mock-ups, regional-show whiteboards, beat-writer notebooks, fan boards. NOT from the front offices. All three teams should be framed as silent / non-committal ("All three front offices have stayed silent", "this isn't coming from the buildings", "no team has acknowledged the chatter").
-- Lean on phrases like: "three-team mock-up making the rounds", "regional shows are floating", "fan-board cycle of the week", "Wednesday call-in mock", "local beat writers have been mapping out".
-- NEVER imply any of the three GMs, owners, or front offices is actually pursuing this. The story is the BUZZ around the cycle, not a leak.
-
-HARD RULES (self-enforce):
-- 1–3 sentences total. Tight, beat-reporter cadence.
-- Describe the cycle clearly: who sends what to whom in the order A→B, B→C, C→A. Use the franchise nameMedium values exactly as given.
-- Do NOT invent any player names beyond the three pieces in the input. If a name isn't there, it doesn't exist.
-- Do NOT name dollar amounts.
-- No emojis (the post is prefixed with a tier emoji separately).
-- No hashtags, no @-mentions, no meta-commentary about the speculation engine, no markdown.
-- OUTPUT CONTRACT: respond with JSON only — {"post": "<the speculation copy as a single string>"}.`;
-
-  const userMessage = `Generate a fan/media speculation post for the following candidate THREE-team trade cycle. Remember: this is NOT a leak from the teams — it's a mock-up from outside the buildings.
-
-CYCLE (A → B → C → A):
-${JSON.stringify(
-  {
-    teamA: names.a,
-    teamB: names.b,
-    teamC: names.c,
-    aSendsToB: { name: normalizeName(pieces.fromA.name), position: pieces.fromA.position },
-    bSendsToC: { name: normalizeName(pieces.fromB.name), position: pieces.fromB.position },
-    cSendsToA: { name: normalizeName(pieces.fromC.name), position: pieces.fromC.position },
-  },
-  null,
-  2,
-)}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 320,
-        system,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-    });
-    if (!res.ok) {
-      warn(`[speculation AI 3T] HTTP ${res.status} — using template`);
-      return null;
-    }
-    const data = await res.json();
-    const text = (data.content?.[0]?.text ?? '').trim();
-    return parseAiResponse(text);
-  } catch (err) {
-    warn(`[speculation AI 3T] ${err.message} — using template`);
-    return null;
-  }
-}
-
 function parseAiResponse(raw) {
   try {
     // Tolerate code fences / surrounding prose
@@ -498,218 +383,10 @@ function generatePostId() {
   return `sf_speculation_${Date.now()}_${hash}`;
 }
 
-// ── Mode dispatchers ──
-
-/**
- * Two-team daily lane (Phase 1). Finds the best buyer→seller candidate that
- * isn't in rotation cooldown, generates a Schefter blurb, and returns the
- * fully-built feed post + the ledger row that should be appended on success.
- *
- * Returns null when there's nothing publishable (no candidates / all in
- * cooldown). Logs progress.
- */
-async function buildTwoTeamPost({
-  playersByFranchise,
-  tradeBaitByFranchise,
-  adpRankById,
-  teams,
-  ledger,
-  now,
-  cadenceTag,
-}) {
-  const rawCandidates = findTwoTeamCandidates({
-    playersByFranchise,
-    tradeBaitByFranchise,
-    adpRankById,
-    teams,
-    limit: 10,
-  });
-  log(`  [two-team] Raw candidate pool: ${rawCandidates.length}`);
-  if (rawCandidates.length === 0) {
-    log('  [two-team] No candidates found — exiting');
-    return null;
-  }
-
-  const passing = [];
-  for (const c of rawCandidates) {
-    const sig = tradeSignature({
-      seller: c.seller,
-      buyer: c.buyer,
-      marqueeId: c.marquee.id,
-      returnPkgIds: c.returnPkg.map((p) => p.id),
-    });
-    if (recentlyPostedTrade(ledger, sig, now)) continue;
-    if (
-      franchiseInRecentRotation(ledger, c.seller, now) &&
-      franchiseInRecentRotation(ledger, c.buyer, now)
-    ) {
-      // Both already featured in the last 7 days — skip to spread coverage.
-      continue;
-    }
-    passing.push({ ...c, signature: sig });
-  }
-  log(`  [two-team] After rotation gate: ${passing.length}`);
-  if (passing.length === 0) {
-    log('  [two-team] All candidates are in the rotation cooldown — exiting');
-    return null;
-  }
-
-  const winner = passing[0];
-  const sellerTeam = teams.get(winner.seller);
-  const buyerTeam = teams.get(winner.buyer);
-  log(
-    `  [two-team] Winner (score=${winner.score}): ${sellerTeam?.nameMedium ?? winner.seller} → ${buyerTeam?.nameMedium ?? winner.buyer}: ${winner.marquee.name}`,
-  );
-
-  const blurbInput = {
-    marquee: winner.marquee,
-    returnPkg: winner.returnPkg,
-    sellerName: sellerTeam?.nameMedium ?? `Franchise ${winner.seller}`,
-    buyerName: buyerTeam?.nameMedium ?? `Franchise ${winner.buyer}`,
-    capRelief: winner.capRelief,
-  };
-  let body = await generateBlurbWithClaude(blurbInput);
-  if (!body) body = templateBlurb(blurbInput);
-  const post = {
-    id: generatePostId(),
-    timestamp: now.toISOString(),
-    type: SPECULATION_POST_TYPE,
-    transactionSubType: SPECULATION_SUB_TYPE_TWO_TEAM,
-    tier: SPECULATION_POST_TIER,
-    headline: 'Schefter speculating…',
-    body: body.startsWith(TIER_EMOJI_TWO_TEAM) ? body : `${TIER_EMOJI_TWO_TEAM} ${body}`,
-    authorId: 'claude',
-    franchiseIds: [winner.seller, winner.buyer],
-    league: LEAGUE_SLUG,
-    speculation: {
-      mode: 'two-team',
-      seller: winner.seller,
-      buyer: winner.buyer,
-      marquee: { id: winner.marquee.id, name: winner.marquee.name, position: winner.marquee.position },
-      returnPkg: winner.returnPkg.map((p) => ({ id: p.id, name: p.name, position: p.position })),
-      score: winner.score,
-      capRelief: winner.capRelief,
-    },
-  };
-  return {
-    post,
-    ledgerEntry: {
-      postedAt: now.getTime(),
-      postId: post.id,
-      signature: winner.signature,
-      franchiseIds: [winner.seller, winner.buyer],
-      cadenceTag,
-      mode: 'two-team',
-    },
-  };
-}
-
-/**
- * Three-team Monday blockbuster lane (Phase 3). Finds the single best A→B→C→A
- * cycle in the league that isn't in rotation cooldown. Two cooldowns apply:
- *   - Same exact cycle (canonical signature) within the last 30 days → skip.
- *   - All three franchises featured in the last 7 days → skip (spread coverage).
- *
- * Note: the franchise rotation gate is more permissive than the two-team gate,
- * which requires only TWO of the franchises to be in cooldown to skip. Three
- * franchises all being in rotation is rarer, so we hold the bar at "all three"
- * to keep the Monday lane from going dark for weeks at a time.
- */
-async function buildThreeTeamPost({
-  playersByFranchise,
-  tradeBaitByFranchise,
-  adpRankById,
-  teams,
-  ledger,
-  now,
-  cadenceTag,
-}) {
-  const cycle = findThreeTeamCandidate({
-    playersByFranchise,
-    tradeBaitByFranchise,
-    adpRankById,
-    teams,
-  });
-  if (!cycle) {
-    log('  [three-team] No 3-cycle found — exiting');
-    return null;
-  }
-
-  const signature = threeTeamTradeSignature({
-    a: cycle.a,
-    b: cycle.b,
-    c: cycle.c,
-    fromAIds: [cycle.pieces.fromA.id],
-    fromBIds: [cycle.pieces.fromB.id],
-    fromCIds: [cycle.pieces.fromC.id],
-  });
-  if (recentlyPostedTrade(ledger, signature, now)) {
-    log('  [three-team] Same cycle posted in the last 30 days — exiting');
-    return null;
-  }
-  const allInRotation =
-    franchiseInRecentRotation(ledger, cycle.a, now) &&
-    franchiseInRecentRotation(ledger, cycle.b, now) &&
-    franchiseInRecentRotation(ledger, cycle.c, now);
-  if (allInRotation) {
-    log('  [three-team] All three franchises in 7d rotation cooldown — exiting');
-    return null;
-  }
-
-  const teamA = teams.get(cycle.a);
-  const teamB = teams.get(cycle.b);
-  const teamC = teams.get(cycle.c);
-  const names = {
-    a: teamA?.nameMedium ?? `Franchise ${cycle.a}`,
-    b: teamB?.nameMedium ?? `Franchise ${cycle.b}`,
-    c: teamC?.nameMedium ?? `Franchise ${cycle.c}`,
-  };
-  log(
-    `  [three-team] Cycle (score=${cycle.score}): ${names.a} → ${names.b} → ${names.c} → ${names.a}`,
-  );
-
-  const blurbInput = { pieces: cycle.pieces, names };
-  let body = await generateThreeTeamBlurbWithClaude(blurbInput);
-  if (!body) body = templateThreeTeamBlurb(blurbInput);
-  const post = {
-    id: generatePostId(),
-    timestamp: now.toISOString(),
-    type: SPECULATION_POST_TYPE,
-    transactionSubType: SPECULATION_SUB_TYPE_THREE_TEAM,
-    tier: SPECULATION_POST_TIER,
-    headline: 'Schefter speculating…',
-    body: body.startsWith(TIER_EMOJI_THREE_TEAM) ? body : `${TIER_EMOJI_THREE_TEAM} ${body}`,
-    authorId: 'claude',
-    franchiseIds: [cycle.a, cycle.b, cycle.c],
-    league: LEAGUE_SLUG,
-    speculation: {
-      mode: 'three-team',
-      cycle: { a: cycle.a, b: cycle.b, c: cycle.c },
-      pieces: {
-        fromA: { id: cycle.pieces.fromA.id, name: cycle.pieces.fromA.name, position: cycle.pieces.fromA.position },
-        fromB: { id: cycle.pieces.fromB.id, name: cycle.pieces.fromB.name, position: cycle.pieces.fromB.position },
-        fromC: { id: cycle.pieces.fromC.id, name: cycle.pieces.fromC.name, position: cycle.pieces.fromC.position },
-      },
-      score: cycle.score,
-    },
-  };
-  return {
-    post,
-    ledgerEntry: {
-      postedAt: now.getTime(),
-      postId: post.id,
-      signature,
-      franchiseIds: [cycle.a, cycle.b, cycle.c],
-      cadenceTag,
-      mode: 'three-team',
-    },
-  };
-}
-
 // ── Main ──
 
 async function main() {
-  log(`\n=== Schefter Trade Speculation [${MODE}] ${DRY_RUN ? '[DRY RUN]' : ''} ===`);
+  log(`\n=== Schefter Trade Speculation ${DRY_RUN ? '[DRY RUN]' : ''} ===`);
   const now = new Date();
   log(`  Timestamp: ${now.toISOString()}`);
 
@@ -775,37 +452,86 @@ async function main() {
     return 0;
   }
 
-  // 5/6/7. Mode-specific candidate selection + post construction.
-  // Each branch returns { post, ledgerEntry } or null when nothing publishable
-  // came out of its lane. Steps 8/9/10 (persist + counter + GroupMe) are
-  // shared.
-  const built =
-    MODE === 'three-team'
-      ? await buildThreeTeamPost({
-          playersByFranchise,
-          tradeBaitByFranchise,
-          adpRankById,
-          teams,
-          ledger,
-          now,
-          cadenceTag: cadence.tag,
-        })
-      : await buildTwoTeamPost({
-          playersByFranchise,
-          tradeBaitByFranchise,
-          adpRankById,
-          teams,
-          ledger,
-          now,
-          cadenceTag: cadence.tag,
-        });
-  if (!built) return 0;
-  const { post, ledgerEntry } = built;
+  // 5. Find candidates.
+  const rawCandidates = findTwoTeamCandidates({
+    playersByFranchise,
+    tradeBaitByFranchise,
+    adpRankById,
+    teams,
+    limit: 10,
+  });
+  log(`  Raw candidate pool: ${rawCandidates.length}`);
+  if (rawCandidates.length === 0) {
+    log('  No candidates found — exiting');
+    return 0;
+  }
+
+  // 6. Apply rotation gate.
+  const passing = [];
+  for (const c of rawCandidates) {
+    const sig = tradeSignature({
+      seller: c.seller,
+      buyer: c.buyer,
+      marqueeId: c.marquee.id,
+      returnPkgIds: c.returnPkg.map((p) => p.id),
+    });
+    if (recentlyPostedTrade(ledger, sig, now)) continue;
+    if (
+      franchiseInRecentRotation(ledger, c.seller, now) &&
+      franchiseInRecentRotation(ledger, c.buyer, now)
+    ) {
+      // Both already featured in the last 7 days — skip to spread coverage.
+      continue;
+    }
+    passing.push({ ...c, signature: sig });
+  }
+  log(`  After rotation gate: ${passing.length}`);
+  if (passing.length === 0) {
+    log('  All candidates are in the rotation cooldown — exiting');
+    return 0;
+  }
+
+  const winner = passing[0];
+  const sellerTeam = teams.get(winner.seller);
+  const buyerTeam = teams.get(winner.buyer);
+  log(`  Winner (score=${winner.score}): ${sellerTeam?.nameMedium ?? winner.seller} → ${buyerTeam?.nameMedium ?? winner.buyer}: ${winner.marquee.name}`);
+
+  // 7. Generate blurb (Claude + template fallback).
+  const blurbInput = {
+    marquee: winner.marquee,
+    returnPkg: winner.returnPkg,
+    sellerName: sellerTeam?.nameMedium ?? `Franchise ${winner.seller}`,
+    buyerName: buyerTeam?.nameMedium ?? `Franchise ${winner.buyer}`,
+    capRelief: winner.capRelief,
+  };
+  let body = await generateBlurbWithClaude(blurbInput);
+  if (!body) body = templateBlurb(blurbInput);
+  // Tier emoji prefix is the visual spine — match the format from the plan doc.
+  const post = {
+    id: generatePostId(),
+    timestamp: now.toISOString(),
+    type: SPECULATION_POST_TYPE,
+    transactionSubType: SPECULATION_SUB_TYPE,
+    tier: SPECULATION_POST_TIER,
+    headline: 'Schefter speculating…',
+    body: body.startsWith(TIER_EMOJI) ? body : `${TIER_EMOJI} ${body}`,
+    authorId: 'claude',
+    franchiseIds: [winner.seller, winner.buyer],
+    league: LEAGUE_SLUG,
+    speculation: {
+      seller: winner.seller,
+      buyer: winner.buyer,
+      marquee: { id: winner.marquee.id, name: winner.marquee.name, position: winner.marquee.position },
+      returnPkg: winner.returnPkg.map((p) => ({ id: p.id, name: p.name, position: p.position })),
+      score: winner.score,
+      capRelief: winner.capRelief,
+    },
+  };
 
   if (DRY_RUN) {
     log('\n  [dry-run] Would append to feed:');
     log(JSON.stringify(post, null, 2));
-    log('\n  [dry-run] Would append to speculation history:', ledgerEntry.signature);
+    log('\n  [dry-run] Would append to speculation history:', winner.signature);
     await postSpeculationToGroupMe({
       post,
       publicBaseUrl: PUBLIC_BASE_URL,
@@ -823,7 +549,13 @@ async function main() {
   await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
   log('  Appended to schefter-feed.json');
 
-  const updatedLedger = appendEntry(ledger, ledgerEntry);
+  const updatedLedger = appendEntry(ledger, {
+    postedAt: now.getTime(),
+    postId: post.id,
+    signature: winner.signature,
+    franchiseIds: [winner.seller, winner.buyer],
+    cadenceTag: cadence.tag,
+  });
   await saveLedger(ledgerPath, updatedLedger, { now });
   log('  Appended to speculation-history.json');
 
