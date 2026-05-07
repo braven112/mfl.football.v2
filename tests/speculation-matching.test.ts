@@ -121,12 +121,19 @@ describe('franchiseCapSpace', () => {
 });
 
 describe('findTwoTeamCandidates — end-to-end', () => {
+  // Hand-supplied medians so the want/have heuristic is independent of the
+  // tiny 2-franchise fixture (auto-computed medians on 2 data points are
+  // degenerate). Mirrors what the runner script does in production where it
+  // computes medians across all 16 league franchises.
+  const fixtureMedians = { QB: 2, RB: 4, WR: 5, TE: 2 };
+
   it('produces at least one candidate respecting parity + cap-fit', () => {
     const candidates = findTwoTeamCandidates({
       playersByFranchise,
       tradeBaitByFranchise,
       adpRankById,
       teams,
+      medians: fixtureMedians,
       limit: 5,
     });
     expect(candidates.length).toBeGreaterThan(0);
@@ -159,6 +166,7 @@ describe('findTwoTeamCandidates — end-to-end', () => {
       tradeBaitByFranchise: altBait,
       adpRankById,
       teams,
+      medians: fixtureMedians,
       limit: 5,
     });
     expect(candidates).toEqual([]);

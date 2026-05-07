@@ -230,14 +230,25 @@ async function loadFeed() {
 
 const TIER_EMOJI = '🟡';
 
+// MFL stores names as "Last, First" but speculation copy reads better as
+// "First Last". Defensive on edge cases (suffixes, single-token names).
+function normalizeName(raw) {
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed.includes(',')) return trimmed;
+  const [last, rest] = trimmed.split(',', 2);
+  return `${rest.trim()} ${last.trim()}`.trim();
+}
+
 // Local-media / fan-chatter framing — the speculation does NOT come from
 // owners or front-office sources. It comes from beat writers, talk-radio
 // callers, fan blogs, and barstool chatter speculating about whether a
 // hypothetical move makes sense. Schefter is REPORTING on that buzz.
 function templateBlurb({ marquee, returnPkg, sellerName, buyerName, capRelief }) {
-  const pkgStr = returnPkg.map((p) => p.name).join(' and ');
+  const pkgStr = returnPkg.map((p) => normalizeName(p.name)).join(' and ');
+  const marqueeName = normalizeName(marquee.name);
   const lines = [
-    `${TIER_EMOJI} The talk-radio crowd in ${buyerName}-country has been chewing on a fit for ${sellerName} ${marquee.position} ${marquee.name}.`,
+    `${TIER_EMOJI} The talk-radio crowd in ${buyerName}-country has been chewing on a fit for ${sellerName} ${marquee.position} ${marqueeName}.`,
     `Local fan boards are floating ${pkgStr} as the kind of return ${sellerName} would have to take seriously — neither front office has commented.`,
   ];
   if (capRelief) {
@@ -276,8 +287,8 @@ ${JSON.stringify(
   {
     seller: sellerName,
     buyer: buyerName,
-    marquee: { name: marquee.name, position: marquee.position, age: marquee.age ?? null, onTradeBait: marquee.onTradeBait },
-    returnPackage: returnPkg.map((p) => ({ name: p.name, position: p.position, age: p.age ?? null })),
+    marquee: { name: normalizeName(marquee.name), position: marquee.position, age: marquee.age ?? null, onTradeBait: marquee.onTradeBait },
+    returnPackage: returnPkg.map((p) => ({ name: normalizeName(p.name), position: p.position, age: p.age ?? null })),
     capReliefAngle: capRelief,
   },
   null,

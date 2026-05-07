@@ -33,6 +33,26 @@ function adpRankToValue(rank) {
   return 1;
 }
 
+// Salary-based value fallback. The on-disk MFL adp-dynasty.json only ranks
+// the rookie class — veterans like Lamar Jackson don't appear. Salary is a
+// surprisingly good proxy in this league because contracts have been priced
+// at auction over many seasons, so high salary correlates with high quality.
+//
+// Curve calibrated against actual top-10 salaries ($9–11M for elite skill
+// players, ~$4.5M for the 90th-percentile cutoff, sub-$1M median).
+function salaryToValue(salary) {
+  if (!salary || salary <= 0) return 0;
+  const m = salary / 1_000_000;
+  if (m >= 9) return 95;
+  if (m >= 7) return 80;
+  if (m >= 5) return 65;
+  if (m >= 3) return 48;
+  if (m >= 1.5) return 32;
+  if (m >= 0.75) return 18;
+  if (m >= 0.5) return 10;
+  return 4;
+}
+
 // Age curve — penalize older players at positions that age fast (RB),
 // minor lift for younger players. Returns a multiplier ∈ [0.4, 1.15].
 function ageMultiplier(position, age) {
@@ -55,12 +75,19 @@ function ageMultiplier(position, age) {
 }
 
 /**
- * Calculate a single dynasty value for a player. Combines the ADP-rank curve
- * and the age multiplier. Players outside ADP get a floor (3).
+ * Calculate a single dynasty value for a player. Tries ADP-rank first
+ * (best for rookies), then falls back to a salary-based curve (best for
+ * veterans whose ADP rank isn't published in the rookie-only feed). Age
+ * multiplier applies on top of either.
  */
 export function valuePlayer({ player, adpRankById }) {
   const rank = adpRankById.get(player.id) ?? null;
-  const base = rank ? adpRankToValue(rank) : 3;
+  let base;
+  if (rank) {
+    base = adpRankToValue(rank);
+  } else {
+    base = salaryToValue(player.salary);
+  }
   const mult = ageMultiplier(player.position, player.age);
   return Math.max(0, Math.round(base * mult));
 }
@@ -78,22 +105,62 @@ function isWithinParity(sellerValue, buyerValue) {
 }
 
 /**
- * Sum positions that a franchise has fewer than 3 active rosterable bodies in.
- * That gives a coarse "wants" set — fancy version belongs in Phase 5.
+ * Coarse fixed-threshold variant — kept for unit tests and any caller that
+ * doesn't have league-wide context. Use buildPositionalWantsRelative when
+ * you can pass the per-position league medians.
  */
 export function buildPositionalWants(franchisePlayers) {
-  const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
-  for (const p of franchisePlayers) {
-    if (p.status !== 'ROSTER') continue;
-    if (counts[p.position] === undefined) continue;
-    counts[p.position] += 1;
-  }
+  const counts = countPositions(franchisePlayers);
   const wants = [];
   if (counts.QB < 2) wants.push('QB');
   if (counts.RB < 4) wants.push('RB');
   if (counts.WR < 5) wants.push('WR');
   if (counts.TE < 2) wants.push('TE');
   return wants;
+}
+
+function countPositions(franchisePlayers) {
+  const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  for (const p of franchisePlayers) {
+    if (p.status !== 'ROSTER') continue;
+    if (counts[p.position] === undefined) continue;
+    counts[p.position] += 1;
+  }
+  return counts;
+}
+
+/**
+ * League-relative variant: a franchise "wants" any position where it sits
+ * at or below the league median minus 1. Computes medians from the league
+ * map. Use this in production — fixed thresholds don't translate across
+ * months because rosters fatten dramatically right after the rookie draft
+ * and trim down again before the August cut.
+ */
+export function buildPositionalWantsRelative(franchisePlayers, leagueMedians) {
+  const counts = countPositions(franchisePlayers);
+  const wants = [];
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+    const median = leagueMedians?.[pos] ?? 0;
+    if (counts[pos] <= median - 1) wants.push(pos);
+  }
+  return wants;
+}
+
+/**
+ * Compute the per-position median count across all franchises.
+ */
+export function computeLeagueMedians(playersByFranchise) {
+  const buckets = { QB: [], RB: [], WR: [], TE: [] };
+  for (const players of playersByFranchise.values()) {
+    const counts = countPositions(players);
+    for (const pos of Object.keys(buckets)) buckets[pos].push(counts[pos]);
+  }
+  const medians = {};
+  for (const pos of Object.keys(buckets)) {
+    const sorted = [...buckets[pos]].sort((a, b) => a - b);
+    medians[pos] = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+  }
+  return medians;
 }
 
 /**
@@ -214,11 +281,13 @@ export function findTwoTeamCandidates({
   adpRankById,
   teams,
   limit = 5,
+  medians: medianOverride = null,
 }) {
   const franchiseIds = Array.from(playersByFranchise.keys());
   const haves = new Map();
   const wants = new Map();
   const capRoom = new Map();
+  const medians = medianOverride ?? computeLeagueMedians(playersByFranchise);
 
   for (const fid of franchiseIds) {
     const players = playersByFranchise.get(fid) ?? [];
@@ -230,7 +299,7 @@ export function findTwoTeamCandidates({
         adpRankById,
       }),
     );
-    wants.set(fid, buildPositionalWants(players));
+    wants.set(fid, buildPositionalWantsRelative(players, medians));
     capRoom.set(fid, franchiseCapSpace({ franchisePlayers: players }));
   }
 
