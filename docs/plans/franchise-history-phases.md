@@ -73,11 +73,31 @@ Format as a "Rivals" carousel/strip linking into rivalry pages.
 
 ### Deliverables checklist
 
-- [ ] Add `matchupHistory` aggregation to `compute-franchise-history.mjs`
-- [ ] Build `src/pages/theleague/rivalries/[pair].astro` (SSR, like franchise detail)
-- [ ] Build `src/pages/theleague/rivalries/index.astro` with the 16×16 mini-matrix
-- [ ] Add "Rivals" section to franchise detail page linking into rivalry pages
-- [ ] Add nav link under League Reports
+- [x] Add `matchupHistory` aggregation to `compute-franchise-history.mjs`
+  — also added `trades[]`, `bothAttributed` flag, playoff-bracket tagging
+  (champion + 3rd-place brackets) plus pre-2020 enrichment from
+  `championship-history.json`, and a `playerNames` lookup pulled from each
+  year's `players.json` so trade rosters are renderable without bundling
+  ~2,700 players client-side.
+- [x] Build `src/pages/theleague/rivalries/[pair].astro` (SSR; 301s the
+  reverse-order slug to canonical smaller-first)
+- [x] Build `src/pages/theleague/rivalries/index.astro` with hot-rivalries
+  strip + the 16×16 mini-matrix (sticky row/col headers, intensity tinting,
+  playoff dots)
+- [x] Add "Top Rivals" section to franchise detail page linking into rivalry
+  pages (top 5 by closeness × log(games + playoff-bonus))
+- [x] Add nav link under League Reports (`Rivalries`, trophy icon)
+
+### Open follow-ons for Phase 2.5
+
+- Pre-2020 consolation/3rd-place enrichment is skipped because the
+  hand-curated champ history doesn't carry the consolation opponent. If we
+  add that to `championship-history.json` we can tag those games too.
+- Trade asset display works for player IDs, current draft picks (`DP_*`),
+  and future picks (`FP_*`). `BBID` and `CASH` codes render generic — fine
+  for a v1 but worth grading once we see real auction-era trades.
+- Owner names will improve all of this; the data is still gated on Brandon
+  populating `data/theleague/owners.json` per the open-data needs section.
 
 ## Phase 3: Badge engine
 

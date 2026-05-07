@@ -236,6 +236,50 @@ function getPlayoffParticipants(playoffBrackets) {
   return participants;
 }
 
+// Build a Map<key, { round, bracket }> for every championship-or-3rd-place
+// playoff matchup that has actual scores. Key = "<week>:<smallerId>:<biggerId>"
+// so per-week matchup lookups are owner-direction independent. Used to tag
+// rivalry matchups with isPlayoff + a human-readable round name.
+function getPlayoffMatchupKeys(playoffBrackets) {
+  const keys = new Map();
+  if (!playoffBrackets) return keys;
+  const list = playoffBrackets.brackets || playoffBrackets.playoffBrackets?.brackets;
+  if (!list) return keys;
+
+  const TAGGED = [
+    { id: '1', tag: 'championship' },
+    { id: '2', tag: 'consolation' },
+  ];
+
+  for (const { id: bracketId, tag } of TAGGED) {
+    const bracket = list[bracketId]?.playoffBracket;
+    if (!bracket) continue;
+    const rounds = toArray(bracket.playoffRound);
+    const totalRounds = rounds.length;
+    rounds.forEach((round, idx) => {
+      const week = parseNum(round.week);
+      const games = toArray(round.playoffGame);
+      const isFinal = idx === totalRounds - 1;
+      const isSemi = idx === totalRounds - 2 && totalRounds >= 2;
+      const roundName =
+        tag === 'consolation'
+          ? isFinal ? '3rd Place' : `Consolation R${idx + 1}`
+          : isFinal ? 'Championship' : isSemi ? 'Semifinal' : `Quarterfinal`;
+      games.forEach((game) => {
+        const homeId = game.home?.franchise_id;
+        const awayId = game.away?.franchise_id;
+        if (!homeId || !awayId) return;
+        const homePts = parseNum(game.home.points);
+        const awayPts = parseNum(game.away.points);
+        if (homePts === 0 && awayPts === 0) return; // unplayed
+        const [a, b] = [homeId, awayId].sort();
+        keys.set(`${week}:${a}:${b}`, { round: roundName, bracket: tag });
+      });
+    });
+  }
+  return keys;
+}
+
 // --- Helpers for weekly results parsing ---
 function getWeeklyHighlightsForYear(weeklyResults, year) {
   const highlights = []; // { year, week, franchiseId, score, opponentId, opponentScore, margin }
@@ -369,12 +413,20 @@ const ensureFranchise = (id) => {
         biggestBlowoutLoss: null,
       },
       headToHead: {}, // opponentFranchiseId -> { wins, losses, ties }
+      matchupHistory: {}, // opponentFranchiseId -> [{year, week, score, opponentScore, isPlayoff, playoffRound, sourceFranchiseId}]
+      trades: [], // [{year, timestamp, partnerId, gaveUp[], received[], byCommish, comments, sourceFranchiseId, partnerSourceId}]
     });
   }
   return franchiseMap.get(id);
 };
 
 const yearSummaries = []; // for the index page: champion/runner-up per year
+
+// Player-name lookup populated from each year's players.json as we process
+// trades. Only contains players that appear in trade ledgers — keeps the
+// derived JSON small while letting rivalry/franchise pages display human
+// names without bundling all 2,700+ players.
+const playerNameLookup = {};
 
 for (const year of years) {
   const yearDir = path.join(FEEDS_DIR, String(year));
@@ -462,6 +514,7 @@ for (const year of years) {
     }
   }
   const playoffParticipants = getPlayoffParticipants(playoffBrackets);
+  const playoffMatchupKeys = getPlayoffMatchupKeys(playoffBrackets);
 
   // Awards from salaries
   const awards = computeAwardsForYear(salaryData);
@@ -610,6 +663,17 @@ for (const year of years) {
 
         const aTarget = attributeYear(aId, year);
         const bTarget = attributeYear(bId, year);
+        // True when BOTH franchise IDs were held by the current owner that
+        // year. Rivalry pages filter on this so a meeting where one side
+        // belonged to a now-departed owner doesn't pollute current-owner
+        // rivalry records.
+        const bothAttributed = aTarget != null && bTarget != null;
+
+        // Detect playoff games via the bracket scores. Regular Week 15-17
+        // games on consolation/toilet-bowl brackets won't match — only
+        // championship + 3rd-place pairings get tagged.
+        const [pa, pb] = [aId, bId].sort();
+        const playoffMatch = playoffMatchupKeys.get(`${weekNum}:${pa}:${pb}`) ?? null;
 
         // Skip games where either side belongs to a former owner (target null).
         // Each side gets credit independently — even if one franchise's owner
@@ -622,6 +686,20 @@ for (const year of years) {
           if (aScore > bScore) frA.headToHead[bId].wins++;
           else if (aScore < bScore) frA.headToHead[bId].losses++;
           else frA.headToHead[bId].ties++;
+
+          if (!frA.matchupHistory[bId]) frA.matchupHistory[bId] = [];
+          frA.matchupHistory[bId].push({
+            year,
+            week: weekNum,
+            score: aScore,
+            opponentScore: bScore,
+            isPlayoff: !!playoffMatch,
+            playoffRound: playoffMatch?.round ?? null,
+            playoffBracket: playoffMatch?.bracket ?? null,
+            sourceFranchiseId: aId !== aTarget ? aId : null,
+            opponentSourceId: bId !== bTarget ? bId : null,
+            bothAttributed,
+          });
 
           const margin = aScore - bScore;
           const game = {
@@ -645,6 +723,20 @@ for (const year of years) {
           else if (bScore < aScore) frB.headToHead[aId].losses++;
           else frB.headToHead[aId].ties++;
 
+          if (!frB.matchupHistory[aId]) frB.matchupHistory[aId] = [];
+          frB.matchupHistory[aId].push({
+            year,
+            week: weekNum,
+            score: bScore,
+            opponentScore: aScore,
+            isPlayoff: !!playoffMatch,
+            playoffRound: playoffMatch?.round ?? null,
+            playoffBracket: playoffMatch?.bracket ?? null,
+            sourceFranchiseId: bId !== bTarget ? bId : null,
+            opponentSourceId: aId !== aTarget ? aId : null,
+            bothAttributed,
+          });
+
           const margin = bScore - aScore;
           const game = {
             year, week: weekNum,
@@ -661,6 +753,83 @@ for (const year of years) {
           }
         }
       }
+    }
+  }
+
+  // Trade ledger from transactions.json. Stored on both sides so rivalry
+  // pages can lookup by partner ID without a full re-scan.
+  const transactions = readJson(path.join(yearDir, 'transactions.json'));
+  const txList = toArray(transactions?.transactions?.transaction);
+  // Build a per-year players index lazily — used only when this year has
+  // trades to resolve.
+  let yearPlayers = null;
+  const ensurePlayersIndex = () => {
+    if (yearPlayers !== null) return yearPlayers;
+    const players = readJson(path.join(yearDir, 'players.json'));
+    yearPlayers = new Map();
+    if (players?.players?.player) {
+      for (const p of toArray(players.players.player)) {
+        if (p.id) yearPlayers.set(p.id, { name: p.name, position: p.position, team: p.team });
+      }
+    }
+    return yearPlayers;
+  };
+  for (const tx of txList) {
+    if (tx.type !== 'TRADE') continue;
+    const fA = tx.franchise;
+    const fB = tx.franchise2;
+    if (!fA || !fB) continue;
+    const aTarget = attributeYear(fA, year);
+    const bTarget = attributeYear(fB, year);
+    const aGave = String(tx.franchise1_gave_up || '').split(',').filter(Boolean);
+    const bGave = String(tx.franchise2_gave_up || '').split(',').filter(Boolean);
+    const timestamp = parseNum(tx.timestamp);
+    const byCommish = String(tx.by_commish || '') === '1';
+    const comments = tx.comments || '';
+
+    // Pull player names for any numeric asset codes used in this trade so
+    // the consumer can resolve them without loading per-year players.json.
+    const recordPlayerNames = (codes) => {
+      if (!codes.some((c) => /^\d+$/.test(c))) return;
+      const idx = ensurePlayersIndex();
+      for (const code of codes) {
+        if (!/^\d+$/.test(code)) continue;
+        if (playerNameLookup[code]) continue;
+        const p = idx.get(code);
+        if (p) playerNameLookup[code] = p;
+      }
+    };
+    recordPlayerNames(aGave);
+    recordPlayerNames(bGave);
+
+    const tradeBothAttributed = aTarget != null && bTarget != null;
+    if (aTarget) {
+      ensureFranchise(aTarget).trades.push({
+        year,
+        timestamp,
+        partnerId: fB,
+        gaveUp: aGave,
+        received: bGave,
+        byCommish,
+        comments,
+        sourceFranchiseId: fA !== aTarget ? fA : null,
+        partnerSourceId: fB !== bTarget ? fB : null,
+        bothAttributed: tradeBothAttributed,
+      });
+    }
+    if (bTarget) {
+      ensureFranchise(bTarget).trades.push({
+        year,
+        timestamp,
+        partnerId: fA,
+        gaveUp: bGave,
+        received: aGave,
+        byCommish,
+        comments,
+        sourceFranchiseId: fB !== bTarget ? fB : null,
+        partnerSourceId: fA !== aTarget ? fA : null,
+        bothAttributed: tradeBothAttributed,
+      });
     }
   }
 
@@ -687,6 +856,42 @@ for (const [id, fr] of franchiseMap) {
   fr.jerryJonesAwards.sort((a, b) => a.year - b.year);
   fr.brockOsweilerAwards.sort((a, b) => a.year - b.year);
 
+  // Sort each opponent's per-meeting history oldest → newest
+  for (const oppId of Object.keys(fr.matchupHistory)) {
+    fr.matchupHistory[oppId].sort((a, b) => a.year - b.year || a.week - b.week);
+  }
+  // Trades oldest → newest by timestamp; ties → year asc
+  fr.trades.sort((a, b) => a.timestamp - b.timestamp || a.year - b.year);
+
+  // Pre-2020 playoff enrichment: MFL retired the bracket data for older
+  // years so getPlayoffMatchupKeys can't tag those games. The hand-curated
+  // championship-history.json knows champion/runnerUp/thirdPlace per year
+  // — promote the LATEST meeting between champion+runnerUp (and the
+  // matching 3rd-place pair when present) to the championship/3rd round.
+  for (const [year, entry] of championshipManualByYear) {
+    const tagLatestMeeting = (sideA, sideB, round, bracket) => {
+      if (!sideA || !sideB) return;
+      // The franchise we're enriching (`id`) only sees the matchup if it's
+      // one of the two sides.
+      let opponent = null;
+      if (id === sideA) opponent = sideB;
+      else if (id === sideB) opponent = sideA;
+      else return;
+      const meetings = fr.matchupHistory[opponent] || [];
+      const yearMeetings = meetings.filter((m) => m.year === year);
+      if (!yearMeetings.length) return;
+      // If any are already tagged via bracket data, skip.
+      if (yearMeetings.some((m) => m.isPlayoff)) return;
+      const latest = yearMeetings[yearMeetings.length - 1];
+      latest.isPlayoff = true;
+      latest.playoffRound = round;
+      latest.playoffBracket = bracket;
+    };
+    tagLatestMeeting(entry.champion, entry.runnerUp, 'Championship', 'championship');
+    // We don't know the 3rd-place opponent from the manual record (only the
+    // winner), so consolation enrichment is skipped here.
+  }
+
   // Attach current identity for index/detail rendering
   const team = currentTeams.find((t) => t.franchiseId === id);
   fr.currentName = team?.name ?? id;
@@ -707,6 +912,7 @@ const output = {
   yearsCovered: years.filter((y) => franchiseMap.size > 0),
   yearSummaries,
   franchises,
+  playerNames: playerNameLookup,
 };
 
 fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
