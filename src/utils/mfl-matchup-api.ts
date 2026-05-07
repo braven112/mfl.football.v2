@@ -675,8 +675,12 @@ export class MFLMatchupApiClient {
         ? (opts.direction === 'to' ? 'moveToIR' : 'activateFromIR')
         : (opts.direction === 'to' ? 'moveToTaxi' : 'activateFromTaxi');
 
-    const writeHost = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
-    const url = `${writeHost}/${this.config.year}/freeagency`;
+    // The legacy /freeagency endpoint lives at api.myfantasyleague.com, NOT
+    // www49 — Brandon's 2026-05-07 capture against www49 returned 404. The
+    // original implementation referenced in our agent docs (qa-principal-
+    // engineer.md, qa-api-debugger.md) used `this.baseUrl` which defaults
+    // to api.myfantasyleague.com. mflFetch handles the cross-origin redirect.
+    const url = `https://api.myfantasyleague.com/${this.config.year}/freeagency`;
     const params = new URLSearchParams({
       TYPE: moveType,
       L: this.config.leagueId,
