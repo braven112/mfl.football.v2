@@ -1,0 +1,501 @@
+---
+/**
+ * PowerRankingsIssue — renders a single weekly power-rankings issue.
+ *
+ * Driven entirely by the JSON document at
+ * src/data/theleague/power-rankings/<year>-w<week>.json.
+ * Phase 1 ships templated blurbs; Phase 2 will swap in LLM-generated copy
+ * without changing the data shape this component reads.
+ */
+import leagueConfig from '../../data/theleague.config.json';
+
+export interface RankingRow {
+  rank: number;
+  franchiseId: string;
+  previousRank: number | null;
+  trend: 'up' | 'down' | 'flat';
+  blurb: string;
+  metrics: {
+    composite: number | null;
+    rolling3Ppg: number | null;
+    seasonPpg: number | null;
+    ppgScore: number | null;
+    recordScore: number | null;
+    allPlayScore: number | null;
+  };
+}
+
+export interface AwardCard {
+  franchiseId?: string;
+  homeId?: string;
+  awayId?: string;
+  title: string;
+  blurb: string;
+}
+
+export interface StandingsTeamRow {
+  franchiseId: string;
+  name: string;
+  nameMedium: string;
+  abbrev: string;
+  division: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  pf: number;
+  pa: number;
+  ppg: number;
+  allPlayPct: number;
+  allPlayWLT: string;
+}
+
+export interface PowerRankingsData {
+  year: number;
+  week: number;
+  publishedAt: string;
+  generatedAt: string;
+  voiceMode: string;
+  headline: string;
+  lede: string;
+  rankings: RankingRow[];
+  awards: {
+    statOfWeek: AwardCard | null;
+    benchBlunder: AwardCard | null;
+    tradeOfWeek: AwardCard | null;
+    cutOfShame: AwardCard | null;
+    heaterOfWeek: AwardCard | null;
+    coolerOfWeek: AwardCard | null;
+    matchupOfWeek: AwardCard | null;
+  };
+  standings: {
+    divisions: { name: string; teams: StandingsTeamRow[] }[];
+    allPlay: { franchiseId: string; name: string; nameMedium: string; abbrev: string; division: string; allPlayPct: number; allPlayWLT: string; pf: number }[];
+  };
+}
+
+export interface Props {
+  issue: PowerRankingsData;
+}
+
+const { issue } = Astro.props as Props;
+
+// Build franchise lookup for icons/colors
+const teams = new Map<string, any>();
+for (const t of (leagueConfig as any).teams) {
+  teams.set(t.franchiseId, t);
+}
+
+const trendGlyph = (t: 'up' | 'down' | 'flat') =>
+  t === 'up' ? '▲' : t === 'down' ? '▼' : '–';
+
+const formattedDate = new Date(issue.publishedAt).toLocaleDateString('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric',
+});
+
+const orderedAwards: { key: string; card: AwardCard | null }[] = [
+  { key: 'statOfWeek',     card: issue.awards.statOfWeek },
+  { key: 'benchBlunder',   card: issue.awards.benchBlunder },
+  { key: 'heaterOfWeek',   card: issue.awards.heaterOfWeek },
+  { key: 'coolerOfWeek',   card: issue.awards.coolerOfWeek },
+  { key: 'matchupOfWeek',  card: issue.awards.matchupOfWeek },
+  { key: 'tradeOfWeek',    card: issue.awards.tradeOfWeek },
+  { key: 'cutOfShame',     card: issue.awards.cutOfShame },
+];
+---
+
+<article class="pr-issue">
+  <header class="pr-hero">
+    <div class="pr-hero__eyebrow">
+      <span class="pr-hero__badge">Power Rankings</span>
+      <span class="pr-hero__dot" aria-hidden="true"></span>
+      <span>Week {issue.week} · {issue.year}</span>
+      <span class="pr-hero__dot" aria-hidden="true"></span>
+      <time datetime={issue.publishedAt}>{formattedDate}</time>
+    </div>
+    <h1 class="pr-hero__title">{issue.headline}</h1>
+    <p class="pr-hero__lede">{issue.lede}</p>
+  </header>
+
+  <section class="pr-section" aria-label="Standings snapshot">
+    <h2 class="pr-section__title">Standings</h2>
+    <div class="pr-standings-grid">
+      <div class="pr-divisions">
+        <h3 class="pr-subhead">By Division</h3>
+        <div class="pr-divisions__grid">
+          {issue.standings.divisions.map(div => (
+            <div class="pr-division-card">
+              <div class="pr-division-card__title">{div.name}</div>
+              <table class="pr-table">
+                <thead>
+                  <tr><th class="pr-table__rank">#</th><th>Team</th><th>W-L</th><th>PF</th></tr>
+                </thead>
+                <tbody>
+                  {div.teams.map((t, i) => {
+                    const team = teams.get(t.franchiseId);
+                    return (
+                      <tr>
+                        <td class="pr-table__rank">{i + 1}</td>
+                        <td>
+                          <span class="pr-team-chip">
+                            {team?.icon && <img src={team.icon} alt="" loading="lazy" width="20" height="20" />}
+                            <span>{t.nameMedium}</span>
+                          </span>
+                        </td>
+                        <td>{t.wins}-{t.losses}{t.ties ? `-${t.ties}` : ''}</td>
+                        <td>{t.pf.toFixed(1)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="pr-allplay">
+        <h3 class="pr-subhead">All-Play</h3>
+        <table class="pr-table">
+          <thead>
+            <tr><th class="pr-table__rank">#</th><th>Team</th><th>All-Play</th><th>PF</th></tr>
+          </thead>
+          <tbody>
+            {issue.standings.allPlay.map((t, i) => {
+              const team = teams.get(t.franchiseId);
+              return (
+                <tr>
+                  <td class="pr-table__rank">{i + 1}</td>
+                  <td>
+                    <span class="pr-team-chip">
+                      {team?.icon && <img src={team.icon} alt="" loading="lazy" width="20" height="20" />}
+                      <span>{t.nameMedium}</span>
+                    </span>
+                  </td>
+                  <td>{t.allPlayWLT || `${(t.allPlayPct * 100).toFixed(1)}%`}</td>
+                  <td>{t.pf.toFixed(1)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="pr-section" aria-label="Power rankings 1-16">
+    <h2 class="pr-section__title">The Rankings</h2>
+    <ol class="pr-rankings">
+      {issue.rankings.map(row => {
+        const team = teams.get(row.franchiseId);
+        const accent = team?.color || 'var(--color-primary, #2563eb)';
+        return (
+          <li class="pr-card" style={`--pr-accent: ${accent}`}>
+            <div class="pr-card__rank">
+              <div class="pr-card__rank-num">{row.rank}</div>
+              {row.previousRank != null && (
+                <div class={`pr-card__trend pr-card__trend--${row.trend}`} title={`Previous: #${row.previousRank}`}>
+                  {trendGlyph(row.trend)}
+                  {row.trend !== 'flat' && (
+                    <span class="pr-card__trend-delta">{Math.abs(row.previousRank - row.rank)}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div class="pr-card__body">
+              <div class="pr-card__heading">
+                {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="32" height="32" />}
+                <h3 class="pr-card__name">
+                  <a href={`/theleague/franchises/${row.franchiseId}`}>{team?.name ?? row.franchiseId}</a>
+                </h3>
+              </div>
+              <p class="pr-card__blurb">{row.blurb}</p>
+              <div class="pr-card__metrics">
+                {row.metrics.rolling3Ppg != null && (
+                  <span class="pr-card__metric"><span>L3 PPG</span><strong>{row.metrics.rolling3Ppg.toFixed(1)}</strong></span>
+                )}
+                {row.metrics.seasonPpg != null && (
+                  <span class="pr-card__metric"><span>Season PPG</span><strong>{row.metrics.seasonPpg.toFixed(1)}</strong></span>
+                )}
+                {row.metrics.composite != null && (
+                  <span class="pr-card__metric"><span>Score</span><strong>{row.metrics.composite.toFixed(1)}</strong></span>
+                )}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  </section>
+
+  <section class="pr-section" aria-label="Weekly awards">
+    <h2 class="pr-section__title">Awards</h2>
+    <div class="pr-awards">
+      {orderedAwards.filter(a => a.card).map(({ card }) => {
+        const fid = card!.franchiseId ?? card!.homeId;
+        const team = fid ? teams.get(fid) : null;
+        const second = card!.awayId ? teams.get(card!.awayId) : null;
+        const accent = team?.color ?? 'var(--color-primary, #2563eb)';
+        return (
+          <div class="pr-award" style={`--pr-accent: ${accent}`}>
+            <div class="pr-award__title">{card!.title}</div>
+            <div class="pr-award__recipient">
+              {team?.icon && <img src={team.icon} alt="" loading="lazy" width="28" height="28" />}
+              <span>{team?.nameMedium ?? fid ?? '—'}</span>
+              {second && (
+                <>
+                  <span class="pr-award__vs">vs</span>
+                  {second?.icon && <img src={second.icon} alt="" loading="lazy" width="28" height="28" />}
+                  <span>{second?.nameMedium}</span>
+                </>
+              )}
+            </div>
+            <p class="pr-award__blurb">{card!.blurb}</p>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+
+  <footer class="pr-footnote">
+    <p>
+      Phase 1 issue — blurbs are templated from on-disk feeds (no LLM voice yet).
+      Composite score: 60% rolling-3wk PPG · 25% H2H record · 15% all-play %.
+    </p>
+  </footer>
+</article>
+
+<style>
+.pr-issue {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+.pr-hero {
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+.pr-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 0.75rem;
+}
+.pr-hero__badge {
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+.pr-hero__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-text-muted, #6b7280);
+}
+.pr-hero__title {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
+  color: var(--color-text, #111827);
+}
+.pr-hero__lede {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--color-text-muted, #4b5563);
+  margin: 0;
+  max-width: 70ch;
+}
+
+.pr-section { margin-bottom: 2.5rem; }
+.pr-section__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: var(--color-text, #111827);
+  border-left: 3px solid var(--color-primary, #2563eb);
+  padding-left: 0.6rem;
+}
+.pr-subhead {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--color-text, #111827);
+}
+
+.pr-standings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.pr-divisions__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.pr-division-card {
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+.pr-division-card__title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+.pr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.pr-table th, .pr-table td {
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+.pr-table th { font-weight: 600; color: var(--color-text-muted, #6b7280); }
+.pr-table__rank { width: 1.6rem; text-align: right; color: var(--color-text-muted, #6b7280); }
+
+.pr-team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pr-team-chip img { border-radius: 0.25rem; }
+
+.pr-rankings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.pr-card {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-left: 4px solid var(--pr-accent);
+  border-radius: 0.5rem;
+  background: var(--color-surface-1, #fff);
+}
+.pr-card__rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.pr-card__rank-num {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--pr-accent);
+}
+.pr-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.pr-card__trend--up { color: #16a34a; }
+.pr-card__trend--down { color: #dc2626; }
+.pr-card__trend--flat { color: var(--color-text-muted, #6b7280); }
+.pr-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.pr-card__icon { border-radius: 0.25rem; }
+.pr-card__name {
+  font-size: 1.05rem;
+  margin: 0;
+  font-weight: 700;
+}
+.pr-card__name a { color: inherit; text-decoration: none; }
+.pr-card__name a:hover { text-decoration: underline; }
+.pr-card__blurb {
+  margin: 0.1rem 0 0.4rem;
+  color: var(--color-text-muted, #4b5563);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+.pr-card__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #6b7280);
+}
+.pr-card__metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+.pr-card__metric strong {
+  color: var(--color-text, #111827);
+  font-weight: 700;
+}
+
+.pr-awards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+.pr-award {
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-top: 3px solid var(--pr-accent);
+  border-radius: 0.5rem;
+  padding: 0.85rem;
+}
+.pr-award__title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.pr-award__recipient {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.35rem;
+}
+.pr-award__vs {
+  font-weight: 400;
+  color: var(--color-text-muted, #6b7280);
+}
+.pr-award__blurb {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, #4b5563);
+}
+
+.pr-footnote {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--color-border, #e5e7eb);
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #6b7280);
+}
+.pr-footnote p { margin: 0; }
+
+@media (max-width: 720px) {
+  .pr-standings-grid { grid-template-columns: 1fr; }
+  .pr-divisions__grid { grid-template-columns: 1fr; }
+}
+</style>

@@ -1,0 +1,101 @@
+---
+/**
+ * Power Rankings — historical permalink: /theleague/power-rankings/[year]/[week].
+ *
+ * Pre-rendered via getStaticPaths for every issue we have on disk.
+ */
+export const prerender = true;
+
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../../components/theleague/Breadcrumbs.astro';
+import PowerRankingsIssue, { type PowerRankingsData } from '../../../../components/theleague/PowerRankingsIssue.astro';
+
+const issueFiles = import.meta.glob<PowerRankingsData>(
+  '../../../../data/theleague/power-rankings/*.json',
+  { eager: true, import: 'default' }
+);
+
+interface Entry { year: number; week: number; data: PowerRankingsData }
+
+const allIssues: Entry[] = Object.entries(issueFiles)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-w(\d{1,2})\.json$/);
+    if (!m) return null;
+    return { year: parseInt(m[1], 10), week: parseInt(m[2], 10), data: data as PowerRankingsData };
+  })
+  .filter((x): x is Entry => x !== null)
+  .sort((a, b) => b.year - a.year || b.week - a.week);
+
+export async function getStaticPaths() {
+  const files = import.meta.glob<PowerRankingsData>(
+    '../../../../data/theleague/power-rankings/*.json',
+    { eager: true, import: 'default' }
+  );
+  const issues: Entry[] = Object.entries(files)
+    .map(([file, data]) => {
+      const m = file.match(/(\d{4})-w(\d{1,2})\.json$/);
+      if (!m) return null;
+      return { year: parseInt(m[1], 10), week: parseInt(m[2], 10), data: data as PowerRankingsData };
+    })
+    .filter((x): x is Entry => x !== null);
+
+  return issues.map(({ year, week, data }) => ({
+    params: { year: String(year), week: String(week) },
+    props: { issue: data },
+  }));
+}
+
+const { issue } = Astro.props as { issue: PowerRankingsData };
+
+// Find adjacent issues for footer nav
+const idx = allIssues.findIndex(i => i.year === issue.year && i.week === issue.week);
+const prevIssue = idx >= 0 ? allIssues[idx + 1] : null; // older
+const nextIssue = idx > 0 ? allIssues[idx - 1] : null;  // newer
+---
+
+<TheLeagueLayout title={`${issue.headline} · Week ${issue.week} Power Rankings`}>
+  <main class="pr-page">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Power Rankings', href: '/theleague/power-rankings' },
+      { label: `Week ${issue.week} · ${issue.year}` },
+    ]} />
+
+    <PowerRankingsIssue issue={issue} />
+
+    <nav class="pr-nav" aria-label="Issue navigation">
+      {prevIssue ? (
+        <a class="pr-nav__link pr-nav__link--prev" href={`/theleague/power-rankings/${prevIssue.year}/${prevIssue.week}`}>
+          ← Week {prevIssue.week} · {prevIssue.year}
+        </a>
+      ) : <span></span>}
+      <a class="pr-nav__link pr-nav__link--index" href="/theleague/power-rankings">All issues</a>
+      {nextIssue ? (
+        <a class="pr-nav__link pr-nav__link--next" href={`/theleague/power-rankings/${nextIssue.year}/${nextIssue.week}`}>
+          Week {nextIssue.week} · {nextIssue.year} →
+        </a>
+      ) : <span></span>}
+    </nav>
+  </main>
+</TheLeagueLayout>
+
+<style>
+.pr-page { min-height: 60vh; }
+.pr-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1100px;
+  margin: -2rem auto 3rem;
+  padding: 0 1rem;
+}
+.pr-nav__link {
+  color: var(--color-text, #111827);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.pr-nav__link:hover { text-decoration: underline; }
+.pr-nav__link--index { color: var(--color-text-muted, #6b7280); }
+</style>
