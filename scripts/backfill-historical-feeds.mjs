@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 /**
- * Backfill missing or invalid historical MFL feeds for TheLeague.
+ * Backfill missing historical MFL feeds for TheLeague.
  *
- * Reads the history.league array from data/theleague/mfl-feeds/2025/league.json
- * (which contains the URL + league ID for every season the league has ever
- * had on MFL) and, for each gap year — missing standings.json or one that
- * returned "Invalid league ID" — refetches against the historical URL.
+ * Reads history.league from data/theleague/mfl-feeds/2025/league.json (which
+ * contains the URL + league ID for every season the league has lived under
+ * on MFL) and, per year, fetches whichever feeds we don't yet have on disk.
  *
- * What it pulls per year (when available):
- *   standings.json, league.json, transactions.json, draftResults.json,
- *   auctionResults.json, playoff-brackets.json, weekly-results.json
+ * What it pulls per year:
+ *   league.json, standings.json, schedule.json (H2H pairings — needed for
+ *   rivalry pages), transactions.json, draftResults.json, auctionResults.json,
+ *   playoff-brackets.json, weekly-results-raw.json + weekly-results.json.
  *
- * Run from the repo root:
- *   node scripts/backfill-historical-feeds.mjs
+ * Usage:
+ *   node scripts/backfill-historical-feeds.mjs           # fill gaps only
+ *   node scripts/backfill-historical-feeds.mjs --force   # refetch everything
+ *   node scripts/backfill-historical-feeds.mjs --dry-run # preview
  *
- * Add --dry-run to print what it would fetch without writing anything.
- * Add --force to refetch every year, even ones that already have data.
+ * If anything new comes back, re-run:
+ *   pnpm compute:franchise-history
  */
 
 import fs from 'node:fs';
@@ -40,7 +42,9 @@ const readJson = (p) => {
 };
 
 const isInvalidFeed = (data) =>
-  !data || data.error || /Invalid league/i.test(JSON.stringify(data?.error || ''));
+  !data ||
+  data.error ||
+  /Invalid league/i.test(JSON.stringify(data?.error || ''));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -52,9 +56,7 @@ async function fetchJson(url) {
       Accept: 'application/json',
     },
   });
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   try {
     return { ok: true, data: JSON.parse(text), raw: text };
@@ -63,19 +65,111 @@ async function fetchJson(url) {
   }
 }
 
-const ENDPOINTS = [
+// Single-call endpoints. Schedule is the new one — gives per-week H2H pairings
+// that we need for rivalry pages.
+const SIMPLE_ENDPOINTS = [
   { type: 'league', file: 'league.json' },
   { type: 'leagueStandings', file: 'standings.json' },
+  { type: 'schedule', file: 'schedule.json' },
   { type: 'transactions', file: 'transactions.json', extra: 'W=YTD&TRANS_TYPE=*' },
   { type: 'draftResults', file: 'draftResults.json' },
   { type: 'auctionResults', file: 'auctionResults.json' },
   { type: 'playoffBrackets', file: 'playoff-brackets.json' },
-  { type: 'weeklyResults', file: 'weekly-results.json', extra: 'W=YTD' },
 ];
 
 function buildUrl(host, year, leagueId, type, extra) {
   const base = `https://${host}/${year}/export?TYPE=${type}&L=${leagueId}&JSON=1`;
   return extra ? `${base}&${extra}` : base;
+}
+
+// Attempt one endpoint, return outcome string + whether anything was written.
+async function attemptEndpoint(host, year, leagueId, type, file, extra, dest) {
+  if (!FORCE && fs.existsSync(dest)) {
+    const existing = readJson(dest);
+    if (!isInvalidFeed(existing)) {
+      return { skipped: true, reason: 'already valid' };
+    }
+  }
+  if (DRY_RUN) {
+    return { dryRun: true };
+  }
+  const url = buildUrl(host, year, leagueId, type, extra);
+  try {
+    const result = await fetchJson(url);
+    if (!result.ok) return { error: 'not JSON (HTML error page)' };
+    if (isInvalidFeed(result.data)) return { error: 'invalid league' };
+    fs.writeFileSync(dest, JSON.stringify(result.data, null, 2));
+    return { written: true, bytes: result.raw.length };
+  } catch (err) {
+    return { error: err.message };
+  } finally {
+    await sleep(500);
+  }
+}
+
+// Fetch all 17 weeks of weekly results and produce both raw and normalized
+// outputs, matching the format produced by scripts/fetch-mfl-feeds.mjs.
+async function fetchWeeklyResults(host, year, leagueId, yearDir) {
+  const rawPath = path.join(yearDir, 'weekly-results-raw.json');
+  const normPath = path.join(yearDir, 'weekly-results.json');
+
+  if (!FORCE && fs.existsSync(rawPath) && fs.existsSync(normPath)) {
+    const existingRaw = readJson(rawPath);
+    if (Array.isArray(existingRaw) && existingRaw.length > 0) {
+      return { skipped: true, reason: 'already cached' };
+    }
+  }
+
+  if (DRY_RUN) {
+    return { dryRun: true, weeksToFetch: 17 };
+  }
+
+  const rawWeeks = [];
+  for (let week = 1; week <= 17; week++) {
+    const url = buildUrl(host, year, leagueId, 'weeklyResults', `W=${week}`);
+    try {
+      const result = await fetchJson(url);
+      if (!result.ok) continue;
+      if (isInvalidFeed(result.data)) continue;
+      rawWeeks.push(result.data);
+    } catch {
+      // skip
+    }
+    await sleep(500);
+  }
+
+  if (rawWeeks.length === 0) {
+    return { error: 'no weeks returned' };
+  }
+
+  fs.writeFileSync(rawPath, JSON.stringify(rawWeeks, null, 2));
+
+  // Normalize: { weeks: [{ week, scores: { fid: pts } }] }
+  const normalized = {
+    weeks: rawWeeks.map((payload) => {
+      const weekVal = Number(payload?.weeklyResults?.week) || undefined;
+      const matchups = payload?.weeklyResults?.matchup
+        ? Array.isArray(payload.weeklyResults.matchup)
+          ? payload.weeklyResults.matchup
+          : [payload.weeklyResults.matchup]
+        : [];
+      const scores = {};
+      for (const m of matchups) {
+        const franchises = m?.franchise
+          ? Array.isArray(m.franchise)
+            ? m.franchise
+            : [m.franchise]
+          : [];
+        for (const f of franchises) {
+          if (f?.id != null) scores[f.id] = Number(f.score) || 0;
+        }
+      }
+      return { week: weekVal, scores };
+    }),
+  };
+  fs.writeFileSync(normPath, JSON.stringify(normalized, null, 2));
+
+  return { written: true, weeks: rawWeeks.length };
 }
 
 const current = readJson(CURRENT_LEAGUE_JSON);
@@ -95,65 +189,42 @@ const yearList = historyEntries
   .sort((a, b) => a.year - b.year);
 
 console.log(`Found ${yearList.length} historical league entries.`);
+console.log(`Mode: ${DRY_RUN ? 'dry-run' : FORCE ? 'force-refetch' : 'fill gaps only'}`);
 
-let totalAttempted = 0;
 let totalWritten = 0;
 let totalSkipped = 0;
 let totalErrors = 0;
+let totalDryRun = 0;
 
 for (const entry of yearList) {
   const yearDir = path.join(FEEDS_DIR, String(entry.year));
-  const standingsPath = path.join(yearDir, 'standings.json');
-  const existing = readJson(standingsPath);
-
-  const needsFetch =
-    FORCE ||
-    !fs.existsSync(standingsPath) ||
-    isInvalidFeed(existing);
-
-  if (!needsFetch) {
-    console.log(`[${entry.year}] standings.json exists and is valid — skipping (use --force to refetch)`);
-    totalSkipped++;
-    continue;
-  }
-
-  console.log(`\n[${entry.year}] host=${entry.host} leagueId=${entry.leagueId}`);
   fs.mkdirSync(yearDir, { recursive: true });
+  console.log(`\n[${entry.year}] host=${entry.host} leagueId=${entry.leagueId}`);
 
-  for (const { type, file, extra } of ENDPOINTS) {
-    const url = buildUrl(entry.host, entry.year, entry.leagueId, type, extra);
+  // Simple per-endpoint loop
+  for (const { type, file, extra } of SIMPLE_ENDPOINTS) {
     const dest = path.join(yearDir, file);
-    totalAttempted++;
-    if (DRY_RUN) {
-      console.log(`  [dry-run] would fetch ${type} → ${file}`);
-      continue;
-    }
-    try {
-      const result = await fetchJson(url);
-      if (!result.ok) {
-        console.log(`  ✗ ${type} → not JSON (probably an HTML error page)`);
-        totalErrors++;
-        continue;
-      }
-      if (isInvalidFeed(result.data)) {
-        console.log(`  ✗ ${type} → MFL says invalid league`);
-        totalErrors++;
-        continue;
-      }
-      fs.writeFileSync(dest, JSON.stringify(result.data, null, 2));
-      console.log(`  ✓ ${type} → ${file} (${result.raw.length} bytes)`);
-      totalWritten++;
-    } catch (err) {
-      console.log(`  ✗ ${type} → ${err.message}`);
-      totalErrors++;
-    }
-    await sleep(750); // be polite to MFL
+    const outcome = await attemptEndpoint(
+      entry.host, entry.year, entry.leagueId, type, file, extra, dest
+    );
+    if (outcome.skipped) { console.log(`  ◦ ${file} — ${outcome.reason}`); totalSkipped++; }
+    else if (outcome.dryRun) { console.log(`  [dry-run] would fetch ${type} → ${file}`); totalDryRun++; }
+    else if (outcome.written) { console.log(`  ✓ ${type} → ${file} (${outcome.bytes} bytes)`); totalWritten++; }
+    else if (outcome.error) { console.log(`  ✗ ${type} → ${outcome.error}`); totalErrors++; }
   }
+
+  // Weekly results: special-cased because it needs 17 separate fetches.
+  const wkOutcome = await fetchWeeklyResults(entry.host, entry.year, entry.leagueId, yearDir);
+  if (wkOutcome.skipped) { console.log(`  ◦ weekly-results — ${wkOutcome.reason}`); totalSkipped++; }
+  else if (wkOutcome.dryRun) { console.log(`  [dry-run] would fetch ${wkOutcome.weeksToFetch} weeks of weeklyResults`); totalDryRun++; }
+  else if (wkOutcome.written) { console.log(`  ✓ weeklyResults → weekly-results-raw.json + weekly-results.json (${wkOutcome.weeks} weeks)`); totalWritten++; }
+  else if (wkOutcome.error) { console.log(`  ✗ weeklyResults → ${wkOutcome.error}`); totalErrors++; }
 }
 
 console.log(
-  `\nDone. attempted=${totalAttempted} written=${totalWritten} errors=${totalErrors} years-skipped=${totalSkipped}`
+  `\nDone. written=${totalWritten} skipped=${totalSkipped} errors=${totalErrors}` +
+  (DRY_RUN ? ` dry-run=${totalDryRun}` : '')
 );
-console.log(
-  `\nIf any years got new data, re-run: pnpm compute:franchise-history`
-);
+if (totalWritten > 0) {
+  console.log(`\nIf any years got new data, re-run: pnpm compute:franchise-history`);
+}
