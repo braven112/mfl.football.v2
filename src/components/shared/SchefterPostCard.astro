@@ -15,7 +15,7 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime } from '../../utils/schefter-feed';
+import { formatRelativeTime, isRumorLikePost } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -43,8 +43,13 @@ const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
 const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
-const isRumor = post.type === 'transaction' && post.transactionSubType === 'rumor_mill';
-const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumor ? ' sf-post--rumor' : ''}`;
+// Rumor-mill is the legacy tip-driven lane (whisper-back + thread links
+// only make sense there). Speculation is algorithmic and shares the
+// rumor-style card treatment (visual + anonymous reactions + impression
+// tracking) but NOT the tip-back UI.
+const isTipRumor = post.type === 'transaction' && post.transactionSubType === 'rumor_mill';
+const isRumorLike = isRumorLikePost(post);
+const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumorLike ? ' sf-post--rumor' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
@@ -81,7 +86,7 @@ for (const url of allUrlsToStrip) {
 gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 ---
 
-<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumor ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
   <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">
@@ -250,9 +255,9 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
             isAuthenticated={isAuthenticated}
             initialReactions={reactions?.reactions}
             initialUserReaction={reactions?.userReaction}
-            anonymous={isRumor}
+            anonymous={isRumorLike}
           />
-          {isRumor && (
+          {isTipRumor && (
             <SchefterWhisperBack
               client:idle
               postId={post.id}
@@ -260,7 +265,7 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
             />
           )}
         </div>
-        {isRumor && post.threadId && (
+        {isTipRumor && post.threadId && (
           <a class="sfc-post__thread-link" href={`/theleague/schefter/thread/${post.threadId}`}>
             View the full thread →
           </a>

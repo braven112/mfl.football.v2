@@ -87,3 +87,18 @@ export function formatRelativeTime(isoTimestamp: string, now?: Date): string {
 export function isDuplicatePost(feed: SchefterFeed, sourceTimestamp: string): boolean {
   return feed.posts.some(p => p.sourceTimestamp === sourceTimestamp);
 }
+
+/**
+ * Sub-types that get rumor-style card treatment: anonymous-namespace
+ * reactions, impression tracking, and `sf-post--rumor` styling. Anything
+ * narrower than rumor-style behavior (whisper-back, thread links) should
+ * branch on `transactionSubType === 'rumor_mill'` directly — those are
+ * tip-driven and tied to the anonymous tipster pipeline.
+ */
+const RUMOR_LIKE_SUB_TYPES = new Set(['rumor_mill', 'trade_speculation']);
+
+export function isRumorLikePost(post: { type?: string; transactionSubType?: string }): boolean {
+  if (post.type !== 'transaction') return false;
+  if (!post.transactionSubType) return false;
+  return RUMOR_LIKE_SUB_TYPES.has(post.transactionSubType);
+}

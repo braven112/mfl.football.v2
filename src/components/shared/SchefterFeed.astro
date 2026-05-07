@@ -13,6 +13,7 @@ import type { SchefterPost } from '../../types/schefter';
 import type { SchefterReactionResponse } from '../../types/schefter';
 import { getBatchReactions, getBatchAnonymousReactions } from '../../utils/schefter-reactions';
 import { hashTipsterId } from '../../utils/schefter-tipster-hash';
+import { isRumorLikePost } from '../../utils/schefter-feed';
 import SchefterPostCard from './SchefterPostCard.astro';
 
 interface Props {
@@ -33,14 +34,11 @@ interface Props {
 const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, userId, initialLimit = 25 } = Astro.props;
 const now = new Date();
 
-// Partition rumor_mill posts from the rest — they use the anonymous reaction
-// namespace (keyed on hashedOwnerId) so reactor identity never leaks.
-function isRumorPost(p: SchefterPost): boolean {
-  return p.type === 'transaction' && p.transactionSubType === 'rumor_mill';
-}
-
-const rumorPostIds = posts.filter(isRumorPost).map((p) => p.id);
-const regularPostIds = posts.filter((p) => !isRumorPost(p)).map((p) => p.id);
+// Partition rumor-like posts (rumor-mill + speculation) from the rest —
+// they use the anonymous reaction namespace (keyed on hashedOwnerId) so
+// reactor identity never leaks.
+const rumorPostIds = posts.filter(isRumorLikePost).map((p) => p.id);
+const regularPostIds = posts.filter((p) => !isRumorLikePost(p)).map((p) => p.id);
 
 let userHashedOwnerId: string | undefined;
 if (userId) {

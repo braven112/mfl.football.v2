@@ -69,7 +69,14 @@ const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', LEAGUE_SLUG
 const RESOLVED_EVENTS_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
 const TEAMS_CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
 
-const SPECULATION_TIER_TWO_TEAM = 'speculation_two_team';
+// Match the rumor-mill's wire shape so the existing feed renderer treats
+// speculation posts as rumor-style cards (visual styling, anonymous
+// reactions, impression tracking). The `transactionSubType` field is the
+// only thing distinguishing speculation from a real anonymous-tip rumor;
+// the renderer uses it to skip whisper-back and thread-link UI on
+// speculation posts (those make no sense for algorithmic content).
+const SPECULATION_POST_TYPE = 'transaction';
+const SPECULATION_POST_TIER = 'rumor';
 const SPECULATION_SUB_TYPE = 'trade_speculation';
 
 const log = (...args) => console.log(...args);
@@ -489,9 +496,9 @@ async function main() {
   const post = {
     id: generatePostId(),
     timestamp: now.toISOString(),
-    type: 'rumor',
+    type: SPECULATION_POST_TYPE,
     transactionSubType: SPECULATION_SUB_TYPE,
-    tier: SPECULATION_TIER_TWO_TEAM,
+    tier: SPECULATION_POST_TIER,
     headline: 'Schefter speculating…',
     body: body.startsWith(TIER_EMOJI) ? body : `${TIER_EMOJI} ${body}`,
     authorId: 'claude',
