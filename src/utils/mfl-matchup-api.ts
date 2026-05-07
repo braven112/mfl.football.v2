@@ -636,22 +636,26 @@ export class MFLMatchupApiClient {
       // POST to api.myfantasyleague.com (mflFetch handles the cross-origin
       // redirect to www49 and re-attaches the cookie), put every parameter in
       // the body, owner cookie only — never send MFL_IS_COMMISH.
+      //
+      // Send ONLY the active param (PROMOTED or DEMOTED, ACTIVATED or
+      // DEACTIVATED) for the move's direction. Sending the inactive
+      // companion as an empty string causes MFL's import endpoint to
+      // silently no-op while still returning a success-shaped response
+      // (no <error>, no HTML), which is why prior versions of this code
+      // appeared to succeed in our UI but never persisted on MFL. The
+      // captured docs confirm the working examples are single-direction
+      // (e.g. `PROMOTED=17096&L=13522`, never both with one empty).
       const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
       const params = new URLSearchParams({
         TYPE: opts.type,
         L: this.config.leagueId,
         FRANCHISE_ID: opts.franchiseId,
       });
-      if (opts.direction === 'to') {
-        params.set(opts.onParam, opts.playerId);
-        params.set(opts.offParam, '');
-      } else {
-        params.set(opts.onParam, '');
-        params.set(opts.offParam, opts.playerId);
-      }
+      const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
+      params.set(activeParam, opts.playerId);
 
       console.log(
-        `[runRosterMove] POST ${url} (type=${opts.type}, franchise=${opts.franchiseId}, ${opts.direction === 'to' ? opts.onParam : opts.offParam}=${opts.playerId})`,
+        `[runRosterMove] POST ${url} (type=${opts.type}, franchise=${opts.franchiseId}, ${activeParam}=${opts.playerId})`,
       );
 
       const response = await mflFetch({
