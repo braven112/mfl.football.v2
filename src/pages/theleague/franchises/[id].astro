@@ -718,6 +718,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
     margin: 0 0 0.75rem;
     color: var(--text-secondary, #666);
     font-size: 0.875rem;
+    white-space: nowrap;
   }
 
   .badges-bar {
@@ -895,7 +896,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
   }
   .year-by-year-scroll {
     max-height: 480px;
-    overflow-y: auto;
+    overflow: auto;
     margin: 0 -0.25rem;
     padding: 0 0.25rem;
     /* contain scrolling so a fast scroll inside the table doesn't bubble
@@ -964,6 +965,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
     text-align: left;
     border-bottom: 1px solid var(--border, #ececec);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .year-by-year th {
     font-size: 0.6875rem;
