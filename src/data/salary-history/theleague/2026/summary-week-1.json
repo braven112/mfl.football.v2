@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-05-06T23-38-43.709Z",
+  "snapshot": "2026-05-07T00-02-28.216Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-06T23:38:43.704Z",
+    "fetchedAt": "2026-05-07T00:02:28.211Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-05-06T23:38:43.707Z"
+    "generatedAt": "2026-05-07T00:02:28.214Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 134,
+      "totalPlayers": 135,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
       "starterAverage": 4024238.15,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 1909668.35,
-      "medianSalary": 862125,
+      "averageSalary": 1898670.81,
+      "medianSalary": 847000,
       "topPlayers": [
         {
           "id": "15287",
@@ -834,18 +834,24 @@
           "name": "Metchie, John",
           "salary": 425000,
           "franchiseId": "0003"
+        },
+        {
+          "id": "17599",
+          "name": "Douglas, Caleb",
+          "salary": 425000,
+          "franchiseId": "0011"
         }
       ]
     },
     "RB": {
-      "totalPlayers": 93,
+      "totalPlayers": 94,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
       "starterAverage": 4154739.15,
       "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1756665.37,
+      "averageSalary": 1742498.72,
       "medianSalary": 632225,
       "topPlayers": [
         {
@@ -1405,6 +1411,12 @@
           "name": "Harris, Najee",
           "salary": 425000,
           "franchiseId": "0004"
+        },
+        {
+          "id": "17652",
+          "name": "Randall, Adam",
+          "salary": 425000,
+          "franchiseId": "0011"
         }
       ]
     },
@@ -1783,14 +1795,14 @@
       ]
     },
     "TE": {
-      "totalPlayers": 61,
+      "totalPlayers": 62,
       "top3Average": 5583333.33,
       "top5Average": 5142672,
       "top10Average": 4266237.25,
       "starterAverage": 3126490.14,
       "starterMedian": 2637500,
       "starterCount": 18,
-      "averageSalary": 1368724.22,
+      "averageSalary": 1353502.86,
       "medianSalary": 658845,
       "topPlayers": [
         {
@@ -2158,6 +2170,12 @@
           "name": "Allen, Davis",
           "salary": 425000,
           "franchiseId": "0014"
+        },
+        {
+          "id": "17566",
+          "name": "Royer, Joe",
+          "salary": 425000,
+          "franchiseId": "0016"
         }
       ]
     },
