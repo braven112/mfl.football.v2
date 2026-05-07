@@ -651,26 +651,25 @@ export class MFLMatchupApiClient {
     }
 
     // Mirrors the proven owner-mode write pattern in src/pages/api/cut-player.ts:
-    // POST to api.myfantasyleague.com (mflFetch handles the cross-origin
-    // redirect to www49 and re-attaches the cookie), put every parameter in
-    // the body, owner cookie only — never send MFL_IS_COMMISH.
+    // owner cookie only — never send MFL_IS_COMMISH.
+    //
+    // POST DIRECTLY TO www49 (not api.myfantasyleague.com). MFL's api.* host
+    // 302-redirects to www49, and mflFetch follows that redirect by converting
+    // POST → GET per HTTP spec (body appended to the URL). MFL's import
+    // endpoint accepts GETs for some TYPEs (e.g. fcfsWaiver, which is why
+    // Cut Player works through api.*) but appears to silently no-op on GETs
+    // for TYPE=taxi_squad and TYPE=ir — the response is `<status>OK</status>`
+    // without the move actually persisting. Brandon's 2026-05-07 debug
+    // capture confirmed this: status 200, body `<status>OK</status>`, no
+    // persistence on refresh. POSTing directly to www49 keeps the method
+    // and body intact so the import handler runs.
     //
     // Send ONLY the active param (PROMOTED or DEMOTED, ACTIVATED or
-    // DEACTIVATED) for the move's direction. Sending the inactive
-    // companion as an empty string causes MFL's import endpoint to
-    // silently no-op while still returning a success-shaped response
-    // (no <error>, no HTML).
+    // DEACTIVATED). The empty companion silently no-ops.
     //
-    // Do NOT send FRANCHISE_ID. Brandon's debug capture on 2026-05-07
-    // showed MFL returning `<status>OK</status>` while the move didn't
-    // persist on the roster — the same silent-failure pattern the cron
-    // auto-taxi hit when sending FRANCHISE_ID with commish cookies
-    // ("Can not impersonate another franchise when LOCKOUT is on.").
-    // Hypothesis: any presence of FRANCHISE_ID on import?TYPE=taxi_squad
-    // routes through MFL's impersonation check, which silently rejects
-    // under `lockout: "Yes"`. The MFL_USER_ID cookie already identifies
-    // the owner's franchise, so FRANCHISE_ID is redundant in owner mode.
-    const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
+    // Do NOT send FRANCHISE_ID — owner cookie identifies the franchise.
+    const writeHost = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
+    const url = `${writeHost}/${this.config.year}/import`;
     const params = new URLSearchParams({
       TYPE: opts.type,
       L: this.config.leagueId,
