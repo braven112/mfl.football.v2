@@ -1658,12 +1658,34 @@ for (const [id, player] of Object.entries(eligPlayersFeed)) {
   eligPlayersMap.set(id, player as MFLPlayerInfo);
 }
 
-// Get rosters data for eligibility
+// Get rosters data for eligibility — prefer the Redis-cached snapshot used by
+// the display so contract changes on MFL flow into eligibility within ~2 min.
+// The static feed lags (it's synced by a cron job and can be ~20 min behind),
+// which means a freshly-acquired rookie still flagged with empty contractInfo
+// in the static file would never light up the rookie-override chip.
+// Fall back to the static feed when Redis is unavailable.
 const eligRostersFeed = rostersFeeds[Object.keys(rostersFeeds).find(
   (path) => extractFeedSeason(path) === eligibilityYearStr
 ) ?? ''];
 const eligRostersData = eligRostersFeed ? getModuleData(eligRostersFeed) : null;
-const eligFranchises = eligRostersData?.rosters?.franchise ?? [];
+const staticEligFranchises = eligRostersData?.rosters?.franchise ?? [];
+
+const eligFranchises = (eligibilityYearStr === currentLeagueYearStr && cachedRosterPlayers)
+  ? (() => {
+      const byFranchise: Record<string, any[]> = {};
+      for (const [id, p] of Object.entries(cachedRosterPlayers)) {
+        if (!p?.franchiseId) continue;
+        (byFranchise[p.franchiseId] ??= []).push({
+          id,
+          salary: p.salary,
+          contractYear: p.contractYear,
+          contractInfo: p.contractInfo ?? '',
+          status: p.status,
+        });
+      }
+      return Object.entries(byFranchise).map(([id, player]) => ({ id, player }));
+    })()
+  : staticEligFranchises;
 
 // Compute top-10 positional salary averages for team option calculations.
 // Built from live roster data (all franchises) so it's always accurate.
