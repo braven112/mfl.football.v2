@@ -12,17 +12,25 @@
  *   - Share the 3-posts/day rumor-mill budget (`schefter:rumor:posts_today`),
  *     with a peak-week reservation that lets speculation skip past a saturated
  *     budget the week before the trade deadline
- *   - NO GroupMe posting yet — that lands in Phase 2
+ *
+ * Phase 2 scope (added):
+ *   - Best-effort GroupMe post via scripts/lib/speculation-groupme.mjs.
+ *     Includes a deep link back to the specific feed entry
+ *     (https://theleague.us/news#post-<id>). Failures are logged and ignored
+ *     — the feed + ledger are already persisted by the time we attempt the
+ *     GroupMe call, so a chat outage cannot block the run or break rotation.
  *
  * Usage:
  *   node scripts/schefter-trade-speculation.mjs           # live run
  *   node scripts/schefter-trade-speculation.mjs --dry-run # no mutations
  *
  * Env (required for live posting):
- *   ANTHROPIC_API_KEY        Claude API key for blurb generation
- *   UPSTASH_REDIS_REST_URL   Redis URL (required for shared daily counter)
- *   UPSTASH_REDIS_REST_TOKEN Redis token
+ *   ANTHROPIC_API_KEY            Claude API key for blurb generation
+ *   UPSTASH_REDIS_REST_URL       Redis URL (required for shared daily counter)
+ *   UPSTASH_REDIS_REST_TOKEN     Redis token
  *   (KV_* / STORAGE_* fallbacks also accepted, mirroring the rumor-mill)
+ *   GROUPME_SCHEFTER_BOT_ID      GroupMe bot id; absent = skip GroupMe (Phase 2)
+ *   SCHEFTER_PUBLIC_BASE_URL     site origin for GroupMe deep link (default theleague.us)
  *
  * To disable: comment out the cron schedule in the workflow file. We do not
  * use GitHub Actions variables as feature flags — code is always the source
@@ -58,6 +66,7 @@ import {
   RUMOR_POSTS_TODAY_KEY,
   RUMOR_LAST_POST_TS_KEY,
 } from './lib/speculation-budget.mjs';
+import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -68,6 +77,11 @@ const LEAGUE_SLUG = 'theleague';
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', LEAGUE_SLUG === 'theleague' ? 'schefter-feed.json' : `${LEAGUE_SLUG}-schefter-feed.json`);
 const RESOLVED_EVENTS_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
 const TEAMS_CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
+
+// Public origin used to build the deep-link back to the feed post in the
+// GroupMe message. theleague.us 301s /theleague/news → /news (vercel.json),
+// so the canonical anchor lives at /news#post-<id>.
+const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
 
 // Match the rumor-mill's wire shape so the existing feed renderer treats
 // speculation posts as rumor-style cards (visual styling, anonymous
@@ -518,6 +532,13 @@ async function main() {
     log('\n  [dry-run] Would append to feed:');
     log(JSON.stringify(post, null, 2));
     log('\n  [dry-run] Would append to speculation history:', winner.signature);
+    await postSpeculationToGroupMe({
+      post,
+      publicBaseUrl: PUBLIC_BASE_URL,
+      dryRun: true,
+      log,
+      warn,
+    });
     return 0;
   }
 
@@ -552,6 +573,16 @@ async function main() {
       warn(`  [speculation] Redis counter update failed: ${err.message}`);
     }
   }
+
+  // 10. GroupMe — Phase 2. Best-effort: feed + ledger + counter are already
+  // persisted, so a GroupMe failure must not throw. The helper swallows all
+  // errors and returns a status object we can log.
+  await postSpeculationToGroupMe({
+    post,
+    publicBaseUrl: PUBLIC_BASE_URL,
+    log,
+    warn,
+  });
 
   return 0;
 }
