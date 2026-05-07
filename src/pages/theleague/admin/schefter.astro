@@ -851,9 +851,17 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     const subtypes = data.feed?.bySubType || {};
     const subtypesBody = document.getElementById('ops-subtypes-body');
     if (subtypesBody) {
+      const subtypePillVariant = (k: string): string => {
+        const key = k.toUpperCase();
+        if (key === 'TRADE' || key.startsWith('TRADE_')) return 'info';
+        if (key === 'AUCTION_WON' || key.startsWith('AUCTION_')) return 'ok';
+        if (key === 'FREE_AGENT') return 'ok';
+        if (key === 'RUMOR_MILL') return 'warn';
+        return 'mute';
+      };
       const rows = Object.entries(subtypes)
         .sort((a: any, b: any) => b[1] - a[1])
-        .map(([k, count]) => `<tr><td><code>${k}</code></td><td class="ops-table__num">${count}</td></tr>`)
+        .map(([k, count]) => `<tr><td><span class="ops-pill ops-pill--${subtypePillVariant(k)}">${escapeHtml(k)}</span></td><td class="ops-table__num">${count}</td></tr>`)
         .join('');
       subtypesBody.innerHTML = rows || '<tr><td colspan="2">—</td></tr>';
     }
