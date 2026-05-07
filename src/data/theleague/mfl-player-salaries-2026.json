@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-07T02:56:54.046Z"
+    "fetchedAt": "2026-05-07T04:16:24.121Z"
   },
   "players": [
     {
@@ -1314,28 +1314,59 @@
       ]
     },
     {
-      "id": "17482",
-      "name": "Washington Jr., Mike",
-      "position": "RB",
-      "salary": 475000,
+      "id": "17549",
+      "name": "Roush, Sam",
+      "position": "TE",
+      "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "4",
+      "contractYear": "1",
       "points": 0,
-      "team": "LV",
+      "team": "CHI",
       "draftYear": 2026,
-      "draftTeam": "LVR",
+      "draftTeam": "CHI",
       "birthdate": null,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17482_thumb.jpg",
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17549_thumb.jpg",
       "externalIds": {
-        "mfl": "17482",
-        "sleeper": null,
+        "mfl": "17549",
+        "sleeper": "13322",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "13322",
+        "fullName": "Sam Roush",
+        "team": "CHI",
+        "age": 22,
+        "height": "77",
+        "weight": "260",
+        "number": null,
+        "college": "Stanford",
+        "birthDate": "2003-09-06",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17104",
+          "name": "Loveland, Colston"
+        },
+        {
+          "id": "14867",
+          "name": "Kmet, Cole"
+        }
+      ]
     },
     {
       "id": "17512",
@@ -1395,6 +1426,30 @@
           "name": "McCaffrey, Luke"
         }
       ]
+    },
+    {
+      "id": "17482",
+      "name": "Washington Jr., Mike",
+      "position": "RB",
+      "salary": 475000,
+      "franchiseId": "0001",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 0,
+      "team": "LV",
+      "draftYear": 2026,
+      "draftTeam": "LVR",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17482_thumb.jpg",
+      "externalIds": {
+        "mfl": "17482",
+        "sleeper": null,
+        "gsis": null
+      },
+      "sleeper": null,
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
     },
     {
       "id": "14717",
