@@ -23,6 +23,7 @@
     "fetch:adp:rookies": "pnpm run fetch:adp:sleeper && pnpm run fetch:adp:ktc",
     "fetch:nfl-draft-date": "node scripts/fetch-nfl-draft-date.mjs",
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
+    "backfill:historical-feeds": "node scripts/backfill-historical-feeds.mjs",
     "fetch:nfl-news-digest": "node scripts/fetch-nfl-news-digest.mjs",
     "fetch:trade-bait": "MFL_LEAGUE_ID=13522 MFL_LEAGUE_SLUG=theleague node scripts/fetch-trade-bait.mjs",
     "fetch:live:lineups": "node scripts/fetch-live-lineups.mjs",
