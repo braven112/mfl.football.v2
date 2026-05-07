@@ -18,25 +18,6 @@ export interface MFLApiConfig {
 }
 
 /**
- * Diagnostic capture from a roster-move write — surfaced all the way to the
- * UI so we can see what MFL actually responded with on a phone, without
- * needing DevTools / Vercel logs.
- */
-export interface RosterMoveDebug {
-  requestUrl: string;
-  requestBody: string;
-  responseStatus: number;
-  responseContentType: string;
-  responseBody: string;
-}
-
-export interface RosterMoveResult {
-  success: boolean;
-  error?: string;
-  debug?: RosterMoveDebug;
-}
-
-/**
  * Raw MFL roster response
  */
 interface MFLRosterResponse {
@@ -604,7 +585,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     franchiseId: string,
     direction: 'to' | 'from' = 'to',
-  ): Promise<RosterMoveResult> {
+  ): Promise<{ success: boolean; error?: string }> {
     return this.runRosterMove({
       type: 'ir',
       onParam: 'DEACTIVATE',
@@ -634,7 +615,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     franchiseId: string,
     direction: 'to' | 'from' = 'to',
-  ): Promise<RosterMoveResult> {
+  ): Promise<{ success: boolean; error?: string }> {
     return this.runRosterMove({
       type: 'taxi_squad',
       onParam: 'DEMOTE',
@@ -656,7 +637,7 @@ export class MFLMatchupApiClient {
     playerId: string;
     franchiseId: string;
     direction: 'to' | 'from';
-  }): Promise<RosterMoveResult> {
+  }): Promise<{ success: boolean; error?: string }> {
     if (!this.config.mflUserId) {
       return { success: false, error: 'Authentication required for roster moves' };
     }
@@ -702,45 +683,31 @@ export class MFLMatchupApiClient {
       });
 
       const text = await response.text();
-      const debug: RosterMoveDebug = {
-        requestUrl: url,
-        requestBody,
-        responseStatus: response.status,
-        responseContentType: response.headers.get('content-type') || '',
-        responseBody: text.slice(0, 1500),
-      };
       console.log(
-        `[runRosterMove] MFL response: ${debug.responseStatus} ${debug.responseContentType} | body=${debug.responseBody.slice(0, 500)}`,
+        `[runRosterMove] MFL response: ${response.status} ${response.headers.get('content-type') ?? ''} | body=${text.slice(0, 500)}`,
       );
 
       if (text.includes('<error>') || text.includes('"error"')) {
         const errorMatch =
           text.match(/<error[^>]*>(.*?)<\/error>/s) ||
           text.match(/"error"\s*:\s*"([^"]+)"/);
-        return { success: false, error: errorMatch?.[1] || 'MFL rejected the request', debug };
+        return { success: false, error: errorMatch?.[1] || 'MFL rejected the request' };
       }
 
       if (!response.ok) {
-        return { success: false, error: `MFL API error: ${response.status}`, debug };
+        return { success: false, error: `MFL API error: ${response.status}` };
       }
 
       if (text.includes('<html') || text.includes('<!DOCTYPE')) {
-        return { success: false, error: 'MFL did not process the request. Try again.', debug };
+        return { success: false, error: 'MFL did not process the request. Try again.' };
       }
 
-      return { success: true, debug };
+      return { success: true };
     } catch (error) {
       console.error(`Failed to ${opts.direction === 'to' ? 'move to' : 'remove from'} ${opts.type}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Roster move failed',
-        debug: {
-          requestUrl: url,
-          requestBody,
-          responseStatus: 0,
-          responseContentType: '',
-          responseBody: error instanceof Error ? error.message : String(error),
-        },
       };
     }
   }
