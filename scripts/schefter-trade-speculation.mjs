@@ -52,6 +52,11 @@ import {
   franchiseInRecentRotation,
   tradeSignature,
 } from './lib/speculation-history.mjs';
+import {
+  checkGlobalBudgetGate,
+  RUMOR_POSTS_TODAY_KEY,
+  RUMOR_LAST_POST_TS_KEY,
+} from './lib/speculation-budget.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -62,12 +67,6 @@ const LEAGUE_SLUG = 'theleague';
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', LEAGUE_SLUG === 'theleague' ? 'schefter-feed.json' : `${LEAGUE_SLUG}-schefter-feed.json`);
 const RESOLVED_EVENTS_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
 const TEAMS_CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
-
-// Shared rumor-mill daily counter — keep in sync with scripts/schefter-rumor-scan.mjs
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
-const MAX_GLOBAL_POSTS_PER_DAY = 3;
-const RESERVED_PEAK_SLOT = 1; // peak-week speculation may use this slot even if 3 are burned
 
 const SPECULATION_TIER_TWO_TEAM = 'speculation_two_team';
 const SPECULATION_SUB_TYPE = 'trade_speculation';
@@ -109,9 +108,16 @@ function secondsUntilPtMidnight(now = new Date()) {
 }
 
 // ── Redis ──
+//
+// Live runs hard-require Redis: speculation shares a daily-post counter
+// with the rumor-mill (RUMOR_POSTS_TODAY_KEY) and a last-post timestamp
+// (RUMOR_LAST_POST_TS_KEY) for spacing. Without those keys the two scanners
+// can't coordinate and would over-post on the same day. Dry-run is the
+// only path that's allowed to run unmetered, since it doesn't mutate
+// anything.
 
 let _redis;
-async function getRedis() {
+async function getRedis({ required }) {
   if (_redis !== undefined) return _redis;
   const url =
     process.env.UPSTASH_REDIS_REST_URL ||
@@ -122,7 +128,13 @@ async function getRedis() {
     process.env.KV_REST_API_TOKEN ||
     process.env.STORAGE_REST_API_TOKEN;
   if (!url || !token) {
-    warn('[speculation] Redis credentials not set — running without budget gate');
+    if (required) {
+      throw new Error(
+        '[speculation] Redis credentials missing (UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN). ' +
+          'Live mode requires the shared rumor-mill counter — set the secrets or use --dry-run.',
+      );
+    }
+    warn('[speculation] Redis credentials not set — dry-run mode running without budget gate');
     _redis = null;
     return null;
   }
@@ -131,6 +143,9 @@ async function getRedis() {
     _redis = new Redis({ url, token });
     return _redis;
   } catch (err) {
+    if (required) {
+      throw new Error(`[speculation] @upstash/redis import failed: ${err.message}`);
+    }
     warn(`[speculation] Redis import failed: ${err.message}`);
     _redis = null;
     return null;
@@ -386,30 +401,26 @@ async function main() {
     return 0;
   }
 
-  // 3. Global daily-budget check — share the rumor-mill's `posts_today`
-  // counter so all Schefter-voiced posts (rumors + speculation) honor a
-  // single 3-per-day cap on the feed.
-  const redis = await getRedis();
+  // 3. Global daily-budget gate — share the rumor-mill's `posts_today`
+  // counter and last-post timestamp so all Schefter-voiced posts honor
+  // a single 3-per-day cap and a 4-hour spacing rule. Redis is required
+  // in live mode (getRedis throws if creds are missing); dry-run runs
+  // unmetered.
+  const redis = await getRedis({ required: !DRY_RUN });
   let globalPostsToday = 0;
+  let lastPostTs = null;
   if (redis) {
-    const raw = await redis.get(RUMOR_POSTS_TODAY_KEY);
-    globalPostsToday = typeof raw === 'number' ? raw : parseInt(raw ?? '0', 10) || 0;
+    const rawCount = await redis.get(RUMOR_POSTS_TODAY_KEY);
+    globalPostsToday = typeof rawCount === 'number' ? rawCount : parseInt(rawCount ?? '0', 10) || 0;
+    const rawLast = await redis.get(RUMOR_LAST_POST_TS_KEY);
+    lastPostTs = typeof rawLast === 'number' ? rawLast : parseInt(rawLast ?? '0', 10) || null;
   }
-  const effectiveCap = MAX_GLOBAL_POSTS_PER_DAY - (cadence.reservesGlobalSlot ? 0 : 0);
-  if (globalPostsToday >= MAX_GLOBAL_POSTS_PER_DAY) {
-    if (!cadence.reservesGlobalSlot) {
-      log(`  Global cap met (posts_today=${globalPostsToday}, cap=${MAX_GLOBAL_POSTS_PER_DAY}) — exiting`);
-      return 0;
-    }
-    // Peak-week speculation may exceed the soft cap by RESERVED_PEAK_SLOT.
-    if (globalPostsToday >= MAX_GLOBAL_POSTS_PER_DAY + RESERVED_PEAK_SLOT) {
-      log(`  Even with peak-week reservation, cap met (posts_today=${globalPostsToday}) — exiting`);
-      return 0;
-    }
-    log(`  Global cap normally met but peak-week reservation in effect — proceeding`);
-  } else {
-    log(`  Global posts_today=${globalPostsToday} (cap=${MAX_GLOBAL_POSTS_PER_DAY}); effectiveCap=${effectiveCap}`);
+  const budgetGate = checkGlobalBudgetGate({ cadence, globalPostsToday, lastPostTs, now });
+  if (!budgetGate.allowed) {
+    log(`  Global budget gate blocked: ${budgetGate.reason} — exiting`);
+    return 0;
   }
+  log(`  Global budget OK (posts_today=${globalPostsToday}, ceiling=${budgetGate.ceiling})`);
 
   // 4. Load league state.
   const season = detectCurrentSeason(now);
