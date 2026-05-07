@@ -569,7 +569,7 @@ for (const year of years) {
     fr.careerLosses += row.losses;
     fr.careerTies += row.ties;
     fr.careerPointsFor += row.pointsFor;
-    fr.yearsActive += 1;
+    if (!seasonNotStarted) fr.yearsActive += 1;
     if (playoffParticipants.has(row.franchiseId)) fr.playoffAppearances += 1;
 
     if (champResult?.champion === row.franchiseId) {
