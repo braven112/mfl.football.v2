@@ -51,7 +51,6 @@ jobs:
 
       - name: Run speculation scanner
         env:
-          SCHEFTER_TRADE_SPECULATION_ENABLED: ${{ vars.SCHEFTER_TRADE_SPECULATION_ENABLED }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}

@@ -24,8 +24,9 @@
  *   UPSTASH_REDIS_REST_TOKEN Redis token
  *   (KV_* / STORAGE_* fallbacks also accepted, mirroring the rumor-mill)
  *
- * Optional:
- *   SCHEFTER_TRADE_SPECULATION_ENABLED  gate flag — must be truthy to run
+ * To disable: comment out the cron schedule in the workflow file. We do not
+ * use GitHub Actions variables as feature flags — code is always the source
+ * of truth in this repo.
  */
 
 import { promises as fs } from 'node:fs';
@@ -367,14 +368,6 @@ async function main() {
   log(`\n=== Schefter Trade Speculation ${DRY_RUN ? '[DRY RUN]' : ''} ===`);
   const now = new Date();
   log(`  Timestamp: ${now.toISOString()}`);
-
-  // Enable gate (defaults to OFF in production unless explicitly enabled —
-  // mirrors how the rumor-mill rolled out).
-  const enabled = process.env.SCHEFTER_TRADE_SPECULATION_ENABLED;
-  if (!enabled || enabled === '0' || String(enabled).toLowerCase() === 'false') {
-    log('  SCHEFTER_TRADE_SPECULATION_ENABLED is not truthy — exiting');
-    return 0;
-  }
 
   if (isQuietHours(now)) {
     log(`  Quiet hours (PT ${getPtHour(now)}:00) — exiting`);
