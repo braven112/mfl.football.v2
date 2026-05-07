@@ -78,10 +78,17 @@ TYPE={operation}&L={leagueId}&{params}
 | Operation | TYPE | Key Params | Auth Level |
 |-----------|------|------------|------------|
 | Set Lineup | `setStarters` | `FRANCHISE`, `PLAYERS` | Owner |
-| Move to IR | via freeagency | `FRANCHISE`, `PLAYER` | Owner/Commish |
+| Move to IR | `ir` (import) | `L`, `ACTIVATE` (off IR) / `DEACTIVATE` (to IR), optional `FRANCHISE_ID` for commish impersonation | Owner / Commish-via-FRANCHISE_ID |
+| Move to Taxi | `taxi_squad` (import) | `L`, `PROMOTE` (off taxi) / `DEMOTE` (to taxi), optional `FRANCHISE_ID` for commish impersonation | Owner / Commish-via-FRANCHISE_ID |
 | Trade Block | `tradeBait` | Research needed | Owner |
 | Submit Trade | `tradeProposal` | Research needed | Owner |
 | Waiver Bid | `fcfsWaivers` | Research needed | Owner |
+
+**IR/taxi caveats** (verified 2026-05-07 against MFL's live api_info spec):
+- Parameter names are verb-form, NOT past tense — `ACTIVATE`/`DEACTIVATE`/`PROMOTE`/`DEMOTE`, never with a trailing D. Past-tense names trigger a silent `<status>OK</status>` no-op.
+- Direction reads from the active-roster perspective: `PROMOTE` = off taxi (up to active); `DEMOTE` = onto taxi. `ACTIVATE` = off IR; `DEACTIVATE` = onto IR.
+- `FRANCHISE_ID` is ONLY for commissioner impersonation. Sending it on an owner-mode request can trip MFL's lockout-impersonation check and silently no-op the write.
+- The `freeagency?TYPE=moveToIR` path that older versions of this doc referenced is **not a working endpoint** — it 404s at every host. Use `import?TYPE=ir`.
 
 **Discovering Unknown Endpoints:**
 1. Check MFL API info page: `https://www49.myfantasyleague.com/2026/api_info?STATE=details&L=13522`

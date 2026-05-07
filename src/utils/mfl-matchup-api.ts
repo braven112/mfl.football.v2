@@ -574,6 +574,12 @@ export class MFLMatchupApiClient {
    *
    * MFL's transaction record uses the same field names — `ACTIVATED` is the
    * player who has been "activated to IR status," not "activated to play."
+   *
+   * MFL parameter names (per the live api_info spec, verified 2026-05-07):
+   * - DEACTIVATE: list of player ids to move FROM Active TO IR
+   * - ACTIVATE:   list of player ids to move FROM IR TO Active
+   * Note: these are verb-form (no D), opposite of the past-tense field names
+   * used in transaction logs ("activated"/"deactivated").
    */
   async movePlayerToIR(
     playerId: string,
@@ -582,8 +588,8 @@ export class MFLMatchupApiClient {
   ): Promise<{ success: boolean; error?: string }> {
     return this.runRosterMove({
       type: 'ir',
-      onParam: 'ACTIVATED',
-      offParam: 'DEACTIVATED',
+      onParam: 'DEACTIVATE',
+      offParam: 'ACTIVATE',
       playerId,
       franchiseId,
       direction,
@@ -594,8 +600,13 @@ export class MFLMatchupApiClient {
    * Move a rookie to / from the Taxi (Practice) Squad via MFL's
    * import?TYPE=taxi_squad endpoint.
    *
-   * direction='to'   → PROMOTED=<id> (player moves ONTO taxi)
-   * direction='from' → DEMOTED=<id>  (player moves OFF taxi back to active)
+   * MFL parameter names (per the live api_info spec, verified 2026-05-07):
+   * - DEMOTE:  list of player ids to move FROM Active TO Taxi Squad (demote down)
+   * - PROMOTE: list of player ids to move FROM Taxi Squad TO Active (promote up)
+   * Note: these are verb-form (no D), and PROMOTE/DEMOTE here are the OPPOSITE
+   * of how the transaction log's `promoted`/`demoted` fields read — those
+   * record "promoted ONTO the taxi", whereas the import verbs treat the
+   * active roster as the higher status.
    *
    * MFL enforces taxi-squad cap and rookie eligibility based on league rules;
    * caller should preflight where possible for friendlier UX.
@@ -607,8 +618,8 @@ export class MFLMatchupApiClient {
   ): Promise<{ success: boolean; error?: string }> {
     return this.runRosterMove({
       type: 'taxi_squad',
-      onParam: 'PROMOTED',
-      offParam: 'DEMOTED',
+      onParam: 'DEMOTE',
+      offParam: 'PROMOTE',
       playerId,
       franchiseId,
       direction,
@@ -621,8 +632,8 @@ export class MFLMatchupApiClient {
    */
   private async runRosterMove(opts: {
     type: 'ir' | 'taxi_squad';
-    onParam: 'ACTIVATED' | 'PROMOTED';
-    offParam: 'DEACTIVATED' | 'DEMOTED';
+    onParam: 'DEACTIVATE' | 'DEMOTE';
+    offParam: 'ACTIVATE' | 'PROMOTE';
     playerId: string;
     franchiseId: string;
     direction: 'to' | 'from';
@@ -631,38 +642,44 @@ export class MFLMatchupApiClient {
       return { success: false, error: 'Authentication required for roster moves' };
     }
 
+    // POST to MFL's import endpoint with the parameter names from the live
+    // api_info spec page (verified 2026-05-07 by Brandon copying the
+    // taxi_squad and ir entries directly from MFL's API Test Form):
+    //
+    //   IR:    L, ACTIVATE (off IR → active), DEACTIVATE (active → IR)
+    //   Taxi:  L, PROMOTE (taxi → active), DEMOTE (active → taxi)
+    //
+    // The verb-form names (no trailing D) differ from the past-tense
+    // transaction-log fields (`activated`/`deactivated`/`promoted`/`demoted`)
+    // we previously inferred from. That misinference was the root cause of
+    // the silent `<status>OK</status>` no-op we'd been chasing — MFL accepted
+    // the request shape but didn't recognize the parameter names.
+    //
+    // FRANCHISE_ID is only required when the commissioner is impersonating
+    // an owner; for owner-mode (cookie-only auth) the franchise is implied.
+    // Don't send it — adding it on a non-impersonating request is the same
+    // class of issue that broke the cron under league lockout.
+    //
+    // Single-direction body matches the cut-player.ts working pattern.
+    const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
+    const params = new URLSearchParams({
+      TYPE: opts.type,
+      L: this.config.leagueId,
+    });
+    const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
+    params.set(activeParam, opts.playerId);
+
+    const requestBody = params.toString();
+    console.log(
+      `[runRosterMove] POST ${url} body=${requestBody}`,
+    );
+
     try {
-      // Mirrors the proven owner-mode write pattern in src/pages/api/cut-player.ts:
-      // POST to api.myfantasyleague.com (mflFetch handles the cross-origin
-      // redirect to www49 and re-attaches the cookie), put every parameter in
-      // the body, owner cookie only — never send MFL_IS_COMMISH.
-      //
-      // Send ONLY the active param (PROMOTED or DEMOTED, ACTIVATED or
-      // DEACTIVATED) for the move's direction. Sending the inactive
-      // companion as an empty string causes MFL's import endpoint to
-      // silently no-op while still returning a success-shaped response
-      // (no <error>, no HTML), which is why prior versions of this code
-      // appeared to succeed in our UI but never persisted on MFL. The
-      // captured docs confirm the working examples are single-direction
-      // (e.g. `PROMOTED=17096&L=13522`, never both with one empty).
-      const url = `https://api.myfantasyleague.com/${this.config.year}/import`;
-      const params = new URLSearchParams({
-        TYPE: opts.type,
-        L: this.config.leagueId,
-        FRANCHISE_ID: opts.franchiseId,
-      });
-      const activeParam = opts.direction === 'to' ? opts.onParam : opts.offParam;
-      params.set(activeParam, opts.playerId);
-
-      console.log(
-        `[runRosterMove] POST ${url} (type=${opts.type}, franchise=${opts.franchiseId}, ${activeParam}=${opts.playerId})`,
-      );
-
       const response = await mflFetch({
         url,
         method: 'POST',
         mflUserCookie: this.config.mflUserId,
-        body: params.toString(),
+        body: requestBody,
       });
 
       const text = await response.text();

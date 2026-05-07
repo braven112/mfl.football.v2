@@ -11,10 +11,12 @@ Owner-mode roster moves wired into the existing player action button on `src/pag
 - `POST /api/move-to-practice` — same shape; adds two server-authoritative gates for `direction='to'`: rookie classification (`status === 'R'` from the MFL players export) and practice-squad cap (TheLeague = 3).
 
 **MFL endpoints used (canonical, owner mode):**
-- IR: `POST {host}/{year}/import?TYPE=ir` with `ACTIVATED=<id>&DEACTIVATED=` (or inverse). NOT the legacy `/freeagency&TYPE=moveToIR`.
-- Taxi: `POST {host}/{year}/import?TYPE=taxi_squad` with `PROMOTED=<id>&DEMOTED=` (or inverse).
+- IR: `POST {host}/{year}/import` body `TYPE=ir&L=...&DEACTIVATE=<id>` (move TO IR) or `&ACTIVATE=<id>` (move OFF IR). NOT the legacy `/freeagency&TYPE=moveToIR` (which 404s).
+- Taxi: `POST {host}/{year}/import` body `TYPE=taxi_squad&L=...&DEMOTE=<id>` (move TO taxi) or `&PROMOTE=<id>` (move OFF taxi).
 - Both go through `mflFetch()` (Cookie-safe across the api→www49 redirect).
 - Both share a private `runRosterMove()` helper in `src/utils/mfl-matchup-api.ts` that takes `{ type, onParam, offParam, playerId, direction }`.
+- **Verb-form params, not past tense.** It's `ACTIVATE`/`DEACTIVATE`/`PROMOTE`/`DEMOTE` — without a trailing `D`. The 2026-05-04 entries earlier in this file used past-tense names inferred from the transaction log; that inference was wrong. See `docs/claude/insights/domains/mfl-api.md` 2026-05-07 entry for the verified spec. Sending the wrong-tense names produces a silent `<status>OK</status>` that doesn't actually mutate state.
+- **Owner mode does NOT pass `FRANCHISE_ID`** — it's only for commissioner impersonation. Sending it on a non-impersonating owner request can trip MFL's lockout-impersonation check and silently no-op the write.
 
 **UI surface:**
 - `populateCdmActionOptions()` at ~line 8404 of `rosters.astro` adds 4 conditional options to the existing action menu: Move to IR, Activate from IR, Move to Practice Squad, Promote from Practice. Owner-only gate (`config.authUser.franchiseId === currentTeam`). Practice-squad rookies retain access to "Move to IR" (an injury on practice should still be reachable from this menu).
@@ -27,7 +29,9 @@ Owner-mode roster moves wired into the existing player action button on `src/pag
 
 **Context:** Original spec asked whether "already on IR" should hide the option or show the inverse. We assumed inverse would double the implementation cost.
 
-**Insight:** MFL's `import?TYPE=ir` and `import?TYPE=taxi_squad` accept BOTH `ACTIVATED`/`DEACTIVATED` (or `PROMOTED`/`DEMOTED`) in the same request. The direction is implicit in which field you populate — there's no `MOVE=ACTIVATE/DEACTIVATE` parameter. So one private helper handles both directions for both endpoints — total surface is 4 directions × 2 endpoints with one server function and one client function each.
+**Insight:** MFL's `import?TYPE=ir` and `import?TYPE=taxi_squad` accept BOTH `ACTIVATE`/`DEACTIVATE` (or `PROMOTE`/`DEMOTE`) in the same request. The direction is implicit in which field you populate — there's no `MOVE=ACTIVATE/DEACTIVATE` parameter. So one private helper handles both directions for both endpoints — total surface is 4 directions × 2 endpoints with one server function and one client function each.
+
+> Originally written 2026-05-04 using past-tense names (`ACTIVATED`/`DEACTIVATED`/`PROMOTED`/`DEMOTED`); corrected 2026-05-07 to the verified verb-form names. The pattern itself — "direction encoded by which param is populated" — is unchanged.
 
 **Recommendation:** When designing a roster move flow that has a clear "undo" semantic (IR ↔ active, Practice ↔ active), check MFL's API for inverse-in-same-call support before scoping out one-way only. It's almost always there, and the implementation cost is negligible.
 

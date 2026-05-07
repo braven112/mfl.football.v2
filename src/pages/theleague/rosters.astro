@@ -927,17 +927,20 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
   });
 });
 
-// Load MFL injury data for current season (dynamically determined week)
-const currentWeek = getCurrentWeek();
+// Load MFL injury data — sourced from data/theleague/mfl-feeds/<year>/injuries.json,
+// kept fresh by the roster-sync workflow (every 5 min year-round) which calls
+// fetch-mfl-feeds.mjs. Status values are pre-normalized ('Q'/'O'/'IR'/etc.) so
+// the badge matches what owners see on MFL itself. Falls back to per-player
+// Sleeper data if the file is somehow missing (e.g. fresh checkout before the
+// first sync run).
 let mflInjuryData = {};
 try {
-  // Use dynamic import based on current NFL week
-  const injuryDataModule = await import(`../../../data/theleague/live-injury-data-week-${currentWeek}.json`);
+  const injuryDataModule = await import(`../../../data/theleague/mfl-feeds/${currentLeagueYearStr}/injuries.json`);
   if (injuryDataModule.default?.injuries) {
     mflInjuryData = injuryDataModule.default.injuries;
   }
 } catch (error) {
-  console.warn(`Live injury data not available for week ${currentWeek}:`, error.message);
+  console.warn(`MFL injury data not available for ${currentLeagueYearStr}:`, error.message);
 }
 
 const recordsBySeason = {};

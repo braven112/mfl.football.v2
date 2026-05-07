@@ -259,6 +259,37 @@ const parseTradeBait = (data) => {
   return Array.from(playerIds);
 };
 
+// Mirrors normalizeInjuryStatus in scripts/fetch-live-lineups.mjs and
+// the TypeScript client at src/utils/mfl-matchup-api.ts. Keep these in
+// sync if you change one.
+const normalizeInjuryStatus = (status) => {
+  if (!status) return 'Healthy';
+  const normalized = String(status).toLowerCase().trim();
+  if (normalized.startsWith('ir-') || normalized.startsWith('ir ')) return 'IR';
+  switch (normalized) {
+    case 'out':
+    case 'o':
+      return 'Out';
+    case 'doubtful':
+    case 'd':
+      return 'Doubtful';
+    case 'questionable':
+    case 'q':
+      return 'Questionable';
+    case 'ir':
+    case 'injured reserve':
+      return 'IR';
+    case 'suspended':
+      return 'Suspended';
+    case 'retired':
+      return 'Retired';
+    case 'holdout':
+      return 'Holdout';
+    default:
+      return 'Healthy';
+  }
+};
+
 const endpoints = [
   {
     key: 'rosters',
@@ -289,6 +320,42 @@ const endpoints = [
     key: 'transactions',
     url: withWeek(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
+  },
+  {
+    // MFL's TYPE=injuries is league-agnostic (no L= param). Returns the live
+    // NFL injury report keyed by player. Transformed here into the same
+    // shape rosters.astro previously consumed from live-injury-data-week-*.json
+    // (an artifact of the old fetch-live-lineups.mjs script that only ran
+    // in-season): `{ generatedAt, year, injuredPlayers, injuries: { [id]: { injuryStatus, injuryBodyPart, expectedReturn } } }`.
+    // Status values normalized so the badge rendering ('Q' / 'O' / 'IR' / etc.)
+    // matches what owners see on MFL itself.
+    key: 'injuries',
+    url: `${host}/${year}/export?TYPE=injuries&JSON=1`,
+    parser: (t) => {
+      const raw = JSON.parse(t);
+      const list = Array.isArray(raw?.injuries?.injury)
+        ? raw.injuries.injury
+        : raw?.injuries?.injury
+          ? [raw.injuries.injury]
+          : [];
+      const injuries = {};
+      let injuredPlayers = 0;
+      for (const inj of list) {
+        if (!inj?.id || !inj?.status) continue;
+        injuredPlayers++;
+        injuries[inj.id] = {
+          injuryStatus: normalizeInjuryStatus(inj.status),
+          injuryBodyPart: inj.details || '',
+          expectedReturn: inj.exp_return || '',
+        };
+      }
+      return {
+        generatedAt: new Date().toISOString(),
+        year: parseInt(year, 10),
+        injuredPlayers,
+        injuries,
+      };
+    },
   },
   {
     key: 'tradeBait',
