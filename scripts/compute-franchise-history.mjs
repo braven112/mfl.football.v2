@@ -119,6 +119,9 @@ const normalizeName = (s) => (s || '').trim().toLowerCase().replace(/^the\s+/, '
 //      history entry + 1 (current owner started after the prior owner).
 //   4. Else (no history at all): null → include all years.
 const inferCurrentOwnerSince = (team) => {
+  if (typeof team.currentOwnerSince === 'number') {
+    return team.currentOwnerSince;
+  }
   if (Array.isArray(team.ownerHistory) && team.ownerHistory.length > 0) {
     return Math.min(...team.ownerHistory.map((h) => h.yearStart));
   }
