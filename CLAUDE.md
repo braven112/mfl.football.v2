@@ -11,6 +11,19 @@ entries for gotchas that have bitten us and would bite a future session too.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
 
+## Feature flags — code, not GitHub Actions variables
+
+Do not introduce new `vars.*` references in workflows as feature gates
+(`SCHEFTER_FOO_ENABLED`, etc.). Editing a GitHub variable is never easier
+than editing code in this repo, and the indirection just splits the
+source of truth across two places. To disable a scheduled job, comment
+out (or delete) its `cron:` line. To gate behavior, use a `const` in the
+script itself.
+
+A few legacy vars predate this rule (`SCHEFTER_RUMOR_MILL_ENABLED`,
+`SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`). Don't add more, and prefer
+moving the existing ones into code if you're already touching the file.
+
 ## Roger date-handling gotchas
 
 There are **two** independent code paths named "Roger". Both have hallucinated
