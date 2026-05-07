@@ -593,7 +593,7 @@ const canonicalRivalryPair = (a: string, b: string): string =>
         .map(({ era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers }) => (
         <div class="era" id={`era-${era.yearStart}`}>
           <div class="era-header">
-            {era.icon && <img src={era.icon} alt="" class="era-icon" />}
+            {era.icon && <img src={resolveRowIcon(era)} alt="" class="era-icon" />}
             <div>
               <h3>
                 {era.name}
