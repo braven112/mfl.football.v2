@@ -1,0 +1,72 @@
+name: Backfill Historical MFL Feeds
+
+# Manually-triggered one-off (or as-needed) backfill for missing/invalid
+# historical seasons. Pulls every gap year listed in the current league.json's
+# history.league array, then regenerates franchise-history.json and commits
+# any resulting changes back to whatever branch the workflow was launched on.
+#
+# Run from the GitHub Actions UI, picking the branch you want to backfill
+# (e.g. claude/fantasy-football-ideas-M2Ga7).
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Refetch every year, even ones already cached as valid'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: backfill-historical-feeds
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (current branch)
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.24.0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Backfill historical feeds
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            node ./scripts/backfill-historical-feeds.mjs --force
+          else
+            node ./scripts/backfill-historical-feeds.mjs
+          fi
+
+      - name: Recompute franchise history
+        run: node ./scripts/compute-franchise-history.mjs
+
+      - name: Commit and push
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No new historical data picked up — nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "Historical Feed Backfill Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/theleague/mfl-feeds/ data/theleague/derived/
+          git commit -m "chore: backfill historical MFL feeds + recompute franchise history"
+          git push origin HEAD:${{ github.ref_name }}
