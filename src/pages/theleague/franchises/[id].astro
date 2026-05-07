@@ -16,7 +16,9 @@ if (!fr) {
 
 const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === id);
 
-// Build eras: each entry in team.history + the current top-level identity (if not already in history)
+// Build eras keyed by NAME CHANGES only — config history entries that share
+// the current name (or each other) are banner refreshes, not real eras, so
+// they get merged into one continuous span.
 type Era = {
   name: string;
   nameMedium?: string;
@@ -26,30 +28,47 @@ type Era = {
   icon?: string;
   isCurrent: boolean;
 };
+const normalizeIdentity = (s: string): string =>
+  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
 const eras: Era[] = [];
 const yearsForFranchise = fr.yearByYear.map((y: any) => y.year);
 const minYear = Math.min(...yearsForFranchise);
 const maxYear = Math.max(...yearsForFranchise);
+const currentNorm = normalizeIdentity(team?.name ?? '');
+
+const pushOrExtend = (entry: Era) => {
+  const last = eras[eras.length - 1];
+  if (last && normalizeIdentity(last.name) === normalizeIdentity(entry.name)) {
+    last.yearEnd = Math.max(last.yearEnd, entry.yearEnd);
+    last.yearStart = Math.min(last.yearStart, entry.yearStart);
+    if (entry.isCurrent) last.isCurrent = true;
+    last.banner = entry.banner ?? last.banner;
+    last.icon = entry.icon ?? last.icon;
+    return;
+  }
+  eras.push(entry);
+};
 
 if (Array.isArray(team?.history) && team.history.length > 0) {
   for (const h of team.history) {
-    eras.push({
+    pushOrExtend({
       name: h.name,
       nameMedium: h.nameMedium ?? h.name,
       yearStart: h.yearStart,
       yearEnd: h.yearEnd,
       banner: h.banner,
       icon: h.icon,
-      isCurrent: false,
+      isCurrent: normalizeIdentity(h.name) === currentNorm,
     });
   }
-  // Find earliest history entry — anything before is "unrecorded era"
   const earliestHistoryYear = Math.min(...team.history.map((h: any) => h.yearStart));
-  // Latest history entry end
   const latestHistoryYear = Math.max(...team.history.map((h: any) => h.yearEnd));
-  // Current era starts after latest history entry
+  // Append a current era covering the years after the latest config entry.
+  // If the current name matches the most recent history entry, this just
+  // extends that era's yearEnd via pushOrExtend.
   if (latestHistoryYear < maxYear || latestHistoryYear < new Date().getFullYear()) {
-    eras.push({
+    pushOrExtend({
       name: team.name,
       nameMedium: team.nameMedium ?? team.name,
       yearStart: latestHistoryYear + 1,
@@ -59,7 +78,6 @@ if (Array.isArray(team?.history) && team.history.length > 0) {
       isCurrent: true,
     });
   }
-  // Pre-history era (years that fall before any history entry)
   if (minYear < earliestHistoryYear) {
     eras.unshift({
       name: 'Earlier eras',

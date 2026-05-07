@@ -56,7 +56,10 @@ const yearsCovered = (franchiseHistory.yearsCovered as number[]).slice().sort((a
 const firstYear = yearsCovered[0];
 const lastYear = yearsCovered[yearsCovered.length - 1];
 
-// Build a list of every distinct historical identity for the discovery strip
+// Build a list of every distinct historical identity for the discovery strip.
+// Only include entries that are actually a different name from the current
+// franchise — same-name history entries (banner refreshes, minor casing
+// differences, "The " prefix tweaks) are filtered out.
 type HistoricalIdentity = {
   franchiseId: string;
   name: string;
@@ -64,11 +67,27 @@ type HistoricalIdentity = {
   yearEnd: number;
   banner: string | null;
 };
+const normalizeIdentity = (s: string): string =>
+  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
 const historicalIdentities: HistoricalIdentity[] = [];
 for (const team of leagueConfig.teams as any[]) {
-  if (Array.isArray(team.history)) {
-    for (const h of team.history) {
-      historicalIdentities.push({
+  if (!Array.isArray(team.history)) continue;
+  const currentNorm = normalizeIdentity(team.name);
+  // Group all entries by normalized name (non-adjacent runs collapse too —
+  // e.g. "Poker in the Rear" appears in 2012-2013 and 2015 with Generals
+  // between, but it should still show as one row with the union range).
+  const byName = new Map<string, HistoricalIdentity>();
+  for (const h of team.history) {
+    const key = normalizeIdentity(h.name);
+    if (key === currentNorm) continue;
+    const existing = byName.get(key);
+    if (existing) {
+      existing.yearEnd = Math.max(existing.yearEnd, h.yearEnd);
+      existing.yearStart = Math.min(existing.yearStart, h.yearStart);
+      existing.banner = existing.banner ?? h.banner ?? null;
+    } else {
+      byName.set(key, {
         franchiseId: team.franchiseId,
         name: h.name,
         yearStart: h.yearStart,
@@ -77,8 +96,9 @@ for (const team of leagueConfig.teams as any[]) {
       });
     }
   }
+  historicalIdentities.push(...byName.values());
 }
-historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd);
+historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yearStart);
 ---
 
 <TheLeagueLayout title="Franchise History">
