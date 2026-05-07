@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-05-07T21-40-18.120Z",
+  "snapshot": "2026-05-07T22-03-26.792Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-07T21:40:18.116Z",
+    "fetchedAt": "2026-05-07T22:03:26.787Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-05-07T21:40:18.119Z"
+    "generatedAt": "2026-05-07T22:03:26.790Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 135,
+      "totalPlayers": 136,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
       "starterAverage": 4024238.15,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 1898123.03,
-      "medianSalary": 847000,
+      "averageSalary": 1887291.24,
+      "medianSalary": 839437.5,
       "topPlayers": [
         {
           "id": "15287",
@@ -840,19 +840,25 @@
           "name": "Metchie, John",
           "salary": 425000,
           "franchiseId": "0003"
+        },
+        {
+          "id": "17528",
+          "name": "Coleman, Kevin",
+          "salary": 425000,
+          "franchiseId": "0012"
         }
       ]
     },
     "RB": {
-      "totalPlayers": 93,
+      "totalPlayers": 92,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
       "starterAverage": 4154739.15,
       "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1756477.2,
-      "medianSalary": 632225,
+      "averageSalary": 1770188.91,
+      "medianSalary": 645535,
       "topPlayers": [
         {
           "id": "13130",
@@ -1309,12 +1315,6 @@
           "name": "Etienne, Trevor",
           "salary": 495000,
           "franchiseId": "0010"
-        },
-        {
-          "id": "17046",
-          "name": "Neal, Devin",
-          "salary": 495000,
-          "franchiseId": "0012"
         },
         {
           "id": "17482",
@@ -1789,14 +1789,14 @@
       ]
     },
     "TE": {
-      "totalPlayers": 63,
+      "totalPlayers": 62,
       "top3Average": 5583333.33,
       "top5Average": 5142672,
       "top10Average": 4266237.25,
       "starterAverage": 3126490.14,
       "starterMedian": 2637500,
       "starterCount": 18,
-      "averageSalary": 1339280.6,
+      "averageSalary": 1353341.57,
       "medianSalary": 658845,
       "topPlayers": [
         {
@@ -2128,12 +2128,6 @@
           "name": "Kmet, Cole",
           "salary": 467500,
           "franchiseId": "0009"
-        },
-        {
-          "id": "17243",
-          "name": "Fidone, Thomas",
-          "salary": 467500,
-          "franchiseId": "0012"
         },
         {
           "id": "13189",
