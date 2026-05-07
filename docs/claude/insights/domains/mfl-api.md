@@ -759,6 +759,8 @@ TheLeague 2026 (`data/theleague/mfl-feeds/2026/league.json`) has `"lockout": "Ye
 
 ## 2026-05-04 - IR and Taxi Squad Write Endpoints: Authoritative Specification from Transaction Evidence
 
+> **⚠️ SUPERSEDED — see 2026-05-07 entry below.** The parameter-name inference in this insight was WRONG. The transaction log uses past-tense field names (`activated`/`deactivated`/`promoted`/`demoted`) describing what happened; the import endpoint uses verb-form parameter names (`ACTIVATE`/`DEACTIVATE`/`PROMOTE`/`DEMOTE`) describing what to do. They are not the same. Sending the past-tense names produces a silent `<status>OK</status>` response with no actual state change — the symptom that wasted #166 / #171 / #173 / #174 / multiple iterations on #175. Kept here as a record of the failure mode.
+
 **Context:** Researching the correct owner-level write endpoints for IR moves and taxi squad moves for TheLeague (L=13522, 2026). The MFL api_info pages return 403 from this server environment. Authoritative data was extracted from the cached `transactions.json` files (2025: 1152 transactions, 2026: 759 transactions).
 
 ### Evidence Source
@@ -926,4 +928,69 @@ const raw = data?.players?.player;
 const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
 ```
 The triple-step (`Array.isArray ? : (raw ? [raw] : [])`) handles all three shapes: array, single object, and missing. Reuse this pattern wherever you read filtered MFL exports.
+
+---
+
+## 2026-05-07 - IR and Taxi Squad Write Endpoints: Verified Specification from Live api_info
+
+**Context:** Final fix for the persistent silent-failure bug on `POST /api/move-to-ir` and `POST /api/move-to-practice` chased through PRs #166, #171, #173, #174 and several iterations on #175. The on-page debug panel added in #175 captured MFL returning `<status>OK</status>` 200 for every variant of `import?TYPE=ir` / `import?TYPE=taxi_squad` we tried — never an error, never persistence. The `/freeagency?TYPE=moveToIR` "legacy" path documented elsewhere in this codebase 404'd at every host.
+
+**Insight:** **The MFL api_info spec page lists DIFFERENT parameter names than the transaction log fields.** The 2026-05-04 entry above inferred parameter names from the transaction log; that inference was wrong. The actual spec, copied verbatim from MFL's API Test Form on 2026-05-07 by an authenticated user (the page returns 403 from this server, so it can only be read from a logged-in browser):
+
+### IR — `import?TYPE=ir`
+
+> **ir** — Import an IR (activate/deactivate) move. Access restricted to league owners. Commissioner can impersonate owner using FRANCHISE_ID parameter.
+>
+> | Param | Description |
+> |---|---|
+> | `L` | League Id (required) |
+> | `ACTIVATE` | Comma-separated list of player ids to activate (move from Injured Reserve to Active Roster). |
+> | `DEACTIVATE` | Comma-separated list of player ids to deactivate (move from Active Roster to Injured Reserve). |
+> | `DROP` | Comma-separated list of player ids to drop from the roster. Applies to all players regardless of roster status. |
+> | `FRANCHISE_ID` | When called by the Commissioner, you must pass this parameter to indicate on which franchise behalf to do the request. |
+
+### Taxi — `import?TYPE=taxi_squad`
+
+> **taxi_squad** — Import a Taxi Squad (promote/demote) move. Access restricted to league owners. Commissioner can impersonate owner using FRANCHISE_ID parameter.
+>
+> | Param | Description |
+> |---|---|
+> | `L` | League Id (required) |
+> | `PROMOTE` | Comma-separated list of player ids to promote (move from Taxi Squad to Active Roster). |
+> | `DEMOTE` | Comma-separated list of player ids to demote (move from Active Roster to Taxi Squad). |
+> | `DROP` | Comma-separated list of player ids to drop from the roster. Applies to all players regardless of roster status. |
+> | `FRANCHISE_ID` | When called by the Commissioner, you must pass this parameter to indicate on which franchise behalf to do the request. |
+
+**Critical clarifications**
+
+- **Verb form, not past tense.** It is `ACTIVATE` / `DEACTIVATE` / `PROMOTE` / `DEMOTE` — not `ACTIVATED` / `DEACTIVATED` / `PROMOTED` / `DEMOTED`. The trailing `D` was the bug. MFL's import endpoint silently no-ops requests with unrecognized parameter names while still returning `<status>OK</status>` (it processed `TYPE` and `L` but had no recorded action to perform).
+- **Direction semantics are inverted from how the transaction log reads.** `PROMOTE` means *move FROM Taxi TO Active* — i.e. promote off the practice squad up to the active roster. The transaction log's `promoted` field records the opposite: a player who got *placed onto* the taxi squad. Same flip for IR. Code that calls these has to map UI direction to the right verb carefully:
+
+  | UI direction | IR (TYPE=ir) | Taxi (TYPE=taxi_squad) |
+  |---|---|---|
+  | "to" (move to IR / move to practice) | `DEACTIVATE` | `DEMOTE` |
+  | "from" (off IR / promote to active) | `ACTIVATE` | `PROMOTE` |
+
+- **Owner mode does NOT pass `FRANCHISE_ID`.** Per the spec, FRANCHISE_ID is *only* required when the commissioner is impersonating an owner. Owner-mode auth (`MFL_USER_ID` cookie alone) implies the franchise. Sending FRANCHISE_ID in a non-impersonating owner request is the same class of issue that broke the cron auto-taxi under league lockout (see "Commissioner Can Impersonate Franchise Owners via FRANCHISE_ID Parameter", 2026-03-13 entry).
+- **The legacy `/freeagency?TYPE=moveToIR` path does not exist** at either `api.myfantasyleague.com` or `www49.myfantasyleague.com` for this league/year. It returned 404 on every test against `/2026/freeagency`. The references to it in `.claude/agents/qa-principal-engineer.md` and `.claude/agents/qa-api-debugger.md` (and `docs/features/mfl-api.md`) are wrong; they should be removed or updated to point at the canonical `import?TYPE=ir`. The 2026-05-04 inference above incorrectly classified `freeagency` as legacy-but-functional; in reality the canonical `import?TYPE=ir` works once the parameter names are right.
+
+**Working request shape (owner mode)**
+
+```http
+POST https://api.myfantasyleague.com/{YEAR}/import
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={userCookie}
+
+TYPE=ir&L={leagueId}&DEACTIVATE={playerId}    # move TO IR
+TYPE=ir&L={leagueId}&ACTIVATE={playerId}      # move OFF IR
+
+TYPE=taxi_squad&L={leagueId}&DEMOTE={playerId}    # move TO taxi
+TYPE=taxi_squad&L={leagueId}&PROMOTE={playerId}   # move OFF taxi
+```
+
+`mflFetch` handles the `api.* → www49` 302 redirect and re-attaches the cookie. Single-direction body (only the active param, no empty companion) — this matches the `cut-player.ts` working pattern.
+
+**Process lesson:** Inference from observed transaction-log field names is *not* the same as a verified API spec, even when the names look matched. The 2026-05-04 entry above stated "Confidence: Medium — The field name mapping from transactions is strong evidence". That confidence was misplaced — every single one of those parameter inferences was wrong by one letter. Rule going forward: **don't ship inferred parameter names to a write endpoint without a live verification.** If the spec page returns 403 from this environment, ask the user to copy the relevant section from their authenticated browser before guessing.
+
+**Evidence:** `src/utils/mfl-matchup-api.ts:597-690` after the fix; PR #175. The on-page debug panel from #175 captured both the silent-`OK` symptom (with wrong params) and the post-fix request shape — see `src/pages/theleague/rosters.astro` for that surface (intended to be ripped out in a follow-up once the fix is verified end-to-end).
 

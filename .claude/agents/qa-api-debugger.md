@@ -82,11 +82,17 @@ For each API call:
 - **Content-Type for writes:** `application/x-www-form-urlencoded`
 
 ### Common Write Endpoints
-| Operation | TYPE | Key Params |
-|-----------|------|------------|
+| Operation | TYPE (URL) | Key Params |
+|-----------|------------|------------|
 | Set Lineup | `setStarters` | `FRANCHISE`, `PLAYERS` (comma-sep IDs) |
-| Move to IR | via `freeagency` | `FRANCHISE`, `PLAYER`, `TYPE=moveToIR` |
+| Move to IR | `ir` (`POST /import`) | `L`, `ACTIVATE` (off IR) / `DEACTIVATE` (to IR), optional `FRANCHISE_ID` for commish impersonation |
+| Move to Taxi | `taxi_squad` (`POST /import`) | `L`, `PROMOTE` (off taxi) / `DEMOTE` (to taxi), optional `FRANCHISE_ID` for commish impersonation |
 | Trade Block | `tradeBait` (import) | Research needed — may use `ADD`/`REMOVE` or `PLAYERS` |
+
+**IR/taxi caveats** (verified 2026-05-07 from MFL's live api_info):
+- Parameter names are verb-form (no trailing D). Sending `ACTIVATED`/`PROMOTED` etc. produces a silent `<status>OK</status>` that doesn't actually persist — MFL accepts the request but doesn't recognize the param.
+- `FRANCHISE_ID` only for commissioner impersonation. Owner-mode writes should NOT send it.
+- Older versions of this doc claimed "Move to IR via `freeagency`" — that endpoint 404s. Use `import?TYPE=ir`.
 
 ### Known MFL API Quirks
 - Single-item arrays may return as bare objects (not wrapped in `[]`)

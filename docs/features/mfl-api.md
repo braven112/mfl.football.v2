@@ -1066,42 +1066,41 @@ Content-Type: application/x-www-form-urlencoded
 Cookie: MFL_USER_ID={userCookie}
 ```
 
-**Parameters (inferred from transaction data — NOT verified by direct API docs access):**
+**Parameters (verified 2026-05-07 against MFL's live `api_info?STATE=details` page):**
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `L` | Yes | League ID |
-| `ACTIVATED` | Conditional | Comma-separated player IDs to PLACE ON IR (move from active roster to IR). At least one of ACTIVATED or DEACTIVATED must be present. |
-| `DEACTIVATED` | Conditional | Comma-separated player IDs to REMOVE FROM IR (return to active roster). |
-| `FRANCHISE_ID` | No | Commissioner impersonation only. For owner mode, the franchise is determined by the auth cookie. |
+| `ACTIVATE` | Conditional | Comma-separated player IDs to **activate** — move FROM Injured Reserve TO Active Roster. At least one of `ACTIVATE` or `DEACTIVATE` must be present. |
+| `DEACTIVATE` | Conditional | Comma-separated player IDs to **deactivate** — move FROM Active Roster TO Injured Reserve. |
+| `DROP` | No | Comma-separated player IDs to drop from the roster entirely (regardless of bucket). |
+| `FRANCHISE_ID` | No | **Commissioner impersonation only.** For owner mode, the franchise is implied by the auth cookie — *do not send `FRANCHISE_ID`* in owner-mode writes. |
 
 **Authentication:** Owner (`MFL_USER_ID` cookie only). Use `mflFetch()` from `src/utils/mfl-fetch.ts`.
 
-**Example — Place one player on IR:**
+**Example — place one player on IR:**
 ```
-ACTIVATED=14800&L=13522
-```
-
-**Example — Return player from IR to active (and optionally place a different player on IR simultaneously):**
-```
-DEACTIVATED=14800&ACTIVATED=16642&L=13522
+TYPE=ir&L=13522&DEACTIVATE=14800
 ```
 
-**Key Insights (added 2026-05-04):**
-- `ACTIVATED` means "activated onto the IR list" (i.e., placed on IR)
-- `DEACTIVATED` means "deactivated from IR" (i.e., returned to active roster)
-- Terminology is counter-intuitive — "activated" = going TO IR, not coming off it
-- Owner mode requires only `MFL_USER_ID` cookie; ALL 90 IR transactions in 2025 data had no `by_commish` flag
-- Commissioner impersonation supported via `FRANCHISE_ID` (+ `MFL_IS_COMMISH` cookie)
-- TheLeague has `injuredReserve: "50"` — 50-slot IR limit (effectively unlimited for practical purposes)
-- IR players count 100% toward salary cap (`includeIRWithSalary: "100"`)
-- **IMPORTANT:** The existing implementation in `src/utils/mfl-matchup-api.ts:544` uses `/freeagency?TYPE=moveToIR` with `PLAYER` (singular) and `FRANCHISE` params — this is a LEGACY path that may still function but is NOT the documented canonical endpoint. The canonical endpoint is `import?TYPE=ir` with `ACTIVATED`/`DEACTIVATED`.
-- **REDIRECT BUG:** The existing implementation also uses raw `fetch()` with default `redirect: 'follow'` which will silently drop the Cookie header on redirect to www49. Use `mflFetch()` instead.
+**Example — return player from IR (and simultaneously place a different player on IR):**
+```
+TYPE=ir&L=13522&ACTIVATE=14800&DEACTIVATE=16642
+```
 
-**Confidence:** Medium — inferred from 90 IR transaction records in the 2025 cached data. Parameter names match transaction field names. Direct API documentation was inaccessible (403) from the server environment.
+**Key insights:**
+- **Verb-form parameter names.** It is `ACTIVATE`/`DEACTIVATE`, NOT `ACTIVATED`/`DEACTIVATED`. The trailing `D` was the source of a long-running silent-failure bug — MFL accepts the request shape but silently no-ops when it doesn't recognize the parameter, while still returning `<status>OK</status>`.
+- **`ACTIVATE` = off IR; `DEACTIVATE` = onto IR.** Terminology reads from the *player's* perspective: a player being placed on IR is "deactivated" (taken out of action). This is the inverse of the transaction-log field naming, which records `activated`/`deactivated` in the past tense from the league's perspective.
+- **Do NOT send FRANCHISE_ID in owner-mode requests.** It's only for commissioner impersonation. Sending it in a non-impersonating request can trigger MFL's lockout-impersonation check and silently no-op the write.
+- TheLeague has `injuredReserve: "50"` — 50-slot IR limit (effectively unlimited).
+- IR players count 100% toward salary cap (`includeIRWithSalary: "100"`).
+- The `freeagency?TYPE=moveToIR` path mentioned in some prior internal docs is **not a working endpoint** — it returns 404 at every host tested. Use `import?TYPE=ir`.
+
+**Confidence:** Verified — parameter names and semantics quoted directly from MFL's API Test Form on 2026-05-07.
 
 **Used In:**
-- [src/pages/api/move-to-ir.ts](src/pages/api/move-to-ir.ts) — uses the legacy `/freeagency` path via `mfl-matchup-api.ts:544`
+- [src/pages/api/move-to-ir.ts](src/pages/api/move-to-ir.ts)
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts) — `runRosterMove`
 
 ---
 
@@ -1115,45 +1114,45 @@ Content-Type: application/x-www-form-urlencoded
 Cookie: MFL_USER_ID={userCookie}
 ```
 
-**Parameters (inferred from transaction data — NOT verified by direct API docs access):**
+**Parameters (verified 2026-05-07 against MFL's live `api_info?STATE=details` page):**
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `L` | Yes | League ID |
-| `PROMOTED` | Conditional | Comma-separated player IDs to place ON the taxi squad. At least one of PROMOTED or DEMOTED must be present. |
-| `DEMOTED` | Conditional | Comma-separated player IDs to remove FROM the taxi squad (return to active roster or release). |
-| `FRANCHISE_ID` | No | Commissioner impersonation only. For owner mode, franchise is determined by auth cookie. |
+| `PROMOTE` | Conditional | Comma-separated player IDs to **promote** — move FROM Taxi Squad TO Active Roster. At least one of `PROMOTE` or `DEMOTE` must be present. |
+| `DEMOTE` | Conditional | Comma-separated player IDs to **demote** — move FROM Active Roster TO Taxi Squad. |
+| `DROP` | No | Comma-separated player IDs to drop from the roster entirely (regardless of bucket). |
+| `FRANCHISE_ID` | No | **Commissioner impersonation only.** For owner mode, the franchise is implied by the auth cookie — *do not send `FRANCHISE_ID`* in owner-mode writes. |
 
 **Authentication:** Owner (`MFL_USER_ID` cookie only). Use `mflFetch()` from `src/utils/mfl-fetch.ts`.
 
-**Example — Move rookie to taxi squad:**
+**Example — move rookie onto taxi squad:**
 ```
-PROMOTED=17096&L=13522
-```
-
-**Example — Swap: move one player off taxi, one player on:**
-```
-PROMOTED=17037&DEMOTED=17076&L=13522
+TYPE=taxi_squad&L=13522&DEMOTE=17096
 ```
 
-**Example — Remove player from taxi squad:**
+**Example — promote rookie off taxi squad to active:**
 ```
-DEMOTED=17096&L=13522
+TYPE=taxi_squad&L=13522&PROMOTE=17096
 ```
 
-**Key Insights (added 2026-05-04):**
-- `PROMOTED` = moving a player TO the taxi squad (promoted onto taxi)
-- `DEMOTED` = removing a player FROM the taxi squad
-- Owner mode is sufficient — 107 of 113 TAXI transactions in 2025 data had no `by_commish` flag
-- Swap operations (PROMOTED + DEMOTED in one call) are fully supported — confirmed in transaction data
-- TheLeague taxi squad size limit: `taxiSquad: "3"` — max 3 players at any time
-- Taxi squad players count 50% toward salary cap (`includeTaxiWithSalary: "50"`)
-- **Eligibility (TheLeague-specific):** In practice, only rookies (IDs 17xxx) are eligible. All 9 taxi players in 2025 and all 3 in 2026 are from recent draft classes. This is enforced by MFL based on league rules, not an API parameter.
+**Example — swap: move one player off taxi, one player on:**
+```
+TYPE=taxi_squad&L=13522&PROMOTE=17037&DEMOTE=17076
+```
+
+**Key insights:**
+- **Verb-form parameter names.** It is `PROMOTE`/`DEMOTE`, NOT `PROMOTED`/`DEMOTED`. The trailing `D` was the source of a long-running silent-failure bug — MFL accepts the request shape but silently no-ops when it doesn't recognize the parameter, while still returning `<status>OK</status>`.
+- **Direction reads from the active-roster perspective.** `PROMOTE` means *up to* the active roster; `DEMOTE` means *down to* the taxi squad. The transaction log records the inverse perspective — `promoted` there logs a player who was *placed onto* taxi (i.e. demoted from the import endpoint's POV). The mismatch is real; map deliberately.
+- **Do NOT send FRANCHISE_ID in owner-mode requests.** It's only for commissioner impersonation. Sending it in a non-impersonating request can trigger MFL's lockout-impersonation check and silently no-op the write.
+- TheLeague taxi squad size limit: `taxiSquad: "3"` — max 3 players at any time.
+- Taxi squad players count 50% toward salary cap (`includeTaxiWithSalary: "50"`).
+- **Eligibility (TheLeague-specific):** In practice, only rookies (IDs 17xxx) are eligible. All 9 taxi players in 2025 and all 3 in 2026 are from recent draft classes. Enforced by MFL based on league rules, not an API parameter.
 - **Player must already be on active roster:** Taxi squad moves require the player to be on the franchise's active roster first (status: ROSTER). Cannot taxi a free agent directly.
-- `contractInfo: "TO"` appears on 2026 taxi players — likely "Taxi Option" contract status, may be a 2026 league rule change.
-- Commissioner impersonation supported via `FRANCHISE_ID` parameter (+ `MFL_IS_COMMISH` cookie)
+- `contractInfo: "TO"` on 2026 taxi players is the "Taxi Option" contract status (a 2026 league rule change).
+- Auto-taxi via commissioner impersonation does **not** work in TheLeague: `lockout: "Yes"` causes MFL to reject the impersonating write with `"Can not impersonate another franchise when LOCKOUT is on."` (See `scripts/sync-draft-pick-contracts.mjs` history — auto-taxi was removed in PR #173 for this reason.) Practice-squad placement runs entirely through the per-owner UI flow.
 
-**Confidence:** Medium — inferred from 113 TAXI transaction records in the 2025 cached data. Parameter names match transaction field names. Direct API documentation was inaccessible (403) from the server environment.
+**Confidence:** Verified — parameter names and semantics quoted directly from MFL's API Test Form on 2026-05-07.
 
 **Related:**
 - `src/utils/mfl-fetch.ts` — required for authenticated writes
