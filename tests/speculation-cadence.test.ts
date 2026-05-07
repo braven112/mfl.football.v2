@@ -38,7 +38,7 @@ describe('resolveCadence — calendar-aware quota', () => {
   it('lands on quiet-offseason fallback when nothing else matches (mid-July)', () => {
     const cadence = resolveCadence({ events, now: new Date('2026-07-15T18:00:00Z') });
     expect(cadence.tag).toBe('quiet-offseason-default');
-    expect(cadence.maxPerDay).toBeCloseTo(1 / 3, 5);
+    expect(cadence.maxPerDay).toBeCloseTo(1 / 14, 5);
   });
 
   it('returns 0/day after the trade deadline through the championship', () => {
@@ -51,7 +51,7 @@ describe('resolveCadence — calendar-aware quota', () => {
     // Oct 1 is 43 days before Nov 13 — still inside the in-season but pre-ramp window
     const cadence = resolveCadence({ events, now: new Date('2026-10-01T18:00:00Z') });
     expect(cadence.tag).toBe('regular-season-default');
-    expect(cadence.maxPerDay).toBe(0.5);
+    expect(cadence.maxPerDay).toBeCloseTo(1 / 5, 5);
   });
 
   it('returns NO rule (0 quota) when no events are available', () => {
@@ -92,6 +92,30 @@ describe('permitsPost — fractional vs integer cadence', () => {
     const twoDaysAgo = new Date('2026-10-03T12:00:00Z');
     const result = permitsPost({ cadence, postsTodayInLane: 0, lastPostAt: twoDaysAgo, now });
     expect(result.allowed).toBe(true);
+  });
+
+  it('blocks 1-per-5-day regular-season cadence at 3 days since last post', () => {
+    const cadence = { tag: 'rs', maxPerDay: 1 / 5, reservesGlobalSlot: false };
+    const now = new Date('2026-10-05T12:00:00Z');
+    const threeDaysAgo = new Date('2026-10-02T12:00:00Z');
+    const result = permitsPost({ cadence, postsTodayInLane: 0, lastPostAt: threeDaysAgo, now });
+    expect(result.allowed).toBe(false);
+  });
+
+  it('allows 1-per-5-day regular-season cadence after 4 days have elapsed', () => {
+    const cadence = { tag: 'rs', maxPerDay: 1 / 5, reservesGlobalSlot: false };
+    const now = new Date('2026-10-05T12:00:00Z');
+    const fourDaysAgo = new Date('2026-10-01T12:00:00Z');
+    const result = permitsPost({ cadence, postsTodayInLane: 0, lastPostAt: fourDaysAgo, now });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('blocks 1-per-14-day quiet-offseason cadence after just 1 week', () => {
+    const cadence = { tag: 'quiet', maxPerDay: 1 / 14, reservesGlobalSlot: false };
+    const now = new Date('2026-07-15T12:00:00Z');
+    const sevenDaysAgo = new Date('2026-07-08T12:00:00Z');
+    const result = permitsPost({ cadence, postsTodayInLane: 0, lastPostAt: sevenDaysAgo, now });
+    expect(result.allowed).toBe(false);
   });
 });
 

@@ -70,8 +70,8 @@ export const CADENCE_LADDER = [
   },
   {
     id: 'regular-season-default',
-    label: 'Regular season default (1 every 2 days)',
-    maxPerDay: 0.5,
+    label: 'Regular season default (1 every 5 days)',
+    maxPerDay: 1 / 5,
     reservesGlobalSlot: false,
     betweenEvents: { startId: 'nfl-season-starts', endId: 'trading-deadline', endOffsetDays: -22 },
   },
@@ -84,8 +84,8 @@ export const CADENCE_LADDER = [
   },
   {
     id: 'quiet-offseason-default',
-    label: 'Quiet offseason (1 every 3 days)',
-    maxPerDay: 1 / 3,
+    label: 'Quiet offseason (1 every 14 days)',
+    maxPerDay: 1 / 14,
     reservesGlobalSlot: false,
     fallback: true,
   },
