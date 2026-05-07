@@ -1,0 +1,289 @@
+{
+  "league": {
+    "auctionStartAmount": "45000000",
+    "partialLineupAllowed": "SYSTEM",
+    "endWeek": "17",
+    "history": {
+      "league": [
+        {
+          "url": "https://www47.myfantasyleague.com/2009/home/42989",
+          "year": "2009"
+        },
+        {
+          "url": "http://www98.myfantasyleague.com/2006/home/71481",
+          "year": "2006"
+        },
+        {
+          "url": "http://www98.myfantasyleague.com/2007/home/76273",
+          "year": "2007"
+        },
+        {
+          "year": "2008",
+          "url": "http://www98.myfantasyleague.com/2008/home/28463"
+        },
+        {
+          "year": "2010",
+          "url": "http://www58.myfantasyleague.com/2010/home/34479"
+        }
+      ]
+    },
+    "starters": {
+      "count": "9",
+      "position": [
+        {
+          "limit": "1",
+          "name": "QB"
+        },
+        {
+          "name": "RB",
+          "limit": "1-3"
+        },
+        {
+          "name": "WR",
+          "limit": "1-4"
+        },
+        {
+          "limit": "1-3",
+          "name": "TE"
+        },
+        {
+          "name": "PK",
+          "limit": "1"
+        },
+        {
+          "name": "Def",
+          "limit": "1"
+        }
+      ]
+    },
+    "loadRosters": "email_draft_email_auction",
+    "draft_kind": "email",
+    "draftTimer": "ON",
+    "survivorPool": "Yes",
+    "tiebreakerPosition": "",
+    "nflPoolType": "Confidence",
+    "startWeek": "1",
+    "rostersPerPlayer": "1",
+    "nflPoolStartWeek": "1",
+    "tiebreaker": "nonstarter",
+    "name": "Dynasty: The League",
+    "precision": "2",
+    "includeIRWithSalary": "100",
+    "defaultTradeExpirationDays": "7",
+    "survivorPoolStartWeek": "1",
+    "bidIncrement": "25000",
+    "standingsSort": "PCT,H2H,DIVPCT,PWR,PTS,VICTORY_POINTS,",
+    "nflPoolEndWeek": "17",
+    "usesSalaries": "1",
+    "includeTaxiWithSalary": "50",
+    "mobileAlerts": "",
+    "id": "42989",
+    "tiebreakerCount": "1",
+    "rosterSize": "22",
+    "injuredReserve": "30",
+    "lastRegularSeasonWeek": "13",
+    "bestLineup": "No",
+    "baseURL": "https://www47.myfantasyleague.com",
+    "lockout": "No",
+    "draftLimitHours": "12:00",
+    "franchises": {
+      "franchise": [
+        {
+          "logo": "http://dynastytheleague.com/images/team_banners/pigskins.png",
+          "division": "00",
+          "abbrev": "PIGS",
+          "id": "0001",
+          "icon": "http://dynastytheleague.com/images/team_banners/pigskins_icon.png",
+          "salaryCapAmount": "",
+          "name": "Pacific Pigskins",
+          "waiverSortOrder": "3"
+        },
+        {
+          "waiverSortOrder": "15",
+          "icon": "http://dynastytheleague.com/images/team_banners/degenerates_icon.png",
+          "salaryCapAmount": "",
+          "name": "Degenerates",
+          "id": "0002",
+          "division": "01",
+          "logo": "http://dynastytheleague.com/images/team_pages/degenerates.jpg",
+          "abbrev": "DEG"
+        },
+        {
+          "division": "01",
+          "logo": "http://dynastytheleague.com/images/team_pages/mistakesweremade.jpg",
+          "abbrev": "MWM",
+          "id": "0003",
+          "salaryCapAmount": "",
+          "icon": "http://dynastytheleague.com/images/team_banners/mistakes_were_made.png",
+          "name": "Mistakes Were Made",
+          "waiverSortOrder": "7"
+        },
+        {
+          "waiverSortOrder": "12",
+          "icon": "http://dynastytheleague.com/images/team_banners/las_vegas_icon.png",
+          "salaryCapAmount": "",
+          "name": "Las Vegas Elite",
+          "id": "0004",
+          "division": "00",
+          "logo": "http://dynastytheleague.com/images/team_pages/las_vegas.jpg",
+          "abbrev": "LVE"
+        },
+        {
+          "icon": "http://dynastytheleague.com/images/team_banners/executioners.png",
+          "salaryCapAmount": "",
+          "name": "The Executioners",
+          "waiverSortOrder": "4",
+          "division": "02",
+          "logo": "http://dynastytheleague.com/images/team_pages/executioners.jpg",
+          "abbrev": "THEX",
+          "id": "0005"
+        },
+        {
+          "waiverSortOrder": "10",
+          "name": "LBer-DeCleaters",
+          "salaryCapAmount": "",
+          "icon": "http://dynastytheleague.com/images/team_banners/lb_decleaters_icon.png",
+          "id": "0006",
+          "sound": "https://www42.myfantasyleague.com/fflnetdynamic2007/76273_franchise_sound0006.mp3",
+          "abbrev": "LBDe",
+          "logo": "http://dynastytheleague.com/images/team_pages/decleaters.jpg",
+          "division": "00"
+        },
+        {
+          "id": "0007",
+          "abbrev": "ACER",
+          "logo": "http://dynastytheleague.com/images/team_pages/acer_fc_edge.jpg",
+          "division": "03",
+          "waiverSortOrder": "16",
+          "name": "Acer FC Edge",
+          "icon": "http://dynastytheleague.com/images/team_banners/acer_fc_edge_icon.png",
+          "salaryCapAmount": ""
+        },
+        {
+          "id": "0008",
+          "abbrev": "PAIN",
+          "logo": "http://dynastytheleague.com/images/team_pages/bring_the_pain.jpg",
+          "division": "02",
+          "waiverSortOrder": "14",
+          "name": "Bring the Pain",
+          "icon": "http://dynastytheleague.com/images/team_banners/bring_the_pain_icon.png",
+          "salaryCapAmount": ""
+        },
+        {
+          "name": "Rolling Rockers",
+          "salaryCapAmount": "",
+          "icon": "http://dynastytheleague.com/images/team_banners/rolling_rockers_icon.png",
+          "waiverSortOrder": "1",
+          "abbrev": "ROCK",
+          "division": "02",
+          "logo": "http://dynastytheleague.com/images/team_pages/rolling_rockers.jpg",
+          "id": "0009"
+        },
+        {
+          "sound": "https://www42.myfantasyleague.com/fflnetdynamic2007/76273_franchise_sound0010.mp3",
+          "id": "0010",
+          "logo": "http://dynastytheleague.com/images/team_pages/witch_city_warlocks.jpg",
+          "division": "03",
+          "abbrev": "WCW",
+          "waiverSortOrder": "9",
+          "salaryCapAmount": "",
+          "icon": "http://dynastytheleague.com/images/team_banners/witch_city_warriors_icon.png",
+          "name": "Witch City Warlocks"
+        },
+        {
+          "id": "0011",
+          "abbrev": "RAKE",
+          "logo": "http://dynastytheleague.com/images/team_pages/rakefighters.jpg",
+          "division": "02",
+          "waiverSortOrder": "2",
+          "name": "Amish Rakefighters",
+          "icon": "http://www.dynastytheleague.com/images/team_banners/amish_rakefighters_icon.png",
+          "salaryCapAmount": ""
+        },
+        {
+          "id": "0012",
+          "abbrev": "B2M",
+          "division": "01",
+          "logo": "http://dynastytheleague.com/images/team_pages/boys2men.jpg",
+          "waiverSortOrder": "8",
+          "name": "BOYZ II MEN",
+          "icon": "http://dynastytheleague.com/images/team_banners/boyz2men_icon.png",
+          "salaryCapAmount": ""
+        },
+        {
+          "waiverSortOrder": "6",
+          "salaryCapAmount": "",
+          "icon": "http://dynastytheleague.com/images/team_banners/sabertooths_icon.png",
+          "name": "Sabertooths",
+          "id": "0013",
+          "logo": "http://dynastytheleague.com/images/team_pages/sabertooths.jpg",
+          "division": "00",
+          "abbrev": "SABR"
+        },
+        {
+          "sound": "http://www.rleeermey.com/sounds/armedresponse.wav",
+          "id": "0014",
+          "division": "03",
+          "logo": "http://dynastytheleague.com/images/team_pages/devil_dogs.jpg",
+          "abbrev": "DOGS",
+          "waiverSortOrder": "13",
+          "salaryCapAmount": "",
+          "icon": "http://dynastytheleague.com/images/team_banners/devil_dogs_icon.png",
+          "name": "Devil Dogs"
+        },
+        {
+          "icon": "http://dynastytheleague.com/images/team_banners/dark_magicians_of_chaos_ico.png",
+          "salaryCapAmount": "",
+          "name": "Dark Magicians of Chaos",
+          "waiverSortOrder": "11",
+          "division": "01",
+          "logo": "http://dynastytheleague.com/images/team_pages/dark_magicians_of_chaos.jpg",
+          "abbrev": "DMOC",
+          "id": "0015"
+        },
+        {
+          "division": "03",
+          "logo": "http://dynastytheleague.com/images/team_pages/silver_bullets.jpg",
+          "abbrev": "SBUL",
+          "id": "0016",
+          "icon": "http://dynastytheleague.com/images/team_banners/silver_bullets_icon.png",
+          "salaryCapAmount": "",
+          "name": "Silver Bullets",
+          "waiverSortOrder": "5"
+        }
+      ],
+      "count": "16"
+    },
+    "divisions": {
+      "count": "4",
+      "division": [
+        {
+          "id": "00",
+          "name": "Pacific"
+        },
+        {
+          "id": "01",
+          "name": "Midwest"
+        },
+        {
+          "id": "02",
+          "name": "Central"
+        },
+        {
+          "name": "Atlantic",
+          "id": "03"
+        }
+      ]
+    },
+    "playerLimitUnit": "LEAGUE",
+    "salaryCapAmount": "45000000",
+    "auction_kind": "email",
+    "h2h": "YES",
+    "minBid": "425000",
+    "usesContractYear": "1",
+    "taxiSquad": "3",
+    "survivorPoolEndWeek": "17"
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
+}
