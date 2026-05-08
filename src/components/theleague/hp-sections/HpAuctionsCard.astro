@@ -278,6 +278,15 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     padding: 1.5rem;
   }
 
+  /* Project default is content-box; force border-box for everything inside the
+     card so width:100% children (CTA, table wrapper) stay within the card. */
+  .hp-auc,
+  .hp-auc *,
+  .hp-auc *::before,
+  .hp-auc *::after {
+    box-sizing: border-box;
+  }
+
   .hp-auc__header {
     display: flex;
     align-items: flex-start;
