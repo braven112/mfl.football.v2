@@ -592,10 +592,16 @@ const canonicalRivalryPair = (a: string, b: string): string =>
         <p class="dim small">
           Career milestones, single-season feats, and league records held by this franchise.
         </p>
-        {['career', 'season', 'game'].map((tier) => {
+        {['career', 'season', 'game', 'trade'].map((tier) => {
           const tierBadges = fr.badges.filter((b: any) => b.tier === tier);
           if (tierBadges.length === 0) return null;
-          const tierLabel = tier === 'career' ? 'Career' : tier === 'season' ? 'Single-Season' : 'Single-Game';
+          const tierLabel = tier === 'career'
+            ? 'Career'
+            : tier === 'season'
+            ? 'Single-Season'
+            : tier === 'game'
+            ? 'Single-Game'
+            : 'Trade';
           return (
             <div class="badge-tier">
               <h3 class="badge-tier-label">{tierLabel}</h3>

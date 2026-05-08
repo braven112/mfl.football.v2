@@ -16,12 +16,13 @@
  * those are surfaced separately on the detail page.
  */
 
-export const BADGE_TIERS = ['career', 'season', 'game'];
+export const BADGE_TIERS = ['career', 'season', 'game', 'trade'];
 
 const TIER_LABEL = {
   career: 'Career',
   season: 'Single-Season',
   game: 'Single-Game',
+  trade: 'Trade',
 };
 
 export const BADGES = [
@@ -115,6 +116,17 @@ export const BADGES = [
         .map((y) => ({ year: y.year, label: `${y.wins}-${y.losses}` })),
   },
   {
+    id: 'best-record',
+    name: 'Top of the Standings',
+    description: 'Finished #1 in regular-season standings (best record).',
+    icon: '🥇',
+    tier: 'season',
+    compute: (fr) =>
+      fr.yearByYear
+        .filter((y) => y.regSeasonRank === 1)
+        .map((y) => ({ year: y.year, label: `${y.wins}-${y.losses}${y.ties ? '-' + y.ties : ''}` })),
+  },
+  {
     id: 'top-scorer',
     name: 'League Scoring Champ',
     description: 'Led the league in regular-season points in a year.',
@@ -123,6 +135,49 @@ export const BADGES = [
     compute: (fr, ctx) => {
       const years = ctx.topScorerByYear[fr.franchiseId] || [];
       return years.map((year) => ({ year }));
+    },
+  },
+  {
+    id: 'highest-scoring-season-ever',
+    name: 'League Record: Highest-Scoring Season',
+    description: 'Holds the all-time single-season points-for record.',
+    icon: '🌋',
+    tier: 'season',
+    compute: (fr, ctx) => {
+      if (ctx.highestScoringSeasonEver?.franchiseId !== fr.franchiseId) return [];
+      return [
+        {
+          year: ctx.highestScoringSeasonEver.year,
+          value: Number(ctx.highestScoringSeasonEver.pointsFor.toFixed(2)),
+          suffix: 'pts',
+        },
+      ];
+    },
+  },
+  {
+    id: 'worst-to-first',
+    name: 'Worst-to-First',
+    description: 'Finished last in the regular season, then made the playoffs the next year.',
+    icon: '🦅',
+    tier: 'season',
+    compute: (fr, ctx) => {
+      const yearsByYear = new Map(fr.yearByYear.map((y) => [y.year, y]));
+      const earned = [];
+      for (const y of fr.yearByYear) {
+        const leagueSize = ctx.leagueSizeByYear[y.year];
+        if (!leagueSize || y.regSeasonRank !== leagueSize) continue;
+        const next = yearsByYear.get(y.year + 1);
+        if (!next) continue;
+        const madePlayoffs =
+          next.playoffResult === 'playoffs' ||
+          next.playoffResult === 'champion' ||
+          next.playoffResult === 'runner-up' ||
+          next.playoffResult === 'third-place';
+        if (madePlayoffs) {
+          earned.push({ year: next.year, label: `from #${y.regSeasonRank} in ${y.year}` });
+        }
+      }
+      return earned;
     },
   },
   {
@@ -179,6 +234,37 @@ export const BADGES = [
       ];
     },
   },
+  {
+    id: 'all-time-lowest-score',
+    name: 'League Record: Lowest Score',
+    description: 'Holds the all-time single-game low — a stinker for the ages.',
+    icon: '💩',
+    tier: 'game',
+    compute: (fr, ctx) => {
+      if (ctx.lowestScoreEver?.franchiseId !== fr.franchiseId) return [];
+      return [
+        {
+          year: ctx.lowestScoreEver.year,
+          week: ctx.lowestScoreEver.week,
+          value: Number(ctx.lowestScoreEver.score.toFixed(2)),
+          suffix: 'pts',
+        },
+      ];
+    },
+  },
+
+  // ── Trade ──────────────────────────────────────────────────────────
+  {
+    id: 'most-active-trader',
+    name: 'Wheeler & Dealer',
+    description: 'Has made the most trades in league history.',
+    icon: '🤝',
+    tier: 'trade',
+    compute: (fr, ctx) => {
+      if (ctx.mostTradesEver?.franchiseId !== fr.franchiseId) return [];
+      return [{ value: ctx.mostTradesEver.count, suffix: 'all-time trades' }];
+    },
+  },
 ];
 
 export function getTierLabel(tier) {
@@ -189,6 +275,9 @@ export function buildBadgeContext(franchises, yearSummaries = []) {
   const ctx = {
     highestScoreEver: null,
     biggestBlowoutEver: null,
+    lowestScoreEver: null,
+    highestScoringSeasonEver: null,
+    mostTradesEver: null,
     topScorerByYear: {},
     leagueSizeByYear: {},
   };
@@ -216,6 +305,50 @@ export function buildBadgeContext(franchises, yearSummaries = []) {
     ) {
       ctx.biggestBlowoutEver = { ...h.biggestBlowoutWin, franchiseId: fid };
     }
+    if (
+      h.lowestSingleGame &&
+      (!ctx.lowestScoreEver ||
+        h.lowestSingleGame.score < ctx.lowestScoreEver.score)
+    ) {
+      ctx.lowestScoreEver = { ...h.lowestSingleGame, franchiseId: fid };
+    }
+  }
+
+  // All-time highest single-season points-for. Skip not-yet-played seasons.
+  for (const [fid, fr] of Object.entries(franchises)) {
+    for (const y of fr.yearByYear) {
+      if (y.wins + y.losses + y.ties === 0 && (!y.pointsFor || y.pointsFor === 0)) {
+        continue;
+      }
+      if (
+        !ctx.highestScoringSeasonEver ||
+        y.pointsFor > ctx.highestScoringSeasonEver.pointsFor
+      ) {
+        ctx.highestScoringSeasonEver = {
+          franchiseId: fid,
+          year: y.year,
+          pointsFor: y.pointsFor,
+        };
+      }
+    }
+  }
+
+  // Most trades in league history (sole holder; ties = no badge).
+  let topCount = 0;
+  let topFid = null;
+  let tied = false;
+  for (const [fid, fr] of Object.entries(franchises)) {
+    const count = Array.isArray(fr.trades) ? fr.trades.length : 0;
+    if (count > topCount) {
+      topCount = count;
+      topFid = fid;
+      tied = false;
+    } else if (count === topCount && count > 0) {
+      tied = true;
+    }
+  }
+  if (topFid && !tied) {
+    ctx.mostTradesEver = { franchiseId: topFid, count: topCount };
   }
 
   // Per-year scoring champ. (Bottom-of-standings is detected per-franchise
