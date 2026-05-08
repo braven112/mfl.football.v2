@@ -10,14 +10,14 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
-import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
 import WhatsNext from '../../components/theleague/WhatsNext.astro';
 import HpTeamSnapshot from '../../components/theleague/hp-sections/HpTeamSnapshot.astro';
 import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandingsCompact.astro';
 import HpUnsignedFaCard from '../../components/theleague/hp-sections/HpUnsignedFaCard.astro';
+import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCard.astro';
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
 import { getAuthUser } from '../../utils/auth';
-import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
+import { resolveHeroState, parseTestDate, isAuctionStripPeriod } from '../../utils/hero-resolver';
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
@@ -31,6 +31,7 @@ import { computeLeagueSummary, type SalaryPlayer, type TeamConfig } from '../../
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { parseNumber } from '../../utils/formatters';
 import { resolveUnsignedFaAlerts, type DashboardPlayerContext } from '../../utils/homepage-dashboard';
+import { loadActiveAuctions } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import type { WhatsNewEntry } from '../../types/whats-new';
@@ -82,11 +83,19 @@ const timeline = getWhatsNextTimeline(effectiveDate);
 const rawHeroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline, draftComplete);
 const heroState = await enrichHeroState(rawHeroState);
 
-// Auction strip: show after full auction hero ends, through 3rd Sunday of August
+// Auctions card: replaces the legacy compact `AuctionStrip` on the homepage.
+// Same visibility rules as the strip — show after the full auction hero ends,
+// through the 3rd Sunday of August (FA close).
 const now = effectiveDate ?? new Date();
 const isAuctionHeroActive = heroState.phase === 'auction-preview' || heroState.phase === 'auction-live';
-const showAuctionStrip = !isAuctionHeroActive && isAuctionStripPeriod(now);
-const stripVariant = showAuctionStrip && isPostDraftPeriod(now) ? 'auction-udfa' as const : 'auction' as const;
+const showAuctionsCard = !isAuctionHeroActive && isAuctionStripPeriod(now);
+
+// MFL external links for the auctions card
+const mflHost = 'www49.myfantasyleague.com';
+const mflLeagueId = '13522';
+const mflAuctionBase = `https://${mflHost}/${leagueYear}/options?L=${mflLeagueId}`;
+const placeBidUrl = `${mflAuctionBase}&O=43`;
+const completedAuctionsUrl = `${mflAuctionBase}&O=43`;
 
 // Load team config (used for reply composer + live scoring)
 let userTeamName: string | undefined;
@@ -284,6 +293,16 @@ const unsignedFaAlerts = resolveUnsignedFaAlerts({
   referenceDate: now,
 });
 
+// Active auctions card — only fetch when the card is eligible to show.
+// Avoids hitting MFL year-round on every homepage render.
+const activeAuctions = showAuctionsCard
+  ? await loadActiveAuctions({
+      baseUrl: Astro.url,
+      playerMap: hpPlayerIdentityMap,
+      teams: (leagueConfig.teams ?? []) as any[],
+    })
+  : [];
+
 // Fetch live scoring data when slot is 'live-scoring'
 let liveScoring: {
   week: number;
@@ -394,12 +413,11 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         userFranchiseId={userFranchiseId}
         isAuthenticated={isAuthenticated}
       />
-      {showAuctionStrip && (
-        <AuctionStrip
-          leagueYear={leagueYear}
-          resolveLeaguePath={r}
-          spriteUrl={spriteUrl}
-          variant={stripVariant}
+      {showAuctionsCard && activeAuctions.length > 0 && (
+        <HpAuctionsCard
+          auctions={activeAuctions}
+          placeBidUrl={placeBidUrl}
+          completedAuctionsUrl={completedAuctionsUrl}
         />
       )}
       <HpTeamSnapshot

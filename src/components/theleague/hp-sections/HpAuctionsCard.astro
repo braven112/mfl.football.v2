@@ -1,0 +1,614 @@
+---
+/**
+ * HpAuctionsCard — Homepage card showing every currently active auction,
+ * with the high bid, the high bidder, and a live "over in" countdown.
+ *
+ * Replaces the compact `AuctionStrip` on the homepage during the post-hero
+ * auction window. Rows are rendered server-side from the latest
+ * auctionResults + transactions snapshot; a small island script polls
+ * `/api/live-auction` every 60s and re-ticks the time-left cells in place.
+ */
+import PlayerCell from '../PlayerCell.astro';
+import { spriteUrl } from '../../../utils/sprite-url';
+import { formatCompactNumber } from '../../../utils/formatters';
+import type { HomepageAuctionRow } from '../../../utils/homepage-auctions';
+
+interface Props {
+  auctions: HomepageAuctionRow[];
+  /** External URL to MFL's auction landing page (place / track bids). */
+  placeBidUrl: string;
+  /** External URL to MFL's completed auctions report. */
+  completedAuctionsUrl: string;
+}
+
+const { auctions, placeBidUrl, completedAuctionsUrl } = Astro.props;
+
+const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
+---
+
+<section class="hp-auc" aria-label="Active free agent auctions">
+  <div class="hp-auc__header">
+    <div class="hp-auc__section-header">
+      <h3 class="hp-auc__title">Current Auctions</h3>
+      <p class="hp-auc__sub">
+        {auctions.length === 1 ? '1 auction' : `${auctions.length} auctions`} active.
+        36-hour timer resets when a new franchise takes the lead.
+      </p>
+    </div>
+    <a
+      href={placeBidUrl}
+      class="hp-auc__cta-link"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Place auction bid (opens in new tab)"
+    >
+      Place a bid
+      <span class="hp-auc__ext" aria-hidden="true">&#8599;</span>
+    </a>
+  </div>
+
+  <div class="hp-auc__table-wrap">
+    <table class="hp-auc__table">
+      <thead>
+        <tr>
+          <th scope="col" class="hp-auc__col-player">Player</th>
+          <th scope="col" class="hp-auc__col-bid">High Bid</th>
+          <th scope="col" class="hp-auc__col-bidder">High Bidder</th>
+          <th scope="col" class="hp-auc__col-time">Over In</th>
+        </tr>
+      </thead>
+      <tbody>
+        {auctions.map((row) => (
+          <tr data-player-id={row.playerId}>
+            <td class="hp-auc__cell-player">
+              <PlayerCell
+                name={row.playerName}
+                headshot={row.headshot}
+                position={row.position}
+                nflTeam={row.nflTeam}
+                mflId={row.playerId}
+                espnId={row.espnId}
+                size="compact"
+              />
+            </td>
+            <td class="hp-auc__cell-bid">{formatDollar(row.bid)}</td>
+            <td class="hp-auc__cell-bidder">
+              {row.franchiseBanner ? (
+                <img
+                  src={row.franchiseBanner}
+                  alt={row.franchiseName}
+                  title={row.franchiseName}
+                  class="hp-auc__banner"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : row.franchiseIcon ? (
+                <span class="hp-auc__bidder-fallback">
+                  <img
+                    src={row.franchiseIcon}
+                    alt=""
+                    class="hp-auc__icon"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span>{row.franchiseName}</span>
+                </span>
+              ) : (
+                <span class="hp-auc__bidder-fallback">{row.franchiseName}</span>
+              )}
+            </td>
+            <td
+              class="hp-auc__cell-time"
+              data-anchor={row.anchorTimestamp}
+              aria-live="polite"
+            >
+              <span class="hp-auc__time-text">…</span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <a
+    href={placeBidUrl}
+    class="hp-auc__cta"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Place auction bid (opens in new tab)"
+  >
+    <svg class="hp-auc__cta-icon" aria-hidden="true">
+      <use href={`${spriteUrl}#icon-gavel`} />
+    </svg>
+    <span>Place Auction Bid</span>
+    <span class="hp-auc__cta-ext" aria-hidden="true">&#8599;</span>
+  </a>
+
+  <p class="hp-auc__note">
+    Bids refresh every 60 seconds; the timer ticks every 30s. New auctions show on page reload.
+    <button type="button" class="hp-auc__refresh" data-hp-auc-refresh hidden aria-live="polite">
+      New auctions — refresh
+    </button>
+    <span class="hp-auc__sep" aria-hidden="true">·</span>
+    <a
+      href={completedAuctionsUrl}
+      class="hp-auc__note-link"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Completed auctions report
+      <span class="hp-auc__ext" aria-hidden="true">&#8599;</span>
+    </a>
+  </p>
+</section>
+
+<script>
+  /**
+   * Auction time-left ticker.
+   *
+   * Every 30s, recompute "Over In" for each row from data-anchor. Every 60s,
+   * fetch /api/live-auction to refresh anchors and bid amounts. We avoid
+   * adding/removing rows at runtime — if an auction ends or is added the
+   * server-rendered table will reflect it on the next page load.
+   */
+  const BID_WINDOW_MS = 36 * 60 * 60 * 1000;
+
+  function timeLeftMs(anchorSeconds: number): number {
+    if (!anchorSeconds) return 0;
+    const anchorMs = anchorSeconds * 1000;
+    return Math.max(0, anchorMs + BID_WINDOW_MS - Date.now());
+  }
+
+  function tierFor(ms: number): 'normal' | 'closing' | 'urgent' | 'critical' | 'ended' {
+    if (ms <= 0) return 'ended';
+    if (ms < 60 * 60 * 1000) return 'critical';
+    if (ms < 6 * 60 * 60 * 1000) return 'urgent';
+    if (ms < 24 * 60 * 60 * 1000) return 'closing';
+    return 'normal';
+  }
+
+  function formatLeft(ms: number): string {
+    if (ms <= 0) return 'Ended';
+    const totalMin = Math.floor(ms / 60000);
+    const hours = Math.floor(totalMin / 60);
+    const minutes = totalMin % 60;
+    if (hours <= 0) return `${minutes}m`;
+    return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  }
+
+  function tickRows(root: HTMLElement) {
+    const cells = root.querySelectorAll<HTMLElement>('.hp-auc__cell-time[data-anchor]');
+    cells.forEach((cell) => {
+      const anchor = parseInt(cell.dataset.anchor || '0', 10);
+      const ms = timeLeftMs(anchor);
+      const text = formatLeft(ms);
+      const tier = tierFor(ms);
+      const span = cell.querySelector<HTMLElement>('.hp-auc__time-text');
+      if (span && span.textContent !== text) span.textContent = text;
+      cell.classList.remove(
+        'hp-auc__cell-time--closing',
+        'hp-auc__cell-time--urgent',
+        'hp-auc__cell-time--critical',
+        'hp-auc__cell-time--ended',
+      );
+      if (tier !== 'normal') cell.classList.add(`hp-auc__cell-time--${tier}`);
+    });
+  }
+
+  async function refreshFromApi(root: HTMLElement) {
+    try {
+      const resp = await fetch('/api/live-auction');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const auctions: Record<string, { bid: number; lastBidTime: number | null; initTime: number | null; status: string }> = data?.auctions || {};
+
+      const renderedIds = new Set<string>();
+      root.querySelectorAll<HTMLTableRowElement>('tbody tr[data-player-id]').forEach((tr) => {
+        const id = tr.dataset.playerId;
+        if (!id) return;
+        renderedIds.add(id);
+        const auc = auctions[id];
+        // Auction ended or disappeared — remove the row in place.
+        if (!auc || auc.status !== 'active') {
+          tr.remove();
+          return;
+        }
+        const bidCell = tr.querySelector<HTMLElement>('.hp-auc__cell-bid');
+        if (bidCell && typeof auc.bid === 'number') {
+          const v = auc.bid;
+          let compact: string;
+          if (v >= 1_000_000) compact = `${(v / 1_000_000).toFixed(1)}M`;
+          else if (v >= 1_000) compact = `${(v / 1_000).toFixed(0)}K`;
+          else compact = String(v);
+          const next = `$${compact}`;
+          if (bidCell.textContent !== next) bidCell.textContent = next;
+        }
+        const timeCell = tr.querySelector<HTMLElement>('.hp-auc__cell-time');
+        const anchor = auc.lastBidTime ?? auc.initTime;
+        if (timeCell && typeof anchor === 'number' && anchor > 0) {
+          timeCell.dataset.anchor = String(anchor);
+        }
+      });
+
+      // Detect new active auctions not yet in the table — surface a refresh pill
+      // so the user can reload to pick them up. We don't synthesize rows
+      // client-side because they need server-side player + team enrichment.
+      const newActive = Object.entries(auctions).some(
+        ([id, auc]) => auc && auc.status === 'active' && !renderedIds.has(id),
+      );
+      const refreshBtn = root.querySelector<HTMLButtonElement>('[data-hp-auc-refresh]');
+      if (refreshBtn) refreshBtn.hidden = !newActive;
+
+      tickRows(root);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  let tickHandle: number | null = null;
+  let pollHandle: number | null = null;
+
+  function init() {
+    if (tickHandle !== null) window.clearInterval(tickHandle);
+    if (pollHandle !== null) window.clearInterval(pollHandle);
+    tickHandle = null;
+    pollHandle = null;
+
+    const root = document.querySelector<HTMLElement>('.hp-auc');
+    if (!root) return;
+
+    tickRows(root);
+    tickHandle = window.setInterval(() => tickRows(root), 30_000);
+    pollHandle = window.setInterval(() => refreshFromApi(root), 60_000);
+
+    const refreshBtn = root.querySelector<HTMLButtonElement>('[data-hp-auc-refresh]');
+    refreshBtn?.addEventListener('click', () => window.location.reload());
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .hp-auc {
+    --dh-accent: var(--color-primary, #1c497c);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+
+  /* Project default is content-box; force border-box for everything inside the
+     card so width:100% children (CTA, table wrapper) stay within the card. */
+  .hp-auc,
+  .hp-auc *,
+  .hp-auc *::before,
+  .hp-auc *::after {
+    box-sizing: border-box;
+  }
+
+  .hp-auc__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hp-auc__section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+    min-width: 0;
+  }
+
+  .hp-auc__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hp-auc__sub {
+    margin: 0.35rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .hp-auc__cta-link {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: gap 0.15s ease;
+  }
+
+  .hp-auc__cta-link:hover,
+  .hp-auc__cta-link:focus-visible {
+    gap: 0.5rem;
+  }
+
+  .hp-auc__cta-link:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  .hp-auc__table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .hp-auc__table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.8125rem;
+  }
+
+  .hp-auc__table th {
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    white-space: nowrap;
+  }
+
+  .hp-auc__table tbody tr {
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .hp-auc__table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .hp-auc__table tbody tr:nth-child(even) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .hp-auc__table td {
+    padding: 0.625rem 0.75rem;
+    vertical-align: middle;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* ── Player ── */
+  .hp-auc__col-player { width: 38%; }
+
+  .hp-auc__cell-player {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .hp-auc__cell-player :global(.player-cell) {
+    --player-avatar-size: 32px;
+    min-width: 0;
+  }
+
+  .hp-auc__cell-player :global(.player-cell__info) {
+    min-width: 0;
+  }
+
+  .hp-auc__cell-player :global(.player-cell__name) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Bid ── */
+  .hp-auc__col-bid { width: 16%; white-space: nowrap; }
+
+  .hp-auc__cell-bid {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    white-space: nowrap;
+  }
+
+  /* ── Bidder ── */
+  .hp-auc__col-bidder { width: 30%; }
+
+  .hp-auc__banner {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    object-fit: contain;
+  }
+
+  .hp-auc__bidder-fallback {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hp-auc__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+  }
+
+  /* ── Time-left ── */
+  .hp-auc__col-time { width: 16%; white-space: nowrap; text-align: right; }
+
+  .hp-auc__cell-time {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .hp-auc__cell-time--closing { color: var(--color-amber-700, #b45309); font-weight: 600; }
+  .hp-auc__cell-time--urgent  { color: var(--color-amber-700, #b45309); font-weight: 700; }
+  .hp-auc__cell-time--critical { color: var(--color-red-600, #dc2626); font-weight: 700; }
+  .hp-auc__cell-time--ended { color: var(--color-gray-500, #6b7280); font-style: italic; }
+
+  /* ── Primary CTA — design-system primary button (blue) ── */
+  .hp-auc__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--btn-primary-bg, var(--color-primary, #1c497c));
+    color: var(--btn-primary-text, #fff);
+    border: 1px solid var(--btn-primary-border, var(--color-primary, #1c497c));
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .hp-auc__cta:hover {
+    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
+    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
+  }
+
+  .hp-auc__cta:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .hp-auc__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  .hp-auc__cta-ext {
+    font-size: 0.75rem;
+    opacity: 0.85;
+  }
+
+  /* ── Footer note ── */
+  .hp-auc__note {
+    margin: 0.75rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.5;
+  }
+
+  .hp-auc__note-link {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .hp-auc__note-link:hover {
+    text-decoration: underline;
+  }
+
+  .hp-auc__sep {
+    color: var(--color-gray-300, #d1d5db);
+    margin: 0 0.25rem;
+  }
+
+  .hp-auc__refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, #fff);
+    color: var(--color-primary, #1c497c);
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .hp-auc__refresh[hidden] { display: none; }
+
+  .hp-auc__refresh:hover {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 14%, #fff);
+  }
+
+  .hp-auc__refresh:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .hp-auc__ext {
+    font-size: 0.75rem;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 720px) {
+    .hp-auc {
+      padding: 1rem;
+    }
+
+    .hp-auc__header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+
+    .hp-auc__cta-link {
+      align-self: flex-start;
+    }
+
+    .hp-auc__table {
+      font-size: 0.75rem;
+    }
+
+    .hp-auc__table th,
+    .hp-auc__table td {
+      padding: 0.5rem 0.375rem;
+    }
+
+    .hp-auc__col-player { width: 44%; }
+    .hp-auc__col-bid    { width: 16%; }
+    .hp-auc__col-bidder { width: 24%; }
+    .hp-auc__col-time   { width: 16%; }
+
+    .hp-auc__cell-player :global(.player-cell) {
+      --player-avatar-size: 28px;
+      --player-gap: 0.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* Drop the bidder column on phones — banner art has no readable
+       breakpoint at this width. The high bidder is still surfaced server-side
+       on the dedicated auction page. */
+    .hp-auc__col-bidder,
+    .hp-auc__cell-bidder { display: none; }
+
+    .hp-auc__col-player { width: 50%; }
+    .hp-auc__col-bid    { width: 26%; }
+    .hp-auc__col-time   { width: 24%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hp-auc__cta-link,
+    .hp-auc__cta {
+      transition: none;
+    }
+  }
+</style>
