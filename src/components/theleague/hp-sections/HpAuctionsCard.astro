@@ -10,6 +10,7 @@
  */
 import PlayerCell from '../PlayerCell.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
+import { formatCompactNumber } from '../../../utils/formatters';
 import type { HomepageAuctionRow } from '../../../utils/homepage-auctions';
 
 interface Props {
@@ -22,8 +23,7 @@ interface Props {
 
 const { auctions, placeBidUrl, completedAuctionsUrl } = Astro.props;
 
-const formatDollar = (n: number): string =>
-  n >= 1000 ? `$${(n).toLocaleString('en-US')}` : `$${n}`;
+const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 ---
 
 <section class="hp-auc" aria-label="Active free agent auctions">
@@ -215,7 +215,12 @@ const formatDollar = (n: number): string =>
         }
         const bidCell = tr.querySelector<HTMLElement>('.hp-auc__cell-bid');
         if (bidCell && typeof auc.bid === 'number') {
-          const next = auc.bid >= 1000 ? `$${auc.bid.toLocaleString('en-US')}` : `$${auc.bid}`;
+          const v = auc.bid;
+          let compact: string;
+          if (v >= 1_000_000) compact = `${(v / 1_000_000).toFixed(1)}M`;
+          else if (v >= 1_000) compact = `${(v / 1_000).toFixed(0)}K`;
+          else compact = String(v);
+          const next = `$${compact}`;
           if (bidCell.textContent !== next) bidCell.textContent = next;
         }
         const timeCell = tr.querySelector<HTMLElement>('.hp-auc__cell-time');
@@ -328,13 +333,14 @@ const formatDollar = (n: number): string =>
   }
 
   .hp-auc__table-wrap {
+    width: 100%;
     overflow-x: auto;
-    margin: 0 -0.25rem;
   }
 
   .hp-auc__table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.8125rem;
   }
 
@@ -373,14 +379,26 @@ const formatDollar = (n: number): string =>
 
   .hp-auc__cell-player {
     min-width: 0;
+    overflow: hidden;
   }
 
   .hp-auc__cell-player :global(.player-cell) {
     --player-avatar-size: 32px;
+    min-width: 0;
+  }
+
+  .hp-auc__cell-player :global(.player-cell__info) {
+    min-width: 0;
+  }
+
+  .hp-auc__cell-player :global(.player-cell__name) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ── Bid ── */
-  .hp-auc__col-bid { width: 18%; white-space: nowrap; }
+  .hp-auc__col-bid { width: 16%; white-space: nowrap; }
 
   .hp-auc__cell-bid {
     font-weight: 700;
@@ -390,14 +408,15 @@ const formatDollar = (n: number): string =>
   }
 
   /* ── Bidder ── */
-  .hp-auc__col-bidder { width: 28%; }
+  .hp-auc__col-bidder { width: 30%; }
 
   .hp-auc__banner {
     display: block;
     width: 100%;
-    max-width: 180px;
+    max-width: 100%;
     height: auto;
     border-radius: 4px;
+    object-fit: contain;
   }
 
   .hp-auc__bidder-fallback {
@@ -416,12 +435,13 @@ const formatDollar = (n: number): string =>
   }
 
   /* ── Time-left ── */
-  .hp-auc__col-time { width: 16%; white-space: nowrap; }
+  .hp-auc__col-time { width: 16%; white-space: nowrap; text-align: right; }
 
   .hp-auc__cell-time {
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-700, #374151);
     white-space: nowrap;
+    text-align: right;
   }
 
   .hp-auc__cell-time--closing { color: var(--color-amber-700, #b45309); font-weight: 600; }
@@ -529,9 +549,9 @@ const formatDollar = (n: number): string =>
     opacity: 0.6;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 720px) {
     .hp-auc {
-      padding: 1.25rem;
+      padding: 1rem;
     }
 
     .hp-auc__header {
@@ -544,18 +564,36 @@ const formatDollar = (n: number): string =>
       align-self: flex-start;
     }
 
+    .hp-auc__table {
+      font-size: 0.75rem;
+    }
+
     .hp-auc__table th,
     .hp-auc__table td {
-      padding: 0.5rem 0.5rem;
+      padding: 0.5rem 0.375rem;
     }
 
-    .hp-auc__col-player { width: auto; }
-    .hp-auc__col-bid,
-    .hp-auc__col-time { width: auto; }
+    .hp-auc__col-player { width: 44%; }
+    .hp-auc__col-bid    { width: 16%; }
+    .hp-auc__col-bidder { width: 24%; }
+    .hp-auc__col-time   { width: 16%; }
 
-    .hp-auc__banner {
-      max-width: 120px;
+    .hp-auc__cell-player :global(.player-cell) {
+      --player-avatar-size: 28px;
+      --player-gap: 0.5rem;
     }
+  }
+
+  @media (max-width: 480px) {
+    /* Drop the bidder column on phones — banner art has no readable
+       breakpoint at this width. The high bidder is still surfaced server-side
+       on the dedicated auction page. */
+    .hp-auc__col-bidder,
+    .hp-auc__cell-bidder { display: none; }
+
+    .hp-auc__col-player { width: 50%; }
+    .hp-auc__col-bid    { width: 26%; }
+    .hp-auc__col-time   { width: 24%; }
   }
 
   @media (prefers-reduced-motion: reduce) {
