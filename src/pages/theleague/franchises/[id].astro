@@ -1479,6 +1479,8 @@ const formatBid = (n: number): string => {
     border-radius: 999px;
     border: 1px solid transparent;
     transition: border-color 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .trade-partner:hover { border-color: var(--accent); }
   .partner-icon {
@@ -1489,6 +1491,7 @@ const formatBid = (n: number): string => {
   }
   .partner-name {
     font-size: 0.875rem;
+    white-space: nowrap;
   }
   .trade-date {
     margin-left: auto;
