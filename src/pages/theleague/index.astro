@@ -16,6 +16,7 @@ import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandin
 import HpUnsignedFaCard from '../../components/theleague/hp-sections/HpUnsignedFaCard.astro';
 import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCard.astro';
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
+import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod } from '../../utils/hero-resolver';
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
@@ -31,7 +32,7 @@ import { computeLeagueSummary, type SalaryPlayer, type TeamConfig } from '../../
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { parseNumber } from '../../utils/formatters';
 import { resolveUnsignedFaAlerts, type DashboardPlayerContext } from '../../utils/homepage-dashboard';
-import { loadActiveAuctions } from '../../utils/homepage-auctions';
+import { loadActiveAuctions, type MflPlayerExtras } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import type { WhatsNewEntry } from '../../types/whats-new';
@@ -170,6 +171,7 @@ const hpPlayerIdentityMap = getPlayerMap(parseInt(currentSalaryYear) || getCurre
 const playerMetaById = new Map<string, { name: string; position: string }>();
 const eligibilityPlayersById = new Map<string, MFLPlayerInfo>();
 const playerDisplayById = new Map<string, DashboardPlayerContext>();
+const playerExtrasById = new Map<string, MflPlayerExtras>();
 for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {
   if (!p?.id) continue;
   const identity = hpPlayerIdentityMap.get(p.id);
@@ -182,6 +184,7 @@ for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) 
     status: p.status,
     draft_year: p.draft_year,
   });
+  playerExtrasById.set(p.id, p as MflPlayerExtras);
   if (!playerDisplayById.has(p.id)) {
     playerDisplayById.set(p.id, {
       id: p.id,
@@ -300,6 +303,7 @@ const activeAuctions = showAuctionsCard
       year: leagueYear,
       leagueId: mflLeagueId,
       playerMap: hpPlayerIdentityMap,
+      playerExtras: playerExtrasById,
       teams: (leagueConfig.teams ?? []) as any[],
     })
   : [];
@@ -415,11 +419,14 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         isAuthenticated={isAuthenticated}
       />
       {showAuctionsCard && activeAuctions.length > 0 && (
-        <HpAuctionsCard
-          auctions={activeAuctions}
-          placeBidUrl={placeBidUrl}
-          completedAuctionsUrl={completedAuctionsUrl}
-        />
+        <>
+          <HpAuctionsCard
+            auctions={activeAuctions}
+            placeBidUrl={placeBidUrl}
+            completedAuctionsUrl={completedAuctionsUrl}
+          />
+          <PlayerDetailsModal />
+        </>
       )}
       <HpTeamSnapshot
         isAuthenticated={isAuthenticated}
