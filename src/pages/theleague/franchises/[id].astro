@@ -337,7 +337,6 @@ type FranchiseTrade = {
   partnerId: string;
   gaveUp: string[];
   received: string[];
-  byCommish: boolean;
   comments: string;
   bothAttributed: boolean;
 };
@@ -624,11 +623,6 @@ const formatBid = (n: number): string => {
                         <span class="partner-name">{partnerName}</span>
                       </a>
                       <span class="dim small trade-date">{tradeDateLabel(t)}</span>
-                      {t.byCommish && (
-                        <span class="commish-tag" title="Trade was processed by the commissioner">
-                          commish
-                        </span>
-                      )}
                     </div>
                     <div class="trade-cols">
                       <div class="trade-col">
@@ -1499,15 +1493,6 @@ const formatBid = (n: number): string => {
   .trade-date {
     margin-left: auto;
     font-variant-numeric: tabular-nums;
-  }
-  .commish-tag {
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background: var(--surface-3, #ebebeb);
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    color: var(--text-tertiary, #666);
   }
   .trade-cols {
     display: grid;

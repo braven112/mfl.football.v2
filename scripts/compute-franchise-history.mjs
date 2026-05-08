@@ -486,7 +486,7 @@ const ensureFranchise = (id) => {
       },
       headToHead: {}, // opponentFranchiseId -> { wins, losses, ties }
       matchupHistory: {}, // opponentFranchiseId -> [{year, week, score, opponentScore, isPlayoff, playoffRound, sourceFranchiseId}]
-      trades: [], // [{year, timestamp, partnerId, gaveUp[], received[], byCommish, comments, sourceFranchiseId, partnerSourceId}]
+      trades: [], // [{year, timestamp, partnerId, gaveUp[], received[], comments, sourceFranchiseId, partnerSourceId}]
       draftPicks: [], // [{year, round, pick, playerId, viaTrade, comments, timestamp, sourceFranchiseId}]
       auctionWins: [], // [{year, playerId, winningBid, timestamp, sourceFranchiseId}]
     });
@@ -945,7 +945,6 @@ for (const year of years) {
     const aGave = String(tx.franchise1_gave_up || '').split(',').filter(Boolean);
     const bGave = String(tx.franchise2_gave_up || '').split(',').filter(Boolean);
     const timestamp = parseNum(tx.timestamp);
-    const byCommish = String(tx.by_commish || '') === '1';
     const comments = tx.comments || '';
 
     // Pull player names for any numeric asset codes used in this trade so
@@ -971,7 +970,6 @@ for (const year of years) {
         partnerId: fB,
         gaveUp: aGave,
         received: bGave,
-        byCommish,
         comments,
         sourceFranchiseId: fA !== aTarget ? fA : null,
         partnerSourceId: fB !== bTarget ? fB : null,
@@ -985,7 +983,6 @@ for (const year of years) {
         partnerId: fA,
         gaveUp: bGave,
         received: aGave,
-        byCommish,
         comments,
         sourceFranchiseId: fB !== bTarget ? fB : null,
         partnerSourceId: fA !== aTarget ? fA : null,
