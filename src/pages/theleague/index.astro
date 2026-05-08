@@ -249,6 +249,14 @@ if (cachedRosterPlayers) {
       }
     }
   }
+  // Drop salary-file holdovers no longer on any roster — released free agents
+  // would otherwise keep their stale franchiseId and inflate that team's cap.
+  const rosteredIds = new Set(Object.keys(cachedRosterPlayers));
+  for (let i = salaryPlayers.length - 1; i >= 0; i--) {
+    if (!rosteredIds.has(salaryPlayers[i].id)) {
+      salaryPlayers.splice(i, 1);
+    }
+  }
 }
 
 const teamSummaries = computeLeagueSummary(salaryPlayers, rawAdjustments, draftCapitalMap, teamConfigs);
