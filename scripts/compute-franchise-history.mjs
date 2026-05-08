@@ -487,6 +487,8 @@ const ensureFranchise = (id) => {
       headToHead: {}, // opponentFranchiseId -> { wins, losses, ties }
       matchupHistory: {}, // opponentFranchiseId -> [{year, week, score, opponentScore, isPlayoff, playoffRound, sourceFranchiseId}]
       trades: [], // [{year, timestamp, partnerId, gaveUp[], received[], byCommish, comments, sourceFranchiseId, partnerSourceId}]
+      draftPicks: [], // [{year, round, pick, playerId, viaTrade, comments, timestamp, sourceFranchiseId}]
+      auctionWins: [], // [{year, playerId, winningBid, timestamp, sourceFranchiseId}]
     });
   }
   return franchiseMap.get(id);
@@ -992,6 +994,63 @@ for (const year of years) {
     }
   }
 
+  // Rookie draft results — every pick is per-franchise; "[Pick traded from
+  // <name>]" comments indicate the slot moved between franchises before the
+  // selection was made. We don't try to resolve the prior owner's franchise
+  // ID from the comment text (names rotate); the pill is just informational.
+  const draftResults = readJson(path.join(yearDir, 'draftResults.json'));
+  const draftPicks = toArray(draftResults?.draftResults?.draftUnit?.draftPick);
+  const draftPlayerIds = [];
+  for (const dp of draftPicks) {
+    if (!dp?.franchise || !dp?.player) continue;
+    const target = attributeYear(dp.franchise, year);
+    if (!target) continue;
+    draftPlayerIds.push(dp.player);
+    const comments = dp.comments || '';
+    ensureFranchise(target).draftPicks.push({
+      year,
+      round: parseNum(dp.round),
+      pick: parseNum(dp.pick),
+      playerId: dp.player,
+      viaTrade: /Pick traded from/i.test(comments),
+      comments: comments.trim(),
+      timestamp: parseNum(dp.timestamp),
+      sourceFranchiseId: dp.franchise !== target ? dp.franchise : null,
+    });
+  }
+
+  // Auction wins — `winningBid` is the dollar amount in raw integer form.
+  const auctionResults = readJson(path.join(yearDir, 'auctionResults.json'));
+  const auctionWins = toArray(auctionResults?.auctionResults?.auctionUnit?.auction);
+  const auctionPlayerIds = [];
+  for (const aw of auctionWins) {
+    if (!aw?.franchise || !aw?.player) continue;
+    const target = attributeYear(aw.franchise, year);
+    if (!target) continue;
+    auctionPlayerIds.push(aw.player);
+    ensureFranchise(target).auctionWins.push({
+      year,
+      playerId: aw.player,
+      winningBid: parseNum(aw.winningBid),
+      timestamp: parseNum(aw.lastBidTime || aw.timeStarted),
+      sourceFranchiseId: aw.franchise !== target ? aw.franchise : null,
+    });
+  }
+
+  // Resolve player names for any draft + auction picks that haven't already
+  // been picked up by the trade-asset resolver. Reuses the per-year players
+  // index helper defined above (closes over the same `yearPlayers` cache).
+  const allDraftAuctionIds = [...draftPlayerIds, ...auctionPlayerIds];
+  if (allDraftAuctionIds.some((c) => /^\d+$/.test(c))) {
+    const idx = ensurePlayersIndex();
+    for (const code of allDraftAuctionIds) {
+      if (!/^\d+$/.test(code)) continue;
+      if (playerNameLookup[code]) continue;
+      const p = idx.get(code);
+      if (p) playerNameLookup[code] = p;
+    }
+  }
+
   yearSummaries.push({
     year,
     leagueSize: standingsRows.length,
@@ -1022,6 +1081,10 @@ for (const [id, fr] of franchiseMap) {
   }
   // Trades oldest → newest by timestamp; ties → year asc
   fr.trades.sort((a, b) => a.timestamp - b.timestamp || a.year - b.year);
+  // Draft picks: ascending by year then overall pick order
+  fr.draftPicks.sort((a, b) => a.year - b.year || a.round - b.round || a.pick - b.pick);
+  // Auction wins: ascending by year then bid time
+  fr.auctionWins.sort((a, b) => a.year - b.year || a.timestamp - b.timestamp);
 
   // Pre-2020 playoff enrichment: MFL retired the bracket data for older
   // years so getPlayoffMatchupKeys can't tag those games. The hand-curated

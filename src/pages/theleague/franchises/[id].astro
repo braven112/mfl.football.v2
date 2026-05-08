@@ -364,6 +364,61 @@ const tradeDateLabel = (t: FranchiseTrade): string => {
     day: 'numeric',
   });
 };
+
+// Draft + auction history (Phase 4). Both are pre-sorted oldest-first by the
+// aggregator; we display newest year first with the most recent year auto-
+// expanded, matching the trade-ledger layout.
+type FranchiseDraftPick = {
+  year: number;
+  round: number;
+  pick: number;
+  playerId: string;
+  viaTrade: boolean;
+  comments: string;
+  timestamp: number;
+};
+type FranchiseAuctionWin = {
+  year: number;
+  playerId: string;
+  winningBid: number;
+  timestamp: number;
+};
+
+const groupByYearDesc = <T extends { year: number }>(items: T[]): { year: number; items: T[] }[] => {
+  const m = new Map<number, T[]>();
+  for (const it of items) {
+    if (!m.has(it.year)) m.set(it.year, []);
+    m.get(it.year)!.push(it);
+  }
+  return Array.from(m.entries())
+    .map(([year, items]) => ({ year, items }))
+    .sort((a, b) => b.year - a.year);
+};
+
+const draftPicks: FranchiseDraftPick[] = (fr.draftPicks as FranchiseDraftPick[]) || [];
+const draftYearGroups = groupByYearDesc(draftPicks).map((g) => ({
+  year: g.year,
+  items: g.items.slice().sort((a, b) => a.round - b.round || a.pick - b.pick),
+}));
+
+const auctionWins: FranchiseAuctionWin[] = (fr.auctionWins as FranchiseAuctionWin[]) || [];
+const auctionYearGroups = groupByYearDesc(auctionWins).map((g) => ({
+  year: g.year,
+  items: g.items.slice().sort((a, b) => b.winningBid - a.winningBid),
+  totalSpend: g.items.reduce((s, a) => s + a.winningBid, 0),
+}));
+
+const formatPlayerLabel = (playerId: string): string => {
+  const meta = playerNames[playerId];
+  if (meta) return `${meta.name}${meta.position ? ` (${meta.position})` : ''}`;
+  return `Player #${playerId}`;
+};
+
+const formatBid = (n: number): string => {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n}`;
+};
 ---
 
 <TheLeagueLayout title={`${fr.currentName} — Franchise History`}>
@@ -598,6 +653,57 @@ const tradeDateLabel = (t: FranchiseTrade): string => {
                 );
               })}
             </ul>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {draftPicks.length > 0 && (
+      <section class="draft-section">
+        <h2>Draft History ({draftPicks.length})</h2>
+        <p class="dim small">
+          Every rookie draft pick made by the current owner — grouped by year, in draft order.
+        </p>
+        {draftYearGroups.map((group) => (
+          <details class="year-group" open={group === draftYearGroups[0]}>
+            <summary>
+              <span class="year-label">{group.year}</span>
+              <span class="dim small">{group.items.length} pick{group.items.length === 1 ? '' : 's'}</span>
+            </summary>
+            <ol class="pick-list">
+              {group.items.map((p) => (
+                <li class="pick-row">
+                  <span class="pick-slot">{p.round}.{String(p.pick).padStart(2, '0')}</span>
+                  <span class="pick-player">{formatPlayerLabel(p.playerId)}</span>
+                  {p.viaTrade && <span class="pick-tag" title="Pick acquired via trade">via trade</span>}
+                </li>
+              ))}
+            </ol>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {auctionWins.length > 0 && (
+      <section class="auction-section">
+        <h2>Auction History ({auctionWins.length})</h2>
+        <p class="dim small">
+          Every auction win by the current owner — grouped by year, biggest bid first.
+        </p>
+        {auctionYearGroups.map((group) => (
+          <details class="year-group" open={group === auctionYearGroups[0]}>
+            <summary>
+              <span class="year-label">{group.year}</span>
+              <span class="dim small">{group.items.length} win{group.items.length === 1 ? '' : 's'} · {formatBid(group.totalSpend)} spent</span>
+            </summary>
+            <ol class="pick-list">
+              {group.items.map((a) => (
+                <li class="pick-row">
+                  <span class="pick-bid">{formatBid(a.winningBid)}</span>
+                  <span class="pick-player">{formatPlayerLabel(a.playerId)}</span>
+                </li>
+              ))}
+            </ol>
           </details>
         ))}
       </section>
@@ -1436,5 +1542,81 @@ const tradeDateLabel = (t: FranchiseTrade): string => {
   @media (max-width: 600px) {
     .trade-cols { grid-template-columns: 1fr; gap: 0.5rem; }
     .trade-date { margin-left: 0; flex-basis: 100%; order: 3; }
+  }
+
+  /* ============================================
+   * DRAFT + AUCTION HISTORY
+   * (reuses .trade-year disclosure styling via .year-group)
+   * ============================================ */
+  .draft-section, .auction-section {
+    margin: 2.5rem 0;
+  }
+  .draft-section > p, .auction-section > p {
+    margin: 0 0 1rem;
+  }
+  .year-group {
+    margin-bottom: 0.625rem;
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 0.625rem;
+    background: #fff;
+    overflow: hidden;
+  }
+  .year-group > summary {
+    cursor: pointer;
+    padding: 0.625rem 0.875rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    font-weight: 600;
+    background: var(--surface-2, #f5f5f5);
+    list-style: none;
+  }
+  .year-group > summary::-webkit-details-marker { display: none; }
+  .year-group > summary::before {
+    content: '▸';
+    color: var(--text-tertiary, #888);
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  .year-group[open] > summary::before { transform: rotate(90deg); }
+  .year-label {
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+  }
+  .pick-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.375rem 0.875rem 0.625rem;
+  }
+  .pick-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--border, #f0f0f0);
+    font-size: 0.875rem;
+  }
+  .pick-row:last-child { border-bottom: none; }
+  .pick-slot, .pick-bid {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 3.5rem;
+    color: var(--accent);
+  }
+  .pick-bid { color: #1f5d2d; }
+  .pick-player {
+    flex: 1;
+    min-width: 0;
+  }
+  .pick-tag {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--surface-3, #ebebeb);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    color: var(--text-tertiary, #666);
+    font-weight: 600;
   }
 </style>
