@@ -15,6 +15,7 @@ import WhatsNext from '../../components/theleague/WhatsNext.astro';
 import HpTeamSnapshot from '../../components/theleague/hp-sections/HpTeamSnapshot.astro';
 import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandingsCompact.astro';
 import HpUnsignedFaCard from '../../components/theleague/hp-sections/HpUnsignedFaCard.astro';
+import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCard.astro';
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
@@ -31,6 +32,7 @@ import { computeLeagueSummary, type SalaryPlayer, type TeamConfig } from '../../
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { parseNumber } from '../../utils/formatters';
 import { resolveUnsignedFaAlerts, type DashboardPlayerContext } from '../../utils/homepage-dashboard';
+import { loadActiveAuctions } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import type { WhatsNewEntry } from '../../types/whats-new';
@@ -87,6 +89,14 @@ const now = effectiveDate ?? new Date();
 const isAuctionHeroActive = heroState.phase === 'auction-preview' || heroState.phase === 'auction-live';
 const showAuctionStrip = !isAuctionHeroActive && isAuctionStripPeriod(now);
 const stripVariant = showAuctionStrip && isPostDraftPeriod(now) ? 'auction-udfa' as const : 'auction' as const;
+const isAuctionPeriod = isAuctionHeroActive || showAuctionStrip;
+
+// MFL external links for the auctions card
+const mflHost = 'www49.myfantasyleague.com';
+const mflLeagueId = '13522';
+const mflAuctionBase = `https://${mflHost}/${leagueYear}/options?L=${mflLeagueId}`;
+const placeBidUrl = `${mflAuctionBase}&O=43`;
+const completedAuctionsUrl = `${mflAuctionBase}&O=43`;
 
 // Load team config (used for reply composer + live scoring)
 let userTeamName: string | undefined;
@@ -276,6 +286,16 @@ const unsignedFaAlerts = resolveUnsignedFaAlerts({
   referenceDate: now,
 });
 
+// Active auctions card — only fetch during auction window to avoid round-trips
+// to MFL year-round.
+const activeAuctions = isAuctionPeriod
+  ? await loadActiveAuctions({
+      baseUrl: Astro.url,
+      playerMap: hpPlayerIdentityMap,
+      teams: (leagueConfig.teams ?? []) as any[],
+    })
+  : [];
+
 // Fetch live scoring data when slot is 'live-scoring'
 let liveScoring: {
   week: number;
@@ -409,6 +429,14 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         alerts={unsignedFaAlerts}
         referenceDate={now}
       />
+
+      {activeAuctions.length > 0 && (
+        <HpAuctionsCard
+          auctions={activeAuctions}
+          placeBidUrl={placeBidUrl}
+          completedAuctionsUrl={completedAuctionsUrl}
+        />
+      )}
 
       <WhatsNext demoDate={effectiveDate} maxCards={2} />
 
