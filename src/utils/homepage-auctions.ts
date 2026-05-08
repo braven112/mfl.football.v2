@@ -1,11 +1,13 @@
 /**
  * Homepage active-auction loader.
  *
- * Calls the internal /api/live-auction endpoint at SSR time, joins each active
- * auction against the player identity map and team config, and returns rows
- * ready to render in the HpAuctionsCard. Errors and empty payloads return [].
+ * Calls fetchLiveAuctions() directly (no SSR self-fetch) and joins each
+ * active auction against the player identity map and team config. Returns
+ * rows ready to render in the HpAuctionsCard. Errors and empty payloads
+ * return [] but are logged server-side for visibility.
  */
 import type { PlayerIdentity } from './player-map';
+import { fetchLiveAuctions } from './live-auctions';
 
 interface TeamConfigEntry {
   franchiseId: string;
@@ -37,29 +39,21 @@ export interface HomepageAuctionRow {
 }
 
 interface FetchOpts {
-  baseUrl: URL;
+  /** League year (defaults to current). */
+  year?: number | string;
+  /** MFL league id (defaults to 13522). */
+  leagueId?: string;
   playerMap: Map<string, PlayerIdentity>;
   teams: TeamConfigEntry[];
-  /** Optional override (e.g. for testing). */
+  /** Optional fetch override (e.g. for testing). */
   fetchImpl?: typeof fetch;
 }
 
 export async function loadActiveAuctions(opts: FetchOpts): Promise<HomepageAuctionRow[]> {
-  const { baseUrl, playerMap, teams } = opts;
-  const fetchImpl = opts.fetchImpl ?? fetch;
+  const { playerMap, teams, year, leagueId, fetchImpl } = opts;
 
-  let payload: any;
-  try {
-    const url = new URL('/api/live-auction', baseUrl);
-    const res = await fetchImpl(url.toString());
-    if (!res.ok) return [];
-    payload = await res.json();
-  } catch {
-    return [];
-  }
-
-  const auctions = payload?.auctions;
-  if (!auctions || typeof auctions !== 'object') return [];
+  const snapshot = await fetchLiveAuctions({ year, leagueId, fetchImpl });
+  const auctions = snapshot.auctions;
 
   const teamById = new Map<string, TeamConfigEntry>();
   for (const t of teams) {
@@ -67,8 +61,7 @@ export async function loadActiveAuctions(opts: FetchOpts): Promise<HomepageAucti
   }
 
   const rows: HomepageAuctionRow[] = [];
-  for (const [playerId, raw] of Object.entries(auctions)) {
-    const auc = raw as { bid?: number; franchise?: string; status?: string; lastBidTime?: number | null; initTime?: number | null };
+  for (const [playerId, auc] of Object.entries(auctions)) {
     if (auc?.status !== 'active') continue;
     const anchor = auc.lastBidTime ?? auc.initTime ?? 0;
     if (typeof anchor !== 'number' || anchor <= 0) continue;
@@ -92,6 +85,10 @@ export async function loadActiveAuctions(opts: FetchOpts): Promise<HomepageAucti
       anchorTimestamp: anchor,
     });
   }
+
+  console.log(
+    `[homepage-auctions] snapshot=${snapshot.count} active=${rows.length}`,
+  );
 
   // Sort soonest-to-end first; rows without an anchor sink to the bottom.
   const BID_WINDOW_SEC = 36 * 60 * 60;

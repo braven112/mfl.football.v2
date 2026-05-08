@@ -297,7 +297,8 @@ const unsignedFaAlerts = resolveUnsignedFaAlerts({
 // Avoids hitting MFL year-round on every homepage render.
 const activeAuctions = showAuctionsCard
   ? await loadActiveAuctions({
-      baseUrl: Astro.url,
+      year: leagueYear,
+      leagueId: mflLeagueId,
       playerMap: hpPlayerIdentityMap,
       teams: (leagueConfig.teams ?? []) as any[],
     })
