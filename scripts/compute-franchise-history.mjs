@@ -239,6 +239,39 @@ function getPlayoffParticipants(playoffBrackets) {
   return participants;
 }
 
+// Pre-2020 brackets reference seeds (no franchise IDs), so the function above
+// returns an empty set. Recover the teams that actually made the playoffs by
+// re-running MFL's standard seeding logic against the regular-season standings:
+//
+//   * Seeds 1..N: division winners, ordered by overall record + tiebreakers.
+//   * Seeds N+1..: non-division winners, ordered by overall record.
+//
+// The championship bracket's metadata advertises `teamsInvolved` — the number
+// of seeds that count as "made the playoffs". Take the top N seeded teams.
+function getChampionshipBracketSize(playoffBrackets) {
+  if (!playoffBrackets) return 0;
+  const meta = toArray(playoffBrackets.playoffBrackets?.playoffBracket).find(
+    (b) => b.id === '1'
+  );
+  return meta ? Number(meta.teamsInvolved) || 0 : 0;
+}
+
+function inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize) {
+  if (!bracketSize) return [];
+  const divWinnerIds = new Set([...divisionTitleHolders.values()].filter(Boolean));
+  const sorted = [...standingsRows].sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      a.losses - b.losses ||
+      b.h2hPct - a.h2hPct ||
+      b.allPlayPct - a.allPlayPct ||
+      b.pointsFor - a.pointsFor
+  );
+  const divWinners = sorted.filter((r) => divWinnerIds.has(r.franchiseId));
+  const wildcards = sorted.filter((r) => !divWinnerIds.has(r.franchiseId));
+  return [...divWinners, ...wildcards].slice(0, bracketSize).map((r) => r.franchiseId);
+}
+
 // Build a Map<key, { round, bracket }> for every championship-or-3rd-place
 // playoff matchup that has actual scores. Key = "<week>:<smallerId>:<biggerId>"
 // so per-week matchup lookups are owner-direction independent. Used to tag
@@ -528,12 +561,20 @@ for (const year of years) {
   const playoffMatchupKeys = getPlayoffMatchupKeys(playoffBrackets);
 
   // MFL's pre-2020 brackets are metadata-only (no franchise IDs), so
-  // getPlayoffParticipants returns an empty set for those years.
-  // Augment with the franchises we *know* made the postseason: every
-  // division winner (auto-bid) and any team listed as champion /
-  // runner-up / third place. Wild cards still get missed in years
-  // without bracket data, but the count moves from "wildly under" to
-  // "lightly under".
+  // getPlayoffParticipants returns an empty set for those years. Reconstruct
+  // the participant list by re-running MFL's seeding logic (division winners
+  // first, then wildcards by record) and keeping the top `teamsInvolved`
+  // seeds — that's the actual size of the championship bracket per year.
+  if (playoffParticipants.size === 0 && seasonHasGames) {
+    const bracketSize = getChampionshipBracketSize(playoffBrackets);
+    for (const fid of inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize)) {
+      playoffParticipants.add(fid);
+    }
+  }
+
+  // Belt-and-suspenders: even when MFL did emit franchise IDs, make sure
+  // every division winner and the recorded champion / runner-up / third
+  // place are credited as playoff participants.
   for (const champId of divisionTitleHolders.values()) {
     if (champId) playoffParticipants.add(champId);
   }
