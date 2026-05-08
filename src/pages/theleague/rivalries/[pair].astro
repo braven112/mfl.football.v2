@@ -164,13 +164,19 @@ const titleB = frB.currentNameMedium || frB.currentName;
     ]} />
 
     <header class="hero">
-      <div class="side side--a" style={frA.currentColor ? `--accent: ${frA.currentColor};` : ''}>
+      <div
+        class:list={['side', 'side--a', { 'side--banner-only': !!frA.currentBanner }]}
+        style={frA.currentColor ? `--accent: ${frA.currentColor};` : ''}
+      >
         <a href={resolveLeaguePath(`/theleague/franchises/${frA.franchiseId}`, hideLeaguePrefix)} class="side-link">
-          {frA.currentBanner && <img src={frA.currentBanner} alt="" class="banner" />}
-          <div class="side-name">
-            {frA.currentIcon && <img src={frA.currentIcon} alt="" class="logo" />}
-            <h1>{frA.currentName}</h1>
-          </div>
+          {frA.currentBanner ? (
+            <img src={frA.currentBanner} alt={frA.currentName} class="banner" />
+          ) : (
+            <div class="side-name">
+              {frA.currentIcon && <img src={frA.currentIcon} alt="" class="logo" />}
+              <h1>{frA.currentName}</h1>
+            </div>
+          )}
         </a>
       </div>
       <div class="versus">
@@ -197,13 +203,19 @@ const titleB = frB.currentNameMedium || frB.currentName;
           </p>
         )}
       </div>
-      <div class="side side--b" style={frB.currentColor ? `--accent: ${frB.currentColor};` : ''}>
+      <div
+        class:list={['side', 'side--b', { 'side--banner-only': !!frB.currentBanner }]}
+        style={frB.currentColor ? `--accent: ${frB.currentColor};` : ''}
+      >
         <a href={resolveLeaguePath(`/theleague/franchises/${frB.franchiseId}`, hideLeaguePrefix)} class="side-link">
-          {frB.currentBanner && <img src={frB.currentBanner} alt="" class="banner" />}
-          <div class="side-name">
-            {frB.currentIcon && <img src={frB.currentIcon} alt="" class="logo" />}
-            <h1>{frB.currentName}</h1>
-          </div>
+          {frB.currentBanner ? (
+            <img src={frB.currentBanner} alt={frB.currentName} class="banner" />
+          ) : (
+            <div class="side-name">
+              {frB.currentIcon && <img src={frB.currentIcon} alt="" class="logo" />}
+              <h1>{frB.currentName}</h1>
+            </div>
+          )}
         </a>
       </div>
     </header>
@@ -537,7 +549,9 @@ const titleB = frB.currentNameMedium || frB.currentName;
     height: auto;
     display: block;
     line-height: 0;
-    opacity: 0.9;
+  }
+  .side--banner-only {
+    background: transparent;
   }
   .side-name {
     display: flex;
