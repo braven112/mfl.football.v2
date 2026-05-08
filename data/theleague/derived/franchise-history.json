@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-08T01:42:05.814Z",
+  "generatedAt": "2026-05-08T01:54:57.972Z",
   "yearsCovered": [
     2007,
     2008,
@@ -25,6 +25,7 @@
   "yearSummaries": [
     {
       "year": 2007,
+      "leagueSize": 16,
       "champion": "0015",
       "runnerUp": "0007",
       "thirdPlace": null,
@@ -34,6 +35,7 @@
     },
     {
       "year": 2008,
+      "leagueSize": 16,
       "champion": "0015",
       "runnerUp": "0008",
       "thirdPlace": null,
@@ -43,6 +45,7 @@
     },
     {
       "year": 2009,
+      "leagueSize": 16,
       "champion": "0004",
       "runnerUp": "0006",
       "thirdPlace": null,
@@ -52,6 +55,7 @@
     },
     {
       "year": 2010,
+      "leagueSize": 12,
       "champion": "0007",
       "runnerUp": "0006",
       "thirdPlace": null,
@@ -61,6 +65,7 @@
     },
     {
       "year": 2011,
+      "leagueSize": 16,
       "champion": "0013",
       "runnerUp": "0007",
       "thirdPlace": null,
@@ -70,6 +75,7 @@
     },
     {
       "year": 2012,
+      "leagueSize": 16,
       "champion": "0014",
       "runnerUp": "0012",
       "thirdPlace": null,
@@ -79,6 +85,7 @@
     },
     {
       "year": 2013,
+      "leagueSize": 16,
       "champion": "0014",
       "runnerUp": "0003",
       "thirdPlace": null,
@@ -88,6 +95,7 @@
     },
     {
       "year": 2014,
+      "leagueSize": 16,
       "champion": "0008",
       "runnerUp": "0001",
       "thirdPlace": null,
@@ -97,6 +105,7 @@
     },
     {
       "year": 2015,
+      "leagueSize": 12,
       "champion": "0011",
       "runnerUp": "0005",
       "thirdPlace": null,
@@ -106,6 +115,7 @@
     },
     {
       "year": 2016,
+      "leagueSize": 16,
       "champion": "0006",
       "runnerUp": "0015",
       "thirdPlace": null,
@@ -115,6 +125,7 @@
     },
     {
       "year": 2017,
+      "leagueSize": 16,
       "champion": "0007",
       "runnerUp": "0013",
       "thirdPlace": null,
@@ -124,6 +135,7 @@
     },
     {
       "year": 2018,
+      "leagueSize": 16,
       "champion": "0011",
       "runnerUp": "0004",
       "thirdPlace": null,
@@ -133,6 +145,7 @@
     },
     {
       "year": 2019,
+      "leagueSize": 16,
       "champion": "0008",
       "runnerUp": "0011",
       "thirdPlace": null,
@@ -142,6 +155,7 @@
     },
     {
       "year": 2020,
+      "leagueSize": 16,
       "champion": "0008",
       "runnerUp": "0016",
       "thirdPlace": "0009",
@@ -151,6 +165,7 @@
     },
     {
       "year": 2021,
+      "leagueSize": 16,
       "champion": "0011",
       "runnerUp": "0008",
       "thirdPlace": null,
@@ -160,6 +175,7 @@
     },
     {
       "year": 2022,
+      "leagueSize": 16,
       "champion": "0012",
       "runnerUp": "0015",
       "thirdPlace": null,
@@ -169,6 +185,7 @@
     },
     {
       "year": 2023,
+      "leagueSize": 16,
       "champion": "0007",
       "runnerUp": "0002",
       "thirdPlace": "0003",
@@ -178,6 +195,7 @@
     },
     {
       "year": 2024,
+      "leagueSize": 16,
       "champion": "0009",
       "runnerUp": "0002",
       "thirdPlace": null,
@@ -187,6 +205,7 @@
     },
     {
       "year": 2025,
+      "leagueSize": 16,
       "champion": "0010",
       "runnerUp": "0015",
       "thirdPlace": "0002",
@@ -196,6 +215,7 @@
     },
     {
       "year": 2026,
+      "leagueSize": 16,
       "champion": null,
       "runnerUp": null,
       "thirdPlace": null,
@@ -6262,7 +6282,78 @@
       "currentBanner": "/assets/theleague/banners/dark_magicians.png",
       "currentDivision": "East",
       "currentColor": "#9b30ff",
-      "currentOwnerSince": null
+      "currentOwnerSince": null,
+      "badges": [
+        {
+          "id": "founding-member",
+          "name": "Founding Member",
+          "description": "Active in TheLeague's inaugural 2007 season.",
+          "icon": "🌟",
+          "tier": "career",
+          "awards": [
+            {
+              "label": "Class of 2007"
+            }
+          ]
+        },
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 17,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-legend",
+          "name": "Playoff Legend",
+          "description": "Reached the playoffs 10 or more times.",
+          "icon": "🌠",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 11,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "century-club",
+          "name": "Century Club",
+          "description": "100+ all-time wins.",
+          "icon": "💯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 156,
+              "suffix": "wins"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2012
+            },
+            {
+              "year": 2011
+            },
+            {
+              "year": 2007
+            }
+          ]
+        }
+      ]
     },
     "0001": {
       "franchiseId": "0001",
@@ -12312,7 +12403,88 @@
       "currentBanner": "/assets/theleague/banners/pigskins.png",
       "currentDivision": "Northwest",
       "currentColor": "#cc2936",
-      "currentOwnerSince": null
+      "currentOwnerSince": null,
+      "badges": [
+        {
+          "id": "founding-member",
+          "name": "Founding Member",
+          "description": "Active in TheLeague's inaugural 2007 season.",
+          "icon": "🌟",
+          "tier": "career",
+          "awards": [
+            {
+              "label": "Class of 2007"
+            }
+          ]
+        },
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 19,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-legend",
+          "name": "Playoff Legend",
+          "description": "Reached the playoffs 10 or more times.",
+          "icon": "🌠",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 11,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "century-club",
+          "name": "Century Club",
+          "description": "100+ all-time wins.",
+          "icon": "💯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 168,
+              "suffix": "wins"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2022
+            },
+            {
+              "year": 2010
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2017,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0008": {
       "franchiseId": "0008",
@@ -19281,7 +19453,81 @@
       "currentBanner": "/assets/theleague/banners/bring_the_pain.png",
       "currentDivision": "Central",
       "currentColor": "#1a1a1a",
-      "currentOwnerSince": null
+      "currentOwnerSince": null,
+      "badges": [
+        {
+          "id": "founding-member",
+          "name": "Founding Member",
+          "description": "Active in TheLeague's inaugural 2007 season.",
+          "icon": "🌟",
+          "tier": "career",
+          "awards": [
+            {
+              "label": "Class of 2007"
+            }
+          ]
+        },
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 19,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-legend",
+          "name": "Playoff Legend",
+          "description": "Reached the playoffs 10 or more times.",
+          "icon": "🌠",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 11,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "century-club",
+          "name": "Century Club",
+          "description": "100+ all-time wins.",
+          "icon": "💯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 176,
+              "suffix": "wins"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2016
+            },
+            {
+              "year": 2014
+            },
+            {
+              "year": 2009
+            },
+            {
+              "year": 2008
+            }
+          ]
+        }
+      ]
     },
     "0011": {
       "franchiseId": "0011",
@@ -23945,7 +24191,47 @@
       "currentBanner": "/assets/theleague/banners/midwestside.png",
       "currentDivision": "Southwest",
       "currentColor": "#ffcd00",
-      "currentOwnerSince": 2010
+      "currentOwnerSince": 2010,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 13,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 5,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2019
+            }
+          ]
+        }
+      ]
     },
     "0007": {
       "franchiseId": "0007",
@@ -28963,7 +29249,80 @@
       "currentBanner": "/assets/theleague/banners/fire_ready_aim.png",
       "currentDivision": "East",
       "currentColor": "#e88370",
-      "currentOwnerSince": 2010
+      "currentOwnerSince": 2010,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 16,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 9,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "century-club",
+          "name": "Century Club",
+          "description": "100+ all-time wins.",
+          "icon": "💯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 129,
+              "suffix": "wins"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2023
+            },
+            {
+              "year": 2017
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2025,
+              "label": "#16"
+            },
+            {
+              "year": 2020,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0012": {
       "franchiseId": "0012",
@@ -33774,7 +34133,90 @@
       "currentBanner": "/assets/theleague/banners/vitside_mafia.png",
       "currentDivision": "Northwest",
       "currentColor": "#f06abc",
-      "currentOwnerSince": 2011
+      "currentOwnerSince": 2011,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 15,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 9,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "century-club",
+          "name": "Century Club",
+          "description": "100+ all-time wins.",
+          "icon": "💯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 129,
+              "suffix": "wins"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2015
+            }
+          ]
+        },
+        {
+          "id": "all-time-highest-score",
+          "name": "League Record: Highest Score",
+          "description": "Holds the all-time single-game scoring record.",
+          "icon": "💥",
+          "tier": "game",
+          "awards": [
+            {
+              "year": 2015,
+              "week": 3,
+              "value": 214.14,
+              "suffix": "pts"
+            }
+          ]
+        },
+        {
+          "id": "all-time-biggest-blowout",
+          "name": "League Record: Biggest Blowout",
+          "description": "Holds the all-time biggest blowout win.",
+          "icon": "🚂",
+          "tier": "game",
+          "awards": [
+            {
+              "year": 2015,
+              "week": 3,
+              "value": 121.14,
+              "suffix": "pt margin"
+            }
+          ]
+        }
+      ]
     },
     "0009": {
       "franchiseId": "0009",
@@ -39365,7 +39807,88 @@
       "currentBanner": "/assets/theleague/banners/wabbits.png",
       "currentDivision": "East",
       "currentColor": "#5c5c5c",
-      "currentOwnerSince": 2012
+      "currentOwnerSince": 2012,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 14,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 8,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "century-club",
+          "name": "Century Club",
+          "description": "100+ all-time wins.",
+          "icon": "💯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 137,
+              "suffix": "wins"
+            }
+          ]
+        },
+        {
+          "id": "perfect-regular-season",
+          "name": "Perfect Regular Season",
+          "description": "Finished a season undefeated.",
+          "icon": "✨",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2018,
+              "label": "16-0"
+            }
+          ]
+        },
+        {
+          "id": "top-scorer",
+          "name": "League Scoring Champ",
+          "description": "Led the league in regular-season points in a year.",
+          "icon": "🚀",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2025
+            },
+            {
+              "year": 2024
+            },
+            {
+              "year": 2021
+            },
+            {
+              "year": 2020
+            },
+            {
+              "year": 2018
+            },
+            {
+              "year": 2013
+            }
+          ]
+        }
+      ]
     },
     "0016": {
       "franchiseId": "0016",
@@ -43081,7 +43604,22 @@
       "currentBanner": "/assets/theleague/banners/the_dream.png",
       "currentDivision": "East",
       "currentColor": "#3498db",
-      "currentOwnerSince": 2014
+      "currentOwnerSince": 2014,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 11,
+              "suffix": "seasons"
+            }
+          ]
+        }
+      ]
     },
     "0013": {
       "franchiseId": "0013",
@@ -46615,7 +47153,52 @@
       "currentBanner": "/assets/theleague/banners/geeks.png",
       "currentDivision": "Southwest",
       "currentColor": "#d45500",
-      "currentOwnerSince": 2014
+      "currentOwnerSince": 2014,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 11,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 5,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2016,
+              "label": "#16"
+            },
+            {
+              "year": 2014,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0002": {
       "franchiseId": "0002",
@@ -49794,7 +50377,48 @@
       "currentBanner": "/assets/theleague/banners/da_dangsters.png",
       "currentDivision": "Northwest",
       "currentColor": "#8b6914",
-      "currentOwnerSince": 2015
+      "currentOwnerSince": 2015,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 11,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 7,
+              "suffix": "appearances"
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2021,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0005": {
       "franchiseId": "0005",
@@ -52894,7 +53518,35 @@
       "currentBanner": "/assets/theleague/banners/ninjas.png",
       "currentDivision": "Central",
       "currentColor": "#006847",
-      "currentOwnerSince": 2016
+      "currentOwnerSince": 2016,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 10,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "playoff-veteran",
+          "name": "Playoff Veteran",
+          "description": "Reached the playoffs 5–9 times.",
+          "icon": "🎯",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 5,
+              "suffix": "appearances"
+            }
+          ]
+        }
+      ]
     },
     "0003": {
       "franchiseId": "0003",
@@ -56212,7 +56864,39 @@
       "currentBanner": "/assets/theleague/banners/maverick.png",
       "currentDivision": "Central",
       "currentColor": "#c4b060",
-      "currentOwnerSince": 2016
+      "currentOwnerSince": 2016,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 10,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2019,
+              "label": "#16"
+            },
+            {
+              "year": 2018,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0010": {
       "franchiseId": "0010",
@@ -59365,7 +60049,35 @@
       "currentBanner": "/assets/theleague/banners/computer_jocks.png",
       "currentDivision": "Northwest",
       "currentColor": "#2e8b57",
-      "currentOwnerSince": 2016
+      "currentOwnerSince": 2016,
+      "badges": [
+        {
+          "id": "decade-of-service",
+          "name": "Decade of Service",
+          "description": "Owned this franchise for 10+ seasons.",
+          "icon": "🎖️",
+          "tier": "career",
+          "awards": [
+            {
+              "value": 10,
+              "suffix": "seasons"
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2022,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0014": {
       "franchiseId": "0014",
@@ -61893,7 +62605,22 @@
       "currentBanner": "/assets/theleague/banners/cowboy_up.png",
       "currentDivision": "Central",
       "currentColor": "#0d2b56",
-      "currentOwnerSince": 2018
+      "currentOwnerSince": 2018,
+      "badges": [
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2024,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0006": {
       "franchiseId": "0006",
@@ -64708,7 +65435,22 @@
       "currentBanner": "/assets/theleague/banners/music_city.png",
       "currentDivision": "Southwest",
       "currentColor": "#4b92db",
-      "currentOwnerSince": 2019
+      "currentOwnerSince": 2019,
+      "badges": [
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2023,
+              "label": "#16"
+            }
+          ]
+        }
+      ]
     },
     "0004": {
       "franchiseId": "0004",
@@ -64762,7 +65504,8 @@
       "currentBanner": "/assets/theleague/banners/dead_cap_walking.png",
       "currentDivision": "Southwest",
       "currentColor": "#65b32e",
-      "currentOwnerSince": 2026
+      "currentOwnerSince": 2026,
+      "badges": []
     }
   },
   "playerNames": {

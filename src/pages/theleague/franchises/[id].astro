@@ -586,6 +586,48 @@ const canonicalRivalryPair = (a: string, b: string): string =>
       </div>
     </section>
 
+    {fr.badges && fr.badges.length > 0 && (
+      <section class="badges-section">
+        <h2>Badges</h2>
+        <p class="dim small">
+          Career milestones, single-season feats, and league records held by this franchise.
+        </p>
+        {['career', 'season', 'game'].map((tier) => {
+          const tierBadges = fr.badges.filter((b: any) => b.tier === tier);
+          if (tierBadges.length === 0) return null;
+          const tierLabel = tier === 'career' ? 'Career' : tier === 'season' ? 'Single-Season' : 'Single-Game';
+          return (
+            <div class="badge-tier">
+              <h3 class="badge-tier-label">{tierLabel}</h3>
+              <ul class="badge-grid">
+                {tierBadges.map((b: any) => (
+                  <li class={`badge-card badge-card--${b.tier}`} title={b.description}>
+                    <span class="badge-icon" aria-hidden="true">{b.icon}</span>
+                    <div class="badge-text">
+                      <div class="badge-name">{b.name}</div>
+                      <div class="badge-awards">
+                        {b.awards.map((a: any, i: number) => {
+                          const parts = [];
+                          if (a.year) parts.push(a.year);
+                          if (a.week) parts.push(`Wk ${a.week}`);
+                          if (a.value != null) parts.push(`${a.value}${a.suffix ? ' ' + a.suffix : ''}`);
+                          if (a.label && parts.length === 0) parts.push(a.label);
+                          else if (a.label) parts.push(`(${a.label})`);
+                          return (
+                            <span class="badge-award" key={i}>{parts.join(' · ') || '—'}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </section>
+    )}
+
     <section class="eras">
       <h2>Era History</h2>
       {eraStats
@@ -892,6 +934,68 @@ const canonicalRivalryPair = (a: string, b: string): string =>
   .award--mvp { border-left-color: #1f5d2d; background: #f0fbf0; }
   .award--jerry { border-left-color: #8b2a1f; background: #fff5f3; }
   .award--osweiler { border-left-color: #4d2c66; background: #f9f4fc; }
+
+  .badges-section {
+    margin-bottom: 2.5rem;
+  }
+  .badges-section .small {
+    margin: 0 0 1rem;
+  }
+  .badge-tier {
+    margin-bottom: 1.25rem;
+  }
+  .badge-tier-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary, #888);
+    font-weight: 600;
+  }
+  .badge-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.625rem;
+  }
+  .badge-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    background: #fff;
+    border: 1px solid var(--border, #e5e5e5);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.5rem;
+  }
+  .badge-card--career { border-left-color: #b58a00; }
+  .badge-card--season { border-left-color: #1f5d2d; }
+  .badge-card--game { border-left-color: #8b2a1f; }
+  .badge-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .badge-text {
+    min-width: 0;
+    flex: 1;
+  }
+  .badge-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+  }
+  .badge-awards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary, #666);
+    font-variant-numeric: tabular-nums;
+  }
 
   .era {
     margin-bottom: 2rem;

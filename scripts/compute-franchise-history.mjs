@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildBadgeContext, computeBadgesFor } from './badges.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -993,6 +994,7 @@ for (const year of years) {
 
   yearSummaries.push({
     year,
+    leagueSize: standingsRows.length,
     champion: champResult?.champion ?? null,
     runnerUp: champResult?.runnerUp ?? null,
     thirdPlace: champResult?.thirdPlace ?? null,
@@ -1072,6 +1074,14 @@ for (const [id, fr] of franchiseMap) {
   fr.currentOwnerSince = currentOwnerSinceMap.get(id) ?? null;
 
   franchises[id] = fr;
+}
+
+// Phase 3: badge engine. Each franchise's earned badges are derived from the
+// already-aggregated stats above + cross-franchise context (league records,
+// per-year leaders, league size per year).
+const badgeContext = buildBadgeContext(franchises, yearSummaries);
+for (const fid of Object.keys(franchises)) {
+  franchises[fid].badges = computeBadgesFor(franchises[fid], badgeContext);
 }
 
 const output = {
