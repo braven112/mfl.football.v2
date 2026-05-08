@@ -1,4 +1,5 @@
 {
+  "version": "1.0",
   "encoding": "utf-8",
   "salaryAdjustments": {
     "salaryAdjustment": [
@@ -17,18 +18,18 @@
         "amount": "1059625"
       },
       {
-        "franchise_id": "0012",
-        "description": "2026 Dead Money",
-        "timestamp": "1771139599",
+        "id": "10",
         "amount": "552736",
-        "id": "10"
+        "timestamp": "1771139599",
+        "franchise_id": "0012",
+        "description": "2026 Dead Money"
       },
       {
         "id": "11",
         "amount": "4633500",
         "timestamp": "1771139599",
-        "description": "2026 Dead Money",
-        "franchise_id": "0013"
+        "franchise_id": "0013",
+        "description": "2026 Dead Money"
       },
       {
         "id": "12",
@@ -38,11 +39,11 @@
         "description": "2026 Dead Money"
       },
       {
-        "id": "13",
         "amount": "693875",
-        "timestamp": "1771139599",
+        "id": "13",
         "franchise_id": "0015",
-        "description": "2026 Dead Money"
+        "description": "2026 Dead Money",
+        "timestamp": "1771139599"
       },
       {
         "amount": "136125",
@@ -53,45 +54,45 @@
       },
       {
         "timestamp": "1774116905",
-        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)",
         "franchise_id": "0013",
+        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)",
         "id": "15",
         "amount": "233750"
       },
       {
-        "timestamp": "1774116905",
-        "franchise_id": "0013",
-        "description": "Dropped Palmer, Joshua BUF WR (Salary: $467,500, Years: 4)",
+        "amount": "233750",
         "id": "16",
-        "amount": "233750"
+        "description": "Dropped Palmer, Joshua BUF WR (Salary: $467,500, Years: 4)",
+        "franchise_id": "0013",
+        "timestamp": "1774116905"
       },
       {
+        "id": "17",
+        "amount": "550000",
         "timestamp": "1777817398",
         "franchise_id": "0013",
-        "description": "Dropped Thornton, Tyquan KCC WR (Salary: $1,100,000, Years: 4)",
-        "id": "17",
-        "amount": "550000"
+        "description": "Dropped Thornton, Tyquan KCC WR (Salary: $1,100,000, Years: 4)"
       },
       {
-        "description": "Dropped Wicks, Dontayvion PHI WR (Salary: $598,950, Years: 2)",
         "franchise_id": "0013",
+        "description": "Dropped Wicks, Dontayvion PHI WR (Salary: $598,950, Years: 2)",
         "timestamp": "1778116472",
         "amount": "299475",
         "id": "18"
       },
       {
-        "timestamp": "1778119383",
-        "description": "Dropped Hill, Taysom NOS TE (Salary: $467,500, Years: 1)",
         "franchise_id": "0001",
-        "id": "19",
-        "amount": "233750"
+        "description": "Dropped Hill, Taysom NOS TE (Salary: $467,500, Years: 1)",
+        "timestamp": "1778119383",
+        "amount": "233750",
+        "id": "19"
       },
       {
+        "id": "2",
+        "amount": "840125",
         "timestamp": "1771139599",
         "franchise_id": "0003",
-        "description": "2026 Dead Money",
-        "id": "2",
-        "amount": "840125"
+        "description": "2026 Dead Money"
       },
       {
         "id": "20",
@@ -108,39 +109,39 @@
         "timestamp": "1778190533"
       },
       {
-        "id": "22",
         "amount": "247500",
-        "timestamp": "1778190724",
+        "id": "22",
         "description": "Dropped Neal, Devin NOS RB (Salary: $495,000, Years: 4)",
-        "franchise_id": "0012"
+        "franchise_id": "0012",
+        "timestamp": "1778190724"
       },
       {
-        "amount": "1783750",
         "id": "3",
-        "franchise_id": "0005",
+        "amount": "1783750",
+        "timestamp": "1771139599",
         "description": "2026 Dead Money",
-        "timestamp": "1771139599"
+        "franchise_id": "0005"
       },
       {
-        "description": "2026 Dead Money",
         "franchise_id": "0006",
+        "description": "2026 Dead Money",
         "timestamp": "1771139599",
         "amount": "450771",
         "id": "4"
       },
       {
-        "timestamp": "1771139599",
+        "amount": "1061500",
+        "id": "5",
         "franchise_id": "0007",
         "description": "2026 Dead Money",
-        "id": "5",
-        "amount": "1061500"
+        "timestamp": "1771139599"
       },
       {
+        "amount": "3022396",
+        "id": "6",
         "description": "2026 Dead Money",
         "franchise_id": "0008",
-        "timestamp": "1771139599",
-        "amount": "3022396",
-        "id": "6"
+        "timestamp": "1771139599"
       },
       {
         "description": "2026 Dead Money",
@@ -150,20 +151,19 @@
         "id": "7"
       },
       {
-        "amount": "1440601",
-        "id": "8",
+        "timestamp": "1771139599",
         "franchise_id": "0010",
         "description": "2026 Dead Money",
-        "timestamp": "1771139599"
+        "id": "8",
+        "amount": "1440601"
       },
       {
-        "timestamp": "1771139599",
         "description": "2026 Dead Money",
         "franchise_id": "0011",
-        "id": "9",
-        "amount": "741813"
+        "timestamp": "1771139599",
+        "amount": "741813",
+        "id": "9"
       }
     ]
-  },
-  "version": "1.0"
+  }
 }
