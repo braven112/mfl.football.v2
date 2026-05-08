@@ -34,14 +34,14 @@ import {
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 // ─── Algorithm weights (composite ranking score) ───────────────────
-//   60% — rolling-3wk PPG (form)
-//   25% — head-to-head record (results)
-//   15% — all-play % (luck-adjusted strength)
+//   50% — rolling-3wk PPG (form)
+//   30% — head-to-head record (results)
+//   20% — all-play % (luck-adjusted strength)
 // Cap-health weight from the design doc is deferred to Phase 2 (needs salary
 // pipeline plumbed in). Total still sums to 1.0 by upweighting form.
-const W_FORM = 0.60;
-const W_RECORD = 0.25;
-const W_ALL_PLAY = 0.15;
+const W_FORM = 0.50;
+const W_RECORD = 0.30;
+const W_ALL_PLAY = 0.20;
 
 // ─── CLI ───────────────────────────────────────────────────────────
 
