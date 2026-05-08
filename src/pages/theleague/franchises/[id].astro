@@ -4,6 +4,7 @@ import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
+import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
 
 export const prerender = false;
 
@@ -316,6 +317,108 @@ const opponentMeta: Record<string, any> = Object.fromEntries(
 
 const canonicalRivalryPair = (a: string, b: string): string =>
   [a, b].sort().join('-vs-');
+
+// Trade ledger — every trade involving this franchise, grouped by year for
+// rendering. Trades are stored in `fr.trades` oldest-first (see
+// scripts/compute-franchise-history.mjs); display newest-first.
+const playerNames = ((franchiseHistory as any).playerNames ?? {}) as Record<
+  string,
+  { name: string; position?: string; team?: string }
+>;
+const franchiseShortName = (fid: string): string => {
+  const meta = opponentMeta[fid];
+  return meta?.nameShort ?? meta?.nameMedium ?? meta?.name ?? fid;
+};
+const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+
+type FranchiseTrade = {
+  year: number;
+  timestamp: number;
+  partnerId: string;
+  gaveUp: string[];
+  received: string[];
+  byCommish: boolean;
+  comments: string;
+  bothAttributed: boolean;
+};
+const allTrades: FranchiseTrade[] = ((fr.trades as FranchiseTrade[]) || []).filter(
+  (t) => t.partnerId !== id
+);
+const tradesByYear = new Map<number, FranchiseTrade[]>();
+for (const t of allTrades) {
+  if (!tradesByYear.has(t.year)) tradesByYear.set(t.year, []);
+  tradesByYear.get(t.year)!.push(t);
+}
+const tradeYearGroups = Array.from(tradesByYear.entries())
+  .map(([year, trades]) => ({
+    year,
+    trades: trades.slice().sort((a, b) => b.timestamp - a.timestamp),
+  }))
+  .sort((a, b) => b.year - a.year);
+
+const tradeDateLabel = (t: FranchiseTrade): string => {
+  if (!t.timestamp) return String(t.year);
+  return new Date(t.timestamp * 1000).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+// Draft + auction history (Phase 4). Both are pre-sorted oldest-first by the
+// aggregator; we display newest year first with the most recent year auto-
+// expanded, matching the trade-ledger layout.
+type FranchiseDraftPick = {
+  year: number;
+  round: number;
+  pick: number;
+  playerId: string;
+  viaTrade: boolean;
+  comments: string;
+  timestamp: number;
+};
+type FranchiseAuctionWin = {
+  year: number;
+  playerId: string;
+  winningBid: number;
+  timestamp: number;
+};
+
+const groupByYearDesc = <T extends { year: number }>(items: T[]): { year: number; items: T[] }[] => {
+  const m = new Map<number, T[]>();
+  for (const it of items) {
+    if (!m.has(it.year)) m.set(it.year, []);
+    m.get(it.year)!.push(it);
+  }
+  return Array.from(m.entries())
+    .map(([year, items]) => ({ year, items }))
+    .sort((a, b) => b.year - a.year);
+};
+
+const draftPicks: FranchiseDraftPick[] = (fr.draftPicks as FranchiseDraftPick[]) || [];
+const draftYearGroups = groupByYearDesc(draftPicks).map((g) => ({
+  year: g.year,
+  items: g.items.slice().sort((a, b) => a.round - b.round || a.pick - b.pick),
+}));
+
+const auctionWins: FranchiseAuctionWin[] = (fr.auctionWins as FranchiseAuctionWin[]) || [];
+const auctionYearGroups = groupByYearDesc(auctionWins).map((g) => ({
+  year: g.year,
+  items: g.items.slice().sort((a, b) => b.winningBid - a.winningBid),
+  totalSpend: g.items.reduce((s, a) => s + a.winningBid, 0),
+}));
+
+const formatPlayerLabel = (playerId: string): string => {
+  const meta = playerNames[playerId];
+  if (meta) return `${meta.name}${meta.position ? ` (${meta.position})` : ''}`;
+  return `Player #${playerId}`;
+};
+
+const formatBid = (n: number): string => {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n}`;
+};
 ---
 
 <TheLeagueLayout title={`${fr.currentName} — Franchise History`}>
@@ -488,6 +591,121 @@ const canonicalRivalryPair = (a: string, b: string): string =>
         <p class="dim small">
           <a href={resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix)}>See full rivalry matrix →</a>
         </p>
+      </section>
+    )}
+
+    {allTrades.length > 0 && (
+      <section class="trades-section">
+        <h2>Trade Ledger ({allTrades.length})</h2>
+        <p class="dim small">
+          Every trade involving the current owner — grouped by year, newest first.
+        </p>
+        {tradeYearGroups.map((group) => (
+          <details class="trade-year" open={group === tradeYearGroups[0]}>
+            <summary>
+              <span class="trade-year-label">{group.year}</span>
+              <span class="dim small">{group.trades.length} trade{group.trades.length === 1 ? '' : 's'}</span>
+            </summary>
+            <ul class="trade-list">
+              {group.trades.map((t) => {
+                const partnerMeta = opponentMeta[t.partnerId];
+                const partnerName =
+                  partnerMeta?.nameShort ?? partnerMeta?.nameMedium ?? partnerMeta?.name ?? t.partnerId;
+                const partnerIcon = partnerMeta?.icon ?? `/assets/theleague/icons/${t.partnerId}.png`;
+                const rivalryHref = resolveLeaguePath(
+                  `/theleague/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`,
+                  hideLeaguePrefix
+                );
+                return (
+                  <li class="trade">
+                    <div class="trade-head">
+                      <a class="trade-partner" href={rivalryHref} title={`Rivalry vs ${partnerName}`}>
+                        <img src={partnerIcon} alt="" class="partner-icon" loading="lazy" />
+                        <span class="partner-name">{partnerName}</span>
+                      </a>
+                      <span class="dim small trade-date">{tradeDateLabel(t)}</span>
+                      {t.byCommish && (
+                        <span class="commish-tag" title="Trade was processed by the commissioner">
+                          commish
+                        </span>
+                      )}
+                    </div>
+                    <div class="trade-cols">
+                      <div class="trade-col">
+                        <div class="t-name">Sent</div>
+                        {t.gaveUp.length > 0 ? (
+                          <ul>{t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)}</ul>
+                        ) : (
+                          <p class="dim small">—</p>
+                        )}
+                      </div>
+                      <div class="trade-col">
+                        <div class="t-name">Received</div>
+                        {t.received.length > 0 ? (
+                          <ul>{t.received.map((c) => <li>{formatAsset(c)}</li>)}</ul>
+                        ) : (
+                          <p class="dim small">—</p>
+                        )}
+                      </div>
+                    </div>
+                    {t.comments && <p class="trade-comments dim small">"{t.comments}"</p>}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {draftPicks.length > 0 && (
+      <section class="draft-section">
+        <h2>Draft History ({draftPicks.length})</h2>
+        <p class="dim small">
+          Every rookie draft pick made by the current owner — grouped by year, in draft order.
+        </p>
+        {draftYearGroups.map((group) => (
+          <details class="year-group" open={group === draftYearGroups[0]}>
+            <summary>
+              <span class="year-label">{group.year}</span>
+              <span class="dim small">{group.items.length} pick{group.items.length === 1 ? '' : 's'}</span>
+            </summary>
+            <ol class="pick-list">
+              {group.items.map((p) => (
+                <li class="pick-row">
+                  <span class="pick-slot">{p.round}.{String(p.pick).padStart(2, '0')}</span>
+                  <span class="pick-player">{formatPlayerLabel(p.playerId)}</span>
+                  {p.viaTrade && <span class="pick-tag" title="Pick acquired via trade">via trade</span>}
+                </li>
+              ))}
+            </ol>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {auctionWins.length > 0 && (
+      <section class="auction-section">
+        <h2>Auction History ({auctionWins.length})</h2>
+        <p class="dim small">
+          Every auction win by the current owner — grouped by year, biggest bid first.
+        </p>
+        {auctionYearGroups.map((group) => (
+          <details class="year-group" open={group === auctionYearGroups[0]}>
+            <summary>
+              <span class="year-label">{group.year}</span>
+              <span class="dim small">{group.items.length} win{group.items.length === 1 ? '' : 's'} · {formatBid(group.totalSpend)} spent</span>
+            </summary>
+            <ol class="pick-list">
+              {group.items.map((a) => (
+                <li class="pick-row">
+                  <span class="pick-bid">{formatBid(a.winningBid)}</span>
+                  <span class="pick-player">{formatPlayerLabel(a.playerId)}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        ))}
       </section>
     )}
 
@@ -1196,5 +1414,209 @@ const canonicalRivalryPair = (a: string, b: string): string =>
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-top: 0.125rem;
+  }
+
+  /* ============================================
+   * TRADE LEDGER
+   * ============================================ */
+  .trades-section {
+    margin: 2.5rem 0;
+  }
+  .trades-section > p {
+    margin: 0 0 1rem;
+  }
+  .trade-year {
+    margin-bottom: 0.625rem;
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 0.625rem;
+    background: #fff;
+    overflow: hidden;
+  }
+  .trade-year > summary {
+    cursor: pointer;
+    padding: 0.625rem 0.875rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    font-weight: 600;
+    background: var(--surface-2, #f5f5f5);
+    list-style: none;
+  }
+  .trade-year > summary::-webkit-details-marker { display: none; }
+  .trade-year > summary::before {
+    content: '▸';
+    color: var(--text-tertiary, #888);
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  .trade-year[open] > summary::before { transform: rotate(90deg); }
+  .trade-year-label {
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+  }
+  .trade-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.625rem 0.875rem 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+  .trade {
+    background: var(--surface-2, #f7f7f7);
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.875rem;
+  }
+  .trade-head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.5rem;
+  }
+  .trade-partner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    text-decoration: none;
+    color: inherit;
+    font-weight: 600;
+    background: #fff;
+    padding: 0.25rem 0.5rem 0.25rem 0.375rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    transition: border-color 0.15s ease;
+  }
+  .trade-partner:hover { border-color: var(--accent); }
+  .partner-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .partner-name {
+    font-size: 0.875rem;
+  }
+  .trade-date {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .commish-tag {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--surface-3, #ebebeb);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    color: var(--text-tertiary, #666);
+  }
+  .trade-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+  }
+  .trade-col {
+    background: #fff;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem;
+  }
+  .t-name {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary, #888);
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .trade-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.875rem;
+  }
+  .trade-col li { padding: 0.125rem 0; }
+  .trade-col p { margin: 0; }
+  .trade-comments {
+    margin: 0.5rem 0 0;
+    font-style: italic;
+  }
+  @media (max-width: 600px) {
+    .trade-cols { grid-template-columns: 1fr; gap: 0.5rem; }
+    .trade-date { margin-left: 0; flex-basis: 100%; order: 3; }
+  }
+
+  /* ============================================
+   * DRAFT + AUCTION HISTORY
+   * (reuses .trade-year disclosure styling via .year-group)
+   * ============================================ */
+  .draft-section, .auction-section {
+    margin: 2.5rem 0;
+  }
+  .draft-section > p, .auction-section > p {
+    margin: 0 0 1rem;
+  }
+  .year-group {
+    margin-bottom: 0.625rem;
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 0.625rem;
+    background: #fff;
+    overflow: hidden;
+  }
+  .year-group > summary {
+    cursor: pointer;
+    padding: 0.625rem 0.875rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    font-weight: 600;
+    background: var(--surface-2, #f5f5f5);
+    list-style: none;
+  }
+  .year-group > summary::-webkit-details-marker { display: none; }
+  .year-group > summary::before {
+    content: '▸';
+    color: var(--text-tertiary, #888);
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  .year-group[open] > summary::before { transform: rotate(90deg); }
+  .year-label {
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+  }
+  .pick-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.375rem 0.875rem 0.625rem;
+  }
+  .pick-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--border, #f0f0f0);
+    font-size: 0.875rem;
+  }
+  .pick-row:last-child { border-bottom: none; }
+  .pick-slot, .pick-bid {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 3.5rem;
+    color: var(--accent);
+  }
+  .pick-bid { color: #1f5d2d; }
+  .pick-player {
+    flex: 1;
+    min-width: 0;
+  }
+  .pick-tag {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--surface-3, #ebebeb);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    color: var(--text-tertiary, #666);
+    font-weight: 600;
   }
 </style>

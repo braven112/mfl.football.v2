@@ -4,6 +4,7 @@ import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
+import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
 
 export const prerender = false;
 
@@ -127,32 +128,11 @@ const tradesBetween: Trade[] = ((frA.trades as Trade[]) || [])
   .filter((t) => t.partnerId === bigger && t.bothAttributed)
   .sort((x, y) => x.timestamp - y.timestamp);
 
-// Asset code → human label. Picks come in two flavors:
-// - DP_<round>_<pick>      = current draft pick (round 0-indexed)
-// - FP_<franchiseId>_<year>_<round> = future pick from another franchise's draft
-function franchiseShortName(id: string): string {
-  const t = teamLookup[id];
-  return t?.nameShort ?? t?.nameMedium ?? t?.name ?? id;
+function franchiseShortName(fid: string): string {
+  const t = teamLookup[fid];
+  return t?.nameShort ?? t?.nameMedium ?? t?.name ?? fid;
 }
-
-function formatAsset(code: string): string {
-  if (/^FP_(\d{4})_(\d{4})_(\d+)$/.test(code)) {
-    const [, fid, yr, rnd] = code.match(/^FP_(\d{4})_(\d{4})_(\d+)$/)!;
-    return `${yr} R${rnd} pick (via ${franchiseShortName(fid)})`;
-  }
-  if (/^DP_(\d+)_(\d+)$/.test(code)) {
-    const [, rnd, pick] = code.match(/^DP_(\d+)_(\d+)$/)!;
-    return `Draft pick R${Number(rnd) + 1}.${Number(pick) + 1}`;
-  }
-  if (code === 'CASH') return 'Salary cap cash';
-  if (code.startsWith('BBID')) return `BBID balance`;
-  if (/^\d+$/.test(code)) {
-    const meta = playerNames[code];
-    if (meta) return `${meta.name}${meta.position ? ` (${meta.position})` : ''}`;
-    return `Player #${code}`;
-  }
-  return code;
-}
+const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
 
 function tradeDateLabel(t: Trade): string {
   if (!t.timestamp) return String(t.year);
