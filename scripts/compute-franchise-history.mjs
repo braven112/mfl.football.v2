@@ -483,22 +483,30 @@ for (const year of years) {
     row.regSeasonRank = idx + 1;
   });
 
+  // Don't crown a division leader (or anything else) before any games have
+  // been played — MFL still emits standings rows with PF=0 ranked by
+  // tiebreaker, which would otherwise leak into division titles + playoff
+  // appearance counts for the in-progress current season.
+  const seasonHasGames = standingsRows.some((r) => r.wins + r.losses + r.ties > 0);
+
   // Division titles — best record per division (tiebreak by PF)
   const divisionTitleHolders = new Map(); // divisionId -> franchiseId
-  const byDiv = new Map();
-  standingsRows.forEach((row) => {
-    if (!row.divisionId) return;
-    if (!byDiv.has(row.divisionId)) byDiv.set(row.divisionId, []);
-    byDiv.get(row.divisionId).push(row);
-  });
-  for (const [divId, members] of byDiv) {
-    members.sort(
-      (a, b) =>
-        b.divisionWins - a.divisionWins ||
-        b.wins - a.wins ||
-        b.pointsFor - a.pointsFor
-    );
-    if (members[0]) divisionTitleHolders.set(divId, members[0].franchiseId);
+  if (seasonHasGames) {
+    const byDiv = new Map();
+    standingsRows.forEach((row) => {
+      if (!row.divisionId) return;
+      if (!byDiv.has(row.divisionId)) byDiv.set(row.divisionId, []);
+      byDiv.get(row.divisionId).push(row);
+    });
+    for (const [divId, members] of byDiv) {
+      members.sort(
+        (a, b) =>
+          b.divisionWins - a.divisionWins ||
+          b.wins - a.wins ||
+          b.pointsFor - a.pointsFor
+      );
+      if (members[0]) divisionTitleHolders.set(divId, members[0].franchiseId);
+    }
   }
 
   // Championship results
@@ -519,6 +527,20 @@ for (const year of years) {
   const playoffParticipants = getPlayoffParticipants(playoffBrackets);
   const playoffMatchupKeys = getPlayoffMatchupKeys(playoffBrackets);
 
+  // MFL's pre-2020 brackets are metadata-only (no franchise IDs), so
+  // getPlayoffParticipants returns an empty set for those years.
+  // Augment with the franchises we *know* made the postseason: every
+  // division winner (auto-bid) and any team listed as champion /
+  // runner-up / third place. Wild cards still get missed in years
+  // without bracket data, but the count moves from "wildly under" to
+  // "lightly under".
+  for (const champId of divisionTitleHolders.values()) {
+    if (champId) playoffParticipants.add(champId);
+  }
+  if (champResult?.champion) playoffParticipants.add(champResult.champion);
+  if (champResult?.runnerUp) playoffParticipants.add(champResult.runnerUp);
+  if (champResult?.thirdPlace) playoffParticipants.add(champResult.thirdPlace);
+
   // Awards from salaries
   const awards = computeAwardsForYear(salaryData);
 
@@ -531,7 +553,19 @@ for (const year of years) {
     const fr = ensureFranchise(targetId);
     const identity = getIdentityForYear(row.franchiseId, year);
 
-    let playoffResult = playoffParticipants.has(row.franchiseId) ? 'playoffs' : 'missed';
+    // Suppress preseason placeholder standings: when a season has zero
+    // games played AND zero points scored, MFL's standings still report
+    // a regSeasonRank and mark a division leader by tiebreaker. Treat
+    // those as "not played" so unplayed years don't claim a rank,
+    // division title, or playoff appearance. We require pointsFor==0
+    // too so we don't blow away historical 0-0 anomalies (e.g. Pigskins
+    // 2022 had no W/L recorded but 2k points scored).
+    const seasonNotStarted =
+      row.wins === 0 && row.losses === 0 && row.ties === 0 && row.pointsFor === 0;
+
+    let playoffResult = !seasonNotStarted && playoffParticipants.has(row.franchiseId)
+      ? 'playoffs'
+      : 'missed';
     if (champResult?.champion === row.franchiseId) playoffResult = 'champion';
     else if (champResult?.runnerUp === row.franchiseId) playoffResult = 'runner-up';
     else if (champResult?.thirdPlace === row.franchiseId) playoffResult = 'third-place';
@@ -539,12 +573,6 @@ for (const year of years) {
     const wonDivision = Array.from(divisionTitleHolders.values()).includes(row.franchiseId)
       ? Array.from(divisionTitleHolders.entries()).find(([, id]) => id === row.franchiseId)?.[0]
       : null;
-
-    // Suppress preseason placeholder standings: when a season has zero
-    // games played, MFL's standings still report a regSeasonRank and
-    // mark a division leader by tiebreaker. Treat those as "not played"
-    // so unplayed years don't claim a rank or division title.
-    const seasonNotStarted = row.wins === 0 && row.losses === 0 && row.ties === 0;
 
     fr.yearByYear.push({
       year,
@@ -570,7 +598,7 @@ for (const year of years) {
     fr.careerTies += row.ties;
     fr.careerPointsFor += row.pointsFor;
     if (!seasonNotStarted) fr.yearsActive += 1;
-    if (playoffParticipants.has(row.franchiseId)) fr.playoffAppearances += 1;
+    if (!seasonNotStarted && playoffParticipants.has(row.franchiseId)) fr.playoffAppearances += 1;
 
     if (champResult?.champion === row.franchiseId) {
       fr.championships.push(year);
