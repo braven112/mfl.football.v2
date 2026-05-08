@@ -22,6 +22,10 @@ export interface HomepageAuctionRow {
   playerName: string;
   position: string;
   nflTeam: string;
+  /** Pre-resolved player headshot URL (for PlayerCell). */
+  headshot?: string;
+  /** ESPN ID — used by PlayerCell as a headshot fallback. */
+  espnId?: string;
   bid: number;
   franchiseId: string;
   franchiseName: string;
@@ -77,6 +81,8 @@ export async function loadActiveAuctions(opts: FetchOpts): Promise<HomepageAucti
       playerName: ident?.name ?? `Player ${playerId}`,
       position: ident?.position ?? '',
       nflTeam: ident?.nflTeam ?? '',
+      headshot: ident?.headshot,
+      espnId: ident?.espnId ?? undefined,
       bid: typeof auc.bid === 'number' ? auc.bid : 0,
       franchiseId: auc.franchise ?? '',
       franchiseName: team?.name ?? auc.franchise ?? 'Unknown',

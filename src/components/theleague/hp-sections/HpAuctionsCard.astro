@@ -3,29 +3,17 @@
  * HpAuctionsCard — Homepage card showing every currently active auction,
  * with the high bid, the high bidder, and a live "over in" countdown.
  *
- * Rows are rendered server-side from the latest auctionResults + transactions
- * snapshot; a small island script polls /api/live-auction every 60s and ticks
- * the time-left cells in place.
+ * Replaces the compact `AuctionStrip` on the homepage during the post-hero
+ * auction window. Rows are rendered server-side from the latest
+ * auctionResults + transactions snapshot; a small island script polls
+ * `/api/live-auction` every 60s and re-ticks the time-left cells in place.
  */
+import PlayerCell from '../PlayerCell.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
-
-interface AuctionRow {
-  playerId: string;
-  playerName: string;
-  position: string;
-  nflTeam: string;
-  bid: number;
-  franchiseId: string;
-  franchiseName: string;
-  franchiseAbbrev: string;
-  franchiseBanner?: string;
-  franchiseIcon?: string;
-  /** Unix seconds — last meaningful bid (or init if none yet). */
-  anchorTimestamp: number;
-}
+import type { HomepageAuctionRow } from '../../../utils/homepage-auctions';
 
 interface Props {
-  auctions: AuctionRow[];
+  auctions: HomepageAuctionRow[];
   /** External URL to MFL's auction landing page (place / track bids). */
   placeBidUrl: string;
   /** External URL to MFL's completed auctions report. */
@@ -73,10 +61,15 @@ const formatDollar = (n: number): string =>
         {auctions.map((row) => (
           <tr data-player-id={row.playerId}>
             <td class="hp-auc__cell-player">
-              <span class="hp-auc__player-name">{row.playerName}</span>
-              <span class="hp-auc__player-meta">
-                {row.position}{row.nflTeam ? ` · ${row.nflTeam}` : ''}
-              </span>
+              <PlayerCell
+                name={row.playerName}
+                headshot={row.headshot}
+                position={row.position}
+                nflTeam={row.nflTeam}
+                mflId={row.playerId}
+                espnId={row.espnId}
+                size="compact"
+              />
             </td>
             <td class="hp-auc__cell-bid">{formatDollar(row.bid)}</td>
             <td class="hp-auc__cell-bidder">
@@ -132,7 +125,11 @@ const formatDollar = (n: number): string =>
   </a>
 
   <p class="hp-auc__note">
-    Snapshot from MFL — bids and timers refresh every minute.
+    Bids refresh every 60 seconds; the timer ticks every 30s. New auctions show on page reload.
+    <button type="button" class="hp-auc__refresh" data-hp-auc-refresh hidden aria-live="polite">
+      New auctions — refresh
+    </button>
+    <span class="hp-auc__sep" aria-hidden="true">·</span>
     <a
       href={completedAuctionsUrl}
       class="hp-auc__note-link"
@@ -204,11 +201,18 @@ const formatDollar = (n: number): string =>
       if (!resp.ok) return;
       const data = await resp.json();
       const auctions: Record<string, { bid: number; lastBidTime: number | null; initTime: number | null; status: string }> = data?.auctions || {};
+
+      const renderedIds = new Set<string>();
       root.querySelectorAll<HTMLTableRowElement>('tbody tr[data-player-id]').forEach((tr) => {
         const id = tr.dataset.playerId;
         if (!id) return;
+        renderedIds.add(id);
         const auc = auctions[id];
-        if (!auc || auc.status !== 'active') return;
+        // Auction ended or disappeared — remove the row in place.
+        if (!auc || auc.status !== 'active') {
+          tr.remove();
+          return;
+        }
         const bidCell = tr.querySelector<HTMLElement>('.hp-auc__cell-bid');
         if (bidCell && typeof auc.bid === 'number') {
           const next = auc.bid >= 1000 ? `$${auc.bid.toLocaleString('en-US')}` : `$${auc.bid}`;
@@ -220,6 +224,16 @@ const formatDollar = (n: number): string =>
           timeCell.dataset.anchor = String(anchor);
         }
       });
+
+      // Detect new active auctions not yet in the table — surface a refresh pill
+      // so the user can reload to pick them up. We don't synthesize rows
+      // client-side because they need server-side player + team enrichment.
+      const newActive = Object.entries(auctions).some(
+        ([id, auc]) => auc && auc.status === 'active' && !renderedIds.has(id),
+      );
+      const refreshBtn = root.querySelector<HTMLButtonElement>('[data-hp-auc-refresh]');
+      if (refreshBtn) refreshBtn.hidden = !newActive;
+
       tickRows(root);
     } catch {
       /* best-effort */
@@ -241,6 +255,9 @@ const formatDollar = (n: number): string =>
     tickRows(root);
     tickHandle = window.setInterval(() => tickRows(root), 30_000);
     pollHandle = window.setInterval(() => refreshFromApi(root), 60_000);
+
+    const refreshBtn = root.querySelector<HTMLButtonElement>('[data-hp-auc-refresh]');
+    refreshBtn?.addEventListener('click', () => window.location.reload());
   }
 
   document.addEventListener('astro:page-load', init);
@@ -248,7 +265,7 @@ const formatDollar = (n: number): string =>
 
 <style>
   .hp-auc {
-    --dh-accent: var(--cat-free-agency, var(--color-secondary, #2e8743));
+    --dh-accent: var(--color-primary, #1c497c);
     background: var(--content-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
@@ -355,23 +372,11 @@ const formatDollar = (n: number): string =>
   .hp-auc__col-player { width: 38%; }
 
   .hp-auc__cell-player {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
     min-width: 0;
   }
 
-  .hp-auc__player-name {
-    font-weight: 600;
-    color: var(--color-gray-900, #111827);
-    line-height: 1.25;
-  }
-
-  .hp-auc__player-meta {
-    font-size: 0.6875rem;
-    color: var(--color-gray-500, #6b7280);
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
+  .hp-auc__cell-player :global(.player-cell) {
+    --player-avatar-size: 32px;
   }
 
   /* ── Bid ── */
@@ -424,7 +429,7 @@ const formatDollar = (n: number): string =>
   .hp-auc__cell-time--critical { color: var(--color-red-600, #dc2626); font-weight: 700; }
   .hp-auc__cell-time--ended { color: var(--color-gray-500, #6b7280); font-style: italic; }
 
-  /* ── Primary CTA ── */
+  /* ── Primary CTA — design-system primary button (blue) ── */
   .hp-auc__cta {
     display: inline-flex;
     align-items: center;
@@ -434,9 +439,9 @@ const formatDollar = (n: number): string =>
     width: 100%;
     padding: 0.75rem 1.25rem;
     border-radius: var(--radius-md, 0.5rem);
-    background: var(--color-secondary, #2e8743);
-    color: var(--color-white, #fff);
-    border: 1px solid var(--color-secondary, #2e8743);
+    background: var(--btn-primary-bg, var(--color-primary, #1c497c));
+    color: var(--btn-primary-text, #fff);
+    border: 1px solid var(--btn-primary-border, var(--color-primary, #1c497c));
     box-shadow: var(--shadow-sm);
     text-decoration: none;
     font-size: 0.875rem;
@@ -447,12 +452,12 @@ const formatDollar = (n: number): string =>
   }
 
   .hp-auc__cta:hover {
-    background: var(--color-secondary-dark, #26743a);
-    border-color: var(--color-secondary-dark, #26743a);
+    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
+    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
   }
 
   .hp-auc__cta:focus-visible {
-    outline: 2px solid var(--color-secondary, #2e8743);
+    outline: 2px solid var(--color-primary, #1c497c);
     outline-offset: 2px;
   }
 
@@ -484,6 +489,39 @@ const formatDollar = (n: number): string =>
 
   .hp-auc__note-link:hover {
     text-decoration: underline;
+  }
+
+  .hp-auc__sep {
+    color: var(--color-gray-300, #d1d5db);
+    margin: 0 0.25rem;
+  }
+
+  .hp-auc__refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, #fff);
+    color: var(--color-primary, #1c497c);
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .hp-auc__refresh[hidden] { display: none; }
+
+  .hp-auc__refresh:hover {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 14%, #fff);
+  }
+
+  .hp-auc__refresh:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
   }
 
   .hp-auc__ext {
