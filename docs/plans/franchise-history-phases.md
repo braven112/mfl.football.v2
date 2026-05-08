@@ -144,10 +144,21 @@ Two new sections on each franchise detail page.
 
 ### Trade ledger
 
-- Walk `data/theleague/mfl-feeds/<year>/transactions.json` for every year, filter `type=TRADE` involving this franchise.
-- Render a chronological list with each trade's date, partner franchise (linked), every asset gained/lost.
-- Group by year; collapsible by default.
-- Aggregation produces `franchises[id].trades[]` for cheap render.
+- [x] Walk `data/theleague/mfl-feeds/<year>/transactions.json` for every year,
+  filter `type=TRADE` involving this franchise. **Already aggregated in
+  Phase 2** as `franchises[id].trades[]` with bidirectional attribution.
+- [x] Render a chronological list with each trade's date, partner franchise
+  (linked → rivalry page), every asset sent/received. Grouped by year with
+  the most recent year auto-expanded; older years collapsed via `<details>`.
+  Lives between "Top Rivals" and "Points by Season" on the franchise detail
+  page.
+- [x] Asset formatter extracted to `src/utils/franchise-trade-asset.ts` and
+  shared with the rivalries page (`formatTradeAsset`).
+- Known data limitation (carried forward): trades from 2007-2010 render
+  unresolved player codes as "Player #NNNN" because MFL's per-year
+  `players.json` isn't available for those years. Fix would require a
+  cross-year fallback to the most recent `players.json` that contains the
+  ID — out of scope for the trade-ledger UI.
 
 ### Draft history
 
