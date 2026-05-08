@@ -1,0 +1,110 @@
+---
+/**
+ * Power Rankings — current week (latest published issue).
+ *
+ * Reads all power-rankings JSON files via Vite glob and picks the highest
+ * (year, week) combination. Permalink to a specific issue lives at
+ * /theleague/power-rankings/[year]/[week].
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import PowerRankingsIssue, { type PowerRankingsData } from '../../../components/theleague/PowerRankingsIssue.astro';
+
+const issueFiles = import.meta.glob<PowerRankingsData>(
+  '../../../data/theleague/power-rankings/*.json',
+  { eager: true, import: 'default' }
+);
+
+const issues = Object.entries(issueFiles)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-w(\d{1,2})\.json$/);
+    if (!m) return null;
+    return {
+      year: parseInt(m[1], 10),
+      week: parseInt(m[2], 10),
+      data: data as PowerRankingsData,
+    };
+  })
+  .filter((x): x is { year: number; week: number; data: PowerRankingsData } => x !== null)
+  .sort((a, b) => b.year - a.year || b.week - a.week);
+
+const latest = issues[0] ?? null;
+
+const olderIssues = issues.slice(1);
+---
+
+<TheLeagueLayout title={latest ? `${latest.data.headline} · Week ${latest.week} Power Rankings` : 'Power Rankings'}>
+  <main class="pr-page">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Power Rankings' },
+    ]} />
+
+    {latest ? (
+      <>
+        <PowerRankingsIssue issue={latest.data} />
+        {olderIssues.length > 0 && (
+          <aside class="pr-archive">
+            <h2 class="pr-archive__title">Past Issues</h2>
+            <ul class="pr-archive__list">
+              {olderIssues.map(i => (
+                <li>
+                  <a href={`/theleague/power-rankings/${i.year}/${i.week}`}>
+                    Week {i.week} · {i.year} — {i.data.headline}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )}
+      </>
+    ) : (
+      <section class="pr-empty">
+        <h1>Power Rankings — Coming Soon</h1>
+        <p>
+          The first weekly issue publishes Tuesday morning during the season.
+          Run <code>pnpm generate:power-rankings --year YYYY --week N</code> to seed an issue.
+        </p>
+      </section>
+    )}
+  </main>
+</TheLeagueLayout>
+
+<style>
+.pr-page { min-height: 60vh; }
+.pr-archive {
+  max-width: 1100px;
+  margin: 0 auto 3rem;
+  padding: 0 1rem;
+}
+.pr-archive__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+.pr-archive__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.pr-archive__list a {
+  color: var(--color-text, #111827);
+  text-decoration: none;
+}
+.pr-archive__list a:hover { text-decoration: underline; }
+.pr-empty {
+  max-width: 720px;
+  margin: 4rem auto;
+  padding: 0 1rem;
+  text-align: center;
+  color: var(--color-text-muted, #6b7280);
+}
+.pr-empty code {
+  background: var(--color-surface-2, #f3f4f6);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+}
+</style>
