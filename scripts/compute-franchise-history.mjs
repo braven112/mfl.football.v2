@@ -316,6 +316,41 @@ function getPlayoffMatchupKeys(playoffBrackets) {
   return keys;
 }
 
+// Pre-2020 brackets reference seeds (no franchise IDs), so getPlayoffMatchupKeys
+// returns an empty map and the rivalry pages undercount playoff meetings for
+// those years. Recover the matchups by walking schedule.json from the
+// championship bracket's startWeek onward — every game where BOTH franchises
+// are championship-bracket participants is a playoff meeting.
+//
+// Round labels are heuristic at this granularity (we don't try to recreate
+// MFL's exact bracket chain): the championship game gets relabelled later in
+// the per-franchise post-process from championship-history.json. Anything
+// else is "Playoffs" generic, which is enough for the rivalry-page sub-list.
+function getPreFranchiseIdPlayoffMatchupKeys(playoffBrackets, schedule, participants) {
+  const keys = new Map();
+  if (!schedule?.schedule?.weeklySchedule || participants.size < 2) return keys;
+  const meta = toArray(playoffBrackets?.playoffBrackets?.playoffBracket).find(
+    (b) => b.id === '1'
+  );
+  const startWeek = meta ? Number(meta.startWeek) || 0 : 0;
+  if (!startWeek) return keys;
+  for (const wk of toArray(schedule.schedule.weeklySchedule)) {
+    const week = Number(wk.week);
+    if (!week || week < startWeek) continue;
+    for (const m of toArray(wk.matchup)) {
+      const fr = toArray(m.franchise);
+      if (fr.length < 2) continue;
+      const idA = fr[0]?.id;
+      const idB = fr[1]?.id;
+      if (!idA || !idB) continue;
+      if (!participants.has(idA) || !participants.has(idB)) continue;
+      const [a, b] = [idA, idB].sort();
+      keys.set(`${week}:${a}:${b}`, { round: 'Playoffs', bracket: 'championship' });
+    }
+  }
+  return keys;
+}
+
 // --- Helpers for weekly results parsing ---
 function getWeeklyHighlightsForYear(weeklyResults, year) {
   const highlights = []; // { year, week, franchiseId, score, opponentId, opponentScore, margin }
@@ -472,6 +507,7 @@ for (const year of years) {
   const leagueJson = readJson(path.join(yearDir, 'league.json'));
   const playoffBrackets = readJson(path.join(yearDir, 'playoff-brackets.json'));
   const weeklyResults = readJson(path.join(yearDir, 'weekly-results.json'));
+  const schedule = readJson(path.join(yearDir, 'schedule.json'));
   const salaryData = readJson(path.join(SALARIES_DIR, `mfl-player-salaries-${year}.json`));
 
   // Map franchiseId -> division for this year
@@ -569,6 +605,22 @@ for (const year of years) {
     const bracketSize = getChampionshipBracketSize(playoffBrackets);
     for (const fid of inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize)) {
       playoffParticipants.add(fid);
+    }
+  }
+
+  // Same data gap on the matchup side: getPlayoffMatchupKeys can only tag
+  // games whose bracket entries carry franchise IDs. For pre-2020 years,
+  // walk the schedule from the championship bracket's startWeek onward and
+  // tag any participant-vs-participant game as a playoff meeting. The
+  // champion-vs-runner-up game gets re-labelled "Championship" by the
+  // post-process loop later.
+  if (playoffMatchupKeys.size === 0 && playoffParticipants.size >= 2) {
+    for (const [k, v] of getPreFranchiseIdPlayoffMatchupKeys(
+      playoffBrackets,
+      schedule,
+      playoffParticipants
+    )) {
+      playoffMatchupKeys.set(k, v);
     }
   }
 
@@ -722,8 +774,107 @@ for (const year of years) {
     });
   }
 
-  // Head-to-head records + biggest blowouts from weekly-results-raw (which
-  // has matchup pairings — weekly-results.json only has scores).
+  // Head-to-head records + biggest blowouts. weekly-results-raw.json carries
+  // both rosters and matchup pairings, but pre-2020 it only contains regular
+  // season weeks. schedule.json fills in the playoff weeks (and any other
+  // gaps) with matchup pairings + scores. We process weekly-results-raw
+  // first; any (week, smallerId, biggerId) tuple it covers becomes
+  // authoritative. Then we walk schedule.json and process anything not yet
+  // covered so playoff matchups land in matchupHistory.
+  const matchupSeen = new Set();
+  const recordMatchup = (aId, bId, aScore, bScore, weekNum) => {
+    if (!aId || !bId) return;
+    if (aScore === 0 && bScore === 0) return;
+    const [pa, pb] = [aId, bId].sort();
+    const seenKey = `${weekNum}:${pa}:${pb}`;
+    if (matchupSeen.has(seenKey)) return;
+    matchupSeen.add(seenKey);
+
+    const aTarget = attributeYear(aId, year);
+    const bTarget = attributeYear(bId, year);
+    const bothAttributed = aTarget != null && bTarget != null;
+
+    const playoffMatch = playoffMatchupKeys.get(`${weekNum}:${pa}:${pb}`) ?? null;
+
+    // Skip games where either side belongs to a former owner (target null).
+    // Each side gets credit independently — even if one franchise's owner
+    // changed mid-season, we still record the other side's H2H + blowout.
+    if (aTarget) {
+      const frA = ensureFranchise(aTarget);
+      // H2H opponent is the OTHER side's source franchise (stable across
+      // owner changes — Phase 2 rivalry pages key off this).
+      if (!frA.headToHead[bId]) frA.headToHead[bId] = { wins: 0, losses: 0, ties: 0 };
+      if (aScore > bScore) frA.headToHead[bId].wins++;
+      else if (aScore < bScore) frA.headToHead[bId].losses++;
+      else frA.headToHead[bId].ties++;
+
+      if (!frA.matchupHistory[bId]) frA.matchupHistory[bId] = [];
+      frA.matchupHistory[bId].push({
+        year,
+        week: weekNum,
+        score: aScore,
+        opponentScore: bScore,
+        isPlayoff: !!playoffMatch,
+        playoffRound: playoffMatch?.round ?? null,
+        playoffBracket: playoffMatch?.bracket ?? null,
+        sourceFranchiseId: aId !== aTarget ? aId : null,
+        opponentSourceId: bId !== bTarget ? bId : null,
+        bothAttributed,
+      });
+
+      const margin = aScore - bScore;
+      const game = {
+        year, week: weekNum,
+        score: aScore, opponentScore: bScore,
+        opponentFranchiseId: bId,
+        margin: Math.abs(margin),
+        sourceFranchiseId: aId !== aTarget ? aId : null,
+      };
+      if (margin > 0 && (!frA.highlights.biggestBlowoutWin || margin > frA.highlights.biggestBlowoutWin.margin)) {
+        frA.highlights.biggestBlowoutWin = game;
+      }
+      if (margin < 0 && (!frA.highlights.biggestBlowoutLoss || -margin > frA.highlights.biggestBlowoutLoss.margin)) {
+        frA.highlights.biggestBlowoutLoss = game;
+      }
+    }
+    if (bTarget) {
+      const frB = ensureFranchise(bTarget);
+      if (!frB.headToHead[aId]) frB.headToHead[aId] = { wins: 0, losses: 0, ties: 0 };
+      if (bScore > aScore) frB.headToHead[aId].wins++;
+      else if (bScore < aScore) frB.headToHead[aId].losses++;
+      else frB.headToHead[aId].ties++;
+
+      if (!frB.matchupHistory[aId]) frB.matchupHistory[aId] = [];
+      frB.matchupHistory[aId].push({
+        year,
+        week: weekNum,
+        score: bScore,
+        opponentScore: aScore,
+        isPlayoff: !!playoffMatch,
+        playoffRound: playoffMatch?.round ?? null,
+        playoffBracket: playoffMatch?.bracket ?? null,
+        sourceFranchiseId: bId !== bTarget ? bId : null,
+        opponentSourceId: aId !== aTarget ? aId : null,
+        bothAttributed,
+      });
+
+      const margin = bScore - aScore;
+      const game = {
+        year, week: weekNum,
+        score: bScore, opponentScore: aScore,
+        opponentFranchiseId: aId,
+        margin: Math.abs(margin),
+        sourceFranchiseId: bId !== bTarget ? bId : null,
+      };
+      if (margin > 0 && (!frB.highlights.biggestBlowoutWin || margin > frB.highlights.biggestBlowoutWin.margin)) {
+        frB.highlights.biggestBlowoutWin = game;
+      }
+      if (margin < 0 && (!frB.highlights.biggestBlowoutLoss || -margin > frB.highlights.biggestBlowoutLoss.margin)) {
+        frB.highlights.biggestBlowoutLoss = game;
+      }
+    }
+  };
+
   const weeklyRaw = readJson(path.join(yearDir, 'weekly-results-raw.json'));
   if (Array.isArray(weeklyRaw)) {
     for (const wkPayload of weeklyRaw) {
@@ -732,104 +883,33 @@ for (const year of years) {
       for (const m of matchups) {
         const fr = toArray(m?.franchise);
         if (fr.length !== 2) continue;
-        const a = fr[0], b = fr[1];
-        const aId = a?.id, bId = b?.id;
-        const aScore = parseNum(a?.score);
-        const bScore = parseNum(b?.score);
-        if (!aId || !bId) continue;
-        if (aScore === 0 && bScore === 0) continue; // unplayed week
-
-        const aTarget = attributeYear(aId, year);
-        const bTarget = attributeYear(bId, year);
-        // True when BOTH franchise IDs were held by the current owner that
-        // year. Rivalry pages filter on this so a meeting where one side
-        // belonged to a now-departed owner doesn't pollute current-owner
-        // rivalry records.
-        const bothAttributed = aTarget != null && bTarget != null;
-
-        // Detect playoff games via the bracket scores. Regular Week 15-17
-        // games on consolation/toilet-bowl brackets won't match — only
-        // championship + 3rd-place pairings get tagged.
-        const [pa, pb] = [aId, bId].sort();
-        const playoffMatch = playoffMatchupKeys.get(`${weekNum}:${pa}:${pb}`) ?? null;
-
-        // Skip games where either side belongs to a former owner (target null).
-        // Each side gets credit independently — even if one franchise's owner
-        // changed mid-season, we still record the other side's H2H + blowout.
-        if (aTarget) {
-          const frA = ensureFranchise(aTarget);
-          // H2H opponent is the OTHER side's source franchise (stable across
-          // owner changes — Phase 2 rivalry pages key off this).
-          if (!frA.headToHead[bId]) frA.headToHead[bId] = { wins: 0, losses: 0, ties: 0 };
-          if (aScore > bScore) frA.headToHead[bId].wins++;
-          else if (aScore < bScore) frA.headToHead[bId].losses++;
-          else frA.headToHead[bId].ties++;
-
-          if (!frA.matchupHistory[bId]) frA.matchupHistory[bId] = [];
-          frA.matchupHistory[bId].push({
-            year,
-            week: weekNum,
-            score: aScore,
-            opponentScore: bScore,
-            isPlayoff: !!playoffMatch,
-            playoffRound: playoffMatch?.round ?? null,
-            playoffBracket: playoffMatch?.bracket ?? null,
-            sourceFranchiseId: aId !== aTarget ? aId : null,
-            opponentSourceId: bId !== bTarget ? bId : null,
-            bothAttributed,
-          });
-
-          const margin = aScore - bScore;
-          const game = {
-            year, week: weekNum,
-            score: aScore, opponentScore: bScore,
-            opponentFranchiseId: bId,
-            margin: Math.abs(margin),
-            sourceFranchiseId: aId !== aTarget ? aId : null,
-          };
-          if (margin > 0 && (!frA.highlights.biggestBlowoutWin || margin > frA.highlights.biggestBlowoutWin.margin)) {
-            frA.highlights.biggestBlowoutWin = game;
-          }
-          if (margin < 0 && (!frA.highlights.biggestBlowoutLoss || -margin > frA.highlights.biggestBlowoutLoss.margin)) {
-            frA.highlights.biggestBlowoutLoss = game;
-          }
-        }
-        if (bTarget) {
-          const frB = ensureFranchise(bTarget);
-          if (!frB.headToHead[aId]) frB.headToHead[aId] = { wins: 0, losses: 0, ties: 0 };
-          if (bScore > aScore) frB.headToHead[aId].wins++;
-          else if (bScore < aScore) frB.headToHead[aId].losses++;
-          else frB.headToHead[aId].ties++;
-
-          if (!frB.matchupHistory[aId]) frB.matchupHistory[aId] = [];
-          frB.matchupHistory[aId].push({
-            year,
-            week: weekNum,
-            score: bScore,
-            opponentScore: aScore,
-            isPlayoff: !!playoffMatch,
-            playoffRound: playoffMatch?.round ?? null,
-            playoffBracket: playoffMatch?.bracket ?? null,
-            sourceFranchiseId: bId !== bTarget ? bId : null,
-            opponentSourceId: aId !== aTarget ? aId : null,
-            bothAttributed,
-          });
-
-          const margin = bScore - aScore;
-          const game = {
-            year, week: weekNum,
-            score: bScore, opponentScore: aScore,
-            opponentFranchiseId: aId,
-            margin: Math.abs(margin),
-            sourceFranchiseId: bId !== bTarget ? bId : null,
-          };
-          if (margin > 0 && (!frB.highlights.biggestBlowoutWin || margin > frB.highlights.biggestBlowoutWin.margin)) {
-            frB.highlights.biggestBlowoutWin = game;
-          }
-          if (margin < 0 && (!frB.highlights.biggestBlowoutLoss || -margin > frB.highlights.biggestBlowoutLoss.margin)) {
-            frB.highlights.biggestBlowoutLoss = game;
-          }
-        }
+        recordMatchup(
+          fr[0]?.id,
+          fr[1]?.id,
+          parseNum(fr[0]?.score),
+          parseNum(fr[1]?.score),
+          weekNum
+        );
+      }
+    }
+  }
+  // Pre-2020 weekly-results-raw stops at the regular season; schedule.json
+  // carries the full season including playoff weeks. recordMatchup dedupes
+  // against weekly-results-raw via matchupSeen.
+  if (schedule?.schedule?.weeklySchedule) {
+    for (const wk of toArray(schedule.schedule.weeklySchedule)) {
+      const weekNum = Number(wk.week);
+      if (!weekNum) continue;
+      for (const m of toArray(wk.matchup)) {
+        const fr = toArray(m?.franchise);
+        if (fr.length !== 2) continue;
+        recordMatchup(
+          fr[0]?.id,
+          fr[1]?.id,
+          parseNum(fr[0]?.score),
+          parseNum(fr[1]?.score),
+          weekNum
+        );
       }
     }
   }
@@ -958,16 +1038,25 @@ for (const [id, fr] of franchiseMap) {
       const meetings = fr.matchupHistory[opponent] || [];
       const yearMeetings = meetings.filter((m) => m.year === year);
       if (!yearMeetings.length) return;
-      // If any are already tagged via bracket data, skip.
-      if (yearMeetings.some((m) => m.isPlayoff)) return;
+      // Skip only if the latest meeting is already labeled with a more
+      // specific round than the generic "Playoffs" fallback. Otherwise we
+      // upgrade the round name in place.
       const latest = yearMeetings[yearMeetings.length - 1];
+      if (latest.playoffRound && latest.playoffRound !== 'Playoffs' && latest.playoffRound !== round) {
+        return;
+      }
       latest.isPlayoff = true;
       latest.playoffRound = round;
       latest.playoffBracket = bracket;
     };
     tagLatestMeeting(entry.champion, entry.runnerUp, 'Championship', 'championship');
-    // We don't know the 3rd-place opponent from the manual record (only the
-    // winner), so consolation enrichment is skipped here.
+    // 3rd-place tag — populated from championship-history.json when the entry
+    // carries `thirdPlace` + `thirdPlaceLoser`. Many older years don't have
+    // this curated, in which case the consolation game stays as generic
+    // "Playoffs" (the rivalry page still counts it as a playoff meeting).
+    if (entry.thirdPlace && entry.thirdPlaceLoser) {
+      tagLatestMeeting(entry.thirdPlace, entry.thirdPlaceLoser, '3rd Place', 'consolation');
+    }
   }
 
   // Attach current identity for index/detail rendering
