@@ -68,6 +68,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
                 nflTeam={row.nflTeam}
                 mflId={row.playerId}
                 espnId={row.espnId}
+                playerData={row.modalData}
                 size="compact"
               />
             </td>
@@ -151,6 +152,8 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
    * adding/removing rows at runtime — if an auction ends or is added the
    * server-rendered table will reflect it on the next page load.
    */
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
   const BID_WINDOW_MS = 36 * 60 * 60 * 1000;
 
   function timeLeftMs(anchorSeconds: number): number {
@@ -263,6 +266,10 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
     const refreshBtn = root.querySelector<HTMLButtonElement>('[data-hp-auc-refresh]');
     refreshBtn?.addEventListener('click', () => window.location.reload());
+
+    // Open PlayerDetailsModal when a player name is clicked. The modal itself
+    // is mounted once at the page level (theleague/index.astro).
+    initPlayerModalTrigger(root);
   }
 
   document.addEventListener('astro:page-load', init);
