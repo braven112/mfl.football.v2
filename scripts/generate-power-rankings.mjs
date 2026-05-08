@@ -23,6 +23,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { callAnthropic } from './article-utils/ai-client.mjs';
+import {
+  buildFactSheet,
+  getSystemPrompt,
+  getUserPrompt,
+  applyAIVoice,
+} from './lib/power-rankings-ai.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -40,13 +47,15 @@ const W_ALL_PLAY = 0.15;
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { year: null, week: null, dryRun: false, regenerate: false };
+  const opts = { year: null, week: null, dryRun: false, regenerate: false, ai: null };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--year': opts.year = parseInt(args[++i], 10); break;
       case '--week': opts.week = parseInt(args[++i], 10); break;
       case '--dry-run': opts.dryRun = true; break;
       case '--regenerate': opts.regenerate = true; break;
+      case '--ai': opts.ai = true; break;
+      case '--no-ai': opts.ai = false; break;
       case '-h':
       case '--help':
         printUsage();
@@ -57,7 +66,10 @@ function parseArgs() {
 }
 
 function printUsage() {
-  console.log(`Usage: node scripts/generate-power-rankings.mjs --year YYYY --week N [--dry-run] [--regenerate]`);
+  console.log(`Usage: node scripts/generate-power-rankings.mjs --year YYYY --week N [--dry-run] [--regenerate] [--ai|--no-ai]`);
+  console.log(`  --ai       Force Claude voice (requires ANTHROPIC_API_KEY)`);
+  console.log(`  --no-ai    Force templated voice (no API call)`);
+  console.log(`  default    AI when ANTHROPIC_API_KEY is set, templated otherwise`);
 }
 
 // ─── Loaders ───────────────────────────────────────────────────────
@@ -471,7 +483,7 @@ function buildHeadlineAndLede({ teams, rankings, awards, week, year }) {
 
 // ─── Main ──────────────────────────────────────────────────────────
 
-export async function generatePowerRankings({ year, week }) {
+export async function generatePowerRankings({ year, week, useAI = false }) {
   const dir = feedDir(year);
   const teamsConfig = await loadTeamsConfig();
 
@@ -528,18 +540,25 @@ export async function generatePowerRankings({ year, week }) {
     week,
   });
 
-  // Build blurbs (templated)
-  const rankings = namedRankings.map(r => ({
-    ...r,
-    blurb: rankingBlurb(
-      { ...r, rolling3Ppg: r.metrics.rolling3Ppg, seasonPpg: r.metrics.seasonPpg },
-      teamsConfig.teams,
-      standingsByFid,
-      schedule,
-      weeklyResults,
-      week
-    ),
-  }));
+  // Build blurbs (templated baseline). We also stash the structured facts
+  // (last3 record, streak) on each row so the AI fact sheet can reference them.
+  const rankings = namedRankings.map(r => {
+    const last3Record = rollingRecord(schedule, weeklyResults, r.franchiseId, week, 3);
+    const streak = parseStreak(standingsByFid.get(r.franchiseId)?.strk);
+    const factsForBlurb = { last3Record, streak };
+    return {
+      ...r,
+      blurb: rankingBlurb(
+        { ...r, rolling3Ppg: r.metrics.rolling3Ppg, seasonPpg: r.metrics.seasonPpg },
+        teamsConfig.teams,
+        standingsByFid,
+        schedule,
+        weeklyResults,
+        week
+      ),
+      factsForBlurb,
+    };
+  });
 
   const awards = {
     statOfWeek,
@@ -567,18 +586,55 @@ export async function generatePowerRankings({ year, week }) {
 
   const generatedAt = new Date().toISOString();
 
-  return {
+  let issue = {
     year,
     week,
     publishedAt: generatedAt,
     generatedAt,
-    voiceMode: 'templated', // Phase 1; switches to 'schefter' when LLM lands
+    voiceMode: 'templated',
     headline,
     lede,
     rankings,
     awards,
     standings: standingsSnapshot,
   };
+
+  if (useAI) {
+    issue = await applySchefterVoice(issue, teamsConfig.teams);
+  }
+
+  // Strip transient fact-bag from output rows
+  issue.rankings = issue.rankings.map(({ factsForBlurb, ...rest }) => rest);
+
+  return issue;
+}
+
+async function applySchefterVoice(issue, teams) {
+  const factSheet = buildFactSheet({ issue, teams });
+  console.log('  Calling Claude for Schefter voice…');
+  let aiOutput;
+  try {
+    aiOutput = await callAnthropic(getSystemPrompt(), getUserPrompt(factSheet), 4000);
+  } catch (err) {
+    console.warn(`  [warn] AI call failed (${err.message}). Keeping templated voice.`);
+    return issue;
+  }
+
+  const { issue: voiced, report } = applyAIVoice(issue, aiOutput, teams);
+
+  const blurbsApplied = report.blurbs.applied;
+  const blurbsTotal = blurbsApplied + report.blurbs.fallback;
+  const awardsApplied = report.awardBlurbs.applied;
+  const awardsTotal = awardsApplied + report.awardBlurbs.fallback;
+  console.log(`  Voice: headline=${report.headline}, lede=${report.lede}, blurbs=${blurbsApplied}/${blurbsTotal}, awardBlurbs=${awardsApplied}/${awardsTotal}`);
+  if (report.blurbs.fails.length > 0) {
+    for (const f of report.blurbs.fails) {
+      console.warn(`    [fallback] ${f.franchiseId}: ${f.errors.join('; ')}`);
+    }
+  }
+
+  voiced.voiceMode = blurbsApplied > 0 ? 'schefter' : 'templated';
+  return voiced;
 }
 
 function round2(x) {
@@ -604,7 +660,15 @@ async function main() {
     }
   }
 
-  const issue = await generatePowerRankings({ year: opts.year, week: opts.week });
+  // Resolve voice mode: explicit flag wins, otherwise auto on API key.
+  const useAI = opts.ai === true
+    ? true
+    : opts.ai === false
+      ? false
+      : Boolean(process.env.ANTHROPIC_API_KEY);
+  console.log(`  Voice: ${useAI ? 'schefter (AI)' : 'templated'}`);
+
+  const issue = await generatePowerRankings({ year: opts.year, week: opts.week, useAI });
 
   if (opts.dryRun) {
     console.log('--- DRY RUN ---');
