@@ -7,11 +7,13 @@ import leagueConfig from '../../../data/theleague.config.json';
 
 export const prerender = false;
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 const { id } = Astro.params;
 const fr: any = id ? (franchiseHistory.franchises as any)[id] : null;
 
 if (!fr) {
-  return Astro.redirect(resolveLeaguePath('/franchises'));
+  return Astro.redirect(resolveLeaguePath('/theleague/franchises', hideLeaguePrefix));
 }
 
 const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === id);
@@ -259,6 +261,61 @@ const formatRecord = (w: number, l: number, t: number) =>
   t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`;
 
 const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
+
+// Top rivals — opponents with the most-intense shared history under the
+// current owners. Scoring blends total games, win/loss closeness, and a
+// playoff-meeting bonus; a 4-game floor filters out one-off matchups.
+type RivalEntry = {
+  opponentId: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  games: number;
+  playoffGames: number;
+  intensity: number;
+};
+const rivalEntries: RivalEntry[] = [];
+const matchupHistory: Record<string, any[]> = (fr.matchupHistory || {}) as any;
+for (const oppId of Object.keys(matchupHistory)) {
+  if (oppId === id) continue; // skip self-matches caused by ownerHistory cross-attribution
+  const meetings = (matchupHistory[oppId] || []).filter((m) => m.bothAttributed);
+  if (meetings.length < 4) continue;
+  let wins = 0, losses = 0, ties = 0, playoffGames = 0;
+  for (const m of meetings) {
+    if (m.score > m.opponentScore) wins++;
+    else if (m.score < m.opponentScore) losses++;
+    else ties++;
+    if (m.isPlayoff) playoffGames++;
+  }
+  const totalDecided = wins + losses + ties;
+  const closeness = totalDecided > 0 ? 1 - Math.abs(wins - losses) / totalDecided : 0;
+  const intensity = closeness * Math.log2(1 + meetings.length + playoffGames * 3);
+  rivalEntries.push({
+    opponentId: oppId,
+    wins, losses, ties,
+    games: meetings.length,
+    playoffGames,
+    intensity,
+  });
+}
+rivalEntries.sort((a, b) => b.intensity - a.intensity);
+const topRivals = rivalEntries.slice(0, 5);
+
+const opponentMeta: Record<string, any> = Object.fromEntries(
+  (leagueConfig.teams as any[]).map((t) => [
+    t.franchiseId,
+    {
+      name: t.name,
+      nameMedium: t.nameMedium ?? t.name,
+      nameShort: t.nameShort ?? t.nameMedium ?? t.name,
+      icon: t.icon,
+      color: t.color,
+    },
+  ])
+);
+
+const canonicalRivalryPair = (a: string, b: string): string =>
+  [a, b].sort().join('-vs-');
 ---
 
 <TheLeagueLayout title={`${fr.currentName} — Franchise History`}>
@@ -275,7 +332,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
           <img src={fr.currentBanner} alt="" />
           {fr.championships.length > 0 && (
             <div class="crown" title={`${fr.championships.length}x Champion`}>
-              <span aria-hidden="true">👑</span>
+              <span class="crown-icon" aria-hidden="true">🏆</span>
               <span class="crown-count">{fr.championships.length}</span>
             </div>
           )}
@@ -396,6 +453,44 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
       </section>
     )}
 
+    {topRivals.length > 0 && (
+      <section class="rivals">
+        <h2>Top Rivals</h2>
+        <p class="dim small">
+          Most-intense shared history under the current owners — closeness, total meetings, and playoff stakes weighted.
+        </p>
+        <ul class="rivals-list">
+          {topRivals.map((r) => {
+            const meta = opponentMeta[r.opponentId];
+            const name = meta?.nameShort || meta?.nameMedium || meta?.name || r.opponentId;
+            const iconSrc = meta?.icon || `/assets/theleague/icons/${r.opponentId}.png`;
+            return (
+              <li>
+                <a class="rival-card" href={resolveLeaguePath(`/theleague/rivalries/${canonicalRivalryPair(id!, r.opponentId)}`, hideLeaguePrefix)}>
+                  <img src={iconSrc} alt="" class="rival-icon" loading="lazy" />
+                  <div class="rival-text">
+                    <div class="rival-name">{name}</div>
+                    <div class="rival-record">
+                      {formatRecord(r.wins, r.losses, r.ties)}
+                      <span class="dim"> · {r.games} game{r.games === 1 ? '' : 's'}</span>
+                    </div>
+                    {r.playoffGames > 0 && (
+                      <div class="rival-playoff">
+                        🔥 {r.playoffGames} playoff
+                      </div>
+                    )}
+                  </div>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+        <p class="dim small">
+          <a href={resolveLeaguePath('/theleague/rivalries', hideLeaguePrefix)}>See full rivalry matrix →</a>
+        </p>
+      </section>
+    )}
+
     {fr.yearByYear && fr.yearByYear.length > 0 && (
       <section class="scoring-chart-section">
         <h2>Points by Season</h2>
@@ -491,6 +586,48 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
       </div>
     </section>
 
+    {fr.badges && fr.badges.length > 0 && (
+      <section class="badges-section">
+        <h2>Badges</h2>
+        <p class="dim small">
+          Career milestones, single-season feats, and league records held by this franchise.
+        </p>
+        {['career', 'season', 'game'].map((tier) => {
+          const tierBadges = fr.badges.filter((b: any) => b.tier === tier);
+          if (tierBadges.length === 0) return null;
+          const tierLabel = tier === 'career' ? 'Career' : tier === 'season' ? 'Single-Season' : 'Single-Game';
+          return (
+            <div class="badge-tier">
+              <h3 class="badge-tier-label">{tierLabel}</h3>
+              <ul class="badge-grid">
+                {tierBadges.map((b: any) => (
+                  <li class={`badge-card badge-card--${b.tier}`} title={b.description}>
+                    <span class="badge-icon" aria-hidden="true">{b.icon}</span>
+                    <div class="badge-text">
+                      <div class="badge-name">{b.name}</div>
+                      <div class="badge-awards">
+                        {b.awards.map((a: any, i: number) => {
+                          const parts = [];
+                          if (a.year) parts.push(a.year);
+                          if (a.week) parts.push(`Wk ${a.week}`);
+                          if (a.value != null) parts.push(`${a.value}${a.suffix ? ' ' + a.suffix : ''}`);
+                          if (a.label && parts.length === 0) parts.push(a.label);
+                          else if (a.label) parts.push(`(${a.label})`);
+                          return (
+                            <span class="badge-award" key={i}>{parts.join(' · ') || '—'}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </section>
+    )}
+
     <section class="eras">
       <h2>Era History</h2>
       {eraStats
@@ -498,7 +635,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
         .map(({ era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers }) => (
         <div class="era" id={`era-${era.yearStart}`}>
           <div class="era-header">
-            {era.icon && <img src={era.icon} alt="" class="era-icon" />}
+            {era.icon && <img src={resolveRowIcon(era)} alt="" class="era-icon" />}
             <div>
               <h3>
                 {era.name}
@@ -565,7 +702,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     </section>
 
     <p class="footnote">
-      <a href={resolveLeaguePath('/franchises')}>← All franchises</a>
+      <a href={resolveLeaguePath('/theleague/franchises', hideLeaguePrefix)}>← All franchises</a>
     </p>
   </article>
 </TheLeagueLayout>
@@ -592,32 +729,34 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
   }
   .hero-banner {
     position: relative;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
     line-height: 0;
   }
   .hero-banner img {
-    width: calc(100% + 20px);
+    width: 100%;
     height: auto;
-    margin-left: -10px;
     display: block;
   }
   .crown {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: rgba(0, 0, 0, 0.7);
+    bottom: calc(-1.1rem + 10px);
+    right: 0;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.78);
     color: #ffd54a;
-    border-radius: 999px;
-    padding: 0.25rem 0.625rem;
-    font-size: 0.875rem;
-    font-weight: 700;
-    display: flex;
+    border-radius: 50%;
+    display: inline-flex;
+    flex-direction: row;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: center;
+    gap: 0.125rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   }
-  .crown-count { font-size: 0.875rem; }
+  .crown-icon { font-size: 0.6875rem; }
+  .crown-count { font-size: 0.6875rem; }
 
   .hero-text h1 {
     margin: 0 0 0.25rem;
@@ -627,6 +766,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     margin: 0 0 0.75rem;
     color: var(--text-secondary, #666);
     font-size: 0.875rem;
+    white-space: nowrap;
   }
 
   .badges-bar {
@@ -795,6 +935,68 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
   .award--jerry { border-left-color: #8b2a1f; background: #fff5f3; }
   .award--osweiler { border-left-color: #4d2c66; background: #f9f4fc; }
 
+  .badges-section {
+    margin-bottom: 2.5rem;
+  }
+  .badges-section .small {
+    margin: 0 0 1rem;
+  }
+  .badge-tier {
+    margin-bottom: 1.25rem;
+  }
+  .badge-tier-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary, #888);
+    font-weight: 600;
+  }
+  .badge-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.625rem;
+  }
+  .badge-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    background: #fff;
+    border: 1px solid var(--border, #e5e5e5);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.5rem;
+  }
+  .badge-card--career { border-left-color: #b58a00; }
+  .badge-card--season { border-left-color: #1f5d2d; }
+  .badge-card--game { border-left-color: #8b2a1f; }
+  .badge-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .badge-text {
+    min-width: 0;
+    flex: 1;
+  }
+  .badge-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+  }
+  .badge-awards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary, #666);
+    font-variant-numeric: tabular-nums;
+  }
+
   .era {
     margin-bottom: 2rem;
     padding: 1rem 1.25rem;
@@ -804,7 +1006,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
   }
   .year-by-year-scroll {
     max-height: 480px;
-    overflow-y: auto;
+    overflow: auto;
     margin: 0 -0.25rem;
     padding: 0 0.25rem;
     /* contain scrolling so a fast scroll inside the table doesn't bubble
@@ -873,6 +1075,7 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     text-align: left;
     border-bottom: 1px solid var(--border, #ececec);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .year-by-year th {
     font-size: 0.6875rem;
@@ -923,5 +1126,69 @@ const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
     margin-top: 2rem;
     text-align: center;
     font-size: 0.875rem;
+  }
+
+  /* ============================================
+   * RIVALS STRIP
+   * ============================================ */
+  .rivals {
+    margin: 2rem 0;
+  }
+  .rivals h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.25rem;
+  }
+  .rivals p { margin: 0 0 0.875rem; }
+  .rivals-list {
+    list-style: none;
+    margin: 0 0 0.625rem;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.625rem;
+  }
+  .rival-card {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--surface-2, #f7f7f7);
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .rival-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent, var(--color-primary, #1c497c));
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .rival-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .rival-text { min-width: 0; line-height: 1.2; }
+  .rival-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rival-record {
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary, #555);
+  }
+  .rival-playoff {
+    font-size: 0.6875rem;
+    color: #7a5b00;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 0.125rem;
   }
 </style>
