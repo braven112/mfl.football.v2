@@ -276,9 +276,8 @@ export function getPlayerEligibility(
   // 2. Check for rookie override (RC or TO player before August cutdown)
   // Rookies drafted in our league this year — including 1st-rounders who carry
   // the TO (Team Option) tag — can adjust their initial contract length until
-  // the 3rd Sunday in August. RC picks may declare 1-3 years; 1st-round TO
-  // picks are signed to a 4-year rookie deal with a 5th-year option, so they
-  // may declare 1-4 years.
+  // the 3rd Sunday in August. All rookies may declare 1–4 years so an owner
+  // can always revert to the default 4-year deal even after a prior override.
   const isFirstRoundRookieTag = contractInfo === 'TO';
   if ((isRC || isFirstRoundRookieTag) && isMFLRookie(playerInfo, currentYear)) {
     const cutdownDate = getAugustCutdownDate(now.getFullYear());
@@ -289,7 +288,7 @@ export function getPlayerEligibility(
         declarationType: 'rookie-override',
         deadlineTimestamp: Math.floor(cutdownDate.getTime() / 1000),
         isExpired: false,
-        yearOptions: isFirstRoundRookieTag ? [1, 2, 3, 4] : [1, 2, 3],
+        yearOptions: [1, 2, 3, 4],
       };
     }
   }

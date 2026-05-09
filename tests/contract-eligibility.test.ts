@@ -399,7 +399,8 @@ describe('getPlayerEligibility', () => {
       const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
       expect(result.eligible).toBe(true);
       expect(result.declarationType).toBe('rookie-override');
-      expect(result.yearOptions).toEqual([1, 2, 3]);
+      // 1–4 always available so owners can revert to the default 4-year deal.
+      expect(result.yearOptions).toEqual([1, 2, 3, 4]);
     });
 
     it('does not mark RC player without MFL rookie status', () => {

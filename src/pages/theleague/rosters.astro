@@ -7099,6 +7099,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               || playerElig?.contractInfo
               || '';
             const isRookieContract = playerElig?.isRookieContract ?? false;
+            // Forward the underlying declaration type / year options so the action
+            // sheet can offer "Declare Contract" for fresh acquisitions and rookies.
+            const isOwnTeam = !!config.authUser?.franchiseId
+              && config.authUser.franchiseId === (btn.dataset.playerFranchiseId || currentTeam);
+            const allowDeclare = isOwnTeam && playerElig && !playerElig.isExpired
+              && (playerElig.type === 'new-acquisition' || playerElig.type === 'rookie-override');
             openDeclarationModal({
               ...rawPlayer,
               eligibility: {
@@ -7108,6 +7114,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 contractInfo,
                 isRookieContract,
                 displayTag: rawPlayer.displayTag,
+                declareType: allowDeclare ? playerElig.type : null,
+                declareYearOptions: allowDeclare ? (playerElig.yearOptions || null) : null,
+                deadlineTimestamp: allowDeclare ? playerElig.deadlineTimestamp : undefined,
+                acquisitionTimestamp: allowDeclare ? playerElig.acquisitionTimestamp : undefined,
               },
               _rawPlayer: rawPlayer,
             });
@@ -7820,8 +7830,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const dot3 = document.getElementById('cdm-step-dot-3');
         const dot3Active = dot3?.classList.contains('active') && dot3?.style.display !== 'none';
         if (dot3Active) {
-          goToVetExtYearStep(); // Step 3 → Step 2 (year select)
-        } else if (cdmEl?.dataset.cdmMode === 'action-select') {
+          goToVetExtYearStep(); // Step 3 → Step 2 (year select) — vet-ext only flow with 3 steps
+        } else if (cdmEl?.dataset.cdmMode === 'action-select' || cdmEl?.dataset.cdmMode === 'declare-contract') {
           goToActionSelectStep(); // Step 2 → Step 1 (action select)
         } else {
           goToVetExtStep1(); // Direct vet-ext step 2 → step 1
@@ -7836,7 +7846,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmStepDot1El.addEventListener('click', () => {
         if (!cdmStepDot1El.classList.contains('completed')) return;
         const cdmEl = document.getElementById('contract-declaration-modal');
-        if (cdmEl?.dataset.cdmMode === 'action-select') {
+        if (cdmEl?.dataset.cdmMode === 'action-select' || cdmEl?.dataset.cdmMode === 'declare-contract') {
           goToActionSelectStep(); // 3-step: return to action select
         } else {
           goToVetExtStep1(); // 2-step direct vet-ext: return to year selection
@@ -7852,7 +7862,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         if (!cdmStepDot2El.classList.contains('completed')) return;
         const dot3 = document.getElementById('cdm-step-dot-3');
         if (dot3?.classList.contains('active') && dot3?.style.display !== 'none') {
-          goToVetExtYearStep(); // Step 3 → Step 2 (year select)
+          goToVetExtYearStep(); // Step 3 → Step 2 (year select) — vet-ext only flow with 3 steps
         }
       });
     }
@@ -8433,6 +8443,24 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const isTO = contractInfo === 'TO';
       const isRC = elig.isRookieContract;
 
+      // Declare Contract — fresh acquisition (auction/BBID/free-agent) or rookie override window
+      if (elig.declareType === 'new-acquisition' || elig.declareType === 'rookie-override') {
+        const opts = Array.isArray(elig.declareYearOptions) && elig.declareYearOptions.length
+          ? elig.declareYearOptions
+          : (elig.declareType === 'rookie-override' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
+        const min = opts[0];
+        const max = opts[opts.length - 1];
+        const range = min === max ? `${min} year${min === 1 ? '' : 's'}` : `${min}–${max} years`;
+        const desc = elig.declareType === 'rookie-override'
+          ? `Set rookie contract length (${range})`
+          : `Set initial contract length (${range})`;
+        actionOptions.appendChild(makeCdmActionBtn(
+          'declare-contract', 'Declare Contract', desc,
+          () => goToDeclareContractStep(),
+          false, 'icon-coin'
+        ));
+      }
+
       // Tag-like actions (1 year remaining)
       if (contractYears === 1 && !isTO) {
         // Franchise Tag — non-TO players only
@@ -8990,7 +9018,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const goToActionSelectStep = () => {
       cdmCurrentStep = 1;
       cdmFlowType = 'action-select';
+      cdmViaActionSelect = true;
       cutConfirmed = false;
+      const cdmEl = document.getElementById('contract-declaration-modal');
+      if (cdmEl) cdmEl.dataset.cdmMode = 'action-select';
 
       const dot1 = document.getElementById('cdm-step-dot-1');
       const dot2 = document.getElementById('cdm-step-dot-2');
@@ -9029,6 +9060,102 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmSubmitBtn.style.display = 'none';
 
       if (cdmPlayerData) populateCdmActionOptions(cdmPlayerData.eligibility);
+    };
+
+    // ----------------------------------------------------------------
+    // goToDeclareContractStep — year selection for new-acquisition /
+    // rookie-override players entered via the action sheet. This is a
+    // real declaration (submits to the API), so cdmViaActionSelect is
+    // cleared after entry. Mirrors the yrs-chip flow.
+    // ----------------------------------------------------------------
+    const goToDeclareContractStep = () => {
+      const elig = cdmPlayerData?.eligibility;
+      if (!elig?.declareType) return;
+      const declareType = elig.declareType;
+
+      // Switch out of sandbox/action-select mode so submit hits the API
+      cdmViaActionSelect = false;
+      cdmCurrentStep = 2;
+      cdmFlowType = declareType;
+      const cdmEl = document.getElementById('contract-declaration-modal');
+      if (cdmEl) cdmEl.dataset.cdmMode = 'declare-contract';
+
+      const typeBadge = document.getElementById('cdm-type-badge');
+      if (typeBadge) {
+        typeBadge.style.display = '';
+        typeBadge.dataset.type = declareType;
+        document.getElementById('cdm-type-label').textContent = DECLARATION_TYPE_LABELS[declareType] || 'Declare Contract';
+      }
+
+      const dot1 = document.getElementById('cdm-step-dot-1');
+      const dot2 = document.getElementById('cdm-step-dot-2');
+      const dot3 = document.getElementById('cdm-step-dot-3');
+      const line1 = document.getElementById('cdm-step-line-1');
+      const line2 = document.getElementById('cdm-step-line-2');
+      const stepLabel = document.getElementById('cdm-stepper-label');
+
+      if (dot2) dot2.style.display = '';
+      if (line1) line1.style.display = '';
+      if (dot1) { dot1.classList.remove('active'); dot1.classList.add('completed'); }
+      if (dot2) { dot2.classList.remove('completed'); dot2.classList.add('active'); }
+      if (dot3) dot3.style.display = 'none';
+      if (line1) line1.classList.add('completed');
+      if (line2) line2.style.display = 'none';
+      if (stepLabel) stepLabel.textContent = 'Step 2 of 2';
+
+      if (cdmBackBtn) cdmBackBtn.style.display = '';
+
+      const metricsEl = document.getElementById('cdm-metrics');
+      if (metricsEl) metricsEl.style.display = '';
+
+      const actionSection = document.getElementById('cdm-action-section');
+      if (actionSection) actionSection.style.display = 'none';
+      document.getElementById('cdm-extension-section').style.display = 'none';
+      document.getElementById('cdm-formula-section').style.display = 'none';
+      document.getElementById('cdm-tag-section').style.display = 'none';
+
+      const yearSection = document.getElementById('cdm-year-section');
+      if (yearSection) yearSection.style.display = '';
+
+      const yearOptions = (Array.isArray(elig.declareYearOptions) && elig.declareYearOptions.length)
+        ? elig.declareYearOptions
+        : (declareType === 'rookie-override' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
+      const yearContainer = document.getElementById('cdm-year-options');
+      yearContainer.replaceChildren();
+      yearOptions.forEach(yr => {
+        const btn = document.createElement('button');
+        btn.className = 'cdm-year-btn';
+        btn.dataset.years = String(yr);
+        const numEl = document.createElement('span');
+        numEl.className = 'cdm-year-btn__number';
+        numEl.textContent = String(yr);
+        const labelEl = document.createElement('span');
+        labelEl.className = 'cdm-year-btn__label';
+        labelEl.textContent = yr === 1 ? 'YEAR' : 'YEARS';
+        btn.appendChild(numEl);
+        btn.appendChild(labelEl);
+        btn.addEventListener('click', () => {
+          yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          cdmSelectedYears = yr;
+          cdmSelectedSalary = elig.currentSalary;
+          cdmSubmitBtn.disabled = false;
+          updateProjectionTable(elig.currentSalary, yr, null, config.salaryYears?.[0]);
+          updateCapImpact(elig.currentSalary, yr, config.salaryYears?.[0]);
+        });
+        yearContainer.appendChild(btn);
+      });
+
+      // Make sure the underlying eligibility surface used by the API submit path
+      // carries the real type/timestamps from the eligibility engine.
+      cdmPlayerData.eligibility.type = declareType;
+      cdmPlayerData.eligibility.yearOptions = yearOptions;
+
+      cdmSelectedYears = null;
+      cdmSelectedSalary = null;
+      cdmSubmitBtn.disabled = true;
+      cdmSubmitBtn.style.display = '';
+      cdmSubmitBtn.textContent = 'Declare Contract';
     };
 
     // ----------------------------------------------------------------
@@ -9164,6 +9291,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     // ----------------------------------------------------------------
     // goToRookieExtReview — rookie extension review (step 2 of 2)
+    // Rookie extensions are always +2 years per league rules; no year
+    // picker, just a confirmation/review step.
     // ----------------------------------------------------------------
     const goToRookieExtReview = () => {
       cdmCurrentStep = 2;
@@ -9229,10 +9358,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const eqEl = document.getElementById('cdm-formula-equation');
         if (eqEl) {
           eqEl.replaceChildren();
-          eqEl.appendChild(document.createTextNode('(Top 5 Avg \u00D7 Ext Yrs / (Existing + Ext)) + Salary'));
+          eqEl.appendChild(document.createTextNode('(Top 5 Avg × Ext Yrs / (Existing + Ext)) + Salary'));
           eqEl.appendChild(document.createElement('br'));
           eqEl.appendChild(document.createTextNode(
-            '(' + formatSalaryCompact(avgSalary) + ' \u00D7 ' + extYears +
+            '(' + formatSalaryCompact(avgSalary) + ' × ' + extYears +
             ' / (' + existingYears + ' + ' + extYears + ')) + ' + formatSalaryCompact(baseSalary)
           ));
         }
