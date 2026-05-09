@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-05-09T13-43-09.690Z",
+  "snapshot": "2026-05-09T14-14-26.289Z",
   "week": "off-11",
   "metadata": {
     "leagueId": "13522",
@@ -15,22 +15,22 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-09T13:43:09.970Z",
+    "fetchedAt": "2026-05-09T14:14:26.813Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-11).",
-    "generatedAt": "2026-05-09T13:43:09.970Z"
+    "generatedAt": "2026-05-09T14:14:26.813Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 138,
+      "totalPlayers": 139,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
       "starterAverage": 4024238.15,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 1867185.57,
-      "medianSalary": 800263.75,
+      "averageSalary": 1856810.13,
+      "medianSalary": 768652.5,
       "topPlayers": [
         {
           "id": "15287",
@@ -859,6 +859,12 @@
           "name": "Metchie, John",
           "salary": 425000,
           "franchiseId": "0003"
+        },
+        {
+          "id": "17523",
+          "name": "Caldwell, Jeff",
+          "salary": 425000,
+          "franchiseId": "0015"
         }
       ]
     },
@@ -1808,14 +1814,14 @@
       ]
     },
     "TE": {
-      "totalPlayers": 62,
+      "totalPlayers": 64,
       "top3Average": 5583333.33,
       "top5Average": 5142672,
       "top10Average": 4266237.25,
       "starterAverage": 3126490.14,
       "starterMedian": 2637500,
       "starterCount": 18,
-      "averageSalary": 1353341.57,
+      "averageSalary": 1324330.9,
       "medianSalary": 658845,
       "topPlayers": [
         {
@@ -2179,6 +2185,12 @@
           "franchiseId": "0016"
         },
         {
+          "id": "17605",
+          "name": "Kacmarek, Will",
+          "salary": 425000,
+          "franchiseId": "0005"
+        },
+        {
           "id": "16645",
           "name": "All, Erick",
           "salary": 425000,
@@ -2189,6 +2201,12 @@
           "name": "Allen, Davis",
           "salary": 425000,
           "franchiseId": "0014"
+        },
+        {
+          "id": "17644",
+          "name": "Koziol, Tanner",
+          "salary": 425000,
+          "franchiseId": "0015"
         }
       ]
     },
