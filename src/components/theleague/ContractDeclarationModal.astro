@@ -266,7 +266,11 @@
     z-index: 1001;
     justify-content: center;
     align-items: center;
-    padding: 1rem;
+    padding:
+      max(1rem, env(safe-area-inset-top, 0px))
+      max(1rem, env(safe-area-inset-right, 0px))
+      max(1rem, env(safe-area-inset-bottom, 0px))
+      max(1rem, env(safe-area-inset-left, 0px));
   }
 
   .contract-declaration-modal.active {
@@ -288,7 +292,10 @@
     box-shadow: var(--shadow-xl);
     width: 100%;
     max-width: 440px;
+    /* Use dvh (dynamic viewport height) so the mobile URL/nav bars don't clip
+       the modal. Falls back to vh on older browsers. */
     max-height: 88vh;
+    max-height: min(88vh, calc(100dvh - 2rem));
     display: flex;
     flex-direction: column;
     overflow: hidden;
