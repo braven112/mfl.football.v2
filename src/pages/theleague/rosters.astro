@@ -5543,7 +5543,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         delete contractActions[currentVeteranExtension];
         currentVeteranExtension = null;
       }
-      result = calculateVeteranExtension(years, position, config.extensionSeason, extensionYears, salary);
+      result = calculateVeteranExtension(years, position, config.extensionSeason, 2, salary);
       currentVeteranExtension = id;
     } else if (actionType === 'cut') {
       const penalty = calculateCutPenalty(salary, years);
@@ -7822,11 +7822,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       };
     }
 
-    // Returns the year-selection step function for the active extension flow.
-    const getActiveYearStepFn = () => (cdmFlowType === 'rookie-extension')
-      ? goToRookieExtYearStep
-      : goToVetExtYearStep;
-
     // Wire Back button — guarded (one handler only) + DOM-state-aware
     if (cdmBackBtn && !cdmBackBtn._handlerAdded) {
       cdmBackBtn._handlerAdded = true;
@@ -7835,7 +7830,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const dot3 = document.getElementById('cdm-step-dot-3');
         const dot3Active = dot3?.classList.contains('active') && dot3?.style.display !== 'none';
         if (dot3Active) {
-          getActiveYearStepFn()(); // Step 3 → Step 2 (year select)
+          goToVetExtYearStep(); // Step 3 → Step 2 (year select) — vet-ext only flow with 3 steps
         } else if (cdmEl?.dataset.cdmMode === 'action-select' || cdmEl?.dataset.cdmMode === 'declare-contract') {
           goToActionSelectStep(); // Step 2 → Step 1 (action select)
         } else {
@@ -7867,7 +7862,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         if (!cdmStepDot2El.classList.contains('completed')) return;
         const dot3 = document.getElementById('cdm-step-dot-3');
         if (dot3?.classList.contains('active') && dot3?.style.display !== 'none') {
-          getActiveYearStepFn()(); // Step 3 → Step 2 (year select)
+          goToVetExtYearStep(); // Step 3 → Step 2 (year select) — vet-ext only flow with 3 steps
         }
       });
     }
@@ -8494,10 +8489,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         ));
       }
       if (contractYears >= 2 && (isRC || isTO)) {
-        // Rookie Extension — RC or TO contracts only (+1–3 years)
+        // Rookie Extension — RC or TO contracts only (+2 years, fixed)
         actionOptions.appendChild(makeCdmActionBtn(
-          'rookie-extension', 'Rookie Extension', 'Extend rookie contract 1–3 years',
-          () => goToRookieExtYearStep(),
+          'rookie-extension', 'Rookie Extension', 'Extend rookie contract 2 years',
+          () => goToRookieExtReview(),
           false, 'icon-coin-r'
         ));
       }
@@ -9295,11 +9290,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     };
 
     // ----------------------------------------------------------------
-    // goToRookieExtYearStep — rookie extension year selection (step 2 of 3)
-    // Mirrors goToVetExtYearStep; reuses buildVetExtYearButtons since the
-    // salary formula is identical for rookie and veteran extensions.
+    // goToRookieExtReview — rookie extension review (step 2 of 2)
+    // Rookie extensions are always +2 years per league rules; no year
+    // picker, just a confirmation/review step.
     // ----------------------------------------------------------------
-    const goToRookieExtYearStep = () => {
+    const goToRookieExtReview = () => {
       cdmCurrentStep = 2;
       cdmFlowType = 'rookie-extension';
 
@@ -9310,56 +9305,107 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         document.getElementById('cdm-type-label').textContent = DECLARATION_TYPE_LABELS['rookie-extension'] || 'Rookie Extension';
       }
 
-      const dot3 = document.getElementById('cdm-step-dot-3');
-      const line2 = document.getElementById('cdm-step-line-2');
-      if (dot3) dot3.style.display = '';
-      if (line2) line2.style.display = '';
-
       const dot1 = document.getElementById('cdm-step-dot-1');
       const dot2 = document.getElementById('cdm-step-dot-2');
+      const dot3 = document.getElementById('cdm-step-dot-3');
       const line1 = document.getElementById('cdm-step-line-1');
+      const line2 = document.getElementById('cdm-step-line-2');
       const stepLabel = document.getElementById('cdm-stepper-label');
 
       if (dot2) dot2.style.display = '';
       if (line1) line1.style.display = '';
       if (dot1) { dot1.classList.remove('active'); dot1.classList.add('completed'); }
-      if (dot2) { dot2.classList.remove('completed', 'active'); dot2.classList.add('active'); }
-      if (dot3) dot3.classList.remove('active', 'completed');
+      if (dot2) { dot2.classList.remove('completed'); dot2.classList.add('active'); }
+      if (dot3) dot3.style.display = 'none';
       if (line1) line1.classList.add('completed');
-      if (line2) line2.classList.remove('completed');
-      if (stepLabel) stepLabel.textContent = 'Step 2 of 3';
+      if (line2) line2.style.display = 'none';
+      if (stepLabel) stepLabel.textContent = 'Step 2 of 2';
 
       if (cdmBackBtn) cdmBackBtn.style.display = '';
 
-      const metricsEl = document.getElementById('cdm-metrics');
-      if (metricsEl) metricsEl.style.display = '';
       const actionSection = document.getElementById('cdm-action-section');
       if (actionSection) actionSection.style.display = 'none';
-      document.getElementById('cdm-extension-section').style.display = 'none';
-      document.getElementById('cdm-formula-section').style.display = 'none';
-      document.getElementById('cdm-projection-section').style.display = 'none';
-      document.getElementById('cdm-cap-impact-section').style.display = 'none';
 
-      const yearSection = document.getElementById('cdm-year-section');
-      if (yearSection) yearSection.style.display = '';
+      const elig = cdmPlayerData.eligibility;
+      const existingYears = Number(elig.currentYears) || 0;
+      const baseSalary = Number(elig.currentSalary) || 0;
+      const extYears = 2; // Always 2 for rookie extension
+      const avgSalary = getReferenceSalary(cdmPlayerData.position, 'extension', config.extensionSeason);
+      const denominator = existingYears + extYears;
+      const proratedPortion = denominator > 0 ? (avgSalary * extYears) / denominator : 0;
+      const newSalary = Math.round(proratedPortion + baseSalary);
 
+      // Show extension terms section (reuse vet-ext section)
+      const extSection = document.getElementById('cdm-extension-section');
+      if (extSection) extSection.style.display = '';
+      document.getElementById('cdm-ext-current').textContent = formatSalaryCompact(baseSalary);
+      document.getElementById('cdm-ext-new').textContent = formatSalaryCompact(newSalary);
+
+      const yrsCurrentEl = document.getElementById('cdm-ext-years-current');
+      const yrsNewEl = document.getElementById('cdm-ext-years-new');
+      if (yrsCurrentEl) yrsCurrentEl.textContent = existingYears + (existingYears === 1 ? ' yr' : ' yrs');
+      if (yrsNewEl) yrsNewEl.textContent = denominator + ' yrs';
+
+      // Show formula section using DOM methods
+      const formulaSection = document.getElementById('cdm-formula-section');
       const fToggle = document.getElementById('cdm-formula-toggle');
       const fBody = document.getElementById('cdm-formula-body');
-      if (fToggle) fToggle.setAttribute('aria-expanded', 'false');
-      if (fBody) fBody.classList.remove('expanded');
+      if (formulaSection) {
+        formulaSection.style.display = '';
+        if (fToggle) fToggle.setAttribute('aria-expanded', 'false');
+        if (fBody) fBody.classList.remove('expanded');
 
-      // Default to 1–3 years if eligibility didn't include yearOptions
-      const elig = cdmPlayerData.eligibility;
-      const eligWithYears = Array.isArray(elig.yearOptions) && elig.yearOptions.length
-        ? elig
-        : { ...elig, yearOptions: [1, 2, 3] };
-      buildVetExtYearButtons(eligWithYears, cdmPlayerData);
+        const eqEl = document.getElementById('cdm-formula-equation');
+        if (eqEl) {
+          eqEl.replaceChildren();
+          eqEl.appendChild(document.createTextNode('(Top 5 Avg × Ext Yrs / (Existing + Ext)) + Salary'));
+          eqEl.appendChild(document.createElement('br'));
+          eqEl.appendChild(document.createTextNode(
+            '(' + formatSalaryCompact(avgSalary) + ' × ' + extYears +
+            ' / (' + existingYears + ' + ' + extYears + ')) + ' + formatSalaryCompact(baseSalary)
+          ));
+        }
 
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
+        const makeStep = (l, v) => {
+          const s = document.createElement('div'); s.className = 'cdm-formula__step';
+          const sl = document.createElement('span'); sl.className = 'cdm-formula__step-label'; sl.textContent = l;
+          const sv = document.createElement('span'); sv.className = 'cdm-formula__step-value'; sv.textContent = v;
+          s.appendChild(sl); s.appendChild(sv); return s;
+        };
+        const stepsEl = document.getElementById('cdm-formula-steps');
+        if (stepsEl) {
+          stepsEl.replaceChildren();
+          stepsEl.appendChild(makeStep('Top 5 Avg', formatCurrency(avgSalary)));
+          stepsEl.appendChild(makeStep('Ext Years', String(extYears)));
+          stepsEl.appendChild(makeStep('Total Years', existingYears + ' + ' + extYears + ' = ' + denominator));
+          stepsEl.appendChild(makeStep('Prorated', formatCurrency(Math.round(proratedPortion))));
+          stepsEl.appendChild(makeStep('Existing Salary', formatCurrency(baseSalary)));
+        }
+        const resultEl = document.getElementById('cdm-formula-result');
+        if (resultEl) {
+          resultEl.replaceChildren();
+          const lbl = document.createElement('span'); lbl.className = 'cdm-formula__result-label'; lbl.textContent = 'New Base Salary';
+          const val = document.createElement('span'); val.className = 'cdm-formula__result-value'; val.textContent = formatCurrency(newSalary);
+          resultEl.appendChild(lbl); resultEl.appendChild(val);
+        }
+      }
+
+      const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
+      updateProjectionTable(newSalary, denominator, playerAge, config.salaryYears?.[0]);
+      updateCapImpact(newSalary, denominator, config.salaryYears?.[0]);
+
+      const reviewPanel = document.getElementById('cdm-review-panel');
+      if (reviewPanel) {
+        reviewPanel.classList.remove('panel-enter');
+        void reviewPanel.offsetWidth;
+        reviewPanel.classList.add('panel-enter');
+      }
+
+      cdmSelectedYears = extYears;
+      cdmSelectedSalary = newSalary;
       cdmSubmitType = 'rookie-extension';
-      cdmSubmitBtn.disabled = true;
       cdmSubmitBtn.style.display = '';
+      cdmSubmitBtn.disabled = false;
       cdmSubmitBtn.textContent = 'Add Extension';
     };
 
@@ -9725,9 +9771,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           return;
         }
         if (cdmFlowType === 'rookie-extension') {
-          if (!cdmSelectedYears || !cdmPlayerData) return;
+          if (!cdmPlayerData) return;
           selectedPlayer = cdmPlayerData._rawPlayer;
-          applyContractAction('rookie-extension', cdmSelectedYears);
+          applyContractAction('rookie-extension', 2);
           closeDeclarationModal();
           return;
         }

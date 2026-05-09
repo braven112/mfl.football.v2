@@ -363,7 +363,6 @@ export function getPlayerEligibility(
       declarationType: 'rookie-extension',
       extensionSalary,
       extensionYears,
-      yearOptions: [1, 2, 3],
     };
   }
 
