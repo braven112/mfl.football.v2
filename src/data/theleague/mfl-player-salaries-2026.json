@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-09T22:29:23.077Z"
+    "fetchedAt": "2026-05-09T22:51:06.530Z"
   },
   "players": [
     {
@@ -6150,57 +6150,6 @@
       "depthChartAhead": null
     },
     {
-      "id": "17605",
-      "name": "Kacmarek, Will",
-      "position": "TE",
-      "salary": 425000,
-      "franchiseId": "0005",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 0,
-      "team": "MIA",
-      "draftYear": 2026,
-      "draftTeam": "MIA",
-      "birthdate": null,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17605_thumb.jpg",
-      "externalIds": {
-        "mfl": "17605",
-        "sleeper": "13434",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13434",
-        "fullName": "Will Kacmarek",
-        "team": "MIA",
-        "age": 23,
-        "height": "78",
-        "weight": "258",
-        "number": 82,
-        "college": "Ohio State",
-        "birthDate": "2003-02-12",
-        "status": "Active",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "15797",
-          "name": "Dulcich, Greg"
-        }
-      ]
-    },
-    {
       "id": "17462",
       "name": "Mendoza, Fernando",
       "position": "QB",
@@ -6299,6 +6248,57 @@
         {
           "id": "13189",
           "name": "Engram, Evan"
+        }
+      ]
+    },
+    {
+      "id": "17605",
+      "name": "Kacmarek, Will",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0005",
+      "status": "TAXI_SQUAD",
+      "contractYear": "1",
+      "points": 0,
+      "team": "MIA",
+      "draftYear": 2026,
+      "draftTeam": "MIA",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17605_thumb.jpg",
+      "externalIds": {
+        "mfl": "17605",
+        "sleeper": "13434",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13434",
+        "fullName": "Will Kacmarek",
+        "team": "MIA",
+        "age": 23,
+        "height": "78",
+        "weight": "258",
+        "number": 82,
+        "college": "Ohio State",
+        "birthDate": "2003-02-12",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "15797",
+          "name": "Dulcich, Greg"
         }
       ]
     },
