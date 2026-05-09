@@ -8452,7 +8452,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (elig.declareType === 'new-acquisition' || elig.declareType === 'rookie-override') {
         const opts = Array.isArray(elig.declareYearOptions) && elig.declareYearOptions.length
           ? elig.declareYearOptions
-          : (elig.declareType === 'rookie-override' ? [1, 2, 3] : [1, 2, 3, 4, 5]);
+          : (elig.declareType === 'rookie-override' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
         const min = opts[0];
         const max = opts[opts.length - 1];
         const range = min === max ? `${min} year${min === 1 ? '' : 's'}` : `${min}–${max} years`;
@@ -9124,7 +9124,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       const yearOptions = (Array.isArray(elig.declareYearOptions) && elig.declareYearOptions.length)
         ? elig.declareYearOptions
-        : (declareType === 'rookie-override' ? [1, 2, 3] : [1, 2, 3, 4, 5]);
+        : (declareType === 'rookie-override' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
       const yearContainer = document.getElementById('cdm-year-options');
       yearContainer.replaceChildren();
       yearOptions.forEach(yr => {
