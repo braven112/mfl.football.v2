@@ -9653,26 +9653,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmError.style.display = 'none';
 
       const elig = cdmPlayerData.eligibility;
-
-      // If selecting the same years as current contract, cancel any pending declaration
-      if (cdmSelectedYears === elig?.currentYears) {
-        delete localDeclarations[cdmPlayerData.id];
-        delete declarationsByPlayer[cdmPlayerData.id];
-        cdmSubmitBtn.style.display = 'none';
-        cdmSuccess.style.display = 'flex';
-        updateView();
-        applyEligibilityStyling();
-        setTimeout(closeDeclarationModal, 1500);
-        return;
-      }
+      const isCancelling = cdmSelectedYears === elig?.currentYears;
 
       // Demo mode: skip API call, show success immediately
       const isDemoPlayer = demoActive && String(cdmPlayerData.id).startsWith('DEMO_');
       if (isDemoPlayer) {
-        localDeclarations[cdmPlayerData.id] = {
-          status: 'pending',
-          years: cdmSelectedYears,
-        };
+        if (isCancelling) {
+          delete localDeclarations[cdmPlayerData.id];
+          delete declarationsByPlayer[cdmPlayerData.id];
+        } else {
+          localDeclarations[cdmPlayerData.id] = {
+            status: 'pending',
+            years: cdmSelectedYears,
+          };
+        }
         cdmSubmitBtn.style.display = 'none';
         cdmSuccess.style.display = 'flex';
         updateView();
@@ -9721,17 +9715,23 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Declaration failed');
 
-        // Optimistic update
-        localDeclarations[cdmPlayerData.id] = {
-          status: 'pending',
-          years: cdmSelectedYears,
-        };
+        if (result.cancelled) {
+          delete localDeclarations[cdmPlayerData.id];
+          delete declarationsByPlayer[cdmPlayerData.id];
+        } else {
+          // Optimistic update
+          localDeclarations[cdmPlayerData.id] = {
+            status: 'pending',
+            years: cdmSelectedYears,
+          };
+        }
 
         cdmSubmitBtn.style.display = 'none';
         cdmSuccess.style.display = 'flex';
 
         // Refresh the years cells
         updateView();
+        applyEligibilityStyling();
 
         // Auto-close after short delay
         setTimeout(closeDeclarationModal, 1500);
