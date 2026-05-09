@@ -30,11 +30,26 @@ Coherence rubric:
 - No obviously hallucinated facts (impossible matchups, made-up rules, broken franchise references).
 - Reads like one human posted it, not a stitched-together summary.
 
+Specificity rubric (HARD — overrides voice when content is missing):
+A GroupMe ping wakes every owner. The post MUST carry at least one piece of concrete signal a reader could act on or repeat to a friend. At least ONE of the following must be present:
+  - a named franchise or owner (e.g. "the Geeks", "Wabbit")
+  - a named player
+  - a specific topic with concrete detail — a position being shopped ("a tight end", "a power back"), a contract or comp-pick situation, a lineup/IR move, a draft-pick conversation, an auction bid, a pending offer
+  - a division-level beat that pairs the division frame with topical content ("a team in the Northwest is shopping a tight end") — division + topic must BOTH be present
+
+Posts that combine an atmospheric frame ("roster friction", "something brewing", "working through some issues", "moving on", "the file just got another page") with NO concrete signal are CONTENT-FREE. Cap the score at 4 regardless of voice quality.
+
+The off-topic-launder kit ("not strictly league business", "not all about fantasy football", "throwing elbows", "having a moment", "fired up", "in a mood", "hissy fit") is ONLY allowed to ship when it attaches to source-side framing — a named GroupMe tipster, a tipster codename, a tipsterDivision reverse-lens, or an intra-division beef frame. Off-topic-launder kit + no source-side framing + no concrete signal = score 3.
+
+A useful gut check: if a reader could only summarize this post as "Schefter said something happened somewhere" — suppress.
+
+Context fields (when provided): scope identifies which redaction lane the post came from. "commish" and "style-book" / Schefter-target lanes are allowed to run lighter on franchise/player specificity (the institutional / self-referential frame IS the signal). "division" and "league-wide" lanes MUST carry the topical detail per the specificity rubric — those scopes have no franchise to lean on.
+
 Score 1-10:
 - 10: Worth interrupting the chat for.
 - 7-9: Solid, send it.
 - 4-6: Flat, off-voice, or borderline. Don't ping the chat.
-- 1-3: Hallucinated, contradictory, or off-topic. Definitely suppress.
+- 1-3: Hallucinated, contradictory, off-topic, or content-free. Definitely suppress.
 
 Respond with JSON only: {"score": <int 1-10>, "reason": "<one short sentence>"}`;
 
@@ -49,8 +64,15 @@ export function parseScorerResponse(text) {
   return { score, reason: String(parsed.reason || '').slice(0, 240) };
 }
 
-export async function scoreSchefterPost({ headline, body, analysis = null, tier = null }, { apiKey, model = DEFAULT_MODEL, fetchFn = fetch } = {}) {
+export async function scoreSchefterPost(
+  { headline, body, analysis = null, tier = null, scope = null, topic = null },
+  { apiKey, model = DEFAULT_MODEL, fetchFn = fetch } = {},
+) {
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY required');
+
+  const userPayload = { headline, body, analysis, tier };
+  if (scope) userPayload.scope = scope;
+  if (topic) userPayload.topic = topic;
 
   const res = await fetchFn('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -65,7 +87,7 @@ export async function scoreSchefterPost({ headline, body, analysis = null, tier 
       system: SCORING_PROMPT,
       messages: [{
         role: 'user',
-        content: `Score this post:\n\n${JSON.stringify({ headline, body, analysis, tier }, null, 2)}`,
+        content: `Score this post:\n\n${JSON.stringify(userPayload, null, 2)}`,
       }],
     }),
   });
@@ -80,6 +102,10 @@ export async function scoreSchefterPost({ headline, body, analysis = null, tier 
 
 // Decide whether to fire the GroupMe send. Returns { allow, score, reason, error }.
 // Always returns allow=true on scorer failure — see header comment.
+//
+// `post` may carry optional `scope` and `topic` fields. They're passed through
+// to the scorer so it can calibrate the specificity check (commish / style-book
+// scopes get more leeway; division / league-wide scopes don't).
 export async function checkGroupMeQuality(post, { apiKey, model, threshold, log = console.log, warn = console.warn } = {}) {
   if (!apiKey) {
     log('  [quality-gate] no ANTHROPIC_API_KEY — allowing GroupMe send');

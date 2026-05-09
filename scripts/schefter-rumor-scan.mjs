@@ -109,6 +109,7 @@ import {
   getTeamNameCount30d,
   recordTeamNaming,
 } from './lib/schefter-team-naming.mjs';
+import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -585,6 +586,44 @@ function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
 }
 
 // ── GroupMe ──
+
+// Quality-gate suppressions tracker — populated when checkGroupMeQuality
+// blocks a chat ping. Flushed to data/schefter/groupme-suppressions.json
+// at exit so a workflow follow-up can act on it. Mirrors the contract used
+// by scripts/schefter-scan.mjs.
+const groupMeSuppressions = [];
+async function recordRumorGroupMeSuppression(entry) {
+  warn(`  [quality-gate] SUPPRESSED GroupMe: ${entry.id} (score ${entry.score}) — ${entry.reason}`);
+  groupMeSuppressions.push({
+    league: LEAGUE_SLUG,
+    timestamp: new Date().toISOString(),
+    ...entry,
+  });
+}
+
+async function flushGroupMeSuppressions() {
+  try {
+    const suppressionsPath = path.join(projectRoot, 'data', 'schefter', 'groupme-suppressions.json');
+    await fs.mkdir(path.dirname(suppressionsPath), { recursive: true });
+    let existing = [];
+    try {
+      const raw = JSON.parse(await fs.readFile(suppressionsPath, 'utf8'));
+      if (Array.isArray(raw?.suppressions)) existing = raw.suppressions;
+    } catch {
+      // file missing or unparseable — start fresh
+    }
+    const merged = [...existing, ...groupMeSuppressions];
+    await fs.writeFile(
+      suppressionsPath,
+      JSON.stringify({ generatedAt: new Date().toISOString(), suppressions: merged }, null, 2) + '\n',
+    );
+    if (groupMeSuppressions.length > 0) {
+      log(`⚠️  Suppressed ${groupMeSuppressions.length} GroupMe send(s) (see ${path.relative(projectRoot, suppressionsPath)})`);
+    }
+  } catch (err) {
+    warn(`  Failed to write GroupMe suppressions log: ${err.message}`);
+  }
+}
 
 async function postToGroupMe(text) {
   const botId = process.env.GROUPME_SCHEFTER_BOT_ID;
@@ -2876,10 +2915,42 @@ async function main() {
   await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
   log(`  Appended to feed: ${builtPosts.length} new post(s) (total: ${feed.posts.length})`);
 
+  // Quality gate — per-post check before pinging the GroupMe chat. The feed
+  // write above already persisted; we only suppress the chat ping for
+  // low-scoring posts (vague launders, content-free atmospheric posts, etc.).
+  // Failure mode is allow-on-error (see schefter-quality-gate.mjs header).
+  const gateResults = await Promise.all(
+    builtPosts.map((p, i) => {
+      const primaryTip = beats[i]?.anonymized?.[0];
+      return checkGroupMeQuality(
+        {
+          headline: p.headline,
+          body: p.body,
+          tier: p.tier,
+          scope: primaryTip?.scope?.kind ?? null,
+          topic: primaryTip?.topic ?? null,
+        },
+        { apiKey: process.env.ANTHROPIC_API_KEY, log, warn },
+      );
+    }),
+  );
+
   // GroupMe — one message per post so each shows up as an independent
   // reply target in the group chat. Small stagger between to avoid
-  // rate-limiting surprises.
+  // rate-limiting surprises. Suppressed posts skip the chat ping.
   for (let i = 0; i < builtPosts.length; i++) {
+    const gate = gateResults[i];
+    if (gate && !gate.allow) {
+      await recordRumorGroupMeSuppression({
+        id: builtPosts[i].id,
+        timestamp: builtPosts[i].timestamp,
+        headline: builtPosts[i].headline,
+        body: builtPosts[i].body,
+        score: gate.score,
+        reason: gate.reason,
+      });
+      continue;
+    }
     if (i > 0) await new Promise((r) => setTimeout(r, 250));
     await postToGroupMe(groupMeTextFor(builtPosts[i]));
   }
@@ -3104,12 +3175,14 @@ const invokedDirectly = (() => {
 
 if (invokedDirectly) {
   main()
-    .then((count) => {
+    .then(async (count) => {
+      await flushGroupMeSuppressions();
       log(`\n=== Done. Posts written: ${count} ===`);
       process.exit(0);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       console.error('[rumor-scan] Fatal:', err);
+      try { await flushGroupMeSuppressions(); } catch {}
       process.exit(1);
     });
 }
