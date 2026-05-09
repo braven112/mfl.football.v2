@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-09T07:58:23.739Z"
+    "fetchedAt": "2026-05-09T08:35:32.770Z"
   },
   "players": [
     {
@@ -4114,6 +4114,10 @@
         {
           "id": "14836",
           "name": "Jefferson, Justin"
+        },
+        {
+          "id": "14860",
+          "name": "Jennings, Jauan"
         }
       ]
     },
@@ -8387,20 +8391,47 @@
       "status": "ROSTER",
       "contractYear": "3",
       "points": 0,
-      "team": "SF",
+      "team": "MIN",
       "draftYear": 2020,
       "draftTeam": "SFO",
       "birthdate": 868510800,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14860_thumb.jpg",
       "externalIds": {
         "mfl": "14860",
-        "sleeper": null,
+        "sleeper": "7049",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "7049",
+        "fullName": "Jauan Jennings",
+        "team": "MIN",
+        "age": 28,
+        "height": "75",
+        "weight": "212",
+        "number": 15,
+        "college": "Tennessee",
+        "birthDate": "1997-07-10",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 6,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14836",
+          "name": "Jefferson, Justin"
+        }
+      ]
     },
     {
       "id": "15331",
@@ -19008,6 +19039,10 @@
         {
           "id": "14836",
           "name": "Jefferson, Justin"
+        },
+        {
+          "id": "14860",
+          "name": "Jennings, Jauan"
         },
         {
           "id": "16186",
