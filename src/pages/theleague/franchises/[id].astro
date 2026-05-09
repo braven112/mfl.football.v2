@@ -483,6 +483,16 @@ const formatBid = (n: number): string => {
             </li>
           )}
         </ul>
+        {team && (
+          <p class="hero-actions">
+            <a
+              class="btn-roster"
+              href={resolveLeaguePath(`/theleague/rosters?franchise=${id}`, hideLeaguePrefix)}
+            >
+              View Current Roster →
+            </a>
+          </p>
+        )}
       </div>
     </header>
 
@@ -1017,6 +1027,32 @@ const formatBid = (n: number): string => {
   .badge--mvp { background: #e6f7e6; color: #1f5d2d; }
   .badge--jerry { background: #ffe4e1; color: #8b2a1f; }
   .badge--osweiler { background: #f0e6f7; color: #4d2c66; }
+
+  .hero-actions {
+    margin: 0.875rem 0 0;
+  }
+  .btn-roster {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    transition: filter 0.15s ease, transform 0.15s ease;
+  }
+  .btn-roster:hover,
+  .btn-roster:focus-visible {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .btn-roster:focus-visible {
+    outline: 2px solid var(--color-focus, #2563eb);
+    outline-offset: 2px;
+  }
 
   .quick-stats {
     display: grid;
