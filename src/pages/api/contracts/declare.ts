@@ -12,6 +12,7 @@ import {
   generateDeclarationId,
   addDeclaration,
   updateDeclaration,
+  deleteDeclaration,
   getPendingDeclarationForPlayer,
   getTeamFranchiseTag,
   getTeamExtension,
@@ -73,6 +74,30 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({ error: 'You can only submit declarations for your own team' }),
         { status: 403, headers: JSON_HEADERS },
+      );
+    }
+
+    // 3a. Cancel-pending shortcut: selecting the same years as the current
+    // contract means "revert any pending change for this player". Validation
+    // would reject equal years, so handle this before validation runs.
+    if (requestedYears === currentYears) {
+      const existing = await getPendingDeclarationForPlayer(playerId, franchiseId);
+      if (existing && existing.status === 'pending') {
+        const deleted = await deleteDeclaration(existing.id);
+        if (!deleted) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to cancel pending declaration' }),
+            { status: 500, headers: JSON_HEADERS },
+          );
+        }
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          cancelled: true,
+          message: 'Pending declaration cancelled',
+        }),
+        { status: 200, headers: JSON_HEADERS },
       );
     }
 
