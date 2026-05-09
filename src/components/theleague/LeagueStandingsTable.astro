@@ -6,9 +6,10 @@ export interface Props {
   year?: number;
   preferredTeamId?: string;
   rosterBaseUrl?: string;
+  franchiseBaseUrl?: string;
 }
 
-const { teams, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl } = Astro.props;
+const { teams, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -82,6 +83,15 @@ function getRowColor(seed: number | undefined): string {
           const isTierBoundary = rowColor !== nextTier && nextTeam;
           const isPreferredTeam = preferredTeamId && team.id === preferredTeamId;
 
+          const bannerHref = franchiseBaseUrl
+            ? `${franchiseBaseUrl}/${team.id}`
+            : rosterBaseUrl
+              ? `${rosterBaseUrl}?franchise=${team.id}`
+              : null;
+          const bannerLabel = franchiseBaseUrl
+            ? `View ${team.teamName} franchise page`
+            : `View ${team.teamName} roster`;
+
           return (
             <tr
               class={`league-row ${rowColor} ${isTierBoundary ? 'tier-boundary' : ''}${isPreferredTeam ? ' preferred-team' : ''}`}
@@ -94,11 +104,11 @@ function getRowColor(seed: number | undefined): string {
               <td class="col-team">
                 <div class="team-info">
                   {team.teamBanner && (
-                    rosterBaseUrl ? (
+                    bannerHref ? (
                       <a
-                        href={`${rosterBaseUrl}?franchise=${team.id}`}
+                        href={bannerHref}
                         class="team-banner-link"
-                        aria-label={`View ${team.teamName} roster`}
+                        aria-label={bannerLabel}
                       >
                         <img
                           src={team.teamBanner}
