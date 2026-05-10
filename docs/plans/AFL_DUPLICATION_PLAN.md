@@ -279,7 +279,14 @@ Goal: a logged-out visitor to `/afl-fantasy` gets a usable experience.
 ### Phase 2 — AFL-specific mechanics (~1 week, smaller than originally scoped)
 - Vitest coverage for `src/utils/standings.ts` all-play math (§2.7).
 - Move `PREMIER_LEAGUE_CUTOFF_WEEK` to config (§2.7).
-- **Backfill `championsByYear`.** Build `data/afl-fantasy/champions.json` covering every AFL season for which we have records (the salary data goes back to 2007 — extend the champions file as far as historical sources allow). Standings page reads from JSON; new years just add an entry rather than a code change. Same treatment for TheLeague if its champions are similarly hardcoded — verify and align.
+- **Backfill `championsByYear` (2003-present).** Build `data/afl-fantasy/championship-history.json` mirroring the existing `data/theleague/championship-history.json` shape (per-year `{champion, runnerUp, championName, runnerUpName}` franchise-id entries). Standings page reads from JSON; new years are data edits.
+  - Source: MFL public API. **No auth needed** for historical reads.
+  - **2020-present**: hit `TYPE=playoffBracket&BRACKET_ID=1` on the year's host. Final `playoffRound` entry has `franchise_id` + `points` for each side; higher score wins.
+  - **2003-2019**: `playoffBracket` returns seeds only (no franchise winners) for those seasons — fall back to `TYPE=weeklyResults&W={championship_week}`, where the championship week is `startWeek + startWeekGames - 1` from `playoffBrackets` metadata.
+  - **Per-year host + league ID mapping is already on disk**: `data/afl-fantasy/mfl-feeds/2024/league.json` → `league.history.league[]`. AFL had a different host *and* league ID every year from 2003-2015, then settled on `www44/L=19621` from 2016+. The script must respect this map; using `19621` for older years returns wrong data.
+  - **Reusable code**: `scripts/compute-franchise-history.mjs` (specifically `getChampionshipResult()` at lines 181-227) already implements the bracket-walking logic for TheLeague and handles both array and object `playoffRound` shapes. Generalize it to take a `(slug, year)` argument and run for both leagues from the same script.
+  - Same audit on TheLeague — verify its `championship-history.json` is current and complete.
+- **Fix the bad 2011 AFL feed cache.** `data/afl-fantasy/mfl-feeds/2011/` was fetched with league ID `48815` (a TheLeague year ID). Correct AFL 2011 ID is `36377` on `www49`. Re-fetch and overwrite. Surface this as a check in the per-year fetch script so wrong-league regressions can't happen again.
 - Reword the misleading `?view=all_play` subtitle on standings (§3 standings row follow-up #3).
 - Rename "Promotion/Relegation playoff" copy on standings to "Promotion/Relegation cutoff" or similar — it's a final-standings cut, not a bracket of games.
 - Tier-movement history page or franchise-detail section (§4.2 #4).
@@ -323,7 +330,7 @@ Goal: a logged-out visitor to `/afl-fantasy` gets a usable experience.
 7. **AFL voice/persona**: gut-check what AFL Schefter should sound like before Phase 3. Different enough from TheLeague Schefter to feel like its own beat, not so different it feels gimmicky.
 8. **Roger for AFL**: is there an AFL "rules nag"-style commish persona, or is Ask Roger TheLeague-only forever? Currently the schefter-scan code says AFL has "its own commish and cadence" — clarify.
 9. **Salary data utility**: AFL has 19 years of salary JSON. Is that auction-history data, or stale-from-when-AFL-had-cap data? Affects whether §4.3 is a backward-looking archive or rolling history.
-10. **Champions backfill source**: how far back do reliable AFL division-champion records go, and where do they live (MFL history pages? a spreadsheet? Brandon's memory?)? Determines how complete `data/afl-fantasy/champions.json` can be on first commit.
+10. ~~**Champions backfill source**~~ — answered. MFL's public API has it back to 2003 via `TYPE=playoffBracket` (2020+) and `TYPE=weeklyResults` (2003-2019). Per-year host/league-id mapping is in `data/afl-fantasy/mfl-feeds/2024/league.json`. Plan committed in Phase 2.
 
 ---
 
