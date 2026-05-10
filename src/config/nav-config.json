@@ -301,6 +301,24 @@
           "description": "Pitch rule changes, suggest features, or float ideas"
         }
       ]
+    },
+    {
+      "id": "afl-keepers-section",
+      "label": "Keepers",
+      "phaseOrder": { "inSeason": 7, "offSeason": 4 },
+      "defaultOpen": "off-season",
+      "leagueOnly": "afl",
+      "links": [
+        {
+          "id": "afl-keepers",
+          "label": "Keepers",
+          "icon": "bookmark",
+          "path": "/keepers",
+          "external": false,
+          "leagueOnly": "afl",
+          "description": "Each franchise's 7-player keeper list"
+        }
+      ]
     }
   ],
   "adminFranchiseIds": ["0001", "0000"],
@@ -342,7 +360,8 @@
     "/draft-room": "/draft-room",
     "/suggestions": "/suggestions",
     "/stats": "/stats",
-    "/rules-chat": "/rules-chat"
+    "/rules-chat": "/rules-chat",
+    "/keepers": "/keepers"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
