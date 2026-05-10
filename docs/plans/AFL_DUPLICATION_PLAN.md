@@ -25,15 +25,28 @@ Branch: `claude/plan-afl-version-mjyIK`.
 ### Already built for AFL
 
 - **League context** (`src/utils/league-context.ts`): `getLeagueContext(url)` returns `{leagueId, name, slug, dataPath}` for both leagues. Cross-league franchise map covers 7 owners with teams in both.
-- **Config** (`data/afl-fantasy/afl.config.json`): full team list with `tier: "Premier League" | "D-League"`, conferences, divisions, abbrevs, aliases, icon/banner URLs.
+- **Config** (`data/afl-fantasy/afl.config.json`): full team list with `tier: "Premier League" | "D-League"`, conferences (`'00'` = AL, `'01'` = NL — baseball-style branding), divisions (North/South/East/West), abbrevs, aliases, icon/banner URLs.
 - **Salary data** (`src/data/afl-fantasy/`): `mfl-player-salaries-2007..2025.json`, `mfl-salary-averages-2007..2025.json`. (Useful as historical record even though AFL has no salary cap going forward.)
 - **CSS skin**: `src/assets/css/src/afl_main.scss`, `_variables-afl.scss`; `build-styles.mjs` already loops both leagues.
 - **Asset pipeline**: `sync-afl-assets.mjs`, `sync-afl-asset-urls.mjs`, `watch-afl-assets.mjs`. Assets in `public/assets/afl/{banners,icons,group-me}`.
-- **Pages** (8, mostly stubs): `index, standings, rosters, playoffs, news, draft-predictor, assets, icons, test-cookie`.
+- **All-play computation library**: `src/utils/standings.ts` (602 lines). `calculateAllPlayFromWeekly(results, cutoffWeek)` plus `getDivisionStandings`, `getConferenceStandings`, `getAllPlayStandings`, `getTierAllPlayStandings`. Tiebreaker chain: all-play → PF → PWR → VP → PA. `PREMIER_LEAGUE_CUTOFF_WEEK = 17` is hardcoded in the standings page (move to config).
+- **Standings page shipped** (`src/pages/afl-fantasy/standings.astro`, 925 lines). Three views via `?view=`:
+  - `division` — standings within each division, defending-champion badges (hardcoded by-year map).
+  - `league` (Playoff) — AL + NL conference standings (top 4 advance) + an **NIT / Secondary Playoffs** table for seeds 5-12 ranked by Power Rank.
+  - `all_play` (Premier League) — Premier League and D-League side-by-side tier tables, plus a **Promotion/Relegation playoff** sub-table where Premier ranks 9-10 + D-League ranks 3-4 compete for the 2 spots that stay/move up to Premier next year.
+- **Playoffs page shipped** (`src/pages/afl-fantasy/playoffs.astro`, 2,743 lines). **Four-bracket structure**, not one:
+  1. Bracket 1: Overall Championship (AL/NL conference winners).
+  2. Bracket 2: AL Conference, seeds 1-4.
+  3. Bracket 3: NL Conference, seeds 1-4.
+  4. Brackets 6-9: NIT / "Toilet Bowl" — non-playoff teams seeded 1-N by Power Rank.
+  
+  Reads MFL `playoff-brackets.json` feed for live bracket data; auto-selects which bracket to show based on the viewer's preferred team cookie.
+- **Other pages**: 8 total stubs in `src/pages/afl-fantasy/` (`assets`, `draft-predictor` — 424 lines, `icons` — 709 lines, `index`, `news`, `rosters` — 524 lines, `test-cookie`).
 - **Schefter (partial)**: `scripts/schefter-scan.mjs` already branches on `league.slug === 'afl'` in feed/post-history paths and team-icon resolution. Several flows are still TheLeague-only by guard (`Ask Roger`, certain rumor phases).
 - **Season state**: `src/data/mfl-season-state-afl.json`.
-- **MFL feeds**: `src/data/mfl-feeds/afl/2025/` (only `salaryAdjustments.json` so far).
+- **MFL feeds**: `src/data/mfl-feeds/afl/2025/` (only `salaryAdjustments.json` so far). The standings/playoffs pages currently read from `data/afl-fantasy/mfl-feeds/<year>/{standings,weekly-results,playoff-brackets}.json` — different path shape than the TheLeague feed location, worth normalizing.
 - **Type hints** for AFL in `src/types/{nav,schefter,standings}.ts`.
+- **Cross-league** primitives: `setAFLPreference`, `getAFLPreference`, `resolveAFLTeamSelection`, `getAFLTeamData` already in `src/utils/team-preferences.ts`.
 
 ### Not yet built for AFL
 
@@ -97,13 +110,13 @@ For workflows that should *not* run for AFL initially (e.g. roger-date-audit), g
 
 Build a small `<LeagueSwitcher>` component that uses `getOtherLeagueFranchiseId` (already implemented) to deep-link from a TheLeague page to the equivalent AFL page when the viewer owns teams in both leagues. Drop it into the global header. Pays off immediately for the 7 dual-league owners.
 
-### 2.7 All-play computation library
+### 2.7 All-play computation library — *already shipped*, harden
 
-The AFL side competition that drives promotion/relegation runs on **all-play records** — every week, each team is compared to every other team's score, generating an "if everyone played everyone" W/L. This number feeds standings, the tier tracker, stats, and power-rankings annotations.
+`src/utils/standings.ts` already implements `calculateAllPlayFromWeekly`, the tier-grouped standings, and the cutoff-week mechanic. Remaining cleanups (small):
 
-Build `src/lib/afl/all-play.ts` once, with vitest coverage, before any consuming page is written. Pure functions over `weeklyResults.json`. Cache to `src/data/afl-fantasy/all-play-<year>.json` via a workflow so SSR pages don't recompute. (Detail in §4.2.)
-
-This is in Phase 0 because Phase 1's standings page already needs it — building it as part of standings risks scattering the math across multiple pages.
+- Add vitest coverage. Right now this math underpins the side game's outcome and has no tests — high-value, low-effort.
+- Move `PREMIER_LEAGUE_CUTOFF_WEEK = 17` out of the standings page constant and into `data/afl-fantasy/afl.config.json` (under e.g. `tierCompetition.cutoffWeek`).
+- Optional: precompute and cache `src/data/afl-fantasy/all-play-<year>.json` via a workflow so SSR doesn't recompute on every request. Skip if perf is fine.
 
 ---
 
@@ -114,9 +127,10 @@ Legend: **Dup** = duplicate as-is with AFL data swap. **Adapt** = page exists in
 | TheLeague page / area | Status | AFL treatment |
 |---|---|---|
 | `index.astro` (landing) | Adapt | Two hero modules: (a) division/playoff race (H2H), (b) tier race (all-play). Keeper-deadline countdown instead of franchise-tag deadline |
-| `standings.astro` | Adapt | **Three views, toggleable:** (a) H2H standings by division/conference (drives playoffs), (b) all-play standings by tier with promotion/relegation cutoff annotated, (c) combined "everything" view. AFL playoffs come from (a); tier movement comes from (b) — they're independent. The page must make that distinction explicit |
-| `rosters.astro` | Adapt | Drop salary/contract columns; add keeper-eligibility column (top 7 kept from prior season). Already partially done |
-| `playoffs.astro` | Adapt | **Single bracket** seeded from H2H standings (2 divisions per conference, standard format) — *not* split by tier. Tier movement is a separate side competition (§4.2). Existing 2,743-line page may have over-rotated on tier brackets — review against this distinction |
+| `standings.astro` | **Shipped** | 925 lines, three views via `?view=`: `division`, `league` (AL/NL + NIT), `all_play` (Premier + D-League + promotion/relegation playoff). Open follow-ups: (1) `championsByYear` is hardcoded — make data-driven from `data/afl-fantasy/champions.json`; (2) `PREMIER_LEAGUE_CUTOFF_WEEK = 17` should move to config (§2.7); (3) Premier League view has no D-League playoff equivalent visualized — confirm whether D-League also has its own end-of-season playoff |
+| `rosters.astro` | Adapt | Drop salary/contract columns; add keeper-eligibility column (top 7 kept from prior season). Already partially done (524 lines) |
+| `playoffs.astro` | **Shipped** | 2,743 lines, four brackets: (1) Overall Championship between conference winners, (2) AL Conference seeds 1-4, (3) NL Conference seeds 1-4, (6-9) NIT/Toilet Bowl seeds 5-12 by Power Rank. Reads MFL `playoff-brackets.json`. Auto-selects bracket from preferred team. Open follow-ups: (1) verify the Premier League playoffs (top 4 of all-play tier) actually has a bracket here or whether that lives elsewhere; (2) the "Promotion/Relegation playoff" sub-bracket on standings page may also deserve a real bracket view here |
+| `<NIT / Secondary Playoffs>` (concept) | **Shipped** | College-NIT-style consolation bracket for seeds 5-12 across both conferences, ranked by Power Rank. Surfaces on standings (`?view=league`) and as brackets 6-9 on playoffs |
 | `schedule` (implicit) | Adapt | Different starter slots; render lineup/scoring badges per league |
 | `lineup.astro` | Adapt | Read lineup format from config (different starter counts) |
 | `matchup-data.astro` / `matchup-preview-example.astro` | Adapt | Same — config-driven scoring |
@@ -191,29 +205,23 @@ Data path: `src/data/afl-fantasy/keepers/<year>.json`. Fetch via MFL `keeperList
 
 ### 4.2 All-play side competition + promotion/relegation tracker
 
-This is a real second competition layered on top of H2H, not just a flavor on standings. Each week, every team's score is compared to every other team's score → all-play W/L for the week. Season totals determine who promotes from D-League and who relegates from Premier.
+This is a real second competition layered on top of H2H. Each week, every team's score is compared to every other team's score → all-play W/L for the week. Season totals determine who stays in / promotes to / relegates from Premier League.
 
-**Pages:**
+**Already shipped on the standings page (`?view=all_play`):**
+- Premier League and D-League side-by-side tier standings (`getTierAllPlayStandings`).
+- All-play computation via `calculateAllPlayFromWeekly` with cutoff week.
+- Promotion/Relegation playoff sub-table: Premier 9-10 + D-League 3-4 → top 2 by all-play stay/promote to Premier next year.
 
-- `/afl-fantasy/all-play` — all-play standings, weekly all-play results grid, "what your record would be in all-play" callouts. Compute from MFL `weeklyResults` (already fetched), no new MFL API calls needed.
-- `/afl-fantasy/tiers` (or merged into the all-play page) — current Premier League / D-League members, the promotion zone (top N of D-League by all-play) and relegation zone (bottom N of Premier by all-play) clearly marked. Live "if season ended today" projections.
-- Historical tier movement timeline per franchise (small section, or expand into its own page if data warrants).
+**What's left:**
 
-**Logic helper:** new `src/lib/afl/all-play.ts`:
-```ts
-// Given a weekly results JSON, return per-team {w, l, t} for the week
-function computeAllPlayWeek(results: WeeklyResults): AllPlayRecord[]
-// Sum across weeks for season standings
-function computeAllPlaySeason(allWeeks: WeeklyResults[]): AllPlayRecord[]
-```
+1. **Tests** for the all-play math (§2.7).
+2. **Move cutoff week to config** (§2.7).
+3. **"If season ended today" projections** that account for unplayed weeks (current implementation is point-in-time).
+4. **Historical tier movement timeline** per franchise — `src/data/afl-fantasy/tier-history.json`. New small page or section on franchise detail.
+5. **Optional dedicated `/afl-fantasy/tiers` page** that's promotion/relegation-first (today the standings page is playoff-first with all-play as a tab). Decide whether to surface this as its own URL for permalinks/social shares, or keep everything on `standings`.
+6. **Power-rankings annotation** — footnote each ranked team with their all-play record so subjective rankings sit next to the objective race.
 
-Cover with vitest — this is the math behind the side game's outcome and it must be deterministic.
-
-**Data:**
-- `src/data/afl-fantasy/tier-history.json` — historical promotion/relegation events per year/franchise.
-- All-play standings derived on the fly from `data/afl-fantasy/mfl-feeds/<year>/weeklyResults.json`. Cached in `src/data/afl-fantasy/all-play-<year>.json` for performance, regenerated by a workflow.
-
-**Not the same as power rankings.** Power rankings are subjective; all-play is a real W/L record with playoff-equivalent stakes. Treat the page as a co-equal standings view, not a fun stat.
+**Not the same as power rankings.** Power rankings are subjective; all-play is a real W/L record with promotion/relegation stakes. Already correctly framed in the shipped UI.
 
 ### 4.3 Auction results / history
 
@@ -250,17 +258,24 @@ Each phase is one or more PRs into `claude/plan-afl-version-mjyIK` (then merged 
 4. Schefter `runForLeague(league)` refactor (§2.4). PR.
 5. Workflows matrix conversion (§2.5). PR.
 6. `<LeagueSwitcher>` component (§2.6). PR.
-7. All-play library + cache workflow (§2.7). PR.
+7. All-play library hardening (§2.7) — small follow-ups, library itself already in `src/utils/standings.ts`. PR.
 
 **Exit criteria:** every TheLeague page still renders identically; AFL stub pages still render; no behavior change visible to users.
 
 ### Phase 1 — Core read-only AFL pages (~1 week)
-- `standings`, `rosters`, `playoffs` (review existing), `index`, `about`, `franchises/index + [id]`, `players`, `news + news/[id]`, `activity`, `assets`, `icons`.
-- Goal: a logged-out visitor to `/afl-fantasy` gets a usable experience.
 
-### Phase 2 — AFL-specific mechanics (~2 weeks)
-- All-play + promotion/relegation pages (§4.2) — consumes the library landed in Phase 0 §2.7.
-- Standings page rebuild with the three-view toggle (H2H / all-play / combined).
+**Already shipped:** `standings` (925 lines), `playoffs` (2,743 lines), `rosters` (524 lines, partial), `draft-predictor` (424 lines), `assets` (485 lines), `icons` (709 lines), `index` (238 lines).
+
+**Remaining:** `about`, `franchises/index` + `[id]`, `players`, `news` + `news/[id]`, `activity`, plus polish on the rosters page (drop salary/contract columns, add keeper-eligibility column).
+
+Goal: a logged-out visitor to `/afl-fantasy` gets a usable experience.
+
+### Phase 2 — AFL-specific mechanics (~1 week, smaller than originally scoped)
+- Vitest coverage for `src/utils/standings.ts` all-play math (§2.7).
+- Move `PREMIER_LEAGUE_CUTOFF_WEEK` to config (§2.7).
+- Make `championsByYear` data-driven (`data/afl-fantasy/champions.json`).
+- Tier-movement history page or franchise-detail section (§4.2 #4).
+- "If season ended today" forecasts (§4.2 #3).
 - Keepers suite (§4.1).
 - Calendar with AFL events.
 - Auction archive (§4.3).
@@ -294,7 +309,10 @@ Each phase is one or more PRs into `claude/plan-afl-version-mjyIK` (then merged 
 1. **Auction vs snake**: confirm AFL draft format. If auction, the draft tooling is heavier work than a "duplicate" because TheLeague's draft tool may not be auction-shaped. (The existing `draft-predictor.astro` for AFL suggests it's been thought about.)
 2. **Lineup format**: confirm AFL starter slots and scoring. Drives stats/lineup/matchup pages.
 3. **Keeper rules edge cases**: are kept players' MFL "salaries" set to anything special (e.g. round-based pricing)? This affects the keeper UI.
-4. **Tier movement rules**: confirmed *driven by all-play standings*, not H2H, not playoffs. Still need to pin down: how many teams move each year (top 1 / 2 / 3 of D-League promote? same number relegate?), tiebreakers within all-play (head-to-head all-play? total points scored?), and whether playoff participation in Premier protects you from relegation.
+4. **Tier movement rules**: confirmed *driven by all-play standings*, not H2H, not playoffs. The shipped standings page implements the answer: Premier ranks 9-10 + D-League ranks 3-4 enter a 4-team Promotion/Relegation playoff; top 2 by all-play stay in / move up to Premier next year. (Implication: D-League ranks 1-2 auto-promote, Premier ranks 1-8 are auto-safe.) Confirm this matches written rules before any tooling depends on the cutoffs.
+10. **D-League playoffs**: Premier League's top 4 of the all-play tier presumably has its own bracket; does D-League also have a season-ending playoff for its tier, and if so, where does it appear? The shipped UI shows only the Premier League standings as the all-play view's heading.
+11. **Defending champions data**: `championsByYear` is hardcoded for 2024 only. Decide whether to backfill historical years and make data-driven, or leave as-is and update annually.
+12. **Feed path normalization**: AFL feeds live at `data/afl-fantasy/mfl-feeds/<year>/`; TheLeague feeds live at `data/theleague/mfl-feeds/<year>/`. Worth normalizing before workflow matrix work in §2.5 to avoid hardcoded path conditionals downstream.
 5. **`afl-fantasy.com` ownership**: do we own the domain? If not, factor acquisition into the Phase 7 timeline.
 6. **Inconsistent config location**: TheLeague config is at `src/data/theleague.config.json`; AFL config is at `data/afl-fantasy/afl.config.json`. Phase 0 §2.1 must pick one and migrate the other.
 7. **AFL voice/persona**: gut-check with Brandon what AFL Schefter should sound like before Phase 3. Different enough from TheLeague Schefter to feel like its own beat, not so different it feels gimmicky.
