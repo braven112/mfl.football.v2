@@ -1,0 +1,29 @@
+{
+  "$comment": "Per-year MFL host + league ID mapping for AFL Fantasy. AFL had a different host AND league ID for every season 2003-2015, then settled on www44/L=19621 from 2016+. Source of truth: data/afl-fantasy/mfl-feeds/2024/league.json -> league.history.league[]. The 2024-12-30 fetch of that file is committed; rebuild this map by running `pnpm exec node scripts/backfill-afl-championship-history.mjs --rebuild-host-map`.",
+  "years": {
+    "2003": { "host": "www45", "leagueId": "55011" },
+    "2004": { "host": "www47", "leagueId": "23644" },
+    "2005": { "host": "www42", "leagueId": "29232" },
+    "2006": { "host": "www45", "leagueId": "49793" },
+    "2007": { "host": "www43", "leagueId": "47555" },
+    "2008": { "host": "www44", "leagueId": "13233" },
+    "2009": { "host": "www47", "leagueId": "21465" },
+    "2010": { "host": "www46", "leagueId": "30033" },
+    "2011": { "host": "www49", "leagueId": "36377" },
+    "2012": { "host": "www45", "leagueId": "26792" },
+    "2013": { "host": "www45", "leagueId": "48338" },
+    "2014": { "host": "www45", "leagueId": "40840" },
+    "2015": { "host": "www44", "leagueId": "14236" },
+    "2016": { "host": "www44", "leagueId": "19621" },
+    "2017": { "host": "www44", "leagueId": "19621" },
+    "2018": { "host": "www44", "leagueId": "19621" },
+    "2019": { "host": "www44", "leagueId": "19621" },
+    "2020": { "host": "www44", "leagueId": "19621" },
+    "2021": { "host": "www44", "leagueId": "19621" },
+    "2022": { "host": "www44", "leagueId": "19621" },
+    "2023": { "host": "www44", "leagueId": "19621" },
+    "2024": { "host": "www44", "leagueId": "19621" },
+    "2025": { "host": "www44", "leagueId": "19621" },
+    "2026": { "host": "www44", "leagueId": "19621" }
+  }
+}

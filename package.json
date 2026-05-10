@@ -25,6 +25,8 @@
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
     "generate:power-rankings": "node scripts/generate-power-rankings.mjs",
     "backfill:historical-feeds": "node scripts/backfill-historical-feeds.mjs",
+    "backfill:afl-champions": "node scripts/backfill-afl-championship-history.mjs",
+    "backfill:afl-champions:online": "node scripts/backfill-afl-championship-history.mjs --online",
     "fetch:nfl-news-digest": "node scripts/fetch-nfl-news-digest.mjs",
     "fetch:trade-bait": "MFL_LEAGUE_ID=13522 MFL_LEAGUE_SLUG=theleague node scripts/fetch-trade-bait.mjs",
     "fetch:live:lineups": "node scripts/fetch-live-lineups.mjs",
