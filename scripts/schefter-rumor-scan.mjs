@@ -692,7 +692,7 @@ async function safeGetTeamNameCount30d(franchiseId, redis) {
   }
 }
 
-async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
+export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
   const refMs = now instanceof Date ? now.getTime() : Date.now();
   // Single-franchise fuzz applies ONLY to web tips. A GroupMe mention of
   // franchise X isn't an anonymity leak — the speaker publicly named it
