@@ -1,0 +1,301 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+
+export const prerender = false;
+
+// Optional MFL keeperList feed — when present, surfaces real per-franchise
+// keeper selections. Until the feed is being fetched on cron, the page
+// renders the educational/explanatory view below.
+const keeperFeeds = import.meta.glob<{
+  default: {
+    keeperList?: { franchise?: Array<{ id: string; player?: any[] | any }> };
+  };
+}>('../../../data/afl-fantasy/mfl-feeds/*/keeperList.json', { eager: true });
+
+interface KeeperPlayerEntry {
+  id: string;
+  status?: string;
+}
+
+interface KeeperFranchise {
+  franchiseId: string;
+  selections: KeeperPlayerEntry[];
+}
+
+const currentYear = getCurrentLeagueYear();
+const keeperFeedKey = Object.keys(keeperFeeds).find((k) =>
+  k.includes(`/${currentYear}/keeperList.json`)
+);
+const keeperFeed = keeperFeedKey ? keeperFeeds[keeperFeedKey].default : null;
+
+const keeperByFranchise = new Map<string, KeeperFranchise>();
+if (keeperFeed?.keeperList?.franchise) {
+  const franchises = Array.isArray(keeperFeed.keeperList.franchise)
+    ? keeperFeed.keeperList.franchise
+    : [keeperFeed.keeperList.franchise];
+  for (const f of franchises) {
+    const players = Array.isArray(f.player)
+      ? f.player
+      : f.player
+      ? [f.player]
+      : [];
+    keeperByFranchise.set(f.id, {
+      franchiseId: f.id,
+      selections: players.map((p: any) => ({ id: p.id, status: p.status })),
+    });
+  }
+}
+
+const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
+  const tierA = a.tier === 'Premier League' ? 0 : 1;
+  const tierB = b.tier === 'Premier League' ? 0 : 1;
+  if (tierA !== tierB) return tierA - tierB;
+  return a.name.localeCompare(b.name);
+});
+
+const hasLiveKeeperData = keeperByFranchise.size > 0;
+---
+
+<TheLeagueLayout title="Keepers | AFL Fantasy">
+  <main class="afl-keepers">
+    <header class="afl-keepers__hero">
+      <h1>AFL Keepers</h1>
+      <p>
+        AFL Fantasy is a 7-player keeper league. Each franchise picks 7
+        players to retain into the new season; the rest are released back
+        into the auction pool.
+      </p>
+    </header>
+
+    {!hasLiveKeeperData && (
+      <section class="afl-keepers__notice">
+        <h2>Live keeper feed not yet wired</h2>
+        <p>
+          Once the <code>keeperList</code> MFL feed is being fetched on cron
+          for AFL, this page will show each franchise's submitted top-7. For
+          now, the franchise grid below links to each team's current roster
+          so you can study who's likely to be kept versus released into the
+          auction pool.
+        </p>
+        <p>
+          To enable: add <code>keeperList</code> to the AFL feed list in
+          <code>scripts/fetch-mfl-feeds.mjs</code>, run a fetch for the
+          current league year, and this page will start populating.
+        </p>
+      </section>
+    )}
+
+    <section class="afl-keepers__grid-section">
+      <h2>By franchise</h2>
+      <div class="afl-keepers__grid">
+        {teams.map((team) => {
+          const keeper = keeperByFranchise.get(team.franchiseId);
+          const count = keeper?.selections.length ?? 0;
+          return (
+            <a class="keeper-card" href={`/afl-fantasy/rosters?franchise=${team.franchiseId}`}>
+              <div class="keeper-card__icon-wrap">
+                <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+              </div>
+              <div class="keeper-card__body">
+                <h3 class="keeper-card__name">{team.name}</h3>
+                <div class="keeper-card__meta">
+                  <span class:list={[
+                    'keeper-card__tier',
+                    team.tier === 'Premier League'
+                      ? 'keeper-card__tier--premier'
+                      : 'keeper-card__tier--dleague',
+                  ]}>
+                    {team.tier}
+                  </span>
+                  {hasLiveKeeperData ? (
+                    <span class="keeper-card__count">
+                      {count} / 7 declared
+                    </span>
+                  ) : (
+                    <span class="keeper-card__count keeper-card__count--placeholder">
+                      View roster →
+                    </span>
+                  )}
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+    <section class="afl-keepers__info">
+      <h2>Keeper rules summary</h2>
+      <ul>
+        <li>Each franchise designates exactly 7 players to retain.</li>
+        <li>Non-kept players return to the player pool for the offseason auction.</li>
+        <li>There is no salary cap — auction is for picking players, not for managing future cap impact.</li>
+        <li>The keeper deadline appears on the <a href="/afl-fantasy/calendar">league calendar</a>.</li>
+        <li>Full keeper rules: see the <a href="/afl-fantasy/rules#keepers">constitution</a>.</li>
+      </ul>
+    </section>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .afl-keepers {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  .afl-keepers__hero {
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .afl-keepers__hero h1 {
+    font-size: 2.25rem;
+    margin-bottom: var(--spacing-sm, 8px);
+  }
+
+  .afl-keepers__hero p {
+    color: var(--text-muted, #6b7280);
+    max-width: 700px;
+    line-height: 1.6;
+  }
+
+  .afl-keepers__notice {
+    background: var(--bg-warning, #fef3c7);
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    padding: var(--spacing-md, 16px);
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .afl-keepers__notice h2 {
+    font-size: 1.125rem;
+    margin: 0 0 var(--spacing-sm, 8px) 0;
+    color: #92400e;
+  }
+
+  .afl-keepers__notice p {
+    margin: 0 0 var(--spacing-sm, 8px) 0;
+    line-height: 1.6;
+    color: #92400e;
+  }
+
+  .afl-keepers__notice code {
+    background: rgba(255, 255, 255, 0.5);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.875em;
+  }
+
+  .afl-keepers__grid-section,
+  .afl-keepers__info {
+    margin-bottom: var(--spacing-xxl, 48px);
+  }
+
+  .afl-keepers__grid-section h2,
+  .afl-keepers__info h2 {
+    font-size: 1.375rem;
+    margin-bottom: var(--spacing-md, 16px);
+    padding-bottom: var(--spacing-sm, 8px);
+    border-bottom: 2px solid var(--border-color, #e5e7eb);
+  }
+
+  .afl-keepers__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--spacing-md, 16px);
+  }
+
+  .keeper-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md, 16px);
+    padding: var(--spacing-md, 16px);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-default);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .keeper-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .keeper-card__icon-wrap {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .keeper-card__icon-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .keeper-card__body {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .keeper-card__name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .keeper-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.8125rem;
+  }
+
+  .keeper-card__tier {
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.6875rem;
+    width: max-content;
+  }
+
+  .keeper-card__tier--premier {
+    background: var(--primary-color, #c41e3a);
+    color: white;
+  }
+
+  .keeper-card__tier--dleague {
+    background: var(--bg-muted, #e5e7eb);
+    color: var(--text-default);
+  }
+
+  .keeper-card__count {
+    color: var(--text-muted, #6b7280);
+    font-weight: 500;
+  }
+
+  .keeper-card__count--placeholder {
+    color: var(--primary-color, #c41e3a);
+  }
+
+  .afl-keepers__info ul {
+    line-height: 1.8;
+    padding-left: var(--spacing-lg, 24px);
+  }
+
+  .afl-keepers__info a {
+    color: var(--primary-color, #c41e3a);
+  }
+</style>
