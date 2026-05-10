@@ -36,6 +36,14 @@ const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
 const DRY_RUN = process.argv.includes('--dry-run');
 
 // ── League configs ──
+//
+// `features` is the single source of truth for which Schefter sub-pipelines
+// run for which league. Replaces the older `if (league.slug !== 'theleague')`
+// guards scattered across this file. To activate a flow for AFL, flip the
+// corresponding feature flag to true. AFL's commish-cadence flows
+// (rumorMill, tradeBait, eventReminders) currently default off — see
+// AFL_DUPLICATION_PLAN §2.4 for the rationale (different commish, different
+// calendar, AFL persona pending).
 
 const LEAGUES = [
   {
@@ -44,6 +52,11 @@ const LEAGUES = [
     feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'src', 'data', 'theleague.config.json'),
+    features: {
+      rumorMill: true,
+      tradeBait: true,
+      eventReminders: true,
+    },
   },
   {
     slug: 'afl',
@@ -51,6 +64,11 @@ const LEAGUES = [
     feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json'),
+    features: {
+      rumorMill: false,
+      tradeBait: false,
+      eventReminders: false,
+    },
   },
 ];
 
@@ -781,8 +799,9 @@ async function scanPendingTrades(league) {
     return 0;
   }
 
-  // Phase 1 is theleague-only (AFL has its own commish and cadence)
-  if (league.slug !== 'theleague') return 0;
+  if (!league.features?.rumorMill) {
+    return 0;
+  }
 
   console.log(`\n=== Scanning Pending Trades (Rumor Mill) for ${league.slug} ===`);
 
@@ -1115,7 +1134,9 @@ async function scanTradeBait(league) {
       process.env.SCHEFTER_RUMOR_MILL_ENABLED.toLowerCase() === 'false') {
     return 0;
   }
-  if (league.slug !== 'theleague') return 0;
+  if (!league.features?.tradeBait) {
+    return 0;
+  }
 
   console.log(`\n=== Scanning Trade Bait (Rumor Mill) for ${league.slug} ===`);
 
@@ -1426,9 +1447,8 @@ function pickRogerTemplate(touchId, eventId) {
 async function scanEventReminders(league) {
   console.log(`\n=== Scanning event reminders for ${league.slug} ===`);
 
-  // Only TheLeague gets Ask Roger posts (AFL has different calendar)
-  if (league.slug !== 'theleague') {
-    console.log('  Skipping — Ask Roger is TheLeague only');
+  if (!league.features?.eventReminders) {
+    console.log(`  Skipping — eventReminders feature flag is off for ${league.slug}`);
     return 0;
   }
 
