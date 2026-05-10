@@ -1,0 +1,76 @@
+{
+  "$comment": "AFL Fantasy league calendar events. Each entry has either a fixed date (month + day, optional time) or a computed rule (relative to NFL Labor Day). dates_per_year overrides the computed/fixed values for specific years (e.g. when the league moves auction night). The calendar page renders these grouped by category. Update this file as the AFL league office sets dates each year.",
+  "$todo": "Most dates below are placeholders inferred from typical AFL cadence. Brandon: replace with actual AFL deadlines from the AFL constitution, and switch to dates_per_year overrides where helpful.",
+  "events": [
+    {
+      "id": "afl-keeper-deadline",
+      "name": "Keeper List Deadline",
+      "description": "Each franchise must declare its 7 kept players. Players not declared as keepers are released into the auction pool.",
+      "category": "preseason",
+      "icon": "bookmark",
+      "startDate": { "type": "fixed", "month": 7, "day": 1, "time": "20:00" },
+      "urgencyDays": 14,
+      "sortOrder": 1,
+      "actionLinks": [
+        { "label": "Manage Keepers", "url": "/afl-fantasy/keepers/manage", "external": false }
+      ]
+    },
+    {
+      "id": "afl-auction",
+      "name": "AFL Auction",
+      "description": "Live auction for all non-keeper players. Free agency follows after the auction closes.",
+      "category": "preseason",
+      "icon": "dollar",
+      "startDate": { "type": "fixed", "month": 8, "day": 15, "time": "19:00" },
+      "urgencyDays": 7,
+      "sortOrder": 2
+    },
+    {
+      "id": "afl-season-start",
+      "name": "Regular Season Kickoff",
+      "description": "Week 1 of the AFL Fantasy regular season begins with the NFL kickoff Thursday.",
+      "category": "in-season",
+      "icon": "star",
+      "startDate": { "type": "computed", "rule": "nfl-kickoff" },
+      "sortOrder": 3
+    },
+    {
+      "id": "afl-trade-deadline",
+      "name": "Trade Deadline",
+      "description": "Final day to submit trades for the regular season.",
+      "category": "in-season",
+      "icon": "clock",
+      "startDate": { "type": "computed", "rule": "friday-before-week-11" },
+      "urgencyDays": 7,
+      "sortOrder": 4
+    },
+    {
+      "id": "afl-allplay-locks",
+      "name": "All-Play Cutoff Locks",
+      "description": "Final week of all-play scoring. After this week the Premier/D-League promotion-relegation cutoff is locked.",
+      "category": "in-season",
+      "icon": "swap",
+      "startDate": { "type": "computed", "rule": "after-week-16" },
+      "urgencyDays": 7,
+      "sortOrder": 5
+    },
+    {
+      "id": "afl-conference-playoffs-start",
+      "name": "Conference Playoffs Start",
+      "description": "AL and NL conference seeds 1-4 begin head-to-head playoffs. NIT bracket (seeds 5-12) also begins.",
+      "category": "playoffs",
+      "icon": "trophy",
+      "startDate": { "type": "computed", "rule": "playoffs-start" },
+      "sortOrder": 6
+    },
+    {
+      "id": "afl-championship-week",
+      "name": "Championship Week",
+      "description": "AL champion vs. NL champion in the AFL Fantasy championship game.",
+      "category": "playoffs",
+      "icon": "trophy",
+      "startDate": { "type": "computed", "rule": "championship-week" },
+      "sortOrder": 7
+    }
+  ]
+}
