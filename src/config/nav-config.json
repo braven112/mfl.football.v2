@@ -233,7 +233,6 @@
       "label": "League Reports",
       "phaseOrder": { "inSeason": 4, "offSeason": 5 },
       "defaultOpen": "never",
-      "leagueOnly": "theleague",
       "links": [
         {
           "id": "stats-hub",
@@ -241,6 +240,7 @@
           "icon": "bar-chart",
           "path": "/stats",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "League analytics hub — salary benchmarks, awards, projected free agents, and team comparisons"
         },
         {
@@ -249,15 +249,16 @@
           "icon": "activity",
           "path": "/activity",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "See when each franchise owner last visited the site"
         },
         {
           "id": "franchise-history",
-          "label": "Franchise History",
+          "label": "Franchises",
           "icon": "shield",
           "path": "/franchises",
           "external": false,
-          "description": "All-time records, championships, division titles, and award history per franchise"
+          "description": "All-time records, championships, and per-franchise profiles"
         },
         {
           "id": "rivalries",
@@ -265,6 +266,7 @@
           "icon": "trophy",
           "path": "/rivalries",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "Head-to-head records, playoff meetings, and trade history between every pair of franchises"
         }
       ]
