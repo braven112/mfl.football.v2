@@ -60,13 +60,15 @@ describe('schefter-rumor-scan.mjs — main rumor-mill ordering', () => {
   it('writes the feed to disk BEFORE posting to GroupMe (live path)', () => {
     // Feed-first is the invariant. The main rumor-mill post pipeline already
     // honored this; pinning it ensures future refactors don't swap the order.
-    // Each beat ships its own GroupMe message via groupMeTextFor(builtPosts[i]).
+    // Each gate-allowed beat ships its own GroupMe message via
+    // groupMeTextFor(allowedPosts[i]). Held / suppressed beats skip both
+    // the feed write and the GroupMe send.
     //
     // The DRY_RUN block also calls postToGroupMe, so `indexOf` alone would
     // land on the dry-run call. Use `lastIndexOf` to land on the live call
     // and assert the feed write precedes it.
     const writeIdx = src.indexOf('await fs.writeFile(FEED_PATH');
-    const groupMeIdx = src.lastIndexOf('await postToGroupMe(groupMeTextFor(builtPosts[i])');
+    const groupMeIdx = src.lastIndexOf('await postToGroupMe(groupMeTextFor(allowedPosts[i])');
     expect(writeIdx).toBeGreaterThan(-1);
     expect(groupMeIdx).toBeGreaterThan(-1);
     expect(writeIdx).toBeLessThan(groupMeIdx);
