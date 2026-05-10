@@ -1,0 +1,355 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+
+// Optional championship history — graceful when not yet committed (PR #207).
+const champHistoryGlob = import.meta.glob<{
+  default: {
+    championships?: Array<{
+      year: number;
+      champion: string;
+      runnerUp: string;
+      championName: string;
+      runnerUpName: string;
+    }>;
+  };
+}>('../../../../data/afl-fantasy/championship-history.json', { eager: true });
+
+const championshipHistory =
+  Object.values(champHistoryGlob)[0]?.default?.championships ?? [];
+
+// SSR: route is /afl-fantasy/franchises/:id where :id is the franchiseId
+// (e.g. "0001"). Astro handles dynamic route params.
+export async function getStaticPaths() {
+  // Static generation for all known AFL franchises so deep links work
+  // out of the box.
+  const cfg = (await import('../../../../data/afl-fantasy/afl.config.json'))
+    .default;
+  return (cfg.teams as Array<{ franchiseId: string }>).map((t) => ({
+    params: { id: t.franchiseId },
+  }));
+}
+
+const { id } = Astro.params;
+
+const team = (aflConfig.teams as Array<any>).find(
+  (t) => t.franchiseId === id
+);
+
+if (!team) {
+  return Astro.redirect('/afl-fantasy/franchises');
+}
+
+// Championships won (best-effort — pre-2024 entries reference historical
+// franchise IDs that may not match current IDs).
+const wonYears = championshipHistory
+  .filter((c) => c.champion === id)
+  .map((c) => c.year)
+  .sort((a, b) => b - a);
+
+const lostYears = championshipHistory
+  .filter((c) => c.runnerUp === id)
+  .map((c) => c.year)
+  .sort((a, b) => b - a);
+
+// Conference + division metadata
+const conference = (aflConfig.conferences ?? []).find(
+  (c: any) => c.code === team.conference
+);
+const conferenceName = conference?.name ?? team.conference;
+---
+
+<TheLeagueLayout title={`${team.name} | AFL Franchise`}>
+  <main class="franchise-detail">
+    <header class="franchise-hero">
+      <a class="franchise-hero__back" href="/afl-fantasy/franchises">
+        ← All franchises
+      </a>
+
+      <div class="franchise-hero__content">
+        {team.banner ? (
+          <img class="franchise-hero__banner" src={team.banner} alt="" loading="lazy" />
+        ) : (
+          <div class="franchise-hero__banner-placeholder" />
+        )}
+
+        <div class="franchise-hero__text">
+          <div class="franchise-hero__tier-row">
+            <span
+              class:list={[
+                'franchise-hero__tier-pill',
+                team.tier === 'Premier League'
+                  ? 'franchise-hero__tier-pill--premier'
+                  : 'franchise-hero__tier-pill--dleague',
+              ]}
+            >
+              {team.tier}
+            </span>
+            <span class="franchise-hero__div">
+              {conferenceName} {team.division}
+            </span>
+          </div>
+          <h1 class="franchise-hero__name">{team.name}</h1>
+          {team.aliases?.length ? (
+            <p class="franchise-hero__aliases">
+              Also known as: {team.aliases.join(', ')}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </header>
+
+    <div class="franchise-stats">
+      <div class="stat-card">
+        <div class="stat-card__value">
+          {wonYears.length === 0 ? '—' : wonYears.length}
+        </div>
+        <div class="stat-card__label">Championships</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">
+          {lostYears.length === 0 ? '—' : lostYears.length}
+        </div>
+        <div class="stat-card__label">Runner-ups</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">{team.tier === 'Premier League' ? 'P' : 'D'}</div>
+        <div class="stat-card__label">Tier</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">{team.abbrev}</div>
+        <div class="stat-card__label">Abbrev</div>
+      </div>
+    </div>
+
+    {wonYears.length > 0 && (
+      <section class="franchise-section">
+        <h2>Championship years</h2>
+        <ul class="champ-list">
+          {wonYears.map((y) => (
+            <li class="champ-list__win">
+              <span class="champ-list__year">{y}</span>
+              <span class="champ-list__verb">— champion</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {lostYears.length > 0 && (
+      <section class="franchise-section">
+        <h2>Runner-up years</h2>
+        <ul class="champ-list">
+          {lostYears.map((y) => (
+            <li class="champ-list__loss">
+              <span class="champ-list__year">{y}</span>
+              <span class="champ-list__verb">— runner-up</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="franchise-section">
+      <h2>Quick links</h2>
+      <div class="quick-links">
+        <a class="quick-link" href={`/afl-fantasy/rosters?franchise=${id}`}>
+          📋 Roster
+        </a>
+        <a class="quick-link" href={`/afl-fantasy/standings?myteam=${id}`}>
+          📊 Standings (highlight this team)
+        </a>
+      </div>
+    </section>
+
+    <p class="franchise-footer">
+      Wider per-franchise history (year-by-year W-L, MVPs, biggest blowouts)
+      arrives in a later phase once <code>compute-franchise-history.mjs</code>
+      runs against AFL feeds.
+    </p>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .franchise-detail {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  .franchise-hero {
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .franchise-hero__back {
+    display: inline-block;
+    margin-bottom: var(--spacing-md, 16px);
+    color: var(--text-muted, #6b7280);
+    text-decoration: none;
+    font-size: 0.875rem;
+  }
+
+  .franchise-hero__back:hover {
+    color: var(--text-default);
+    text-decoration: underline;
+  }
+
+  .franchise-hero__content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg, 24px);
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .franchise-hero__banner,
+  .franchise-hero__banner-placeholder {
+    width: 240px;
+    height: 160px;
+    flex-shrink: 0;
+    object-fit: cover;
+    background: var(--bg-muted, #f3f4f6);
+  }
+
+  .franchise-hero__text {
+    padding: var(--spacing-md, 16px);
+    min-width: 0;
+  }
+
+  .franchise-hero__tier-row {
+    display: flex;
+    gap: var(--spacing-sm, 8px);
+    margin-bottom: var(--spacing-sm, 8px);
+  }
+
+  .franchise-hero__tier-pill {
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .franchise-hero__tier-pill--premier {
+    background: var(--primary-color, #c41e3a);
+    color: white;
+  }
+
+  .franchise-hero__tier-pill--dleague {
+    background: var(--bg-muted, #e5e7eb);
+    color: var(--text-default);
+  }
+
+  .franchise-hero__div {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    align-self: center;
+  }
+
+  .franchise-hero__name {
+    font-size: 2rem;
+    margin: 0 0 4px 0;
+  }
+
+  .franchise-hero__aliases {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  .franchise-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--spacing-md, 16px);
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .stat-card {
+    text-align: center;
+    padding: var(--spacing-md, 16px);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+  }
+
+  .stat-card__value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-color, #c41e3a);
+  }
+
+  .stat-card__label {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    margin-top: 4px;
+  }
+
+  .franchise-section {
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .franchise-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  .champ-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .champ-list li {
+    padding: var(--spacing-sm, 8px) 0;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .champ-list__year {
+    font-weight: 700;
+    margin-right: var(--spacing-sm, 8px);
+  }
+
+  .champ-list__win .champ-list__verb {
+    color: #d97706;
+  }
+
+  .champ-list__loss .champ-list__verb {
+    color: var(--text-muted, #6b7280);
+  }
+
+  .quick-links {
+    display: flex;
+    gap: var(--spacing-md, 16px);
+    flex-wrap: wrap;
+  }
+
+  .quick-link {
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-default);
+    font-weight: 500;
+  }
+
+  .quick-link:hover {
+    background: var(--bg-muted, #f3f4f6);
+  }
+
+  .franchise-footer {
+    margin-top: var(--spacing-xl, 32px);
+    color: var(--text-muted, #6b7280);
+    font-size: 0.875rem;
+    font-style: italic;
+  }
+
+  .franchise-footer code {
+    background: var(--code-bg, #f3f4f6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-style: normal;
+  }
+</style>

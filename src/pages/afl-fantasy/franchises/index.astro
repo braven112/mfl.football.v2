@@ -1,0 +1,221 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+
+// Optional championship history — graceful when not yet committed (PR #207).
+const champHistoryGlob = import.meta.glob<{
+  default: {
+    championships?: Array<{ year: number; champion: string; runnerUp: string }>;
+  };
+}>('../../../../data/afl-fantasy/championship-history.json', { eager: true });
+
+const championships =
+  Object.values(champHistoryGlob)[0]?.default?.championships ?? [];
+
+// Build a "championships count" map keyed by current franchise ID.
+// Note: pre-2024 entries reference historical franchise IDs; this is a
+// best-effort current-franchise count. Full mapping needs franchise-history
+// derivations (Phase 5 work).
+const champsByFranchise = new Map<string, number>();
+for (const c of championships) {
+  champsByFranchise.set(c.champion, (champsByFranchise.get(c.champion) ?? 0) + 1);
+}
+
+const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
+  // Premier League first, then D-League. Within each tier, alpha by name.
+  const tierA = a.tier === 'Premier League' ? 0 : 1;
+  const tierB = b.tier === 'Premier League' ? 0 : 1;
+  if (tierA !== tierB) return tierA - tierB;
+  return a.name.localeCompare(b.name);
+});
+
+const totalFranchises = teams.length;
+const premierCount = teams.filter(t => t.tier === 'Premier League').length;
+const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
+---
+
+<TheLeagueLayout title="Franchises | AFL Fantasy">
+  <main class="franchises-page">
+    <header class="franchises-hero">
+      <h1>AFL Franchises</h1>
+      <p class="subtitle">
+        {totalFranchises} teams across two tiers — {premierCount} in
+        Premier League, {dLeagueCount} in D-League. Click a team for its
+        per-franchise profile.
+      </p>
+    </header>
+
+    <section class="tier-section">
+      <h2 class="tier-title tier-title--premier">
+        Premier League
+        <span class="tier-count">{premierCount} teams</span>
+      </h2>
+      <div class="franchises-grid">
+        {teams.filter(t => t.tier === 'Premier League').map(team => (
+          <a class="franchise-card" href={`/afl-fantasy/franchises/${team.franchiseId}`}>
+            <div class="franchise-card__icon-wrap">
+              <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+            </div>
+            <div class="franchise-card__body">
+              <h3 class="franchise-card__name">{team.name}</h3>
+              <div class="franchise-card__meta">
+                <span class="franchise-card__div">{team.division}</span>
+                {champsByFranchise.has(team.franchiseId) && (
+                  <span class="franchise-card__champs" title={`${champsByFranchise.get(team.franchiseId)} championship(s)`}>
+                    🏆 ×{champsByFranchise.get(team.franchiseId)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="tier-section">
+      <h2 class="tier-title tier-title--dleague">
+        D-League
+        <span class="tier-count">{dLeagueCount} teams</span>
+      </h2>
+      <div class="franchises-grid">
+        {teams.filter(t => t.tier === 'D-League').map(team => (
+          <a class="franchise-card" href={`/afl-fantasy/franchises/${team.franchiseId}`}>
+            <div class="franchise-card__icon-wrap">
+              <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+            </div>
+            <div class="franchise-card__body">
+              <h3 class="franchise-card__name">{team.name}</h3>
+              <div class="franchise-card__meta">
+                <span class="franchise-card__div">{team.division}</span>
+                {champsByFranchise.has(team.franchiseId) && (
+                  <span class="franchise-card__champs" title={`${champsByFranchise.get(team.franchiseId)} championship(s)`}>
+                    🏆 ×{champsByFranchise.get(team.franchiseId)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .franchises-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  .franchises-hero {
+    text-align: center;
+    margin-bottom: var(--spacing-xxl, 48px);
+  }
+
+  .franchises-hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-sm, 8px);
+  }
+
+  .subtitle {
+    color: var(--text-muted, #6b7280);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .tier-section {
+    margin-bottom: var(--spacing-xxl, 48px);
+  }
+
+  .tier-title {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-lg, 24px);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md, 16px);
+    padding-bottom: var(--spacing-sm, 8px);
+    border-bottom: 2px solid var(--border-color, #e5e7eb);
+  }
+
+  .tier-title--premier {
+    color: var(--primary-color, #c41e3a);
+  }
+
+  .tier-count {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-muted, #6b7280);
+  }
+
+  .franchises-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--spacing-md, 16px);
+  }
+
+  .franchise-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md, 16px);
+    padding: var(--spacing-md, 16px);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-default);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .franchise-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .franchise-card__icon-wrap {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .franchise-card__icon-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .franchise-card__body {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .franchise-card__name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .franchise-card__meta {
+    display: flex;
+    gap: var(--spacing-sm, 8px);
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+  }
+
+  .franchise-card__div {
+    background: var(--code-bg, #f3f4f6);
+    padding: 2px 8px;
+    border-radius: 9999px;
+  }
+
+  .franchise-card__champs {
+    color: #d97706;
+    font-weight: 600;
+  }
+</style>
