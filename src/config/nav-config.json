@@ -275,7 +275,6 @@
       "label": "Rules",
       "phaseOrder": { "inSeason": 6, "offSeason": 6 },
       "defaultOpen": "never",
-      "leagueOnly": "theleague",
       "links": [
         {
           "id": "rules",
@@ -291,6 +290,7 @@
           "icon": "whistle",
           "path": "/rules-chat",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "Ask our AI rules expert any rules question"
         },
         {
@@ -299,6 +299,7 @@
           "icon": "commenting",
           "path": "/suggestions",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "Pitch rule changes, suggest features, or float ideas"
         },
         {
