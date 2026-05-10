@@ -158,7 +158,8 @@ describe('busy-morning directive in the LLM prompt', () => {
 describe('cap accounting — busy-morning posts share one slot', () => {
   it('uses one MAX_POSTS_PER_DAY slot for the whole cycle (matches gossip secondary pattern)', () => {
     // The cap-increment line increments by 1 regardless of beat count.
-    // We grep for the existing comment pattern that documents this.
-    expect(SCANNER_SRC).toMatch(/even with \$\{builtPosts\.length\} posts — counts as one cap slot/);
+    // We grep for the dry-run log line that documents this — its wording
+    // calls out the "1 cycle = 1 slot" invariant explicitly.
+    expect(SCANNER_SRC).toMatch(/1 cycle\s*=\s*1 slot/);
   });
 });

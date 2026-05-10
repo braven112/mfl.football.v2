@@ -109,6 +109,7 @@ import {
   getTeamNameCount30d,
   recordTeamNaming,
 } from './lib/schefter-team-naming.mjs';
+import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -207,6 +208,15 @@ const TIP_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 // A tip this old MUST either reference its date or hedge in-voice.
 const TIP_STALE_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
 const PROCESSED_TTL_SEC = 24 * 60 * 60;
+
+// Hold-and-strike (Option A): when the quality gate suppresses a post, the
+// tips in that beat are pushed back into the queue with `suppressedStrikes`
+// incremented, instead of being drained. They re-marinate and get re-evaluated
+// next cycle — at which point a corroborating tip about the same franchise
+// can promote the scope to "franchise-multi-source" (rule 4) and clear the
+// new specificity bar. Tips that exceed either threshold below are dropped.
+const MAX_SUPPRESSED_STRIKES = 3;
+const MAX_HELD_MS = 48 * 60 * 60 * 1000;
 
 const QUIET_HOUR_START = 23; // 11pm PT
 const QUIET_HOUR_END = 7;    // 7am PT
@@ -586,6 +596,44 @@ function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
 
 // ── GroupMe ──
 
+// Quality-gate suppressions tracker — populated when checkGroupMeQuality
+// blocks a chat ping. Flushed to data/schefter/groupme-suppressions.json
+// at exit so a workflow follow-up can act on it. Mirrors the contract used
+// by scripts/schefter-scan.mjs.
+const groupMeSuppressions = [];
+async function recordRumorGroupMeSuppression(entry) {
+  warn(`  [quality-gate] SUPPRESSED GroupMe: ${entry.id} (score ${entry.score}) — ${entry.reason}`);
+  groupMeSuppressions.push({
+    league: LEAGUE_SLUG,
+    timestamp: new Date().toISOString(),
+    ...entry,
+  });
+}
+
+async function flushGroupMeSuppressions() {
+  try {
+    const suppressionsPath = path.join(projectRoot, 'data', 'schefter', 'groupme-suppressions.json');
+    await fs.mkdir(path.dirname(suppressionsPath), { recursive: true });
+    let existing = [];
+    try {
+      const raw = JSON.parse(await fs.readFile(suppressionsPath, 'utf8'));
+      if (Array.isArray(raw?.suppressions)) existing = raw.suppressions;
+    } catch {
+      // file missing or unparseable — start fresh
+    }
+    const merged = [...existing, ...groupMeSuppressions];
+    await fs.writeFile(
+      suppressionsPath,
+      JSON.stringify({ generatedAt: new Date().toISOString(), suppressions: merged }, null, 2) + '\n',
+    );
+    if (groupMeSuppressions.length > 0) {
+      log(`⚠️  Suppressed ${groupMeSuppressions.length} GroupMe send(s) (see ${path.relative(projectRoot, suppressionsPath)})`);
+    }
+  } catch (err) {
+    warn(`  Failed to write GroupMe suppressions log: ${err.message}`);
+  }
+}
+
 async function postToGroupMe(text) {
   const botId = process.env.GROUPME_SCHEFTER_BOT_ID;
   if (!botId) {
@@ -644,7 +692,7 @@ async function safeGetTeamNameCount30d(franchiseId, redis) {
   }
 }
 
-async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
+export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
   const refMs = now instanceof Date ? now.getTime() : Date.now();
   // Single-franchise fuzz applies ONLY to web tips. A GroupMe mention of
   // franchise X isn't an anonymity leak — the speaker publicly named it
@@ -2462,14 +2510,20 @@ async function main() {
   }
   log(`  Queue depth: ${parsedTips.length}`);
 
-  // Drop expired
+  // Drop expired — by submitted age, by suppressed-strike count, or by
+  // total time spent on hold. The strike/hold checks let Option A age out
+  // a tip that the gate keeps rejecting without an LLM call ever firing.
   const now = new Date();
   const freshTips = parsedTips.filter((t) => {
     const age = now.getTime() - (t.submittedAt ?? 0);
-    return age <= TIP_EXPIRY_MS;
+    if (age > TIP_EXPIRY_MS) return false;
+    const strikes = typeof t.suppressedStrikes === 'number' ? t.suppressedStrikes : 0;
+    if (strikes >= MAX_SUPPRESSED_STRIKES) return false;
+    if (typeof t.firstSuppressedAt === 'number' && now.getTime() - t.firstSuppressedAt > MAX_HELD_MS) return false;
+    return true;
   });
   const expiredCount = parsedTips.length - freshTips.length;
-  if (expiredCount > 0) log(`  Expired tips (>24h): ${expiredCount}`);
+  if (expiredCount > 0) log(`  Dropped tips (expired / strike-exhausted / hold-aged): ${expiredCount}`);
 
   if (freshTips.length === 0) {
     log('  No fresh tips — clearing stale queue');
@@ -2751,7 +2805,6 @@ async function main() {
   // parent rumors land in two different threads — one per post. We keep
   // the parent-id mapping in a side Map so it never leaks into the feed
   // JSON or the API response shape.
-  const combinedBatch = beats.flatMap((b) => b.batch);
   const builtPosts = [];
   const ctaByPostId = new Map();
   const parentIdByPostId = new Map();
@@ -2837,7 +2890,6 @@ async function main() {
     builtPosts.push(post);
   }
 
-  const allTipIds = combinedBatch.map((t) => t.id);
   // GroupMe payload — per-post CTA. Trade-bait posts link into the Trade
   // Builder; every other post carries the tip-page CTA.
   const groupMeTextFor = (p) => {
@@ -2848,51 +2900,131 @@ async function main() {
     return `${p.body}\n\n${cta.groupMePrefix} ${cta.groupMeUrl}`;
   };
 
-  if (DRY_RUN) {
-    log(`\n  [dry-run] Would append ${builtPosts.length} post(s) to feed:`);
-    for (const p of builtPosts) log(JSON.stringify(p, null, 2));
-    log('\n  [dry-run] Would remove the following tipIds from queue:');
-    log(`    ${allTipIds.join(', ')}`);
-    if (unusedTips.length > 0) {
-      log(`  [dry-run] Would hold ${unusedTips.length} tip(s) for the next cycle: ${unusedTips.map((t) => t.id).join(', ')}`);
+  // Quality gate — per-beat check BEFORE any persistence. Suppressed beats
+  // do not write the feed, do not ping GroupMe, do not credit tipster
+  // counters, and do not bump team-naming or history. Their tips are pushed
+  // back into the queue with `suppressedStrikes` incremented (Option A) so a
+  // future cycle can promote them to multi-source naming if a corroborating
+  // tip lands. Tips that hit MAX_SUPPRESSED_STRIKES or sit in held state
+  // longer than MAX_HELD_MS get dropped at the next queue load.
+  // Failure mode of the gate itself is allow-on-error (see
+  // schefter-quality-gate.mjs header).
+  const gateResults = await Promise.all(
+    builtPosts.map((p, i) => {
+      const primaryTip = beats[i]?.anonymized?.[0];
+      return checkGroupMeQuality(
+        {
+          headline: p.headline,
+          body: p.body,
+          tier: p.tier,
+          scope: primaryTip?.scope?.kind ?? null,
+          topic: primaryTip?.topic ?? null,
+        },
+        { apiKey: process.env.ANTHROPIC_API_KEY, log, warn },
+      );
+    }),
+  );
+
+  const allowedIndexSet = new Set(
+    gateResults
+      .map((g, i) => (g && g.allow !== false ? i : -1))
+      .filter((i) => i >= 0),
+  );
+  const allowedPosts = builtPosts.filter((_, i) => allowedIndexSet.has(i));
+  const allowedBeats = beats.filter((_, i) => allowedIndexSet.has(i));
+  const consumedBatch = allowedBeats.flatMap((b) => b.batch);
+  const consumedTipIds = consumedBatch.map((t) => t.id);
+
+  // Build the held-tips list now so DRY_RUN can log it. Each held tip:
+  //  - bumps suppressedStrikes (defaults 0 → 1 on first hold)
+  //  - stamps firstSuppressedAt the first time it's held
+  //  - drops here when strikes hit the cap or held-age exceeds the window
+  //    (instead of getting re-pushed and dropped on the next queue load)
+  const heldTipsForRequeue = [];
+  const heldTipsExhausted = [];
+  for (let i = 0; i < beats.length; i++) {
+    if (allowedIndexSet.has(i)) continue;
+    const gate = gateResults[i];
+    await recordRumorGroupMeSuppression({
+      id: builtPosts[i].id,
+      timestamp: builtPosts[i].timestamp,
+      headline: builtPosts[i].headline,
+      body: builtPosts[i].body,
+      score: gate?.score ?? null,
+      reason: gate?.reason ?? null,
+    });
+    for (const tip of beats[i].batch) {
+      const strikes = (typeof tip.suppressedStrikes === 'number' ? tip.suppressedStrikes : 0) + 1;
+      const firstSuppressedAt = typeof tip.firstSuppressedAt === 'number' ? tip.firstSuppressedAt : now.getTime();
+      if (strikes >= MAX_SUPPRESSED_STRIKES) {
+        log(`  [hold-strike] ${tip.id} hit ${MAX_SUPPRESSED_STRIKES} strikes — dropping`);
+        heldTipsExhausted.push(tip);
+        continue;
+      }
+      if (now.getTime() - firstSuppressedAt > MAX_HELD_MS) {
+        log(`  [hold-strike] ${tip.id} held > ${(MAX_HELD_MS / 3600000).toFixed(0)}h — dropping`);
+        heldTipsExhausted.push(tip);
+        continue;
+      }
+      heldTipsForRequeue.push({ ...tip, suppressedStrikes: strikes, firstSuppressedAt });
     }
-    log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''} (even with ${builtPosts.length} posts — counts as one cap slot), set last_post_ts${unusedTips.length > 0 ? ', rewrite queue with leftover tips' : ', DEL first_tip_ts'}`);
+  }
+
+  if (DRY_RUN) {
+    log(`\n  [dry-run] Gate verdict: ${allowedPosts.length} allow / ${builtPosts.length - allowedPosts.length} suppress`);
+    log(`\n  [dry-run] Would append ${allowedPosts.length} post(s) to feed:`);
+    for (const p of allowedPosts) log(JSON.stringify(p, null, 2));
+    log('\n  [dry-run] Would archive (consume) the following tipIds:');
+    log(`    ${consumedTipIds.join(', ')}`);
+    if (heldTipsForRequeue.length > 0) {
+      log(`  [dry-run] Would HOLD ${heldTipsForRequeue.length} suppressed tip(s) for re-evaluation: ${heldTipsForRequeue.map((t) => `${t.id}(strikes=${t.suppressedStrikes})`).join(', ')}`);
+    }
+    if (heldTipsExhausted.length > 0) {
+      log(`  [dry-run] Would DROP ${heldTipsExhausted.length} strike-exhausted tip(s): ${heldTipsExhausted.map((t) => t.id).join(', ')}`);
+    }
+    if (unusedTips.length > 0) {
+      log(`  [dry-run] Would hold ${unusedTips.length} unchosen-bucket tip(s) for the next cycle: ${unusedTips.map((t) => t.id).join(', ')}`);
+    }
+    log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''} (1 cycle = 1 slot, regardless of suppression), set last_post_ts`);
     if (hadRogerRiff) {
       log(`  [dry-run] Would set ${ROGER_LAST_RIFF_DATE_KEY}=${todayPt} (ex=48h)`);
     }
-    for (const p of builtPosts) {
+    for (const p of allowedPosts) {
       await postToGroupMe(groupMeTextFor(p));
     }
     return 0;
   }
 
-  // Write feed — prepend in reverse so the primary beat ends up at index 0
-  // (top of the feed). Both posts land in the same fs.writeFile call so
-  // an error on GroupMe can't leave one written and one missing.
-  const feed = await loadFeed();
-  const existingPosts = feed.posts ?? [];
-  feed.posts = [...builtPosts, ...existingPosts];
-  feed.lastScanTimestamp = now.toISOString();
-  await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
-  log(`  Appended to feed: ${builtPosts.length} new post(s) (total: ${feed.posts.length})`);
-
-  // GroupMe — one message per post so each shows up as an independent
-  // reply target in the group chat. Small stagger between to avoid
-  // rate-limiting surprises.
-  for (let i = 0; i < builtPosts.length; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 250));
-    await postToGroupMe(groupMeTextFor(builtPosts[i]));
+  // Write feed — only ALLOWED posts ship. Held / suppressed posts never hit
+  // the website feed; their underlying tips wait for re-evaluation.
+  if (allowedPosts.length > 0) {
+    const feed = await loadFeed();
+    const existingPosts = feed.posts ?? [];
+    feed.posts = [...allowedPosts, ...existingPosts];
+    feed.lastScanTimestamp = now.toISOString();
+    await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
+    log(`  Appended to feed: ${allowedPosts.length} new post(s) (total: ${feed.posts.length})`);
+  } else {
+    log('  All beats suppressed — skipping feed write; tips held for re-evaluation');
   }
 
-  // Per-team name counter: every post that named a franchise (explicit-pick,
-  // multi-source, or trade-bait) bumps the rolling 30-day name count for
-  // that franchise. Drives drama escalation in subsequent posts and powers
-  // the "Hottest desks this week" sidebar widget. Best-effort — a Redis
-  // failure here cannot block anything downstream because the post is
-  // already on disk and on GroupMe.
-  for (let i = 0; i < builtPosts.length; i++) {
-    const beat = beats[i];
-    const post = builtPosts[i];
+  // GroupMe — one message per allowed post so each shows up as an independent
+  // reply target in the group chat. Small stagger between to avoid
+  // rate-limiting surprises.
+  for (let i = 0; i < allowedPosts.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 250));
+    await postToGroupMe(groupMeTextFor(allowedPosts[i]));
+  }
+
+  // Per-team name counter: every ALLOWED post that named a franchise
+  // (explicit-pick, multi-source, or trade-bait) bumps the rolling 30-day
+  // name count for that franchise. Drives drama escalation in subsequent
+  // posts and powers the "Hottest desks this week" sidebar widget. Held
+  // posts do not bump — the post never shipped, so it shouldn't influence
+  // future naming framing.
+  for (let i = 0; i < allowedPosts.length; i++) {
+    const beat = allowedBeats[i];
+    const post = allowedPosts[i];
     const namingScopes = ['franchise-explicit-pick', 'franchise-multi-source', 'trade-bait'];
     const safe = beat?.anonymized?.[0];
     if (!safe || !namingScopes.includes(safe.scope?.kind)) continue;
@@ -2911,11 +3043,11 @@ async function main() {
     }
   }
 
-  // Append each post to the rolling history (one entry per post).
-  const tipSources = Array.from(new Set(combinedBatch.map((t) => t.source).filter(Boolean)));
-  for (let i = 0; i < builtPosts.length; i++) {
-    const p = builtPosts[i];
-    const beat = beats[i];
+  // Append each ALLOWED post to the rolling history (one entry per post).
+  const tipSources = Array.from(new Set(consumedBatch.map((t) => t.source).filter(Boolean)));
+  for (let i = 0; i < allowedPosts.length; i++) {
+    const p = allowedPosts[i];
+    const beat = allowedBeats[i];
     const subject = deriveHistorySubject(beat.batch, beat.anonymized);
     await appendPostHistory(
       buildHistoryEntry({
@@ -2952,41 +3084,48 @@ async function main() {
     }
     await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
 
-    // Remove consumed tips from the queue while preserving tips in other
-    // buckets for the next cycle. We replace the list atomically: DEL then
-    // RPUSH each leftover JSON string back. Any tip that arrived between
-    // LRANGE and now would be lost — acceptable at our 15 min cadence.
+    // Remove consumed tips from the queue while preserving (a) tips in
+    // unchosen buckets and (b) tips held back by the quality gate (Option A —
+    // suppressed but not yet strike-exhausted). We replace the list
+    // atomically: DEL then RPUSH each surviving JSON string back. Any tip
+    // that arrived between LRANGE and now would be lost — acceptable at
+    // our 15 min cadence.
+    const requeueTips = [...unusedTips, ...heldTipsForRequeue];
     await redis.del(TIPS_QUEUE_KEY);
-    if (unusedTips.length > 0) {
-      const serialized = unusedTips.map((t) => JSON.stringify(t));
+    if (requeueTips.length > 0) {
+      const serialized = requeueTips.map((t) => JSON.stringify(t));
       await redis.rpush(TIPS_QUEUE_KEY, ...serialized);
       // Keep first_tip_ts anchored at the OLDEST surviving tip so the
       // marinate gate still gates the next cycle accurately — tips that
       // have already sat longer than MIN_MARINATE_MS stay eligible.
-      const oldest = unusedTips.reduce(
+      const oldest = requeueTips.reduce(
         (acc, t) => Math.min(acc, t.submittedAt ?? Date.now()),
         Number.MAX_SAFE_INTEGER,
       );
       if (Number.isFinite(oldest)) {
         await redis.set(FIRST_TIP_TS_KEY, oldest);
       }
-      log(`  Queue held ${unusedTips.length} tip(s) for next cycle (oldest submittedAt=${new Date(oldest).toISOString()})`);
+      log(`  Queue requeued ${requeueTips.length} tip(s) for next cycle (${unusedTips.length} unchosen-bucket + ${heldTipsForRequeue.length} held; oldest submittedAt=${new Date(oldest).toISOString()})`);
     } else {
       await redis.del(FIRST_TIP_TS_KEY);
     }
 
-    // Processed audit list (TTL 24h) — covers tips from every beat.
-    if (allTipIds.length > 0) {
-      await redis.lpush(TIPS_PROCESSED_KEY, ...allTipIds);
+    // Processed audit list (TTL 24h) — covers consumed tips only. Held and
+    // strike-exhausted tips do not enter the processed archive on this
+    // cycle (they will when their post finally ships, or never if dropped).
+    const archiveTipIds = [...consumedTipIds, ...heldTipsExhausted.map((t) => t.id)];
+    if (archiveTipIds.length > 0) {
+      await redis.lpush(TIPS_PROCESSED_KEY, ...archiveTipIds);
       await redis.expire(TIPS_PROCESSED_KEY, PROCESSED_TTL_SEC);
     }
 
     // Phase 10 — hash_for_tip index. The weekly tip-of-the-week script needs to
     // resolve each contributing tipId back to a hashedOwnerId to award badges.
     // We TTL these at 14 days so the weekly job has a generous window even if
-    // it runs a day or two late. Covers both beats of a two-beat gossip post
-    // plus every tip swept into a Friday mailbag.
-    for (const tip of combinedBatch) {
+    // it runs a day or two late. Held tips are skipped — they get indexed if
+    // and when their post eventually ships. Covers both beats of a two-beat
+    // gossip post plus every tip swept into a Friday mailbag.
+    for (const tip of consumedBatch) {
       if (tip && tip.source === 'web' && typeof tip.hashedOwnerId === 'string' && tip.hashedOwnerId.length > 0) {
         try {
           await redis.set(
@@ -3022,8 +3161,9 @@ async function main() {
   // started one from a whisper-back), record it in Redis so future
   // follow-ups can look up the thread and the permalink page can render
   // the chain. Each beat has its own (possibly null) threadId, so we
-  // loop and treat them independently.
-  for (const p of builtPosts) {
+  // loop and treat them independently. Held / suppressed posts never
+  // shipped, so they don't enter the thread registry.
+  for (const p of allowedPosts) {
     if (!p.threadId) continue;
     const threadId = p.threadId;
     const dominantParentId = parentIdByPostId.get(p.id);
@@ -3058,12 +3198,14 @@ async function main() {
 
   // Phase 6 — tipster scorecard: increment counters for each distinct web
   // tipster that contributed to this rumor. Runs after the queue drain so a
-  // scorecard failure cannot block the post from shipping.
+  // scorecard failure cannot block the post from shipping. Held / suppressed
+  // tips are excluded — they get credit if and when their post eventually
+  // ships from a future cycle.
   try {
     const seasonYear = getSeasonYearForTipster(now);
     await incrementTipsterCounters({
       redis,
-      batch: combinedBatch,
+      batch: consumedBatch,
       seasonYear,
       dryRun: DRY_RUN,
       log,
@@ -3104,12 +3246,14 @@ const invokedDirectly = (() => {
 
 if (invokedDirectly) {
   main()
-    .then((count) => {
+    .then(async (count) => {
+      await flushGroupMeSuppressions();
       log(`\n=== Done. Posts written: ${count} ===`);
       process.exit(0);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       console.error('[rumor-scan] Fatal:', err);
+      try { await flushGroupMeSuppressions(); } catch {}
       process.exit(1);
     });
 }

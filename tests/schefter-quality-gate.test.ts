@@ -89,3 +89,37 @@ describe('checkGroupMeQuality', () => {
     }
   });
 });
+
+describe('scoreSchefterPost — scope/topic plumbing', () => {
+  it('passes scope and topic to the scorer when provided', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: [{ text: '{"score": 7, "reason": "ok"}' }] }),
+    });
+    await scoreSchefterPost(
+      { headline: 'h', body: 'b', tier: 'rumor', scope: 'division', topic: 'roster' },
+      { apiKey: 'k', fetchFn },
+    );
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    const callArgs = fetchFn.mock.calls[0]?.[1];
+    const sentBody = JSON.parse(callArgs.body);
+    const userContent = sentBody.messages[0].content;
+    expect(userContent).toContain('"scope": "division"');
+    expect(userContent).toContain('"topic": "roster"');
+  });
+
+  it('omits scope/topic from the payload when not provided', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: [{ text: '{"score": 7, "reason": "ok"}' }] }),
+    });
+    await scoreSchefterPost(
+      { headline: 'h', body: 'b', tier: 'rumor' },
+      { apiKey: 'k', fetchFn },
+    );
+    const sentBody = JSON.parse(fetchFn.mock.calls[0]?.[1].body);
+    const userContent = sentBody.messages[0].content;
+    expect(userContent).not.toContain('"scope"');
+    expect(userContent).not.toContain('"topic"');
+  });
+});

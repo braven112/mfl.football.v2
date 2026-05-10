@@ -183,7 +183,7 @@ describe('rumor-scan tip-page link — every post sends readers back to /tip', (
     expect(src).toMatch(/ctaByPostId\.get\(p\.id\)/);
     expect(src).toMatch(/groupMeUrl:\s*TIP_PAGE_ABSOLUTE_URL/);
     expect(src).toMatch(/\$\{cta\.groupMePrefix\}\s*\$\{cta\.groupMeUrl\}/);
-    expect(src).toMatch(/await\s+postToGroupMe\(groupMeTextFor\(builtPosts\[i\]\)\)/);
+    expect(src).toMatch(/await\s+postToGroupMe\(groupMeTextFor\(allowedPosts\[i\]\)\)/);
     // No raw-body GroupMe calls remain — every rumor post gets the CTA.
     expect(src).not.toMatch(/await\s+postToGroupMe\(post\.body\)/);
   });
@@ -357,15 +357,16 @@ describe('rumor-scan two-post gossip — second bucket ships as its own feed pos
   });
 
   it('writes both posts to the feed in one atomic fs.writeFile call', () => {
-    // Prepend builtPosts in array order so primary lands at index 0
-    // (top of the feed).
-    expect(src).toMatch(/feed\.posts\s*=\s*\[\s*\.\.\.builtPosts,\s*\.\.\.existingPosts\s*\]/);
+    // Prepend allowedPosts (gate-allowed beats only) in array order so the
+    // primary lands at index 0 (top of the feed). Held / suppressed posts
+    // never enter the feed — Option A holds their tips back for re-eval.
+    expect(src).toMatch(/feed\.posts\s*=\s*\[\s*\.\.\.allowedPosts,\s*\.\.\.existingPosts\s*\]/);
     const feedWrites = (src.match(/await fs\.writeFile\(FEED_PATH/g) ?? []).length;
     expect(feedWrites).toBe(1);
   });
 
   it('sends a separate GroupMe message per post (so each is independently replyable)', () => {
-    expect(src).toMatch(/for\s*\(let i\s*=\s*0;\s*i\s*<\s*builtPosts\.length;\s*i\+\+\)\s*\{[\s\S]*?postToGroupMe\(groupMeTextFor\(builtPosts\[i\]\)\)/);
+    expect(src).toMatch(/for\s*\(let i\s*=\s*0;\s*i\s*<\s*allowedPosts\.length;\s*i\+\+\)\s*\{[\s\S]*?postToGroupMe\(groupMeTextFor\(allowedPosts\[i\]\)\)/);
   });
 
   it('counts both posts as ONE slot against posts_today and gossip counters', () => {
