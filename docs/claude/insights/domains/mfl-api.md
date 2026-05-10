@@ -994,3 +994,80 @@ TYPE=taxi_squad&L={leagueId}&PROMOTE={playerId}   # move OFF taxi
 
 **Evidence:** `src/utils/mfl-matchup-api.ts:597-690` after the fix; PR #175. The on-page debug panel from #175 captured both the silent-`OK` symptom (with wrong params) and the post-fix request shape — see `src/pages/theleague/rosters.astro` for that surface (intended to be ripped out in a follow-up once the fix is verified end-to-end).
 
+---
+
+## 2026-05-10 - Historical Champion Extraction: playoffBracket vs weeklyResults, and the Pre-2020 Cutoff
+
+**Context:** Researching how to backfill AFL Fantasy (L=19621) champion data from 2003 to present via API rather than manual data entry.
+
+**Finding 1: The only two viable endpoints for historical champion data are:**
+
+1. `TYPE=playoffBracket&BRACKET_ID=1` — returns the championship game with `franchise_id` + `points` for each team in the final round. The winner is the franchise with the higher `points`. Bracket ID `1` is always the league championship bracket. This is the **preferred source** when it works.
+2. `TYPE=weeklyResults&W={championship_week}` — returns all matchups for a given week including playoff games tagged with `isPlayoff=1`. The championship game can be identified by filtering for the bracket 1 championship week (readable from `TYPE=playoffBrackets` metadata: `startWeek + startWeekGames - 1`). This is a **fallback** for years where the bracket endpoint returns seed-only data.
+
+**Finding 2: MFL does NOT have a `leagueHistory` or `championshipHistory` endpoint.** The `history.league` array inside `TYPE=league` returns URLs (host+year+leagueId) for every historical season, but does not include champion data.
+
+**Finding 3: Pre-2020 playoffBracket returns seeds only — no franchise_ids or points.** For seasons 2019 and older, `TYPE=playoffBracket&BRACKET_ID=1` returns bracket structure (seeds, `winner_of_game` references) but no `franchise_id` or `points` fields. Confirmed by inspecting TheLeague's backfilled 2019 and 2020 data:
+- 2020+: `{ "franchise_id": "0006", "points": "141.37" }` in each game slot
+- 2019 and older: `{ "seed": "2" }` only — no franchise_ids
+
+For pre-2020 years, `TYPE=weeklyResults&W={champ_week}` with `isPlayoff=1` matchup filtering is the correct path to identify the championship game participants and winner.
+
+**Finding 4: The response shape for `playoffBracket` (BRACKET_ID=1) for a completed season (2020+):**
+```json
+{
+  "playoffBracket": {
+    "bracket_id": "1",
+    "playoffRound": {
+      "week": "17",
+      "playoffGame": {
+        "home": { "franchise_id": "0022", "points": "175.54", "seed": "1", "winner_of_game": "3", "bracket": "3" },
+        "away": { "franchise_id": "0005", "points": "111.08", "seed": "2", "winner_of_game": "3", "bracket": "2" },
+        "game_id": "1"
+      }
+    }
+  }
+}
+```
+Champion = franchise with higher `points`. Multi-round brackets have `playoffRound` as an array; single-game finals have it as an object.
+
+**Finding 5: AFL Fantasy has a different host AND different league ID for every season 2003-2015, then settles on www44/L=19621 from 2016 onward.** The complete mapping is in `data/afl-fantasy/mfl-feeds/2024/league.json` under `league.history.league[]`. Each entry has `year` and `url` (extractable: `https://{host}/{year}/home/{leagueId}`):
+
+| Year | Host | League ID |
+|------|------|-----------|
+| 2003 | www45 | 55011 |
+| 2004 | www47 | 23644 |
+| 2005 | www42 | 29232 |
+| 2006 | www45 | 49793 |
+| 2007 | www43 | 47555 |
+| 2008 | www44 | 13233 |
+| 2009 | www47 | 21465 |
+| 2010 | www46 | 30033 |
+| 2011 | www49 | 36377 |
+| 2012 | www45 | 26792 |
+| 2013 | www45 | 48338 |
+| 2014 | www45 | 40840 |
+| 2015 | www44 | 14236 |
+| 2016-2025 | www44 | 19621 |
+
+**CAUTION:** The cached 2011 AFL data (`data/afl-fantasy/mfl-feeds/2011/`) was fetched with league ID `48815` (incorrect — that's a TheLeague year ID). The correct 2011 AFL league ID is `36377` on `www49`. A re-fetch with the correct ID is needed.
+
+**Finding 6: Authentication — historical bracket and weeklyResults reads are public (no auth required).** These are `TYPE=export` read-only endpoints. No cookie or API key needed for past seasons.
+
+**Finding 7: The existing `scripts/compute-franchise-history.mjs` `getChampionshipResult()` function already handles both cases** — it reads `brackets['1'].playoffBracket`, finds the last `playoffRound`, takes `franchise_id` + `points` from the final game, and falls back to null if `franchise_id` is missing. AFL backfill can reuse this logic.
+
+**Recommended backfill strategy for AFL champions 2003-2025:**
+1. Use `data/afl-fantasy/mfl-feeds/2024/league.json` → `history.league[]` to build the host+year+leagueId map.
+2. For each year 2016-2025: `https://www44.myfantasyleague.com/{year}/export?TYPE=playoffBracket&L=19621&BRACKET_ID=1&JSON=1`
+3. For years 2003-2015: same endpoint pattern using the correct host and league ID per the table above.
+4. If `franchise_id` is absent in the response (pre-2020 era), fall back to `TYPE=weeklyResults&W={champ_week}` and filter for `isPlayoff=1` matchups. Championship week = `startWeek + startWeekGames - 1` from `TYPE=playoffBrackets` metadata.
+5. For the oldest years (2003-2010), MFL's playoff bracket endpoint may not exist at all on archived hosts — in that case weeklyResults is the primary source, or manual curation is required.
+6. The resulting data should be stored as `data/afl-fantasy/championship-history.json` mirroring TheLeague's `data/theleague/championship-history.json` shape: `{ championships: [{ year, champion, runnerUp, championName, runnerUpName }] }`.
+
+**Evidence:**
+- AFL 2024 playoff-brackets.json: `data/afl-fantasy/mfl-feeds/2024/playoff-brackets.json` (bracket 1, week 17 game: 0022 defeats 0005)
+- TheLeague 2019 playoff-brackets.json: seeds only, no franchise_ids (pre-2020 cutoff confirmed)
+- TheLeague 2020 playoff-brackets.json: franchise_ids + points present (2020+ works)
+- History mapping: `data/afl-fantasy/mfl-feeds/2024/league.json` → `league.history.league[]`
+- AFL champion extraction logic: `scripts/compute-franchise-history.mjs:181-227` (`getChampionshipResult()`)
+
