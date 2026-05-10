@@ -23,6 +23,30 @@
       "destination": "/",
       "has": [{ "type": "host", "value": "www.theleague.us" }],
       "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy/:path*",
+      "destination": "/:path*",
+      "has": [{ "type": "host", "value": "afl-fantasy.com" }],
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy/:path*",
+      "destination": "/:path*",
+      "has": [{ "type": "host", "value": "www.afl-fantasy.com" }],
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy",
+      "destination": "/",
+      "has": [{ "type": "host", "value": "afl-fantasy.com" }],
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy",
+      "destination": "/",
+      "has": [{ "type": "host", "value": "www.afl-fantasy.com" }],
+      "statusCode": 301
     }
   ],
   "rewrites": [
