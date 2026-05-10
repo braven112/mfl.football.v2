@@ -20,7 +20,7 @@
 
 import type { LeagueSlug, NavHeaderProps } from '../../types/nav';
 import { hasTeamInBothLeagues } from '../../utils/league-context';
-import { resolveLeaguePath } from '../../utils/nav-utils';
+import { resolveLeaguePath, getEquivalentRoute } from '../../utils/nav-utils';
 
 interface Props extends NavHeaderProps {
   /** Current page path for smart routing when switching leagues */
@@ -55,29 +55,9 @@ const logoAlt = league === 'afl' ? 'AFL Fantasy Logo' : 'TheLeague Logo';
 const targetLeague = league === 'afl' ? 'theleague' : 'afl';
 const targetLeagueName = league === 'afl' ? 'TheLeague' : 'AFL Fantasy';
 
-/**
- * Get the equivalent route in the target league.
- */
-function getEquivalentRoute(path: string, target: 'theleague' | 'afl'): string {
-  const targetBase = target === 'afl' ? '/afl-fantasy' : '/theleague';
-
-  // Extract the page portion after the league prefix
-  let pagePath = '';
-  if (path.startsWith('/theleague')) {
-    pagePath = path.slice('/theleague'.length);
-  } else if (path.startsWith('/afl-fantasy')) {
-    pagePath = path.slice('/afl-fantasy'.length);
-  }
-
-  // If no page path or just root, return league home
-  if (!pagePath || pagePath === '/') {
-    return targetBase;
-  }
-
-  // Construct equivalent URL
-  return `${targetBase}${pagePath}`;
-}
-
+// Equivalent-route logic lives in src/utils/nav-utils.ts and is shared with
+// LeagueSwitcher. nav-utils consults the route-equivalence map first and
+// falls back to the league home for paths that don't have a counterpart.
 const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague), hideLeaguePrefix);
 ---
 

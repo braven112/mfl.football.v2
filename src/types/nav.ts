@@ -317,6 +317,15 @@ export interface LeagueSwitcherProps {
 
   /** Current page path for smart routing */
   currentPath: string;
+
+  /**
+   * Optional franchise ID. When provided, the switcher only renders if
+   * the franchise has a counterpart team in the other league
+   * (per CROSS_LEAGUE_TEAM_MAP). When omitted, the switcher renders
+   * unconditionally — useful for global headers and pages where any
+   * visitor should be able to flip between leagues.
+   */
+  franchiseId?: string;
 }
 
 /**
