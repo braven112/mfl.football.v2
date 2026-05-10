@@ -1,7 +1,7 @@
 /**
  * Astro Middleware
  *
- * Handles two concerns for the theleague.us domain:
+ * Handles two concerns for the per-league domains:
  *
  * 1. URL rewriting: Rewrites clean URLs (e.g., /rosters) to their internal
  *    Astro route (e.g., /theleague/rosters) using context.rewrite(). This is
@@ -9,54 +9,30 @@
  *    SSR catch-all route in the build output config.
  *
  * 2. Link generation flag: Sets context.locals.hideLeaguePrefix so components
- *    can generate clean links without the /theleague prefix on theleague.us.
+ *    can generate clean links without the /<slug> prefix on the league's
+ *    apex host.
  *
- * Vercel 301 redirects in vercel.json still handle catching leaked /theleague/*
+ * Vercel 301 redirects in vercel.json still handle catching leaked /<slug>/*
  * links at the edge before this middleware runs.
+ *
+ * The host → slug map and the path-rewrite logic live in
+ * src/utils/league-host-map.ts and are unit-tested.
  */
 
 import { defineMiddleware } from 'astro:middleware';
-
-const THELEAGUE_HOSTS = new Set(['theleague.us', 'www.theleague.us']);
-
-/** Paths that exist at the root level and should NOT be rewritten to /theleague/* */
-const SKIP_REWRITE_PREFIXES = [
-  '/api/',
-  '/afl-fantasy',
-  '/_astro/',
-  '/_image',
-  '/_server-islands/',
-  '/forum/',
-  '/404',
-  '/favicon.ico',
-  '/assets/',
-  '/manifest.json',
-];
+import { HOST_TO_SLUG, resolveLeagueRewrite } from './utils/league-host-map';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const hostname = context.url.hostname;
-  const isTheLeagueHost = THELEAGUE_HOSTS.has(hostname);
+  const isLeagueHost = Boolean(HOST_TO_SLUG[hostname]);
 
-  context.locals.hideLeaguePrefix = isTheLeagueHost;
+  context.locals.hideLeaguePrefix = isLeagueHost;
 
-  if (isTheLeagueHost) {
-    const path = context.url.pathname;
-    // Already has /theleague prefix — no rewrite needed
-    if (path.startsWith('/theleague')) {
-      return next();
-    }
+  if (!isLeagueHost) return next();
 
-    // Skip rewrite for root-level paths (API, AFL, static assets, forum)
-    const shouldSkip = SKIP_REWRITE_PREFIXES.some((prefix) => path.startsWith(prefix));
-    if (shouldSkip) {
-      return next();
-    }
+  const rewrite = resolveLeagueRewrite(hostname, context.url.pathname);
+  if (!rewrite) return next();
 
-    // Rewrite / → /theleague, /rosters → /theleague/rosters, etc.
-    const newPath = path === '/' ? '/theleague' : `/theleague${path}`;
-    const newUrl = new URL(newPath + context.url.search, context.url);
-    return context.rewrite(newUrl);
-  }
-
-  return next();
+  const newUrl = new URL(rewrite.newPath + context.url.search, context.url);
+  return context.rewrite(newUrl);
 });
