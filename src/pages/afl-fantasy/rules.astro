@@ -1,0 +1,184 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+
+export const prerender = false;
+
+// Read the AFL constitution HTML at build time. The source of truth is
+// docs/rules.html — when the AFL league office updates the constitution,
+// drop a new version of that file in and the page picks it up.
+const rulesPath = path.join(
+  process.cwd(),
+  'src',
+  'pages',
+  'afl-fantasy',
+  'docs',
+  'rules.html'
+);
+
+let rulesHtml: string;
+try {
+  rulesHtml = await fs.readFile(rulesPath, 'utf8');
+} catch {
+  rulesHtml = '<p>Rules document not available.</p>';
+}
+
+// Section anchors lifted from the headings in docs/rules.html so the
+// in-page jump nav stays in sync.
+const sectionLinks = [
+  { id: 'league-information', label: 'League Information' },
+  { id: 'important-dates', label: 'Important Dates' },
+  { id: 'division-setup', label: 'Division Setup' },
+  { id: 'team-rosters', label: 'Team Rosters' },
+  { id: 'injured-reserve', label: 'Injured Reserve' },
+  { id: 'starting-rosters', label: 'Starting Rosters' },
+  { id: 'trades', label: 'Trades' },
+  { id: 'free-agentss', label: 'Free Agents' },
+  { id: 'keepers', label: 'Keepers' },
+  { id: 'draft', label: 'Draft' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'scoring', label: 'Scoring & Errors' },
+  { id: 'game-tiebreakers', label: 'Game Tiebreakers' },
+  { id: 'standings-tiebreakers', label: 'Standings Tiebreakers' },
+  { id: 'playoff-structure', label: 'Playoff Structure' },
+  { id: 'premier-dleague', label: 'Premier / D-League Competition' },
+  { id: 'payouts', label: 'Payouts' },
+  { id: 'replacement-owners', label: 'Replacement Owners' },
+  { id: 'rule-changes', label: 'Rule Changes' },
+];
+---
+
+<TheLeagueLayout title="AFL Constitution & Rules">
+  <div class="afl-rules-page">
+    <header class="afl-rules-page__hero">
+      <h1>AFL Fantasy Constitution</h1>
+      <p>
+        The full rule set for AFL Fantasy. Use the table of contents to jump
+        to a section. Edits to this document live at
+        <code>src/pages/afl-fantasy/docs/rules.html</code>.
+      </p>
+    </header>
+
+    <nav class="afl-rules-page__toc" aria-label="Constitution sections">
+      <h2 class="afl-rules-page__toc-title">Sections</h2>
+      <ol class="afl-rules-page__toc-list">
+        {sectionLinks.map((s) => (
+          <li>
+            <a href={`#${s.id}`}>{s.label}</a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <article class="afl-rules-page__content" set:html={rulesHtml} />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .afl-rules-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-xl, 32px);
+  }
+
+  @media (min-width: 1024px) {
+    .afl-rules-page {
+      grid-template-columns: 240px minmax(0, 1fr);
+      grid-template-areas:
+        'hero hero'
+        'toc content';
+    }
+
+    .afl-rules-page__hero {
+      grid-area: hero;
+    }
+
+    .afl-rules-page__toc {
+      grid-area: toc;
+    }
+
+    .afl-rules-page__content {
+      grid-area: content;
+    }
+  }
+
+  .afl-rules-page__hero {
+    border-bottom: 2px solid var(--border-color, #e5e7eb);
+    padding-bottom: var(--spacing-md, 16px);
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  .afl-rules-page__hero h1 {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm, 8px);
+  }
+
+  .afl-rules-page__hero p {
+    color: var(--text-muted, #6b7280);
+    line-height: 1.6;
+  }
+
+  .afl-rules-page__hero code {
+    background: var(--code-bg, #f3f4f6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.875em;
+  }
+
+  .afl-rules-page__toc {
+    position: sticky;
+    top: 80px;
+    align-self: start;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    padding: var(--spacing-md, 16px);
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
+
+  .afl-rules-page__toc-title {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted, #6b7280);
+    margin: 0 0 var(--spacing-sm, 8px) 0;
+  }
+
+  .afl-rules-page__toc-list {
+    list-style: decimal;
+    padding-left: var(--spacing-md, 16px);
+    margin: 0;
+  }
+
+  .afl-rules-page__toc-list li {
+    padding: 2px 0;
+  }
+
+  .afl-rules-page__toc-list a {
+    color: var(--text-default);
+    text-decoration: none;
+    font-size: 0.875rem;
+  }
+
+  .afl-rules-page__toc-list a:hover {
+    color: var(--primary-color, #c41e3a);
+    text-decoration: underline;
+  }
+
+  .afl-rules-page__content {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    padding: var(--spacing-lg, 24px);
+    line-height: 1.7;
+  }
+
+  .afl-rules-page__content :global(h2) {
+    scroll-margin-top: 80px;
+  }
+</style>
