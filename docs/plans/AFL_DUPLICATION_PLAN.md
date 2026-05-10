@@ -127,9 +127,9 @@ Legend: **Dup** = duplicate as-is with AFL data swap. **Adapt** = page exists in
 | TheLeague page / area | Status | AFL treatment |
 |---|---|---|
 | `index.astro` (landing) | Adapt | Two hero modules: (a) division/playoff race (H2H), (b) tier race (all-play). Keeper-deadline countdown instead of franchise-tag deadline |
-| `standings.astro` | **Shipped** | 925 lines, three views via `?view=`: `division`, `league` (AL/NL + NIT), `all_play` (Premier + D-League + promotion/relegation playoff). Open follow-ups: (1) `championsByYear` is hardcoded — make data-driven from `data/afl-fantasy/champions.json`; (2) `PREMIER_LEAGUE_CUTOFF_WEEK = 17` should move to config (§2.7); (3) Premier League view has no D-League playoff equivalent visualized — confirm whether D-League also has its own end-of-season playoff |
+| `standings.astro` | **Shipped** | 925 lines, three views via `?view=`: `division`, `league` (AL/NL + NIT), `all_play` (Premier + D-League + 4-team promotion/relegation cutoff). Open follow-ups: (1) backfill `championsByYear` to be data-driven from `data/afl-fantasy/champions.json` (committed work, see §6 Phase 2); (2) `PREMIER_LEAGUE_CUTOFF_WEEK = 17` should move to config (§2.7); (3) the `?view=all_play` subtitle "Top 4 advance to playoffs • Bottom 2 relegated to D-League" is misleading — there are no Premier/D-League tier playoffs (the top 4 it refers to is the H2H AL/NL bracket the same teams happen to be in). Reword the subtitle |
 | `rosters.astro` | Adapt | Drop salary/contract columns; add keeper-eligibility column (top 7 kept from prior season). Already partially done (524 lines) |
-| `playoffs.astro` | **Shipped** | 2,743 lines, four brackets: (1) Overall Championship between conference winners, (2) AL Conference seeds 1-4, (3) NL Conference seeds 1-4, (6-9) NIT/Toilet Bowl seeds 5-12 by Power Rank. Reads MFL `playoff-brackets.json`. Auto-selects bracket from preferred team. Open follow-ups: (1) verify the Premier League playoffs (top 4 of all-play tier) actually has a bracket here or whether that lives elsewhere; (2) the "Promotion/Relegation playoff" sub-bracket on standings page may also deserve a real bracket view here |
+| `playoffs.astro` | **Shipped** | 2,743 lines, four brackets: (1) Overall Championship between conference winners, (2) AL Conference seeds 1-4, (3) NL Conference seeds 1-4, (6-9) NIT/Toilet Bowl seeds 5-12 by Power Rank. Reads MFL `playoff-brackets.json`. Auto-selects bracket from preferred team. **No Premier or D-League tier playoffs exist** — the only tier-related "playoff" is the 4-team all-play cutoff (Premier 9-10 + D-League 3-4) shown on the standings page, which isn't a true bracket of games |
 | `<NIT / Secondary Playoffs>` (concept) | **Shipped** | College-NIT-style consolation bracket for seeds 5-12 across both conferences, ranked by Power Rank. Surfaces on standings (`?view=league`) and as brackets 6-9 on playoffs |
 | `schedule` (implicit) | Adapt | Different starter slots; render lineup/scoring badges per league |
 | `lineup.astro` | Adapt | Read lineup format from config (different starter counts) |
@@ -207,10 +207,15 @@ Data path: `src/data/afl-fantasy/keepers/<year>.json`. Fetch via MFL `keeperList
 
 This is a real second competition layered on top of H2H. Each week, every team's score is compared to every other team's score → all-play W/L for the week. Season totals determine who stays in / promotes to / relegates from Premier League.
 
+**Tier mechanics, precise:**
+- D-League #1 and #2 stay in D-League. Premier #1-#8 stay in Premier (auto-safe).
+- The 4 bubble teams — Premier #9, Premier #10, D-League #3, D-League #4 — are ranked together by all-play record at season end. Top 2 of those 4 are in Premier next year; bottom 2 are in D-League next year.
+- This is **not** a playoff in the football sense — there are no extra games. It's a final standings cut. The shipped UI calls it "Promotion/Relegation playoff" which is a stretch; consider renaming to "Promotion/Relegation cutoff" or "Premier League bubble" in copy.
+
 **Already shipped on the standings page (`?view=all_play`):**
 - Premier League and D-League side-by-side tier standings (`getTierAllPlayStandings`).
 - All-play computation via `calculateAllPlayFromWeekly` with cutoff week.
-- Promotion/Relegation playoff sub-table: Premier 9-10 + D-League 3-4 → top 2 by all-play stay/promote to Premier next year.
+- The 4-team bubble cutoff sub-table.
 
 **What's left:**
 
@@ -253,12 +258,13 @@ Each phase is one or more PRs into `claude/plan-afl-version-mjyIK` (then merged 
 
 ### Phase 0 — Foundation (architecture only, ~1 week)
 1. League config unification (§2.1). PR.
-2. `LeagueLayout` rename + prop-drive (§2.2). PR.
-3. Middleware host map (§2.3). PR.
-4. Schefter `runForLeague(league)` refactor (§2.4). PR.
-5. Workflows matrix conversion (§2.5). PR.
-6. `<LeagueSwitcher>` component (§2.6). PR.
-7. All-play library hardening (§2.7) — small follow-ups, library itself already in `src/utils/standings.ts`. PR.
+2. **Feed path normalization.** AFL feeds at `data/afl-fantasy/mfl-feeds/<year>/`, TheLeague feeds at `data/theleague/mfl-feeds/<year>/`. Pick one canonical layout (recommend `data/<slug>/mfl-feeds/<year>/`), migrate the other, update every `import.meta.glob` and script `path.join` reference. Land before §2.5 so the workflow matrix doesn't have to branch on path shape. PR.
+3. `LeagueLayout` rename + prop-drive (§2.2). PR.
+4. Middleware host map (§2.3). PR.
+5. Schefter `runForLeague(league)` refactor (§2.4). PR.
+6. Workflows matrix conversion (§2.5). PR.
+7. `<LeagueSwitcher>` component (§2.6). PR.
+8. All-play library hardening (§2.7) — small follow-ups, library itself already in `src/utils/standings.ts`. PR.
 
 **Exit criteria:** every TheLeague page still renders identically; AFL stub pages still render; no behavior change visible to users.
 
@@ -273,7 +279,9 @@ Goal: a logged-out visitor to `/afl-fantasy` gets a usable experience.
 ### Phase 2 — AFL-specific mechanics (~1 week, smaller than originally scoped)
 - Vitest coverage for `src/utils/standings.ts` all-play math (§2.7).
 - Move `PREMIER_LEAGUE_CUTOFF_WEEK` to config (§2.7).
-- Make `championsByYear` data-driven (`data/afl-fantasy/champions.json`).
+- **Backfill `championsByYear`.** Build `data/afl-fantasy/champions.json` covering every AFL season for which we have records (the salary data goes back to 2007 — extend the champions file as far as historical sources allow). Standings page reads from JSON; new years just add an entry rather than a code change. Same treatment for TheLeague if its champions are similarly hardcoded — verify and align.
+- Reword the misleading `?view=all_play` subtitle on standings (§3 standings row follow-up #3).
+- Rename "Promotion/Relegation playoff" copy on standings to "Promotion/Relegation cutoff" or similar — it's a final-standings cut, not a bracket of games.
 - Tier-movement history page or franchise-detail section (§4.2 #4).
 - "If season ended today" forecasts (§4.2 #3).
 - Keepers suite (§4.1).
@@ -309,15 +317,13 @@ Goal: a logged-out visitor to `/afl-fantasy` gets a usable experience.
 1. **Auction vs snake**: confirm AFL draft format. If auction, the draft tooling is heavier work than a "duplicate" because TheLeague's draft tool may not be auction-shaped. (The existing `draft-predictor.astro` for AFL suggests it's been thought about.)
 2. **Lineup format**: confirm AFL starter slots and scoring. Drives stats/lineup/matchup pages.
 3. **Keeper rules edge cases**: are kept players' MFL "salaries" set to anything special (e.g. round-based pricing)? This affects the keeper UI.
-4. **Tier movement rules**: confirmed *driven by all-play standings*, not H2H, not playoffs. The shipped standings page implements the answer: Premier ranks 9-10 + D-League ranks 3-4 enter a 4-team Promotion/Relegation playoff; top 2 by all-play stay in / move up to Premier next year. (Implication: D-League ranks 1-2 auto-promote, Premier ranks 1-8 are auto-safe.) Confirm this matches written rules before any tooling depends on the cutoffs.
-10. **D-League playoffs**: Premier League's top 4 of the all-play tier presumably has its own bracket; does D-League also have a season-ending playoff for its tier, and if so, where does it appear? The shipped UI shows only the Premier League standings as the all-play view's heading.
-11. **Defending champions data**: `championsByYear` is hardcoded for 2024 only. Decide whether to backfill historical years and make data-driven, or leave as-is and update annually.
-12. **Feed path normalization**: AFL feeds live at `data/afl-fantasy/mfl-feeds/<year>/`; TheLeague feeds live at `data/theleague/mfl-feeds/<year>/`. Worth normalizing before workflow matrix work in §2.5 to avoid hardcoded path conditionals downstream.
+4. **Tier movement — confirmed.** No Premier or D-League playoffs. D-League #1, #2 stay in D-League. Premier #1-#8 are auto-safe. Premier #9, #10 + D-League #3, #4 are ranked together by all-play; top 2 are in Premier next year, bottom 2 in D-League. So 0-2 D-League teams promote per year (depending on how D3/D4 fare vs P9/P10). Re-confirm this matches written rules before any tooling depends on the cutoffs.
 5. **`afl-fantasy.com` ownership**: do we own the domain? If not, factor acquisition into the Phase 7 timeline.
 6. **Inconsistent config location**: TheLeague config is at `src/data/theleague.config.json`; AFL config is at `data/afl-fantasy/afl.config.json`. Phase 0 §2.1 must pick one and migrate the other.
-7. **AFL voice/persona**: gut-check with Brandon what AFL Schefter should sound like before Phase 3. Different enough from TheLeague Schefter to feel like its own beat, not so different it feels gimmicky.
+7. **AFL voice/persona**: gut-check what AFL Schefter should sound like before Phase 3. Different enough from TheLeague Schefter to feel like its own beat, not so different it feels gimmicky.
 8. **Roger for AFL**: is there an AFL "rules nag"-style commish persona, or is Ask Roger TheLeague-only forever? Currently the schefter-scan code says AFL has "its own commish and cadence" — clarify.
 9. **Salary data utility**: AFL has 19 years of salary JSON. Is that auction-history data, or stale-from-when-AFL-had-cap data? Affects whether §4.3 is a backward-looking archive or rolling history.
+10. **Champions backfill source**: how far back do reliable AFL division-champion records go, and where do they live (MFL history pages? a spreadsheet? Brandon's memory?)? Determines how complete `data/afl-fantasy/champions.json` can be on first commit.
 
 ---
 
