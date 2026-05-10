@@ -1,0 +1,47 @@
+{
+  "$comment": "AFL Fantasy league championship history. Mirrors data/theleague/championship-history.json shape. Each entry maps a year to the franchise IDs (as they were AT THAT TIME) that finished 1st and 2nd. Names are recorded as they were AT THAT TIME — to find the franchise ID for an older year, cross-reference data/afl-fantasy/mfl-feeds/<year>/league.json. Backfilled from MFL playoffBracket/weeklyResults exports by scripts/backfill-afl-championship-history.mjs.",
+  "championships": [
+    {
+      "year": 2024,
+      "champion": "0022",
+      "runnerUp": "0005",
+      "championName": "Balls Deep",
+      "runnerUpName": "Computer Jocks",
+      "source": "playoffBracket"
+    },
+    {
+      "year": 2025,
+      "champion": "0015",
+      "runnerUp": "0007",
+      "championName": "The Mariachi Ninjas",
+      "runnerUpName": "Avenging Amish",
+      "source": "playoffBracket"
+    }
+  ],
+  "$gaps": {
+    "$comment": "Years not yet backfilled. Run with --online in a network-enabled environment to fill them in.",
+    "missingYears": [
+      2003,
+      2004,
+      2005,
+      2006,
+      2007,
+      2008,
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023
+    ]
+  }
+}
