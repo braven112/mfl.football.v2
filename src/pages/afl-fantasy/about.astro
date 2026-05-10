@@ -1,0 +1,343 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+// Championship history is optional — backfill PR may not have landed yet.
+// import.meta.glob loads gracefully if the file doesn't exist.
+const champHistoryGlob = import.meta.glob<{
+  default: { championships?: Array<{ year: number; champion: string; runnerUp: string; championName: string; runnerUpName: string }> };
+}>('../../../data/afl-fantasy/championship-history.json', { eager: true });
+
+const champEntries = Object.values(champHistoryGlob)[0]?.default?.championships ?? [];
+
+// Pull a few stats off config and historical data to keep this page
+// data-driven rather than hand-edited each year.
+const totalTeams = aflConfig.teams?.length ?? 0;
+const conferences = aflConfig.conferences ?? [];
+const tiersList = aflConfig.tierCompetition?.tiers ?? ['Premier League', 'D-League'];
+const cutoffWeek = aflConfig.tierCompetition?.cutoffWeek ?? 17;
+const championships = champEntries.slice().sort((a, b) => b.year - a.year);
+const mostRecentChamp = championships[0];
+const yearsRecorded = championships.length;
+---
+
+<TheLeagueLayout title="About AFL Fantasy | American Football League">
+  <main class="about-page">
+    <header class="about-hero">
+      <div class="about-hero__eyebrow">
+        <span class="about-tag">AFL Fantasy</span>
+        <span class="about-dot">·</span>
+        <span class="about-hero__date">Since 2003</span>
+      </div>
+
+      <h1 class="about-hero__title">
+        24 teams. Two tiers. One promotion/relegation race.
+      </h1>
+
+      <p class="about-hero__deck">
+        AFL Fantasy is a 24-team dynasty league that's been running since 2003.
+        It runs on top of MyFantasyLeague but adds something most fantasy
+        leagues don't: <strong>a side competition that decides who plays in
+        Premier League next year</strong>. Win-loss records still matter for
+        playoffs, but every weekly score also counts in an all-play league
+        that determines tier movement.
+      </p>
+    </header>
+
+    <div class="about-stats">
+      <div class="about-stats__item">
+        <div class="about-stats__value">{totalTeams}</div>
+        <div class="about-stats__label">Teams across two tiers</div>
+      </div>
+      <div class="about-stats__item">
+        <div class="about-stats__value">{conferences.length}</div>
+        <div class="about-stats__label">Conferences (AL + NL)</div>
+      </div>
+      <div class="about-stats__item">
+        <div class="about-stats__value">7</div>
+        <div class="about-stats__label">Keepers per franchise</div>
+      </div>
+      <div class="about-stats__item">
+        <div class="about-stats__value">{yearsRecorded}</div>
+        <div class="about-stats__label">Championship years on file</div>
+      </div>
+    </div>
+
+    <div class="about-body">
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">01</span>
+          <div>
+            <h2 class="about-section-title">Two Competitions, One Schedule</h2>
+            <p class="about-section-sub">
+              How AFL splits H2H playoffs from the all-play tier race.
+            </p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            Every week each franchise plays one head-to-head opponent —
+            standard fantasy. AL Conference and NL Conference division winners
+            seed 1-4 in their conference; the AL and NL champions then meet
+            for the overall championship. Seeds 5-12 fall into a 16-team
+            <strong>NIT / Secondary Playoffs</strong> bracket ranked by Power
+            Rank.
+          </p>
+          <p>
+            On top of that, every weekly score is also compared to every
+            other team's score, generating an all-play W-L record for the
+            week. Season totals through week {cutoffWeek} determine
+            <strong>which tier you play in next year</strong> — that's the
+            promotion/relegation mechanic AFL is built around.
+          </p>
+        </div>
+      </section>
+
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">02</span>
+          <div>
+            <h2 class="about-section-title">Premier League ↔ D-League</h2>
+            <p class="about-section-sub">
+              Promotion/relegation is a final-standings cut, not a bracket.
+            </p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            {tiersList.join(' and ')} run as parallel tiers in regular season:
+            12 teams in each, separate cap-free environments, separate weekly
+            scoring (same rules, different opponents).
+          </p>
+          <ul class="about-bullets">
+            <li>
+              <strong>Premier #1-#8</strong> are auto-safe. They stay in
+              Premier next year regardless of what else happens.
+            </li>
+            <li>
+              <strong>D-League #1-#2</strong> stay in D-League regardless.
+            </li>
+            <li>
+              The 4 bubble teams — <strong>Premier #9, Premier #10,
+              D-League #3, D-League #4</strong> — are ranked together by
+              all-play record at season end. Top 2 of those 4 are in Premier
+              next year. Bottom 2 are in D-League.
+            </li>
+          </ul>
+          <p>
+            That means 0-2 D-League teams promote each year (depending on how
+            D3/D4 fare against P9/P10). It's not a playoff in the football
+            sense — there are no extra games. It's a final-standings cut
+            shown on the
+            <a href="/afl-fantasy/standings?view=all_play">standings page</a>.
+          </p>
+        </div>
+      </section>
+
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">03</span>
+          <div>
+            <h2 class="about-section-title">Keepers, Not Contracts</h2>
+            <p class="about-section-sub">
+              No salary cap. No contract years. Top 7 from last year keep on.
+            </p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            AFL is a 7-player keeper league. Each franchise picks 7 players to
+            retain into the new season; the rest are released back into the
+            auction pool. There is no salary cap — auction is for picking
+            players, not for managing future cap impact.
+          </p>
+        </div>
+      </section>
+
+      {mostRecentChamp && (
+        <section class="about-section">
+          <div class="about-section-header">
+            <span class="about-section-num">04</span>
+            <div>
+              <h2 class="about-section-title">Champions on file</h2>
+              <p class="about-section-sub">
+                Most recent: {mostRecentChamp.year} — {mostRecentChamp.championName} over {mostRecentChamp.runnerUpName}.
+              </p>
+            </div>
+          </div>
+
+          <div class="about-prose">
+            <ul class="about-champ-list">
+              {championships.slice(0, 10).map(c => (
+                <li>
+                  <strong>{c.year}:</strong> {c.championName}
+                  <span class="about-champ-list__loser">def. {c.runnerUpName}</span>
+                </li>
+              ))}
+            </ul>
+            <p class="about-prose__footer">
+              Backfilled from MFL via
+              <code>scripts/backfill-afl-championship-history.mjs</code>;
+              full 23-season list runs after the next workflow run with
+              network access.
+            </p>
+          </div>
+        </section>
+      )}
+    </div>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .about-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  .about-hero {
+    text-align: center;
+    padding: var(--spacing-xl, 32px) 0;
+  }
+
+  .about-hero__eyebrow {
+    font-size: 0.875rem;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: var(--spacing-md, 16px);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .about-tag {
+    background: var(--primary-color, #c41e3a);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-weight: 600;
+  }
+
+  .about-dot {
+    margin: 0 8px;
+  }
+
+  .about-hero__title {
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  .about-hero__deck {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    max-width: 720px;
+    margin: 0 auto;
+    color: var(--text-default);
+  }
+
+  .about-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--spacing-md, 16px);
+    padding: var(--spacing-lg, 24px) 0;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    margin: var(--spacing-xl, 32px) 0;
+  }
+
+  .about-stats__item {
+    text-align: center;
+  }
+
+  .about-stats__value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-color, #c41e3a);
+    line-height: 1;
+  }
+
+  .about-stats__label {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    margin-top: var(--spacing-xs, 4px);
+  }
+
+  .about-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xxl, 48px);
+  }
+
+  .about-section-header {
+    display: flex;
+    gap: var(--spacing-md, 16px);
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  .about-section-num {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--primary-color, #c41e3a);
+    flex-shrink: 0;
+  }
+
+  .about-section-title {
+    font-size: 1.375rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .about-section-sub {
+    color: var(--text-muted, #6b7280);
+    margin: 4px 0 0 0;
+  }
+
+  .about-prose p {
+    line-height: 1.7;
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  .about-bullets {
+    margin: var(--spacing-md, 16px) 0;
+    padding-left: var(--spacing-lg, 24px);
+  }
+
+  .about-bullets li {
+    margin-bottom: var(--spacing-sm, 8px);
+    line-height: 1.6;
+  }
+
+  .about-champ-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--spacing-md, 16px) 0;
+  }
+
+  .about-champ-list li {
+    padding: var(--spacing-sm, 8px) 0;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .about-champ-list__loser {
+    color: var(--text-muted, #6b7280);
+    margin-left: var(--spacing-sm, 8px);
+    font-size: 0.875rem;
+  }
+
+  .about-prose__footer {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.875rem;
+    font-style: italic;
+    margin-top: var(--spacing-lg, 24px);
+  }
+
+  .about-prose code {
+    background: var(--code-bg, #f3f4f6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.875em;
+  }
+</style>
