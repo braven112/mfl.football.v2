@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-10T09:08:27.066Z"
+    "fetchedAt": "2026-05-10T09:47:54.421Z"
   },
   "players": [
     {
@@ -9997,65 +9997,6 @@
       "depthChartAhead": null
     },
     {
-      "id": "17518",
-      "name": "Allen, Cyrus",
-      "position": "WR",
-      "salary": 425000,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 0,
-      "team": "KC",
-      "draftYear": 2026,
-      "draftTeam": "KCC",
-      "birthdate": null,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17518_thumb.jpg",
-      "externalIds": {
-        "mfl": "17518",
-        "sleeper": "13413",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13413",
-        "fullName": "Cyrus Allen",
-        "team": "KC",
-        "age": 23,
-        "height": "71",
-        "weight": "180",
-        "number": 13,
-        "college": "Cincinnati",
-        "birthDate": "2003-02-11",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "SWR",
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "16620",
-          "name": "Worthy, Xavier"
-        },
-        {
-          "id": "16194",
-          "name": "Rice, Rashee"
-        },
-        {
-          "id": "17086",
-          "name": "Royals, Jalen"
-        }
-      ]
-    },
-    {
       "id": "17520",
       "name": "Hurst, Ted",
       "position": "WR",
@@ -10166,6 +10107,65 @@
         {
           "id": "14861",
           "name": "Johnson, Juwan"
+        }
+      ]
+    },
+    {
+      "id": "17518",
+      "name": "Allen, Cyrus",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "TAXI_SQUAD",
+      "contractYear": "1",
+      "points": 0,
+      "team": "KC",
+      "draftYear": 2026,
+      "draftTeam": "KCC",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17518_thumb.jpg",
+      "externalIds": {
+        "mfl": "17518",
+        "sleeper": "13413",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13413",
+        "fullName": "Cyrus Allen",
+        "team": "KC",
+        "age": 23,
+        "height": "71",
+        "weight": "180",
+        "number": 13,
+        "college": "Cincinnati",
+        "birthDate": "2003-02-11",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "16620",
+          "name": "Worthy, Xavier"
+        },
+        {
+          "id": "16194",
+          "name": "Rice, Rashee"
+        },
+        {
+          "id": "17086",
+          "name": "Royals, Jalen"
         }
       ]
     },
