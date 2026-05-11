@@ -66,11 +66,15 @@ const conferenceName = conference?.name ?? team.conference;
         ← All franchises
       </a>
 
+      {team.banner ? (
+        <img class="franchise-hero__banner" src={team.banner} alt="" loading="lazy" />
+      ) : null}
+
       <div class="franchise-hero__content">
-        {team.banner ? (
-          <img class="franchise-hero__banner" src={team.banner} alt="" loading="lazy" />
+        {team.icon ? (
+          <img class="franchise-hero__icon" src={team.icon} alt={`${team.name} icon`} loading="lazy" />
         ) : (
-          <div class="franchise-hero__banner-placeholder" />
+          <div class="franchise-hero__icon-placeholder" />
         )}
 
         <div class="franchise-hero__text">
@@ -194,27 +198,44 @@ const conferenceName = conference?.name ?? team.conference;
     text-decoration: underline;
   }
 
+  .franchise-hero__banner {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 240px;
+    object-fit: contain;
+    background: var(--bg-muted, #f3f4f6);
+    border-radius: 12px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
   .franchise-hero__content {
     display: flex;
     align-items: center;
     gap: var(--spacing-lg, 24px);
     background: var(--card-bg, #ffffff);
     border-radius: 12px;
-    overflow: hidden;
     border: 1px solid var(--border-color, #e5e7eb);
+    padding: var(--spacing-md, 16px);
   }
 
-  .franchise-hero__banner,
-  .franchise-hero__banner-placeholder {
-    width: 240px;
-    height: 160px;
+  .franchise-hero__icon,
+  .franchise-hero__icon-placeholder {
+    width: 96px;
+    height: 96px;
     flex-shrink: 0;
-    object-fit: cover;
+    object-fit: contain;
+    background: var(--bg-muted, #f3f4f6);
+    border-radius: 12px;
+    padding: 6px;
+  }
+
+  .franchise-hero__icon-placeholder {
     background: var(--bg-muted, #f3f4f6);
   }
 
   .franchise-hero__text {
-    padding: var(--spacing-md, 16px);
     min-width: 0;
   }
 
