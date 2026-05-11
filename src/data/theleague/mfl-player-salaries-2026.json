@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-11T01:20:30.033Z"
+    "fetchedAt": "2026-05-11T02:07:30.135Z"
   },
   "players": [
     {
@@ -18393,12 +18393,75 @@
       "depthChartAhead": null
     },
     {
+      "id": "17500",
+      "name": "Boston, Denzel",
+      "position": "WR",
+      "salary": 1350000,
+      "franchiseId": "0015",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 0,
+      "team": "CLE",
+      "draftYear": 2026,
+      "draftTeam": "CLE",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17500_thumb.jpg",
+      "externalIds": {
+        "mfl": "17500",
+        "sleeper": "13346",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13346",
+        "fullName": "Denzel Boston",
+        "team": "CLE",
+        "age": 22,
+        "height": "76",
+        "weight": "209",
+        "number": 12,
+        "college": "Washington",
+        "birthDate": "2003-12-06",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
+        },
+        {
+          "id": "16191",
+          "name": "Tillman, Cedric"
+        },
+        {
+          "id": "17076",
+          "name": "Bond, Isaiah"
+        },
+        {
+          "id": "17501",
+          "name": "Concepcion, KC"
+        }
+      ]
+    },
+    {
       "id": "17523",
       "name": "Caldwell, Jeff",
       "position": "WR",
       "salary": 425000,
       "franchiseId": "0015",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 0,
       "team": "KC",
@@ -18461,7 +18524,7 @@
       "position": "TE",
       "salary": 425000,
       "franchiseId": "0015",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 0,
       "team": "JAX",
@@ -18507,69 +18570,6 @@
         {
           "id": "17591",
           "name": "Boerkircher, Nate"
-        }
-      ]
-    },
-    {
-      "id": "17500",
-      "name": "Boston, Denzel",
-      "position": "WR",
-      "salary": 1350000,
-      "franchiseId": "0015",
-      "status": "TAXI_SQUAD",
-      "contractYear": "4",
-      "points": 0,
-      "team": "CLE",
-      "draftYear": 2026,
-      "draftTeam": "CLE",
-      "birthdate": null,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17500_thumb.jpg",
-      "externalIds": {
-        "mfl": "17500",
-        "sleeper": "13346",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13346",
-        "fullName": "Denzel Boston",
-        "team": "CLE",
-        "age": 22,
-        "height": "76",
-        "weight": "209",
-        "number": 12,
-        "college": "Washington",
-        "birthDate": "2003-12-06",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "RWR",
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
-          "id": "16191",
-          "name": "Tillman, Cedric"
-        },
-        {
-          "id": "17076",
-          "name": "Bond, Isaiah"
-        },
-        {
-          "id": "17501",
-          "name": "Concepcion, KC"
         }
       ]
     },
