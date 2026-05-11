@@ -1,7 +1,45 @@
 {
-  "lastScanTimestamp": "2026-05-11T19:59:52.224Z",
+  "lastScanTimestamp": "2026-05-11T20:46:56.224Z",
   "lastProcessedMflTimestamp": "1778365056",
   "posts": [
+    {
+      "id": "sf_speculation_1778532418544_d2b9b759",
+      "timestamp": "2026-05-11T20:46:56.224Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Computer Jocks country has been floating a wild one: Sam Darnold to the Computer Jocks in exchange for tight ends Brenton Strange and Michael Mayer from the Pigskins. Neither front office has commented on the speculation, but local beat writers have noted the Pigskins are carrying two promising young tight ends while the Computer Jocks have been searching for depth at the position alongside their quarterback situation.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0001",
+        "0010"
+      ],
+      "league": "theleague",
+      "speculation": {
+        "seller": "0001",
+        "buyer": "0010",
+        "marquee": {
+          "id": "13592",
+          "name": "Darnold, Sam",
+          "position": "QB"
+        },
+        "returnPkg": [
+          {
+            "id": "16269",
+            "name": "Strange, Brenton",
+            "position": "TE"
+          },
+          {
+            "id": "16212",
+            "name": "Mayer, Michael",
+            "position": "TE"
+          }
+        ],
+        "score": 135,
+        "capRelief": false
+      }
+    },
     {
       "id": "wire_48742175",
       "timestamp": "2026-05-11T16:49:29Z",
