@@ -85,20 +85,26 @@ const LEAGUE_PREFIXES: Record<LeagueSlug, string> = {
 };
 
 /**
- * Strip the /theleague prefix from a path when serving on theleague.us.
+ * Strip the active league prefix from a path when serving on the league's
+ * apex domain (theleague.us, afl-fantasy.com).
  *
- * On theleague.us, Vercel rewrites clean URLs (e.g. /rosters) to internal
- * /theleague/rosters paths. This function ensures generated links match
- * the clean URL the user sees in their browser.
+ * The middleware sets `Astro.locals.hideLeaguePrefix` to true for any
+ * recognized league host (see src/utils/league-host-map.ts) and rewrites
+ * incoming clean URLs (e.g. /rosters) to internal Astro routes
+ * (/theleague/rosters or /afl-fantasy/rosters). This function is the
+ * outbound complement: it strips whichever league prefix is present so
+ * generated <a href> targets match the clean URL the user sees.
  *
- * @param path - Internal path (e.g. '/theleague/rosters')
- * @param hidePrefix - Whether to strip the prefix (true on theleague.us)
+ * @param path - Internal path (e.g. '/theleague/rosters' or '/afl-fantasy/rosters')
+ * @param hidePrefix - Whether to strip the prefix (true on a league apex host)
  * @returns Clean path (e.g. '/rosters') or original path if hidePrefix is false
  */
 export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
   if (!hidePrefix) return path;
-  if (path === '/theleague') return '/';
-  if (path.startsWith('/theleague/')) return path.slice('/theleague'.length);
+  for (const prefix of Object.values(LEAGUE_PREFIXES)) {
+    if (path === prefix) return '/';
+    if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
+  }
   return path;
 }
 
