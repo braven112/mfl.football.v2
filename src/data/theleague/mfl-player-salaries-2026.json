@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-12T08:30:37.669Z"
+    "fetchedAt": "2026-05-12T09:30:12.169Z"
   },
   "players": [
     {
@@ -2066,7 +2066,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13192",
+          "name": "Njoku, David"
+        }
+      ]
     },
     {
       "id": "16152",
@@ -16426,6 +16431,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "13192",
+          "name": "Njoku, David"
+        },
+        {
           "id": "17099",
           "name": "Gadsden, Oronde"
         }
@@ -19590,17 +19599,39 @@
       "status": "ROSTER",
       "contractYear": "3",
       "points": 0,
-      "team": "FA",
+      "team": "LAC",
       "draftYear": 2017,
       "draftTeam": "CLE",
       "birthdate": 836974800,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13192_thumb.jpg",
       "externalIds": {
         "mfl": "13192",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "4033",
+        "gsis": "00-0033885"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "4033",
+        "fullName": "David Njoku",
+        "team": "LAC",
+        "age": 29,
+        "height": "76",
+        "weight": "246",
+        "number": 85,
+        "college": "Miami (FL)",
+        "birthDate": "1996-07-10",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 9,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0033885"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
