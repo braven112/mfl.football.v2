@@ -459,3 +459,34 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
   });
 });
 
+describe('rumor-scan rookie-draft scope guard (HARD RULE 21)', () => {
+  // Pinning test: the rumor mill must never frame a trade rumor as the
+  // rookie draft. The system prompt's hard rule prohibits "draft-room"
+  // framing on trade_offer tips; the trade-offer playbook reiterates it.
+  //
+  // History: on 2026-05-12 the scanner posted "Rookie draft's reached
+  // that sweet spot where half the league is locked in, half is on
+  // auto-pilot…" days AFTER the actual rookie draft completed. The
+  // LLM had hallucinated rookie-draft framing on top of trade-builder
+  // "draft" signals (saved trade proposals). HARD RULE 21 forbids that
+  // confusion; this test keeps the rule in place.
+  const src = read('scripts/schefter-rumor-scan.mjs');
+
+  it('HARD RULE 21 forbids framing trade rumors as the rookie draft', () => {
+    expect(src).toMatch(/21\.\s*NEVER FRAME A TRADE RUMOR AS THE ROOKIE DRAFT/);
+  });
+
+  it('HARD RULE 21 names the offending phrases the LLM previously reached for', () => {
+    expect(src).toMatch(/draft-room buzz|draft chatter|draft's in full swing|rookie-draft strategy|auto-pilot picks|half the league locked in/);
+  });
+
+  it('HARD RULE 21 clarifies that "draft" metadata refers to trade-builder saves, not the rookie draft', () => {
+    expect(src).toMatch(/TRADE-BUILDER SAVES/);
+    expect(src).toMatch(/NOT the rookie draft/);
+  });
+
+  it('trade-offer playbook redaction rules reiterate the rookie-draft ban', () => {
+    expect(src).toMatch(/NEVER frame a trade-offer tip as the rookie draft/);
+  });
+});
+
