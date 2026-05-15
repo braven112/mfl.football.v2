@@ -1,6 +1,9 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+import { getAuthUser } from '../../../utils/auth';
+
+export const prerender = false;
 
 // Optional championship history — graceful when not yet committed (PR #207).
 const champHistoryGlob = import.meta.glob<{
@@ -19,17 +22,9 @@ const championshipHistory =
   Object.values(champHistoryGlob)[0]?.default?.championships ?? [];
 
 // SSR: route is /afl-fantasy/franchises/:id where :id is the franchiseId
-// (e.g. "0001"). Astro handles dynamic route params.
-export async function getStaticPaths() {
-  // Static generation for all known AFL franchises so deep links work
-  // out of the box.
-  const cfg = (await import('../../../../data/afl-fantasy/afl.config.json'))
-    .default;
-  return (cfg.teams as Array<{ franchiseId: string }>).map((t) => ({
-    params: { id: t.franchiseId },
-  }));
-}
-
+// (e.g. "0001"). Rendered per-request so we can detect the viewer's
+// auth state and reveal owner-only CTAs (Manage roster / Open trade
+// builder) without hydrating a client component.
 const { id } = Astro.params;
 
 const team = (aflConfig.teams as Array<any>).find(
@@ -57,6 +52,14 @@ const conference = (aflConfig.conferences ?? []).find(
   (c: any) => c.code === team.conference
 );
 const conferenceName = conference?.name ?? team.conference;
+
+// Auth — surface owner-only CTAs at the top of the page when the
+// viewer matches this franchise.
+const authUser = getAuthUser(Astro.request);
+const isOwner =
+  !!authUser &&
+  authUser.leagueId === '19621' &&
+  authUser.franchiseId === id;
 ---
 
 <TheLeagueLayout title={`${team.name} | AFL Franchise`}>
@@ -100,6 +103,38 @@ const conferenceName = conference?.name ?? team.conference;
             </p>
           ) : null}
         </div>
+      </div>
+
+      <!-- Action bar: owner-only CTAs + universal roster link -->
+      <div class="franchise-actions">
+        <a class="franchise-action franchise-action--primary" href={`/afl-fantasy/rosters?franchise=${id}`}>
+          <span class="franchise-action__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M9 5H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2h-4M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          View roster
+        </a>
+        {isOwner && (
+          <>
+            <a class="franchise-action" href={`/afl-fantasy/rosters?franchise=${id}&view=planner`}>
+              <span class="franchise-action__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              Keeper planner
+            </a>
+            <a class="franchise-action" href={`/afl-fantasy/trade-builder?from=${id}`}>
+              <span class="franchise-action__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 17l-4-4m0 0l4-4m-4 4h18m-4-4l4 4m0 0l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              Open trade builder
+            </a>
+          </>
+        )}
       </div>
     </header>
 
@@ -157,9 +192,6 @@ const conferenceName = conference?.name ?? team.conference;
     <section class="franchise-section">
       <h2>Quick links</h2>
       <div class="quick-links">
-        <a class="quick-link" href={`/afl-fantasy/rosters?franchise=${id}`}>
-          📋 Roster
-        </a>
         <a class="quick-link" href={`/afl-fantasy/standings?myteam=${id}`}>
           📊 Standings (highlight this team)
         </a>
@@ -218,6 +250,49 @@ const conferenceName = conference?.name ?? team.conference;
     border-radius: 12px;
     border: 1px solid var(--border-color, #e5e7eb);
     padding: var(--spacing-md, 16px);
+  }
+
+  .franchise-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: var(--spacing-md, 16px);
+  }
+
+  .franchise-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: #fff;
+    color: #c41e3a;
+    border: 1px solid #c41e3a;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+
+  .franchise-action:hover {
+    background: #c41e3a;
+    color: #fff;
+  }
+
+  .franchise-action--primary {
+    background: #c41e3a;
+    color: #fff;
+  }
+
+  .franchise-action--primary:hover {
+    background: #a31a31;
+    border-color: #a31a31;
+  }
+
+  .franchise-action__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .franchise-hero__icon,
