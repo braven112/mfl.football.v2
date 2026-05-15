@@ -18,6 +18,8 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from './league-year';
+import liveOddsFallbackData from '../data/nfl/live-odds.json';
 
 export interface NflMatchup {
   /** Opponent NFL team code (e.g. "BUF") */
@@ -55,14 +57,41 @@ function normalizeNflCode(code: string): string {
 }
 
 /**
+ * Materialize the static src/data/nfl/live-odds.json fallback into an
+ * OddsMap. The fallback file is a snapshot of the most recent real NFL
+ * week (or the upcoming Week 1 once it's generated) so the Coach-tab
+ * columns render something useful during the offseason instead of "BYE"
+ * for every player.
+ */
+function fallbackOddsMap(): OddsMap {
+  const map: OddsMap = {};
+  for (const [code, record] of Object.entries(liveOddsFallbackData as Record<string, any>)) {
+    if (!record?.opponent) continue;
+    map[normalizeNflCode(code)] = {
+      opponent: normalizeNflCode(record.opponent),
+      isHome: !!record.isHome,
+    };
+  }
+  return map;
+}
+
+/**
  * Fetch the ESPN scoreboard for a given week and build a {teamCode → matchup}
- * map. Returns an empty map if the fetch fails (offseason, network blip,
- * timeout) so callers can render "BYE" rather than crash.
+ * map. During the offseason — when MFL has rolled into the new league year
+ * but the previous NFL season hasn't been replaced yet — we skip ESPN and
+ * return the static fallback so the page never renders all-BYE. Outside of
+ * that window we still fall back to the snapshot on any ESPN failure.
  */
 export async function fetchNflMatchups(
   week: number,
   options: { signal?: AbortSignal; year?: number } = {}
 ): Promise<OddsMap> {
+  // Offseason short-circuit: leagueYear ahead of seasonYear means we're
+  // past Feb 14 but before Labor Day — no live NFL games to fetch.
+  if (getCurrentLeagueYear() > getCurrentSeasonYear()) {
+    return fallbackOddsMap();
+  }
+
   const cacheKey = `${options.year ?? new Date().getFullYear()}-${week}`;
   const cached = oddsCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < ODDS_TTL_MS) {
@@ -80,9 +109,10 @@ export async function fetchNflMatchups(
       signal: options.signal ?? AbortSignal.timeout(5000),
     });
     if (!res.ok) {
-      console.warn(`[nfl-matchups] ESPN returned ${res.status} for week ${week}`);
-      oddsCache.set(cacheKey, { data: {}, fetchedAt: Date.now() });
-      return {};
+      console.warn(`[nfl-matchups] ESPN returned ${res.status} for week ${week}; using fallback`);
+      const fb = fallbackOddsMap();
+      oddsCache.set(cacheKey, { data: fb, fetchedAt: Date.now() });
+      return fb;
     }
     const data = await res.json();
     const map: OddsMap = {};
@@ -97,12 +127,20 @@ export async function fetchNflMatchups(
       map[homeCode] = { opponent: awayCode, isHome: true };
       map[awayCode] = { opponent: homeCode, isHome: false };
     }
+    // Empty ESPN response (between weeks, schedule not yet published) →
+    // use the fallback snapshot so the table still renders something.
+    if (Object.keys(map).length === 0) {
+      const fb = fallbackOddsMap();
+      oddsCache.set(cacheKey, { data: fb, fetchedAt: Date.now() });
+      return fb;
+    }
     oddsCache.set(cacheKey, { data: map, fetchedAt: Date.now() });
     return map;
   } catch (err) {
-    console.warn('[nfl-matchups] ESPN fetch failed:', err);
-    oddsCache.set(cacheKey, { data: {}, fetchedAt: Date.now() });
-    return {};
+    console.warn('[nfl-matchups] ESPN fetch failed; using fallback:', err);
+    const fb = fallbackOddsMap();
+    oddsCache.set(cacheKey, { data: fb, fetchedAt: Date.now() });
+    return fb;
   }
 }
 
