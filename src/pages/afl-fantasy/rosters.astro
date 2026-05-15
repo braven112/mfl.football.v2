@@ -275,6 +275,126 @@ const plannerDraftPicks: KeeperPlannerDraftPick[] = (() => {
     });
 })();
 
+// ── Analytics: simple descriptive stats for the Analytics view ──
+type AnalyticsBucket = { label: string; count: number; pct: number };
+
+function bucketize(items: string[], topN?: number): AnalyticsBucket[] {
+  const counts = new Map<string, number>();
+  for (const v of items) {
+    if (!v || v === 'N/A' || v === 'FA') continue;
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  const total = items.length;
+  let buckets = Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count, pct: total ? (count / total) * 100 : 0 }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  if (topN) buckets = buckets.slice(0, topN);
+  return buckets;
+}
+
+const positionDistribution: AnalyticsBucket[] = (() => {
+  const PRIMARY_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK'];
+  const counts = new Map<string, number>();
+  for (const p of roster) {
+    const pos = p.position;
+    const key = PRIMARY_POSITIONS.includes(pos)
+      ? pos
+      : pos === 'DEF' || pos === 'Def'
+        ? 'DEF'
+        : 'Other';
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const ordered = [...PRIMARY_POSITIONS, 'DEF', 'Other'];
+  return ordered
+    .map((label) => ({
+      label,
+      count: counts.get(label) ?? 0,
+      pct: roster.length ? ((counts.get(label) ?? 0) / roster.length) * 100 : 0,
+    }))
+    .filter((b) => b.count > 0);
+})();
+
+const ageBuckets: AnalyticsBucket[] = (() => {
+  const ranges: Array<{ label: string; min: number; max: number }> = [
+    { label: '≤23', min: 0, max: 23 },
+    { label: '24–26', min: 24, max: 26 },
+    { label: '27–29', min: 27, max: 29 },
+    { label: '30+', min: 30, max: 99 },
+  ];
+  const ages = roster
+    .map((p) => Number(p.age))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return ranges.map((r) => {
+    const count = ages.filter((a) => a >= r.min && a <= r.max).length;
+    return {
+      label: r.label,
+      count,
+      pct: ages.length ? (count / ages.length) * 100 : 0,
+    };
+  }).filter((b) => b.count > 0);
+})();
+
+const ageStats: { avg: number | null; oldest: { name: string; age: number } | null; youngest: { name: string; age: number } | null } =
+  (() => {
+    const withAge = roster
+      .map((p) => ({ name: p.name, age: Number(p.age) }))
+      .filter((p) => Number.isFinite(p.age) && p.age > 0);
+    if (!withAge.length) return { avg: null, oldest: null, youngest: null };
+    const sum = withAge.reduce((acc, p) => acc + p.age, 0);
+    const sortedByAge = [...withAge].sort((a, b) => a.age - b.age);
+    return {
+      avg: sum / withAge.length,
+      youngest: sortedByAge[0]!,
+      oldest: sortedByAge[sortedByAge.length - 1]!,
+    };
+  })();
+
+const nflTeamDistribution: AnalyticsBucket[] = bucketize(
+  roster.map((p) => p.team),
+  10
+);
+const collegeDistribution: AnalyticsBucket[] = bucketize(
+  roster.map((p) => p.college),
+  8
+);
+
+// Color palette for position donut chart (consistent everywhere)
+const POSITION_COLORS: Record<string, string> = {
+  QB: '#c41e3a',
+  RB: '#2563eb',
+  WR: '#16a34a',
+  TE: '#9333ea',
+  PK: '#ea580c',
+  DEF: '#0891b2',
+  Other: '#64748b',
+};
+
+// Build the SVG path string for donut chart segments
+function makeDonutSegments(buckets: AnalyticsBucket[]) {
+  const total = buckets.reduce((s, b) => s + b.count, 0);
+  if (total === 0) return [];
+  let cumulative = 0;
+  return buckets.map((b) => {
+    const startPct = cumulative / total;
+    cumulative += b.count;
+    const endPct = cumulative / total;
+    // Map to circumference; using r=42 so circumference ≈ 263.89
+    const circumference = 2 * Math.PI * 42;
+    const dashLength = (endPct - startPct) * circumference;
+    const dashOffset = -startPct * circumference;
+    return {
+      label: b.label,
+      count: b.count,
+      pct: b.pct,
+      color: POSITION_COLORS[b.label] ?? '#64748b',
+      dashArray: `${dashLength} ${circumference - dashLength}`,
+      dashOffset,
+    };
+  });
+}
+
+const donutSegments = makeDonutSegments(positionDistribution);
+
 // Initial view from query param
 const requestedView = Astro.url.searchParams.get('view');
 const initialView = ['roster', 'analytics', 'planner'].includes(requestedView ?? '')
@@ -513,12 +633,154 @@ const pageConfig = {
       )}
     </section>
 
-    <!-- Analytics View (stub) -->
+    <!-- Analytics View -->
     <section class="view-container" data-view-content="analytics" hidden={initialView !== 'analytics'}>
-      <div class="coming-soon">
-        <h2>Analytics</h2>
-        <p>Roster composition, age distribution, position allocation, and college / NFL-team breakdowns. Coming next.</p>
-      </div>
+      {roster.length === 0 ? (
+        <div class="empty-state">
+          <p>No roster data to analyze in {selectedYear}.</p>
+        </div>
+      ) : (
+        <div class="analytics-grid">
+          <!-- Position composition donut -->
+          <article class="chart-card chart-card--span-2">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Position composition</h3>
+              <p class="chart-card__subtitle">{roster.length} players on roster</p>
+            </header>
+            <div class="donut-row">
+              <svg
+                class="donut-chart"
+                viewBox="0 0 100 100"
+                role="img"
+                aria-label="Position composition donut chart"
+              >
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="14" />
+                {donutSegments.map((seg) => (
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="transparent"
+                    stroke={seg.color}
+                    stroke-width="14"
+                    stroke-dasharray={seg.dashArray}
+                    stroke-dashoffset={seg.dashOffset}
+                    transform="rotate(-90 50 50)"
+                  >
+                    <title>{seg.label}: {seg.count} ({seg.pct.toFixed(0)}%)</title>
+                  </circle>
+                ))}
+                <text x="50" y="48" text-anchor="middle" class="donut-chart__num">{roster.length}</text>
+                <text x="50" y="60" text-anchor="middle" class="donut-chart__label">PLAYERS</text>
+              </svg>
+              <ul class="donut-legend">
+                {positionDistribution.map((b) => (
+                  <li>
+                    <span
+                      class="donut-legend__swatch"
+                      style={`background:${POSITION_COLORS[b.label] ?? '#64748b'}`}
+                    ></span>
+                    <span class="donut-legend__label">{b.label}</span>
+                    <span class="donut-legend__count">{b.count}</span>
+                    <span class="donut-legend__pct">{b.pct.toFixed(0)}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+
+          <!-- Age stats card -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age</h3>
+              <p class="chart-card__subtitle">Average / range</p>
+            </header>
+            <div class="age-stats">
+              <div class="age-stats__big">
+                <span class="age-stats__value">{ageStats.avg ? ageStats.avg.toFixed(1) : '—'}</span>
+                <span class="age-stats__label">Avg age</span>
+              </div>
+              <div class="age-stats__minmax">
+                <div class="age-stats__row">
+                  <span class="age-stats__row-label">Youngest</span>
+                  <span class="age-stats__row-name">{ageStats.youngest?.name ?? '—'}</span>
+                  <span class="age-stats__row-age">{ageStats.youngest?.age ?? '—'}</span>
+                </div>
+                <div class="age-stats__row">
+                  <span class="age-stats__row-label">Oldest</span>
+                  <span class="age-stats__row-name">{ageStats.oldest?.name ?? '—'}</span>
+                  <span class="age-stats__row-age">{ageStats.oldest?.age ?? '—'}</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Age distribution bars -->
+          <article class="chart-card chart-card--span-2">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age distribution</h3>
+              <p class="chart-card__subtitle">How your roster splits by age</p>
+            </header>
+            <ul class="bar-list">
+              {ageBuckets.map((b) => (
+                <li class="bar-row">
+                  <span class="bar-row__label">{b.label}</span>
+                  <span class="bar-row__track">
+                    <span class="bar-row__fill" style={`width:${b.pct}%`}></span>
+                  </span>
+                  <span class="bar-row__count">{b.count}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <!-- NFL team distribution -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">NFL teams</h3>
+              <p class="chart-card__subtitle">Top {nflTeamDistribution.length} represented</p>
+            </header>
+            {nflTeamDistribution.length === 0 ? (
+              <p class="chart-card__empty">No NFL team data yet.</p>
+            ) : (
+              <ul class="bar-list bar-list--compact">
+                {nflTeamDistribution.map((b) => (
+                  <li class="bar-row">
+                    <span class="bar-row__label bar-row__label--code">{b.label}</span>
+                    <span class="bar-row__track">
+                      <span class="bar-row__fill bar-row__fill--blue" style={`width:${b.pct}%`}></span>
+                    </span>
+                    <span class="bar-row__count">{b.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+
+          <!-- College distribution -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Colleges</h3>
+              <p class="chart-card__subtitle">Top {collegeDistribution.length} represented</p>
+            </header>
+            {collegeDistribution.length === 0 ? (
+              <p class="chart-card__empty">No college data yet.</p>
+            ) : (
+              <ul class="bar-list bar-list--compact">
+                {collegeDistribution.map((b) => (
+                  <li class="bar-row">
+                    <span class="bar-row__label">{b.label}</span>
+                    <span class="bar-row__track">
+                      <span class="bar-row__fill bar-row__fill--green" style={`width:${b.pct}%`}></span>
+                    </span>
+                    <span class="bar-row__count">{b.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+      )}
     </section>
 
     <!-- Planner View -->
@@ -1026,6 +1288,258 @@ const pageConfig = {
     .action-btn:focus-visible {
       outline: 2px solid #c41e3a;
       outline-offset: 1px;
+    }
+
+    /* ── Analytics view ── */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .chart-card--span-2 {
+      grid-column: span 2;
+    }
+
+    .chart-card__header {
+      margin-bottom: 1rem;
+    }
+
+    .chart-card__title {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .chart-card__subtitle {
+      margin: 0.125rem 0 0;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .chart-card__empty {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #9ca3af;
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .donut-row {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .donut-chart {
+      width: 160px;
+      height: 160px;
+      flex-shrink: 0;
+    }
+
+    .donut-chart__num {
+      font-size: 14px;
+      font-weight: 800;
+      fill: #0f172a;
+    }
+
+    .donut-chart__label {
+      font-size: 4px;
+      letter-spacing: 0.5px;
+      fill: #6b7280;
+      font-weight: 700;
+    }
+
+    .donut-legend {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      flex: 1;
+      min-width: 160px;
+      display: grid;
+      gap: 0.375rem;
+    }
+
+    .donut-legend li {
+      display: grid;
+      grid-template-columns: 12px 1fr auto auto;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .donut-legend__swatch {
+      display: block;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .donut-legend__label {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .donut-legend__count {
+      color: #374151;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .donut-legend__pct {
+      color: #6b7280;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .age-stats {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .age-stats__big {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+      border-radius: 0.5rem;
+      color: #fff;
+    }
+
+    .age-stats__value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .age-stats__label {
+      margin-top: 0.25rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .age-stats__minmax {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .age-stats__row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.375rem 0.625rem;
+      background: #f9fafb;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+    }
+
+    .age-stats__row-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .age-stats__row-name {
+      color: #0f172a;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .age-stats__row-age {
+      font-weight: 700;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .bar-list--compact {
+      gap: 0.375rem;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 36px;
+      align-items: center;
+      gap: 0.625rem;
+      font-size: 0.8125rem;
+    }
+
+    .bar-row__label {
+      color: #374151;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-row__label--code {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.75rem;
+    }
+
+    .bar-row__track {
+      position: relative;
+      height: 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .bar-row__fill {
+      position: absolute;
+      inset: 0;
+      background: #c41e3a;
+      border-radius: 6px;
+      transition: width 200ms ease;
+    }
+
+    .bar-row__fill--blue {
+      background: #2563eb;
+    }
+
+    .bar-row__fill--green {
+      background: #16a34a;
+    }
+
+    .bar-row__count {
+      color: #374151;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    @media (max-width: 720px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-card--span-2 {
+        grid-column: span 1;
+      }
     }
 
     /* ── Empty / coming-soon states ── */
