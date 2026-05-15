@@ -8,6 +8,15 @@ import KeeperPlanner, {
   type KeeperPlannerDraftPick,
 } from '../../components/afl-fantasy/KeeperPlanner.astro';
 import { spriteUrl } from '../../utils/sprite-url';
+import { getCurrentWeek } from '../../utils/current-week';
+import {
+  fetchNflMatchups,
+  loadFantasyPointsAllowed,
+  getOpponentFpa,
+  fpaTier,
+  type NflMatchup,
+} from '../../utils/nfl-matchups';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -231,6 +240,37 @@ const sortedTableRoster: RosterEntry[] = (() => {
       });
   return [...byStatus('ROSTER'), ...byStatus('INJURED_RESERVE')];
 })();
+
+// ── Coach-mode matchup data (matches TheLeague's roster Coach tab) ──
+//
+// For every player on the roster, look up their NFL team's matchup for the
+// current NFL week + the opponent's defensive rank against the player's
+// position. Both sources gracefully no-op outside the regular season.
+//
+// We use TheLeague's fantasyPointsAllowed.json file — it's NFL-wide data
+// (not league-specific) so the same snapshot serves both league sites.
+const nflWeek = getCurrentWeek();
+const nflYear = new Date().getFullYear();
+const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
+const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
+
+interface PlayerMatchup {
+  matchup: NflMatchup | null;
+  oppRank: number | null;
+  oppCode: string | null;
+}
+const matchupByPlayerId = new Map<string, PlayerMatchup>();
+for (const player of sortedTableRoster) {
+  const teamCode = player.team ? normalizeTeamCode(player.team) : '';
+  const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
+  const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
+  const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
+  matchupByPlayerId.set(player.id, {
+    matchup,
+    oppRank: fpa?.rank ?? null,
+    oppCode,
+  });
+}
 
 // Roster summary
 const totalPlayers = roster.length;
@@ -562,63 +602,90 @@ const pageConfig = {
               <thead>
                 <tr>
                   <th data-column="player">Player</th>
-                  <th data-column="college">College</th>
+                  <th data-column="oppRank">Opp #</th>
+                  <th data-column="opponent">Opponent</th>
                   {isOwner && <th data-column="actions" aria-label="Actions"></th>}
                 </tr>
               </thead>
               <tbody>
-                {sortedTableRoster.map((player) => (
-                  <tr
-                    data-player-id={player.id}
-                    data-player-status={player.status}
-                    data-player-name={player.name}
-                    data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
-                    data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
-                  >
-                    <td data-column="player">
-                      <PlayerCell
-                        name={player.name}
-                        position={player.position}
-                        nflTeam={player.team}
-                        mflId={player.id}
-                        espnId={player.espn_id}
-                        playerData={buildPlayerModalData(player)}
-                        size="compact"
-                      >
-                        {player.isOnTradeBait && (
-                          <a
-                            slot="after-name"
-                            class="trade-bait-link"
-                            href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
-                            title="On trade block"
-                            aria-label="On trade block"
-                          >
-                            🏷️
-                          </a>
-                        )}
-                      </PlayerCell>
-                    </td>
-                    <td data-column="college">{player.college === 'N/A' ? '—' : player.college}</td>
-                    {isOwner && (
-                      <td data-column="actions">
-                        <button
-                          type="button"
-                          class="ufa-action-btn"
-                          data-action-trigger
-                          data-player-id={player.id}
-                          aria-label={`Manage ${player.name}`}
-                          title="Manage player"
+                {sortedTableRoster.map((player) => {
+                  const m = matchupByPlayerId.get(player.id) ?? { matchup: null, oppRank: null, oppCode: null };
+                  const tier = m.oppRank != null ? fpaTier(m.oppRank) : null;
+                  return (
+                    <tr
+                      data-player-id={player.id}
+                      data-player-status={player.status}
+                      data-player-name={player.name}
+                      data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
+                      data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
+                    >
+                      <td data-column="player">
+                        <PlayerCell
+                          name={player.name}
+                          position={player.position}
+                          nflTeam={player.team}
+                          mflId={player.id}
+                          espnId={player.espn_id}
+                          playerData={buildPlayerModalData(player)}
+                          size="compact"
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <circle cx="12" cy="5" r="2"/>
-                            <circle cx="12" cy="12" r="2"/>
-                            <circle cx="12" cy="19" r="2"/>
-                          </svg>
-                        </button>
+                          {player.isOnTradeBait && (
+                            <a
+                              slot="after-name"
+                              class="trade-bait-link"
+                              href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                              title="On trade block"
+                              aria-label="On trade block"
+                            >
+                              🏷️
+                            </a>
+                          )}
+                        </PlayerCell>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td data-column="oppRank">
+                        {m.oppRank != null ? (
+                          <span class={`rank-badge rank-tier-${tier}`}>#{m.oppRank}</span>
+                        ) : (
+                          <span class="opp-empty">—</span>
+                        )}
+                      </td>
+                      <td data-column="opponent">
+                        {m.matchup && m.oppCode ? (
+                          <span class="opponent-cell">
+                            <span class="vs-at">{m.matchup.isHome ? 'vs' : '@'}</span>
+                            <img
+                              src={`/assets/nfl-logos/${m.oppCode}.svg`}
+                              alt={m.oppCode}
+                              class="opponent-logo"
+                              loading="lazy"
+                              onerror="this.style.display='none'"
+                            />
+                          </span>
+                        ) : (
+                          <span class="opponent-bye">BYE</span>
+                        )}
+                      </td>
+                      {isOwner && (
+                        <td data-column="actions">
+                          <button
+                            type="button"
+                            class="ufa-action-btn"
+                            data-action-trigger
+                            data-player-id={player.id}
+                            aria-label={`Manage ${player.name}`}
+                            title="Manage player"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <circle cx="12" cy="5" r="2"/>
+                              <circle cx="12" cy="12" r="2"/>
+                              <circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1208,8 +1275,18 @@ const pageConfig = {
       padding-left: 0.75rem;
     }
 
-    .roster-table th[data-column="college"] {
+    .roster-table th[data-column="oppRank"],
+    .roster-table th[data-column="opponent"] {
       text-align: left;
+      font-weight: 600;
+    }
+
+    .roster-table th[data-column="oppRank"] {
+      width: 64px;
+    }
+
+    .roster-table th[data-column="opponent"] {
+      width: 96px;
     }
 
     .roster-table th[data-column="actions"] {
@@ -1229,18 +1306,62 @@ const pageConfig = {
       padding-left: 0.75rem;
     }
 
-    .roster-table td[data-column="college"] {
-      color: var(--color-gray-500, #6b7280);
-      font-size: 0.8rem;
-      max-width: 180px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .roster-table td[data-column="oppRank"],
+    .roster-table td[data-column="opponent"] {
+      text-align: left;
     }
 
     .roster-table td[data-column="actions"] {
       text-align: right;
       padding-right: 0.5rem;
+    }
+
+    /* OPP # rank badge — color-tiered by FPA rank
+       (1-8 = red / tough; 25-32 = green / good matchup) */
+    .rank-badge {
+      display: inline-block;
+      padding: 0.12rem 0.55rem;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+    }
+
+    .rank-tier-4 { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+    .rank-tier-3 { background: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }
+    .rank-tier-2 { background: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }
+    .rank-tier-1 { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .opp-empty {
+      color: var(--color-gray-400, #9ca3af);
+    }
+
+    /* Opponent cell — vs/@ + NFL logo, matches TheLeague's Coach tab */
+    .opponent-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .vs-at {
+      font-size: 0.75rem;
+      color: var(--color-gray-500, #64748b);
+      font-weight: 500;
+      width: 1.25rem;
+      text-align: center;
+    }
+
+    .opponent-logo {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+
+    .opponent-bye {
+      color: var(--color-gray-400, #9ca3af);
+      font-style: italic;
+      font-size: 0.8rem;
     }
 
     .roster-table tbody tr {
@@ -1293,14 +1414,6 @@ const pageConfig = {
       display: inline-block;
       cursor: pointer;
       text-decoration: none;
-    }
-
-    /* Hide college column on narrow screens (no horizontal scroll needed) */
-    @media (max-width: 560px) {
-      .roster-table th[data-column="college"],
-      .roster-table td[data-column="college"] {
-        display: none;
-      }
     }
 
     /* ── Analytics view ── */
