@@ -7,6 +7,7 @@ import KeeperPlanner, {
   type KeeperPlannerPlayer,
   type KeeperPlannerDraftPick,
 } from '../../components/afl-fantasy/KeeperPlanner.astro';
+import { spriteUrl } from '../../utils/sprite-url';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -16,7 +17,6 @@ import {
 import {
   getAllTeams,
   getTeamsGroupedByConference,
-  getConferenceShort,
   getConferenceName,
   getTeam,
   type AFLTeam,
@@ -171,7 +171,6 @@ if (isValidFranchiseId(queryFranchiseId)) {
 }
 
 const selectedTeam: AFLTeam = getTeam(selectedFranchiseId) ?? allTeams[0]!;
-const conferenceShort = getConferenceShort(selectedTeam.conference);
 const conferenceName = getConferenceName(selectedTeam.conference);
 
 // Owner detection: only AFL users on their own team see write actions
@@ -237,7 +236,6 @@ const totalPlayers = roster.length;
 const activeRoster = roster.filter((p) => p.status === 'ROSTER').length;
 const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').length;
 const ROSTER_SIZE = 16;
-const openSlots = Math.max(0, ROSTER_SIZE - totalPlayers);
 
 // Build the KeeperPlanner inputs (only really used when isOwner is true)
 const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => ({
@@ -433,202 +431,208 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title={`AFL Fantasy — ${selectedTeam.name} Roster`}>
-  <main class="afl-rosters" data-initial-view={initialView}>
+  <section class="roster-page" data-initial-view={initialView}>
     <!-- Team Header Card -->
-    <header class="afl-rosters__header">
-      <div class="header-card">
-        <div class="header-card__left">
-          {selectedTeam.icon && (
-            <img class="header-card__icon" src={selectedTeam.icon} alt={`${selectedTeam.name} logo`} />
-          )}
-          <div class="header-card__identity">
-            <div class="header-card__pills">
-              <span
-                class:list={[
-                  'pill',
-                  'pill--conf',
-                  selectedTeam.conference === '00' ? 'pill--conf-al' : 'pill--conf-nl',
-                ]}
-                title={conferenceName}
-              >
-                {conferenceShort}
-              </span>
-              <span class="pill pill--division">{selectedTeam.division}</span>
-              <span
-                class:list={[
-                  'pill',
-                  'pill--tier',
-                  selectedTeam.tier === 'Premier League' ? 'pill--tier-premier' : 'pill--tier-dleague',
-                ]}
-              >
-                {selectedTeam.tier}
-              </span>
-              {isOwner && <span class="pill pill--owner">Your team</span>}
-            </div>
-            <h1 class="header-card__name">{selectedTeam.name}</h1>
-            <a class="header-card__profile-link" href={`/afl-fantasy/franchises/${selectedTeam.franchiseId}`}>
-              View franchise profile →
-            </a>
-          </div>
-        </div>
-
-        <div class="header-card__right">
-          <div class="control">
-            <label for="franchise-select">Team</label>
-            <select id="franchise-select" data-current-franchise={selectedFranchiseId}>
-              {teamsByConference.map((group) => (
-                <optgroup label={group.conferenceName}>
-                  {group.teams
-                    .slice()
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((t) => (
-                      <option value={t.franchiseId} selected={t.franchiseId === selectedFranchiseId}>
-                        {t.name}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-
-          <div class="control">
-            <label for="year-select">Year</label>
-            <select id="year-select" data-current-year={selectedYear}>
-              {availableYears.map((year) => (
-                <option value={year} selected={year === selectedYear}>{year}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- View tabs -->
-      <nav class="view-tabs" role="tablist" aria-label="Roster view">
-        <button class="view-tab" data-view="roster" role="tab" aria-selected={initialView === 'roster'}>
-          <span class="view-tab__label">Roster</span>
-        </button>
-        <button class="view-tab" data-view="analytics" role="tab" aria-selected={initialView === 'analytics'}>
-          <span class="view-tab__label">Analytics</span>
-        </button>
-        <button class="view-tab" data-view="planner" role="tab" aria-selected={initialView === 'planner'}>
-          <span class="view-tab__label">Planner</span>
-        </button>
-      </nav>
-
-      <!-- Roster summary strip -->
-      <div class="summary-strip">
-        <div class="summary-stat">
-          <span class="summary-stat__value">{activeRoster}</span>
-          <span class="summary-stat__label">Active</span>
-        </div>
-        <div class="summary-stat">
-          <span class="summary-stat__value">{injuredReserve}</span>
-          <span class="summary-stat__label">IR</span>
-        </div>
-        <div class="summary-stat">
-          <span class="summary-stat__value">{totalPlayers}<span class="summary-stat__denom">/{ROSTER_SIZE}</span></span>
-          <span class="summary-stat__label">Roster</span>
-        </div>
-        {openSlots > 0 && (
-          <div class="summary-stat summary-stat--accent">
-            <span class="summary-stat__value">{openSlots}</span>
-            <span class="summary-stat__label">Open</span>
-          </div>
+    <div class="team-card" data-team-identity>
+      {selectedTeam.icon && (
+        <img src={selectedTeam.icon} alt={`${selectedTeam.name} icon`} />
+      )}
+      <div class="team-card__identity">
+        <p class="team-card__label" data-view-label>AFL Roster</p>
+        <h2 class="team-card__name">{selectedTeam.name}</h2>
+        <p class="team-card__meta">
+          {conferenceName} · {selectedTeam.division}
+        </p>
+        {isOwner && (
+          <p class="team-card__last-seen" data-level="active">
+            <span class="last-seen-dot" aria-hidden="true"></span>
+            <span>Your team</span>
+          </p>
         )}
       </div>
-    </header>
+
+      <div class="team-card__actions">
+        <div class="view-tabs">
+          <button
+            class="view-tab"
+            data-view="roster"
+            data-active={initialView === 'roster' ? 'true' : 'false'}
+            aria-label="Roster View"
+            title="Roster View"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+              <use href={`${spriteUrl}#icon-users`}></use>
+            </svg>
+            <span class="view-tab__label">Roster</span>
+          </button>
+          <button
+            class="view-tab"
+            data-view="analytics"
+            data-active={initialView === 'analytics' ? 'true' : 'false'}
+            aria-label="Analytics View"
+            title="Analytics View"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+              <use href={`${spriteUrl}#icon-bar-chart`}></use>
+            </svg>
+            <span class="view-tab__label">Analytics</span>
+          </button>
+          <button
+            class="view-tab"
+            data-view="planner"
+            data-active={initialView === 'planner' ? 'true' : 'false'}
+            aria-label="Keeper Planner"
+            title="Keeper Planner"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+              <use href={`${spriteUrl}#icon-chalkboard`}></use>
+            </svg>
+            <span class="view-tab__label">Planner</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compact controls: team + year switcher -->
+    <div class="roster-controls-bar">
+      <div class="roster-controls-bar__group">
+        <label for="franchise-select">Team</label>
+        <select id="franchise-select" data-current-franchise={selectedFranchiseId}>
+          {teamsByConference.map((group) => (
+            <optgroup label={group.conferenceName}>
+              {group.teams
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((t) => (
+                  <option value={t.franchiseId} selected={t.franchiseId === selectedFranchiseId}>
+                    {t.name}
+                  </option>
+                ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      <div class="roster-controls-bar__group">
+        <label for="year-select">Year</label>
+        <select id="year-select" data-current-year={selectedYear}>
+          {availableYears.map((year) => (
+            <option value={year} selected={year === selectedYear}>{year}</option>
+          ))}
+        </select>
+      </div>
+      <a class="roster-controls-bar__profile" href={`/afl-fantasy/franchises/${selectedTeam.franchiseId}`}>
+        Franchise profile →
+      </a>
+    </div>
+
+    <!-- Roster summary -->
+    <div class="roster-summary">
+      <article>
+        <p>Active roster</p>
+        <strong>{activeRoster}<span class="roster-summary__denom">/{ROSTER_SIZE}</span></strong>
+      </article>
+      <article>
+        <p>Injured reserve</p>
+        <strong>{injuredReserve}</strong>
+      </article>
+      <article>
+        <p>Total players</p>
+        <strong>{totalPlayers}</strong>
+      </article>
+      <article>
+        <p>Open active slots</p>
+        <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
+      </article>
+    </div>
 
     <!-- Roster View -->
     <section class="view-container" data-view-content="roster" hidden={initialView !== 'roster'}>
-      {sortedPositions
-        .filter((pos) => (rosterByPosition.get(pos)?.length ?? 0) > 0)
-        .map((position) => {
-          const players = rosterByPosition.get(position)!;
-          return (
-            <div class="position-block">
-              <header class="position-block__header">
-                <h2 class="position-block__title">{position}</h2>
-                <span class="position-block__count">{players.length}</span>
-              </header>
-              <div class="position-block__table-wrap">
-                <table class="roster-table">
-                  <thead>
-                    <tr>
-                      <th class="col-player">Player</th>
-                      <th class="col-team">NFL</th>
-                      <th class="col-age">Age</th>
-                      <th class="col-college">College</th>
-                      <th class="col-status">Status</th>
-                      {isOwner && <th class="col-actions" aria-label="Actions"></th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {players.map((player) => (
-                      <tr
-                        data-player-id={player.id}
-                        data-player-status={player.status}
-                        data-player-name={player.name}
-                        data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
-                      >
-                        <td class="col-player">
-                          <PlayerCell
-                            name={player.name}
-                            position={player.position}
-                            nflTeam={player.team}
-                            mflId={player.id}
-                            espnId={player.espn_id}
-                            playerData={buildPlayerModalData(player)}
-                            size="compact"
-                          >
-                            {player.isOnTradeBait && (
-                              <span slot="after-name" class="bait-badge" title="On trade block">TB</span>
-                            )}
-                          </PlayerCell>
-                        </td>
-                        <td class="col-team">{player.team}</td>
-                        <td class="col-age">{player.age}</td>
-                        <td class="col-college">{player.college}</td>
-                        <td class="col-status">
-                          <span
-                            class:list={[
-                              'status-badge',
-                              player.status === 'INJURED_RESERVE' && 'status-badge--ir',
-                              player.status === 'ROSTER' && 'status-badge--active',
-                            ]}
-                          >
-                            {player.status === 'INJURED_RESERVE' ? 'IR' : 'Active'}
-                          </span>
-                        </td>
-                        {isOwner && (
-                          <td class="col-actions">
-                            <button
-                              type="button"
-                              class="action-btn"
-                              data-action-trigger
-                              data-player-id={player.id}
-                              aria-label={`Manage ${player.name}`}
-                              title="Manage player"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                                <circle cx="3" cy="8" r="1.5" fill="currentColor" />
-                                <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-                                <circle cx="13" cy="8" r="1.5" fill="currentColor" />
-                              </svg>
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })}
-
-      {roster.length === 0 && (
+      {roster.length === 0 ? (
         <div class="empty-state">
           <p>No roster data for this team in {selectedYear}.</p>
+        </div>
+      ) : (
+        <div class="roster-table-card">
+          <div class="roster-table-wrapper">
+            <table class="roster-table roster-table--afl">
+              <thead>
+                <tr>
+                  <th data-column="player">Player</th>
+                  <th data-column="college">College</th>
+                  <th data-column="status">Status</th>
+                  {isOwner && <th data-column="actions" aria-label="Actions"></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedPositions
+                  .flatMap((pos) => rosterByPosition.get(pos) ?? [])
+                  .map((player) => (
+                    <tr
+                      data-player-id={player.id}
+                      data-player-status={player.status}
+                      data-player-name={player.name}
+                      data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
+                      data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
+                    >
+                      <td data-column="player">
+                        <PlayerCell
+                          name={player.name}
+                          position={player.position}
+                          nflTeam={player.team}
+                          mflId={player.id}
+                          espnId={player.espn_id}
+                          playerData={buildPlayerModalData(player)}
+                          size="compact"
+                        >
+                          {player.isOnTradeBait && (
+                            <a
+                              slot="after-name"
+                              class="trade-bait-link"
+                              href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                              title="On trade block"
+                              aria-label="On trade block"
+                            >
+                              🏷️
+                            </a>
+                          )}
+                        </PlayerCell>
+                      </td>
+                      <td data-column="college">{player.college === 'N/A' ? '—' : player.college}</td>
+                      <td data-column="status">
+                        <span
+                          class:list={[
+                            'status-pill',
+                            player.status === 'INJURED_RESERVE'
+                              ? 'status-pill--ir'
+                              : 'status-pill--active',
+                          ]}
+                        >
+                          {player.status === 'INJURED_RESERVE' ? 'IR' : 'Active'}
+                        </span>
+                      </td>
+                      {isOwner && (
+                        <td data-column="actions">
+                          <button
+                            type="button"
+                            class="ufa-action-btn"
+                            data-action-trigger
+                            data-player-id={player.id}
+                            aria-label={`Manage ${player.name}`}
+                            title="Manage player"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <circle cx="12" cy="5" r="2"/>
+                              <circle cx="12" cy="12" r="2"/>
+                              <circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>
@@ -816,14 +820,24 @@ const pageConfig = {
     const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');
     const containers = document.querySelectorAll<HTMLElement>('[data-view-content]');
 
+    const VIEW_LABELS: Record<string, string> = {
+      roster: 'AFL Roster',
+      analytics: 'Advanced Analytics',
+      planner: 'Keeper Planner',
+    };
+    const labelEl = document.querySelector<HTMLElement>('[data-view-label]');
+
     function switchView(viewName: string) {
       Array.from(tabs).forEach((tab) => {
         const isActive = tab.dataset.view === viewName;
-        tab.setAttribute('aria-selected', String(isActive));
+        tab.setAttribute('data-active', String(isActive));
       });
       Array.from(containers).forEach((container) => {
         container.hidden = container.dataset.viewContent !== viewName;
       });
+      if (labelEl && VIEW_LABELS[viewName]) {
+        labelEl.textContent = VIEW_LABELS[viewName];
+      }
       const url = new URL(window.location.href);
       if (viewName === 'roster') url.searchParams.delete('view');
       else url.searchParams.set('view', viewName);
@@ -861,7 +875,7 @@ const pageConfig = {
     }
 
     // ── Player details modal trigger (delegated) ──
-    const rosterContainer = document.querySelector('.afl-rosters');
+    const rosterContainer = document.querySelector('.roster-page');
     if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
 
     // ── Player action button → AFLActionModal (owner only) ──
@@ -890,404 +904,422 @@ const pageConfig = {
   </script>
 
   <style>
-    /* ── Page shell ── */
-    .afl-rosters {
-      max-width: 1200px;
+    /* ────────────────────────────────────────────────────────────────
+       AFL roster page — matches TheLeague's roster page visual language
+       (team-card hero, icon-tile view-tabs, roster-summary, roster-table).
+       Variables come from TheLeagueLayout's global stylesheet so the look
+       stays in lockstep with the rest of the site.
+       ──────────────────────────────────────────────────────────────── */
+
+    .roster-page {
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 1.5rem 1rem 4rem;
+      padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--padding-xxl, 3rem);
       display: grid;
-      gap: 1.25rem;
+      gap: var(--padding-md, 1rem);
     }
 
-    /* ── Header card ── */
-    .afl-rosters__header {
+    /* ── Team-card hero ── */
+    .team-card {
       display: grid;
-      gap: 0.75rem;
+      padding: var(--padding-md, 1rem);
+      padding-bottom: var(--padding-xxl, 3rem); /* room for tabs on mobile */
+      justify-items: center;
+      gap: var(--padding-sm, 0.5rem);
+      border-radius: var(--radius-lg, 1rem);
+      background: var(--content-bg, #fff);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      text-align: center;
     }
 
-    .header-card {
-      display: flex;
-      gap: 1.5rem;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      background: #fff;
-      border-radius: 1rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      padding: 1.5rem;
+    @media (min-width: 480px) {
+      .team-card {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        padding-inline: var(--padding-lg, 1.5rem);
+        justify-content: center;
+        padding-block: var(--padding-md, 1rem) var(--padding-sm, 0.5rem);
+        text-align: left;
+      }
     }
 
-    .header-card__left {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      min-width: 0;
-      flex: 1 1 320px;
-    }
-
-    .header-card__icon {
+    .team-card img {
       width: 72px;
       height: 72px;
-      object-fit: contain;
+      border-radius: 14px;
+      object-fit: cover;
+    }
+
+    .team-card__identity {
+      min-width: 0;
+    }
+
+    .team-card__label {
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-400, #9ca3af);
+      margin: 0;
+    }
+
+    .team-card__name {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--color-gray-900, #111827);
+    }
+
+    .team-card__meta {
+      margin: 0;
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.875rem;
+    }
+
+    .team-card__last-seen {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--color-gray-500, #6b7280);
+      margin: 0.125rem 0 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .last-seen-dot {
+      display: inline-block;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
       flex-shrink: 0;
     }
 
-    .header-card__identity {
-      min-width: 0;
+    [data-level='active'] .last-seen-dot { background: var(--activity-green, #16a34a); }
+
+    /* View tabs (SVG icon tiles) — copied structurally from TheLeague */
+    .team-card__actions {
+      width: 100%;
     }
 
-    .header-card__pills {
+    @media (min-width: 480px) {
+      .team-card__actions {
+        width: auto;
+      }
+    }
+
+    .view-tabs {
       display: flex;
-      flex-wrap: wrap;
       gap: 0.5rem;
-      margin-bottom: 0.5rem;
+      justify-content: center;
     }
 
-    .pill {
-      display: inline-block;
-      padding: 0.125rem 0.5rem;
-      border-radius: 9999px;
+    @media (min-width: 480px) {
+      .view-tabs {
+        position: absolute;
+        right: var(--padding-lg, 1.5rem);
+        top: var(--padding-lg, 1.5rem);
+      }
+    }
+
+    .view-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.5rem 0.7rem;
+      border: 2px solid transparent;
+      border-radius: var(--radius-md, 0.5rem);
+      background: var(--color-gray-50, #f9fafb);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      min-width: 69px;
+    }
+
+    .view-tab:hover {
+      background: var(--color-gray-200, #dddedf);
+      border-color: var(--color-gray-300, #d1d5db);
+    }
+
+    .view-tab[data-active="true"] {
+      background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+      border-color: var(--color-primary, #1c497c);
+    }
+
+    .view-tab__icon {
+      width: 28px;
+      height: 28px;
+      fill: var(--color-gray-500, #6b7280);
+      color: var(--color-gray-500, #6b7280);
+    }
+
+    .view-tab[data-active="true"] .view-tab__icon {
+      fill: var(--color-primary, #1c497c);
+      color: var(--color-primary, #1c497c);
+    }
+
+    .view-tab__label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--color-gray-500, #6b7280);
+      white-space: nowrap;
+    }
+
+    .view-tab[data-active="true"] .view-tab__label {
+      color: var(--color-primary, #1c497c);
+    }
+
+    /* ── Inline controls bar (team + year switcher) ── */
+    .roster-controls-bar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-md, 0.5rem);
+      padding: 0.625rem 1rem;
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    }
+
+    .roster-controls-bar__group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .roster-controls-bar__group label {
       font-size: 0.6875rem;
-      font-weight: 700;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      line-height: 1.4;
+      color: var(--color-gray-500, #6b7280);
     }
 
-    .pill--conf-al {
-      background: #fee2e2;
-      color: #991b1b;
+    .roster-controls-bar__group select {
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--color-gray-200, #e5e7eb);
+      border-radius: var(--radius-sm, 0.25rem);
+      background: #fff;
+      font-size: 0.85rem;
+      color: var(--color-gray-900, #111827);
+      cursor: pointer;
     }
 
-    .pill--conf-nl {
-      background: #dbeafe;
-      color: #1e3a8a;
-    }
-
-    .pill--division {
-      background: #f3f4f6;
-      color: #374151;
-    }
-
-    .pill--tier-premier {
-      background: #c41e3a;
-      color: #fff;
-    }
-
-    .pill--tier-dleague {
-      background: #e5e7eb;
-      color: #374151;
-    }
-
-    .pill--owner {
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #fbbf24;
-    }
-
-    .header-card__name {
-      font-size: 1.875rem;
-      font-weight: 700;
-      margin: 0 0 0.25rem;
-      color: #0f172a;
-      line-height: 1.1;
-    }
-
-    .header-card__profile-link {
+    .roster-controls-bar__profile {
+      margin-left: auto;
       font-size: 0.8125rem;
-      color: #c41e3a;
+      color: var(--color-primary, #1c497c);
       text-decoration: none;
       font-weight: 600;
     }
 
-    .header-card__profile-link:hover {
-      text-decoration: underline;
-    }
+    .roster-controls-bar__profile:hover { text-decoration: underline; }
 
-    .header-card__right {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .control {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      min-width: 160px;
-    }
-
-    .control label {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #6b7280;
-    }
-
-    .control select {
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.5rem;
-      background: #fff;
-      font-size: 0.9375rem;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .control select:focus {
-      outline: 2px solid #c41e3a;
-      outline-offset: -1px;
-      border-color: #c41e3a;
-    }
-
-    /* ── View tabs ── */
-    .view-tabs {
-      display: flex;
-      gap: 0.25rem;
-      background: #fff;
-      border-radius: 0.75rem;
-      padding: 0.25rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    }
-
-    .view-tab {
-      flex: 1;
-      padding: 0.625rem 1rem;
-      border: 0;
-      background: transparent;
-      border-radius: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #6b7280;
-      cursor: pointer;
-      transition: background-color 120ms ease, color 120ms ease;
-    }
-
-    .view-tab:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    .view-tab[aria-selected="true"] {
-      background: #c41e3a;
-      color: #fff;
-    }
-
-    /* ── Summary strip ── */
-    .summary-strip {
+    /* ── Roster summary cards (matches TheLeague's .roster-summary) ── */
+    .roster-summary {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-      gap: 0.5rem;
-      background: #fff;
-      border-radius: 0.75rem;
-      padding: 0.75rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--padding-md, 1rem);
     }
 
-    .summary-stat {
-      text-align: center;
-      padding: 0.5rem;
+    .roster-summary article {
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-lg, 1rem);
+      padding: var(--padding-md, 1rem);
+      box-shadow: var(--shadow-md);
     }
 
-    .summary-stat__value {
+    .roster-summary p {
+      margin: 0;
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.8rem;
+    }
+
+    .roster-summary strong {
       display: block;
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #0f172a;
-      line-height: 1;
+      margin-top: 0.35rem;
+      font-size: clamp(1.1rem, 4vw, 1.6rem);
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-gray-900, #111827);
     }
 
-    .summary-stat__denom {
-      font-size: 0.875rem;
-      color: #9ca3af;
-      font-weight: 600;
-    }
-
-    .summary-stat__label {
-      display: block;
-      margin-top: 0.25rem;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #6b7280;
-    }
-
-    .summary-stat--accent .summary-stat__value {
-      color: #c41e3a;
+    .roster-summary__denom {
+      color: var(--color-gray-400, #9ca3af);
+      font-size: 0.75em;
+      font-weight: 500;
     }
 
     /* ── View containers ── */
     .view-container {
       display: grid;
-      gap: 1.25rem;
+      gap: var(--padding-lg, 1.5rem);
     }
 
     .view-container[hidden] {
       display: none;
     }
 
-    /* ── Position blocks ── */
-    .position-block {
-      background: #fff;
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    /* ── Roster table card ── */
+    .roster-table-card {
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-lg, 1rem);
+      padding: var(--padding-md, 1rem);
+      box-shadow: var(--shadow-lg);
       overflow: hidden;
     }
 
-    .position-block__header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.875rem 1.25rem;
-      background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
-      color: #fff;
-    }
-
-    .position-block__title {
-      margin: 0;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.025em;
-      text-transform: uppercase;
-    }
-
-    .position-block__count {
-      font-size: 0.75rem;
-      font-weight: 600;
-      background: rgba(255, 255, 255, 0.2);
-      padding: 0.125rem 0.5rem;
-      border-radius: 9999px;
-    }
-
-    .position-block__table-wrap {
+    .roster-table-wrapper {
       overflow-x: auto;
+      border-radius: var(--radius-md, 0.5rem);
+      background: var(--content-bg, #fff);
     }
 
     .roster-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.875rem;
     }
 
     .roster-table thead {
-      background: #f9fafb;
+      background: var(--color-gray-50, #f9fafb);
+      border-bottom: 1px solid var(--content-border, #e2e8f0);
     }
 
     .roster-table th {
-      padding: 0.625rem 1rem;
-      text-align: left;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #6b7280;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .roster-table td {
-      padding: 0.625rem 1rem;
-      border-bottom: 1px solid #f3f4f6;
-      vertical-align: middle;
-    }
-
-    .roster-table tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
-    .roster-table tbody tr:hover {
-      background: #fafbfc;
-    }
-
-    .col-team,
-    .col-age,
-    .col-status,
-    .col-actions {
-      text-align: center;
-    }
-
-    .col-team {
-      width: 64px;
-      color: #6b7280;
+      font-size: 0.625rem;
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-400, #9ca3af);
+      padding: 0.55rem 0.5rem;
+      text-align: right;
+      background: var(--color-gray-50, #f9fafb);
     }
 
-    .col-age {
-      width: 56px;
-      color: #6b7280;
+    .roster-table th[data-column="player"] {
+      text-align: left;
+      padding-left: 0.75rem;
     }
 
-    .col-college {
-      color: #6b7280;
-      font-size: 0.8125rem;
+    .roster-table th[data-column="college"],
+    .roster-table th[data-column="status"] {
+      text-align: left;
     }
 
-    .col-status {
-      width: 92px;
-    }
-
-    .col-actions {
+    .roster-table th[data-column="actions"] {
       width: 48px;
     }
 
-    .status-badge {
+    .roster-table td {
+      padding: 0.65rem 0.5rem;
+      border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+      vertical-align: middle;
+      font-size: 0.85rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .roster-table td[data-column="player"] {
+      text-align: left;
+      padding-left: 0.75rem;
+    }
+
+    .roster-table td[data-column="college"] {
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.8rem;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .roster-table td[data-column="actions"] {
+      text-align: right;
+      padding-right: 0.5rem;
+    }
+
+    .roster-table tbody tr {
+      border-left: 3px solid transparent;
+    }
+
+    .roster-table tbody tr[data-row-status="active"] {
+      border-left-color: var(--activity-green, #16a34a);
+    }
+
+    .roster-table tbody tr[data-row-status="ir"] {
+      border-left-color: var(--color-danger, #dc2626);
+    }
+
+    .roster-table tbody tr:hover {
+      background: var(--color-gray-50, #f9fafb);
+    }
+
+    /* Status pill (small, inline) */
+    .status-pill {
       display: inline-block;
       padding: 0.125rem 0.5rem;
       border-radius: 9999px;
-      font-size: 0.6875rem;
+      font-size: 0.65rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      background: #e5e7eb;
-      color: #374151;
     }
 
-    .status-badge--active {
-      background: #dcfce7;
+    .status-pill--active {
+      background: color-mix(in srgb, var(--activity-green, #16a34a) 14%, white);
       color: #166534;
     }
 
-    .status-badge--ir {
-      background: #fee2e2;
+    .status-pill--ir {
+      background: color-mix(in srgb, var(--color-danger, #dc2626) 12%, white);
       color: #991b1b;
     }
 
-    .bait-badge {
-      display: inline-block;
-      margin-left: 0.375rem;
-      padding: 0 0.375rem;
-      font-size: 0.625rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      background: #fef3c7;
-      color: #92400e;
-      border-radius: 0.25rem;
-      vertical-align: middle;
-    }
-
-    .action-btn {
-      width: 28px;
-      height: 28px;
-      border: 0;
-      background: transparent;
-      border-radius: 0.375rem;
-      color: #6b7280;
-      cursor: pointer;
+    /* 3-dot action button — same look TheLeague uses */
+    .ufa-action-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      transition: background-color 120ms ease, color 120ms ease;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--color-gray-200, #d1d5db);
+      background: var(--content-bg, #fff);
+      color: var(--color-gray-500, #6b7280);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.18s ease;
     }
 
-    .action-btn:hover {
-      background: #f3f4f6;
-      color: #111827;
+    .ufa-action-btn:hover {
+      background: var(--color-gray-50, #f3f4f6);
+      color: var(--color-gray-700, #374151);
+      border-color: var(--color-gray-300, #9ca3af);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
-    .action-btn:focus-visible {
-      outline: 2px solid #c41e3a;
+    .ufa-action-btn:focus-visible {
+      outline: 2px solid var(--color-primary, #1c497c);
       outline-offset: 1px;
+    }
+
+    .trade-bait-link {
+      margin-left: 0.25rem;
+      font-size: 0.9rem;
+      display: inline-block;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* Hide college column on narrow screens (no horizontal scroll needed) */
+    @media (max-width: 560px) {
+      .roster-table th[data-column="college"],
+      .roster-table td[data-column="college"] {
+        display: none;
+      }
     }
 
     /* ── Analytics view ── */
@@ -1559,40 +1591,16 @@ const pageConfig = {
       font-size: 1.25rem;
     }
 
-    /* ── Mobile ── */
+    /* Mobile: tighter table cells */
     @media (max-width: 720px) {
-      .afl-rosters {
-        padding: 1rem 0.5rem 3rem;
-      }
-
-      .header-card {
-        padding: 1rem;
-      }
-
-      .header-card__icon {
-        width: 56px;
-        height: 56px;
-      }
-
-      .header-card__name {
-        font-size: 1.5rem;
-      }
-
-      .header-card__right {
-        width: 100%;
-      }
-
-      .control {
-        flex: 1;
+      .roster-page {
+        padding: 0.5rem 0.5rem 3rem;
       }
 
       .roster-table th,
       .roster-table td {
-        padding: 0.5rem 0.5rem;
-      }
-
-      .col-college {
-        display: none;
+        padding: 0.5rem 0.4rem;
+        font-size: 0.8rem;
       }
     }
   </style>
