@@ -18,6 +18,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildBadgeContext, computeBadgesFor } from './badges.mjs';
+import {
+  diffNewAwards,
+  buildMilestonePost,
+  mergeMilestonePosts,
+} from './lib/franchise-milestone-posts.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -26,6 +31,7 @@ const SALARIES_DIR = path.join(ROOT, 'data/theleague');
 const LEAGUE_CONFIG_PATH = path.join(ROOT, 'src/data/theleague.config.json');
 const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, 'data/theleague/championship-history.json');
 const OUTPUT_PATH = path.join(ROOT, 'data/theleague/derived/franchise-history.json');
+const SCHEFTER_FEED_PATH = path.join(ROOT, 'src/data/theleague/schefter-feed.json');
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
 
@@ -1142,6 +1148,51 @@ for (const [id, fr] of franchiseMap) {
 const badgeContext = buildBadgeContext(franchises, yearSummaries);
 for (const fid of Object.keys(franchises)) {
   franchises[fid].badges = computeBadgesFor(franchises[fid], badgeContext);
+}
+
+// Phase 5: Schefter milestone posts. The previously-committed
+// franchise-history.json is the snapshot we diff against — if it's missing
+// (fresh checkout / first run) we silently seed and emit nothing so we
+// don't flood the feed with retroactive posts for every existing badge.
+const previousOutput = readJson(OUTPUT_PATH);
+if (!previousOutput?.franchises) {
+  console.log('[franchise-history] no previous snapshot — milestone diff skipped (silent seed)');
+} else {
+  const newAwards = diffNewAwards(previousOutput.franchises, franchises);
+  if (newAwards.length === 0) {
+    console.log('[franchise-history] no new badges — milestone diff empty');
+  } else {
+    const now = new Date();
+    const milestonePosts = newAwards.map((entry) =>
+      buildMilestonePost({
+        franchiseId: entry.franchiseId,
+        badge: entry.badge,
+        award: entry.award,
+        franchise: franchises[entry.franchiseId],
+        now,
+      })
+    );
+    const feed = readJson(SCHEFTER_FEED_PATH);
+    if (feed && Array.isArray(feed.posts)) {
+      const { posts, added } = mergeMilestonePosts(feed.posts, milestonePosts);
+      if (added > 0) {
+        feed.posts = posts;
+        feed.lastScanTimestamp = now.toISOString();
+        fs.writeFileSync(SCHEFTER_FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
+        console.log(
+          `[franchise-history] emitted ${added} new milestone post(s) to ${SCHEFTER_FEED_PATH}`
+        );
+      } else {
+        console.log(
+          `[franchise-history] ${milestonePosts.length} milestone(s) already in feed — no new posts`
+        );
+      }
+    } else {
+      console.warn(
+        `[franchise-history] could not load ${SCHEFTER_FEED_PATH} — skipping milestone emission`
+      );
+    }
+  }
 }
 
 const output = {
