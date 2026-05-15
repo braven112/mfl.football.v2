@@ -58,19 +58,24 @@ function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
  * @param username - MFL username
  * @param password - MFL password
  * @param leagueId - League ID to match against (e.g. "13522")
+ * @param year - Override the season year used when calling MFL. Defaults to
+ *   the current calendar year. AFL passes the last completed season here
+ *   because the 2026 AFL league hasn't been created on MFL yet, so calling
+ *   `2026/myleagues` returns nothing for league 19621.
  */
 export async function authenticateWithMFL(
   username: string,
   password: string,
-  leagueId?: string
+  leagueId?: string,
+  year?: number,
 ): Promise<MFLLoginResponse> {
   try {
-    const year = new Date().getFullYear();
+    const seasonYear = year ?? new Date().getFullYear();
 
     // ── Step 1: Login to get MFL_USER_ID cookie ─────────────────────
     // Try POST first (MFL-recommended), fall back to GET if POST returns
     // empty body (MFL redirects POST→GET on some hosts, losing the body).
-    const loginUrl = `https://api.myfantasyleague.com/${year}/login`;
+    const loginUrl = `https://api.myfantasyleague.com/${seasonYear}/login`;
     const loginParams = new URLSearchParams({
       USERNAME: username,
       PASSWORD: password,
@@ -78,7 +83,7 @@ export async function authenticateWithMFL(
     });
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Step 1: calling /login (year:', year, ')');
+      console.log('[mfl-login] Step 1: calling /login (year:', seasonYear, ')');
     }
 
     // Use manual redirect handling to capture Set-Cookie headers from ALL hops.
@@ -212,7 +217,7 @@ export async function authenticateWithMFL(
     // Authenticate with the MFL_USER_ID cookie from Step 1.
     // Returns {"leagues":{}} when unauth'd, or {"leagues":{"league":[...]}}
     // with franchise_id when authenticated.
-    const mlUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues&JSON=1`;
+    const mlUrl = `https://api.myfantasyleague.com/${seasonYear}/export?TYPE=myleagues&JSON=1`;
 
     console.log('[mfl-login] Step 2: calling export?TYPE=myleagues with cookie');
 

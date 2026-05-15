@@ -16,6 +16,12 @@ import { getAuthUser } from '../../utils/auth';
 export const prerender = false;
 
 const AFL_LEAGUE_ID = '19621';
+// MFL hasn't been set up for AFL 2026 yet — last completed season is 2025.
+// `myleagues` for 2026 returns nothing for this league, which is why owners
+// who tried to sign in before this fix saw "your franchise could not be
+// determined". Once the 2026 AFL league exists on MFL, this can drop back
+// to the current year via getCurrentLeagueYear().
+const AFL_LOGIN_YEAR = 2025;
 
 // If already authenticated as an AFL owner, redirect into the AFL home.
 // If authenticated against a different league, fall through so the user
@@ -36,6 +42,7 @@ const safeNext = next && next.startsWith('/afl-fantasy') ? next : '/afl-fantasy'
   <div class="afl-login-page">
     <LoginForm
       leagueId={AFL_LEAGUE_ID}
+      seasonYear={AFL_LOGIN_YEAR}
       redirectUrl={safeNext}
       logoSrc="/assets/logos/afl-logo.svg"
       logoAlt="AFL Fantasy logo"

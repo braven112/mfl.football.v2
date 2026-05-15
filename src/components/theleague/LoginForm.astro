@@ -18,6 +18,12 @@ export interface Props {
   redirectUrl?: string;
   /** League ID override (defaults to 13522) */
   leagueId?: string;
+  /**
+   * Season year override forwarded to MFL. AFL passes 2025 because its
+   * 2026 league hasn't been created on MFL yet; calling /2026/myleagues
+   * for the AFL leagueId returns nothing, so franchise resolution fails.
+   */
+  seasonYear?: number | string;
   /** Logo src override — defaults to The League logo */
   logoSrc?: string;
   /** Logo alt text */
@@ -33,6 +39,7 @@ const {
   showLogo = compact,
   redirectUrl,
   leagueId = '13522',
+  seasonYear,
   logoSrc = '/assets/logos/theleague-logo.svg',
   logoAlt = 'The League logo',
   subtitle = 'Enter your MFL credentials',
@@ -44,6 +51,7 @@ const {
   class:list={['login-form', { 'login-form--compact': compact }, className]}
   data-redirect-url={redirectUrl}
   data-league-id={leagueId}
+  data-season-year={seasonYear != null ? String(seasonYear) : ''}
 >
   <!-- Branded Header -->
   <div class:list={['login-header', { 'login-header--compact': compact }]}>
@@ -158,6 +166,8 @@ const {
     // Server-rendered redirect from component prop (highest priority)
     const componentRedirect = formWrapper.dataset.redirectUrl;
     const leagueId = formWrapper.dataset.leagueId || '13522';
+    const seasonYearAttr = formWrapper.dataset.seasonYear || '';
+    const seasonYear = /^\d{4}$/.test(seasonYearAttr) ? Number(seasonYearAttr) : null;
 
     // ── Form submission ──────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
@@ -192,6 +202,7 @@ const {
             username: usernameInput.value,
             password: passwordInput.value,
             leagueId,
+            ...(seasonYear != null ? { year: seasonYear } : {}),
           }),
         });
 
