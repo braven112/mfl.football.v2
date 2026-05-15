@@ -1,0 +1,594 @@
+---
+/**
+ * AFLActionModal — owner-only player action menu for AFL roster pages.
+ *
+ * Two-step flow:
+ *   1. Choose action (Move to IR / Activate / Cut / Trade Block / Trade)
+ *   2. Confirm + execute via /api/* — same write endpoints TheLeague uses,
+ *      since user.leagueId on the JWT scopes them per-league.
+ *
+ * AFL has no salary cap, no contracts, no franchise tag, and no extension
+ * — so the action set is intentionally short. Trade routes to the AFL
+ * trade builder (built in a later commit).
+ *
+ * Open via window.openAFLActionModal({ playerId, playerName, status,
+ * isOnTradeBait }). Close via the X button, overlay click, or ESC.
+ */
+---
+
+<div class="afl-action-modal" id="afl-action-modal" role="dialog" aria-modal="true" aria-labelledby="aam-title" hidden>
+  <div class="afl-action-modal__overlay" data-aam-close></div>
+  <div class="afl-action-modal__content">
+    <button class="aam-close" data-aam-close aria-label="Close (ESC)" title="Close">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+
+    <header class="aam-header">
+      <h3 class="aam-title" id="aam-title">Manage Player</h3>
+      <p class="aam-subtitle" id="aam-subtitle">&mdash;</p>
+    </header>
+
+    <!-- Step 1: action selector -->
+    <div class="aam-step" data-aam-step="select">
+      <ul class="aam-actions" role="list">
+        <li>
+          <button class="aam-action" data-aam-action="ir-to" type="button" hidden>
+            <span class="aam-action__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2v6m0 0v14m0-14h7a3 3 0 010 6h-7M5 8h7" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="aam-action__body">
+              <span class="aam-action__label">Move to IR</span>
+              <span class="aam-action__desc">Place this player on Injured Reserve</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="aam-action" data-aam-action="ir-from" type="button" hidden>
+            <span class="aam-action__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14m0 0l-6-6m6 6l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="aam-action__body">
+              <span class="aam-action__label">Activate from IR</span>
+              <span class="aam-action__desc">Return this player to the active roster</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="aam-action" data-aam-action="trade-bait-add" type="button" hidden>
+            <span class="aam-action__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="aam-action__body">
+              <span class="aam-action__label">Add to Trade Block</span>
+              <span class="aam-action__desc">Signal that you'd consider trade offers</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="aam-action" data-aam-action="trade-bait-remove" type="button" hidden>
+            <span class="aam-action__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="aam-action__body">
+              <span class="aam-action__label">Remove from Trade Block</span>
+              <span class="aam-action__desc">Take this player off the trade block</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="aam-action" data-aam-action="trade" type="button">
+            <span class="aam-action__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M7 17l-4-4m0 0l4-4m-4 4h18m-4-4l4 4m0 0l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="aam-action__body">
+              <span class="aam-action__label">Trade Player</span>
+              <span class="aam-action__desc">Open the trade builder with this player loaded</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="aam-action aam-action--destructive" data-aam-action="cut" type="button">
+            <span class="aam-action__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="aam-action__body">
+              <span class="aam-action__label">Cut Player</span>
+              <span class="aam-action__desc">Release back into the auction pool</span>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Step 2: confirm -->
+    <div class="aam-step" data-aam-step="confirm" hidden>
+      <p class="aam-confirm__copy" id="aam-confirm-copy">&mdash;</p>
+      <div class="aam-error" id="aam-error" hidden></div>
+      <div class="aam-success" id="aam-success" hidden></div>
+      <div class="aam-confirm__actions">
+        <button class="aam-btn aam-btn--ghost" type="button" data-aam-cancel>Back</button>
+        <button class="aam-btn aam-btn--primary" type="button" id="aam-confirm-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  type ModalAction = 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
+
+  interface ActionPayload {
+    playerId: string;
+    playerName: string;
+    /** ROSTER | INJURED_RESERVE — drives which IR action is shown */
+    status?: string;
+    /** Whether the player is currently on the trade block */
+    isOnTradeBait?: boolean;
+    /** Owner's franchise ID (for trade-builder routing) */
+    franchiseId?: string;
+  }
+
+  const _modalEl = document.getElementById('afl-action-modal') as HTMLDivElement | null;
+  if (!_modalEl) {
+    console.error('[afl-action-modal] root element not found');
+  } else {
+    // Pin into a const so closures keep the non-null narrowing
+    const modal: HTMLDivElement = _modalEl;
+    const subtitleEl = modal.querySelector('#aam-subtitle') as HTMLElement;
+    const stepSelect = modal.querySelector('[data-aam-step="select"]') as HTMLElement;
+    const stepConfirm = modal.querySelector('[data-aam-step="confirm"]') as HTMLElement;
+    const confirmCopy = modal.querySelector('#aam-confirm-copy') as HTMLElement;
+    const confirmBtn = modal.querySelector('#aam-confirm-btn') as HTMLButtonElement;
+    const errorEl = modal.querySelector('#aam-error') as HTMLElement;
+    const successEl = modal.querySelector('#aam-success') as HTMLElement;
+
+    const actionButtons = {
+      'ir-to': modal.querySelector('[data-aam-action="ir-to"]') as HTMLButtonElement,
+      'ir-from': modal.querySelector('[data-aam-action="ir-from"]') as HTMLButtonElement,
+      'cut': modal.querySelector('[data-aam-action="cut"]') as HTMLButtonElement,
+      'trade-bait-add': modal.querySelector('[data-aam-action="trade-bait-add"]') as HTMLButtonElement,
+      'trade-bait-remove': modal.querySelector('[data-aam-action="trade-bait-remove"]') as HTMLButtonElement,
+      'trade': modal.querySelector('[data-aam-action="trade"]') as HTMLButtonElement,
+    };
+
+    let currentPayload: ActionPayload | null = null;
+    let pendingAction: ModalAction | null = null;
+
+    function openModal(payload: ActionPayload) {
+      currentPayload = payload;
+      pendingAction = null;
+      subtitleEl.textContent = payload.playerName;
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+      successEl.hidden = true;
+      successEl.textContent = '';
+
+      const onIR = payload.status === 'INJURED_RESERVE';
+      actionButtons['ir-to'].hidden = onIR;
+      actionButtons['ir-from'].hidden = !onIR;
+      actionButtons['trade-bait-add'].hidden = !!payload.isOnTradeBait;
+      actionButtons['trade-bait-remove'].hidden = !payload.isOnTradeBait;
+
+      stepSelect.hidden = false;
+      stepConfirm.hidden = true;
+      modal.hidden = false;
+      modal.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.hidden = true;
+      modal.classList.remove('is-open');
+      document.body.style.overflow = '';
+      currentPayload = null;
+      pendingAction = null;
+    }
+
+    function confirmCopyFor(action: ModalAction, name: string): string {
+      switch (action) {
+        case 'ir-to':
+          return `Move ${name} to Injured Reserve? They'll free up an active roster slot but stay under your control.`;
+        case 'ir-from':
+          return `Activate ${name} from Injured Reserve? They'll move back into your active roster.`;
+        case 'cut':
+          return `Release ${name}? This drops them back into the AFL auction pool. This action cannot be undone here.`;
+        case 'trade-bait-add':
+          return `Add ${name} to your public trade block? Other owners will see this player is available.`;
+        case 'trade-bait-remove':
+          return `Remove ${name} from your trade block?`;
+        case 'trade':
+          return `Open the trade builder with ${name} preloaded?`;
+      }
+    }
+
+    function showStep(step: 'select' | 'confirm') {
+      stepSelect.hidden = step !== 'select';
+      stepConfirm.hidden = step !== 'confirm';
+    }
+
+    function pickAction(action: ModalAction) {
+      if (!currentPayload) return;
+      pendingAction = action;
+      confirmCopy.textContent = confirmCopyFor(action, currentPayload.playerName);
+      confirmBtn.textContent = action === 'cut' ? 'Cut Player' : 'Confirm';
+      confirmBtn.classList.toggle('aam-btn--danger', action === 'cut');
+      confirmBtn.disabled = false;
+      errorEl.hidden = true;
+      successEl.hidden = true;
+      showStep('confirm');
+    }
+
+    async function postJson(url: string, body: any): Promise<{ ok: boolean; data: any }> {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok && (data?.success ?? true), data };
+    }
+
+    function refreshRowAfterIR(playerId: string, newStatus: string) {
+      const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
+      if (!row) return;
+      row.dataset.playerStatus = newStatus;
+      const badge = row.querySelector('.status-badge');
+      if (badge) {
+        const onIR = newStatus === 'INJURED_RESERVE';
+        badge.textContent = onIR ? 'IR' : 'Active';
+        badge.classList.toggle('status-badge--ir', onIR);
+        badge.classList.toggle('status-badge--active', !onIR);
+      }
+    }
+
+    function removeRowAfterCut(playerId: string) {
+      const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
+      if (!row) return;
+      const tbody = row.parentElement;
+      row.remove();
+      // If a position block emptied out, hide it
+      if (tbody && tbody.children.length === 0) {
+        const block = tbody.closest('.position-block');
+        if (block) (block as HTMLElement).hidden = true;
+      }
+    }
+
+    function refreshRowAfterTradeBait(playerId: string, isOn: boolean) {
+      const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
+      if (!row) return;
+      row.dataset.onTradeBait = isOn ? 'true' : 'false';
+      const nameEl = row.querySelector('.player-cell__name');
+      if (!nameEl) return;
+      const existing = nameEl.querySelector('.bait-badge');
+      if (isOn && !existing) {
+        const badge = document.createElement('span');
+        badge.className = 'bait-badge';
+        badge.title = 'On trade block';
+        badge.textContent = 'TB';
+        nameEl.appendChild(badge);
+      } else if (!isOn && existing) {
+        existing.remove();
+      }
+    }
+
+    async function executeAction() {
+      if (!currentPayload || !pendingAction) return;
+      const { playerId, playerName, franchiseId } = currentPayload;
+      const action = pendingAction;
+
+      if (action === 'trade') {
+        const target = `/afl-fantasy/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        window.location.href = target;
+        return;
+      }
+
+      confirmBtn.disabled = true;
+      const origLabel = confirmBtn.textContent;
+      confirmBtn.textContent = 'Working…';
+      errorEl.hidden = true;
+
+      try {
+        let result: { ok: boolean; data: any };
+        if (action === 'cut') {
+          result = await postJson('/api/cut-player', { playerId });
+        } else if (action === 'ir-to') {
+          result = await postJson('/api/move-to-ir', { playerId, direction: 'to' });
+        } else if (action === 'ir-from') {
+          result = await postJson('/api/move-to-ir', { playerId, direction: 'from' });
+        } else if (action === 'trade-bait-add') {
+          result = await postJson('/api/trade-bait', { playerId, action: 'add' });
+        } else if (action === 'trade-bait-remove') {
+          result = await postJson('/api/trade-bait', { playerId, action: 'remove' });
+        } else {
+          throw new Error(`Unknown action: ${action}`);
+        }
+
+        if (!result.ok) {
+          throw new Error(result.data?.message || result.data?.error || 'Request failed');
+        }
+
+        // Optimistic UI updates so the user sees the result without reload
+        if (action === 'ir-to') refreshRowAfterIR(playerId, 'INJURED_RESERVE');
+        if (action === 'ir-from') refreshRowAfterIR(playerId, 'ROSTER');
+        if (action === 'cut') removeRowAfterCut(playerId);
+        if (action === 'trade-bait-add') refreshRowAfterTradeBait(playerId, true);
+        if (action === 'trade-bait-remove') refreshRowAfterTradeBait(playerId, false);
+
+        successEl.textContent = `${playerName} — done.`;
+        successEl.hidden = false;
+        confirmBtn.textContent = origLabel;
+        setTimeout(() => closeModal(), 1200);
+      } catch (err: any) {
+        errorEl.textContent = err?.message || 'Something went wrong. Please try again.';
+        errorEl.hidden = false;
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = origLabel;
+      }
+    }
+
+    // ── Event wiring ──
+    Object.entries(actionButtons).forEach(([action, btn]) => {
+      btn?.addEventListener('click', () => pickAction(action as ModalAction));
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      void executeAction();
+    });
+
+    modal.querySelectorAll('[data-aam-close]').forEach((el) => {
+      el.addEventListener('click', () => closeModal());
+    });
+
+    modal.querySelectorAll('[data-aam-cancel]').forEach((el) => {
+      el.addEventListener('click', () => showStep('select'));
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+
+    // Expose a global opener so any roster table on the page can trigger us
+    (window as any).openAFLActionModal = openModal;
+  }
+</script>
+
+<style>
+  .afl-action-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .afl-action-modal[hidden] {
+    display: none;
+  }
+
+  .afl-action-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+  }
+
+  .afl-action-modal__content {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    padding: 1.25rem;
+    animation: aam-pop 140ms ease-out;
+  }
+
+  @keyframes aam-pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .aam-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    border-radius: 0.375rem;
+    color: #6b7280;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .aam-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .aam-header {
+    margin: 0 2rem 1rem 0;
+  }
+
+  .aam-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+
+  .aam-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .aam-actions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  .aam-action {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    color: #111827;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+
+  .aam-action[hidden] {
+    display: none;
+  }
+
+  .aam-action:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #c41e3a;
+  }
+
+  .aam-action:focus-visible {
+    outline: 2px solid #c41e3a;
+    outline-offset: 1px;
+  }
+
+  .aam-action__icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    color: #4b5563;
+  }
+
+  .aam-action--destructive .aam-action__icon {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .aam-action__body {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .aam-action__label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .aam-action__desc {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .aam-confirm__copy {
+    margin: 0 0 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: #374151;
+  }
+
+  .aam-error,
+  .aam-success {
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .aam-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  .aam-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+  }
+
+  .aam-confirm__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .aam-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+
+  .aam-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .aam-btn--ghost {
+    background: transparent;
+    color: #4b5563;
+    border-color: #d1d5db;
+  }
+
+  .aam-btn--ghost:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+
+  .aam-btn--primary {
+    background: #c41e3a;
+    color: #fff;
+  }
+
+  .aam-btn--primary:hover:not(:disabled) {
+    background: #a31a31;
+  }
+
+  .aam-btn--danger {
+    background: #991b1b;
+    color: #fff;
+  }
+
+  .aam-btn--danger:hover:not(:disabled) {
+    background: #7f1d1d;
+  }
+</style>

@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -484,6 +485,7 @@ const pageConfig = {
   </main>
 
   <PlayerDetailsModal hideContract />
+  {isOwner && <AFLActionModal />}
 
   <script id="afl-roster-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
 
@@ -545,23 +547,28 @@ const pageConfig = {
     const rosterContainer = document.querySelector('.afl-rosters');
     if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
 
-    // ── Player action button (placeholder until AFLActionModal lands) ──
+    // ── Player action button → AFLActionModal (owner only) ──
     document.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const trigger = target.closest('[data-action-trigger]') as HTMLButtonElement | null;
       if (!trigger) return;
       e.stopPropagation();
-      const row = trigger.closest('tr');
-      const playerName = row?.dataset.playerName ?? 'this player';
-      // TODO: wire to AFLActionModal in next commit. config carries the
-      // SSR-resolved franchiseId / leagueId / isOwner that the modal needs.
-      console.debug('[afl-rosters] action triggered', {
-        player: playerName,
+      const row = trigger.closest('tr') as HTMLTableRowElement | null;
+      if (!row) return;
+      const opener = (window as any).openAFLActionModal as
+        | ((p: { playerId: string; playerName: string; status?: string; isOnTradeBait?: boolean; franchiseId?: string }) => void)
+        | undefined;
+      if (typeof opener !== 'function') {
+        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
+        return;
+      }
+      opener({
+        playerId: row.dataset.playerId ?? '',
+        playerName: row.dataset.playerName ?? 'Player',
+        status: row.dataset.playerStatus,
+        isOnTradeBait: row.dataset.onTradeBait === 'true',
         franchiseId: config.selectedFranchiseId,
       });
-      alert(
-        `Manage ${playerName}\n\n(Action modal arrives in the next commit — Cut, IR, Trade Block, Trade.)`
-      );
     });
   </script>
 
