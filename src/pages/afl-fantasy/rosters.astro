@@ -454,6 +454,7 @@ const pageConfig = {
       <div class="team-card__actions">
         <div class="view-tabs">
           <button
+            type="button"
             class="view-tab"
             data-view="roster"
             data-active={initialView === 'roster' ? 'true' : 'false'}
@@ -466,6 +467,7 @@ const pageConfig = {
             <span class="view-tab__label">Roster</span>
           </button>
           <button
+            type="button"
             class="view-tab"
             data-view="analytics"
             data-active={initialView === 'analytics' ? 'true' : 'false'}
@@ -478,6 +480,7 @@ const pageConfig = {
             <span class="view-tab__label">Analytics</span>
           </button>
           <button
+            type="button"
             class="view-tab"
             data-view="planner"
             data-active={initialView === 'planner' ? 'true' : 'false'}
@@ -799,7 +802,14 @@ const pageConfig = {
       ) : (
         <div class="coming-soon">
           <h2>Planner</h2>
-          <p>The keeper planner is private to each team owner. Sign in as {selectedTeam.name}'s owner to use it.</p>
+          <p>The keeper planner is private to each team owner.</p>
+          {!authUser && (
+            <p>
+              <a class="coming-soon__cta" href={`/afl-fantasy/login?next=/afl-fantasy/rosters?franchise=${selectedFranchiseId}&view=planner`}>
+                Sign in to AFL Fantasy →
+              </a>
+            </p>
+          )}
         </div>
       )}
     </section>
@@ -833,7 +843,13 @@ const pageConfig = {
         tab.setAttribute('data-active', String(isActive));
       });
       Array.from(containers).forEach((container) => {
-        container.hidden = container.dataset.viewContent !== viewName;
+        const isActive = container.dataset.viewContent === viewName;
+        // Use inline style + drop the SSR-set [hidden] attribute. Belt and
+        // suspenders so the toggle is robust against any [hidden] vs class
+        // specificity weirdness in scoped Astro styles.
+        container.style.display = isActive ? 'grid' : 'none';
+        if (isActive) container.removeAttribute('hidden');
+        else container.setAttribute('hidden', '');
       });
       if (labelEl && VIEW_LABELS[viewName]) {
         labelEl.textContent = VIEW_LABELS[viewName];
@@ -845,7 +861,8 @@ const pageConfig = {
     }
 
     Array.from(tabs).forEach((tab) => {
-      tab.addEventListener('click', () => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
         const viewName = tab.dataset.view;
         if (viewName) switchView(viewName);
       });

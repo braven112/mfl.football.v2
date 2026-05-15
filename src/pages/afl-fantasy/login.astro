@@ -1,0 +1,60 @@
+---
+/**
+ * AFL Fantasy login page — mirrors /theleague/login but posts to MFL
+ * with leagueId=19621 so the resulting JWT scopes the user to AFL.
+ *
+ * Without this page, every login on the site dropped the user into
+ * TheLeague (13522) regardless of which site they came from, which is
+ * why AFL owners weren't seeing owner-only UI (action menus, keeper
+ * planner, trade builder).
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import LoginForm from '../../components/theleague/LoginForm.astro';
+import { getAuthUser } from '../../utils/auth';
+
+export const prerender = false;
+
+const AFL_LEAGUE_ID = '19621';
+
+// If already authenticated as an AFL owner, redirect into the AFL home.
+// If authenticated against a different league, fall through so the user
+// can re-sign-in against AFL (this scenario is real — same person can
+// own teams in both leagues).
+const authUser = getAuthUser(Astro.request);
+if (authUser?.leagueId === AFL_LEAGUE_ID) {
+  return Astro.redirect('/afl-fantasy');
+}
+
+// Where to redirect on successful login — honor ?next= for deep links,
+// otherwise drop them on the AFL home.
+const next = Astro.url.searchParams.get('next');
+const safeNext = next && next.startsWith('/afl-fantasy') ? next : '/afl-fantasy';
+---
+
+<TheLeagueLayout title="Sign In — AFL Fantasy">
+  <div class="afl-login-page">
+    <LoginForm
+      leagueId={AFL_LEAGUE_ID}
+      redirectUrl={safeNext}
+      logoSrc="/assets/logos/afl-logo.svg"
+      logoAlt="AFL Fantasy logo"
+      subtitle="Sign in with your MFL credentials for the American Football League"
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .afl-login-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 4rem var(--spacing-lg, 1.5rem) var(--spacing-2xl, 3rem);
+  }
+
+  @media (max-width: 640px) {
+    .afl-login-page {
+      padding: 2.5rem var(--spacing-md, 1rem) var(--spacing-xl, 2rem);
+    }
+  }
+</style>

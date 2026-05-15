@@ -18,6 +18,12 @@ export interface Props {
   redirectUrl?: string;
   /** League ID override (defaults to 13522) */
   leagueId?: string;
+  /** Logo src override — defaults to The League logo */
+  logoSrc?: string;
+  /** Logo alt text */
+  logoAlt?: string;
+  /** Subtitle override under "Sign In" */
+  subtitle?: string;
   /** Optional class for consumer styling hooks */
   class?: string;
 }
@@ -27,6 +33,9 @@ const {
   showLogo = compact,
   redirectUrl,
   leagueId = '13522',
+  logoSrc = '/assets/logos/theleague-logo.svg',
+  logoAlt = 'The League logo',
+  subtitle = 'Enter your MFL credentials',
   class: className,
 } = Astro.props;
 ---
@@ -41,14 +50,14 @@ const {
     {showLogo && (
       <img
         class="login-header__logo"
-        src="/assets/logos/theleague-logo.svg"
-        alt="The League logo"
+        src={logoSrc}
+        alt={logoAlt}
         width={compact ? 48 : 64}
         height={compact ? 48 : 64}
       />
     )}
     <h2 class="login-header__title">Sign In</h2>
-    <p class="login-header__subtitle">Enter your MFL credentials</p>
+    <p class="login-header__subtitle">{subtitle}</p>
   </div>
 
   <!-- Login Form -->
