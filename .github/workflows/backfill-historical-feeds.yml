@@ -67,6 +67,8 @@ jobs:
 
           git config user.name "Historical Feed Backfill Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/theleague/mfl-feeds/ data/theleague/derived/
+          # schefter-feed.json picks up any new milestone posts emitted by
+          # the compute step (Phase 5 — badge crossings auto-post).
+          git add data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json
           git commit -m "chore: backfill historical MFL feeds + recompute franchise history"
           git push origin HEAD:${{ github.ref_name }}

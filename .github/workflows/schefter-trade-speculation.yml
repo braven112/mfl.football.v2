@@ -5,6 +5,10 @@ on:
     # Daily at 8pm UTC = 1pm Pacific. NFL-calendar-aware cadence (per
     # scripts/lib/speculation-cadence.mjs) decides whether to actually post —
     # the cron just gives the scanner a once-a-day chance.
+    #
+    # This same cron also runs the franchise-history recompute below, which
+    # diffs new badges against the committed snapshot and auto-posts
+    # milestone events to the Schefter feed (Phase 5).
     - cron: "0 20 * * *"
   workflow_dispatch:
     inputs:
@@ -44,6 +48,14 @@ jobs:
           MFL_LEAGUE_SLUG: theleague
         run: node scripts/fetch-trade-bait.mjs
 
+      - name: Recompute franchise history (milestone diff)
+        # Runs the badge engine and diffs against the committed
+        # franchise-history.json snapshot. Newly-earned badges emit
+        # Schefter posts directly into src/data/theleague/schefter-feed.json
+        # (idempotent — dedup by deterministic post id).
+        if: github.event.inputs.dry_run != 'true'
+        run: node scripts/compute-franchise-history.mjs
+
       - name: Run speculation scanner
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -71,7 +83,9 @@ jobs:
 
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/schefter-feed.json data/theleague/derived/speculation-history.json data/theleague/mfl-feeds
-          git commit -m "chore: schefter speculation — new trade speculation post"
+          # franchise-history.json: updated snapshot so milestone diff stays
+          # in sync. schefter-feed.json: trade-speculation + milestone posts.
+          git add src/data/theleague/schefter-feed.json data/theleague/derived/speculation-history.json data/theleague/derived/franchise-history.json data/theleague/mfl-feeds
+          git commit -m "chore: schefter daily — speculation + milestone scan"
           git pull --rebase origin main
           git push
