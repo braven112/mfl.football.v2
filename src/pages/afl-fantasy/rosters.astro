@@ -3,6 +3,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
+import KeeperPlanner, {
+  type KeeperPlannerPlayer,
+  type KeeperPlannerDraftPick,
+} from '../../components/afl-fantasy/KeeperPlanner.astro';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -42,6 +46,9 @@ const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/pla
 const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', {
   eager: true,
 });
+const futurePicksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', {
+  eager: true,
+});
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -74,6 +81,9 @@ const playersData = getModuleData(
 ) as any;
 const tradeBaitData = getModuleData(
   tradeBaitFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait.json`]
+) as any;
+const futurePicksData = getModuleData(
+  futurePicksFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]
 ) as any;
 
 if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
@@ -228,6 +238,42 @@ const activeRoster = roster.filter((p) => p.status === 'ROSTER').length;
 const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').length;
 const ROSTER_SIZE = 16;
 const openSlots = Math.max(0, ROSTER_SIZE - totalPlayers);
+
+// Build the KeeperPlanner inputs (only really used when isOwner is true)
+const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => ({
+  id: p.id,
+  name: p.name,
+  position: p.position,
+  team: p.team,
+  age: p.age,
+  espnId: p.espn_id,
+  status: p.status,
+}));
+
+const teamNameLookup = new Map<string, string>(
+  allTeams.map((t) => [t.franchiseId, t.nameShort || t.name])
+);
+const plannerDraftPicks: KeeperPlannerDraftPick[] = (() => {
+  const franchise = (futurePicksData?.futureDraftPicks?.franchise as any[] | undefined)?.find(
+    (f) => f?.id === selectedFranchiseId
+  );
+  const picks = franchise?.futureDraftPick;
+  if (!picks) return [];
+  const arr = Array.isArray(picks) ? picks : [picks];
+  return arr
+    .filter((p: any) => p?.year && p?.round && p?.originalPickFor)
+    .map((p: any) => ({
+      year: String(p.year),
+      round: String(p.round),
+      originalPickFor: String(p.originalPickFor),
+      originalPickForName: teamNameLookup.get(String(p.originalPickFor)),
+      isTraded: String(p.originalPickFor) !== selectedFranchiseId,
+    }))
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year.localeCompare(b.year);
+      return parseInt(a.round, 10) - parseInt(b.round, 10);
+    });
+})();
 
 // Initial view from query param
 const requestedView = Astro.url.searchParams.get('view');
@@ -475,12 +521,21 @@ const pageConfig = {
       </div>
     </section>
 
-    <!-- Planner View (stub) -->
+    <!-- Planner View -->
     <section class="view-container" data-view-content="planner" hidden={initialView !== 'planner'}>
-      <div class="coming-soon">
-        <h2>Planner</h2>
-        <p>Drag-and-drop keeper selection, draft assets, and offseason planning tools. Coming next.</p>
-      </div>
+      {isOwner ? (
+        <KeeperPlanner
+          franchiseId={selectedFranchiseId}
+          year={selectedYear}
+          roster={plannerRoster}
+          draftPicks={plannerDraftPicks}
+        />
+      ) : (
+        <div class="coming-soon">
+          <h2>Planner</h2>
+          <p>The keeper planner is private to each team owner. Sign in as {selectedTeam.name}'s owner to use it.</p>
+        </div>
+      )}
     </section>
   </main>
 
