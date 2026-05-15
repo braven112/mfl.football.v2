@@ -11,9 +11,14 @@
 
 export interface Props {
   class?: string;
+  /**
+   * Hide all contract / salary UI. AFL has no salaries or contracts;
+   * showing the "Free Agent" fallback is misleading there.
+   */
+  hideContract?: boolean;
 }
 
-const { class: className } = Astro.props;
+const { class: className, hideContract = false } = Astro.props;
 ---
 
 <div class:list={['player-details-modal', className]}>
@@ -54,10 +59,12 @@ const { class: className } = Astro.props;
           <span class="pdm-metric__value" id="metric-ppg-value">&mdash;</span>
           <span class="pdm-metric__label">Per Game</span>
         </div>
-        <div class="pdm-metric" id="metric-card-contract">
-          <span class="pdm-metric__value" id="metric-contract-value">&mdash;</span>
-          <span class="pdm-metric__label" id="metric-contract-label">Contract</span>
-        </div>
+        {!hideContract && (
+          <div class="pdm-metric" id="metric-card-contract">
+            <span class="pdm-metric__value" id="metric-contract-value">&mdash;</span>
+            <span class="pdm-metric__label" id="metric-contract-label">Contract</span>
+          </div>
+        )}
       </div>
 
       <!-- Weekly Results (promoted position) -->
@@ -113,10 +120,12 @@ const { class: className } = Astro.props;
               <span id="detail-college">&mdash;</span>
             </span>
           </div>
-          <div class="pdm-detail" id="detail-row-contract">
-            <span class="pdm-detail__label">Contract</span>
-            <span class="pdm-detail__value" id="detail-contract-detail">&mdash;</span>
-          </div>
+          {!hideContract && (
+            <div class="pdm-detail" id="detail-row-contract">
+              <span class="pdm-detail__label">Contract</span>
+              <span class="pdm-detail__value" id="detail-contract-detail">&mdash;</span>
+            </div>
+          )}
           <div class="pdm-detail" id="detail-row-bye">
             <span class="pdm-detail__label">Bye</span>
             <span class="pdm-detail__value" id="detail-bye-value">&mdash;</span>
