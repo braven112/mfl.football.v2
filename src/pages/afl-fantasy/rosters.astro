@@ -217,19 +217,20 @@ const positionRank = (pos: string) => {
   const idx = POSITION_ORDER.indexOf(pos);
   return idx === -1 ? POSITION_ORDER.length : idx;
 };
-const rosterByPosition = new Map<string, RosterEntry[]>();
-for (const player of roster) {
-  if (!rosterByPosition.has(player.position)) {
-    rosterByPosition.set(player.position, []);
-  }
-  rosterByPosition.get(player.position)!.push(player);
-}
-const sortedPositions = Array.from(rosterByPosition.keys()).sort(
-  (a, b) => positionRank(a) - positionRank(b)
-);
-for (const players of rosterByPosition.values()) {
-  players.sort((a, b) => a.name.localeCompare(b.name));
-}
+// Table sort: active roster first (by position then name), then IR at the
+// bottom. Mirrors TheLeague's roster page — the green left-border stripe
+// on active rows + the red stripe on IR rows makes the split obvious
+// without a dedicated Status column.
+const sortedTableRoster: RosterEntry[] = (() => {
+  const byStatus = (status: string) =>
+    roster
+      .filter((p) => p.status === status)
+      .sort((a, b) => {
+        const r = positionRank(a.position) - positionRank(b.position);
+        return r !== 0 ? r : a.name.localeCompare(b.name);
+      });
+  return [...byStatus('ROSTER'), ...byStatus('INJURED_RESERVE')];
+})();
 
 // Roster summary
 const totalPlayers = roster.length;
@@ -562,77 +563,62 @@ const pageConfig = {
                 <tr>
                   <th data-column="player">Player</th>
                   <th data-column="college">College</th>
-                  <th data-column="status">Status</th>
                   {isOwner && <th data-column="actions" aria-label="Actions"></th>}
                 </tr>
               </thead>
               <tbody>
-                {sortedPositions
-                  .flatMap((pos) => rosterByPosition.get(pos) ?? [])
-                  .map((player) => (
-                    <tr
-                      data-player-id={player.id}
-                      data-player-status={player.status}
-                      data-player-name={player.name}
-                      data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
-                      data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
-                    >
-                      <td data-column="player">
-                        <PlayerCell
-                          name={player.name}
-                          position={player.position}
-                          nflTeam={player.team}
-                          mflId={player.id}
-                          espnId={player.espn_id}
-                          playerData={buildPlayerModalData(player)}
-                          size="compact"
-                        >
-                          {player.isOnTradeBait && (
-                            <a
-                              slot="after-name"
-                              class="trade-bait-link"
-                              href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
-                              title="On trade block"
-                              aria-label="On trade block"
-                            >
-                              🏷️
-                            </a>
-                          )}
-                        </PlayerCell>
-                      </td>
-                      <td data-column="college">{player.college === 'N/A' ? '—' : player.college}</td>
-                      <td data-column="status">
-                        <span
-                          class:list={[
-                            'status-pill',
-                            player.status === 'INJURED_RESERVE'
-                              ? 'status-pill--ir'
-                              : 'status-pill--active',
-                          ]}
-                        >
-                          {player.status === 'INJURED_RESERVE' ? 'IR' : 'Active'}
-                        </span>
-                      </td>
-                      {isOwner && (
-                        <td data-column="actions">
-                          <button
-                            type="button"
-                            class="ufa-action-btn"
-                            data-action-trigger
-                            data-player-id={player.id}
-                            aria-label={`Manage ${player.name}`}
-                            title="Manage player"
+                {sortedTableRoster.map((player) => (
+                  <tr
+                    data-player-id={player.id}
+                    data-player-status={player.status}
+                    data-player-name={player.name}
+                    data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
+                    data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
+                  >
+                    <td data-column="player">
+                      <PlayerCell
+                        name={player.name}
+                        position={player.position}
+                        nflTeam={player.team}
+                        mflId={player.id}
+                        espnId={player.espn_id}
+                        playerData={buildPlayerModalData(player)}
+                        size="compact"
+                      >
+                        {player.isOnTradeBait && (
+                          <a
+                            slot="after-name"
+                            class="trade-bait-link"
+                            href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                            title="On trade block"
+                            aria-label="On trade block"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                              <circle cx="12" cy="5" r="2"/>
-                              <circle cx="12" cy="12" r="2"/>
-                              <circle cx="12" cy="19" r="2"/>
-                            </svg>
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
+                            🏷️
+                          </a>
+                        )}
+                      </PlayerCell>
+                    </td>
+                    <td data-column="college">{player.college === 'N/A' ? '—' : player.college}</td>
+                    {isOwner && (
+                      <td data-column="actions">
+                        <button
+                          type="button"
+                          class="ufa-action-btn"
+                          data-action-trigger
+                          data-player-id={player.id}
+                          aria-label={`Manage ${player.name}`}
+                          title="Manage player"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                          </svg>
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1222,8 +1208,7 @@ const pageConfig = {
       padding-left: 0.75rem;
     }
 
-    .roster-table th[data-column="college"],
-    .roster-table th[data-column="status"] {
+    .roster-table th[data-column="college"] {
       text-align: left;
     }
 
@@ -1272,27 +1257,6 @@ const pageConfig = {
 
     .roster-table tbody tr:hover {
       background: var(--color-gray-50, #f9fafb);
-    }
-
-    /* Status pill (small, inline) */
-    .status-pill {
-      display: inline-block;
-      padding: 0.125rem 0.5rem;
-      border-radius: 9999px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .status-pill--active {
-      background: color-mix(in srgb, var(--activity-green, #16a34a) 14%, white);
-      color: #166534;
-    }
-
-    .status-pill--ir {
-      background: color-mix(in srgb, var(--color-danger, #dc2626) 12%, white);
-      color: #991b1b;
     }
 
     /* 3-dot action button — same look TheLeague uses */
