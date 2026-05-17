@@ -1024,18 +1024,46 @@ const pageConfig = {
       const row = trigger.closest('tr') as HTMLTableRowElement | null;
       if (!row) return;
       const opener = (window as any).openAFLActionModal as
-        | ((p: { playerId: string; playerName: string; status?: string; isOnTradeBait?: boolean; franchiseId?: string }) => void)
+        | ((p: {
+            playerId: string;
+            playerName: string;
+            status?: string;
+            isOnTradeBait?: boolean;
+            franchiseId?: string;
+            headshot?: string;
+            position?: string;
+            nflTeam?: string;
+          }) => void)
         | undefined;
       if (typeof opener !== 'function') {
         console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
         return;
       }
+
+      // Pull the player lockup details off the PlayerCell already rendered in
+      // the row. This avoids duplicating the same data into row dataset
+      // attributes server-side, and keeps the modal hero in sync with whatever
+      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
+      const playerCell = row.querySelector('[data-column="player"] .player-cell');
+      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
+      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
+      const posEl = playerCell?.querySelector('.player-meta__pos');
+      // Position label can include contract tags ("QB - RC"); strip them.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
+      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
+      const logoSrc = logoImg?.getAttribute('src') ?? '';
+      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
+      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
+
       opener({
         playerId: row.dataset.playerId ?? '',
         playerName: row.dataset.playerName ?? 'Player',
         status: row.dataset.playerStatus,
         isOnTradeBait: row.dataset.onTradeBait === 'true',
         franchiseId: config.selectedFranchiseId,
+        headshot: headshotImg?.getAttribute('src') ?? undefined,
+        position: positionRaw || undefined,
+        nflTeam: teamCode || undefined,
       });
     });
   </script>
