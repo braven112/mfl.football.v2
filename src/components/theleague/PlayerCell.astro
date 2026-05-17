@@ -29,7 +29,7 @@
  */
 
 import '../../styles/player-cell.css';
-import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
+import { buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
 
@@ -82,12 +82,18 @@ const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
 // Prefer the caller-supplied headshot URL — server-side builders pick the
-// right endpoint (NFL combiner, college-football, or MFL photo) based on
-// which IDs are available. Only fall back to getPlayerHeadshot when nothing
-// was passed in; that path assumes an NFL ID, which breaks for pre-draft
-// rookies that only have a college ESPN ID.
-const resolvedHeadshot =
-  headshot || (resolvedEspnId ? getPlayerHeadshot(resolvedMflId, resolvedEspnId) : DEFAULT_HEADSHOT_URL);
+// right endpoint (ESPN NFL direct, college-football, or MFL photo) based on
+// the IDs they have available. When no headshot URL is passed, fall through
+// to getPlayerHeadshot, which is the same cascade PlayerDetailsModal uses:
+//   - ESPN NFL direct URL when we have an NFL espn_id
+//   - MFL photo URL when we only have an MFL id
+//   - DEFAULT_HEADSHOT_URL when neither is present
+// The previous version skipped from "no espnId" straight to DEFAULT, which
+// meant any player missing an espn_id rendered as the MFL silhouette even
+// when MFL had a perfectly good photo (Breece Hall on the AFL feed — his
+// row showed the silhouette, his click-through modal loaded fine because
+// PlayerDetailsModal does try the MFL photo URL as a step before default).
+const resolvedHeadshot = headshot || getPlayerHeadshot(resolvedMflId, resolvedEspnId);
 // Avatar: DEF uses team logo, others use headshot
 const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
 

@@ -169,9 +169,13 @@
     const errorEl = modal.querySelector('#aam-error') as HTMLElement;
     const successEl = modal.querySelector('#aam-success') as HTMLElement;
 
-    // Default fallback headshot — matches /assets/default-headshot.svg used elsewhere.
-    // Keeps the avatar circle from breaking when MFL doesn't have a photo for a player.
-    const DEFAULT_HEADSHOT = '/assets/default-headshot.svg';
+    // Default fallback headshot — same MFL no_photo URL the rest of the codebase
+    // uses (see DEFAULT_HEADSHOT_URL in src/constants/roster-constants.ts and
+    // PlayerDetailsModal's DEFAULT_IMG). Keeps the avatar tile from breaking
+    // when ESPN doesn't have a headshot for a player (free agents, defenses,
+    // pre-draft rookies).
+    const DEFAULT_HEADSHOT =
+      'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
     // MFL → standard NFL team code translation. Just the ones MFL uses
     // differently from the standard 2-3 letter codes (everything else is
