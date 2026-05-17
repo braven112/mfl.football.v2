@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-05-17T00:01:40.506Z"
+    "fetchedAt": "2026-05-17T01:12:41.514Z"
   },
   "players": [
     {
@@ -39,7 +39,7 @@
         "id": "11637",
         "fullName": "Keon Coleman",
         "team": "BUF",
-        "age": 22,
+        "age": 23,
         "height": "75",
         "weight": "213",
         "number": 0,
@@ -13092,7 +13092,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -13103,7 +13103,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron"
+        }
+      ]
     },
     {
       "id": "16222",
@@ -13595,6 +13600,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron"
+        },
         {
           "id": "17036",
           "name": "Howard, Will"
@@ -14508,10 +14517,32 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/7836_thumb.jpg",
       "externalIds": {
         "mfl": "7836",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "96",
+        "gsis": "00-0023459"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "96",
+        "fullName": "Aaron Rodgers",
+        "team": "PIT",
+        "age": 42,
+        "height": "74",
+        "weight": "223",
+        "number": 8,
+        "college": "California",
+        "birthDate": "1983-12-02",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 21,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0023459"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
