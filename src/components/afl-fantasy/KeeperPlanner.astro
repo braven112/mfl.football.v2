@@ -1047,6 +1047,16 @@ const roundLabel = (round: string) => {
       box-shadow 0.18s ease, color 0.18s ease;
   }
 
+  /* Pin the inline SVG to a consistent visual size — keeps the down arrow
+     from rendering as an empty box when the upstream <svg width=14> attrs
+     get nuked by some browser stylesheets, and matches what we did on the
+     AFLActionModal action tiles. */
+  .kp-arrow svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
   .kp-arrow:hover {
     border-color: var(--color-gray-300, #9ca3af);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -1066,13 +1076,18 @@ const roundLabel = (round: string) => {
     color: var(--color-success-dark, #047857);
   }
 
+  /* Down arrow ("send back to cut pool") — keep the same icon-button shape
+     as the up arrow, but in a neutral-dark tone instead of green so the two
+     buttons don't fight for attention. gray-500 was too faint on phone
+     screens — it rendered as a visually-empty box. gray-700 reads cleanly
+     against white at the same weight as the up-arrow chevron. */
   .kp-arrow--down {
-    color: var(--color-gray-500, #6b7280);
+    color: var(--color-gray-700, #374151);
   }
 
   .kp-arrow--down:hover {
     background: var(--color-gray-50, #f9fafb);
-    color: var(--color-gray-700, #374151);
+    color: var(--color-gray-900, #111827);
   }
 
   /* Draft picks */
