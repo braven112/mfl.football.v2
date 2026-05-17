@@ -17,6 +17,11 @@ import {
   type NflMatchup,
 } from '../../utils/nfl-matchups';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import {
+  loadAflPlayerScores,
+  loadAflProjections,
+  aggregateScores,
+} from '../../utils/afl-player-scoring';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -254,10 +259,25 @@ const nflYear = new Date().getFullYear();
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
 const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
 
+// AFL per-player scoring (Avg, Last week) + projected points. Both readers
+// gracefully return empty maps when the snapshot files are absent so the
+// page still renders during offseason / before MFL produces the feed.
+const aflScores = loadAflPlayerScores(selectedYear);
+const aflProjections = loadAflProjections(selectedYear);
+
 interface PlayerMatchup {
   matchup: NflMatchup | null;
   oppRank: number | null;
+  oppAvg: number | null;
   oppCode: string | null;
+  /** Player's last-week score from playerScores.json (null if missing). */
+  lastScore: number | null;
+  /** Projected points for the week — from projectedScores.json. */
+  projected: number | null;
+  /** Sample-size of the average; renders the column as "—" when zero. */
+  scoreSampleSize: number;
+  /** Mean of all per-week scores we have on file. */
+  scoreAverage: number | null;
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
 for (const player of sortedTableRoster) {
@@ -265,12 +285,33 @@ for (const player of sortedTableRoster) {
   const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
   const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
   const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
+  const agg = aggregateScores(aflScores, player.id);
   matchupByPlayerId.set(player.id, {
     matchup,
     oppRank: fpa?.rank ?? null,
+    oppAvg: fpa?.avg ?? null,
     oppCode,
+    lastScore: agg.lastScore,
+    projected: aflProjections.get(player.id) ?? null,
+    scoreSampleSize: agg.sampleSize,
+    scoreAverage: agg.average,
   });
 }
+
+// Small format helpers so the JSX stays declarative
+const formatPoints = (v: number | null): string =>
+  v == null ? '—' : v.toFixed(1);
+const formatWeather = (m: NflMatchup | null): string => {
+  if (!m?.weather) return '—';
+  const t = m.weather.temperature;
+  if (typeof t === 'number') return `${Math.round(t)}°`;
+  return m.weather.displayValue ?? '—';
+};
+const formatOverUnder = (m: NflMatchup | null): string => {
+  if (!m?.overUnder) return '—';
+  const trimmed = m.overUnder.trim();
+  return trimmed && trimmed !== 'N/A' ? trimmed : '—';
+};
 
 // Roster summary
 const totalPlayers = roster.length;
@@ -604,13 +645,24 @@ const pageConfig = {
                   <th data-column="player">Player</th>
                   <th data-column="oppRank">Opp #</th>
                   <th data-column="opponent">Opponent</th>
+                  <th data-column="ou">O/U</th>
+                  <th data-column="weather">Weather</th>
+                  <th data-column="oppAvg">Opp Avg</th>
+                  <th data-column="avg">Avg</th>
+                  <th data-column="projected">Proj</th>
                   {isOwner && <th data-column="actions" aria-label="Actions"></th>}
                 </tr>
               </thead>
               <tbody>
                 {sortedTableRoster.map((player) => {
-                  const m = matchupByPlayerId.get(player.id) ?? { matchup: null, oppRank: null, oppCode: null };
-                  const tier = m.oppRank != null ? fpaTier(m.oppRank) : null;
+                  const m = matchupByPlayerId.get(player.id);
+                  const matchup = m?.matchup ?? null;
+                  const oppCode = m?.oppCode ?? null;
+                  const oppRank = m?.oppRank ?? null;
+                  const oppAvg = m?.oppAvg ?? null;
+                  const avg = m?.scoreAverage ?? null;
+                  const projected = m?.projected ?? null;
+                  const tier = oppRank != null ? fpaTier(oppRank) : null;
                   return (
                     <tr
                       data-player-id={player.id}
@@ -643,19 +695,19 @@ const pageConfig = {
                         </PlayerCell>
                       </td>
                       <td data-column="oppRank">
-                        {m.oppRank != null ? (
-                          <span class={`rank-badge rank-tier-${tier}`}>#{m.oppRank}</span>
+                        {oppRank != null ? (
+                          <span class={`rank-badge rank-tier-${tier}`}>#{oppRank}</span>
                         ) : (
                           <span class="opp-empty">—</span>
                         )}
                       </td>
                       <td data-column="opponent">
-                        {m.matchup && m.oppCode ? (
+                        {matchup && oppCode ? (
                           <span class="opponent-cell">
-                            <span class="vs-at">{m.matchup.isHome ? 'vs' : '@'}</span>
+                            <span class="vs-at">{matchup.isHome ? 'vs' : '@'}</span>
                             <img
-                              src={`/assets/nfl-logos/${m.oppCode}.svg`}
-                              alt={m.oppCode}
+                              src={`/assets/nfl-logos/${oppCode}.svg`}
+                              alt={oppCode}
                               class="opponent-logo"
                               loading="lazy"
                               onerror="this.style.display='none'"
@@ -664,6 +716,21 @@ const pageConfig = {
                         ) : (
                           <span class="opponent-bye">BYE</span>
                         )}
+                      </td>
+                      <td data-column="ou">
+                        <span class="num-cell">{formatOverUnder(matchup)}</span>
+                      </td>
+                      <td data-column="weather">
+                        <span class="num-cell">{formatWeather(matchup)}</span>
+                      </td>
+                      <td data-column="oppAvg">
+                        <span class="num-cell">{formatPoints(oppAvg)}</span>
+                      </td>
+                      <td data-column="avg">
+                        <span class="num-cell">{formatPoints(avg)}</span>
+                      </td>
+                      <td data-column="projected">
+                        <span class="num-cell num-cell--strong">{formatPoints(projected)}</span>
                       </td>
                       {isOwner && (
                         <td data-column="actions">
@@ -1251,6 +1318,7 @@ const pageConfig = {
 
     .roster-table {
       width: 100%;
+      min-width: 740px; /* keeps the 8 Coach columns readable; horizontal scrolls on phones */
       border-collapse: collapse;
     }
 
@@ -1282,17 +1350,14 @@ const pageConfig = {
       font-weight: 600;
     }
 
-    .roster-table th[data-column="oppRank"] {
-      width: 64px;
-    }
-
-    .roster-table th[data-column="opponent"] {
-      width: 96px;
-    }
-
-    .roster-table th[data-column="actions"] {
-      width: 48px;
-    }
+    .roster-table th[data-column="oppRank"] { width: 64px; }
+    .roster-table th[data-column="opponent"] { width: 96px; }
+    .roster-table th[data-column="ou"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="weather"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="oppAvg"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="avg"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="projected"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="actions"] { width: 48px; }
 
     .roster-table td {
       padding: 0.65rem 0.5rem;
@@ -1310,6 +1375,26 @@ const pageConfig = {
     .roster-table td[data-column="oppRank"],
     .roster-table td[data-column="opponent"] {
       text-align: left;
+    }
+
+    .roster-table td[data-column="ou"],
+    .roster-table td[data-column="weather"],
+    .roster-table td[data-column="oppAvg"],
+    .roster-table td[data-column="avg"],
+    .roster-table td[data-column="projected"] {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .num-cell {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .num-cell--strong {
+      font-weight: 700;
+      color: var(--color-gray-900, #111827);
     }
 
     .roster-table td[data-column="actions"] {

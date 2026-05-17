@@ -26,6 +26,20 @@ export interface NflMatchup {
   opponent: string;
   /** True when the player's NFL team is hosting */
   isHome: boolean;
+  /**
+   * Point spread as ESPN reports it ("BUF -2.5", "PHI -7", etc.) Caller
+   * decides how to display. Empty string when ESPN hasn't priced the game.
+   */
+  spread: string;
+  /** Over/Under for the game ("47.5", "N/A", or empty). */
+  overUnder: string;
+  /** Game time in ISO 8601 (helps callers detect "BYE" vs "not yet scheduled") */
+  date: string;
+  /**
+   * Stadium weather snapshot from ESPN. null when ESPN doesn't include it
+   * (dome games, indoor venues, future games before forecast lands).
+   */
+  weather: { temperature?: number; displayValue?: string } | null;
 }
 
 export interface PositionFpa {
@@ -70,6 +84,17 @@ function fallbackOddsMap(): OddsMap {
     map[normalizeNflCode(code)] = {
       opponent: normalizeNflCode(record.opponent),
       isHome: !!record.isHome,
+      spread: typeof record.spread === 'string' ? record.spread : '',
+      overUnder: typeof record.overUnder === 'string' ? record.overUnder : '',
+      date: typeof record.date === 'string' ? record.date : '',
+      weather: record.weather && typeof record.weather === 'object'
+        ? {
+            temperature:
+              typeof record.weather.temperature === 'number' ? record.weather.temperature : undefined,
+            displayValue:
+              typeof record.weather.displayValue === 'string' ? record.weather.displayValue : undefined,
+          }
+        : null,
     };
   }
   return map;
@@ -124,8 +149,25 @@ export async function fetchNflMatchups(
       if (!home?.team?.abbreviation || !away?.team?.abbreviation) continue;
       const homeCode = normalizeNflCode(home.team.abbreviation);
       const awayCode = normalizeNflCode(away.team.abbreviation);
-      map[homeCode] = { opponent: awayCode, isHome: true };
-      map[awayCode] = { opponent: homeCode, isHome: false };
+      const odds = competition.odds?.[0] ?? {};
+      const spread = typeof odds.details === 'string' ? odds.details : '';
+      const overUnder = odds.overUnder != null ? String(odds.overUnder) : '';
+      const weather = competition.weather
+        ? {
+            temperature:
+              typeof competition.weather.temperature === 'number'
+                ? competition.weather.temperature
+                : undefined,
+            displayValue:
+              typeof competition.weather.displayValue === 'string'
+                ? competition.weather.displayValue
+                : undefined,
+          }
+        : null;
+      const date = typeof event.date === 'string' ? event.date : '';
+      const base = { spread, overUnder, weather, date };
+      map[homeCode] = { opponent: awayCode, isHome: true, ...base };
+      map[awayCode] = { opponent: homeCode, isHome: false, ...base };
     }
     // Empty ESPN response (between weeks, schedule not yet published) →
     // use the fallback snapshot so the table still renders something.
