@@ -643,6 +643,7 @@ const pageConfig = {
               <thead>
                 <tr>
                   <th data-column="player">Player</th>
+                  {isOwner && <th data-column="actions" aria-label="Actions"></th>}
                   <th data-column="oppRank">Opp #</th>
                   <th data-column="opponent">Opponent</th>
                   <th data-column="ou">O/U</th>
@@ -650,7 +651,6 @@ const pageConfig = {
                   <th data-column="oppAvg">Opp Avg</th>
                   <th data-column="avg">Avg</th>
                   <th data-column="projected">Proj</th>
-                  {isOwner && <th data-column="actions" aria-label="Actions"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -694,6 +694,24 @@ const pageConfig = {
                           )}
                         </PlayerCell>
                       </td>
+                      {isOwner && (
+                        <td data-column="actions">
+                          <button
+                            type="button"
+                            class="ufa-action-btn"
+                            data-action-trigger
+                            data-player-id={player.id}
+                            aria-label={`Manage ${player.name}`}
+                            title="Manage player"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <circle cx="12" cy="5" r="2"/>
+                              <circle cx="12" cy="12" r="2"/>
+                              <circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+                        </td>
+                      )}
                       <td data-column="oppRank">
                         {oppRank != null ? (
                           <span class={`rank-badge rank-tier-${tier}`}>#{oppRank}</span>
@@ -732,24 +750,6 @@ const pageConfig = {
                       <td data-column="projected">
                         <span class="num-cell num-cell--strong">{formatPoints(projected)}</span>
                       </td>
-                      {isOwner && (
-                        <td data-column="actions">
-                          <button
-                            type="button"
-                            class="ufa-action-btn"
-                            data-action-trigger
-                            data-player-id={player.id}
-                            aria-label={`Manage ${player.name}`}
-                            title="Manage player"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                              <circle cx="12" cy="5" r="2"/>
-                              <circle cx="12" cy="12" r="2"/>
-                              <circle cx="12" cy="19" r="2"/>
-                            </svg>
-                          </button>
-                        </td>
-                      )}
                     </tr>
                   );
                 })}
@@ -1397,9 +1397,13 @@ const pageConfig = {
       color: var(--color-gray-900, #111827);
     }
 
+    /* Actions column now sits immediately after the player name; align the
+       button to the left so it reads as part of the row's identity block
+       rather than a right-edge afterthought. */
     .roster-table td[data-column="actions"] {
-      text-align: right;
-      padding-right: 0.5rem;
+      text-align: left;
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
     }
 
     /* OPP # rank badge — color-tiered by FPA rank
