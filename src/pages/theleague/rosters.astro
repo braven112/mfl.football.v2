@@ -3847,13 +3847,17 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   text-align: center;
 }
 
-  :global(.roster-table td[data-column^='year']) {
+/* Salary year columns (year1, year2, ...) — right-align the dollar amounts.
+   :not([data-column='years']) explicitly excludes the Yrs column above, which
+   otherwise gets caught by this prefix selector and ends up right-aligned
+   instead of centered (same specificity → source-order wins → bug). */
+  :global(.roster-table td[data-column^='year']:not([data-column='years'])) {
     font-size: var(--table-cell-font-size, 0.75rem);
     text-align: right;
     padding-right: 0.5rem;
   }
 
-:global(.roster-table th[data-column^='year']) {
+:global(.roster-table th[data-column^='year']:not([data-column='years'])) {
   text-align: right;
   padding-right: 0.5rem;
 }
