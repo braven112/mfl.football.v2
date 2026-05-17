@@ -1,21 +1,49 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
+import KeeperPlanner, {
+  type KeeperPlannerPlayer,
+  type KeeperPlannerDraftPick,
+} from '../../components/afl-fantasy/KeeperPlanner.astro';
+import { spriteUrl } from '../../utils/sprite-url';
+import { getCurrentWeek } from '../../utils/current-week';
+import {
+  fetchNflMatchups,
+  loadFantasyPointsAllowed,
+  getOpponentFpa,
+  fpaTier,
+  type NflMatchup,
+} from '../../utils/nfl-matchups';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import {
+  loadAflPlayerScores,
+  loadAflProjections,
+  aggregateScores,
+} from '../../utils/afl-player-scoring';
+import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
+  getAFLPreference,
   getAFLTeamData,
 } from '../../utils/team-preferences';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import {
+  getAllTeams,
+  getTeamsGroupedByConference,
+  getConferenceName,
+  getTeam,
+  type AFLTeam,
+} from '../../utils/afl-conference';
 
-// Get league context from URL
-const league = getLeagueContext(Astro.url);
-const baseUrl = getLeagueBaseUrl(league);
+export const prerender = false;
 
-// Team Preference Cookie Integration
+// AFL 2026 league hasn't been created on MFL yet — hardcode 2025 until
+// the new league exists and feeds populate. Once it does, this can become
+// the same auto-detect logic theleague uses.
+const FALLBACK_YEAR = 2025;
+
 const myTeamParam = Astro.url.searchParams.get('myteam');
-
-// If myteam parameter is provided, update the cookie preference
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
   if (teamData) {
@@ -23,502 +51,1769 @@ if (myTeamParam) {
   }
 }
 
-// Import rosters data for AFL Fantasy
 const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', {
   eager: true,
 });
-
-// Import players data for AFL Fantasy
 const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', {
   eager: true,
 });
+const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', {
+  eager: true,
+});
+const futurePicksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', {
+  eager: true,
+});
 
-// Extract available years
-const availableYears = Object.keys(rostersFeeds)
-  .map(path => {
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+// Year selector: only include years where rosters.json has real data
+// (skip the empty/errored 2026 placeholder).
+const availableYears = Object.entries(rostersFeeds)
+  .map(([path, mod]) => {
     const match = path.match(/\/(\d{4})\/rosters\.json$/);
-    return match ? parseInt(match[1], 10) : null;
+    if (!match) return null;
+    const data = getModuleData(mod) as any;
+    if (!data?.rosters?.franchise) return null;
+    return parseInt(match[1], 10);
   })
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-// Get selected year - default to latest available or current league year
-const defaultYear = availableYears[0] || getCurrentLeagueYear();
 const requestedYear = Astro.url.searchParams.get('year');
-const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
-
-// Validate year
-if (!availableYears.includes(selectedYear)) {
-  return Astro.redirect(`${baseUrl}/rosters?year=${defaultYear}`);
-}
-
-// Get rosters data
-const getModuleData = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+const parsedYear = requestedYear ? parseInt(requestedYear, 10) : NaN;
+const selectedYear =
+  !isNaN(parsedYear) && availableYears.includes(parsedYear)
+    ? parsedYear
+    : (availableYears[0] ?? FALLBACK_YEAR);
 
 const rostersData = getModuleData(
   rostersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/rosters.json`]
-);
-
+) as any;
 const playersData = getModuleData(
   playersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]
-);
+) as any;
+const tradeBaitData = getModuleData(
+  tradeBaitFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait.json`]
+) as any;
+const futurePicksData = getModuleData(
+  futurePicksFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]
+) as any;
 
 if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
-  return Astro.redirect(`${baseUrl}/rosters?year=${defaultYear}`);
+  return Astro.redirect(`/afl-fantasy/rosters?year=${availableYears[0] ?? FALLBACK_YEAR}`);
 }
 
-// Create players lookup map
-const playersMap = new Map();
-playersData.players.player.forEach((p: any) => {
+// Build players lookup
+type PlayerInfo = {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  age: string;
+  college: string;
+  birthdate?: string;
+  height?: string;
+  weight?: string;
+  draft_year?: string;
+  draft_round?: string;
+  draft_pick?: string;
+  draft_team?: string;
+  espn_id?: string;
+  jersey?: string;
+};
+const playersMap = new Map<string, PlayerInfo>();
+for (const p of playersData.players.player as any[]) {
   playersMap.set(p.id, {
     id: p.id,
-    name: p.name,
-    position: p.position,
-    team: p.team,
-    age: p.age,
-    college: p.college,
+    name: p.name || `Player ${p.id}`,
+    position: p.position || 'N/A',
+    team: p.team || 'FA',
+    age: p.age || 'N/A',
+    college: p.college || 'N/A',
+    birthdate: p.birthdate,
+    height: p.height,
+    weight: p.weight,
+    draft_year: p.draft_year,
+    draft_round: p.draft_round,
+    draft_pick: p.draft_pick,
+    draft_team: p.draft_team,
+    espn_id: p.espn_id,
+    jersey: p.jersey,
   });
-});
+}
 
-// Get selected franchise from query param or default to first team
-const selectedFranchiseId = Astro.url.searchParams.get('franchise') || aflConfig.teams[0].franchiseId;
-
-// Build teams list for dropdown
-const teamsList = aflConfig.teams
-  .map(team => ({
-    id: team.franchiseId,
-    name: team.name,
-    abbrev: team.abbrev,
-    division: team.division,
-    icon: team.icon,
-  }))
-  .sort((a, b) => {
-    // Sort by division first, then by name
-    if (a.division !== b.division) {
-      return a.division.localeCompare(b.division);
+// Trade bait set for badges
+const tradeBaitSet = new Set<string>();
+const baitPlayers = tradeBaitData?.tradeBaits?.tradeBait;
+if (baitPlayers) {
+  const arr = Array.isArray(baitPlayers) ? baitPlayers : [baitPlayers];
+  for (const b of arr) {
+    const willGiveUp = (b?.willGiveUp ?? '') as string;
+    for (const id of willGiveUp.split(',')) {
+      const trimmed = id.trim();
+      if (/^\d+$/.test(trimmed)) tradeBaitSet.add(trimmed);
     }
-    return a.name.localeCompare(b.name);
-  });
+  }
+}
 
-// Get selected team info
-const selectedTeam = teamsList.find(t => t.id === selectedFranchiseId) || teamsList[0];
+// Auth + selected franchise resolution: query param > cookie > authUser > first AL team
+const authUser = getAuthUser(Astro.request);
+const aflPref = getAFLPreference(Astro.cookies);
 
-// Get roster for selected franchise
-const franchiseRoster = rostersData.rosters.franchise.find(
+const allTeams = getAllTeams();
+const teamsByConference = getTeamsGroupedByConference();
+const fallbackTeamId = allTeams[0]?.franchiseId ?? '0001';
+
+const queryFranchiseId = Astro.url.searchParams.get('franchise');
+const isValidFranchiseId = (id: string | null | undefined): boolean =>
+  !!id && allTeams.some((t) => t.franchiseId === id);
+
+let selectedFranchiseId: string;
+if (isValidFranchiseId(queryFranchiseId)) {
+  selectedFranchiseId = queryFranchiseId!;
+} else if (aflPref?.franchiseId && isValidFranchiseId(aflPref.franchiseId)) {
+  selectedFranchiseId = aflPref.franchiseId;
+} else if (
+  authUser?.leagueId === '19621' &&
+  authUser.franchiseId &&
+  isValidFranchiseId(authUser.franchiseId)
+) {
+  selectedFranchiseId = authUser.franchiseId;
+} else {
+  selectedFranchiseId = fallbackTeamId;
+}
+
+const selectedTeam: AFLTeam = getTeam(selectedFranchiseId) ?? allTeams[0]!;
+const conferenceName = getConferenceName(selectedTeam.conference);
+
+// Owner detection: only AFL users on their own team see write actions
+const isOwner =
+  !!authUser &&
+  authUser.leagueId === '19621' &&
+  authUser.franchiseId === selectedTeam.franchiseId;
+
+// Build roster
+type RosterEntry = PlayerInfo & {
+  status: string;
+  isOnTradeBait: boolean;
+};
+const franchiseRoster = (rostersData.rosters.franchise as any[]).find(
   (f: any) => f.id === selectedFranchiseId
 );
-
-// Build roster with player details
-const roster = franchiseRoster?.player?.map((p: any) => {
-  const playerInfo = playersMap.get(p.id) || {};
+const rosterPlayers = (franchiseRoster?.player ?? []) as Array<{ id: string; status: string }>;
+const roster: RosterEntry[] = rosterPlayers.map((p) => {
+  const info = playersMap.get(p.id);
   return {
     id: p.id,
-    status: p.status,
-    name: playerInfo.name || `Player ${p.id}`,
-    position: playerInfo.position || 'N/A',
-    team: playerInfo.team || 'N/A',
-    age: playerInfo.age || 'N/A',
-    college: playerInfo.college || 'N/A',
+    status: p.status || 'ROSTER',
+    name: info?.name || `Player ${p.id}`,
+    position: info?.position || 'N/A',
+    team: info?.team || 'FA',
+    age: info?.age || 'N/A',
+    college: info?.college || 'N/A',
+    birthdate: info?.birthdate,
+    height: info?.height,
+    weight: info?.weight,
+    draft_year: info?.draft_year,
+    draft_round: info?.draft_round,
+    draft_pick: info?.draft_pick,
+    draft_team: info?.draft_team,
+    espn_id: info?.espn_id,
+    jersey: info?.jersey,
+    isOnTradeBait: tradeBaitSet.has(p.id),
   };
-}) || [];
-
-// Group players by position
-const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'Coach'];
-const rosterByPosition = new Map<string, typeof roster>();
-
-positionOrder.forEach(pos => {
-  rosterByPosition.set(pos, []);
 });
 
-roster.forEach((player: any) => {
-  const pos = player.position;
-  if (!rosterByPosition.has(pos)) {
-    rosterByPosition.set(pos, []);
-  }
-  rosterByPosition.get(pos)!.push(player);
-});
+// Group + sort by position; defenses last
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF', 'Coach'];
+const positionRank = (pos: string) => {
+  const idx = POSITION_ORDER.indexOf(pos);
+  return idx === -1 ? POSITION_ORDER.length : idx;
+};
+// Table sort: active roster first (by position then name), then IR at the
+// bottom. Mirrors TheLeague's roster page — the green left-border stripe
+// on active rows + the red stripe on IR rows makes the split obvious
+// without a dedicated Status column.
+const sortedTableRoster: RosterEntry[] = (() => {
+  const byStatus = (status: string) =>
+    roster
+      .filter((p) => p.status === status)
+      .sort((a, b) => {
+        const r = positionRank(a.position) - positionRank(b.position);
+        return r !== 0 ? r : a.name.localeCompare(b.name);
+      });
+  return [...byStatus('ROSTER'), ...byStatus('INJURED_RESERVE')];
+})();
 
-// Sort players within each position by name
-rosterByPosition.forEach(players => {
-  players.sort((a, b) => a.name.localeCompare(b.name));
-});
+// ── Coach-mode matchup data (matches TheLeague's roster Coach tab) ──
+//
+// For every player on the roster, look up their NFL team's matchup for the
+// current NFL week + the opponent's defensive rank against the player's
+// position. Both sources gracefully no-op outside the regular season.
+//
+// We use TheLeague's fantasyPointsAllowed.json file — it's NFL-wide data
+// (not league-specific) so the same snapshot serves both league sites.
+const nflWeek = getCurrentWeek();
+const nflYear = new Date().getFullYear();
+const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
+const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
 
-// Calculate roster counts
+// AFL per-player scoring (Avg, Last week) + projected points. Both readers
+// gracefully return empty maps when the snapshot files are absent so the
+// page still renders during offseason / before MFL produces the feed.
+const aflScores = loadAflPlayerScores(selectedYear);
+const aflProjections = loadAflProjections(selectedYear);
+
+interface PlayerMatchup {
+  matchup: NflMatchup | null;
+  oppRank: number | null;
+  oppAvg: number | null;
+  oppCode: string | null;
+  /** Player's last-week score from playerScores.json (null if missing). */
+  lastScore: number | null;
+  /** Projected points for the week — from projectedScores.json. */
+  projected: number | null;
+  /** Sample-size of the average; renders the column as "—" when zero. */
+  scoreSampleSize: number;
+  /** Mean of all per-week scores we have on file. */
+  scoreAverage: number | null;
+}
+const matchupByPlayerId = new Map<string, PlayerMatchup>();
+for (const player of sortedTableRoster) {
+  const teamCode = player.team ? normalizeTeamCode(player.team) : '';
+  const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
+  const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
+  const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
+  const agg = aggregateScores(aflScores, player.id);
+  matchupByPlayerId.set(player.id, {
+    matchup,
+    oppRank: fpa?.rank ?? null,
+    oppAvg: fpa?.avg ?? null,
+    oppCode,
+    lastScore: agg.lastScore,
+    projected: aflProjections.get(player.id) ?? null,
+    scoreSampleSize: agg.sampleSize,
+    scoreAverage: agg.average,
+  });
+}
+
+// Small format helpers so the JSX stays declarative
+const formatPoints = (v: number | null): string =>
+  v == null ? '—' : v.toFixed(1);
+const formatWeather = (m: NflMatchup | null): string => {
+  if (!m?.weather) return '—';
+  const t = m.weather.temperature;
+  if (typeof t === 'number') return `${Math.round(t)}°`;
+  return m.weather.displayValue ?? '—';
+};
+const formatOverUnder = (m: NflMatchup | null): string => {
+  if (!m?.overUnder) return '—';
+  const trimmed = m.overUnder.trim();
+  return trimmed && trimmed !== 'N/A' ? trimmed : '—';
+};
+
+// Roster summary
 const totalPlayers = roster.length;
-const activeRoster = roster.filter((p: any) => p.status === 'ROSTER').length;
-const taxiSquad = roster.filter((p: any) => p.status === 'TAXI_SQUAD').length;
-const injured = roster.filter((p: any) => p.status === 'INJURED_RESERVE').length;
+const activeRoster = roster.filter((p) => p.status === 'ROSTER').length;
+const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').length;
+const ROSTER_SIZE = 16;
+
+// Build the KeeperPlanner inputs (only really used when isOwner is true)
+const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => ({
+  id: p.id,
+  name: p.name,
+  position: p.position,
+  team: p.team,
+  age: p.age,
+  espnId: p.espn_id,
+  status: p.status,
+}));
+
+const teamNameLookup = new Map<string, string>(
+  allTeams.map((t) => [t.franchiseId, t.nameShort || t.name])
+);
+const plannerDraftPicks: KeeperPlannerDraftPick[] = (() => {
+  const franchise = (futurePicksData?.futureDraftPicks?.franchise as any[] | undefined)?.find(
+    (f) => f?.id === selectedFranchiseId
+  );
+  const picks = franchise?.futureDraftPick;
+  if (!picks) return [];
+  const arr = Array.isArray(picks) ? picks : [picks];
+  return arr
+    .filter((p: any) => p?.year && p?.round && p?.originalPickFor)
+    .map((p: any) => ({
+      year: String(p.year),
+      round: String(p.round),
+      originalPickFor: String(p.originalPickFor),
+      originalPickForName: teamNameLookup.get(String(p.originalPickFor)),
+      isTraded: String(p.originalPickFor) !== selectedFranchiseId,
+    }))
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year.localeCompare(b.year);
+      return parseInt(a.round, 10) - parseInt(b.round, 10);
+    });
+})();
+
+// ── Analytics: simple descriptive stats for the Analytics view ──
+type AnalyticsBucket = { label: string; count: number; pct: number };
+
+function bucketize(items: string[], topN?: number): AnalyticsBucket[] {
+  const counts = new Map<string, number>();
+  for (const v of items) {
+    if (!v || v === 'N/A' || v === 'FA') continue;
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  const total = items.length;
+  let buckets = Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count, pct: total ? (count / total) * 100 : 0 }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  if (topN) buckets = buckets.slice(0, topN);
+  return buckets;
+}
+
+const positionDistribution: AnalyticsBucket[] = (() => {
+  const PRIMARY_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK'];
+  const counts = new Map<string, number>();
+  for (const p of roster) {
+    const pos = p.position;
+    const key = PRIMARY_POSITIONS.includes(pos)
+      ? pos
+      : pos === 'DEF' || pos === 'Def'
+        ? 'DEF'
+        : 'Other';
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const ordered = [...PRIMARY_POSITIONS, 'DEF', 'Other'];
+  return ordered
+    .map((label) => ({
+      label,
+      count: counts.get(label) ?? 0,
+      pct: roster.length ? ((counts.get(label) ?? 0) / roster.length) * 100 : 0,
+    }))
+    .filter((b) => b.count > 0);
+})();
+
+const ageBuckets: AnalyticsBucket[] = (() => {
+  const ranges: Array<{ label: string; min: number; max: number }> = [
+    { label: '≤23', min: 0, max: 23 },
+    { label: '24–26', min: 24, max: 26 },
+    { label: '27–29', min: 27, max: 29 },
+    { label: '30+', min: 30, max: 99 },
+  ];
+  const ages = roster
+    .map((p) => Number(p.age))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return ranges.map((r) => {
+    const count = ages.filter((a) => a >= r.min && a <= r.max).length;
+    return {
+      label: r.label,
+      count,
+      pct: ages.length ? (count / ages.length) * 100 : 0,
+    };
+  }).filter((b) => b.count > 0);
+})();
+
+const ageStats: { avg: number | null; oldest: { name: string; age: number } | null; youngest: { name: string; age: number } | null } =
+  (() => {
+    const withAge = roster
+      .map((p) => ({ name: p.name, age: Number(p.age) }))
+      .filter((p) => Number.isFinite(p.age) && p.age > 0);
+    if (!withAge.length) return { avg: null, oldest: null, youngest: null };
+    const sum = withAge.reduce((acc, p) => acc + p.age, 0);
+    const sortedByAge = [...withAge].sort((a, b) => a.age - b.age);
+    return {
+      avg: sum / withAge.length,
+      youngest: sortedByAge[0]!,
+      oldest: sortedByAge[sortedByAge.length - 1]!,
+    };
+  })();
+
+const nflTeamDistribution: AnalyticsBucket[] = bucketize(
+  roster.map((p) => p.team),
+  10
+);
+const collegeDistribution: AnalyticsBucket[] = bucketize(
+  roster.map((p) => p.college),
+  8
+);
+
+// Color palette for position donut chart (consistent everywhere)
+const POSITION_COLORS: Record<string, string> = {
+  QB: '#c41e3a',
+  RB: '#2563eb',
+  WR: '#16a34a',
+  TE: '#9333ea',
+  PK: '#ea580c',
+  DEF: '#0891b2',
+  Other: '#64748b',
+};
+
+// Build the SVG path string for donut chart segments
+function makeDonutSegments(buckets: AnalyticsBucket[]) {
+  const total = buckets.reduce((s, b) => s + b.count, 0);
+  if (total === 0) return [];
+  let cumulative = 0;
+  return buckets.map((b) => {
+    const startPct = cumulative / total;
+    cumulative += b.count;
+    const endPct = cumulative / total;
+    // Map to circumference; using r=42 so circumference ≈ 263.89
+    const circumference = 2 * Math.PI * 42;
+    const dashLength = (endPct - startPct) * circumference;
+    const dashOffset = -startPct * circumference;
+    return {
+      label: b.label,
+      count: b.count,
+      pct: b.pct,
+      color: POSITION_COLORS[b.label] ?? '#64748b',
+      dashArray: `${dashLength} ${circumference - dashLength}`,
+      dashOffset,
+    };
+  });
+}
+
+const donutSegments = makeDonutSegments(positionDistribution);
+
+// Initial view from query param
+const requestedView = Astro.url.searchParams.get('view');
+const initialView = ['roster', 'analytics', 'planner'].includes(requestedView ?? '')
+  ? requestedView!
+  : 'roster';
+
+// Player modal payload builder — keeps the SSR data shape consistent with
+// PlayerDetailsModal expectations (no salary fields; modal hides contract).
+const buildPlayerModalData = (p: RosterEntry) => ({
+  id: p.id,
+  espnId: p.espn_id,
+  name: p.name,
+  position: p.position,
+  nflTeam: p.team,
+  status: p.status,
+  college: p.college,
+  height: p.height ? Number(p.height) : null,
+  weight: p.weight ? Number(p.weight) : null,
+  number: p.jersey ? Number(p.jersey) : null,
+  draftYear: p.draft_year ? Number(p.draft_year) : null,
+  draftRound: p.draft_round ? Number(p.draft_round) : null,
+  draftPick: p.draft_pick ? Number(p.draft_pick) : null,
+  draftTeam: p.draft_team ?? null,
+  birthdate: p.birthdate ? Number(p.birthdate) : null,
+  franchiseId: selectedFranchiseId,
+});
+
+// Page-level config exposed to client JS
+const pageConfig = {
+  selectedYear,
+  selectedFranchiseId,
+  isOwner,
+  leagueId: '19621',
+  initialView,
+};
 ---
 
-<TheLeagueLayout title={`AFL Fantasy - ${selectedTeam.name} Roster`}>
-  <div class="rosters-page">
-    <!-- Header -->
-    <header class="roster-hero">
-      <div class="roster-hero__content">
-        <div class="roster-hero__team">
-          {selectedTeam.icon && (
-            <img src={selectedTeam.icon} alt={selectedTeam.name} class="team-logo" />
-          )}
-          <div>
-            <h1 class="team-name">{selectedTeam.name}</h1>
-            <p class="team-abbrev">{selectedTeam.abbrev}</p>
-          </div>
-        </div>
+<TheLeagueLayout title={`AFL Fantasy — ${selectedTeam.name} Roster`}>
+  <section class="roster-page" data-initial-view={initialView}>
+    <!-- Team Header Card -->
+    <div class="team-card" data-team-identity>
+      {selectedTeam.icon && (
+        <img src={selectedTeam.icon} alt={`${selectedTeam.name} icon`} />
+      )}
+      <div class="team-card__identity">
+        <p class="team-card__label" data-view-label>AFL Roster</p>
+        <h2 class="team-card__name">{selectedTeam.name}</h2>
+        <p class="team-card__meta">
+          {conferenceName} · {selectedTeam.division}
+        </p>
+        {isOwner && (
+          <p class="team-card__last-seen" data-level="active">
+            <span class="last-seen-dot" aria-hidden="true"></span>
+            <span>Your team</span>
+          </p>
+        )}
+      </div>
 
-        <!-- Team Selector -->
-        <div class="team-selector">
-          <label for="franchise-select">Select Team:</label>
-          <select
-            id="franchise-select"
-            onchange={`window.location.href = '${baseUrl}/rosters?year=${selectedYear}&franchise=' + this.value`}
+      <div class="team-card__actions">
+        <div class="view-tabs">
+          <button
+            type="button"
+            class="view-tab"
+            data-view="roster"
+            data-active={initialView === 'roster' ? 'true' : 'false'}
+            aria-label="Roster View"
+            title="Roster View"
           >
-            {teamsList.map(team => (
-              <option value={team.id} selected={team.id === selectedFranchiseId}>
-                {team.name}
-              </option>
-            ))}
-          </select>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+              <use href={`${spriteUrl}#icon-users`}></use>
+            </svg>
+            <span class="view-tab__label">Roster</span>
+          </button>
+          <button
+            type="button"
+            class="view-tab"
+            data-view="analytics"
+            data-active={initialView === 'analytics' ? 'true' : 'false'}
+            aria-label="Analytics View"
+            title="Analytics View"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+              <use href={`${spriteUrl}#icon-bar-chart`}></use>
+            </svg>
+            <span class="view-tab__label">Analytics</span>
+          </button>
+          <button
+            type="button"
+            class="view-tab"
+            data-view="planner"
+            data-active={initialView === 'planner' ? 'true' : 'false'}
+            aria-label="Keeper Planner"
+            title="Keeper Planner"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+              <use href={`${spriteUrl}#icon-chalkboard`}></use>
+            </svg>
+            <span class="view-tab__label">Planner</span>
+          </button>
         </div>
       </div>
+    </div>
 
-      <!-- Roster Stats -->
-      <div class="roster-stats">
-        <div class="stat-card">
-          <div class="stat-value">{totalPlayers}</div>
-          <div class="stat-label">Total Players</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">{activeRoster}</div>
-          <div class="stat-label">Active Roster</div>
-        </div>
-        {taxiSquad > 0 && (
-          <div class="stat-card">
-            <div class="stat-value">{taxiSquad}</div>
-            <div class="stat-label">Taxi Squad</div>
-          </div>
-        )}
-        {injured > 0 && (
-          <div class="stat-card">
-            <div class="stat-value">{injured}</div>
-            <div class="stat-label">Injured Reserve</div>
-          </div>
-        )}
+    <!-- Compact controls: team + year switcher -->
+    <div class="roster-controls-bar">
+      <div class="roster-controls-bar__group">
+        <label for="franchise-select">Team</label>
+        <select id="franchise-select" data-current-franchise={selectedFranchiseId}>
+          {teamsByConference.map((group) => (
+            <optgroup label={group.conferenceName}>
+              {group.teams
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((t) => (
+                  <option value={t.franchiseId} selected={t.franchiseId === selectedFranchiseId}>
+                    {t.name}
+                  </option>
+                ))}
+            </optgroup>
+          ))}
+        </select>
       </div>
-    </header>
+      <div class="roster-controls-bar__group">
+        <label for="year-select">Year</label>
+        <select id="year-select" data-current-year={selectedYear}>
+          {availableYears.map((year) => (
+            <option value={year} selected={year === selectedYear}>{year}</option>
+          ))}
+        </select>
+      </div>
+      <a class="roster-controls-bar__profile" href={`/afl-fantasy/franchises/${selectedTeam.franchiseId}`}>
+        Franchise profile →
+      </a>
+    </div>
 
-    <!-- Roster Table by Position -->
-    <main class="roster-content">
-      {Array.from(rosterByPosition.entries())
-        .filter(([_, players]) => players.length > 0)
-        .map(([position, players]) => (
-          <div class="position-group">
-            <h2 class="position-title">
-              {position} ({players.length})
-            </h2>
+    <!-- Roster summary -->
+    <div class="roster-summary">
+      <article>
+        <p>Active roster</p>
+        <strong>{activeRoster}<span class="roster-summary__denom">/{ROSTER_SIZE}</span></strong>
+      </article>
+      <article>
+        <p>Injured reserve</p>
+        <strong>{injuredReserve}</strong>
+      </article>
+      <article>
+        <p>Total players</p>
+        <strong>{totalPlayers}</strong>
+      </article>
+      <article>
+        <p>Open active slots</p>
+        <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
+      </article>
+    </div>
 
-            <div class="roster-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="player-col">Player</th>
-                    <th class="pos-col">Pos</th>
-                    <th class="team-col">NFL Team</th>
-                    <th class="age-col">Age</th>
-                    <th class="college-col">College</th>
-                    <th class="status-col">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {players.map((player: any) => (
-                    <tr>
-                      <td class="player-col">
-                        <div class="player-name">{player.name}</div>
+    <!-- Roster View -->
+    <section class="view-container" data-view-content="roster" hidden={initialView !== 'roster'}>
+      {roster.length === 0 ? (
+        <div class="empty-state">
+          <p>No roster data for this team in {selectedYear}.</p>
+        </div>
+      ) : (
+        <div class="roster-table-card">
+          <div class="roster-table-wrapper">
+            <table class="roster-table roster-table--afl">
+              <thead>
+                <tr>
+                  <th data-column="player">Player</th>
+                  {isOwner && <th data-column="actions" aria-label="Actions"></th>}
+                  <th data-column="oppRank">Opp #</th>
+                  <th data-column="opponent">Opponent</th>
+                  <th data-column="ou">O/U</th>
+                  <th data-column="weather">Weather</th>
+                  <th data-column="oppAvg">Opp Avg</th>
+                  <th data-column="avg">Avg</th>
+                  <th data-column="projected">Proj</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedTableRoster.map((player) => {
+                  const m = matchupByPlayerId.get(player.id);
+                  const matchup = m?.matchup ?? null;
+                  const oppCode = m?.oppCode ?? null;
+                  const oppRank = m?.oppRank ?? null;
+                  const oppAvg = m?.oppAvg ?? null;
+                  const avg = m?.scoreAverage ?? null;
+                  const projected = m?.projected ?? null;
+                  const tier = oppRank != null ? fpaTier(oppRank) : null;
+                  return (
+                    <tr
+                      data-player-id={player.id}
+                      data-player-status={player.status}
+                      data-player-name={player.name}
+                      data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
+                      data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
+                    >
+                      <td data-column="player">
+                        <PlayerCell
+                          name={player.name}
+                          position={player.position}
+                          nflTeam={player.team}
+                          mflId={player.id}
+                          espnId={player.espn_id}
+                          playerData={buildPlayerModalData(player)}
+                          size="compact"
+                        >
+                          {player.isOnTradeBait && (
+                            <a
+                              slot="after-name"
+                              class="trade-bait-link"
+                              href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                              title="On trade block"
+                              aria-label="On trade block"
+                            >
+                              🏷️
+                            </a>
+                          )}
+                        </PlayerCell>
                       </td>
-                      <td class="pos-col">{player.position}</td>
-                      <td class="team-col">{player.team}</td>
-                      <td class="age-col">{player.age}</td>
-                      <td class="college-col">{player.college}</td>
-                      <td class="status-col">
-                        <span class={`status-badge status-${player.status.toLowerCase().replace('_', '-')}`}>
-                          {player.status.replace('_', ' ')}
-                        </span>
+                      {isOwner && (
+                        <td data-column="actions">
+                          <button
+                            type="button"
+                            class="ufa-action-btn"
+                            data-action-trigger
+                            data-player-id={player.id}
+                            aria-label={`Manage ${player.name}`}
+                            title="Manage player"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <circle cx="12" cy="5" r="2"/>
+                              <circle cx="12" cy="12" r="2"/>
+                              <circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+                        </td>
+                      )}
+                      <td data-column="oppRank">
+                        {oppRank != null ? (
+                          <span class={`rank-badge rank-tier-${tier}`}>#{oppRank}</span>
+                        ) : (
+                          <span class="opp-empty">—</span>
+                        )}
+                      </td>
+                      <td data-column="opponent">
+                        {matchup && oppCode ? (
+                          <span class="opponent-cell">
+                            <span class="vs-at">{matchup.isHome ? 'vs' : '@'}</span>
+                            <img
+                              src={`/assets/nfl-logos/${oppCode}.svg`}
+                              alt={oppCode}
+                              class="opponent-logo"
+                              loading="lazy"
+                              onerror="this.style.display='none'"
+                            />
+                          </span>
+                        ) : (
+                          <span class="opponent-bye">BYE</span>
+                        )}
+                      </td>
+                      <td data-column="ou">
+                        <span class="num-cell">{formatOverUnder(matchup)}</span>
+                      </td>
+                      <td data-column="weather">
+                        <span class="num-cell">{formatWeather(matchup)}</span>
+                      </td>
+                      <td data-column="oppAvg">
+                        <span class="num-cell">{formatPoints(oppAvg)}</span>
+                      </td>
+                      <td data-column="avg">
+                        <span class="num-cell">{formatPoints(avg)}</span>
+                      </td>
+                      <td data-column="projected">
+                        <span class="num-cell num-cell--strong">{formatPoints(projected)}</span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
-    </main>
-  </div>
-</TheLeagueLayout>
+        </div>
+      )}
+    </section>
 
-<style>
-  .rosters-page {
-    display: grid;
-    gap: 2rem;
-    padding: 2rem 1rem;
-  }
+    <!-- Analytics View -->
+    <section class="view-container" data-view-content="analytics" hidden={initialView !== 'analytics'}>
+      {roster.length === 0 ? (
+        <div class="empty-state">
+          <p>No roster data to analyze in {selectedYear}.</p>
+        </div>
+      ) : (
+        <div class="analytics-grid">
+          <!-- Position composition donut -->
+          <article class="chart-card chart-card--span-2">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Position composition</h3>
+              <p class="chart-card__subtitle">{roster.length} players on roster</p>
+            </header>
+            <div class="donut-row">
+              <svg
+                class="donut-chart"
+                viewBox="0 0 100 100"
+                role="img"
+                aria-label="Position composition donut chart"
+              >
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="14" />
+                {donutSegments.map((seg) => (
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="transparent"
+                    stroke={seg.color}
+                    stroke-width="14"
+                    stroke-dasharray={seg.dashArray}
+                    stroke-dashoffset={seg.dashOffset}
+                    transform="rotate(-90 50 50)"
+                  >
+                    <title>{seg.label}: {seg.count} ({seg.pct.toFixed(0)}%)</title>
+                  </circle>
+                ))}
+                <text x="50" y="48" text-anchor="middle" class="donut-chart__num">{roster.length}</text>
+                <text x="50" y="60" text-anchor="middle" class="donut-chart__label">PLAYERS</text>
+              </svg>
+              <ul class="donut-legend">
+                {positionDistribution.map((b) => (
+                  <li>
+                    <span
+                      class="donut-legend__swatch"
+                      style={`background:${POSITION_COLORS[b.label] ?? '#64748b'}`}
+                    ></span>
+                    <span class="donut-legend__label">{b.label}</span>
+                    <span class="donut-legend__count">{b.count}</span>
+                    <span class="donut-legend__pct">{b.pct.toFixed(0)}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
 
-  .roster-hero {
-    background: #fff;
-    border-radius: 1rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    padding: 2rem;
-  }
+          <!-- Age stats card -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age</h3>
+              <p class="chart-card__subtitle">Average / range</p>
+            </header>
+            <div class="age-stats">
+              <div class="age-stats__big">
+                <span class="age-stats__value">{ageStats.avg ? ageStats.avg.toFixed(1) : '—'}</span>
+                <span class="age-stats__label">Avg age</span>
+              </div>
+              <div class="age-stats__minmax">
+                <div class="age-stats__row">
+                  <span class="age-stats__row-label">Youngest</span>
+                  <span class="age-stats__row-name">{ageStats.youngest?.name ?? '—'}</span>
+                  <span class="age-stats__row-age">{ageStats.youngest?.age ?? '—'}</span>
+                </div>
+                <div class="age-stats__row">
+                  <span class="age-stats__row-label">Oldest</span>
+                  <span class="age-stats__row-name">{ageStats.oldest?.name ?? '—'}</span>
+                  <span class="age-stats__row-age">{ageStats.oldest?.age ?? '—'}</span>
+                </div>
+              </div>
+            </div>
+          </article>
 
-  .roster-hero__content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-  }
+          <!-- Age distribution bars -->
+          <article class="chart-card chart-card--span-2">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age distribution</h3>
+              <p class="chart-card__subtitle">How your roster splits by age</p>
+            </header>
+            <ul class="bar-list">
+              {ageBuckets.map((b) => (
+                <li class="bar-row">
+                  <span class="bar-row__label">{b.label}</span>
+                  <span class="bar-row__track">
+                    <span class="bar-row__fill" style={`width:${b.pct}%`}></span>
+                  </span>
+                  <span class="bar-row__count">{b.count}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
 
-  .roster-hero__team {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
+          <!-- NFL team distribution -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">NFL teams</h3>
+              <p class="chart-card__subtitle">Top {nflTeamDistribution.length} represented</p>
+            </header>
+            {nflTeamDistribution.length === 0 ? (
+              <p class="chart-card__empty">No NFL team data yet.</p>
+            ) : (
+              <ul class="bar-list bar-list--compact">
+                {nflTeamDistribution.map((b) => (
+                  <li class="bar-row">
+                    <span class="bar-row__label bar-row__label--code">{b.label}</span>
+                    <span class="bar-row__track">
+                      <span class="bar-row__fill bar-row__fill--blue" style={`width:${b.pct}%`}></span>
+                    </span>
+                    <span class="bar-row__count">{b.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
 
-  .team-logo {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    border-radius: 0.5rem;
-  }
+          <!-- College distribution -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Colleges</h3>
+              <p class="chart-card__subtitle">Top {collegeDistribution.length} represented</p>
+            </header>
+            {collegeDistribution.length === 0 ? (
+              <p class="chart-card__empty">No college data yet.</p>
+            ) : (
+              <ul class="bar-list bar-list--compact">
+                {collegeDistribution.map((b) => (
+                  <li class="bar-row">
+                    <span class="bar-row__label">{b.label}</span>
+                    <span class="bar-row__track">
+                      <span class="bar-row__fill bar-row__fill--green" style={`width:${b.pct}%`}></span>
+                    </span>
+                    <span class="bar-row__count">{b.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+      )}
+    </section>
 
-  .team-name {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0;
-    color: #1e293b;
-  }
+    <!-- Planner View -->
+    <section class="view-container" data-view-content="planner" hidden={initialView !== 'planner'}>
+      {isOwner ? (
+        <KeeperPlanner
+          franchiseId={selectedFranchiseId}
+          year={selectedYear}
+          roster={plannerRoster}
+          draftPicks={plannerDraftPicks}
+        />
+      ) : (
+        <div class="coming-soon">
+          <h2>Planner</h2>
+          <p>The keeper planner is private to each team owner.</p>
+          {!authUser && (
+            <p>
+              <a class="coming-soon__cta" href={`/afl-fantasy/login?next=/afl-fantasy/rosters?franchise=${selectedFranchiseId}&view=planner`}>
+                Sign in to AFL Fantasy →
+              </a>
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  </main>
 
-  .team-abbrev {
-    font-size: 1.125rem;
-    color: #64748b;
-    margin: 0.25rem 0 0 0;
-  }
+  <PlayerDetailsModal hideContract />
+  {isOwner && <AFLActionModal />}
 
-  .team-selector {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
+  <script id="afl-roster-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
 
-  .team-selector label {
-    font-weight: 600;
-    color: #475569;
-  }
+  <script>
+    import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
-  .team-selector select {
-    padding: 0.5rem 1rem;
-    border: 2px solid #dddcdc;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    background: white;
-    cursor: pointer;
-    min-width: 250px;
-  }
+    const configEl = document.getElementById('afl-roster-config');
+    const config = configEl ? JSON.parse(configEl.textContent || '{}') : {};
 
-  .team-selector select:hover {
-    border-color: #cbd5e1;
-  }
+    // ── View tab switching ──
+    const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');
+    const containers = document.querySelectorAll<HTMLElement>('[data-view-content]');
 
-  .team-selector select:focus {
-    outline: none;
-    border-color: #c41e3a;
-  }
+    const VIEW_LABELS: Record<string, string> = {
+      roster: 'AFL Roster',
+      analytics: 'Advanced Analytics',
+      planner: 'Keeper Planner',
+    };
+    const labelEl = document.querySelector<HTMLElement>('[data-view-label]');
 
-  .roster-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-  }
-
-  .stat-card {
-    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    text-align: center;
-  }
-
-  .stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
-
-  .stat-label {
-    font-size: 0.875rem;
-    opacity: 0.9;
-  }
-
-  .roster-content {
-    display: grid;
-    gap: 2rem;
-  }
-
-  .position-group {
-    background: #fff;
-    border-radius: 1rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    overflow: hidden;
-  }
-
-  .position-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    padding: 1.5rem 2rem;
-    margin: 0;
-    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
-    color: white;
-  }
-
-  .roster-table {
-    overflow-x: auto;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  thead {
-    background: #f8fafc;
-    border-bottom: 2px solid #dddcdc;
-  }
-
-  th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: #475569;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  tbody tr {
-    border-bottom: 1px solid #dddcdc;
-  }
-
-  tbody tr:hover {
-    background: #f8fafc;
-  }
-
-  td {
-    padding: 1rem;
-  }
-
-  .player-col {
-    min-width: 200px;
-  }
-
-  .player-name {
-    font-weight: 600;
-    color: #1e293b;
-  }
-
-  .pos-col {
-    width: 80px;
-    text-align: center;
-    font-weight: 600;
-    color: #64748b;
-  }
-
-  .team-col {
-    width: 100px;
-    text-align: center;
-  }
-
-  .age-col {
-    width: 80px;
-    text-align: center;
-  }
-
-  .college-col {
-    min-width: 150px;
-  }
-
-  .status-col {
-    width: 120px;
-    text-align: center;
-  }
-
-  .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .status-roster {
-    background: #dcfce7;
-    color: #166534;
-  }
-
-  .status-taxi-squad {
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .status-injured-reserve {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-
-  @media (max-width: 767px) {
-    .rosters-page {
-      padding: 1rem 0.5rem;
+    function switchView(viewName: string) {
+      Array.from(tabs).forEach((tab) => {
+        const isActive = tab.dataset.view === viewName;
+        tab.setAttribute('data-active', String(isActive));
+      });
+      Array.from(containers).forEach((container) => {
+        const isActive = container.dataset.viewContent === viewName;
+        // Use inline style + drop the SSR-set [hidden] attribute. Belt and
+        // suspenders so the toggle is robust against any [hidden] vs class
+        // specificity weirdness in scoped Astro styles.
+        container.style.display = isActive ? 'grid' : 'none';
+        if (isActive) container.removeAttribute('hidden');
+        else container.setAttribute('hidden', '');
+      });
+      if (labelEl && VIEW_LABELS[viewName]) {
+        labelEl.textContent = VIEW_LABELS[viewName];
+      }
+      const url = new URL(window.location.href);
+      if (viewName === 'roster') url.searchParams.delete('view');
+      else url.searchParams.set('view', viewName);
+      window.history.replaceState({}, '', url.toString());
     }
 
-    .roster-hero {
-      padding: 1.5rem;
+    Array.from(tabs).forEach((tab) => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const viewName = tab.dataset.view;
+        if (viewName) switchView(viewName);
+      });
+    });
+
+    // ── Team / year selectors ──
+    const buildUrl = (params: Record<string, string>) => {
+      const url = new URL(window.location.href);
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.set(k, v);
+      }
+      return url.toString();
+    };
+
+    const franchiseSelect = document.getElementById('franchise-select') as HTMLSelectElement | null;
+    if (franchiseSelect) {
+      franchiseSelect.addEventListener('change', () => {
+        window.location.href = buildUrl({ franchise: franchiseSelect.value });
+      });
     }
 
-    .roster-hero__content {
-      flex-direction: column;
-      align-items: flex-start;
+    const yearSelect = document.getElementById('year-select') as HTMLSelectElement | null;
+    if (yearSelect) {
+      yearSelect.addEventListener('change', () => {
+        window.location.href = buildUrl({ year: yearSelect.value });
+      });
     }
 
-    .team-logo {
-      width: 60px;
-      height: 60px;
+    // ── Player details modal trigger (delegated) ──
+    const rosterContainer = document.querySelector('.roster-page');
+    if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
+
+    // ── Player action button → AFLActionModal (owner only) ──
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const trigger = target.closest('[data-action-trigger]') as HTMLButtonElement | null;
+      if (!trigger) return;
+      e.stopPropagation();
+      const row = trigger.closest('tr') as HTMLTableRowElement | null;
+      if (!row) return;
+      const opener = (window as any).openAFLActionModal as
+        | ((p: {
+            playerId: string;
+            playerName: string;
+            status?: string;
+            isOnTradeBait?: boolean;
+            franchiseId?: string;
+            headshot?: string;
+            position?: string;
+            nflTeam?: string;
+          }) => void)
+        | undefined;
+      if (typeof opener !== 'function') {
+        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
+        return;
+      }
+
+      // Pull the player lockup details off the PlayerCell already rendered in
+      // the row. This avoids duplicating the same data into row dataset
+      // attributes server-side, and keeps the modal hero in sync with whatever
+      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
+      const playerCell = row.querySelector('[data-column="player"] .player-cell');
+      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
+      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
+      const posEl = playerCell?.querySelector('.player-meta__pos');
+      // Position label can include contract tags ("QB - RC"); strip them.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
+      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
+      const logoSrc = logoImg?.getAttribute('src') ?? '';
+      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
+      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
+
+      opener({
+        playerId: row.dataset.playerId ?? '',
+        playerName: row.dataset.playerName ?? 'Player',
+        status: row.dataset.playerStatus,
+        isOnTradeBait: row.dataset.onTradeBait === 'true',
+        franchiseId: config.selectedFranchiseId,
+        headshot: headshotImg?.getAttribute('src') ?? undefined,
+        position: positionRaw || undefined,
+        nflTeam: teamCode || undefined,
+      });
+    });
+  </script>
+
+  <style>
+    /* ────────────────────────────────────────────────────────────────
+       AFL roster page — matches TheLeague's roster page visual language
+       (team-card hero, icon-tile view-tabs, roster-summary, roster-table).
+       Variables come from TheLeagueLayout's global stylesheet so the look
+       stays in lockstep with the rest of the site.
+       ──────────────────────────────────────────────────────────────── */
+
+    .roster-page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--padding-xxl, 3rem);
+      display: grid;
+      gap: var(--padding-md, 1rem);
     }
 
-    .team-name {
-      font-size: 1.5rem;
+    /* ── Team-card hero ── */
+    .team-card {
+      display: grid;
+      padding: var(--padding-md, 1rem);
+      padding-bottom: var(--padding-xxl, 3rem); /* room for tabs on mobile */
+      justify-items: center;
+      gap: var(--padding-sm, 0.5rem);
+      border-radius: var(--radius-lg, 1rem);
+      background: var(--content-bg, #fff);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      text-align: center;
     }
 
-    .team-selector {
-      width: 100%;
+    @media (min-width: 480px) {
+      .team-card {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        padding-inline: var(--padding-lg, 1.5rem);
+        justify-content: center;
+        padding-block: var(--padding-md, 1rem) var(--padding-sm, 0.5rem);
+        text-align: left;
+      }
     }
 
-    .team-selector select {
-      flex: 1;
+    .team-card img {
+      width: 72px;
+      height: 72px;
+      border-radius: 14px;
+      object-fit: cover;
+    }
+
+    .team-card__identity {
       min-width: 0;
     }
 
-    .position-title {
-      font-size: 1.25rem;
-      padding: 1rem 1.5rem;
+    .team-card__label {
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-400, #9ca3af);
+      margin: 0;
     }
 
-    th, td {
-      padding: 0.75rem 0.5rem;
+    .team-card__name {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--color-gray-900, #111827);
     }
 
-    .college-col {
+    .team-card__meta {
+      margin: 0;
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.875rem;
+    }
+
+    .team-card__last-seen {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--color-gray-500, #6b7280);
+      margin: 0.125rem 0 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .last-seen-dot {
+      display: inline-block;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    [data-level='active'] .last-seen-dot { background: var(--activity-green, #16a34a); }
+
+    /* View tabs (SVG icon tiles) — copied structurally from TheLeague */
+    .team-card__actions {
+      width: 100%;
+    }
+
+    @media (min-width: 480px) {
+      .team-card__actions {
+        width: auto;
+      }
+    }
+
+    .view-tabs {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    @media (min-width: 480px) {
+      .view-tabs {
+        position: absolute;
+        right: var(--padding-lg, 1.5rem);
+        top: var(--padding-lg, 1.5rem);
+      }
+    }
+
+    .view-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.5rem 0.7rem;
+      border: 2px solid transparent;
+      border-radius: var(--radius-md, 0.5rem);
+      background: var(--color-gray-50, #f9fafb);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      min-width: 69px;
+    }
+
+    .view-tab:hover {
+      background: var(--color-gray-200, #dddedf);
+      border-color: var(--color-gray-300, #d1d5db);
+    }
+
+    .view-tab[data-active="true"] {
+      background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+      border-color: var(--color-primary, #1c497c);
+    }
+
+    .view-tab__icon {
+      width: 28px;
+      height: 28px;
+      fill: var(--color-gray-500, #6b7280);
+      color: var(--color-gray-500, #6b7280);
+    }
+
+    .view-tab[data-active="true"] .view-tab__icon {
+      fill: var(--color-primary, #1c497c);
+      color: var(--color-primary, #1c497c);
+    }
+
+    .view-tab__label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--color-gray-500, #6b7280);
+      white-space: nowrap;
+    }
+
+    .view-tab[data-active="true"] .view-tab__label {
+      color: var(--color-primary, #1c497c);
+    }
+
+    /* ── Inline controls bar (team + year switcher) ── */
+    .roster-controls-bar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-md, 0.5rem);
+      padding: 0.625rem 1rem;
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    }
+
+    .roster-controls-bar__group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .roster-controls-bar__group label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-gray-500, #6b7280);
+    }
+
+    .roster-controls-bar__group select {
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--color-gray-200, #e5e7eb);
+      border-radius: var(--radius-sm, 0.25rem);
+      background: #fff;
+      font-size: 0.85rem;
+      color: var(--color-gray-900, #111827);
+      cursor: pointer;
+    }
+
+    .roster-controls-bar__profile {
+      margin-left: auto;
+      font-size: 0.8125rem;
+      color: var(--color-primary, #1c497c);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .roster-controls-bar__profile:hover { text-decoration: underline; }
+
+    /* ── Roster summary cards (matches TheLeague's .roster-summary) ── */
+    .roster-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--padding-md, 1rem);
+    }
+
+    .roster-summary article {
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-lg, 1rem);
+      padding: var(--padding-md, 1rem);
+      box-shadow: var(--shadow-md);
+    }
+
+    .roster-summary p {
+      margin: 0;
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.8rem;
+    }
+
+    .roster-summary strong {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: clamp(1.1rem, 4vw, 1.6rem);
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-gray-900, #111827);
+    }
+
+    .roster-summary__denom {
+      color: var(--color-gray-400, #9ca3af);
+      font-size: 0.75em;
+      font-weight: 500;
+    }
+
+    /* ── View containers ── */
+    .view-container {
+      display: grid;
+      gap: var(--padding-lg, 1.5rem);
+    }
+
+    .view-container[hidden] {
       display: none;
     }
-  }
-</style>
+
+    /* ── Roster table card ── */
+    .roster-table-card {
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-lg, 1rem);
+      padding: var(--padding-md, 1rem);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .roster-table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-md, 0.5rem);
+      background: var(--content-bg, #fff);
+    }
+
+    .roster-table {
+      width: 100%;
+      min-width: 740px; /* keeps the 8 Coach columns readable; horizontal scrolls on phones */
+      border-collapse: collapse;
+    }
+
+    .roster-table thead {
+      background: var(--color-gray-50, #f9fafb);
+      border-bottom: 1px solid var(--content-border, #e2e8f0);
+    }
+
+    .roster-table th {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-400, #9ca3af);
+      padding: 0.55rem 0.5rem;
+      text-align: right;
+      background: var(--color-gray-50, #f9fafb);
+      white-space: nowrap;
+    }
+
+    .roster-table th[data-column="player"] {
+      text-align: left;
+      padding-left: 0.75rem;
+    }
+
+    .roster-table th[data-column="oppRank"],
+    .roster-table th[data-column="opponent"] {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .roster-table th[data-column="oppRank"] { width: 64px; }
+    .roster-table th[data-column="opponent"] { width: 96px; }
+    .roster-table th[data-column="ou"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="weather"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="oppAvg"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="avg"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="projected"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="actions"] { width: 48px; }
+
+    .roster-table td {
+      padding: 0.65rem 0.5rem;
+      border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+      vertical-align: middle;
+      font-size: 0.85rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .roster-table td[data-column="player"] {
+      text-align: left;
+      padding-left: 0.75rem;
+    }
+
+    .roster-table td[data-column="oppRank"],
+    .roster-table td[data-column="opponent"] {
+      text-align: left;
+    }
+
+    .roster-table td[data-column="ou"],
+    .roster-table td[data-column="weather"],
+    .roster-table td[data-column="oppAvg"],
+    .roster-table td[data-column="avg"],
+    .roster-table td[data-column="projected"] {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .num-cell {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .num-cell--strong {
+      font-weight: 700;
+      color: var(--color-gray-900, #111827);
+    }
+
+    /* Actions column now sits immediately after the player name; align the
+       button to the left so it reads as part of the row's identity block
+       rather than a right-edge afterthought. */
+    .roster-table td[data-column="actions"] {
+      text-align: left;
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+    }
+
+    /* OPP # rank badge — color-tiered by FPA rank
+       (1-8 = red / tough; 25-32 = green / good matchup) */
+    .rank-badge {
+      display: inline-block;
+      padding: 0.12rem 0.55rem;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+    }
+
+    .rank-tier-4 { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+    .rank-tier-3 { background: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }
+    .rank-tier-2 { background: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }
+    .rank-tier-1 { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .opp-empty {
+      color: var(--color-gray-400, #9ca3af);
+    }
+
+    /* Opponent cell — vs/@ + NFL logo, matches TheLeague's Coach tab */
+    .opponent-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .vs-at {
+      font-size: 0.75rem;
+      color: var(--color-gray-500, #64748b);
+      font-weight: 500;
+      width: 1.25rem;
+      text-align: center;
+    }
+
+    .opponent-logo {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+
+    .opponent-bye {
+      color: var(--color-gray-400, #9ca3af);
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+
+    .roster-table tbody tr {
+      border-left: 3px solid transparent;
+    }
+
+    .roster-table tbody tr[data-row-status="active"] {
+      border-left-color: var(--activity-green, #16a34a);
+    }
+
+    .roster-table tbody tr[data-row-status="ir"] {
+      border-left-color: var(--color-danger, #dc2626);
+    }
+
+    .roster-table tbody tr:hover {
+      background: var(--color-gray-50, #f9fafb);
+    }
+
+    /* 3-dot action button — same look TheLeague uses */
+    .ufa-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--color-gray-200, #d1d5db);
+      background: var(--content-bg, #fff);
+      color: var(--color-gray-500, #6b7280);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ufa-action-btn:hover {
+      background: var(--color-gray-50, #f3f4f6);
+      color: var(--color-gray-700, #374151);
+      border-color: var(--color-gray-300, #9ca3af);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .ufa-action-btn:focus-visible {
+      outline: 2px solid var(--color-primary, #1c497c);
+      outline-offset: 1px;
+    }
+
+    .trade-bait-link {
+      margin-left: 0.25rem;
+      font-size: 0.9rem;
+      display: inline-block;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* ── Analytics view ── */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .chart-card--span-2 {
+      grid-column: span 2;
+    }
+
+    .chart-card__header {
+      margin-bottom: 1rem;
+    }
+
+    .chart-card__title {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .chart-card__subtitle {
+      margin: 0.125rem 0 0;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .chart-card__empty {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #9ca3af;
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .donut-row {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .donut-chart {
+      width: 160px;
+      height: 160px;
+      flex-shrink: 0;
+    }
+
+    .donut-chart__num {
+      font-size: 14px;
+      font-weight: 800;
+      fill: #0f172a;
+    }
+
+    .donut-chart__label {
+      font-size: 4px;
+      letter-spacing: 0.5px;
+      fill: #6b7280;
+      font-weight: 700;
+    }
+
+    .donut-legend {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      flex: 1;
+      min-width: 160px;
+      display: grid;
+      gap: 0.375rem;
+    }
+
+    .donut-legend li {
+      display: grid;
+      grid-template-columns: 12px 1fr auto auto;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .donut-legend__swatch {
+      display: block;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .donut-legend__label {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .donut-legend__count {
+      color: #374151;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .donut-legend__pct {
+      color: #6b7280;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .age-stats {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .age-stats__big {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+      border-radius: 0.5rem;
+      color: #fff;
+    }
+
+    .age-stats__value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .age-stats__label {
+      margin-top: 0.25rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .age-stats__minmax {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .age-stats__row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.375rem 0.625rem;
+      background: #f9fafb;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+    }
+
+    .age-stats__row-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .age-stats__row-name {
+      color: #0f172a;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .age-stats__row-age {
+      font-weight: 700;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .bar-list--compact {
+      gap: 0.375rem;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 36px;
+      align-items: center;
+      gap: 0.625rem;
+      font-size: 0.8125rem;
+    }
+
+    .bar-row__label {
+      color: #374151;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-row__label--code {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.75rem;
+    }
+
+    .bar-row__track {
+      position: relative;
+      height: 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .bar-row__fill {
+      position: absolute;
+      inset: 0;
+      background: #c41e3a;
+      border-radius: 6px;
+      transition: width 200ms ease;
+    }
+
+    .bar-row__fill--blue {
+      background: #2563eb;
+    }
+
+    .bar-row__fill--green {
+      background: #16a34a;
+    }
+
+    .bar-row__count {
+      color: #374151;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    @media (max-width: 720px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-card--span-2 {
+        grid-column: span 1;
+      }
+    }
+
+    /* ── Empty / coming-soon states ── */
+    .empty-state,
+    .coming-soon {
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      color: #6b7280;
+    }
+
+    .coming-soon h2 {
+      margin: 0 0 0.5rem;
+      color: #111827;
+      font-size: 1.25rem;
+    }
+
+    /* Mobile: tighter table cells */
+    @media (max-width: 720px) {
+      .roster-page {
+        padding: 0.5rem 0.5rem 3rem;
+      }
+
+      .roster-table th,
+      .roster-table td {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</TheLeagueLayout>

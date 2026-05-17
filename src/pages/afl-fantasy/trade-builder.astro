@@ -1,0 +1,987 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import { getAuthUser } from '../../utils/auth';
+import {
+  getAllTeams,
+  getTeam,
+  getConferenceTeams,
+  getConferenceShort,
+  type AFLTeam,
+  type ConferenceId,
+} from '../../utils/afl-conference';
+
+export const prerender = false;
+
+const FALLBACK_YEAR = 2025;
+
+// Data — pull rosters + players + ADP for the current AFL season
+const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
+const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true });
+const adpFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true });
+const picksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true });
+
+const getModuleData = (mod: any) => (mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod);
+
+const availableYears = Object.entries(rostersFeeds)
+  .map(([path, mod]) => {
+    const match = path.match(/\/(\d{4})\/rosters\.json$/);
+    if (!match) return null;
+    const data = getModuleData(mod) as any;
+    return data?.rosters?.franchise ? parseInt(match[1], 10) : null;
+  })
+  .filter((y): y is number => y !== null)
+  .sort((a, b) => b - a);
+
+const selectedYear = availableYears[0] ?? FALLBACK_YEAR;
+
+const rostersData = getModuleData(rostersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/rosters.json`]) as any;
+const playersData = getModuleData(playersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]) as any;
+const adpData = getModuleData(adpFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/adp-dynasty.json`]) as any;
+const picksData = getModuleData(picksFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]) as any;
+
+// Auth — must be an AFL owner
+const authUser = getAuthUser(Astro.request);
+const isAflOwner = !!authUser && authUser.leagueId === '19621' && !!authUser.franchiseId;
+
+const allTeams = getAllTeams();
+
+// Derive "from" and "to" from query params (?from=0001&to=0002&player=12345)
+const queryFrom = Astro.url.searchParams.get('from');
+const queryTo = Astro.url.searchParams.get('to');
+const queryPlayer = Astro.url.searchParams.get('player');
+
+const fromFranchiseId =
+  isAflOwner && (!queryFrom || queryFrom === authUser!.franchiseId)
+    ? authUser!.franchiseId!
+    : (queryFrom && allTeams.some((t) => t.franchiseId === queryFrom)
+        ? queryFrom
+        : authUser?.franchiseId ?? '0001');
+
+const fromTeam: AFLTeam | undefined = getTeam(fromFranchiseId);
+const fromConference: ConferenceId | null = fromTeam?.conference ?? null;
+const sameConferenceTeams = fromConference
+  ? getConferenceTeams(fromConference).filter((t) => t.franchiseId !== fromFranchiseId)
+  : [];
+
+const toFranchiseId =
+  queryTo && sameConferenceTeams.some((t) => t.franchiseId === queryTo)
+    ? queryTo
+    : sameConferenceTeams[0]?.franchiseId ?? null;
+const toTeam: AFLTeam | undefined = toFranchiseId ? getTeam(toFranchiseId) : undefined;
+
+// Build player info map
+type PlayerLite = {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  age: string;
+  espnId?: string;
+  adp?: number;
+  adpRank?: number;
+};
+const playerMap = new Map<string, PlayerLite>();
+for (const p of (playersData?.players?.player ?? []) as any[]) {
+  playerMap.set(p.id, {
+    id: p.id,
+    name: p.name || `Player ${p.id}`,
+    position: p.position || 'N/A',
+    team: p.team || 'FA',
+    age: p.age || 'N/A',
+    espnId: p.espn_id,
+  });
+}
+
+// Enrich with ADP
+for (const a of (adpData?.adp?.player ?? []) as any[]) {
+  const info = playerMap.get(a.id);
+  if (info) {
+    info.adp = parseFloat(a.averagePick);
+    info.adpRank = parseInt(a.rank, 10);
+  }
+}
+
+// Get rosters
+function rosterFor(franchiseId: string): PlayerLite[] {
+  const f = (rostersData?.rosters?.franchise as any[] | undefined)?.find((fr) => fr.id === franchiseId);
+  if (!f?.player) return [];
+  const arr = Array.isArray(f.player) ? f.player : [f.player];
+  return arr
+    .map((p: any) => playerMap.get(p.id))
+    .filter((p: PlayerLite | undefined): p is PlayerLite => !!p)
+    .sort((a: PlayerLite, b: PlayerLite) => {
+      // ADP rank first (lower = more valuable), unranked players at the end
+      const aRank = a.adpRank ?? 9999;
+      const bRank = b.adpRank ?? 9999;
+      return aRank - bRank;
+    });
+}
+
+const fromRoster = rosterFor(fromFranchiseId);
+const toRoster = toFranchiseId ? rosterFor(toFranchiseId) : [];
+
+// Pre-selected player from query param
+const preSelectedPlayer =
+  queryPlayer && fromRoster.some((p) => p.id === queryPlayer) ? queryPlayer : null;
+
+// Future draft picks for both teams
+type DraftPickAsset = {
+  token: string;
+  label: string;
+  year: string;
+  round: number;
+  originalPickFor: string;
+  isOriginal: boolean;
+};
+const teamNameLookup = new Map<string, string>(allTeams.map((t) => [t.franchiseId, t.nameShort || t.name]));
+function picksFor(franchiseId: string): DraftPickAsset[] {
+  const f = (picksData?.futureDraftPicks?.franchise as any[] | undefined)?.find((fr) => fr.id === franchiseId);
+  if (!f?.futureDraftPick) return [];
+  const arr = Array.isArray(f.futureDraftPick) ? f.futureDraftPick : [f.futureDraftPick];
+  return arr
+    .map((p: any) => ({
+      year: String(p.year),
+      round: parseInt(p.round, 10),
+      originalPickFor: String(p.originalPickFor),
+      isOriginal: String(p.originalPickFor) === franchiseId,
+      token: `FP_${String(p.originalPickFor)}_${String(p.year)}_${String(p.round)}`,
+      label: `${p.year} R${p.round}${String(p.originalPickFor) !== franchiseId ? ` (via ${teamNameLookup.get(String(p.originalPickFor)) ?? p.originalPickFor})` : ''}`,
+    }))
+    .sort((a: DraftPickAsset, b: DraftPickAsset) => {
+      if (a.year !== b.year) return a.year.localeCompare(b.year);
+      return a.round - b.round;
+    });
+}
+const fromPicks = fromFranchiseId ? picksFor(fromFranchiseId) : [];
+const toPicks = toFranchiseId ? picksFor(toFranchiseId) : [];
+
+// Page-level config for client JS
+const pageConfig = {
+  fromFranchiseId,
+  toFranchiseId,
+  selectedYear,
+  preSelectedPlayer,
+  isAflOwner,
+  // Tag map so the client can pretty-print player info from IDs without re-fetching
+  playerLookup: Object.fromEntries(
+    Array.from(playerMap.values()).map((p) => [
+      p.id,
+      { name: p.name, position: p.position, team: p.team, adp: p.adp ?? null, adpRank: p.adpRank ?? null },
+    ])
+  ),
+  // Pick lookup keyed by token for fairness math
+  pickLookup: Object.fromEntries(
+    [...fromPicks, ...toPicks].map((pick) => [
+      pick.token,
+      { label: pick.label, year: pick.year, round: pick.round, originalPickFor: pick.originalPickFor },
+    ])
+  ),
+};
+
+---
+
+<TheLeagueLayout title="AFL Trade Builder">
+  <main class="trade-builder">
+    {!isAflOwner ? (
+      <section class="tb-gate">
+        <h1>Trade Builder</h1>
+        <p>Sign in as an AFL Fantasy owner to draft trade proposals.</p>
+        <a href="/afl-fantasy/login?next=/afl-fantasy/trade-builder" class="tb-btn tb-btn--primary">Sign in</a>
+      </section>
+    ) : !toTeam ? (
+      <section class="tb-gate">
+        <h1>Trade Builder</h1>
+        <p>No same-conference trade partners are available right now.</p>
+      </section>
+    ) : (
+      <>
+        <header class="tb-header">
+          <div class="tb-header__crumbs">
+            <a href={`/afl-fantasy/rosters?franchise=${fromFranchiseId}`}>← Back to roster</a>
+          </div>
+          <h1 class="tb-header__title">Trade Builder</h1>
+          <p class="tb-header__sub">
+            Same-conference trades only ({getConferenceShort(fromConference!)})
+          </p>
+        </header>
+
+        <div class="tb-panels">
+          <!-- LEFT: My side -->
+          <section class="tb-side tb-side--mine" aria-label="Your offering">
+            <header class="tb-side__header">
+              {fromTeam?.icon && <img class="tb-side__icon" src={fromTeam.icon} alt="" />}
+              <div>
+                <h2 class="tb-side__team">{fromTeam?.name}</h2>
+                <p class="tb-side__role">You give</p>
+              </div>
+            </header>
+
+            <ul class="tb-zone" data-zone="from" id="zone-from">
+              <li class="tb-empty">Pick players or picks from your roster below.</li>
+            </ul>
+
+            <div class="tb-section">
+              <h3 class="tb-section__title">Your players · ranked by ADP</h3>
+              <ul class="tb-picker">
+                {fromRoster.map((p) => (
+                  <li class="tb-picker__item" data-asset-type="player" data-asset-id={p.id} data-side="from">
+                    <span class="tb-picker__cell">
+                      <PlayerCell
+                        name={p.name}
+                        position={p.position}
+                        nflTeam={p.team}
+                        mflId={p.id}
+                        espnId={p.espnId}
+                        size="compact"
+                      />
+                    </span>
+                    <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
+                    <button type="button" class="tb-picker__add" aria-label={`Add ${p.name} to offer`}>+</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {fromPicks.length > 0 && (
+              <div class="tb-section">
+                <h3 class="tb-section__title">Your {Number(selectedYear) + 1} picks</h3>
+                <ul class="tb-picker">
+                  {fromPicks.map((pick) => (
+                    <li class="tb-picker__item tb-picker__item--pick" data-asset-type="pick" data-asset-id={pick.token} data-side="from" data-pick-label={pick.label}>
+                      <span class="tb-picker__pick-label">{pick.label}</span>
+                      <button type="button" class="tb-picker__add" aria-label={`Add ${pick.label} to offer`}>+</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          <!-- CENTER: Fairness -->
+          <section class="tb-center" aria-label="Trade summary">
+            <div class="tb-fairness">
+              <h3 class="tb-center__title">Trade balance</h3>
+              <div class="tb-balance" id="tb-balance">
+                <div class="tb-balance__row">
+                  <span class="tb-balance__label">Your offer ADP sum</span>
+                  <span class="tb-balance__value" id="tb-from-sum">0</span>
+                </div>
+                <div class="tb-balance__row">
+                  <span class="tb-balance__label">Their offer ADP sum</span>
+                  <span class="tb-balance__value" id="tb-to-sum">0</span>
+                </div>
+                <div class="tb-balance__bar">
+                  <div class="tb-balance__bar-fill" id="tb-balance-fill"></div>
+                </div>
+                <p class="tb-balance__verdict" id="tb-balance-verdict">Add assets to see a fairness read.</p>
+              </div>
+
+              <label class="tb-comments-label" for="tb-comments">Note (optional)</label>
+              <textarea id="tb-comments" class="tb-comments" rows="3" placeholder="Add a message for the receiving owner..."></textarea>
+
+              <button
+                id="tb-submit"
+                type="button"
+                class="tb-btn tb-btn--primary tb-submit"
+                disabled
+              >
+                Send proposal
+              </button>
+              <p class="tb-submit-hint" id="tb-submit-hint"></p>
+            </div>
+          </section>
+
+          <!-- RIGHT: Their side -->
+          <section class="tb-side tb-side--theirs" aria-label="Their offering">
+            <header class="tb-side__header">
+              {toTeam.icon && <img class="tb-side__icon" src={toTeam.icon} alt="" />}
+              <div>
+                <h2 class="tb-side__team">
+                  <select id="tb-to-select" class="tb-to-select">
+                    {sameConferenceTeams
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((t) => (
+                        <option value={t.franchiseId} selected={t.franchiseId === toFranchiseId}>
+                          {t.name}
+                        </option>
+                      ))}
+                  </select>
+                </h2>
+                <p class="tb-side__role">They give</p>
+              </div>
+            </header>
+
+            <ul class="tb-zone" data-zone="to" id="zone-to">
+              <li class="tb-empty">Pick what you want from their roster.</li>
+            </ul>
+
+            <div class="tb-section">
+              <h3 class="tb-section__title">Their players · ranked by ADP</h3>
+              <ul class="tb-picker">
+                {toRoster.map((p) => (
+                  <li class="tb-picker__item" data-asset-type="player" data-asset-id={p.id} data-side="to">
+                    <span class="tb-picker__cell">
+                      <PlayerCell
+                        name={p.name}
+                        position={p.position}
+                        nflTeam={p.team}
+                        mflId={p.id}
+                        espnId={p.espnId}
+                        size="compact"
+                      />
+                    </span>
+                    <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
+                    <button type="button" class="tb-picker__add" aria-label={`Add ${p.name} to ask`}>+</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {toPicks.length > 0 && (
+              <div class="tb-section">
+                <h3 class="tb-section__title">Their {Number(selectedYear) + 1} picks</h3>
+                <ul class="tb-picker">
+                  {toPicks.map((pick) => (
+                    <li class="tb-picker__item tb-picker__item--pick" data-asset-type="pick" data-asset-id={pick.token} data-side="to" data-pick-label={pick.label}>
+                      <span class="tb-picker__pick-label">{pick.label}</span>
+                      <button type="button" class="tb-picker__add" aria-label={`Add ${pick.label} to ask`}>+</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        </div>
+      </>
+    )}
+  </main>
+
+  <script id="tb-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
+
+  <script>
+    const cfgEl = document.getElementById('tb-config');
+    if (cfgEl) {
+      const config = JSON.parse(cfgEl.textContent || '{}');
+      const { fromFranchiseId, preSelectedPlayer, isAflOwner, playerLookup, pickLookup } = config;
+
+      const zoneFrom = document.getElementById('zone-from');
+      const zoneTo = document.getElementById('zone-to');
+      const fromSumEl = document.getElementById('tb-from-sum');
+      const toSumEl = document.getElementById('tb-to-sum');
+      const balanceFill = document.getElementById('tb-balance-fill');
+      const verdictEl = document.getElementById('tb-balance-verdict');
+      const submitBtn = document.getElementById('tb-submit') as HTMLButtonElement | null;
+      const hintEl = document.getElementById('tb-submit-hint');
+      const commentsEl = document.getElementById('tb-comments') as HTMLTextAreaElement | null;
+      const toSelect = document.getElementById('tb-to-select') as HTMLSelectElement | null;
+
+      type Asset = { type: 'player' | 'pick'; id: string };
+      const offer: { from: Asset[]; to: Asset[] } = { from: [], to: [] };
+
+      // ADP-to-points scale: low ADP = high value. Player worth = max(0, 200 - rank).
+      // Picks worth: derived from average ADP at that round position
+      // (1st = 180, 2nd = 130, 3rd = 90, 4th = 60, 5th+ = 30 each).
+      const PICK_VALUES: Record<number, number> = {
+        1: 180, 2: 130, 3: 90, 4: 60, 5: 40, 6: 30, 7: 25, 8: 20, 9: 15, 10: 10,
+      };
+
+      function playerValue(playerId: string): number {
+        const p = playerLookup[playerId];
+        if (!p) return 0;
+        if (p.adpRank == null) return 5; // un-ranked rookies / depth
+        return Math.max(5, 200 - p.adpRank);
+      }
+
+      function pickValue(token: string): number {
+        const pick = pickLookup[token];
+        if (!pick) return 0;
+        return PICK_VALUES[pick.round] ?? 5;
+      }
+
+      function assetValue(a: Asset): number {
+        return a.type === 'player' ? playerValue(a.id) : pickValue(a.id);
+      }
+
+      function assetLabel(a: Asset): string {
+        if (a.type === 'player') {
+          const p = playerLookup[a.id];
+          return p ? `${p.name} (${p.position}${p.adp != null ? ` · ADP ${p.adp.toFixed(0)}` : ''})` : a.id;
+        }
+        return pickLookup[a.id]?.label ?? a.id;
+      }
+
+      function renderZone(side: 'from' | 'to') {
+        const zone = side === 'from' ? zoneFrom : zoneTo;
+        if (!zone) return;
+        const assets = offer[side];
+        if (assets.length === 0) {
+          zone.innerHTML = `<li class="tb-empty">${side === 'from' ? 'Pick players or picks from your roster below.' : "Pick what you want from their roster."}</li>`;
+          return;
+        }
+        zone.innerHTML = assets
+          .map(
+            (a) => `
+              <li class="tb-asset" data-asset-type="${a.type}" data-asset-id="${a.id}" data-side="${side}">
+                <span class="tb-asset__label">${assetLabel(a)}</span>
+                <button type="button" class="tb-asset__remove" aria-label="Remove">×</button>
+              </li>
+            `
+          )
+          .join('');
+      }
+
+      function updateFairness() {
+        const fromSum = offer.from.reduce((s, a) => s + assetValue(a), 0);
+        const toSum = offer.to.reduce((s, a) => s + assetValue(a), 0);
+        if (fromSumEl) fromSumEl.textContent = String(fromSum);
+        if (toSumEl) toSumEl.textContent = String(toSum);
+
+        const max = Math.max(fromSum, toSum, 1);
+        if (balanceFill) {
+          // Fill direction: 50% center = even, >50% = "your side worth more"
+          const total = fromSum + toSum || 1;
+          const fromPct = (fromSum / total) * 100;
+          balanceFill.style.width = `${fromPct}%`;
+        }
+
+        const diff = fromSum - toSum;
+        const ratio = max ? Math.abs(diff) / max : 0;
+
+        if (verdictEl) {
+          if (fromSum === 0 && toSum === 0) {
+            verdictEl.textContent = 'Add assets to see a fairness read.';
+            verdictEl.dataset.kind = '';
+          } else if (ratio < 0.1) {
+            verdictEl.textContent = 'Looks fair on both sides.';
+            verdictEl.dataset.kind = 'ok';
+          } else if (diff > 0) {
+            verdictEl.textContent = `You're sending ${Math.round(ratio * 100)}% more value.`;
+            verdictEl.dataset.kind = 'warn';
+          } else {
+            verdictEl.textContent = `You're receiving ${Math.round(ratio * 100)}% more value.`;
+            verdictEl.dataset.kind = 'good';
+          }
+        }
+
+        // Submit gating: both sides must have at least one asset
+        const ready = offer.from.length > 0 && offer.to.length > 0 && isAflOwner;
+        if (submitBtn) submitBtn.disabled = !ready;
+        if (hintEl) {
+          if (!ready) {
+            hintEl.textContent = offer.from.length === 0 || offer.to.length === 0 ? 'Add at least one asset on each side.' : '';
+          } else {
+            hintEl.textContent = '';
+          }
+        }
+      }
+
+      function add(side: 'from' | 'to', type: 'player' | 'pick', id: string) {
+        if (offer[side].some((a) => a.id === id && a.type === type)) return;
+        offer[side].push({ type, id });
+        renderZone(side);
+        updateFairness();
+        // Visually mark the row as added
+        const row = document.querySelector(
+          `[data-side="${side}"][data-asset-type="${type}"][data-asset-id="${id}"]`
+        );
+        row?.classList.add('is-selected');
+      }
+
+      function remove(side: 'from' | 'to', type: 'player' | 'pick', id: string) {
+        offer[side] = offer[side].filter((a) => !(a.id === id && a.type === type));
+        renderZone(side);
+        updateFairness();
+        const row = document.querySelector(
+          `[data-side="${side}"][data-asset-type="${type}"][data-asset-id="${id}"]`
+        );
+        row?.classList.remove('is-selected');
+      }
+
+      // Wire picker buttons
+      document.querySelectorAll<HTMLLIElement>('.tb-picker__item').forEach((item) => {
+        const btn = item.querySelector<HTMLButtonElement>('.tb-picker__add');
+        btn?.addEventListener('click', () => {
+          const type = (item.dataset.assetType as 'player' | 'pick') || 'player';
+          const id = item.dataset.assetId || '';
+          const side = (item.dataset.side as 'from' | 'to') || 'from';
+          if (!id) return;
+          if (item.classList.contains('is-selected')) {
+            remove(side, type, id);
+          } else {
+            add(side, type, id);
+          }
+        });
+      });
+
+      // Wire zone removal
+      document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const rm = target.closest<HTMLElement>('.tb-asset__remove');
+        if (!rm) return;
+        const asset = rm.closest<HTMLElement>('.tb-asset');
+        if (!asset) return;
+        const side = asset.dataset.side as 'from' | 'to';
+        const type = asset.dataset.assetType as 'player' | 'pick';
+        const id = asset.dataset.assetId || '';
+        remove(side, type, id);
+      });
+
+      // Wire team switch
+      toSelect?.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('from', fromFranchiseId);
+        url.searchParams.set('to', toSelect.value);
+        url.searchParams.delete('player');
+        window.location.href = url.toString();
+      });
+
+      // Pre-select player from query param
+      if (preSelectedPlayer) {
+        add('from', 'player', preSelectedPlayer);
+      }
+
+      // Submit handler
+      submitBtn?.addEventListener('click', async () => {
+        if (offer.from.length === 0 || offer.to.length === 0) return;
+        const toFranchise = toSelect?.value;
+        if (!toFranchise) return;
+
+        const willGiveUp = offer.from.map((a) => a.id).join(',');
+        const willReceive = offer.to.map((a) => a.id).join(',');
+        const comments = commentsEl?.value.trim() || '';
+
+        const summary =
+          `Send this trade to ${toSelect.options[toSelect.selectedIndex].text}?\n\n` +
+          `You give:\n  ${offer.from.map(assetLabel).join('\n  ')}\n\n` +
+          `You receive:\n  ${offer.to.map(assetLabel).join('\n  ')}`;
+        if (!confirm(summary)) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending…';
+        if (hintEl) hintEl.textContent = '';
+
+        try {
+          const res = await fetch('/api/trades/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              offeredTo: toFranchise,
+              willGiveUp,
+              willReceive,
+              comments,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.success) {
+            throw new Error(data?.message || `HTTP ${res.status}`);
+          }
+          if (hintEl) {
+            hintEl.textContent = 'Trade proposal sent. Redirecting to your roster…';
+            hintEl.dataset.kind = 'ok';
+          }
+          setTimeout(() => {
+            window.location.href = `/afl-fantasy/rosters?franchise=${fromFranchiseId}`;
+          }, 1200);
+        } catch (err: any) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send proposal';
+          if (hintEl) {
+            hintEl.textContent = err?.message || 'Submit failed. Please try again.';
+            hintEl.dataset.kind = 'err';
+          }
+        }
+      });
+
+      renderZone('from');
+      renderZone('to');
+      updateFairness();
+    }
+  </script>
+
+  <style>
+    .trade-builder {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 4rem;
+    }
+
+    .tb-gate {
+      max-width: 480px;
+      margin: 4rem auto;
+      text-align: center;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .tb-header {
+      margin-bottom: 1.25rem;
+    }
+
+    .tb-header__crumbs {
+      font-size: 0.8125rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .tb-header__crumbs a {
+      color: #c41e3a;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .tb-header__crumbs a:hover {
+      text-decoration: underline;
+    }
+
+    .tb-header__title {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .tb-header__sub {
+      margin: 0.25rem 0 0;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    .tb-panels {
+      display: grid;
+      grid-template-columns: 1fr 320px 1fr;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .tb-side {
+      background: #fff;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      padding: 1.25rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .tb-side__header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .tb-side__icon {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+    }
+
+    .tb-side__team {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .tb-side__role {
+      margin: 0;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .tb-to-select {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #0f172a;
+      padding: 0.125rem 0.375rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      background: #fff;
+      cursor: pointer;
+      max-width: 100%;
+    }
+
+    .tb-zone {
+      list-style: none;
+      margin: 0;
+      padding: 0.75rem;
+      min-height: 80px;
+      background: #f9fafb;
+      border-radius: 0.5rem;
+      border: 2px dashed #e5e7eb;
+      display: grid;
+      gap: 0.375rem;
+    }
+
+    .tb-empty {
+      color: #9ca3af;
+      font-size: 0.8125rem;
+      text-align: center;
+      padding: 0.625rem;
+    }
+
+    .tb-asset {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.625rem;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+    }
+
+    .tb-asset__label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .tb-asset__remove {
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 0.25rem;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .tb-asset__remove:hover {
+      background: #fecaca;
+    }
+
+    .tb-section {
+      display: grid;
+      gap: 0.375rem;
+    }
+
+    .tb-section__title {
+      margin: 0;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .tb-picker {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 380px;
+      overflow-y: auto;
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .tb-picker__item {
+      display: grid;
+      grid-template-columns: 1fr auto 28px;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.5rem;
+      border-radius: 0.375rem;
+      border: 1px solid #f3f4f6;
+    }
+
+    .tb-picker__item:hover {
+      background: #f9fafb;
+    }
+
+    .tb-picker__item.is-selected {
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .tb-picker__item--pick {
+      grid-template-columns: 1fr 28px;
+    }
+
+    .tb-picker__cell {
+      min-width: 0;
+    }
+
+    .tb-picker__adp {
+      font-size: 0.75rem;
+      color: #6b7280;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tb-picker__pick-label {
+      font-size: 0.8125rem;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .tb-picker__add {
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 0.25rem;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .tb-picker__add:hover {
+      background: #bbf7d0;
+    }
+
+    .tb-picker__item.is-selected .tb-picker__add {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Center fairness panel */
+    .tb-center {
+      position: sticky;
+      top: 1rem;
+    }
+
+    .tb-fairness {
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .tb-center__title {
+      margin: 0;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .tb-balance {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .tb-balance__row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      color: #374151;
+    }
+
+    .tb-balance__label {
+      color: #6b7280;
+    }
+
+    .tb-balance__value {
+      font-weight: 800;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tb-balance__bar {
+      position: relative;
+      height: 10px;
+      background: #fee2e2;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .tb-balance__bar-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: #dcfce7;
+      transition: width 200ms ease;
+    }
+
+    .tb-balance__verdict {
+      margin: 0.25rem 0 0;
+      font-size: 0.8125rem;
+      text-align: center;
+      color: #6b7280;
+    }
+
+    .tb-balance__verdict[data-kind="ok"] { color: #166534; }
+    .tb-balance__verdict[data-kind="warn"] { color: #991b1b; }
+    .tb-balance__verdict[data-kind="good"] { color: #0369a1; }
+
+    .tb-comments-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .tb-comments {
+      width: 100%;
+      padding: 0.5rem 0.625rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .tb-comments:focus {
+      outline: 2px solid #c41e3a;
+      outline-offset: -1px;
+      border-color: #c41e3a;
+    }
+
+    .tb-btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.375rem;
+      border: 1px solid transparent;
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tb-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .tb-btn--primary {
+      background: #c41e3a;
+      color: #fff;
+    }
+
+    .tb-btn--primary:hover:not(:disabled) {
+      background: #a31a31;
+    }
+
+    .tb-submit-hint {
+      margin: 0;
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-align: center;
+    }
+
+    .tb-submit-hint[data-kind="ok"] { color: #166534; }
+    .tb-submit-hint[data-kind="err"] { color: #991b1b; }
+
+    @media (max-width: 1024px) {
+      .tb-panels {
+        grid-template-columns: 1fr;
+      }
+
+      .tb-center {
+        position: static;
+        order: -1;
+      }
+    }
+  </style>
+</TheLeagueLayout>

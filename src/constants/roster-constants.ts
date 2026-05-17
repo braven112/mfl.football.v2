@@ -78,13 +78,26 @@ export function resolveEspnId(
 /**
  * Get player headshot URL, preferring ESPN high-quality images when available.
  * Falls back to MFL photo, then to default placeholder.
+ *
+ * Uses ESPN's *direct* headshot endpoint (not the combiner CDN). The combiner
+ * variant — `a.espncdn.com/combiner/i?img=...&w=96&h=70` — resizes to a
+ * thumbnail at the CDN, which is bandwidth-friendly for avatar tiles BUT
+ * silently returns nothing for a handful of players whose entries are stale
+ * on the combiner. The direct URL is the canonical source ESPN uses for the
+ * same image, has the same hit rate as MFL (every active player), and is what
+ * PlayerDetailsModal already calls — so keeping the row's initial src in
+ * lockstep means the row and the modal share a cache entry and either both
+ * succeed or both fail. (Discovered when Breece Hall rendered as the MFL
+ * silhouette on the AFL roster while his modal hero loaded fine: the modal
+ * was using the direct URL and the row was using the combiner.)
+ *
  * @param mflId - MFL player ID
  * @param espnId - Optional ESPN player ID for higher quality headshots
  * @returns URL to player headshot image
  */
 export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
   if (espnId) {
-    return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70&cb=1`;
+    return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
   return getPlayerImageUrl(mflId);
 }

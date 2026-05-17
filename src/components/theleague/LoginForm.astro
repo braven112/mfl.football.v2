@@ -18,6 +18,18 @@ export interface Props {
   redirectUrl?: string;
   /** League ID override (defaults to 13522) */
   leagueId?: string;
+  /**
+   * Season year override forwarded to MFL. AFL passes 2025 because its
+   * 2026 league hasn't been created on MFL yet; calling /2026/myleagues
+   * for the AFL leagueId returns nothing, so franchise resolution fails.
+   */
+  seasonYear?: number | string;
+  /** Logo src override — defaults to The League logo */
+  logoSrc?: string;
+  /** Logo alt text */
+  logoAlt?: string;
+  /** Subtitle override under "Sign In" */
+  subtitle?: string;
   /** Optional class for consumer styling hooks */
   class?: string;
 }
@@ -27,6 +39,10 @@ const {
   showLogo = compact,
   redirectUrl,
   leagueId = '13522',
+  seasonYear,
+  logoSrc = '/assets/logos/theleague-logo.svg',
+  logoAlt = 'The League logo',
+  subtitle = 'Enter your MFL credentials',
   class: className,
 } = Astro.props;
 ---
@@ -35,20 +51,21 @@ const {
   class:list={['login-form', { 'login-form--compact': compact }, className]}
   data-redirect-url={redirectUrl}
   data-league-id={leagueId}
+  data-season-year={seasonYear != null ? String(seasonYear) : ''}
 >
   <!-- Branded Header -->
   <div class:list={['login-header', { 'login-header--compact': compact }]}>
     {showLogo && (
       <img
         class="login-header__logo"
-        src="/assets/logos/theleague-logo.svg"
-        alt="The League logo"
+        src={logoSrc}
+        alt={logoAlt}
         width={compact ? 48 : 64}
         height={compact ? 48 : 64}
       />
     )}
     <h2 class="login-header__title">Sign In</h2>
-    <p class="login-header__subtitle">Enter your MFL credentials</p>
+    <p class="login-header__subtitle">{subtitle}</p>
   </div>
 
   <!-- Login Form -->
@@ -149,6 +166,8 @@ const {
     // Server-rendered redirect from component prop (highest priority)
     const componentRedirect = formWrapper.dataset.redirectUrl;
     const leagueId = formWrapper.dataset.leagueId || '13522';
+    const seasonYearAttr = formWrapper.dataset.seasonYear || '';
+    const seasonYear = /^\d{4}$/.test(seasonYearAttr) ? Number(seasonYearAttr) : null;
 
     // ── Form submission ──────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
@@ -183,6 +202,7 @@ const {
             username: usernameInput.value,
             password: passwordInput.value,
             leagueId,
+            ...(seasonYear != null ? { year: seasonYear } : {}),
           }),
         });
 

@@ -1,0 +1,1302 @@
+---
+/**
+ * KeeperPlanner — AFL offseason scratchpad.
+ *
+ * Owners can drag (or click-arrow) players above/below "the line".
+ * Above the line = the 7 keepers they intend to protect. Below the
+ * line = everyone who's going to get cut. Plan auto-saves to the
+ * server (debounced) so it persists across devices.
+ *
+ * The "Finalize keepers" CTA runs sequential POSTs to /api/cut-player
+ * to actually drop the non-keepers from the MFL roster. AFL has no
+ * formal keeper construct on MFL, so the "keepers" themselves are
+ * implicit — they're just whoever's left after the bulk cut.
+ *
+ * Renders inert (no script wiring) on non-owner pages. The roster page
+ * gates inclusion on isOwner, so unauthorized owners never see this UI.
+ */
+
+import PlayerCell from '../theleague/PlayerCell.astro';
+import { KEEPER_LIMIT } from '../../utils/afl-keepers-storage';
+
+export interface KeeperPlannerPlayer {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  age: string;
+  espnId?: string;
+  status: string;
+}
+
+export interface KeeperPlannerDraftPick {
+  year: string;
+  round: string;
+  originalPickFor: string;
+  originalPickForName?: string;
+  isTraded: boolean;
+}
+
+export interface Props {
+  franchiseId: string;
+  year: number;
+  /** All players on the franchise's current roster, ordered however the caller likes. */
+  roster: KeeperPlannerPlayer[];
+  /** Future draft picks the franchise currently owns for this year. */
+  draftPicks?: KeeperPlannerDraftPick[];
+}
+
+const { franchiseId, year, roster, draftPicks = [] } = Astro.props;
+
+// Position group order for the cut pool sort
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF'];
+const positionRank = (pos: string) => {
+  const idx = POSITION_ORDER.indexOf(pos);
+  return idx === -1 ? POSITION_ORDER.length : idx;
+};
+
+// Sort roster: by position group, then name. Initial render is "everyone in the cut pool".
+const sortedRoster = [...roster].sort((a, b) => {
+  const r = positionRank(a.position) - positionRank(b.position);
+  return r !== 0 ? r : a.name.localeCompare(b.name);
+});
+
+const buildModalData = (p: KeeperPlannerPlayer) => ({
+  id: p.id,
+  espnId: p.espnId,
+  name: p.name,
+  position: p.position,
+  nflTeam: p.team,
+  status: p.status,
+  franchiseId,
+});
+
+// Round labels (1st / 2nd / 3rd / 4th / Nth)
+const roundLabel = (round: string) => {
+  const n = parseInt(round, 10);
+  if (!Number.isFinite(n)) return round;
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  const ones = n % 10;
+  if (ones === 1) return `${n}st`;
+  if (ones === 2) return `${n}nd`;
+  if (ones === 3) return `${n}rd`;
+  return `${n}th`;
+};
+---
+
+<section
+  class="keeper-planner"
+  data-keeper-planner
+  data-franchise-id={franchiseId}
+  data-year={year}
+  data-keeper-limit={KEEPER_LIMIT}
+>
+  <header class="kp-intro">
+    <h2 class="kp-intro__title">Keeper planner</h2>
+    <p class="kp-intro__copy">
+      Drag (or use the arrow buttons) to move up to {KEEPER_LIMIT} players above the line.
+      Everyone below the line gets cut when you finalize. Plan saves automatically.
+    </p>
+  </header>
+
+  <!-- Above-the-line: keepers -->
+  <div
+    class="kp-zone kp-zone--keepers"
+    data-zone="keepers"
+    aria-label={`Keepers — drag here to keep (max ${KEEPER_LIMIT})`}
+  >
+    <header class="kp-zone__header">
+      <div class="kp-zone__title-group">
+        <span class="kp-zone__icon kp-zone__icon--keep" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <h3 class="kp-zone__title">Above the line — keepers</h3>
+      </div>
+      <span class="kp-counter" data-counter="keepers">
+        <span data-count="keepers">0</span><span class="kp-counter__sep"> / </span><span>{KEEPER_LIMIT}</span>
+      </span>
+    </header>
+
+    <div class="kp-slots" data-slots>
+      {Array.from({ length: KEEPER_LIMIT }).map((_, i) => (
+        <div class="kp-slot kp-slot--empty" data-slot-index={i} aria-label="Empty keeper slot">
+          <span class="kp-slot__num">{i + 1}</span>
+          <span class="kp-slot__hint">Drag a player here</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Status bar / actions -->
+  <div class="kp-statusbar">
+    <div class="kp-status" data-status>Ready</div>
+    <div class="kp-actions">
+      <button type="button" class="kp-btn kp-btn--ghost" data-action="reset">Reset</button>
+      <button type="button" class="kp-btn kp-btn--primary" data-action="finalize" disabled>
+        Finalize keepers
+      </button>
+    </div>
+  </div>
+
+  <!-- Below-the-line: will be cut -->
+  <div
+    class="kp-zone kp-zone--cuts"
+    data-zone="cuts"
+    aria-label="Players that will be cut on finalize"
+  >
+    <header class="kp-zone__header">
+      <div class="kp-zone__title-group">
+        <span class="kp-zone__icon kp-zone__icon--cut" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <h3 class="kp-zone__title">Below the line — will be cut</h3>
+      </div>
+      <span class="kp-counter" data-counter="cuts">
+        <span data-count="cuts">{roster.length}</span> players
+      </span>
+    </header>
+
+    <ul class="kp-cards" data-cards>
+      {sortedRoster.map((player) => (
+        <li
+          class="kp-card"
+          data-card
+          data-player-id={player.id}
+          draggable="true"
+          tabindex="0"
+        >
+          <div class="kp-card__player">
+            <PlayerCell
+              name={player.name}
+              position={player.position}
+              nflTeam={player.team}
+              mflId={player.id}
+              espnId={player.espnId}
+              playerData={buildModalData(player)}
+              size="compact"
+            />
+          </div>
+          <div class="kp-card__meta">
+            <span class="kp-card__age" title="Age">{player.age}</span>
+            {player.status === 'INJURED_RESERVE' && <span class="kp-card__ir-pill">IR</span>}
+          </div>
+          <button
+            type="button"
+            class="kp-arrow kp-arrow--up"
+            data-move="up"
+            aria-label={`Keep ${player.name}`}
+            title="Move to keepers"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  {draftPicks.length > 0 && (
+    <div class="kp-picks">
+      <header class="kp-picks__header">
+        <h3 class="kp-picks__title">{year + 1} draft assets</h3>
+        <span class="kp-picks__count">{draftPicks.length} picks</span>
+      </header>
+      <ul class="kp-picks__list">
+        {draftPicks.map((pick) => (
+          <li class="kp-picks__pick">
+            <span class="kp-picks__round">{roundLabel(pick.round)} round</span>
+            {pick.isTraded ? (
+              <span class="kp-picks__via">
+                via {pick.originalPickForName ?? pick.originalPickFor}
+              </span>
+            ) : (
+              <span class="kp-picks__via">Original</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</section>
+
+<!-- Finalize confirmation modal -->
+<div class="kp-finalize" id="kp-finalize" role="dialog" aria-modal="true" aria-labelledby="kp-finalize-title" hidden>
+  <div class="kp-finalize__overlay" data-finalize-close></div>
+  <div class="kp-finalize__content">
+    <button type="button" class="kp-finalize__close" data-finalize-close aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+    <h3 class="kp-finalize__title" id="kp-finalize-title">Finalize keepers</h3>
+    <p class="kp-finalize__copy" id="kp-finalize-copy">
+      &mdash;
+    </p>
+
+    <div class="kp-finalize__lists">
+      <div class="kp-finalize__col">
+        <h4>Keeping</h4>
+        <ul id="kp-finalize-keep"></ul>
+      </div>
+      <div class="kp-finalize__col">
+        <h4>Cutting</h4>
+        <ul id="kp-finalize-cut"></ul>
+      </div>
+    </div>
+
+    <div class="kp-finalize__progress" id="kp-finalize-progress" hidden>
+      <div class="kp-finalize__bar"><span id="kp-finalize-bar-fill"></span></div>
+      <p class="kp-finalize__progress-label" id="kp-finalize-progress-label">&mdash;</p>
+    </div>
+
+    <div class="kp-finalize__error" id="kp-finalize-error" hidden></div>
+
+    <div class="kp-finalize__actions">
+      <button type="button" class="kp-btn kp-btn--ghost" data-finalize-cancel>Back</button>
+      <button type="button" class="kp-btn kp-btn--danger" id="kp-finalize-confirm">
+        Cut everyone below the line
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  interface PlayerLookup {
+    id: string;
+    name: string;
+    position: string;
+  }
+
+  const _root = document.querySelector<HTMLElement>('[data-keeper-planner]');
+  if (!_root) {
+    // Component not on this page — bail silently.
+  } else {
+    // Pin into a const so inner closures keep the non-null narrowing
+    const root: HTMLElement = _root;
+    const franchiseId = root.dataset.franchiseId || '';
+    const year = Number(root.dataset.year || '0');
+    const KEEPER_LIMIT = Number(root.dataset.keeperLimit || '7');
+
+    const slotsEl = root.querySelector<HTMLElement>('[data-slots]');
+    const cardsEl = root.querySelector<HTMLElement>('[data-cards]');
+    const counterKeepers = root.querySelector<HTMLElement>('[data-count="keepers"]');
+    const counterCuts = root.querySelector<HTMLElement>('[data-count="cuts"]');
+    const statusEl = root.querySelector<HTMLElement>('[data-status]');
+    const resetBtn = root.querySelector<HTMLButtonElement>('[data-action="reset"]');
+    const finalizeBtn = root.querySelector<HTMLButtonElement>('[data-action="finalize"]');
+
+    // Collect every card's data for fast lookup
+    const cardData = new Map<string, PlayerLookup>();
+    const initialCardsByPos = new Map<string, HTMLLIElement[]>();
+    cardsEl?.querySelectorAll<HTMLLIElement>('[data-card]').forEach((card) => {
+      const id = card.dataset.playerId || '';
+      const nameEl = card.querySelector('.player-cell__name');
+      const posEl = card.querySelector('.player-meta__pos');
+      const name = nameEl?.textContent?.trim() || `Player ${id}`;
+      // Position label may include "QB - RC" style suffix; strip suffix.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() || '';
+      cardData.set(id, { id, name, position: positionRaw });
+      const list = initialCardsByPos.get(positionRaw) || [];
+      list.push(card);
+      initialCardsByPos.set(positionRaw, list);
+    });
+
+    // Local state — single source of truth, mirrored into the DOM each render.
+    const keeperIds: string[] = [];
+
+    let saveTimer: number | null = null;
+    let isSaving = false;
+    let pendingSavePayload: string[] | null = null;
+    const STATUS_RESET_MS = 1800;
+
+    function setStatus(text: string, kind?: 'ok' | 'err' | 'work') {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.dataset.kind = kind || '';
+    }
+
+    function flashStatus(text: string, kind: 'ok' | 'err') {
+      setStatus(text, kind);
+      window.setTimeout(() => {
+        if (statusEl?.textContent === text) setStatus(keeperIds.length === KEEPER_LIMIT ? 'Roster locked in.' : 'Ready');
+      }, STATUS_RESET_MS);
+    }
+
+    async function flushSave() {
+      if (!pendingSavePayload) return;
+      const payload = pendingSavePayload;
+      pendingSavePayload = null;
+      isSaving = true;
+      setStatus('Saving…', 'work');
+      try {
+        const res = await fetch('/api/afl-keepers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ franchise: franchiseId, year, keepers: payload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.message || `Save failed (${res.status})`);
+        }
+        flashStatus('Saved.', 'ok');
+      } catch (err: any) {
+        flashStatus(err?.message || 'Save failed.', 'err');
+      } finally {
+        isSaving = false;
+        if (pendingSavePayload) void flushSave();
+      }
+    }
+
+    function scheduleSave() {
+      pendingSavePayload = keeperIds.slice();
+      if (isSaving) return;
+      if (saveTimer != null) window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+        void flushSave();
+      }, 600);
+    }
+
+    function updateCounters() {
+      if (counterKeepers) counterKeepers.textContent = String(keeperIds.length);
+      if (counterCuts) counterCuts.textContent = String(cardData.size - keeperIds.length);
+      const keepZone = root.querySelector('[data-zone="keepers"]');
+      if (keepZone) keepZone.classList.toggle('kp-zone--full', keeperIds.length >= KEEPER_LIMIT);
+      if (finalizeBtn) finalizeBtn.disabled = keeperIds.length !== KEEPER_LIMIT;
+    }
+
+    function findCard(playerId: string): HTMLLIElement | null {
+      return root.querySelector<HTMLLIElement>(`[data-card][data-player-id="${playerId}"]`);
+    }
+
+    function renderSlots() {
+      if (!slotsEl) return;
+      slotsEl.querySelectorAll<HTMLElement>('[data-slot-index]').forEach((slot) => {
+        const idx = Number(slot.dataset.slotIndex);
+        const playerId = keeperIds[idx];
+        if (playerId) {
+          const info = cardData.get(playerId);
+          slot.classList.remove('kp-slot--empty');
+          slot.classList.add('kp-slot--filled');
+          slot.innerHTML = '';
+
+          const num = document.createElement('span');
+          num.className = 'kp-slot__num';
+          num.textContent = String(idx + 1);
+          slot.appendChild(num);
+
+          // Reuse the full PlayerCell lockup from the matching cut card so the
+          // slot picks up the avatar, NFL logo, position pill, and — critically —
+          // the `data-player-modal` attribute that wires the player-details modal
+          // trigger. Falls back to bare name text when the source card isn't
+          // available (defensive; shouldn't happen in practice).
+          const card = findCard(playerId);
+          const sourceCell = card?.querySelector('.kp-card__player');
+          const wrapper = document.createElement('div');
+          wrapper.className = 'kp-slot__player';
+          if (sourceCell) {
+            wrapper.innerHTML = sourceCell.innerHTML;
+          } else {
+            wrapper.textContent = info?.name || playerId;
+          }
+          slot.appendChild(wrapper);
+
+          const arrow = document.createElement('button');
+          arrow.type = 'button';
+          arrow.className = 'kp-arrow kp-arrow--down';
+          arrow.dataset.move = 'down';
+          arrow.dataset.slotPlayerId = playerId;
+          arrow.setAttribute('aria-label', `Remove ${info?.name || playerId} from keepers`);
+          arrow.title = 'Send back to cut pool';
+          arrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>';
+          slot.appendChild(arrow);
+          slot.draggable = true;
+          slot.dataset.playerId = playerId;
+        } else {
+          slot.classList.add('kp-slot--empty');
+          slot.classList.remove('kp-slot--filled');
+          slot.innerHTML = `<span class="kp-slot__num">${idx + 1}</span><span class="kp-slot__hint">Drag a player here</span>`;
+          slot.draggable = false;
+          delete slot.dataset.playerId;
+        }
+      });
+    }
+
+    function setCardVisibility(playerId: string, hidden: boolean) {
+      const card = findCard(playerId);
+      if (card) card.hidden = hidden;
+    }
+
+    function moveToKeepers(playerId: string): boolean {
+      if (keeperIds.includes(playerId)) return false;
+      if (keeperIds.length >= KEEPER_LIMIT) {
+        flashStatus(`Limit is ${KEEPER_LIMIT}. Bump someone else first.`, 'err');
+        return false;
+      }
+      keeperIds.push(playerId);
+      setCardVisibility(playerId, true);
+      renderSlots();
+      updateCounters();
+      scheduleSave();
+      return true;
+    }
+
+    function moveToCuts(playerId: string): boolean {
+      const idx = keeperIds.indexOf(playerId);
+      if (idx === -1) return false;
+      keeperIds.splice(idx, 1);
+      setCardVisibility(playerId, false);
+      renderSlots();
+      updateCounters();
+      scheduleSave();
+      return true;
+    }
+
+    // ── Arrow buttons (click-based, mobile-friendly) ──
+    root.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const moveBtn = target.closest('[data-move]') as HTMLButtonElement | null;
+      if (!moveBtn) return;
+      e.stopPropagation();
+      const direction = moveBtn.dataset.move;
+      const card = moveBtn.closest('[data-card]') as HTMLElement | null;
+      const slotPlayerId = moveBtn.dataset.slotPlayerId;
+      const playerId = card?.dataset.playerId || slotPlayerId;
+      if (!playerId) return;
+      if (direction === 'up') moveToKeepers(playerId);
+      else if (direction === 'down') moveToCuts(playerId);
+    });
+
+    // ── Drag and drop ──
+    let dragId: string | null = null;
+
+    root.addEventListener('dragstart', (e) => {
+      const card = (e.target as HTMLElement).closest<HTMLElement>('[data-card], [data-slot-index]');
+      if (!card) return;
+      const id = card.dataset.playerId;
+      if (!id) return;
+      dragId = id;
+      try {
+        e.dataTransfer?.setData('text/plain', id);
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      } catch {}
+      card.classList.add('is-dragging');
+    });
+
+    root.addEventListener('dragend', (e) => {
+      const card = (e.target as HTMLElement).closest<HTMLElement>('[data-card], [data-slot-index]');
+      card?.classList.remove('is-dragging');
+      dragId = null;
+      root.querySelectorAll('.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+    });
+
+    root.addEventListener('dragover', (e) => {
+      const zone = (e.target as HTMLElement).closest<HTMLElement>('[data-zone]');
+      if (!zone) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('is-drop-target');
+    });
+
+    root.addEventListener('dragleave', (e) => {
+      const zone = (e.target as HTMLElement).closest<HTMLElement>('[data-zone]');
+      if (!zone) return;
+      // Only remove highlight when leaving the zone entirely
+      const next = e.relatedTarget as Node | null;
+      if (!next || !zone.contains(next)) {
+        zone.classList.remove('is-drop-target');
+      }
+    });
+
+    root.addEventListener('drop', (e) => {
+      const zone = (e.target as HTMLElement).closest<HTMLElement>('[data-zone]');
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.remove('is-drop-target');
+      const id = dragId || e.dataTransfer?.getData('text/plain') || '';
+      if (!id) return;
+      if (zone.dataset.zone === 'keepers') moveToKeepers(id);
+      else if (zone.dataset.zone === 'cuts') moveToCuts(id);
+    });
+
+    // ── Reset ──
+    resetBtn?.addEventListener('click', async () => {
+      if (!keeperIds.length) return;
+      if (!confirm('Clear all keepers from the planner?')) return;
+      while (keeperIds.length) {
+        const id = keeperIds.pop();
+        if (id) setCardVisibility(id, false);
+      }
+      renderSlots();
+      updateCounters();
+      try {
+        setStatus('Resetting…', 'work');
+        const res = await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Reset failed.');
+        flashStatus('Cleared.', 'ok');
+      } catch (err: any) {
+        flashStatus(err?.message || 'Reset failed.', 'err');
+      }
+    });
+
+    // ── Finalize ──
+    const finalizeModal = document.getElementById('kp-finalize') as HTMLDivElement | null;
+    const finalizeOpen = () => {
+      if (!finalizeModal) return;
+      const keepList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-keep');
+      const cutList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-cut');
+      const copy = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
+      const cutIds: string[] = [];
+      for (const id of cardData.keys()) {
+        if (!keeperIds.includes(id)) cutIds.push(id);
+      }
+      if (keepList) {
+        keepList.innerHTML = keeperIds
+          .map((id) => `<li>${cardData.get(id)?.name ?? id}</li>`)
+          .join('');
+      }
+      if (cutList) {
+        cutList.innerHTML = cutIds
+          .map((id) => `<li>${cardData.get(id)?.name ?? id}</li>`)
+          .join('');
+      }
+      if (copy) {
+        copy.textContent = `Confirming will cut ${cutIds.length} players from your roster on MFL. The ${keeperIds.length} above stay. This cannot be undone here.`;
+      }
+      const progress = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress');
+      const error = finalizeModal.querySelector<HTMLElement>('#kp-finalize-error');
+      const confirm = finalizeModal.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
+      if (progress) progress.hidden = true;
+      if (error) error.hidden = true;
+      if (confirm) {
+        confirm.disabled = false;
+        confirm.textContent = 'Cut everyone below the line';
+      }
+      finalizeModal.hidden = false;
+      document.body.style.overflow = 'hidden';
+    };
+
+    const finalizeClose = () => {
+      if (!finalizeModal) return;
+      finalizeModal.hidden = true;
+      document.body.style.overflow = '';
+    };
+
+    finalizeBtn?.addEventListener('click', () => {
+      if (keeperIds.length !== KEEPER_LIMIT) return;
+      finalizeOpen();
+    });
+    finalizeModal?.querySelectorAll('[data-finalize-close]').forEach((el) => {
+      el.addEventListener('click', finalizeClose);
+    });
+    finalizeModal?.querySelectorAll('[data-finalize-cancel]').forEach((el) => {
+      el.addEventListener('click', finalizeClose);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && finalizeModal && !finalizeModal.hidden) finalizeClose();
+    });
+
+    const confirmBtn = finalizeModal?.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
+    confirmBtn?.addEventListener('click', async () => {
+      if (!finalizeModal) return;
+      const progress = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress');
+      const bar = finalizeModal.querySelector<HTMLElement>('#kp-finalize-bar-fill');
+      const label = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress-label');
+      const error = finalizeModal.querySelector<HTMLElement>('#kp-finalize-error');
+      if (error) error.hidden = true;
+
+      const cutIds: string[] = [];
+      for (const id of cardData.keys()) {
+        if (!keeperIds.includes(id)) cutIds.push(id);
+      }
+
+      if (cutIds.length === 0) {
+        finalizeClose();
+        return;
+      }
+
+      if (progress) progress.hidden = false;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Cutting…';
+
+      let done = 0;
+      const failures: Array<{ id: string; name: string; message: string }> = [];
+      for (const id of cutIds) {
+        try {
+          const res = await fetch('/api/cut-player', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: id }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.success) {
+            failures.push({
+              id,
+              name: cardData.get(id)?.name || id,
+              message: data?.message || `HTTP ${res.status}`,
+            });
+          }
+        } catch (err: any) {
+          failures.push({
+            id,
+            name: cardData.get(id)?.name || id,
+            message: err?.message || 'Network error',
+          });
+        }
+        done += 1;
+        if (label) label.textContent = `Cut ${done} of ${cutIds.length}…`;
+        if (bar) bar.style.width = `${Math.round((done / cutIds.length) * 100)}%`;
+      }
+
+      if (failures.length === 0) {
+        if (label) label.textContent = `Cut ${done} of ${cutIds.length}. Reloading roster…`;
+        // Clear the saved plan since cuts are now permanent.
+        try {
+          await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE' });
+        } catch {}
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        if (error) {
+          error.hidden = false;
+          error.innerHTML =
+            `<strong>${failures.length} of ${cutIds.length} cuts failed.</strong><br/>` +
+            failures.map((f) => `${f.name}: ${f.message}`).join('<br/>') +
+            '<br/><br/>The successful cuts went through. Reload the page and try the failures individually.';
+        }
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Retry remaining';
+      }
+    });
+
+    // ── Initial load from server ──
+    async function loadPlan() {
+      try {
+        const res = await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, {
+          headers: { 'Accept': 'application/json' },
+        });
+        if (!res.ok) return; // user might not be the owner — fine
+        const data = await res.json().catch(() => null);
+        const savedKeepers: string[] = data?.plan?.keepers ?? [];
+        for (const id of savedKeepers) {
+          if (cardData.has(id) && keeperIds.length < KEEPER_LIMIT && !keeperIds.includes(id)) {
+            keeperIds.push(id);
+            setCardVisibility(id, true);
+          }
+        }
+        renderSlots();
+        updateCounters();
+      } catch (err) {
+        console.warn('[keeper-planner] load failed:', err);
+      }
+    }
+
+    renderSlots();
+    updateCounters();
+    void loadPlan();
+  }
+</script>
+
+<style>
+  .keeper-planner {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .kp-intro {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .kp-intro__title {
+    margin: 0 0 0.25rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .kp-intro__copy {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  /* Zones */
+  .kp-zone {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: outline 120ms ease;
+    outline: 2px dashed transparent;
+    outline-offset: -2px;
+  }
+
+  .kp-zone.is-drop-target {
+    outline-color: #c41e3a;
+  }
+
+  .kp-zone--full {
+    background: #f0fdf4;
+  }
+
+  .kp-zone__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .kp-zone__title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .kp-zone__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kp-zone__icon--keep {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .kp-zone__icon--cut {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .kp-zone__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #374151;
+  }
+
+  .kp-counter {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #6b7280;
+  }
+
+  .kp-counter__sep {
+    color: #d1d5db;
+  }
+
+  /* Slots */
+  .kp-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .kp-slot {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 2px dashed #e5e7eb;
+    border-radius: 0.5rem;
+    min-height: 56px;
+  }
+
+  .kp-slot--empty .kp-slot__hint {
+    color: #9ca3af;
+    font-size: 0.75rem;
+  }
+
+  .kp-slot--filled {
+    background: #ecfdf5;
+    border-style: solid;
+    border-color: #a7f3d0;
+    cursor: grab;
+  }
+
+  .kp-slot--filled.is-dragging {
+    opacity: 0.5;
+  }
+
+  .kp-slot__num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #6b7280;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid #e5e7eb;
+  }
+
+  .kp-slot--filled .kp-slot__num {
+    background: #166534;
+    color: #fff;
+    border-color: #166534;
+  }
+
+  /* Wrapper for the cloned PlayerCell lockup. Flex so the cell stretches
+     to fill the row while the arrow stays anchored on the right. */
+  .kp-slot__player {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .kp-slot__player .player-cell {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Legacy fallback text styles — used only when the PlayerCell clone
+     fails (defensive path inside renderSlots). */
+  .kp-slot__name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kp-slot__pos {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Status bar */
+  .kp-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .kp-status {
+    font-size: 0.8125rem;
+    color: #4b5563;
+  }
+
+  .kp-status[data-kind="work"] {
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .kp-status[data-kind="ok"] {
+    color: #166534;
+  }
+
+  .kp-status[data-kind="err"] {
+    color: #991b1b;
+  }
+
+  .kp-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .kp-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .kp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .kp-btn--ghost {
+    background: transparent;
+    color: #4b5563;
+    border-color: #d1d5db;
+  }
+
+  .kp-btn--ghost:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+
+  .kp-btn--primary {
+    background: #166534;
+    color: #fff;
+  }
+
+  .kp-btn--primary:hover:not(:disabled) {
+    background: #14532d;
+  }
+
+  .kp-btn--danger {
+    background: #991b1b;
+    color: #fff;
+  }
+
+  .kp-btn--danger:hover:not(:disabled) {
+    background: #7f1d1d;
+  }
+
+  /* Cards (cut pool) */
+  .kp-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .kp-card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: grab;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .kp-card:hover {
+    border-color: #c41e3a;
+  }
+
+  .kp-card.is-dragging {
+    opacity: 0.5;
+  }
+
+  .kp-card[hidden] {
+    display: none;
+  }
+
+  .kp-card__player {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kp-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .kp-card__age {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  .kp-card__ir-pill {
+    display: inline-block;
+    padding: 0 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 0.25rem;
+  }
+
+  /* Promote / demote arrow — same icon-button shape as ufa-action-btn on the
+     roster page so the design system reads consistently across both AFL
+     surfaces. Carries a subtle semantic tint via the SVG color (green to
+     promote, red to demote) without painting the whole button. */
+  .kp-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-gray-200, #d1d5db);
+    background: var(--content-bg, var(--color-white, #fff));
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.18s ease, border-color 0.18s ease,
+      box-shadow 0.18s ease, color 0.18s ease;
+  }
+
+  /* Pin the inline SVG to a consistent visual size — keeps the down arrow
+     from rendering as an empty box when the upstream <svg width=14> attrs
+     get nuked by some browser stylesheets, and matches what we did on the
+     AFLActionModal action tiles. */
+  .kp-arrow svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
+  .kp-arrow:hover {
+    border-color: var(--color-gray-300, #9ca3af);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .kp-arrow:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .kp-arrow--up {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .kp-arrow--up:hover {
+    background: var(--color-success-light, #d1fae5);
+    color: var(--color-success-dark, #047857);
+  }
+
+  /* Down arrow ("send back to cut pool") — keep the same icon-button shape
+     as the up arrow, but in a neutral-dark tone instead of green so the two
+     buttons don't fight for attention. gray-500 was too faint on phone
+     screens — it rendered as a visually-empty box. gray-700 reads cleanly
+     against white at the same weight as the up-arrow chevron. */
+  .kp-arrow--down {
+    color: var(--color-gray-700, #374151);
+  }
+
+  .kp-arrow--down:hover {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* Draft picks */
+  .kp-picks {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .kp-picks__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .kp-picks__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #374151;
+  }
+
+  .kp-picks__count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+  }
+
+  .kp-picks__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .kp-picks__pick {
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    color: #374151;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .kp-picks__round {
+    font-weight: 700;
+  }
+
+  .kp-picks__via {
+    color: #6b7280;
+    font-size: 0.6875rem;
+  }
+
+  /* Finalize modal */
+  .kp-finalize {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .kp-finalize[hidden] {
+    display: none;
+  }
+
+  .kp-finalize__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+  }
+
+  .kp-finalize__content {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    padding: 1.5rem;
+  }
+
+  .kp-finalize__close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .kp-finalize__close:hover {
+    background: #f3f4f6;
+  }
+
+  .kp-finalize__title {
+    margin: 0 2rem 0.5rem 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .kp-finalize__copy {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  .kp-finalize__lists {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .kp-finalize__col h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+
+  .kp-finalize__col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    color: #111827;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .kp-finalize__col li {
+    padding: 0.125rem 0;
+  }
+
+  .kp-finalize__progress {
+    margin-bottom: 0.75rem;
+  }
+
+  .kp-finalize__bar {
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .kp-finalize__bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: #166534;
+    transition: width 200ms ease;
+  }
+
+  .kp-finalize__progress-label {
+    margin: 0.375rem 0 0;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .kp-finalize__error {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .kp-finalize__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 720px) {
+    .kp-slots {
+      grid-template-columns: 1fr;
+    }
+
+    .kp-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .kp-finalize__lists {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

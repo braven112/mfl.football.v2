@@ -1,0 +1,732 @@
+---
+/**
+ * AFLActionModal — owner-only player action menu for AFL roster pages.
+ *
+ * Two-step flow:
+ *   1. Choose action (Move to IR / Activate / Cut / Trade Block / Trade)
+ *   2. Confirm + execute via /api/* — same write endpoints TheLeague uses,
+ *      since user.leagueId on the JWT scopes them per-league.
+ *
+ * AFL has no salary cap, no contracts, no franchise tag, and no extension
+ * — so the action set is intentionally short. Trade routes to the AFL
+ * trade builder (built in a later commit).
+ *
+ * Open via window.openAFLActionModal({ playerId, playerName, status,
+ * isOnTradeBait }). Close via the X button, overlay click, or ESC.
+ */
+---
+
+<div class="afl-action-modal" id="afl-action-modal" role="dialog" aria-modal="true" aria-labelledby="aam-player-name" hidden>
+  <div class="afl-action-modal__overlay" data-aam-close></div>
+  <div class="afl-action-modal__content">
+    <!-- Circular close button — same shape as TheLeague's ContractDeclarationModal (cdm-close) -->
+    <button class="aam-close" data-aam-close aria-label="Close (ESC)" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+
+    <div class="aam-body">
+      <!-- Hero Identity — mirrors TheLeague's cdm-hero (avatar + name + team logo + position) -->
+      <div class="aam-hero">
+        <div class="aam-hero__avatar">
+          <img id="aam-headshot" alt="Player headshot" />
+        </div>
+        <div class="aam-hero__info">
+          <h3 class="aam-hero__name" id="aam-player-name">&mdash;</h3>
+          <div class="aam-hero__meta">
+            <img class="aam-hero__team-logo" id="aam-nfl-logo" src="" alt="" />
+            <span class="aam-hero__meta-text" id="aam-meta-text">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action eyebrow — accent bar + uppercase label, matches cdm-section__title pattern -->
+      <div class="aam-section">
+        <h4 class="aam-section__title">Manage Player</h4>
+
+        <!-- Step 1: action selector -->
+        <div class="aam-step" data-aam-step="select">
+          <ul class="aam-actions" role="list">
+            <li>
+              <button class="aam-action" data-aam-action="ir-to" type="button" hidden>
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-ambulance" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label">Move to IR</span>
+                  <span class="aam-action__desc">Pause participation &mdash; player stays on your roster</span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="aam-action" data-aam-action="ir-from" type="button" hidden>
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-ambulance" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label">Activate from IR</span>
+                  <span class="aam-action__desc">Restore to active roster</span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="aam-action" data-aam-action="trade-bait-add" type="button" hidden>
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-bookmark" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label">Add to Trade Block</span>
+                  <span class="aam-action__desc">Signal that you'd consider trade offers</span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="aam-action" data-aam-action="trade-bait-remove" type="button" hidden>
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-bookmark" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label">Remove from Trade Block</span>
+                  <span class="aam-action__desc">Take this player off the trade block</span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="aam-action" data-aam-action="trade" type="button">
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-exchange" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label">Trade Player</span>
+                  <span class="aam-action__desc">Open the trade builder with this player loaded</span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="aam-action aam-action--destructive" data-aam-action="cut" type="button">
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-user-times" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label">Cut Player</span>
+                  <span class="aam-action__desc">Release back into the auction pool</span>
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Step 2: confirm — replaces the action grid within the same section -->
+        <div class="aam-step" data-aam-step="confirm" hidden>
+          <p class="aam-confirm__copy" id="aam-confirm-copy">&mdash;</p>
+          <div class="aam-error" id="aam-error" hidden></div>
+          <div class="aam-success" id="aam-success" hidden></div>
+          <div class="aam-confirm__actions">
+            <button class="aam-btn aam-btn--ghost" type="button" data-aam-cancel>Back</button>
+            <button class="aam-btn aam-btn--primary" type="button" id="aam-confirm-btn">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  type ModalAction = 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
+
+  interface ActionPayload {
+    playerId: string;
+    playerName: string;
+    /** ROSTER | INJURED_RESERVE — drives which IR action is shown */
+    status?: string;
+    /** Whether the player is currently on the trade block */
+    isOnTradeBait?: boolean;
+    /** Owner's franchise ID (for trade-builder routing) */
+    franchiseId?: string;
+    /** Headshot URL (jpg/png/svg) — drives the hero avatar */
+    headshot?: string;
+    /** Position code (QB/RB/WR/TE/PK/DEF) — shown next to NFL logo */
+    position?: string;
+    /** NFL team code in any format — used to load the team logo SVG */
+    nflTeam?: string;
+  }
+
+  const _modalEl = document.getElementById('afl-action-modal') as HTMLDivElement | null;
+  if (!_modalEl) {
+    console.error('[afl-action-modal] root element not found');
+  } else {
+    // Pin into a const so closures keep the non-null narrowing
+    const modal: HTMLDivElement = _modalEl;
+    const playerNameEl = modal.querySelector('#aam-player-name') as HTMLElement;
+    const headshotEl = modal.querySelector('#aam-headshot') as HTMLImageElement;
+    const nflLogoEl = modal.querySelector('#aam-nfl-logo') as HTMLImageElement;
+    const metaTextEl = modal.querySelector('#aam-meta-text') as HTMLElement;
+    const stepSelect = modal.querySelector('[data-aam-step="select"]') as HTMLElement;
+    const stepConfirm = modal.querySelector('[data-aam-step="confirm"]') as HTMLElement;
+    const confirmCopy = modal.querySelector('#aam-confirm-copy') as HTMLElement;
+    const confirmBtn = modal.querySelector('#aam-confirm-btn') as HTMLButtonElement;
+    const errorEl = modal.querySelector('#aam-error') as HTMLElement;
+    const successEl = modal.querySelector('#aam-success') as HTMLElement;
+
+    // Default fallback headshot — same MFL no_photo URL the rest of the codebase
+    // uses (see DEFAULT_HEADSHOT_URL in src/constants/roster-constants.ts and
+    // PlayerDetailsModal's DEFAULT_IMG). Keeps the avatar tile from breaking
+    // when ESPN doesn't have a headshot for a player (free agents, defenses,
+    // pre-draft rookies).
+    const DEFAULT_HEADSHOT =
+      'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+
+    // MFL → standard NFL team code translation. Just the ones MFL uses
+    // differently from the standard 2-3 letter codes (everything else is
+    // already valid). Kept local to avoid pulling in nfl-logo.ts which
+    // would force this script out of inline mode.
+    const MFL_TO_STD: Record<string, string> = {
+      JAC: 'JAX',
+      LAR: 'LA',
+      LA: 'LA',
+      LAA: 'LAR',
+      WAS: 'WSH',
+      WSH: 'WSH',
+    };
+    function normalizeNflCode(code: string): string {
+      if (!code) return '';
+      const up = code.toUpperCase().trim();
+      return MFL_TO_STD[up] ?? up;
+    }
+
+    const actionButtons = {
+      'ir-to': modal.querySelector('[data-aam-action="ir-to"]') as HTMLButtonElement,
+      'ir-from': modal.querySelector('[data-aam-action="ir-from"]') as HTMLButtonElement,
+      'cut': modal.querySelector('[data-aam-action="cut"]') as HTMLButtonElement,
+      'trade-bait-add': modal.querySelector('[data-aam-action="trade-bait-add"]') as HTMLButtonElement,
+      'trade-bait-remove': modal.querySelector('[data-aam-action="trade-bait-remove"]') as HTMLButtonElement,
+      'trade': modal.querySelector('[data-aam-action="trade"]') as HTMLButtonElement,
+    };
+
+    let currentPayload: ActionPayload | null = null;
+    let pendingAction: ModalAction | null = null;
+
+    function openModal(payload: ActionPayload) {
+      currentPayload = payload;
+      pendingAction = null;
+
+      // Hero — mirrors TheLeague's cdm-hero populator. Headshot falls back to
+      // the default silhouette when MFL has no photo (pre-draft rookies, free
+      // agents); team logo falls back to the generic NFL shield when team is
+      // missing. The image's onerror attribute swaps to the same default if
+      // the headshot URL 404s mid-load.
+      playerNameEl.textContent = payload.playerName;
+      headshotEl.src = payload.headshot || DEFAULT_HEADSHOT;
+      headshotEl.alt = `${payload.playerName} headshot`;
+      headshotEl.onerror = () => { headshotEl.src = DEFAULT_HEADSHOT; };
+      const teamCode = payload.nflTeam ? normalizeNflCode(payload.nflTeam) : '';
+      nflLogoEl.src = teamCode
+        ? `/assets/nfl-logos/${teamCode}.svg`
+        : '/assets/nfl-logos/NFL.svg';
+      nflLogoEl.alt = teamCode || 'NFL';
+      metaTextEl.textContent = payload.position || '';
+
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+      successEl.hidden = true;
+      successEl.textContent = '';
+
+      const onIR = payload.status === 'INJURED_RESERVE';
+      actionButtons['ir-to'].hidden = onIR;
+      actionButtons['ir-from'].hidden = !onIR;
+      actionButtons['trade-bait-add'].hidden = !!payload.isOnTradeBait;
+      actionButtons['trade-bait-remove'].hidden = !payload.isOnTradeBait;
+
+      stepSelect.hidden = false;
+      stepConfirm.hidden = true;
+      modal.hidden = false;
+      modal.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.hidden = true;
+      modal.classList.remove('is-open');
+      document.body.style.overflow = '';
+      currentPayload = null;
+      pendingAction = null;
+    }
+
+    function confirmCopyFor(action: ModalAction, name: string): string {
+      switch (action) {
+        case 'ir-to':
+          return `Move ${name} to Injured Reserve? They'll free up an active roster slot but stay under your control.`;
+        case 'ir-from':
+          return `Activate ${name} from Injured Reserve? They'll move back into your active roster.`;
+        case 'cut':
+          return `Release ${name}? This drops them back into the AFL auction pool. This action cannot be undone here.`;
+        case 'trade-bait-add':
+          return `Add ${name} to your public trade block? Other owners will see this player is available.`;
+        case 'trade-bait-remove':
+          return `Remove ${name} from your trade block?`;
+        case 'trade':
+          return `Open the trade builder with ${name} preloaded?`;
+      }
+    }
+
+    function showStep(step: 'select' | 'confirm') {
+      stepSelect.hidden = step !== 'select';
+      stepConfirm.hidden = step !== 'confirm';
+    }
+
+    function pickAction(action: ModalAction) {
+      if (!currentPayload) return;
+      pendingAction = action;
+      confirmCopy.textContent = confirmCopyFor(action, currentPayload.playerName);
+      confirmBtn.textContent = action === 'cut' ? 'Cut Player' : 'Confirm';
+      confirmBtn.classList.toggle('aam-btn--danger', action === 'cut');
+      confirmBtn.disabled = false;
+      errorEl.hidden = true;
+      successEl.hidden = true;
+      showStep('confirm');
+    }
+
+    async function postJson(url: string, body: any): Promise<{ ok: boolean; data: any }> {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok && (data?.success ?? true), data };
+    }
+
+    function refreshRowAfterIR(playerId: string, newStatus: string) {
+      const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
+      if (!row) return;
+      row.dataset.playerStatus = newStatus;
+      const badge = row.querySelector('.status-badge');
+      if (badge) {
+        const onIR = newStatus === 'INJURED_RESERVE';
+        badge.textContent = onIR ? 'IR' : 'Active';
+        badge.classList.toggle('status-badge--ir', onIR);
+        badge.classList.toggle('status-badge--active', !onIR);
+      }
+    }
+
+    function removeRowAfterCut(playerId: string) {
+      const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
+      if (!row) return;
+      const tbody = row.parentElement;
+      row.remove();
+      // If a position block emptied out, hide it
+      if (tbody && tbody.children.length === 0) {
+        const block = tbody.closest('.position-block');
+        if (block) (block as HTMLElement).hidden = true;
+      }
+    }
+
+    function refreshRowAfterTradeBait(playerId: string, isOn: boolean) {
+      const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
+      if (!row) return;
+      row.dataset.onTradeBait = isOn ? 'true' : 'false';
+      const nameEl = row.querySelector('.player-cell__name');
+      if (!nameEl) return;
+      const existing = nameEl.querySelector('.bait-badge');
+      if (isOn && !existing) {
+        const badge = document.createElement('span');
+        badge.className = 'bait-badge';
+        badge.title = 'On trade block';
+        badge.textContent = 'TB';
+        nameEl.appendChild(badge);
+      } else if (!isOn && existing) {
+        existing.remove();
+      }
+    }
+
+    async function executeAction() {
+      if (!currentPayload || !pendingAction) return;
+      const { playerId, playerName, franchiseId } = currentPayload;
+      const action = pendingAction;
+
+      if (action === 'trade') {
+        const target = `/afl-fantasy/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        window.location.href = target;
+        return;
+      }
+
+      confirmBtn.disabled = true;
+      const origLabel = confirmBtn.textContent;
+      confirmBtn.textContent = 'Working…';
+      errorEl.hidden = true;
+
+      try {
+        let result: { ok: boolean; data: any };
+        if (action === 'cut') {
+          result = await postJson('/api/cut-player', { playerId });
+        } else if (action === 'ir-to') {
+          result = await postJson('/api/move-to-ir', { playerId, direction: 'to' });
+        } else if (action === 'ir-from') {
+          result = await postJson('/api/move-to-ir', { playerId, direction: 'from' });
+        } else if (action === 'trade-bait-add') {
+          result = await postJson('/api/trade-bait', { playerId, action: 'add' });
+        } else if (action === 'trade-bait-remove') {
+          result = await postJson('/api/trade-bait', { playerId, action: 'remove' });
+        } else {
+          throw new Error(`Unknown action: ${action}`);
+        }
+
+        if (!result.ok) {
+          throw new Error(result.data?.message || result.data?.error || 'Request failed');
+        }
+
+        // Optimistic UI updates so the user sees the result without reload
+        if (action === 'ir-to') refreshRowAfterIR(playerId, 'INJURED_RESERVE');
+        if (action === 'ir-from') refreshRowAfterIR(playerId, 'ROSTER');
+        if (action === 'cut') removeRowAfterCut(playerId);
+        if (action === 'trade-bait-add') refreshRowAfterTradeBait(playerId, true);
+        if (action === 'trade-bait-remove') refreshRowAfterTradeBait(playerId, false);
+
+        successEl.textContent = `${playerName} — done.`;
+        successEl.hidden = false;
+        confirmBtn.textContent = origLabel;
+        setTimeout(() => closeModal(), 1200);
+      } catch (err: any) {
+        errorEl.textContent = err?.message || 'Something went wrong. Please try again.';
+        errorEl.hidden = false;
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = origLabel;
+      }
+    }
+
+    // ── Event wiring ──
+    Object.entries(actionButtons).forEach(([action, btn]) => {
+      btn?.addEventListener('click', () => pickAction(action as ModalAction));
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      void executeAction();
+    });
+
+    modal.querySelectorAll('[data-aam-close]').forEach((el) => {
+      el.addEventListener('click', () => closeModal());
+    });
+
+    modal.querySelectorAll('[data-aam-cancel]').forEach((el) => {
+      el.addEventListener('click', () => showStep('select'));
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+
+    // Expose a global opener so any roster table on the page can trigger us
+    (window as any).openAFLActionModal = openModal;
+  }
+</script>
+
+<style>
+  .afl-action-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .afl-action-modal[hidden] {
+    display: none;
+  }
+
+  .afl-action-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+  }
+
+  .afl-action-modal__content {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    padding: 1.25rem;
+    animation: aam-pop 140ms ease-out;
+  }
+
+  @keyframes aam-pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Circular close button — matches cdm-close in TheLeague's ContractDeclarationModal */
+  .aam-close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 50%;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .aam-close:hover {
+    background: var(--color-gray-200, #e5e7eb);
+    color: var(--color-gray-900, #111827);
+  }
+
+  .aam-body {
+    padding-right: 2.25rem; /* leave room for the absolute-positioned close button */
+  }
+
+  /* Player Identity Hero — mirrors TheLeague's cdm-hero block: square rounded
+     avatar on the left, large bold name + meta row to its right. Matches the
+     hero typography of the player-details + contract-declaration modals so
+     all three player-centric modals read as siblings. */
+  .aam-hero {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .aam-hero__avatar {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 0.625rem;
+    overflow: hidden;
+    background: var(--color-gray-100, #f3f4f6);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .aam-hero__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .aam-hero__info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .aam-hero__name {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--color-gray-900, #0f172a);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .aam-hero__meta {
+    margin-top: 0.375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4375rem;
+  }
+
+  .aam-hero__team-logo {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .aam-hero__meta-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    letter-spacing: 0.02em;
+  }
+
+  /* Action eyebrow — accent bar + uppercase label, same pattern TheLeague
+     uses for section titles inside CDM. */
+  .aam-section {
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .aam-section__title {
+    margin: 0 0 0.625rem;
+    padding-left: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-left: 3px solid var(--color-primary, #1c497c);
+    line-height: 1.4;
+  }
+
+  .aam-actions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  .aam-action {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    color: #111827;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+
+  .aam-action[hidden] {
+    display: none;
+  }
+
+  .aam-action:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #c41e3a;
+  }
+
+  .aam-action:focus-visible {
+    outline: 2px solid #c41e3a;
+    outline-offset: 1px;
+  }
+
+  /* Icon tile — same sizing/treatment as cdm-action-option__icon. SVG inside
+     uses currentColor + responsive width/height so the sprite scales with the
+     tile. */
+  .aam-action__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 0.5rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .aam-action__icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  .aam-action--destructive .aam-action__icon {
+    background: var(--color-error-light, #fee2e2);
+    color: var(--color-error-dark, #991b1b);
+  }
+
+  .aam-action__body {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .aam-action__label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .aam-action__desc {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .aam-confirm__copy {
+    margin: 0 0 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: #374151;
+  }
+
+  .aam-error,
+  .aam-success {
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .aam-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  .aam-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+  }
+
+  .aam-confirm__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .aam-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+
+  .aam-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .aam-btn--ghost {
+    background: transparent;
+    color: #4b5563;
+    border-color: #d1d5db;
+  }
+
+  .aam-btn--ghost:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+
+  .aam-btn--primary {
+    background: #c41e3a;
+    color: #fff;
+  }
+
+  .aam-btn--primary:hover:not(:disabled) {
+    background: #a31a31;
+  }
+
+  .aam-btn--danger {
+    background: #991b1b;
+    color: #fff;
+  }
+
+  .aam-btn--danger:hover:not(:disabled) {
+    background: #7f1d1d;
+  }
+</style>

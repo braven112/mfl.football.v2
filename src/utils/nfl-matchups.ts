@@ -1,0 +1,260 @@
+/**
+ * NFL matchup helper — used by AFL roster page (and reusable by anything
+ * else that wants to surface "this week's NFL opponent" data alongside
+ * fantasy players.
+ *
+ * Two pieces of data feed the Coach-mode columns:
+ *
+ *   1. ESPN scoreboard for the current NFL week — gives each NFL team's
+ *      opponent for the week + home/away.
+ *
+ *   2. fantasyPointsAllowed.json (committed under data/theleague/mfl-feeds/
+ *      because the data is NFL-wide, not league-specific) — gives each NFL
+ *      team's defensive rank by position so we can color the OPP # pill.
+ *
+ * Both are cached in-process for 5 minutes so multiple page renders during
+ * a single dev session (or repeated SSR hits) don't hammer ESPN.
+ */
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from './league-year';
+import liveOddsFallbackData from '../data/nfl/live-odds.json';
+
+export interface NflMatchup {
+  /** Opponent NFL team code (e.g. "BUF") */
+  opponent: string;
+  /** True when the player's NFL team is hosting */
+  isHome: boolean;
+  /**
+   * Point spread as ESPN reports it ("BUF -2.5", "PHI -7", etc.) Caller
+   * decides how to display. Empty string when ESPN hasn't priced the game.
+   */
+  spread: string;
+  /** Over/Under for the game ("47.5", "N/A", or empty). */
+  overUnder: string;
+  /** Game time in ISO 8601 (helps callers detect "BYE" vs "not yet scheduled") */
+  date: string;
+  /**
+   * Stadium weather snapshot from ESPN. null when ESPN doesn't include it
+   * (dome games, indoor venues, future games before forecast lands).
+   */
+  weather: { temperature?: number; displayValue?: string } | null;
+}
+
+export interface PositionFpa {
+  rank: number; // 1 (worst defense) to 32 (best defense)
+  avg: number;
+}
+
+export interface FpaData {
+  /** Map of NFL team code to per-position FPA stats */
+  byTeam: Record<string, Record<string, PositionFpa>>;
+  /** Number of completed weeks the FPA was computed across */
+  completedWeeks?: number;
+}
+
+const ODDS_TTL_MS = 5 * 60 * 1000;
+type OddsMap = Record<string, NflMatchup>;
+const oddsCache = new Map<string, { data: OddsMap; fetchedAt: number }>();
+const fpaCache = new Map<number, FpaData | null>();
+
+/** ESPN sometimes uses a different code than MFL/our NFL logos. */
+function normalizeNflCode(code: string): string {
+  if (!code) return '';
+  const map: Record<string, string> = {
+    JAC: 'JAX',
+    WAS: 'WSH',
+  };
+  const upper = code.toUpperCase();
+  return map[upper] ?? upper;
+}
+
+/**
+ * Materialize the static src/data/nfl/live-odds.json fallback into an
+ * OddsMap. The fallback file is a snapshot of the most recent real NFL
+ * week (or the upcoming Week 1 once it's generated) so the Coach-tab
+ * columns render something useful during the offseason instead of "BYE"
+ * for every player.
+ */
+function fallbackOddsMap(): OddsMap {
+  const map: OddsMap = {};
+  for (const [code, record] of Object.entries(liveOddsFallbackData as Record<string, any>)) {
+    if (!record?.opponent) continue;
+    map[normalizeNflCode(code)] = {
+      opponent: normalizeNflCode(record.opponent),
+      isHome: !!record.isHome,
+      spread: typeof record.spread === 'string' ? record.spread : '',
+      overUnder: typeof record.overUnder === 'string' ? record.overUnder : '',
+      date: typeof record.date === 'string' ? record.date : '',
+      weather: record.weather && typeof record.weather === 'object'
+        ? {
+            temperature:
+              typeof record.weather.temperature === 'number' ? record.weather.temperature : undefined,
+            displayValue:
+              typeof record.weather.displayValue === 'string' ? record.weather.displayValue : undefined,
+          }
+        : null,
+    };
+  }
+  return map;
+}
+
+/**
+ * Fetch the ESPN scoreboard for a given week and build a {teamCode → matchup}
+ * map. During the offseason — when MFL has rolled into the new league year
+ * but the previous NFL season hasn't been replaced yet — we skip ESPN and
+ * return the static fallback so the page never renders all-BYE. Outside of
+ * that window we still fall back to the snapshot on any ESPN failure.
+ */
+export async function fetchNflMatchups(
+  week: number,
+  options: { signal?: AbortSignal; year?: number } = {}
+): Promise<OddsMap> {
+  // Offseason short-circuit: leagueYear ahead of seasonYear means we're
+  // past Feb 14 but before Labor Day — no live NFL games to fetch.
+  if (getCurrentLeagueYear() > getCurrentSeasonYear()) {
+    return fallbackOddsMap();
+  }
+
+  const cacheKey = `${options.year ?? new Date().getFullYear()}-${week}`;
+  const cached = oddsCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < ODDS_TTL_MS) {
+    return cached.data;
+  }
+
+  // ESPN: regular season = seasontype 2 (weeks 1-18), playoffs = seasontype 3 (weeks 1-4)
+  const isPlayoffs = week > 18;
+  const seasonType = isPlayoffs ? 3 : 2;
+  const espnWeek = isPlayoffs ? week - 18 : week;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${espnWeek}&seasontype=${seasonType}`;
+
+  try {
+    const res = await fetch(url, {
+      signal: options.signal ?? AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      console.warn(`[nfl-matchups] ESPN returned ${res.status} for week ${week}; using fallback`);
+      const fb = fallbackOddsMap();
+      oddsCache.set(cacheKey, { data: fb, fetchedAt: Date.now() });
+      return fb;
+    }
+    const data = await res.json();
+    const map: OddsMap = {};
+    for (const event of data?.events ?? []) {
+      const competition = event?.competitions?.[0];
+      if (!competition) continue;
+      const home = competition.competitors?.find((t: any) => t.homeAway === 'home');
+      const away = competition.competitors?.find((t: any) => t.homeAway === 'away');
+      if (!home?.team?.abbreviation || !away?.team?.abbreviation) continue;
+      const homeCode = normalizeNflCode(home.team.abbreviation);
+      const awayCode = normalizeNflCode(away.team.abbreviation);
+      const odds = competition.odds?.[0] ?? {};
+      const spread = typeof odds.details === 'string' ? odds.details : '';
+      const overUnder = odds.overUnder != null ? String(odds.overUnder) : '';
+      const weather = competition.weather
+        ? {
+            temperature:
+              typeof competition.weather.temperature === 'number'
+                ? competition.weather.temperature
+                : undefined,
+            displayValue:
+              typeof competition.weather.displayValue === 'string'
+                ? competition.weather.displayValue
+                : undefined,
+          }
+        : null;
+      const date = typeof event.date === 'string' ? event.date : '';
+      const base = { spread, overUnder, weather, date };
+      map[homeCode] = { opponent: awayCode, isHome: true, ...base };
+      map[awayCode] = { opponent: homeCode, isHome: false, ...base };
+    }
+    // Empty ESPN response (between weeks, schedule not yet published) →
+    // use the fallback snapshot so the table still renders something.
+    if (Object.keys(map).length === 0) {
+      const fb = fallbackOddsMap();
+      oddsCache.set(cacheKey, { data: fb, fetchedAt: Date.now() });
+      return fb;
+    }
+    oddsCache.set(cacheKey, { data: map, fetchedAt: Date.now() });
+    return map;
+  } catch (err) {
+    console.warn('[nfl-matchups] ESPN fetch failed; using fallback:', err);
+    const fb = fallbackOddsMap();
+    oddsCache.set(cacheKey, { data: fb, fetchedAt: Date.now() });
+    return fb;
+  }
+}
+
+/**
+ * Load FPA data for a season from the committed JSON file. Cached per year
+ * so we only hit disk once. Returns null when the file doesn't exist (early
+ * in a season, missing snapshot).
+ */
+export function loadFantasyPointsAllowed(year: number): FpaData | null {
+  if (fpaCache.has(year)) return fpaCache.get(year) ?? null;
+
+  const path = resolve(
+    process.cwd(),
+    `data/theleague/mfl-feeds/${year}/fantasyPointsAllowed.json`
+  );
+  try {
+    const raw = readFileSync(path, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const result: FpaData = {
+      byTeam: parsed.fantasyPointsAllowed ?? {},
+      completedWeeks: parsed.completedWeeks,
+    };
+    fpaCache.set(year, result);
+    return result;
+  } catch {
+    fpaCache.set(year, null);
+    return null;
+  }
+}
+
+/**
+ * Reverse mapping for FPA lookup: ESPN-style codes ↔ MFL-style codes.
+ * The committed FPA file uses MFL codes (JAC, WAS); ESPN scoreboard
+ * returns ESPN codes (JAX, WSH). Try both at lookup time.
+ */
+const FPA_LOOKUP_FALLBACKS: Record<string, string> = {
+  JAX: 'JAC',
+  WSH: 'WAS',
+  JAC: 'JAX',
+  WAS: 'WSH',
+};
+
+/**
+ * Look up the FPA stats for a given (opponent team, player position) pair.
+ * Returns null when either the team or the position isn't in the data.
+ * Defenses (DEF/Def) and kickers (PK) typically don't have FPA — caller
+ * decides whether to show "—".
+ */
+export function getOpponentFpa(
+  fpa: FpaData | null,
+  opponentCode: string,
+  position: string
+): PositionFpa | null {
+  if (!fpa || !opponentCode) return null;
+  const upper = opponentCode.toUpperCase();
+  const teamStats =
+    fpa.byTeam[upper] ??
+    fpa.byTeam[FPA_LOOKUP_FALLBACKS[upper] ?? ''];
+  if (!teamStats) return null;
+  return teamStats[position] ?? null;
+}
+
+/**
+ * Bucket an FPA rank into one of four tiers for color coding.
+ *   tier 4 = ranks 25-32 (worst defense → green / good matchup)
+ *   tier 3 = ranks 17-24
+ *   tier 2 = ranks  9-16
+ *   tier 1 = ranks  1- 8 (best defense → red / tough matchup)
+ */
+export function fpaTier(rank: number): 1 | 2 | 3 | 4 {
+  if (rank >= 25) return 4;
+  if (rank >= 17) return 3;
+  if (rank >= 9) return 2;
+  return 1;
+}
