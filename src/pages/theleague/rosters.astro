@@ -2313,12 +2313,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
               <!-- GM Mode Columns -->
               <th scope="col" data-column="rank" class="gm-col ranking-col" data-sortable data-sort-key="topRanking" id="rankColHeader">Rank <span class="sort-arrow"></span></th>
-              <th scope="col" data-column="years" class="gm-col" data-sortable data-sort-key="contractYears">Yrs <span class="sort-arrow"></span></th>
               <th scope="col" data-column="actions" class="actions-column gm-col" title="Contract Actions">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-label="Actions" style="opacity:0.5;vertical-align:middle;">
                   <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
                 </svg>
               </th>
+              <th scope="col" data-column="years" class="gm-col" data-sortable data-sort-key="contractYears">Yrs <span class="sort-arrow"></span></th>
               {SALARY_YEARS.map((year, index) => (
                 <th scope="col" data-column={`year${index + 1}`} class="gm-col" data-sortable data-sort-key={`salary_${index}`}>{year} <span class="sort-arrow"></span></th>
               ))}
@@ -2328,8 +2328,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             <tr class="roster-totals roster-totals--dead gm-row">
               <td data-column="player" class="roster-totals__label">Dead Money</td>
               <td data-column="rank" class="gm-col ranking-col"></td>
-              <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
+              <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`} class="gm-col">
                   {formatCurrency(initialDeadMoney[index] ?? 0)}
@@ -2339,8 +2339,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             <tr class="roster-totals gm-row">
               <td data-column="player" class="roster-totals__label">Total Salary</td>
               <td data-column="rank" class="gm-col ranking-col"></td>
-              <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
+              <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`} class="gm-col">
                   {formatCurrency((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))}
@@ -2350,8 +2350,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             <tr class="roster-totals roster-totals--cap gm-row">
               <td data-column="player" class="roster-totals__label">Salary Cap</td>
               <td data-column="rank" class="gm-col ranking-col"></td>
-              <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
+              <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`} class="gm-col">
                   {formatCurrency(initialCapLimit)}
@@ -2361,8 +2361,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             <tr class="roster-totals roster-totals--space gm-row">
               <td data-column="player" class="roster-totals__label">Cap Space</td>
               <td data-column="rank" class="gm-col ranking-col"></td>
-              <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
+              <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`} class="gm-col">
                   {formatCurrency(
@@ -2558,7 +2558,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
                 {/* GM Mode Cells */}
                 <td data-label="Rank" data-column="rank" class="gm-col ranking-col ranking-cell"></td>
-                <td data-label="Yrs" data-column="years" class="gm-col years-cell" data-player-id={player.id}>{player.contractYears || 0}</td>
                 <td data-label="Actions" data-column="actions" class="actions-cell gm-col">
                   <button
                     class="ufa-action-btn"
@@ -2581,6 +2580,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                     </svg>
                   </button>
                 </td>
+                <td data-label="Yrs" data-column="years" class="gm-col years-cell" data-player-id={player.id}>{player.contractYears || 0}</td>
                 {SALARY_YEARS.map((year, index) => {
                   const isUfa = !(player.contractYears > index);
                   const isFirstYearUfa = isUfa && player.contractYears === index;
@@ -7057,8 +7057,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
             ${/* GM Mode Cells */ ''}
             <td data-label="Rank" data-column="rank" class="gm-col ranking-col ranking-cell"></td>
-            <td data-label="Yrs" data-column="years" class="gm-col years-cell" data-player-id="${player.id}">${buildYearsCellContent(player.id, displayYears, currentTeam)}</td>
             ${actionsCell}
+            <td data-label="Yrs" data-column="years" class="gm-col years-cell" data-player-id="${player.id}">${buildYearsCellContent(player.id, displayYears, currentTeam)}</td>
             ${salaryCells}
           </tr>`;
         })
