@@ -107,6 +107,15 @@
   color: #111;
   font-size: var(--player-name-size);
   line-height: 1.3;
+  /* Keep the lockup tight: "Lastname, Firstname" must stay on one line so
+     the table doesn't grow a second row of cell-height to host an awkward
+     orphan word. The column itself widens to fit (tables auto-size column
+     width to content unless capped); on extremely narrow viewports the
+     ellipsis kicks in instead of wrapping. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .player-cell__name--clickable {
