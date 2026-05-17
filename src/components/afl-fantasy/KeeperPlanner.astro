@@ -385,21 +385,28 @@ const roundLabel = (round: string) => {
           slot.classList.remove('kp-slot--empty');
           slot.classList.add('kp-slot--filled');
           slot.innerHTML = '';
+
           const num = document.createElement('span');
           num.className = 'kp-slot__num';
           num.textContent = String(idx + 1);
           slot.appendChild(num);
-          const label = document.createElement('div');
-          label.className = 'kp-slot__player';
-          const nameSpan = document.createElement('span');
-          nameSpan.className = 'kp-slot__name';
-          nameSpan.textContent = info?.name || playerId;
-          const posSpan = document.createElement('span');
-          posSpan.className = 'kp-slot__pos';
-          posSpan.textContent = info?.position || '';
-          label.appendChild(nameSpan);
-          label.appendChild(posSpan);
-          slot.appendChild(label);
+
+          // Reuse the full PlayerCell lockup from the matching cut card so the
+          // slot picks up the avatar, NFL logo, position pill, and — critically —
+          // the `data-player-modal` attribute that wires the player-details modal
+          // trigger. Falls back to bare name text when the source card isn't
+          // available (defensive; shouldn't happen in practice).
+          const card = findCard(playerId);
+          const sourceCell = card?.querySelector('.kp-card__player');
+          const wrapper = document.createElement('div');
+          wrapper.className = 'kp-slot__player';
+          if (sourceCell) {
+            wrapper.innerHTML = sourceCell.innerHTML;
+          } else {
+            wrapper.textContent = info?.name || playerId;
+          }
+          slot.appendChild(wrapper);
+
           const arrow = document.createElement('button');
           arrow.type = 'button';
           arrow.className = 'kp-arrow kp-arrow--down';
@@ -849,12 +856,22 @@ const roundLabel = (round: string) => {
     border-color: #166534;
   }
 
+  /* Wrapper for the cloned PlayerCell lockup. Flex so the cell stretches
+     to fill the row while the arrow stays anchored on the right. */
   .kp-slot__player {
-    display: grid;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .kp-slot__player .player-cell {
     flex: 1;
     min-width: 0;
   }
 
+  /* Legacy fallback text styles — used only when the PlayerCell clone
+     fails (defensive path inside renderSlots). */
   .kp-slot__name {
     font-size: 0.875rem;
     font-weight: 600;
@@ -1010,34 +1027,52 @@ const roundLabel = (round: string) => {
     border-radius: 0.25rem;
   }
 
+  /* Promote / demote arrow — same icon-button shape as ufa-action-btn on the
+     roster page so the design system reads consistently across both AFL
+     surfaces. Carries a subtle semantic tint via the SVG color (green to
+     promote, red to demote) without painting the whole button. */
   .kp-arrow {
-    width: 28px;
-    height: 28px;
-    border-radius: 0.375rem;
-    border: 0;
-    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-gray-200, #d1d5db);
+    background: var(--content-bg, var(--color-white, #fff));
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
     flex-shrink: 0;
+    transition: background-color 0.18s ease, border-color 0.18s ease,
+      box-shadow 0.18s ease, color 0.18s ease;
+  }
+
+  .kp-arrow:hover {
+    border-color: var(--color-gray-300, #9ca3af);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .kp-arrow:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
   }
 
   .kp-arrow--up {
-    background: #dcfce7;
-    color: #166534;
+    color: var(--color-success-dark, #059669);
   }
 
   .kp-arrow--up:hover {
-    background: #bbf7d0;
+    background: var(--color-success-light, #d1fae5);
+    color: var(--color-success-dark, #047857);
   }
 
   .kp-arrow--down {
-    background: #fee2e2;
-    color: #991b1b;
+    color: var(--color-gray-500, #6b7280);
   }
 
   .kp-arrow--down:hover {
-    background: #fecaca;
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-700, #374151);
   }
 
   /* Draft picks */
