@@ -235,16 +235,17 @@ const positionRank = (pos: string) => {
 // bottom. Mirrors TheLeague's roster page — the green left-border stripe
 // on active rows + the red stripe on IR rows makes the split obvious
 // without a dedicated Status column.
-const sortedTableRoster: RosterEntry[] = (() => {
-  const byStatus = (status: string) =>
-    roster
-      .filter((p) => p.status === status)
-      .sort((a, b) => {
-        const r = positionRank(a.position) - positionRank(b.position);
-        return r !== 0 ? r : a.name.localeCompare(b.name);
-      });
-  return [...byStatus('ROSTER'), ...byStatus('INJURED_RESERVE')];
-})();
+const byPositionThenName = (a: RosterEntry, b: RosterEntry) => {
+  const r = positionRank(a.position) - positionRank(b.position);
+  return r !== 0 ? r : a.name.localeCompare(b.name);
+};
+const activeRosterPlayers: RosterEntry[] = roster
+  .filter((p) => p.status === 'ROSTER')
+  .sort(byPositionThenName);
+const irRosterPlayers: RosterEntry[] = roster
+  .filter((p) => p.status === 'INJURED_RESERVE')
+  .sort(byPositionThenName);
+const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPlayers];
 
 // ── Coach-mode matchup data (matches TheLeague's roster Coach tab) ──
 //
@@ -610,26 +611,6 @@ const pageConfig = {
       </a>
     </div>
 
-    <!-- Roster summary -->
-    <div class="roster-summary">
-      <article>
-        <p>Active roster</p>
-        <strong>{activeRoster}<span class="roster-summary__denom">/{ROSTER_SIZE}</span></strong>
-      </article>
-      <article>
-        <p>Injured reserve</p>
-        <strong>{injuredReserve}</strong>
-      </article>
-      <article>
-        <p>Total players</p>
-        <strong>{totalPlayers}</strong>
-      </article>
-      <article>
-        <p>Open active slots</p>
-        <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
-      </article>
-    </div>
-
     <!-- Roster View -->
     <section class="view-container" data-view-content="roster" hidden={initialView !== 'roster'}>
       {roster.length === 0 ? (
@@ -637,24 +618,45 @@ const pageConfig = {
           <p>No roster data for this team in {selectedYear}.</p>
         </div>
       ) : (
-        <div class="roster-table-card">
-          <div class="roster-table-wrapper">
-            <table class="roster-table roster-table--afl">
-              <thead>
-                <tr>
-                  <th data-column="player">Player</th>
-                  {isOwner && <th data-column="actions" aria-label="Actions"></th>}
-                  <th data-column="oppRank">Opp #</th>
-                  <th data-column="opponent">Opponent</th>
-                  <th data-column="ou">O/U</th>
-                  <th data-column="weather">Weather</th>
-                  <th data-column="oppAvg">Opp Avg</th>
-                  <th data-column="avg">Avg</th>
-                  <th data-column="projected">Proj</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedTableRoster.map((player) => {
+        <Fragment>
+        {[
+          {
+            title: 'Active Roster',
+            players: activeRosterPlayers,
+            statusClass: 'active',
+            alwaysShow: true,
+          },
+          {
+            title: 'Injured Reserve',
+            players: irRosterPlayers,
+            statusClass: 'ir',
+            alwaysShow: false,
+          },
+        ]
+          .filter((group) => group.alwaysShow || group.players.length > 0)
+          .map((group) => (
+            <div class="roster-section" data-roster-section={group.statusClass}>
+              {group.statusClass !== 'active' && (
+                <h3 class="roster-section__title">{group.title}</h3>
+              )}
+              <div class="roster-table-card">
+                <div class="roster-table-wrapper">
+                  <table class="roster-table roster-table--afl">
+                    <thead>
+                      <tr>
+                        <th data-column="player">Player</th>
+                        {isOwner && <th data-column="actions" aria-label="Actions"></th>}
+                        <th data-column="oppRank">Opp #</th>
+                        <th data-column="opponent">Opponent</th>
+                        <th data-column="ou">O/U</th>
+                        <th data-column="weather">Weather</th>
+                        <th data-column="oppAvg">Opp Avg</th>
+                        <th data-column="avg">Avg</th>
+                        <th data-column="projected">Proj</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.players.map((player) => {
                   const m = matchupByPlayerId.get(player.id);
                   const matchup = m?.matchup ?? null;
                   const oppCode = m?.oppCode ?? null;
@@ -753,10 +755,33 @@ const pageConfig = {
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <!-- Roster summary cards -->
+          <div class="roster-summary">
+            <article>
+              <p>Active roster</p>
+              <strong>{activeRoster}<span class="roster-summary__denom">/{ROSTER_SIZE}</span></strong>
+            </article>
+            <article>
+              <p>Injured reserve</p>
+              <strong>{injuredReserve}</strong>
+            </article>
+            <article>
+              <p>Total players</p>
+              <strong>{totalPlayers}</strong>
+            </article>
+            <article>
+              <p>Open active slots</p>
+              <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
+            </article>
           </div>
-        </div>
+        </Fragment>
       )}
     </section>
 
@@ -1172,6 +1197,7 @@ const pageConfig = {
     @media (min-width: 480px) {
       .team-card__actions {
         width: auto;
+        margin-left: auto;
       }
     }
 
@@ -1283,6 +1309,27 @@ const pageConfig = {
     }
 
     .roster-controls-bar__profile:hover { text-decoration: underline; }
+
+    /* ── Roster section header ── */
+    .roster-section {
+      display: grid;
+      gap: var(--padding-md, 1rem);
+    }
+
+    .roster-section__title {
+      margin: 0;
+      padding-bottom: 0.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-gray-900, #111827);
+      line-height: 1.2;
+    }
+
+    /* IR section: slightly de-emphasized table card to make it visually
+       obvious these players are NOT on the active roster. */
+    .roster-section[data-roster-section='ir'] .roster-table-card {
+      background: var(--color-gray-50, #f9fafb);
+    }
 
     /* ── Roster summary cards (matches TheLeague's .roster-summary) ── */
     .roster-summary {
