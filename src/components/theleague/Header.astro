@@ -51,7 +51,7 @@ const year = (Astro.props.year || envYear).toString();
 // Construct the MFL homepage URL using the context-aware league object.
 // This ensures the correct host and leagueId are always used.
 const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
-const submitLineupUrl = '/theleague/lineup';
+const submitLineupUrl = isAFL ? '/afl-fantasy/lineup' : '/theleague/lineup';
 const addDropUrl = `https://${league.host}/${year}/add_drop?L=${league.leagueId}`;
 const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 ---

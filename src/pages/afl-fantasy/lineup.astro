@@ -1,0 +1,2089 @@
+---
+/**
+ * Submit Lineup Page — /afl-fantasy/lineup
+ *
+ * SSR page (auth-required). Mobile-first, zero React.
+ * Tap starter slot → CDM bottom-sheet → choose replacement → submit to MFL.
+ *
+ * Note: innerHTML usage throughout the client script is intentional and safe.
+ * All data rendered comes from MFL API (server-fetched, never user-typed),
+ * and follows the same pattern used by buildPlayerCellHTML() across the codebase.
+ *
+ * AFL starter rules are identical to TheLeague's:
+ * QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1 (total 9). Slot layout matches TheLeague.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import { getAuthUser } from '../../utils/auth';
+import { getCurrentWeekForYear } from '../../utils/current-week';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
+import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
+
+// ---------------------------------------------------------------------------
+// Auth gate
+// ---------------------------------------------------------------------------
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId) {
+  return Astro.redirect('/theleague/login?redirect=/afl-fantasy/lineup');
+}
+
+// ---------------------------------------------------------------------------
+// Core data loading
+// ---------------------------------------------------------------------------
+// AFL is pinned to 2025 until the league rolls over to 2026 on MFL.
+const AFL_LEAGUE_YEAR = 2025;
+const leagueYear = AFL_LEAGUE_YEAR;
+const currentWeek = getCurrentWeekForYear(leagueYear);
+const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || currentWeek;
+const week = Math.max(1, Math.min(22, requestedWeek));
+
+const MFL_LEAGUE_ID = '19621';
+const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
+
+// Parallel data fetches (all 8 run concurrently to avoid waterfall)
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes] = await Promise.all([
+  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=fantasyPointsAllowed&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=players&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  loadLiveOdds(week),
+  fetch(`${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+]);
+
+const rostersData = rostersRes?.ok ? await rostersRes.json() : null;
+const projData = projRes?.ok ? await projRes.json() : null;
+const weeklyData = weeklyRes?.ok ? await weeklyRes.json() : null;
+const fpaData = fpaRes?.ok ? await fpaRes.json() : null;
+const playersData = playersRes?.ok ? await playersRes.json() : null;
+const nflSchedData = nflSchedRes?.ok ? await nflSchedRes.json() : null;
+
+// Build kickoff map from MFL schedule (source of truth for game locks)
+const nowEpoch = Math.floor(Date.now() / 1000);
+const kickoffByTeam = new Map<string, number>();
+const rawMatchups = nflSchedData?.nflSchedule?.matchup;
+const matchups = Array.isArray(rawMatchups) ? rawMatchups : rawMatchups ? [rawMatchups] : [];
+for (const game of matchups) {
+  const kickoff = parseInt(game.kickoff, 10) || 0;
+  const teams = Array.isArray(game.team) ? game.team : game.team ? [game.team] : [];
+  for (const t of teams) {
+    if (t.id) kickoffByTeam.set(t.id, kickoff);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Build player map
+// ---------------------------------------------------------------------------
+const playerMap = new Map<string, any>();
+const rawPlayers = playersData?.players?.player;
+if (Array.isArray(rawPlayers)) {
+  rawPlayers.forEach((p: any) => playerMap.set(p.id, p));
+} else if (rawPlayers?.id) {
+  playerMap.set(rawPlayers.id, rawPlayers);
+}
+
+// Projection map
+const projMap = new Map<string, number>();
+const rawProj = projData?.projectedScores?.playerScore;
+if (Array.isArray(rawProj)) {
+  rawProj.forEach((p: any) => projMap.set(p.id, parseFloat(p.score) || 0));
+} else if (rawProj?.id) {
+  projMap.set(rawProj.id, parseFloat(rawProj.score) || 0);
+}
+
+// Weekly scores
+const weeklyUnwrapped = weeklyData?.allWeeklyResults ?? weeklyData;
+const playerScoresMap = processWeeklyScores(weeklyUnwrapped, currentWeek);
+
+// ---------------------------------------------------------------------------
+// Find franchise roster & current starters
+// ---------------------------------------------------------------------------
+const allFranchises = rostersData?.rosters?.franchise;
+const franchiseRoster = Array.isArray(allFranchises)
+  ? allFranchises.find((f: any) => f.id === user.franchiseId)
+  : allFranchises?.id === user.franchiseId ? allFranchises : null;
+
+const rosterPlayers = franchiseRoster?.player
+  ? (Array.isArray(franchiseRoster.player) ? franchiseRoster.player : [franchiseRoster.player])
+  : [];
+
+// AFL lineup positions (from league rules — identical to TheLeague: QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1)
+const SLOT_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX', 'PK', 'DEF'];
+
+// Eligible positions for each slot type
+const SLOT_ELIGIBILITY: Record<string, string[]> = {
+  QB: ['QB'],
+  RB: ['RB'],
+  WR: ['WR'],
+  TE: ['TE'],
+  FLEX: ['RB', 'WR', 'TE'],
+  PK: ['PK'],
+  DEF: ['DEF'],
+};
+
+// Player identity map — provides ESPN IDs, headshots, and team data from synced MFL feed
+const lineupPlayerIdentityMap = getPlayerMap(leagueYear);
+
+// ---------------------------------------------------------------------------
+// Build LineupPlayer array
+// ---------------------------------------------------------------------------
+interface LineupPlayer {
+  id: string;
+  name: string;
+  headshot: string;
+  position: string;
+  nflTeam: string;
+  eligibleSlots: string[];
+  projection: number | null;
+  last3Avg: number | null;
+  seasonAvg: number | null;
+  injury: string | null;
+  gameLocked: boolean;
+  gameIndex: number | null;
+  isBye: boolean;
+  espnId?: string;
+  customRank: number | null;
+  streak: number | null;
+  recentScores: { week: number; score: number }[];
+}
+
+interface GameInfo {
+  id: string;
+  home: string;
+  away: string;
+  kickoff: string;
+  spread: number | null;
+  overUnder: number | null;
+  fpaRanks: Record<string, Record<string, number>>;
+  status: string;
+}
+
+// Build schedule from live odds
+const schedule: GameInfo[] = [];
+const seenGames = new Set<string>();
+
+Object.values(liveOdds).forEach((odds) => {
+  if (seenGames.has(odds.id)) return;
+  seenGames.add(odds.id);
+
+  const { favoredTeam, spreadAmount } = parseSpread(odds.spread);
+  const spreadNum = spreadAmount ? parseFloat(spreadAmount) : null;
+
+  // Build FPA ranks for this game
+  const fpaRanks: Record<string, Record<string, number>> = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']) {
+    const homeStats = getFPAStats(fpaData, odds.awayTeam, pos);
+    const awayStats = getFPAStats(fpaData, odds.homeTeam, pos);
+    if (!fpaRanks[odds.homeTeam]) fpaRanks[odds.homeTeam] = {};
+    if (!fpaRanks[odds.awayTeam]) fpaRanks[odds.awayTeam] = {};
+    if (awayStats) fpaRanks[odds.homeTeam][pos] = awayStats.rank;
+    if (homeStats) fpaRanks[odds.awayTeam][pos] = homeStats.rank;
+  }
+
+  schedule.push({
+    id: odds.id,
+    home: odds.homeTeam,
+    away: odds.awayTeam,
+    kickoff: odds.date,
+    spread: spreadNum && favoredTeam ? (favoredTeam === odds.homeTeam ? -spreadNum : spreadNum) : null,
+    overUnder: odds.overUnder !== 'N/A' ? parseFloat(String(odds.overUnder)) : null,
+    fpaRanks,
+    status: odds.status?.toLowerCase().includes('final') ? 'final'
+      : odds.status?.toLowerCase().includes('progress') || odds.status?.match(/^\d/) ? 'live'
+      : 'pre',
+  });
+});
+
+// Map game indices
+const gameIndexByTeam = new Map<string, number>();
+schedule.forEach((g, i) => {
+  gameIndexByTeam.set(g.home, i);
+  gameIndexByTeam.set(g.away, i);
+});
+
+// Build roster
+const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
+  const pd = playerMap.get(rp.id);
+  const identity = lineupPlayerIdentityMap.get(rp.id);
+  const nflTeam = identity?.nflTeam ?? normalizeTeamCode(pd?.team || '');
+  const position = identity?.position ?? (pd?.position || 'N/A').replace(/^Def$/i, 'DEF').replace(/^K$/i, 'PK');
+  const espnId = identity?.espnId ?? null;
+  const headshot = identity?.headshot ?? getPlayerHeadshot(rp.id, espnId);
+  const proj = projMap.get(rp.id) ?? null;
+  const isBye = nflByeWeeks[nflTeam] === week;
+
+  const eligibleSlots: string[] = [];
+  if (SLOT_ELIGIBILITY[position]) eligibleSlots.push(position);
+  if (['RB', 'WR', 'TE'].includes(position)) eligibleSlots.push('FLEX');
+
+  // Scores
+  const weeklyScores = playerScoresMap.get(rp.id) || {};
+  const allScores = Object.values(weeklyScores).filter((s): s is number => typeof s === 'number');
+  const seasonAvg = allScores.length > 0 ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10 : null;
+
+  const recentWeeks: number[] = [];
+  for (let w = Math.max(1, currentWeek - 3); w < currentWeek; w++) {
+    if (weeklyScores[w] !== undefined) recentWeeks.push(weeklyScores[w]);
+  }
+  const last3Avg = recentWeeks.length > 0 ? Math.round((recentWeeks.reduce((a, b) => a + b, 0) / recentWeeks.length) * 10) / 10 : null;
+
+  const recentScores: { week: number; score: number }[] = [];
+  for (let w = Math.max(1, currentWeek - 5); w < currentWeek; w++) {
+    if (weeklyScores[w] !== undefined) recentScores.push({ week: w, score: weeklyScores[w] });
+  }
+
+  // Game lock status — use MFL kickoff times (source of truth)
+  const gameIdx = gameIndexByTeam.get(nflTeam) ?? null;
+  const kickoff = kickoffByTeam.get(nflTeam) ?? 0;
+  const gameLocked = kickoff > 0 && nowEpoch >= kickoff;
+
+  const streak = computeStreak(weeklyScores, currentWeek);
+
+  return {
+    id: rp.id,
+    name: pd?.name || `Player ${rp.id}`,
+    headshot,
+    position,
+    nflTeam,
+    eligibleSlots,
+    projection: proj,
+    last3Avg,
+    seasonAvg,
+    injury: null,
+    gameLocked,
+    gameIndex: gameIdx,
+    isBye,
+    espnId: espnId || undefined,
+    customRank: null,
+    streak,
+    recentScores,
+  };
+});
+
+// Parse starters from the parallel fetch
+const starterIds = new Set<string>();
+try {
+  if (startersRes?.ok) {
+    const startersData = await startersRes.json();
+    const rawStarters = startersData?.myStarters?.player;
+    const starterList = Array.isArray(rawStarters) ? rawStarters : rawStarters ? [rawStarters] : [];
+    starterList.forEach((p: any) => starterIds.add(p.id));
+  }
+} catch { /* starters unavailable — slots will be empty, user fills manually */ }
+
+// Build initial slots based on starters
+const slots: { position: string; index: number; playerId: string | null; locked: boolean }[] = [];
+const usedPlayerIds = new Set<string>();
+
+// If MFL returned starters, use those; otherwise fill optimally by projection
+const hasStarters = starterIds.size > 0;
+const candidatePool = hasStarters
+  ? roster.filter(p => starterIds.has(p.id))
+  : [...roster].sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
+
+// Pre-allocate slots array to preserve positional order
+for (let i = 0; i < SLOT_POSITIONS.length; i++) {
+  slots.push({ position: SLOT_POSITIONS[i], index: i, playerId: null, locked: false });
+}
+
+// Pass 1: Fill position-specific slots (non-FLEX)
+for (let i = 0; i < slots.length; i++) {
+  if (slots[i].position === 'FLEX') continue;
+  const assignedPlayer = candidatePool.find(p => p.position === slots[i].position && !usedPlayerIds.has(p.id)) || null;
+  if (assignedPlayer) {
+    usedPlayerIds.add(assignedPlayer.id);
+    slots[i].playerId = assignedPlayer.id;
+    slots[i].locked = assignedPlayer.gameLocked;
+  }
+}
+
+// Pass 2: Fill FLEX slots with best remaining RB/WR/TE
+for (let i = 0; i < slots.length; i++) {
+  if (slots[i].position !== 'FLEX') continue;
+  const assignedPlayer = candidatePool.find(p =>
+    ['RB', 'WR', 'TE'].includes(p.position) && !usedPlayerIds.has(p.id)
+  ) || null;
+  if (assignedPlayer) {
+    usedPlayerIds.add(assignedPlayer.id);
+    slots[i].playerId = assignedPlayer.id;
+    slots[i].locked = assignedPlayer.gameLocked;
+  }
+}
+
+// Available weeks for selector
+const availableWeeks: { week: number; label: string; isCurrent: boolean; isPast: boolean }[] = [];
+for (let w = 1; w <= 22; w++) {
+  availableWeeks.push({
+    week: w,
+    label: `Week ${w}`,
+    isCurrent: w === currentWeek,
+    isPast: w < currentWeek,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Serialize payload for client
+// ---------------------------------------------------------------------------
+const lineupPayload = {
+  leagueYear,
+  week,
+  availableWeeks,
+  franchiseId: user.franchiseId,
+  slots,
+  roster,
+  schedule,
+  lastSubmitted: null,
+};
+
+const payloadJson = JSON.stringify(lineupPayload);
+
+// Build roster map for server-side rendering
+const rosterById = new Map(roster.map(p => [p.id, p]));
+---
+
+<TheLeagueLayout title="Set Lineup" currentPage="lineup">
+  <main class="lineup-page">
+    <!-- Header -->
+    <header class="lineup-header">
+      <h1 class="lineup-title">Set Lineup</h1>
+      <div class="lineup-week-select">
+        <label for="lineup-week" class="visually-hidden">Select week</label>
+        <select id="lineup-week" class="lineup-week-select__input">
+          {availableWeeks.map(w => (
+            <option value={w.week} selected={w.week === week}>
+              {w.label}{w.isCurrent ? ' (current)' : ''}
+            </option>
+          ))}
+        </select>
+        <svg class="lineup-week-select__icon" aria-hidden="true" width="12" height="12" viewBox="0 0 12 12">
+          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="lineup-toolbar">
+      <button class="lineup-optimal" id="lineup-optimal" aria-label="Set optimal lineup based on projections">
+        <svg class="lineup-optimal__icon" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+          <path d="M8 1l2.09 4.26L15 6.27l-3.5 3.42L12.18 15 8 12.77 3.82 15l.68-5.31L1 6.27l4.91-.71L8 1z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+        Set Optimal
+      </button>
+      <button class="lineup-clear" id="lineup-clear" aria-label="Hold to clear all starter slots">
+        <svg class="lineup-clear__ring" aria-hidden="true" width="28" height="28" viewBox="0 0 28 28">
+          <circle cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-200, #e5e7eb)" stroke-width="2"/>
+          <circle class="lineup-clear__progress" cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-500, #6b7280)" stroke-width="2" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" transform="rotate(-90 14 14)"/>
+          <path d="M10 10l8 8M18 10l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Hold to Clear
+      </button>
+      <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
+    </div>
+
+    <!-- Starters -->
+    <section class="lineup-starters" aria-labelledby="starters-heading">
+      <h2 class="section-title" id="starters-heading">Starters</h2>
+      <ol class="lineup-slots" id="lineup-slots">
+        {slots.map((slot, i) => {
+          const player = slot.playerId ? rosterById.get(slot.playerId) : null;
+          const game = player?.gameIndex != null ? schedule[player.gameIndex] : null;
+          const oppTeam = game ? (player!.nflTeam === game.home ? game.away : game.home) : null;
+          const isHome = game ? player!.nflTeam === game.home : false;
+          const matchupPrefix = isHome ? 'vs' : '@';
+          const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
+
+          return (
+            <li class={`lineup-slot ${slot.locked ? 'lineup-slot--locked' : ''} ${!player ? 'lineup-slot--empty' : ''}`}
+                data-slot={slot.position} data-index={String(i)} data-player-id={player?.id || ''}>
+              <button class="lineup-slot__card"
+                      aria-label={player
+                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.projection ? `Projected ${player.projection} points.` : ''} Tap to change.`
+                        : `${slot.position}: Empty slot. Tap to set.`}
+                      aria-disabled={slot.locked ? 'true' : 'false'}
+                      disabled={slot.locked}>
+                {player ? (
+                  <div class="lineup-slot__player">
+                    <PlayerCell
+                      name={player.name}
+                      headshot={player.headshot}
+                      position={player.position}
+                      nflTeam={player.nflTeam}
+                      mflId={player.id}
+                      espnId={player.espnId}
+                      size="default"
+                    />
+                  </div>
+                ) : (
+                  <div class="lineup-slot__player lineup-slot__player--empty">
+                    <PlayerCell
+                      name="Tap to set"
+                      headshot="/assets/nfl-logos/NFL.svg"
+                      position={slot.position}
+                      nflTeam=""
+                      size="default"
+                    />
+                  </div>
+                )}
+                {player && (
+                  <div class="lineup-slot__game">
+                    {player.isBye ? (
+                      <span class="lineup-slot__bye">BYE</span>
+                    ) : oppTeam ? (
+                      <>
+                        <div class="lineup-slot__opp" aria-label={matchupLabel}>
+                          <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
+                          <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" />
+                        </div>
+                        {player.projection != null && (
+                          <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
+                        )}
+                      </>
+                    ) : null}
+                    {player.streak && <span class="lineup-streak" title={`${player.streak}-week hot streak`}>🔥</span>}
+                  </div>
+                )}
+                {slot.locked && (
+                  <div class="lineup-slot__lock" aria-label="Locked — game started">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                      <path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+
+    <!-- Bench -->
+    <section class="lineup-bench" aria-labelledby="bench-heading">
+      <div class="lineup-bench__header">
+        <h2 class="section-title" id="bench-heading">Bench</h2>
+        <span class="count-display"><strong id="bench-count">{roster.length - slots.filter(s => s.playerId).length}</strong> players</span>
+      </div>
+      <ul class="lineup-bench-list" id="lineup-bench-list">
+        {roster.filter(p => !usedPlayerIds.has(p.id)).sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1)).map(player => {
+          const game = player.gameIndex != null ? schedule[player.gameIndex] : null;
+          const oppTeam = game ? (player.nflTeam === game.home ? game.away : game.home) : null;
+          const isHome = game ? player.nflTeam === game.home : false;
+          const matchupPrefix = isHome ? 'vs' : '@';
+          const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
+          return (
+          <li class={`lineup-bench-row ${player.gameLocked ? 'lineup-bench-row--locked' : ''}`}
+              data-player-id={player.id}>
+            <div class="lineup-bench-row__player">
+              <PlayerCell
+                name={player.name}
+                headshot={player.headshot}
+                position={player.position}
+                nflTeam={player.nflTeam}
+                size="compact"
+              />
+            </div>
+            {player.isBye ? (
+              <span class="lineup-bench-row__bye">BYE</span>
+            ) : oppTeam ? (
+              <div class="lineup-bench-row__opp" aria-label={matchupLabel}>
+                <span class="lineup-bench-row__opp-prefix">{matchupPrefix}</span>
+                <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="14" height="14" />
+              </div>
+            ) : null}
+            {player.projection != null && (
+              <span class="lineup-bench-row__proj">{player.projection.toFixed(1)}</span>
+            )}
+          </li>
+          );
+        })}
+      </ul>
+    </section>
+
+    <!-- Submit bar (fixed bottom) -->
+    <div class="lineup-submit-bar" id="lineup-submit-bar">
+      <span class="lineup-changes" id="lineup-changes" aria-live="polite" style="display:none">
+        <strong>0</strong> changes
+      </span>
+      <button class="lineup-submit lineup-submit--clean" id="lineup-submit" disabled>
+        <svg class="lineup-submit__icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M13.5 4.5L6 12l-3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="lineup-submit__text">Lineup Saved</span>
+      </button>
+    </div>
+
+    <!-- CDM overlay + bottom-sheet -->
+    <div class="lineup-cdm" id="lineup-cdm" role="dialog" aria-modal="true"
+         aria-label="Choose replacement player" aria-hidden="true">
+      <div class="lineup-cdm__overlay"></div>
+      <div class="lineup-cdm__sheet">
+        <div class="lineup-cdm__handle" aria-hidden="true">
+          <span class="lineup-cdm__handle-bar"></span>
+        </div>
+        <button class="lineup-cdm__close" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <div class="lineup-cdm__current" id="cdm-current-starter">
+          <!-- JS-populated: current starter card -->
+        </div>
+
+        <div class="lineup-cdm__replacements">
+          <div class="lineup-cdm__replacements-header">
+            <h3 class="section-title">Eligible Replacements</h3>
+            <span class="lineup-cdm__sort-label" id="cdm-sort-label">by Projection</span>
+          </div>
+          <div class="lineup-cdm__table-scroll">
+            <table class="lineup-cdm__table" aria-label="Available replacement players">
+              <thead id="cdm-thead"></thead>
+              <tbody id="cdm-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Undo toast -->
+    <div class="lineup-toast" id="lineup-toast" aria-hidden="true">
+      <span id="lineup-toast-text">Shake to undo</span>
+    </div>
+
+    <!-- Live region announcer -->
+    <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="lineup-announcer"></div>
+  </main>
+
+  <!-- Serialize payload -->
+  <script is:inline define:vars={{ payloadJson }}>
+    window.__LINEUP_DATA__ = JSON.parse(payloadJson);
+  </script>
+
+  <!-- Client-side lineup manager -->
+  <script>
+    import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+
+    // ---------------------------------------------------------------------------
+    // State
+    // ---------------------------------------------------------------------------
+    const data = (window as any).__LINEUP_DATA__;
+    if (!data) throw new Error('Missing lineup data');
+
+    interface SlotState { position: string; index: number; playerId: string | null; locked: boolean; }
+
+    let currentSlots: SlotState[] = [...data.slots];
+    const originalSlots: SlotState[] = data.slots.map((s: SlotState) => ({ ...s }));
+    const rosterMap = new Map(data.roster.map((p: any) => [p.id, p]));
+    let lastSwap: { slotIndex: number; oldPlayerId: string; newPlayerId: string } | null = null;
+    let lastClear: { slots: (string | null)[] } | null = null;
+    let previousFocus: HTMLElement | null = null;
+
+    // DOM refs
+    const slotsContainer = document.getElementById('lineup-slots')!;
+    const submitBtn = document.getElementById('lineup-submit') as HTMLButtonElement;
+    const submitText = submitBtn.querySelector('.lineup-submit__text') as HTMLElement;
+    const changesEl = document.getElementById('lineup-changes') as HTMLElement;
+    const cdmEl = document.getElementById('lineup-cdm')!;
+    const cdmOverlay = cdmEl.querySelector('.lineup-cdm__overlay') as HTMLElement;
+    const cdmSheet = cdmEl.querySelector('.lineup-cdm__sheet') as HTMLElement;
+    const cdmClose = cdmEl.querySelector('.lineup-cdm__close') as HTMLButtonElement;
+    const cdmCurrent = document.getElementById('cdm-current-starter')!;
+    const cdmThead = document.getElementById('cdm-thead')!;
+    const cdmTbody = document.getElementById('cdm-tbody')!;
+    const announcer = document.getElementById('lineup-announcer')!;
+    const toastEl = document.getElementById('lineup-toast')!;
+    const toastText = document.getElementById('lineup-toast-text')!;
+    const weekSelect = document.getElementById('lineup-week') as HTMLSelectElement;
+    const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
+    const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
+    const statusEl = document.getElementById('lineup-status')!;
+
+    let activeSlotIndex: number | null = null;
+
+    // ---------------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------------
+    function announce(msg: string) {
+      announcer.textContent = '';
+      requestAnimationFrame(() => { announcer.textContent = msg; });
+    }
+
+    function haptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
+      if ('vibrate' in navigator) {
+        const d = { light: 10, medium: 20, heavy: 40 };
+        navigator.vibrate(d[style]);
+      }
+    }
+
+    function isMobileSheet(): boolean {
+      return !window.matchMedia('(min-width: 640px)').matches;
+    }
+
+    function getPlayer(id: string | null) {
+      return id ? rosterMap.get(id) : null;
+    }
+
+    function getGame(player: any) {
+      return player?.gameIndex != null ? data.schedule[player.gameIndex] : null;
+    }
+
+    /** Escape HTML to prevent XSS when inserting server-fetched data */
+    function esc(str: string): string {
+      const el = document.createElement('span');
+      el.textContent = str;
+      return el.innerHTML;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Change tracking
+    // ---------------------------------------------------------------------------
+    function countChanges(): number {
+      let count = 0;
+      for (let i = 0; i < currentSlots.length; i++) {
+        if (currentSlots[i].playerId !== originalSlots[i].playerId) count++;
+      }
+      return count;
+    }
+
+    function updateSubmitBar() {
+      const changes = countChanges();
+      const hasChanges = changes > 0;
+      const allFilled = currentSlots.every(s => s.playerId != null);
+
+      if (hasChanges && allFilled) {
+        submitBtn.className = 'lineup-submit lineup-submit--ready';
+        submitBtn.disabled = false;
+        submitText.textContent = 'Submit Lineup';
+        changesEl.style.display = '';
+        changesEl.querySelector('strong')!.textContent = String(changes);
+      } else if (!hasChanges) {
+        submitBtn.className = 'lineup-submit lineup-submit--clean';
+        submitBtn.disabled = true;
+        submitText.textContent = 'Lineup Saved';
+        changesEl.style.display = 'none';
+      } else {
+        submitBtn.className = 'lineup-submit lineup-submit--disabled';
+        submitBtn.disabled = true;
+        submitText.textContent = 'Submit Lineup';
+        changesEl.style.display = '';
+        changesEl.querySelector('strong')!.textContent = String(changes);
+      }
+
+      saveDraft();
+    }
+
+    // ---------------------------------------------------------------------------
+    // localStorage draft persistence
+    // ---------------------------------------------------------------------------
+    const STORAGE_KEY = 'lineup-draft-afl';
+
+    function saveDraft() {
+      const draft = {
+        franchiseId: data.franchiseId,
+        leagueYear: data.leagueYear,
+        week: data.week,
+        slots: currentSlots.map(s => ({ index: s.index, playerId: s.playerId })),
+        savedAt: new Date().toISOString(),
+      };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(draft)); } catch {}
+    }
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        if (draft.franchiseId !== data.franchiseId || draft.leagueYear !== data.leagueYear || draft.week !== data.week) return;
+        const age = Date.now() - new Date(draft.savedAt).getTime();
+        if (age > 24 * 60 * 60 * 1000) return;
+        draft.slots.forEach((s: { index: number; playerId: string | null }) => {
+          if (typeof s.index === 'number' && s.index >= 0 && s.index < currentSlots.length
+              && (!s.playerId || rosterMap.has(s.playerId))) {
+            currentSlots[s.index].playerId = s.playerId;
+          }
+        });
+      } catch {}
+    }
+
+    // ---------------------------------------------------------------------------
+    // Render slot card content
+    // ---------------------------------------------------------------------------
+    function renderSlotCard(slotIndex: number) {
+      const slot = currentSlots[slotIndex];
+      const li = slotsContainer.children[slotIndex] as HTMLElement;
+      if (!li) return;
+
+      const player = getPlayer(slot.playerId);
+      const game = player ? getGame(player) : null;
+      const oppTeam = game ? (player!.nflTeam === game.home ? game.away : game.home) : null;
+      const isHome = game ? player!.nflTeam === game.home : false;
+      const isSwapped = slot.playerId !== originalSlots[slotIndex].playerId;
+
+      li.dataset.playerId = player?.id || '';
+      li.className = `lineup-slot${slot.locked ? ' lineup-slot--locked' : ''}${!player ? ' lineup-slot--empty' : ''}${isSwapped ? ' lineup-slot--swapped' : ''}`;
+
+      const btn = li.querySelector('.lineup-slot__card') as HTMLButtonElement;
+      if (!btn) return;
+
+      btn.ariaLabel = player
+        ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''} Tap to change.`
+        : `${esc(slot.position)}: Empty slot. Tap to set.`;
+      btn.ariaDisabled = slot.locked ? 'true' : 'false';
+      btn.disabled = slot.locked;
+
+      if (!player) {
+        const emptyCell = buildPlayerCellHTML({
+          name: 'Tap to set',
+          headshot: '/assets/nfl-logos/NFL.svg',
+          position: slot.position,
+          nflTeam: '',
+          size: 'default',
+        });
+        btn.innerHTML = `<div class="lineup-slot__player lineup-slot__player--empty">${emptyCell}</div>`;
+        return;
+      }
+
+      // buildPlayerCellHTML is the established codebase pattern for client-side player rendering
+      const playerCell = buildPlayerCellHTML({
+        name: player.name,
+        headshot: player.headshot,
+        position: player.position,
+        nflTeam: player.nflTeam,
+        mflId: player.id,
+        espnId: player.espnId,
+        size: 'default',
+      });
+
+      let gameHtml = '';
+      if (player.isBye) {
+        gameHtml = `<span class="lineup-slot__bye">BYE</span>`;
+      } else if (oppTeam) {
+        const matchupPrefix = isHome ? 'vs' : '@';
+        const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
+        gameHtml = `
+          <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
+            <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
+            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" />
+          </div>
+          ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
+        `;
+      }
+      if (player.streak) {
+        gameHtml += `<span class="lineup-streak" title="${esc(String(player.streak))}-week hot streak">🔥</span>`;
+      }
+
+      let lockHtml = '';
+      if (slot.locked) {
+        lockHtml = `<div class="lineup-slot__lock" aria-label="Locked"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>`;
+      }
+
+      btn.innerHTML = `<div class="lineup-slot__player">${playerCell}</div><div class="lineup-slot__game">${gameHtml}</div>${lockHtml}`;
+    }
+
+    // ---------------------------------------------------------------------------
+    // CDM (bottom sheet / modal)
+    // ---------------------------------------------------------------------------
+    function openCDM(slotIndex: number) {
+      activeSlotIndex = slotIndex;
+      const slot = currentSlots[slotIndex];
+      const currentPlayer = getPlayer(slot.playerId);
+      previousFocus = document.activeElement as HTMLElement;
+
+      const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
+      slotEl?.classList.add('lineup-slot--active');
+
+      // Current starter card
+      if (currentPlayer) {
+        const cell = buildPlayerCellHTML({
+          name: currentPlayer.name,
+          headshot: currentPlayer.headshot,
+          position: currentPlayer.position,
+          nflTeam: currentPlayer.nflTeam,
+          mflId: currentPlayer.id,
+          espnId: currentPlayer.espnId,
+          size: 'compact',
+        });
+        cdmCurrent.innerHTML = `
+          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
+          <div class="lineup-cdm__current-card">
+            ${cell}
+            <div class="lineup-cdm__current-stats">
+              ${currentPlayer.projection != null ? `<span class="lineup-cdm__stat"><strong>${currentPlayer.projection.toFixed(1)}</strong> proj</span>` : ''}
+              ${currentPlayer.last3Avg != null ? `<span class="lineup-cdm__stat">${currentPlayer.last3Avg.toFixed(1)} L3</span>` : ''}
+              ${currentPlayer.seasonAvg != null ? `<span class="lineup-cdm__stat">${currentPlayer.seasonAvg.toFixed(1)} avg</span>` : ''}
+            </div>
+          </div>
+        `;
+      } else {
+        cdmCurrent.innerHTML = `
+          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
+          <div class="lineup-cdm__current-card lineup-cdm__current-card--empty">
+            <span>No player assigned</span>
+          </div>
+        `;
+      }
+
+      // Eligible replacements
+      const usedIds = new Set(currentSlots.map(s => s.playerId).filter(Boolean));
+      if (slot.playerId) usedIds.delete(slot.playerId);
+
+      const eligible = data.roster.filter((p: any) => {
+        if (usedIds.has(p.id)) return false;
+        if (p.id === slot.playerId) return false;
+        if (p.gameLocked) return false;
+        return p.eligibleSlots.includes(slot.position);
+      });
+
+      if (eligible.length === 0) {
+        console.warn('[CDM] No eligible players for slot:', slot.position, '| roster:', data.roster.length,
+          '| sample:', data.roster.slice(0, 5).map((p: any) => ({ name: p.name, pos: p.position, slots: p.eligibleSlots, locked: p.gameLocked })));
+      }
+
+      eligible.sort((a: any, b: any) => (b.projection ?? 0) - (a.projection ?? 0));
+
+      cdmThead.innerHTML = `<tr>
+        <th class="cdm-th cdm-th--player">Player</th>
+        <th class="cdm-th cdm-th--num">FPA</th>
+        <th class="cdm-th cdm-th--num">Proj</th>
+        <th class="cdm-th cdm-th--num">L3</th>
+        <th class="cdm-th cdm-th--num">Avg</th>
+      </tr>`;
+
+      cdmTbody.innerHTML = eligible.map((p: any, i: number) => {
+        const game = getGame(p);
+        const oppTeam = game ? (p.nflTeam === game.home ? game.away : game.home) : null;
+
+        let fpaRank = '';
+        let fpaClass = '';
+        if (game && oppTeam) {
+          const ranks = game.fpaRanks?.[p.nflTeam];
+          const posKey = p.position === 'PK' ? 'PK' : p.position;
+          const rank = ranks?.[posKey];
+          if (rank) {
+            fpaRank = String(rank);
+            fpaClass = rank <= 8 ? 'fpa--good' : rank >= 25 ? 'fpa--bad' : '';
+          }
+        }
+
+        const cell = buildPlayerCellHTML({
+          name: p.name,
+          headshot: p.headshot,
+          position: p.position,
+          nflTeam: p.nflTeam,
+          mflId: p.id,
+          espnId: p.espnId,
+          size: 'compact',
+        });
+
+        const isHome = game ? p.nflTeam === game.home : false;
+        let matchupHtml = '';
+        if (p.isBye) {
+          matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
+        } else if (oppTeam) {
+          matchupHtml = `<div class="cdm-matchup">
+            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="cdm-matchup__logo" width="12" height="12" />
+            <span class="cdm-matchup__text"><span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span> ${esc(oppTeam)}</span>
+          </div>`;
+        }
+
+        return `<tr class="cdm-row" role="option" tabindex="${i === 0 ? '0' : '-1'}" data-player-id="${esc(p.id)}" aria-selected="false">
+          <td class="cdm-td cdm-td--player">${cell}${matchupHtml}</td>
+          <td class="cdm-td cdm-td--num ${fpaClass}">${esc(fpaRank)}</td>
+          <td class="cdm-td cdm-td--num cdm-td--proj">${p.projection != null ? p.projection.toFixed(1) : '-'}</td>
+          <td class="cdm-td cdm-td--num">${p.last3Avg != null ? p.last3Avg.toFixed(1) : '-'}</td>
+          <td class="cdm-td cdm-td--num">${p.seasonAvg != null ? p.seasonAvg.toFixed(1) : '-'}</td>
+        </tr>`;
+      }).join('');
+
+      cdmEl.ariaHidden = 'false';
+      cdmEl.classList.add('lineup-cdm--open');
+      document.body.style.overflow = 'hidden';
+
+      announce(`Choose replacement for ${slot.position} slot. ${eligible.length} players available.`);
+
+      setTimeout(() => {
+        const firstRow = cdmTbody.querySelector('.cdm-row') as HTMLElement;
+        (firstRow || cdmClose).focus();
+      }, 320);
+    }
+
+    function closeCDM() {
+      cdmEl.classList.remove('lineup-cdm--open');
+      document.body.style.overflow = '';
+
+      if (activeSlotIndex !== null) {
+        const slotEl = slotsContainer.children[activeSlotIndex] as HTMLElement;
+        slotEl?.classList.remove('lineup-slot--active');
+      }
+
+      setTimeout(() => {
+        cdmEl.ariaHidden = 'true';
+        previousFocus?.focus();
+        activeSlotIndex = null;
+      }, 260);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Swap
+    // ---------------------------------------------------------------------------
+    function performSwap(slotIndex: number, newPlayerId: string) {
+      const oldPlayerId = currentSlots[slotIndex].playerId;
+      currentSlots[slotIndex].playerId = newPlayerId;
+
+      lastSwap = { slotIndex, oldPlayerId: oldPlayerId || '', newPlayerId };
+      lastClear = null;
+
+      renderSlotCard(slotIndex);
+      updateSubmitBar();
+
+      const newPlayer = getPlayer(newPlayerId);
+      const oldPlayer = getPlayer(oldPlayerId);
+      announce(`Swapped ${oldPlayer?.name || 'empty'} out for ${newPlayer?.name || 'empty'} at ${currentSlots[slotIndex].position}.`);
+      haptic('medium');
+
+      showToast('Shake to undo');
+      closeCDM();
+
+      const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
+      slotEl?.classList.add('lineup-slot--flash');
+      setTimeout(() => slotEl?.classList.remove('lineup-slot--flash'), 400);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Undo
+    // ---------------------------------------------------------------------------
+    function undoLastSwap() {
+      if (!lastSwap) return;
+      currentSlots[lastSwap.slotIndex].playerId = lastSwap.oldPlayerId || null;
+      const restored = getPlayer(lastSwap.oldPlayerId);
+      renderSlotCard(lastSwap.slotIndex);
+      updateSubmitBar();
+      announce(`Undo: restored ${restored?.name || 'empty'} to ${currentSlots[lastSwap.slotIndex].position}.`);
+      haptic('medium');
+      lastSwap = null;
+    }
+
+    function undoClear() {
+      if (!lastClear) return;
+      let restoredCount = 0;
+      for (let i = 0; i < currentSlots.length; i++) {
+        if (currentSlots[i].locked) continue;
+        if (currentSlots[i].playerId !== lastClear.slots[i]) {
+          currentSlots[i].playerId = lastClear.slots[i];
+          restoredCount++;
+        }
+      }
+      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+      updateSubmitBar();
+      announce(`Undo clear: ${restoredCount} starters restored.`);
+      haptic('medium');
+      lastClear = null;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Set Optimal
+    // ---------------------------------------------------------------------------
+    function setOptimalLineup() {
+      const available = data.roster.filter((p: any) => !p.gameLocked && !p.isBye);
+      const used = new Set<string>();
+      const newSlots = currentSlots.map(s => ({ ...s }));
+
+      function getScore(p: any): number {
+        if (p.customRank != null) return 1000 - p.customRank;
+        return p.projection ?? 0;
+      }
+
+      for (let i = 0; i < newSlots.length; i++) {
+        if (newSlots[i].locked) {
+          if (newSlots[i].playerId) used.add(newSlots[i].playerId!);
+          continue;
+        }
+        if (newSlots[i].position === 'FLEX') continue;
+
+        const pos = newSlots[i].position;
+        const best = available
+          .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes(pos))
+          .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
+
+        if (best) {
+          newSlots[i].playerId = best.id;
+          used.add(best.id);
+        }
+      }
+
+      for (let i = 0; i < newSlots.length; i++) {
+        if (newSlots[i].locked || newSlots[i].position !== 'FLEX') continue;
+        const best = available
+          .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes('FLEX'))
+          .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
+        if (best) {
+          newSlots[i].playerId = best.id;
+          used.add(best.id);
+        }
+      }
+
+      let changedCount = 0;
+      for (let i = 0; i < newSlots.length; i++) {
+        if (newSlots[i].playerId !== currentSlots[i].playerId) changedCount++;
+      }
+
+      if (changedCount === 0) {
+        announce('Lineup is already optimal.');
+        statusEl.textContent = 'Already optimal!';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        return;
+      }
+
+      currentSlots = newSlots;
+      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+      updateSubmitBar();
+      announce(`Optimal lineup set. ${changedCount} changes made.`);
+      haptic('light');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Clear Lineup
+    // ---------------------------------------------------------------------------
+    function clearLineup() {
+      let clearedCount = 0;
+      const snapshot = currentSlots.map(s => s.playerId);
+
+      for (let i = 0; i < currentSlots.length; i++) {
+        if (currentSlots[i].locked || !currentSlots[i].playerId) continue;
+        currentSlots[i].playerId = null;
+        clearedCount++;
+      }
+
+      if (clearedCount === 0) {
+        announce('Lineup is already empty.');
+        statusEl.textContent = 'Already empty!';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        return;
+      }
+
+      lastClear = { slots: snapshot };
+      lastSwap = null;
+
+      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+      updateSubmitBar();
+      announce(`Lineup cleared. ${clearedCount} slots emptied.`);
+      haptic('light');
+      showToast('Shake to undo');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Submit
+    // ---------------------------------------------------------------------------
+    async function submitLineup() {
+      if (submitBtn.disabled) return;
+
+      const starterIds = currentSlots.map(s => s.playerId).filter(Boolean);
+      if (starterIds.length !== 9) {
+        announce('Lineup is incomplete.');
+        return;
+      }
+
+      submitBtn.className = 'lineup-submit lineup-submit--loading';
+      submitBtn.disabled = true;
+      submitText.textContent = 'Submitting...';
+
+      try {
+        const res = await fetch('/api/afl-fantasy/lineup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ week: data.week, starters: starterIds }),
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+          for (let i = 0; i < currentSlots.length; i++) {
+            originalSlots[i].playerId = currentSlots[i].playerId;
+          }
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
+
+          submitBtn.className = 'lineup-submit lineup-submit--success';
+          submitText.textContent = 'Saved!';
+          haptic('heavy');
+          announce(`Lineup submitted successfully for Week ${data.week}.`);
+
+          document.querySelectorAll('.lineup-slot--swapped').forEach(el => el.classList.remove('lineup-slot--swapped'));
+
+          setTimeout(() => {
+            submitBtn.className = 'lineup-submit lineup-submit--clean';
+            submitBtn.disabled = true;
+            submitText.textContent = 'Lineup Saved';
+            changesEl.style.display = 'none';
+          }, 2000);
+        } else {
+          submitBtn.className = 'lineup-submit lineup-submit--error';
+          submitText.textContent = 'Failed — Retry';
+          submitBtn.disabled = false;
+          announce(`Lineup submission failed. ${result.error || 'Please try again.'}`);
+        }
+      } catch {
+        submitBtn.className = 'lineup-submit lineup-submit--error';
+        submitText.textContent = 'Failed — Retry';
+        submitBtn.disabled = false;
+        announce('Lineup submission failed. Please try again.');
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Toast
+    // ---------------------------------------------------------------------------
+    function showToast(msg: string) {
+      toastText.textContent = msg;
+      toastEl.classList.add('lineup-toast--visible');
+      toastEl.ariaHidden = 'false';
+      setTimeout(() => {
+        toastEl.classList.remove('lineup-toast--visible');
+        toastEl.ariaHidden = 'true';
+      }, 3000);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Event listeners
+    // ---------------------------------------------------------------------------
+    slotsContainer.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.lineup-slot__card') as HTMLButtonElement;
+      if (!btn || btn.disabled) return;
+      const li = btn.closest('.lineup-slot') as HTMLElement;
+      const index = parseInt(li?.dataset.index || '', 10);
+      if (!isNaN(index)) openCDM(index);
+    });
+
+    cdmOverlay.addEventListener('click', closeCDM);
+    cdmClose.addEventListener('click', closeCDM);
+
+    cdmTbody.addEventListener('click', (e) => {
+      const row = (e.target as HTMLElement).closest('.cdm-row') as HTMLElement;
+      if (!row || activeSlotIndex === null) return;
+      const playerId = row.dataset.playerId;
+      if (playerId) performSwap(activeSlotIndex, playerId);
+    });
+
+    cdmEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeCDM(); return; }
+
+      const rows = Array.from(cdmTbody.querySelectorAll('.cdm-row')) as HTMLElement[];
+      const focusedIdx = rows.indexOf(document.activeElement as HTMLElement);
+
+      if (e.key === 'ArrowDown' && focusedIdx < rows.length - 1) {
+        e.preventDefault(); rows[focusedIdx + 1]?.focus();
+      } else if (e.key === 'ArrowUp' && focusedIdx > 0) {
+        e.preventDefault(); rows[focusedIdx - 1]?.focus();
+      } else if ((e.key === 'Enter' || e.key === ' ') && focusedIdx >= 0) {
+        e.preventDefault();
+        const playerId = rows[focusedIdx]?.dataset.playerId;
+        if (playerId && activeSlotIndex !== null) performSwap(activeSlotIndex, playerId);
+      } else if (e.key === 'Home') {
+        e.preventDefault(); rows[0]?.focus();
+      } else if (e.key === 'End') {
+        e.preventDefault(); rows[rows.length - 1]?.focus();
+      }
+    });
+
+    submitBtn.addEventListener('click', submitLineup);
+    optimalBtn.addEventListener('click', setOptimalLineup);
+    // Long-press to clear (1300ms hold)
+    const clearProgress = clearBtn.querySelector('.lineup-clear__progress') as SVGCircleElement;
+    const CLEAR_HOLD_MS = 1300;
+    let clearTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function startClearHold() {
+      clearProgress.style.transition = `stroke-dashoffset ${CLEAR_HOLD_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+      clearProgress.style.strokeDashoffset = '0';
+      clearBtn.classList.add('lineup-clear--holding');
+      clearTimer = setTimeout(() => {
+        clearLineup();
+        cancelClearHold();
+      }, CLEAR_HOLD_MS);
+    }
+
+    function cancelClearHold() {
+      if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+      clearProgress.style.transition = 'stroke-dashoffset 0.15s ease';
+      clearProgress.style.strokeDashoffset = '75.4';
+      clearBtn.classList.remove('lineup-clear--holding');
+    }
+
+    clearBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); startClearHold(); });
+    clearBtn.addEventListener('pointerup', cancelClearHold);
+    clearBtn.addEventListener('pointerleave', cancelClearHold);
+    clearBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    weekSelect.addEventListener('change', () => {
+      const newWeek = weekSelect.value;
+      const changes = countChanges();
+      if (changes > 0 && !confirm(`You have ${changes} unsaved changes for Week ${data.week}. Discard?`)) {
+        weekSelect.value = String(data.week);
+        return;
+      }
+      window.location.href = `/afl-fantasy/lineup?week=${newWeek}`;
+    });
+
+    // Shake to undo (mobile)
+    let lastShakeTime = 0;
+    const shakeThreshold = 15;
+
+    if ('DeviceMotionEvent' in window) {
+      const requestPermission = (DeviceMotionEvent as any).requestPermission;
+      if (typeof requestPermission === 'function') {
+        document.addEventListener('click', async function reqMotion() {
+          try { await requestPermission(); } catch {}
+          document.removeEventListener('click', reqMotion);
+        }, { once: true });
+      }
+
+      window.addEventListener('devicemotion', (e) => {
+        if (!lastSwap && !lastClear) return;
+        const acc = e.accelerationIncludingGravity;
+        if (!acc) return;
+        const force = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+        const now = Date.now();
+        if (force > shakeThreshold && now - lastShakeTime > 1000) {
+          lastShakeTime = now;
+          if (lastClear) {
+            undoClear();
+          } else {
+            undoLastSwap();
+            lastSwap = null;
+          }
+          toastEl.classList.remove('lineup-toast--visible');
+        }
+      });
+    }
+
+    // Desktop undo via toast click
+    toastEl.addEventListener('click', () => {
+      if (!isMobileSheet()) {
+        if (lastClear) {
+          undoClear();
+          toastEl.classList.remove('lineup-toast--visible');
+        } else if (lastSwap) {
+          undoLastSwap();
+          lastSwap = null;
+          toastEl.classList.remove('lineup-toast--visible');
+        }
+      }
+    });
+
+    // ---------------------------------------------------------------------------
+    // Init
+    // ---------------------------------------------------------------------------
+    loadDraft();
+    updateSubmitBar();
+    for (let i = 0; i < currentSlots.length; i++) {
+      if (currentSlots[i].playerId !== originalSlots[i].playerId) {
+        renderSlotCard(i);
+      }
+    }
+  </script>
+</TheLeagueLayout>
+
+<style is:global>
+  /* ===================================================================
+     Lineup Page — Design Tokens
+     =================================================================== */
+  :root {
+    --lineup-slot-bg: var(--card-bg, #ffffff);
+    --lineup-slot-border: var(--content-border, #e2e8f0);
+    --lineup-slot-active-bg: var(--color-gray-50, #f9fafb);
+    --lineup-slot-locked-overlay: rgba(243, 244, 246, 0.7);
+    --lineup-slot-empty-border: var(--color-gray-300, #d1d5db);
+    --lineup-slot-swapped-accent: var(--color-secondary, #2e8743);
+
+    --lineup-pos-qb: var(--color-primary, #1c497c);
+    --lineup-pos-rb: var(--color-secondary, #2e8743);
+    --lineup-pos-wr: var(--color-franchise-tag, #7c3aed);
+    --lineup-pos-te: var(--chart-color-2, #c0623a);
+    --lineup-pos-flex: var(--chart-color-6, #5a6672);
+    --lineup-pos-pk: var(--chart-color-5, #b8860b);
+    --lineup-pos-def: var(--color-gray-700, #374151);
+
+    --lineup-fpa-good: var(--color-success-dark, #059669);
+    --lineup-fpa-bad: var(--color-error, #dc2626);
+
+    --lineup-cdm-bg: var(--card-bg, #ffffff);
+    --lineup-cdm-handle: var(--color-gray-300, #d1d5db);
+
+    --lineup-submit-ready: var(--btn-secondary-bg, #2e8743);
+    --lineup-submit-error: var(--color-error, #dc2626);
+    --lineup-submit-success: var(--color-success, #10b981);
+
+    --lineup-page-px: var(--spacing-md, 1rem);
+    --lineup-slot-gap: var(--spacing-sm, 0.5rem);
+    --lineup-submit-height: 68px;
+  }
+
+  /* ===================================================================
+     Page layout
+     =================================================================== */
+  .lineup-page {
+    max-width: 100%;
+    padding: 0 var(--lineup-page-px) calc(var(--lineup-submit-height) + 1.5rem);
+  }
+
+  .lineup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0 0.75rem;
+  }
+
+  .lineup-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  /* Week selector */
+  .lineup-week-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .lineup-week-select__input {
+    appearance: none;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  .lineup-week-select__icon {
+    position: absolute;
+    right: 0.625rem;
+    pointer-events: none;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Toolbar */
+  .lineup-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .lineup-optimal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-on-colored, #fff);
+    background: var(--color-primary, #1c497c);
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+    min-height: 44px;
+    transition: background 0.15s ease, filter 0.15s ease;
+  }
+  .lineup-optimal:hover { filter: brightness(1.1); }
+  .lineup-optimal:active { filter: brightness(0.95); transform: scale(0.98); }
+
+  .lineup-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    background: transparent;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+    min-height: 44px;
+    transition: background 0.15s ease, color 0.15s ease;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .lineup-clear:hover { background: var(--color-gray-100, #f3f4f6); }
+  .lineup-clear--holding {
+    color: var(--color-gray-800, #1f2937);
+    border-color: var(--color-gray-400, #9ca3af);
+    background: var(--color-gray-100, #f3f4f6);
+  }
+  .lineup-clear__ring { flex-shrink: 0; }
+  .lineup-clear__progress { stroke-dashoffset: 75.4; }
+
+  .lineup-status {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* ===================================================================
+     Section titles (editorial standard)
+     =================================================================== */
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.75rem;
+  }
+
+  /* ===================================================================
+     Starter slot cards
+     =================================================================== */
+  .lineup-slots {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lineup-slot-gap);
+  }
+
+  .lineup-slot__card {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: var(--lineup-slot-bg);
+    border: 1px solid var(--lineup-slot-border);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
+    padding: 0.625rem;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    min-height: 64px;
+    gap: 0.5rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .lineup-slot__card:hover:not(:disabled) {
+    box-shadow: var(--shadow-md, 0 4px 6px rgba(0,0,0,.07));
+  }
+  .lineup-slot__card:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  /* Empty slot — subdued player lockup using standard PlayerCell */
+  .lineup-slot__player--empty {
+    opacity: 0.5;
+  }
+  .lineup-slot__player--empty .player-cell__avatar {
+    display: none;
+  }
+  .lineup-slot__player--empty .player-cell__name {
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .lineup-slot__player {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .lineup-slot__game {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    min-width: 56px;
+    flex-shrink: 0;
+  }
+
+  .lineup-slot__opp {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .lineup-slot__opp-logo { width: 16px; height: 16px; }
+
+  .lineup-slot__opp-prefix {
+    font-size: 0.6875rem;
+    text-transform: lowercase;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .lineup-slot__opp-prefix + .lineup-slot__opp-logo {
+    flex-shrink: 0;
+  }
+
+  .lineup-slot__proj {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lineup-slot__bye {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-gray-400, #9ca3af);
+    text-transform: uppercase;
+    padding: 0.125rem 0.375rem;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  /* Slot states */
+  .lineup-slot--empty .lineup-slot__card {
+    border-style: dashed;
+    border-width: 2px;
+    border-color: var(--lineup-slot-empty-border);
+    box-shadow: none;
+  }
+
+
+  .lineup-slot--active .lineup-slot__card {
+    box-shadow: inset 3px 0 0 var(--color-primary, #1c497c);
+    background: var(--lineup-slot-active-bg);
+  }
+
+  .lineup-slot--swapped .lineup-slot__card {
+    /* No left border accent — keep cards clean */
+  }
+
+  .lineup-slot--locked .lineup-slot__card {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .lineup-slot__lock {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.375rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .lineup-streak {
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+    animation: lineup-flame-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes lineup-flame-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  @keyframes lineup-slot-flash {
+    0% { background: var(--color-info-light, #dbeafe); }
+    100% { background: var(--lineup-slot-bg); }
+  }
+
+  .lineup-slot--flash .lineup-slot__card {
+    animation: lineup-slot-flash 0.4s ease-out;
+  }
+
+  /* ===================================================================
+     Bench section
+     =================================================================== */
+  .lineup-bench { margin-top: var(--spacing-lg, 1.5rem); }
+
+  .lineup-bench__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .lineup-bench__header .section-title { margin: 0; }
+
+  .count-display {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .lineup-bench-list { list-style: none; margin: 0; padding: 0; }
+
+  .lineup-bench-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .lineup-bench-row__player { flex: 1; min-width: 0; overflow: hidden; }
+
+  .lineup-bench-row__proj {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  .lineup-bench-row__bye {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+    letter-spacing: 0.04em;
+  }
+
+  .lineup-bench-row__opp {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .lineup-bench-row__opp-logo {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .lineup-bench-row__opp-prefix {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .lineup-bench-row--locked { opacity: 0.6; }
+
+  /* ===================================================================
+     Submit bar (fixed bottom)
+     =================================================================== */
+  .lineup-submit-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-sticky, 100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem var(--lineup-page-px);
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    background: var(--card-bg, #ffffff);
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    height: var(--lineup-submit-height);
+  }
+
+  .lineup-changes {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    background: var(--color-warning-light, #fef3c7);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full, 9999px);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lineup-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+    min-height: 48px;
+    transition: background 0.15s ease, transform 0.15s ease;
+    font: inherit;
+  }
+
+  .lineup-submit--clean {
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-600, #4b5563);
+    cursor: default;
+  }
+
+  .lineup-submit--ready {
+    background: var(--lineup-submit-ready);
+    color: var(--text-on-colored, #fff);
+  }
+  .lineup-submit--ready:hover { filter: brightness(1.05); }
+  .lineup-submit--ready:active { transform: scale(0.98); }
+
+  .lineup-submit--disabled {
+    background: var(--color-gray-300, #d1d5db);
+    color: var(--color-gray-500, #6b7280);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .lineup-submit--loading {
+    background: var(--lineup-submit-ready);
+    color: var(--text-on-colored, #fff);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .lineup-submit--error {
+    background: var(--lineup-submit-error);
+    color: var(--text-on-colored, #fff);
+  }
+
+  .lineup-submit--success {
+    background: var(--lineup-submit-success);
+    color: var(--text-on-colored, #fff);
+    animation: lineup-submit-success 0.4s ease-out;
+  }
+
+  @keyframes lineup-submit-success {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+
+  /* ===================================================================
+     CDM — Bottom Sheet (mobile) / Modal (desktop)
+     =================================================================== */
+  .lineup-cdm {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal-backdrop, 400);
+  }
+
+  .lineup-cdm--open {
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .lineup-cdm__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: lineup-overlay-enter 0.25s ease-out;
+  }
+
+  @keyframes lineup-overlay-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .lineup-cdm__sheet {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-height: 88vh;
+    min-height: 50vh;
+    background: var(--lineup-cdm-bg);
+    border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+    box-shadow: var(--shadow-xl, 0 20px 25px rgba(0,0,0,.1));
+    overflow-y: auto;
+    padding: 1.25rem;
+    padding-top: 0;
+    animation: lineup-cdm-enter-mobile 0.25s ease-out;
+  }
+
+  @keyframes lineup-cdm-enter-mobile {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .lineup-cdm__handle {
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem 0 0.5rem;
+  }
+
+  .lineup-cdm__handle-bar {
+    width: 32px;
+    height: 4px;
+    background: var(--lineup-cdm-handle);
+    border-radius: 2px;
+  }
+
+  .lineup-cdm__close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: var(--color-gray-100, #f3f4f6);
+    border: none;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    border-radius: var(--radius-full, 9999px);
+    transition: background 0.15s ease;
+  }
+  .lineup-cdm__close svg { width: 18px; height: 18px; }
+  .lineup-cdm__close:hover { background: var(--color-gray-200, #e5e7eb); }
+
+  .lineup-cdm__section-title {
+    margin-bottom: 0.5rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .lineup-cdm__current-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: inset 3px 0 0 var(--color-primary, #1c497c);
+    margin-bottom: 1rem;
+  }
+
+  .lineup-cdm__current-card--empty {
+    color: var(--color-gray-500, #6b7280);
+    font-style: italic;
+    font-size: 0.8125rem;
+    box-shadow: none;
+    border: 1px dashed var(--color-gray-300, #d1d5db);
+  }
+
+  .lineup-cdm__current-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-left: auto;
+  }
+
+  .lineup-cdm__stat {
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .lineup-cdm__stat strong {
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .lineup-cdm__replacements-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .lineup-cdm__replacements-header .section-title { margin: 0; }
+
+  .lineup-cdm__sort-label {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    font-style: italic;
+  }
+
+  .lineup-cdm__table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lineup-cdm__table-scroll {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cdm-th {
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+  }
+
+  .cdm-th--num { text-align: right; width: 40px; }
+  .cdm-th--player { min-width: 140px; }
+
+  .cdm-td {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .cdm-td--num { text-align: right; }
+  .cdm-td--proj { font-weight: 700; }
+
+  .cdm-row {
+    cursor: pointer;
+    min-height: 48px;
+    outline: none;
+  }
+  .cdm-row:hover { background: var(--color-gray-50, #f9fafb); }
+  .cdm-row:focus-visible { box-shadow: inset 0 0 0 2px var(--color-primary, #1c497c); }
+
+  .fpa--good { color: var(--lineup-fpa-good); font-weight: 600; }
+  .fpa--bad { color: var(--lineup-fpa-bad); font-weight: 600; }
+
+  .cdm-matchup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+  }
+
+  .cdm-matchup__logo {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+
+  .cdm-matchup__text {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdm-matchup__prefix {
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  .cdm-matchup--bye {
+    display: inline-block;
+    margin-top: 0.2rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ===================================================================
+     Toast
+     =================================================================== */
+  .lineup-toast {
+    position: fixed;
+    bottom: calc(var(--lineup-submit-height) + 0.75rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--color-gray-800, #1f2937);
+    color: var(--text-on-colored, #fff);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: var(--z-toast, 500);
+  }
+
+  .lineup-toast--visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  /* ===================================================================
+     Desktop overrides (>=640px)
+     =================================================================== */
+  @media (min-width: 640px) {
+    .lineup-page {
+      max-width: 440px;
+      margin: 0 auto;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+
+    .lineup-slot__card { padding: 0.75rem; }
+
+    .lineup-cdm--open {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lineup-cdm__sheet {
+      max-width: 440px;
+      max-height: 88vh;
+      min-height: auto;
+      border-radius: var(--radius-lg, 1rem);
+      padding: 1.75rem 1.75rem 1.25rem;
+      animation: lineup-cdm-enter-desktop 0.22s ease-out;
+    }
+
+    @keyframes lineup-cdm-enter-desktop {
+      from { opacity: 0; transform: scale(0.97) translateY(6px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .lineup-cdm__handle { display: none; }
+
+    .lineup-submit-bar {
+      max-width: 440px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+    }
+  }
+
+  /* ===================================================================
+     Reduced motion
+     =================================================================== */
+  @media (prefers-reduced-motion: reduce) {
+    .lineup-slot__card,
+    .lineup-cdm__sheet,
+    .lineup-cdm__overlay,
+    .lineup-submit,
+    .lineup-optimal__icon,
+    .lineup-streak {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ===================================================================
+     Visually hidden (a11y)
+     =================================================================== */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Player cell tweaks inside lineup cards */
+  .lineup-slot__player :global(.player-cell) { gap: 0.375rem; }
+  .lineup-slot__player :global(.player-cell__name) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+</style>
