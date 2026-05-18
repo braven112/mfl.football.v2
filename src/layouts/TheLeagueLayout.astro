@@ -74,18 +74,25 @@ if (myteamParam) {
 	});
 }
 
+// JWT session is the canonical auth state — used as a fallback when the
+// league-specific preference cookie is missing (e.g., older login sessions
+// from before the cookie write was fixed, or after a manual cookie clear).
+const layoutAuthUser = getAuthUser(Astro.request);
+
 // Get team preference based on current league context
 let myteam: string | null = null;
 let teamInfo: NavTeamInfo | null = null;
 
 if (league === 'afl') {
-	// AFL: Check AFL-specific preference cookie first
+	// AFL: Check AFL-specific preference cookie first, fall back to JWT
 	const aflPref = getAFLPreference(Astro.cookies);
-	myteam = myteamParam || aflPref?.franchiseId || null;
+	const aflJwtFranchiseId =
+		layoutAuthUser?.leagueId === '19621' ? layoutAuthUser.franchiseId : null;
+	myteam = myteamParam || aflPref?.franchiseId || aflJwtFranchiseId || null;
 
-	// Only populate nav teamInfo from authenticated sources (AFL preference cookie),
-	// not from ?myteam= query param which doesn't require login
-	const navTeamId = aflPref?.franchiseId || null;
+	// Only populate nav teamInfo from authenticated sources (AFL preference cookie
+	// or JWT session), not from ?myteam= query param which doesn't require login
+	const navTeamId = aflPref?.franchiseId || aflJwtFranchiseId || null;
 
 	if (navTeamId) {
 		// Dynamic import AFL config only when needed
@@ -156,8 +163,7 @@ const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const adminFranchiseIds = getAdminFranchiseIds();
 
 // Commissioner mode: use JWT session auth as the single source of truth
-const authUser = getAuthUser(Astro.request);
-const isCommissioner = !!authUser && isCommissionerOrAdmin(authUser);
+const isCommissioner = !!layoutAuthUser && isCommissionerOrAdmin(layoutAuthUser);
 const isCommishMode = isCommissioner && Astro.cookies.get('commish-mode')?.value === 'true';
 
 // Get visible navigation sections

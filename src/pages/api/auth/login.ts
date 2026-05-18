@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
 import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
-import { setTheLeaguePreference } from '../../../utils/team-preferences';
+import { setTheLeaguePreference, setAFLPreference, getAFLTeamData } from '../../../utils/team-preferences';
+
+const AFL_LEAGUE_ID = '19621';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -59,8 +61,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const isDev = import.meta.env.DEV;
     const sessionCookie = createSessionCookie(sessionToken, isDev);
 
-    // Set team preference cookie
-    setTheLeaguePreference(cookies, mflResponse.franchiseId);
+    // Set team preference cookie for the league the user logged into
+    const resolvedLeagueId = mflResponse.leagueId || leagueId || '';
+    if (resolvedLeagueId === AFL_LEAGUE_ID) {
+      const teamData = getAFLTeamData(mflResponse.franchiseId);
+      if (teamData) {
+        setAFLPreference(cookies, mflResponse.franchiseId, teamData.conference, teamData.tier);
+      }
+    } else {
+      setTheLeaguePreference(cookies, mflResponse.franchiseId);
+    }
 
     // Build all Set-Cookie headers: session + MFL credentials
     const setCookieHeaders = [sessionCookie];
