@@ -780,10 +780,6 @@ const pageConfig = {
               <p>Open active slots</p>
               <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
             </article>
-            <article class="roster-summary__keep">
-              <p>Kept next year</p>
-              <strong>7</strong>
-            </article>
           </div>
         </Fragment>
       )}
@@ -1111,12 +1107,6 @@ const pageConfig = {
       padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--padding-xxl, 3rem);
       display: grid;
       gap: var(--padding-md, 1rem);
-    }
-
-    /* Highlight the keep-7 summary stat so the AFL-specific number
-       reads at a glance among the standard roster counts. */
-    .roster-summary__keep strong {
-      color: #92400e;
     }
 
     /* ── Team-card hero ── */
