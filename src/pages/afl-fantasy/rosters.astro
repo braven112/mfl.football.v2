@@ -515,6 +515,18 @@ const pageConfig = {
 
 <TheLeagueLayout title={`AFL Fantasy — ${selectedTeam.name} Roster`}>
   <section class="roster-page" data-initial-view={initialView}>
+    <!-- Team banner: full-width above the hero card, matching the
+         franchises detail page treatment. Renders only when the team
+         config has a banner URL; otherwise skipped silently. -->
+    {selectedTeam.banner && (
+      <img
+        class="team-banner"
+        src={selectedTeam.banner}
+        alt=""
+        loading="lazy"
+      />
+    )}
+
     <!-- Team Header Card -->
     <div class="team-card" data-team-identity>
       {selectedTeam.icon && (
@@ -610,6 +622,17 @@ const pageConfig = {
         Franchise profile →
       </a>
     </div>
+
+    <!-- AFL keeper context strip: anchors the page in the league's
+         one rule a salary-cap reader needs to know up front, with a
+         deep link to the keepers surface (and planner). Top-level so it
+         shows across roster / analytics / planner views. -->
+    <aside class="afl-keeper-context">
+      <strong>AFL Fantasy keeps 7.</strong>
+      Each franchise picks 7 players to retain next season — no salary
+      cap, no contracts. Build the list on
+      <a href={`/keepers?franchise=${selectedTeam.franchiseId}`}>the keepers page</a>.
+    </aside>
 
     <!-- Roster View -->
     <section class="view-container" data-view-content="roster" hidden={initialView !== 'roster'}>
@@ -779,6 +802,10 @@ const pageConfig = {
             <article>
               <p>Open active slots</p>
               <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
+            </article>
+            <article class="roster-summary__keep">
+              <p>Kept next year</p>
+              <strong>7</strong>
             </article>
           </div>
         </Fragment>
@@ -1107,6 +1134,40 @@ const pageConfig = {
       padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--padding-xxl, 3rem);
       display: grid;
       gap: var(--padding-md, 1rem);
+    }
+
+    /* ── Team banner (above hero) ── */
+    .team-banner {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 240px;
+      object-fit: contain;
+      background: var(--color-gray-100, #f3f4f6);
+      border-radius: var(--radius-lg, 1rem);
+      border: 1px solid var(--color-gray-200, #e5e7eb);
+    }
+
+    /* ── AFL keeper context strip ── */
+    .afl-keeper-context {
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      color: #7c2d12;
+      border-radius: var(--radius-md, 0.75rem);
+      padding: 0.75rem 1rem;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+
+    .afl-keeper-context a {
+      color: var(--color-primary, #c41e3a);
+      font-weight: 600;
+    }
+
+    /* Highlight the keep-7 summary stat so the AFL-specific number
+       reads at a glance among the standard roster counts. */
+    .roster-summary__keep strong {
+      color: #92400e;
     }
 
     /* ── Team-card hero ── */
