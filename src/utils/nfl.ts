@@ -67,3 +67,18 @@ export function getStadiumName(teamCode: string) {
   };
   return stadiums[code] || '';
 }
+
+// City name per normalized NFL team code. Used by player-centric modals
+// (PlayerDetailsModal, AFLActionModal, ContractDeclarationModal) to render
+// "Detroit · RB" rather than "DET · RB" in the hero meta line. Keys MUST be
+// the normalized codes returned by normalizeTeamCode (e.g. WSH, JAX).
+export const NFL_TEAM_CITIES: Record<string, string> = {
+  ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
+  CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
+  DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
+  HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville', KC: 'Kansas City',
+  LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
+  MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
+  NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
+  SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WSH: 'Washington',
+};

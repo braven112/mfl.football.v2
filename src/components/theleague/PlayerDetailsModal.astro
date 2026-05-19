@@ -625,6 +625,8 @@ const { class: className, hideContract = false } = Astro.props;
 </style>
 
 <script>
+  import { NFL_TEAM_CITIES } from '../../utils/nfl';
+
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
     const overlay = document.querySelector('.player-details-modal__overlay');
@@ -658,17 +660,6 @@ const { class: className, hideContract = false } = Astro.props;
         NYJ: 'NY Jets', PHI: 'Philadelphia Eagles', PIT: 'Pittsburgh Steelers',
         SEA: 'Seattle Seahawks', SF: 'San Francisco 49ers', TB: 'Tampa Bay Buccaneers',
         TEN: 'Tennessee Titans', WAS: 'Washington Commanders', WSH: 'Washington Commanders',
-      };
-
-      const nflTeamCities = {
-        ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
-        CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
-        DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
-        HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville', KC: 'Kansas City',
-        LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
-        MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
-        NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
-        SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington', WSH: 'Washington',
       };
 
       const setText = (id, value) => {
@@ -809,7 +800,7 @@ const { class: className, hideContract = false } = Astro.props;
 
       // ── Hero: Meta line (Team · Position · #Jersey) ──
 
-      const teamCity = nflTeamCities[teamCode] || nflTeamCities[playerData.nflTeam] || playerData.nflTeam || 'Free Agent';
+      const teamCity = NFL_TEAM_CITIES[teamCode] || playerData.nflTeam || 'Free Agent';
       const posLabel = formatPosition(position) || '';
       const jersey = playerData.number ? '#' + playerData.number : '';
       const metaParts = [teamCity, posLabel, jersey].filter(Boolean);

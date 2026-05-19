@@ -138,6 +138,8 @@
 </div>
 
 <script>
+  import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+
   type ModalAction = 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
 
   interface ActionPayload {
@@ -196,38 +198,6 @@
     const DEFAULT_HEADSHOT =
       'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
-    // MFL → standard NFL team code translation. Just the ones MFL uses
-    // differently from the standard 2-3 letter codes (everything else is
-    // already valid). Kept local to avoid pulling in nfl-logo.ts which
-    // would force this script out of inline mode.
-    const MFL_TO_STD: Record<string, string> = {
-      JAC: 'JAX',
-      LAR: 'LA',
-      LA: 'LA',
-      LAA: 'LAR',
-      WAS: 'WSH',
-      WSH: 'WSH',
-    };
-    function normalizeNflCode(code: string): string {
-      if (!code) return '';
-      const up = code.toUpperCase().trim();
-      return MFL_TO_STD[up] ?? up;
-    }
-
-    // Team-code → city name. Mirrors PlayerDetailsModal's nflTeamCities so
-    // the meta line reads "Detroit · RB" rather than "DET · RB".
-    const NFL_TEAM_CITIES: Record<string, string> = {
-      ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
-      CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
-      DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
-      HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville', KC: 'Kansas City',
-      LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
-      MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
-      NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
-      SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
-      WSH: 'Washington',
-    };
-
     function formatDraft(
       year: number | null | undefined,
       round: number | null | undefined,
@@ -283,7 +253,7 @@
       headshotEl.src = payload.headshot || DEFAULT_HEADSHOT;
       headshotEl.alt = `${payload.playerName} headshot`;
       headshotEl.onerror = () => { headshotEl.src = DEFAULT_HEADSHOT; };
-      const teamCode = payload.nflTeam ? normalizeNflCode(payload.nflTeam) : '';
+      const teamCode = payload.nflTeam ? normalizeTeamCode(payload.nflTeam) : '';
       nflLogoEl.src = teamCode
         ? `/assets/nfl-logos/${teamCode}.svg`
         : '/assets/nfl-logos/NFL.svg';

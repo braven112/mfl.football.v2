@@ -5081,6 +5081,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
 
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
@@ -7900,21 +7901,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
     }
 
-    // Team code → city name for the CDM hero meta line. Mirrors the
-    // PlayerDetailsModal mapping so "Detroit · RB" reads consistently across
-    // every player-centric modal in the app.
-    const CDM_NFL_CITIES = {
-      ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
-      CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
-      DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
-      HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville', KC: 'Kansas City',
-      LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
-      MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
-      NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
-      SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
-      WSH: 'Washington',
-    };
-
     const cdmFormatDraft = (year, round, pick, teamCode) => {
       const rawTeam = (teamCode || '').toUpperCase();
       const isUndrafted = !year || rawTeam === 'FA' || rawTeam === 'UFA';
@@ -7974,9 +7960,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       // Meta line: "{City} · {Position}". Falls back to bare team code when the
       // city lookup misses, and "Free Agent" when there's no team at all.
-      const cdmNflTeamCode = (data.nflTeam || '').toUpperCase();
+      const cdmNflTeamCode = data.nflTeam ? normalizeTeamCode(data.nflTeam) : '';
       const cdmTeamCity = cdmNflTeamCode
-        ? (CDM_NFL_CITIES[cdmNflTeamCode] || data.nflTeam || cdmNflTeamCode)
+        ? (NFL_TEAM_CITIES[cdmNflTeamCode] || data.nflTeam || cdmNflTeamCode)
         : 'Free Agent';
       const cdmPosLabel = data.position || '';
       const cdmMetaParts = [cdmTeamCity, cdmPosLabel].filter(Boolean);
