@@ -9,6 +9,7 @@
  * truth" so the admin page can show an honest preview of what the next
  * scanner cycle will pick.
  */
+import { isFingerprintStale, getStreakLength } from './schefter-recurrence-ledger.mjs';
 
 export function classifyTipKind(tip) {
   if (!tip) return 'gossip';
@@ -98,4 +99,46 @@ export function rankBuckets(buckets, now = new Date()) {
   trade.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
   gossip.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
   return [...trade, ...gossip];
+}
+
+/**
+ * A bucket's recurrence fingerprint = its bucket key, with two carve-outs:
+ *   - trade-offer buckets (`trade:offer`) have their own dedup mechanism
+ *     (per-offer cumulative probability) so the recurrence ledger doesn't
+ *     apply.
+ *   - whisper-back threads (`thread:<id>`) are reply chains, not recurring
+ *     news — they should never be marked stale.
+ *
+ * Returns `null` when the bucket is exempt from recurrence tracking.
+ */
+export function bucketFingerprint(bucket) {
+  if (!bucket || typeof bucket.key !== 'string') return null;
+  if (bucket.key === 'trade:offer') return null;
+  if (bucket.key.startsWith('thread:')) return null;
+  return bucket.key;
+}
+
+/**
+ * True when this bucket has been posted about in the two preceding ISO
+ * weeks — posting it again this cycle would be the 3rd consecutive week,
+ * which qualifies it for mailbag-only relegation. Trade-offer buckets and
+ * whisper-back threads always return false (they're exempt — see
+ * `bucketFingerprint`).
+ */
+export function isBucketStale(bucket, ledger, currentWeek) {
+  const fp = bucketFingerprint(bucket);
+  if (!fp) return false;
+  return isFingerprintStale(ledger, fp, currentWeek);
+}
+
+/**
+ * Consecutive-week streak length for a bucket (including the current week
+ * as if it just shipped). Returns 1 for exempt buckets (trade-offer,
+ * whisper-back) and for never-seen fingerprints. A streak of 3+ means the
+ * bucket is stale and headed for mailbag-only.
+ */
+export function bucketStreakLength(bucket, ledger, currentWeek) {
+  const fp = bucketFingerprint(bucket);
+  if (!fp) return 1;
+  return getStreakLength(ledger, fp, currentWeek);
 }

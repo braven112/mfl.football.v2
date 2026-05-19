@@ -56,7 +56,20 @@ type RedisClient = {
 // scanner's bucket selection exactly. Both consumers must agree.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .mjs via allowJs
-import { buildTopicBuckets, bucketPriorityScore, rankBuckets } from '../../../../scripts/lib/schefter-bucket-logic.mjs';
+import {
+  buildTopicBuckets,
+  bucketPriorityScore,
+  rankBuckets,
+  isBucketStale,
+  bucketStreakLength,
+} from '../../../../scripts/lib/schefter-bucket-logic.mjs';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — .mjs via allowJs
+import { isoWeekLabel } from '../../../../scripts/lib/schefter-recurrence-ledger.mjs';
+// Static JSON import — the scanner commits this file each run, and Vercel
+// redeploys on push, so the admin preview lags by at most one scanner cycle.
+// That's acceptable: the staleness flag is informational, not a gate.
+import recurrenceLedger from '../../../../data/schefter/topic-recurrence.json';
 // Reuse the listener's exact mention regex so the admin's "schefterDetected"
 // flag matches what the live scanner would have done with the same text.
 // Native-reply detection isn't reproducible here (it requires the bot-message
@@ -485,14 +498,23 @@ async function readRedisStats(redis: RedisClient) {
   // win first (always), then gossip buckets sorted by descending
   // priorityScore (size + age boost). The first entry is what the next
   // scanner cycle would pick if marinate + cap gates pass.
-  const ranked = rankBuckets(buildTopicBuckets(pendingTips), new Date());
+  //
+  // Each entry also carries staleStreakWeeks + isStale so the admin can
+  // see which buckets the scanner is deferring to Friday's mailbag. A
+  // streak of 3+ weeks (isStale === true) means "old news" — the scanner
+  // skips it from the normal lane until a quiet week breaks the run.
+  const previewNow = new Date();
+  const currentIsoWeek = isoWeekLabel(previewNow);
+  const ranked = rankBuckets(buildTopicBuckets(pendingTips), previewNow);
   const predictedPostOrder = ranked.map((b: { key: string; kind: string; tips: unknown[]; oldestSubmittedAt: number }) => ({
     key: b.key,
     kind: b.kind,
     tipCount: b.tips.length,
     tipIds: (b.tips as Array<{ id?: unknown }>).map((t) => (typeof t.id === 'string' ? t.id : null)).filter((x): x is string => !!x),
     oldestSubmittedAt: b.oldestSubmittedAt,
-    priorityScore: bucketPriorityScore(b, new Date()),
+    priorityScore: bucketPriorityScore(b, previewNow),
+    staleStreakWeeks: bucketStreakLength(b, recurrenceLedger, currentIsoWeek),
+    isStale: isBucketStale(b, recurrenceLedger, currentIsoWeek),
   }));
 
   // Sample the processed archive to break down tip sources (web vs groupme vs trade_offer)
