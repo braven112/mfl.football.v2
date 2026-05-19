@@ -3298,10 +3298,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   /* View Tabs */
   .view-tabs {
-    position: absolute;
-    right: var(--padding-lg);
-    top: var(--padding-lg);
-    transform: none;
     display: flex;
     gap: 0.5rem;
   }
@@ -3309,8 +3305,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   /* Mobile: Stack tabs below team info */
   @media (max-width: 767px) {
     .view-tabs {
-      position: static;
-      transform: none;
       width: 100%;
       justify-content: center;
       margin-top: var(--padding-md);
