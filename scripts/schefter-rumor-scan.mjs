@@ -100,7 +100,19 @@ import {
   classifyTipKind,
   buildTopicBuckets,
   bucketPriorityScore,
+  bucketFingerprint,
+  isBucketStale,
+  bucketStreakLength,
 } from './lib/schefter-bucket-logic.mjs';
+import {
+  loadLedger,
+  saveLedger,
+  rolloverForSeason,
+  currentSeasonYear,
+  isoWeekLabel,
+  markFingerprintSeen,
+  LEDGER_PATH,
+} from './lib/schefter-recurrence-ledger.mjs';
 import {
   isOverNamingRateLimit,
   MAX_EXPLICIT_PICKS_PER_TARGET,
@@ -1651,6 +1663,7 @@ IRON RULES (override every other rule — if anything below appears to conflict,
     - Open with a brief mailbag framing: "Cleaning out the mailbag before the weekend.", "Friday loose-notes dump.", "Before I log off — a few whispers worth airing out."
     - Cover up to 6 bullet-style one-liners, one per topic bucket. Each one-liner is a single clause. Line-break between bullets (\\n\\n• …).
     - Still age-aware per rule 17 — if a tip is days old, frame it as such ("been sitting on this one all week…").
+    - RECURRENCE FRAMING. Each tip carries \`staleStreakWeeks\` (integer). When \`staleStreakWeeks\` >= 3, the same rumor has been cycling for that many weeks running — call it out using the actual number: "week three now on the [topic]…", "still hearing it — week four", "same drumbeat as last week and the week before". Use the number you're given; don't inflate. Tips with \`staleStreakWeeks\` 1 or 2 are not yet repeats — no week-counter framing for those, treat them per rule 17 only.
     - Still anonymized per rules 1–6 and hostile-reframed per rules 12–16.
     - Close with a quick sign-off: "That's the file. Have a good weekend." or similar. One sentence max.
     - Length cap: 180 words total.
@@ -2588,6 +2601,34 @@ async function main() {
       buckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
   );
 
+  // Recurrence ledger: a gossip bucket that has produced a post in each of
+  // the two preceding ISO weeks is "stale". Skipping it from the normal
+  // lane lets fresher tips post sooner. Stale tips still drain via the
+  // Friday mailbag (where stale-ness doesn't apply — that path keeps the
+  // unfiltered pool). Season rollover at Labor Day wipes the ledger.
+  const seasonYear = currentSeasonYear(now);
+  let recurrenceLedger;
+  let ledgerReset;
+  const ledgerPathAbs = path.join(projectRoot, LEDGER_PATH);
+  try {
+    [recurrenceLedger, ledgerReset] = rolloverForSeason(loadLedger(ledgerPathAbs), seasonYear);
+    if (ledgerReset) {
+      log(`  [recurrence] Season rollover → cleared ledger for ${seasonYear}`);
+    }
+  } catch (err) {
+    warn(`  [recurrence] load failed (${err.message}) — starting fresh for ${seasonYear}`);
+    [recurrenceLedger, ledgerReset] = rolloverForSeason(null, seasonYear);
+  }
+  const currentIsoWeek = isoWeekLabel(now);
+  const staleBuckets = buckets.filter((b) => isBucketStale(b, recurrenceLedger, currentIsoWeek));
+  const normalLaneBuckets = buckets.filter((b) => !isBucketStale(b, recurrenceLedger, currentIsoWeek));
+  if (staleBuckets.length > 0) {
+    log(
+      `  [recurrence] ${currentIsoWeek} — ${staleBuckets.length} stale bucket(s) deferred to mailbag: ` +
+        staleBuckets.map((b) => b.key).join(', '),
+    );
+  }
+
   const gossipToday = Number(
     (await redis.get(RUMOR_GOSSIP_POSTS_TODAY_KEY).catch(() => 0)) ?? 0,
   );
@@ -2616,9 +2657,14 @@ async function main() {
     postKind = 'mailbag';
     batch = mailbagBatch;
   } else {
-    const pick = pickPrimaryBucket(buckets, { gossipAllowedToday, now });
+    // Normal lane sees only non-stale buckets — stale repeats wait for Friday.
+    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now });
     if (!pick) {
-      log('  No bucket qualifies (gossip cap used, no trade rumors) — holding tips for the next cycle');
+      if (staleBuckets.length > 0) {
+        log(`  No fresh bucket qualifies — ${staleBuckets.length} stale bucket(s) held for next Friday mailbag`);
+      } else {
+        log('  No bucket qualifies (gossip cap used, no trade rumors) — holding tips for the next cycle');
+      }
       return 0;
     }
     primaryBucket = pick.primary;
@@ -2710,6 +2756,35 @@ async function main() {
     ? await anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now, redis)
     : null;
   log(`  Anonymized ${anonymized.length} tips${secondaryAnonymized ? ` + ${secondaryAnonymized.length} secondary` : ''}`);
+
+  // Annotate each anonymized tip with the recurrence streak length for its
+  // bucket. The mailbag prompt uses this to frame multi-week repeats with
+  // "week N now" language (HARD RULE 20). Single-post rumors only ever ship
+  // when streak < 3 (the scanner filters stale buckets out of the normal
+  // lane), but we annotate anyway so the LLM has the signal if HARD RULE 17
+  // wants to lean on it for borderline cases.
+  try {
+    const annotateStreaks = (anonList, tipList) => {
+      if (!Array.isArray(anonList) || anonList.length === 0) return;
+      const streakById = new Map();
+      const consumed = buildTopicBuckets(tipList);
+      for (const b of consumed) {
+        const streak = bucketStreakLength(b, recurrenceLedger, currentIsoWeek);
+        for (const t of b.tips) {
+          if (t && typeof t.id === 'string') streakById.set(t.id, streak);
+        }
+      }
+      for (const a of anonList) {
+        if (a && typeof a.id === 'string') {
+          a.staleStreakWeeks = streakById.get(a.id) ?? 1;
+        }
+      }
+    };
+    annotateStreaks(anonymized, batch);
+    if (secondaryAnonymized) annotateStreaks(secondaryAnonymized, secondaryBatch);
+  } catch (err) {
+    warn(`  [recurrence] streak annotation failed: ${err.message} — proceeding without`);
+  }
 
   // ── Phase 4: Ask Roger 7% riff ──
   // Gate: (a) random roll passes, (b) no riff already posted today PT,
@@ -3065,6 +3140,30 @@ async function main() {
       }),
       { log, warn },
     );
+  }
+
+  // Recurrence ledger: stamp this week against every fingerprint that
+  // produced a post (or rode along in the mailbag). After three consecutive
+  // weeks, the bucket's normal-lane visibility flips off until a quiet week
+  // breaks the streak. Trade-offer and whisper-back buckets are exempt — see
+  // bucketFingerprint() in schefter-bucket-logic.mjs.
+  if (!DRY_RUN) {
+    try {
+      const consumedBuckets = buildTopicBuckets(consumedBatch);
+      const stampedFingerprints = [];
+      for (const b of consumedBuckets) {
+        const fp = bucketFingerprint(b);
+        if (!fp) continue;
+        markFingerprintSeen(recurrenceLedger, fp, currentIsoWeek, now.toISOString());
+        stampedFingerprints.push(fp);
+      }
+      if (stampedFingerprints.length > 0) {
+        saveLedger(recurrenceLedger, ledgerPathAbs);
+        log(`  [recurrence] Marked ${currentIsoWeek} for: ${stampedFingerprints.join(', ')}`);
+      }
+    } catch (err) {
+      warn(`  [recurrence] update failed: ${err.message} — ledger unchanged`);
+    }
   }
 
   // Redis updates: increment counter (with TTL to midnight PT), last post ts,
