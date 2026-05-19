@@ -1307,6 +1307,12 @@ const pageConfig = {
             headshot?: string;
             position?: string;
             nflTeam?: string;
+            birthdate?: number | null;
+            college?: string | null;
+            draftYear?: number | null;
+            draftRound?: number | null;
+            draftPick?: number | null;
+            draftTeam?: string | null;
           }) => void)
         | undefined;
       if (typeof opener !== 'function') {
@@ -1329,6 +1335,36 @@ const pageConfig = {
       const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
       const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
 
+      // The PlayerCell also serializes the full player payload onto the name
+      // element via data-player-modal — same JSON PlayerDetailsModal uses. Re-
+      // parse it so the action modal hero can show age / college / draft pick
+      // without duplicating those fields into separate data attributes.
+      const nameEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
+      const rawJson = nameEl?.getAttribute('data-player-modal') ?? '';
+      let extra: {
+        birthdate?: number | null;
+        college?: string | null;
+        draftYear?: number | null;
+        draftRound?: number | null;
+        draftPick?: number | null;
+        draftTeam?: string | null;
+      } = {};
+      if (rawJson) {
+        try {
+          const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+          extra = {
+            birthdate: typeof parsed.birthdate === 'number' ? parsed.birthdate : null,
+            college: typeof parsed.college === 'string' ? parsed.college : null,
+            draftYear: typeof parsed.draftYear === 'number' ? parsed.draftYear : null,
+            draftRound: typeof parsed.draftRound === 'number' ? parsed.draftRound : null,
+            draftPick: typeof parsed.draftPick === 'number' ? parsed.draftPick : null,
+            draftTeam: typeof parsed.draftTeam === 'string' ? parsed.draftTeam : null,
+          };
+        } catch {
+          // Malformed JSON — leave extra empty; modal will fall back gracefully.
+        }
+      }
+
       opener({
         playerId: row.dataset.playerId ?? '',
         playerName: row.dataset.playerName ?? 'Player',
@@ -1338,6 +1374,7 @@ const pageConfig = {
         headshot: headshotImg?.getAttribute('src') ?? undefined,
         position: positionRaw || undefined,
         nflTeam: teamCode || undefined,
+        ...extra,
       });
     });
   </script>

@@ -5081,6 +5081,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
 
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
@@ -6179,13 +6180,31 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const metaLogoEl = playerCell?.querySelector('.player-cell__meta-logo');
       const posEl = playerCell?.querySelector('.player-cell__position');
       const birthdateRaw = row?.dataset?.birthdate;
+
+      // PlayerCell serializes the full payload onto its name element via
+      // data-player-modal — the same JSON PlayerDetailsModal consumes. Re-parse
+      // it so the hero can render age / team city / college / draft info
+      // without duplicating those fields into separate data attributes.
+      const modalJsonEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
+      const rawJson = modalJsonEl?.getAttribute('data-player-modal');
+      let modalData = {};
+      if (rawJson) {
+        try { modalData = JSON.parse(rawJson); } catch { /* leave empty */ }
+      }
+
       return {
         id: playerId,
         name: nameEl?.textContent ?? '',
         headshot: imgEl?.src ?? DEFAULT_HEADSHOT_URL,
         nflLogo: metaLogoEl?.src ?? '',
         position: posEl?.textContent ?? '',
-        birthdate: birthdateRaw ? Number(birthdateRaw) : null,
+        nflTeam: modalData.nflTeam ?? null,
+        birthdate: birthdateRaw ? Number(birthdateRaw) : (modalData.birthdate ?? null),
+        college: modalData.college ?? null,
+        draftYear: modalData.draftYear ?? null,
+        draftRound: modalData.draftRound ?? null,
+        draftPick: modalData.draftPick ?? null,
+        draftTeam: modalData.draftTeam ?? null,
         eligibility: elig,
       };
     };
@@ -7073,22 +7092,39 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             const playerPosition = btn.dataset.playerPosition;
             const playerSalary = parseFloat(btn.dataset.playerSalary || '0');
             const playerYears = parseInt(btn.dataset.playerYears || '1', 10);
-            const birthdateRaw = btn.closest('tr')?.dataset?.birthdate;
+            const actionRow = btn.closest('tr');
+            const birthdateRaw = actionRow?.dataset?.birthdate;
+
+            // PlayerCell on the row already serializes the full payload onto
+            // data-player-modal. Re-parse it so the action-select hero can
+            // render college / draft / age without piping each field through
+            // its own data attribute.
+            const actionPlayerCell = actionRow?.querySelector('[data-column="player"]');
+            const actionModalJson = actionPlayerCell?.querySelector('.player-cell__name[data-player-modal]')?.getAttribute('data-player-modal');
+            let actionModalData = {};
+            if (actionModalJson) {
+              try { actionModalData = JSON.parse(actionModalJson); } catch { /* leave empty */ }
+            }
 
             const rawPlayer = {
               id: playerId,
               name: playerName,
               position: playerPosition,
-              nflTeam: btn.dataset.playerNflTeam || '',
+              nflTeam: btn.dataset.playerNflTeam || actionModalData.nflTeam || '',
               nflLogo: btn.dataset.playerNflLogo || '',
               headshot: btn.dataset.playerHeadshot || '',
               injuryStatus: btn.dataset.playerInjuryStatus || '',
               salary: playerSalary,
               years: playerYears,
-              birthdate: birthdateRaw ? Number(birthdateRaw) : null,
+              birthdate: birthdateRaw ? Number(birthdateRaw) : (actionModalData.birthdate ?? null),
               franchiseId: btn.dataset.playerFranchiseId || '',
               tradeBait: btn.dataset.playerTradeBait === 'true',
               displayTag: btn.dataset.playerDisplayTag || 'active',
+              college: actionModalData.college ?? null,
+              draftYear: actionModalData.draftYear ?? null,
+              draftRound: actionModalData.draftRound ?? null,
+              draftPick: actionModalData.draftPick ?? null,
+              draftTeam: actionModalData.draftTeam ?? null,
             };
             // Look up real eligibility to get contractInfo/isRookieContract for action filtering
             // Fall back to currentTeam since playerFranchiseId may not be set on the button
@@ -7865,6 +7901,31 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
     }
 
+    const cdmFormatDraft = (year, round, pick, teamCode) => {
+      const rawTeam = (teamCode || '').toUpperCase();
+      const isUndrafted = !year || rawTeam === 'FA' || rawTeam === 'UFA';
+      if (isUndrafted) return 'Undrafted';
+      const fmtPick = (v) => {
+        if (v == null) return '??';
+        const n = Number(v);
+        return Number.isFinite(n) ? String(n).padStart(2, '0') : '??';
+      };
+      if (year && round) return year + ' Round ' + round + ', Pick ' + fmtPick(pick);
+      if (year && pick) return year + ' Pick ' + fmtPick(pick);
+      return 'Undrafted';
+    };
+
+    const cdmCalcAge = (birthdate) => {
+      if (!birthdate) return null;
+      const bd = new Date(birthdate * 1000);
+      if (Number.isNaN(bd.getTime())) return null;
+      const today = new Date();
+      let age = today.getFullYear() - bd.getFullYear();
+      const md = today.getMonth() - bd.getMonth();
+      if (md < 0 || (md === 0 && today.getDate() < bd.getDate())) age--;
+      return age >= 0 ? age : null;
+    };
+
     const openDeclarationModal = (data, preSelectedYears = null) => {
       if (!cdmModal) return;
       cdmPlayerData = data;
@@ -7896,7 +7957,49 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
       document.getElementById('cdm-player-name').textContent = data.name;
       document.getElementById('cdm-nfl-logo').src = data.nflLogo || '/assets/nfl-logos/NFL.svg';
-      document.getElementById('cdm-meta-text').textContent = data.position || '';
+
+      // Meta line: "{City} · {Position}". Falls back to bare team code when the
+      // city lookup misses, and "Free Agent" when there's no team at all.
+      const cdmNflTeamCode = data.nflTeam ? normalizeTeamCode(data.nflTeam) : '';
+      const cdmTeamCity = cdmNflTeamCode
+        ? (NFL_TEAM_CITIES[cdmNflTeamCode] || data.nflTeam || cdmNflTeamCode)
+        : 'Free Agent';
+      const cdmPosLabel = data.position || '';
+      const cdmMetaParts = [cdmTeamCity, cdmPosLabel].filter(Boolean);
+      document.getElementById('cdm-meta-text').textContent = cdmMetaParts.join(' · ');
+
+      // Age pill — only shown when we have a usable birthdate.
+      const cdmAgeEl = document.getElementById('cdm-age-pill');
+      if (cdmAgeEl) {
+        const cdmAge = cdmCalcAge(data.birthdate);
+        if (cdmAge != null) {
+          cdmAgeEl.textContent = `${cdmAge} yrs`;
+          cdmAgeEl.hidden = false;
+        } else {
+          cdmAgeEl.textContent = '';
+          cdmAgeEl.hidden = true;
+        }
+      }
+
+      // Sub line: "{College} · {Draft}". DEFs / players without info collapse
+      // the row entirely instead of showing an empty " · ".
+      const cdmSubEl = document.getElementById('cdm-sub-text');
+      if (cdmSubEl) {
+        const cdmIsDef = (data.position || '').toUpperCase() === 'DEF';
+        const cdmSubParts = [];
+        if (data.college) cdmSubParts.push(data.college);
+        if (!cdmIsDef) {
+          const cdmDraftStr = cdmFormatDraft(data.draftYear, data.draftRound, data.draftPick, data.draftTeam);
+          if (cdmDraftStr !== 'Undrafted' || !data.college) cdmSubParts.push(cdmDraftStr);
+        }
+        if (cdmSubParts.length > 0) {
+          cdmSubEl.textContent = cdmSubParts.join(' · ');
+          cdmSubEl.hidden = false;
+        } else {
+          cdmSubEl.textContent = '';
+          cdmSubEl.hidden = true;
+        }
+      }
 
       // Type badge
       const elig = data.eligibility;
