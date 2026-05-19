@@ -43,6 +43,7 @@ import {
   getAFLTeamData,
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
+import { getAuthUser } from '../../utils/auth';
 
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
@@ -59,11 +60,14 @@ if (myTeamParam) {
 }
 
 const cookiePref = getAFLPreference(Astro.cookies);
-const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref);
+const authUser = getAuthUser(Astro.request);
+const authAflFranchiseId =
+  authUser?.leagueId === '19621' && authUser.franchiseId ? authUser.franchiseId : null;
+const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
 const resolvedFranchiseId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,
-  cookiePreference: cookiePref?.franchiseId,
+  cookiePreference: cookiePref?.franchiseId ?? authAflFranchiseId ?? undefined,
 });
 const userFranchiseId = hasExplicitTeam ? resolvedFranchiseId : undefined;
 const userTeam = userFranchiseId ? aflConfig.teams.find(t => t.franchiseId === userFranchiseId) : undefined;
