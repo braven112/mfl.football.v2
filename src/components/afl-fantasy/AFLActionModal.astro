@@ -27,17 +27,22 @@
     </button>
 
     <div class="aam-body">
-      <!-- Hero Identity — mirrors TheLeague's cdm-hero (avatar + name + team logo + position) -->
+      <!-- Hero Identity — mirrors PlayerDetailsModal's pdm-hero
+           (avatar + name + age pill + team logo + city · position + college · draft) -->
       <div class="aam-hero">
         <div class="aam-hero__avatar">
           <img id="aam-headshot" alt="Player headshot" />
         </div>
         <div class="aam-hero__info">
-          <h3 class="aam-hero__name" id="aam-player-name">&mdash;</h3>
+          <div class="aam-hero__name-row">
+            <h3 class="aam-hero__name" id="aam-player-name">&mdash;</h3>
+            <span class="aam-hero__age" id="aam-age-pill" hidden></span>
+          </div>
           <div class="aam-hero__meta">
             <img class="aam-hero__team-logo" id="aam-nfl-logo" src="" alt="" />
             <span class="aam-hero__meta-text" id="aam-meta-text">&mdash;</span>
           </div>
+          <div class="aam-hero__sub" id="aam-sub-text" hidden></div>
         </div>
       </div>
 
@@ -150,6 +155,18 @@
     position?: string;
     /** NFL team code in any format — used to load the team logo SVG */
     nflTeam?: string;
+    /** Unix-seconds birthdate (MFL format) — drives the age pill */
+    birthdate?: number | null;
+    /** College name — first segment of the sub-line */
+    college?: string | null;
+    /** Draft year (e.g. 2023) */
+    draftYear?: number | null;
+    /** Draft round */
+    draftRound?: number | null;
+    /** Pick within the round */
+    draftPick?: number | null;
+    /** Drafting NFL team code — used to detect undrafted (FA/UFA) */
+    draftTeam?: string | null;
   }
 
   const _modalEl = document.getElementById('afl-action-modal') as HTMLDivElement | null;
@@ -162,6 +179,8 @@
     const headshotEl = modal.querySelector('#aam-headshot') as HTMLImageElement;
     const nflLogoEl = modal.querySelector('#aam-nfl-logo') as HTMLImageElement;
     const metaTextEl = modal.querySelector('#aam-meta-text') as HTMLElement;
+    const agePillEl = modal.querySelector('#aam-age-pill') as HTMLElement;
+    const subTextEl = modal.querySelector('#aam-sub-text') as HTMLElement;
     const stepSelect = modal.querySelector('[data-aam-step="select"]') as HTMLElement;
     const stepConfirm = modal.querySelector('[data-aam-step="confirm"]') as HTMLElement;
     const confirmCopy = modal.querySelector('#aam-confirm-copy') as HTMLElement;
@@ -195,6 +214,50 @@
       return MFL_TO_STD[up] ?? up;
     }
 
+    // Team-code → city name. Mirrors PlayerDetailsModal's nflTeamCities so
+    // the meta line reads "Detroit · RB" rather than "DET · RB".
+    const NFL_TEAM_CITIES: Record<string, string> = {
+      ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
+      CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
+      DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
+      HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville', KC: 'Kansas City',
+      LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
+      MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
+      NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
+      SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
+      WSH: 'Washington',
+    };
+
+    function formatDraft(
+      year: number | null | undefined,
+      round: number | null | undefined,
+      pick: number | null | undefined,
+      teamCode: string | null | undefined,
+    ): string {
+      const rawTeam = (teamCode || '').toUpperCase();
+      const isUndrafted = !year || rawTeam === 'FA' || rawTeam === 'UFA';
+      if (isUndrafted) return 'Undrafted';
+      const fmtPick = (v: number | null | undefined) => {
+        if (v == null) return '??';
+        const n = Number(v);
+        return Number.isFinite(n) ? String(n).padStart(2, '0') : '??';
+      };
+      if (year && round) return `${year} Round ${round}, Pick ${fmtPick(pick)}`;
+      if (year && pick) return `${year} Pick ${fmtPick(pick)}`;
+      return 'Undrafted';
+    }
+
+    function calcAge(birthdate: number | null | undefined): number | null {
+      if (!birthdate) return null;
+      const bd = new Date(birthdate * 1000);
+      if (Number.isNaN(bd.getTime())) return null;
+      const today = new Date();
+      let age = today.getFullYear() - bd.getFullYear();
+      const md = today.getMonth() - bd.getMonth();
+      if (md < 0 || (md === 0 && today.getDate() < bd.getDate())) age--;
+      return age >= 0 ? age : null;
+    }
+
     const actionButtons = {
       'ir-to': modal.querySelector('[data-aam-action="ir-to"]') as HTMLButtonElement,
       'ir-from': modal.querySelector('[data-aam-action="ir-from"]') as HTMLButtonElement,
@@ -211,7 +274,7 @@
       currentPayload = payload;
       pendingAction = null;
 
-      // Hero — mirrors TheLeague's cdm-hero populator. Headshot falls back to
+      // Hero — mirrors PlayerDetailsModal's populator. Headshot falls back to
       // the default silhouette when MFL has no photo (pre-draft rookies, free
       // agents); team logo falls back to the generic NFL shield when team is
       // missing. The image's onerror attribute swaps to the same default if
@@ -225,7 +288,46 @@
         ? `/assets/nfl-logos/${teamCode}.svg`
         : '/assets/nfl-logos/NFL.svg';
       nflLogoEl.alt = teamCode || 'NFL';
-      metaTextEl.textContent = payload.position || '';
+
+      // Meta line: "{City} · {Position}". Falls back to bare team code when we
+      // don't have a city mapping, and "Free Agent" when there's no team at all.
+      const teamCity = teamCode
+        ? (NFL_TEAM_CITIES[teamCode] || payload.nflTeam || teamCode)
+        : 'Free Agent';
+      const metaParts = [teamCity, payload.position || ''].filter(Boolean);
+      metaTextEl.textContent = metaParts.join(' · ');
+
+      // Age pill — only shown when we have a usable birthdate.
+      const age = calcAge(payload.birthdate);
+      if (age != null) {
+        agePillEl.textContent = `${age} yrs`;
+        agePillEl.hidden = false;
+      } else {
+        agePillEl.textContent = '';
+        agePillEl.hidden = true;
+      }
+
+      // Sub line: "{College} · {Draft}". DEFs and players without college/draft
+      // info collapse the row entirely instead of showing an empty " · ".
+      const isDef = (payload.position || '').toUpperCase() === 'DEF';
+      const subParts: string[] = [];
+      if (payload.college) subParts.push(payload.college);
+      if (!isDef) {
+        const draftStr = formatDraft(
+          payload.draftYear,
+          payload.draftRound,
+          payload.draftPick,
+          payload.draftTeam,
+        );
+        if (draftStr !== 'Undrafted' || !payload.college) subParts.push(draftStr);
+      }
+      if (subParts.length > 0) {
+        subTextEl.textContent = subParts.join(' · ');
+        subTextEl.hidden = false;
+      } else {
+        subTextEl.textContent = '';
+        subTextEl.hidden = true;
+      }
 
       errorEl.hidden = true;
       errorEl.textContent = '';
@@ -496,7 +598,7 @@
      all three player-centric modals read as siblings. */
   .aam-hero {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.875rem;
     margin-bottom: 1.25rem;
   }
@@ -526,6 +628,12 @@
     flex: 1;
   }
 
+  .aam-hero__name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
   .aam-hero__name {
     margin: 0;
     font-size: 1.25rem;
@@ -536,11 +644,27 @@
     text-overflow: ellipsis;
   }
 
+  .aam-hero__age {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full, 9999px);
+    white-space: nowrap;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  .aam-hero__age[hidden] {
+    display: none;
+  }
+
   .aam-hero__meta {
-    margin-top: 0.375rem;
+    margin-top: 0.25rem;
     display: flex;
     align-items: center;
-    gap: 0.4375rem;
+    gap: 0.4rem;
   }
 
   .aam-hero__team-logo {
@@ -552,9 +676,19 @@
 
   .aam-hero__meta-text {
     font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-gray-700, #374151);
-    letter-spacing: 0.02em;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .aam-hero__sub {
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    line-height: 1.4;
+  }
+
+  .aam-hero__sub[hidden] {
+    display: none;
   }
 
   /* Action eyebrow — accent bar + uppercase label, same pattern TheLeague
