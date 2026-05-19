@@ -253,17 +253,27 @@
       headshotEl.src = payload.headshot || DEFAULT_HEADSHOT;
       headshotEl.alt = `${payload.playerName} headshot`;
       headshotEl.onerror = () => { headshotEl.src = DEFAULT_HEADSHOT; };
-      const teamCode = payload.nflTeam ? normalizeTeamCode(payload.nflTeam) : '';
-      nflLogoEl.src = teamCode
-        ? `/assets/nfl-logos/${teamCode}.svg`
-        : '/assets/nfl-logos/NFL.svg';
-      nflLogoEl.alt = teamCode || 'NFL';
 
-      // Meta line: "{City} · {Position}". Falls back to bare team code when we
-      // don't have a city mapping, and "Free Agent" when there's no team at all.
-      const teamCity = teamCode
-        ? (NFL_TEAM_CITIES[teamCode] || payload.nflTeam || teamCode)
-        : 'Free Agent';
+      // Normalize the inbound team code. The caller hands us whatever code
+      // came off the PlayerCell logo URL, so we can see:
+      //   - a real NFL code (DET, KC, ...) — normalize + render team logo
+      //   - 'NFL' — PlayerCell's generic-shield fallback for free agents
+      //   - 'FA' — MFL's raw free-agent code (won't happen via rosters, but
+      //     defensive for any future caller that passes raw MFL data)
+      //   - '' / null — no team data at all
+      // The last three all collapse to the "Free Agent" presentation.
+      const normalized = payload.nflTeam ? normalizeTeamCode(payload.nflTeam) : '';
+      const knownTeam = normalized && NFL_TEAM_CITIES[normalized] ? normalized : '';
+
+      nflLogoEl.src = knownTeam
+        ? `/assets/nfl-logos/${knownTeam}.svg`
+        : '/assets/nfl-logos/NFL.svg';
+      nflLogoEl.alt = knownTeam ? (NFL_TEAM_CITIES[knownTeam] || knownTeam) : 'Free Agent';
+
+      // Meta line: "{City} · {Position}". When the code doesn't resolve to a
+      // known city (free agent, garbage data) we show "Free Agent" rather
+      // than echoing the raw code — otherwise FAs read "NFL · QB".
+      const teamCity = knownTeam ? NFL_TEAM_CITIES[knownTeam] : 'Free Agent';
       const metaParts = [teamCity, payload.position || ''].filter(Boolean);
       metaTextEl.textContent = metaParts.join(' · ');
 
