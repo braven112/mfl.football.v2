@@ -1,0 +1,110 @@
+---
+/**
+ * AflWhatsNext — League events timeline for the AFL homepage.
+ *
+ * Reuses the shared WhatsNextCard component but sources its timeline from
+ * the AFL events JSON (via getAflWhatsNextTimeline).
+ */
+import WhatsNextCard from '../../theleague/WhatsNextCard.astro';
+import { getAflWhatsNextTimeline } from '../../../utils/league-event-resolver';
+
+interface Props {
+  /** Override date for demo/testing purposes (?testDate=YYYY-MM-DD). */
+  demoDate?: Date;
+  /** Maximum number of event cards to show (default: 2). */
+  maxCards?: number;
+  /** Optional event ID to hide (when already shown in the hero banner). */
+  excludeEventId?: string;
+}
+
+const { demoDate, maxCards = 2, excludeEventId } = Astro.props;
+
+const timeline = getAflWhatsNextTimeline(demoDate);
+
+let { current, next, upcoming } = timeline;
+if (excludeEventId) {
+  if (current?.definition.id === excludeEventId) current = null;
+  if (next?.definition.id === excludeEventId) next = null;
+  if (upcoming?.definition.id === excludeEventId) upcoming = null;
+}
+
+const hasEvents = current || next || upcoming;
+---
+
+{hasEvents && (
+  <section class="afl-next" aria-label="Upcoming AFL events">
+    <div class="afl-next__header">
+      <h2 class="afl-next__heading">What's Next</h2>
+      <a href="/afl-fantasy/calendar" class="afl-next__calendar-link">
+        Full calendar
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+    <div class:list={['afl-next__grid', { 'afl-next__grid--2col': maxCards === 2 }]}>
+      {current && <WhatsNextCard event={current} position="current" />}
+      {maxCards >= 2 && next && <WhatsNextCard event={next} position="next" />}
+      {maxCards >= 3 && upcoming && <WhatsNextCard event={upcoming} position="upcoming" />}
+    </div>
+  </section>
+)}
+
+<style>
+  .afl-next {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .afl-next__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .afl-next__heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #c41e3a);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .afl-next__calendar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #c41e3a);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: gap 0.15s ease;
+  }
+
+  .afl-next__calendar-link:hover {
+    gap: 0.5rem;
+  }
+
+  .afl-next__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .afl-next__grid--2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    .afl-next__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

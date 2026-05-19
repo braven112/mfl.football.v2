@@ -1,0 +1,175 @@
+---
+/**
+ * AflQuickLinks — Discovery grid for AFL homepage.
+ *
+ * Filters page-directory.json to AFL routes (paths starting with /afl-fantasy/),
+ * sorted by popularity. Mirrors TheLeague's HpQuickLinks structure so the
+ * editorial design stays consistent.
+ */
+import { spriteUrl } from '../../../utils/sprite-url';
+
+interface PageEntry {
+  id: string;
+  title: string;
+  description: string;
+  path: string;
+  icon: string;
+  category: string;
+  visibility: string;
+  popularity: number;
+}
+
+import pageDirectory from '../../../data/page-directory.json';
+const allPages: PageEntry[] = pageDirectory as PageEntry[];
+
+// Filter to AFL routes only and exclude the homepage itself + admin pages.
+const aflPages = allPages
+  .filter(p => p.visibility === 'all')
+  .filter(p => p.path.startsWith('/afl-fantasy/') || p.path === '/afl-fantasy')
+  .filter(p => p.id !== 'afl-homepage' && p.id !== 'homepage');
+
+// Sort by popularity, take up to 8.
+const pages = [...aflPages].sort((a, b) => b.popularity - a.popularity).slice(0, 8);
+---
+
+<section class="afl-links" aria-label="Quick links">
+  <div class="afl-links__header">
+    <h3 class="afl-links__title">Explore</h3>
+    <a href="/afl-fantasy" class="afl-links__cta">
+      All pages
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
+  {pages.length === 0 ? (
+    <p class="afl-links__empty">No AFL pages registered in the directory yet.</p>
+  ) : (
+    <div class="afl-links__grid">
+      {pages.map(page => (
+        <a href={page.path} class="afl-links__card">
+          <svg class="afl-links__icon" width="20" height="20" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-${page.icon}`} />
+          </svg>
+          <div class="afl-links__text">
+            <span class="afl-links__name">{page.title}</span>
+            <span class="afl-links__desc">{page.description}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+</section>
+
+<style>
+  .afl-links {
+    --afl-accent: var(--color-primary, #c41e3a);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+
+  .afl-links__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .afl-links__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--afl-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .afl-links__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--afl-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .afl-links__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .afl-links__empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .afl-links__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .afl-links__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-gray-50, #f9fafb);
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .afl-links__card:hover {
+    background: var(--color-gray-100, #f3f4f6);
+    transform: translateY(-1px);
+  }
+
+  .afl-links__icon {
+    flex-shrink: 0;
+    color: var(--afl-accent);
+    margin-top: 0.125rem;
+  }
+
+  .afl-links__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .afl-links__name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.3;
+  }
+
+  .afl-links__desc {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .afl-links {
+      padding: 1.25rem;
+    }
+
+    .afl-links__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

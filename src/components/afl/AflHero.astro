@@ -1,0 +1,202 @@
+---
+/**
+ * AflHero — Renders the AFL homepage hero from an AflHeroState.
+ *
+ * Routes to specialty hero components for high-stakes phases (trade deadline
+ * countdown, playoffs bracket, championship matchup) and falls back to the
+ * shared editorial HeroBanner for everything else.
+ */
+import HeroBanner from '../theleague/HeroBanner.astro';
+import TradeDeadlineHero from '../theleague/TradeDeadlineHero';
+import AflPlayoffsHero from './AflPlayoffsHero.astro';
+import AflChampionshipHero from './AflChampionshipHero.astro';
+import '../../styles/trade-deadline-hero.css';
+import type { AflHeroState } from '../../utils/afl-hero-resolver';
+
+interface Props {
+  state: AflHeroState;
+  /** AFL league config — required when rendering playoffs/championship heroes that need bracket data. */
+  config?: any;
+  /** Standings data from the AFL feed — same. */
+  standings?: any[];
+  /** User's franchise id, for highlighting in playoff brackets. */
+  userFranchiseId?: string;
+}
+
+const { state, config, standings, userFranchiseId } = Astro.props;
+const { content } = state;
+
+const fmtTime = (d: Date) =>
+  d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+---
+
+{state.kind === 'trade-deadline' ? (
+  <TradeDeadlineHero
+    client:idle
+    deadlineMidnightPT={state.deadlineMidnightPT}
+  />
+) : state.kind === 'playoffs' && config && standings ? (
+  <AflPlayoffsHero
+    teams={config.teams}
+    standings={standings}
+    config={config}
+    userFranchiseId={userFranchiseId}
+  />
+) : state.kind === 'championship' && config && standings ? (
+  <AflChampionshipHero
+    teams={config.teams}
+    standings={standings}
+    config={config}
+    userFranchiseId={userFranchiseId}
+  />
+) : (
+  <HeroBanner
+    title={content.title}
+    summary={content.summary}
+    link={content.link}
+    linkLabel={content.linkLabel ?? 'Learn more'}
+    icon={content.icon}
+    accentColor={content.accentColor}
+    variant="editorial"
+    isActive={content.isActive}
+    isUrgent={content.isUrgent}
+    isExternal={content.isExternal}
+    image={content.image}
+    imageAlt={content.imageAlt}
+    kicker={content.kicker}
+    kickerDate={content.kickerDate}
+  />
+)}
+
+{state.kind === 'conference-draft' && (
+  <div class="afl-draft-pills" aria-label="Conference draft details">
+    <div class:list={['afl-draft-pill', { 'afl-draft-pill--live': state.al.live, 'afl-draft-pill--mine': state.userConference === '00' }]}>
+      <span class="afl-draft-pill__label">American League</span>
+      <span class="afl-draft-pill__date">{fmtTime(state.al.date)}</span>
+      <span class="afl-draft-pill__status">{state.al.live ? 'Live now' : 'Live draft'}</span>
+    </div>
+    <div class:list={['afl-draft-pill', { 'afl-draft-pill--live': state.nl.live, 'afl-draft-pill--mine': state.userConference === '01' }]}>
+      <span class="afl-draft-pill__label">National League</span>
+      <span class="afl-draft-pill__date">{fmtTime(state.nl.date)}</span>
+      <span class="afl-draft-pill__status">{state.nl.live ? 'Live now' : 'Email draft'}</span>
+    </div>
+  </div>
+)}
+
+{state.kind === 'keeper-deadline' && (
+  <div class="afl-countdown-strip" aria-label="Keeper deadline countdown">
+    <span class="afl-countdown-strip__label">Keeper Deadline</span>
+    <span class="afl-countdown-strip__value">
+      {state.daysUntil === 0
+        ? 'Today, 8pm PT'
+        : state.daysUntil === 1
+          ? 'Tomorrow, 8pm PT'
+          : `${state.daysUntil} days · July 15`}
+    </span>
+    <a class="afl-countdown-strip__link" href="/afl-fantasy/keepers">Manage keepers →</a>
+  </div>
+)}
+
+<style>
+  .afl-draft-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .afl-draft-pill {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.875rem 1rem;
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 3px solid var(--cat-draft, #7c3aed);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .afl-draft-pill--mine {
+    border-left-color: var(--color-primary, #c41e3a);
+    background: color-mix(in srgb, var(--color-primary, #c41e3a) 4%, var(--content-bg, #fff));
+  }
+
+  .afl-draft-pill--live {
+    border-left-color: var(--color-error, #dc2626);
+    box-shadow: 0 0 0 1px var(--color-error, #dc2626);
+  }
+
+  .afl-draft-pill__label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .afl-draft-pill__date {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-800, #1f2937);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .afl-draft-pill__status {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .afl-draft-pill--live .afl-draft-pill__status {
+    color: var(--color-error, #dc2626);
+    font-weight: 600;
+  }
+
+  .afl-countdown-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    flex-wrap: wrap;
+  }
+
+  .afl-countdown-strip__label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .afl-countdown-strip__value {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .afl-countdown-strip__link {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #c41e3a);
+    text-decoration: none;
+  }
+
+  .afl-countdown-strip__link:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 640px) {
+    .afl-draft-pills {
+      grid-template-columns: 1fr;
+    }
+    .afl-countdown-strip__link {
+      margin-left: 0;
+    }
+  }
+</style>

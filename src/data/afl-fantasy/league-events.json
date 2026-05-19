@@ -1,76 +1,96 @@
 {
-  "$comment": "AFL Fantasy league calendar events. Each entry has either a fixed date (month + day, optional time) or a computed rule (relative to NFL Labor Day). dates_per_year overrides the computed/fixed values for specific years (e.g. when the league moves auction night). The calendar page renders these grouped by category. Update this file as the AFL league office sets dates each year.",
-  "$todo": "Most dates below are placeholders inferred from typical AFL cadence. Brandon: replace with actual AFL deadlines from the AFL constitution, and switch to dates_per_year overrides where helpful.",
+  "$comment": "AFL league calendar events. Mirrors TheLeague's shape (see src/data/theleague/league-events.ts and src/types/league-events.ts). Custom computed rules used here: 'saturday-before-labor-day' (AL Live Draft), 'sunday-before-labor-day' (NL Email Draft, 9am PT). Keeper deadline is fixed July 15.",
   "events": [
     {
+      "id": "afl-new-season-starts",
+      "name": "New Season Starts",
+      "description": "AFL league year rolls over and rosters lock for the new season.",
+      "category": "preseason",
+      "icon": "star",
+      "startDate": { "type": "fixed", "month": 2, "day": 15 },
+      "sortOrder": 1
+    },
+    {
       "id": "afl-keeper-deadline",
-      "name": "Keeper List Deadline",
-      "description": "Each franchise must declare its 7 kept players. Players not declared as keepers are released into the auction pool.",
+      "name": "Keeper Deadline",
+      "description": "Final day to declare your 7 keepers. Anyone not protected enters the draft pool.",
       "category": "preseason",
       "icon": "bookmark",
-      "startDate": { "type": "fixed", "month": 7, "day": 1, "time": "20:00" },
-      "urgencyDays": 14,
-      "sortOrder": 1,
+      "startDate": { "type": "fixed", "month": 7, "day": 15, "time": "20:00" },
       "actionLinks": [
-        { "label": "Manage Keepers", "url": "/afl-fantasy/keepers/manage", "external": false }
-      ]
-    },
-    {
-      "id": "afl-auction",
-      "name": "AFL Auction",
-      "description": "Live auction for all non-keeper players. Free agency follows after the auction closes.",
-      "category": "preseason",
-      "icon": "dollar",
-      "startDate": { "type": "fixed", "month": 8, "day": 15, "time": "19:00" },
+        { "label": "Manage Keepers", "url": "/afl-fantasy/keepers", "external": false }
+      ],
       "urgencyDays": 7,
-      "sortOrder": 2
-    },
-    {
-      "id": "afl-season-start",
-      "name": "Regular Season Kickoff",
-      "description": "Week 1 of the AFL Fantasy regular season begins with the NFL kickoff Thursday.",
-      "category": "in-season",
-      "icon": "star",
-      "startDate": { "type": "computed", "rule": "nfl-kickoff" },
       "sortOrder": 3
     },
     {
-      "id": "afl-trade-deadline",
-      "name": "Trade Deadline",
-      "description": "Final day to submit trades for the regular season.",
-      "category": "in-season",
-      "icon": "clock",
-      "startDate": { "type": "computed", "rule": "friday-before-week-11" },
+      "id": "afl-al-draft",
+      "name": "American League Draft",
+      "description": "AL teams meet live for the conference draft — veterans and rookies on the same board.",
+      "category": "draft",
+      "icon": "draft-podium",
+      "startDate": { "type": "computed", "rule": "saturday-before-labor-day", "time": "09:00" },
       "urgencyDays": 7,
       "sortOrder": 4
     },
     {
-      "id": "afl-allplay-locks",
-      "name": "All-Play Cutoff Locks",
-      "description": "Final week of all-play scoring. After this week the Premier/D-League promotion-relegation cutoff is locked.",
-      "category": "in-season",
-      "icon": "swap",
-      "startDate": { "type": "computed", "rule": "after-week-16" },
+      "id": "afl-nl-draft",
+      "name": "National League Draft",
+      "description": "NL teams begin the email draft at 9am PT Sunday. Slow draft, but the clock matters.",
+      "category": "draft",
+      "icon": "draft-podium",
+      "startDate": { "type": "computed", "rule": "sunday-before-labor-day", "time": "09:00" },
       "urgencyDays": 7,
       "sortOrder": 5
     },
     {
-      "id": "afl-conference-playoffs-start",
-      "name": "Conference Playoffs Start",
-      "description": "AL and NL conference seeds 1-4 begin head-to-head playoffs. NIT bracket (seeds 5-12) also begins.",
-      "category": "playoffs",
-      "icon": "trophy",
-      "startDate": { "type": "computed", "rule": "playoffs-start" },
+      "id": "afl-season-start",
+      "name": "NFL Season Starts",
+      "description": "NFL kickoff and the start of weekly fantasy matchups across both conferences.",
+      "category": "regular-season",
+      "icon": "nfl",
+      "startDate": { "type": "computed", "rule": "nfl-kickoff" },
       "sortOrder": 6
     },
     {
-      "id": "afl-championship-week",
-      "name": "Championship Week",
-      "description": "AL champion vs. NL champion in the AFL Fantasy championship game.",
-      "category": "playoffs",
-      "icon": "trophy",
-      "startDate": { "type": "computed", "rule": "championship-week" },
+      "id": "afl-trade-deadline",
+      "name": "Trade Deadline",
+      "description": "Final day to submit trades. Deadline is the Wednesday between Week 10 and Week 11.",
+      "category": "regular-season",
+      "icon": "exchange",
+      "startDate": { "type": "computed", "rule": "afl-trade-deadline" },
+      "urgencyDays": 7,
       "sortOrder": 7
+    },
+    {
+      "id": "afl-regular-season-ends",
+      "name": "Regular Season Ends",
+      "description": "Week 13 closes the regular season. Premier/D-League cutoff and conference seeds lock.",
+      "category": "regular-season",
+      "icon": "gavel",
+      "startDate": { "type": "computed", "rule": "after-week-16" },
+      "urgencyDays": 7,
+      "sortOrder": 8
+    },
+    {
+      "id": "afl-conference-playoffs",
+      "name": "Conference Playoffs",
+      "description": "Week 14 — conference seeds 1-4 begin head-to-head playoffs.",
+      "category": "regular-season",
+      "icon": "playoff",
+      "startDate": { "type": "computed", "rule": "afl-playoffs-start" },
+      "urgencyDays": 7,
+      "sortOrder": 9
+    },
+    {
+      "id": "afl-championship-week",
+      "name": "World Championship",
+      "description": "Week 16 — AL champion vs. NL champion in the World Championship.",
+      "category": "regular-season",
+      "icon": "champ",
+      "startDate": { "type": "computed", "rule": "afl-championship-week" },
+      "urgencyDays": 7,
+      "sortOrder": 10
     }
   ]
 }

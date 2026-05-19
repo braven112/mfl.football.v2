@@ -1,0 +1,260 @@
+---
+/**
+ * AflChampionshipHero — World Championship matchup hero (Week 16).
+ *
+ * Shows AL champion vs NL champion. Without live bracket data we fall back to
+ * the #1 seed of each conference; once the playoffs feed publishes winners,
+ * those override the seeds.
+ */
+import { chooseTeamName } from '../../utils/team-names';
+import { getConferenceStandings } from '../../utils/standings';
+
+interface Team {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  icon?: string;
+  banner?: string;
+}
+
+interface Props {
+  teams: Team[];
+  standings: any[];
+  config: any;
+  userFranchiseId?: string;
+}
+
+const { teams, standings, config, userFranchiseId } = Astro.props;
+const teamMap = new Map(teams.map(t => [t.franchiseId, t]));
+
+interface ChampionEntry {
+  franchiseId: string;
+  name: string;
+  icon?: string;
+  banner?: string;
+  seed: number;
+  record: string;
+  isUser: boolean;
+}
+
+function topSeed(code: '00' | '01'): ChampionEntry | null {
+  try {
+    const result = getConferenceStandings(standings, config, code);
+    const top = (result.allTeams ?? [])[0];
+    if (!top) return null;
+    const team = teamMap.get(top.id);
+    return {
+      franchiseId: top.id,
+      name: team
+        ? chooseTeamName({
+            fullName: team.name,
+            nameMedium: team.nameMedium,
+            nameShort: team.nameShort,
+            abbrev: team.abbrev,
+          }, 'default')
+        : top.teamName ?? top.id,
+      icon: team?.icon,
+      banner: team?.banner,
+      seed: top.conferenceSeed,
+      record: top.h2hwlt ?? '0-0-0',
+      isUser: top.id === userFranchiseId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const al = topSeed('00');
+const nl = topSeed('01');
+
+function formatRecord(wlt: string): string {
+  const parts = wlt.split('-');
+  return parts.length === 3 && parts[2] === '0' ? `${parts[0]}-${parts[1]}` : wlt;
+}
+---
+
+<section class="afl-champ-hero" aria-label="World Championship matchup">
+  <div class="afl-champ-hero__head">
+    <span class="afl-champ-hero__kicker">World Championship · Week 16</span>
+    <h2 class="afl-champ-hero__title">One Game. One Trophy.</h2>
+    <p class="afl-champ-hero__sub">The AL champion and NL champion meet to crown the AFL world champion.</p>
+  </div>
+
+  <div class="afl-champ-hero__matchup">
+    {al ? (
+      <div class:list={['afl-champ-hero__side afl-champ-hero__side--al', { 'afl-champ-hero__side--user': al.isUser }]}>
+        <span class="afl-champ-hero__conf">American League</span>
+        {al.icon && <img src={al.icon} alt="" class="afl-champ-hero__icon" loading="lazy" />}
+        <span class="afl-champ-hero__name">{al.name}</span>
+        <span class="afl-champ-hero__record">{formatRecord(al.record)}</span>
+      </div>
+    ) : (
+      <div class="afl-champ-hero__side afl-champ-hero__side--tbd">
+        <span class="afl-champ-hero__conf">American League</span>
+        <span class="afl-champ-hero__name">TBD</span>
+      </div>
+    )}
+
+    <div class="afl-champ-hero__vs" aria-hidden="true">vs</div>
+
+    {nl ? (
+      <div class:list={['afl-champ-hero__side afl-champ-hero__side--nl', { 'afl-champ-hero__side--user': nl.isUser }]}>
+        <span class="afl-champ-hero__conf">National League</span>
+        {nl.icon && <img src={nl.icon} alt="" class="afl-champ-hero__icon" loading="lazy" />}
+        <span class="afl-champ-hero__name">{nl.name}</span>
+        <span class="afl-champ-hero__record">{formatRecord(nl.record)}</span>
+      </div>
+    ) : (
+      <div class="afl-champ-hero__side afl-champ-hero__side--tbd">
+        <span class="afl-champ-hero__conf">National League</span>
+        <span class="afl-champ-hero__name">TBD</span>
+      </div>
+    )}
+  </div>
+
+  <a href="/afl-fantasy/playoffs" class="afl-champ-hero__cta">
+    View bracket
+    <span aria-hidden="true">→</span>
+  </a>
+</section>
+
+<style>
+  .afl-champ-hero {
+    --afl-accent: var(--color-primary, #c41e3a);
+    --afl-gold: #d97706;
+    background:
+      radial-gradient(ellipse at top, color-mix(in srgb, var(--afl-gold) 8%, transparent), transparent 70%),
+      var(--content-bg, #fff);
+    border: 1px solid var(--afl-gold);
+    border-radius: var(--radius-lg, 0.75rem);
+    box-shadow: var(--shadow-md);
+    padding: 2rem 1.75rem;
+  }
+
+  .afl-champ-hero__head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .afl-champ-hero__kicker {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--afl-gold);
+  }
+
+  .afl-champ-hero__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.15;
+  }
+
+  .afl-champ-hero__sub {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    max-width: 38ch;
+  }
+
+  .afl-champ-hero__matchup {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .afl-champ-hero__side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 1rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    text-align: center;
+  }
+
+  .afl-champ-hero__side--user {
+    border-color: var(--afl-accent);
+    background: color-mix(in srgb, var(--afl-accent) 5%, var(--content-bg, #fff));
+  }
+
+  .afl-champ-hero__side--tbd {
+    opacity: 0.6;
+  }
+
+  .afl-champ-hero__conf {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .afl-champ-hero__icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .afl-champ-hero__name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.2;
+  }
+
+  .afl-champ-hero__side--user .afl-champ-hero__name {
+    color: var(--afl-accent);
+  }
+
+  .afl-champ-hero__record {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .afl-champ-hero__vs {
+    font-size: 0.875rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--afl-gold);
+  }
+
+  .afl-champ-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--afl-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .afl-champ-hero__cta:hover {
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 560px) {
+    .afl-champ-hero__matchup {
+      grid-template-columns: 1fr;
+    }
+    .afl-champ-hero__vs {
+      padding: 0.25rem 0;
+    }
+  }
+</style>

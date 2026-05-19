@@ -1,6 +1,6 @@
 ---
 /**
- * AFL Fantasy login page — mirrors /theleague/login but posts to MFL
+ * AFL login page — mirrors /theleague/login but posts to MFL
  * with leagueId=19621 so the resulting JWT scopes the user to AFL.
  *
  * Without this page, every login on the site dropped the user into
@@ -38,14 +38,14 @@ const next = Astro.url.searchParams.get('next');
 const safeNext = next && next.startsWith('/afl-fantasy') ? next : '/afl-fantasy';
 ---
 
-<TheLeagueLayout title="Sign In — AFL Fantasy">
+<TheLeagueLayout title="Sign In — AFL">
   <div class="afl-login-page">
     <LoginForm
       leagueId={AFL_LEAGUE_ID}
       seasonYear={AFL_LOGIN_YEAR}
       redirectUrl={safeNext}
       logoSrc="/assets/logos/afl-logo.svg"
-      logoAlt="AFL Fantasy logo"
+      logoAlt="AFL logo"
       subtitle="Sign in with your MFL credentials for the American Football League"
     />
   </div>
