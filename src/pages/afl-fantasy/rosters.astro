@@ -16,7 +16,8 @@ import {
   fpaTier,
   type NflMatchup,
 } from '../../utils/nfl-matchups';
-import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
+import collegeLogos from '../../data/college-logos.json';
 import {
   loadAflPlayerScores,
   loadAflProjections,
@@ -395,6 +396,24 @@ const positionDistribution: AnalyticsBucket[] = (() => {
     .filter((b) => b.count > 0);
 })();
 
+// MFL ships only `birthdate` (Unix seconds) — there's no `age` field on the
+// feed. Compute age client-of-server-side so the analytics view actually has
+// numbers to render.
+function calculateAgeFromBirthdate(birthdate?: string | number | null): number | null {
+  if (!birthdate) return null;
+  const seconds = typeof birthdate === 'number' ? birthdate : Number(birthdate);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  const birthDate = new Date(seconds * 1000);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age > 0 ? age : null;
+}
+
 const ageBuckets: AnalyticsBucket[] = (() => {
   const ranges: Array<{ label: string; min: number; max: number }> = [
     { label: '≤23', min: 0, max: 23 },
@@ -403,8 +422,8 @@ const ageBuckets: AnalyticsBucket[] = (() => {
     { label: '30+', min: 30, max: 99 },
   ];
   const ages = roster
-    .map((p) => Number(p.age))
-    .filter((n) => Number.isFinite(n) && n > 0);
+    .map((p) => calculateAgeFromBirthdate(p.birthdate))
+    .filter((n): n is number => n !== null);
   return ranges.map((r) => {
     const count = ages.filter((a) => a >= r.min && a <= r.max).length;
     return {
@@ -418,8 +437,8 @@ const ageBuckets: AnalyticsBucket[] = (() => {
 const ageStats: { avg: number | null; oldest: { name: string; age: number } | null; youngest: { name: string; age: number } | null } =
   (() => {
     const withAge = roster
-      .map((p) => ({ name: p.name, age: Number(p.age) }))
-      .filter((p) => Number.isFinite(p.age) && p.age > 0);
+      .map((p) => ({ name: p.name, age: calculateAgeFromBirthdate(p.birthdate) }))
+      .filter((p): p is { name: string; age: number } => p.age !== null);
     if (!withAge.length) return { avg: null, oldest: null, youngest: null };
     const sum = withAge.reduce((acc, p) => acc + p.age, 0);
     const sortedByAge = [...withAge].sort((a, b) => a.age - b.age);
@@ -430,14 +449,52 @@ const ageStats: { avg: number | null; oldest: { name: string; age: number } | nu
     };
   })();
 
-const nflTeamDistribution: AnalyticsBucket[] = bucketize(
-  roster.map((p) => p.team),
-  10
+// Group roster by NFL team — mirrors TheLeague's analytics layout, where each
+// team that shares ≥2 players gets its own chart-card with the full lineup.
+// Coaches and free agents are excluded so the card list stays focused on
+// actual NFL roster overlap.
+type RosterGroup = { key: string; players: RosterEntry[] };
+
+const playersByNflTeam: RosterGroup[] = (() => {
+  const groups = new Map<string, RosterEntry[]>();
+  for (const p of roster) {
+    const team = (p.team || '').trim();
+    if (!team || team === 'FA' || team === 'N/A') continue;
+    const pos = (p.position || '').toUpperCase();
+    if (pos === 'COACH') continue;
+    const normalized = normalizeTeamCode(team) || team;
+    if (!groups.has(normalized)) groups.set(normalized, []);
+    groups.get(normalized)!.push(p);
+  }
+  return [...groups.entries()]
+    .filter(([, players]) => players.length > 1)
+    .map(([key, players]) => ({ key, players: [...players].sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+})();
+
+const collegeLogosNormalized: Record<string, { logo?: string; logoDark?: string }> = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]: any) => [name.toLowerCase(), data])
 );
-const collegeDistribution: AnalyticsBucket[] = bucketize(
-  roster.map((p) => p.college),
-  8
-);
+const getCollegeAssets = (collegeName?: string | null) => {
+  if (!collegeName) return null;
+  return collegeLogosNormalized[collegeName.toLowerCase()] ?? null;
+};
+
+const playersByCollege: RosterGroup[] = (() => {
+  const groups = new Map<string, RosterEntry[]>();
+  for (const p of roster) {
+    const college = (p.college || '').trim();
+    if (!college || college === 'N/A' || college.toLowerCase() === 'unknown') continue;
+    const pos = (p.position || '').toUpperCase();
+    if (pos === 'DEF') continue;
+    if (!groups.has(college)) groups.set(college, []);
+    groups.get(college)!.push(p);
+  }
+  return [...groups.entries()]
+    .filter(([, players]) => players.length > 1)
+    .map(([key, players]) => ({ key, players: [...players].sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+})();
 
 // Color palette for position donut chart (consistent everywhere)
 const POSITION_COLORS: Record<string, string> = {
@@ -475,6 +532,80 @@ function makeDonutSegments(buckets: AnalyticsBucket[]) {
 }
 
 const donutSegments = makeDonutSegments(positionDistribution);
+
+// ── Age × position strip plot ──
+// Each player becomes a dot at (age, position-lane). Lanes are fixed so the
+// chart layout stays consistent across rosters; identical (age, position)
+// pairs stack vertically inside their lane so overlapping dots stay legible.
+const POSITION_LANES = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
+type PositionLane = (typeof POSITION_LANES)[number];
+
+type AgePositionDot = {
+  position: PositionLane;
+  age: number;
+  name: string;
+  stackIndex: number;
+};
+
+const ageByPositionDots: AgePositionDot[] = (() => {
+  const points: { position: PositionLane; age: number; name: string }[] = [];
+  for (const p of roster) {
+    const age = calculateAgeFromBirthdate(p.birthdate);
+    if (age === null) continue;
+    const rawPos = (p.position || '').toUpperCase();
+    const lane: PositionLane | null =
+      rawPos === 'DEF' ? 'DEF'
+      : (POSITION_LANES as readonly string[]).includes(rawPos) ? (rawPos as PositionLane)
+      : null;
+    if (!lane) continue;
+    points.push({ position: lane, age, name: p.name });
+  }
+  // Stack same-age dots within their lane so overlapping players stay readable.
+  const seen = new Map<string, number>();
+  return points.map((pt) => {
+    const key = `${pt.position}:${pt.age}`;
+    const stackIndex = seen.get(key) ?? 0;
+    seen.set(key, stackIndex + 1);
+    return { ...pt, stackIndex };
+  });
+})();
+
+// X-axis range padded to a clean multiple of 2 on each side so labels align.
+const ageStripRange = (() => {
+  const ages = ageByPositionDots.map((d) => d.age);
+  const lo = ages.length ? Math.min(...ages) : 22;
+  const hi = ages.length ? Math.max(...ages) : 36;
+  const min = Math.max(18, Math.floor((lo - 1) / 2) * 2);
+  const max = Math.ceil((hi + 1) / 2) * 2;
+  const ticks: number[] = [];
+  for (let t = min; t <= max; t += 2) ticks.push(t);
+  return { min, max, ticks };
+})();
+
+// SVG geometry — keep the viewBox numbers + helpers together so the markup
+// below stays declarative.
+const STRIP_W = 400;
+const STRIP_H = 220;
+const STRIP_PAD_L = 36;
+const STRIP_PAD_R = 14;
+const STRIP_PAD_T = 12;
+const STRIP_PAD_B = 28;
+const STRIP_PLOT_W = STRIP_W - STRIP_PAD_L - STRIP_PAD_R;
+const STRIP_PLOT_H = STRIP_H - STRIP_PAD_T - STRIP_PAD_B;
+const STRIP_LANE_H = STRIP_PLOT_H / POSITION_LANES.length;
+const STRIP_STACK_STEP = 8; // px between stacked dots in the same lane
+
+const stripMapX = (age: number) => {
+  const span = ageStripRange.max - ageStripRange.min || 1;
+  return STRIP_PAD_L + ((age - ageStripRange.min) / span) * STRIP_PLOT_W;
+};
+const stripLaneCenter = (lane: PositionLane) =>
+  STRIP_PAD_T + (POSITION_LANES.indexOf(lane) + 0.5) * STRIP_LANE_H;
+const stripMapY = (lane: PositionLane, stackIndex: number) => {
+  // First dot lands on the lane center; stack grows upward so the base of
+  // the column always rides the same horizontal line.
+  return stripLaneCenter(lane) - stackIndex * STRIP_STACK_STEP;
+};
 
 // Initial view from query param
 const requestedView = Astro.url.searchParams.get('view');
@@ -793,8 +924,8 @@ const pageConfig = {
         </div>
       ) : (
         <div class="analytics-grid">
-          <!-- Position composition donut -->
-          <article class="chart-card chart-card--span-2">
+          <!-- Position composition donut (paired with Age-by-position strip plot) -->
+          <article class="chart-card">
             <header class="chart-card__header">
               <h3 class="chart-card__title">Position composition</h3>
               <p class="chart-card__subtitle">{roster.length} players on roster</p>
@@ -841,6 +972,88 @@ const pageConfig = {
             </div>
           </article>
 
+          {/* Age by position — strip plot: position lane on Y, age on X.
+              Each dot is one player; same-(age,position) dots stack upward so
+              overlapping players stay legible. */}
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age by position</h3>
+              <p class="chart-card__subtitle">Each dot is a player</p>
+            </header>
+            {ageByPositionDots.length === 0 ? (
+              <p class="chart-card__empty">No age data yet.</p>
+            ) : (
+              <svg
+                class="strip-plot"
+                viewBox={`0 0 ${STRIP_W} ${STRIP_H}`}
+                role="img"
+                aria-label="Roster age plotted against position"
+              >
+                {/* Vertical gridlines at each x-axis tick */}
+                {ageStripRange.ticks.map((t) => (
+                  <line
+                    x1={stripMapX(t)}
+                    x2={stripMapX(t)}
+                    y1={STRIP_PAD_T}
+                    y2={STRIP_H - STRIP_PAD_B}
+                    stroke="#f3f4f6"
+                    stroke-width="1"
+                  />
+                ))}
+                {/* Horizontal lane lines + Y-axis position labels */}
+                {POSITION_LANES.map((lane) => {
+                  const cy = stripLaneCenter(lane);
+                  return (
+                    <Fragment>
+                      <line
+                        x1={STRIP_PAD_L}
+                        x2={STRIP_W - STRIP_PAD_R}
+                        y1={cy}
+                        y2={cy}
+                        stroke="#e5e7eb"
+                        stroke-width="1"
+                        stroke-dasharray="2 3"
+                      />
+                      <text
+                        x={STRIP_PAD_L - 8}
+                        y={cy + 3}
+                        text-anchor="end"
+                        class="strip-plot__lane-label"
+                      >
+                        {lane}
+                      </text>
+                    </Fragment>
+                  );
+                })}
+                {/* X-axis tick labels */}
+                {ageStripRange.ticks.map((t) => (
+                  <text
+                    x={stripMapX(t)}
+                    y={STRIP_H - STRIP_PAD_B + 14}
+                    text-anchor="middle"
+                    class="strip-plot__x-label"
+                  >
+                    {t}
+                  </text>
+                ))}
+                {/* Player dots */}
+                {ageByPositionDots.map((dot) => (
+                  <circle
+                    cx={stripMapX(dot.age)}
+                    cy={stripMapY(dot.position, dot.stackIndex)}
+                    r="4"
+                    fill={POSITION_COLORS[dot.position] ?? '#64748b'}
+                    fill-opacity="0.85"
+                    stroke="#fff"
+                    stroke-width="1"
+                  >
+                    <title>{dot.name} — {dot.position}, age {dot.age}</title>
+                  </circle>
+                ))}
+              </svg>
+            )}
+          </article>
+
           <!-- Age stats card -->
           <article class="chart-card">
             <header class="chart-card__header">
@@ -867,8 +1080,8 @@ const pageConfig = {
             </div>
           </article>
 
-          <!-- Age distribution bars -->
-          <article class="chart-card chart-card--span-2">
+          <!-- Age distribution bars (paired with Age card on the same row) -->
+          <article class="chart-card">
             <header class="chart-card__header">
               <h3 class="chart-card__title">Age distribution</h3>
               <p class="chart-card__subtitle">How your roster splits by age</p>
@@ -886,51 +1099,87 @@ const pageConfig = {
             </ul>
           </article>
 
-          <!-- NFL team distribution -->
-          <article class="chart-card">
-            <header class="chart-card__header">
-              <h3 class="chart-card__title">NFL teams</h3>
-              <p class="chart-card__subtitle">Top {nflTeamDistribution.length} represented</p>
-            </header>
-            {nflTeamDistribution.length === 0 ? (
-              <p class="chart-card__empty">No NFL team data yet.</p>
-            ) : (
-              <ul class="bar-list bar-list--compact">
-                {nflTeamDistribution.map((b) => (
-                  <li class="bar-row">
-                    <span class="bar-row__label bar-row__label--code">{b.label}</span>
-                    <span class="bar-row__track">
-                      <span class="bar-row__fill bar-row__fill--blue" style={`width:${b.pct}%`}></span>
-                    </span>
-                    <span class="bar-row__count">{b.count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
+        </div>
+      )}
 
-          <!-- College distribution -->
-          <article class="chart-card">
-            <header class="chart-card__header">
-              <h3 class="chart-card__title">Colleges</h3>
-              <p class="chart-card__subtitle">Top {collegeDistribution.length} represented</p>
-            </header>
-            {collegeDistribution.length === 0 ? (
-              <p class="chart-card__empty">No college data yet.</p>
-            ) : (
-              <ul class="bar-list bar-list--compact">
-                {collegeDistribution.map((b) => (
-                  <li class="bar-row">
-                    <span class="bar-row__label">{b.label}</span>
-                    <span class="bar-row__track">
-                      <span class="bar-row__fill bar-row__fill--green" style={`width:${b.pct}%`}></span>
-                    </span>
-                    <span class="bar-row__count">{b.count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
+      {/* NFL Analysis — mirrors TheLeague's analytics page: each NFL team
+          with ≥2 of this franchise's players gets a card with the players
+          listed using the standard PlayerCell lockup. */}
+      {playersByNflTeam.length > 0 && (
+        <div class="analytics-section">
+          <div class="section-header">
+            <h3 class="section-header__title">NFL Analysis</h3>
+            <p class="section-header__sub">Players on the same NFL team</p>
+          </div>
+          <div class="nfl-teams-grid">
+            {playersByNflTeam.map((group) => (
+              <article class="chart-card">
+                <header class="chart-card__header chart-card__header--group">
+                  <img src={getNFLTeamLogo(group.key)} alt={group.key} class="team-group__logo" />
+                  <span class="team-group__name">{getNFLTeamName(group.key)}</span>
+                </header>
+                <div class="team-group__players">
+                  {group.players.map((player) => (
+                    <div class="players-team__player">
+                      <PlayerCell
+                        name={player.name}
+                        position={player.position}
+                        nflTeam={player.team}
+                        playerData={buildPlayerModalData(player)}
+                        mflId={player.id}
+                        espnId={player.espn_id}
+                        size="compact"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* College Analysis — same chart-card grid keyed by school. */}
+      {playersByCollege.length > 0 && (
+        <div class="analytics-section">
+          <div class="section-header">
+            <h3 class="section-header__title">College Analysis</h3>
+            <p class="section-header__sub">Players who played for the same college</p>
+          </div>
+          <div class="nfl-teams-grid">
+            {playersByCollege.map((group) => {
+              const assets = getCollegeAssets(group.key);
+              return (
+                <article class="chart-card">
+                  <header class="chart-card__header chart-card__header--group">
+                    {assets?.logo ? (
+                      <img src={assets.logo} alt={group.key} class="team-group__logo" />
+                    ) : (
+                      <div class="team-group__logo team-group__logo--fallback">
+                        {group.key[0] ?? '?'}
+                      </div>
+                    )}
+                    <span class="team-group__name">{group.key}</span>
+                  </header>
+                  <div class="team-group__players">
+                    {group.players.map((player) => (
+                      <div class="players-team__player">
+                        <PlayerCell
+                          name={player.name}
+                          position={player.position}
+                          nflTeam={player.team}
+                          playerData={buildPlayerModalData(player)}
+                          mflId={player.id}
+                          espnId={player.espn_id}
+                          size="compact"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
       )}
     </section>
@@ -1109,11 +1358,12 @@ const pageConfig = {
       gap: var(--padding-md, 1rem);
     }
 
-    /* ── Team-card hero ── */
+    /* ── Team-card hero ──
+       Symmetric top/bottom padding so future content (activity strip, etc.)
+       slots in beneath this card without needing extra spacing tweaks. */
     .team-card {
       display: grid;
       padding: var(--padding-md, 1rem);
-      padding-bottom: var(--padding-xxl, 3rem); /* room for tabs on mobile */
       justify-items: center;
       gap: var(--padding-sm, 0.5rem);
       border-radius: var(--radius-lg, 1rem);
@@ -1130,7 +1380,7 @@ const pageConfig = {
         flex-wrap: wrap;
         padding-inline: var(--padding-lg, 1.5rem);
         justify-content: center;
-        padding-block: var(--padding-md, 1rem) var(--padding-sm, 0.5rem);
+        padding-block: var(--padding-md, 1rem);
         text-align: left;
       }
     }
@@ -1627,14 +1877,64 @@ const pageConfig = {
     .donut-row {
       display: flex;
       align-items: center;
-      gap: 1.5rem;
+      gap: 4.5rem;
       flex-wrap: wrap;
     }
 
+    @media (max-width: 1100px) {
+      .donut-row {
+        gap: 2.5rem;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .donut-row {
+        gap: 1.5rem;
+      }
+    }
+
+    /* Age × position strip plot — mirrors the donut card scale so the
+       two cards sit side by side without one dominating the other. */
+    .strip-plot {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .strip-plot__lane-label {
+      font-size: 10px;
+      font-weight: 700;
+      fill: #6b7280;
+      letter-spacing: 0.04em;
+    }
+
+    .strip-plot__x-label {
+      font-size: 9px;
+      fill: #9ca3af;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Sized to roughly match the strip-plot card's rendered height
+       (viewBox 400×220 → ~55% of the chart-card width) so the two
+       analytics cards on the top row read as a balanced pair. */
     .donut-chart {
-      width: 160px;
-      height: 160px;
+      width: 240px;
+      height: 240px;
       flex-shrink: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .donut-chart {
+        width: 200px;
+        height: 200px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .donut-chart {
+        width: 180px;
+        height: 180px;
+      }
     }
 
     .donut-chart__num {
@@ -1654,8 +1954,13 @@ const pageConfig = {
       list-style: none;
       margin: 0;
       padding: 0;
-      flex: 1;
+      /* Take just enough room for the legend contents — don't stretch to the
+         right edge of the card. Combined with .donut-row's larger gap, this
+         keeps the legend visually centered between the donut and the card
+         border instead of jammed against the edge. */
+      flex: 0 1 auto;
       min-width: 160px;
+      max-width: 220px;
       display: grid;
       gap: 0.375rem;
     }
@@ -1702,7 +2007,7 @@ const pageConfig = {
       flex-direction: column;
       align-items: center;
       padding: 0.75rem;
-      background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+      background: #154e87;
       border-radius: 0.5rem;
       color: #fff;
     }
@@ -1831,6 +2136,102 @@ const pageConfig = {
       .chart-card--span-2 {
         grid-column: span 1;
       }
+    }
+
+    /* ── NFL / College analysis sections — mirror TheLeague's layout ── */
+    .view-container[data-view-content="analytics"] {
+      row-gap: 2rem;
+    }
+
+    .analytics-section {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .section-header {
+      padding-left: 0.625rem;
+      border-left: 2px solid var(--color-primary, #1c497c);
+    }
+
+    .section-header__title {
+      margin: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-900, #111827);
+      line-height: 1;
+    }
+
+    .section-header__sub {
+      margin: 0.25rem 0 0;
+      font-size: 0.8125rem;
+      color: var(--color-gray-400, #9ca3af);
+      line-height: 1.3;
+    }
+
+    .nfl-teams-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+      .nfl-teams-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .nfl-teams-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card__header--group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .team-group__logo {
+      width: 2rem;
+      height: 2rem;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .team-group__logo--fallback {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.5rem;
+      background: #e2e8f0;
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .team-group__name {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: 0.02em;
+    }
+
+    .team-group__players {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .players-team__player {
+      padding: 0.5rem 0.625rem;
+      background: #f9fafb;
+      border-radius: 0.375rem;
     }
 
     /* ── Empty / coming-soon states ── */
