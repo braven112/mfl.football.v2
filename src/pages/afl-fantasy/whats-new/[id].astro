@@ -22,7 +22,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import SchefterWidget from '../../../components/shared/SchefterWidget.astro';
 import type { SchefterFeed as FeedType } from '../../../types/schefter';
-import schefterFeedData from '../../../data/theleague/schefter-feed.json';
+import schefterFeedData from '../../../../data/afl-fantasy/schefter-feed.json';
 
 export const prerender = false;
 
@@ -34,11 +34,11 @@ const isAdmin = !!user && isCommissionerOrAdmin(user);
 
 const visible = (entries as WhatsNewEntry[])
   .filter((e) => e.visibility !== 'admin' || isAdmin)
-  .filter((e) => entryAppliesToLeague(e, 'theleague'));
+  .filter((e) => entryAppliesToLeague(e, 'afl'));
 const sorted = sortEntriesNewestFirst(visible);
 const id = Astro.params.id;
 const entry = sorted.find((e) => e.id === id);
-if (!entry) return Astro.redirect(r('/theleague/whats-new'));
+if (!entry) return Astro.redirect(r('/afl-fantasy/whats-new'));
 const { prev, next } = getAdjacentEntries(sorted, entry.id);
 
 const MULTICOLOR_ICONS = ['nfl'];
@@ -51,8 +51,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   <main class="wn-detail">
 
     <Breadcrumbs items={[
-      { label: 'The League', href: '/theleague' },
-      { label: "What's New", href: '/theleague/whats-new' },
+      { label: 'AFL', href: '/afl-fantasy' },
+      { label: "What's New", href: '/afl-fantasy/whats-new' },
       { label: entry.title },
     ]} />
 
@@ -71,7 +71,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
                   <span class="browser-frame__dot browser-frame__dot--red"></span>
                   <span class="browser-frame__dot browser-frame__dot--yellow"></span>
                   <span class="browser-frame__dot browser-frame__dot--green"></span>
-                  <span class="browser-frame__url">{entry.link ? `theleague.us${entry.link.replace('/theleague', '')}` : 'theleague.us'}</span>
+                  <span class="browser-frame__url">{entry.link ? `afl-fantasy.com${entry.link.replace('/afl-fantasy', '')}` : 'afl-fantasy.com'}</span>
                 </div>
                 <img
                   src={imagePath}
@@ -223,8 +223,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
             <div class="wn-detail__release-card">
               <SchefterWidget
                 posts={(schefterFeedData as FeedType).posts.slice(0, 4)}
-                league="theleague"
-                allNewsLink={r('/theleague/news')}
+                league="afl"
+                allNewsLink={r('/afl-fantasy/news')}
               />
             </div>
           )}
@@ -235,7 +235,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
               <h2 class="wn-detail__section-title">More Updates</h2>
               <div class="wn-detail__nav-links">
                 {prev && (
-                  <a href={`${r('/theleague/whats-new')}/${prev.id}`} class="wn-detail__nav-link wn-detail__nav-link--prev">
+                  <a href={`${r('/afl-fantasy/whats-new')}/${prev.id}`} class="wn-detail__nav-link wn-detail__nav-link--prev">
                     <span class="wn-detail__nav-dir">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="12" height="12">
                         <path d="M10 3L5 8l5 5" />
@@ -246,7 +246,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
                   </a>
                 )}
                 {next && (
-                  <a href={`${r('/theleague/whats-new')}/${next.id}`} class="wn-detail__nav-link wn-detail__nav-link--next">
+                  <a href={`${r('/afl-fantasy/whats-new')}/${next.id}`} class="wn-detail__nav-link wn-detail__nav-link--next">
                     <span class="wn-detail__nav-dir">
                       Older
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="12" height="12">

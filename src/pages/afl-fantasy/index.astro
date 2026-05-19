@@ -1,238 +1,306 @@
 ---
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import {
-  setAFLPreference,
-  getAFLTeamData,
-} from '../../utils/team-preferences';
-
-// Server-render to support team preferences
+/**
+ * AFL Homepage
+ *
+ * 2-column layout mirroring TheLeague's homepage:
+ *   Left  — rotating hero (calendar-driven), team snapshot, conference-draft
+ *           preview (in season), tiered standings preview, What's Next
+ *           timeline, quick links.
+ *   Right — Schefter Report news feed (sticky sidebar).
+ *
+ * The hero rotation is driven by `resolveAflHeroState` which encodes AFL's
+ * calendar cadence: long quiet offseason → keeper window in June/July →
+ * conference draft weekend before Labor Day → regular season → playoffs →
+ * championship. What's New entries tagged `leagues: ['afl']` (or untagged)
+ * surface during quiet periods.
+ */
 export const prerender = false;
 
-// Team Preference Cookie Integration
-const myTeamParam = Astro.url.searchParams.get('myteam');
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
+import AflHero from '../../components/afl/AflHero.astro';
+import AflTeamSnapshot from '../../components/afl/hp-sections/AflTeamSnapshot.astro';
+import AflStandingsCompact from '../../components/afl/hp-sections/AflStandingsCompact.astro';
+import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflConferencePlayoffPreview.astro';
+import AflConferenceDraftPreview from '../../components/afl/hp-sections/AflConferenceDraftPreview.astro';
+import AflWhatsNext from '../../components/afl/hp-sections/AflWhatsNext.astro';
+import AflQuickLinks from '../../components/afl/hp-sections/AflQuickLinks.astro';
 
-// If myteam parameter is provided, update the cookie preference
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import feedData from '../../../data/afl-fantasy/schefter-feed.json';
+import whatsNewData from '../../data/whats-new.json';
+
+import { entryAppliesToLeague } from '../../types/whats-new';
+import type { WhatsNewEntry } from '../../types/whats-new';
+import type { SchefterFeed as FeedType } from '../../types/schefter';
+import { parseTestDate } from '../../utils/hero-resolver';
+import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
+import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
+import { getCurrentSeasonYear, getLaborDayForYear } from '../../utils/league-year';
+import {
+  getAFLPreference,
+  setAFLPreference,
+  getAFLTeamData,
+  resolveAFLTeamSelection,
+} from '../../utils/team-preferences';
+
+import '../../styles/schefter-feed.css';
+import '../../styles/schefter-feed-compact.css';
+
+// ── Team preference resolution ──────────────────────────────────────────────
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
   if (teamData) {
     setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
   }
 }
+
+const cookiePref = getAFLPreference(Astro.cookies);
+const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref);
+const resolvedFranchiseId = resolveAFLTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePref?.franchiseId,
+});
+const userFranchiseId = hasExplicitTeam ? resolvedFranchiseId : undefined;
+const userTeam = userFranchiseId ? aflConfig.teams.find(t => t.franchiseId === userFranchiseId) : undefined;
+const userConferenceId = (userTeam?.conference === '00' || userTeam?.conference === '01')
+  ? (userTeam.conference as '00' | '01')
+  : undefined;
+const userConferenceName = userConferenceId
+  ? aflConfig.conferences.find(c => c.code === userConferenceId)?.name
+  : undefined;
+
+// ── Date / hero state ───────────────────────────────────────────────────────
+const testDateParam = Astro.url.searchParams.get('testDate');
+const effectiveDate = parseTestDate(testDateParam) ?? new Date();
+const testMode = !!testDateParam;
+
+const timeline = getAflWhatsNextTimeline(effectiveDate);
+const allWhatsNew = whatsNewData as WhatsNewEntry[];
+const aflWhatsNew = allWhatsNew.filter(e => entryAppliesToLeague(e, 'afl'));
+
+const heroState = resolveAflHeroState({
+  referenceDate: effectiveDate,
+  testMode,
+  whatsNewEntries: allWhatsNew,
+  timeline,
+  userConferenceId,
+});
+
+// ── Standings + roster data ─────────────────────────────────────────────────
+const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true });
+const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
+
+function getModule(mod: any) {
+  return mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+}
+
+// Resolve the AFL season year by walking from getCurrentSeasonYear backward
+// to the most recent year that actually has populated standings data.
+// (MFL rolls the year over at kickoff so the "current" season is often empty
+//  until games are played — fall back to last completed year.)
+function resolveSeasonYearWithData(): number {
+  const preferred = getCurrentSeasonYear(effectiveDate);
+  for (let y = preferred; y >= preferred - 5; y--) {
+    const feed = getModule(standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${y}/standings.json`]) as { leagueStandings?: { franchise: any[] } } | undefined;
+    if (feed?.leagueStandings?.franchise?.length) return y;
+  }
+  return preferred;
+}
+
+const seasonYear = resolveSeasonYearWithData();
+
+function pickFeed(feeds: Record<string, unknown>, suffix: string) {
+  return getModule(feeds[`../../../data/afl-fantasy/mfl-feeds/${seasonYear}/${suffix}`]);
+}
+
+const standingsFeed = pickFeed(standingsFeeds, 'standings.json') as { leagueStandings?: { franchise: any[] } } | undefined;
+const standingsFranchises: any[] = standingsFeed?.leagueStandings?.franchise ?? [];
+
+// Roster count for the user's team
+const rostersFeed = pickFeed(rosterFeeds, 'rosters.json') as { rosters?: { franchise: any | any[] } } | undefined;
+const rosterFranchises = rostersFeed?.rosters?.franchise
+  ? Array.isArray(rostersFeed.rosters.franchise) ? rostersFeed.rosters.franchise : [rostersFeed.rosters.franchise]
+  : [];
+const userRosterEntry = rosterFranchises.find((r: any) => r.id === userFranchiseId);
+const rosterCount = userRosterEntry?.player
+  ? (Array.isArray(userRosterEntry.player) ? userRosterEntry.player.length : 1)
+  : undefined;
+
+// Record from standings feed
+const userStandingsRow = standingsFranchises.find((f: any) => f.id === userFranchiseId);
+const recordParts = (userStandingsRow?.h2hwlt ?? '').split('-').map((n: string) => parseInt(n, 10));
+const record = recordParts.length === 3 && recordParts.every(Number.isFinite)
+  ? { wins: recordParts[0], losses: recordParts[1], ties: recordParts[2] }
+  : undefined;
+
+const inSeasonVariant = heroState.kind === 'regular-season' || heroState.kind === 'playoffs' || heroState.kind === 'championship';
+
+// ── Schefter feed ───────────────────────────────────────────────────────────
+const feed = feedData as FeedType;
+const compactPosts = feed.posts.slice(0, 30);
+
+// ── Conference draft preview visibility ─────────────────────────────────────
+const labor = getLaborDayForYear(effectiveDate.getFullYear());
+const alDate = new Date(labor);
+alDate.setDate(alDate.getDate() - 2);
+alDate.setHours(9, 0, 0, 0);
+const nlDate = new Date(labor);
+nlDate.setDate(nlDate.getDate() - 1);
+nlDate.setHours(9, 0, 0, 0);
+
+const draftPreviewStart = new Date(alDate);
+draftPreviewStart.setDate(draftPreviewStart.getDate() - 14); // show 2 weeks before AL draft
+const draftPreviewEnd = new Date(nlDate);
+draftPreviewEnd.setDate(draftPreviewEnd.getDate() + 7); // keep visible 1 week after NL draft
+
+const showDraftPreview = effectiveDate >= draftPreviewStart && effectiveDate <= draftPreviewEnd;
+
+// Hide the What's Next card that the hero already promotes
+const heroEventId = heroState.content.heroEventId;
 ---
 
-<TheLeagueLayout title="AFL Fantasy - American Football League">
-  <div class="landing-page">
-    <!-- Hero Section -->
-    <header class="hero-section">
-      <h1 class="league-title">{aflConfig.name}</h1>
-      <p class="league-info">
-        {aflConfig.teams.length} Teams • {aflConfig.conferences.length} Conferences • {aflConfig.draftRounds} Draft Rounds
-      </p>
-    </header>
+<TheLeagueLayout title="AFL — American Football League">
+  <div class="afl-hp">
+    <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
+      <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
 
-    <!-- Quick Links -->
-    <section class="quick-links">
-      <h2>League Pages</h2>
-      <div class="links-grid">
-        <a href="/afl-fantasy/standings" class="link-card">
-          <div class="link-icon">📊</div>
-          <h3>Standings</h3>
-          <p>View current season standings by division</p>
-        </a>
+      <AflHero
+        state={heroState}
+        config={aflConfig}
+        standings={standingsFranchises}
+        userFranchiseId={userFranchiseId}
+      />
 
-        <a href="/afl-fantasy/rosters" class="link-card">
-          <div class="link-icon">👥</div>
-          <h3>Rosters</h3>
-          <p>Browse team rosters and player information</p>
-        </a>
+      <AflTeamSnapshot
+        userTeam={userTeam}
+        userConferenceName={userConferenceName}
+        record={record}
+        rosterCount={rosterCount}
+        keeperLimit={aflConfig.keepers ?? 7}
+        rosterLimit={28}
+        variant={inSeasonVariant ? 'in-season' : 'offseason'}
+      />
 
-        <a href="/afl-fantasy/playoffs" class="link-card">
-          <div class="link-icon">🏆</div>
-          <h3>Playoffs</h3>
-          <p>Playoff bracket and tournament results</p>
-        </a>
+      {showDraftPreview && (
+        <AflConferenceDraftPreview
+          alDate={alDate}
+          nlDate={nlDate}
+          referenceDate={effectiveDate}
+          userConferenceId={userConferenceId}
+        />
+      )}
 
-        <a href="/afl-fantasy/draft-predictor" class="link-card">
-          <div class="link-icon">📈</div>
-          <h3>Draft Predictor</h3>
-          <p>Projected draft order for upcoming season</p>
-        </a>
-      </div>
-    </section>
+      <AflWhatsNext demoDate={effectiveDate} maxCards={2} excludeEventId={heroEventId} />
 
-    <!-- League Info -->
-    <section class="league-info-section">
-      <h2>League Structure</h2>
-      <div class="structure-grid">
-        {aflConfig.conferences.map(conf => (
-          <div class="conference-card">
-            <h3>{conf.name}</h3>
-            <div class="divisions">
-              {conf.divisions.map(div => (
-                <div class="division-badge">{div}</div>
-              ))}
-            </div>
+      {standingsFranchises.length > 0 && (
+        <AflConferencePlayoffPreview
+          teams={aflConfig.teams}
+          standings={standingsFranchises}
+          config={aflConfig}
+          userFranchiseId={userFranchiseId}
+          conferenceCode={userConferenceId ?? '00'}
+        />
+      )}
+
+      {standingsFranchises.length > 0 && (
+        <AflStandingsCompact
+          teams={aflConfig.teams}
+          standings={standingsFranchises}
+          userFranchiseId={userFranchiseId}
+          relegationCount={4}
+        />
+      )}
+
+      <AflQuickLinks />
+
+      {testMode && (
+        <div class="afl-hp__debug" id="afl-demo-nav">
+          <div class="afl-hp__debug-phase">
+            <code>Hero: {heroState.kind} · priority {heroState.priority} · ref {effectiveDate.toISOString()}</code>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </section>
+
+    <aside class="afl-hp__sidebar" aria-label="Schefter Report feed" tabindex="0">
+      <SchefterFeedCompact posts={compactPosts} isAuthenticated={false} />
+    </aside>
   </div>
 </TheLeagueLayout>
 
 <style>
-  .landing-page {
-    padding: 2rem 1rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .hero-section {
-    background: var(--hero-bg-color, #fff);
-    color: var(--hero-text-color, #002244);
-    padding: 4rem 2rem;
-    border-radius: 1rem;
-    text-align: center;
-    margin-bottom: 3rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  }
-
-  .league-title {
-    font-size: 3rem;
-    font-weight: 900;
-    margin: 0 0 1rem 0;
-  }
-
-  .league-info {
-    font-size: 1.25rem;
-    margin: 0;
-    opacity: 0.95;
-  }
-
-  .quick-links {
-    margin-bottom: 3rem;
-  }
-
-  .quick-links h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    color: #1e293b;
-  }
-
-  .links-grid {
+  .afl-hp {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: 1fr 380px;
     gap: 1.5rem;
+    align-items: start;
   }
 
-  .link-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 1rem;
-    border: 2px solid #e2e8f0;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  .afl-hp__main {
+    min-width: 0;
   }
 
-  .link-card:hover {
-    border-color: #c41e3a;
-    box-shadow: 0 10px 15px -3px rgb(196 30 58 / 0.2);
-    transform: translateY(-2px);
+  .afl-hp__main > :global(:not(:first-child)) {
+    margin-top: 2rem;
   }
 
-  .link-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
-  .link-card h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-    color: #1e293b;
+  .afl-hp__sidebar {
+    min-width: 0;
+    margin-top: 2rem;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sf-border, #e5e7eb) transparent;
+    border-radius: var(--radius-lg, 0.75rem);
   }
 
-  .link-card p {
-    margin: 0;
-    color: #64748b;
-    line-height: 1.5;
+  .afl-hp__debug {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px dashed var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
   }
 
-  .league-info-section {
-    background: white;
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  }
-
-  .league-info-section h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 1.5rem 0;
-    color: #1e293b;
-  }
-
-  .structure-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-  }
-
-  .conference-card {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    border: 2px solid #cbd5e1;
-  }
-
-  .conference-card h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0 0 1rem 0;
-    color: #002244;
-  }
-
-  .divisions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .division-badge {
-    background: #154e87;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-
-  @media (max-width: 767px) {
-    .landing-page {
-      padding: 1rem 0.5rem;
+  @container (max-width: 1024px) {
+    .afl-hp {
+      grid-template-columns: 1fr 320px;
+      gap: 1rem;
     }
+  }
 
-    .hero-section {
-      padding: 3rem 1.5rem;
-    }
-
-    .league-title {
-      font-size: 2rem;
-    }
-
-    .league-info {
-      font-size: 1rem;
-    }
-
-    .links-grid {
+  @container (max-width: 880px) {
+    .afl-hp {
       grid-template-columns: 1fr;
+      gap: 1rem;
     }
 
-    .structure-grid {
-      grid-template-columns: 1fr;
+    .afl-hp__sidebar {
+      position: static;
+      max-height: none;
+      overflow-y: visible;
     }
   }
 </style>

@@ -16,7 +16,7 @@ import path from 'path';
 // Note: This page is server-rendered (not prerendered) to support team preferences
 // export const prerender = true;
 
-// Load AFL Fantasy data - use current season year (updates Labor Day)
+// Load AFL data - use current season year (updates Labor Day)
 const currentYear = getCurrentSeasonYear();
 const standingsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'standings.json');
 const playoffBracketsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'playoff-brackets.json');
@@ -94,7 +94,7 @@ const alOrder = draftOrders.find(order => order.conference === 'American League'
 const nlOrder = draftOrders.find(order => order.conference === 'National League');
 ---
 
-<TheLeagueLayout title={`AFL Fantasy - ${nextYear} Draft Predictor`}>
+<TheLeagueLayout title={`AFL - ${nextYear} Draft Predictor`}>
   <script is:inline define:vars={{ preferredConference }}>
     // Set preferred conference on body for client-side script
     document.body.setAttribute('data-preferred-conference', preferredConference === '00' ? 'AL' : 'NL');

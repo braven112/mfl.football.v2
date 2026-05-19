@@ -23,14 +23,14 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 export const prerender = false;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const basePath = hideLeaguePrefix ? '' : '/theleague';
+const basePath = hideLeaguePrefix ? '' : '/afl-fantasy';
 
 const user = getAuthUser(Astro.request);
 const isAdmin = !!user && isCommissionerOrAdmin(user);
 
 const visible = (entries as WhatsNewEntry[])
   .filter((e) => e.visibility !== 'admin' || isAdmin)
-  .filter((e) => entryAppliesToLeague(e, 'theleague'));
+  .filter((e) => entryAppliesToLeague(e, 'afl'));
 const sorted = sortEntriesNewestFirst(visible);
 
 // Read the last-visit cookie for "NEW" badge computation
@@ -51,7 +51,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 });
 ---
 
-<TheLeagueLayout title="What's New - The League">
+<TheLeagueLayout title="What's New — AFL">
   <main class="whats-new-page">
     <header class="whats-new-page__header">
       <h1 class="whats-new-page__title">
@@ -61,8 +61,11 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
         )}
       </h1>
       <p class="whats-new-page__subtitle">
-        New features, improvements, and updates to The League.
+        New features, improvements, and updates to the AFL.
       </p>
+      {sorted.length === 0 && (
+        <p class="whats-new-page__subtitle">No AFL-specific updates yet — check back soon.</p>
+      )}
     </header>
 
     <WhatsNewListing

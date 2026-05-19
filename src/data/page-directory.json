@@ -458,5 +458,137 @@
     "tags": ["tip", "tips", "rumor", "rumors", "rumor mill", "schefter", "anonymous", "gossip", "leak", "leaks", "whisper", "source", "informant", "intel", "scoop", "hot take", "prediction", "submit", "form", "trade rumor", "commish beef"],
     "visibility": "all",
     "popularity": 30
+  },
+  {
+    "id": "afl-rosters",
+    "title": "Rosters",
+    "description": "All 24 AFL franchise rosters across both conferences — players, status, contracts. Switch teams with the picker.",
+    "path": "/afl-fantasy/rosters",
+    "icon": "users",
+    "category": "popular",
+    "tags": ["afl", "roster", "rosters", "team", "teams", "players", "lineup", "squad", "depth chart", "premier league", "d-league", "american league", "national league", "al", "nl", "conference", "division", "starters", "bench", "ir", "injured reserve", "keeper"],
+    "visibility": "all",
+    "popularity": 90
+  },
+  {
+    "id": "afl-standings",
+    "title": "Standings",
+    "description": "AFL standings by conference, division, tier, and all-play — track promotion/relegation between Premier League and D-League.",
+    "path": "/afl-fantasy/standings",
+    "icon": "trophy",
+    "category": "popular",
+    "tags": ["afl", "standings", "rankings", "rank", "record", "wins", "losses", "ties", "all-play", "allplay", "tier", "premier league", "d-league", "promotion", "relegation", "conference", "division", "american league", "national league", "al", "nl", "playoff race", "playoff seeding", "pf", "pa", "points for", "points against"],
+    "visibility": "all",
+    "popularity": 88
+  },
+  {
+    "id": "afl-lineup",
+    "title": "Set Lineup",
+    "description": "Set your weekly starting lineup — pick from your bench, swap into FLEX slots, and submit to MFL without leaving the site.",
+    "path": "/afl-fantasy/lineup",
+    "icon": "clipboard",
+    "category": "my-team",
+    "tags": ["afl", "lineup", "lineups", "set lineup", "submit lineup", "starters", "starting", "bench", "start", "sit", "flex", "weekly", "qb", "rb", "wr", "te", "pk", "def", "kicker", "defense", "swap", "slot", "game day", "matchup"],
+    "visibility": "all",
+    "popularity": 80
+  },
+  {
+    "id": "afl-keepers",
+    "title": "Keepers",
+    "description": "Declare your 7 protected players before the July 15 deadline. Players left undeclared get released into the draft pool.",
+    "path": "/afl-fantasy/keepers",
+    "icon": "bookmark",
+    "category": "my-team",
+    "tags": ["afl", "keeper", "keepers", "keep", "protect", "protected", "declare", "declaration", "deadline", "july 15", "preseason", "offseason", "auction pool", "draft pool", "release", "released", "core", "retain", "save", "lock in", "7 keepers"],
+    "visibility": "all",
+    "popularity": 75
+  },
+  {
+    "id": "afl-playoffs",
+    "title": "Playoffs",
+    "description": "Conference playoff brackets — AL and NL race through head-to-head matchups to crown champions before the AFL title game.",
+    "path": "/afl-fantasy/playoffs",
+    "icon": "playoff",
+    "category": "popular",
+    "tags": ["afl", "playoff", "playoffs", "bracket", "brackets", "championship", "title", "trophy", "champion", "head to head", "h2h", "conference", "al", "nl", "american league", "national league", "seed", "seeding", "round", "semifinal", "final", "matchup", "nit", "consolation"],
+    "visibility": "all",
+    "popularity": 70
+  },
+  {
+    "id": "afl-news",
+    "title": "Schefter Report",
+    "description": "AFL news feed — transactions, trades, draft buzz, and weekly recaps. Schefter covers both conferences.",
+    "path": "/afl-fantasy/news",
+    "icon": "news",
+    "category": "popular",
+    "tags": ["afl", "news", "feed", "schefter", "report", "transactions", "trades", "trade", "free agent", "free agency", "waivers", "rumors", "hot take", "analysis", "recap", "weekly", "breaking", "moves", "activity", "timeline", "commentary"],
+    "visibility": "all",
+    "popularity": 72
+  },
+  {
+    "id": "afl-trade-builder",
+    "title": "Trade Builder",
+    "description": "Build and propose AFL trades — pick assets, evaluate fairness, and send the offer when the package looks right.",
+    "path": "/afl-fantasy/trade-builder",
+    "icon": "exchange",
+    "category": "my-team",
+    "tags": ["afl", "trade", "trades", "trading", "trade builder", "swap", "exchange", "propose", "offer", "send trade", "fairness", "value", "package", "players", "draft picks", "futures", "deal", "deals", "trading block"],
+    "visibility": "all",
+    "popularity": 60
+  },
+  {
+    "id": "afl-draft-predictor",
+    "title": "Draft Predictor",
+    "description": "Projected AFL draft order for the upcoming season — based on standings, tiebreakers, and current league results.",
+    "path": "/afl-fantasy/draft-predictor",
+    "icon": "draft-podium",
+    "category": "tools",
+    "tags": ["afl", "draft", "predictor", "draft predictor", "draft order", "order", "pick", "picks", "round", "rounds", "rookie", "rookies", "veteran", "projection", "next year", "upcoming", "future", "1.01", "first round", "conference draft", "al draft", "nl draft"],
+    "visibility": "all",
+    "popularity": 55
+  },
+  {
+    "id": "afl-calendar",
+    "title": "Calendar",
+    "description": "Important AFL dates — keeper deadline, conference draft weekend, trade deadline, playoffs, and championship week.",
+    "path": "/afl-fantasy/calendar",
+    "icon": "calendar",
+    "category": "info",
+    "tags": ["afl", "calendar", "dates", "deadlines", "schedule", "events", "timeline", "keeper deadline", "draft", "trade deadline", "playoffs", "championship", "kickoff", "labor day", "season", "year", "important dates", "when", "july 15"],
+    "visibility": "all",
+    "popularity": 35
+  },
+  {
+    "id": "afl-rules",
+    "title": "Constitution",
+    "description": "The AFL constitution — scoring, roster rules, keeper rules, draft format, playoffs, tier promotion/relegation, and dues.",
+    "path": "/afl-fantasy/rules",
+    "icon": "scroll",
+    "category": "info",
+    "tags": ["afl", "rules", "constitution", "bylaws", "scoring", "format", "roster rules", "keeper rules", "draft rules", "playoff rules", "tier", "promotion", "relegation", "dues", "payouts", "commissioner", "league rules", "guidelines", "policy", "policies"],
+    "visibility": "all",
+    "popularity": 30
+  },
+  {
+    "id": "afl-about",
+    "title": "About AFL",
+    "description": "About the American Football League — history, structure, franchises, and how AFL differs from TheLeague.",
+    "path": "/afl-fantasy/about",
+    "icon": "shield",
+    "category": "info",
+    "tags": ["afl", "about", "american football league", "history", "franchises", "league", "info", "information", "intro", "overview", "structure", "conferences", "tiers", "format", "background", "how it works", "explainer", "what is"],
+    "visibility": "all",
+    "popularity": 20
+  },
+  {
+    "id": "afl-whats-new",
+    "title": "What's New",
+    "description": "Changelog of new AFL features, page launches, enhancements, and bug fixes — filtered to AFL-tagged updates only.",
+    "path": "/afl-fantasy/whats-new",
+    "icon": "star",
+    "category": "info",
+    "tags": ["afl", "whats new", "what's new", "changelog", "updates", "new", "features", "release notes", "release", "notes", "announcements", "history", "blog", "log", "added", "shipped", "launched", "fixed", "polish", "enhancement"],
+    "visibility": "all",
+    "popularity": 25
   }
 ]

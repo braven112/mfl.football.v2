@@ -1,144 +1,18 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import eventsConfig from '../../data/afl-fantasy/league-events.json';
+import { getAllResolvedAflEvents } from '../../utils/league-event-resolver';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import { spriteUrl } from '../../utils/sprite-url';
+import type { ResolvedLeagueEvent } from '../../types/league-events';
 
 export const prerender = false;
 
-interface FixedDate {
-  type: 'fixed';
-  month: number; // 1-12
-  day: number;
-  time?: string;
-}
+const testDateParam = Astro.url.searchParams.get('testDate');
+const today = testDateParam ? new Date(testDateParam + 'T12:00:00') : new Date();
+const leagueYear = getCurrentLeagueYear(today);
 
-interface ComputedDate {
-  type: 'computed';
-  rule:
-    | 'nfl-kickoff'
-    | 'friday-before-week-11'
-    | 'after-week-16'
-    | 'playoffs-start'
-    | 'championship-week'
-    | 'third-thursday-march'
-    | 'third-sunday-august';
-}
-
-interface AflEvent {
-  id: string;
-  name: string;
-  description: string;
-  category: 'preseason' | 'in-season' | 'playoffs' | 'offseason';
-  icon: string;
-  startDate: FixedDate | ComputedDate;
-  urgencyDays?: number;
-  sortOrder: number;
-  actionLinks?: Array<{ label: string; url: string; external?: boolean }>;
-}
-
-const events = (eventsConfig.events as AflEvent[]).slice().sort(
-  (a, b) => a.sortOrder - b.sortOrder
-);
-
-// --- Date resolution -----------------------------------------------------
-
-function getNthDayOfMonth(year: number, month: number, dayOfWeek: number, nth: number): Date {
-  const first = new Date(year, month, 1);
-  const firstDow = first.getDay();
-  let diff = dayOfWeek - firstDow;
-  if (diff < 0) diff += 7;
-  return new Date(year, month, 1 + diff + (nth - 1) * 7);
-}
-
-function getLaborDay(year: number): Date {
-  return getNthDayOfMonth(year, 8, 1, 1); // Sept (idx 8), Monday (1), 1st
-}
-
-function resolveDate(date: FixedDate | ComputedDate, year: number): Date {
-  if (date.type === 'fixed') {
-    const [hh, mm] = (date.time ?? '00:00').split(':').map(Number);
-    return new Date(year, date.month - 1, date.day, hh ?? 0, mm ?? 0);
-  }
-  switch (date.rule) {
-    case 'third-thursday-march':
-      return getNthDayOfMonth(year, 2, 4, 3);
-    case 'third-sunday-august':
-      return getNthDayOfMonth(year, 7, 0, 3);
-    case 'nfl-kickoff': {
-      const ld = getLaborDay(year);
-      return new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-    }
-    case 'friday-before-week-11': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      // Week 11 starts ~10 weeks after kickoff; "Friday before" = -6 days from week-start
-      return new Date(
-        kickoff.getFullYear(),
-        kickoff.getMonth(),
-        kickoff.getDate() + 10 * 7 - 6
-      );
-    }
-    case 'after-week-16': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(
-        kickoff.getFullYear(),
-        kickoff.getMonth(),
-        kickoff.getDate() + 16 * 7
-      );
-    }
-    case 'playoffs-start': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(
-        kickoff.getFullYear(),
-        kickoff.getMonth(),
-        kickoff.getDate() + 14 * 7
-      );
-    }
-    case 'championship-week': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(
-        kickoff.getFullYear(),
-        kickoff.getMonth(),
-        kickoff.getDate() + 16 * 7
-      );
-    }
-  }
-}
-
-function calendarDaysUntil(target: Date, today: Date): number {
-  const a = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const b = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-const today = new Date();
-const calendarYear = today.getFullYear();
-
-interface ResolvedEvent {
-  def: AflEvent;
-  date: Date;
-  daysUntil: number;
-  isPast: boolean;
-  urgent: boolean;
-}
-
-const resolveYear = (year: number): ResolvedEvent[] =>
-  events.map((def) => {
-    const date = resolveDate(def.startDate, year);
-    const daysUntil = calendarDaysUntil(date, today);
-    return {
-      def,
-      date,
-      daysUntil,
-      isPast: daysUntil < 0,
-      urgent: daysUntil >= 0 && daysUntil <= (def.urgencyDays ?? 0),
-    };
-  });
-
-const currentYearEvents = resolveYear(calendarYear);
-const nextYearEvents = resolveYear(calendarYear + 1);
+const currentYearEvents = getAllResolvedAflEvents({ leagueYear, referenceDate: today });
+const nextYearEvents = getAllResolvedAflEvents({ leagueYear: leagueYear + 1, referenceDate: today });
 
 const upcomingThisYear = currentYearEvents.filter((e) => !e.isPast);
 const pastThisYear = currentYearEvents.filter((e) => e.isPast);
@@ -150,6 +24,20 @@ const fmt = (d: Date) =>
     day: 'numeric',
     year: 'numeric',
   });
+
+function daysFromNow(target: Date): number {
+  const a = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const b = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function countdownLabel(daysUntil: number): string {
+  if (daysUntil === 0) return 'Today';
+  if (daysUntil === 1) return 'Tomorrow';
+  if (daysUntil > 0) return `In ${daysUntil} days`;
+  if (daysUntil === -1) return 'Yesterday';
+  return `${-daysUntil} days ago`;
+}
 ---
 
 <TheLeagueLayout title="AFL Calendar | American Football League">
@@ -157,60 +45,77 @@ const fmt = (d: Date) =>
     <header class="afl-calendar__hero">
       <h1>AFL Calendar</h1>
       <p>
-        Important dates for the AFL Fantasy {calendarYear} league year. Times
-        are local. Some dates below are placeholder cadences pending the
-        official AFL constitution; flag any wrong ones and they'll move into
-        <code>src/data/afl-fantasy/league-events.json</code>.
+        Important dates for the AFL {leagueYear} league year. All dates
+        are resolved from the league constitution
+        (<code>src/pages/afl-fantasy/docs/rules.html</code>) and shared with
+        the homepage What's Next timeline.
       </p>
     </header>
 
     {upcomingThisYear.length > 0 && (
       <section class="afl-calendar__section">
-        <h2>Coming up — {calendarYear}</h2>
+        <h2>Coming up — {leagueYear}</h2>
         <div class="afl-calendar__grid">
-          {upcomingThisYear.map(({ def, date, daysUntil, urgent }) => (
-            <article class:list={['event-card', { 'event-card--urgent': urgent }]}>
-              <div class="event-card__category">{def.category}</div>
-              <h3 class="event-card__title">{def.name}</h3>
-              <div class="event-card__date">{fmt(date)}</div>
-              <div class="event-card__until">
-                {daysUntil === 0
-                  ? 'Today'
-                  : daysUntil === 1
-                  ? 'Tomorrow'
-                  : `In ${daysUntil} days`}
-              </div>
-              <p class="event-card__desc">{def.description}</p>
-              {def.actionLinks?.length ? (
-                <div class="event-card__links">
-                  {def.actionLinks.map((link) => (
-                    <a
-                      href={link.url}
-                      class="event-card__link"
-                      target={link.external ? '_blank' : undefined}
-                      rel={link.external ? 'noopener noreferrer' : undefined}
-                    >
-                      {link.label}
-                    </a>
-                  ))}
+          {upcomingThisYear.map((event: ResolvedLeagueEvent) => {
+            const daysUntil = daysFromNow(event.startDate);
+            return (
+              <article class:list={[
+                'event-card',
+                event.isActive && 'event-card--active',
+                event.isUrgent && 'event-card--urgent',
+              ]}>
+                <div class="event-card__head">
+                  {event.definition.icon && (
+                    <svg class="event-card__icon" width="18" height="18" aria-hidden="true">
+                      <use href={`${spriteUrl}#icon-${event.definition.icon}`} />
+                    </svg>
+                  )}
+                  <span class="event-card__category">{event.definition.category}</span>
                 </div>
-              ) : null}
-            </article>
-          ))}
+                <h3 class="event-card__title">{event.definition.name}</h3>
+                <div class="event-card__date">{fmt(event.startDate)}</div>
+                <div class="event-card__until">
+                  {event.isActive ? 'Happening now' : countdownLabel(daysUntil)}
+                </div>
+                <p class="event-card__desc">{event.definition.description}</p>
+                {event.actionLinks.length > 0 && (
+                  <div class="event-card__links">
+                    {event.actionLinks.map((link) => (
+                      <a
+                        href={link.url}
+                        class="event-card__link"
+                        target={link.external ? '_blank' : undefined}
+                        rel={link.external ? 'noopener noreferrer' : undefined}
+                      >
+                        {link.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
     )}
 
     {pastThisYear.length > 0 && (
       <section class="afl-calendar__section afl-calendar__section--past">
-        <h2>Already happened — {calendarYear}</h2>
+        <h2>Already happened — {leagueYear}</h2>
         <div class="afl-calendar__grid">
-          {pastThisYear.map(({ def, date }) => (
+          {pastThisYear.map((event: ResolvedLeagueEvent) => (
             <article class="event-card event-card--past">
-              <div class="event-card__category">{def.category}</div>
-              <h3 class="event-card__title">{def.name}</h3>
-              <div class="event-card__date">{fmt(date)}</div>
-              <p class="event-card__desc">{def.description}</p>
+              <div class="event-card__head">
+                {event.definition.icon && (
+                  <svg class="event-card__icon" width="18" height="18" aria-hidden="true">
+                    <use href={`${spriteUrl}#icon-${event.definition.icon}`} />
+                  </svg>
+                )}
+                <span class="event-card__category">{event.definition.category}</span>
+              </div>
+              <h3 class="event-card__title">{event.definition.name}</h3>
+              <div class="event-card__date">{fmt(event.startDate)}</div>
+              <p class="event-card__desc">{event.definition.description}</p>
             </article>
           ))}
         </div>
@@ -218,15 +123,21 @@ const fmt = (d: Date) =>
     )}
 
     <section class="afl-calendar__section">
-      <h2>Next year — {calendarYear + 1}</h2>
+      <h2>Next year — {leagueYear + 1}</h2>
       <div class="afl-calendar__grid">
-        {nextYearEvents.map(({ def, date, daysUntil }) => (
+        {nextYearEvents.map((event: ResolvedLeagueEvent) => (
           <article class="event-card event-card--future">
-            <div class="event-card__category">{def.category}</div>
-            <h3 class="event-card__title">{def.name}</h3>
-            <div class="event-card__date">{fmt(date)}</div>
-            <div class="event-card__until">In {daysUntil} days</div>
-            <p class="event-card__desc">{def.description}</p>
+            <div class="event-card__head">
+              {event.definition.icon && (
+                <svg class="event-card__icon" width="18" height="18" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-${event.definition.icon}`} />
+                </svg>
+              )}
+              <span class="event-card__category">{event.definition.category}</span>
+            </div>
+            <h3 class="event-card__title">{event.definition.name}</h3>
+            <div class="event-card__date">{fmt(event.startDate)}</div>
+            <p class="event-card__desc">{event.definition.description}</p>
           </article>
         ))}
       </div>
@@ -294,6 +205,11 @@ const fmt = (d: Date) =>
     gap: var(--spacing-xs, 4px);
   }
 
+  .event-card--active {
+    border-color: var(--color-success, #16a34a);
+    box-shadow: 0 0 0 1px var(--color-success, #16a34a);
+  }
+
   .event-card--urgent {
     border-color: var(--primary-color, #c41e3a);
     box-shadow: 0 0 0 1px var(--primary-color, #c41e3a);
@@ -307,13 +223,24 @@ const fmt = (d: Date) =>
     background: var(--bg-muted, #f9fafb);
   }
 
+  .event-card__head {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: var(--spacing-xs, 4px);
+  }
+
+  .event-card__icon {
+    color: var(--primary-color, #c41e3a);
+    flex-shrink: 0;
+  }
+
   .event-card__category {
     font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--text-muted, #6b7280);
-    margin-bottom: var(--spacing-xs, 4px);
   }
 
   .event-card--urgent .event-card__category {
@@ -340,6 +267,10 @@ const fmt = (d: Date) =>
 
   .event-card--urgent .event-card__until {
     color: var(--primary-color, #c41e3a);
+  }
+
+  .event-card--active .event-card__until {
+    color: var(--color-success, #16a34a);
   }
 
   .event-card__desc {

@@ -1,0 +1,336 @@
+---
+/**
+ * AflConferencePlayoffPreview — AL or NL playoff seeding preview.
+ *
+ * Each AFL conference seeds 4 teams for the head-to-head playoffs:
+ *   - Seeds 1–2: Division winners (sorted by record)
+ *   - Seeds 3–4: Top 2 wild cards
+ * Everyone else competes in the NIT-style consolation bracket.
+ *
+ * Picks the user's conference (AL or NL) when known; falls back to AL.
+ * Renders seeds 1–6 so you can see who's in the playoffs and who's chasing.
+ */
+import { chooseTeamName } from '../../../utils/team-names';
+import { getConferenceStandings } from '../../../utils/standings';
+
+interface Team {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  icon?: string;
+  conference?: string;
+  division?: string;
+}
+
+interface Props {
+  teams: Team[];
+  standings: any[];
+  /** AFL league config (needed by getConferenceStandings). */
+  config: any;
+  userFranchiseId?: string;
+  /** Pick which conference to show: '00' = AL, '01' = NL. Defaults to AL. */
+  conferenceCode?: '00' | '01';
+  /** Number of teams that make the playoffs. */
+  playoffSlots?: number;
+}
+
+const {
+  teams,
+  standings,
+  config,
+  userFranchiseId,
+  conferenceCode = '00',
+  playoffSlots = 4,
+} = Astro.props;
+
+const teamMap = new Map(teams.map(t => [t.franchiseId, t]));
+const hasGames = standings.some(f => parseFloat(f.pf ?? '0') > 0);
+
+let confResult: { conference: any; allTeams: Array<any> } | null = null;
+try {
+  confResult = getConferenceStandings(standings, config, conferenceCode);
+} catch {
+  confResult = null;
+}
+
+if (!confResult) {
+  // If standings aren't ready, render nothing
+}
+
+const conferenceName = confResult?.conference?.name ?? (conferenceCode === '00' ? 'American League' : 'National League');
+
+interface PreviewRow {
+  franchiseId: string;
+  name: string;
+  seed: number;
+  record: string;
+  pf: number;
+  division: string;
+  isDivisionWinner: boolean;
+  isUser: boolean;
+}
+
+const allConfTeams = (confResult?.allTeams ?? []) as any[];
+
+const rows: PreviewRow[] = allConfTeams.map((t: any) => {
+  const team = teamMap.get(t.id);
+  const displayName = team
+    ? chooseTeamName({
+        fullName: team.name,
+        nameMedium: team.nameMedium,
+        nameShort: team.nameShort,
+        abbrev: team.abbrev,
+      }, 'default')
+    : t.teamName ?? t.id;
+  return {
+    franchiseId: t.id,
+    name: displayName,
+    seed: t.conferenceSeed,
+    record: t.h2hwlt ?? '0-0-0',
+    pf: parseFloat(t.pf ?? '0'),
+    division: t.division,
+    isDivisionWinner: t.conferenceSeed <= 2,
+    isUser: t.id === userFranchiseId,
+  };
+});
+
+const visible = rows.slice(0, 6);
+---
+
+{rows.length > 0 && (
+  <section class="afl-conf" aria-label={`${conferenceName} playoff preview`}>
+    <div class="afl-conf__header">
+      <div class="afl-conf__section-header">
+        <h3 class="afl-conf__title">{conferenceName} Playoff Standings</h3>
+        <p class="afl-conf__sub">Top {playoffSlots} clinch playoff seeds. Division winners take seeds 1–2.</p>
+      </div>
+      <a href={`/afl-fantasy/standings?view=conference&conf=${conferenceCode}`} class="afl-conf__cta">
+        Full bracket
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    <table class="afl-conf__table">
+      <thead>
+        <tr>
+          <th class="afl-conf__th afl-conf__th--seed">Seed</th>
+          <th class="afl-conf__th afl-conf__th--team">Team</th>
+          <th class="afl-conf__th afl-conf__th--div">Div</th>
+          {hasGames && <th class="afl-conf__th afl-conf__th--record">Record</th>}
+          <th class="afl-conf__th afl-conf__th--pf">PF</th>
+        </tr>
+      </thead>
+      <tbody>
+        {visible.map((row) => (
+          <>
+            {row.seed === playoffSlots + 1 && (
+              <tr class="afl-conf__cutline" aria-hidden="true">
+                <td colspan={hasGames ? 5 : 4}>Playoff line ↓</td>
+              </tr>
+            )}
+            <tr class:list={[
+              'afl-conf__row',
+              { 'afl-conf__row--user': row.isUser, 'afl-conf__row--out': row.seed > playoffSlots },
+            ]}>
+              <td class="afl-conf__td afl-conf__td--seed">
+                <span class:list={['afl-conf__seed-badge', { 'afl-conf__seed-badge--in': row.seed <= playoffSlots }]}>
+                  {row.seed}
+                </span>
+              </td>
+              <td class="afl-conf__td afl-conf__td--team">
+                <span class={row.isUser ? 'afl-conf__team-name--bold' : ''}>{row.name}</span>
+                {row.isDivisionWinner && <span class="afl-conf__chip" aria-label="Division winner">Div</span>}
+              </td>
+              <td class="afl-conf__td afl-conf__td--div">{row.division}</td>
+              {hasGames && <td class="afl-conf__td afl-conf__td--record">{row.record}</td>}
+              <td class="afl-conf__td afl-conf__td--pf">{row.pf.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+            </tr>
+          </>
+        ))}
+      </tbody>
+    </table>
+  </section>
+)}
+
+<style>
+  .afl-conf {
+    --afl-accent: var(--color-primary, #c41e3a);
+    --afl-highlight-bg: color-mix(in srgb, var(--afl-accent) 6%, transparent);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+
+  .afl-conf__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .afl-conf__section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--afl-accent);
+  }
+
+  .afl-conf__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .afl-conf__sub {
+    margin: 0.375rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .afl-conf__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--afl-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .afl-conf__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .afl-conf__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .afl-conf__th {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0 0.5rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    white-space: nowrap;
+  }
+
+  .afl-conf__th--seed { width: 2.5rem; text-align: center; }
+  .afl-conf__th--record,
+  .afl-conf__th--pf { text-align: right; }
+  .afl-conf__th--div { text-align: center; width: 3rem; }
+
+  .afl-conf__row {
+    transition: background 0.1s ease;
+  }
+
+  .afl-conf__row:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .afl-conf__row--user {
+    background: var(--afl-highlight-bg);
+  }
+
+  .afl-conf__row--user .afl-conf__td:first-child {
+    box-shadow: inset 3px 0 0 var(--afl-accent);
+  }
+
+  .afl-conf__row--out .afl-conf__td {
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .afl-conf__td {
+    padding: 0.4375rem 0.5rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .afl-conf__td--seed {
+    text-align: center;
+  }
+
+  .afl-conf__seed-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border-radius: 999px;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+
+  .afl-conf__seed-badge--in {
+    background: var(--cat-regular-season, #1c497c);
+    color: #fff;
+  }
+
+  .afl-conf__td--team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--color-gray-800, #1f2937);
+    overflow: hidden;
+  }
+
+  .afl-conf__team-name--bold {
+    font-weight: 700;
+  }
+
+  .afl-conf__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cat-regular-season, #1c497c) 14%, transparent);
+    color: var(--cat-regular-season, #1c497c);
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .afl-conf__td--div {
+    text-align: center;
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.75rem;
+  }
+
+  .afl-conf__td--record,
+  .afl-conf__td--pf {
+    text-align: right;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .afl-conf__cutline td {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-error, #dc2626);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, transparent);
+    text-align: center;
+  }
+</style>

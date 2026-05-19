@@ -46,14 +46,14 @@ const canSwitchLeagues = hasTeamInBothLeagues(franchiseId, league);
 const leagueHome = resolveLeaguePath(league === 'afl' ? '/afl-fantasy' : '/theleague', hideLeaguePrefix);
 
 // Determine league display name for screen readers
-const leagueName = league === 'afl' ? 'AFL Fantasy' : 'TheLeague';
+const leagueName = league === 'afl' ? 'AFL' : 'TheLeague';
 
 // Logo alt text
-const logoAlt = league === 'afl' ? 'AFL Fantasy Logo' : 'TheLeague Logo';
+const logoAlt = league === 'afl' ? 'AFL Logo' : 'TheLeague Logo';
 
 // Target league for switching
 const targetLeague = league === 'afl' ? 'theleague' : 'afl';
-const targetLeagueName = league === 'afl' ? 'TheLeague' : 'AFL Fantasy';
+const targetLeagueName = league === 'afl' ? 'TheLeague' : 'AFL';
 
 // Equivalent-route logic lives in src/utils/nav-utils.ts and is shared with
 // LeagueSwitcher. nav-utils consults the route-equivalence map first and
@@ -80,7 +80,7 @@ const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague
       />
       <span class="nav-header__league-name">
         {league === 'afl' ? (
-          <span class="nav-header__league-name--afl">AFL Fantasy</span>
+          <span class="nav-header__league-name--afl">AFL</span>
         ) : (
           <>
             <span class="nav-header__league-name--the">The</span>

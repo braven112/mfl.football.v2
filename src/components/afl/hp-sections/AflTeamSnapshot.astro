@@ -1,0 +1,363 @@
+---
+/**
+ * AflTeamSnapshot — Personal team card for the AFL homepage.
+ *
+ * Shows the AFL team's tier (Premier / D-League), conference, current record,
+ * and roster count. During the regular season, also surfaces the next matchup;
+ * during the offseason, surfaces keeper status. Guests see a team picker prompt.
+ */
+import { spriteUrl } from '../../../utils/sprite-url';
+
+interface Team {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  conference?: string;
+  division?: string;
+  tier?: string;
+  icon?: string;
+}
+
+interface Props {
+  userTeam?: Team;
+  userConferenceName?: string;
+  record?: { wins: number; losses: number; ties: number };
+  nextOpponent?: { name?: string; icon?: string };
+  rosterCount?: number;
+  keeperCount?: number;
+  /** Total keepers allowed per franchise. */
+  keeperLimit: number;
+  /** Active roster target (used to surface "X of N" slot fill). */
+  rosterLimit?: number;
+  /** Render variant — defaults to "in-season" when record exists, "offseason" otherwise */
+  variant?: 'in-season' | 'offseason';
+}
+
+const {
+  userTeam,
+  userConferenceName,
+  record,
+  nextOpponent,
+  rosterCount,
+  keeperCount,
+  keeperLimit,
+  rosterLimit,
+  variant,
+} = Astro.props;
+
+const inferredVariant: 'in-season' | 'offseason' = variant ?? (record ? 'in-season' : 'offseason');
+
+interface MetricDef {
+  label: string;
+  value: string;
+  sub: string;
+  href: string;
+  icon?: string;
+  alert?: boolean;
+}
+
+const metrics: MetricDef[] = inferredVariant === 'in-season'
+  ? [
+      {
+        label: 'Record',
+        value: record ? `${record.wins}-${record.losses}${record.ties ? `-${record.ties}` : ''}` : '—',
+        sub: userConferenceName ? `${userConferenceName} conf.` : 'in conference',
+        href: '/afl-fantasy/standings',
+        icon: 'star',
+      },
+      {
+        label: 'Tier',
+        value: userTeam?.tier === 'Premier League' ? 'Premier' : userTeam?.tier === 'D-League' ? 'D-League' : '—',
+        sub: 'this season',
+        href: '/afl-fantasy/standings?view=tier',
+        icon: 'trophy',
+      },
+      {
+        label: 'Roster',
+        value: rosterCount != null ? `${rosterCount}` : '—',
+        sub: rosterLimit ? `of ${rosterLimit} slots` : 'players',
+        href: '/afl-fantasy/rosters',
+        icon: 'users',
+        alert: rosterLimit ? (rosterCount ?? 0) > rosterLimit : false,
+      },
+      {
+        label: 'Next Up',
+        value: nextOpponent?.name ? 'vs.' : 'TBD',
+        sub: nextOpponent?.name ?? 'check schedule',
+        href: '/afl-fantasy/standings',
+        icon: 'exchange',
+      },
+    ]
+  : [
+      {
+        label: 'Tier',
+        value: userTeam?.tier === 'Premier League' ? 'Premier' : userTeam?.tier === 'D-League' ? 'D-League' : '—',
+        sub: 'this season',
+        href: '/afl-fantasy/standings?view=tier',
+        icon: 'trophy',
+      },
+      {
+        label: 'Conference',
+        value: userTeam?.conference === '00' ? 'AL' : userTeam?.conference === '01' ? 'NL' : '—',
+        sub: userTeam?.division ?? '',
+        href: '/afl-fantasy/standings',
+        icon: 'star',
+      },
+      {
+        label: 'Keepers',
+        value: keeperCount != null ? `${keeperCount}` : '—',
+        sub: `of ${keeperLimit} protected`,
+        href: '/afl-fantasy/keepers',
+        icon: 'bookmark',
+        alert: keeperCount != null && keeperCount < keeperLimit,
+      },
+      {
+        label: 'Roster',
+        value: rosterCount != null ? `${rosterCount}` : '—',
+        sub: 'players',
+        href: '/afl-fantasy/rosters',
+        icon: 'users',
+      },
+    ];
+---
+
+{userTeam ? (
+  <section class="afl-snapshot" aria-label="My team snapshot">
+    <div class="afl-snapshot__header">
+      <div class="afl-snapshot__team">
+        {userTeam.icon && (
+          <img src={userTeam.icon} alt="" class="afl-snapshot__team-icon" width="28" height="28" loading="lazy" />
+        )}
+        <div class="afl-snapshot__name">
+          <h3 class="afl-snapshot__title">My Team</h3>
+          <p class="afl-snapshot__sub">{userTeam.nameMedium ?? userTeam.name}</p>
+        </div>
+      </div>
+      <a href="/afl-fantasy/rosters" class="afl-snapshot__cta">
+        Full roster
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+    <div class="afl-snapshot__grid">
+      {metrics.map(m => (
+        <a href={m.href} class="afl-snapshot__card">
+          {m.icon && (
+            <svg class="afl-snapshot__card-icon" width="14" height="14" aria-hidden="true">
+              <use href={`${spriteUrl}#icon-${m.icon}`} />
+            </svg>
+          )}
+          <span class:list={['afl-snapshot__card-value', { 'afl-snapshot__card-value--alert': m.alert }]}>{m.value}</span>
+          <span class="afl-snapshot__card-label">{m.label}</span>
+          <span class="afl-snapshot__card-sub">{m.sub}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+) : (
+  <section class="afl-snapshot afl-snapshot--guest" aria-label="Team selector prompt">
+    <div class="afl-snapshot__guest-inner">
+      <svg class="afl-snapshot__guest-icon" width="24" height="24" aria-hidden="true">
+        <use href={`${spriteUrl}#icon-shield`} />
+      </svg>
+      <div class="afl-snapshot__guest-text">
+        <p class="afl-snapshot__guest-heading">Pick your franchise</p>
+        <p class="afl-snapshot__guest-desc">Choose your team to personalize standings, keepers, and the rotating hero.</p>
+      </div>
+      <a href="/afl-fantasy/standings" class="afl-snapshot__guest-btn">Choose team</a>
+    </div>
+  </section>
+)}
+
+<style>
+  .afl-snapshot {
+    --afl-accent: var(--color-primary, #c41e3a);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+
+  .afl-snapshot__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  .afl-snapshot__team {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .afl-snapshot__team-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .afl-snapshot__name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .afl-snapshot__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--afl-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .afl-snapshot__sub {
+    margin: 0 0 0 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .afl-snapshot__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--afl-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .afl-snapshot__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .afl-snapshot__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .afl-snapshot__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.875rem 0.5rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.15s ease;
+  }
+
+  .afl-snapshot__card:hover {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .afl-snapshot__card-icon {
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .afl-snapshot__card-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.2;
+  }
+
+  .afl-snapshot__card-value--alert {
+    color: var(--color-error, #dc2626);
+  }
+
+  .afl-snapshot__card-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .afl-snapshot__card-sub {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .afl-snapshot--guest {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .afl-snapshot__guest-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .afl-snapshot__guest-icon {
+    flex-shrink: 0;
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  .afl-snapshot__guest-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .afl-snapshot__guest-heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    margin: 0;
+  }
+
+  .afl-snapshot__guest-desc {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0.25rem 0 0;
+  }
+
+  .afl-snapshot__guest-btn {
+    flex-shrink: 0;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--afl-accent);
+    border: 1px solid var(--afl-accent);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .afl-snapshot__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .afl-snapshot__guest-inner {
+      flex-wrap: wrap;
+    }
+    .afl-snapshot__guest-btn {
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+  }
+</style>

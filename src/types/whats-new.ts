@@ -53,6 +53,24 @@ export interface WhatsNewEntry {
   imageAlt?: string;
   /** Audience restriction — defaults to "all" if omitted. "admin" hides the entry from non-admin users in both the listing and the detail route. */
   visibility?: 'all' | 'admin';
+  /**
+   * League scope — which league(s) the entry applies to. If omitted, the entry is
+   * shown to both leagues (back-compat default). Use this to surface league-specific
+   * features only on the matching homepage / What's New page.
+   */
+  leagues?: Array<'theleague' | 'afl'>;
+}
+
+/** A league slug used by the `leagues` tagging field on What's New entries. */
+export type LeagueSlug = 'theleague' | 'afl';
+
+/**
+ * Returns true if the entry should be shown in the given league context.
+ * Missing `leagues` field = visible everywhere (back-compat default).
+ */
+export function entryAppliesToLeague(entry: WhatsNewEntry, league: LeagueSlug): boolean {
+  if (!entry.leagues || entry.leagues.length === 0) return true;
+  return entry.leagues.includes(league);
 }
 
 /** Hero content source type */

@@ -1,0 +1,374 @@
+---
+/**
+ * AflStandingsCompact — Single-tier standings preview centered on the user.
+ *
+ * Renders only the tier the user belongs to (Premier League or D-League).
+ * Shows a tight 5-row window: 2 above + the user + 2 below. The window
+ * clamps at the top/bottom of the tier, and inserts the promotion/
+ * relegation cutline if it falls inside the visible window.
+ *
+ * If no user is selected, falls back to the cutline neighborhood of
+ * Premier League.
+ */
+import { chooseTeamName } from '../../../utils/team-names';
+
+interface Team {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  tier?: string;
+  icon?: string;
+}
+
+interface StandingRow {
+  franchiseId: string;
+  name: string;
+  rank: number;
+  allPlayRecord: string;
+  allPlayPct: number;
+  pf: number;
+  tier: 'Premier League' | 'D-League';
+  isUser: boolean;
+}
+
+interface Props {
+  teams: Team[];
+  standings: any[];
+  userFranchiseId?: string;
+  /** Number of teams promoted from D-League / relegated from Premier each year. */
+  relegationCount?: number;
+}
+
+const { teams, standings, userFranchiseId, relegationCount = 4 } = Astro.props;
+
+const teamMap = new Map(teams.map(t => [t.franchiseId, t]));
+const hasGames = standings.some(f => parseFloat(f.pf ?? '0') > 0);
+
+function makeRows(): StandingRow[] {
+  return standings.map(f => {
+    const team = teamMap.get(f.id);
+    const tier = (team?.tier === 'Premier League' ? 'Premier League' : 'D-League') as StandingRow['tier'];
+    const displayName = team
+      ? chooseTeamName({
+          fullName: team.name,
+          nameMedium: team.nameMedium,
+          nameShort: team.nameShort,
+          abbrev: team.abbrev,
+        }, 'default')
+      : f.fname ?? f.id;
+    return {
+      franchiseId: f.id,
+      name: displayName,
+      rank: 0,
+      allPlayRecord: f.all_play_wlt ?? '0-0-0',
+      allPlayPct: parseFloat(f.all_play_pct ?? '0'),
+      pf: parseFloat(f.pf ?? '0'),
+      tier,
+      isUser: f.id === userFranchiseId,
+    };
+  });
+}
+
+/** Format a "W-L-T" record string, dropping the "-0" ties suffix when there are no ties. */
+function formatRecord(wlt: string): string {
+  const parts = wlt.split('-');
+  if (parts.length === 3 && parts[2] === '0') return `${parts[0]}-${parts[1]}`;
+  return wlt;
+}
+
+function sortRows(rows: StandingRow[]): StandingRow[] {
+  return [...rows].sort((a, b) => {
+    if (hasGames) {
+      if (b.allPlayPct !== a.allPlayPct) return b.allPlayPct - a.allPlayPct;
+      return b.pf - a.pf;
+    }
+    return b.pf - a.pf;
+  });
+}
+
+const allRows = makeRows();
+const premierRows = sortRows(allRows.filter(r => r.tier === 'Premier League'));
+const dLeagueRows = sortRows(allRows.filter(r => r.tier === 'D-League'));
+premierRows.forEach((r, i) => { r.rank = i + 1; });
+dLeagueRows.forEach((r, i) => { r.rank = i + 1; });
+
+// Pick the user's tier (default to Premier if no user)
+const userRow = userFranchiseId ? allRows.find(r => r.isUser) : undefined;
+const userTier = userRow?.tier ?? 'Premier League';
+const tierRows = userTier === 'Premier League' ? premierRows : dLeagueRows;
+
+// Cutline index (first row past the cutoff): Premier = bottom N relegated,
+// D-League = top N promoted.
+const cutIdx = userTier === 'Premier League'
+  ? Math.max(0, tierRows.length - relegationCount)
+  : relegationCount;
+
+const cutLabel = userTier === 'Premier League' ? 'Relegation line ↓' : 'Promotion line ↑';
+
+// Build a 5-row window centered on the user (or cutline if no user).
+const WINDOW_SIZE = 5;
+const half = Math.floor(WINDOW_SIZE / 2); // 2
+const total = tierRows.length;
+
+const focalIdx = userRow
+  ? tierRows.findIndex(r => r.franchiseId === userFranchiseId)
+  : Math.max(0, cutIdx - 1); // place the cutline near the middle when no user
+
+let startIdx = Math.max(0, focalIdx - half);
+let endIdx = Math.min(total, startIdx + WINDOW_SIZE);
+// Clamp to bottom: if we hit the bottom, walk start back so we still show 5.
+if (endIdx - startIdx < WINDOW_SIZE) {
+  startIdx = Math.max(0, endIdx - WINDOW_SIZE);
+}
+
+const windowRows = tierRows.slice(startIdx, endIdx).map((row) => ({
+  ...row,
+  // Mark this row so we render the cutline ABOVE it (i.e., it's the first
+  // row past the cutoff and the row above it is also visible).
+  cutBefore: row.rank === cutIdx + 1 && row.rank > 1 && startIdx <= cutIdx - 1,
+}));
+
+// Subtitle: user's position + clearance to/from the cutline
+function ordinal(n: number): string {
+  const m100 = n % 100;
+  if (m100 >= 11 && m100 <= 13) return `${n}th`;
+  const m10 = n % 10;
+  if (m10 === 1) return `${n}st`;
+  if (m10 === 2) return `${n}nd`;
+  if (m10 === 3) return `${n}rd`;
+  return `${n}th`;
+}
+
+let subtitle = '';
+if (userRow) {
+  const rank = focalIdx + 1;
+  if (userTier === 'Premier League') {
+    const safeBy = cutIdx - focalIdx;
+    subtitle = safeBy > 0
+      ? `You're ${ordinal(rank)} of ${total} in Premier — ${safeBy} clear of relegation.`
+      : `You're ${ordinal(rank)} of ${total} in Premier — in the relegation zone.`;
+  } else {
+    const promoBy = cutIdx - focalIdx;
+    subtitle = promoBy > 0
+      ? `You're ${ordinal(rank)} of ${total} in D-League — in promotion position.`
+      : `You're ${ordinal(rank)} of ${total} in D-League — ${-promoBy + 1} short of promotion.`;
+  }
+} else {
+  subtitle = userTier === 'Premier League'
+    ? `Premier League — bottom ${relegationCount} drop to D-League at season end.`
+    : `D-League — top ${relegationCount} promote to Premier.`;
+}
+---
+
+<section class="afl-tiers" aria-label={`${userTier} standings`}>
+  <div class="afl-tiers__header">
+    <div class="afl-tiers__section-header">
+      <h3 class="afl-tiers__title">{userTier} Standings</h3>
+      <p class="afl-tiers__sub">{subtitle}</p>
+    </div>
+    <a href="/afl-fantasy/standings?view=tier" class="afl-tiers__cta">
+      Full standings
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
+
+  <table class="afl-tiers__table">
+    <thead>
+      <tr>
+        <th class="afl-tiers__th afl-tiers__th--rank">#</th>
+        <th class="afl-tiers__th afl-tiers__th--team">Team</th>
+        {hasGames && <th class="afl-tiers__th afl-tiers__th--ap">All-Play</th>}
+        <th class="afl-tiers__th afl-tiers__th--pf">PF</th>
+      </tr>
+    </thead>
+    <tbody>
+      {windowRows.map((row) => (
+        <>
+          {row.cutBefore && (
+            <tr class="afl-tiers__cutline" aria-hidden="true">
+              <td colspan={hasGames ? 4 : 3}>{cutLabel}</td>
+            </tr>
+          )}
+          <tr class:list={['afl-tiers__row', { 'afl-tiers__row--user': row.isUser }]}>
+            <td class="afl-tiers__td afl-tiers__td--rank">{row.rank}</td>
+            <td class="afl-tiers__td afl-tiers__td--team">
+              <span class={row.isUser ? 'afl-tiers__team-name--bold' : ''}>{row.name}</span>
+            </td>
+            {hasGames && (
+              <td class="afl-tiers__td afl-tiers__td--ap">
+                <span class="afl-tiers__ap-record">{formatRecord(row.allPlayRecord)}</span>
+                <span class="afl-tiers__ap-pct">{(row.allPlayPct * 100).toFixed(1)}%</span>
+              </td>
+            )}
+            <td class="afl-tiers__td afl-tiers__td--pf">{row.pf.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+          </tr>
+        </>
+      ))}
+    </tbody>
+  </table>
+</section>
+
+<style>
+  .afl-tiers {
+    --afl-accent: var(--color-primary, #c41e3a);
+    --afl-highlight-bg: color-mix(in srgb, var(--afl-accent) 6%, transparent);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+
+  .afl-tiers__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .afl-tiers__section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--afl-accent);
+  }
+
+  .afl-tiers__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .afl-tiers__sub {
+    margin: 0.375rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .afl-tiers__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--afl-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .afl-tiers__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .afl-tiers__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .afl-tiers__th {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0 0.5rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    white-space: nowrap;
+  }
+
+  .afl-tiers__th--rank { width: 2rem; text-align: center; }
+  .afl-tiers__th--ap,
+  .afl-tiers__th--pf { text-align: right; }
+
+  .afl-tiers__row {
+    transition: background 0.1s ease;
+  }
+
+  .afl-tiers__row:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .afl-tiers__row--user {
+    background: var(--afl-highlight-bg);
+  }
+
+  .afl-tiers__row--user .afl-tiers__td:first-child {
+    box-shadow: inset 3px 0 0 var(--afl-accent);
+  }
+
+  .afl-tiers__td {
+    padding: 0.4375rem 0.5rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .afl-tiers__td--rank {
+    text-align: center;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  .afl-tiers__td--team {
+    font-weight: 500;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .afl-tiers__team-name--bold {
+    font-weight: 700;
+  }
+
+  .afl-tiers__td--ap,
+  .afl-tiers__td--pf {
+    text-align: right;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* All-Play column — the headline metric for tier promotion/relegation.
+     Show the W-L-T record big and the % small underneath. */
+  .afl-tiers__td--ap {
+    line-height: 1.15;
+  }
+
+  .afl-tiers__ap-record {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .afl-tiers__ap-pct {
+    display: block;
+    margin-top: 0.0625rem;
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .afl-tiers__row--user .afl-tiers__ap-record {
+    color: var(--afl-accent);
+  }
+
+  .afl-tiers__cutline td {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-error, #dc2626);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, transparent);
+    text-align: center;
+  }
+</style>

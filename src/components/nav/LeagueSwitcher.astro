@@ -2,7 +2,7 @@
 /**
  * LeagueSwitcher Component
  *
- * Toggle component for switching between AFL Fantasy and TheLeague.
+ * Toggle component for switching between AFL and TheLeague.
  * Implements smart routing to navigate to the equivalent page in the other league.
  *
  * Features:
@@ -77,7 +77,7 @@ const isAflActive = currentLeague === 'afl';
     <a
       href={aflUrl}
       class:list={['league-switcher__option', { 'league-switcher__option--active': isAflActive }]}
-      aria-label={isAflActive ? 'AFL Fantasy (current)' : 'Switch to AFL Fantasy'}
+      aria-label={isAflActive ? 'AFL (current)' : 'Switch to AFL'}
       aria-current={isAflActive ? 'page' : undefined}
     >
       <span class="league-switcher__abbrev">AFL</span>

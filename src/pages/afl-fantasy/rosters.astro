@@ -644,7 +644,7 @@ const pageConfig = {
 };
 ---
 
-<TheLeagueLayout title={`AFL Fantasy — ${selectedTeam.name} Roster`}>
+<TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
   <section class="roster-page" data-initial-view={initialView}>
     <!-- Team Header Card -->
     <div class="team-card" data-team-identity>
@@ -1200,7 +1200,7 @@ const pageConfig = {
           {!authUser && (
             <p>
               <a class="coming-soon__cta" href={`/afl-fantasy/login?next=/afl-fantasy/rosters?franchise=${selectedFranchiseId}&view=planner`}>
-                Sign in to AFL Fantasy →
+                Sign in to AFL →
               </a>
             </p>
           )}
