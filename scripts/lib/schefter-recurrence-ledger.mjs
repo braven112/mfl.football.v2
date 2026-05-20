@@ -20,8 +20,18 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-export const LEDGER_VERSION = 1;
+// Bump from 1 → 2: ledger entries now also carry a sorted unique list of
+// tipsterHashes (the distinct hashedOwnerIds that have ever contributed to
+// this fingerprint). The list is the data source for HARD RULE 25 (cross-
+// week memory recall — "three weeks ago a source mentioned X; tonight a
+// different voice circled back"). Old v1 files load cleanly: missing
+// tipsterHashes fields are treated as empty arrays.
+export const LEDGER_VERSION = 2;
 export const STALE_WEEK_THRESHOLD = 2;
+// Hashes are SHA-256 hex (64 chars). We keep the per-fingerprint roster
+// bounded so a heavily-recurring bucket can't grow the ledger without
+// limit — the prompt only needs the COUNT, not the identities.
+const MAX_TIPSTERS_PER_FINGERPRINT = 64;
 
 export function isoWeekLabel(date) {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -72,6 +82,30 @@ export function emptyLedger(season) {
 }
 
 /**
+ * Migrate a loaded ledger to the current schema in-place. Idempotent.
+ * Backfills missing tipsterHashes arrays (v1 → v2 upgrade) so callers that
+ * loaded a pre-feature-10 file don't crash on getMemoryRecall.
+ */
+function migrateLedgerInPlace(ledger) {
+  if (!ledger || typeof ledger !== 'object') return ledger;
+  ledger.version = LEDGER_VERSION;
+  if (!ledger.fingerprints || typeof ledger.fingerprints !== 'object') {
+    ledger.fingerprints = {};
+    return ledger;
+  }
+  for (const fp of Object.keys(ledger.fingerprints)) {
+    const entry = ledger.fingerprints[fp];
+    if (!entry || typeof entry !== 'object') {
+      ledger.fingerprints[fp] = { weeksSeen: [], tipsterHashes: [] };
+      continue;
+    }
+    if (!Array.isArray(entry.weeksSeen)) entry.weeksSeen = [];
+    if (!Array.isArray(entry.tipsterHashes)) entry.tipsterHashes = [];
+  }
+  return ledger;
+}
+
+/**
  * A fingerprint is stale iff the ledger has entries for BOTH of the two
  * preceding ISO weeks. The current week's entry is written only AFTER a post
  * is consumed, so two consecutive prior weeks means this cycle's consume
@@ -110,9 +144,10 @@ export function getStreakLength(ledger, fingerprint, currentWeek) {
   return streak;
 }
 
-export function markFingerprintSeen(ledger, fingerprint, currentWeek, nowIso) {
+export function markFingerprintSeen(ledger, fingerprint, currentWeek, nowIso, tipsterHashes = []) {
   if (!ledger.fingerprints) ledger.fingerprints = {};
-  const entry = ledger.fingerprints[fingerprint] ?? { weeksSeen: [] };
+  const entry = ledger.fingerprints[fingerprint] ?? { weeksSeen: [], tipsterHashes: [] };
+  if (!Array.isArray(entry.tipsterHashes)) entry.tipsterHashes = [];
   if (!entry.weeksSeen.includes(currentWeek)) {
     entry.weeksSeen.push(currentWeek);
     entry.weeksSeen.sort();
@@ -120,9 +155,70 @@ export function markFingerprintSeen(ledger, fingerprint, currentWeek, nowIso) {
       entry.weeksSeen = entry.weeksSeen.slice(-12);
     }
   }
+  // Merge new tipster hashes; keep the list sorted-unique and bounded.
+  const seen = new Set(entry.tipsterHashes);
+  for (const h of tipsterHashes ?? []) {
+    if (typeof h === 'string' && h.length > 0) seen.add(h);
+  }
+  entry.tipsterHashes = [...seen].sort();
+  if (entry.tipsterHashes.length > MAX_TIPSTERS_PER_FINGERPRINT) {
+    // Trim from the front — older sorted hashes age out first. The COUNT
+    // (what the prompt uses) is preserved as the trimmed length.
+    entry.tipsterHashes = entry.tipsterHashes.slice(-MAX_TIPSTERS_PER_FINGERPRINT);
+  }
   entry.lastUpdated = nowIso ?? new Date().toISOString();
   ledger.fingerprints[fingerprint] = entry;
   return ledger;
+}
+
+/**
+ * Cross-week memory recall — feature 10 from the bot-intelligence brainstorm.
+ *
+ * Returns a `memoryRecall` payload when:
+ *   - the fingerprint has been touched in ≥ 2 distinct prior weeks
+ *   - AT LEAST ONE of the current cycle's tipsterHashes was NOT in the
+ *     ledger's recorded roster for this fingerprint (a "different voice
+ *     circled back")
+ *
+ * Returns null when memory recall is not warranted. The caller surfaces the
+ * payload on the anonymized tip so HARD RULE 25 can drive the phrasing.
+ *
+ * Privacy: only counts surface — the individual hashes are never echoed.
+ */
+export function getMemoryRecall(ledger, fingerprint, currentTipsterHashes, currentWeek) {
+  if (!fingerprint) return null;
+  const entry = ledger?.fingerprints?.[fingerprint];
+  if (!entry) return null;
+  const weeksSeen = Array.isArray(entry.weeksSeen) ? entry.weeksSeen : [];
+  if (weeksSeen.length < 2) return null;
+
+  const prior = new Set(Array.isArray(entry.tipsterHashes) ? entry.tipsterHashes : []);
+  const current = Array.isArray(currentTipsterHashes) ? currentTipsterHashes : [];
+  const hasFreshVoice = current.some((h) => typeof h === 'string' && h.length > 0 && !prior.has(h));
+  if (!hasFreshVoice) return null;
+
+  // Weeks-since-first-seen, as a calendar-week diff between the earliest
+  // recorded ISO-week and the current one. We compute by walking the
+  // ordered weeksSeen list — the first entry is the oldest.
+  const earliest = weeksSeen[0];
+  let weeksAgo = 0;
+  let probe = currentWeek;
+  while (probe !== earliest && weeksAgo < 52) {
+    probe = isoWeekMinus(probe, 1);
+    weeksAgo += 1;
+  }
+
+  // Combined distinct-voices count = prior roster ∪ current new voices.
+  // Cap at 64 so the count stays in a sensible range for prompts.
+  const combined = new Set(prior);
+  for (const h of current) {
+    if (typeof h === 'string' && h.length > 0) combined.add(h);
+  }
+  return {
+    weeksSinceFirstSeen: weeksAgo,
+    totalWeeksSeen: weeksSeen.length,
+    distinctVoicesAcrossTime: combined.size,
+  };
 }
 
 export function rolloverForSeason(ledger, season) {
@@ -141,10 +237,16 @@ export function loadLedger(filePath = LEDGER_PATH) {
   try {
     const raw = readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || parsed.version !== LEDGER_VERSION) {
+    if (!parsed || typeof parsed !== 'object') {
       return emptyLedger(currentSeasonYear());
     }
-    return parsed;
+    // Accept v1 (pre-feature-10) and v2; migrate in place so getMemoryRecall
+    // sees a uniform shape. A version we don't recognize at all gets
+    // discarded — that's a corrupt/future file, safer to start fresh.
+    if (parsed.version !== 1 && parsed.version !== 2) {
+      return emptyLedger(currentSeasonYear());
+    }
+    return migrateLedgerInPlace(parsed);
   } catch {
     return emptyLedger(currentSeasonYear());
   }

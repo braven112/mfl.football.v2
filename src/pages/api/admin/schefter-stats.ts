@@ -66,6 +66,9 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .mjs via allowJs
 import { isoWeekLabel } from '../../../../scripts/lib/schefter-recurrence-ledger.mjs';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — .mjs via allowJs
+import { buildTipsterContext } from '../../../../scripts/lib/schefter-tipster-context.mjs';
 // Static JSON import — the scanner commits this file each run, and Vercel
 // redeploys on push, so the admin preview lags by at most one scanner cycle.
 // That's acceptable: the staleness flag is informational, not a gate.
@@ -434,12 +437,21 @@ async function readRedisStats(redis: RedisClient) {
   // identifier across tips and would let the commish de-anonymize a web
   // tipster across a session. Everything else (text, source, author,
   // submittedAt, attackOnSchefter, etc.) is fine to surface.
+  //
+  // We also keep a SERVER-ONLY copy of the tips with their hashedOwnerIds
+  // intact so we can compute the tipsterContext used by the priority
+  // preview below — bucketPriorityScore needs the hashes to apply the
+  // feature-1 recency weighting. The hashes never leave this handler; only
+  // the priorityScore integer ends up in the response.
   const pendingTips: Array<Record<string, unknown>> = [];
+  const pendingTipsWithHashes: Array<Record<string, unknown>> = [];
   for (const raw of pendingTipsRaw ?? []) {
     try {
       const tip = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (tip && typeof tip === 'object') {
-        const { hashedOwnerId: _hid, ...safe } = tip as Record<string, unknown>;
+        const rec = tip as Record<string, unknown>;
+        pendingTipsWithHashes.push(rec);
+        const { hashedOwnerId: _hid, ...safe } = rec;
         pendingTips.push(safe);
       }
     } catch {
@@ -496,8 +508,15 @@ async function readRedisStats(redis: RedisClient) {
   // Predicted post order — runs the same bucket logic the scanner uses,
   // so the admin sees an honest preview of the next post(s). Trade buckets
   // win first (always), then gossip buckets sorted by descending
-  // priorityScore (size + age boost). The first entry is what the next
-  // scanner cycle would pick if marinate + cap gates pass.
+  // priorityScore (size + age boost + tipster-context delta). The first
+  // entry is what the next scanner cycle would pick if marinate + cap
+  // gates pass.
+  //
+  // Feature 1 wiring: build the same tipsterContext the scanner uses, off
+  // the server-only `pendingTipsWithHashes` copy. Without this, the admin
+  // priority preview would silently disagree with the scanner once a
+  // first-time voice or burst regular hits the queue — that drift
+  // confused real ops debugging in the pre-feature-1 era.
   //
   // Each entry also carries staleStreakWeeks + isStale so the admin can
   // see which buckets the scanner is deferring to Friday's mailbag. A
@@ -505,14 +524,25 @@ async function readRedisStats(redis: RedisClient) {
   // skips it from the normal lane until a quiet week breaks the run.
   const previewNow = new Date();
   const currentIsoWeek = isoWeekLabel(previewNow);
-  const ranked = rankBuckets(buildTopicBuckets(pendingTips), previewNow);
+  let tipsterContext: Map<string, unknown> = new Map();
+  try {
+    tipsterContext = await buildTipsterContext(pendingTipsWithHashes, redis);
+  } catch (err) {
+    console.warn('[admin/schefter-stats] tipster context build failed:', err);
+    tipsterContext = new Map();
+  }
+  // Topic buckets need the hashedOwnerIds for the tipster delta to apply,
+  // but the buckets array itself never crosses the response boundary —
+  // it's iterated in place and only the projected fields below ship.
+  const previewBuckets = buildTopicBuckets(pendingTipsWithHashes);
+  const ranked = rankBuckets(previewBuckets, previewNow, tipsterContext);
   const predictedPostOrder = ranked.map((b: { key: string; kind: string; tips: unknown[]; oldestSubmittedAt: number }) => ({
     key: b.key,
     kind: b.kind,
     tipCount: b.tips.length,
     tipIds: (b.tips as Array<{ id?: unknown }>).map((t) => (typeof t.id === 'string' ? t.id : null)).filter((x): x is string => !!x),
     oldestSubmittedAt: b.oldestSubmittedAt,
-    priorityScore: bucketPriorityScore(b, previewNow),
+    priorityScore: bucketPriorityScore(b, previewNow, tipsterContext),
     staleStreakWeeks: bucketStreakLength(b, recurrenceLedger, currentIsoWeek),
     isStale: isBucketStale(b, recurrenceLedger, currentIsoWeek),
   }));

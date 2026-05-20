@@ -95,7 +95,7 @@ import {
   appendPostHistory,
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
-import { incrementTipsterCounters } from './lib/schefter-tipster-counters.mjs';
+import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import {
   classifyTipKind,
   buildTopicBuckets,
@@ -104,6 +104,7 @@ import {
   isBucketStale,
   bucketStreakLength,
 } from './lib/schefter-bucket-logic.mjs';
+import { buildTipsterContext } from './lib/schefter-tipster-context.mjs';
 import {
   loadLedger,
   saveLedger,
@@ -111,6 +112,7 @@ import {
   currentSeasonYear,
   isoWeekLabel,
   markFingerprintSeen,
+  getMemoryRecall,
   LEDGER_PATH,
 } from './lib/schefter-recurrence-ledger.mjs';
 import {
@@ -146,6 +148,11 @@ const TIPS_QUEUE_KEY = 'schefter:tips:queue';
 const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
 const ROGER_LAST_RIFF_DATE_KEY = 'schefter:ask_roger:last_riff_date';
 const MORNING_GREETING_DATE_KEY = 'schefter:morning_greeting:last_used_date';
+// Feature 7 — "saying no, out loud" cooldown. Stores PT-date string of the
+// last quiet-day post. Fires AT MOST once per QUIET_DAY_COOLDOWN_DAYS so
+// Schefter doesn't make "slow news" his whole bit. See attemptQuietDayPost.
+const QUIET_DAY_LAST_DATE_KEY = 'schefter:rumor:quiet_day_last_date';
+const QUIET_DAY_COOLDOWN_DAYS = 3;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
 // Legacy key (pre-cumulative-probability model). Still read for dedup against
@@ -704,7 +711,7 @@ async function safeGetTeamNameCount30d(franchiseId, redis) {
   }
 }
 
-export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
+export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null, tipsterContext = null) {
   const refMs = now instanceof Date ? now.getTime() : Date.now();
   // Single-franchise fuzz applies ONLY to web tips. A GroupMe mention of
   // franchise X isn't an anonymity leak — the speaker publicly named it
@@ -844,6 +851,31 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
         };
       }
       return safe;
+    }
+
+    // Tipster-aware voice flags (web tips only — groupme/trade_offer/trade_bait
+    // returned above). Surfaced early so EVERY web-tip scope branch (league-wide,
+    // commish, division, multi-source, explicit-pick) carries them. These are
+    // ANONYMOUS framing signals: HARD RULE 22 uses `firstTimeTipster` for
+    // curiosity-spark phrasing, HARD RULE 23 uses `prolificTipster` for soft
+    // hedge, HARD RULE 24 uses `tipsterBeat` for the standing-beat nod
+    // WITHOUT ever attaching a codename (option B — codename:topic binding
+    // stays private). None of these flags leak hashedOwnerId, franchise, or
+    // division.
+    if (
+      typeof tip.hashedOwnerId === 'string' &&
+      tip.hashedOwnerId.length > 0 &&
+      tipsterContext
+    ) {
+      const c = tipsterContext.get(tip.hashedOwnerId);
+      if (c) {
+        if (c.isFirstTime) safe.firstTimeTipster = true;
+        if (c.isProlific) safe.prolificTipster = true;
+        if (c.beat && typeof c.beat.topic === 'string') {
+          // ONLY the topic — the codename never surfaces here.
+          safe.tipsterBeat = { topic: c.beat.topic };
+        }
+      }
     }
 
     const hint = tip.franchiseHint;
@@ -997,12 +1029,12 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
  *
  * Returns `{ primary, secondary }` or `null` when nothing qualifies.
  */
-function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date() } = {}) {
+function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date(), tipsterContext = null } = {}) {
   const tradeBuckets = buckets.filter((b) => b.kind === 'trade');
   if (tradeBuckets.length > 0) {
     // Only one bucket key (trade:offer) maps to kind === 'trade' under the
     // new classification, but sort defensively in case that ever changes.
-    tradeBuckets.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
+    tradeBuckets.sort((a, b) => bucketPriorityScore(b, now, tipsterContext) - bucketPriorityScore(a, now, tipsterContext));
     return { primary: tradeBuckets[0], secondary: null };
   }
 
@@ -1012,8 +1044,8 @@ function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date() } = {
   if (gossipBuckets.length === 0) return null;
 
   gossipBuckets.sort((a, b) => {
-    const sa = bucketPriorityScore(a, now);
-    const sb = bucketPriorityScore(b, now);
+    const sa = bucketPriorityScore(a, now, tipsterContext);
+    const sb = bucketPriorityScore(b, now, tipsterContext);
     if (sb !== sa) return sb - sa;
     // Ties: older wins so a long-queued tip always beats a fresh one.
     return a.oldestSubmittedAt - b.oldestSubmittedAt;
@@ -1516,6 +1548,157 @@ function selectSchefterTargetMode(beat) {
   return pickSchefterTargetMode();
 }
 
+/**
+ * Should the scanner fire a "saying no, out loud" quiet-day post this cycle?
+ *
+ * Conditions (ALL must hold):
+ *   - The normal bucket pick returned null (nothing qualifies this cycle).
+ *   - We're not on Friday's mailbag path (mailbag is its own catch-up lane).
+ *   - At least ONE of:
+ *       (a) freshTips is empty — the queue genuinely has nothing.
+ *       (b) every queued tip with an hashedOwnerId came from a single
+ *           prolific tipster (according to tipsterContext) — Schefter has
+ *           one chatty voice and nothing else.
+ *       (c) every non-trade bucket is stale (recurrence ledger has marked
+ *           them as 3-week repeats) — the queue is full of old chatter.
+ *
+ * Cooldown check (against `lastQuietDayDateStr`) is done by the caller —
+ * this helper is pure so it's testable. Returns the reason string for logs.
+ */
+export function evaluateQuietDayConditions({
+  pick,
+  mailbagBatch,
+  freshTips,
+  normalLaneBuckets,
+  staleBuckets,
+  tipsterContext,
+}) {
+  if (pick) return { shouldFire: false, reason: 'normal-pick-available' };
+  if (mailbagBatch) return { shouldFire: false, reason: 'mailbag-active' };
+
+  const tips = Array.isArray(freshTips) ? freshTips : [];
+  if (tips.length === 0) {
+    return { shouldFire: true, reason: 'queue-empty', queueSize: 0 };
+  }
+
+  // (b) single prolific tipster owns the queue. Count distinct web hashes;
+  // if there's exactly one and the context flags them prolific, qualifies.
+  const webHashes = new Set();
+  for (const tip of tips) {
+    if (tip?.source === 'web' && typeof tip.hashedOwnerId === 'string' && tip.hashedOwnerId) {
+      webHashes.add(tip.hashedOwnerId);
+    }
+  }
+  if (webHashes.size === 1) {
+    const onlyHash = [...webHashes][0];
+    const c = tipsterContext?.get?.(onlyHash);
+    if (c?.isProlific) {
+      return { shouldFire: true, reason: 'single-prolific-tipster', queueSize: tips.length };
+    }
+  }
+
+  // (c) all non-trade buckets are stale — only mailbag would touch them.
+  const haveNormalLane = Array.isArray(normalLaneBuckets) && normalLaneBuckets.length > 0;
+  const haveStale = Array.isArray(staleBuckets) && staleBuckets.length > 0;
+  if (!haveNormalLane && haveStale) {
+    return { shouldFire: true, reason: 'all-stale', queueSize: tips.length };
+  }
+
+  return { shouldFire: false, reason: 'no-quiet-day-trigger' };
+}
+
+/**
+ * Quiet-day body generator. Independent LLM call (separate system prompt
+ * from generateAiBody) so it can stay tiny and cache-eligible. Returns the
+ * generated post text, or a template fallback if ANTHROPIC_API_KEY is unset.
+ *
+ * Feature 7 — "saying no, out loud." When the rumor mill is genuinely
+ * quiet, Schefter files ONE candid acknowledgment instead of fabricating
+ * a story. Fires at most once per QUIET_DAY_COOLDOWN_DAYS so it doesn't
+ * become his whole bit.
+ *
+ * @param {Object} ctx
+ * @param {string} ctx.reason  Internal log string ("queue empty",
+ *                             "single-prolific-tipster", "all-stale")
+ * @param {number} ctx.queueSize
+ * @returns {Promise<string>}  The post body.
+ */
+export async function generateQuietDayBody({ reason = 'queue-quiet', queueSize = 0 } = {}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Template fallback — chosen so a dry-run / no-key environment still
+  // ships a recognizable Schefter-voice quiet-day line.
+  const templates = [
+    'Slow news day. League is quiet. Or my tipster line just needs new batteries.',
+    'Phones are not ringing. Either the league is at peace or my sources are at the beach.',
+    'Nothing crossing the desk worth filing. Bench day for the rumor mill.',
+    'Quiet rolodex tonight. The desk is open if anyone has something real.',
+  ];
+  const fallback = templates[Math.floor(Math.random() * templates.length)];
+
+  if (!apiKey) {
+    warn('  [quiet-day] ANTHROPIC_API_KEY not set — using template');
+    return fallback;
+  }
+
+  const system = `You are Claude Schefter — a dynasty fantasy football beat reporter. You file rumor-mill posts in a confident, columnist voice.
+
+This is a QUIET-DAY post. The rumor mill is genuinely slow: no tip clusters worth shipping, no fresh angles, just background noise. Your job is to acknowledge the quiet candidly rather than fabricate a story.
+
+HARD RULES (all of these, every time):
+- ONE OR TWO sentences. No more.
+- Bemused, dry, self-aware. You are a beat reporter on a slow news day, not breaking news.
+- NEVER invent a story, name a franchise, name a player, name an owner, or tease "developing".
+- NEVER promise news is coming. The whole point is that there is none right now.
+- You MAY gently dig at the silence (the league, the rolodex, the off-season). Once.
+- Voice examples (rotate phrasing, never echo verbatim — pick your own line in this register):
+    * "Slow news day. League's quiet. Or my tipster line just needs new batteries."
+    * "Phones aren't ringing. Either the league's at peace or my sources are at the beach."
+    * "Nothing crossing the desk worth filing. Bench day for the rumor mill."
+    * "Quiet rolodex tonight. The desk is open if anyone has something real."
+    * "Sources have nothing for me. I respect that."
+- Output JSON ONLY: {"post": "<the post text as a single string>"}. No meta-commentary. No reasoning in the post field.`;
+
+  const userMessage = `File a quiet-day post. Internal cue (do NOT reference): reason="${reason}", queueSize=${queueSize}. Output JSON only.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      warn(`  [quiet-day] anthropic ${res.status}: ${t.slice(0, 200)} — falling back to template`);
+      return fallback;
+    }
+    const data = await res.json();
+    const text = data?.content?.[0]?.text ?? '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      warn('  [quiet-day] no JSON in response — falling back to template');
+      return fallback;
+    }
+    const parsed = JSON.parse(match[0]);
+    if (typeof parsed?.post === 'string' && parsed.post.trim().length > 0) {
+      return parsed.post.trim();
+    }
+    warn('  [quiet-day] empty post in response — falling back to template');
+    return fallback;
+  } catch (err) {
+    warn(`  [quiet-day] generation failed: ${err.message} — falling back to template`);
+    return fallback;
+  }
+}
+
 async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null, busyMorning = false, busyMorningBacklog = 0, morningGreeting = false } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -1672,6 +1855,37 @@ IRON RULES (override every other rule — if anything below appears to conflict,
     - Trade-offer tips (source: "trade_offer") are about ONE TEAM CONSIDERING A TRADE. Phrase as "shopping", "looking to move", "fielding calls on", "in talks about", "kicking the tires on", "putting out feelers on" — NEVER as "draft chatter", "draft-room buzz", "the draft's in full swing", "rookie-draft strategy", "auto-pilot picks", "half the league locked in", or any framing that implies a league draft event is underway or imminent.
     - The internal "draft" vocabulary you may encounter in tip metadata (e.g. owner activity counts, repeat-offerer signals) reflects TRADE-BUILDER SAVES — owners drafting trade proposals in the trade tool. It is NOT the rookie draft. Treat all "draft"-flavored metadata as a trade-shopping intensity signal and nothing else.
     - The only path to mentioning the rookie draft (or NFL draft) is when a tip's literal \`text\` field references it. Even then, you may only acknowledge what the tip actually says — never extend the framing to other tips in the batch, and never invent a "draft is happening now" backdrop.
+
+22. CURIOSITY SPARKS (first-time tipster). When a web tip carries \`firstTimeTipster: true\`, this is a voice Schefter has never reported on before — the rolodex just added a new line. Surface the freshness in voice with ONE light cue per post; never explain why, never name the tipster, never reveal it's a "first" in literal terms. Pick one and rotate (never two posts in a row with the same phrase):
+    - "A new voice in my ear tonight."
+    - "First time this corner of the league has called."
+    - "Picking up a signal I haven't heard before."
+    - "New line lighting up tonight."
+    - "Fresh number on the call sheet."
+    The cue is a tone marker on the lede, NOT the whole post — file the actual content in the same 1–2 sentences. Subject-anonymity rules (1–14) still apply; this flag is about the SOURCE side of the framing, not the target. When a bucket has multiple tipsters and only ONE is first-time, the cue is still in-voice — the new voice IS the angle. Never combine in the same post with rule 23 (\`prolificTipster\`) — if both flags are present in a multi-tipster bucket, prefer the curiosity-spark frame; the regular's contribution gets discounted to background.
+
+23. GRAIN OF SALT (prolific regular). When a web tip carries \`prolificTipster: true\` AND no \`firstTimeTipster\` is present in the same beat, this tip came from the league's chattiest voice — the reader has heard from this source plenty of times. Add ONE soft-hedge cue that signals reporter-discretion without naming or unmasking. Rotate (never same phrase in a 5-post window):
+    - "The usual rolodex is buzzing again about…"
+    - "One familiar voice keeps circling back to…"
+    - "A regular on the tip line is back with…"
+    - "Same number I've been hearing from, this time on…"
+    - "Hearing this one from a source I know well — for what it's worth…"
+    The hedge is a SINGLE clause that ties into the lede, not a separate sentence. The post still files the actual content — the hedge tells the reader Schefter is weighing the source, it does NOT excuse a content-free post. NEVER pair with the codename or the franchise; this stays voice-only. Skip the hedge entirely on multi-source clusters (rule 4) and on first-time-tipster beats (rule 22 wins — fresh voice is the angle).
+
+24. STANDING BEAT (tipster-topic affinity). When a web tip carries \`tipsterBeat: { topic: <string> }\`, this tipster has a documented standing beat — they reliably feed Schefter the same kind of news. You MAY add a ONE-CLAUSE nod to the standing beat IF and only IF the tip's actual topic matches \`tipsterBeat.topic\`. Phrasing examples (rotate, never same in 5 posts):
+    - "My standing source on commish gripes is back tonight."
+    - "The trade-rumor regular has another one."
+    - "Hearing from the desk that always has the roster beat."
+    - "My usual line on lineup business is lit up again."
+    HARD CONSTRAINTS: NEVER name the codename, the hash, the franchise, or the division alongside this nod (correlation risk — option B design). The beat reference is ABOUT WHAT THEY TIP, never about who they are. If \`firstTimeTipster\` OR \`prolificTipster\` is also on the same tip, you may layer the beat nod with rule 23's hedge OR rule 22's spark, but never all three at once — pick the strongest single voice cue. If \`tipsterBeat.topic\` does NOT match the current post's topic (e.g. their beat is "commish" but this tip is about a trade), DO NOT use this rule — it would imply the wrong specialty.
+
+25. CROSS-WEEK MEMORY RECALL. When a tip carries \`memoryRecall: { weeksSinceFirstSeen, totalWeeksSeen, distinctVoicesAcrossTime }\`, the bucket this post is filing on has shown up in PRIOR weeks AND tonight's contributors include AT LEAST ONE voice that wasn't on the previous roster. This is the "different voice circled back" moment — a feature reporter's reflex. You MAY open the post with a memory-recall frame; ONE per post, never stack with rule 11's whisper-back continuity (those are explicit reply threads, this is independent recall). Phrasing kit (rotate, never same in 5 posts; pick the variant whose specifics match the data you're given):
+    - "Circling back to a whisper from a couple weeks ago — different voice on the line this time."
+    - "Hearing the same story from a fresh corner of the league tonight."
+    - "Three weeks ago a source mentioned this; tonight a different voice circles back." (use the actual weeksSinceFirstSeen integer; clamp to "a few weeks" when the count is 1)
+    - "Same drumbeat, new hands on the kit."
+    - "This file has more than one fingerprint on it now."
+    HARD CONSTRAINTS: use the integer count from \`weeksSinceFirstSeen\` honestly — never inflate ("three weeks ago" requires weeksSinceFirstSeen === 3). When weeksSinceFirstSeen is 1 OR less, prefer non-numeric phrasing ("a couple weeks ago", "earlier in the run"). \`distinctVoicesAcrossTime\` is a COUNT only — never speculate on identity, never name a codename, never name a franchise. NEVER quote a number larger than the data supports. If \`distinctVoicesAcrossTime\` is exactly 2 the frame is "another voice"; if it's 3+ the frame can lean to "multiple voices over time". Do NOT pair memory-recall with rule 20's mailbag "week N now" framing (mailbag has its own staleness language). Do NOT use this rule on hostile or off-topic tips (rules 12, 16) — keep the recall frame for genuine news threads.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
@@ -2601,6 +2815,30 @@ async function main() {
       buckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
   );
 
+  // Per-tipster context — lifts a first-time voice over same-sized noise
+  // from the league's chatty regulars, and discounts a burst-tipping
+  // tipster who has 3+ tips queued this cycle. See
+  // scripts/lib/schefter-tipster-context.mjs for the score math and the
+  // signal sources (Redis: rumors_total + topic_counts).
+  let tipsterContext = new Map();
+  try {
+    tipsterContext = await buildTipsterContext(freshTips, redis);
+    if (tipsterContext.size > 0) {
+      const summary = [...tipsterContext.values()].map((c) => {
+        const tags = [];
+        if (c.isFirstTime) tags.push('first');
+        if (c.isProlific) tags.push('prolific');
+        if (c.tipsInQueue >= 2) tags.push(`burst×${c.tipsInQueue}`);
+        if (c.beat) tags.push(`beat:${c.beat.topic}`);
+        return `${c.hashedOwnerId.slice(0, 6)}=${tags.join('+') || 'baseline'}`;
+      }).join(', ');
+      log(`  [tipster-context] ${tipsterContext.size} contributor(s) — ${summary}`);
+    }
+  } catch (err) {
+    warn(`  [tipster-context] build failed: ${err.message} — falling back to size+age ranking`);
+    tipsterContext = new Map();
+  }
+
   // Recurrence ledger: a gossip bucket that has produced a post in each of
   // the two preceding ISO weeks is "stale". Skipping it from the normal
   // lane lets fresher tips post sooner. Stale tips still drain via the
@@ -2658,14 +2896,90 @@ async function main() {
     batch = mailbagBatch;
   } else {
     // Normal lane sees only non-stale buckets — stale repeats wait for Friday.
-    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now });
+    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now, tipsterContext });
     if (!pick) {
       if (staleBuckets.length > 0) {
         log(`  No fresh bucket qualifies — ${staleBuckets.length} stale bucket(s) held for next Friday mailbag`);
       } else {
         log('  No bucket qualifies (gossip cap used, no trade rumors) — holding tips for the next cycle');
       }
-      return 0;
+      // Feature 7 — quiet-day post. When the normal lane has nothing AND
+      // we're not mid-mailbag, Schefter optionally files ONE candid
+      // acknowledgment instead of going silent. Cooldown enforced via a
+      // PT-date key so this fires at most once per QUIET_DAY_COOLDOWN_DAYS.
+      const quietEval = evaluateQuietDayConditions({
+        pick,
+        mailbagBatch,
+        freshTips,
+        normalLaneBuckets,
+        staleBuckets,
+        tipsterContext,
+      });
+      if (!quietEval.shouldFire) return 0;
+
+      let quietLastDateStr = null;
+      try { quietLastDateStr = await redis.get(QUIET_DAY_LAST_DATE_KEY); } catch { /* tolerate */ }
+      if (typeof quietLastDateStr === 'string' && quietLastDateStr.length > 0) {
+        const ageDays = Math.floor((Date.parse(`${todayPtDate}T00:00:00Z`) - Date.parse(`${quietLastDateStr}T00:00:00Z`)) / (24 * 60 * 60 * 1000));
+        if (ageDays < QUIET_DAY_COOLDOWN_DAYS) {
+          log(`  [quiet-day] cooldown active — last fired ${quietLastDateStr} (${ageDays}d ago, need ≥${QUIET_DAY_COOLDOWN_DAYS}d)`);
+          return 0;
+        }
+      }
+      log(`  [quiet-day] firing — reason=${quietEval.reason}, queueSize=${quietEval.queueSize ?? 0}`);
+
+      const quietBody = await generateQuietDayBody({
+        reason: quietEval.reason,
+        queueSize: quietEval.queueSize ?? 0,
+      });
+      log(`  [quiet-day] body: ${quietBody}`);
+
+      if (DRY_RUN) {
+        log(`  [dry-run] Would ship quiet-day post; would set ${QUIET_DAY_LAST_DATE_KEY}=${todayPtDate}`);
+        return 0;
+      }
+
+      const quietPost = {
+        id: generatePostId(),
+        timestamp: now.toISOString(),
+        type: 'transaction',
+        transactionSubType: RUMOR_SUB_TYPE,
+        tier: RUMOR_TIER,
+        headline: 'Schefter checking in…',
+        body: quietBody,
+        authorId: 'claude',
+        franchiseIds: [],
+        tipIds: [],
+        league: LEAGUE_SLUG,
+        link: TIP_PAGE_PATH,
+        linkLabel: 'Got a real tip?',
+      };
+
+      try {
+        const feed = await loadFeed();
+        feed.posts = [quietPost, ...(feed.posts ?? [])];
+        feed.lastScanTimestamp = now.toISOString();
+        await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
+        log(`  [quiet-day] appended quiet-day post ${quietPost.id} to feed`);
+      } catch (err) {
+        warn(`  [quiet-day] feed write failed: ${err.message}`);
+        return 0;
+      }
+
+      // Mark cooldown + the daily-cap counter so quiet-day shares one of
+      // the day's MAX_POSTS_PER_DAY slots. Deliberately NO GroupMe ping —
+      // a "slow news day" post buzzing every phone is the opposite of slow.
+      try {
+        await redis.set(QUIET_DAY_LAST_DATE_KEY, todayPtDate);
+        const newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
+        if (newCount === 1) {
+          await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+        }
+        await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
+      } catch (err) {
+        warn(`  [quiet-day] counter update failed: ${err.message} — post shipped, cooldown unset`);
+      }
+      return 1;
     }
     primaryBucket = pick.primary;
     secondaryBucket = pick.secondary;
@@ -2751,9 +3065,9 @@ async function main() {
   // headline snippets into their scope.
   const teams = await loadTeams();
   const feedForAnonymize = await loadFeed();
-  const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis);
+  const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis, tipsterContext);
   const secondaryAnonymized = secondaryBatch
-    ? await anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now, redis)
+    ? await anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now, redis, tipsterContext)
     : null;
   log(`  Anonymized ${anonymized.length} tips${secondaryAnonymized ? ` + ${secondaryAnonymized.length} secondary` : ''}`);
 
@@ -2784,6 +3098,47 @@ async function main() {
     if (secondaryAnonymized) annotateStreaks(secondaryAnonymized, secondaryBatch);
   } catch (err) {
     warn(`  [recurrence] streak annotation failed: ${err.message} — proceeding without`);
+  }
+
+  // Cross-week memory recall (feature 10 / HARD RULE 25). For each bucket
+  // that has a ledger fingerprint AND has been touched in ≥2 prior weeks,
+  // check whether THIS cycle's tipster roster contains at least one voice
+  // that wasn't on the previous roster. If yes, surface a memoryRecall
+  // payload on every anonymized tip in that bucket so the LLM can open
+  // with "circling back to last week's…" / "three weeks ago a source
+  // mentioned this; tonight a different voice…" framing. Privacy: only
+  // COUNTS surface — no hashes, no codenames, no franchises.
+  try {
+    const annotateMemoryRecall = (anonList, tipList) => {
+      if (!Array.isArray(anonList) || anonList.length === 0) return;
+      const recallById = new Map();
+      const consumed = buildTopicBuckets(tipList);
+      for (const b of consumed) {
+        const fp = bucketFingerprint(b);
+        if (!fp) continue;
+        const currentHashes = [];
+        for (const t of b.tips) {
+          if (t?.source === 'web' && typeof t.hashedOwnerId === 'string' && t.hashedOwnerId) {
+            currentHashes.push(t.hashedOwnerId);
+          }
+        }
+        const recall = getMemoryRecall(recurrenceLedger, fp, currentHashes, currentIsoWeek);
+        if (!recall) continue;
+        for (const t of b.tips) {
+          if (t && typeof t.id === 'string') recallById.set(t.id, recall);
+        }
+      }
+      for (const a of anonList) {
+        if (a && typeof a.id === 'string') {
+          const r = recallById.get(a.id);
+          if (r) a.memoryRecall = r;
+        }
+      }
+    };
+    annotateMemoryRecall(anonymized, batch);
+    if (secondaryAnonymized) annotateMemoryRecall(secondaryAnonymized, secondaryBatch);
+  } catch (err) {
+    warn(`  [recurrence] memory-recall annotation failed: ${err.message} — proceeding without`);
   }
 
   // ── Phase 4: Ask Roger 7% riff ──
@@ -3154,7 +3509,17 @@ async function main() {
       for (const b of consumedBuckets) {
         const fp = bucketFingerprint(b);
         if (!fp) continue;
-        markFingerprintSeen(recurrenceLedger, fp, currentIsoWeek, now.toISOString());
+        // Per-bucket tipster roster (web-only — groupme/trade_offer don't
+        // carry a hashedOwnerId). The ledger merges this list into its
+        // running tipsterHashes set so feature 10's memory recall can
+        // detect when a "different voice" returns to an old fingerprint.
+        const tipsterHashes = [];
+        for (const t of b.tips) {
+          if (t?.source === 'web' && typeof t.hashedOwnerId === 'string' && t.hashedOwnerId) {
+            tipsterHashes.push(t.hashedOwnerId);
+          }
+        }
+        markFingerprintSeen(recurrenceLedger, fp, currentIsoWeek, now.toISOString(), tipsterHashes);
         stampedFingerprints.push(fp);
       }
       if (stampedFingerprints.length > 0) {
@@ -3318,6 +3683,21 @@ async function main() {
     });
   } catch (err) {
     warn(`  [tipster-counters] hook failed: ${err.message}`);
+  }
+
+  // Per-tipster topic histogram — feeds buildTipsterContext on subsequent
+  // cycles so the "standing beat" (HARD RULE 24) can be derived. Same
+  // failure stance as above: a counter error never blocks the post.
+  try {
+    await incrementTipsterTopicCounters({
+      redis,
+      batch: consumedBatch,
+      dryRun: DRY_RUN,
+      log,
+      warn,
+    });
+  } catch (err) {
+    warn(`  [tipster-topic-counters] hook failed: ${err.message}`);
   }
 
   return 1;

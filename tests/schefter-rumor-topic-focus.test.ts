@@ -258,8 +258,9 @@ describe('rumor-scan age metadata — tips carry ageDays + isStale to the LLM', 
   it('passes now into anonymizeTips so age is computed against the cycle clock', () => {
     // Updated for Phase-2 explicit-pick feature: anonymizeTips is now async
     // and accepts a 5th `redis` argument for naming-rate-limit + name-count
-    // reads. Both call sites still pass `now` as the 4th arg.
-    expect(src).toMatch(/await anonymizeTips\(batch,\s*teams,\s*feedForAnonymize\.posts[^,]*,\s*now,\s*redis\)/);
+    // reads. Both call sites still pass `now` as the 4th arg. Phase-8 added a
+    // 6th `tipsterContext` arg (per-tipster recency/voice flags).
+    expect(src).toMatch(/await anonymizeTips\(batch,\s*teams,\s*feedForAnonymize\.posts[^,]*,\s*now,\s*redis,\s*tipsterContext\)/);
   });
 });
 
@@ -361,8 +362,13 @@ describe('rumor-scan two-post gossip — second bucket ships as its own feed pos
     // primary lands at index 0 (top of the feed). Held / suppressed posts
     // never enter the feed — Option A holds their tips back for re-eval.
     expect(src).toMatch(/feed\.posts\s*=\s*\[\s*\.\.\.allowedPosts,\s*\.\.\.existingPosts\s*\]/);
+    // Two FEED_PATH writes exist as of Phase 8: the main flow (this test's
+    // contract) AND the quiet-day branch (feature 7 — saying no out loud).
+    // Both lanes are atomic single-write per cycle, but they're independent
+    // lanes that never both fire on the same cycle (quiet-day only runs
+    // when the normal pick returned null).
     const feedWrites = (src.match(/await fs\.writeFile\(FEED_PATH/g) ?? []).length;
-    expect(feedWrites).toBe(1);
+    expect(feedWrites).toBe(2);
   });
 
   it('sends a separate GroupMe message per post (so each is independently replyable)', () => {
@@ -370,9 +376,13 @@ describe('rumor-scan two-post gossip — second bucket ships as its own feed pos
   });
 
   it('counts both posts as ONE slot against posts_today and gossip counters', () => {
-    // INCR runs once per cycle even when we ship two posts.
+    // INCR runs once per cycle even when we ship two posts (main flow).
+    // Phase 8 adds a second INCR site in the quiet-day branch — distinct
+    // lane, distinct cycle, same one-slot-per-cycle invariant.
     const incrCount = (src.match(/redis\.incr\(RUMOR_POSTS_TODAY_KEY\)/g) ?? []).length;
-    expect(incrCount).toBe(1);
+    expect(incrCount).toBe(2);
+    // Gossip counter only ever increments in the main gossip lane —
+    // quiet-day is its own thing and does NOT consume the gossip cap.
     const gossipIncr = (src.match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g) ?? []).length;
     expect(gossipIncr).toBe(1);
   });

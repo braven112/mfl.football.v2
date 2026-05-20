@@ -22,6 +22,11 @@ const CODENAMES_USED_KEY = 'schefter:tipster:codenames_used';
 const RUMORS_TOTAL_PREFIX = 'schefter:tipster:rumors_total:';
 const RUMORS_SEASON_PREFIX = 'schefter:tipster:rumors_season:';
 const LEADERBOARD_PREFIX = 'schefter:tipster:leaderboard:';
+// Per-tipster topic histogram, populated alongside the rumor counters above.
+// HASH: topic → lifetime count. Read by buildTipsterContext (lib/schefter-
+// tipster-context.mjs) to derive a "standing beat" — the topic share that
+// HARD RULE 24 surfaces in the prompt without ever attaching a codename.
+const TOPIC_COUNTS_PREFIX = 'schefter:tipster:topic_counts:';
 
 /** Must stay in sync with src/utils/schefter-codenames.ts. */
 const SCHEFTER_CODENAMES = [
@@ -159,4 +164,69 @@ export async function incrementTipsterCounters({
   }
 
   log(`  [tipster-counters] updated ${distinctHashes.size} contributor(s)`);
+}
+
+/**
+ * Increment the per-tipster topic histogram. Called after a rumor ships, in
+ * parallel with incrementTipsterCounters. One increment per (tipster, topic)
+ * pair in the batch — a tipster who contributed two trade tips to the same
+ * post counts +1 for "trade", not +2, so the histogram tracks distinct
+ * authoritative beats per post rather than tip volume.
+ *
+ * The histogram drives HARD RULE 24 (standing beat) via buildTipsterContext.
+ * Only web tips count — groupme tips are already attributable and don't
+ * benefit from a standing-beat hint; trade_offer tips have no tipster at all.
+ *
+ * @param {object} opts
+ * @param {import('@upstash/redis').Redis} opts.redis
+ * @param {Array<{source: string, hashedOwnerId?: string, topic?: string}>} opts.batch
+ * @param {boolean} [opts.dryRun]
+ * @param {(msg: string) => void} [opts.log]
+ * @param {(msg: string) => void} [opts.warn]
+ */
+export async function incrementTipsterTopicCounters({
+  redis,
+  batch,
+  dryRun = false,
+  log = () => {},
+  warn = () => {},
+}) {
+  if (!redis || !Array.isArray(batch) || batch.length === 0) return;
+
+  // Dedup to (hash, topic) pairs so a tipster who tipped two roster items in
+  // the same batch counts +1 for "roster", not +2. This keeps the histogram
+  // a fair measure of WHAT a tipster reliably reports on, not how many
+  // overlapping tips they happened to send.
+  const pairs = new Map(); // hash → Set<topic>
+  for (const tip of batch) {
+    if (!tip || tip.source !== 'web') continue;
+    const hash = typeof tip.hashedOwnerId === 'string' ? tip.hashedOwnerId : '';
+    const topic = typeof tip.topic === 'string' && tip.topic.length > 0 ? tip.topic : 'other';
+    if (!hash) continue;
+    if (!pairs.has(hash)) pairs.set(hash, new Set());
+    pairs.get(hash).add(topic);
+  }
+  if (pairs.size === 0) {
+    log('  [tipster-topic-counters] no web tippers in batch — skipping');
+    return;
+  }
+
+  if (dryRun) {
+    const summary = [...pairs.entries()]
+      .map(([h, topics]) => `${h.slice(0, 6)}:[${[...topics].join(',')}]`)
+      .join(', ');
+    log(`  [dry-run] Would increment topic counters: ${summary}`);
+    return;
+  }
+
+  for (const [hash, topics] of pairs) {
+    for (const topic of topics) {
+      try {
+        await redis.hincrby(`${TOPIC_COUNTS_PREFIX}${hash}`, topic, 1);
+      } catch (err) {
+        warn(`  [tipster-topic-counters] increment failed for ${hash.slice(0, 6)} topic=${topic}: ${err.message}`);
+      }
+    }
+  }
+  log(`  [tipster-topic-counters] updated ${pairs.size} contributor(s)`);
 }
