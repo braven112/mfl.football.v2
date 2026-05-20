@@ -112,6 +112,7 @@ import {
   currentSeasonYear,
   isoWeekLabel,
   markFingerprintSeen,
+  getMemoryRecall,
   LEDGER_PATH,
 } from './lib/schefter-recurrence-ledger.mjs';
 import {
@@ -1878,6 +1879,14 @@ IRON RULES (override every other rule — if anything below appears to conflict,
     - "My usual line on lineup business is lit up again."
     HARD CONSTRAINTS: NEVER name the codename, the hash, the franchise, or the division alongside this nod (correlation risk — option B design). The beat reference is ABOUT WHAT THEY TIP, never about who they are. If \`firstTimeTipster\` OR \`prolificTipster\` is also on the same tip, you may layer the beat nod with rule 23's hedge OR rule 22's spark, but never all three at once — pick the strongest single voice cue. If \`tipsterBeat.topic\` does NOT match the current post's topic (e.g. their beat is "commish" but this tip is about a trade), DO NOT use this rule — it would imply the wrong specialty.
 
+25. CROSS-WEEK MEMORY RECALL. When a tip carries \`memoryRecall: { weeksSinceFirstSeen, totalWeeksSeen, distinctVoicesAcrossTime }\`, the bucket this post is filing on has shown up in PRIOR weeks AND tonight's contributors include AT LEAST ONE voice that wasn't on the previous roster. This is the "different voice circled back" moment — a feature reporter's reflex. You MAY open the post with a memory-recall frame; ONE per post, never stack with rule 11's whisper-back continuity (those are explicit reply threads, this is independent recall). Phrasing kit (rotate, never same in 5 posts; pick the variant whose specifics match the data you're given):
+    - "Circling back to a whisper from a couple weeks ago — different voice on the line this time."
+    - "Hearing the same story from a fresh corner of the league tonight."
+    - "Three weeks ago a source mentioned this; tonight a different voice circles back." (use the actual weeksSinceFirstSeen integer; clamp to "a few weeks" when the count is 1)
+    - "Same drumbeat, new hands on the kit."
+    - "This file has more than one fingerprint on it now."
+    HARD CONSTRAINTS: use the integer count from \`weeksSinceFirstSeen\` honestly — never inflate ("three weeks ago" requires weeksSinceFirstSeen === 3). When weeksSinceFirstSeen is 1 OR less, prefer non-numeric phrasing ("a couple weeks ago", "earlier in the run"). \`distinctVoicesAcrossTime\` is a COUNT only — never speculate on identity, never name a codename, never name a franchise. NEVER quote a number larger than the data supports. If \`distinctVoicesAcrossTime\` is exactly 2 the frame is "another voice"; if it's 3+ the frame can lean to "multiple voices over time". Do NOT pair memory-recall with rule 20's mailbag "week N now" framing (mailbag has its own staleness language). Do NOT use this rule on hostile or off-topic tips (rules 12, 16) — keep the recall frame for genuine news threads.
+
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
   if (hasTradeOffer) {
@@ -3091,6 +3100,47 @@ async function main() {
     warn(`  [recurrence] streak annotation failed: ${err.message} — proceeding without`);
   }
 
+  // Cross-week memory recall (feature 10 / HARD RULE 25). For each bucket
+  // that has a ledger fingerprint AND has been touched in ≥2 prior weeks,
+  // check whether THIS cycle's tipster roster contains at least one voice
+  // that wasn't on the previous roster. If yes, surface a memoryRecall
+  // payload on every anonymized tip in that bucket so the LLM can open
+  // with "circling back to last week's…" / "three weeks ago a source
+  // mentioned this; tonight a different voice…" framing. Privacy: only
+  // COUNTS surface — no hashes, no codenames, no franchises.
+  try {
+    const annotateMemoryRecall = (anonList, tipList) => {
+      if (!Array.isArray(anonList) || anonList.length === 0) return;
+      const recallById = new Map();
+      const consumed = buildTopicBuckets(tipList);
+      for (const b of consumed) {
+        const fp = bucketFingerprint(b);
+        if (!fp) continue;
+        const currentHashes = [];
+        for (const t of b.tips) {
+          if (t?.source === 'web' && typeof t.hashedOwnerId === 'string' && t.hashedOwnerId) {
+            currentHashes.push(t.hashedOwnerId);
+          }
+        }
+        const recall = getMemoryRecall(recurrenceLedger, fp, currentHashes, currentIsoWeek);
+        if (!recall) continue;
+        for (const t of b.tips) {
+          if (t && typeof t.id === 'string') recallById.set(t.id, recall);
+        }
+      }
+      for (const a of anonList) {
+        if (a && typeof a.id === 'string') {
+          const r = recallById.get(a.id);
+          if (r) a.memoryRecall = r;
+        }
+      }
+    };
+    annotateMemoryRecall(anonymized, batch);
+    if (secondaryAnonymized) annotateMemoryRecall(secondaryAnonymized, secondaryBatch);
+  } catch (err) {
+    warn(`  [recurrence] memory-recall annotation failed: ${err.message} — proceeding without`);
+  }
+
   // ── Phase 4: Ask Roger 7% riff ──
   // Gate: (a) random roll passes, (b) no riff already posted today PT,
   // (c) a rumor-mill post is about to go out anyway (true here since we're
@@ -3459,7 +3509,17 @@ async function main() {
       for (const b of consumedBuckets) {
         const fp = bucketFingerprint(b);
         if (!fp) continue;
-        markFingerprintSeen(recurrenceLedger, fp, currentIsoWeek, now.toISOString());
+        // Per-bucket tipster roster (web-only — groupme/trade_offer don't
+        // carry a hashedOwnerId). The ledger merges this list into its
+        // running tipsterHashes set so feature 10's memory recall can
+        // detect when a "different voice" returns to an old fingerprint.
+        const tipsterHashes = [];
+        for (const t of b.tips) {
+          if (t?.source === 'web' && typeof t.hashedOwnerId === 'string' && t.hashedOwnerId) {
+            tipsterHashes.push(t.hashedOwnerId);
+          }
+        }
+        markFingerprintSeen(recurrenceLedger, fp, currentIsoWeek, now.toISOString(), tipsterHashes);
         stampedFingerprints.push(fp);
       }
       if (stampedFingerprints.length > 0) {
