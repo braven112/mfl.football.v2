@@ -147,6 +147,11 @@ const TIPS_QUEUE_KEY = 'schefter:tips:queue';
 const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
 const ROGER_LAST_RIFF_DATE_KEY = 'schefter:ask_roger:last_riff_date';
 const MORNING_GREETING_DATE_KEY = 'schefter:morning_greeting:last_used_date';
+// Feature 7 — "saying no, out loud" cooldown. Stores PT-date string of the
+// last quiet-day post. Fires AT MOST once per QUIET_DAY_COOLDOWN_DAYS so
+// Schefter doesn't make "slow news" his whole bit. See attemptQuietDayPost.
+const QUIET_DAY_LAST_DATE_KEY = 'schefter:rumor:quiet_day_last_date';
+const QUIET_DAY_COOLDOWN_DAYS = 3;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
 // Legacy key (pre-cumulative-probability model). Still read for dedup against
@@ -1542,6 +1547,157 @@ function selectSchefterTargetMode(beat) {
   return pickSchefterTargetMode();
 }
 
+/**
+ * Should the scanner fire a "saying no, out loud" quiet-day post this cycle?
+ *
+ * Conditions (ALL must hold):
+ *   - The normal bucket pick returned null (nothing qualifies this cycle).
+ *   - We're not on Friday's mailbag path (mailbag is its own catch-up lane).
+ *   - At least ONE of:
+ *       (a) freshTips is empty — the queue genuinely has nothing.
+ *       (b) every queued tip with an hashedOwnerId came from a single
+ *           prolific tipster (according to tipsterContext) — Schefter has
+ *           one chatty voice and nothing else.
+ *       (c) every non-trade bucket is stale (recurrence ledger has marked
+ *           them as 3-week repeats) — the queue is full of old chatter.
+ *
+ * Cooldown check (against `lastQuietDayDateStr`) is done by the caller —
+ * this helper is pure so it's testable. Returns the reason string for logs.
+ */
+export function evaluateQuietDayConditions({
+  pick,
+  mailbagBatch,
+  freshTips,
+  normalLaneBuckets,
+  staleBuckets,
+  tipsterContext,
+}) {
+  if (pick) return { shouldFire: false, reason: 'normal-pick-available' };
+  if (mailbagBatch) return { shouldFire: false, reason: 'mailbag-active' };
+
+  const tips = Array.isArray(freshTips) ? freshTips : [];
+  if (tips.length === 0) {
+    return { shouldFire: true, reason: 'queue-empty', queueSize: 0 };
+  }
+
+  // (b) single prolific tipster owns the queue. Count distinct web hashes;
+  // if there's exactly one and the context flags them prolific, qualifies.
+  const webHashes = new Set();
+  for (const tip of tips) {
+    if (tip?.source === 'web' && typeof tip.hashedOwnerId === 'string' && tip.hashedOwnerId) {
+      webHashes.add(tip.hashedOwnerId);
+    }
+  }
+  if (webHashes.size === 1) {
+    const onlyHash = [...webHashes][0];
+    const c = tipsterContext?.get?.(onlyHash);
+    if (c?.isProlific) {
+      return { shouldFire: true, reason: 'single-prolific-tipster', queueSize: tips.length };
+    }
+  }
+
+  // (c) all non-trade buckets are stale — only mailbag would touch them.
+  const haveNormalLane = Array.isArray(normalLaneBuckets) && normalLaneBuckets.length > 0;
+  const haveStale = Array.isArray(staleBuckets) && staleBuckets.length > 0;
+  if (!haveNormalLane && haveStale) {
+    return { shouldFire: true, reason: 'all-stale', queueSize: tips.length };
+  }
+
+  return { shouldFire: false, reason: 'no-quiet-day-trigger' };
+}
+
+/**
+ * Quiet-day body generator. Independent LLM call (separate system prompt
+ * from generateAiBody) so it can stay tiny and cache-eligible. Returns the
+ * generated post text, or a template fallback if ANTHROPIC_API_KEY is unset.
+ *
+ * Feature 7 — "saying no, out loud." When the rumor mill is genuinely
+ * quiet, Schefter files ONE candid acknowledgment instead of fabricating
+ * a story. Fires at most once per QUIET_DAY_COOLDOWN_DAYS so it doesn't
+ * become his whole bit.
+ *
+ * @param {Object} ctx
+ * @param {string} ctx.reason  Internal log string ("queue empty",
+ *                             "single-prolific-tipster", "all-stale")
+ * @param {number} ctx.queueSize
+ * @returns {Promise<string>}  The post body.
+ */
+export async function generateQuietDayBody({ reason = 'queue-quiet', queueSize = 0 } = {}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Template fallback — chosen so a dry-run / no-key environment still
+  // ships a recognizable Schefter-voice quiet-day line.
+  const templates = [
+    'Slow news day. League is quiet. Or my tipster line just needs new batteries.',
+    'Phones are not ringing. Either the league is at peace or my sources are at the beach.',
+    'Nothing crossing the desk worth filing. Bench day for the rumor mill.',
+    'Quiet rolodex tonight. The desk is open if anyone has something real.',
+  ];
+  const fallback = templates[Math.floor(Math.random() * templates.length)];
+
+  if (!apiKey) {
+    warn('  [quiet-day] ANTHROPIC_API_KEY not set — using template');
+    return fallback;
+  }
+
+  const system = `You are Claude Schefter — a dynasty fantasy football beat reporter. You file rumor-mill posts in a confident, columnist voice.
+
+This is a QUIET-DAY post. The rumor mill is genuinely slow: no tip clusters worth shipping, no fresh angles, just background noise. Your job is to acknowledge the quiet candidly rather than fabricate a story.
+
+HARD RULES (all of these, every time):
+- ONE OR TWO sentences. No more.
+- Bemused, dry, self-aware. You are a beat reporter on a slow news day, not breaking news.
+- NEVER invent a story, name a franchise, name a player, name an owner, or tease "developing".
+- NEVER promise news is coming. The whole point is that there is none right now.
+- You MAY gently dig at the silence (the league, the rolodex, the off-season). Once.
+- Voice examples (rotate phrasing, never echo verbatim — pick your own line in this register):
+    * "Slow news day. League's quiet. Or my tipster line just needs new batteries."
+    * "Phones aren't ringing. Either the league's at peace or my sources are at the beach."
+    * "Nothing crossing the desk worth filing. Bench day for the rumor mill."
+    * "Quiet rolodex tonight. The desk is open if anyone has something real."
+    * "Sources have nothing for me. I respect that."
+- Output JSON ONLY: {"post": "<the post text as a single string>"}. No meta-commentary. No reasoning in the post field.`;
+
+  const userMessage = `File a quiet-day post. Internal cue (do NOT reference): reason="${reason}", queueSize=${queueSize}. Output JSON only.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      warn(`  [quiet-day] anthropic ${res.status}: ${t.slice(0, 200)} — falling back to template`);
+      return fallback;
+    }
+    const data = await res.json();
+    const text = data?.content?.[0]?.text ?? '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      warn('  [quiet-day] no JSON in response — falling back to template');
+      return fallback;
+    }
+    const parsed = JSON.parse(match[0]);
+    if (typeof parsed?.post === 'string' && parsed.post.trim().length > 0) {
+      return parsed.post.trim();
+    }
+    warn('  [quiet-day] empty post in response — falling back to template');
+    return fallback;
+  } catch (err) {
+    warn(`  [quiet-day] generation failed: ${err.message} — falling back to template`);
+    return fallback;
+  }
+}
+
 async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, mode = 'single', nflContext = null, schefterTargetMode = null, busyMorning = false, busyMorningBacklog = 0, morningGreeting = false } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -2738,7 +2894,83 @@ async function main() {
       } else {
         log('  No bucket qualifies (gossip cap used, no trade rumors) — holding tips for the next cycle');
       }
-      return 0;
+      // Feature 7 — quiet-day post. When the normal lane has nothing AND
+      // we're not mid-mailbag, Schefter optionally files ONE candid
+      // acknowledgment instead of going silent. Cooldown enforced via a
+      // PT-date key so this fires at most once per QUIET_DAY_COOLDOWN_DAYS.
+      const quietEval = evaluateQuietDayConditions({
+        pick,
+        mailbagBatch,
+        freshTips,
+        normalLaneBuckets,
+        staleBuckets,
+        tipsterContext,
+      });
+      if (!quietEval.shouldFire) return 0;
+
+      let quietLastDateStr = null;
+      try { quietLastDateStr = await redis.get(QUIET_DAY_LAST_DATE_KEY); } catch { /* tolerate */ }
+      if (typeof quietLastDateStr === 'string' && quietLastDateStr.length > 0) {
+        const ageDays = Math.floor((Date.parse(`${todayPtDate}T00:00:00Z`) - Date.parse(`${quietLastDateStr}T00:00:00Z`)) / (24 * 60 * 60 * 1000));
+        if (ageDays < QUIET_DAY_COOLDOWN_DAYS) {
+          log(`  [quiet-day] cooldown active — last fired ${quietLastDateStr} (${ageDays}d ago, need ≥${QUIET_DAY_COOLDOWN_DAYS}d)`);
+          return 0;
+        }
+      }
+      log(`  [quiet-day] firing — reason=${quietEval.reason}, queueSize=${quietEval.queueSize ?? 0}`);
+
+      const quietBody = await generateQuietDayBody({
+        reason: quietEval.reason,
+        queueSize: quietEval.queueSize ?? 0,
+      });
+      log(`  [quiet-day] body: ${quietBody}`);
+
+      if (DRY_RUN) {
+        log(`  [dry-run] Would ship quiet-day post; would set ${QUIET_DAY_LAST_DATE_KEY}=${todayPtDate}`);
+        return 0;
+      }
+
+      const quietPost = {
+        id: generatePostId(),
+        timestamp: now.toISOString(),
+        type: 'transaction',
+        transactionSubType: RUMOR_SUB_TYPE,
+        tier: RUMOR_TIER,
+        headline: 'Schefter checking in…',
+        body: quietBody,
+        authorId: 'claude',
+        franchiseIds: [],
+        tipIds: [],
+        league: LEAGUE_SLUG,
+        link: TIP_PAGE_PATH,
+        linkLabel: 'Got a real tip?',
+      };
+
+      try {
+        const feed = await loadFeed();
+        feed.posts = [quietPost, ...(feed.posts ?? [])];
+        feed.lastScanTimestamp = now.toISOString();
+        await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
+        log(`  [quiet-day] appended quiet-day post ${quietPost.id} to feed`);
+      } catch (err) {
+        warn(`  [quiet-day] feed write failed: ${err.message}`);
+        return 0;
+      }
+
+      // Mark cooldown + the daily-cap counter so quiet-day shares one of
+      // the day's MAX_POSTS_PER_DAY slots. Deliberately NO GroupMe ping —
+      // a "slow news day" post buzzing every phone is the opposite of slow.
+      try {
+        await redis.set(QUIET_DAY_LAST_DATE_KEY, todayPtDate);
+        const newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
+        if (newCount === 1) {
+          await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+        }
+        await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
+      } catch (err) {
+        warn(`  [quiet-day] counter update failed: ${err.message} — post shipped, cooldown unset`);
+      }
+      return 1;
     }
     primaryBucket = pick.primary;
     secondaryBucket = pick.secondary;
