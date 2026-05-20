@@ -258,8 +258,9 @@ describe('rumor-scan age metadata — tips carry ageDays + isStale to the LLM', 
   it('passes now into anonymizeTips so age is computed against the cycle clock', () => {
     // Updated for Phase-2 explicit-pick feature: anonymizeTips is now async
     // and accepts a 5th `redis` argument for naming-rate-limit + name-count
-    // reads. Both call sites still pass `now` as the 4th arg.
-    expect(src).toMatch(/await anonymizeTips\(batch,\s*teams,\s*feedForAnonymize\.posts[^,]*,\s*now,\s*redis\)/);
+    // reads. Both call sites still pass `now` as the 4th arg. Phase-8 added a
+    // 6th `tipsterContext` arg (per-tipster recency/voice flags).
+    expect(src).toMatch(/await anonymizeTips\(batch,\s*teams,\s*feedForAnonymize\.posts[^,]*,\s*now,\s*redis,\s*tipsterContext\)/);
   });
 });
 

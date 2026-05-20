@@ -705,7 +705,7 @@ async function safeGetTeamNameCount30d(franchiseId, redis) {
   }
 }
 
-export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null) {
+export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(), redis = null, tipsterContext = null) {
   const refMs = now instanceof Date ? now.getTime() : Date.now();
   // Single-franchise fuzz applies ONLY to web tips. A GroupMe mention of
   // franchise X isn't an anonymity leak — the speaker publicly named it
@@ -845,6 +845,31 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
         };
       }
       return safe;
+    }
+
+    // Tipster-aware voice flags (web tips only — groupme/trade_offer/trade_bait
+    // returned above). Surfaced early so EVERY web-tip scope branch (league-wide,
+    // commish, division, multi-source, explicit-pick) carries them. These are
+    // ANONYMOUS framing signals: HARD RULE 22 uses `firstTimeTipster` for
+    // curiosity-spark phrasing, HARD RULE 23 uses `prolificTipster` for soft
+    // hedge, HARD RULE 24 uses `tipsterBeat` for the standing-beat nod
+    // WITHOUT ever attaching a codename (option B — codename:topic binding
+    // stays private). None of these flags leak hashedOwnerId, franchise, or
+    // division.
+    if (
+      typeof tip.hashedOwnerId === 'string' &&
+      tip.hashedOwnerId.length > 0 &&
+      tipsterContext
+    ) {
+      const c = tipsterContext.get(tip.hashedOwnerId);
+      if (c) {
+        if (c.isFirstTime) safe.firstTimeTipster = true;
+        if (c.isProlific) safe.prolificTipster = true;
+        if (c.beat && typeof c.beat.topic === 'string') {
+          // ONLY the topic — the codename never surfaces here.
+          safe.tipsterBeat = { topic: c.beat.topic };
+        }
+      }
     }
 
     const hint = tip.franchiseHint;
@@ -1673,6 +1698,29 @@ IRON RULES (override every other rule — if anything below appears to conflict,
     - Trade-offer tips (source: "trade_offer") are about ONE TEAM CONSIDERING A TRADE. Phrase as "shopping", "looking to move", "fielding calls on", "in talks about", "kicking the tires on", "putting out feelers on" — NEVER as "draft chatter", "draft-room buzz", "the draft's in full swing", "rookie-draft strategy", "auto-pilot picks", "half the league locked in", or any framing that implies a league draft event is underway or imminent.
     - The internal "draft" vocabulary you may encounter in tip metadata (e.g. owner activity counts, repeat-offerer signals) reflects TRADE-BUILDER SAVES — owners drafting trade proposals in the trade tool. It is NOT the rookie draft. Treat all "draft"-flavored metadata as a trade-shopping intensity signal and nothing else.
     - The only path to mentioning the rookie draft (or NFL draft) is when a tip's literal \`text\` field references it. Even then, you may only acknowledge what the tip actually says — never extend the framing to other tips in the batch, and never invent a "draft is happening now" backdrop.
+
+22. CURIOSITY SPARKS (first-time tipster). When a web tip carries \`firstTimeTipster: true\`, this is a voice Schefter has never reported on before — the rolodex just added a new line. Surface the freshness in voice with ONE light cue per post; never explain why, never name the tipster, never reveal it's a "first" in literal terms. Pick one and rotate (never two posts in a row with the same phrase):
+    - "A new voice in my ear tonight."
+    - "First time this corner of the league has called."
+    - "Picking up a signal I haven't heard before."
+    - "New line lighting up tonight."
+    - "Fresh number on the call sheet."
+    The cue is a tone marker on the lede, NOT the whole post — file the actual content in the same 1–2 sentences. Subject-anonymity rules (1–14) still apply; this flag is about the SOURCE side of the framing, not the target. When a bucket has multiple tipsters and only ONE is first-time, the cue is still in-voice — the new voice IS the angle. Never combine in the same post with rule 23 (\`prolificTipster\`) — if both flags are present in a multi-tipster bucket, prefer the curiosity-spark frame; the regular's contribution gets discounted to background.
+
+23. GRAIN OF SALT (prolific regular). When a web tip carries \`prolificTipster: true\` AND no \`firstTimeTipster\` is present in the same beat, this tip came from the league's chattiest voice — the reader has heard from this source plenty of times. Add ONE soft-hedge cue that signals reporter-discretion without naming or unmasking. Rotate (never same phrase in a 5-post window):
+    - "The usual rolodex is buzzing again about…"
+    - "One familiar voice keeps circling back to…"
+    - "A regular on the tip line is back with…"
+    - "Same number I've been hearing from, this time on…"
+    - "Hearing this one from a source I know well — for what it's worth…"
+    The hedge is a SINGLE clause that ties into the lede, not a separate sentence. The post still files the actual content — the hedge tells the reader Schefter is weighing the source, it does NOT excuse a content-free post. NEVER pair with the codename or the franchise; this stays voice-only. Skip the hedge entirely on multi-source clusters (rule 4) and on first-time-tipster beats (rule 22 wins — fresh voice is the angle).
+
+24. STANDING BEAT (tipster-topic affinity). When a web tip carries \`tipsterBeat: { topic: <string> }\`, this tipster has a documented standing beat — they reliably feed Schefter the same kind of news. You MAY add a ONE-CLAUSE nod to the standing beat IF and only IF the tip's actual topic matches \`tipsterBeat.topic\`. Phrasing examples (rotate, never same in 5 posts):
+    - "My standing source on commish gripes is back tonight."
+    - "The trade-rumor regular has another one."
+    - "Hearing from the desk that always has the roster beat."
+    - "My usual line on lineup business is lit up again."
+    HARD CONSTRAINTS: NEVER name the codename, the hash, the franchise, or the division alongside this nod (correlation risk — option B design). The beat reference is ABOUT WHAT THEY TIP, never about who they are. If \`firstTimeTipster\` OR \`prolificTipster\` is also on the same tip, you may layer the beat nod with rule 23's hedge OR rule 22's spark, but never all three at once — pick the strongest single voice cue. If \`tipsterBeat.topic\` does NOT match the current post's topic (e.g. their beat is "commish" but this tip is about a trade), DO NOT use this rule — it would imply the wrong specialty.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
@@ -2776,9 +2824,9 @@ async function main() {
   // headline snippets into their scope.
   const teams = await loadTeams();
   const feedForAnonymize = await loadFeed();
-  const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis);
+  const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis, tipsterContext);
   const secondaryAnonymized = secondaryBatch
-    ? await anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now, redis)
+    ? await anonymizeTips(secondaryBatch, teams, feedForAnonymize.posts ?? [], now, redis, tipsterContext)
     : null;
   log(`  Anonymized ${anonymized.length} tips${secondaryAnonymized ? ` + ${secondaryAnonymized.length} secondary` : ''}`);
 
