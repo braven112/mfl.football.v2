@@ -297,3 +297,44 @@ describe('buildTipsterContext', () => {
     expect(BEAT_CONCENTRATION).toBeLessThanOrEqual(1);
   });
 });
+
+// ── Admin schefter-stats wiring (anti-drift contract) ──
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+describe('admin schefter-stats — tipsterContext wiring', () => {
+  const ADMIN_SRC = readFileSync(
+    path.join(process.cwd(), 'src/pages/api/admin/schefter-stats.ts'),
+    'utf8',
+  );
+
+  it('imports buildTipsterContext from the shared scanner lib', () => {
+    // Same import the scanner uses — the admin priority preview MUST stay
+    // in lockstep with the scanner's pick order or operators get confused
+    // debugging which post is about to ship.
+    expect(ADMIN_SRC).toMatch(/import\s*\{\s*buildTipsterContext\s*\}/);
+  });
+
+  it('builds the context off a server-only copy of tips that retains hashedOwnerIds', () => {
+    // The hashes never reach the response — but the priority math needs
+    // them. The dual-array trick (pendingTips vs pendingTipsWithHashes) is
+    // what lets the route compute the score without leaking identity.
+    expect(ADMIN_SRC).toMatch(/pendingTipsWithHashes/);
+    expect(ADMIN_SRC).toMatch(/await\s+buildTipsterContext\(pendingTipsWithHashes,\s*redis\)/);
+  });
+
+  it('passes tipsterContext into rankBuckets AND bucketPriorityScore', () => {
+    // Both calls must receive the context — without it the preview's score
+    // disagrees with the scanner's score and the predicted order drifts.
+    expect(ADMIN_SRC).toMatch(/rankBuckets\(previewBuckets,\s*previewNow,\s*tipsterContext\)/);
+    expect(ADMIN_SRC).toMatch(/bucketPriorityScore\(b,\s*previewNow,\s*tipsterContext\)/);
+  });
+
+  it('does NOT include hashedOwnerId in the public pendingTips array', () => {
+    // The hashed identifier strip is the original anonymity contract for
+    // the admin endpoint; the new wiring is allowed to keep an internal
+    // copy but the response body's stripping logic must survive.
+    expect(ADMIN_SRC).toMatch(/hashedOwnerId:\s*_hid,\s*\.\.\.safe/);
+  });
+});

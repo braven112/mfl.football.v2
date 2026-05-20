@@ -125,3 +125,81 @@ After every resolution, before pushing:
 
 `git rerere` is enabled (see `.git/config`); identical conflicts on
 re-rebase replay automatically. Do not turn it off.
+
+## Schefter tipster context (Phase 8 — bot intelligence)
+
+The rumor-mill scanner weights bucket priority and surfaces voice cues
+based on per-tipster signals. The whole flow lives in three files:
+
+- **`scripts/lib/schefter-tipster-context.mjs`** — `buildTipsterContext`
+  reads two Redis keys per queued web tipster and returns a
+  `Map<hashedOwnerId, { isFirstTime, isProlific, tipsInQueue, beat }>`:
+  - `schefter:tipster:rumors_total:{hash}` (STRING, lifetime post count)
+  - `schefter:tipster:topic_counts:{hash}` (HASH, topic → lifetime count)
+- **`scripts/lib/schefter-bucket-logic.mjs`** — `bucketPriorityScore`
+  accepts the context as an optional third arg and adds a tipster delta
+  (first-time voice +5, burst regular −3, prolific −1). Without the
+  context, falls back to the pre-Phase-8 size+age math — both the
+  scanner and the admin preview pass the context now.
+- **`scripts/schefter-rumor-scan.mjs`** — `anonymizeTips` surfaces the
+  voice flags on every web-tip scope: `firstTimeTipster`,
+  `prolificTipster`, `tipsterBeat: { topic }`. HARD RULES 22 / 23 / 24
+  drive the phrasing. Post-commit increments live in
+  `schefter-tipster-counters.mjs` (`incrementTipsterCounters` plus
+  `incrementTipsterTopicCounters`).
+
+**Privacy contract — DO NOT WEAKEN.** The codename↔topic binding stays
+server-side. That's option B from the design discussion in
+`#enhance-bot-intelligence-tAh6t` — public codenames (Style Book bit)
+are fine, but pairing a codename with a beat (e.g. "Burner Phone keeps
+feeding me trade chatter") correlates over time and starts narrowing
+source identity. HARD RULE 24 enforces "never name the codename"; the
+`tipsterBeat` payload deliberately carries only the topic name, never
+the codename or hash. The admin route keeps a server-only
+`pendingTipsWithHashes` array for the priority preview math but strips
+`hashedOwnerId` from everything that crosses the response boundary.
+
+## Schefter quiet-day post (Phase 8 — feature 7)
+
+When the scanner's normal lane finds no qualifying bucket AND the queue
+meets one of three honest-quiet conditions (`queue-empty`,
+`single-prolific-tipster`, `all-stale`), Schefter ships ONE candid
+"slow news day" post instead of going silent. Lives entirely inside
+`scripts/schefter-rumor-scan.mjs` (no separate module — the logic is
+specific to the scanner flow):
+
+- **Cooldown:** `schefter:rumor:quiet_day_last_date` (PT-date string),
+  guarded by `QUIET_DAY_COOLDOWN_DAYS` (default 3).
+- **Distribution:** writes the feed entry and consumes one of
+  `MAX_POSTS_PER_DAY`, but **deliberately skips the GroupMe webhook** —
+  a slow-news-day post buzzing every owner's phone is the opposite of
+  slow. This invariant is locked by a sentinel comment that the
+  regression test (`tests/schefter-quiet-day.test.ts`) greps for; do not
+  delete the comment without also adding GroupMe-skip coverage another way.
+- **Voice:** `generateQuietDayBody` uses its own tiny system prompt (not
+  the main HARD-RULES block) with a 4-template fallback when
+  `ANTHROPIC_API_KEY` is unset, so dry-runs still produce recognizable
+  output.
+
+## Schefter recurrence ledger v2 (Phase 8 — feature 10)
+
+`data/schefter/topic-recurrence.json` bumped to v2. Each fingerprint
+entry now carries `tipsterHashes` (sorted-unique, capped at 64) in
+addition to the existing `weeksSeen`. The bump powers cross-week memory
+recall (HARD RULE 25): when a bucket reappears with at least one voice
+that wasn't on its prior roster, `getMemoryRecall` returns a
+counts-only payload (`weeksSinceFirstSeen`, `totalWeeksSeen`,
+`distinctVoicesAcrossTime`) that the anonymizer attaches to each tip
+in the bucket.
+
+`loadLedger` migrates v1 files in place by backfilling empty
+`tipsterHashes` arrays. The migration is transparent — no manual
+intervention needed when a deployed branch first hits the v2 code.
+Unknown future versions (>2) are discarded and replaced with an empty
+ledger (safer than trusting a schema we don't understand).
+
+**Privacy contract:** the ledger stores raw hashes for set-membership
+checks (so we can detect "fresh voice"), but `getMemoryRecall`'s return
+value contains only counts. The hashes never reach the LLM prompt or
+the response payload. Don't change that without re-litigating the
+correlation argument from option B above.
