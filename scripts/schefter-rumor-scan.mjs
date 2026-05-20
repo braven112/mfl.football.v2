@@ -95,7 +95,7 @@ import {
   appendPostHistory,
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
-import { incrementTipsterCounters } from './lib/schefter-tipster-counters.mjs';
+import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import {
   classifyTipKind,
   buildTopicBuckets,
@@ -3391,6 +3391,21 @@ async function main() {
     });
   } catch (err) {
     warn(`  [tipster-counters] hook failed: ${err.message}`);
+  }
+
+  // Per-tipster topic histogram — feeds buildTipsterContext on subsequent
+  // cycles so the "standing beat" (HARD RULE 24) can be derived. Same
+  // failure stance as above: a counter error never blocks the post.
+  try {
+    await incrementTipsterTopicCounters({
+      redis,
+      batch: consumedBatch,
+      dryRun: DRY_RUN,
+      log,
+      warn,
+    });
+  } catch (err) {
+    warn(`  [tipster-topic-counters] hook failed: ${err.message}`);
   }
 
   return 1;
