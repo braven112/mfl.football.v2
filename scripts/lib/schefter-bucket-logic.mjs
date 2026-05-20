@@ -10,6 +10,7 @@
  * scanner cycle will pick.
  */
 import { isFingerprintStale, getStreakLength } from './schefter-recurrence-ledger.mjs';
+import { tipsterScoreDelta } from './schefter-tipster-context.mjs';
 
 export function classifyTipKind(tip) {
   if (!tip) return 'gossip';
@@ -79,13 +80,25 @@ export function buildTopicBuckets(tips) {
  * expire):
  *   - Each additional tip in the bucket: +2 (a 2-tip cluster = +2, 3-tip = +4)
  *   - Each day the oldest tip has been queued: +1
+ *   - Tipster-aware delta (optional, see ./schefter-tipster-context.mjs):
+ *       first-time voice in the bucket: +5
+ *       burst-tipping regular (≥3 in queue this cycle): −3
+ *       moderate burst (2 in queue): −1
+ *       lifetime prolific tipster (≥10 posts): −1
+ *     These stack with the base score so a first-time voice always lifts the
+ *     bucket above same-sized noise from the chatty regular, while a
+ *     genuine multi-tipster cluster on a fresh topic still wins outright.
+ *
+ * `tipsterContext` is optional (admin previews call without it and get the
+ * pre-Phase-8 size+age ranking). When omitted the delta is zero.
  */
-export function bucketPriorityScore(bucket, now = new Date()) {
+export function bucketPriorityScore(bucket, now = new Date(), tipsterContext = null) {
   const refMs = now instanceof Date ? now.getTime() : Date.now();
   const oldestAgeMs = Math.max(0, refMs - (bucket.oldestSubmittedAt ?? refMs));
   const oldestAgeDays = Math.floor(oldestAgeMs / (24 * 60 * 60 * 1000));
   const sizeScore = Math.max(0, bucket.tips.length - 1) * 2;
-  return sizeScore + oldestAgeDays;
+  const tipsterDelta = tipsterContext ? tipsterScoreDelta(bucket, tipsterContext) : 0;
+  return sizeScore + oldestAgeDays + tipsterDelta;
 }
 
 /**
@@ -93,11 +106,11 @@ export function bucketPriorityScore(bucket, now = new Date()) {
  * first (always win), then gossip buckets by descending priority score.
  * Used by the admin page to preview the next few posts.
  */
-export function rankBuckets(buckets, now = new Date()) {
+export function rankBuckets(buckets, now = new Date(), tipsterContext = null) {
   const trade = buckets.filter((b) => b.kind === 'trade');
   const gossip = buckets.filter((b) => b.kind !== 'trade');
-  trade.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
-  gossip.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
+  trade.sort((a, b) => bucketPriorityScore(b, now, tipsterContext) - bucketPriorityScore(a, now, tipsterContext));
+  gossip.sort((a, b) => bucketPriorityScore(b, now, tipsterContext) - bucketPriorityScore(a, now, tipsterContext));
   return [...trade, ...gossip];
 }
 

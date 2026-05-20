@@ -104,6 +104,7 @@ import {
   isBucketStale,
   bucketStreakLength,
 } from './lib/schefter-bucket-logic.mjs';
+import { buildTipsterContext } from './lib/schefter-tipster-context.mjs';
 import {
   loadLedger,
   saveLedger,
