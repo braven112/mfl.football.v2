@@ -998,12 +998,12 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
  *
  * Returns `{ primary, secondary }` or `null` when nothing qualifies.
  */
-function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date() } = {}) {
+function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date(), tipsterContext = null } = {}) {
   const tradeBuckets = buckets.filter((b) => b.kind === 'trade');
   if (tradeBuckets.length > 0) {
     // Only one bucket key (trade:offer) maps to kind === 'trade' under the
     // new classification, but sort defensively in case that ever changes.
-    tradeBuckets.sort((a, b) => bucketPriorityScore(b, now) - bucketPriorityScore(a, now));
+    tradeBuckets.sort((a, b) => bucketPriorityScore(b, now, tipsterContext) - bucketPriorityScore(a, now, tipsterContext));
     return { primary: tradeBuckets[0], secondary: null };
   }
 
@@ -1013,8 +1013,8 @@ function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date() } = {
   if (gossipBuckets.length === 0) return null;
 
   gossipBuckets.sort((a, b) => {
-    const sa = bucketPriorityScore(a, now);
-    const sb = bucketPriorityScore(b, now);
+    const sa = bucketPriorityScore(a, now, tipsterContext);
+    const sb = bucketPriorityScore(b, now, tipsterContext);
     if (sb !== sa) return sb - sa;
     // Ties: older wins so a long-queued tip always beats a fresh one.
     return a.oldestSubmittedAt - b.oldestSubmittedAt;
@@ -2602,6 +2602,30 @@ async function main() {
       buckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
   );
 
+  // Per-tipster context — lifts a first-time voice over same-sized noise
+  // from the league's chatty regulars, and discounts a burst-tipping
+  // tipster who has 3+ tips queued this cycle. See
+  // scripts/lib/schefter-tipster-context.mjs for the score math and the
+  // signal sources (Redis: rumors_total + topic_counts).
+  let tipsterContext = new Map();
+  try {
+    tipsterContext = await buildTipsterContext(freshTips, redis);
+    if (tipsterContext.size > 0) {
+      const summary = [...tipsterContext.values()].map((c) => {
+        const tags = [];
+        if (c.isFirstTime) tags.push('first');
+        if (c.isProlific) tags.push('prolific');
+        if (c.tipsInQueue >= 2) tags.push(`burst×${c.tipsInQueue}`);
+        if (c.beat) tags.push(`beat:${c.beat.topic}`);
+        return `${c.hashedOwnerId.slice(0, 6)}=${tags.join('+') || 'baseline'}`;
+      }).join(', ');
+      log(`  [tipster-context] ${tipsterContext.size} contributor(s) — ${summary}`);
+    }
+  } catch (err) {
+    warn(`  [tipster-context] build failed: ${err.message} — falling back to size+age ranking`);
+    tipsterContext = new Map();
+  }
+
   // Recurrence ledger: a gossip bucket that has produced a post in each of
   // the two preceding ISO weeks is "stale". Skipping it from the normal
   // lane lets fresher tips post sooner. Stale tips still drain via the
@@ -2659,7 +2683,7 @@ async function main() {
     batch = mailbagBatch;
   } else {
     // Normal lane sees only non-stale buckets — stale repeats wait for Friday.
-    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now });
+    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now, tipsterContext });
     if (!pick) {
       if (staleBuckets.length > 0) {
         log(`  No fresh bucket qualifies — ${staleBuckets.length} stale bucket(s) held for next Friday mailbag`);
