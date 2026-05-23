@@ -100,14 +100,14 @@ jobs:
         env:
           ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
         run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No new articles generated."
-            exit 0
-          fi
-
+          # schefter-feed.json is append-only and written by several workflows
+          # on overlapping crons; a plain `git pull --rebase` collides on it
+          # (merge=binary) and the push fails. commit-feed-and-push reconciles by
+          # post id on top of the latest origin and retries. "Nothing changed"
+          # is guarded inside the script.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/schefter-feed.json
-          git commit -m "chore: schefter article — $ARTICLE_TYPE"
-          git pull --rebase origin main
-          git push
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: schefter article — $ARTICLE_TYPE" \
+            --files "src/data/theleague/schefter-feed.json"
