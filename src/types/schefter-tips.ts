@@ -51,6 +51,33 @@ export interface EscalatedPlayer {
 }
 
 /**
+ * Per-offer graduated disclosure. Each time the dice roll passes for a
+ * specific offerId, the exposure count increments and the next post can
+ * name more. Replaces the pre-2026-05 one-and-done absorbing state.
+ *
+ *   exposure.signal = 1 → name ONE team only (deterministic hash of offerId)
+ *   exposure.signal = 2 → team + marquee player (highest ADP dynasty rank)
+ *   exposure.signal = 3 → team + 2 players (next marquee)
+ *   exposure.signal ≥ N → team + (N-1) players in marquee order
+ *
+ * `team` is the franchise display block the post may reference; `players`
+ * is the ordered (best→worst) list the post may name. The LLM prompt
+ * treats this as authoritative — nothing outside `exposure` may be named.
+ */
+export interface TradeOfferExposure {
+  /** 1-indexed signal count for this offer (1 = first reveal). */
+  signal: number;
+  /** The single franchise the post may name at this signal level. */
+  team: { name: string; nameShort?: string };
+  /**
+   * Ordered list of players the post may name (signal 1 = empty,
+   * signal 2 = 1 player, signal 3 = 2 players, etc.). Sorted by descending
+   * ADP dynasty value so the marquee piece always leads.
+   */
+  players: Array<{ name: string; position: string }>;
+}
+
+/**
  * Structured trade-offer tip pushed to `schefter:tips:queue` by the
  * Phase 6b offer-scan step. Unlike web/groupme tips, `text` is empty —
  * the LLM synthesizes the post from the structured redacted fields.
@@ -82,6 +109,12 @@ export interface TradeOfferTip extends Omit<Tip, 'source' | 'text'> {
   offerId: string;
   /** Franchise who originated the offer — audit only, never to LLM */
   offeringFranchiseId: string;
+  /**
+   * Per-offer graduated reveal. Present only when the offer has earned at
+   * least one successful dice-roll signal. Each subsequent successful roll
+   * bumps `signal` and unlocks more detail. See {@link TradeOfferExposure}.
+   */
+  exposure?: TradeOfferExposure;
 }
 
 export interface Tip {

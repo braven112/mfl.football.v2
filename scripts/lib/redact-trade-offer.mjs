@@ -15,6 +15,14 @@
  *   teamMap         — Map<franchiseId, { name, division, nameShort, … }>
  *   counts          — { ownerOfferCount7d, divisionOfferCount7d, playerHistory }
  *                     where playerHistory is Map<playerId, distinctOffererCount21d>
+ *   exposureCount   — number of prior successful dice-roll signals on THIS
+ *                     offer (0 = no posts yet). The post about to ship is at
+ *                     signal `exposureCount + 1`. Drives graduated disclosure:
+ *                       signal 1 → name 1 team
+ *                       signal 2 → team + 1 marquee player
+ *                       signal 3 → team + 2 players, etc.
+ *   adpRankByPlayerId — Map<playerId, number> for marquee ordering. Optional;
+ *                     players without a rank sort last (least marquee).
  *
  * Output: { tip, debug } where `tip` matches TradeOfferTip from
  * src/types/schefter-tips.ts and `debug` records escalation + anti-leak logic
@@ -28,6 +36,92 @@ const ROUND_ORDINALS = {
 
 const CURRENT_PICK_REGEX = /^DP_(\d{1,2})_(\d{1,2})$/;
 const FUTURE_PICK_REGEX = /^FP_(\d{4})_(\d{4})_(\d+)$/;
+
+/**
+ * Deterministic 0/1 coin-flip from an offerId. djb2-lite — pure, no crypto
+ * needed (we just need a stable, fairly-distributed bit). Used to pick
+ * WHICH of the two franchises gets named at signal=1; both later signals
+ * reference the same team, so subsequent posts build on the first reveal
+ * instead of flipping.
+ */
+function hashOfferIdToBit(offerId) {
+  const s = String(offerId || '');
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 1) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h) % 2;
+}
+
+function pickDisplayTeam(team) {
+  if (!team) return null;
+  const name = team.name || team.nameMedium || team.nameShort || null;
+  if (!name) return null;
+  const out = { name };
+  if (team.nameShort) out.nameShort = team.nameShort;
+  return out;
+}
+
+/**
+ * Build the `exposure` block from the redaction inputs. Returns null when
+ * exposureCount is 0 (no prior posts → no exposure yet, which signals
+ * "this is the first post — exposure starts at signal=1").
+ *
+ * Note on the off-by-one: callers pass the number of PRIOR posts. The post
+ * we're building now is at `signal = exposureCount + 1`. So:
+ *   exposureCount = 0 → signal 1 → name team only
+ *   exposureCount = 1 → signal 2 → team + 1 player
+ *   exposureCount = N → signal N+1 → team + N players
+ */
+function buildExposure({
+  signal,
+  offerId,
+  offeringFid,
+  rawOffer,
+  teamMap,
+  playerAssets,
+  adpRankByPlayerId,
+}) {
+  if (!Number.isFinite(signal) || signal < 1) return null;
+
+  const fid1 = String(rawOffer.franchise ?? offeringFid ?? '');
+  const fid2 = String(
+    rawOffer.franchise2 ?? (fid1 === offeringFid ? '' : offeringFid) ?? '',
+  );
+  const candidates = [fid1, fid2].filter((f) => f);
+  if (candidates.length === 0) return null;
+
+  // Deterministic single-team pick: hash the offerId so subsequent signals
+  // about the same offer always reference the same team. "Either team but
+  // only 1 initially" — the coin-flip is even between the two franchises.
+  const bit = hashOfferIdToBit(offerId);
+  const chosenFid = candidates[bit % candidates.length];
+  const team = pickDisplayTeam(teamMap?.get?.(chosenFid));
+  if (!team) return null;
+
+  // Marquee ordering: ADP dynasty rank ascending (rank 1 = best). Players
+  // without a rank sort to the end. Stable tie-break by playerId.
+  const ranked = playerAssets
+    .filter((a) => a && a.kind === 'player' && a.name)
+    .map((a) => ({
+      name: a.name,
+      position: a.position ?? 'UNK',
+      playerId: a.playerId,
+      rank: (() => {
+        const r = adpRankByPlayerId?.get?.(a.playerId);
+        return Number.isFinite(r) && r > 0 ? r : Number.POSITIVE_INFINITY;
+      })(),
+    }))
+    .sort((a, b) => (a.rank - b.rank) || (a.playerId < b.playerId ? -1 : 1));
+
+  // Signal 1 = 0 players, signal 2 = 1 player, …
+  const playerCount = Math.max(0, signal - 1);
+  const players = ranked
+    .slice(0, playerCount)
+    .map(({ name, position }) => ({ name, position }));
+
+  return { signal, team, players };
+}
 
 /**
  * Parse one asset token into { kind, position | round/year | raw }.
@@ -103,6 +197,8 @@ export function redactTradeOffer({
   currentYear,
   framingHint = 'fresh',
   offerAgeMs = 0,
+  exposureCount = 0,
+  adpRankByPlayerId,
 }) {
   const {
     ownerOfferCount7d = 1,
@@ -185,6 +281,23 @@ export function redactTradeOffer({
 
   const offerId = String(rawOffer.id || rawOffer.trade_id || '');
 
+  // Per-offer graduated reveal. signal = exposureCount + 1 because callers
+  // pass the number of PRIOR posts; the post we're building IS the next
+  // signal. exposure stays undefined when exposureCount is negative (treat
+  // as "no exposure yet" — the legacy redaction tokens carry the post).
+  const exposureSignal = Number.isFinite(exposureCount)
+    ? Math.max(0, Math.floor(exposureCount)) + 1
+    : 1;
+  const exposure = buildExposure({
+    signal: exposureSignal,
+    offerId,
+    offeringFid,
+    rawOffer,
+    teamMap,
+    playerAssets: allAssets,
+    adpRankByPlayerId,
+  });
+
   // Partner franchise — the team being offered to. Used by the corroboration
   // matcher to detect when a web/groupme tip's franchiseHint is on either
   // side of this offer. Internal-only metadata; never reaches the LLM (the
@@ -221,6 +334,7 @@ export function redactTradeOffer({
     partnerFranchiseId,
     playerNames,
   };
+  if (exposure) tip.exposure = exposure;
 
   const debug = {
     offerId,
@@ -246,6 +360,7 @@ export function redactTradeOffer({
       divisionHint: finalDivisionHint,
       escalatedPlayer,
     },
+    exposure,
   };
 
   return { tip, debug };
@@ -288,17 +403,49 @@ export function redactTradeOffer({
  * tier-cap on draft-only contribution, this gives Schefter speed without
  * letting him name names from soft signals.
  *
+ * Exposure scaling (second arg, Phase 6c): a second multiplier of
+ * `OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure` (capped at
+ * `OFFER_EXPOSURE_BOOST_MAX`) accelerates the NEXT reveal once an offer has
+ * already shipped at least one post. priorExposure=0 → ×1, so signal-1
+ * timing/unpredictability is untouched. The combined product is clamped to
+ * `OFFER_PROBABILITY_CEILING` so even a hot, multi-post offer can't post on
+ * essentially every scan.
+ *
  * Exported for tests & dry-run logging.
  */
 export const OFFER_POST_PROBABILITY = 0.05;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;
 
-export function offerPostProbability(effectiveOfferers = 1) {
+// Exposure boost (Phase 6c). Once an offer has already shipped a post (i.e.
+// it's a developing, already-public story), accelerate the *next* reveal so
+// signal 2 / signal 3 don't trail signal 1 by days. `priorExposure` is the
+// number of posts ALREADY shipped about this offer:
+//   priorExposure 0 (signal 1) → ×1  (no change — keeps signal-1 timing and
+//                                      its "owner can't tell what tipped it"
+//                                      unpredictability exactly as before)
+//   priorExposure 1 (signal 2) → ×2
+//   priorExposure 2 (signal 3) → ×4 (capped)
+//   priorExposure 3+           → ×4 (capped)
+// The boost stacks on top of the shopping-volume multiplier, but the combined
+// per-run probability is clamped to OFFER_PROBABILITY_CEILING so even the
+// hottest already-reported offer can't post on basically every scan (which
+// would dump the whole ladder in an hour).
+export const OFFER_EXPOSURE_BOOST_FACTOR = 2;
+export const OFFER_EXPOSURE_BOOST_MAX = 4;
+export const OFFER_PROBABILITY_CEILING = 0.35;
+
+export function offerPostProbability(effectiveOfferers = 1, priorExposure = 0) {
   const n = Number.isFinite(effectiveOfferers) ? Math.max(1, effectiveOfferers) : 1;
-  const raw = Math.pow(OFFER_VOLUME_BOOST_FACTOR, n - 1);
-  const multiplier = Math.min(OFFER_VOLUME_BOOST_MAX, raw);
-  return OFFER_POST_PROBABILITY * multiplier;
+  const volumeRaw = Math.pow(OFFER_VOLUME_BOOST_FACTOR, n - 1);
+  const volumeMult = Math.min(OFFER_VOLUME_BOOST_MAX, volumeRaw);
+
+  const e = Number.isFinite(priorExposure) ? Math.max(0, Math.floor(priorExposure)) : 0;
+  const exposureRaw = Math.pow(OFFER_EXPOSURE_BOOST_FACTOR, e);
+  const exposureMult = Math.min(OFFER_EXPOSURE_BOOST_MAX, exposureRaw);
+
+  const p = OFFER_POST_PROBABILITY * volumeMult * exposureMult;
+  return Math.min(OFFER_PROBABILITY_CEILING, p);
 }
 
 export { bucketVolumeHint, tierForDistinctOfferers, classifyAsset, parseAssetString };

@@ -21,6 +21,9 @@ import {
   OFFER_POST_PROBABILITY,
   OFFER_VOLUME_BOOST_FACTOR,
   OFFER_VOLUME_BOOST_MAX,
+  OFFER_EXPOSURE_BOOST_FACTOR,
+  OFFER_EXPOSURE_BOOST_MAX,
+  OFFER_PROBABILITY_CEILING,
   tierForDistinctOfferers,
 } from '../scripts/lib/redact-trade-offer.mjs';
 import {
@@ -92,6 +95,48 @@ describe('offerPostProbability — exponential scaling on shopping volume', () =
   });
 });
 
+describe('offerPostProbability — exposure acceleration', () => {
+  it('priorExposure=0 leaves signal-1 odds untouched (back-compat)', () => {
+    // Default second arg AND explicit 0 both equal the pre-Phase-6c value.
+    expect(offerPostProbability(1)).toBeCloseTo(OFFER_POST_PROBABILITY);
+    expect(offerPostProbability(1, 0)).toBeCloseTo(OFFER_POST_PROBABILITY);
+  });
+
+  it('doubles per prior post for a one-team offer until the exposure cap', () => {
+    expect(offerPostProbability(1, 1)).toBeCloseTo(
+      OFFER_POST_PROBABILITY * OFFER_EXPOSURE_BOOST_FACTOR,
+    ); // signal 2 → 0.10
+    expect(offerPostProbability(1, 2)).toBeCloseTo(
+      OFFER_POST_PROBABILITY * OFFER_EXPOSURE_BOOST_FACTOR ** 2,
+    ); // signal 3 → 0.20
+  });
+
+  it('caps the exposure multiplier at OFFER_EXPOSURE_BOOST_MAX', () => {
+    const capped = OFFER_POST_PROBABILITY * OFFER_EXPOSURE_BOOST_MAX;
+    expect(offerPostProbability(1, 3)).toBeCloseTo(capped); // ×8 raw → ×4 capped
+    expect(offerPostProbability(1, 99)).toBeCloseTo(capped);
+  });
+
+  it('stacks with the volume multiplier but never exceeds the ceiling', () => {
+    // 3 teams chasing (volume ×2.25) at signal 3 (exposure ×4) = 0.45 raw,
+    // clamped to the 0.35 ceiling.
+    expect(offerPostProbability(3, 2)).toBeCloseTo(OFFER_PROBABILITY_CEILING);
+    // Nothing ever exceeds the ceiling no matter how hot.
+    for (let n = 1; n <= 20; n += 1) {
+      for (let e = 0; e <= 10; e += 1) {
+        expect(offerPostProbability(n, e)).toBeLessThanOrEqual(
+          OFFER_PROBABILITY_CEILING + 1e-9,
+        );
+      }
+    }
+  });
+
+  it('tolerates junk priorExposure (NaN / negative → treated as 0)', () => {
+    expect(offerPostProbability(1, NaN)).toBeCloseTo(OFFER_POST_PROBABILITY);
+    expect(offerPostProbability(1, -5)).toBeCloseTo(OFFER_POST_PROBABILITY);
+  });
+});
+
 describe('escalation tier classifier', () => {
   it('returns base/tightened_circle/named at the documented thresholds', () => {
     expect(tierForDistinctOfferers(0)).toBe('base');
@@ -124,9 +169,9 @@ describe('rumor-scan: tier cap on draft-only contribution', () => {
     expect(src).toMatch(/effectiveCount\s*=\s*3\s*;/);
   });
 
-  it('passes the most-shopped player count into the probability roll', () => {
+  it('passes the most-shopped player count + prior exposure into the probability roll', () => {
     expect(src).toMatch(/maxEffectiveOfferers/);
-    expect(src).toMatch(/offerPostProbability\(\s*maxEffectiveOfferers\s*\)/);
+    expect(src).toMatch(/offerPostProbability\(\s*maxEffectiveOfferers\s*,\s*priorExposure\s*\)/);
   });
 
   it('runs the draft scan before iterating real offers (so player history reflects drafts on first pass)', () => {

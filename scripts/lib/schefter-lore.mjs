@@ -84,13 +84,13 @@ const BOT_WINKS = [
   'ghost in the machine',
   "I don't sleep",
   'Half my sources are timestamps',
-  "can't hide from a bot",
+  "Can't hide from Claude",
   'Redis connection',
   'I remember everything',
   'The algorithm noticed',
   "Even Roger doesn't know",
   'My sources have sources',
-  'The bot sees what the bot sees',
+  'Claude sees what Claude sees',
 ];
 
 // Phrase fragments derived from running-bits.md. Loose substring match.
