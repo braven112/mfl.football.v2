@@ -76,16 +76,15 @@ jobs:
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
         if: github.event.inputs.dry_run != 'true'
         run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No speculation post produced."
-            exit 0
-          fi
-
+          # schefter-feed.json is append-only and written by several workflows
+          # on overlapping crons; a plain `git pull --rebase` collides on it
+          # (merge=binary) and the push fails. commit-feed-and-push reconciles the
+          # feed by post id on top of the latest origin and retries; the derived
+          # snapshots and raw mfl-feeds directory are taken as-is. "Nothing
+          # changed" is guarded inside the script.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          # franchise-history.json: updated snapshot so milestone diff stays
-          # in sync. schefter-feed.json: trade-speculation + milestone posts.
-          git add src/data/theleague/schefter-feed.json data/theleague/derived/speculation-history.json data/theleague/derived/franchise-history.json data/theleague/mfl-feeds
-          git commit -m "chore: schefter daily — speculation + milestone scan"
-          git pull --rebase origin main
-          git push
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: schefter daily — speculation + milestone scan" \
+            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/derived/franchise-history.json,data/theleague/mfl-feeds"
