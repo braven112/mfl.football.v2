@@ -3645,7 +3645,17 @@ async function main() {
       await redis.set(FRIDAY_MAILBAG_DONE_KEY, todayPtDate, { ex: 48 * 60 * 60 });
       log(`  [mailbag] Marked done for ${todayPtDate}`);
     }
-    await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
+    // Spacing anchor reflects DELIVERED posts only. A fully-suppressed cycle
+    // (quality gate rejected every beat) ships nothing to the chat, so it must
+    // not start the 4h spacing clock — otherwise one suppressed post silently
+    // blocks every real post for the rest of the window. That is exactly what
+    // blanked an entire morning: a ~7am suppressed beat set this anchor and
+    // every later cycle failed with "need 240m spacing". The posts_today slot
+    // is still consumed above (the LLM-rate safety valve); only the chat-cadence
+    // anchor is delivery-gated.
+    if (allowedPosts.length > 0) {
+      await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
+    }
 
     // Remove consumed tips from the queue while preserving (a) tips in
     // unchosen buckets and (b) tips held back by the quality gate (Option A —
