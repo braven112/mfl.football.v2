@@ -1400,7 +1400,7 @@ Framing-hint phrasing (HARD — framingHint is authoritative, do not infer from 
               Do NOT claim the deal is dead, cancelled, or rescinded. The offer still exists — it's the silence on the other end that's the story.
 
 Claude humor layer (dial down, season lightly):
-  ${includeBotWink ? 'INCLUDE a single dry self-aware bot wink this post — one clause is enough. Examples: "I see all the phones. Don\'t ask how.", "My sources have sources.", "The bot sees what the bot sees." Do NOT explain the joke.' : 'NO bot wink this post. Straight columnist voice.'}
+  ${includeBotWink ? 'INCLUDE a single dry self-aware bot wink this post — one clause is enough. Examples: "I see all the phones. Don\'t ask how.", "My sources have sources.", "Claude sees what Claude sees." Do NOT explain the joke.' : 'NO bot wink this post. Straight columnist voice.'}
 
 FEW-SHOT EXAMPLES (imitate rhythm + vagueness, do not copy verbatim):
 
