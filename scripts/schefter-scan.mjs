@@ -27,6 +27,11 @@ import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { parseRosterMove } from './lib/roster-move-parse.mjs';
+import {
+  evaluatePingWindow,
+  consumeDailyPost,
+} from './lib/schefter-groupme-budget.mjs';
+import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -78,6 +83,15 @@ const LEAGUES = [
 const SKIP_TYPES = new Set(['AUCTION_BID', 'AUCTION_INIT', 'IR', 'TAXI']);
 const BREAKING_AUCTION = 3_000_000;
 const STANDARD_AUCTION = 1_000_000;
+
+// A dropped player whose contract salary exceeds this gets a GroupMe ping
+// (and consumes a daily post slot). Cheaper drops are feed-only.
+const BIG_DROP_THRESHOLD = 1_000_000;
+// Held big-drop pings older than this (e.g. backed up behind spacing for days)
+// are discarded rather than pinged stale.
+const BIG_DROP_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+// Redis list of big-drop GroupMe pings waiting on the quiet-hours/spacing gate.
+const BIG_DROP_PENDING_KEY = 'schefter:bigdrop:pending_groupme';
 const ROUND_ORDINALS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' };
 
 // ── Helpers ──
@@ -393,6 +407,14 @@ const DROP_DEF_TEMPLATES = [
   (tm, p) => ({ headline: `${tm} waive ${p}`, body: `${cap(p)} is off ${tm}'s roster. Streaming defense back on the wire.` }),
   (tm, p) => ({ headline: `${tm} release ${p}`, body: `${tm} move on from ${p}. Available to stream elsewhere.` }),
 ];
+// Big-name drops (>$1M salary). The salary is the headline — a notable cap
+// commitment hitting the open market. ${s} is the formatted salary.
+const BIG_DROP_TEMPLATES = [
+  (tm, p, s) => ({ headline: `${tm} cut ${p}`, body: `Surprise move — ${tm} drop ${p} and the ${s} contract that came with it. He's free for anyone to claim.` }),
+  (tm, p, s) => ({ headline: `${tm} release ${p}`, body: `${tm} eat the ${p} deal and move on. A ${s} player just hit the open market — someone's going to pounce.` }),
+  (tm, p, s) => ({ headline: `${tm} waive ${p}`, body: `Didn't see this coming. ${tm} waive ${p}, walking away from a ${s} commitment. Available to the whole league now.` }),
+  (tm, p, s) => ({ headline: `${tm} move on from ${p}`, body: `${tm} cut ${p} loose — a ${s} contract off the books. The wire just got interesting.` }),
+];
 
 /** Build a display descriptor for a player ID, or undefined when absent. */
 function describePlayer(playerId, players) {
@@ -405,15 +427,14 @@ function describePlayer(playerId, players) {
   };
 }
 
-function generateFreeAgentPost(raw, players, teams, leagueSlug) {
+function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMap = new Map()) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
   const { addedIds, droppedIds, bbidAmount } = parseRosterMove(raw.transaction);
   const added = describePlayer(addedIds[0], players);
-  const dropped = describePlayer(droppedIds[0], players);
   const salary = Number.isFinite(bbidAmount) && bbidAmount > 100_000 ? bbidAmount : undefined;
 
   // Transaction with neither a recognizable add nor drop — nothing to report.
-  if (!added && !dropped) return null;
+  if (!added && droppedIds.length === 0) return null;
 
   const base = {
     id: generatePostId(raw.timestamp),
@@ -427,6 +448,25 @@ function generateFreeAgentPost(raw, players, teams, leagueSlug) {
 
   // Pure drop (a player released with nothing acquired) — a cut, not a claim.
   if (!added) {
+    // Feature the priciest dropped player (matters for bulk drops).
+    const dropSalary = resolveDropSalary(raw, droppedIds, players, dropAdjustmentMap);
+    const featuredId = dropSalary?.playerId ?? droppedIds[0];
+    const dropped = describePlayer(featuredId, players);
+    const isBig = dropSalary != null && dropSalary.salary > BIG_DROP_THRESHOLD;
+
+    if (isBig) {
+      const salaryStr = formatSalary(dropSalary.salary);
+      const { headline, body } = pickTemplate(BIG_DROP_TEMPLATES, raw.timestamp)(team, dropped.playerName, salaryStr);
+      return {
+        ...base,
+        tier: 'standard',
+        headline,
+        body,
+        playerIds: [featuredId],
+        bigDrop: { playerId: featuredId, salary: dropSalary.salary },
+      };
+    }
+
     const dropPool = dropped.isDef ? DROP_DEF_TEMPLATES : DROP_TEMPLATES;
     const { headline, body } = pickTemplate(dropPool, raw.timestamp)(team, dropped.playerName, '');
     return { ...base, tier: 'minor', headline, body };
@@ -529,6 +569,27 @@ async function fetchTransactions(leagueId, year) {
   return Array.isArray(txns) ? txns : [txns];
 }
 
+/**
+ * Fetch salary adjustments. A FREE_AGENT drop transaction ("|playerId,")
+ * carries no salary, but MFL logs a matching adjustment with the dropped
+ * player's contract salary in its description — this is how we know whether a
+ * drop is a big-name move. Best-effort: returns [] on any failure.
+ */
+async function fetchSalaryAdjustments(leagueId, year) {
+  try {
+    const url = `https://${MFL_HOST}/${year}/export?TYPE=salaryAdjustments&L=${leagueId}&JSON=1`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const adj = data?.salaryAdjustments?.salaryAdjustment ?? [];
+    return Array.isArray(adj) ? adj : [adj];
+  } catch (err) {
+    console.warn(`  [salaryAdj] fetch failed: ${err.message}`);
+    return [];
+  }
+}
+
+
 // ── Data Loading ──
 
 async function loadPlayers(filePath) {
@@ -589,15 +650,19 @@ async function scanLeague(league) {
   const now = new Date();
   const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
 
-  const [transactions, players, teams] = await Promise.all([
+  const [transactions, salaryAdjustments, players, teams] = await Promise.all([
     fetchTransactions(league.leagueId, year),
+    fetchSalaryAdjustments(league.leagueId, year),
     loadPlayers(league.playersPath(year)),
     loadTeams(league.configPath),
   ]);
+  const dropAdjustmentMap = buildDropAdjustmentMap(salaryAdjustments);
 
   console.log(`  Total transactions: ${transactions.length}`);
   console.log(`  Players loaded: ${players.size}`);
   console.log(`  Teams loaded: ${teams.size}`);
+
+  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
 
   // Filter new transactions
   const newTxns = transactions.filter(txn => {
@@ -609,13 +674,14 @@ async function scanLeague(league) {
   if (newTxns.length === 0) {
     feed.lastScanTimestamp = now.toISOString();
     await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    // Still drain any big-drop pings held back by quiet hours / spacing.
+    await flushPendingBigDrops(now);
     return 0;
   }
 
   // Sort oldest first so we process chronologically
   newTxns.sort((a, b) => parseInt(a.timestamp) - parseInt(b.timestamp));
 
-  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
   const newPosts = [];
 
   for (const txn of newTxns) {
@@ -625,7 +691,7 @@ async function scanLeague(league) {
     } else if (txn.type === 'AUCTION_WON') {
       post = generateAuctionPost(txn, players, teams, leagueSlug);
     } else if (txn.type === 'FREE_AGENT' || txn.type === 'WAIVER' || txn.type === 'BBID_WAIVER') {
-      post = generateFreeAgentPost(txn, players, teams, leagueSlug);
+      post = generateFreeAgentPost(txn, players, teams, leagueSlug, dropAdjustmentMap);
     } else {
       continue;
     }
@@ -670,7 +736,152 @@ async function scanLeague(league) {
 
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} new posts. Feed total: ${feed.posts.length}`);
+
+  // Feed-first invariant holds: the file is persisted above before any GroupMe
+  // ping. Enqueue big-name drops, then drain the pending queue (respecting
+  // quiet hours + spacing and the shared daily budget).
+  await enqueueBigDrops(newPosts, leagueSlug, now);
+  await flushPendingBigDrops(now);
+
   return newPosts.length;
+}
+
+// ── Big-name drops → GroupMe (shared daily budget) ──
+//
+// Every drop already lands on the league feed (above). Drops of players with a
+// contract salary over BIG_DROP_THRESHOLD additionally ping GroupMe and consume
+// one of the shared MAX_POSTS_PER_DAY slots (schefter:rumor:posts_today). The
+// daily cap does NOT block these — a big drop is real news — but quiet hours
+// and minimum spacing DO hold the ping, so we stage pings in a Redis list and
+// drain them on later scans once the window opens.
+
+function buildBigDropGroupMeText(post) {
+  return `${post.headline}\n\n${post.body}`;
+}
+
+/** Stage GroupMe pings for any big-name drops found this scan. */
+async function enqueueBigDrops(posts, leagueSlug, now) {
+  const bigDrops = posts.filter(p => p.bigDrop);
+  if (bigDrops.length === 0) return;
+
+  if (DRY_RUN) {
+    for (const post of bigDrops) {
+      console.log(`  [dry-run] Would queue big-drop GroupMe ping:\n${buildBigDropGroupMeText(post)}`);
+    }
+    return;
+  }
+
+  const redis = await getRedis();
+  if (!redis) {
+    console.warn(`  [big-drop] Redis unavailable — ${bigDrops.length} ping(s) feed-only (no GroupMe)`);
+    return;
+  }
+  for (const post of bigDrops) {
+    const entry = {
+      id: post.id,
+      league: leagueSlug,
+      headline: post.headline,
+      body: post.body,
+      text: buildBigDropGroupMeText(post),
+      ts: now.getTime(),
+    };
+    try {
+      await redis.rpush(BIG_DROP_PENDING_KEY, JSON.stringify(entry));
+      console.log(`  [big-drop] Queued GroupMe ping: ${post.headline}`);
+    } catch (err) {
+      console.warn(`  [big-drop] enqueue failed: ${err.message} — feed-only`);
+    }
+  }
+}
+
+/**
+ * Drain staged big-drop pings. Sends at most one per spacing window (4h), holds
+ * everything during quiet hours, and discards pings that have gone stale.
+ */
+async function flushPendingBigDrops(now) {
+  if (DRY_RUN) return;
+  const redis = await getRedis();
+  if (!redis) return;
+
+  const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
+
+  let pendingCount;
+  try {
+    pendingCount = await redis.llen(BIG_DROP_PENDING_KEY);
+  } catch (err) {
+    console.warn(`  [big-drop] llen failed: ${err.message}`);
+    return;
+  }
+  if (!pendingCount) return;
+
+  // Bounded by the queue length: each iteration either sends (then spacing
+  // blocks the rest), discards a stale entry, or holds (and we stop).
+  for (let i = 0; i < pendingCount; i++) {
+    let head;
+    try {
+      head = await redis.lindex(BIG_DROP_PENDING_KEY, 0);
+    } catch (err) {
+      console.warn(`  [big-drop] lindex failed: ${err.message}`);
+      return;
+    }
+    if (head == null) return;
+
+    let entry;
+    try {
+      entry = typeof head === 'string' ? JSON.parse(head) : head;
+    } catch {
+      // Corrupt entry — drop it and continue.
+      await redis.lpop(BIG_DROP_PENDING_KEY).catch(() => {});
+      continue;
+    }
+
+    // Stale guard: discard pings that backed up for too long.
+    if (now.getTime() - (entry.ts ?? 0) > BIG_DROP_MAX_AGE_MS) {
+      console.warn(`  [big-drop] Discarding stale ping (${entry.headline})`);
+      await redis.lpop(BIG_DROP_PENDING_KEY).catch(() => {});
+      continue;
+    }
+
+    const window = await evaluatePingWindow(redis, now);
+    if (window.quietHours) {
+      console.log('  [big-drop] Quiet hours — holding pings');
+      return;
+    }
+    if (window.spacingHeld) {
+      console.log('  [big-drop] Spacing — holding pings for a later scan');
+      return;
+    }
+
+    if (!schefterBotId) {
+      console.warn('  [big-drop] GROUPME_SCHEFTER_BOT_ID not set — holding ping');
+      return;
+    }
+
+    // Quality gate the chat ping (the feed post already shipped).
+    const gate = await checkGroupMeQuality(
+      { headline: entry.headline, body: entry.body, tier: 'standard' },
+      { apiKey: process.env.ANTHROPIC_API_KEY },
+    );
+    await redis.lpop(BIG_DROP_PENDING_KEY).catch(() => {});
+    if (!gate.allow) {
+      recordGroupMeSuppression({
+        id: entry.id,
+        league: entry.league,
+        headline: entry.headline,
+        body: entry.body,
+        score: gate.score,
+        reason: gate.reason,
+        timestamp: new Date().toISOString(),
+      });
+      continue;
+    }
+
+    await postToGroupMe(entry.text, { botIdOverride: schefterBotId });
+    await consumeDailyPost(redis, now);
+    console.log(`  [big-drop] Pinged GroupMe (post ${window.postsToday + 1}, cap ${window.atCap ? 'exceeded' : 'ok'}): ${entry.headline}`);
+    // One ping per run: spacing now blocks the rest until a later scan.
+    return;
+  }
 }
 
 // ── Schefter Rumor Mill: Trade-Pending Posts (Phase 1) ──
@@ -1089,11 +1300,10 @@ function parseTradeBaitByFranchise(data) {
 
 /**
  * Minimal Upstash Redis adapter — mirrors the pattern in
- * schefter-rumor-scan.mjs so both scripts can share the tips queue.
- * Returns null when credentials are missing (the trade-bait scan then
- * skips so we don't silently advance committedBlock without enqueueing).
+ * schefter-rumor-scan.mjs so both scripts can share the tips queue and the
+ * daily GroupMe post budget. Returns null when credentials are missing.
  */
-async function getTradeBaitRedis() {
+async function getRedis() {
   const url =
     process.env.UPSTASH_REDIS_REST_URL ||
     process.env.KV_REST_API_URL ||
@@ -1235,7 +1445,7 @@ async function scanTradeBait(league) {
   // We have tips to enqueue. Redis is required — without it we cannot push
   // to the rumor-mill queue, so we must NOT advance committedBlock (which
   // would swallow the signal). Back off cleanly instead.
-  const redis = await getTradeBaitRedis();
+  const redis = await getRedis();
   if (!redis && !DRY_RUN) {
     console.warn('  [trade-bait] Redis unavailable — holding state, will retry next cycle');
     return 0;
