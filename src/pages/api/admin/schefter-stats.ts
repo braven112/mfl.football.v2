@@ -38,6 +38,7 @@ const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
 const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
 const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
 const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
+const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 
 type RedisClient = {
@@ -401,6 +402,7 @@ async function readRedisStats(redis: RedisClient) {
     tradeOffersPostedMembers,
     tradeOffersArchiveMap,
     tradeOffersRollsMap,
+    tradeOffersExposureMap,
     ownerReportsMap,
     pendingTipsRaw,
     recentGroupMeRaw,
@@ -421,6 +423,7 @@ async function readRedisStats(redis: RedisClient) {
     redis.smembers<string>(OFFER_POSTED_KEY).catch(() => [] as string[]),
     redis.hgetall<Record<string, string>>(OFFER_ARCHIVE_KEY).catch(() => null),
     redis.hgetall<Record<string, string>>(OFFER_ROLLS_KEY).catch(() => null),
+    redis.hgetall<Record<string, string>>(OFFER_EXPOSURE_KEY).catch(() => null),
     redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
     // Pull the actual queue contents (not just LLEN) so the admin page can
     // render a "what's next to post" list. Cap at 50 — the queue rarely
@@ -638,6 +641,12 @@ async function readRedisStats(redis: RedisClient) {
     partnerName: string;
     firstSeenMs: number;
     rollCount: number;
+    /**
+     * Graduated-disclosure signal count for this offer — number of Schefter
+     * posts that have shipped about it. 0 = never posted, 1 = team named once,
+     * 2 = team + marquee player, 3+ = team + multiple players.
+     */
+    exposureCount: number;
     posted: boolean;
     postId: string | null;
     postTimestamp: string | null;
@@ -654,6 +663,21 @@ async function readRedisStats(redis: RedisClient) {
       const n = Number(v);
       if (Number.isFinite(n)) rollsLookup.set(k, n);
     }
+  }
+  const exposureLookup = new Map<string, number>();
+  if (tradeOffersExposureMap && typeof tradeOffersExposureMap === 'object') {
+    for (const [k, v] of Object.entries(tradeOffersExposureMap)) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) exposureLookup.set(k, n);
+    }
+  }
+  // Resolve a unified exposure count: prefer the new counter, fall back to
+  // "is in OFFER_POSTED_KEY → 1" for pre-2026-05 offers that haven't had a
+  // new post yet under the graduated-disclosure model.
+  function resolveExposure(offerId: string): number {
+    const fresh = exposureLookup.get(offerId);
+    if (fresh && fresh > 0) return fresh;
+    return postedSet.has(offerId) ? 1 : 0;
   }
 
   function teamName(fid: string): string {
@@ -685,6 +709,7 @@ async function readRedisStats(redis: RedisClient) {
         partnerName: teamName(partnerFid),
         firstSeenMs,
         rollCount: rollsLookup.get(offerId) ?? 0,
+        exposureCount: resolveExposure(offerId),
         posted: postedSet.has(offerId),
         postId: link?.postId || null,
         postTimestamp: link?.postTimestamp || null,
@@ -717,6 +742,7 @@ async function readRedisStats(redis: RedisClient) {
         partnerName: '',
         firstSeenMs,
         rollCount: rollsLookup.get(offerId) ?? 0,
+        exposureCount: resolveExposure(offerId),
         posted: postedSet.has(offerId),
         postId: link?.postId || null,
         postTimestamp: link?.postTimestamp || null,

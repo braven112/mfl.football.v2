@@ -251,8 +251,12 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
           The roll counter (<code>schefter:trade_offers:rolls</code>) tells you
           how many GitHub Actions runs had a chance to leak the rumor — every
           15 minutes the scanner rolls a die against <code>p</code> while the
-          offer is in-flight. If a post shipped, the link drops you on the
-          news feed where Schefter announced it (same content as GroupMe).
+          offer is in-flight. The <strong>signal</strong> pill on a posted row
+          counts how many times Schefter has reported on this same offer:
+          signal 1 names one team only, signal 2 adds the marquee player,
+          signal 3+ keeps adding the next-best player. The post link drops
+          you on the news feed where Schefter most recently announced it
+          (same content as GroupMe).
         </p>
         <div id="ops-archive-body" class="ops-archive">Loading…</div>
       </article>
@@ -449,6 +453,8 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     partnerName: string;
     firstSeenMs: number;
     rollCount: number;
+    /** Schefter posts shipped about this offer. Drives the graduated reveal. */
+    exposureCount: number;
     posted: boolean;
     postId: string | null;
     postTimestamp: string | null;
@@ -507,14 +513,22 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
            → <strong>${escapeHtml(e.partnerName || `Team ${e.partnerFid}` || '?')}</strong>`;
       const seen = e.firstSeenMs ? `${new Date(e.firstSeenMs).toLocaleString()} (${fmtRel(e.firstSeenMs)})` : '—';
       const rollLabel = `${e.rollCount} roll${e.rollCount === 1 ? '' : 's'}`;
+      const exposureLabel = e.exposureCount > 0
+        ? `signal ${e.exposureCount}`
+        : null;
       const pills: string[] = [];
       if (e.posted) {
+        const exposureSuffix = exposureLabel ? ` · ${exposureLabel}` : '';
         if (e.postId) {
           const safePid = encodeURIComponent(e.postId);
-          pills.push(`<a class="ops-pill ops-pill--info ops-pill--link" href="/theleague/news#post-${safePid}" title="View Schefter's post">posted</a>`);
+          pills.push(`<a class="ops-pill ops-pill--info ops-pill--link" href="/theleague/news#post-${safePid}" title="View Schefter's most recent post about this offer">posted${exposureSuffix}</a>`);
         } else {
-          pills.push('<span class="ops-pill ops-pill--info">posted</span>');
+          pills.push(`<span class="ops-pill ops-pill--info">posted${exposureSuffix}</span>`);
         }
+      } else if (exposureLabel) {
+        // Defensive: exposure>0 without `posted` shouldn't happen in normal
+        // flow, but if it does, surface the signal level rather than hide it.
+        pills.push(`<span class="ops-pill ops-pill--info">${exposureLabel}</span>`);
       }
       if (liveIds) {
         pills.push(liveIds.has(e.offerId)
