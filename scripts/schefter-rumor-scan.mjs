@@ -155,12 +155,6 @@ const QUIET_DAY_LAST_DATE_KEY = 'schefter:rumor:quiet_day_last_date';
 const QUIET_DAY_COOLDOWN_DAYS = 3;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
-// Legacy key (pre-cumulative-probability model). Still read for dedup against
-// offers that were already "burned" under the old one-shot dice-roll system so
-// we don't suddenly re-surface trades that previously failed the roll.
-const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
-const OFFER_SEEN_TTL_SEC = 30 * 24 * 60 * 60;        // 30d
-
 // Cumulative-probability model with graduated exposure. The base per-run
 // probability lives in `scripts/lib/redact-trade-offer.mjs#OFFER_POST_PROBABILITY`
 // (currently 0.05); see that file for the cumulative-curve breakdown by
@@ -168,17 +162,19 @@ const OFFER_SEEN_TTL_SEC = 30 * 24 * 60 * 60;        // 30d
 //   - an entry in `first_seen` HASH (offerId → epoch ms of first sighting)
 //     used to compute age → framingHint ('fresh' <48h, 'lingering' ≥48h)
 //   - an entry in `exposure` HASH (offerId → int N) incremented every time
-//     a dice roll passes and a post ships. Drives graduated disclosure:
+//     a dice roll passes and a post ships. This is the SINGLE source of
+//     truth for graduated disclosure:
 //       N=1 → first post named one team only
 //       N=2 → second post added the marquee player
 //       N=3+ → each later post added another player
 //     Schefter's primary job is to report on these — keeping a single offer
 //     in rotation across multiple posts is the *point*, not a bug to guard
-//     against.
-//   - LEGACY `posted` SET — pre-2026-05 absorbing-state guard. Still read so
-//     offers posted under the one-and-done model don't suddenly re-surface
-//     at signal=1; once present in `posted`, treat the offer as having
-//     exposure≥1 so the next post starts at signal=2 (team + player).
+//     against. We do NOT seed exposure from the pre-2026-05 `posted` set:
+//     every offer that predates the ladder is a closed/stale trade, so any
+//     still-live offer starts fresh at signal=1.
+//   - `posted` SET — still written on every post for admin tooling (the
+//     Captured Trades card's posted/closed/stale pill logic). No longer an
+//     absorbing gate; an offer can be in `posted` AND keep getting posts.
 const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
 const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
 const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
@@ -2334,10 +2330,15 @@ async function scanTradeOffers({ redis, dryRun }) {
 
   for (const [offerId, { raw, offeringFid }] of offerMap) {
     // Read current exposure count — how many prior posts have shipped about
-    // this offer. The post we're about to consider is at signal=N+1. There
-    // is no absorbing state: Schefter's primary job is to report on these,
-    // so the same offer can recur with more detail as long as it's alive in
-    // MFL and the dice keep landing.
+    // this offer under the graduated-disclosure model. The post we're about
+    // to consider is at signal=N+1. There is no absorbing state: Schefter's
+    // primary job is to report on these, so the same offer can recur with
+    // more detail as long as it's alive in MFL and the dice keep landing.
+    //
+    // The exposure HASH is the SINGLE source of truth. We deliberately do
+    // NOT seed it from the pre-2026-05 `posted` / `seen` sets — those entries
+    // are all stale (closed trades from the old one-shot model), so any
+    // still-live offer starts fresh at signal=1 (team only).
     let priorExposure = 0;
     try {
       const exposureRaw = await redis.hget(OFFER_EXPOSURE_KEY, offerId);
@@ -2345,35 +2346,6 @@ async function scanTradeOffers({ redis, dryRun }) {
       if (Number.isFinite(n) && n > 0) priorExposure = n;
     } catch (err) {
       warn(`  [offer-scan] hget(exposure) failed for ${offerId}: ${err.message}`);
-    }
-
-    // Migration: offers that were "posted closed" under the pre-2026-05
-    // one-and-done model don't have an exposure counter, but they DID earn
-    // a signal-1 post. Treat them as exposure=1 so the next post starts at
-    // signal=2 (team + player) instead of re-naming just the team.
-    if (priorExposure === 0) {
-      try {
-        const wasLegacyPosted =
-          (await redis.sismember(OFFER_POSTED_KEY, offerId)) === 1;
-        if (wasLegacyPosted) priorExposure = 1;
-      } catch (err) {
-        warn(`  [offer-scan] sismember(posted) failed for ${offerId}: ${err.message}`);
-      }
-    }
-
-    // Legacy guard: offers marked by the old one-shot model AND never posted
-    // (sat in OFFER_SEEN_KEY without OFFER_POSTED_KEY) stay burned so we
-    // don't suddenly re-surface trades that previously failed the dice roll
-    // under the pre-cumulative-probability model.
-    let legacyBurned = false;
-    try {
-      legacyBurned = (await redis.sismember(OFFER_SEEN_KEY, offerId)) === 1;
-    } catch (err) {
-      warn(`  [offer-scan] sismember(seen-legacy) failed for ${offerId}: ${err.message}`);
-    }
-    if (legacyBurned && priorExposure === 0) {
-      debugLog.push({ offerId, offeringFid, skipped: 'legacy-seen' });
-      continue;
     }
 
     // First-seen anchor: the timestamp we use to derive framing + track age.

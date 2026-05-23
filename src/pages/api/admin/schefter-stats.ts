@@ -671,13 +671,13 @@ async function readRedisStats(redis: RedisClient) {
       if (Number.isFinite(n) && n > 0) exposureLookup.set(k, n);
     }
   }
-  // Resolve a unified exposure count: prefer the new counter, fall back to
-  // "is in OFFER_POSTED_KEY → 1" for pre-2026-05 offers that haven't had a
-  // new post yet under the graduated-disclosure model.
+  // Graduated-disclosure signal count. The exposure HASH is the single
+  // source of truth — we deliberately do NOT fall back to OFFER_POSTED_KEY.
+  // Old (pre-2026-05) trades sit in `posted` but have no exposure entry, so
+  // they show the "posted" pill with NO signal number — they predate the
+  // ladder. Only new-model posts carry a "signal N" pill.
   function resolveExposure(offerId: string): number {
-    const fresh = exposureLookup.get(offerId);
-    if (fresh && fresh > 0) return fresh;
-    return postedSet.has(offerId) ? 1 : 0;
+    return exposureLookup.get(offerId) ?? 0;
   }
 
   function teamName(fid: string): string {
