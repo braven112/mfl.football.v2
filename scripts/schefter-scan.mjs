@@ -26,6 +26,7 @@ import {
 import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
+import { parseRosterMove } from './lib/roster-move-parse.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -377,26 +378,66 @@ const FA_TEMPLATES = [
   (tm, p, s) => ({ headline: `${tm} claim ${p}${s}`, body: `${tm} take a shot on ${p}${s}.` }),
 ];
 
+// Drop templates — a player released with nothing added in return. These read
+// as a roster cut, NOT a pickup. The salary slot is unused (drops have no cost).
+const DROP_TEMPLATES = [
+  (tm, p) => ({ headline: `${tm} waive ${p}`, body: `${tm} cut ${p} loose. The roster spot opens up.` }),
+  (tm, p) => ({ headline: `${tm} release ${p}`, body: `${tm} move on from ${p}. Back on the open market.` }),
+  (tm, p) => ({ headline: `${tm} cut ${p}`, body: `${tm} part ways with ${p}. Available to the rest of the league now.` }),
+  (tm, p) => ({ headline: `${tm} drop ${p}`, body: `${tm} drop ${p} from the roster. Someone could take a flier here.` }),
+  (tm, p) => ({ headline: `${tm} waive ${p}`, body: `${p} is off ${tm}'s roster — a free agent again.` }),
+  (tm, p) => ({ headline: `${tm} release ${p}`, body: `${tm} clear ${p} off the books. Roster shuffle in progress.` }),
+];
+const DROP_DEF_TEMPLATES = [
+  (tm, p) => ({ headline: `${tm} drop ${p}`, body: `${tm} cut ${p} loose. The D/ST slot opens back up.` }),
+  (tm, p) => ({ headline: `${tm} waive ${p}`, body: `${cap(p)} is off ${tm}'s roster. Streaming defense back on the wire.` }),
+  (tm, p) => ({ headline: `${tm} release ${p}`, body: `${tm} move on from ${p}. Available to stream elsewhere.` }),
+];
+
+/** Build a display descriptor for a player ID, or undefined when absent. */
+function describePlayer(playerId, players) {
+  if (!playerId) return undefined;
+  const player = players.get(playerId);
+  return {
+    playerId,
+    playerName: player ? formatPlayerDisplay(player) : `Player ${playerId}`,
+    isDef: player?.position === 'Def' || player?.position === 'DEF',
+  };
+}
+
 function generateFreeAgentPost(raw, players, teams, leagueSlug) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
-  const { playerName, isDef, salary } = parseAuctionTransaction(raw.transaction, players);
-  const tier = classifyTier(raw, salary);
-  const salaryStr = salary ? ` (${formatSalary(salary)})` : '';
-  const faPool = isDef ? FA_DEF_TEMPLATES : FA_TEMPLATES;
-  const { headline, body } = pickTemplate(faPool, raw.timestamp)(team, playerName, salaryStr);
+  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(raw.transaction);
+  const added = describePlayer(addedIds[0], players);
+  const dropped = describePlayer(droppedIds[0], players);
+  const salary = Number.isFinite(bbidAmount) && bbidAmount > 100_000 ? bbidAmount : undefined;
 
-  return {
+  // Transaction with neither a recognizable add nor drop — nothing to report.
+  if (!added && !dropped) return null;
+
+  const base = {
     id: generatePostId(raw.timestamp),
     timestamp: new Date(parseInt(raw.timestamp) * 1000).toISOString(),
     type: 'transaction',
     transactionSubType: 'FREE_AGENT',
-    tier,
-    headline,
-    body,
     franchiseIds: [raw.franchise],
     sourceTimestamp: raw.timestamp,
     league: leagueSlug,
   };
+
+  // Pure drop (a player released with nothing acquired) — a cut, not a claim.
+  if (!added) {
+    const dropPool = dropped.isDef ? DROP_DEF_TEMPLATES : DROP_TEMPLATES;
+    const { headline, body } = pickTemplate(dropPool, raw.timestamp)(team, dropped.playerName, '');
+    return { ...base, tier: 'minor', headline, body };
+  }
+
+  // Acquisition (with or without a corresponding drop) — report the add.
+  const tier = classifyTier(raw, salary);
+  const salaryStr = salary ? ` (${formatSalary(salary)})` : '';
+  const faPool = added.isDef ? FA_DEF_TEMPLATES : FA_TEMPLATES;
+  const { headline, body } = pickTemplate(faPool, raw.timestamp)(team, added.playerName, salaryStr);
+  return { ...base, tier, headline, body };
 }
 
 // ── AI Commentary (breaking tier) ──
@@ -588,6 +629,9 @@ async function scanLeague(league) {
     } else {
       continue;
     }
+
+    // A generator may decline to post (e.g. an unrecognizable roster move).
+    if (!post) continue;
 
     // Check for dedup
     if (feed.posts.some(p => p.sourceTimestamp === txn.timestamp && p.transactionSubType === post.transactionSubType)) {
