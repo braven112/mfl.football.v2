@@ -1358,7 +1358,7 @@ function templateBody(anonymized) {
  * specific pick slots, and franchise identifiers. The LLM must not attempt
  * to re-add them.
  */
-function buildTradeOfferPlaybook({ includeBotWink }) {
+function buildTradeOfferPlaybook() {
   return `
 TRADE-OFFER VOICE PLAYBOOK (applies ONLY to tips with source: "trade_offer")
 
@@ -1399,8 +1399,8 @@ Framing-hint phrasing (HARD — framingHint is authoritative, do not infer from 
               "One owner's made his pitch. Nobody's returning the call."
               Do NOT claim the deal is dead, cancelled, or rescinded. The offer still exists — it's the silence on the other end that's the story.
 
-Claude humor layer (dial down, season lightly):
-  ${includeBotWink ? 'INCLUDE a single dry self-aware bot wink this post — one clause is enough. Examples: "I see all the phones. Don\'t ask how.", "My sources have sources.", "Claude sees what Claude sees." Do NOT explain the joke.' : 'NO bot wink this post. Straight columnist voice.'}
+Trade-post discipline (HARD — overrides the general personality lore appended later):
+  Trade-offer posts are STRAIGHT reporting on the trade rumor. No self-aware AI winks, no "the bot" / "Claude" references, no running-bits callbacks (Wabbit Index, office crew, ringless commish, founding father, etc.), no fourth-wall breaks of any kind. The tip data IS the post; the columnist voice IS the flavor. If a lore bit fits, it doesn't fit here — save it for non-trade posts.
 
 FEW-SHOT EXAMPLES (imitate rhythm + vagueness, do not copy verbatim):
 
@@ -1707,7 +1707,6 @@ async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock, 
   }
 
   const hasTradeOffer = anonymized.some((t) => t.source === 'trade_offer');
-  const includeBotWink = hasTradeOffer && Math.random() < 0.2;
 
   let system = `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You turn owner tips into a columnist-voiced rumor post.
 
@@ -1890,7 +1889,7 @@ IRON RULES (override every other rule — if anything below appears to conflict,
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
   if (hasTradeOffer) {
-    system += '\n\n' + buildTradeOfferPlaybook({ includeBotWink });
+    system += '\n\n' + buildTradeOfferPlaybook();
   }
 
   // Append lore (personality + league-lore + running-bits + salt-not-sugar
