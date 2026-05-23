@@ -61,7 +61,12 @@ jobs:
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
         if: github.event.inputs.dry_run != 'true'
         run: |
-          if [ -z "$(git status --porcelain)" ]; then
+          # Only the feed + post-history mark a real post. The scanner also
+          # rewrites data/schefter/groupme-suppressions.json with a fresh
+          # timestamp every run; scoping the guard to the committed files keeps
+          # that churn from defeating the early-exit and failing `git commit`
+          # with "no changes added" on quiet runs.
+          if [ -z "$(git status --porcelain src/data/theleague/schefter-feed.json data/schefter/post-history.json)" ]; then
             echo "No new rumor-mill posts."
             exit 0
           fi
