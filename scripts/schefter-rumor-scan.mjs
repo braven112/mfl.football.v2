@@ -2536,15 +2536,17 @@ async function scanTradeOffers({ redis, dryRun }) {
 
     // Dice roll — base probability is OFFER_POST_PROBABILITY (see
     // `scripts/lib/redact-trade-offer.mjs`), scaled exponentially by the most-
-    // shopped player's effective distinct-offerer count (real + 0.4*draft).
-    // Capped at 4× base. Cumulative curve still keeps most passes in the
-    // 1–7 day window for low-volume players; serial-shopped players
-    // accelerate. Owner can't tell whether their submission or any
-    // particular other-team draft tipped the dice — that's the point.
+    // shopped player's effective distinct-offerer count (real + 0.4*draft) AND
+    // by priorExposure (an already-reported, developing offer accelerates its
+    // next reveal). Combined product is clamped to OFFER_PROBABILITY_CEILING.
+    // The signal-1 roll (priorExposure=0) is unchanged, so an owner still
+    // can't tell whether their submission or any particular other-team draft
+    // tipped the FIRST post — that's the point. Subsequent reveals on a
+    // public, developing offer come faster on purpose.
     const maxEffectiveOfferers = playerHistory.size > 0
       ? Math.max(1, ...Array.from(playerHistory.values()))
       : 1;
-    const probability = offerPostProbability(maxEffectiveOfferers);
+    const probability = offerPostProbability(maxEffectiveOfferers, priorExposure);
     const roll = Math.random();
     const passed = roll < probability;
 

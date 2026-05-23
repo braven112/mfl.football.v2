@@ -403,17 +403,49 @@ export function redactTradeOffer({
  * tier-cap on draft-only contribution, this gives Schefter speed without
  * letting him name names from soft signals.
  *
+ * Exposure scaling (second arg, Phase 6c): a second multiplier of
+ * `OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure` (capped at
+ * `OFFER_EXPOSURE_BOOST_MAX`) accelerates the NEXT reveal once an offer has
+ * already shipped at least one post. priorExposure=0 → ×1, so signal-1
+ * timing/unpredictability is untouched. The combined product is clamped to
+ * `OFFER_PROBABILITY_CEILING` so even a hot, multi-post offer can't post on
+ * essentially every scan.
+ *
  * Exported for tests & dry-run logging.
  */
 export const OFFER_POST_PROBABILITY = 0.05;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;
 
-export function offerPostProbability(effectiveOfferers = 1) {
+// Exposure boost (Phase 6c). Once an offer has already shipped a post (i.e.
+// it's a developing, already-public story), accelerate the *next* reveal so
+// signal 2 / signal 3 don't trail signal 1 by days. `priorExposure` is the
+// number of posts ALREADY shipped about this offer:
+//   priorExposure 0 (signal 1) → ×1  (no change — keeps signal-1 timing and
+//                                      its "owner can't tell what tipped it"
+//                                      unpredictability exactly as before)
+//   priorExposure 1 (signal 2) → ×2
+//   priorExposure 2 (signal 3) → ×4 (capped)
+//   priorExposure 3+           → ×4 (capped)
+// The boost stacks on top of the shopping-volume multiplier, but the combined
+// per-run probability is clamped to OFFER_PROBABILITY_CEILING so even the
+// hottest already-reported offer can't post on basically every scan (which
+// would dump the whole ladder in an hour).
+export const OFFER_EXPOSURE_BOOST_FACTOR = 2;
+export const OFFER_EXPOSURE_BOOST_MAX = 4;
+export const OFFER_PROBABILITY_CEILING = 0.35;
+
+export function offerPostProbability(effectiveOfferers = 1, priorExposure = 0) {
   const n = Number.isFinite(effectiveOfferers) ? Math.max(1, effectiveOfferers) : 1;
-  const raw = Math.pow(OFFER_VOLUME_BOOST_FACTOR, n - 1);
-  const multiplier = Math.min(OFFER_VOLUME_BOOST_MAX, raw);
-  return OFFER_POST_PROBABILITY * multiplier;
+  const volumeRaw = Math.pow(OFFER_VOLUME_BOOST_FACTOR, n - 1);
+  const volumeMult = Math.min(OFFER_VOLUME_BOOST_MAX, volumeRaw);
+
+  const e = Number.isFinite(priorExposure) ? Math.max(0, Math.floor(priorExposure)) : 0;
+  const exposureRaw = Math.pow(OFFER_EXPOSURE_BOOST_FACTOR, e);
+  const exposureMult = Math.min(OFFER_EXPOSURE_BOOST_MAX, exposureRaw);
+
+  const p = OFFER_POST_PROBABILITY * volumeMult * exposureMult;
+  return Math.min(OFFER_PROBABILITY_CEILING, p);
 }
 
 export { bucketVolumeHint, tierForDistinctOfferers, classifyAsset, parseAssetString };
