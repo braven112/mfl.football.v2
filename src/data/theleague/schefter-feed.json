@@ -1,7 +1,45 @@
 {
-  "lastScanTimestamp": "2026-05-24T20:20:30.881Z",
+  "lastScanTimestamp": "2026-05-24T20:35:00.240Z",
   "lastProcessedMflTimestamp": "1779515000",
   "posts": [
+    {
+      "id": "sf_speculation_1779654903151_7283093c",
+      "timestamp": "2026-05-24T20:35:00.240Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Computer Jocks country has been kicking around a wild scenario: what if the Pigskins made Lamar Jackson available and the Jocks swooped in with a package centered on tight ends Brenton Strange and Michael Mayer? Neither front office has acknowledged any such discussion, but beat writers monitoring the Pigskins' roster situation and the Jocks' receiving corps have noted the names cropping up on fan boards as a theoretical framework. It's pure speculation at this point — this isn't coming from the buildings — but the dynastic intrigue around a QB move of that magnitude would reshape both franchises overnight.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0001",
+        "0010"
+      ],
+      "league": "theleague",
+      "speculation": {
+        "seller": "0001",
+        "buyer": "0010",
+        "marquee": {
+          "id": "13593",
+          "name": "Jackson, Lamar",
+          "position": "QB"
+        },
+        "returnPkg": [
+          {
+            "id": "16269",
+            "name": "Strange, Brenton",
+            "position": "TE"
+          },
+          {
+            "id": "16212",
+            "name": "Mayer, Michael",
+            "position": "TE"
+          }
+        ],
+        "score": 136,
+        "capRelief": false
+      }
+    },
     {
       "id": "wire_48845555",
       "timestamp": "2026-05-24T10:00:05Z",
