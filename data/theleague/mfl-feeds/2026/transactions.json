@@ -1,74 +1,72 @@
 {
-  "encoding": "utf-8",
-  "version": "1.0",
   "transactions": {
     "transaction": [
       {
-        "transaction": "|16778,",
         "timestamp": "1779515000",
-        "franchise": "0001",
-        "type": "FREE_AGENT"
+        "transaction": "|16778,",
+        "type": "FREE_AGENT",
+        "franchise": "0001"
       },
       {
-        "demoted": "17523,17644,",
+        "type": "TAXI",
+        "franchise": "0015",
         "promoted": "",
         "timestamp": "1778463351",
-        "type": "TAXI",
-        "franchise": "0015"
+        "demoted": "17523,17644,"
       },
       {
-        "timestamp": "1778457490",
-        "promoted": "",
         "franchise": "0006",
         "type": "TAXI",
+        "timestamp": "1778457490",
+        "promoted": "",
         "demoted": "17685,"
       },
       {
-        "demoted": "17508,17504,17497,",
-        "franchise": "0014",
-        "type": "TAXI",
         "promoted": "",
-        "timestamp": "1778431619"
+        "timestamp": "1778431619",
+        "type": "TAXI",
+        "franchise": "0014",
+        "demoted": "17508,17504,17497,"
       },
       {
-        "type": "TAXI",
         "franchise": "0008",
-        "timestamp": "1778406030",
+        "type": "TAXI",
         "promoted": "",
+        "timestamp": "1778406030",
         "demoted": "17518,"
       },
       {
-        "timestamp": "1778366881",
-        "promoted": "",
         "franchise": "0005",
         "type": "TAXI",
+        "promoted": "",
+        "timestamp": "1778366881",
         "demoted": "17605,"
       },
       {
-        "transaction": "17685|425000|",
-        "timestamp": "1778365056",
         "franchise": "0006",
-        "type": "AUCTION_WON"
+        "type": "AUCTION_WON",
+        "transaction": "17685|425000|",
+        "timestamp": "1778365056"
       },
       {
-        "transaction": "17518|425000|",
         "timestamp": "1778356014",
-        "franchise": "0008",
-        "type": "AUCTION_WON"
+        "transaction": "17518|425000|",
+        "type": "AUCTION_WON",
+        "franchise": "0008"
       },
       {
-        "promoted": "",
-        "timestamp": "1778339703",
         "franchise": "0004",
         "type": "TAXI",
+        "promoted": "",
+        "timestamp": "1778339703",
         "demoted": "17543,"
       },
       {
-        "franchise": "0004",
-        "type": "TAXI",
-        "promoted": "",
+        "demoted": "17521,",
         "timestamp": "1778339695",
-        "demoted": "17521,"
+        "promoted": "",
+        "type": "TAXI",
+        "franchise": "0004"
       },
       {
         "transaction": "17644|425000|",
@@ -77,16 +75,16 @@
         "type": "AUCTION_WON"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0005",
         "timestamp": "1778335203",
-        "transaction": "17605|425000|"
+        "transaction": "17605|425000|",
+        "type": "AUCTION_WON",
+        "franchise": "0005"
       },
       {
-        "timestamp": "1778335203",
-        "transaction": "17523|425000|",
         "type": "AUCTION_WON",
-        "franchise": "0015"
+        "franchise": "0015",
+        "timestamp": "1778335203",
+        "transaction": "17523|425000|"
       },
       {
         "transaction": "17685|425000|",
@@ -95,54 +93,54 @@
         "type": "AUCTION_INIT"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0008",
-        "timestamp": "1778213977",
-        "transaction": "17518|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "17518|425000|",
+        "timestamp": "1778213977"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0005",
-        "timestamp": "1778200515",
-        "transaction": "17605|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "17605|425000|",
+        "timestamp": "1778200515"
       },
       {
-        "timestamp": "1778200454",
+        "franchise": "0015",
+        "type": "AUCTION_INIT",
         "transaction": "17644|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0015"
+        "timestamp": "1778200454"
       },
       {
-        "timestamp": "1778200432",
-        "transaction": "17523|425000|",
+        "franchise": "0015",
         "type": "AUCTION_INIT",
-        "franchise": "0015"
+        "transaction": "17523|425000|",
+        "timestamp": "1778200432"
       },
       {
         "demoted": "17528,17502,17517,",
-        "type": "TAXI",
-        "franchise": "0012",
+        "timestamp": "1778197349",
         "promoted": "",
-        "timestamp": "1778197349"
+        "type": "TAXI",
+        "franchise": "0012"
       },
       {
         "demoted": "17467,17503,17607,",
-        "type": "TAXI",
         "franchise": "0002",
+        "type": "TAXI",
         "promoted": "",
         "timestamp": "1778196502"
       },
       {
-        "franchise": "",
-        "type": "LOCK_ALL_PLAYERS",
+        "timestamp": "1778196342",
         "transaction": "",
-        "timestamp": "1778196342"
+        "type": "LOCK_ALL_PLAYERS",
+        "franchise": ""
       },
       {
-        "transaction": "|17046,",
-        "timestamp": "1778190724",
         "franchise": "0012",
-        "type": "FREE_AGENT"
+        "type": "FREE_AGENT",
+        "transaction": "|17046,",
+        "timestamp": "1778190724"
       },
       {
         "timestamp": "1778190533",
@@ -152,65 +150,65 @@
       },
       {
         "demoted": "17512,",
-        "type": "TAXI",
         "franchise": "0001",
-        "timestamp": "1778169067",
-        "promoted": ""
+        "type": "TAXI",
+        "promoted": "",
+        "timestamp": "1778169067"
       },
       {
-        "timestamp": "1778169039",
+        "demoted": "",
         "promoted": "17512,",
+        "timestamp": "1778169039",
         "type": "TAXI",
-        "franchise": "0001",
-        "demoted": ""
+        "franchise": "0001"
       },
       {
-        "demoted": "17466,17473,",
+        "type": "TAXI",
+        "franchise": "0006",
         "promoted": "",
         "timestamp": "1778163434",
-        "type": "TAXI",
-        "franchise": "0006"
+        "demoted": "17466,17473,"
       },
       {
-        "demoted": "17477,17593,",
+        "timestamp": "1778161335",
+        "promoted": "",
         "franchise": "0010",
         "type": "TAXI",
-        "timestamp": "1778161335",
-        "promoted": ""
+        "demoted": "17477,17593,"
       },
       {
-        "transaction": "|14079,",
+        "type": "FREE_AGENT",
+        "franchise": "0001",
         "timestamp": "1778131554",
-        "franchise": "0001",
-        "type": "FREE_AGENT"
+        "transaction": "|14079,"
       },
       {
+        "demoted": "17549,",
+        "promoted": "",
         "timestamp": "1778129751",
-        "promoted": "",
         "franchise": "0001",
-        "type": "TAXI",
-        "demoted": "17549,"
-      },
-      {
-        "demoted": "17478,",
-        "promoted": "",
-        "timestamp": "1778129573",
-        "franchise": "0013",
         "type": "TAXI"
       },
       {
-        "demoted": "17519,",
-        "franchise": "0013",
-        "type": "TAXI",
+        "demoted": "17478,",
+        "timestamp": "1778129573",
         "promoted": "",
-        "timestamp": "1778129524"
+        "type": "TAXI",
+        "franchise": "0013"
       },
       {
-        "demoted": "17482,",
-        "franchise": "0001",
         "type": "TAXI",
+        "franchise": "0013",
+        "timestamp": "1778129524",
+        "promoted": "",
+        "demoted": "17519,"
+      },
+      {
+        "type": "TAXI",
+        "franchise": "0001",
+        "promoted": "",
         "timestamp": "1778126660",
-        "promoted": ""
+        "demoted": "17482,"
       },
       {
         "franchise": "0001",
@@ -219,11 +217,11 @@
         "timestamp": "1778119383"
       },
       {
+        "demoted": "",
         "timestamp": "1778116538",
         "promoted": "17478,",
-        "type": "TAXI",
         "franchise": "0013",
-        "demoted": ""
+        "type": "TAXI"
       },
       {
         "transaction": "|16195,",
@@ -232,46 +230,46 @@
         "type": "FREE_AGENT"
       },
       {
-        "demoted": "17476,17566,",
+        "franchise": "0016",
+        "type": "TAXI",
         "promoted": "17499,",
         "timestamp": "1778111890",
-        "franchise": "0016",
-        "type": "TAXI"
+        "demoted": "17476,17566,"
       },
       {
-        "franchise": "0009",
-        "type": "TAXI",
         "timestamp": "1778101926",
         "promoted": "",
+        "type": "TAXI",
+        "franchise": "0009",
         "demoted": "17485,17529,"
       },
       {
+        "demoted": "17548,",
         "franchise": "0005",
         "type": "TAXI",
         "timestamp": "1778098811",
-        "promoted": "",
-        "demoted": "17548,"
-      },
-      {
-        "demoted": "17567,",
-        "franchise": "0008",
-        "type": "TAXI",
-        "timestamp": "1778043220",
         "promoted": ""
       },
       {
-        "franchise": "0001",
-        "type": "TAXI",
+        "demoted": "17567,",
+        "timestamp": "1778043220",
+        "promoted": "",
+        "franchise": "0008",
+        "type": "TAXI"
+      },
+      {
+        "demoted": "17512,",
         "timestamp": "1778036131",
         "promoted": "",
-        "demoted": "17512,"
+        "franchise": "0001",
+        "type": "TAXI"
       },
       {
         "demoted": "17478,",
-        "promoted": "",
-        "timestamp": "1778034731",
         "franchise": "0013",
-        "type": "TAXI"
+        "type": "TAXI",
+        "timestamp": "1778034731",
+        "promoted": ""
       },
       {
         "timestamp": "1778034015",
@@ -281,32 +279,32 @@
         "demoted": "17500,"
       },
       {
-        "timestamp": "1778021249",
-        "promoted": "",
-        "type": "TAXI",
         "franchise": "0008",
+        "type": "TAXI",
+        "promoted": "",
+        "timestamp": "1778021249",
         "demoted": "17520,"
       },
       {
         "demoted": "17463,",
-        "type": "TAXI",
-        "franchise": "0016",
         "timestamp": "1777936560",
-        "promoted": ""
+        "promoted": "",
+        "franchise": "0016",
+        "type": "TAXI"
       },
       {
-        "timestamp": "1777926350",
-        "promoted": "",
+        "demoted": "17514,",
+        "type": "TAXI",
         "franchise": "0009",
-        "type": "TAXI",
-        "demoted": "17514,"
+        "promoted": "",
+        "timestamp": "1777926350"
       },
       {
-        "demoted": "17499,",
-        "timestamp": "1777837503",
         "promoted": "",
+        "timestamp": "1777837503",
+        "franchise": "0016",
         "type": "TAXI",
-        "franchise": "0016"
+        "demoted": "17499,"
       },
       {
         "franchise": "0013",
@@ -315,24 +313,24 @@
         "timestamp": "1777817398"
       },
       {
-        "demoted": "17501,",
+        "promoted": "",
+        "timestamp": "1777817381",
         "type": "TAXI",
         "franchise": "0013",
-        "timestamp": "1777817381",
-        "promoted": ""
+        "demoted": "17501,"
       },
       {
-        "demoted": "17462,",
         "promoted": "",
         "timestamp": "1777815773",
         "type": "TAXI",
-        "franchise": "0005"
+        "franchise": "0005",
+        "demoted": "17462,"
       },
       {
-        "timestamp": "1774696063",
-        "transaction": "0511|2525000|",
         "type": "AUCTION_WON",
-        "franchise": "0008"
+        "franchise": "0008",
+        "timestamp": "1774696063",
+        "transaction": "0511|2525000|"
       },
       {
         "franchise": "0004",
@@ -341,58 +339,58 @@
         "timestamp": "1774632492"
       },
       {
-        "transaction": "0512|1875000|",
+        "type": "AUCTION_WON",
+        "franchise": "0010",
         "timestamp": "1774587082",
-        "franchise": "0010",
-        "type": "AUCTION_WON"
+        "transaction": "0512|1875000|"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0008",
-        "timestamp": "1774539245",
-        "transaction": "0511|2525000|"
-      },
-      {
-        "franchise": "0010",
         "type": "AUCTION_BID",
-        "transaction": "0511|2500000|",
-        "timestamp": "1774538804"
+        "transaction": "0511|2525000|",
+        "timestamp": "1774539245"
       },
       {
-        "franchise": "0010",
         "type": "AUCTION_BID",
-        "transaction": "0511|2275000|",
-        "timestamp": "1774538705"
+        "franchise": "0010",
+        "timestamp": "1774538804",
+        "transaction": "0511|2500000|"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0010",
+        "timestamp": "1774538705",
+        "transaction": "0511|2275000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0010",
         "timestamp": "1774538664",
-        "transaction": "0512|1875000|",
-        "type": "AUCTION_BID",
-        "franchise": "0010"
+        "transaction": "0512|1875000|"
       },
       {
-        "franchise": "0014",
-        "type": "AUCTION_WON",
+        "timestamp": "1774528500",
         "transaction": "9064|425000|",
-        "timestamp": "1774528500"
-      },
-      {
-        "franchise": "0010",
         "type": "AUCTION_WON",
-        "transaction": "16645|425000|",
-        "timestamp": "1774528500"
+        "franchise": "0014"
       },
       {
-        "timestamp": "1774489074",
-        "transaction": "0511|2250000|",
-        "type": "AUCTION_BID",
-        "franchise": "0010"
+        "type": "AUCTION_WON",
+        "franchise": "0010",
+        "timestamp": "1774528500",
+        "transaction": "16645|425000|"
       },
       {
         "type": "AUCTION_BID",
         "franchise": "0010",
+        "timestamp": "1774489074",
+        "transaction": "0511|2250000|"
+      },
+      {
+        "transaction": "0511|2200000|",
         "timestamp": "1774489014",
-        "transaction": "0511|2200000|"
+        "franchise": "0010",
+        "type": "AUCTION_BID"
       },
       {
         "transaction": "15254|425000|",
@@ -401,10 +399,10 @@
         "type": "AUCTION_INIT"
       },
       {
-        "franchise": "0010",
-        "type": "AUCTION_BID",
+        "timestamp": "1774459885",
         "transaction": "0511|2100000|",
-        "timestamp": "1774459885"
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
         "franchise": "0010",
@@ -413,34 +411,34 @@
         "timestamp": "1774459873"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0010",
-        "timestamp": "1774457250",
-        "transaction": "0512|1825000|"
+        "type": "AUCTION_BID",
+        "transaction": "0512|1825000|",
+        "timestamp": "1774457250"
       },
       {
-        "transaction": "0512|1775000|",
-        "timestamp": "1774451051",
+        "type": "AUCTION_BID",
         "franchise": "0008",
-        "type": "AUCTION_BID"
+        "timestamp": "1774451051",
+        "transaction": "0512|1775000|"
       },
       {
-        "franchise": "0010",
-        "type": "AUCTION_BID",
+        "timestamp": "1774450738",
         "transaction": "0512|1700000|",
-        "timestamp": "1774450738"
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0010",
         "timestamp": "1774449272",
-        "transaction": "0512|1625000|"
+        "transaction": "0512|1625000|",
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
-        "franchise": "0010",
-        "type": "AUCTION_BID",
         "transaction": "0511|2050000|",
-        "timestamp": "1774449272"
+        "timestamp": "1774449272",
+        "franchise": "0010",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0007",
@@ -449,10 +447,10 @@
         "timestamp": "1774444697"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0003",
         "timestamp": "1774426954",
-        "transaction": "15759|425000|"
+        "transaction": "15759|425000|",
+        "type": "AUCTION_WON",
+        "franchise": "0003"
       },
       {
         "timestamp": "1774426954",
@@ -461,22 +459,22 @@
         "franchise": "0004"
       },
       {
-        "type": "AUCTION_WON",
         "franchise": "0003",
-        "timestamp": "1774426954",
-        "transaction": "12801|1650000|"
-      },
-      {
         "type": "AUCTION_WON",
-        "franchise": "0005",
-        "timestamp": "1774418204",
-        "transaction": "14778|1900000|"
+        "transaction": "12801|1650000|",
+        "timestamp": "1774426954"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0005",
-        "timestamp": "1774416612",
-        "transaction": "14778|1900000|"
+        "type": "AUCTION_WON",
+        "transaction": "14778|1900000|",
+        "timestamp": "1774418204"
+      },
+      {
+        "franchise": "0005",
+        "type": "AUCTION_BID",
+        "transaction": "14778|1900000|",
+        "timestamp": "1774416612"
       },
       {
         "type": "AUCTION_BID",
@@ -485,34 +483,34 @@
         "transaction": "14778|1800000|"
       },
       {
-        "transaction": "14778|1700000|",
+        "type": "AUCTION_BID",
+        "franchise": "0005",
         "timestamp": "1774416500",
+        "transaction": "14778|1700000|"
+      },
+      {
+        "transaction": "14778|1600000|",
+        "timestamp": "1774416455",
         "franchise": "0005",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774416455",
-        "transaction": "14778|1600000|",
-        "type": "AUCTION_BID",
-        "franchise": "0005"
-      },
-      {
-        "franchise": "0009",
-        "type": "AUCTION_WON",
         "transaction": "10700|425000|",
-        "timestamp": "1774416222"
+        "timestamp": "1774416222",
+        "franchise": "0009",
+        "type": "AUCTION_WON"
       },
       {
-        "timestamp": "1774413099",
-        "transaction": "13633|600000|",
+        "franchise": "0014",
         "type": "AUCTION_WON",
-        "franchise": "0014"
+        "transaction": "13633|600000|",
+        "timestamp": "1774413099"
       },
       {
-        "timestamp": "1774410862",
         "transaction": "0512|1400000|",
-        "type": "AUCTION_BID",
-        "franchise": "0008"
+        "timestamp": "1774410862",
+        "franchise": "0008",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_WON",
@@ -521,22 +519,22 @@
         "transaction": "0529|1225000|"
       },
       {
-        "transaction": "9064|425000|",
-        "timestamp": "1774397299",
         "franchise": "0014",
+        "type": "AUCTION_INIT",
+        "transaction": "9064|425000|",
+        "timestamp": "1774397299"
+      },
+      {
+        "transaction": "16645|425000|",
+        "timestamp": "1774390118",
+        "franchise": "0010",
         "type": "AUCTION_INIT"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0010",
-        "timestamp": "1774390118",
-        "transaction": "16645|425000|"
-      },
-      {
-        "franchise": "0006",
-        "type": "AUCTION_WON",
+        "timestamp": "1774388755",
         "transaction": "15282|6525000|",
-        "timestamp": "1774388755"
+        "type": "AUCTION_WON",
+        "franchise": "0006"
       },
       {
         "timestamp": "1774360140",
@@ -551,28 +549,28 @@
         "timestamp": "1774360129"
       },
       {
-        "transaction": "0511|1950000|",
+        "type": "AUCTION_BID",
+        "franchise": "0008",
         "timestamp": "1774360119",
+        "transaction": "0511|1950000|"
+      },
+      {
+        "timestamp": "1774360109",
+        "transaction": "0511|1850000|",
+        "type": "AUCTION_BID",
+        "franchise": "0008"
+      },
+      {
+        "transaction": "0511|1750000|",
+        "timestamp": "1774360095",
         "franchise": "0008",
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
-        "timestamp": "1774360109",
-        "transaction": "0511|1850000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
-        "timestamp": "1774360095",
-        "transaction": "0511|1750000|"
-      },
-      {
-        "transaction": "13138|750000|",
-        "timestamp": "1774357200",
+        "type": "AUCTION_WON",
         "franchise": "0011",
-        "type": "AUCTION_WON"
+        "timestamp": "1774357200",
+        "transaction": "13138|750000|"
       },
       {
         "type": "AUCTION_WON",
@@ -581,10 +579,10 @@
         "transaction": "0506|1000000|"
       },
       {
-        "timestamp": "1774342640",
-        "transaction": "0511|1675000|",
+        "franchise": "0008",
         "type": "AUCTION_BID",
-        "franchise": "0008"
+        "transaction": "0511|1675000|",
+        "timestamp": "1774342640"
       },
       {
         "franchise": "0010",
@@ -593,16 +591,16 @@
         "timestamp": "1774341618"
       },
       {
-        "transaction": "0529|1225000|",
-        "timestamp": "1774341597",
-        "franchise": "0008",
-        "type": "AUCTION_BID"
-      },
-      {
         "type": "AUCTION_BID",
         "franchise": "0008",
+        "timestamp": "1774341597",
+        "transaction": "0529|1225000|"
+      },
+      {
         "timestamp": "1774341575",
-        "transaction": "0512|1225000|"
+        "transaction": "0512|1225000|",
+        "type": "AUCTION_BID",
+        "franchise": "0008"
       },
       {
         "franchise": "0004",
@@ -611,10 +609,10 @@
         "timestamp": "1774330904"
       },
       {
-        "timestamp": "1774330861",
-        "transaction": "0506|975000|",
+        "franchise": "0004",
         "type": "AUCTION_BID",
-        "franchise": "0004"
+        "transaction": "0506|975000|",
+        "timestamp": "1774330861"
       },
       {
         "franchise": "0004",
@@ -629,10 +627,10 @@
         "timestamp": "1774330728"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0016",
+        "transaction": "15252|425000|",
         "timestamp": "1774317392",
-        "transaction": "15252|425000|"
+        "franchise": "0016",
+        "type": "AUCTION_WON"
       },
       {
         "timestamp": "1774315984",
@@ -647,10 +645,10 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0003",
         "timestamp": "1774315689",
-        "transaction": "12801|1400000|"
+        "transaction": "12801|1400000|",
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
         "type": "AUCTION_BID",
@@ -659,10 +657,10 @@
         "transaction": "12801|1200000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0003",
         "timestamp": "1774315653",
-        "transaction": "12801|1025000|"
+        "transaction": "12801|1025000|",
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
         "timestamp": "1774315636",
@@ -677,34 +675,34 @@
         "transaction": "12801|750000|"
       },
       {
-        "transaction": "13192|650000|",
-        "timestamp": "1774315602",
         "franchise": "0016",
+        "type": "AUCTION_WON",
+        "transaction": "13192|650000|",
+        "timestamp": "1774315602"
+      },
+      {
+        "transaction": "15331|1525000|",
+        "timestamp": "1774314444",
+        "franchise": "0007",
+        "type": "AUCTION_BID"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0012",
+        "timestamp": "1774314414",
+        "transaction": "13299|7000000|"
+      },
+      {
+        "transaction": "14860|3000000|",
+        "timestamp": "1774314030",
+        "franchise": "0007",
         "type": "AUCTION_WON"
       },
       {
         "franchise": "0007",
         "type": "AUCTION_BID",
-        "transaction": "15331|1525000|",
-        "timestamp": "1774314444"
-      },
-      {
-        "transaction": "13299|7000000|",
-        "timestamp": "1774314414",
-        "franchise": "0012",
-        "type": "AUCTION_BID"
-      },
-      {
-        "timestamp": "1774314030",
         "transaction": "14860|3000000|",
-        "type": "AUCTION_WON",
-        "franchise": "0007"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0007",
-        "timestamp": "1774303340",
-        "transaction": "14860|3000000|"
+        "timestamp": "1774303340"
       },
       {
         "timestamp": "1774299405",
@@ -713,22 +711,22 @@
         "franchise": "0004"
       },
       {
-        "timestamp": "1774295586",
-        "transaction": "15759|425000|",
+        "franchise": "0003",
         "type": "AUCTION_INIT",
-        "franchise": "0003"
-      },
-      {
-        "transaction": "13192|650000|",
-        "timestamp": "1774295009",
-        "franchise": "0016",
-        "type": "AUCTION_BID"
+        "transaction": "15759|425000|",
+        "timestamp": "1774295586"
       },
       {
         "type": "AUCTION_BID",
         "franchise": "0016",
+        "timestamp": "1774295009",
+        "transaction": "13192|650000|"
+      },
+      {
+        "transaction": "13192|600000|",
         "timestamp": "1774294955",
-        "transaction": "13192|600000|"
+        "franchise": "0016",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0004",
@@ -737,52 +735,52 @@
         "timestamp": "1774294292"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0007",
-        "type": "AUCTION_BID",
-        "transaction": "14860|2500000|",
-        "timestamp": "1774294261"
+        "timestamp": "1774294261",
+        "transaction": "14860|2500000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0003",
         "timestamp": "1774293614",
-        "transaction": "12801|500000|"
+        "transaction": "12801|500000|",
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0005",
+        "transaction": "14778|1550000|",
         "timestamp": "1774288368",
-        "transaction": "14778|1550000|"
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
-        "franchise": "0009",
-        "type": "AUCTION_INIT",
         "transaction": "12801|425000|",
-        "timestamp": "1774286065"
-      },
-      {
-        "type": "AUCTION_INIT",
+        "timestamp": "1774286065",
         "franchise": "0009",
-        "timestamp": "1774285943",
-        "transaction": "10700|425000|"
+        "type": "AUCTION_INIT"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_WON",
+        "franchise": "0009",
+        "type": "AUCTION_INIT",
+        "transaction": "10700|425000|",
+        "timestamp": "1774285943"
+      },
+      {
+        "timestamp": "1774285926",
         "transaction": "15284|5575000|",
-        "timestamp": "1774285926"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
-        "timestamp": "1774282851",
-        "transaction": "13633|600000|"
-      },
-      {
         "type": "AUCTION_WON",
+        "franchise": "0001"
+      },
+      {
+        "timestamp": "1774282851",
+        "transaction": "13633|600000|",
+        "type": "AUCTION_BID",
+        "franchise": "0014"
+      },
+      {
         "franchise": "0015",
-        "timestamp": "1774281160",
-        "transaction": "12620|3525000|"
+        "type": "AUCTION_WON",
+        "transaction": "12620|3525000|",
+        "timestamp": "1774281160"
       },
       {
         "franchise": "0015",
@@ -791,10 +789,10 @@
         "timestamp": "1774280439"
       },
       {
-        "transaction": "14778|1500000|",
-        "timestamp": "1774280413",
         "franchise": "0008",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "14778|1500000|",
+        "timestamp": "1774280413"
       },
       {
         "timestamp": "1774280331",
@@ -803,46 +801,46 @@
         "franchise": "0008"
       },
       {
+        "franchise": "0008",
+        "type": "AUCTION_BID",
         "transaction": "0512|1150000|",
-        "timestamp": "1774280276",
+        "timestamp": "1774280276"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0014",
+        "timestamp": "1774278966",
+        "transaction": "0511|1600000|"
+      },
+      {
+        "timestamp": "1774278941",
+        "transaction": "0529|1100000|",
+        "type": "AUCTION_BID",
+        "franchise": "0010"
+      },
+      {
+        "transaction": "0511|1500000|",
+        "timestamp": "1774278923",
         "franchise": "0008",
         "type": "AUCTION_BID"
       },
       {
-        "transaction": "0511|1600000|",
-        "timestamp": "1774278966",
-        "franchise": "0014",
+        "transaction": "0511|1400000|",
+        "timestamp": "1774278910",
+        "franchise": "0008",
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0010",
+        "franchise": "0008",
         "type": "AUCTION_BID",
-        "transaction": "0529|1100000|",
-        "timestamp": "1774278941"
+        "transaction": "0511|1350000|",
+        "timestamp": "1774278896"
       },
       {
-        "timestamp": "1774278923",
-        "transaction": "0511|1500000|",
+        "timestamp": "1774278876",
+        "transaction": "0511|1275000|",
         "type": "AUCTION_BID",
         "franchise": "0008"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
-        "timestamp": "1774278910",
-        "transaction": "0511|1400000|"
-      },
-      {
-        "transaction": "0511|1350000|",
-        "timestamp": "1774278896",
-        "franchise": "0008",
-        "type": "AUCTION_BID"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
-        "timestamp": "1774278876",
-        "transaction": "0511|1275000|"
       },
       {
         "franchise": "0008",
@@ -851,16 +849,16 @@
         "timestamp": "1774278862"
       },
       {
-        "timestamp": "1774277231",
-        "transaction": "15237|4200000|",
+        "franchise": "0009",
         "type": "AUCTION_WON",
-        "franchise": "0009"
+        "transaction": "15237|4200000|",
+        "timestamp": "1774277231"
       },
       {
-        "franchise": "0014",
-        "type": "AUCTION_WON",
         "transaction": "14777|6075000|",
-        "timestamp": "1774277027"
+        "timestamp": "1774277027",
+        "franchise": "0014",
+        "type": "AUCTION_WON"
       },
       {
         "type": "AUCTION_WON",
@@ -869,46 +867,46 @@
         "transaction": "14073|4025000|"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0002",
         "timestamp": "1774270386",
-        "transaction": "14835|4525000|"
-      },
-      {
-        "timestamp": "1774263927",
-        "transaction": "14085|2750000|",
+        "transaction": "14835|4525000|",
         "type": "AUCTION_WON",
         "franchise": "0002"
       },
       {
-        "transaction": "15282|6525000|",
-        "timestamp": "1774258444",
-        "franchise": "0006",
-        "type": "AUCTION_BID"
-      },
-      {
-        "franchise": "0004",
-        "type": "AUCTION_BID",
-        "transaction": "15282|6500000|",
-        "timestamp": "1774258419"
-      },
-      {
-        "transaction": "15241|1000000|",
-        "timestamp": "1774255050",
-        "franchise": "0004",
-        "type": "AUCTION_WON"
-      },
-      {
-        "franchise": "0013",
+        "franchise": "0002",
         "type": "AUCTION_WON",
-        "transaction": "14600|450000|",
-        "timestamp": "1774246409"
+        "transaction": "14085|2750000|",
+        "timestamp": "1774263927"
       },
       {
-        "transaction": "13116|4775000|",
-        "timestamp": "1774245748",
-        "franchise": "0003",
+        "timestamp": "1774258444",
+        "transaction": "15282|6525000|",
+        "type": "AUCTION_BID",
+        "franchise": "0006"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0004",
+        "timestamp": "1774258419",
+        "transaction": "15282|6500000|"
+      },
+      {
+        "timestamp": "1774255050",
+        "transaction": "15241|1000000|",
+        "type": "AUCTION_WON",
+        "franchise": "0004"
+      },
+      {
+        "transaction": "14600|450000|",
+        "timestamp": "1774246409",
+        "franchise": "0013",
         "type": "AUCTION_WON"
+      },
+      {
+        "type": "AUCTION_WON",
+        "franchise": "0003",
+        "timestamp": "1774245748",
+        "transaction": "13116|4775000|"
       },
       {
         "type": "AUCTION_WON",
@@ -917,16 +915,16 @@
         "transaction": "17424|425000|"
       },
       {
-        "franchise": "0004",
-        "type": "AUCTION_WON",
+        "timestamp": "1774242286",
         "transaction": "14122|725000|",
-        "timestamp": "1774242286"
+        "type": "AUCTION_WON",
+        "franchise": "0004"
       },
       {
-        "franchise": "0004",
         "type": "AUCTION_WON",
-        "transaction": "14080|450000|",
-        "timestamp": "1774242286"
+        "franchise": "0004",
+        "timestamp": "1774242286",
+        "transaction": "14080|450000|"
       },
       {
         "transaction": "14122|725000|",
@@ -935,16 +933,16 @@
         "type": "AUCTION_BID"
       },
       {
-        "transaction": "14080|450000|",
-        "timestamp": "1774241817",
+        "type": "AUCTION_BID",
         "franchise": "0004",
-        "type": "AUCTION_BID"
+        "timestamp": "1774241817",
+        "transaction": "14080|450000|"
       },
       {
-        "transaction": "15238|675000|",
-        "timestamp": "1774241159",
         "franchise": "0014",
-        "type": "AUCTION_WON"
+        "type": "AUCTION_WON",
+        "transaction": "15238|675000|",
+        "timestamp": "1774241159"
       },
       {
         "transaction": "13593|5000000|",
@@ -953,10 +951,10 @@
         "type": "AUCTION_WON"
       },
       {
-        "franchise": "0010",
-        "type": "AUCTION_BID",
+        "timestamp": "1774230027",
         "transaction": "15259|1700000|",
-        "timestamp": "1774230027"
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
         "franchise": "0010",
@@ -965,10 +963,10 @@
         "timestamp": "1774226456"
       },
       {
-        "timestamp": "1774226412",
-        "transaction": "14085|2750000|",
         "type": "AUCTION_BID",
-        "franchise": "0002"
+        "franchise": "0002",
+        "timestamp": "1774226412",
+        "transaction": "14085|2750000|"
       },
       {
         "timestamp": "1774226329",
@@ -977,46 +975,46 @@
         "franchise": "0011"
       },
       {
-        "timestamp": "1774226276",
         "transaction": "14122|700000|",
-        "type": "AUCTION_BID",
-        "franchise": "0004"
+        "timestamp": "1774226276",
+        "franchise": "0004",
+        "type": "AUCTION_BID"
       },
       {
+        "franchise": "0004",
+        "type": "AUCTION_BID",
         "transaction": "15259|1475000|",
-        "timestamp": "1774226220",
-        "franchise": "0004",
-        "type": "AUCTION_BID"
+        "timestamp": "1774226220"
       },
       {
-        "franchise": "0004",
         "type": "AUCTION_BID",
-        "transaction": "15259|1400000|",
-        "timestamp": "1774226207"
+        "franchise": "0004",
+        "timestamp": "1774226207",
+        "transaction": "15259|1400000|"
       },
       {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
         "transaction": "14778|1475000|",
-        "timestamp": "1774223572"
-      },
-      {
-        "transaction": "0511|1225000|",
-        "timestamp": "1774223523",
+        "timestamp": "1774223572",
         "franchise": "0008",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774217975",
-        "transaction": "14085|2525000|",
+        "franchise": "0008",
         "type": "AUCTION_BID",
-        "franchise": "0002"
+        "transaction": "0511|1225000|",
+        "timestamp": "1774223523"
       },
       {
-        "timestamp": "1774217921",
-        "transaction": "15259|1175000|",
         "type": "AUCTION_BID",
-        "franchise": "0004"
+        "franchise": "0002",
+        "timestamp": "1774217975",
+        "transaction": "14085|2525000|"
+      },
+      {
+        "transaction": "15259|1175000|",
+        "timestamp": "1774217921",
+        "franchise": "0004",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_BID",
@@ -1025,46 +1023,46 @@
         "transaction": "14085|2225000|"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0010",
-        "timestamp": "1774217860",
-        "transaction": "0529|1050000|"
-      },
-      {
-        "timestamp": "1774217819",
-        "transaction": "14085|2125000|",
         "type": "AUCTION_BID",
-        "franchise": "0002"
+        "transaction": "0529|1050000|",
+        "timestamp": "1774217860"
       },
       {
         "franchise": "0002",
         "type": "AUCTION_BID",
-        "transaction": "14085|1875000|",
-        "timestamp": "1774217755"
+        "transaction": "14085|2125000|",
+        "timestamp": "1774217819"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0002",
+        "timestamp": "1774217755",
+        "transaction": "14085|1875000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0002",
         "timestamp": "1774217725",
-        "transaction": "14085|1575000|",
-        "type": "AUCTION_BID",
-        "franchise": "0002"
+        "transaction": "14085|1575000|"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0005",
         "timestamp": "1774217058",
-        "transaction": "14778|1250000|",
-        "type": "AUCTION_BID",
-        "franchise": "0005"
-      },
-      {
-        "timestamp": "1774216293",
-        "transaction": "15972|3100000|",
-        "type": "AUCTION_WON",
-        "franchise": "0006"
+        "transaction": "14778|1250000|"
       },
       {
         "franchise": "0006",
         "type": "AUCTION_WON",
-        "transaction": "14056|4000000|",
-        "timestamp": "1774216112"
+        "transaction": "15972|3100000|",
+        "timestamp": "1774216293"
+      },
+      {
+        "type": "AUCTION_WON",
+        "franchise": "0006",
+        "timestamp": "1774216112",
+        "transaction": "14056|4000000|"
       },
       {
         "type": "AUCTION_BID",
@@ -1079,28 +1077,28 @@
         "timestamp": "1774212217"
       },
       {
-        "transaction": "13633|550000|",
-        "timestamp": "1774211273",
+        "type": "AUCTION_BID",
         "franchise": "0008",
-        "type": "AUCTION_BID"
+        "timestamp": "1774211273",
+        "transaction": "13633|550000|"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0004",
         "timestamp": "1774207315",
-        "transaction": "15282|6025000|",
-        "type": "AUCTION_BID",
-        "franchise": "0004"
+        "transaction": "15282|6025000|"
       },
       {
-        "transaction": "15789|4750000|",
-        "timestamp": "1774207151",
         "franchise": "0013",
-        "type": "AUCTION_WON"
+        "type": "AUCTION_WON",
+        "transaction": "15789|4750000|",
+        "timestamp": "1774207151"
       },
       {
-        "timestamp": "1774207118",
-        "transaction": "15282|6000000|",
+        "franchise": "0006",
         "type": "AUCTION_BID",
-        "franchise": "0006"
+        "transaction": "15282|6000000|",
+        "timestamp": "1774207118"
       },
       {
         "type": "AUCTION_WON",
@@ -1109,22 +1107,22 @@
         "transaction": "13630|5000000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0004",
         "timestamp": "1774202214",
-        "transaction": "15331|1400000|"
-      },
-      {
+        "transaction": "15331|1400000|",
         "type": "AUCTION_BID",
-        "franchise": "0005",
-        "timestamp": "1774202188",
-        "transaction": "15331|1200000|"
+        "franchise": "0004"
       },
       {
-        "transaction": "15331|1100000|",
+        "timestamp": "1774202188",
+        "transaction": "15331|1200000|",
+        "type": "AUCTION_BID",
+        "franchise": "0005"
+      },
+      {
         "timestamp": "1774202164",
-        "franchise": "0005",
-        "type": "AUCTION_BID"
+        "transaction": "15331|1100000|",
+        "type": "AUCTION_BID",
+        "franchise": "0005"
       },
       {
         "timestamp": "1774202143",
@@ -1133,46 +1131,46 @@
         "franchise": "0005"
       },
       {
-        "franchise": "0002",
-        "type": "AUCTION_WON",
+        "timestamp": "1774201704",
         "transaction": "11150|1225000|",
-        "timestamp": "1774201704"
+        "type": "AUCTION_WON",
+        "franchise": "0002"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0012",
-        "type": "AUCTION_BID",
-        "transaction": "13299|6525000|",
-        "timestamp": "1774200820"
+        "timestamp": "1774200820",
+        "transaction": "13299|6525000|"
       },
       {
-        "franchise": "0002",
-        "type": "AUCTION_BID",
         "transaction": "11150|1225000|",
-        "timestamp": "1774200607"
-      },
-      {
-        "type": "AUCTION_BID",
+        "timestamp": "1774200607",
         "franchise": "0002",
-        "timestamp": "1774200588",
-        "transaction": "11150|1150000|"
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0002",
         "type": "AUCTION_BID",
+        "transaction": "11150|1150000|",
+        "timestamp": "1774200588"
+      },
+      {
+        "timestamp": "1774200574",
         "transaction": "11150|1050000|",
-        "timestamp": "1774200574"
-      },
-      {
-        "type": "AUCTION_WON",
-        "franchise": "0014",
-        "timestamp": "1774199507",
-        "transaction": "16219|425000|"
-      },
-      {
         "type": "AUCTION_BID",
-        "franchise": "0010",
+        "franchise": "0002"
+      },
+      {
+        "franchise": "0014",
+        "type": "AUCTION_WON",
+        "transaction": "16219|425000|",
+        "timestamp": "1774199507"
+      },
+      {
         "timestamp": "1774199056",
-        "transaction": "0512|1000000|"
+        "transaction": "0512|1000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
         "franchise": "0008",
@@ -1187,34 +1185,34 @@
         "franchise": "0012"
       },
       {
-        "transaction": "12141|525000|",
-        "timestamp": "1774197559",
         "franchise": "0015",
+        "type": "AUCTION_WON",
+        "transaction": "12141|525000|",
+        "timestamp": "1774197559"
+      },
+      {
+        "transaction": "16757|775000|",
+        "timestamp": "1774192168",
+        "franchise": "0004",
         "type": "AUCTION_WON"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0004",
-        "timestamp": "1774192168",
-        "transaction": "16757|775000|"
-      },
-      {
-        "transaction": "0518|1075000|",
-        "timestamp": "1774192168",
         "franchise": "0013",
-        "type": "AUCTION_WON"
-      },
-      {
-        "franchise": "0004",
         "type": "AUCTION_WON",
-        "transaction": "16164|975000|",
-        "timestamp": "1774189700"
+        "transaction": "0518|1075000|",
+        "timestamp": "1774192168"
       },
       {
         "timestamp": "1774189700",
-        "transaction": "15979|900000|",
+        "transaction": "16164|975000|",
         "type": "AUCTION_WON",
-        "franchise": "0012"
+        "franchise": "0004"
+      },
+      {
+        "franchise": "0012",
+        "type": "AUCTION_WON",
+        "transaction": "15979|900000|",
+        "timestamp": "1774189700"
       },
       {
         "type": "AUCTION_INIT",
@@ -1223,10 +1221,10 @@
         "transaction": "15252|425000|"
       },
       {
-        "transaction": "15241|1000000|",
         "timestamp": "1774186503",
-        "franchise": "0004",
-        "type": "AUCTION_BID"
+        "transaction": "15241|1000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0004"
       },
       {
         "type": "AUCTION_BID",
@@ -1235,28 +1233,28 @@
         "transaction": "15241|750000|"
       },
       {
-        "timestamp": "1774185930",
-        "transaction": "13192|425000|",
         "type": "AUCTION_INIT",
-        "franchise": "0016"
+        "franchise": "0016",
+        "timestamp": "1774185930",
+        "transaction": "13192|425000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0007",
+        "transaction": "14860|2075000|",
         "timestamp": "1774184129",
-        "transaction": "14860|2075000|"
-      },
-      {
-        "timestamp": "1774184060",
-        "transaction": "13299|6025000|",
-        "type": "AUCTION_BID",
-        "franchise": "0007"
-      },
-      {
-        "transaction": "14143|775000|",
-        "timestamp": "1774169801",
-        "franchise": "0004",
+        "franchise": "0007",
         "type": "AUCTION_BID"
+      },
+      {
+        "transaction": "13299|6025000|",
+        "timestamp": "1774184060",
+        "franchise": "0007",
+        "type": "AUCTION_BID"
+      },
+      {
+        "timestamp": "1774169801",
+        "transaction": "14143|775000|",
+        "type": "AUCTION_BID",
+        "franchise": "0004"
       },
       {
         "timestamp": "1774168599",
@@ -1265,16 +1263,16 @@
         "franchise": "0007"
       },
       {
-        "transaction": "13590|3350000|",
         "timestamp": "1774165728",
-        "franchise": "0003",
-        "type": "AUCTION_WON"
+        "transaction": "13590|3350000|",
+        "type": "AUCTION_WON",
+        "franchise": "0003"
       },
       {
-        "franchise": "0013",
         "type": "AUCTION_WON",
-        "transaction": "11244|4750000|",
-        "timestamp": "1774163737"
+        "franchise": "0013",
+        "timestamp": "1774163737",
+        "transaction": "11244|4750000|"
       },
       {
         "franchise": "0005",
@@ -1295,34 +1293,34 @@
         "timestamp": "1774162571"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0004",
         "timestamp": "1774157312",
-        "transaction": "0506|775000|"
-      },
-      {
-        "franchise": "0012",
-        "type": "AUCTION_WON",
-        "transaction": "7836|1250000|",
-        "timestamp": "1774157295"
-      },
-      {
-        "transaction": "0506|725000|",
-        "timestamp": "1774157198",
-        "franchise": "0011",
-        "type": "AUCTION_BID"
-      },
-      {
-        "franchise": "0006",
+        "transaction": "0506|775000|",
         "type": "AUCTION_BID",
-        "transaction": "15972|3100000|",
-        "timestamp": "1774156426"
+        "franchise": "0004"
       },
       {
-        "transaction": "15284|5575000|",
-        "timestamp": "1774156070",
+        "transaction": "7836|1250000|",
+        "timestamp": "1774157295",
+        "franchise": "0012",
+        "type": "AUCTION_WON"
+      },
+      {
+        "timestamp": "1774157198",
+        "transaction": "0506|725000|",
+        "type": "AUCTION_BID",
+        "franchise": "0011"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0006",
+        "timestamp": "1774156426",
+        "transaction": "15972|3100000|"
+      },
+      {
+        "type": "AUCTION_BID",
         "franchise": "0001",
-        "type": "AUCTION_BID"
+        "timestamp": "1774156070",
+        "transaction": "15284|5575000|"
       },
       {
         "franchise": "0015",
@@ -1331,10 +1329,10 @@
         "timestamp": "1774151286"
       },
       {
-        "transaction": "15716|800000|",
-        "timestamp": "1774150824",
         "franchise": "0015",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15716|800000|",
+        "timestamp": "1774150824"
       },
       {
         "transaction": "0529|850000|",
@@ -1343,22 +1341,22 @@
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774149822",
-        "transaction": "0531|1050000|",
-        "type": "AUCTION_BID",
-        "franchise": "0016"
-      },
-      {
         "franchise": "0016",
         "type": "AUCTION_BID",
-        "transaction": "0531|1000000|",
-        "timestamp": "1774149731"
+        "transaction": "0531|1050000|",
+        "timestamp": "1774149822"
       },
       {
-        "type": "AUCTION_BID",
+        "transaction": "0531|1000000|",
+        "timestamp": "1774149731",
+        "franchise": "0016",
+        "type": "AUCTION_BID"
+      },
+      {
         "franchise": "0013",
-        "timestamp": "1774149695",
-        "transaction": "0518|1075000|"
+        "type": "AUCTION_BID",
+        "transaction": "0518|1075000|",
+        "timestamp": "1774149695"
       },
       {
         "timestamp": "1774149669",
@@ -1367,64 +1365,64 @@
         "franchise": "0013"
       },
       {
-        "timestamp": "1774149477",
-        "transaction": "13671|4000000|",
         "type": "AUCTION_WON",
-        "franchise": "0015"
+        "franchise": "0015",
+        "timestamp": "1774149477",
+        "transaction": "13671|4000000|"
       },
       {
-        "franchise": "0014",
-        "type": "AUCTION_BID",
         "transaction": "12620|3500000|",
-        "timestamp": "1774147850"
+        "timestamp": "1774147850",
+        "franchise": "0014",
+        "type": "AUCTION_BID"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0002",
-        "type": "AUCTION_BID",
-        "transaction": "11150|1000000|",
-        "timestamp": "1774147752"
+        "timestamp": "1774147752",
+        "transaction": "11150|1000000|"
       },
       {
-        "timestamp": "1774147625",
+        "franchise": "0009",
+        "type": "AUCTION_BID",
         "transaction": "15237|4200000|",
-        "type": "AUCTION_BID",
-        "franchise": "0009"
+        "timestamp": "1774147625"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0014",
-        "timestamp": "1774147399",
-        "transaction": "12620|3300000|"
+        "type": "AUCTION_BID",
+        "transaction": "12620|3300000|",
+        "timestamp": "1774147399"
       },
       {
-        "transaction": "15716|750000|",
-        "timestamp": "1774147363",
         "franchise": "0010",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15716|750000|",
+        "timestamp": "1774147363"
       },
       {
+        "franchise": "0014",
+        "type": "AUCTION_BID",
         "transaction": "12620|3175000|",
-        "timestamp": "1774147363",
-        "franchise": "0014",
-        "type": "AUCTION_BID"
+        "timestamp": "1774147363"
       },
       {
-        "timestamp": "1774147358",
         "transaction": "13299|5275000|",
-        "type": "AUCTION_BID",
-        "franchise": "0012"
-      },
-      {
-        "transaction": "0518|975000|",
-        "timestamp": "1774147015",
-        "franchise": "0013",
+        "timestamp": "1774147358",
+        "franchise": "0012",
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0014",
         "type": "AUCTION_BID",
+        "franchise": "0013",
+        "timestamp": "1774147015",
+        "transaction": "0518|975000|"
+      },
+      {
         "transaction": "0511|1150000|",
-        "timestamp": "1774146978"
+        "timestamp": "1774146978",
+        "franchise": "0014",
+        "type": "AUCTION_BID"
       },
       {
         "transaction": "0511|1100000|",
@@ -1433,40 +1431,40 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
+        "transaction": "14777|6075000|",
         "timestamp": "1774146792",
-        "transaction": "14777|6075000|"
-      },
-      {
         "franchise": "0014",
-        "type": "AUCTION_BID",
-        "transaction": "14073|4025000|",
-        "timestamp": "1774146778"
-      },
-      {
-        "franchise": "0004",
-        "type": "AUCTION_BID",
-        "transaction": "14860|2025000|",
-        "timestamp": "1774141046"
-      },
-      {
-        "timestamp": "1774140785",
-        "transaction": "14835|4525000|",
-        "type": "AUCTION_BID",
-        "franchise": "0002"
-      },
-      {
-        "timestamp": "1774140572",
-        "transaction": "13671|4000000|",
-        "type": "AUCTION_BID",
-        "franchise": "0015"
-      },
-      {
-        "transaction": "11244|4750000|",
-        "timestamp": "1774140474",
-        "franchise": "0013",
         "type": "AUCTION_BID"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0014",
+        "timestamp": "1774146778",
+        "transaction": "14073|4025000|"
+      },
+      {
+        "transaction": "14860|2025000|",
+        "timestamp": "1774141046",
+        "franchise": "0004",
+        "type": "AUCTION_BID"
+      },
+      {
+        "transaction": "14835|4525000|",
+        "timestamp": "1774140785",
+        "franchise": "0002",
+        "type": "AUCTION_BID"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0015",
+        "timestamp": "1774140572",
+        "transaction": "13671|4000000|"
+      },
+      {
+        "timestamp": "1774140474",
+        "transaction": "11244|4750000|",
+        "type": "AUCTION_BID",
+        "franchise": "0013"
       },
       {
         "transaction": "13138|425000|",
@@ -1475,10 +1473,10 @@
         "type": "AUCTION_INIT"
       },
       {
-        "franchise": "0005",
-        "type": "AUCTION_BID",
         "transaction": "15337|1000000|",
-        "timestamp": "1774139741"
+        "timestamp": "1774139741",
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_BID",
@@ -1493,28 +1491,28 @@
         "timestamp": "1774139540"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0007",
-        "timestamp": "1774139461",
-        "transaction": "14860|1300000|"
+        "type": "AUCTION_BID",
+        "transaction": "14860|1300000|",
+        "timestamp": "1774139461"
       },
       {
-        "timestamp": "1774139446",
+        "franchise": "0007",
+        "type": "AUCTION_BID",
         "transaction": "14860|1225000|",
+        "timestamp": "1774139446"
+      },
+      {
         "type": "AUCTION_BID",
-        "franchise": "0007"
-      },
-      {
-        "transaction": "14860|1125000|",
-        "timestamp": "1774139427",
         "franchise": "0007",
-        "type": "AUCTION_BID"
+        "timestamp": "1774139427",
+        "transaction": "14860|1125000|"
       },
       {
-        "franchise": "0012",
         "type": "AUCTION_WON",
-        "transaction": "16036|800000|",
-        "timestamp": "1774138598"
+        "franchise": "0012",
+        "timestamp": "1774138598",
+        "transaction": "16036|800000|"
       },
       {
         "transaction": "15256|4600000|",
@@ -1529,22 +1527,22 @@
         "timestamp": "1774137924"
       },
       {
-        "timestamp": "1774133669",
-        "transaction": "15329|4500000|",
+        "franchise": "0006",
         "type": "AUCTION_WON",
-        "franchise": "0006"
+        "transaction": "15329|4500000|",
+        "timestamp": "1774133669"
       },
       {
-        "franchise": "0004",
-        "type": "AUCTION_BID",
+        "timestamp": "1774133067",
         "transaction": "16164|975000|",
-        "timestamp": "1774133067"
-      },
-      {
-        "timestamp": "1774133003",
-        "transaction": "16164|925000|",
         "type": "AUCTION_BID",
         "franchise": "0004"
+      },
+      {
+        "transaction": "16164|925000|",
+        "timestamp": "1774133003",
+        "franchise": "0004",
+        "type": "AUCTION_BID"
       },
       {
         "transaction": "16164|850000|",
@@ -1553,16 +1551,16 @@
         "type": "AUCTION_BID"
       },
       {
-        "transaction": "12616|1800000|",
         "timestamp": "1774132941",
-        "franchise": "0006",
-        "type": "AUCTION_WON"
+        "transaction": "12616|1800000|",
+        "type": "AUCTION_WON",
+        "franchise": "0006"
       },
       {
-        "transaction": "11150|950000|",
-        "timestamp": "1774132828",
+        "type": "AUCTION_BID",
         "franchise": "0002",
-        "type": "AUCTION_BID"
+        "timestamp": "1774132828",
+        "transaction": "11150|950000|"
       },
       {
         "type": "AUCTION_BID",
@@ -1571,34 +1569,34 @@
         "transaction": "14860|1025000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
         "timestamp": "1774132492",
-        "transaction": "0511|1075000|"
-      },
-      {
-        "timestamp": "1774132411",
-        "transaction": "14778|975000|",
+        "transaction": "0511|1075000|",
         "type": "AUCTION_BID",
         "franchise": "0008"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0013",
+        "franchise": "0008",
+        "timestamp": "1774132411",
+        "transaction": "14778|975000|"
+      },
+      {
         "timestamp": "1774132378",
-        "transaction": "13630|5000000|"
+        "transaction": "13630|5000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0013"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0002",
-        "timestamp": "1774132366",
-        "transaction": "11150|850000|"
+        "type": "AUCTION_BID",
+        "transaction": "11150|850000|",
+        "timestamp": "1774132366"
       },
       {
-        "franchise": "0005",
-        "type": "AUCTION_BID",
+        "timestamp": "1774132327",
         "transaction": "14778|825000|",
-        "timestamp": "1774132327"
+        "type": "AUCTION_BID",
+        "franchise": "0005"
       },
       {
         "franchise": "0006",
@@ -1613,22 +1611,22 @@
         "transaction": "11244|4000000|"
       },
       {
-        "transaction": "11244|3750000|",
-        "timestamp": "1774132122",
-        "franchise": "0013",
-        "type": "AUCTION_BID"
-      },
-      {
         "type": "AUCTION_BID",
-        "franchise": "0002",
-        "timestamp": "1774132078",
-        "transaction": "14085|1275000|"
+        "franchise": "0013",
+        "timestamp": "1774132122",
+        "transaction": "11244|3750000|"
       },
       {
-        "transaction": "7836|1250000|",
-        "timestamp": "1774131964",
-        "franchise": "0012",
+        "transaction": "14085|1275000|",
+        "timestamp": "1774132078",
+        "franchise": "0002",
         "type": "AUCTION_BID"
+      },
+      {
+        "franchise": "0012",
+        "type": "AUCTION_BID",
+        "transaction": "7836|1250000|",
+        "timestamp": "1774131964"
       },
       {
         "franchise": "0014",
@@ -1637,10 +1635,10 @@
         "timestamp": "1774131661"
       },
       {
-        "timestamp": "1774127552",
-        "transaction": "0531|925000|",
         "type": "AUCTION_BID",
-        "franchise": "0016"
+        "franchise": "0016",
+        "timestamp": "1774127552",
+        "transaction": "0531|925000|"
       },
       {
         "timestamp": "1774127552",
@@ -1649,10 +1647,10 @@
         "franchise": "0010"
       },
       {
-        "timestamp": "1774120451",
-        "transaction": "15241|450000|",
         "type": "AUCTION_BID",
-        "franchise": "0004"
+        "franchise": "0004",
+        "timestamp": "1774120451",
+        "transaction": "15241|450000|"
       },
       {
         "timestamp": "1774116905",
@@ -1667,34 +1665,34 @@
         "timestamp": "1774116806"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
+        "timestamp": "1774116339",
         "transaction": "15256|4600000|",
-        "timestamp": "1774116339"
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
+        "timestamp": "1774116154",
         "transaction": "15256|4500000|",
-        "timestamp": "1774116154"
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
-        "transaction": "14073|4000000|",
-        "timestamp": "1774116083",
         "franchise": "0001",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "14073|4000000|",
+        "timestamp": "1774116083"
       },
       {
-        "timestamp": "1774115990",
+        "franchise": "0003",
+        "type": "AUCTION_BID",
         "transaction": "14835|4025000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
+        "timestamp": "1774115990"
       },
       {
-        "franchise": "0015",
-        "type": "AUCTION_BID",
         "transaction": "13671|2500000|",
-        "timestamp": "1774115990"
+        "timestamp": "1774115990",
+        "franchise": "0015",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0016",
@@ -1703,28 +1701,28 @@
         "timestamp": "1774115390"
       },
       {
-        "franchise": "0003",
-        "type": "AUCTION_BID",
+        "timestamp": "1774115224",
         "transaction": "13116|4775000|",
-        "timestamp": "1774115224"
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
-        "transaction": "14102|2050000|",
-        "timestamp": "1774113825",
         "franchise": "0009",
-        "type": "AUCTION_WON"
+        "type": "AUCTION_WON",
+        "transaction": "14102|2050000|",
+        "timestamp": "1774113825"
       },
       {
-        "franchise": "0005",
-        "type": "AUCTION_INIT",
         "transaction": "17424|425000|",
-        "timestamp": "1774112926"
+        "timestamp": "1774112926",
+        "franchise": "0005",
+        "type": "AUCTION_INIT"
       },
       {
-        "transaction": "14080|425000|",
-        "timestamp": "1774112685",
+        "type": "AUCTION_INIT",
         "franchise": "0004",
-        "type": "AUCTION_INIT"
+        "timestamp": "1774112685",
+        "transaction": "14080|425000|"
       },
       {
         "franchise": "0004",
@@ -1733,10 +1731,10 @@
         "timestamp": "1774112652"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0004",
+        "transaction": "15259|1125000|",
         "timestamp": "1774112349",
-        "transaction": "15259|1125000|"
+        "franchise": "0004",
+        "type": "AUCTION_BID"
       },
       {
         "timestamp": "1774112349",
@@ -1751,10 +1749,10 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0014",
-        "type": "AUCTION_BID",
         "transaction": "15238|675000|",
-        "timestamp": "1774111003"
+        "timestamp": "1774111003",
+        "franchise": "0014",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_BID",
@@ -1763,16 +1761,16 @@
         "transaction": "15238|575000|"
       },
       {
-        "timestamp": "1774110900",
-        "transaction": "14102|2050000|",
+        "franchise": "0009",
         "type": "AUCTION_BID",
-        "franchise": "0009"
+        "transaction": "14102|2050000|",
+        "timestamp": "1774110900"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0003",
         "timestamp": "1774110888",
-        "transaction": "14871|2775000|"
+        "transaction": "14871|2775000|",
+        "type": "AUCTION_WON",
+        "franchise": "0003"
       },
       {
         "transaction": "14778|650000|",
@@ -1793,10 +1791,10 @@
         "transaction": "14073|3800000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0001",
         "timestamp": "1774110599",
-        "transaction": "13593|5000000|"
+        "transaction": "13593|5000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
         "franchise": "0001",
@@ -1805,76 +1803,76 @@
         "timestamp": "1774110558"
       },
       {
-        "timestamp": "1774110541",
+        "franchise": "0014",
+        "type": "AUCTION_BID",
         "transaction": "14085|1025000|",
+        "timestamp": "1774110541"
+      },
+      {
+        "transaction": "14073|3600000|",
+        "timestamp": "1774110516",
+        "franchise": "0001",
+        "type": "AUCTION_BID"
+      },
+      {
+        "transaction": "0531|800000|",
+        "timestamp": "1774110464",
+        "franchise": "0016",
+        "type": "AUCTION_BID"
+      },
+      {
+        "franchise": "0004",
+        "type": "AUCTION_BID",
+        "transaction": "15716|625000|",
+        "timestamp": "1774110441"
+      },
+      {
+        "franchise": "0007",
+        "type": "AUCTION_BID",
+        "transaction": "14860|975000|",
+        "timestamp": "1774110346"
+      },
+      {
+        "franchise": "0014",
+        "type": "AUCTION_BID",
+        "transaction": "13633|500000|",
+        "timestamp": "1774110346"
+      },
+      {
+        "timestamp": "1774110267",
+        "transaction": "12620|3025000|",
         "type": "AUCTION_BID",
         "franchise": "0014"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0001",
-        "timestamp": "1774110516",
-        "transaction": "14073|3600000|"
-      },
-      {
-        "franchise": "0016",
-        "type": "AUCTION_BID",
-        "transaction": "0531|800000|",
-        "timestamp": "1774110464"
-      },
-      {
-        "transaction": "15716|625000|",
-        "timestamp": "1774110441",
-        "franchise": "0004",
-        "type": "AUCTION_BID"
-      },
-      {
-        "timestamp": "1774110346",
-        "transaction": "14860|975000|",
-        "type": "AUCTION_BID",
-        "franchise": "0007"
-      },
-      {
-        "transaction": "13633|500000|",
-        "timestamp": "1774110346",
-        "franchise": "0014",
-        "type": "AUCTION_BID"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
-        "timestamp": "1774110267",
-        "transaction": "12620|3025000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
         "timestamp": "1774103923",
-        "transaction": "15979|900000|"
+        "transaction": "15979|900000|",
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
-        "timestamp": "1774103057",
+        "franchise": "0006",
+        "type": "AUCTION_BID",
         "transaction": "15282|5775000|",
-        "type": "AUCTION_BID",
-        "franchise": "0006"
+        "timestamp": "1774103057"
       },
       {
-        "transaction": "15789|4750000|",
-        "timestamp": "1774103005",
+        "type": "AUCTION_BID",
         "franchise": "0013",
-        "type": "AUCTION_BID"
+        "timestamp": "1774103005",
+        "transaction": "15789|4750000|"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0002",
-        "timestamp": "1774101690",
-        "transaction": "15282|5025000|"
+        "type": "AUCTION_BID",
+        "transaction": "15282|5025000|",
+        "timestamp": "1774101690"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_BID",
+        "timestamp": "1774100456",
         "transaction": "13593|4775000|",
-        "timestamp": "1774100456"
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
         "franchise": "0009",
@@ -1883,34 +1881,34 @@
         "timestamp": "1774100290"
       },
       {
+        "franchise": "0005",
+        "type": "AUCTION_BID",
         "transaction": "15331|800000|",
-        "timestamp": "1774100231",
-        "franchise": "0005",
-        "type": "AUCTION_BID"
+        "timestamp": "1774100231"
       },
       {
-        "transaction": "14073|3500000|",
-        "timestamp": "1774100166",
         "franchise": "0001",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "14073|3500000|",
+        "timestamp": "1774100166"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0004",
-        "type": "AUCTION_BID",
-        "transaction": "14835|4000000|",
-        "timestamp": "1774100096"
+        "timestamp": "1774100096",
+        "transaction": "14835|4000000|"
       },
       {
-        "franchise": "0007",
-        "type": "AUCTION_BID",
+        "timestamp": "1774099596",
         "transaction": "14860|950000|",
-        "timestamp": "1774099596"
+        "type": "AUCTION_BID",
+        "franchise": "0007"
       },
       {
-        "transaction": "15238|425000|",
-        "timestamp": "1774099380",
         "franchise": "0005",
-        "type": "AUCTION_INIT"
+        "type": "AUCTION_INIT",
+        "transaction": "15238|425000|",
+        "timestamp": "1774099380"
       },
       {
         "timestamp": "1774098718",
@@ -1919,58 +1917,58 @@
         "franchise": "0004"
       },
       {
-        "timestamp": "1774098718",
         "transaction": "13133|425000|",
-        "type": "AUCTION_WON",
-        "franchise": "0004"
-      },
-      {
-        "type": "AUCTION_WON",
-        "franchise": "0009",
-        "timestamp": "1774098575",
-        "transaction": "14836|9800000|"
-      },
-      {
-        "type": "AUCTION_WON",
-        "franchise": "0002",
-        "timestamp": "1774098343",
-        "transaction": "16608|450000|"
-      },
-      {
-        "franchise": "0002",
-        "type": "AUCTION_WON",
-        "transaction": "14832|9500000|",
-        "timestamp": "1774097733"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0009",
-        "timestamp": "1774096918",
-        "transaction": "14102|2000000|"
-      },
-      {
-        "franchise": "0015",
-        "type": "AUCTION_BID",
-        "transaction": "15237|3900000|",
-        "timestamp": "1774096875"
-      },
-      {
-        "timestamp": "1774096745",
-        "transaction": "16608|450000|",
-        "type": "AUCTION_BID",
-        "franchise": "0002"
+        "timestamp": "1774098718",
+        "franchise": "0004",
+        "type": "AUCTION_WON"
       },
       {
         "transaction": "14836|9800000|",
-        "timestamp": "1774096547",
+        "timestamp": "1774098575",
         "franchise": "0009",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_WON"
       },
       {
+        "timestamp": "1774098343",
+        "transaction": "16608|450000|",
+        "type": "AUCTION_WON",
+        "franchise": "0002"
+      },
+      {
+        "type": "AUCTION_WON",
         "franchise": "0002",
+        "timestamp": "1774097733",
+        "transaction": "14832|9500000|"
+      },
+      {
+        "timestamp": "1774096918",
+        "transaction": "14102|2000000|",
         "type": "AUCTION_BID",
-        "transaction": "14832|9500000|",
-        "timestamp": "1774096480"
+        "franchise": "0009"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0015",
+        "timestamp": "1774096875",
+        "transaction": "15237|3900000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0002",
+        "timestamp": "1774096745",
+        "transaction": "16608|450000|"
+      },
+      {
+        "timestamp": "1774096547",
+        "transaction": "14836|9800000|",
+        "type": "AUCTION_BID",
+        "franchise": "0009"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0002",
+        "timestamp": "1774096480",
+        "transaction": "14832|9500000|"
       },
       {
         "timestamp": "1774088031",
@@ -1985,10 +1983,10 @@
         "transaction": "16164|800000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
+        "transaction": "0512|775000|",
         "timestamp": "1774087759",
-        "transaction": "0512|775000|"
+        "franchise": "0008",
+        "type": "AUCTION_BID"
       },
       {
         "transaction": "15282|3525000|",
@@ -1997,16 +1995,16 @@
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774086598",
-        "transaction": "15789|4500000|",
+        "franchise": "0013",
         "type": "AUCTION_BID",
-        "franchise": "0013"
+        "transaction": "15789|4500000|",
+        "timestamp": "1774086598"
       },
       {
-        "timestamp": "1774086562",
         "transaction": "15972|3050000|",
-        "type": "AUCTION_BID",
-        "franchise": "0006"
+        "timestamp": "1774086562",
+        "franchise": "0006",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0006",
@@ -2015,10 +2013,10 @@
         "timestamp": "1774086451"
       },
       {
-        "franchise": "0009",
-        "type": "AUCTION_BID",
         "transaction": "14777|5000000|",
-        "timestamp": "1774086408"
+        "timestamp": "1774086408",
+        "franchise": "0009",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0003",
@@ -2027,28 +2025,28 @@
         "timestamp": "1774086365"
       },
       {
-        "transaction": "15253|3250000|",
         "timestamp": "1774086365",
-        "franchise": "0003",
+        "transaction": "15253|3250000|",
+        "type": "AUCTION_WON",
+        "franchise": "0003"
+      },
+      {
+        "transaction": "14823|2125000|",
+        "timestamp": "1774086365",
+        "franchise": "0001",
         "type": "AUCTION_WON"
       },
       {
+        "type": "AUCTION_WON",
+        "franchise": "0005",
         "timestamp": "1774086365",
-        "transaction": "14823|2125000|",
+        "transaction": "13303|425000|"
+      },
+      {
+        "timestamp": "1774086365",
+        "transaction": "12611|3400000|",
         "type": "AUCTION_WON",
         "franchise": "0001"
-      },
-      {
-        "transaction": "13303|425000|",
-        "timestamp": "1774086365",
-        "franchise": "0005",
-        "type": "AUCTION_WON"
-      },
-      {
-        "type": "AUCTION_WON",
-        "franchise": "0001",
-        "timestamp": "1774086365",
-        "transaction": "12611|3400000|"
       },
       {
         "type": "AUCTION_BID",
@@ -2057,16 +2055,16 @@
         "transaction": "15789|4025000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0006",
         "timestamp": "1774077453",
-        "transaction": "15789|3025000|"
+        "transaction": "15789|3025000|",
+        "type": "AUCTION_BID",
+        "franchise": "0006"
       },
       {
-        "timestamp": "1774077420",
         "transaction": "13630|4025000|",
-        "type": "AUCTION_BID",
-        "franchise": "0013"
+        "timestamp": "1774077420",
+        "franchise": "0013",
+        "type": "AUCTION_BID"
       },
       {
         "transaction": "13630|3025000|",
@@ -2075,22 +2073,22 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0012",
-        "timestamp": "1774077127",
-        "transaction": "14085|1000000|"
+        "type": "AUCTION_BID",
+        "transaction": "14085|1000000|",
+        "timestamp": "1774077127"
       },
       {
-        "timestamp": "1774077113",
-        "transaction": "15281|10000000|",
+        "franchise": "0013",
         "type": "AUCTION_WON",
-        "franchise": "0013"
+        "transaction": "15281|10000000|",
+        "timestamp": "1774077113"
       },
       {
-        "franchise": "0012",
         "type": "AUCTION_BID",
-        "transaction": "14085|825000|",
-        "timestamp": "1774077090"
+        "franchise": "0012",
+        "timestamp": "1774077090",
+        "transaction": "14085|825000|"
       },
       {
         "franchise": "0012",
@@ -2099,10 +2097,10 @@
         "timestamp": "1774074964"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0002",
         "timestamp": "1774071984",
-        "transaction": "11150|750000|"
+        "transaction": "11150|750000|",
+        "type": "AUCTION_BID",
+        "franchise": "0002"
       },
       {
         "transaction": "13674|5000000|",
@@ -2111,10 +2109,10 @@
         "type": "AUCTION_WON"
       },
       {
-        "timestamp": "1774071508",
-        "transaction": "15738|550000|",
         "type": "AUCTION_WON",
-        "franchise": "0004"
+        "franchise": "0004",
+        "timestamp": "1774071508",
+        "transaction": "15738|550000|"
       },
       {
         "transaction": "16843|525000|",
@@ -2135,16 +2133,16 @@
         "franchise": "0014"
       },
       {
-        "timestamp": "1774069406",
-        "transaction": "13116|4500000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
-      },
-      {
         "franchise": "0003",
         "type": "AUCTION_BID",
+        "transaction": "13116|4500000|",
+        "timestamp": "1774069406"
+      },
+      {
+        "timestamp": "1774069352",
         "transaction": "13116|4150000|",
-        "timestamp": "1774069352"
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
         "franchise": "0003",
@@ -2153,34 +2151,34 @@
         "timestamp": "1774069331"
       },
       {
-        "timestamp": "1774069306",
-        "transaction": "13116|4000000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
-      },
-      {
         "type": "AUCTION_BID",
         "franchise": "0003",
-        "timestamp": "1774069290",
-        "transaction": "13116|3875000|"
+        "timestamp": "1774069306",
+        "transaction": "13116|4000000|"
       },
       {
-        "transaction": "11671|4000000|",
-        "timestamp": "1774068582",
-        "franchise": "0007",
-        "type": "AUCTION_BID"
+        "franchise": "0003",
+        "type": "AUCTION_BID",
+        "transaction": "13116|3875000|",
+        "timestamp": "1774069290"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0012",
-        "timestamp": "1774068464",
-        "transaction": "9431|3775000|"
+        "franchise": "0007",
+        "timestamp": "1774068582",
+        "transaction": "11671|4000000|"
       },
       {
-        "franchise": "0012",
+        "timestamp": "1774068464",
+        "transaction": "9431|3775000|",
+        "type": "AUCTION_BID",
+        "franchise": "0012"
+      },
+      {
         "type": "AUCTION_WON",
-        "transaction": "13772|1000000|",
-        "timestamp": "1774067470"
+        "franchise": "0012",
+        "timestamp": "1774067470",
+        "transaction": "13772|1000000|"
       },
       {
         "franchise": "0004",
@@ -2189,40 +2187,40 @@
         "timestamp": "1774066101"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0004",
         "timestamp": "1774066055",
-        "transaction": "16788|550000|",
-        "type": "AUCTION_BID",
-        "franchise": "0004"
+        "transaction": "16788|550000|"
       },
       {
-        "transaction": "15738|550000|",
+        "type": "AUCTION_BID",
+        "franchise": "0004",
         "timestamp": "1774065988",
-        "franchise": "0004",
-        "type": "AUCTION_BID"
+        "transaction": "15738|550000|"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0004",
         "timestamp": "1774065965",
-        "transaction": "15738|500000|",
-        "type": "AUCTION_BID",
-        "franchise": "0004"
+        "transaction": "15738|500000|"
       },
       {
-        "transaction": "16788|500000|",
-        "timestamp": "1774065937",
+        "type": "AUCTION_BID",
         "franchise": "0004",
-        "type": "AUCTION_BID"
+        "timestamp": "1774065937",
+        "transaction": "16788|500000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0015",
         "timestamp": "1774065889",
-        "transaction": "12141|525000|"
+        "transaction": "12141|525000|",
+        "type": "AUCTION_BID",
+        "franchise": "0015"
       },
       {
-        "timestamp": "1774063440",
-        "transaction": "15331|625000|",
         "type": "AUCTION_BID",
-        "franchise": "0008"
+        "franchise": "0008",
+        "timestamp": "1774063440",
+        "transaction": "15331|625000|"
       },
       {
         "timestamp": "1774063419",
@@ -2231,70 +2229,70 @@
         "franchise": "0004"
       },
       {
-        "timestamp": "1774063094",
+        "franchise": "0003",
+        "type": "AUCTION_BID",
         "transaction": "13116|3625000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
+        "timestamp": "1774063094"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0007",
+        "transaction": "13299|5000000|",
         "timestamp": "1774062399",
-        "transaction": "13299|5000000|"
+        "franchise": "0007",
+        "type": "AUCTION_BID"
       },
       {
-        "franchise": "0004",
-        "type": "AUCTION_BID",
+        "timestamp": "1774062177",
         "transaction": "12141|500000|",
-        "timestamp": "1774062177"
+        "type": "AUCTION_BID",
+        "franchise": "0004"
       },
       {
-        "timestamp": "1774062152",
         "transaction": "13633|425000|",
-        "type": "AUCTION_INIT",
+        "timestamp": "1774062152",
+        "franchise": "0012",
+        "type": "AUCTION_INIT"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0004",
+        "timestamp": "1774062131",
+        "transaction": "16757|775000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0013",
+        "timestamp": "1774062109",
+        "transaction": "0529|625000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0013",
+        "timestamp": "1774062048",
+        "transaction": "0518|950000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0008",
+        "timestamp": "1774062031",
+        "transaction": "0518|875000|"
+      },
+      {
+        "timestamp": "1774061887",
+        "transaction": "13589|9000000|",
+        "type": "AUCTION_WON",
         "franchise": "0012"
       },
       {
-        "transaction": "16757|775000|",
-        "timestamp": "1774062131",
-        "franchise": "0004",
-        "type": "AUCTION_BID"
-      },
-      {
-        "transaction": "0529|625000|",
-        "timestamp": "1774062109",
-        "franchise": "0013",
-        "type": "AUCTION_BID"
-      },
-      {
-        "franchise": "0013",
         "type": "AUCTION_BID",
-        "transaction": "0518|950000|",
-        "timestamp": "1774062048"
-      },
-      {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
-        "transaction": "0518|875000|",
-        "timestamp": "1774062031"
-      },
-      {
-        "transaction": "13589|9000000|",
-        "timestamp": "1774061887",
-        "franchise": "0012",
-        "type": "AUCTION_WON"
-      },
-      {
+        "franchise": "0001",
         "timestamp": "1774061325",
-        "transaction": "16757|725000|",
-        "type": "AUCTION_BID",
-        "franchise": "0001"
+        "transaction": "16757|725000|"
       },
       {
-        "transaction": "15786|725000|",
         "timestamp": "1774060984",
-        "franchise": "0008",
-        "type": "AUCTION_WON"
+        "transaction": "15786|725000|",
+        "type": "AUCTION_WON",
+        "franchise": "0008"
       },
       {
         "franchise": "0013",
@@ -2303,10 +2301,10 @@
         "timestamp": "1774060386"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_WON",
         "transaction": "13592|3250000|",
-        "timestamp": "1774060150"
+        "timestamp": "1774060150",
+        "franchise": "0001",
+        "type": "AUCTION_WON"
       },
       {
         "type": "AUCTION_WON",
@@ -2315,28 +2313,28 @@
         "transaction": "14138|2500000|"
       },
       {
-        "type": "AUCTION_WON",
-        "franchise": "0001",
+        "transaction": "16192|2000000|",
         "timestamp": "1774059840",
-        "transaction": "16192|2000000|"
+        "franchise": "0001",
+        "type": "AUCTION_WON"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_WON",
         "transaction": "11675|3125000|",
-        "timestamp": "1774059516"
-      },
-      {
-        "franchise": "0004",
-        "type": "AUCTION_BID",
-        "transaction": "15716|550000|",
-        "timestamp": "1774059277"
-      },
-      {
-        "type": "AUCTION_WON",
+        "timestamp": "1774059516",
         "franchise": "0001",
+        "type": "AUCTION_WON"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0004",
         "timestamp": "1774059277",
-        "transaction": "15742|1200000|"
+        "transaction": "15716|550000|"
+      },
+      {
+        "franchise": "0001",
+        "type": "AUCTION_WON",
+        "transaction": "15742|1200000|",
+        "timestamp": "1774059277"
       },
       {
         "franchise": "0001",
@@ -2345,16 +2343,16 @@
         "timestamp": "1774059195"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0007",
-        "timestamp": "1774059161",
-        "transaction": "13299|4025000|"
+        "type": "AUCTION_BID",
+        "transaction": "13299|4025000|",
+        "timestamp": "1774059161"
       },
       {
-        "transaction": "13604|7200000|",
-        "timestamp": "1774059124",
         "franchise": "0008",
-        "type": "AUCTION_WON"
+        "type": "AUCTION_WON",
+        "transaction": "13604|7200000|",
+        "timestamp": "1774059124"
       },
       {
         "franchise": "0005",
@@ -2363,10 +2361,10 @@
         "timestamp": "1774058991"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
         "transaction": "13299|4000000|",
-        "timestamp": "1774058907"
+        "timestamp": "1774058907",
+        "franchise": "0012",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_WON",
@@ -2381,28 +2379,28 @@
         "type": "AUCTION_BID"
       },
       {
+        "type": "AUCTION_WON",
         "franchise": "0007",
-        "type": "AUCTION_WON",
-        "transaction": "0509|875000|",
-        "timestamp": "1774058795"
+        "timestamp": "1774058795",
+        "transaction": "0509|875000|"
       },
       {
-        "timestamp": "1774058787",
-        "transaction": "13604|7200000|",
         "type": "AUCTION_BID",
-        "franchise": "0008"
+        "franchise": "0008",
+        "timestamp": "1774058787",
+        "transaction": "13604|7200000|"
       },
       {
-        "timestamp": "1774058786",
-        "transaction": "0522|775000|",
         "type": "AUCTION_WON",
-        "franchise": "0005"
+        "franchise": "0005",
+        "timestamp": "1774058786",
+        "transaction": "0522|775000|"
       },
       {
-        "transaction": "12676|1500000|",
-        "timestamp": "1774058768",
         "franchise": "0009",
-        "type": "AUCTION_WON"
+        "type": "AUCTION_WON",
+        "transaction": "12676|1500000|",
+        "timestamp": "1774058768"
       },
       {
         "type": "AUCTION_WON",
@@ -2411,22 +2409,22 @@
         "transaction": "0516|700000|"
       },
       {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
-        "transaction": "13604|7000000|",
-        "timestamp": "1774058638"
-      },
-      {
         "timestamp": "1774058638",
-        "transaction": "14861|1525000|",
-        "type": "AUCTION_WON",
-        "franchise": "0007"
+        "transaction": "13604|7000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0008"
       },
       {
-        "timestamp": "1774058578",
-        "transaction": "15979|875000|",
+        "transaction": "14861|1525000|",
+        "timestamp": "1774058638",
+        "franchise": "0007",
+        "type": "AUCTION_WON"
+      },
+      {
         "type": "AUCTION_BID",
-        "franchise": "0012"
+        "franchise": "0012",
+        "timestamp": "1774058578",
+        "transaction": "15979|875000|"
       },
       {
         "timestamp": "1774058537",
@@ -2435,28 +2433,28 @@
         "franchise": "0004"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
+        "transaction": "15786|725000|",
         "timestamp": "1774058466",
-        "transaction": "15786|725000|"
-      },
-      {
-        "timestamp": "1774058450",
-        "transaction": "16846|575000|",
-        "type": "AUCTION_WON",
-        "franchise": "0011"
-      },
-      {
-        "timestamp": "1774058428",
-        "transaction": "15742|1200000|",
-        "type": "AUCTION_BID",
-        "franchise": "0001"
+        "franchise": "0008",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0011",
         "type": "AUCTION_WON",
-        "transaction": "14779|5250000|",
+        "transaction": "16846|575000|",
+        "timestamp": "1774058450"
+      },
+      {
+        "franchise": "0001",
+        "type": "AUCTION_BID",
+        "transaction": "15742|1200000|",
         "timestamp": "1774058428"
+      },
+      {
+        "transaction": "14779|5250000|",
+        "timestamp": "1774058428",
+        "franchise": "0011",
+        "type": "AUCTION_WON"
       },
       {
         "type": "AUCTION_WON",
@@ -2465,16 +2463,16 @@
         "transaction": "15287|10000000|"
       },
       {
-        "transaction": "15742|1100000|",
         "timestamp": "1774058386",
-        "franchise": "0001",
-        "type": "AUCTION_BID"
+        "transaction": "15742|1100000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
-        "timestamp": "1774058319",
-        "transaction": "14143|700000|",
+        "franchise": "0016",
         "type": "AUCTION_BID",
-        "franchise": "0016"
+        "transaction": "14143|700000|",
+        "timestamp": "1774058319"
       },
       {
         "type": "AUCTION_BID",
@@ -2483,16 +2481,16 @@
         "transaction": "14138|2500000|"
       },
       {
-        "timestamp": "1774058138",
         "transaction": "13299|2500000|",
-        "type": "AUCTION_BID",
-        "franchise": "0012"
+        "timestamp": "1774058138",
+        "franchise": "0012",
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "0516|700000|",
-        "timestamp": "1774057151",
         "franchise": "0001",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "0516|700000|",
+        "timestamp": "1774057151"
       },
       {
         "type": "AUCTION_BID",
@@ -2513,94 +2511,94 @@
         "type": "AUCTION_INIT"
       },
       {
-        "franchise": "0016",
-        "type": "AUCTION_BID",
+        "timestamp": "1774053913",
         "transaction": "14143|450000|",
-        "timestamp": "1774053913"
+        "type": "AUCTION_BID",
+        "franchise": "0016"
       },
       {
-        "timestamp": "1774051650",
         "transaction": "12676|1500000|",
-        "type": "AUCTION_BID",
-        "franchise": "0009"
-      },
-      {
-        "timestamp": "1774049999",
-        "transaction": "16192|2000000|",
-        "type": "AUCTION_BID",
-        "franchise": "0001"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0002",
-        "timestamp": "1774049949",
-        "transaction": "13630|1025000|"
-      },
-      {
-        "timestamp": "1774043860",
-        "transaction": "13674|3000000|",
-        "type": "AUCTION_BID",
-        "franchise": "0005"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
-        "timestamp": "1774043747",
-        "transaction": "7836|1000000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
-        "timestamp": "1774043731",
-        "transaction": "7836|750000|"
-      },
-      {
-        "transaction": "14138|2000000|",
-        "timestamp": "1774043527",
-        "franchise": "0001",
+        "timestamp": "1774051650",
+        "franchise": "0009",
         "type": "AUCTION_BID"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1774049999",
+        "transaction": "16192|2000000|"
+      },
+      {
+        "franchise": "0002",
+        "type": "AUCTION_BID",
+        "transaction": "13630|1025000|",
+        "timestamp": "1774049949"
+      },
+      {
+        "franchise": "0005",
+        "type": "AUCTION_BID",
+        "transaction": "13674|3000000|",
+        "timestamp": "1774043860"
+      },
+      {
+        "franchise": "0012",
+        "type": "AUCTION_BID",
+        "transaction": "7836|1000000|",
+        "timestamp": "1774043747"
+      },
+      {
+        "franchise": "0012",
+        "type": "AUCTION_BID",
+        "transaction": "7836|750000|",
+        "timestamp": "1774043731"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1774043527",
+        "transaction": "14138|2000000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0001",
         "timestamp": "1774043086",
-        "transaction": "13592|3250000|",
-        "type": "AUCTION_BID",
-        "franchise": "0001"
+        "transaction": "13592|3250000|"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0003",
-        "type": "AUCTION_BID",
-        "transaction": "12620|3000000|",
-        "timestamp": "1774041899"
+        "timestamp": "1774041899",
+        "transaction": "12620|3000000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0015",
+        "transaction": "14056|3500000|",
         "timestamp": "1774041550",
-        "transaction": "14056|3500000|"
+        "franchise": "0015",
+        "type": "AUCTION_BID"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0009",
-        "type": "AUCTION_BID",
-        "transaction": "14777|4525000|",
-        "timestamp": "1774041340"
+        "timestamp": "1774041340",
+        "transaction": "14777|4525000|"
       },
       {
-        "timestamp": "1774041232",
         "transaction": "14860|875000|",
-        "type": "AUCTION_BID",
-        "franchise": "0007"
+        "timestamp": "1774041232",
+        "franchise": "0007",
+        "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
         "timestamp": "1774041213",
-        "transaction": "13593|4525000|"
+        "transaction": "13593|4525000|",
+        "type": "AUCTION_BID",
+        "franchise": "0014"
       },
       {
-        "franchise": "0014",
-        "type": "AUCTION_BID",
+        "timestamp": "1774041187",
         "transaction": "0511|1000000|",
-        "timestamp": "1774041187"
+        "type": "AUCTION_BID",
+        "franchise": "0014"
       },
       {
         "timestamp": "1774041135",
@@ -2615,34 +2613,34 @@
         "franchise": "0001"
       },
       {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
+        "timestamp": "1774041089",
         "transaction": "0511|975000|",
-        "timestamp": "1774041089"
+        "type": "AUCTION_BID",
+        "franchise": "0008"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
+        "transaction": "13604|6875000|",
         "timestamp": "1774041029",
-        "transaction": "13604|6875000|"
+        "franchise": "0008",
+        "type": "AUCTION_BID"
       },
       {
-        "franchise": "0014",
-        "type": "AUCTION_BID",
+        "timestamp": "1774040896",
         "transaction": "14073|3400000|",
-        "timestamp": "1774040896"
+        "type": "AUCTION_BID",
+        "franchise": "0014"
       },
       {
-        "franchise": "0002",
-        "type": "AUCTION_BID",
         "transaction": "9431|3000000|",
-        "timestamp": "1774040881"
+        "timestamp": "1774040881",
+        "franchise": "0002",
+        "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774040878",
         "transaction": "14102|1875000|",
-        "type": "AUCTION_BID",
-        "franchise": "0009"
+        "timestamp": "1774040878",
+        "franchise": "0009",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0015",
@@ -2651,46 +2649,46 @@
         "timestamp": "1774040788"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0014",
-        "timestamp": "1774040757",
-        "transaction": "14073|3250000|"
+        "type": "AUCTION_BID",
+        "transaction": "14073|3250000|",
+        "timestamp": "1774040757"
       },
       {
-        "timestamp": "1774040720",
+        "franchise": "0009",
+        "type": "AUCTION_BID",
         "transaction": "13593|4425000|",
+        "timestamp": "1774040720"
+      },
+      {
+        "franchise": "0014",
+        "type": "AUCTION_BID",
+        "transaction": "15237|3800000|",
+        "timestamp": "1774040687"
+      },
+      {
+        "transaction": "15237|3575000|",
+        "timestamp": "1774040667",
+        "franchise": "0009",
+        "type": "AUCTION_BID"
+      },
+      {
+        "franchise": "0011",
+        "type": "AUCTION_BID",
+        "transaction": "16846|575000|",
+        "timestamp": "1774040650"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0007",
+        "timestamp": "1774040610",
+        "transaction": "14860|700000|"
+      },
+      {
+        "timestamp": "1774040610",
+        "transaction": "14102|1675000|",
         "type": "AUCTION_BID",
         "franchise": "0009"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
-        "timestamp": "1774040687",
-        "transaction": "15237|3800000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0009",
-        "timestamp": "1774040667",
-        "transaction": "15237|3575000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0011",
-        "timestamp": "1774040650",
-        "transaction": "16846|575000|"
-      },
-      {
-        "transaction": "14860|700000|",
-        "timestamp": "1774040610",
-        "franchise": "0007",
-        "type": "AUCTION_BID"
-      },
-      {
-        "transaction": "14102|1675000|",
-        "timestamp": "1774040610",
-        "franchise": "0009",
-        "type": "AUCTION_BID"
       },
       {
         "franchise": "0008",
@@ -2699,28 +2697,28 @@
         "timestamp": "1774040530"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0005",
         "timestamp": "1774040349",
-        "transaction": "0522|775000|",
-        "type": "AUCTION_BID",
-        "franchise": "0005"
+        "transaction": "0522|775000|"
       },
       {
-        "transaction": "0509|875000|",
         "timestamp": "1774040320",
-        "franchise": "0007",
-        "type": "AUCTION_BID"
-      },
-      {
-        "timestamp": "1774040202",
-        "transaction": "14823|2125000|",
+        "transaction": "0509|875000|",
         "type": "AUCTION_BID",
-        "franchise": "0001"
+        "franchise": "0007"
       },
       {
-        "transaction": "11671|2500000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1774040202",
+        "transaction": "14823|2125000|"
+      },
+      {
         "timestamp": "1774038262",
-        "franchise": "0007",
-        "type": "AUCTION_BID"
+        "transaction": "11671|2500000|",
+        "type": "AUCTION_BID",
+        "franchise": "0007"
       },
       {
         "timestamp": "1774038202",
@@ -2729,76 +2727,76 @@
         "franchise": "0002"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0003",
         "timestamp": "1774037876",
-        "transaction": "13630|1000000|"
+        "transaction": "13630|1000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
-        "timestamp": "1774035675",
-        "transaction": "13592|3000000|",
         "type": "AUCTION_BID",
-        "franchise": "0001"
+        "franchise": "0001",
+        "timestamp": "1774035675",
+        "transaction": "13592|3000000|"
+      },
+      {
+        "transaction": "15337|725000|",
+        "timestamp": "1774035576",
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_BID",
         "franchise": "0005",
-        "timestamp": "1774035576",
-        "transaction": "15337|725000|"
+        "timestamp": "1774035546",
+        "transaction": "15337|600000|"
       },
       {
-        "timestamp": "1774035546",
-        "transaction": "15337|600000|",
         "type": "AUCTION_BID",
-        "franchise": "0005"
+        "franchise": "0009",
+        "timestamp": "1774035468",
+        "transaction": "14102|1500000|"
       },
       {
         "timestamp": "1774035468",
-        "transaction": "14102|1500000|",
-        "type": "AUCTION_BID",
-        "franchise": "0009"
-      },
-      {
-        "franchise": "0003",
-        "type": "AUCTION_BID",
         "transaction": "12620|2775000|",
-        "timestamp": "1774035468"
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
-        "transaction": "14138|1500000|",
-        "timestamp": "1774035336",
+        "type": "AUCTION_BID",
         "franchise": "0001",
-        "type": "AUCTION_BID"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0003",
         "timestamp": "1774035336",
-        "transaction": "13630|725000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
-        "timestamp": "1774035336",
-        "transaction": "13593|4000000|"
+        "transaction": "14138|1500000|"
       },
       {
         "franchise": "0003",
         "type": "AUCTION_BID",
-        "transaction": "13590|3350000|",
+        "transaction": "13630|725000|",
         "timestamp": "1774035336"
       },
       {
-        "transaction": "11244|2025000|",
-        "timestamp": "1774034131",
-        "franchise": "0013",
+        "franchise": "0014",
+        "type": "AUCTION_BID",
+        "transaction": "13593|4000000|",
+        "timestamp": "1774035336"
+      },
+      {
+        "transaction": "13590|3350000|",
+        "timestamp": "1774035336",
+        "franchise": "0003",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774033962",
-        "transaction": "14861|1525000|",
+        "timestamp": "1774034131",
+        "transaction": "11244|2025000|",
         "type": "AUCTION_BID",
-        "franchise": "0007"
+        "franchise": "0013"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0007",
+        "timestamp": "1774033962",
+        "transaction": "14861|1525000|"
       },
       {
         "type": "AUCTION_BID",
@@ -2807,10 +2805,10 @@
         "transaction": "12676|1250000|"
       },
       {
-        "timestamp": "1774033269",
-        "transaction": "15337|425000|",
         "type": "AUCTION_INIT",
-        "franchise": "0005"
+        "franchise": "0005",
+        "timestamp": "1774033269",
+        "transaction": "15337|425000|"
       },
       {
         "franchise": "0016",
@@ -2825,16 +2823,16 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
         "timestamp": "1774033108",
-        "transaction": "13299|2000000|"
+        "transaction": "13299|2000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0005",
+        "transaction": "13674|2000000|",
         "timestamp": "1774033083",
-        "transaction": "13674|2000000|"
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0005",
@@ -2843,22 +2841,22 @@
         "timestamp": "1774033059"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0015",
-        "timestamp": "1774033035",
-        "transaction": "13671|2000000|"
-      },
-      {
         "type": "AUCTION_BID",
-        "franchise": "0016",
-        "timestamp": "1774032953",
-        "transaction": "15290|8525000|"
+        "transaction": "13671|2000000|",
+        "timestamp": "1774033035"
       },
       {
-        "transaction": "15290|8000000|",
+        "timestamp": "1774032953",
+        "transaction": "15290|8525000|",
+        "type": "AUCTION_BID",
+        "franchise": "0016"
+      },
+      {
         "timestamp": "1774032939",
-        "franchise": "0007",
-        "type": "AUCTION_BID"
+        "transaction": "15290|8000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0007"
       },
       {
         "transaction": "16192|1250000|",
@@ -2867,40 +2865,40 @@
         "type": "AUCTION_BID"
       },
       {
-        "transaction": "13635|3250000|",
-        "timestamp": "1774032725",
         "franchise": "0001",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "13635|3250000|",
+        "timestamp": "1774032725"
       },
       {
+        "franchise": "0015",
+        "type": "AUCTION_BID",
         "transaction": "15259|1025000|",
-        "timestamp": "1774030213",
-        "franchise": "0015",
-        "type": "AUCTION_BID"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
-        "timestamp": "1774030185",
-        "transaction": "13772|1000000|"
+        "timestamp": "1774030213"
       },
       {
         "franchise": "0012",
         "type": "AUCTION_BID",
+        "transaction": "13772|1000000|",
+        "timestamp": "1774030185"
+      },
+      {
+        "timestamp": "1774030131",
         "transaction": "13299|1500000|",
-        "timestamp": "1774030131"
-      },
-      {
-        "timestamp": "1774027732",
-        "transaction": "15972|2500000|",
         "type": "AUCTION_BID",
-        "franchise": "0015"
+        "franchise": "0012"
       },
       {
-        "transaction": "15972|2000000|",
-        "timestamp": "1774027672",
+        "transaction": "15972|2500000|",
+        "timestamp": "1774027732",
         "franchise": "0015",
         "type": "AUCTION_BID"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0015",
+        "timestamp": "1774027672",
+        "transaction": "15972|2000000|"
       },
       {
         "type": "AUCTION_INIT",
@@ -2909,16 +2907,16 @@
         "transaction": "7836|425000|"
       },
       {
-        "franchise": "0015",
         "type": "AUCTION_BID",
-        "transaction": "15972|1250000|",
-        "timestamp": "1774027596"
+        "franchise": "0015",
+        "timestamp": "1774027596",
+        "transaction": "15972|1250000|"
       },
       {
-        "franchise": "0015",
         "type": "AUCTION_BID",
-        "transaction": "15972|900000|",
-        "timestamp": "1774027570"
+        "franchise": "0015",
+        "timestamp": "1774027570",
+        "transaction": "15972|900000|"
       },
       {
         "timestamp": "1774027548",
@@ -2933,40 +2931,40 @@
         "transaction": "15284|5525000|"
       },
       {
-        "transaction": "14835|3025000|",
-        "timestamp": "1774026698",
+        "type": "AUCTION_BID",
         "franchise": "0004",
+        "timestamp": "1774026698",
+        "transaction": "14835|3025000|"
+      },
+      {
+        "transaction": "13593|3250000|",
+        "timestamp": "1774020034",
+        "franchise": "0014",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1774020034",
-        "transaction": "13593|3250000|",
+        "timestamp": "1774020020",
+        "transaction": "15972|450000|",
+        "type": "AUCTION_BID",
+        "franchise": "0015"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0015",
+        "timestamp": "1774019862",
+        "transaction": "13671|1275000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0006",
+        "timestamp": "1774019746",
+        "transaction": "15329|4500000|"
+      },
+      {
+        "timestamp": "1774019475",
+        "transaction": "14073|3000000|",
         "type": "AUCTION_BID",
         "franchise": "0014"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0015",
-        "timestamp": "1774020020",
-        "transaction": "15972|450000|"
-      },
-      {
-        "franchise": "0015",
-        "type": "AUCTION_BID",
-        "transaction": "13671|1275000|",
-        "timestamp": "1774019862"
-      },
-      {
-        "franchise": "0006",
-        "type": "AUCTION_BID",
-        "transaction": "15329|4500000|",
-        "timestamp": "1774019746"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
-        "timestamp": "1774019475",
-        "transaction": "14073|3000000|"
       },
       {
         "type": "AUCTION_BID",
@@ -2975,16 +2973,16 @@
         "transaction": "15237|3100000|"
       },
       {
-        "timestamp": "1774011835",
-        "transaction": "14860|425000|",
+        "franchise": "0007",
         "type": "AUCTION_INIT",
-        "franchise": "0007"
+        "transaction": "14860|425000|",
+        "timestamp": "1774011835"
       },
       {
-        "timestamp": "1774011665",
-        "transaction": "15290|6025000|",
+        "franchise": "0007",
         "type": "AUCTION_BID",
-        "franchise": "0007"
+        "transaction": "15290|6025000|",
+        "timestamp": "1774011665"
       },
       {
         "timestamp": "1774011555",
@@ -2993,10 +2991,10 @@
         "franchise": "0009"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
+        "timestamp": "1774008626",
         "transaction": "15256|3400000|",
-        "timestamp": "1774008626"
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
         "timestamp": "1774008573",
@@ -3029,16 +3027,16 @@
         "transaction": "14836|8000000|"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0006",
-        "timestamp": "1774003730",
-        "transaction": "15241|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "15241|425000|",
+        "timestamp": "1774003730"
       },
       {
-        "franchise": "0006",
         "type": "AUCTION_INIT",
-        "transaction": "14600|425000|",
-        "timestamp": "1774003603"
+        "franchise": "0006",
+        "timestamp": "1774003603",
+        "transaction": "14600|425000|"
       },
       {
         "franchise": "0006",
@@ -3047,22 +3045,22 @@
         "timestamp": "1774003533"
       },
       {
-        "timestamp": "1774003438",
-        "transaction": "15789|2525000|",
         "type": "AUCTION_BID",
-        "franchise": "0006"
-      },
-      {
-        "franchise": "0015",
-        "type": "AUCTION_BID",
-        "transaction": "15329|4000000|",
-        "timestamp": "1774003371"
-      },
-      {
         "franchise": "0006",
+        "timestamp": "1774003438",
+        "transaction": "15789|2525000|"
+      },
+      {
+        "transaction": "15329|4000000|",
+        "timestamp": "1774003371",
+        "franchise": "0015",
+        "type": "AUCTION_BID"
+      },
+      {
         "type": "AUCTION_BID",
-        "transaction": "12616|1525000|",
-        "timestamp": "1774003314"
+        "franchise": "0006",
+        "timestamp": "1774003314",
+        "transaction": "12616|1525000|"
       },
       {
         "franchise": "0006",
@@ -3083,28 +3081,28 @@
         "franchise": "0001"
       },
       {
-        "timestamp": "1773987131",
         "transaction": "14138|1000000|",
-        "type": "AUCTION_BID",
-        "franchise": "0001"
-      },
-      {
-        "transaction": "13635|2000000|",
         "timestamp": "1773987131",
         "franchise": "0001",
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0008",
+        "timestamp": "1773987131",
+        "transaction": "13635|2000000|",
         "type": "AUCTION_BID",
-        "transaction": "0518|800000|",
-        "timestamp": "1773986567"
+        "franchise": "0001"
       },
       {
-        "transaction": "0509|700000|",
-        "timestamp": "1773986470",
-        "franchise": "0007",
+        "transaction": "0518|800000|",
+        "timestamp": "1773986567",
+        "franchise": "0008",
         "type": "AUCTION_BID"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0007",
+        "timestamp": "1773986470",
+        "transaction": "0509|700000|"
       },
       {
         "type": "AUCTION_BID",
@@ -3113,40 +3111,40 @@
         "transaction": "0518|700000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0008",
         "timestamp": "1773985735",
-        "transaction": "0511|925000|"
+        "transaction": "0511|925000|",
+        "type": "AUCTION_BID",
+        "franchise": "0008"
       },
       {
-        "transaction": "12676|800000|",
         "timestamp": "1773984859",
-        "franchise": "0009",
-        "type": "AUCTION_BID"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0009",
-        "timestamp": "1773984822",
-        "transaction": "12676|625000|"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0005",
-        "timestamp": "1773984800",
-        "transaction": "13674|875000|"
-      },
-      {
-        "timestamp": "1773984756",
-        "transaction": "13671|975000|",
+        "transaction": "12676|800000|",
         "type": "AUCTION_BID",
         "franchise": "0009"
       },
       {
-        "transaction": "13671|850000|",
-        "timestamp": "1773984738",
+        "transaction": "12676|625000|",
+        "timestamp": "1773984822",
         "franchise": "0009",
         "type": "AUCTION_BID"
+      },
+      {
+        "franchise": "0005",
+        "type": "AUCTION_BID",
+        "transaction": "13674|875000|",
+        "timestamp": "1773984800"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0009",
+        "timestamp": "1773984756",
+        "transaction": "13671|975000|"
+      },
+      {
+        "timestamp": "1773984738",
+        "transaction": "13671|850000|",
+        "type": "AUCTION_BID",
+        "franchise": "0009"
       },
       {
         "timestamp": "1773984691",
@@ -3161,16 +3159,16 @@
         "franchise": "0003"
       },
       {
-        "timestamp": "1773984629",
         "transaction": "11675|3125000|",
-        "type": "AUCTION_BID",
-        "franchise": "0001"
-      },
-      {
-        "transaction": "15742|800000|",
-        "timestamp": "1773984605",
+        "timestamp": "1773984629",
         "franchise": "0001",
         "type": "AUCTION_BID"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1773984605",
+        "transaction": "15742|800000|"
       },
       {
         "type": "AUCTION_BID",
@@ -3191,10 +3189,10 @@
         "franchise": "0014"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0005",
+        "transaction": "0522|550000|",
         "timestamp": "1773984473",
-        "transaction": "0522|550000|"
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_BID",
@@ -3203,22 +3201,22 @@
         "transaction": "14835|2425000|"
       },
       {
-        "transaction": "14073|2750000|",
         "timestamp": "1773984375",
+        "transaction": "14073|2750000|",
+        "type": "AUCTION_BID",
+        "franchise": "0005"
+      },
+      {
+        "transaction": "14073|2125000|",
+        "timestamp": "1773984329",
         "franchise": "0005",
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0005",
-        "timestamp": "1773984329",
-        "transaction": "14073|2125000|"
-      },
-      {
-        "franchise": "0009",
-        "type": "AUCTION_BID",
+        "timestamp": "1773984196",
         "transaction": "14102|600000|",
-        "timestamp": "1773984196"
+        "type": "AUCTION_BID",
+        "franchise": "0009"
       },
       {
         "transaction": "13635|1925000|",
@@ -3227,34 +3225,34 @@
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773984050",
-        "transaction": "14073|1850000|",
         "type": "AUCTION_BID",
-        "franchise": "0005"
+        "franchise": "0005",
+        "timestamp": "1773984050",
+        "transaction": "14073|1850000|"
       },
       {
-        "transaction": "15253|3125000|",
-        "timestamp": "1773984005",
+        "type": "AUCTION_BID",
         "franchise": "0003",
-        "type": "AUCTION_BID"
+        "timestamp": "1773984005",
+        "transaction": "15253|3125000|"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0003",
         "timestamp": "1773983963",
-        "transaction": "15253|2800000|",
+        "transaction": "15253|2800000|"
+      },
+      {
+        "timestamp": "1773983846",
+        "transaction": "15253|2425000|",
         "type": "AUCTION_BID",
         "franchise": "0003"
       },
       {
-        "franchise": "0003",
         "type": "AUCTION_BID",
-        "transaction": "15253|2425000|",
-        "timestamp": "1773983846"
-      },
-      {
-        "transaction": "16036|775000|",
-        "timestamp": "1773983811",
         "franchise": "0014",
-        "type": "AUCTION_BID"
+        "timestamp": "1773983811",
+        "transaction": "16036|775000|"
       },
       {
         "timestamp": "1773983759",
@@ -3269,34 +3267,34 @@
         "franchise": "0001"
       },
       {
-        "timestamp": "1773983711",
         "transaction": "14835|2125000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
+        "timestamp": "1773983711",
+        "franchise": "0003",
+        "type": "AUCTION_BID"
       },
       {
+        "franchise": "0003",
+        "type": "AUCTION_BID",
         "transaction": "14835|1975000|",
-        "timestamp": "1773983689",
-        "franchise": "0003",
-        "type": "AUCTION_BID"
+        "timestamp": "1773983689"
       },
       {
+        "type": "AUCTION_BID",
         "franchise": "0014",
-        "type": "AUCTION_BID",
-        "transaction": "12620|1525000|",
-        "timestamp": "1773983628"
+        "timestamp": "1773983628",
+        "transaction": "12620|1525000|"
       },
       {
-        "transaction": "16414|1425000|",
-        "timestamp": "1773983566",
+        "type": "AUCTION_BID",
         "franchise": "0003",
-        "type": "AUCTION_BID"
+        "timestamp": "1773983566",
+        "transaction": "16414|1425000|"
       },
       {
-        "timestamp": "1773983488",
         "transaction": "13671|725000|",
-        "type": "AUCTION_BID",
-        "franchise": "0009"
+        "timestamp": "1773983488",
+        "franchise": "0009",
+        "type": "AUCTION_BID"
       },
       {
         "timestamp": "1773983447",
@@ -3317,10 +3315,10 @@
         "franchise": "0009"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0011",
         "timestamp": "1773983304",
-        "transaction": "14779|5250000|"
+        "transaction": "14779|5250000|",
+        "type": "AUCTION_BID",
+        "franchise": "0011"
       },
       {
         "timestamp": "1773983290",
@@ -3329,22 +3327,22 @@
         "franchise": "0011"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_BID",
         "transaction": "0516|625000|",
-        "timestamp": "1773983264"
-      },
-      {
-        "transaction": "16036|675000|",
-        "timestamp": "1773983228",
-        "franchise": "0012",
+        "timestamp": "1773983264",
+        "franchise": "0001",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773983117",
-        "transaction": "14835|1375000|",
+        "timestamp": "1773983228",
+        "transaction": "16036|675000|",
         "type": "AUCTION_BID",
-        "franchise": "0003"
+        "franchise": "0012"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0003",
+        "timestamp": "1773983117",
+        "transaction": "14835|1375000|"
       },
       {
         "type": "AUCTION_BID",
@@ -3353,34 +3351,34 @@
         "transaction": "13671|600000|"
       },
       {
-        "transaction": "13116|3500000|",
         "timestamp": "1773982904",
-        "franchise": "0003",
-        "type": "AUCTION_BID"
+        "transaction": "13116|3500000|",
+        "type": "AUCTION_BID",
+        "franchise": "0003"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0012",
         "timestamp": "1773982877",
-        "transaction": "16036|600000|",
-        "type": "AUCTION_BID",
-        "franchise": "0012"
+        "transaction": "16036|600000|"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0014",
-        "timestamp": "1773982719",
-        "transaction": "13719|550000|"
+        "type": "AUCTION_BID",
+        "transaction": "13719|550000|",
+        "timestamp": "1773982719"
       },
       {
-        "timestamp": "1773982672",
+        "franchise": "0008",
+        "type": "AUCTION_BID",
         "transaction": "13604|5750000|",
-        "type": "AUCTION_BID",
-        "franchise": "0008"
+        "timestamp": "1773982672"
       },
       {
-        "timestamp": "1773982642",
-        "transaction": "0509|650000|",
         "type": "AUCTION_BID",
-        "franchise": "0007"
+        "franchise": "0007",
+        "timestamp": "1773982642",
+        "transaction": "0509|650000|"
       },
       {
         "type": "AUCTION_BID",
@@ -3389,10 +3387,10 @@
         "transaction": "0513|625000|"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0003",
-        "timestamp": "1773982599",
-        "transaction": "14835|975000|"
+        "type": "AUCTION_BID",
+        "transaction": "14835|975000|",
+        "timestamp": "1773982599"
       },
       {
         "franchise": "0004",
@@ -3407,52 +3405,52 @@
         "transaction": "11671|1925000|"
       },
       {
-        "transaction": "13593|3025000|",
         "timestamp": "1773982457",
-        "franchise": "0014",
-        "type": "AUCTION_BID"
+        "transaction": "13593|3025000|",
+        "type": "AUCTION_BID",
+        "franchise": "0014"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0012",
         "timestamp": "1773982413",
-        "transaction": "13589|9000000|",
-        "type": "AUCTION_BID",
-        "franchise": "0012"
+        "transaction": "13589|9000000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0014",
         "timestamp": "1773982391",
-        "transaction": "14102|525000|"
+        "transaction": "14102|525000|",
+        "type": "AUCTION_BID",
+        "franchise": "0014"
       },
       {
-        "transaction": "12860|575000|",
-        "timestamp": "1773982350",
+        "type": "AUCTION_BID",
         "franchise": "0013",
-        "type": "AUCTION_BID"
+        "timestamp": "1773982350",
+        "transaction": "12860|575000|"
       },
       {
-        "transaction": "15979|700000|",
         "timestamp": "1773982318",
-        "franchise": "0001",
-        "type": "AUCTION_BID"
+        "transaction": "15979|700000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0008",
-        "timestamp": "1773982315",
-        "transaction": "11150|525000|"
+        "type": "AUCTION_BID",
+        "transaction": "11150|525000|",
+        "timestamp": "1773982315"
       },
       {
-        "franchise": "0010",
-        "type": "AUCTION_BID",
+        "timestamp": "1773982288",
         "transaction": "12620|1025000|",
-        "timestamp": "1773982288"
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
+        "timestamp": "1773982280",
         "transaction": "13604|5125000|",
-        "timestamp": "1773982280"
+        "type": "AUCTION_BID",
+        "franchise": "0008"
       },
       {
         "type": "AUCTION_BID",
@@ -3461,10 +3459,10 @@
         "transaction": "0511|875000|"
       },
       {
-        "transaction": "12620|850000|",
         "timestamp": "1773982207",
-        "franchise": "0010",
-        "type": "AUCTION_BID"
+        "transaction": "12620|850000|",
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
         "timestamp": "1773982192",
@@ -3473,10 +3471,10 @@
         "franchise": "0001"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
+        "transaction": "13589|8500000|",
         "timestamp": "1773982150",
-        "transaction": "13589|8500000|"
+        "franchise": "0012",
+        "type": "AUCTION_BID"
       },
       {
         "timestamp": "1773982075",
@@ -3491,16 +3489,16 @@
         "franchise": "0004"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0003",
-        "timestamp": "1773982038",
-        "transaction": "13116|2250000|"
+        "type": "AUCTION_BID",
+        "transaction": "13116|2250000|",
+        "timestamp": "1773982038"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
+        "timestamp": "1773981991",
         "transaction": "11671|1575000|",
-        "timestamp": "1773981991"
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
         "transaction": "13593|3000000|",
@@ -3509,28 +3507,28 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
+        "timestamp": "1773981909",
         "transaction": "13589|7125000|",
-        "timestamp": "1773981909"
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_BID",
         "transaction": "11675|1500000|",
-        "timestamp": "1773981841"
-      },
-      {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
-        "transaction": "13604|4500000|",
-        "timestamp": "1773981814"
-      },
-      {
+        "timestamp": "1773981841",
         "franchise": "0001",
+        "type": "AUCTION_BID"
+      },
+      {
         "type": "AUCTION_BID",
-        "transaction": "0513|500000|",
-        "timestamp": "1773981782"
+        "franchise": "0008",
+        "timestamp": "1773981814",
+        "transaction": "13604|4500000|"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1773981782",
+        "transaction": "0513|500000|"
       },
       {
         "type": "AUCTION_BID",
@@ -3539,10 +3537,10 @@
         "transaction": "14779|4000000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0001",
         "timestamp": "1773981725",
-        "transaction": "15979|600000|"
+        "transaction": "15979|600000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
         "transaction": "13604|4000000|",
@@ -3551,16 +3549,16 @@
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773981725",
-        "transaction": "11675|1000000|",
+        "franchise": "0001",
         "type": "AUCTION_BID",
-        "franchise": "0001"
+        "transaction": "11675|1000000|",
+        "timestamp": "1773981725"
       },
       {
-        "franchise": "0003",
         "type": "AUCTION_BID",
-        "transaction": "14871|2775000|",
-        "timestamp": "1773981275"
+        "franchise": "0003",
+        "timestamp": "1773981275",
+        "transaction": "14871|2775000|"
       },
       {
         "franchise": "0005",
@@ -3569,28 +3567,28 @@
         "timestamp": "1773981227"
       },
       {
-        "transaction": "14835|600000|",
-        "timestamp": "1773981227",
         "franchise": "0003",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "14835|600000|",
+        "timestamp": "1773981227"
       },
       {
-        "franchise": "0005",
-        "type": "AUCTION_BID",
+        "timestamp": "1773980927",
         "transaction": "14871|1500000|",
-        "timestamp": "1773980927"
+        "type": "AUCTION_BID",
+        "franchise": "0005"
+      },
+      {
+        "transaction": "14871|750000|",
+        "timestamp": "1773980770",
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0005",
-        "timestamp": "1773980770",
-        "transaction": "14871|750000|"
-      },
-      {
-        "transaction": "13604|3500000|",
-        "timestamp": "1773980770",
         "franchise": "0008",
-        "type": "AUCTION_BID"
+        "timestamp": "1773980770",
+        "transaction": "13604|3500000|"
       },
       {
         "transaction": "13589|6500000|",
@@ -3599,58 +3597,58 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0001",
+        "transaction": "12616|1000000|",
         "timestamp": "1773979276",
-        "transaction": "12616|1000000|"
-      },
-      {
-        "type": "AUCTION_BID",
         "franchise": "0001",
-        "timestamp": "1773971494",
-        "transaction": "12616|850000|"
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "14085|425000|",
-        "timestamp": "1773969188",
-        "franchise": "0004",
-        "type": "AUCTION_INIT"
-      },
-      {
-        "transaction": "13133|425000|",
-        "timestamp": "1773969115",
-        "franchise": "0004",
-        "type": "AUCTION_INIT"
-      },
-      {
-        "transaction": "16788|425000|",
-        "timestamp": "1773969057",
-        "franchise": "0004",
-        "type": "AUCTION_INIT"
-      },
-      {
-        "timestamp": "1773968943",
-        "transaction": "15282|3500000|",
+        "franchise": "0001",
         "type": "AUCTION_BID",
+        "transaction": "12616|850000|",
+        "timestamp": "1773971494"
+      },
+      {
+        "type": "AUCTION_INIT",
+        "franchise": "0004",
+        "timestamp": "1773969188",
+        "transaction": "14085|425000|"
+      },
+      {
+        "timestamp": "1773969115",
+        "transaction": "13133|425000|",
+        "type": "AUCTION_INIT",
         "franchise": "0004"
       },
       {
-        "franchise": "0015",
+        "type": "AUCTION_INIT",
+        "franchise": "0004",
+        "timestamp": "1773969057",
+        "transaction": "16788|425000|"
+      },
+      {
+        "franchise": "0004",
         "type": "AUCTION_BID",
-        "transaction": "15256|3100000|",
+        "transaction": "15282|3500000|",
         "timestamp": "1773968943"
       },
       {
-        "timestamp": "1773968943",
-        "transaction": "11675|725000|",
         "type": "AUCTION_BID",
-        "franchise": "0001"
+        "franchise": "0015",
+        "timestamp": "1773968943",
+        "transaction": "15256|3100000|"
       },
       {
-        "franchise": "0009",
         "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1773968943",
+        "transaction": "11675|725000|"
+      },
+      {
+        "timestamp": "1773968920",
         "transaction": "14836|7775000|",
-        "timestamp": "1773968920"
+        "type": "AUCTION_BID",
+        "franchise": "0009"
       },
       {
         "franchise": "0001",
@@ -3665,28 +3663,28 @@
         "transaction": "15284|4025000|"
       },
       {
+        "timestamp": "1773968831",
         "transaction": "14861|1000000|",
-        "timestamp": "1773968831",
-        "franchise": "0007",
-        "type": "AUCTION_BID"
-      },
-      {
-        "timestamp": "1773968831",
-        "transaction": "14836|6525000|",
         "type": "AUCTION_BID",
         "franchise": "0007"
       },
       {
-        "franchise": "0001",
         "type": "AUCTION_BID",
-        "transaction": "11675|625000|",
-        "timestamp": "1773968831"
+        "franchise": "0007",
+        "timestamp": "1773968831",
+        "transaction": "14836|6525000|"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0002",
+        "timestamp": "1773968831",
+        "transaction": "11675|625000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
+      },
+      {
         "timestamp": "1773968698",
-        "transaction": "16608|425000|"
+        "transaction": "16608|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0002"
       },
       {
         "transaction": "15253|2125000|",
@@ -3701,34 +3699,34 @@
         "franchise": "0002"
       },
       {
-        "timestamp": "1773968190",
+        "franchise": "0002",
+        "type": "AUCTION_BID",
         "transaction": "9431|1275000|",
-        "type": "AUCTION_BID",
-        "franchise": "0002"
+        "timestamp": "1773968190"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0002",
         "timestamp": "1773968072",
-        "transaction": "14832|8050000|",
-        "type": "AUCTION_BID",
-        "franchise": "0002"
+        "transaction": "14832|8050000|"
       },
       {
-        "franchise": "0011",
-        "type": "AUCTION_BID",
         "transaction": "15287|10000000|",
-        "timestamp": "1773967989"
+        "timestamp": "1773967989",
+        "franchise": "0011",
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "15716|425000|",
-        "timestamp": "1773967838",
         "franchise": "0001",
-        "type": "AUCTION_INIT"
-      },
-      {
         "type": "AUCTION_INIT",
+        "transaction": "15716|425000|",
+        "timestamp": "1773967838"
+      },
+      {
         "franchise": "0001",
-        "timestamp": "1773967811",
-        "transaction": "16164|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "16164|425000|",
+        "timestamp": "1773967811"
       },
       {
         "franchise": "0013",
@@ -3737,52 +3735,52 @@
         "timestamp": "1773967799"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0005",
-        "timestamp": "1773967270",
-        "transaction": "14073|1550000|"
-      },
-      {
         "franchise": "0005",
         "type": "AUCTION_BID",
-        "transaction": "9431|725000|",
-        "timestamp": "1773967160"
+        "transaction": "14073|1550000|",
+        "timestamp": "1773967270"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0001",
+        "franchise": "0005",
+        "timestamp": "1773967160",
+        "transaction": "9431|725000|"
+      },
+      {
         "timestamp": "1773967029",
-        "transaction": "13635|1250000|"
+        "transaction": "13635|1250000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_BID",
         "transaction": "14823|1750000|",
-        "timestamp": "1773963169"
+        "timestamp": "1773963169",
+        "franchise": "0001",
+        "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0008",
-        "timestamp": "1773963129",
-        "transaction": "14073|1125000|"
-      },
-      {
-        "franchise": "0012",
         "type": "AUCTION_BID",
+        "transaction": "14073|1125000|",
+        "timestamp": "1773963129"
+      },
+      {
         "transaction": "13593|1250000|",
-        "timestamp": "1773963061"
+        "timestamp": "1773963061",
+        "franchise": "0012",
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "14823|1575000|",
         "timestamp": "1773963020",
-        "franchise": "0001",
-        "type": "AUCTION_BID"
+        "transaction": "14823|1575000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
-        "transaction": "14823|1250000|",
-        "timestamp": "1773962868",
+        "type": "AUCTION_BID",
         "franchise": "0001",
-        "type": "AUCTION_BID"
+        "timestamp": "1773962868",
+        "transaction": "14823|1250000|"
       },
       {
         "transaction": "15256|3000000|",
@@ -3791,34 +3789,34 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0010",
-        "type": "AUCTION_BID",
+        "timestamp": "1773962525",
         "transaction": "12620|450000|",
-        "timestamp": "1773962525"
+        "type": "AUCTION_BID",
+        "franchise": "0010"
       },
       {
-        "timestamp": "1773962500",
+        "franchise": "0003",
+        "type": "AUCTION_BID",
         "transaction": "14777|1750000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
+        "timestamp": "1773962500"
       },
       {
-        "transaction": "13593|675000|",
-        "timestamp": "1773962500",
         "franchise": "0012",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "13593|675000|",
+        "timestamp": "1773962500"
       },
       {
-        "timestamp": "1773962421",
+        "franchise": "0015",
+        "type": "AUCTION_BID",
         "transaction": "15256|1100000|",
-        "type": "AUCTION_BID",
-        "franchise": "0015"
+        "timestamp": "1773962421"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0001",
-        "timestamp": "1773962303",
-        "transaction": "14823|875000|"
+        "type": "AUCTION_BID",
+        "transaction": "14823|875000|",
+        "timestamp": "1773962303"
       },
       {
         "transaction": "14823|775000|",
@@ -3845,82 +3843,82 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0001",
+        "transaction": "14823|575000|",
         "timestamp": "1773962234",
-        "transaction": "14823|575000|"
+        "franchise": "0001",
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "11671|875000|",
-        "timestamp": "1773962234",
+        "type": "AUCTION_BID",
         "franchise": "0012",
-        "type": "AUCTION_BID"
+        "timestamp": "1773962234",
+        "transaction": "11671|875000|"
       },
       {
-        "transaction": "0531|750000|",
-        "timestamp": "1773962028",
+        "type": "AUCTION_BID",
         "franchise": "0010",
-        "type": "AUCTION_BID"
+        "timestamp": "1773962028",
+        "transaction": "0531|750000|"
       },
       {
+        "timestamp": "1773962028",
         "transaction": "0512|750000|",
-        "timestamp": "1773962028",
-        "franchise": "0010",
+        "type": "AUCTION_BID",
+        "franchise": "0010"
+      },
+      {
+        "transaction": "14056|775000|",
+        "timestamp": "1773960042",
+        "franchise": "0015",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773960042",
-        "transaction": "14056|775000|",
-        "type": "AUCTION_BID",
-        "franchise": "0015"
-      },
-      {
-        "franchise": "0001",
-        "type": "AUCTION_BID",
+        "timestamp": "1773959990",
         "transaction": "13592|2500000|",
-        "timestamp": "1773959990"
-      },
-      {
-        "timestamp": "1773959931",
-        "transaction": "13590|2500000|",
         "type": "AUCTION_BID",
         "franchise": "0001"
       },
       {
-        "franchise": "0011",
         "type": "AUCTION_BID",
+        "franchise": "0001",
+        "timestamp": "1773959931",
+        "transaction": "13590|2500000|"
+      },
+      {
+        "timestamp": "1773959816",
         "transaction": "14779|2975000|",
-        "timestamp": "1773959816"
-      },
-      {
-        "franchise": "0011",
         "type": "AUCTION_BID",
-        "transaction": "14779|2875000|",
-        "timestamp": "1773959789"
+        "franchise": "0011"
       },
       {
         "type": "AUCTION_BID",
         "franchise": "0011",
-        "timestamp": "1773959763",
-        "transaction": "14779|2750000|"
+        "timestamp": "1773959789",
+        "transaction": "14779|2875000|"
       },
       {
+        "franchise": "0011",
         "type": "AUCTION_BID",
-        "franchise": "0008",
+        "transaction": "14779|2750000|",
+        "timestamp": "1773959763"
+      },
+      {
         "timestamp": "1773955435",
-        "transaction": "14073|850000|"
-      },
-      {
-        "transaction": "13635|850000|",
-        "timestamp": "1773955379",
-        "franchise": "0001",
-        "type": "AUCTION_BID"
+        "transaction": "14073|850000|",
+        "type": "AUCTION_BID",
+        "franchise": "0008"
       },
       {
         "type": "AUCTION_BID",
         "franchise": "0001",
+        "timestamp": "1773955379",
+        "transaction": "13635|850000|"
+      },
+      {
         "timestamp": "1773955321",
-        "transaction": "12611|3200000|"
+        "transaction": "12611|3200000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
         "type": "AUCTION_INIT",
@@ -3929,22 +3927,22 @@
         "transaction": "14823|425000|"
       },
       {
-        "transaction": "13303|425000|",
         "timestamp": "1773953811",
-        "franchise": "0005",
-        "type": "AUCTION_INIT"
+        "transaction": "13303|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0005"
       },
       {
-        "timestamp": "1773952441",
+        "franchise": "0015",
+        "type": "AUCTION_BID",
         "transaction": "15329|3500000|",
-        "type": "AUCTION_BID",
-        "franchise": "0015"
+        "timestamp": "1773952441"
       },
       {
-        "timestamp": "1773952441",
         "transaction": "15290|5050000|",
-        "type": "AUCTION_BID",
-        "franchise": "0003"
+        "timestamp": "1773952441",
+        "franchise": "0003",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0003",
@@ -3953,16 +3951,16 @@
         "timestamp": "1773952441"
       },
       {
-        "transaction": "14832|5500000|",
         "timestamp": "1773952441",
-        "franchise": "0013",
-        "type": "AUCTION_BID"
+        "transaction": "14832|5500000|",
+        "type": "AUCTION_BID",
+        "franchise": "0013"
       },
       {
-        "timestamp": "1773952441",
-        "transaction": "14777|1025000|",
+        "franchise": "0003",
         "type": "AUCTION_BID",
-        "franchise": "0003"
+        "transaction": "14777|1025000|",
+        "timestamp": "1773952441"
       },
       {
         "franchise": "0001",
@@ -3971,34 +3969,34 @@
         "timestamp": "1773952441"
       },
       {
+        "timestamp": "1773952305",
         "transaction": "16414|1300000|",
-        "timestamp": "1773952305",
-        "franchise": "0003",
-        "type": "AUCTION_BID"
-      },
-      {
-        "timestamp": "1773952305",
-        "transaction": "15290|5000000|",
         "type": "AUCTION_BID",
-        "franchise": "0013"
+        "franchise": "0003"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0013",
+        "timestamp": "1773952305",
+        "transaction": "15290|5000000|"
+      },
+      {
+        "type": "AUCTION_BID",
         "franchise": "0007",
+        "timestamp": "1773952305",
+        "transaction": "14836|6000000|"
+      },
+      {
+        "franchise": "0013",
         "type": "AUCTION_BID",
-        "transaction": "14836|6000000|",
+        "transaction": "14832|2000000|",
         "timestamp": "1773952305"
       },
       {
-        "transaction": "14832|2000000|",
-        "timestamp": "1773952305",
-        "franchise": "0013",
-        "type": "AUCTION_BID"
-      },
-      {
-        "transaction": "14777|1000000|",
-        "timestamp": "1773952305",
         "franchise": "0009",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "14777|1000000|",
+        "timestamp": "1773952305"
       },
       {
         "type": "AUCTION_BID",
@@ -4013,10 +4011,10 @@
         "type": "AUCTION_BID"
       },
       {
-        "transaction": "15281|6050000|",
-        "timestamp": "1773947513",
         "franchise": "0013",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15281|6050000|",
+        "timestamp": "1773947513"
       },
       {
         "type": "AUCTION_BID",
@@ -4025,10 +4023,10 @@
         "transaction": "15281|5050000|"
       },
       {
-        "transaction": "15281|5025000|",
-        "timestamp": "1773946864",
         "franchise": "0013",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15281|5025000|",
+        "timestamp": "1773946864"
       },
       {
         "transaction": "13592|600000|",
@@ -4037,10 +4035,10 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0012",
-        "type": "AUCTION_BID",
+        "timestamp": "1773945891",
         "transaction": "11671|700000|",
-        "timestamp": "1773945891"
+        "type": "AUCTION_BID",
+        "franchise": "0012"
       },
       {
         "franchise": "0009",
@@ -4049,10 +4047,10 @@
         "timestamp": "1773944680"
       },
       {
-        "transaction": "0511|800000|",
-        "timestamp": "1773943974",
+        "type": "AUCTION_BID",
         "franchise": "0008",
-        "type": "AUCTION_BID"
+        "timestamp": "1773943974",
+        "transaction": "0511|800000|"
       },
       {
         "transaction": "13674|725000|",
@@ -4061,34 +4059,34 @@
         "type": "AUCTION_BID"
       },
       {
+        "type": "AUCTION_INIT",
+        "franchise": "0004",
         "timestamp": "1773942043",
-        "transaction": "16757|425000|",
+        "transaction": "16757|425000|"
+      },
+      {
+        "timestamp": "1773942023",
+        "transaction": "14143|425000|",
         "type": "AUCTION_INIT",
         "franchise": "0004"
       },
       {
-        "franchise": "0004",
-        "type": "AUCTION_INIT",
-        "transaction": "14143|425000|",
-        "timestamp": "1773942023"
-      },
-      {
-        "franchise": "0005",
-        "type": "AUCTION_BID",
         "transaction": "13674|550000|",
-        "timestamp": "1773941978"
+        "timestamp": "1773941978",
+        "franchise": "0005",
+        "type": "AUCTION_BID"
       },
       {
-        "franchise": "0001",
-        "type": "AUCTION_BID",
+        "timestamp": "1773941978",
         "transaction": "13635|600000|",
-        "timestamp": "1773941978"
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0004",
-        "timestamp": "1773941904",
-        "transaction": "15738|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "15738|425000|",
+        "timestamp": "1773941904"
       },
       {
         "type": "AUCTION_INIT",
@@ -4103,10 +4101,10 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0007",
-        "type": "AUCTION_BID",
+        "timestamp": "1773941708",
         "transaction": "14861|700000|",
-        "timestamp": "1773941708"
+        "type": "AUCTION_BID",
+        "franchise": "0007"
       },
       {
         "type": "AUCTION_BID",
@@ -4115,34 +4113,34 @@
         "transaction": "14073|600000|"
       },
       {
-        "type": "AUCTION_BID",
         "franchise": "0008",
-        "timestamp": "1773941708",
-        "transaction": "13604|500000|"
-      },
-      {
-        "franchise": "0009",
         "type": "AUCTION_BID",
-        "transaction": "13116|700000|",
+        "transaction": "13604|500000|",
         "timestamp": "1773941708"
       },
       {
-        "transaction": "11244|700000|",
-        "timestamp": "1773941621",
+        "type": "AUCTION_BID",
+        "franchise": "0009",
+        "timestamp": "1773941708",
+        "transaction": "13116|700000|"
+      },
+      {
         "franchise": "0013",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "11244|700000|",
+        "timestamp": "1773941621"
       },
       {
-        "timestamp": "1773941545",
         "transaction": "16843|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0004"
+        "timestamp": "1773941545",
+        "franchise": "0004",
+        "type": "AUCTION_INIT"
       },
       {
-        "transaction": "16414|1000000|",
         "timestamp": "1773941503",
-        "franchise": "0005",
-        "type": "AUCTION_BID"
+        "transaction": "16414|1000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0005"
       },
       {
         "type": "AUCTION_BID",
@@ -4151,10 +4149,10 @@
         "transaction": "15331|525000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0007",
+        "transaction": "14861|600000|",
         "timestamp": "1773941432",
-        "transaction": "14861|600000|"
+        "franchise": "0007",
+        "type": "AUCTION_BID"
       },
       {
         "transaction": "15259|600000|",
@@ -4163,10 +4161,10 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0015",
         "type": "AUCTION_BID",
-        "transaction": "15256|900000|",
-        "timestamp": "1773941330"
+        "franchise": "0015",
+        "timestamp": "1773941330",
+        "transaction": "15256|900000|"
       },
       {
         "type": "AUCTION_BID",
@@ -4175,34 +4173,34 @@
         "transaction": "15253|1700000|"
       },
       {
+        "type": "AUCTION_BID",
+        "franchise": "0015",
         "timestamp": "1773941201",
-        "transaction": "15256|800000|",
-        "type": "AUCTION_BID",
-        "franchise": "0015"
+        "transaction": "15256|800000|"
       },
       {
-        "franchise": "0015",
         "type": "AUCTION_BID",
-        "transaction": "15256|600000|",
-        "timestamp": "1773941174"
+        "franchise": "0015",
+        "timestamp": "1773941174",
+        "transaction": "15256|600000|"
       },
       {
-        "franchise": "0015",
-        "type": "AUCTION_BID",
         "transaction": "15256|500000|",
-        "timestamp": "1773941151"
+        "timestamp": "1773941151",
+        "franchise": "0015",
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "11150|425000|",
         "timestamp": "1773940954",
-        "franchise": "0012",
-        "type": "AUCTION_INIT"
+        "transaction": "11150|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0012"
       },
       {
-        "transaction": "16036|425000|",
         "timestamp": "1773940834",
-        "franchise": "0012",
-        "type": "AUCTION_INIT"
+        "transaction": "16036|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0012"
       },
       {
         "franchise": "0012",
@@ -4223,40 +4221,40 @@
         "transaction": "15259|425000|"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0012",
-        "timestamp": "1773937868",
-        "transaction": "13772|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "13772|425000|",
+        "timestamp": "1773937868"
       },
       {
-        "timestamp": "1773937591",
+        "franchise": "0012",
+        "type": "AUCTION_BID",
         "transaction": "13299|1275000|",
+        "timestamp": "1773937591"
+      },
+      {
+        "transaction": "13589|5000000|",
+        "timestamp": "1773937503",
+        "franchise": "0012",
+        "type": "AUCTION_BID"
+      },
+      {
+        "timestamp": "1773937375",
+        "transaction": "13593|450000|",
         "type": "AUCTION_BID",
         "franchise": "0012"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0012",
-        "timestamp": "1773937503",
-        "transaction": "13589|5000000|"
-      },
-      {
-        "transaction": "13593|450000|",
-        "timestamp": "1773937375",
-        "franchise": "0012",
-        "type": "AUCTION_BID"
-      },
-      {
         "franchise": "0009",
-        "type": "AUCTION_BID",
-        "transaction": "15237|2500000|",
-        "timestamp": "1773937347"
+        "timestamp": "1773937347",
+        "transaction": "15237|2500000|"
       },
       {
-        "transaction": "14779|2000000|",
         "timestamp": "1773937299",
-        "franchise": "0011",
-        "type": "AUCTION_BID"
+        "transaction": "14779|2000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0011"
       },
       {
         "franchise": "0009",
@@ -4277,16 +4275,16 @@
         "transaction": "14056|425000|"
       },
       {
-        "timestamp": "1773935907",
-        "transaction": "13589|3000000|",
+        "franchise": "0012",
         "type": "AUCTION_BID",
-        "franchise": "0012"
+        "transaction": "13589|3000000|",
+        "timestamp": "1773935907"
       },
       {
-        "timestamp": "1773934525",
         "transaction": "11244|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0013"
+        "timestamp": "1773934525",
+        "franchise": "0013",
+        "type": "AUCTION_INIT"
       },
       {
         "type": "AUCTION_BID",
@@ -4301,10 +4299,10 @@
         "franchise": "0015"
       },
       {
-        "transaction": "15253|1500000|",
-        "timestamp": "1773933574",
         "franchise": "0008",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15253|1500000|",
+        "timestamp": "1773933574"
       },
       {
         "timestamp": "1773933496",
@@ -4313,22 +4311,22 @@
         "franchise": "0011"
       },
       {
-        "franchise": "0015",
         "type": "AUCTION_INIT",
-        "transaction": "15256|425000|",
-        "timestamp": "1773933390"
+        "franchise": "0015",
+        "timestamp": "1773933390",
+        "transaction": "15256|425000|"
+      },
+      {
+        "transaction": "12611|1750000|",
+        "timestamp": "1773933151",
+        "franchise": "0015",
+        "type": "AUCTION_BID"
       },
       {
         "franchise": "0015",
         "type": "AUCTION_BID",
-        "transaction": "12611|1750000|",
-        "timestamp": "1773933151"
-      },
-      {
         "transaction": "15329|2525000|",
-        "timestamp": "1773932913",
-        "franchise": "0015",
-        "type": "AUCTION_BID"
+        "timestamp": "1773932913"
       },
       {
         "type": "AUCTION_INIT",
@@ -4337,22 +4335,22 @@
         "transaction": "12141|425000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0012",
+        "transaction": "13589|450000|",
         "timestamp": "1773932280",
-        "transaction": "13589|450000|"
-      },
-      {
-        "transaction": "15287|7000000|",
-        "timestamp": "1773932022",
-        "franchise": "0011",
+        "franchise": "0012",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773931988",
-        "transaction": "15282|3450000|",
+        "franchise": "0011",
         "type": "AUCTION_BID",
-        "franchise": "0009"
+        "transaction": "15287|7000000|",
+        "timestamp": "1773932022"
+      },
+      {
+        "type": "AUCTION_BID",
+        "franchise": "0009",
+        "timestamp": "1773931988",
+        "transaction": "15282|3450000|"
       },
       {
         "franchise": "0013",
@@ -4361,22 +4359,22 @@
         "timestamp": "1773931753"
       },
       {
-        "franchise": "0007",
-        "type": "AUCTION_BID",
+        "timestamp": "1773931719",
         "transaction": "14836|5000000|",
-        "timestamp": "1773931719"
-      },
-      {
         "type": "AUCTION_BID",
-        "franchise": "0007",
-        "timestamp": "1773931667",
-        "transaction": "15789|2000000|"
+        "franchise": "0007"
       },
       {
-        "transaction": "15287|5000000|",
-        "timestamp": "1773931648",
+        "franchise": "0007",
+        "type": "AUCTION_BID",
+        "transaction": "15789|2000000|",
+        "timestamp": "1773931667"
+      },
+      {
         "franchise": "0011",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15287|5000000|",
+        "timestamp": "1773931648"
       },
       {
         "transaction": "15290|4000000|",
@@ -4385,16 +4383,16 @@
         "type": "AUCTION_BID"
       },
       {
-        "transaction": "15287|4000000|",
-        "timestamp": "1773931365",
+        "type": "AUCTION_BID",
         "franchise": "0011",
-        "type": "AUCTION_BID"
+        "timestamp": "1773931365",
+        "transaction": "15287|4000000|"
       },
       {
-        "transaction": "15281|3525000|",
-        "timestamp": "1773931365",
         "franchise": "0013",
-        "type": "AUCTION_BID"
+        "type": "AUCTION_BID",
+        "transaction": "15281|3525000|",
+        "timestamp": "1773931365"
       },
       {
         "transaction": "14832|500000|",
@@ -4403,82 +4401,82 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0008",
         "timestamp": "1773931246",
-        "transaction": "15786|425000|"
-      },
-      {
+        "transaction": "15786|425000|",
         "type": "AUCTION_INIT",
-        "franchise": "0013",
-        "timestamp": "1773931108",
-        "transaction": "13719|425000|"
+        "franchise": "0008"
       },
       {
-        "transaction": "0509|550000|",
         "timestamp": "1773931108",
+        "transaction": "13719|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0013"
+      },
+      {
+        "type": "AUCTION_BID",
         "franchise": "0007",
+        "timestamp": "1773931108",
+        "transaction": "0509|550000|"
+      },
+      {
+        "transaction": "0516|575000|",
+        "timestamp": "1773931067",
+        "franchise": "0001",
         "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773931067",
-        "transaction": "0516|575000|",
+        "franchise": "0011",
+        "type": "AUCTION_BID",
+        "transaction": "16846|500000|",
+        "timestamp": "1773931027"
+      },
+      {
+        "franchise": "0001",
+        "type": "AUCTION_BID",
+        "transaction": "15979|500000|",
+        "timestamp": "1773930999"
+      },
+      {
+        "timestamp": "1773930951",
+        "transaction": "0516|475000|",
         "type": "AUCTION_BID",
         "franchise": "0001"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0011",
-        "timestamp": "1773931027",
-        "transaction": "16846|500000|"
+        "franchise": "0013",
+        "type": "AUCTION_INIT",
+        "transaction": "12860|425000|",
+        "timestamp": "1773930769"
       },
       {
-        "transaction": "15979|500000|",
-        "timestamp": "1773930999",
-        "franchise": "0001",
+        "franchise": "0013",
+        "type": "AUCTION_BID",
+        "transaction": "0518|650000|",
+        "timestamp": "1773930728"
+      },
+      {
+        "transaction": "0511|700000|",
+        "timestamp": "1773930728",
+        "franchise": "0013",
         "type": "AUCTION_BID"
       },
       {
         "franchise": "0001",
         "type": "AUCTION_BID",
-        "transaction": "0516|475000|",
-        "timestamp": "1773930951"
-      },
-      {
-        "timestamp": "1773930769",
-        "transaction": "12860|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0013"
-      },
-      {
-        "timestamp": "1773930728",
-        "transaction": "0518|650000|",
-        "type": "AUCTION_BID",
-        "franchise": "0013"
-      },
-      {
-        "timestamp": "1773930728",
-        "transaction": "0511|700000|",
-        "type": "AUCTION_BID",
-        "franchise": "0013"
-      },
-      {
-        "type": "AUCTION_BID",
-        "franchise": "0001",
-        "timestamp": "1773930705",
-        "transaction": "0518|600000|"
-      },
-      {
-        "franchise": "0008",
-        "type": "AUCTION_BID",
-        "transaction": "0511|600000|",
+        "transaction": "0518|600000|",
         "timestamp": "1773930705"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0001",
+        "franchise": "0008",
+        "timestamp": "1773930705",
+        "transaction": "0511|600000|"
+      },
+      {
         "timestamp": "1773930672",
-        "transaction": "0518|500000|"
+        "transaction": "0518|500000|",
+        "type": "AUCTION_BID",
+        "franchise": "0001"
       },
       {
         "type": "AUCTION_BID",
@@ -4487,28 +4485,28 @@
         "transaction": "0511|500000|"
       },
       {
-        "timestamp": "1773930610",
         "transaction": "13299|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0013"
+        "timestamp": "1773930610",
+        "franchise": "0013",
+        "type": "AUCTION_INIT"
       },
       {
-        "timestamp": "1773930574",
+        "franchise": "0001",
+        "type": "AUCTION_INIT",
         "transaction": "12611|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0001"
+        "timestamp": "1773930574"
       },
       {
+        "franchise": "0001",
         "type": "AUCTION_BID",
-        "franchise": "0001",
-        "timestamp": "1773930552",
-        "transaction": "15329|500000|"
+        "transaction": "15329|500000|",
+        "timestamp": "1773930552"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0001",
-        "timestamp": "1773930520",
-        "transaction": "13592|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "13592|425000|",
+        "timestamp": "1773930520"
       },
       {
         "transaction": "13674|425000|",
@@ -4517,10 +4515,10 @@
         "type": "AUCTION_INIT"
       },
       {
-        "type": "AUCTION_INIT",
         "franchise": "0001",
-        "timestamp": "1773930393",
-        "transaction": "13590|425000|"
+        "type": "AUCTION_INIT",
+        "transaction": "13590|425000|",
+        "timestamp": "1773930393"
       },
       {
         "type": "AUCTION_BID",
@@ -4529,34 +4527,34 @@
         "transaction": "14138|775000|"
       },
       {
-        "transaction": "15979|425000|",
-        "timestamp": "1773930320",
+        "type": "AUCTION_INIT",
         "franchise": "0001",
+        "timestamp": "1773930320",
+        "transaction": "15979|425000|"
+      },
+      {
+        "transaction": "14138|425000|",
+        "timestamp": "1773930255",
+        "franchise": "0009",
         "type": "AUCTION_INIT"
       },
       {
-        "timestamp": "1773930255",
-        "transaction": "14138|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0009"
+        "transaction": "16192|1025000|",
+        "timestamp": "1773930235",
+        "franchise": "0001",
+        "type": "AUCTION_BID"
       },
       {
-        "timestamp": "1773930235",
-        "transaction": "16192|1025000|",
+        "timestamp": "1773930028",
+        "transaction": "15329|450000|",
         "type": "AUCTION_BID",
         "franchise": "0001"
       },
       {
         "type": "AUCTION_BID",
-        "franchise": "0001",
-        "timestamp": "1773930028",
-        "transaction": "15329|450000|"
-      },
-      {
-        "transaction": "16414|950000|",
-        "timestamp": "1773929943",
         "franchise": "0005",
-        "type": "AUCTION_BID"
+        "timestamp": "1773929943",
+        "transaction": "16414|950000|"
       },
       {
         "transaction": "16414|750000|",
@@ -4565,40 +4563,40 @@
         "type": "AUCTION_BID"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0001",
         "timestamp": "1773929865",
-        "transaction": "15282|425000|"
+        "transaction": "15282|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0001"
       },
       {
-        "timestamp": "1773929853",
         "transaction": "11675|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0001"
+        "timestamp": "1773929853",
+        "franchise": "0001",
+        "type": "AUCTION_INIT"
       },
       {
-        "transaction": "12620|425000|",
         "timestamp": "1773929682",
-        "franchise": "0008",
-        "type": "AUCTION_INIT"
-      },
-      {
-        "transaction": "9431|425000|",
-        "timestamp": "1773929656",
-        "franchise": "0008",
-        "type": "AUCTION_INIT"
-      },
-      {
-        "timestamp": "1773929632",
-        "transaction": "15742|425000|",
+        "transaction": "12620|425000|",
         "type": "AUCTION_INIT",
-        "franchise": "0001"
+        "franchise": "0008"
+      },
+      {
+        "franchise": "0008",
+        "type": "AUCTION_INIT",
+        "transaction": "9431|425000|",
+        "timestamp": "1773929656"
       },
       {
         "type": "AUCTION_INIT",
         "franchise": "0001",
+        "timestamp": "1773929632",
+        "transaction": "15742|425000|"
+      },
+      {
+        "transaction": "13635|425000|",
         "timestamp": "1773929583",
-        "transaction": "13635|425000|"
+        "franchise": "0001",
+        "type": "AUCTION_INIT"
       },
       {
         "transaction": "14832|450000|",
@@ -4607,22 +4605,22 @@
         "type": "AUCTION_BID"
       },
       {
-        "franchise": "0007",
-        "type": "AUCTION_BID",
         "transaction": "14836|2000000|",
-        "timestamp": "1773929534"
+        "timestamp": "1773929534",
+        "franchise": "0007",
+        "type": "AUCTION_BID"
       },
       {
-        "franchise": "0008",
         "type": "AUCTION_INIT",
-        "transaction": "13604|425000|",
-        "timestamp": "1773929516"
+        "franchise": "0008",
+        "timestamp": "1773929516",
+        "transaction": "13604|425000|"
       },
       {
-        "type": "AUCTION_BID",
-        "franchise": "0009",
         "timestamp": "1773929497",
-        "transaction": "14777|450000|"
+        "transaction": "14777|450000|",
+        "type": "AUCTION_BID",
+        "franchise": "0009"
       },
       {
         "type": "AUCTION_BID",
@@ -4631,46 +4629,46 @@
         "transaction": "15287|2500000|"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0008",
+        "transaction": "15253|425000|",
         "timestamp": "1773929447",
-        "transaction": "15253|425000|"
-      },
-      {
-        "type": "AUCTION_INIT",
         "franchise": "0008",
-        "timestamp": "1773929369",
-        "transaction": "14073|425000|"
-      },
-      {
-        "transaction": "15789|425000|",
-        "timestamp": "1773929320",
-        "franchise": "0007",
         "type": "AUCTION_INIT"
       },
       {
-        "timestamp": "1773929285",
-        "transaction": "0513|425000|",
+        "transaction": "14073|425000|",
+        "timestamp": "1773929369",
+        "franchise": "0008",
+        "type": "AUCTION_INIT"
+      },
+      {
         "type": "AUCTION_INIT",
-        "franchise": "0001"
+        "franchise": "0007",
+        "timestamp": "1773929320",
+        "transaction": "15789|425000|"
       },
       {
-        "timestamp": "1773929276",
-        "transaction": "15284|2250000|",
-        "type": "AUCTION_BID",
-        "franchise": "0009"
-      },
-      {
+        "type": "AUCTION_INIT",
         "franchise": "0001",
-        "type": "AUCTION_INIT",
-        "transaction": "0506|425000|",
-        "timestamp": "1773929264"
+        "timestamp": "1773929285",
+        "transaction": "0513|425000|"
       },
       {
-        "timestamp": "1773929261",
-        "transaction": "14832|425000|",
+        "franchise": "0009",
+        "type": "AUCTION_BID",
+        "transaction": "15284|2250000|",
+        "timestamp": "1773929276"
+      },
+      {
+        "transaction": "0506|425000|",
+        "timestamp": "1773929264",
+        "franchise": "0001",
+        "type": "AUCTION_INIT"
+      },
+      {
+        "franchise": "0008",
         "type": "AUCTION_INIT",
-        "franchise": "0008"
+        "transaction": "14832|425000|",
+        "timestamp": "1773929261"
       },
       {
         "franchise": "0001",
@@ -4679,28 +4677,28 @@
         "timestamp": "1773929227"
       },
       {
-        "timestamp": "1773929212",
         "transaction": "16414|475000|",
-        "type": "AUCTION_BID",
-        "franchise": "0005"
-      },
-      {
-        "franchise": "0007",
-        "type": "AUCTION_BID",
-        "transaction": "0509|450000|",
-        "timestamp": "1773929189"
-      },
-      {
+        "timestamp": "1773929212",
         "franchise": "0005",
-        "type": "AUCTION_INIT",
-        "transaction": "0522|425000|",
-        "timestamp": "1773929186"
+        "type": "AUCTION_BID"
       },
       {
-        "transaction": "12676|425000|",
-        "timestamp": "1773929168",
-        "franchise": "0009",
+        "timestamp": "1773929189",
+        "transaction": "0509|450000|",
+        "type": "AUCTION_BID",
+        "franchise": "0007"
+      },
+      {
+        "transaction": "0522|425000|",
+        "timestamp": "1773929186",
+        "franchise": "0005",
         "type": "AUCTION_INIT"
+      },
+      {
+        "timestamp": "1773929168",
+        "transaction": "12676|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0009"
       },
       {
         "timestamp": "1773929167",
@@ -4709,28 +4707,28 @@
         "franchise": "0001"
       },
       {
-        "franchise": "0005",
-        "type": "AUCTION_INIT",
+        "timestamp": "1773929150",
         "transaction": "14871|425000|",
-        "timestamp": "1773929150"
+        "type": "AUCTION_INIT",
+        "franchise": "0005"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0001",
+        "transaction": "0529|425000|",
         "timestamp": "1773929135",
-        "transaction": "0529|425000|"
-      },
-      {
-        "type": "AUCTION_INIT",
         "franchise": "0001",
-        "timestamp": "1773929120",
-        "transaction": "0518|425000|"
+        "type": "AUCTION_INIT"
       },
       {
-        "franchise": "0009",
-        "type": "AUCTION_INIT",
+        "transaction": "0518|425000|",
+        "timestamp": "1773929120",
+        "franchise": "0001",
+        "type": "AUCTION_INIT"
+      },
+      {
+        "timestamp": "1773929117",
         "transaction": "15329|425000|",
-        "timestamp": "1773929117"
+        "type": "AUCTION_INIT",
+        "franchise": "0009"
       },
       {
         "transaction": "16414|425000|",
@@ -4739,28 +4737,28 @@
         "type": "AUCTION_INIT"
       },
       {
-        "timestamp": "1773929085",
+        "franchise": "0001",
+        "type": "AUCTION_INIT",
         "transaction": "0531|425000|",
-        "type": "AUCTION_INIT",
-        "franchise": "0001"
+        "timestamp": "1773929085"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0009",
         "timestamp": "1773929074",
-        "transaction": "16192|425000|"
-      },
-      {
-        "transaction": "13116|425000|",
-        "timestamp": "1773929054",
-        "franchise": "0009",
-        "type": "AUCTION_INIT"
-      },
-      {
-        "timestamp": "1773929036",
-        "transaction": "13589|425000|",
+        "transaction": "16192|425000|",
         "type": "AUCTION_INIT",
         "franchise": "0009"
+      },
+      {
+        "franchise": "0009",
+        "type": "AUCTION_INIT",
+        "transaction": "13116|425000|",
+        "timestamp": "1773929054"
+      },
+      {
+        "type": "AUCTION_INIT",
+        "franchise": "0009",
+        "timestamp": "1773929036",
+        "transaction": "13589|425000|"
       },
       {
         "timestamp": "1773929030",
@@ -4769,10 +4767,10 @@
         "franchise": "0007"
       },
       {
-        "timestamp": "1773929023",
-        "transaction": "13593|425000|",
+        "franchise": "0009",
         "type": "AUCTION_INIT",
-        "franchise": "0009"
+        "transaction": "13593|425000|",
+        "timestamp": "1773929023"
       },
       {
         "type": "AUCTION_INIT",
@@ -4781,16 +4779,16 @@
         "transaction": "12616|425000|"
       },
       {
-        "franchise": "0007",
-        "type": "AUCTION_INIT",
+        "timestamp": "1773928936",
         "transaction": "14836|425000|",
-        "timestamp": "1773928936"
+        "type": "AUCTION_INIT",
+        "franchise": "0007"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0008",
         "timestamp": "1773928926",
-        "transaction": "0509|425000|"
+        "transaction": "0509|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0008"
       },
       {
         "type": "AUCTION_INIT",
@@ -4799,70 +4797,72 @@
         "transaction": "15237|425000|"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0008",
+        "transaction": "0511|425000|",
         "timestamp": "1773928918",
-        "transaction": "0511|425000|"
+        "franchise": "0008",
+        "type": "AUCTION_INIT"
       },
       {
-        "transaction": "15284|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0009",
         "timestamp": "1773928900",
-        "franchise": "0009",
-        "type": "AUCTION_INIT"
+        "transaction": "15284|425000|"
       },
       {
-        "transaction": "15290|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0009",
         "timestamp": "1773928880",
-        "franchise": "0009",
-        "type": "AUCTION_INIT"
+        "transaction": "15290|425000|"
       },
       {
-        "transaction": "15281|3000000|",
         "timestamp": "1773928875",
-        "franchise": "0009",
-        "type": "AUCTION_BID"
+        "transaction": "15281|3000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0009"
       },
       {
+        "type": "AUCTION_INIT",
+        "franchise": "0011",
         "timestamp": "1773928848",
-        "transaction": "16846|425000|",
+        "transaction": "16846|425000|"
+      },
+      {
+        "timestamp": "1773928842",
+        "transaction": "14777|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0001"
+      },
+      {
+        "timestamp": "1773928839",
+        "transaction": "15281|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0009"
+      },
+      {
+        "timestamp": "1773928828",
+        "transaction": "14779|425000|",
         "type": "AUCTION_INIT",
         "franchise": "0011"
       },
       {
-        "type": "AUCTION_INIT",
-        "franchise": "0001",
-        "timestamp": "1773928842",
-        "transaction": "14777|425000|"
-      },
-      {
-        "franchise": "0009",
-        "type": "AUCTION_INIT",
-        "transaction": "15281|425000|",
-        "timestamp": "1773928839"
-      },
-      {
-        "transaction": "14779|425000|",
-        "timestamp": "1773928828",
         "franchise": "0011",
-        "type": "AUCTION_INIT"
-      },
-      {
+        "type": "AUCTION_INIT",
         "transaction": "15287|425000|",
-        "timestamp": "1773928818",
-        "franchise": "0011",
-        "type": "AUCTION_INIT"
+        "timestamp": "1773928818"
       },
       {
-        "comments": "",
-        "expires": "1774544400",
-        "timestamp": "1773270789",
-        "franchise1_gave_up": "DP_2_10,",
         "franchise2": "0010",
         "franchise2_gave_up": "15749,",
-        "by_commish": "1",
         "type": "TRADE",
-        "franchise": "0008"
+        "franchise": "0008",
+        "by_commish": "1",
+        "expires": "1774544400",
+        "comments": "",
+        "franchise1_gave_up": "DP_2_10,",
+        "timestamp": "1773270789"
       }
     ]
-  }
+  },
+  "version": "1.0",
+  "encoding": "utf-8"
 }
