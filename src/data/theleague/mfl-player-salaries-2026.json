@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-06-02T08:48:25.191Z"
+    "fetchedAt": "2026-06-02T10:21:46.500Z"
   },
   "players": [
     {
@@ -1508,7 +1508,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        }
+      ]
     },
     {
       "id": "15708",
@@ -5750,6 +5755,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
+        {
           "id": "15779",
           "name": "Doubs, Romeo"
         },
@@ -7969,6 +7978,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
+        {
           "id": "15779",
           "name": "Doubs, Romeo"
         },
@@ -9023,17 +9036,39 @@
       "status": "ROSTER",
       "contractYear": "3",
       "points": 0,
-      "team": "PHI",
+      "team": "NE",
       "draftYear": 2019,
       "draftTeam": "TEN",
       "birthdate": 867646800,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14104_thumb.jpg",
       "externalIds": {
         "mfl": "14104",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5859",
+        "gsis": " 00-0035676"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5859",
+        "fullName": "A.J. Brown",
+        "team": "NE",
+        "age": 28,
+        "height": "73",
+        "weight": "226",
+        "number": 1,
+        "college": "Ole Miss",
+        "birthDate": "1997-06-30",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035676"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -10917,6 +10952,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
+        {
           "id": "15779",
           "name": "Doubs, Romeo"
         }
@@ -11208,10 +11247,6 @@
         {
           "id": "13633",
           "name": "Kirk, Christian"
-        },
-        {
-          "id": "14840",
-          "name": "Aiyuk, Brandon"
         }
       ]
     },
@@ -16532,7 +16567,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "SWR",
+        "depthChartPosition": null,
         "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
@@ -16544,20 +16579,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "11671",
-          "name": "Evans, Mike"
-        },
-        {
-          "id": "16622",
-          "name": "Pearsall, Ricky"
-        },
-        {
-          "id": "13633",
-          "name": "Kirk, Christian"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "14817",
