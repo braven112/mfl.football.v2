@@ -20,7 +20,11 @@
  */
 
 import { defineMiddleware } from 'astro:middleware';
-import { HOST_TO_SLUG, resolveLeagueRewrite } from './utils/league-host-map';
+import {
+  HOST_TO_SLUG,
+  resolveLeagueRewrite,
+  buildClientRedirectHtml,
+} from './utils/league-host-map';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const hostname = context.url.hostname;
@@ -34,5 +38,38 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!rewrite) return next();
 
   const newUrl = new URL(rewrite.newPath + context.url.search, context.url);
-  return context.rewrite(newUrl);
+  const response = await context.rewrite(newUrl);
+
+  // Clean (non-prefixed) league-host URLs resolve only via the rewrite above,
+  // so they fall through to the Vercel build-output SSR fallback route, which
+  // carries `status: 404`. A 200 render overrides that status, but a 3xx
+  // server redirect does NOT — Vercel returns it as a 404 (the Location header
+  // survives, but browsers ignore it). That silently 404s every server
+  // redirect on a clean URL, e.g. the login gate on /schefter/tip (confirmed:
+  // 302s correctly in dev, 404s in prod). Re-issue GET redirects as a 200 HTML
+  // document the browser follows; the fallback leaves 200s intact. Non-GET
+  // requests keep the native 3xx (page forms post to /api/*, which skip the
+  // rewrite, so this is effectively GET-only in practice).
+  if (
+    context.request.method === 'GET' &&
+    response.status >= 300 &&
+    response.status < 400
+  ) {
+    const location = response.headers.get('location');
+    if (location) {
+      const headers = new Headers({
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      // Preserve any cookies the redirect set (e.g. a session clear).
+      const cookies = response.headers.getSetCookie?.() ?? [];
+      for (const cookie of cookies) headers.append('set-cookie', cookie);
+      return new Response(buildClientRedirectHtml(location), {
+        status: 200,
+        headers,
+      });
+    }
+  }
+
+  return response;
 });

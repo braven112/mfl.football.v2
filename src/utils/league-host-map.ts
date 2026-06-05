@@ -79,3 +79,42 @@ export function resolveLeagueRewrite(
   const newPath = pathname === '/' ? slugPrefix : `${slugPrefix}${pathname}`;
   return { newPath, slug };
 }
+
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Build a minimal HTML document that performs a client-side redirect to
+ * `location`.
+ *
+ * Why this exists: on a league apex host, clean (non-prefixed) URLs resolve
+ * only via the middleware rewrite, so they fall through to the Vercel
+ * build-output SSR fallback route, which carries `status: 404`. A 200 render
+ * overrides that status, but a 3xx redirect does NOT — Vercel returns the
+ * page's server redirect as a 404 (the Location header survives, but browsers
+ * ignore it on a 404). That silently breaks every server redirect on a clean
+ * URL, e.g. the login gate on /schefter/tip. Returning a 200 HTML document the
+ * browser follows works around the fallback, which leaves 200s intact.
+ *
+ * The `<script>` does the redirect immediately; the `<meta refresh>` and
+ * `<a>` are no-JS fallbacks. The URL is escaped for the attribute contexts and
+ * `<` is escaped inside the script string so a crafted Location can't break
+ * out of the tag.
+ */
+export function buildClientRedirectHtml(location: string): string {
+  const attrSafe = escapeHtmlAttr(location);
+  const scriptSafe = JSON.stringify(location).replace(/</g, '\\u003c');
+  return (
+    '<!doctype html><html><head><meta charset="utf-8">' +
+    `<meta http-equiv="refresh" content="0; url=${attrSafe}">` +
+    '<title>Redirecting…</title>' +
+    `<script>location.replace(${scriptSafe})</script>` +
+    '</head><body>Redirecting to ' +
+    `<a href="${attrSafe}">${attrSafe}</a>…</body></html>`
+  );
+}

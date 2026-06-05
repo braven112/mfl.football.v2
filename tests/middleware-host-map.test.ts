@@ -3,6 +3,7 @@ import {
   HOST_TO_SLUG,
   SKIP_REWRITE_PREFIXES,
   resolveLeagueRewrite,
+  buildClientRedirectHtml,
 } from '../src/utils/league-host-map';
 
 // ---------------------------------------------------------------------------
@@ -176,5 +177,39 @@ describe('resolveLeagueRewrite', () => {
       newPath: '/theleague',
       slug: 'theleague',
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildClientRedirectHtml — the clean-URL redirect workaround
+// (clean-URL 3xx responses get clobbered to 404 by the Vercel SSR fallback;
+//  this returns a 200 HTML doc the browser follows instead)
+// ---------------------------------------------------------------------------
+
+describe('buildClientRedirectHtml', () => {
+  it('redirects to the given location via script, meta, and anchor', () => {
+    const html = buildClientRedirectHtml('/theleague/login?redirect=/theleague/schefter/tip');
+    expect(html).toContain('location.replace(');
+    expect(html).toContain('http-equiv="refresh"');
+    expect(html).toContain('/theleague/login?redirect=/theleague/schefter/tip');
+    // The script form carries the raw (JSON-encoded) URL.
+    expect(html).toContain('"/theleague/login?redirect=/theleague/schefter/tip"');
+  });
+
+  it('escapes HTML-significant characters in attribute contexts', () => {
+    const html = buildClientRedirectHtml('/x?a=1&b="2"<3>');
+    expect(html).toContain('&amp;');
+    expect(html).toContain('&quot;');
+    expect(html).toContain('&lt;');
+    expect(html).toContain('&gt;');
+    // No raw double-quote/angle-bracket from the URL leaks into an attribute.
+    expect(html).not.toContain('a=1&b="2"<3>');
+  });
+
+  it('prevents breaking out of the <script> tag', () => {
+    const html = buildClientRedirectHtml('/x?z=</script><script>alert(1)</script>');
+    // The literal closing tag must be neutralized inside the script string.
+    expect(html).not.toContain('</script><script>alert(1)');
+    expect(html).toContain('\\u003c');
   });
 });
