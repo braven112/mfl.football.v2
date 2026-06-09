@@ -83,6 +83,28 @@ describe('resolveDateForYear', () => {
     expect(date.getDate()).toBe(10);
   });
 
+  it('should resolve AL draft to the Saturday a week before Labor Day weekend', () => {
+    // Labor Day 2026 is Mon Sep 7. The draft is NOT on the holiday weekend —
+    // it is the Saturday a full week earlier: Aug 29, 2026.
+    const date = resolveDateForYear(
+      { type: 'computed', rule: 'saturday-before-labor-day-weekend' },
+      2026,
+    );
+    expect(date.getDay()).toBe(6); // Saturday
+    expect(date.getMonth()).toBe(7); // August
+    expect(date.getDate()).toBe(29);
+  });
+
+  it('should resolve NL draft to the Sunday after the AL draft Saturday', () => {
+    const date = resolveDateForYear(
+      { type: 'computed', rule: 'sunday-before-labor-day-weekend' },
+      2026,
+    );
+    expect(date.getDay()).toBe(0); // Sunday
+    expect(date.getMonth()).toBe(7); // August
+    expect(date.getDate()).toBe(30);
+  });
+
   it('should resolve computed day-before-nfl-kickoff', () => {
     const date = resolveDateForYear({ type: 'computed', rule: 'day-before-nfl-kickoff' }, 2026);
     expect(date.getDay()).toBe(3); // Wednesday
