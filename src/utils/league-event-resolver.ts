@@ -58,19 +58,23 @@ function resolveComputedDate(rule: string, year: number): Date {
     case 'third-sunday-august':
       return getNthDayOfMonth(year, 7, 0, 3); // August, Sunday, 3rd
 
-    case 'saturday-before-labor-day': {
-      // AL Live Draft — Saturday immediately before Labor Day
+    case 'saturday-before-labor-day-weekend': {
+      // AL Live Draft — Saturday a full week before Labor Day, i.e. the
+      // Saturday BEFORE the Labor Day holiday weekend (not the Saturday of it).
+      // Labor Day is Monday, so the Saturday of LD weekend is laborDay - 2;
+      // one week earlier is laborDay - 9.
       const laborDay = getLaborDayForYear(year);
       const sat = new Date(laborDay);
-      sat.setDate(sat.getDate() - 2);
+      sat.setDate(sat.getDate() - 9);
       return sat;
     }
 
-    case 'sunday-before-labor-day': {
-      // NL Email Draft — Sunday immediately before Labor Day
+    case 'sunday-before-labor-day-weekend': {
+      // NL Email Draft — the Sunday right after the AL Draft Saturday above,
+      // i.e. the day before the Labor Day holiday weekend (laborDay - 8).
       const laborDay = getLaborDayForYear(year);
       const sun = new Date(laborDay);
-      sun.setDate(sun.getDate() - 1);
+      sun.setDate(sun.getDate() - 8);
       return sun;
     }
 

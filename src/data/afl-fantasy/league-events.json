@@ -1,5 +1,5 @@
 {
-  "$comment": "AFL league calendar events. Mirrors TheLeague's shape (see src/data/theleague/league-events.ts and src/types/league-events.ts). Custom computed rules used here: 'saturday-before-labor-day' (AL Live Draft), 'sunday-before-labor-day' (NL Email Draft, 9am PT). Keeper deadline is fixed July 15.",
+  "$comment": "AFL league calendar events. Mirrors TheLeague's shape (see src/data/theleague/league-events.ts and src/types/league-events.ts). Custom computed rules used here: 'saturday-before-labor-day-weekend' (AL Live Draft — the Saturday a week before Labor Day, NOT on the holiday weekend), 'sunday-before-labor-day-weekend' (NL Email Draft, 9am PT — the next day). Keeper deadline is fixed July 15.",
   "events": [
     {
       "id": "afl-new-season-starts",
@@ -29,7 +29,7 @@
       "description": "AL teams meet live for the conference draft — veterans and rookies on the same board.",
       "category": "draft",
       "icon": "draft-podium",
-      "startDate": { "type": "computed", "rule": "saturday-before-labor-day", "time": "09:00" },
+      "startDate": { "type": "computed", "rule": "saturday-before-labor-day-weekend", "time": "09:00" },
       "urgencyDays": 7,
       "sortOrder": 4
     },
@@ -39,7 +39,7 @@
       "description": "NL teams begin the email draft at 9am PT Sunday. Slow draft, but the clock matters.",
       "category": "draft",
       "icon": "draft-podium",
-      "startDate": { "type": "computed", "rule": "sunday-before-labor-day", "time": "09:00" },
+      "startDate": { "type": "computed", "rule": "sunday-before-labor-day-weekend", "time": "09:00" },
       "urgencyDays": 7,
       "sortOrder": 5
     },
