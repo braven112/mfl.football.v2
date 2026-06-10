@@ -5,6 +5,7 @@
 
 import type { FantasyPlayer, StartingLineup, PlayerStatus, FantasyTeam } from '../types/matchup-previews';
 import { mflFetch } from './mfl-fetch';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 /**
  * MFL API configuration
@@ -718,7 +719,7 @@ export class MFLMatchupApiClient {
  */
 export function createMFLApiClient(config: Partial<MFLApiConfig> = {}): MFLMatchupApiClient {
   const defaultConfig: MFLApiConfig = {
-    leagueId: config.leagueId || process.env.MFL_LEAGUE_ID || '13522',
+    leagueId: config.leagueId || process.env.MFL_LEAGUE_ID || LEAGUES[DEFAULT_LEAGUE_SLUG].id,
     year: config.year || new Date().getFullYear().toString(),
     host: config.host || process.env.MFL_HOST || 'https://api.myfantasyleague.com',
     mflUserId: config.mflUserId || process.env.MFL_USER_ID,

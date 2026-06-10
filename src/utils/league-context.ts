@@ -1,7 +1,10 @@
 /**
  * League context utilities
- * Determines which league context we're in based on URL path
+ * Determines which league context we're in based on URL path.
+ * All per-league constants come from the registry in src/config/leagues.ts.
  */
+
+import { getLeagueByPath } from '../config/leagues';
 
 export interface LeagueContext {
   host: string;
@@ -10,9 +13,6 @@ export interface LeagueContext {
   slug: string; // 'theleague' or 'afl-fantasy'
   dataPath: string; // 'data/theleague' or 'data/afl-fantasy'
 }
-
-const defaultMflHost =
-  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'www49.myfantasyleague.com/';
 
 const normalizeHost = (value: string) =>
   value.replace(/^https?:\/\//, '').replace(/\/+$/, '');
@@ -23,38 +23,19 @@ const normalizeHost = (value: string) =>
  * @returns League context information
  */
 export function getLeagueContext(url: URL): LeagueContext {
-  const pathname = url.pathname;
-  const host = normalizeHost(defaultMflHost);
+  const league = getLeagueByPath(url.pathname);
+  // PUBLIC_MFL_HOST overrides for all leagues (legacy behavior); otherwise
+  // each league uses its own MFL server from the registry.
+  const host = normalizeHost(
+    (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || league.mflHost
+  );
 
-  // Check if URL starts with /afl-fantasy
-  if (pathname.startsWith('/afl-fantasy')) {
-    return {
-      host,
-      leagueId: '19621',
-      name: 'American Football League',
-      slug: 'afl-fantasy',
-      dataPath: 'data/afl-fantasy',
-    };
-  }
-
-  // Check if URL starts with /theleague
-  if (pathname.startsWith('/theleague')) {
-    return {
-      host,
-      leagueId: '13522',
-      name: 'The League',
-      slug: 'theleague',
-      dataPath: 'data/theleague',
-    };
-  }
-
-  // Default to The League for backward compatibility
   return {
     host,
-    leagueId: '13522',
-    name: 'The League',
-    slug: 'theleague',
-    dataPath: 'data/theleague',
+    leagueId: league.id,
+    name: league.name,
+    slug: league.slug,
+    dataPath: league.dataPath,
   };
 }
 

@@ -5,6 +5,7 @@
 
 import type { ContractValidationResult, ContractValidationError } from '../types/contracts';
 import type { DeclarationType } from '../types/contract-eligibility';
+import { LEAGUES } from '../config/leagues';
 
 // League season starts on February 15th
 const SEASON_START_MONTH = 2; // February (0-indexed would be 1, but JS uses 0-indexed, so 2 for March would be 2... actually Feb is 1)
@@ -129,7 +130,7 @@ function validateLeagueId(leagueId: string): ContractValidationError[] {
   const errors: ContractValidationError[] = [];
 
   // Allow both production league and test league
-  const ALLOWED_LEAGUES = ['13522', '18202', '36189'];
+  const ALLOWED_LEAGUES = [LEAGUES.theleague.id, '18202', '36189'];
   if (!ALLOWED_LEAGUES.includes(leagueId)) {
     errors.push({
       field: 'leagueId',

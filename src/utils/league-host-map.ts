@@ -5,22 +5,20 @@
  * pulls in astro:middleware and can't be unit-tested directly) and by
  * vitest.
  *
- * Adding a new league domain: extend HOST_TO_SLUG. The afl-fantasy.com
- * entry is wired in but dormant — flipping live requires DNS + Vercel
- * domain attachment (AFL_DUPLICATION_PLAN §2.3, Phase 7).
+ * Adding a new league domain: add it to the league's `domains` array in
+ * src/config/leagues-data.mjs. The afl-fantasy.com entries are wired in but
+ * dormant — flipping live requires DNS + Vercel domain attachment
+ * (AFL_DUPLICATION_PLAN §2.3, Phase 7).
  */
+
+import { buildHostToSlugMap } from '../config/leagues';
 
 /**
  * Map of apex hostnames → league slug (the path segment under src/pages/).
- * Both the bare host and `www.` variant should be present.
+ * Derived from the league registry; both bare host and `www.` variants are
+ * listed there.
  */
-export const HOST_TO_SLUG: Readonly<Record<string, string>> = {
-  'theleague.us': 'theleague',
-  'www.theleague.us': 'theleague',
-  // Dormant until afl-fantasy.com is pointed at this Vercel project.
-  'afl-fantasy.com': 'afl-fantasy',
-  'www.afl-fantasy.com': 'afl-fantasy',
-};
+export const HOST_TO_SLUG: Readonly<Record<string, string>> = buildHostToSlugMap();
 
 // Slug prefixes get a trailing slash so /theleagueX doesn't match /theleague
 // as a substring. The exact path /theleague (no trailing slash) is caught

@@ -2,6 +2,7 @@
  * LineupOptimizer
  * Detects bench upgrades and lineup optimization opportunities
  */
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 import type { 
   FantasyPlayer, 
@@ -43,7 +44,7 @@ export class LineupOptimizer {
   private leagueId: string;
   private year: string;
 
-  constructor(leagueId: string = '13522', year: string = new Date().getFullYear().toString()) {
+  constructor(leagueId: string = LEAGUES[DEFAULT_LEAGUE_SLUG].id, year: string = new Date().getFullYear().toString()) {
     this.leagueId = leagueId;
     this.year = year;
   }

@@ -4,12 +4,14 @@
 
 import type { TeamStanding } from '../types/standings';
 import { chooseTeamName } from './team-names';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 const DEFAULT_HOST =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
   'https://www49.myfantasyleague.com';
 const DEFAULT_LEAGUE_ID =
-  (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
+  (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) ||
+  LEAGUES[DEFAULT_LEAGUE_SLUG].id;
 
 const trimHost = (host: string) => host.replace(/\/+$/, '');
 
