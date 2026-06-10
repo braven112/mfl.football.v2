@@ -4,11 +4,12 @@ import {
   getTaggedPlayers,
   getCutCandidates,
   isDraftComplete,
+  areAllDraftPicksFilled,
 } from '../src/utils/offseason-hero-data';
 
-// These tests use real data files from the repo.
-// 2025 season has completed playoff brackets and a full draft.
-// 2026 season has empty draft results and current rosters.
+// These tests use real data files from the repo for FROZEN historical years
+// only (their feeds never change). Anything about the current/in-progress
+// year must use fixtures — live data flips state as the season advances.
 
 describe('getChampionshipResult', () => {
   it('returns null for a non-existent year', () => {
@@ -81,13 +82,28 @@ describe('isDraftComplete', () => {
     expect(isDraftComplete(1999)).toBe(false);
   });
 
-  it('returns false for 2026 (draft has not started)', () => {
-    // 2026 draft picks all have empty player fields
-    expect(isDraftComplete(2026)).toBe(false);
+  it('returns true for 2025 (completed draft, frozen data)', () => {
+    expect(isDraftComplete(2025)).toBe(true);
+  });
+});
+
+describe('areAllDraftPicksFilled (fixtures)', () => {
+  const wrap = (draftPick: unknown) => ({ draftResults: { draftUnit: { draftPick } } });
+
+  it('returns false for missing or empty data', () => {
+    expect(areAllDraftPicksFilled(null)).toBe(false);
+    expect(areAllDraftPicksFilled({})).toBe(false);
+    expect(areAllDraftPicksFilled(wrap([]))).toBe(false);
   });
 
-  it('returns true for 2025 (completed draft)', () => {
-    // 2025 draft should be complete (all picks filled)
-    expect(isDraftComplete(2025)).toBe(true);
+  it('returns false when any pick has an empty player field', () => {
+    expect(areAllDraftPicksFilled(wrap([{ player: '12345' }, { player: '' }]))).toBe(false);
+    expect(areAllDraftPicksFilled(wrap([{ player: '   ' }]))).toBe(false);
+    expect(areAllDraftPicksFilled(wrap({ player: '' }))).toBe(false); // single pick, not array
+  });
+
+  it('returns true when every pick is filled', () => {
+    expect(areAllDraftPicksFilled(wrap([{ player: '12345' }, { player: '67890' }]))).toBe(true);
+    expect(areAllDraftPicksFilled(wrap({ player: '12345' }))).toBe(true);
   });
 });
