@@ -311,10 +311,11 @@ export function getCutCandidates(leagueYear: number): CutCandidateRaw[] {
 // ── Draft Completion ──
 
 /**
- * Check if the rookie draft is complete by verifying all picks have players.
+ * Pure check: do the parsed MFL draft results contain picks and is every
+ * pick filled with a player? Exported separately so tests can cover the
+ * empty/partial-pick logic with fixtures instead of live repo data.
  */
-export function isDraftComplete(leagueYear: number): boolean {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/draftResults.json`);
+export function areAllDraftPicksFilled(data: any): boolean {
   if (!data?.draftResults?.draftUnit?.draftPick) return false;
 
   const picks = Array.isArray(data.draftResults.draftUnit.draftPick)
@@ -324,6 +325,15 @@ export function isDraftComplete(leagueYear: number): boolean {
   if (picks.length === 0) return false;
 
   return picks.every((p: any) => p.player && p.player.trim() !== '');
+}
+
+/**
+ * Check if the rookie draft is complete by verifying all picks have players.
+ */
+export function isDraftComplete(leagueYear: number): boolean {
+  return areAllDraftPicksFilled(
+    readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/draftResults.json`)
+  );
 }
 
 // ── Player Lookup ──

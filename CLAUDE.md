@@ -24,6 +24,26 @@ A few legacy vars predate this rule (`SCHEFTER_RUMOR_MILL_ENABLED`,
 `SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`). Don't add more, and prefer
 moving the existing ones into code if you're already touching the file.
 
+## League registry — never hardcode league constants
+
+`src/config/leagues-data.mjs` (data) + `src/config/leagues.ts` (types/helpers)
+are the single source of truth for per-league constants: MFL id, slug, name,
+MFL host, data path, apex domains, and feature flags. Do not write `'13522'`,
+`'19621'`, `'data/theleague'`, etc. inline — import from the registry.
+App code imports `../config/leagues`; node scripts import
+`src/config/leagues-data.mjs` directly. Gate league-specific UI with
+`leagueHasFeature(slug, 'contracts' | 'keepers' | ...)`. Adding a league or
+domain is a one-entry change in `leagues-data.mjs`.
+
+## Auth — session JWT only
+
+`getAuthUser()` (src/utils/auth.ts) trusts only the signed session cookie.
+The old `X-User-Context` / `X-Auth-User` header fallbacks were removed in
+June 2026 — they allowed full auth bypass. Never re-add unsigned identity
+sources. Rate-limit any new LLM-backed endpoint with
+`src/utils/rate-limit.ts`, and run any server-side fetch of a user-supplied
+URL through `src/utils/url-guard.ts#validatePublicUrl`.
+
 ## Roger date-handling gotchas
 
 There are **two** independent code paths named "Roger". Both have hallucinated

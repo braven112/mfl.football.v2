@@ -2,20 +2,15 @@
 
 ## Overview
 
-Authentication supports multiple methods for flexibility across different integration contexts:
-- Session JWT (primary)
-- Authorization header
-- X-User-Context header
-- X-Auth-User header
+The **session JWT in the httpOnly cookie is the only identity source.**
 
-## Auth Priority Order
-
-When checking authentication, sources are tried in order:
-
-1. **Session JWT from httpOnly cookie** (primary method)
-2. **Authorization header** with Bearer token
-3. **X-User-Context header** (JSON format, for message board integration)
-4. **X-Auth-User header** (colon-delimited, for testing)
+> ⚠️ **Removed (June 2026):** the `X-User-Context` and `X-Auth-User` header
+> fallbacks were deleted from `getAuthUser()`. They accepted unsigned identity
+> from any client, which allowed full auth bypass / privilege escalation
+> (claim any franchise or the admin role with a curl header). Any docs or
+> examples below that still show those headers are historical — they no longer
+> work. For local testing, log in through the normal flow or mint a session
+> token with `createSessionToken()` from `src/utils/session.ts`.
 
 ## Core Auth Utilities
 

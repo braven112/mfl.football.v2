@@ -9,9 +9,10 @@
  * homepage SSR loader so we don't pay for a self-fetch round-trip.
  */
 import { getCurrentLeagueYear } from './league-year';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 const DEFAULT_HOST = 'https://api.myfantasyleague.com';
-const DEFAULT_LEAGUE_ID = '13522';
+const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
 
 export interface LiveAuctionEntry {
   bid: number;
