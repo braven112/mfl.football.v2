@@ -11,7 +11,11 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
+import { checkRateLimit } from '../../../utils/rate-limit';
 import { loadTeamConfig } from '../../../utils/groupme-storage';
+
+const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_WINDOW = 3600; // 1 hour
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -37,6 +41,11 @@ RULES:
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
+
+  const limit = await checkRateLimit('groupme-rewrite', user.franchiseId, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+  if (!limit.allowed) {
+    return json({ error: 'Slow down — too many rewrites this hour. Try again later.' }, 429);
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return json({ error: 'AI not configured' }, 503);

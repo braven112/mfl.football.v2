@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getOgPreview } from '../../utils/og-preview';
+import { validatePublicUrl } from '../../utils/url-guard';
 
 export const prerender = false;
 
@@ -7,6 +8,15 @@ export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url).searchParams.get('url');
   if (!url || !/^https?:\/\//i.test(url)) {
     return new Response(JSON.stringify({ error: 'Invalid or missing url param' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // SSRF guard — refuse URLs that point at internal/private address space
+  const blocked = await validatePublicUrl(url);
+  if (blocked) {
+    return new Response(JSON.stringify({ error: blocked }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

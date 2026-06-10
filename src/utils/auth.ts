@@ -1,7 +1,11 @@
 /**
  * Authentication Utilities
  * Handles user authentication and authorization
- * Currently supports franchise/league context from message board or external auth
+ *
+ * Identity comes exclusively from the signed session JWT. Unsigned identity
+ * headers (X-User-Context / X-Auth-User) were removed — they let any client
+ * claim any franchise or the admin role. Do not re-add them; for local
+ * testing, mint a real session via the login flow or createSessionToken().
  */
 
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
@@ -23,76 +27,24 @@ const normalizeFranchise = (value: string | null | undefined): string => {
 };
 
 /**
- * Get authenticated user from request
- * Checks multiple sources for authentication (in priority order):
- * 1. Session JWT from httpOnly cookie (primary auth method)
- * 2. Authorization header with Bearer token
- * 3. X-User-Context header (sent by message board or test harness)
- * 4. X-Auth-User header (colon-delimited format for test)
+ * Get authenticated user from request.
+ * The session JWT in the httpOnly cookie is the only accepted identity source.
  */
 export function getAuthUser(request: Request): AuthUser | null {
-
-  // Priority 1: Check for session JWT in cookies
   const cookieHeader = request.headers.get('cookie');
   const sessionToken = getSessionTokenFromCookie(cookieHeader);
+  if (!sessionToken) return null;
 
-  if (sessionToken) {
-    const sessionData = validateSessionToken(sessionToken);
-    if (sessionData) {
-      return {
-        id: sessionData.userId,
-        name: sessionData.username,
-        franchiseId: normalizeFranchise(sessionData.franchiseId),
-        leagueId: sessionData.leagueId,
-        role: sessionData.role,
-      };
-    }
-  }
+  const sessionData = validateSessionToken(sessionToken);
+  if (!sessionData) return null;
 
-  // Priority 2: Check Authorization header with Bearer token
-  const authHeader = request.headers.get('authorization');
-  // TODO: Implement JWT token validation from Authorization header
-  // if (authHeader?.startsWith('Bearer ')) {
-  //   const token = authHeader.substring(7);
-  //   return validateJWT(token);
-  // }
-
-  // Priority 3: Check for user context header (sent by message board or test harness)
-  const userContextHeader = request.headers.get('x-user-context');
-  if (userContextHeader) {
-    try {
-      const rawUser = JSON.parse(userContextHeader) as AuthUser;
-      const user = {
-        id: rawUser.id,
-        name: rawUser.name,
-        franchiseId: normalizeFranchise(rawUser.franchiseId),
-        leagueId: rawUser.leagueId,
-        role: rawUser.role,
-      };
-      if (user.id && user.franchiseId && user.leagueId) {
-        return user;
-      }
-    } catch {
-      // Invalid JSON in header, continue checking
-    }
-  }
-
-  // Priority 4: Check for X-Auth-User header with format: "id:franchiseId:leagueId:name:role"
-  const userHeader = request.headers.get('x-auth-user');
-  if (userHeader) {
-    const parts = userHeader.split(':');
-    if (parts.length >= 3) {
-      return {
-        id: parts[0],
-        franchiseId: normalizeFranchise(parts[1]),
-        leagueId: parts[2],
-        name: parts[3] || 'User',
-        role: (parts[4] as any) || 'owner',
-      };
-    }
-  }
-
-  return null;
+  return {
+    id: sessionData.userId,
+    name: sessionData.username,
+    franchiseId: normalizeFranchise(sessionData.franchiseId),
+    leagueId: sessionData.leagueId,
+    role: sessionData.role,
+  };
 }
 
 /**

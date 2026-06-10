@@ -9,6 +9,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../../utils/auth';
+import { checkRateLimit } from '../../../../utils/rate-limit';
 import type { SchefterReply, AiReplyRequest } from '../../../../types/schefter-replies';
 import {
   getReplyById,
@@ -75,9 +76,17 @@ function chooseCharacter(post: SchefterPost | null): 'claude' | 'roger' {
   return 'claude';
 }
 
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW = 3600; // 1 hour
+
 export const POST: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
+
+  const limit = await checkRateLimit('ai-reply', user.franchiseId, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+  if (!limit.allowed) {
+    return json({ error: 'Too many AI replies this hour — give Schefter a breather.' }, 429);
+  }
 
   const postId = params.postId;
   if (!postId) return json({ error: 'postId required' }, 400);

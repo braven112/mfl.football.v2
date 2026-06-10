@@ -7,6 +7,8 @@
  * Used to render link-preview cards in the Schefter feed for GroupMe posts.
  */
 
+import { validatePublicUrl } from './url-guard';
+
 type RedisClient = {
   get: <T>(key: string) => Promise<T | null>;
   set: (key: string, value: unknown, opts?: { ex?: number }) => Promise<string>;
@@ -52,6 +54,39 @@ const CACHE_KEY_PREFIX = 'og:preview:';
 const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const FAILED_CACHE_TTL_SECONDS = 60 * 60; // 1 hour for failures (retry sooner)
 const FETCH_TIMEOUT_MS = 5000;
+const MAX_REDIRECTS = 3;
+
+/**
+ * Fetch with manual redirect following, validating every hop against the
+ * SSRF guard — `redirect: 'follow'` would let a public URL bounce us into
+ * private address space.
+ */
+async function fetchWithGuardedRedirects(url: string, signal: AbortSignal): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const reason = await validatePublicUrl(current);
+    if (reason) throw new Error(`Blocked URL (${reason}): ${current}`);
+
+    const res = await fetch(current, {
+      signal,
+      headers: {
+        // Masquerade as a regular browser — many sites block bots
+        'User-Agent': 'Mozilla/5.0 (compatible; MFLFootballBot/1.0; +https://theleague.football)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      redirect: 'manual',
+    });
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) return res;
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return res;
+  }
+  throw new Error('Too many redirects');
+}
 
 /** Fetch and parse OG/Twitter meta tags from a URL */
 async function fetchAndParse(url: string): Promise<OgPreview> {
@@ -62,15 +97,7 @@ async function fetchAndParse(url: string): Promise<OgPreview> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        // Masquerade as a regular browser — many sites block bots
-        'User-Agent': 'Mozilla/5.0 (compatible; MFLFootballBot/1.0; +https://theleague.football)',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-      redirect: 'follow',
-    });
+    const res = await fetchWithGuardedRedirects(url, controller.signal);
     clearTimeout(timeout);
 
     if (!res.ok) {

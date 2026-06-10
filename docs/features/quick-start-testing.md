@@ -1,5 +1,10 @@
 # Quick Start - Contract Management Testing
 
+> ⚠️ **OUTDATED (June 2026):** the `X-User-Context` / `X-Auth-User` header auth
+> shown in this guide was removed for security (unsigned headers = full auth
+> bypass). Authenticate with a real session cookie instead. See
+> `docs/claude/auth.md`.
+
 ## View All Eligible Players
 
 ### Option 1: Browser (Easiest)

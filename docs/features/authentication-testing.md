@@ -1,5 +1,10 @@
 # Contract Management - Authentication & Testing Guide
 
+> ⚠️ **OUTDATED (June 2026):** the `X-User-Context` / `X-Auth-User` header auth
+> shown throughout this guide was removed for security (unsigned headers =
+> full auth bypass). Authenticate with a real session cookie instead. See
+> `docs/claude/auth.md`.
+
 ## Overview
 
 The contract management feature now pulls **real player data** from your live site and implements **real authentication** support. Here's how to test and use it.
