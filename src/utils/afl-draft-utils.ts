@@ -84,11 +84,26 @@ function calculateConferenceDraftOrder(
   // Step 1: Sort by reverse record (worst to best)
   const sortedByRecord = sortByRecordReverse(standings);
 
-  // Step 2: Assign base draft points (12 for worst, 1 for champion)
-  const teamsWithPoints = sortedByRecord.map((team, index) => {
-    const isChampion = team.id === championId;
-    const basePosition = isChampion ? 12 : index + 1; // Champion always gets position 12
-    const basePoints = 13 - basePosition; // 12 points for position 1, 1 point for position 12
+  // Step 2: Assign base draft positions.
+  //
+  // Per the AFL constitution, the conference champion is pulled out of the
+  // standings-based order and forced to the LAST base position (worst pick,
+  // 1 point). The remaining teams fill positions 1..(N-1) by reverse record
+  // (worst record = position 1 = most points). Pulling the champion out first
+  // is what keeps the positions contiguous: assigning the champion position N
+  // while still numbering everyone else by raw index would collide at N (and
+  // skip a position) whenever the champion is not the best-record team.
+  const teamCount = sortedByRecord.length;
+  const championTeam = championId
+    ? sortedByRecord.find(team => team.id === championId)
+    : undefined;
+  const nonChampions = championTeam
+    ? sortedByRecord.filter(team => team.id !== championId)
+    : sortedByRecord;
+
+  const teamsWithPoints = nonChampions.map((team, index) => {
+    const basePosition = index + 1; // 1 = worst record (best pick)
+    const basePoints = teamCount + 1 - basePosition; // N points for position 1 ... 2 for position N-1
 
     // Check if team is in top 5 NIT finishers (+1.5 bonus)
     const isNITTop5 = nitTop5.some(nit => nit.franchiseId === team.id);
@@ -99,9 +114,20 @@ function calculateConferenceDraftOrder(
       team,
       basePosition,
       totalPoints,
-      isChampion
+      isChampion: false
     };
   });
+
+  // Champion always lands at the last base position (1 point, no NIT bonus —
+  // the conference champion plays in the championship bracket, not the NIT).
+  if (championTeam) {
+    teamsWithPoints.push({
+      team: championTeam,
+      basePosition: teamCount,
+      totalPoints: 1,
+      isChampion: true
+    });
+  }
 
   // Step 3: Reorder Round 1 by total points (highest points = pick 1 / best pick)
   const round1Order = [...teamsWithPoints].sort((a, b) => {
@@ -277,9 +303,19 @@ export function getMockNITResults(): Map<string, NITResult[]> {
 }
 
 /**
- * Parse league champion from playoff bracket data
- * The overall league champion gets the 12th pick in their conference
- * Returns map of conference code ('00' or '01') to champion franchise ID
+ * Parse conference champions from playoff bracket data.
+ *
+ * Per the AFL constitution each conference draft is independent, and EACH
+ * conference champion automatically receives the 12th (last) pick in their own
+ * conference draft — not just the overall Super Bowl winner. The conference
+ * championships are separate brackets from the Super Bowl:
+ *   - Bracket 1 = AFL Championship (Super Bowl, AL champ vs NL champ)
+ *   - Bracket 2 = AL Championship  -> American League champion (conference '00')
+ *   - Bracket 3 = NL Championship  -> National League champion (conference '01')
+ *
+ * We read brackets 2 and 3 and slot each winner into its actual conference
+ * (looked up from the team config, so a misnumbered bracket can't mis-slot a
+ * champion). Returns a map of conference code ('00' | '01') -> franchise ID.
  */
 export function parseConferenceChampions(
   playoffBracketsData: any,
@@ -291,17 +327,14 @@ export function parseConferenceChampions(
     return champions;
   }
 
-  // Bracket 1 is the overall league championship (AL vs NL)
-  // The winner gets the 12th pick in their conference
-  const leagueChampion = getWinnerOfBracket(playoffBracketsData.brackets['1']);
+  // Bracket 2 = AL Championship, Bracket 3 = NL Championship.
+  for (const bracketId of ['2', '3']) {
+    const champion = getWinnerOfBracket(playoffBracketsData.brackets[bracketId]);
+    if (!champion) continue;
 
-  if (leagueChampion) {
-    // Determine which conference the champion belongs to
-    const teamConfig = teamConfigs.get(leagueChampion);
-    const conference = teamConfig?.conference;
-
+    const conference = teamConfigs.get(champion)?.conference;
     if (conference === '00' || conference === '01') {
-      champions.set(conference, leagueChampion);
+      champions.set(conference, champion);
     }
   }
 
@@ -380,8 +413,8 @@ export function parseNITResults(
   teamConfigs: Map<string, TeamConfig>
 ): Map<string, NITResult[]> {
   const results = new Map<string, NITResult[]>([
-    ['A', []],
-    ['B', []]
+    ['00', []],
+    ['01', []]
   ]);
 
   if (!playoffBracketsData?.brackets) {
