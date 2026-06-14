@@ -108,15 +108,39 @@ describe('calculateAFLDraftOrder', () => {
     expect(idxA11).toBeGreaterThan(idxA09);
   });
 
-  it('keeps rounds 2-9 following the round 1 order', () => {
+  it('produces 9 rounds of 12 picks, with all later rounds identical to each other', () => {
     const { teams, config } = buildConference('a', '00');
     const orders = calculateAFLDraftOrder(teams, config, new Map(), new Map());
     const al = orders.find(o => o.conference === 'American League')!;
     expect(al.picks).toHaveLength(108); // 12 teams * 9 rounds
 
-    const round1 = al.picks.filter(p => p.round === 1).sort((a, b) => a.pickInRound - b.pickInRound);
+    const round2 = al.picks.filter(p => p.round === 2).sort((a, b) => a.pickInRound - b.pickInRound);
     const round5 = al.picks.filter(p => p.round === 5).sort((a, b) => a.pickInRound - b.pickInRound);
-    expect(round5.map(p => p.franchiseId)).toEqual(round1.map(p => p.franchiseId));
+    expect(round5.map(p => p.franchiseId)).toEqual(round2.map(p => p.franchiseId));
+  });
+
+  it('applies the NIT bonus to Round 1 ONLY — Rounds 2-9 use the base reverse-standings order', () => {
+    const { teams, config } = buildConference('a', '00');
+    // a11 (2nd-best record, base position 11, 2 pts) gets +1.5 -> 3.5 pts, so in
+    // Round 1 it jumps ahead of a10 (base position 10, 3 pts). In Round 2 it must
+    // revert to its base slot BEHIND a10.
+    const nit = new Map([['00', [{ franchiseId: 'a11', finishPosition: 1 }]]]);
+    const orders = calculateAFLDraftOrder(teams, config, new Map(), nit);
+    const al = orders.find(o => o.conference === 'American League')!;
+
+    const round1 = al.picks.filter(p => p.round === 1).sort((a, b) => a.pickInRound - b.pickInRound);
+    const round2 = al.picks.filter(p => p.round === 2).sort((a, b) => a.pickInRound - b.pickInRound);
+
+    // Round 1: NIT bump puts a11 ahead of a10.
+    expect(round1.findIndex(p => p.franchiseId === 'a11'))
+      .toBeLessThan(round1.findIndex(p => p.franchiseId === 'a10'));
+
+    // Round 2: base order restores a10 ahead of a11 (no NIT carryover).
+    expect(round2.findIndex(p => p.franchiseId === 'a10'))
+      .toBeLessThan(round2.findIndex(p => p.franchiseId === 'a11'));
+
+    // Round 2 is the pure reverse-record order: a01 worst -> pick 1 ... a12 -> 11, champ-less so a12 last data team.
+    expect(round2[0].franchiseId).toBe('a01');
   });
 });
 

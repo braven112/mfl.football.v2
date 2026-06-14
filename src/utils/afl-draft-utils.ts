@@ -139,6 +139,15 @@ function calculateConferenceDraftOrder(
     return a.basePosition - b.basePosition;
   });
 
+  // Rounds 2-9 follow the BASE order (reverse standings, champion last) — the
+  // NIT bonus is a Round 1 ONLY adjustment per the constitution ("The first
+  // round will be reordered by total points earned"). Verified against the
+  // live MFL draft board: a team bumped up in Round 1 by its NIT bonus reverts
+  // to its base slot in Round 2 onward.
+  const baseOrder = [...teamsWithPoints].sort((a, b) => a.basePosition - b.basePosition);
+
+  const teamCountPerRound = teamsWithPoints.length;
+
   // Build all draft predictions
   const draftPredictions: DraftPrediction[] = [];
 
@@ -158,11 +167,11 @@ function calculateConferenceDraftOrder(
     );
   });
 
-  // Rounds 2-9: Follow Round 1 order
+  // Rounds 2-9: Follow the base (reverse-standings) order, NOT Round 1
   for (let round = 2; round <= 9; round++) {
-    round1Order.forEach((item, index) => {
+    baseOrder.forEach((item, index) => {
       const pickInRound = index + 1; // 1-12
-      const overallNumber = (round - 1) * 12 + pickInRound;
+      const overallNumber = (round - 1) * teamCountPerRound + pickInRound;
 
       draftPredictions.push(
         buildAFLDraftPrediction(
