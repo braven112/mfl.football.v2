@@ -1071,3 +1071,34 @@ Champion = franchise with higher `points`. Multi-round brackets have `playoffRou
 - History mapping: `data/afl-fantasy/mfl-feeds/2024/league.json` → `league.history.league[]`
 - AFL champion extraction logic: `scripts/compute-franchise-history.mjs:181-227` (`getChampionshipResult()`)
 
+---
+
+## 2026-06-14 - MFL Does NOT Have an API to Set the Base Draft ORDER (Pick Sequence)
+
+**Context:** Researching whether MFL exposes a programmatic endpoint to set which franchise picks in which slot (the pre-draft pick order / draft sequence) for the AFL Fantasy league (L=19621, www44).
+
+**Distinction that matters:** There are THREE different "draft" concepts in MFL's API:
+
+1. **`draftResults` (import)** — Commissioner-only endpoint that RECORDS draft picks (player X was selected by franchise Y in round R). This is for loading results of an offline draft AFTER it happened. It destroys and replaces all existing picks. It does NOT set pick ORDER — it records who picked whom.
+
+2. **`myDraftList` (import)** — Owner-level endpoint that sets a franchise's personal pre-draft rankings board (which players THEY want to target). This appears in MFL's Live Draft Room as a guide. It is a per-franchise preference list, not the draft pick order.
+
+3. **`live_draft` (misc)** — Real-time draft commands (DRAFT, PAUSE, RESUME, SKIP, UNDO) for use during an active snake/linear draft. Does not set the pre-draft pick sequence.
+
+**Finding: No endpoint exists to set the base draft pick order (who picks 1st, 2nd, 3rd, etc.).** MFL does not expose a `draftSort`, `draftOrder`, `draftSequence`, or equivalent import endpoint via its public API. The draft pick sequence is set by commissioners inside the MFL commissioner web UI only, and cannot be written programmatically via the documented API.
+
+**What the MFL commissioner UI DOES provide (web-only, not API):**
+- Manual slot assignment: commissioner drags/reorders franchises into draft slots
+- Auto-generate by standings (worst record picks first)
+- Auto-generate by reverse standings
+- Import from a CSV/URL-based text list (MFL's own commissioner import tool, not an API endpoint)
+
+**Evidence basis:** The MFL insights knowledge base documents `draftResults` import as "loads offline draft results (destructive: deletes all existing results)" (2026-02-27 entry). No `draftSort` or `draftOrder` import endpoint appears in any searched documentation. The api_info pages return 403 from this server environment and could not be scraped directly; however the MFL API's full set of documented import endpoints has been surveyed across multiple prior research sessions with no draft-ORDER endpoint found.
+
+**Confidence: High** — Draft order is a commissioner setup operation in MFL. The distinction between "recording results" and "setting the pick sequence" is explicit in MFL's web UI. If such an API existed, it would have appeared in prior comprehensive API surveys.
+
+**Recommendation:** To set AFL draft order programmatically, the options are:
+1. Use MFL's commissioner web UI manually (only reliable approach today)
+2. Use browser automation (Playwright/Puppeteer) targeting the MFL commissioner draft-setup page — brittle but feasible
+3. Request the feature from MFL support if this is a recurring need
+
