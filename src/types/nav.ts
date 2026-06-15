@@ -119,6 +119,9 @@ export interface NavSection {
   /** Section heading label */
   label: string;
 
+  /** AFL-specific section heading (falls back to label when absent) */
+  labelAFL?: string;
+
   /** Links within this section */
   links: NavLink[];
 

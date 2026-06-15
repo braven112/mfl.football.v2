@@ -232,7 +232,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
               aria-controls={regionId}
               data-section-toggle
             >
-              <span class="nav-links__section-label">{section.label}</span>
+              <span class="nav-links__section-label">{league === 'afl' && section.labelAFL ? section.labelAFL : section.label}</span>
               <svg class="nav-links__section-chevron" viewBox="0 0 24 24" aria-hidden="true">
                 <use href={`${spriteUrl}#icon-chevron-right`} />
               </svg>

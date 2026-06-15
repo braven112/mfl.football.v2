@@ -37,7 +37,6 @@
           "icon": "star",
           "path": "/whats-new",
           "external": false,
-          "leagueOnly": "theleague",
           "description": "See the latest features and improvements"
         }
       ]
@@ -54,7 +53,6 @@
           "icon": "lineup",
           "path": "/lineup",
           "external": false,
-          "leagueOnly": "theleague",
           "description": "Set your starting lineup"
         },
         {
@@ -192,9 +190,9 @@
     {
       "id": "cap-contracts",
       "label": "Cap & Contracts",
+      "labelAFL": "Roster & Trades",
       "phaseOrder": { "inSeason": 3, "offSeason": 3 },
       "defaultOpen": "never",
-      "leagueOnly": "theleague",
       "links": [
         {
           "id": "rosters",
@@ -221,7 +219,6 @@
           "icon": "transactions-2",
           "path": "/trade-builder",
           "external": false,
-          "leagueOnly": "theleague",
           "description": "Simulate trades and see cap impact"
         },
         {
