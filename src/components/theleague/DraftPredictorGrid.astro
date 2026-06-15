@@ -13,6 +13,7 @@ export interface Props {
   teamsPerConference?: number; // Default 16 for theLeague, 12 for AFL Fantasy
   hasCompensatoryPicks?: boolean; // Default true for theLeague, false for AFL Fantasy
   championshipDetermined?: boolean; // Whether overall championship has been decided
+  championLabel?: string; // Label for the reserved last pick: 'League Champion' (theLeague) or 'Conference Champion' (AFL)
   userTeamId?: string; // User's preferred team for highlighting their picks
 }
 
@@ -22,6 +23,7 @@ const {
   teamsPerConference = 16,
   hasCompensatoryPicks = true,
   championshipDetermined = false,
+  championLabel = 'League Champion',
   userTeamId = ''
 } = Astro.props;
 
@@ -117,7 +119,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                   {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
                 </div>
                 {isChampionPick(pick) && (showChampionReserved || hasChampion) && (
-                  <div class="draft-pick__label">{showChampionReserved ? 'Reserved for Champ' : 'League Champion'}</div>
+                  <div class="draft-pick__label">{showChampionReserved ? 'Reserved for Champ' : championLabel}</div>
                 )}
               </div>
             </div>
@@ -187,7 +189,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                 <rect x="4" y="42" width="56" height="8" rx="2" fill="currentColor" opacity="0.15"/>
               </svg>
             </div>
-            <div class="draft-pick__name">League Champion</div>
+            <div class="draft-pick__name">{championLabel}</div>
             <div class="draft-pick__number">{round}.{String(teamsPerConference).padStart(2, '0')}</div>
             <div class="draft-pick__label">Reserved</div>
           </div>
