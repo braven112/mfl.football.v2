@@ -123,7 +123,6 @@
       "label": "Offseason War Room",
       "phaseOrder": { "inSeason": 5, "offSeason": 2 },
       "defaultOpen": "off-season",
-      "leagueOnly": "theleague",
       "links": [
         {
           "id": "draft-room",
@@ -176,6 +175,7 @@
           "path": "/cr",
           "external": false,
           "visibility": "admin",
+          "leagueOnly": "theleague",
           "description": "Personalized player rankings with drag-and-drop reordering"
         }
       ]
