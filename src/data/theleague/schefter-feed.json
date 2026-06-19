@@ -1,7 +1,45 @@
 {
-  "lastScanTimestamp": "2026-06-19T20:24:58.420Z",
+  "lastScanTimestamp": "2026-06-19T20:45:24.688Z",
   "lastProcessedMflTimestamp": "1779515000",
   "posts": [
+    {
+      "id": "sf_speculation_1781901927398_944345ec",
+      "timestamp": "2026-06-19T20:45:24.688Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Computer Jocks country has been kicking around a hypothetical: what if they pivoted on quarterback and pried Sam Darnold away from the Pigskins by bundling tight end prospects Brenton Strange and Michael Mayer in return? Local beat writers have been speculating the Pigskins might view a youth infusion at the position as a reset valve, though neither front office has acknowledged any of this chatter—it's purely fan boards and Wednesday night call-in show fodder at this point.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0001",
+        "0010"
+      ],
+      "league": "theleague",
+      "speculation": {
+        "seller": "0001",
+        "buyer": "0010",
+        "marquee": {
+          "id": "13592",
+          "name": "Darnold, Sam",
+          "position": "QB"
+        },
+        "returnPkg": [
+          {
+            "id": "16269",
+            "name": "Strange, Brenton",
+            "position": "TE"
+          },
+          {
+            "id": "16212",
+            "name": "Mayer, Michael",
+            "position": "TE"
+          }
+        ],
+        "score": 135,
+        "capRelief": false
+      }
+    },
     {
       "id": "espn_bf19c0b06a10a",
       "timestamp": "2026-06-19T20:16:22.819Z",
