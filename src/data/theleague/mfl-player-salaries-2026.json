@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-06-21T03:53:01.889Z"
+    "fetchedAt": "2026-06-21T05:34:18.061Z"
   },
   "players": [
     {
@@ -832,7 +832,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -843,7 +843,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14823",
+          "name": "Dowdle, Rico"
+        }
+      ]
     },
     {
       "id": "11675",
@@ -1113,7 +1118,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -1124,12 +1129,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "15742",
-          "name": "Warren, Jaylen"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "13593",
@@ -6180,7 +6180,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -7270,12 +7270,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "15742",
-          "name": "Warren, Jaylen"
-        },
-        {
           "id": "14823",
           "name": "Dowdle, Rico"
+        },
+        {
+          "id": "15742",
+          "name": "Warren, Jaylen"
         },
         {
           "id": "17048",
@@ -10669,7 +10669,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -15167,12 +15167,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "15742",
-          "name": "Warren, Jaylen"
-        },
-        {
           "id": "14823",
           "name": "Dowdle, Rico"
+        },
+        {
+          "id": "15742",
+          "name": "Warren, Jaylen"
         }
       ]
     },
@@ -19800,7 +19800,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
