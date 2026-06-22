@@ -3,7 +3,9 @@ import {
   calculateAFLDraftOrder,
   parseConferenceChampions,
   parseNITResults,
+  buildHeadToHeadFromRaw,
 } from '../src/utils/afl-draft-utils';
+import type { HeadToHeadMap } from '../src/utils/afl-draft-utils';
 import type { StandingsFranchise } from '../src/types/standings';
 
 /**
@@ -141,6 +143,110 @@ describe('calculateAFLDraftOrder', () => {
 
     // Round 2 is the pure reverse-record order: a01 worst -> pick 1 ... a12 -> 11, champ-less so a12 last data team.
     expect(round2[0].franchiseId).toBe('a01');
+  });
+});
+
+describe('standings tiebreakers follow the AFL constitution', () => {
+  // Build a franchise with explicit tiebreaker fields. Overall record is
+  // divw+nondivw / divl+nondivl; the *pct fields are the constitution metrics.
+  function mk(
+    id: string,
+    o: Partial<Record<'divw' | 'divl' | 'nondivw' | 'nondivl' | 'divpct' | 'confpct' | 'pwr' | 'pf' | 'allplay' | 'vp' | 'pa', string>>,
+  ): StandingsFranchise {
+    return {
+      ...franchise(id, 0, 0),
+      divw: o.divw ?? '0',
+      divl: o.divl ?? '0',
+      nondivw: o.nondivw ?? '0',
+      nondivl: o.nondivl ?? '0',
+      divpct: o.divpct ?? '0',
+      confpct: o.confpct ?? '0',
+      pwr: o.pwr ?? '0',
+      pf: o.pf ?? '0',
+      all_play_pct: o.allplay ?? '0',
+      vp: o.vp ?? '0',
+      pa: o.pa ?? '0',
+    };
+  }
+
+  const cfg = (entries: Array<[string, string]>) =>
+    new Map(entries.map(([id, division]) => [id, { id, name: `Team ${id}`, conference: '00', division }]));
+
+  function round1Picks(teams: StandingsFranchise[], config: ReturnType<typeof cfg>, h2h?: HeadToHeadMap) {
+    const orders = calculateAFLDraftOrder(teams, config, new Map(), new Map(), h2h);
+    const al = orders.find(o => o.conference === 'American League')!;
+    return al.picks.filter(p => p.round === 1).sort((a, b) => a.pickInRound - b.pickInRound);
+  }
+
+  it('breaks a same-division tie on division record, NOT Power Rank (Herd vs Chatmaster)', () => {
+    // Both 5-12, same division, head-to-head split 1-1. Chatmaster has the worse
+    // division record (.300 vs .400) so it must pick FIRST — even though its
+    // Power Rank is higher (the pre-fix code wrongly used Power Rank first and
+    // put the Herd first).
+    const herd = mk('0014', { divw: '4', divl: '6', nondivw: '1', nondivl: '6', divpct: '.400', confpct: '.312', pwr: '29.36', pf: '1791.07', allplay: '.300', vp: '16', pa: '1993.67' });
+    const chat = mk('0021', { divw: '3', divl: '7', nondivw: '2', nondivl: '5', divpct: '.300', confpct: '.312', pwr: '31.79', pf: '1842.59', allplay: '.355', vp: '18', pa: '2008.03' });
+    const config = cfg([['0014', 'West'], ['0021', 'West']]);
+    const h2h: HeadToHeadMap = new Map([
+      ['0014', new Map([['0021', { w: 1, l: 1, t: 0 }]])],
+      ['0021', new Map([['0014', { w: 1, l: 1, t: 0 }]])],
+    ]);
+
+    const r1 = round1Picks([herd, chat], config, h2h);
+    const chatPick = r1.find(p => p.franchiseId === '0021')!.pickInRound;
+    const herdPick = r1.find(p => p.franchiseId === '0014')!.pickInRound;
+    expect(chatPick).toBeLessThan(herdPick);
+  });
+
+  it('applies head-to-head before division record for same-division ties', () => {
+    // Identical division records; the only differentiator is head-to-head, where
+    // B swept A 2-0. A lost the series, so A (worse) picks first.
+    const a = mk('0001', { divw: '5', divl: '5', divpct: '.500', confpct: '.500', pwr: '50', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const b = mk('0002', { divw: '5', divl: '5', divpct: '.500', confpct: '.500', pwr: '50', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const config = cfg([['0001', 'North'], ['0002', 'North']]);
+    const h2h: HeadToHeadMap = new Map([
+      ['0001', new Map([['0002', { w: 0, l: 2, t: 0 }]])],
+      ['0002', new Map([['0001', { w: 2, l: 0, t: 0 }]])],
+    ]);
+
+    const r1 = round1Picks([a, b], config, h2h);
+    expect(r1.find(p => p.franchiseId === '0001')!.pickInRound)
+      .toBeLessThan(r1.find(p => p.franchiseId === '0002')!.pickInRound);
+  });
+
+  it('ignores head-to-head and division record for cross-division (wild-card) ties', () => {
+    // Different divisions: the constitution's wild-card chain starts at
+    // conference record. A has a far better division record AND swept B
+    // head-to-head, but those steps must be SKIPPED — B's worse conference
+    // record makes B pick first.
+    const a = mk('0001', { divw: '9', divl: '1', divpct: '.900', confpct: '.500', pwr: '50', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const b = mk('0008', { divw: '5', divl: '5', divpct: '.500', confpct: '.300', pwr: '50', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const config = cfg([['0001', 'North'], ['0008', 'South']]);
+    const h2h: HeadToHeadMap = new Map([
+      ['0001', new Map([['0008', { w: 2, l: 0, t: 0 }]])],
+      ['0008', new Map([['0001', { w: 0, l: 2, t: 0 }]])],
+    ]);
+
+    const r1 = round1Picks([a, b], config, h2h);
+    expect(r1.find(p => p.franchiseId === '0008')!.pickInRound)
+      .toBeLessThan(r1.find(p => p.franchiseId === '0001')!.pickInRound);
+  });
+});
+
+describe('buildHeadToHeadFromRaw', () => {
+  it('tallies regular-season matchups in both directions and ignores playoff games', () => {
+    const raw = [
+      { weeklyResults: { week: '1', matchup: [{ regularSeason: '1', franchise: [{ id: '0014', result: 'W' }, { id: '0021', result: 'L' }] }] } },
+      { weeklyResults: { week: '12', matchup: [{ regularSeason: '1', franchise: [{ id: '0014', result: 'L' }, { id: '0021', result: 'W' }] }] } },
+      { weeklyResults: { week: '15', matchup: [{ regularSeason: '0', franchise: [{ id: '0014', result: 'L' }, { id: '0021', result: 'W' }] }] } },
+    ];
+    const m = buildHeadToHeadFromRaw(raw);
+    expect(m.get('0014')?.get('0021')).toEqual({ w: 1, l: 1, t: 0 });
+    expect(m.get('0021')?.get('0014')).toEqual({ w: 1, l: 1, t: 0 });
+  });
+
+  it('returns an empty ledger for malformed input', () => {
+    expect(buildHeadToHeadFromRaw(null).size).toBe(0);
+    expect(buildHeadToHeadFromRaw({}).size).toBe(0);
   });
 });
 
