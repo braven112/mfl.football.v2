@@ -257,11 +257,59 @@ function tailCompare(a: StandingsFranchise, b: StandingsFranchise): number {
 }
 
 /**
+ * Rank one division's tied teams WORST first via the constitution's
+ * eliminate-and-restart procedure: walk the division chain
+ * (head-to-head among the *current* clubs -> division % -> conference % -> tail);
+ * the first step that splits the set partitions it into value-groups, and each
+ * resulting subgroup recurses from step 1 (head-to-head recomputed over only the
+ * subgroup). This matches "3-Team Division Tiebreakers: if two clubs remain tied
+ * after others are eliminated, revert to step 1 of the two-club format" — a team
+ * removed by a later step no longer skews the survivors' head-to-head.
+ */
+function rankDivisionBlockWorstFirst(
+  teams: StandingsFranchise[],
+  headToHead?: HeadToHeadMap
+): StandingsFranchise[] {
+  if (teams.length <= 1) return [...teams];
+
+  // Ordered chain. dir = +1 when a LOWER value is worse (picks earlier),
+  // dir = -1 when a HIGHER value is worse (only "most points allowed").
+  const steps: Array<{ val: (t: StandingsFranchise) => number; dir: 1 | -1 }> = [
+    { val: (t) => h2hPctWithin(t, teams, headToHead), dir: 1 }, // head-to-head among current clubs
+    { val: (t) => numField(t.divpct), dir: 1 }, // division %
+    { val: (t) => numField(t.confpct), dir: 1 }, // conference %
+    { val: (t) => numField(t.pwr), dir: 1 }, // Power Rank
+    { val: (t) => numField(t.pf), dir: 1 }, // total points
+    { val: (t) => numField(t.all_play_pct), dir: 1 }, // all-play %
+    { val: (t) => numField(t.vp), dir: 1 }, // victory points
+    { val: (t) => numField(t.pa), dir: -1 }, // most points allowed (higher = worse)
+  ];
+
+  for (const step of steps) {
+    const groups = new Map<number, StandingsFranchise[]>();
+    for (const t of teams) {
+      const k = step.val(t);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k)!.push(t);
+    }
+    if (groups.size <= 1) continue; // step doesn't separate anyone — try the next
+    // Worst value-group first, then restart the chain within each subgroup.
+    const keys = [...groups.keys()].sort((a, b) => (step.dir === 1 ? a - b : b - a));
+    const out: StandingsFranchise[] = [];
+    for (const k of keys) out.push(...rankDivisionBlockWorstFirst(groups.get(k)!, headToHead));
+    return out;
+  }
+
+  // Every step tied — deterministic coin flip (franchise id).
+  return [...teams].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/**
  * Rank a set of teams already tied on overall record, WORST first (earliest
  * pick), per the constitution. "Ties are broken within divisions first," so:
  *   1. split the tied set by division,
- *   2. order each division internally by the division chain
- *      (head-to-head among the tied clubs -> division % -> conference % -> tail),
+ *   2. order each division internally via rankDivisionBlockWorstFirst
+ *      (head-to-head -> division % -> conference % -> tail, eliminate-and-restart),
  *   3. k-way merge the divisions by the wild-card chain (conference % -> tail),
  *      always taking the worst available division leader.
  *
@@ -269,6 +317,8 @@ function tailCompare(a: StandingsFranchise, b: StandingsFranchise): number {
  * comparator, so the result is deterministic and transitive. (A single in-place
  * comparator that switched chains based on same- vs cross-division would be
  * non-transitive and let V8's sort scramble even the primary record order.)
+ * With 2 divisions per conference a 3-team *wild-card* tie can't occur, so the
+ * cross-division merge only ever makes pairwise wild-card comparisons.
  */
 function rankTiedGroupWorstFirst(
   group: StandingsFranchise[],
@@ -285,18 +335,8 @@ function rankTiedGroupWorstFirst(
     byDivision.get(div)!.push(team);
   }
 
-  // 2. order each division internally (worst first) via the division chain
-  const divisionCompare = (block: StandingsFranchise[]) =>
-    (a: StandingsFranchise, b: StandingsFranchise): number => {
-      const h2h = h2hPctWithin(a, block, headToHead) - h2hPctWithin(b, block, headToHead);
-      if (h2h !== 0) return h2h; // lower head-to-head % = worse = earlier
-      const divPct = numField(a.divpct) - numField(b.divpct);
-      if (divPct !== 0) return divPct;
-      const confPct = numField(a.confpct) - numField(b.confpct);
-      if (confPct !== 0) return confPct;
-      return tailCompare(a, b);
-    };
-  const blocks = [...byDivision.values()].map((block) => [...block].sort(divisionCompare(block)));
+  // 2. order each division internally (worst first), eliminate-and-restart
+  const blocks = [...byDivision.values()].map((block) => rankDivisionBlockWorstFirst(block, headToHead));
 
   // 3. wild-card chain for cross-division ordering (no head-to-head / division %)
   const wildCardCompare = (a: StandingsFranchise, b: StandingsFranchise): number => {
@@ -350,9 +390,18 @@ function sortByRecordReverse(
  */
 export function buildHeadToHeadFromRaw(raw: unknown): HeadToHeadMap {
   const ledger: HeadToHeadMap = new Map();
-  const weeks = Array.isArray(raw) ? raw : Object.values(raw ?? {});
+  // Narrow `unknown` explicitly so malformed input yields an empty ledger
+  // without a strict-mode type error (Object.values needs a real object).
+  const weeks: unknown[] = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object'
+      ? Object.values(raw as Record<string, unknown>)
+      : [];
 
-  const bump = (from: string, to: string, result: string) => {
+  const bump = (from: string, to: string, result: unknown) => {
+    // Only tally recognized W/L/T results; skip missing/unknown so a feed
+    // change can't silently inflate ties.
+    if (result !== 'W' && result !== 'L' && result !== 'T') return;
     if (!ledger.has(from)) ledger.set(from, new Map());
     const row = ledger.get(from)!;
     const rec = row.get(to) ?? { w: 0, l: 0, t: 0 };

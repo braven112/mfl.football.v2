@@ -213,6 +213,29 @@ describe('standings tiebreakers follow the AFL constitution', () => {
       .toBeLessThan(r1.find(p => p.franchiseId === '0002')!.pickInRound);
   });
 
+  it('uses eliminate-and-restart for a 3-team same-division tie (recomputes h2h on survivors)', () => {
+    // A, B, C share a division and an overall record. Their 3-way head-to-head
+    // is a cycle (each 2-2), so step 1 separates no one. Division % then drops C
+    // (.400) out as the worst. The survivors A & B restart at step 1, where A
+    // swept B 2-0 -> B is the worse of the two. Expected worst-first: C, B, A.
+    // A single-pass sort (h2h over the whole block, then div%, then Power Rank)
+    // would instead give C, A, B because A's lower Power Rank looks "worse" and
+    // the A-vs-B head-to-head never gets revisited.
+    const a = mk('0001', { divw: '8', divl: '8', divpct: '.600', confpct: '.500', pwr: '40', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const b = mk('0002', { divw: '8', divl: '8', divpct: '.600', confpct: '.500', pwr: '45', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const c = mk('0003', { divw: '8', divl: '8', divpct: '.400', confpct: '.500', pwr: '50', pf: '1500', allplay: '.500', vp: '20', pa: '1500' });
+    const config = cfg([['0001', 'North'], ['0002', 'North'], ['0003', 'North']]);
+    const h2h: HeadToHeadMap = new Map([
+      ['0001', new Map([['0002', { w: 2, l: 0, t: 0 }], ['0003', { w: 0, l: 2, t: 0 }]])], // A beat B, lost to C
+      ['0002', new Map([['0001', { w: 0, l: 2, t: 0 }], ['0003', { w: 2, l: 0, t: 0 }]])], // B lost to A, beat C
+      ['0003', new Map([['0001', { w: 2, l: 0, t: 0 }], ['0002', { w: 0, l: 2, t: 0 }]])], // C beat A, lost to B
+    ]);
+
+    const r1 = round1Picks([a, b, c], config, h2h);
+    const order = r1.map((p) => p.franchiseId);
+    expect(order).toEqual(['0003', '0002', '0001']); // C, then B (lost A-B h2h), then A
+  });
+
   it('ignores head-to-head and division record for cross-division (wild-card) ties', () => {
     // Different divisions: the constitution's wild-card chain starts at
     // conference record. A has a far better division record AND swept B
