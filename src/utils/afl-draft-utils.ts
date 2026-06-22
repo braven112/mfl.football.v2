@@ -14,7 +14,14 @@ interface TeamConfig {
   icon?: string;
   banner?: string;
   conference?: string;
+  division?: string;
 }
+
+/**
+ * Head-to-head ledger: franchiseId -> opponentId -> regular-season record.
+ * Used for step 1 of the same-division standings tiebreaker.
+ */
+export type HeadToHeadMap = Map<string, Map<string, { w: number; l: number; t: number }>>;
 
 interface NITResult {
   franchiseId: string;
@@ -40,7 +47,8 @@ export function calculateAFLDraftOrder(
   standings: StandingsFranchise[],
   teamConfigs: Map<string, TeamConfig>,
   conferenceChampions: Map<string, string>, // conference code -> franchise ID
-  nitResults: Map<string, NITResult[]> // conference code -> top 5 NIT finishers
+  nitResults: Map<string, NITResult[]>, // conference code -> top 5 NIT finishers
+  headToHead?: HeadToHeadMap // regular-season h2h for same-division tiebreaks
 ): ConferenceDraftOrder[] {
   // Group teams by conference
   const conferenceA = standings.filter(team => teamConfigs.get(team.id)?.conference === '00');
@@ -60,7 +68,8 @@ export function calculateAFLDraftOrder(
       teamConfigs,
       championId || '',
       nitTop5,
-      code
+      code,
+      headToHead
     );
 
     return {
@@ -79,10 +88,11 @@ function calculateConferenceDraftOrder(
   teamConfigs: Map<string, TeamConfig>,
   championId: string,
   nitTop5: NITResult[],
-  conferenceCode: string
+  conferenceCode: string,
+  headToHead?: HeadToHeadMap
 ): DraftPrediction[] {
   // Step 1: Sort by reverse record (worst to best)
-  const sortedByRecord = sortByRecordReverse(standings);
+  const sortedByRecord = sortByRecordReverse(standings, teamConfigs, headToHead);
 
   // Step 2: Assign base draft positions.
   //
@@ -190,62 +200,233 @@ function calculateConferenceDraftOrder(
   return draftPredictions;
 }
 
+const numField = (v: string | undefined): number => {
+  const n = parseFloat(v ?? '0');
+  return Number.isFinite(n) ? n : 0;
+};
+
+/** Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half. */
+function overallPct(f: StandingsFranchise): number {
+  const w = parseInt(f.divw || '0') + parseInt(f.nondivw || '0');
+  const l = parseInt(f.divl || '0') + parseInt(f.nondivl || '0');
+  const t = parseInt(f.divt || '0') + parseInt(f.nondivt || '0');
+  const g = w + l + t;
+  return g > 0 ? (w + 0.5 * t) / g : 0;
+}
+
 /**
- * Sort teams by overall record in reverse order (worst to best)
- * Uses same tiebreakers as standings
+ * Per-team head-to-head win% against the OTHER members of a tied group
+ * (regular season only). Expressed as a scalar so the sort stays transitive —
+ * this mirrors the constitution's "best won-lost-tied % in games between the
+ * clubs" (a property of each club vs the tied set, not a pairwise flip).
+ * Defaults to .500 (neutral) when the clubs never met.
  */
-function sortByRecordReverse(standings: StandingsFranchise[]): StandingsFranchise[] {
-  return [...standings].sort((a, b) => {
-    // Calculate overall win-loss records
-    const aWins = (parseInt(a.divw || '0') + parseInt(a.nondivw || '0'));
-    const aLosses = (parseInt(a.divl || '0') + parseInt(a.nondivl || '0'));
-    const bWins = (parseInt(b.divw || '0') + parseInt(b.nondivw || '0'));
-    const bLosses = (parseInt(b.divl || '0') + parseInt(b.nondivl || '0'));
+function h2hPctWithin(
+  team: StandingsFranchise,
+  group: StandingsFranchise[],
+  headToHead?: HeadToHeadMap
+): number {
+  let w = 0, l = 0, t = 0;
+  for (const opp of group) {
+    if (opp.id === team.id) continue;
+    const rec = headToHead?.get(team.id)?.get(opp.id);
+    if (!rec) continue;
+    w += rec.w; l += rec.l; t += rec.t;
+  }
+  const g = w + l + t;
+  return g > 0 ? (w + 0.5 * t) / g : 0.5;
+}
 
-    // Calculate win percentages
-    const aGames = aWins + aLosses;
-    const bGames = bWins + bLosses;
-    const aWinPct = aGames > 0 ? aWins / aGames : 0;
-    const bWinPct = bGames > 0 ? bWins / bGames : 0;
+/**
+ * Shared tail of every tiebreaker chain (worst picks first): Power Rank ->
+ * total points -> all-play % -> victory points -> most points allowed ->
+ * deterministic coin flip (franchise id). All scalar -> fully transitive.
+ */
+function tailCompare(a: StandingsFranchise, b: StandingsFranchise): number {
+  const pwr = numField(a.pwr) - numField(b.pwr);
+  if (pwr !== 0) return pwr;
+  const pf = numField(a.pf) - numField(b.pf);
+  if (pf !== 0) return pf;
+  const allPlay = numField(a.all_play_pct) - numField(b.all_play_pct);
+  if (allPlay !== 0) return allPlay;
+  const vp = numField(a.vp) - numField(b.vp);
+  if (vp !== 0) return vp;
+  const pa = numField(b.pa) - numField(a.pa); // more points allowed = worse = earlier
+  if (pa !== 0) return pa;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; // deterministic coin flip
+}
 
-    // REVERSE: Worst record (lowest win%) comes first
-    if (aWinPct !== bWinPct) {
-      return aWinPct - bWinPct;
+/**
+ * Rank one division's tied teams WORST first via the constitution's
+ * eliminate-and-restart procedure: walk the division chain
+ * (head-to-head among the *current* clubs -> division % -> conference % -> tail);
+ * the first step that splits the set partitions it into value-groups, and each
+ * resulting subgroup recurses from step 1 (head-to-head recomputed over only the
+ * subgroup). This matches "3-Team Division Tiebreakers: if two clubs remain tied
+ * after others are eliminated, revert to step 1 of the two-club format" — a team
+ * removed by a later step no longer skews the survivors' head-to-head.
+ */
+function rankDivisionBlockWorstFirst(
+  teams: StandingsFranchise[],
+  headToHead?: HeadToHeadMap
+): StandingsFranchise[] {
+  if (teams.length <= 1) return [...teams];
+
+  // Ordered chain. dir = +1 when a LOWER value is worse (picks earlier),
+  // dir = -1 when a HIGHER value is worse (only "most points allowed").
+  const steps: Array<{ val: (t: StandingsFranchise) => number; dir: 1 | -1 }> = [
+    { val: (t) => h2hPctWithin(t, teams, headToHead), dir: 1 }, // head-to-head among current clubs
+    { val: (t) => numField(t.divpct), dir: 1 }, // division %
+    { val: (t) => numField(t.confpct), dir: 1 }, // conference %
+    { val: (t) => numField(t.pwr), dir: 1 }, // Power Rank
+    { val: (t) => numField(t.pf), dir: 1 }, // total points
+    { val: (t) => numField(t.all_play_pct), dir: 1 }, // all-play %
+    { val: (t) => numField(t.vp), dir: 1 }, // victory points
+    { val: (t) => numField(t.pa), dir: -1 }, // most points allowed (higher = worse)
+  ];
+
+  for (const step of steps) {
+    const groups = new Map<number, StandingsFranchise[]>();
+    for (const t of teams) {
+      const k = step.val(t);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k)!.push(t);
     }
+    if (groups.size <= 1) continue; // step doesn't separate anyone — try the next
+    // Worst value-group first, then restart the chain within each subgroup.
+    const keys = [...groups.keys()].sort((a, b) => (step.dir === 1 ? a - b : b - a));
+    const out: StandingsFranchise[] = [];
+    for (const k of keys) out.push(...rankDivisionBlockWorstFirst(groups.get(k)!, headToHead));
+    return out;
+  }
 
-    // Tiebreaker 1: Power Rank (lower is worse for draft purposes)
-    const aPWR = parseFloat(a.pwr || '0');
-    const bPWR = parseFloat(b.pwr || '0');
-    if (aPWR !== bPWR) {
-      return aPWR - bPWR;
+  // Every step tied — deterministic coin flip (franchise id).
+  return [...teams].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/**
+ * Rank a set of teams already tied on overall record, WORST first (earliest
+ * pick), per the constitution. "Ties are broken within divisions first," so:
+ *   1. split the tied set by division,
+ *   2. order each division internally via rankDivisionBlockWorstFirst
+ *      (head-to-head -> division % -> conference % -> tail, eliminate-and-restart),
+ *   3. k-way merge the divisions by the wild-card chain (conference % -> tail),
+ *      always taking the worst available division leader.
+ *
+ * The merge preserves each division's internal order and uses a total-order
+ * comparator, so the result is deterministic and transitive. (A single in-place
+ * comparator that switched chains based on same- vs cross-division would be
+ * non-transitive and let V8's sort scramble even the primary record order.)
+ * With 2 divisions per conference a 3-team *wild-card* tie can't occur, so the
+ * cross-division merge only ever makes pairwise wild-card comparisons.
+ */
+function rankTiedGroupWorstFirst(
+  group: StandingsFranchise[],
+  teamConfigs?: Map<string, TeamConfig>,
+  headToHead?: HeadToHeadMap
+): StandingsFranchise[] {
+  if (group.length <= 1) return group;
+
+  // 1. partition by division (teams with no config get their own singleton bucket)
+  const byDivision = new Map<string, StandingsFranchise[]>();
+  for (const team of group) {
+    const div = teamConfigs?.get(team.id)?.division ?? `__${team.id}`;
+    if (!byDivision.has(div)) byDivision.set(div, []);
+    byDivision.get(div)!.push(team);
+  }
+
+  // 2. order each division internally (worst first), eliminate-and-restart
+  const blocks = [...byDivision.values()].map((block) => rankDivisionBlockWorstFirst(block, headToHead));
+
+  // 3. wild-card chain for cross-division ordering (no head-to-head / division %)
+  const wildCardCompare = (a: StandingsFranchise, b: StandingsFranchise): number => {
+    const confPct = numField(a.confpct) - numField(b.confpct);
+    if (confPct !== 0) return confPct;
+    return tailCompare(a, b);
+  };
+
+  // k-way merge: repeatedly take the worst current division leader
+  const ptr = blocks.map(() => 0);
+  const out: StandingsFranchise[] = [];
+  while (out.length < group.length) {
+    let pick = -1;
+    for (let i = 0; i < blocks.length; i++) {
+      if (ptr[i] >= blocks[i].length) continue;
+      if (pick < 0 || wildCardCompare(blocks[i][ptr[i]], blocks[pick][ptr[pick]]) < 0) pick = i;
     }
+    out.push(blocks[pick][ptr[pick]++]);
+  }
+  return out;
+}
 
-    // Tiebreaker 2: Points For (lower is worse)
-    const aPF = parseFloat(a.pf || '0');
-    const bPF = parseFloat(b.pf || '0');
-    if (aPF !== bPF) {
-      return aPF - bPF;
+/**
+ * Sort teams worst-to-best to produce the base (reverse-standings) draft order.
+ * Primary key is overall W-L-T %; equal-record sets are linearized by
+ * rankTiedGroupWorstFirst (constitution tiebreakers, division-first).
+ */
+function sortByRecordReverse(
+  standings: StandingsFranchise[],
+  teamConfigs?: Map<string, TeamConfig>,
+  headToHead?: HeadToHeadMap
+): StandingsFranchise[] {
+  // Group by overall record (exact win% key), then order groups worst first.
+  const groups = new Map<number, StandingsFranchise[]>();
+  for (const team of standings) {
+    const pct = overallPct(team);
+    if (!groups.has(pct)) groups.set(pct, []);
+    groups.get(pct)!.push(team);
+  }
+  const result: StandingsFranchise[] = [];
+  for (const pct of [...groups.keys()].sort((a, b) => a - b)) {
+    result.push(...rankTiedGroupWorstFirst(groups.get(pct)!, teamConfigs, headToHead));
+  }
+  return result;
+}
+
+/**
+ * Build a regular-season head-to-head ledger from MFL's raw weekly results
+ * (`weekly-results-raw.json`). Only matchups flagged `regularSeason === '1'`
+ * count — playoff/NIT games never factor into standings tiebreakers.
+ */
+export function buildHeadToHeadFromRaw(raw: unknown): HeadToHeadMap {
+  const ledger: HeadToHeadMap = new Map();
+  // Narrow `unknown` explicitly so malformed input yields an empty ledger
+  // without a strict-mode type error (Object.values needs a real object).
+  const weeks: unknown[] = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object'
+      ? Object.values(raw as Record<string, unknown>)
+      : [];
+
+  const bump = (from: string, to: string, result: unknown) => {
+    // Only tally recognized W/L/T results; skip missing/unknown so a feed
+    // change can't silently inflate ties.
+    if (result !== 'W' && result !== 'L' && result !== 'T') return;
+    if (!ledger.has(from)) ledger.set(from, new Map());
+    const row = ledger.get(from)!;
+    const rec = row.get(to) ?? { w: 0, l: 0, t: 0 };
+    if (result === 'W') rec.w++;
+    else if (result === 'L') rec.l++;
+    else rec.t++;
+    row.set(to, rec);
+  };
+
+  for (const weekEntry of weeks as any[]) {
+    const wr = weekEntry?.weeklyResults ?? weekEntry?.[0]?.weeklyResults;
+    if (!wr) continue;
+    const matchups = Array.isArray(wr.matchup) ? wr.matchup : wr.matchup ? [wr.matchup] : [];
+    for (const m of matchups) {
+      if (m?.regularSeason !== '1') continue;
+      const fr = m.franchise;
+      if (!Array.isArray(fr) || fr.length !== 2) continue;
+      const [x, y] = fr;
+      if (!x?.id || !y?.id) continue;
+      bump(x.id, y.id, x.result);
+      bump(y.id, x.id, y.result);
     }
+  }
 
-    // Tiebreaker 3: All-play percentage (lower is worse)
-    const aAllPlay = parseFloat(a.all_play_pct || '0');
-    const bAllPlay = parseFloat(b.all_play_pct || '0');
-    if (aAllPlay !== bAllPlay) {
-      return aAllPlay - bAllPlay;
-    }
-
-    // Tiebreaker 4: Victory Points (lower is worse)
-    const aVP = parseInt(a.vp || '0');
-    const bVP = parseInt(b.vp || '0');
-    if (aVP !== bVP) {
-      return aVP - bVP;
-    }
-
-    // Tiebreaker 5: Points Against (higher is worse)
-    const aPA = parseFloat(a.pa || '0');
-    const bPA = parseFloat(b.pa || '0');
-    return bPA - aPA;
-  });
+  return ledger;
 }
 
 /**

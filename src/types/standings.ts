@@ -20,6 +20,13 @@ export interface StandingsFranchise {
   nondivw: string;
   nondivl: string;
   nondivt: string;
+  // Conference record (present in the MFL feed; optional so lightweight test
+  // fixtures and older callers don't have to supply them).
+  confwlt?: string;
+  confpct?: string;
+  confw?: string;
+  confl?: string;
+  conft?: string;
   all_play_wlt: string;
   all_play_pct: string;
   pf: string;
