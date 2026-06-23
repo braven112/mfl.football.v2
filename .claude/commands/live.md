@@ -1,4 +1,4 @@
-Push the current branch, create a PR, run a code review, auto-approve if the review passes, enable auto-merge, then monitor until the PR is merged.
+Push the current branch, create a PR, run parallel Claude + Codex reviews, auto-approve if both pass, enable auto-merge, then monitor until the PR is merged.
 
 ## Steps
 
@@ -7,10 +7,9 @@ Push the current branch, create a PR, run a code review, auto-approve if the rev
 Before anything ships, run both documentation checks:
 
 1. **Run `/update-whats-new`** — evaluates whether the changes need a What's New entry or changelog item and writes it. If a screenshot is still needed, flag it to the user but don't block.
-
 2. **Run `/update-insights`** — reviews what was built and records any learnings to the insight files.
 
-Both checks are lightweight and non-blocking — if nothing needs updating they say so and we move on.
+Both are non-blocking — if nothing needs updating they say so and move on.
 
 ### 2. Verify there's something to push
 
@@ -24,13 +23,13 @@ Skip these data sync files when staging — they're noise:
 - `src/data/salary-history/`
 - `src/data/theleague/mfl-player-salaries-*`
 
-### 2. Push the branch
+### 3. Push the branch
 
 ```bash
 git push -u origin HEAD
 ```
 
-### 3. Create the PR (or find the existing one)
+### 4. Create the PR (or find the existing one)
 
 Check if a PR already exists for this branch:
 ```bash
@@ -54,28 +53,55 @@ EOF
 
 Capture the PR number and URL. Print the PR URL as a clickable link.
 
-### 4. Run code review
+### 5. Run parallel code reviews
 
-Use the `/code-review` skill to review the diff for this branch. Pass `--comment` so findings are posted as inline PR comments.
+Launch **both reviewers at the same time** in a single message (two Agent tool calls):
 
-If the review surfaces **critical bugs** (not style/nitpick findings), tell the user what was found, stop the auto-approve step, and ask whether to proceed anyway.
+**Reviewer 1 — Claude (`/code-review` skill):**
+- Run `/code-review --comment` to review the diff and post inline PR comments
+- Focus: correctness bugs, design token compliance, CLAUDE.md guideline adherence, TypeScript safety
 
-### 5. Auto-approve the PR
+**Reviewer 2 — Codex (`codex:codex-rescue` agent):**
+- Prompt: "You are a senior code reviewer. Review the following diff for bugs, logic errors, security issues, and missed edge cases. Be direct — list Critical issues (blocks ship), Important issues (should fix soon), and Suggestions (optional). Do not comment on style.\n\nDiff:\n```\n$(git diff main...HEAD)\n```"
+- Use `subagent_type: "codex:codex-rescue"` on the Agent tool call
+- Focus: independent second opinion on correctness and logic — Codex reasons differently from Claude so it catches different things
 
-If the review passed (no critical bugs):
-```bash
-gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code — no critical issues found. CI must pass before merge."
+Wait for **both** to complete before evaluating.
+
+### 6. Evaluate review results
+
+Tally findings across both reviewers:
+
+- **Any Critical findings from either reviewer** → present the findings to the user, stop auto-approve, ask: "Fix these before merging?" Do not proceed until user confirms.
+- **Important findings only** → summarize them, note they should be addressed soon, but proceed with auto-approve.
+- **Suggestions / clean pass** → proceed directly.
+
+Show a brief summary table:
+
+```
+Review Results
+─────────────────────────────
+Claude:   [Critical: N | Important: N | Suggestions: N]
+Codex:    [Critical: N | Important: N | Suggestions: N]
+Decision: [Proceeding / Blocked on N critical issue(s)]
 ```
 
-### 6. Enable auto-merge
+### 7. Auto-approve the PR
+
+If no Critical issues from either reviewer:
+```bash
+gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code + Codex — no critical issues found. CI must pass before merge."
+```
+
+### 8. Enable auto-merge
 
 ```bash
 gh pr merge <PR_NUMBER> --auto --squash
 ```
 
-This queues the merge — GitHub will execute it automatically once the `Tests` CI check passes.
+GitHub will merge automatically once the `Tests` CI check passes.
 
-### 7. Monitor until merged
+### 9. Monitor until merged
 
 Poll every 30 seconds until the PR is merged or a check fails:
 
@@ -94,7 +120,6 @@ while true; do
     break
   fi
 
-  # Check for failed CI
   FAILED=$(echo "$STATE" | jq -r '.checks // [] | map(select(.conclusion == "FAILURE")) | length')
   if [ "$FAILED" -gt 0 ]; then
     echo "CI failed — stopping monitor. Fix and re-run /live."
@@ -108,7 +133,7 @@ while true; do
 done
 ```
 
-### 8. Report
+### 10. Report
 
 When the PR is merged, print:
 - The PR URL (clickable)
