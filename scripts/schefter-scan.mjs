@@ -33,6 +33,7 @@ import {
   isQuietHours,
 } from './lib/schefter-groupme-budget.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -44,23 +45,37 @@ const DRY_RUN = process.argv.includes('--dry-run');
 
 // ── League configs ──
 //
-// `features` is the single source of truth for which Schefter sub-pipelines
-// run for which league. Replaces the older `if (league.slug !== 'theleague')`
-// guards scattered across this file. To activate a flow for AFL, flip the
-// corresponding feature flag to true. AFL's commish-cadence flows
-// (rumorMill, tradeBait) currently default off — see AFL_DUPLICATION_PLAN
-// §2.4 (different commish, AFL persona pending). eventReminders is on for
-// AFL and routes to GROUPME_AFL_ROGER_BOT_ID.
+// Per CLAUDE.md "League registry — never hardcode league constants", per-league
+// IDs/paths/domains come from src/config/leagues-data.mjs. Only Schefter-specific
+// fields live here:
+//   - feedPath / eventsPath: scanner-owned artifacts (the registry's dataPath
+//     anchors them, but Schefter chooses the filenames).
+//   - configPath: TheLeague's pre-dates the registry's dataPath convention.
+//   - groupMeSchefterBotId / groupMeRogerBotId: GroupMe routing per league.
+//   - features: which sub-pipelines run. Source of truth for the Schefter flow.
+//     AFL's commish-cadence flows (rumorMill, tradeBait) stay off — see
+//     AFL_DUPLICATION_PLAN §2.4 (different commish, AFL persona pending).
+//     eventReminders is on for both; AFL routes via GROUPME_AFL_ROGER_BOT_ID.
+
+function buildSchefterLeague(registrySlug, overrides) {
+  const reg = getLeagueBySlug(registrySlug);
+  if (!reg) throw new Error(`Unknown league in registry: ${registrySlug}`);
+  return {
+    // navSlug = 'theleague' | 'afl' — the short slug already used throughout
+    // this script (e.g. for post.league and the `=== Scanning afl ===` logs).
+    slug: reg.navSlug,
+    leagueId: reg.id,
+    playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
+    calendarUrl: `https://${reg.domains[0]}/calendar`,
+    ...overrides,
+  };
+}
 
 const LEAGUES = [
-  {
-    slug: 'theleague',
-    leagueId: '13522',
+  buildSchefterLeague('theleague', {
     feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json'),
-    playersPath: (year) => path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'src', 'data', 'theleague.config.json'),
     eventsPath: path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json'),
-    calendarUrl: 'https://www.theleague.us/calendar',
     groupMeSchefterBotId: process.env.GROUPME_SCHEFTER_BOT_ID,
     groupMeRogerBotId: process.env.GROUPME_ROGER_BOT_ID,
     features: {
@@ -70,15 +85,11 @@ const LEAGUES = [
       // TheLeague uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague
       directGroupMe: false,
     },
-  },
-  {
-    slug: 'afl',
-    leagueId: '19621',
+  }),
+  buildSchefterLeague('afl-fantasy', {
     feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'schefter-feed.json'),
-    playersPath: (year) => path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json'),
     eventsPath: path.join(projectRoot, 'data', 'afl-fantasy', 'resolved-events.json'),
-    calendarUrl: 'https://afl-fantasy.com/calendar',
     groupMeSchefterBotId: process.env.GROUPME_AFL_SCHEFTER_BOT_ID,
     groupMeRogerBotId: process.env.GROUPME_AFL_ROGER_BOT_ID,
     features: {
@@ -88,7 +99,7 @@ const LEAGUES = [
       // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
       directGroupMe: true,
     },
-  },
+  }),
 ];
 
 // ── Constants ──
