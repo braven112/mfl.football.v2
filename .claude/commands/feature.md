@@ -136,10 +136,7 @@ Launch **all three reviewers IN PARALLEL** (single message, three Agent tool cal
    ```
    If build fails, fix and re-run.
 
-3. **Update What's New** (check which applies):
-   - **New page / new feature / enhancement** → Add entry to `src/data/whats-new.json` with editorial voice, screenshot, and all required fields (see CLAUDE.md "What's New Changelog" section)
-   - **Bug fix / style tweak** → Add entry to `src/data/weekly-changelog-staging.json`
-   - **Internal / refactor / data sync** → No entry needed
+3. **Update What's New** — run `/update-whats-new`. It will classify the change and write the correct entry automatically.
 
 4. **Present the Ship Summary:**
    ```
@@ -162,19 +159,9 @@ Launch **all three reviewers IN PARALLEL** (single message, three Agent tool cal
 
 This phase runs automatically after Phase 5 — no gate needed.
 
-1. **Review all agent outputs** from this feature (design spec, QA reports, review findings)
+Run `/update-insights` — it reviews the changed files and agent outputs from this session and writes any learnings to the appropriate domain or feature insight files.
 
-2. **Extract 1-3 key insights** — things learned that will help future features:
-   - Patterns that worked well
-   - Gotchas discovered
-   - Performance decisions and their rationale
-   - Accessibility approaches worth reusing
-
-3. **Write insights** to the appropriate files using the format in `docs/claude/insights/README.md`:
-   - Cross-cutting learnings → `docs/claude/insights/domains/{domain}.md`
-   - Feature-specific learnings → `docs/claude/insights/features/{feature}.md` (create if new)
-
-4. **Update MEMORY.md** if the feature revealed significant architectural patterns or project conventions worth preserving across sessions.
+Also update `MEMORY.md` if the feature revealed significant architectural patterns or project conventions worth preserving across sessions.
 
 ---
 
