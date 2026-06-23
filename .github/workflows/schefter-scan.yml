@@ -28,10 +28,13 @@ jobs:
           node-version: 22
 
       - name: Recompute league events
+        env:
+          TZ: America/Los_Angeles
         run: node scripts/compute-league-events.mjs
 
       - name: Run Schefter scanner
         env:
+          TZ: America/Los_Angeles
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -60,7 +63,7 @@ jobs:
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter scan — new transaction posts" \
-            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/resolved-events.json,data/schefter/post-history.json,data/schefter/groupme-suppressions.json"
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/resolved-events.json,data/afl-fantasy/resolved-events.json,data/schefter/post-history.json,data/schefter/groupme-suppressions.json"
 
       - name: File issue for suppressed GroupMe sends
         if: always()
