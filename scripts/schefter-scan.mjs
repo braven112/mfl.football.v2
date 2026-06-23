@@ -751,7 +751,27 @@ async function scanLeague(league) {
   if (league.features.directGroupMe) {
     const botId = league.groupMeSchefterBotId;
     if (!botId) {
-      console.warn(`  [GroupMe] No bot ID configured for ${league.slug} — skipping GroupMe posts`);
+      // Record a suppression for every post that would have been sent so
+      // we don't silently lose them — the watermark has already advanced.
+      const wouldHaveSent = [...newPosts].reverse().filter(
+        p => p.tier === 'breaking' || p.tier === 'standard'
+      );
+      if (wouldHaveSent.length) {
+        console.warn(`  [GroupMe] No bot ID configured for ${league.slug} — recording ${wouldHaveSent.length} suppression(s)`);
+        for (const post of wouldHaveSent) {
+          recordGroupMeSuppression({
+            id: post.id,
+            league: leagueSlug,
+            headline: post.headline,
+            body: post.body,
+            score: 0,
+            reason: `missing_bot_id:${league.slug}`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } else {
+        console.warn(`  [GroupMe] No bot ID configured for ${league.slug} — skipping GroupMe posts`);
+      }
     } else {
       // newPosts was reversed in-place above for feed prepend; iterate the
       // original scan order (oldest-first) by reversing back.
