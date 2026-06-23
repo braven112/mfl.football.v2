@@ -22,7 +22,10 @@ esac
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$repo_root" || exit 0
 
-[ -x node_modules/.bin/vitest ] || exit 0
+if [ ! -x node_modules/.bin/vitest ]; then
+  echo "⚠️  vitest not found — skipping pre-push test gate. Run pnpm install first." >&2
+  exit 0
+fi
 
 echo "Running tests before push…"
-node_modules/.bin/vitest run
+node_modules/.bin/vitest run || exit 1
