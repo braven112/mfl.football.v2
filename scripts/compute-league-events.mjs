@@ -16,6 +16,7 @@ import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
+const aflOutputPath = path.join(projectRoot, 'data', 'afl-fantasy', 'resolved-events.json');
 
 // ── Date computation (mirrors league-event-resolver.ts) ──
 
@@ -44,6 +45,12 @@ function resolveDate(rule, year) {
       const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
       return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 6);
     }
+    case 'wednesday-before-week-11': {
+      // AFL trade deadline: Wednesday between Week 10 and Week 11 = friday-before-week-11 minus 2 days
+      const ld = getLaborDay(year);
+      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
+      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 8);
+    }
     case 'after-week-16': {
       const ld = getLaborDay(year);
       const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
@@ -59,6 +66,9 @@ function resolveDate(rule, year) {
       const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
       return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 16 * 7);
     }
+    case 'second-sunday-february':
+      // Super Bowl Sunday (AFL IR-to-active deadline). NFL moved to 2nd Sunday in Feb starting 2022.
+      return getNthDayOfMonth(year, 1, 0, 2);
     default: return new Date(year, 0, 1);
   }
 }
@@ -84,15 +94,28 @@ const EVENTS = [
   { id: 'league-championship', name: 'League Championship', startRule: { type: 'computed', rule: 'championship-week' }, tier: 'major' },
 ];
 
+// ── AFL Fantasy event definitions ──
+// Sourced from docs/claude/afl-rules.md "Important Dates" + src/data/afl-fantasy/league-events.json.
+// Tier policy mirrors TheLeague: major = 14d/7d/2d/day-of touches, standard = 7d/day-of, minor = day-of only.
+
+const AFL_EVENTS = [
+  { id: 'afl-league-dues', name: 'AFL League Dues', startRule: { type: 'fixed', month: 4, day: 1 }, tier: 'major' },
+  { id: 'afl-keeper-deadline', name: 'AFL Keeper Deadline', startRule: { type: 'fixed', month: 7, day: 15 }, tier: 'major' },
+  { id: 'afl-trade-deadline', name: 'AFL Trade Deadline', startRule: { type: 'computed', rule: 'wednesday-before-week-11' }, tier: 'major' },
+  { id: 'afl-draft-window-opens', name: 'AFL Annual Draft Window', startRule: { type: 'fixed', month: 8, day: 20 }, tier: 'major' },
+  { id: 'afl-ir-deadline', name: 'AFL IR-to-Active Deadline', startRule: { type: 'computed', rule: 'second-sunday-february' }, tier: 'standard' },
+  { id: 'afl-nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard' },
+];
+
 // ── Resolve dates ──
 
-function resolveEvents(year) {
+function resolveEvents(year, eventList = EVENTS) {
   const now = new Date();
 
   // NFL Draft date — try to read from league-year-config if it exists
   let nflDraftDate = getNthDayOfMonth(year, 3, 4, 4); // default: 4th Thursday of April
 
-  return EVENTS.map(event => {
+  return eventList.map(event => {
     let startDate;
 
     if (event.startRule.type === 'fixed') {
@@ -135,8 +158,24 @@ const output = {
 };
 
 await fs.writeFile(outputPath, JSON.stringify(output, null, 2) + '\n');
-console.log(`Resolved ${resolved.length} events for ${year}:`);
+console.log(`Resolved ${resolved.length} TheLeague events for ${year}:`);
 resolved.forEach(e => {
+  const status = e.isPast ? '(past)' : `${e.daysUntil}d away`;
+  console.log(`  ${e.id}: ${new Date(e.startDate).toLocaleDateString()} — ${status} [${e.tier}]`);
+});
+
+// AFL — emit a parallel resolved-events.json so the schefter scanner's Roger
+// reminders fire on AFL deadlines using the same touch logic.
+const aflResolved = resolveEvents(year, AFL_EVENTS);
+const aflOutput = {
+  computedAt: now.toISOString(),
+  leagueYear: year,
+  events: aflResolved,
+};
+await fs.mkdir(path.dirname(aflOutputPath), { recursive: true });
+await fs.writeFile(aflOutputPath, JSON.stringify(aflOutput, null, 2) + '\n');
+console.log(`\nResolved ${aflResolved.length} AFL events for ${year}:`);
+aflResolved.forEach(e => {
   const status = e.isPast ? '(past)' : `${e.daysUntil}d away`;
   console.log(`  ${e.id}: ${new Date(e.startDate).toLocaleDateString()} — ${status} [${e.tier}]`);
 });

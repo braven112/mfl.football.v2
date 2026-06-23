@@ -36,6 +36,7 @@ jobs:
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+          GROUPME_AFL_ROGER_BOT_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_ID }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
           GROUPME_AFL_ROGER_BOT_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_ID }}
