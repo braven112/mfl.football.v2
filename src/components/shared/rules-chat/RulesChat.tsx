@@ -52,7 +52,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
         }
       })
       .catch(() => setDynamicLoaded(true));
-  }, [isAuthenticated, preSeeded]);
+  }, [isAuthenticated, preSeeded, apiEndpoint]);
 
   // Filter displayed Q&As based on search
   const displayedQAs = searchText.trim().length >= 3
@@ -103,7 +103,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, apiEndpoint]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('Delete this Q&A? This cannot be undone.')) return;
@@ -125,7 +125,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     } catch {
       setError('Failed to delete question.');
     }
-  }, []);
+  }, [apiEndpoint]);
 
   return (
     <div className="rqa">

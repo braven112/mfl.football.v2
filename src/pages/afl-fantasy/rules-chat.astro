@@ -3,7 +3,7 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
-import RulesChat from '../../components/theleague/rules-chat/RulesChat';
+import RulesChat from '../../components/shared/rules-chat/RulesChat';
 import seedData from '../../data/afl-rules-qa-seeds.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
@@ -84,6 +84,12 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
 <style>
   /* ── 2-Column Blog Layout ── */
   .rqa-page {
+    /* AFL theme tokens — scoped to this page so they don't leak. */
+    --afl-accent: var(--color-primary, #c41e3a);
+    --afl-accent-hover: #a01830;
+    --afl-accent-soft: rgba(196, 30, 58, 0.1);
+    --afl-accent-card-tint: rgba(196, 30, 58, 0.06);
+
     display: grid;
     grid-template-columns: 1fr 260px;
     gap: 1.5rem;
@@ -118,7 +124,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #c41e3a;
+    color: var(--afl-accent);
   }
   .rqa-section-title {
     font-size: 0.75rem;
@@ -126,7 +132,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding-left: 0.625rem;
-    border-left: 2px solid #c41e3a;
+    border-left: 2px solid var(--afl-accent);
     color: var(--color-gray-900, #111827);
   }
   .rqa-hero__sub {
@@ -182,7 +188,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #c41e3a;
+    color: var(--afl-accent);
     margin-top: 0.25rem;
   }
   .rqa-roger-card__bio {
@@ -198,7 +204,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     gap: 0.5rem;
     margin-top: 1rem;
     padding: 0.625rem 1rem;
-    background: #c41e3a;
+    background: var(--afl-accent);
     color: #fff;
     border-radius: var(--radius-md, 0.5rem);
     font-size: 0.8125rem;
@@ -207,7 +213,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     transition: background 0.15s ease;
   }
   .rqa-roger-card__cta:hover {
-    background: #a01830;
+    background: var(--afl-accent-hover);
     text-decoration: none;
   }
 
@@ -235,7 +241,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     margin: 0;
   }
   .rqa-sidebar__disclaimer a {
-    color: #c41e3a;
+    color: var(--afl-accent);
     text-decoration: none;
   }
   .rqa-sidebar__disclaimer a:hover {
@@ -330,9 +336,9 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
   .rqa-input__field::placeholder { color: var(--color-gray-400, #9ca3af); }
   .rqa-input__field:focus-visible {
     outline: none;
-    border-color: #c41e3a;
-    border-left-color: #c41e3a;
-    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+    border-color: var(--afl-accent);
+    border-left-color: var(--afl-accent);
+    box-shadow: 0 0 0 3px var(--afl-accent-soft);
     background: var(--color-white, #fff);
   }
   .rqa-input__count {
@@ -349,7 +355,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background: #c41e3a;
+    background: var(--afl-accent);
     color: #fff;
     border: none;
     border-radius: var(--radius-md, 0.5rem);
@@ -360,9 +366,9 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     transition: background 0.15s ease, opacity 0.15s ease;
     align-self: flex-end;
   }
-  .rqa-input__submit:hover:not(:disabled) { background: #a01830; }
+  .rqa-input__submit:hover:not(:disabled) { background: var(--afl-accent-hover); }
   .rqa-input__submit:disabled { opacity: 0.45; cursor: not-allowed; }
-  .rqa-input__submit:focus-visible { outline: 2px solid #c41e3a; outline-offset: 2px; }
+  .rqa-input__submit:focus-visible { outline: 2px solid var(--afl-accent); outline-offset: 2px; }
   .rqa-input__spinner {
     display: inline-block;
     width: 14px;
@@ -428,14 +434,14 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
   .rqa-card:last-child { border-bottom: none; }
   .rqa-card--new { animation: rqa-highlight 2s ease-out; }
   @keyframes rqa-highlight {
-    0% { background: rgba(196, 30, 58, 0.06); }
+    0% { background: var(--afl-accent-card-tint); }
     100% { background: transparent; }
   }
   .rqa-card__header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
   .rqa-card__avatar {
     width: 28px; height: 28px; min-width: 28px;
     border-radius: var(--radius-full, 9999px);
-    background: #c41e3a;
+    background: var(--afl-accent);
     color: #fff;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em;
@@ -464,7 +470,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
   .rqa-card__answer { font-size: 0.8125rem; color: var(--color-gray-600, #4b5563); line-height: 1.6; }
   .rqa-card__answer .rqa-card__para { margin: 0 0 0.5rem 0; }
   .rqa-card__answer .rqa-card__para:last-child { margin-bottom: 0; }
-  .rqa-card__answer a { color: #c41e3a; text-decoration: none; }
+  .rqa-card__answer a { color: var(--afl-accent); text-decoration: none; }
   .rqa-card__answer a:hover { text-decoration: underline; }
 
   @media (max-width: 600px) {

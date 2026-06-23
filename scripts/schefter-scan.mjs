@@ -30,6 +30,7 @@ import { parseRosterMove } from './lib/roster-move-parse.mjs';
 import {
   evaluatePingWindow,
   consumeDailyPost,
+  isQuietHours,
 } from './lib/schefter-groupme-budget.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
@@ -748,6 +749,12 @@ async function scanLeague(league) {
   // Direct GroupMe posting for leagues using the directGroupMe feature flag
   // (currently AFL). Feed is already persisted above; post breaking/standard
   // tier transactions to GroupMe using the league's own Schefter bot.
+  //
+  // Burst protection: hold posts during overnight quiet hours, and cap the
+  // number we send per scan so a flood of MFL transactions (e.g. waiver day)
+  // doesn't fire 20 GroupMe notifications in one tick. Held posts are logged
+  // as suppressions so they're auditable rather than silently dropped.
+  const MAX_DIRECT_POSTS_PER_SCAN = 5;
   if (league.features.directGroupMe) {
     const botId = league.groupMeSchefterBotId;
     if (!botId) {
@@ -772,12 +779,48 @@ async function scanLeague(league) {
       } else {
         console.warn(`  [GroupMe] No bot ID configured for ${league.slug} — skipping GroupMe posts`);
       }
+    } else if (isQuietHours(now)) {
+      // Quiet hours — log suppressions for any breaking/standard posts so
+      // they're visible without paging owners overnight.
+      const heldPosts = [...newPosts].reverse().filter(
+        p => p.tier === 'breaking' || p.tier === 'standard'
+      );
+      if (heldPosts.length) {
+        console.log(`  [GroupMe] Quiet hours — holding ${heldPosts.length} ${league.slug} post(s)`);
+        for (const post of heldPosts) {
+          recordGroupMeSuppression({
+            id: post.id,
+            league: leagueSlug,
+            headline: post.headline,
+            body: post.body,
+            score: 0,
+            reason: 'quiet_hours',
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
     } else {
       // newPosts was reversed in-place above for feed prepend; iterate the
       // original scan order (oldest-first) by reversing back.
-      const postsToSend = [...newPosts].reverse().filter(
+      const eligible = [...newPosts].reverse().filter(
         p => p.tier === 'breaking' || p.tier === 'standard'
       );
+      const postsToSend = eligible.slice(0, MAX_DIRECT_POSTS_PER_SCAN);
+      const overflow = eligible.slice(MAX_DIRECT_POSTS_PER_SCAN);
+      if (overflow.length) {
+        console.warn(`  [GroupMe] Per-scan cap (${MAX_DIRECT_POSTS_PER_SCAN}) — recording ${overflow.length} overflow suppression(s)`);
+        for (const post of overflow) {
+          recordGroupMeSuppression({
+            id: post.id,
+            league: leagueSlug,
+            headline: post.headline,
+            body: post.body,
+            score: 0,
+            reason: 'per_scan_cap',
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
       for (const post of postsToSend) {
         const groupMeText = `${post.headline}\n\n${post.body}`;
         if (DRY_RUN) {

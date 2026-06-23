@@ -1,7 +1,15 @@
 /**
  * AFL Fantasy constitution text — used by Ask Roger (the AI rules chatbot).
- * When the constitution changes, update docs/claude/afl-rules.md and this file.
- * Source of truth for the live HTML is src/pages/afl-fantasy/docs/rules.html.
+ *
+ * SOURCES OF TRUTH:
+ *   - src/pages/afl-fantasy/docs/rules.html — official prose rendered to users
+ *   - This file — plain text injected into the Haiku system prompt
+ *   - docs/claude/afl-rules.md — developer reference (rules + platform notes)
+ *
+ * When the constitution changes, update rules.html AND this file together.
+ * The .ts version may include factually-true clarifications not in the written
+ * constitution (cross-conference trade ban, conferences draft separately) —
+ * flag these clearly so future edits don't strip them.
  */
 
 export const AFL_CONSTITUTION = `

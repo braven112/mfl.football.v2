@@ -80,5 +80,6 @@ export const { GET, POST, DELETE } = createRulesQAHandlers({
   leagueId: aflLeague.id,
   seedData: seedData as RulesQA[],
   systemPrompt: SYSTEM_PROMPT,
+  dateBlockSuffix: 'Do not claim an event is "today" unless its calendar date matches the ISO date above.',
   resolveTeamName,
 });
