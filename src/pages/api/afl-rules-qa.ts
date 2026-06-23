@@ -8,6 +8,7 @@ import { createRulesQAHandlers } from '../../utils/rules-qa-handlers';
 import seedData from '../../data/afl-rules-qa-seeds.json';
 import { AFL_CONSTITUTION } from '../../data/afl-constitution';
 import { LEAGUES } from '../../config/leagues-data.mjs';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import type { RulesQA } from '../../types/rules-qa';
 
 const SYSTEM_PROMPT = `You are "Roger" — the AI rules expert for the AFL (American Football League), a 24-team keeper fantasy football league. You are NOT the Commissioner — you're Roger, a chatbot who's read the AFL constitution cover to cover. Your answers are *probably* right, but for definitive rulings, owners should ask the actual Commissioner.
@@ -65,19 +66,10 @@ THE AFL CONSTITUTION (this is the complete, authoritative rulebook):
 ${AFL_CONSTITUTION}`;
 
 const aflLeague = LEAGUES['afl-fantasy'];
+const aflTeams: Array<{ franchiseId: string; name: string }> = aflConfig.teams ?? [];
 
 async function resolveTeamName(franchiseId: string): Promise<string | null> {
-  try {
-    // Loaded relative to this file at build time; path uses the registry's dataPath.
-    const config = await import(`../../../${aflLeague.dataPath}/afl.config.json`);
-    const teams: Array<{ franchiseId: string; name: string }> =
-      (config as { default?: { teams?: Array<{ franchiseId: string; name: string }> } }).default?.teams
-      ?? (config as { teams?: Array<{ franchiseId: string; name: string }> }).teams
-      ?? [];
-    return teams.find((t) => t.franchiseId === franchiseId)?.name ?? null;
-  } catch {
-    return null;
-  }
+  return aflTeams.find((t) => t.franchiseId === franchiseId)?.name ?? null;
 }
 
 export const { GET, POST, DELETE } = createRulesQAHandlers({
