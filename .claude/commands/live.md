@@ -125,6 +125,19 @@ gh pr merge <PR_NUMBER> --auto --squash
 
 GitHub will merge automatically once the `Tests` CI check passes.
 
+**Self-authored PR fallback.** GitHub blocks self-approval, so for a PR you opened, auto-merge can sit in `mergeable_state: "blocked"` even when all required checks pass. After every Copilot finding is resolved and every required check is green (`Tests` SUCCESS, `Vercel` SUCCESS, etc.), force the squash-merge with admin rights:
+
+```bash
+gh pr merge <PR_NUMBER> --squash --admin
+```
+
+Only do this when:
+- All Critical/Important findings from Claude, Codex, AND Copilot are resolved
+- Every required status check is SUCCESS
+- The user has authorized the admin merge (either explicitly this session or via standing instruction)
+
+Never `--admin` merge with failing checks or unresolved Critical findings — that's the whole point of branch protection.
+
 ### 10. Monitor until merged
 
 Poll every 30 seconds until the PR is merged or a check fails:
