@@ -2,6 +2,9 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import RulesChat from '../../components/theleague/rules-chat/RulesChat';
+import seedData from '../../data/afl-rules-qa-seeds.json';
 
 export const prerender = false;
 
@@ -23,6 +26,10 @@ try {
 } catch {
   rulesHtml = '<p>Rules document not available.</p>';
 }
+
+const authUser = getAuthUser(Astro.request);
+const isAuthenticated = !!authUser;
+const isAdmin = authUser ? isCommissionerOrAdmin(authUser) : false;
 
 // Section anchors lifted from the headings in docs/rules.html so the
 // in-page jump nav stays in sync.
@@ -73,6 +80,25 @@ const sectionLinks = [
 
     <article class="afl-rules-page__content" set:html={rulesHtml} />
   </div>
+
+  <!-- Ask Roger section -->
+  <section class="afl-roger-section">
+    <header class="afl-roger-section__header">
+      <div class="afl-roger-section__title-wrap">
+        <h2 class="afl-roger-section__title">Ask Roger</h2>
+        <p class="afl-roger-section__sub">Roger is our AI rules expert. He's read the AFL constitution so you don't have to. His answers are <em>probably</em> right — for definitive rulings, ask the actual Commissioner.</p>
+      </div>
+    </header>
+    <div class="afl-roger-section__body">
+      <RulesChat
+        client:load
+        preSeeded={seedData}
+        isAuthenticated={isAuthenticated}
+        isAdmin={isAdmin}
+        apiEndpoint="/api/afl-rules-qa"
+      />
+    </div>
+  </section>
 </TheLeagueLayout>
 
 <style>
@@ -180,5 +206,218 @@ const sectionLinks = [
 
   .afl-rules-page__content :global(h2) {
     scroll-margin-top: 80px;
+  }
+
+  /* ── Ask Roger Section ── */
+  .afl-roger-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md, 16px) var(--spacing-xl, 32px);
+  }
+
+  .afl-roger-section__header {
+    margin-bottom: 1rem;
+  }
+
+  .afl-roger-section__title-wrap {
+    padding-left: 0.625rem;
+    border-left: 2px solid #c41e3a;
+  }
+
+  .afl-roger-section__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+    line-height: 1;
+  }
+
+  .afl-roger-section__sub {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0.25rem 0 0 0;
+  }
+
+  .afl-roger-section__body {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    padding: var(--spacing-lg, 24px);
+  }
+</style>
+
+<style is:global>
+  /* Reuse the shared RulesChat styles for the AFL page */
+  .rqa-input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+  .rqa-input__field-wrap {
+    position: relative;
+  }
+  .rqa-input__field {
+    width: 100%;
+    padding: 0.75rem;
+    padding-right: 4rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--text-color, #1f2937);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
+    box-sizing: border-box;
+    resize: none;
+    overflow: hidden;
+    min-height: 44px;
+    max-height: 160px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .rqa-input__field::placeholder { color: var(--color-gray-400, #9ca3af); }
+  .rqa-input__field:focus-visible {
+    outline: none;
+    border-color: #c41e3a;
+    border-left-color: #c41e3a;
+    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
+    background: var(--color-white, #fff);
+  }
+  .rqa-input__count {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.5rem;
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+  .rqa-input__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: #c41e3a;
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+    align-self: flex-end;
+  }
+  .rqa-input__submit:hover:not(:disabled) { background: #a01830; }
+  .rqa-input__submit:disabled { opacity: 0.45; cursor: not-allowed; }
+  .rqa-input__submit:focus-visible { outline: 2px solid #c41e3a; outline-offset: 2px; }
+  .rqa-input__spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: rqa-spin 0.6s linear infinite;
+  }
+  @keyframes rqa-spin { to { transform: rotate(360deg); } }
+  .rqa-input__hint {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+    font-style: italic;
+  }
+  .rqa-login-prompt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-bottom: 1.5rem;
+  }
+  .rqa-error {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-error-light, #fef2f2);
+    border: 1px solid var(--color-error-border, #fecaca);
+    border-radius: var(--radius-sm, 0.25rem);
+    color: var(--color-error, #dc2626);
+    font-size: 0.8125rem;
+    margin-bottom: 1rem;
+  }
+  .rqa-list { display: flex; flex-direction: column; gap: 0; }
+  .rqa-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.875rem;
+  }
+  .rqa-count {
+    text-align: center;
+    padding-top: 1rem;
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .rqa-card {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+  .rqa-card:first-child { padding-top: 0; }
+  .rqa-card:last-child { border-bottom: none; }
+  .rqa-card--new { animation: rqa-highlight 2s ease-out; }
+  @keyframes rqa-highlight {
+    0% { background: rgba(196, 30, 58, 0.06); }
+    100% { background: transparent; }
+  }
+  .rqa-card__header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .rqa-card__avatar {
+    width: 28px; height: 28px; min-width: 28px;
+    border-radius: var(--radius-full, 9999px);
+    background: #c41e3a;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em;
+  }
+  .rqa-card__avatar--office { background: var(--color-gray-200, #e5e7eb); color: var(--color-gray-500, #6b7280); }
+  .rqa-card__team-icon { width: 100%; height: 100%; object-fit: contain; }
+  .rqa-card__meta { display: flex; align-items: baseline; gap: 0.5rem; flex: 1; }
+  .rqa-card__delete {
+    margin-left: auto; padding: 0.25rem;
+    background: none; border: 1px solid transparent;
+    border-radius: var(--radius-sm, 0.25rem);
+    color: var(--color-gray-400, #9ca3af);
+    cursor: pointer; opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .rqa-card:hover .rqa-card__delete { opacity: 1; }
+  .rqa-card__delete:hover {
+    color: var(--color-red-600, #dc2626);
+    border-color: var(--color-red-200, #fecaca);
+    background: var(--color-red-50, #fef2f2);
+  }
+  .rqa-card__asker { font-size: 0.75rem; font-weight: 600; color: var(--color-gray-700, #374151); }
+  .rqa-card__time { font-size: 0.6875rem; color: var(--color-gray-400, #9ca3af); font-variant-numeric: tabular-nums; }
+  .rqa-card__question { font-size: 0.9375rem; font-weight: 600; color: var(--color-gray-900, #111827); line-height: 1.4; margin-bottom: 0.5rem; }
+  .rqa-card__answer { font-size: 0.8125rem; color: var(--color-gray-600, #4b5563); line-height: 1.6; }
+  .rqa-card__answer .rqa-card__para { margin: 0 0 0.5rem 0; }
+  .rqa-card__answer .rqa-card__para:last-child { margin-bottom: 0; }
+  .rqa-card__answer a { color: #c41e3a; text-decoration: none; }
+  .rqa-card__answer a:hover { text-decoration: underline; }
+  @media (prefers-reduced-motion: reduce) {
+    .rqa-card--new { animation: none; }
+    .rqa-input__spinner { animation: none; }
   }
 </style>

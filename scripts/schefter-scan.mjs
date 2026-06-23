@@ -58,10 +58,14 @@ const LEAGUES = [
     feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'src', 'data', 'theleague.config.json'),
+    groupMeSchefterBotId: process.env.GROUPME_SCHEFTER_BOT_ID,
+    groupMeRogerBotId: process.env.GROUPME_ROGER_BOT_ID,
     features: {
       rumorMill: true,
       tradeBait: true,
       eventReminders: true,
+      // TheLeague uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague
+      directGroupMe: false,
     },
   },
   {
@@ -70,10 +74,14 @@ const LEAGUES = [
     feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json'),
+    groupMeSchefterBotId: process.env.GROUPME_AFL_SCHEFTER_BOT_ID,
+    groupMeRogerBotId: process.env.GROUPME_AFL_ROGER_BOT_ID,
     features: {
       rumorMill: false,
       tradeBait: false,
       eventReminders: false,
+      // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
+      directGroupMe: true,
     },
   },
 ];
@@ -736,6 +744,47 @@ async function scanLeague(league) {
 
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} new posts. Feed total: ${feed.posts.length}`);
+
+  // Direct GroupMe posting for leagues using the directGroupMe feature flag
+  // (currently AFL). Feed is already persisted above; post breaking/standard
+  // tier transactions to GroupMe using the league's own Schefter bot.
+  if (league.features.directGroupMe) {
+    const botId = league.groupMeSchefterBotId;
+    if (!botId) {
+      console.warn(`  [GroupMe] No bot ID configured for ${league.slug} — skipping GroupMe posts`);
+    } else {
+      // newPosts was reversed in-place above for feed prepend; iterate the
+      // original scan order (oldest-first) by reversing back.
+      const postsToSend = [...newPosts].reverse().filter(
+        p => p.tier === 'breaking' || p.tier === 'standard'
+      );
+      for (const post of postsToSend) {
+        const groupMeText = `${post.headline}\n\n${post.body}`;
+        if (DRY_RUN) {
+          console.log(`  [dry-run] Would post to ${league.slug} GroupMe:\n${groupMeText}`);
+        } else {
+          const gate = await checkGroupMeQuality(
+            { headline: post.headline, body: post.body, tier: post.tier },
+            { apiKey: process.env.ANTHROPIC_API_KEY },
+          );
+          if (!gate.allow) {
+            recordGroupMeSuppression({
+              id: post.id,
+              league: leagueSlug,
+              headline: post.headline,
+              body: post.body,
+              score: gate.score,
+              reason: gate.reason,
+              timestamp: new Date().toISOString(),
+            });
+          } else {
+            await postToGroupMe(groupMeText, { botIdOverride: botId });
+            console.log(`  [GroupMe] Posted: ${post.headline}`);
+          }
+        }
+      }
+    }
+  }
 
   // Feed-first invariant holds: the file is persisted above before any GroupMe
   // ping. Enqueue big-name drops, then drain the pending queue (respecting
