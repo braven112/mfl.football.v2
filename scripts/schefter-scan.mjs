@@ -48,9 +48,9 @@ const DRY_RUN = process.argv.includes('--dry-run');
 // run for which league. Replaces the older `if (league.slug !== 'theleague')`
 // guards scattered across this file. To activate a flow for AFL, flip the
 // corresponding feature flag to true. AFL's commish-cadence flows
-// (rumorMill, tradeBait, eventReminders) currently default off — see
-// AFL_DUPLICATION_PLAN §2.4 for the rationale (different commish, different
-// calendar, AFL persona pending).
+// (rumorMill, tradeBait) currently default off — see AFL_DUPLICATION_PLAN
+// §2.4 (different commish, AFL persona pending). eventReminders is on for
+// AFL and routes to GROUPME_AFL_ROGER_BOT_ID.
 
 const LEAGUES = [
   {
@@ -59,6 +59,8 @@ const LEAGUES = [
     feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'src', 'data', 'theleague.config.json'),
+    eventsPath: path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json'),
+    calendarUrl: 'https://www.theleague.us/calendar',
     groupMeSchefterBotId: process.env.GROUPME_SCHEFTER_BOT_ID,
     groupMeRogerBotId: process.env.GROUPME_ROGER_BOT_ID,
     features: {
@@ -75,12 +77,14 @@ const LEAGUES = [
     feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json'),
+    eventsPath: path.join(projectRoot, 'data', 'afl-fantasy', 'resolved-events.json'),
+    calendarUrl: 'https://afl-fantasy.com/calendar',
     groupMeSchefterBotId: process.env.GROUPME_AFL_SCHEFTER_BOT_ID,
     groupMeRogerBotId: process.env.GROUPME_AFL_ROGER_BOT_ID,
     features: {
       rumorMill: false,
       tradeBait: false,
-      eventReminders: false,
+      eventReminders: true,
       // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
       directGroupMe: true,
     },
@@ -1818,13 +1822,13 @@ async function scanEventReminders(league) {
     return 0;
   }
 
-  // Read resolved events
-  const eventsPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
+  // Read resolved events (per-league path)
+  const eventsPath = league.eventsPath;
   let eventsData;
   try {
     eventsData = JSON.parse(await fs.readFile(eventsPath, 'utf8'));
   } catch {
-    console.log('  No resolved-events.json found. Run: node scripts/compute-league-events.mjs');
+    console.log(`  No resolved-events.json found at ${eventsPath}. Run: node scripts/compute-league-events.mjs`);
     return 0;
   }
 
@@ -1858,11 +1862,11 @@ async function scanEventReminders(league) {
         tier: touch.postTier,
         headline,
         body,
-        link: '/theleague/calendar',
+        link: league.slug === 'afl' ? '/afl-fantasy/calendar' : '/theleague/calendar',
         linkLabel: 'View calendar',
         authorId: 'roger',
         franchiseIds: [],
-        league: 'theleague',
+        league: league.slug,
       });
 
       console.log(`  [${touch.id}] ${headline}`);
@@ -1878,10 +1882,15 @@ async function scanEventReminders(league) {
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} reminder posts. Feed total: ${feed.posts.length}`);
 
-  // Send Ask Roger reminders to GroupMe
-  for (const post of newPosts) {
-    const text = `${post.headline}\n\n${post.body}\n\nhttps://www.theleague.us/calendar`;
-    await postToGroupMe(text);
+  // Send Ask Roger reminders to GroupMe (per-league Roger bot)
+  const rogerBotId = league.groupMeRogerBotId;
+  if (!rogerBotId) {
+    console.warn(`  [GroupMe] Roger bot id not set — skipping Roger GroupMe sends for ${league.slug}`);
+  } else {
+    for (const post of newPosts) {
+      const text = `${post.headline}\n\n${post.body}\n\n${league.calendarUrl}`;
+      await postToGroupMe(text, { botIdOverride: rogerBotId });
+    }
   }
   return newPosts.length;
 }
