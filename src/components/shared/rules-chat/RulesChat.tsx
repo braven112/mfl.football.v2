@@ -14,9 +14,10 @@ interface Props {
   isAuthenticated: boolean;
   isAdmin?: boolean;
   teamIcons?: TeamIcon[];
+  apiEndpoint?: string;
 }
 
-export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIcons }: Props) {
+export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIcons, apiEndpoint = '/api/rules-qa' }: Props) {
   const [allQAs, setAllQAs] = useState<RulesQA[]>(preSeeded);
   const [searchText, setSearchText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +36,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
   // Fetch dynamic Q&As from Redis on mount
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetch('/api/rules-qa', { credentials: 'include' })
+    fetch(apiEndpoint, { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
         if (data.items && Array.isArray(data.items)) {
@@ -51,7 +52,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
         }
       })
       .catch(() => setDynamicLoaded(true));
-  }, [isAuthenticated, preSeeded]);
+  }, [isAuthenticated, preSeeded, apiEndpoint]);
 
   // Filter displayed Q&As based on search
   const displayedQAs = searchText.trim().length >= 3
@@ -72,7 +73,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     setError(null);
 
     try {
-      const res = await fetch('/api/rules-qa', {
+      const res = await fetch(apiEndpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -102,13 +103,13 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, apiEndpoint]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('Delete this Q&A? This cannot be undone.')) return;
 
     try {
-      const res = await fetch('/api/rules-qa', {
+      const res = await fetch(apiEndpoint, {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -124,7 +125,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     } catch {
       setError('Failed to delete question.');
     }
-  }, []);
+  }, [apiEndpoint]);
 
   return (
     <div className="rqa">

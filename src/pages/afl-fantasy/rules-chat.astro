@@ -4,13 +4,13 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import RulesChat from '../../components/shared/rules-chat/RulesChat';
-import seedData from '../../data/rules-qa-seeds.json';
-import config from '../../data/theleague.config.json';
+import seedData from '../../data/afl-rules-qa-seeds.json';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 const isAdmin = authUser ? isCommissionerOrAdmin(authUser) : false;
-const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) => ({
+const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string }) => ({
   franchiseId: t.franchiseId,
   icon: t.icon,
 }));
@@ -28,7 +28,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
         </div>
         <div class="rqa-hero__text">
           <div class="rqa-section-title">Ask Roger</div>
-          <p class="rqa-hero__sub">Roger is our AI rules expert. He's read the constitution so you don't have to. His answers are <em>probably</em> right — for definitive rulings, ask the actual Commissioner.</p>
+          <p class="rqa-hero__sub">Roger is our AI rules expert. He's read the AFL constitution so you don't have to. His answers are <em>probably</em> right — for definitive rulings, ask the actual Commissioner.</p>
         </div>
       </header>
 
@@ -39,6 +39,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}
           teamIcons={teamIcons}
+          apiEndpoint="/api/afl-rules-qa"
         />
       </div>
     </div>
@@ -58,8 +59,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
           />
           <div class="rqa-roger-card__name">Roger</div>
           <div class="rqa-roger-card__role">AI Rules Expert</div>
-          <p class="rqa-roger-card__bio">He's read the constitution cover to cover — all 27 sections, every footnote, and the fine print about compensatory picks that even the Commissioner forgot about.</p>
-          <a href="/theleague/rules" class="rqa-roger-card__cta">
+          <p class="rqa-roger-card__bio">He's read the AFL constitution cover to cover — every conference, every division, and the fine print about promotion and relegation that even the Commissioner forgot about.</p>
+          <a href="/afl-fantasy/rules" class="rqa-roger-card__cta">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -72,26 +73,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
         <div class="rqa-sidebar__section">
           <div class="rqa-sidebar__label">Disclaimer</div>
           <p class="rqa-sidebar__disclaimer">
-            Roger is an AI chatbot. His answers are based on the <a href="/theleague/rules">official rules</a> and are <em>probably</em> right — but not guaranteed. When in doubt, the Commissioner's word is final.
+            Roger is an AI chatbot. His answers are based on the <a href="/afl-fantasy/rules">official rules</a> and are <em>probably</em> right — but not guaranteed. When in doubt, the Commissioner's word is final.
           </p>
-        </div>
-
-        <!-- Tip Roger -->
-        <div class="rqa-sidebar__section">
-          <div class="rqa-sidebar__label">Support</div>
-          <p class="rqa-sidebar__tip-text">
-            If Roger saved you a trip to the rulebook, consider giving him a hug. If you're not the hugging type, PayPal works too — each question costs about 10 cents.
-          </p>
-          <div class="rqa-donate-btns">
-            <a href="https://paypal.me/mfladdons" target="_blank" rel="noopener noreferrer" class="rqa-donate-btn">
-              <svg class="rqa-donate-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-paypal" /></svg>
-              PayPal
-            </a>
-            <a href="https://venmo.com/braven112" target="_blank" rel="noopener noreferrer" class="rqa-donate-btn">
-              <svg class="rqa-donate-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-venmo" /></svg>
-              Venmo
-            </a>
-          </div>
         </div>
       </div>
     </aside>
@@ -101,6 +84,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 <style>
   /* ── 2-Column Blog Layout ── */
   .rqa-page {
+    /* AFL theme tokens — scoped to this page so they don't leak. */
+    --afl-accent: var(--color-primary, #c41e3a);
+    --afl-accent-hover: #a01830;
+    --afl-accent-soft: rgba(196, 30, 58, 0.1);
+    --afl-accent-card-tint: rgba(196, 30, 58, 0.06);
+
     display: grid;
     grid-template-columns: 1fr 260px;
     gap: 1.5rem;
@@ -135,7 +124,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary, #1c497c);
+    color: var(--afl-accent);
   }
   .rqa-section-title {
     font-size: 0.75rem;
@@ -143,7 +132,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    border-left: 2px solid var(--afl-accent);
     color: var(--color-gray-900, #111827);
   }
   .rqa-hero__sub {
@@ -199,7 +188,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--color-primary, #1c497c);
+    color: var(--afl-accent);
     margin-top: 0.25rem;
   }
   .rqa-roger-card__bio {
@@ -215,7 +204,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     gap: 0.5rem;
     margin-top: 1rem;
     padding: 0.625rem 1rem;
-    background: var(--color-primary, #1c497c);
+    background: var(--afl-accent);
     color: #fff;
     border-radius: var(--radius-md, 0.5rem);
     font-size: 0.8125rem;
@@ -224,7 +213,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     transition: background 0.15s ease;
   }
   .rqa-roger-card__cta:hover {
-    background: var(--color-primary-dark, #164066);
+    background: var(--afl-accent-hover);
     text-decoration: none;
   }
 
@@ -252,51 +241,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     margin: 0;
   }
   .rqa-sidebar__disclaimer a {
-    color: var(--color-primary, #1c497c);
+    color: var(--afl-accent);
     text-decoration: none;
   }
   .rqa-sidebar__disclaimer a:hover {
     text-decoration: underline;
-  }
-  .rqa-sidebar__tip-text {
-    font-size: 0.6875rem;
-    line-height: 1.55;
-    color: var(--color-gray-500, #6b7280);
-    margin: 0 0 0.75rem 0;
-  }
-
-  /* Donate buttons */
-  .rqa-donate-btns {
-    display: flex;
-    gap: 0.375rem;
-  }
-  .rqa-donate-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    flex: 1;
-    padding: 0.4rem 0.75rem;
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: var(--radius-sm, 0.25rem);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    white-space: nowrap;
-    color: var(--color-gray-600, #4b5563);
-    text-decoration: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .rqa-donate-btn:hover {
-    border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.08);
-    text-decoration: none;
-  }
-  .rqa-donate-btn__icon {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    fill: currentColor;
   }
 
   /* ── Mobile: Single Column ── */
@@ -312,13 +261,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     .rqa-main {
       order: 0;
     }
-    .rqa-sidebar__inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
     .rqa-roger-card {
-      grid-column: 1 / -1;
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -349,9 +292,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     .rqa-body {
       padding: 1rem;
     }
-    .rqa-sidebar__inner {
-      grid-template-columns: 1fr;
-    }
     .rqa-roger-card {
       flex-direction: column;
       text-align: center;
@@ -359,9 +299,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     .rqa-roger-card__avatar {
       width: 64px;
       height: 64px;
-    }
-    .rqa-donate-btns {
-      justify-content: center;
     }
   }
 </style>
@@ -377,9 +314,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
   }
-  .rqa-input__field-wrap {
-    position: relative;
-  }
+  .rqa-input__field-wrap { position: relative; }
   .rqa-input__field {
     width: 100%;
     padding: 0.75rem;
@@ -398,14 +333,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     max-height: 160px;
     transition: border-color 0.18s ease, box-shadow 0.18s ease;
   }
-  .rqa-input__field::placeholder {
-    color: var(--color-gray-400, #9ca3af);
-  }
+  .rqa-input__field::placeholder { color: var(--color-gray-400, #9ca3af); }
   .rqa-input__field:focus-visible {
     outline: none;
-    border-color: var(--color-primary, #1c497c);
-    border-left-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+    border-color: var(--afl-accent);
+    border-left-color: var(--afl-accent);
+    box-shadow: 0 0 0 3px var(--afl-accent-soft);
     background: var(--color-white, #fff);
   }
   .rqa-input__count {
@@ -422,7 +355,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background: var(--color-primary, #1c497c);
+    background: var(--afl-accent);
     color: #fff;
     border: none;
     border-radius: var(--radius-md, 0.5rem);
@@ -433,17 +366,9 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     transition: background 0.15s ease, opacity 0.15s ease;
     align-self: flex-end;
   }
-  .rqa-input__submit:hover:not(:disabled) {
-    background: var(--color-primary-dark, #164066);
-  }
-  .rqa-input__submit:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-  .rqa-input__submit:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
+  .rqa-input__submit:hover:not(:disabled) { background: var(--afl-accent-hover); }
+  .rqa-input__submit:disabled { opacity: 0.45; cursor: not-allowed; }
+  .rqa-input__submit:focus-visible { outline: 2px solid var(--afl-accent); outline-offset: 2px; }
   .rqa-input__spinner {
     display: inline-block;
     width: 14px;
@@ -453,17 +378,13 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-radius: 50%;
     animation: rqa-spin 0.6s linear infinite;
   }
-  @keyframes rqa-spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes rqa-spin { to { transform: rotate(360deg); } }
   .rqa-input__hint {
     font-size: 0.8125rem;
     color: var(--color-gray-500, #6b7280);
     margin: 0;
     font-style: italic;
   }
-
-  /* ── Login Prompt ── */
   .rqa-login-prompt {
     display: flex;
     align-items: center;
@@ -476,8 +397,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     color: var(--color-gray-500, #6b7280);
     margin-bottom: 1.5rem;
   }
-
-  /* ── Error ── */
   .rqa-error {
     display: flex;
     align-items: center;
@@ -490,13 +409,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     font-size: 0.8125rem;
     margin-bottom: 1rem;
   }
-
-  /* ── Q&A List ── */
-  .rqa-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
+  .rqa-list { display: flex; flex-direction: column; gap: 0; }
   .rqa-empty {
     text-align: center;
     padding: 2rem 1rem;
@@ -512,73 +425,37 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     letter-spacing: 0.04em;
     font-variant-numeric: tabular-nums;
   }
-
-  /* ── QA Card ── */
   .rqa-card {
     padding: 1.25rem 0;
     border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
     transition: background 0.3s ease;
   }
-  .rqa-card:first-child {
-    padding-top: 0;
-  }
-  .rqa-card:last-child {
-    border-bottom: none;
-  }
-  .rqa-card--new {
-    animation: rqa-highlight 2s ease-out;
-  }
+  .rqa-card:first-child { padding-top: 0; }
+  .rqa-card:last-child { border-bottom: none; }
+  .rqa-card--new { animation: rqa-highlight 2s ease-out; }
   @keyframes rqa-highlight {
-    0% { background: rgba(28, 73, 124, 0.06); }
+    0% { background: var(--afl-accent-card-tint); }
     100% { background: transparent; }
   }
-  .rqa-card__header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
+  .rqa-card__header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
   .rqa-card__avatar {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
+    width: 28px; height: 28px; min-width: 28px;
     border-radius: var(--radius-full, 9999px);
-    background: var(--color-primary, #1c497c);
+    background: var(--afl-accent);
     color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.625rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em;
   }
-  .rqa-card__avatar--office {
-    background: var(--color-gray-200, #e5e7eb);
-    color: var(--color-gray-500, #6b7280);
-  }
-  .rqa-card__avatar:has(.rqa-card__team-icon) {
-    background: transparent !important;
-  }
-  .rqa-card__team-icon {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-  .rqa-card__meta {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    flex: 1;
-  }
+  .rqa-card__avatar--office { background: var(--color-gray-200, #e5e7eb); color: var(--color-gray-500, #6b7280); }
+  .rqa-card__avatar:has(.rqa-card__team-icon) { background: transparent !important; }
+  .rqa-card__team-icon { width: 100%; height: 100%; object-fit: contain; }
+  .rqa-card__meta { display: flex; align-items: baseline; gap: 0.5rem; flex: 1; }
   .rqa-card__delete {
-    margin-left: auto;
-    padding: 0.25rem;
-    background: none;
-    border: 1px solid transparent;
+    margin-left: auto; padding: 0.25rem;
+    background: none; border: 1px solid transparent;
     border-radius: var(--radius-sm, 0.25rem);
     color: var(--color-gray-400, #9ca3af);
-    cursor: pointer;
-    opacity: 0;
+    cursor: pointer; opacity: 0;
     transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .rqa-card:hover .rqa-card__delete { opacity: 1; }
@@ -587,54 +464,20 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-color: var(--color-red-200, #fecaca);
     background: var(--color-red-50, #fef2f2);
   }
-  .rqa-card__asker {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--color-gray-700, #374151);
-  }
-  .rqa-card__time {
-    font-size: 0.6875rem;
-    color: var(--color-gray-400, #9ca3af);
-    font-variant-numeric: tabular-nums;
-  }
-  .rqa-card__question {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--color-gray-900, #111827);
-    line-height: 1.4;
-    margin-bottom: 0.5rem;
-  }
-  .rqa-card__answer {
-    font-size: 0.8125rem;
-    color: var(--color-gray-600, #4b5563);
-    line-height: 1.6;
-  }
-  .rqa-card__answer .rqa-card__para {
-    margin: 0 0 0.5rem 0;
-  }
-  .rqa-card__answer .rqa-card__para:last-child {
-    margin-bottom: 0;
-  }
-  .rqa-card__answer a {
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-  }
-  .rqa-card__answer a:hover {
-    text-decoration: underline;
-  }
+  .rqa-card__asker { font-size: 0.75rem; font-weight: 600; color: var(--color-gray-700, #374151); }
+  .rqa-card__time { font-size: 0.6875rem; color: var(--color-gray-400, #9ca3af); font-variant-numeric: tabular-nums; }
+  .rqa-card__question { font-size: 0.9375rem; font-weight: 600; color: var(--color-gray-900, #111827); line-height: 1.4; margin-bottom: 0.5rem; }
+  .rqa-card__answer { font-size: 0.8125rem; color: var(--color-gray-600, #4b5563); line-height: 1.6; }
+  .rqa-card__answer .rqa-card__para { margin: 0 0 0.5rem 0; }
+  .rqa-card__answer .rqa-card__para:last-child { margin-bottom: 0; }
+  .rqa-card__answer a { color: var(--afl-accent); text-decoration: none; }
+  .rqa-card__answer a:hover { text-decoration: underline; }
 
   @media (max-width: 600px) {
-    .rqa-card {
-      padding: 1rem 0;
-    }
-    .rqa-card__question {
-      font-size: 0.875rem;
-    }
-    .rqa-card__answer {
-      font-size: 0.8125rem;
-    }
+    .rqa-card { padding: 1rem 0; }
+    .rqa-card__question { font-size: 0.875rem; }
+    .rqa-card__answer { font-size: 0.8125rem; }
   }
-
   @media (prefers-reduced-motion: reduce) {
     .rqa-card--new { animation: none; }
     .rqa-input__spinner { animation: none; }

@@ -46,7 +46,7 @@ export const LEAGUES = {
       keepers: true,
       powerRankings: false,
       liveLineups: false,
-      schefterFeed: false,
+      schefterFeed: true,
     },
   },
 };

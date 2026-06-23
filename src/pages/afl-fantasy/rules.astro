@@ -58,6 +58,10 @@ const sectionLinks = [
         to a section. Edits to this document live at
         <code>src/pages/afl-fantasy/docs/rules.html</code>.
       </p>
+      <a href="/afl-fantasy/rules-chat" class="afl-rules-chat-link">
+        Got a question? Ask Roger
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
     </header>
 
     <nav class="afl-rules-page__toc" aria-label="Constitution sections">
@@ -180,5 +184,25 @@ const sectionLinks = [
 
   .afl-rules-page__content :global(h2) {
     scroll-margin-top: 80px;
+  }
+
+  /* ── Ask Roger CTA ── */
+  .afl-rules-chat-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--color-primary, #c41e3a);
+    color: #fff;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  .afl-rules-chat-link:hover {
+    background: #a01830;
+    text-decoration: none;
   }
 </style>
