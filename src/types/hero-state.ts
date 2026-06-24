@@ -7,6 +7,7 @@
  */
 
 import type { HeroContent } from './whats-new';
+import type { LeagueEventView } from '../utils/league-event-hero-view';
 
 /** The 14 season phases that drive hero selection */
 export type SeasonPhase =
@@ -59,6 +60,10 @@ export interface HeroState {
   priority: HeroPriority;
   /** Fallback hero content for phases that delegate to HeroBanner */
   fallbackHero?: HeroContent;
+  /** Branded LeagueEventHero view — set on offseason-fallback states. */
+  eventView?: LeagueEventView;
+  /** Whether the branded event hero draws its accent border (calendar events only). */
+  eventBordered?: boolean;
   /** Auction-specific props (only when phase is 'auction-preview' or 'auction-live') */
   auctionProps?: {
     live: boolean;
@@ -100,6 +105,8 @@ export interface HeroState {
     overLimitTeams: Array<{
       franchiseId: string;
       franchiseName: string;
+      /** Short franchise name (nameShort → nameMedium → name) for compact UI. */
+      franchiseNameShort: string;
       franchiseIcon: string;
       activeCount: number;
       cutCandidates: Array<{

@@ -30,6 +30,7 @@ import type { DailySlot, GameWindow } from '../types/hero-state';
 import { getAllResolvedAflEvents } from './league-event-resolver';
 import { getDailySlot } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
+import { randomHeroPlayer } from './hero-players';
 
 /** How long a fresh What's New entry stays in the hero. */
 const FEATURE_HERO_DAYS = 7;
@@ -128,29 +129,6 @@ const GLOW_AMBER = 'rgba(217,119,6,.55)';
 const GLOW_NAVY = 'rgba(28,73,124,.55)';
 
 // ── Per-event view configs ───────────────────────────────────────────────────
-
-/**
- * Hero player cut-outs. Listed explicitly (not via import.meta.glob) so the
- * set is greppable and the URLs are stable across builds. Add new images to
- * public/assets/hero-players/ and append their basenames here.
- */
-const HERO_PLAYERS = [
-  'adams', 'allen', 'bijan', 'bishop', 'breece', 'burks', 'burrow', 'caleb',
-  'chase', 'dak', 'drake', 'drakey-maye', 'elliss', 'goff', 'gonz', 'hawks',
-  'hurts', 'jefferson', 'jefferson2', 'jeremiyah_love', 'josh', 'lamar', 'love',
-  'mahomes', 'maye', 'mccaffrey', 'mills', 'njigba', 'njigba2', 'njigba3', 'pat',
-  'pickens', 'puka', 'ramsey', 'sam', 'spears', 'stafford', 'tate', 'trevor',
-  'watson',
-] as const;
-
-function randomHeroPlayer(seed: Date): string {
-  // Use the reference date's day-of-year as a seed so the picked image is
-  // stable for SSR within a given day. The hero re-rolls daily.
-  const start = new Date(seed.getFullYear(), 0, 0);
-  const day = Math.floor((seed.getTime() - start.getTime()) / 86_400_000);
-  const name = HERO_PLAYERS[day % HERO_PLAYERS.length];
-  return `/assets/hero-players/${name}.webp`;
-}
 
 interface ViewContext {
   now: Date;

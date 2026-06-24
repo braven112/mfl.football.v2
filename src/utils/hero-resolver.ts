@@ -17,12 +17,13 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
-import { WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
+import { WHATS_NEW_CATEGORY_LABELS, entryAppliesToLeague } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from '../types/hero-state';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
 import { getCurrentNFLWeek } from './current-week';
+import { buildLeagueEventView } from './league-event-hero-view';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
 function formatKickerDate(dateStr: string): string {
@@ -334,8 +335,11 @@ export function resolveHeroContent(
     return getDraftHero(isDraftLive(now));
   }
 
-  // Filter entries that are eligible for hero promotion
-  const heroEligible = entries.filter((e) => !e.excludeFromHero);
+  // Filter entries that are eligible for hero promotion. Scope to TheLeague —
+  // AFL-tagged entries must never surface on TheLeague homepage (and vice versa).
+  const heroEligible = entries.filter(
+    (e) => !e.excludeFromHero && entryAppliesToLeague(e, 'theleague'),
+  );
 
   // --- Priority 1: New features (≤7 days old) — random pick if multiple ---
   const freshFeatures = heroEligible.filter((e) => {
@@ -958,23 +962,30 @@ export function resolveHeroState(
     const fallback = resolveHeroContent(entries, timeline, now);
     const priority: HeroPriority = fallback.source === 'feature' ? 'P2' :
       fallback.source === 'event' ? (fallback.isUrgent ? 'P3' : fallback.isActive ? 'P4' : 'P4') : 'P5';
+    const { view, bordered } = buildLeagueEventView(fallback, timeline, now);
     return buildState('offseason-fallback', priority, 'resolveHeroContent-fallback', now, testMode, {
       fallbackHero: fallback,
+      eventView: view,
+      eventBordered: bordered,
     });
   }
 
   // Ultimate fallback
+  const ultimateFallback: HeroContent = {
+    source: 'default',
+    title: "What's New",
+    summary: 'See all the latest features, tools, and improvements we\'ve shipped.',
+    link: '/theleague/whats-new',
+    linkLabel: 'View all updates',
+    icon: 'star',
+    accentColor: 'var(--color-primary, #1c497c)',
+    kicker: "What's New",
+  };
+  const ultimate = buildLeagueEventView(ultimateFallback, timeline, now);
   return buildState('offseason-fallback', 'P5', 'ultimate-fallback', now, testMode, {
-    fallbackHero: {
-      source: 'default',
-      title: "What's New",
-      summary: 'See all the latest features, tools, and improvements we\'ve shipped.',
-      link: '/theleague/whats-new',
-      linkLabel: 'View all updates',
-      icon: 'star',
-      accentColor: 'var(--color-primary, #1c497c)',
-      kicker: "What's New",
-    },
+    fallbackHero: ultimateFallback,
+    eventView: ultimate.view,
+    eventBordered: ultimate.bordered,
   });
 }
 
