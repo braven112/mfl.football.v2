@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-06-24T18:09:55.713Z"
+    "fetchedAt": "2026-06-24T18:52:16.493Z"
   },
   "players": [
     {
@@ -382,13 +382,40 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15255_thumb.jpg",
       "externalIds": {
         "mfl": "15255",
-        "sleeper": null,
+        "sleeper": "7567",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "7567",
+        "fullName": "Kenneth Gainwell",
+        "team": "TB",
+        "age": 27,
+        "height": "69",
+        "weight": "200",
+        "number": 1,
+        "college": "Memphis",
+        "birthDate": "1999-03-14",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16598",
+          "name": "Irving, Bucky"
+        }
+      ]
     },
     {
       "id": "16432",
@@ -1609,6 +1636,10 @@
         {
           "id": "16598",
           "name": "Irving, Bucky"
+        },
+        {
+          "id": "15255",
+          "name": "Gainwell, Kenneth"
         }
       ]
     },
@@ -5323,7 +5354,7 @@
         "team": "DET",
         "age": 30,
         "height": "75",
-        "weight": "245",
+        "weight": "248",
         "number": 83,
         "college": "Central Michigan",
         "birthDate": "1995-07-30",
@@ -7495,7 +7526,7 @@
         "team": "DET",
         "age": 28,
         "height": "67",
-        "weight": "183",
+        "weight": "180",
         "number": 8,
         "college": "Wake Forest",
         "birthDate": "1998-05-29",
@@ -9657,7 +9688,7 @@
         "team": "DET",
         "age": 27,
         "height": "70",
-        "weight": "210",
+        "weight": "216",
         "number": 10,
         "college": "Rutgers",
         "birthDate": "1999-03-02",
@@ -9897,7 +9928,7 @@
         "team": "TB",
         "age": 21,
         "height": "75",
-        "weight": "195",
+        "weight": "206",
         "number": 17,
         "college": "Georgia State",
         "birthDate": "2004-07-02",
@@ -11346,7 +11377,7 @@
         "team": "DET",
         "age": 25,
         "height": "73",
-        "weight": "184",
+        "weight": "182",
         "number": 1,
         "college": "Alabama",
         "birthDate": "2001-03-26",
@@ -13146,7 +13177,7 @@
         "team": "DET",
         "age": 27,
         "height": "70",
-        "weight": "205",
+        "weight": "202",
         "number": 39,
         "college": "Arkansas",
         "birthDate": "1999-03-03",
