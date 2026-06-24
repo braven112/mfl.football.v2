@@ -10,6 +10,35 @@
  *   font-size: var(--font-size-base);
  */
 
+@font-face {
+  font-family: 'UFC Sans Condensed';
+  src: url('/assets/fonts/UFCSans-CondensedMedium.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'UFC Sans Condensed';
+  src: url('/assets/fonts/UFCSans-CondensedBold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'UFC Sans';
+  src: url('/assets/fonts/UFCSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'UFC Sans';
+  src: url('/assets/fonts/UFCSans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ========================================
      Typography
@@ -18,6 +47,8 @@
   /* Font Families */
   --font-family-base: var(--font-vend-sans, 'Vend Sans'), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-mono: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
+  --font-display: 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', system-ui, sans-serif;
+  --font-numeric: 'UFC Sans', 'Vend Sans', system-ui, sans-serif;
 
   /* Font Sizes - Fluid scale */
   --font-size-xs: 0.75rem;

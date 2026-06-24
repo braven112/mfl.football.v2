@@ -93,6 +93,7 @@ const heroState = resolveAflHeroState({
   whatsNewEntries: allWhatsNew,
   timeline,
   userConferenceId,
+  userTier: userTeam?.tier,
 });
 
 // ── Standings + roster data ─────────────────────────────────────────────────
@@ -149,12 +150,14 @@ const feed = feedData as FeedType;
 const compactPosts = feed.posts.slice(0, 30);
 
 // ── Conference draft preview visibility ─────────────────────────────────────
+// AL/NL drafts: Saturday and Sunday a full week BEFORE Labor Day weekend
+// (matches the 'saturday-before-labor-day-weekend' rule in league-event-resolver.ts).
 const labor = getLaborDayForYear(effectiveDate.getFullYear());
 const alDate = new Date(labor);
-alDate.setDate(alDate.getDate() - 2);
+alDate.setDate(alDate.getDate() - 9);
 alDate.setHours(9, 0, 0, 0);
 const nlDate = new Date(labor);
-nlDate.setDate(nlDate.getDate() - 1);
+nlDate.setDate(nlDate.getDate() - 8);
 nlDate.setHours(9, 0, 0, 0);
 
 const draftPreviewStart = new Date(alDate);
