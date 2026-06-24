@@ -75,63 +75,20 @@ const quickLinks: QuickLink[] = [
 >
   <nav class="tl-hero-panel" slot="panel" aria-label="Auction quick links">
     <h3 class="tl-hero-panel__title">Quick links</h3>
-    <div class="ah-links">
+    <div class="tl-hero-panel__links">
       {quickLinks.map((link) => (
         <a
           href={link.href}
-          class="ah-link"
+          class="tl-hero-panel__link"
           target={link.external ? '_blank' : undefined}
           rel={link.external ? 'noopener noreferrer' : undefined}
           aria-label={link.external ? `${link.label} (opens in new tab)` : undefined}
         >
-          <svg class="ah-link__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-${link.icon}`}></use></svg>
-          <span class="ah-link__label">{link.label}</span>
-          {link.external && <span class="ah-link__ext" aria-hidden="true">↗</span>}
+          <svg class="tl-hero-panel__link-icon" aria-hidden="true"><use href={`${spriteUrl}#icon-${link.icon}`}></use></svg>
+          <span class="tl-hero-panel__link-label">{link.label}</span>
+          {link.external && <span class="tl-hero-panel__link-ext" aria-hidden="true">↗</span>}
         </a>
       ))}
     </div>
   </nav>
 </EventHeroShell>
-
-<style>
-  .ah-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-  .ah-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    text-decoration: none;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.78rem;
-    font-weight: 600;
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-  .ah-link:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.25);
-  }
-  .ah-link__icon {
-    width: 0.95rem;
-    height: 0.95rem;
-    flex-shrink: 0;
-    fill: var(--ev-accent, #d97706);
-  }
-  .ah-link__label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ah-link__ext {
-    margin-left: auto;
-    font-size: 0.7rem;
-    opacity: 0.5;
-    flex-shrink: 0;
-  }
-</style>
