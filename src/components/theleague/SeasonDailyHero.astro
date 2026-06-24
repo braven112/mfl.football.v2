@@ -76,6 +76,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     resolveLeaguePath={resolveLeaguePath}
     spriteUrl={spriteUrl}
     live={state.auctionProps.live}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 
@@ -160,7 +161,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 {phase === 'udfa-window' && (
   <UDFAHero
     resolveLeaguePath={resolveLeaguePath}
-    spriteUrl={spriteUrl}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 
