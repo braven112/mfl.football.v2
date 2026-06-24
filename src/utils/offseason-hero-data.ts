@@ -492,6 +492,7 @@ function enrichCutWatch(state: HeroState): HeroState {
     return {
       franchiseId: team.franchiseId,
       franchiseName: franchise?.name || '',
+      franchiseNameShort: franchise?.nameShort || franchise?.name || '',
       franchiseIcon: franchise?.icon || '',
       activeCount: team.activeCount,
       cutCandidates: team.cutCandidates.map((c) => {

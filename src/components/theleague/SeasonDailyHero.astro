@@ -11,6 +11,7 @@ import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import AuctionHero from './AuctionHero.astro';
 import DraftHero from './DraftHero.astro';
 import HeroBanner from './HeroBanner.astro';
+import LeagueEventHero from './LeagueEventHero.astro';
 import LiveScoringHero from '../shared/LiveScoringHero';
 import TradeDeadlineHero from './TradeDeadlineHero';
 import PlayoffBracketHero from './PlayoffBracketHero';
@@ -75,6 +76,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     resolveLeaguePath={resolveLeaguePath}
     spriteUrl={spriteUrl}
     live={state.auctionProps.live}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 
@@ -159,7 +161,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 {phase === 'udfa-window' && (
   <UDFAHero
     resolveLeaguePath={resolveLeaguePath}
-    spriteUrl={spriteUrl}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 
@@ -168,14 +170,21 @@ const isFridayArticle = ptWeekday === 'Fri';
     cutWatchProps={state.cutWatchProps}
     resolveLeaguePath={resolveLeaguePath}
     spriteUrl={spriteUrl}
+    userFranchiseId={userFranchiseId}
   />
 )}
 
-{/* Fallback phases: trade-deadline, offseason-fallback, etc. render via HeroBanner */}
+{/* Fallback phases (offseason-fallback): branded LeagueEventHero, with HeroBanner as a defensive fallback */}
 {!slot && !state.auctionProps && !state.draftProps && !state.tradeDeadlineProps
   && !state.championProps && !state.taggedShowcaseProps && !state.cutWatchProps
   && phase !== 'tag-window' && phase !== 'udfa-window'
-  && fallback && (
+  && (state.eventView ? (
+  <LeagueEventHero
+    {...state.eventView}
+    bordered={state.eventBordered}
+    regionLabel="Featured league event"
+  />
+) : fallback ? (
   <HeroBanner
     title={fallback.title}
     summary={fallback.summary}
@@ -189,7 +198,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     kicker={fallback.kicker}
     kickerDate={fallback.kickerDate}
   />
-)}
+) : null)}
 
 {/* Defensive empty-state: ensures the section landmark is never silently empty */}
 {!slot && !state.auctionProps && !state.draftProps && !fallback && (

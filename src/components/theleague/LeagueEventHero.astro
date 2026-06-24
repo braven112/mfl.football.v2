@@ -1,0 +1,47 @@
+---
+/**
+ * LeagueEventHero — branded full-bleed promotional hero for TheLeague homepage.
+ *
+ * Thin promo wrapper over the shared EventHeroShell: deep-navy card, per-event
+ * accent word + countdown, decorative player cut-out, brand-green pill/CTA.
+ * Driven entirely by props the resolver derives (LeagueEventView), so it stays
+ * wired into the existing event system — no new data source. The card chrome
+ * (and its CSS) lives in EventHeroShell; this component just forwards props.
+ */
+import EventHeroShell from './EventHeroShell.astro';
+
+interface Props {
+  /** Pill label, e.g. "2026 NFL Draft" */
+  pill: string;
+  /** White display line, e.g. "The board is" */
+  headline: string;
+  /** Colored display line appended after the headline, e.g. "set." */
+  accentWord?: string;
+  summary: string;
+  link?: string;
+  linkLabel?: string;
+  isExternal?: boolean;
+  /** Sprite glyph id WITHOUT the "icon-" prefix (e.g. "draft-podium"). Ignored when `badge` is set. */
+  icon?: string;
+  /** Optional badge svg. Replaces the icon chip. */
+  badge?: string;
+  badgeAlt?: string;
+  /** Accent color for the headline word, countdown number and rail (per-event category color). */
+  accent?: string;
+  /** Rgba tint for the corner glow wash. */
+  glow?: string;
+  /** Player cut-out, e.g. /assets/hero-players/josh.webp */
+  player?: string;
+  playerAlt?: string;
+  /** Big countdown value (number of days, or a short string like "LIVE"). */
+  countValue?: string | number;
+  /** Small caps label under the countdown number. */
+  countLabel?: string;
+  /** When true, draw the accent border. Reserved for calendar-driven events. */
+  bordered?: boolean;
+  /** Landmark label for the section element. Defaults to "League hero". */
+  regionLabel?: string;
+}
+---
+
+<EventHeroShell {...Astro.props as Props} />
