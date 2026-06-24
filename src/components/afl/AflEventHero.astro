@@ -1,0 +1,337 @@
+---
+/**
+ * AflEventHero — branded full-bleed promotional hero for the AFL homepage.
+ *
+ * Drop-in renderer for AFL's calendar-driven promo states (keeper deadline,
+ * conference draft, champion-crowned, offseason/default). Driven entirely by
+ * props that AflHero.astro derives from the resolver's HeroContent + state, so
+ * it stays wired into the existing event system — no new data source.
+ *
+ * Visual: deep-navy card, corner accent glow, condensed display headline with a
+ * colored accent word, server-rendered day countdown, player cut-out on the
+ * right, brand-red CTA. Colors fall back to AFL brand values but prefer the
+ * site's CSS custom properties where they exist.
+ */
+import { spriteUrl } from '../../utils/sprite-url';
+
+interface Props {
+  /** Pill label, e.g. "2026 Keeper Deadline" */
+  pill: string;
+  /** White display line, e.g. "Lock in your" */
+  headline: string;
+  /** Colored display line appended after the headline, e.g. "core." */
+  accentWord?: string;
+  summary: string;
+  link?: string;
+  linkLabel?: string;
+  isExternal?: boolean;
+  /** Sprite glyph id WITHOUT the "icon-" prefix (e.g. "draft-podium"). Ignored when `badge` is set. */
+  icon?: string;
+  /** Optional tier/conference badge svg (e.g. /assets/afl/premier.svg). Replaces the icon chip. */
+  badge?: string;
+  badgeAlt?: string;
+  /** Accent color for the headline word, countdown number and rail. */
+  accent?: string;
+  /** Rgba tint for the corner glow wash. */
+  glow?: string;
+  /** Player cut-out, e.g. /assets/hero-players/josh.webp */
+  player?: string;
+  playerAlt?: string;
+  /** Big countdown value (number of days, or a short string like "LIVE"). */
+  countValue?: string | number;
+  /** Small caps label under the countdown number. */
+  countLabel?: string;
+  /** When true, draw the gold accent border. Reserved for calendar-driven events. */
+  bordered?: boolean;
+  /** Landmark label for the section element. Defaults to "AFL hero". */
+  regionLabel?: string;
+}
+
+const {
+  pill,
+  headline,
+  accentWord = '',
+  summary,
+  link,
+  linkLabel = 'Learn more',
+  isExternal = false,
+  icon,
+  badge,
+  badgeAlt = '',
+  accent = '#c9a94e',
+  glow = 'rgba(196,30,58,.6)',
+  player,
+  playerAlt = '',
+  countValue,
+  countLabel,
+  bordered = false,
+  regionLabel = 'AFL hero',
+} = Astro.props;
+
+const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
+const hasFooter = hasCount || !!link;
+// Compose an SR-friendly label for the count chip — value + label read as one phrase.
+const countAriaLabel = hasCount
+  ? countLabel
+    ? `${countValue} — ${countLabel}`
+    : String(countValue)
+  : undefined;
+---
+
+<section
+  class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered }]}
+  style={`--ev-accent:${accent};--ev-glow:${glow};`}
+  aria-label={regionLabel}
+>
+  <span class="afl-event-hero__glow" aria-hidden="true"></span>
+
+  {player && (
+    <div class="afl-event-hero__player" aria-hidden="true">
+      <img src={player} alt={playerAlt} loading="eager" fetchpriority="high" />
+      <span class="afl-event-hero__fade afl-event-hero__fade--left"></span>
+      <span class="afl-event-hero__fade afl-event-hero__fade--bottom"></span>
+    </div>
+  )}
+
+  <div class="afl-event-hero__content">
+    <div class="afl-event-hero__eyebrow">
+      {badge ? (
+        <img class="afl-event-hero__badge" src={badge} alt={badgeAlt} />
+      ) : icon ? (
+        <span class="afl-event-hero__chip">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href={`${spriteUrl}#icon-${icon}`}></use></svg>
+        </span>
+      ) : null}
+      <span class="afl-event-hero__pill">{pill}</span>
+    </div>
+
+    <h2 class="afl-event-hero__title">
+      {headline}{accentWord && (<Fragment> <span class="afl-event-hero__accent">{accentWord}</span></Fragment>)}
+    </h2>
+
+    <p class="afl-event-hero__summary">{summary}</p>
+
+    {hasFooter && (
+      <div class="afl-event-hero__footer">
+        {hasCount && (
+          <div class="afl-event-hero__count" role="group" aria-label={countAriaLabel}>
+            <span class="afl-event-hero__count-num" aria-hidden="true">{countValue}</span>
+            {countLabel && <span class="afl-event-hero__count-label" aria-hidden="true">{countLabel}</span>}
+          </div>
+        )}
+        {hasCount && link && <span class="afl-event-hero__divider" aria-hidden="true"></span>}
+        {link && (
+          <a
+            class="afl-event-hero__cta"
+            href={link}
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener noreferrer' : undefined}
+          >
+            {linkLabel}
+            <span class="afl-event-hero__cta-arrow" aria-hidden="true">→</span>
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</section>
+
+<style>
+  .afl-event-hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    min-height: clamp(320px, 34vw, 380px);
+    border-radius: var(--radius-lg, 0.75rem);
+    background: #002244;
+    color: #fff;
+    box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(0, 34, 68, 0.18));
+    isolation: isolate;
+  }
+
+  .afl-event-hero--bordered {
+    border: 2px solid var(--ev-accent);
+  }
+
+  .afl-event-hero__glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(86% 92% at 3% -4%, var(--ev-glow), transparent 64%);
+    pointer-events: none;
+  }
+
+  /* ── Player panel ── */
+  .afl-event-hero__player {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: clamp(220px, 36%, 360px);
+  }
+  .afl-event-hero__player img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 52% 16%;
+    display: block;
+  }
+  .afl-event-hero__fade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .afl-event-hero__fade--left {
+    background: linear-gradient(90deg, #002244 0%, rgba(0, 34, 68, 0.6) 26%, rgba(0, 34, 68, 0.1) 60%, transparent 100%);
+  }
+  .afl-event-hero__fade--bottom {
+    background: linear-gradient(0deg, rgba(0, 34, 68, 0.5) 0%, transparent 42%);
+  }
+  /* ── Content ── */
+  .afl-event-hero__content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.9rem;
+    padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1.5rem, 3vw, 2.75rem);
+    max-width: 640px;
+  }
+
+  .afl-event-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .afl-event-hero__badge {
+    height: 46px;
+    width: auto;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+  }
+  .afl-event-hero__chip {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--ev-accent) 22%, transparent);
+  }
+  .afl-event-hero__chip svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--ev-accent);
+  }
+  .afl-event-hero__pill {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.375rem 0.875rem;
+    border-radius: 999px;
+    background: var(--afl-red, #c41e3a);
+    color: #fff;
+  }
+
+  .afl-event-hero__title {
+    margin: 0;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: clamp(2.2rem, 4.4vw, 3.25rem);
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: #fff;
+    text-wrap: balance;
+  }
+  .afl-event-hero__accent {
+    color: var(--ev-accent);
+  }
+
+  .afl-event-hero__summary {
+    margin: 0;
+    max-width: 24rem;
+    font-size: 1rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .afl-event-hero__footer {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+  }
+  .afl-event-hero__count {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  .afl-event-hero__count-num {
+    font-family: var(--font-numeric, 'UFC Sans', 'Vend Sans', system-ui, sans-serif);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: clamp(2.6rem, 5vw, 3.1rem);
+    color: var(--ev-accent);
+  }
+  .afl-event-hero__count-label {
+    margin-top: 0.3rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .afl-event-hero__divider {
+    width: 1px;
+    height: 54px;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .afl-event-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 50px;
+    padding: 0 1.5rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--afl-red, #c41e3a);
+    color: #fff;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 1.0625rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .afl-event-hero__cta:hover {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(196, 30, 58, 0.35);
+  }
+  .afl-event-hero__cta-arrow {
+    font-size: 1.1rem;
+    transition: transform 0.15s ease;
+  }
+  .afl-event-hero__cta:hover .afl-event-hero__cta-arrow {
+    transform: translateX(2px);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .afl-event-hero__player {
+      width: 42%;
+      opacity: 0.5;
+    }
+    .afl-event-hero__fade--left {
+      background: linear-gradient(90deg, #002244 0%, rgba(0, 34, 68, 0.75) 45%, rgba(0, 34, 68, 0.2) 100%);
+    }
+    .afl-event-hero__content {
+      max-width: none;
+    }
+  }
+</style>

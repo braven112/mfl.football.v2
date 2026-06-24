@@ -1,55 +1,81 @@
 /**
  * AFL Hero Resolver
  *
- * Determines which hero to display on the AFL homepage based on the current
- * calendar position. Mirrors the priority structure of TheLeague's resolver
- * but tuned to AFL's cadence:
- *
- *   - No auction (TheLeague has one; AFL replaces it with a single draft per conference)
- *   - July 15 keeper deadline is the only public preseason date
- *   - Conference drafts run the weekend before Labor Day (AL Saturday live, NL Sunday email)
+ * Determines which hero to display on the AFL homepage based on the AFL
+ * league calendar (src/data/afl-fantasy/league-events.json). The calendar is
+ * the single source of truth for dates; this resolver picks the most relevant
+ * event for "now" and decorates it with a per-event visual treatment for the
+ * branded AflEventHero.
  *
  * Hero priority (high → low):
- *   P0++ Trade Deadline Day (24h override)
- *   P0   Championship Week, Champion Crowned, Conference Draft Window, In-Season
- *   P1   Keeper Deadline Day, Keeper Deadline Approaching (≤30 days out)
- *   P2   Fresh AFL-tagged What's New entry (≤7 days)
- *   P3   Urgent upcoming AFL event
- *   P4   Active / upcoming AFL event
- *   P5   Default offseason hero (no dates) or What's New fallback
+ *   P0++ Trade Deadline Day            → TradeDeadlineHero (live countdown)
+ *   P0   Championship Week (active)    → AflChampionshipHero (matchup card)
+ *   P0   Champion Crowned window       → AflEventHero (calendar-driven)
+ *   P0   Conference Playoffs (active)  → AflPlayoffsHero (bracket)
+ *   P0   Calendar event active         → AflEventHero (calendar-driven)
+ *   P1   Calendar event urgent         → AflEventHero (calendar-driven)
+ *   P0   Regular season slot rotation  → AflEventHero (Schefter-voiced slot, no border)
+ *   P2   Fresh What's New entry        → AflEventHero (no border)
+ *   P3   Active/upcoming timeline      → AflEventHero (no border)
+ *   P5   Default / quiet offseason     → AflEventHero (no border)
+ *
+ * Only calendar-driven events get the gold border; slot/feature/default states
+ * render the same card without it. HeroBanner is no longer used here.
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
 import { entryAppliesToLeague, WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import type { DailySlot, GameWindow } from '../types/hero-state';
-import { getNthDayOfMonth } from './league-event-resolver';
-import { getLaborDayForYear } from './league-year';
+import { getAllResolvedAflEvents } from './league-event-resolver';
 import { getDailySlot } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
 
 /** How long a fresh What's New entry stays in the hero. */
 const FEATURE_HERO_DAYS = 7;
 
-const CATEGORY_COLOR: Record<string, string> = {
-  preseason: 'var(--cat-preseason, #60a5fa)',
-  draft: 'var(--cat-draft, #7c3aed)',
-  'regular-season': 'var(--cat-regular-season, #1c497c)',
-  'free-agency': 'var(--cat-free-agency, #2e8743)',
-};
+/** Visual props passed straight to AflEventHero. */
+export interface EventHeroView {
+  pill: string;
+  headline: string;
+  accentWord?: string;
+  summary: string;
+  link?: string;
+  linkLabel?: string;
+  isExternal?: boolean;
+  icon?: string;
+  badge?: string;
+  badgeAlt?: string;
+  accent?: string;
+  glow?: string;
+  player?: string;
+  playerAlt?: string;
+  countValue?: string | number;
+  countLabel?: string;
+}
 
 /** AFL hero state — discriminated by `kind`. */
 export type AflHeroState =
-  | { kind: 'conference-draft'; priority: 'P0'; content: HeroContent; al: { date: Date; live: boolean }; nl: { date: Date; live: boolean }; userConference?: '00' | '01' }
-  | { kind: 'keeper-deadline'; priority: 'P1'; content: HeroContent; deadline: Date; daysUntil: number }
+  | {
+      kind: 'calendar-event';
+      priority: 'P0' | 'P1';
+      eventId: string;
+      content: HeroContent;
+      view: EventHeroView;
+      /** Populated only when the lead event is an AL or NL draft, so the page can render both pills. */
+      conferenceDraft?: {
+        al: { date: Date; live: boolean };
+        nl: { date: Date; live: boolean };
+        userConference?: '00' | '01';
+      };
+    }
   | { kind: 'trade-deadline'; priority: 'P0++'; content: HeroContent; deadlineMidnightPT: string }
   | { kind: 'championship'; priority: 'P0'; content: HeroContent }
-  | { kind: 'champion-crowned'; priority: 'P0'; content: HeroContent }
   | { kind: 'playoffs'; priority: 'P0'; content: HeroContent; slot?: DailySlot; gameWindow?: GameWindow; week?: number }
-  | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; slot: DailySlot; gameWindow: GameWindow; week?: number }
-  | { kind: 'event'; priority: 'P3' | 'P4'; content: HeroContent }
-  | { kind: 'feature'; priority: 'P2'; content: HeroContent }
-  | { kind: 'default'; priority: 'P5'; content: HeroContent };
+  | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; view: EventHeroView; slot: DailySlot; gameWindow: GameWindow; week?: number }
+  | { kind: 'event'; priority: 'P3' | 'P4'; content: HeroContent; view: EventHeroView }
+  | { kind: 'feature'; priority: 'P2'; content: HeroContent; view: EventHeroView }
+  | { kind: 'default'; priority: 'P5'; content: HeroContent; view: EventHeroView };
 
 export interface AflHeroResolverInput {
   referenceDate: Date;
@@ -58,6 +84,8 @@ export interface AflHeroResolverInput {
   timeline?: WhatsNextTimeline;
   /** User's conference id from AFL cookie/auth ("00"=AL, "01"=NL) — for conference-aware draft hero. */
   userConferenceId?: '00' | '01';
+  /** User's AFL tier ("Premier League" | "D-League") — for keeper hero badge selection. */
+  userTier?: string;
 }
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -68,160 +96,561 @@ function startOfDay(d: Date): Date {
   return out;
 }
 
-function endOfDay(d: Date): Date {
-  const out = new Date(d);
-  out.setHours(23, 59, 59, 999);
-  return out;
-}
-
 function daysBetween(later: Date, earlier: Date): number {
   return Math.ceil((startOfDay(later).getTime() - startOfDay(earlier).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function getKeeperDeadline(year: number): Date {
-  // July 15 @ 8pm PT (treated as local 20:00 to match the calendar entry)
-  return new Date(year, 6, 15, 20, 0, 0, 0);
+function midnightAfter(date: Date): string {
+  const next = new Date(date);
+  next.setDate(next.getDate() + 1);
+  next.setHours(0, 0, 0, 0);
+  const y = next.getFullYear();
+  const m = String(next.getMonth() + 1).padStart(2, '0');
+  const d = String(next.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}T00:00:00-08:00`;
 }
 
-/** Days before the keeper deadline at which the urgency hero kicks in. */
-const KEEPER_URGENCY_DAYS = 30;
+// ── Brand palette ────────────────────────────────────────────────────────────
+// AFL hero accent/glow values. These flow into the `--ev-accent` / `--ev-glow`
+// inline custom properties on AflEventHero, so they're raw strings (not CSS
+// `var()` tokens) — named here so a single source governs the recurring values.
+const ACCENT_GOLD = '#c9a94e';
+const ACCENT_RED = '#dc2626';
+const ACCENT_GREEN = '#2e8743';
+const ACCENT_AMBER = '#d97706';
+const ACCENT_STEEL = '#cfd6db';
+const GLOW_GOLD = 'rgba(201,169,78,.45)';
+const GLOW_GOLD_SOFT = 'rgba(201,169,78,.4)';
+const GLOW_RED = 'rgba(196,30,58,.6)';
+const GLOW_RED_LIVE = 'rgba(220,38,38,.55)';
+const GLOW_GREEN = 'rgba(46,135,67,.55)';
+const GLOW_AMBER = 'rgba(217,119,6,.55)';
+const GLOW_NAVY = 'rgba(28,73,124,.55)';
 
-function getAlDraftDate(year: number): Date {
-  const labor = getLaborDayForYear(year);
-  const sat = new Date(labor);
-  sat.setDate(sat.getDate() - 2);
-  sat.setHours(9, 0, 0, 0);
-  return sat;
+// ── Per-event view configs ───────────────────────────────────────────────────
+
+/**
+ * Hero player cut-outs. Listed explicitly (not via import.meta.glob) so the
+ * set is greppable and the URLs are stable across builds. Add new images to
+ * public/assets/hero-players/ and append their basenames here.
+ */
+const HERO_PLAYERS = [
+  'adams', 'allen', 'bijan', 'bishop', 'breece', 'burks', 'burrow', 'caleb',
+  'chase', 'dak', 'drake', 'drakey-maye', 'elliss', 'goff', 'gonz', 'hawks',
+  'hurts', 'jefferson', 'jefferson2', 'jeremiyah_love', 'josh', 'lamar', 'love',
+  'mahomes', 'maye', 'mccaffrey', 'mills', 'njigba', 'njigba2', 'njigba3', 'pat',
+  'pickens', 'puka', 'ramsey', 'sam', 'spears', 'stafford', 'tate', 'trevor',
+  'watson',
+] as const;
+
+function randomHeroPlayer(seed: Date): string {
+  // Use the reference date's day-of-year as a seed so the picked image is
+  // stable for SSR within a given day. The hero re-rolls daily.
+  const start = new Date(seed.getFullYear(), 0, 0);
+  const day = Math.floor((seed.getTime() - start.getTime()) / 86_400_000);
+  const name = HERO_PLAYERS[day % HERO_PLAYERS.length];
+  return `/assets/hero-players/${name}.webp`;
 }
 
-function getNlDraftDate(year: number): Date {
-  const labor = getLaborDayForYear(year);
-  const sun = new Date(labor);
-  sun.setDate(sun.getDate() - 1);
-  sun.setHours(9, 0, 0, 0);
-  return sun;
+interface ViewContext {
+  now: Date;
+  tier?: string;
+  userConferenceId?: '00' | '01';
 }
 
-function getNflKickoff(year: number): Date {
-  const labor = getLaborDayForYear(year);
-  const thu = new Date(labor);
-  thu.setDate(thu.getDate() + 3);
-  return thu;
+type ViewBuilder = (event: ResolvedLeagueEvent, ctx: ViewContext) => EventHeroView;
+
+const isDleague = (tier?: string) => /d.?league|develop|^0?1$/i.test((tier ?? '').trim());
+
+const dayPhrase = (days: number): string =>
+  days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+
+const EVENT_VIEW: Record<string, ViewBuilder> = {
+  'afl-keeper-deadline': (event, { now, tier }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    const dleague = isDleague(tier);
+    return {
+      pill: `${event.startDate.getFullYear()} Keeper Deadline`,
+      headline: 'Lock in your',
+      accentWord: 'core.',
+      summary:
+        days === 0
+          ? 'Today is the day — declare your 7 keepers before 8pm PT or the league picks for you.'
+          : days === 1
+            ? 'Tomorrow at 8pm PT — declare your 7 keepers. Anyone left undeclared hits the draft pool.'
+            : `${days} days until the keeper deadline. Lock in your 7 protected players before July 15 @ 8pm PT.`,
+      link: '/afl-fantasy/keepers',
+      linkLabel: 'Manage Keepers',
+      accent: ACCENT_GOLD,
+      glow: GLOW_RED,
+      player: randomHeroPlayer(now),
+      badge: dleague ? '/assets/afl/dleague.svg' : '/assets/afl/premier.svg',
+      badgeAlt: dleague ? 'D-League' : 'Premier League',
+      countValue: days,
+      countLabel: days === 0 ? 'Lock by 8PM PT — today' : 'Days to lock · Jul 15 · 8PM PT',
+    };
+  },
+
+  'afl-al-draft': (event, { now, userConferenceId }) => {
+    const live = event.isActive;
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    const isUserAl = userConferenceId === '00';
+    return {
+      pill: 'AL · Live Draft',
+      headline: live ? (isUserAl ? 'Your draft is' : 'AL draft is') : 'Build your',
+      accentWord: live ? 'live.' : 'empire.',
+      summary: isUserAl
+        ? live
+          ? 'The American League live draft is happening right now. Make your picks before the timer expires.'
+          : `Your live draft is ${dayPhrase(days)} — Saturday at 9am PT. Scout the board and finalize your queue.`
+        : event.definition.description,
+      link: '/afl-fantasy/draft-predictor',
+      linkLabel: live ? 'Enter Draft Room' : 'Open Draft Predictor',
+      icon: 'draft-podium',
+      accent: ACCENT_STEEL,
+      glow: 'rgba(59,107,154,.55)',
+      player: randomHeroPlayer(now),
+      countValue: live ? 'LIVE' : days,
+      countLabel: live ? 'Drafting now' : 'Days to AL draft · Sat 9AM PT',
+    };
+  },
+
+  'afl-nl-draft': (event, { now, userConferenceId }) => {
+    const live = event.isActive;
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    const isUserNl = userConferenceId === '01';
+    return {
+      pill: 'NL · Email Draft',
+      headline: live ? (isUserNl ? 'Your draft is' : 'NL draft is') : 'Build your',
+      accentWord: live ? 'open.' : 'empire.',
+      summary: isUserNl
+        ? live
+          ? 'The National League email draft is open. Submit your queue and watch the clock — picks tick through one at a time.'
+          : `Your email draft starts ${dayPhrase(days)} — Sunday at 9am PT. Set your queue before the first pick is on the clock.`
+        : event.definition.description,
+      link: '/afl-fantasy/draft-predictor',
+      linkLabel: live ? 'Watch the Board' : 'Open Draft Predictor',
+      icon: 'draft-podium',
+      accent: ACCENT_GOLD,
+      glow: 'rgba(196,30,58,.55)',
+      player: randomHeroPlayer(now),
+      countValue: live ? 'LIVE' : days,
+      countLabel: live ? 'Drafting now' : 'Days to NL draft · Sun 9AM PT',
+    };
+  },
+
+  'afl-season-start': (event, { now }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    return {
+      pill: 'NFL Kickoff',
+      headline: 'Football is',
+      accentWord: 'back.',
+      summary: event.definition.description,
+      link: '/afl-fantasy/lineup',
+      linkLabel: 'Set Lineup',
+      icon: 'nfl',
+      accent: ACCENT_GOLD,
+      glow: 'rgba(196,30,58,.5)',
+      player: randomHeroPlayer(now),
+      countValue: days,
+      countLabel: days === 0 ? 'Kickoff tonight · 5:20 PM PT' : 'Days to NFL kickoff',
+    };
+  },
+
+  'afl-trade-deadline': (event, { now }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    return {
+      pill: 'Trade Deadline',
+      headline: 'Last call to',
+      accentWord: 'deal.',
+      summary:
+        days === 1
+          ? 'Trade deadline is tomorrow. After Wednesday night, rosters are locked through the playoffs.'
+          : `${days} days until the trade deadline. Use the trade builder to line up your final moves of the season.`,
+      link: '/afl-fantasy/trade-builder',
+      linkLabel: 'Open Trade Builder',
+      icon: 'exchange',
+      accent: '#ff7a59',
+      glow: 'rgba(220,38,38,.55)',
+      player: randomHeroPlayer(now),
+      countValue: days,
+      countLabel: 'Days to deadline · Wed 11:59 PM PT',
+    };
+  },
+
+  'afl-regular-season-ends': (event, { now }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    return {
+      pill: 'Season Finale',
+      headline: 'Seeds are',
+      accentWord: 'locking.',
+      summary: event.definition.description,
+      link: '/afl-fantasy/standings',
+      linkLabel: 'View Standings',
+      icon: 'gavel',
+      accent: ACCENT_GOLD,
+      glow: GLOW_NAVY,
+      player: randomHeroPlayer(now),
+      countValue: days,
+      countLabel: 'Days to Week 13 finale',
+    };
+  },
+
+  'afl-conference-playoffs': (event, { now }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    return {
+      pill: 'Playoffs Incoming',
+      headline: 'Bracket time is',
+      accentWord: 'here.',
+      summary: event.definition.description,
+      link: '/afl-fantasy/playoffs',
+      linkLabel: 'View Bracket',
+      icon: 'playoff',
+      accent: ACCENT_GOLD,
+      glow: 'rgba(196,30,58,.55)',
+      player: randomHeroPlayer(now),
+      countValue: days,
+      countLabel: 'Days to Week 14 tipoff',
+    };
+  },
+
+  'afl-championship-week': (event, { now }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    return {
+      pill: 'World Championship',
+      headline: 'One game for the',
+      accentWord: 'crown.',
+      summary: event.definition.description,
+      link: '/afl-fantasy/playoffs',
+      linkLabel: 'View Bracket',
+      icon: 'champ',
+      accent: ACCENT_GOLD,
+      glow: GLOW_GOLD,
+      player: randomHeroPlayer(now),
+      countValue: days,
+      countLabel: 'Days to Week 16 title game',
+    };
+  },
+
+  'afl-new-season-starts': (event, { now }) => {
+    const days = Math.max(0, daysBetween(event.startDate, now));
+    return {
+      pill: 'New League Year',
+      headline: 'The season',
+      accentWord: 'resets.',
+      summary: event.definition.description,
+      link: '/afl-fantasy/rosters',
+      linkLabel: 'Review Rosters',
+      icon: 'star',
+      accent: ACCENT_GOLD,
+      glow: GLOW_NAVY,
+      player: randomHeroPlayer(now),
+      countValue: days,
+      countLabel: days === 0 ? 'Rolling over today' : 'Days to league rollover',
+    };
+  },
+};
+
+// ── Slot / feature / default view builders ───────────────────────────────────
+// Synthetic keys dispatched by the resolver — NOT calendar event ids. These
+// MUST NOT set `bordered: true`; the gold border is reserved for calendar
+// events. Player image is always randomized from the shared 21-image pool.
+// Voice: Claude Schefter — beat reporter, present tense, ALL CAPS headlines.
+
+interface SlotContext {
+  now: Date;
+  slot?: DailySlot;
+  gameWindow?: GameWindow;
+  week?: number;
+  whatsNewEntry?: WhatsNewEntry;
 }
 
-function getTradeDeadline(year: number): Date {
-  // AFL: Wednesday between Week 10 and Week 11 (per the constitution).
-  const labor = getLaborDayForYear(year);
-  const kickoff = new Date(labor);
-  kickoff.setDate(kickoff.getDate() + 3);
-  const wed = new Date(kickoff);
-  wed.setDate(wed.getDate() + 10 * 7 - 1); // Wed of the Week 10/11 transition
-  return wed;
+const GAME_WINDOW_LABEL: Record<NonNullable<GameWindow>, string> = {
+  tnf: 'Thursday Night Football',
+  sunday: 'Sunday slate',
+  snf: 'Sunday Night Football',
+  mnf: 'Monday Night Football',
+};
+
+const GAME_WINDOW_PILL: Record<NonNullable<GameWindow>, string> = {
+  tnf: 'THURSDAY NIGHT',
+  sunday: 'SUNDAY — LIVE',
+  snf: 'SUNDAY NIGHT',
+  mnf: 'MONDAY NIGHT',
+};
+
+type SlotKey =
+  | 'slot:live-scoring'
+  | 'slot:standings'
+  | 'slot:recap'
+  | 'slot:waiver-wire'
+  | 'slot:game-day-preview'
+  | 'slot:article'
+  | 'feature'
+  | 'default';
+
+const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
+  'slot:live-scoring': ({ now, gameWindow, week }) => {
+    const gw = gameWindow && gameWindow in GAME_WINDOW_LABEL
+      ? (gameWindow as NonNullable<GameWindow>)
+      : null;
+    const weekLabel = week ? `Week ${week}` : 'this week';
+    const summary =
+      gw === 'tnf'
+        ? `Thursday night kicks off ${weekLabel}. Scores updating across both conferences.`
+        : gw === 'snf'
+          ? 'Sunday Night Football is on — late swings still in play across the AL and NL.'
+          : gw === 'mnf'
+            ? `Monday Night Football closes ${weekLabel}. Final swings on the board.`
+            : `${weekLabel} is in motion — scoreboards updating across the AL and NL.`;
+    return {
+      pill: gw ? GAME_WINDOW_PILL[gw] : 'LIVE NOW',
+      headline: 'GAMES ARE',
+      accentWord: 'LIVE.',
+      summary,
+      link: '/afl-fantasy/standings',
+      linkLabel: 'VIEW LIVE SCORES',
+      icon: 'nfl',
+      accent: ACCENT_RED,
+      glow: GLOW_RED_LIVE,
+      player: randomHeroPlayer(now),
+      countValue: 'LIVE',
+      countLabel: gw ? GAME_WINDOW_LABEL[gw] : 'live games',
+    };
+  },
+
+  'slot:standings': ({ now, week }) => ({
+    pill: 'MONDAY STANDINGS',
+    headline: 'THE RACE',
+    accentWord: 'TIGHTENS.',
+    summary: `Where the AL and NL playoff picture stands after ${week ? `Week ${week}` : 'this week'} — seeds, tiebreakers, and the bubble.`,
+    link: '/afl-fantasy/standings',
+    linkLabel: 'SEE THE RACE',
+    icon: 'trophy',
+    accent: ACCENT_GOLD,
+    glow: GLOW_NAVY,
+    player: randomHeroPlayer(now),
+  }),
+
+  'slot:recap': ({ now, week }) => ({
+    pill: 'TUESDAY RECAP',
+    headline: 'THE WEEK IN',
+    accentWord: 'REVIEW.',
+    summary: `${week ? `Week ${week}` : 'The week'} is in the books — top scorers, biggest swings, and the games that moved the standings.`,
+    link: '/afl-fantasy/news',
+    linkLabel: 'READ THE RECAP',
+    icon: 'commenting',
+    accent: ACCENT_GOLD,
+    glow: GLOW_NAVY,
+    player: randomHeroPlayer(now),
+  }),
+
+  'slot:waiver-wire': ({ now }) => ({
+    pill: 'WAIVER DAY',
+    headline: 'CLAIMS RUN',
+    accentWord: 'TONIGHT.',
+    summary: 'Waivers process Wednesday at 8PM PT. After that, free agents go first-come, first-served through Sunday kickoff.',
+    link: '/afl-fantasy/rosters',
+    linkLabel: 'SET YOUR CLAIMS',
+    icon: 'binoculars',
+    accent: ACCENT_GREEN,
+    glow: GLOW_GREEN,
+    player: randomHeroPlayer(now),
+    countValue: 'TONIGHT',
+    countLabel: 'Process at 8PM PT',
+  }),
+
+  'slot:game-day-preview': ({ now, week }) => ({
+    pill: 'GAME DAY',
+    headline: 'LINEUPS LOCK AT',
+    accentWord: 'KICKOFF.',
+    summary: `Last call to set starters for ${week ? `Week ${week}` : 'this week'} — swap injuries, finalize FCFS pickups, lock it in.`,
+    link: '/afl-fantasy/lineup',
+    linkLabel: 'SET LINEUP',
+    icon: 'clipboard',
+    accent: ACCENT_AMBER,
+    glow: GLOW_AMBER,
+    player: randomHeroPlayer(now),
+    countValue: 'LIVE SOON',
+    countLabel: 'Lineups lock at kickoff',
+  }),
+
+  'slot:article': ({ now, week }) => ({
+    pill: week ? `WEEK ${week}` : 'AROUND THE AFL',
+    headline: 'AROUND THE',
+    accentWord: 'AFL.',
+    summary: 'Schefter covers the moves, the matchups, and the storylines shaping the AL and NL races.',
+    link: '/afl-fantasy/news',
+    linkLabel: 'READ THE LATEST',
+    icon: 'news',
+    accent: ACCENT_GOLD,
+    glow: GLOW_GOLD,
+    player: randomHeroPlayer(now),
+  }),
+
+  feature: ({ now, whatsNewEntry: entry }) => {
+    const pillBase = entry ? WHATS_NEW_CATEGORY_LABELS[entry.category] : "WHAT'S NEW";
+    return {
+      pill: (pillBase ?? "WHAT'S NEW").toUpperCase(),
+      headline: 'FRESH ON THE',
+      accentWord: 'SITE.',
+      summary: entry?.summary ?? 'New on the AFL site — take a look.',
+      link: entry?.link,
+      linkLabel: (entry?.linkLabel ?? 'CHECK IT OUT').toUpperCase(),
+      icon: entry?.icon ?? 'news',
+      accent: ACCENT_GOLD,
+      glow: GLOW_GOLD,
+      player: randomHeroPlayer(now),
+    };
+  },
+
+  default: ({ now }) => ({
+    pill: 'AFL',
+    headline: 'TWO CONFERENCES.',
+    accentWord: 'ONE.',
+    summary: 'Two conferences, 24 teams, one champion. Welcome to the American Football League.',
+    link: '/afl-fantasy/standings',
+    linkLabel: 'VIEW STANDINGS',
+    icon: 'star',
+    accent: ACCENT_GOLD,
+    glow: GLOW_GOLD,
+    player: randomHeroPlayer(now),
+  }),
+};
+
+// ── Calendar pick ────────────────────────────────────────────────────────────
+
+/**
+ * Dedupe resolved events across overlapping league years.
+ * Keep the soonest UPCOMING occurrence of each event id (or the most recent
+ * past if none upcoming), so a single event id never appears twice in the pool.
+ */
+function dedupeEvents(events: ResolvedLeagueEvent[]): ResolvedLeagueEvent[] {
+  const byId = new Map<string, ResolvedLeagueEvent>();
+  for (const e of events) {
+    const prev = byId.get(e.definition.id);
+    if (!prev) {
+      byId.set(e.definition.id, e);
+      continue;
+    }
+    // Prefer non-past over past; among non-past prefer soonest; among past prefer most recent.
+    if (prev.isPast && !e.isPast) {
+      byId.set(e.definition.id, e);
+    } else if (!prev.isPast && !e.isPast) {
+      if (e.startDate.getTime() < prev.startDate.getTime()) byId.set(e.definition.id, e);
+    } else if (prev.isPast && e.isPast) {
+      if (e.startDate.getTime() > prev.startDate.getTime()) byId.set(e.definition.id, e);
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 }
 
-function getPlayoffStart(year: number): Date {
-  // AFL playoffs begin Week 14 (one week earlier than TheLeague).
-  const kickoff = getNflKickoff(year);
-  const start = new Date(kickoff);
-  start.setDate(start.getDate() + 13 * 7);
-  return start;
+
+interface LeadPick {
+  event: ResolvedLeagueEvent;
+  view: EventHeroView;
+  priority: 'P0' | 'P1';
+  conferenceDraft?: AflHeroState extends { kind: 'calendar-event' }
+    ? AflHeroState['conferenceDraft']
+    : never;
 }
 
-function getChampionshipStart(year: number): Date {
-  // AFL World Championship is Week 16 (one week earlier than TheLeague).
-  const kickoff = getNflKickoff(year);
-  const start = new Date(kickoff);
-  start.setDate(start.getDate() + 15 * 7);
-  return start;
+/** Per-event lead-up window override (days before startDate). Falls back to calendar's urgencyDays. */
+const URGENCY_OVERRIDES: Record<string, number> = {
+  'afl-keeper-deadline': 30,
+  'afl-season-start': 7,
+  'afl-new-season-starts': 14,
+};
+
+function pickLeadCalendarEvent(
+  events: ResolvedLeagueEvent[],
+  ctx: ViewContext,
+): LeadPick | null {
+  const candidates = events
+    .filter((e) => EVENT_VIEW[e.definition.id])
+    .filter((e) => {
+      if (e.isActive) return true;
+      if (e.isPast) return false;
+      const urgency = URGENCY_OVERRIDES[e.definition.id] ?? e.definition.urgencyDays ?? 0;
+      return urgency > 0 && e.daysUntilStart > 0 && e.daysUntilStart <= urgency;
+    })
+    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+  const lead = candidates[0];
+  if (!lead) return null;
+
+  const view = EVENT_VIEW[lead.definition.id](lead, ctx);
+  const priority: 'P0' | 'P1' = lead.isActive ? 'P0' : 'P1';
+
+  // For the conference-draft week, surface BOTH AL & NL dates so the page can render the dual pills.
+  let conferenceDraft: LeadPick['conferenceDraft'];
+  if (lead.definition.id === 'afl-al-draft' || lead.definition.id === 'afl-nl-draft') {
+    const al = events.find((e) => e.definition.id === 'afl-al-draft');
+    const nl = events.find((e) => e.definition.id === 'afl-nl-draft');
+    if (al && nl) {
+      conferenceDraft = {
+        al: { date: al.startDate, live: al.isActive },
+        nl: { date: nl.startDate, live: nl.isActive },
+        userConference: ctx.userConferenceId,
+      };
+    }
+  }
+
+  return { event: lead, view, priority, conferenceDraft };
 }
 
-function getChampionshipEnd(year: number): Date {
-  const start = getChampionshipStart(year);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 4);
-  end.setHours(23, 59, 59, 999);
-  return end;
+// ── Phase detectors (still needed for bespoke heroes) ────────────────────────
+
+function findEvent(events: ResolvedLeagueEvent[], id: string): ResolvedLeagueEvent | undefined {
+  return events.find((e) => e.definition.id === id);
 }
 
-// ── Phase detectors ──────────────────────────────────────────────────────────
-
-function isConferenceDraftWindow(now: Date): boolean {
-  const year = now.getFullYear();
-  // Window: 7 days before AL Saturday → end of NL Sunday
-  const al = getAlDraftDate(year);
-  const start = new Date(al);
-  start.setDate(start.getDate() - 7);
-  start.setHours(0, 0, 0, 0);
-  const nl = getNlDraftDate(year);
-  const end = endOfDay(nl);
-  return now >= start && now <= end;
-}
-
-function isKeeperDeadlineApproaching(now: Date): boolean {
-  const deadline = getKeeperDeadline(now.getFullYear());
-  if (now >= deadline) return false;
-  return daysBetween(deadline, now) <= KEEPER_URGENCY_DAYS;
-}
-
-function isKeeperDeadlineDay(now: Date): boolean {
-  return now.getMonth() === 6 && now.getDate() === 15;
-}
-
-function isTradeDeadlineDay(now: Date): boolean {
-  const year = now.getFullYear();
-  const td = getTradeDeadline(year);
-  return now.getFullYear() === td.getFullYear() && now.getMonth() === td.getMonth() && now.getDate() === td.getDate();
-}
-
-function isChampionshipWeek(now: Date): boolean {
-  const yearStart = getChampionshipStart(now.getFullYear());
-  const yearEnd = getChampionshipEnd(now.getFullYear());
-  if (now >= yearStart && now <= yearEnd) return true;
-  // Span across calendar year boundary (Dec → Jan)
-  const prevStart = getChampionshipStart(now.getFullYear() - 1);
-  const prevEnd = getChampionshipEnd(now.getFullYear() - 1);
-  return now >= prevStart && now <= prevEnd;
-}
-
-function isChampionCrownedWindow(now: Date): boolean {
-  for (const seasonYear of [now.getFullYear(), now.getFullYear() - 1]) {
-    const end = getChampionshipEnd(seasonYear);
-    const start = new Date(end);
-    start.setDate(start.getDate() + 1);
-    start.setHours(0, 0, 0, 0);
-    const crownedEnd = new Date(start);
-    crownedEnd.setDate(crownedEnd.getDate() + 7);
-    crownedEnd.setHours(23, 59, 59, 999);
-    if (now >= start && now <= crownedEnd) return true;
+function isRegularSeasonActive(events: ResolvedLeagueEvent[], now: Date): boolean {
+  // Scan ALL year occurrences — by mid-September the season's kickoff event is
+  // already `isPast`, and `dedupeEvents` will have promoted next year's kickoff
+  // into the single-entry slot. Match by phase window across pairs of years.
+  const kickoffs = events.filter((e) => e.definition.id === 'afl-season-start');
+  const playoffs = events.filter((e) => e.definition.id === 'afl-conference-playoffs');
+  for (const k of kickoffs) {
+    const p = playoffs.find((x) => x.startDate.getTime() > k.startDate.getTime());
+    if (p && now >= k.startDate && now < p.startDate) return true;
   }
   return false;
 }
 
-function isPlayoffs(now: Date): boolean {
-  const year = now.getFullYear();
-  const start = getPlayoffStart(year);
-  const champStart = getChampionshipStart(year);
-  return now >= start && now < champStart;
+/** Playoffs phase = AFL Weeks 14–15 (afl-conference-playoffs → afl-championship-week). */
+function isInPlayoffsPhase(events: ResolvedLeagueEvent[], now: Date): boolean {
+  // Scan ALL year occurrences — the 2026 championship event is `isPast` on
+  // Dec 26 so the deduped list may have already swapped it for the 2027 one.
+  const playoffEvents = events.filter((e) => e.definition.id === 'afl-conference-playoffs');
+  const champEvents = events.filter((e) => e.definition.id === 'afl-championship-week');
+  for (const p of playoffEvents) {
+    const champAfter = champEvents.find((c) => c.startDate.getTime() > p.startDate.getTime());
+    if (champAfter && now >= p.startDate && now < champAfter.startDate) return true;
+  }
+  return false;
 }
 
-function isRegularSeason(now: Date): boolean {
-  const year = now.getFullYear();
-  const kickoff = getNflKickoff(year);
-  const playoffsStart = getPlayoffStart(year);
-  return now >= kickoff && now < playoffsStart;
+/** Championship phase = AFL Week 16 (afl-championship-week → +7 days). */
+function isInChampionshipPhase(events: ResolvedLeagueEvent[], now: Date): boolean {
+  for (const c of events.filter((e) => e.definition.id === 'afl-championship-week')) {
+    const end = new Date(c.startDate);
+    end.setDate(end.getDate() + 7);
+    if (now >= c.startDate && now < end) return true;
+  }
+  return false;
 }
 
-function isQuietOffseason(now: Date): boolean {
-  // Feb 15 through the moment the keeper-deadline urgency window kicks in.
-  // We intentionally don't surface any specific date during this stretch —
-  // July 15 is the only date the site advertises.
-  const year = now.getFullYear();
-  const start = new Date(year, 1, 15); // Feb 15
-  const deadline = getKeeperDeadline(year);
-  return now >= start && now < deadline && !isKeeperDeadlineApproaching(now);
+function isQuietOffseason(events: ResolvedLeagueEvent[], now: Date): boolean {
+  const newSeason = findEvent(events, 'afl-new-season-starts');
+  const keeper = findEvent(events, 'afl-keeper-deadline');
+  if (!newSeason || !keeper) return false;
+  if (now < newSeason.startDate || now >= keeper.startDate) return false;
+  // Quiet stretch ends when keeper urgency window kicks in (handled by pickLeadCalendarEvent).
+  return true;
 }
 
-// ── Content builders ─────────────────────────────────────────────────────────
+// ── Content builders for bespoke heroes & fallbacks ─────────────────────────
 
 function formatKickerDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -245,7 +674,6 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
 
 function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   const link = event.actionLinks[0] ?? event.resultLinks[0];
-  const accent = CATEGORY_COLOR[event.definition.category] ?? 'var(--color-primary, #1c497c)';
   return {
     source: 'event',
     title: event.definition.name,
@@ -253,7 +681,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
     link: link?.url,
     linkLabel: link?.label ?? 'Learn more',
     icon: event.definition.icon,
-    accentColor: accent,
+    accentColor: 'var(--color-primary, #1c497c)',
     heroEventId: event.definition.id,
     image: event.definition.image,
     imageAlt: event.definition.imageAlt,
@@ -265,107 +693,11 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-function buildKeeperDeadlineHero(deadline: Date, daysUntil: number): HeroContent {
-  const summary =
-    daysUntil === 0
-      ? 'Today is the day — declare your 7 keepers before 8pm PT or the league picks for you.'
-      : daysUntil === 1
-        ? 'Tomorrow at 8pm PT — declare your 7 keepers. Anyone left undeclared hits the draft pool.'
-        : `${daysUntil} days until the keeper deadline. Lock in your 7 protected players before July 15 @ 8pm PT.`;
-  return {
-    source: 'event',
-    title: 'Keeper Deadline',
-    summary,
-    link: '/afl-fantasy/keepers',
-    linkLabel: 'Manage Keepers',
-    icon: 'bookmark',
-    accentColor: 'var(--cat-preseason, #60a5fa)',
-    isUrgent: true,
-    isActive: daysUntil === 0,
-    kicker: daysUntil === 0 ? 'Deadline — Today' : 'Keeper Deadline',
-    kickerDate: formatKickerDate(deadline),
-  };
-}
-
-function buildOffseasonHero(): HeroContent {
-  return {
-    source: 'default',
-    title: 'AFL Offseason',
-    summary: 'Quiet stretch on the calendar — but dynasty math never sleeps. Review rosters, scout free agents, and start lining up your keeper class.',
-    link: '/afl-fantasy/rosters',
-    linkLabel: 'Review Rosters',
-    icon: 'shield',
-    accentColor: 'var(--color-primary, #1c497c)',
-    kicker: 'Offseason',
-  };
-}
-
-function buildConferenceDraftHero(input: {
-  now: Date;
-  al: Date;
-  nl: Date;
-  userConferenceId?: '00' | '01';
-}): HeroContent {
-  const { now, al, nl, userConferenceId } = input;
-  const alLive = now >= al && now < new Date(al.getTime() + 24 * 60 * 60 * 1000);
-  const nlLive = now >= nl && now < new Date(nl.getTime() + 24 * 60 * 60 * 1000);
-  const isUserAl = userConferenceId === '00';
-  const isUserNl = userConferenceId === '01';
-
-  // Conference-aware copy
-  let title = 'Conference Drafts';
-  let summary: string;
-  let kicker = 'Draft Weekend';
-  if (alLive) {
-    kicker = 'AL Draft Under Way';
-    title = isUserAl ? 'Your Draft Is Live' : 'AL Draft Under Way';
-    summary = isUserAl
-      ? 'The American League live draft is happening right now. Make your picks before the timer expires.'
-      : 'The American League is drafting live. NL draft starts Sunday at 9am PT.';
-  } else if (nlLive) {
-    kicker = 'NL Draft Under Way';
-    title = isUserNl ? 'Your Draft Is Live' : 'NL Draft Under Way';
-    summary = isUserNl
-      ? 'The National League email draft is open. Submit your queue and watch the clock — picks tick through one at a time.'
-      : `The National League is drafting now. ${isUserAl ? 'Your AL draft wrapped yesterday — check the results.' : 'Conference Drafts are in full swing.'}`;
-  } else {
-    const daysToAl = daysBetween(al, now);
-    const daysToNl = daysBetween(nl, now);
-    if (isUserAl) {
-      summary = `Your live draft is ${daysToAl === 0 ? 'today' : daysToAl === 1 ? 'tomorrow' : `in ${daysToAl} days`} — Saturday at 9am PT. Scout the board and finalize your queue.`;
-      title = 'AL Draft Day Is Coming';
-    } else if (isUserNl) {
-      summary = `Your email draft starts ${daysToNl === 0 ? 'today' : daysToNl === 1 ? 'tomorrow' : `in ${daysToNl} days`} — Sunday at 9am PT. Set your queue before the first pick is on the clock.`;
-      title = 'NL Draft Is Coming';
-    } else {
-      summary = `AL drafts live Saturday at 9am PT, NL email draft opens Sunday at 9am PT. Conference Drafts kick off in ${daysToAl} days.`;
-    }
-  }
-
-  return {
-    source: 'draft',
-    title,
-    summary,
-    icon: 'draft-podium',
-    accentColor: 'var(--cat-draft, #7c3aed)',
-    kicker,
-    isActive: alLive || nlLive,
-    isUrgent: !alLive && !nlLive,
-    kickerDate: formatKickerDate(isUserNl ? nl : al),
-  };
-}
-
 function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow): HeroContent {
   const weekLabel = week ? `Week ${week}` : 'Regular Season';
   switch (slot) {
     case 'live-scoring': {
-      const windowName: Record<NonNullable<GameWindow>, string> = {
-        tnf: 'Thursday Night Football',
-        sunday: 'Sunday slate',
-        snf: 'Sunday Night Football',
-        mnf: 'Monday Night Football',
-      };
-      const label = gameWindow && gameWindow in windowName ? windowName[gameWindow as NonNullable<GameWindow>] : 'live games';
+      const label = gameWindow && gameWindow in GAME_WINDOW_LABEL ? GAME_WINDOW_LABEL[gameWindow as NonNullable<GameWindow>] : 'live games';
       return {
         source: 'event',
         title: `Games in Progress — ${weekLabel}`,
@@ -404,7 +736,7 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
       return {
         source: 'event',
         title: 'Waivers Process Tonight',
-        summary: 'Waiver claims run Wednesday at 9pm PT. After that, free agents go first-come, first-served through Sunday kickoff.',
+        summary: 'Waiver claims run Wednesday at 8pm PT. After that, free agents go first-come, first-served through Sunday kickoff.',
         link: '/afl-fantasy/rosters',
         linkLabel: 'Set Your Claims',
         icon: 'binoculars',
@@ -446,7 +778,7 @@ function buildPlayoffsHero(): HeroContent {
     linkLabel: 'View Bracket',
     icon: 'playoff',
     accentColor: 'var(--cat-regular-season, #1c497c)',
-    kicker: 'Playoffs',
+    kicker: 'Conference Playoffs',
     isActive: true,
   };
 }
@@ -465,20 +797,6 @@ function buildChampionshipHero(): HeroContent {
   };
 }
 
-function buildChampionCrownedHero(): HeroContent {
-  return {
-    source: 'event',
-    title: 'A New Champion',
-    summary: 'The season has wrapped. View the bracket and savor the result before keeper math takes over.',
-    link: '/afl-fantasy/playoffs',
-    linkLabel: 'View Recap',
-    icon: 'trophy',
-    accentColor: 'var(--color-warning, #d97706)',
-    kicker: 'Champion Crowned',
-    isActive: true,
-  };
-}
-
 function buildTradeDeadlineHero(): HeroContent {
   return {
     source: 'event',
@@ -490,6 +808,19 @@ function buildTradeDeadlineHero(): HeroContent {
     accentColor: 'var(--color-error, #dc2626)',
     isUrgent: true,
     kicker: 'Trade Deadline — Today',
+  };
+}
+
+function buildOffseasonHero(): HeroContent {
+  return {
+    source: 'default',
+    title: 'AFL Offseason',
+    summary: 'Quiet stretch on the calendar — but dynasty math never sleeps. Review rosters, scout free agents, and start lining up your keeper class.',
+    link: '/afl-fantasy/rosters',
+    linkLabel: 'Review Rosters',
+    icon: 'shield',
+    accentColor: 'var(--color-primary, #1c497c)',
+    kicker: 'Offseason',
   };
 }
 
@@ -512,72 +843,113 @@ function buildDefaultHero(entries: WhatsNewEntry[]): HeroContent {
   };
 }
 
+// ── Champion crowned: post-championship celebration window (kept manual, the
+// calendar doesn't model "the week after Week 16") ─────────────────────────────
+
+function isChampionCrownedWindow(events: ResolvedLeagueEvent[], now: Date): boolean {
+  for (const c of events.filter((e) => e.definition.id === 'afl-championship-week')) {
+    // Championship phase = startDate → +7 days; crowned window = next 7 days after that.
+    const phaseEnd = new Date(c.startDate);
+    phaseEnd.setDate(phaseEnd.getDate() + 7);
+    const crownedEnd = new Date(phaseEnd);
+    crownedEnd.setDate(crownedEnd.getDate() + 7);
+    if (now >= phaseEnd && now < crownedEnd) return true;
+  }
+  return false;
+}
+
+function buildChampionCrownedView(event: ResolvedLeagueEvent, now: Date): EventHeroView {
+  void event;
+  return {
+    pill: 'Champion Crowned',
+    headline: 'A new',
+    accentWord: 'champion.',
+    summary: 'The season has wrapped. View the bracket and savor the result before keeper math takes over.',
+    link: '/afl-fantasy/playoffs',
+    linkLabel: 'View Recap',
+    icon: 'trophy',
+    accent: ACCENT_GOLD,
+    glow: GLOW_GOLD_SOFT,
+    player: randomHeroPlayer(now),
+  };
+}
+
 // ── Main resolver ────────────────────────────────────────────────────────────
 
 export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
   const now = input.referenceDate;
   const whatsNew = input.whatsNewEntries ?? [];
   const timeline = input.timeline;
+  const ctx: ViewContext = { now, tier: input.userTier, userConferenceId: input.userConferenceId };
 
-  // P0++: Trade deadline day
-  if (isTradeDeadlineDay(now)) {
-    const year = now.getFullYear();
+  // Resolve every AFL calendar event for the surrounding league years — single
+  // source of truth. We pull (year-1, year, year+1) and dedupe by event id so
+  // events near calendar boundaries (champion-crowned Jan, new season Feb) still
+  // surface even when MFL's "current league year" has rolled to the next one.
+  const calYear = now.getFullYear();
+  const rawEvents = [
+    ...getAllResolvedAflEvents({ leagueYear: calYear - 1, referenceDate: now }),
+    ...getAllResolvedAflEvents({ leagueYear: calYear, referenceDate: now }),
+    ...getAllResolvedAflEvents({ leagueYear: calYear + 1, referenceDate: now }),
+  ];
+  const events = dedupeEvents(rawEvents);
+
+  // P0++: Trade Deadline DAY — bespoke live-countdown hero owns the day.
+  const tradeDeadline = findEvent(events, 'afl-trade-deadline');
+  if (tradeDeadline?.isActive) {
     return {
       kind: 'trade-deadline',
       priority: 'P0++',
       content: buildTradeDeadlineHero(),
-      deadlineMidnightPT: `${year}-${String(getTradeDeadline(year).getMonth() + 1).padStart(2, '0')}-${String(getTradeDeadline(year).getDate() + 1).padStart(2, '0')}T00:00:00-08:00`,
+      deadlineMidnightPT: midnightAfter(tradeDeadline.startDate),
     };
   }
 
-  // P0: Championship week
-  if (isChampionshipWeek(now)) {
+  // P0: Championship Week phase — bespoke matchup hero. Use rawEvents so multi-year
+  // occurrences aren't dropped by dedup when the current year's event is `isPast`.
+  if (isInChampionshipPhase(rawEvents, now)) {
     return { kind: 'championship', priority: 'P0', content: buildChampionshipHero() };
   }
 
-  // P0: Champion crowned (7-day window after championship)
-  if (isChampionCrownedWindow(now)) {
-    return { kind: 'champion-crowned', priority: 'P0', content: buildChampionCrownedHero() };
+  // P0: Champion-crowned 7-day window after championship — branded event hero.
+  if (isChampionCrownedWindow(rawEvents, now)) {
+    const championship = findEvent(events, 'afl-championship-week') ?? rawEvents.find((e) => e.definition.id === 'afl-championship-week');
+    if (championship) {
+      return {
+        kind: 'calendar-event',
+        priority: 'P0',
+        eventId: 'afl-champion-crowned',
+        content: eventToHero(championship),
+        view: buildChampionCrownedView(championship, now),
+      };
+    }
   }
 
-  // P0: Playoffs
-  if (isPlayoffs(now)) {
+  // P0: Conference Playoffs phase (Weeks 14–15) — bespoke bracket hero.
+  if (isInPlayoffsPhase(rawEvents, now)) {
     return { kind: 'playoffs', priority: 'P0', content: buildPlayoffsHero() };
   }
 
-  // P0: Conference Draft window
-  if (isConferenceDraftWindow(now)) {
-    const year = now.getFullYear();
-    const al = getAlDraftDate(year);
-    const nl = getNlDraftDate(year);
-    const content = buildConferenceDraftHero({ now, al, nl, userConferenceId: input.userConferenceId });
+  // P0/P1: Calendar-driven lead event — the new branded AflEventHero.
+  const lead = pickLeadCalendarEvent(events, ctx);
+  if (lead) {
     return {
-      kind: 'conference-draft',
-      priority: 'P0',
-      content,
-      al: { date: al, live: now >= al && now < new Date(al.getTime() + 24 * 60 * 60 * 1000) },
-      nl: { date: nl, live: now >= nl && now < new Date(nl.getTime() + 24 * 60 * 60 * 1000) },
-      userConference: input.userConferenceId,
+      kind: 'calendar-event',
+      priority: lead.priority,
+      eventId: lead.event.definition.id,
+      content: eventToHero(lead.event),
+      view: lead.view,
+      conferenceDraft: lead.conferenceDraft,
     };
   }
 
-  // P1: Keeper deadline day (today is July 15) or approaching (≤30 days out)
-  if (isKeeperDeadlineDay(now) || isKeeperDeadlineApproaching(now)) {
-    const deadline = getKeeperDeadline(now.getFullYear());
-    const daysUntil = isKeeperDeadlineDay(now) ? 0 : daysBetween(deadline, now);
-    return {
-      kind: 'keeper-deadline',
-      priority: 'P1',
-      content: buildKeeperDeadlineHero(deadline, daysUntil),
-      deadline,
-      daysUntil,
-    };
-  }
-
-  // P0: Regular season — route through the daily slot rotation
-  if (isRegularSeason(now)) {
+  // P0: Regular season — route through the daily slot rotation, now with a Schefter-voiced view.
+  if (isRegularSeasonActive(rawEvents, now)) {
     const { slot, gameWindow } = getDailySlot(now);
     const week = getCurrentNFLWeek(now) ?? undefined;
+    const slotKey = `slot:${slot}` as SlotKey;
+    const builder = SLOT_VIEW[slotKey] ?? SLOT_VIEW['slot:article'];
+    const view = builder({ now, slot, gameWindow, week });
     return {
       kind: 'regular-season',
       priority: 'P0',
@@ -585,10 +957,11 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       gameWindow,
       week,
       content: buildRegularSeasonHero(slot, week, gameWindow),
+      view,
     };
   }
 
-  // P2: Fresh AFL-tagged What's New (≤7 days)
+  // P2: Fresh AFL-tagged What's New (≤7 days) — branded fresh-on-the-site hero.
   const fresh = whatsNew
     .filter((e) => entryAppliesToLeague(e, 'afl') && !e.excludeFromHero)
     .filter((e) => {
@@ -597,23 +970,58 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     });
   if (fresh.length > 0) {
     const pick = fresh[Math.floor(Math.random() * fresh.length)];
-    return { kind: 'feature', priority: 'P2', content: featureToHero(pick) };
+    return {
+      kind: 'feature',
+      priority: 'P2',
+      content: featureToHero(pick),
+      view: SLOT_VIEW.feature({ now, whatsNewEntry: pick }),
+    };
   }
 
-  // P3/P4: Urgent or active timeline event
-  if (timeline) {
-    if (timeline.next?.isUrgent) return { kind: 'event', priority: 'P3', content: eventToHero(timeline.next) };
-    if (timeline.current?.isActive) return { kind: 'event', priority: 'P4', content: eventToHero(timeline.current) };
-    if (timeline.next && !timeline.next.isPast && timeline.next.daysUntilStart <= 14) {
-      return { kind: 'event', priority: 'P4', content: eventToHero(timeline.next) };
-    }
+  // P3/P4: Active or upcoming timeline event (fallback for any event without a calendar view config).
+  // Synthesize a minimal view from the event's name/description so the hero still renders branded.
+  const timelinePick =
+    timeline?.next?.isUrgent
+      ? { event: timeline.next, priority: 'P3' as const }
+      : timeline?.current?.isActive
+        ? { event: timeline.current, priority: 'P4' as const }
+        : timeline?.next && !timeline.next.isPast && timeline.next.daysUntilStart <= 14
+          ? { event: timeline.next, priority: 'P4' as const }
+          : null;
+  if (timelinePick) {
+    const e = timelinePick.event;
+    return {
+      kind: 'event',
+      priority: timelinePick.priority,
+      content: eventToHero(e),
+      view: {
+        pill: (e.isActive ? 'HAPPENING NOW' : e.isUrgent ? 'COMING UP' : 'LEAGUE EVENT'),
+        headline: e.definition.name.toUpperCase(),
+        accentWord: '',
+        summary: e.definition.description,
+        link: e.actionLinks[0]?.url ?? e.resultLinks[0]?.url,
+        linkLabel: (e.actionLinks[0]?.label ?? e.resultLinks[0]?.label ?? 'LEARN MORE').toUpperCase(),
+        icon: e.definition.icon,
+        accent: ACCENT_GOLD,
+        glow: GLOW_GOLD,
+        player: randomHeroPlayer(now),
+      },
+    };
   }
 
-  // P5: Quiet offseason — no specific dates surfaced, just a "review rosters" nudge
-  if (isQuietOffseason(now)) {
-    return { kind: 'default', priority: 'P5', content: buildOffseasonHero() };
+  // P5: Quiet offseason or ultimate fallback — branded default hero.
+  if (isQuietOffseason(events, now)) {
+    return {
+      kind: 'default',
+      priority: 'P5',
+      content: buildOffseasonHero(),
+      view: SLOT_VIEW.default({ now }),
+    };
   }
-
-  // P5: Ultimate fallback (e.g., between champion-crowned and Feb 15)
-  return { kind: 'default', priority: 'P5', content: buildDefaultHero(whatsNew) };
+  return {
+    kind: 'default',
+    priority: 'P5',
+    content: buildDefaultHero(whatsNew),
+    view: SLOT_VIEW.default({ now }),
+  };
 }
