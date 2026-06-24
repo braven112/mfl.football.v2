@@ -1,5 +1,25 @@
 [
   {
+    "id": "afl-owner-activity",
+    "date": "2026-06-24",
+    "title": "Who's Actually Showing Up — Now for the AFL",
+    "summary": "The Owner Activity page lands on the AFL: a leaderboard of who last logged in, a 30-day page-views chart with a line for every franchise, the pages everyone's actually clicking, and a season-long transaction tally. The 'I've been busy' excuse now comes with a timestamp.",
+    "description": [
+      "Every league has the owner who swears they're 'staying active' while their roster quietly rots through three waiver cycles. Until now the AFL had no way to call the bluff — activity was a vibe, not a number. TheLeague has had the receipts for a while: a page that shows exactly when each owner last surfaced, what they were looking at, and how many moves they've actually made.",
+      "Owner Activity is now live at /afl-fantasy/activity. The Last Seen table ranks all 24 franchises by most recent visit, with a green/yellow/red dot so you can spot the dormant accounts at a glance. A 30-day page-views chart draws one color-coded line per team — toggle franchises on and off in the legend, hover any day for the breakdown. Below that: the most-visited pages across the whole league, an expandable per-owner view of what each team obsesses over, and a transaction leaderboard tallying trades, free-agent moves, and auction wins for the season. It fills in on its own as owners browse — no setup, no tracking pixel homework.",
+      "TheLeague got to keep score on engagement first. The AFL just got the same scoreboard — and the cold-cereal era keeps getting shorter."
+    ],
+    "category": "new-page",
+    "link": "/afl-fantasy/activity",
+    "linkLabel": "See who's been around",
+    "icon": "activity",
+    "image": "afl-owner-activity.webp",
+    "imageAlt": "The AFL Owner Activity page — a 'Daily Page Views' line chart with one color-coded line per franchise over 30 days, above a Last Seen table ranking franchises by most recent visit with green/yellow/red status dots.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "afl-ask-roger-and-schefter",
     "date": "2026-06-22",
     "title": "Roger and Schefter Suit Up for AFL",
