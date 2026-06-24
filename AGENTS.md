@@ -33,7 +33,7 @@
 - PRs should include a clear description, linked issue/PRD when relevant, and screenshots/GIFs for UI changes.
 
 ## Agent-Specific Instructions
-- For complex tasks, read `claude.md` first; it is the source of truth for feature direction.
+- For complex tasks, read `CLAUDE.md` first; it is the source of truth for feature direction.
 - Always use `chooseTeamName()` from `src/utils/team-names.ts` when displaying team names.
 - New utilities should be reusable/composable and consider the Auction Price Predictor workflows.
 
