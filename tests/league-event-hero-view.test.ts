@@ -72,7 +72,7 @@ describe('buildLeagueEventView', () => {
     const { view, bordered } = buildLeagueEventView(fallback, makeTimeline(event), now);
 
     expect(bordered).toBe(true);
-    expect(view.accent).toBe('#60a5fa'); // preseason category accent
+    expect(view.accent).toBe('#2563eb'); // preseason category accent (readable as white-text pill)
     expect(view.headline).toBe('Tag Matching Period');
   });
 

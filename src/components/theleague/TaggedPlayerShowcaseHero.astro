@@ -7,6 +7,7 @@
  */
 import EventHeroShell from './EventHeroShell.astro';
 import type { HeroState } from '../../types/hero-state';
+import { CATEGORY_ACCENT, CATEGORY_GLOW } from '../../utils/league-event-hero-view';
 
 export interface Props {
   taggedShowcaseProps?: HeroState['taggedShowcaseProps'];
@@ -30,8 +31,8 @@ const summary = hasPlayers
   accentWord="in play."
   summary={summary}
   icon="franchise-tag"
-  accent="#2563eb"
-  glow="rgba(37,99,235,.5)"
+  accent={CATEGORY_ACCENT.preseason}
+  glow={CATEGORY_GLOW.preseason}
   countValue={hasPlayers ? taggedPlayers.length : undefined}
   countLabel={hasPlayers ? (taggedPlayers.length === 1 ? 'Player tagged' : 'Players tagged') : undefined}
   link={r('/theleague/rosters')}
