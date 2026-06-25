@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getConferenceName,
   getConferenceShort,
+  getConferenceLogo,
   getConferenceIdByName,
   isValidConferenceId,
   getFranchiseConference,
@@ -18,6 +19,11 @@ describe('afl-conference', () => {
     expect(getConferenceName('01')).toBe('National League');
     expect(getConferenceShort('00')).toBe('AL');
     expect(getConferenceShort('01')).toBe('NL');
+  });
+
+  it('resolves the branded conference logo path (lowercase short code)', () => {
+    expect(getConferenceLogo('00')).toBe('/assets/afl/conferences/al.svg');
+    expect(getConferenceLogo('01')).toBe('/assets/afl/conferences/nl.svg');
   });
 
   it('round-trips conference name <-> id', () => {

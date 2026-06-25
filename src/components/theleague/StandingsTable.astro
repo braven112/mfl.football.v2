@@ -1,7 +1,7 @@
 ---
 import type { TeamStanding } from '../../types/standings';
 import PlayoffBadge from './PlayoffBadge.astro';
-import { getConferenceLogo, type ConferenceId } from '../../utils/afl-conference';
+import { getConferenceLogo, getConferenceName, type ConferenceId } from '../../utils/afl-conference';
 
 export interface Props {
   teams: TeamStanding[];
@@ -21,6 +21,7 @@ export interface Props {
 const { teams, view, showDivisionHeader = false, divisionName = '', conferenceId, defendingChampion = '', defendingChampionYear, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
 
 const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
+const conferenceName = conferenceId ? getConferenceName(conferenceId) : '';
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -84,7 +85,7 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
         {conferenceLogo && (
           <img
             src={conferenceLogo}
-            alt={`${divisionName} conference logo`}
+            alt={`${conferenceName} logo`}
             class="division-conf-logo"
             loading="lazy"
             decoding="async"
