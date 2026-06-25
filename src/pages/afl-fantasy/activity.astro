@@ -139,10 +139,12 @@ if (useMock) {
 }
 
 // ── Transaction data ──
-interface TxCounts { trades: number; freeAgents: number; auctionWins: number; total: number; }
+// AFL has no auction (keeper league, 9-round NFL-style draft). The third stat
+// tracks waiver claims, which is AFL's rolling "Yahoo-style" add mechanism.
+interface TxCounts { trades: number; freeAgents: number; thirdStat: number; total: number; }
 const txCountMap: Record<string, TxCounts> = {};
 const ensureFranchise = (id: string) => {
-	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, auctionWins: 0, total: 0 };
+	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 };
 };
 
 // import.meta.glob must be at the top level (Vite requirement)
@@ -153,8 +155,8 @@ if (useMock) {
 		const n = parseInt(fid, 10);
 		const trades = (n % 4);
 		const fa = (n % 6);
-		const auctions = (n % 9);
-		txCountMap[fid] = { trades, freeAgents: fa, auctionWins: auctions, total: trades + fa + auctions };
+		const waivers = (n % 5);
+		txCountMap[fid] = { trades, freeAgents: fa, thirdStat: waivers, total: trades + fa + waivers };
 	}
 } else {
 	// AFL spans many historical seasons; use the most recent year that has a feed.
@@ -178,9 +180,10 @@ if (useMock) {
 		} else if (tx.type === 'FREE_AGENT') {
 			ensureFranchise(tx.franchise);
 			txCountMap[tx.franchise].freeAgents++; txCountMap[tx.franchise].total++;
-		} else if (tx.type === 'AUCTION_WON') {
+		} else if (tx.type === 'WAIVER' || tx.type === 'BBID_WAIVER') {
+			// AFL waiver claims (rolling "Yahoo-style"; BBID_WAIVER is legacy data).
 			ensureFranchise(tx.franchise);
-			txCountMap[tx.franchise].auctionWins++; txCountMap[tx.franchise].total++;
+			txCountMap[tx.franchise].thirdStat++; txCountMap[tx.franchise].total++;
 		}
 	}
 }
@@ -190,7 +193,7 @@ const txLeaderboard = aflConfig.teams
 		franchiseId: team.franchiseId,
 		name: chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }),
 		icon: team.icon,
-		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, auctionWins: 0, total: 0 },
+		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 },
 	}))
 	.sort((a, b) => b.counts.total - a.counts.total);
 
@@ -252,5 +255,7 @@ const chartDates = pageViewData.dates;
 		ownerPages={ownerPages}
 		chartTeams={chartTeams}
 		chartDates={chartDates}
+		thirdStatLabel="Waivers"
+		txSubtitle="Trades, free agent moves, and waiver claims this season"
 	/>
 </TheLeagueLayout>

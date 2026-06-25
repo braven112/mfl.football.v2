@@ -128,10 +128,10 @@ if (useMock) {
 }
 
 // ── Transaction data ──
-interface TxCounts { trades: number; freeAgents: number; auctionWins: number; total: number; }
+interface TxCounts { trades: number; freeAgents: number; thirdStat: number; total: number; }
 const txCountMap: Record<string, TxCounts> = {};
 const ensureFranchise = (id: string) => {
-	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, auctionWins: 0, total: 0 };
+	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 };
 };
 
 // import.meta.glob must be at the top level (Vite requirement)
@@ -158,7 +158,7 @@ if (useMock) {
 		'0016': { trades: 2, fa: 4, auctions: 8 },
 	};
 	for (const [fid, p] of Object.entries(mockTxProfiles)) {
-		txCountMap[fid] = { trades: p.trades, freeAgents: p.fa, auctionWins: p.auctions, total: p.trades + p.fa + p.auctions };
+		txCountMap[fid] = { trades: p.trades, freeAgents: p.fa, thirdStat: p.auctions, total: p.trades + p.fa + p.auctions };
 	}
 } else {
 	const leagueYear = getCurrentLeagueYear();
@@ -179,7 +179,7 @@ if (useMock) {
 			txCountMap[tx.franchise].freeAgents++; txCountMap[tx.franchise].total++;
 		} else if (tx.type === 'AUCTION_WON') {
 			ensureFranchise(tx.franchise);
-			txCountMap[tx.franchise].auctionWins++; txCountMap[tx.franchise].total++;
+			txCountMap[tx.franchise].thirdStat++; txCountMap[tx.franchise].total++;
 		}
 	}
 }
@@ -189,7 +189,7 @@ const txLeaderboard = leagueConfig.teams
 		franchiseId: team.franchiseId,
 		name: chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }),
 		icon: team.icon,
-		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, auctionWins: 0, total: 0 },
+		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 },
 	}))
 	.sort((a, b) => b.counts.total - a.counts.total);
 

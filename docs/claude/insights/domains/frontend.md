@@ -304,6 +304,16 @@ Pattern:
 
 ---
 
+## 2026-06-24 - Owner Activity's Third Transaction Stat Is League-Configurable (Auctions ≠ AFL)
+
+**Context:** The Owner Activity "Transaction Activity" leaderboard (`OwnerActivityReport.astro`, shared by both leagues) hardcoded a third stat column = **Auctions** (`auctionWins`, counting `AUCTION_WON`). AFL is a keeper league with a 9-round NFL-style draft and **no auction** (`docs/claude/afl-rules.md`) — so the AFL page fabricated fake auction wins in its mock generator and surfaced a column that never reflects real activity.
+
+**Insight:** The shared component's third stat is now generic — `counts.thirdStat` plus `thirdStatLabel`/`txSubtitle` props (default `"Auctions"`/auction-wins copy so TheLeague is unchanged). TheLeague keeps counting `AUCTION_WON`; AFL passes `thirdStatLabel="Waivers"` and counts `WAIVER` / `BBID_WAIVER` (its rolling "Yahoo-style" waiver adds — a real type in `data/afl-fantasy/mfl-feeds/*/transactions.json`). Note: historical AFL feeds (pre-2026) *do* contain `AUCTION_WON` from an older format, so "AFL never produces it" is only true going forward — don't rely on the type's absence to detect league.
+
+**Recommendation:** When reusing a TheLeague component for AFL, audit every TheLeague-specific domain assumption baked in (auctions, contracts, salary cap, keepers) — not just colors/names. Gate league-specific concepts behind props or `leagueHasFeature(slug, ...)` rather than hardcoding. Any leaderboard/total math must re-derive `total` from the parts after swapping a stat (`total = trades + freeAgents + thirdStat`).
+
+---
+
 ## 2026-06-24 - Absolutely-Positioned First Child Breaks `:not(:first-child)` Margin Spacing
 
 **Context:** The AFL homepage grid (`src/pages/afl-fantasy/index.astro`) showed a ~2rem empty band above BOTH columns — the hero and the Schefter Report sidebar floated below the grid top instead of sitting flush.
