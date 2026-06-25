@@ -2,17 +2,22 @@
  * Live Scoring Hero — CSS
  * Token namespace: --lsh-*
  * Used by LiveScoringHero.tsx React island during game windows.
+ * Re-skinned to the branded deep-navy hero palette (matches EventHeroShell):
+ * navy card, white text, white-alpha cards/borders, bright accent for the
+ * leading score, red LIVE / green FINAL status. Playoffs uses an amber accent.
  */
 
 /* ── Tokens ── */
 :root {
-  --lsh-bg: var(--content-bg, #fff);
-  --lsh-border: var(--content-border, #e2e8f0);
+  --lsh-bg: #0f1e2e;
+  --lsh-border: rgba(255, 255, 255, 0.12);
+  --lsh-card-bg: rgba(255, 255, 255, 0.05);
   --lsh-radius: var(--radius-lg, 0.75rem);
-  --lsh-live-color: #dc2626;
-  --lsh-final-color: var(--color-success, #16a34a);
-  --lsh-next-color: var(--color-gray-500, #6b7280);
-  --lsh-accent: var(--color-primary, #1c497c);
+  --lsh-live-color: #f04848;
+  --lsh-final-color: #22c55e;
+  --lsh-next-color: rgba(255, 255, 255, 0.55);
+  --lsh-accent: #60a5fa;
+  --lsh-glow: color-mix(in srgb, var(--lsh-accent) 28%, transparent);
   --lsh-score-size: 1.5rem;
   --lsh-score-size-compact: 1.125rem;
   --lsh-score-size-champ: 2rem;
@@ -23,14 +28,33 @@
 
 /* ── Container ── */
 .lsh {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   background: var(--lsh-bg);
+  color: #fff;
   border: 1px solid var(--lsh-border);
   border-radius: var(--lsh-radius);
+  box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
   padding: 1.5rem 2rem;
   min-height: 180px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Corner accent glow wash (matches EventHeroShell). */
+.lsh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(86% 92% at 3% -4%, var(--lsh-glow), transparent 64%);
+  pointer-events: none;
+  z-index: 0;
+}
+.lsh > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Header Row ── */
@@ -46,7 +70,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-gray-900, #111827);
+  color: #fff;
   padding-left: 0.625rem;
   border-left: 2px solid var(--lsh-accent);
   margin: 0;
@@ -68,18 +92,18 @@
 }
 
 .lsh__badge--live {
-  background: color-mix(in srgb, var(--lsh-live-color) 12%, transparent);
-  color: var(--lsh-live-color);
+  background: var(--lsh-live-color);
+  color: #fff;
 }
 
 .lsh__badge--final {
-  background: color-mix(in srgb, var(--lsh-final-color) 12%, transparent);
+  background: color-mix(in srgb, var(--lsh-final-color) 22%, transparent);
   color: var(--lsh-final-color);
 }
 
 .lsh__badge--next {
-  background: var(--color-gray-100, #f3f4f6);
-  color: var(--lsh-next-color);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
   font-weight: 600;
 }
 
@@ -88,7 +112,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--lsh-live-color);
+  background: #fff;
   animation: lsh-pulse 1.5s ease-in-out infinite;
 }
 
@@ -99,12 +123,13 @@
 
 /* ── Playoff Variant ── */
 .lsh--playoffs {
-  --lsh-accent: var(--color-warning, #d97706);
-  border-color: color-mix(in srgb, var(--color-warning, #d97706) 30%, var(--lsh-border));
+  --lsh-accent: #f0a23a;
+  --lsh-glow: color-mix(in srgb, #f0a23a 30%, transparent);
+  border-color: color-mix(in srgb, #f0a23a 40%, var(--lsh-border));
 }
 
 .lsh--playoffs .lsh__title {
-  border-left-color: var(--color-warning, #d97706);
+  border-left-color: var(--lsh-accent);
 }
 
 /* ── Game Window Label ── */
@@ -113,7 +138,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-gray-400, #9ca3af);
+  color: rgba(255, 255, 255, 0.5);
   margin: 0;
 }
 
@@ -129,7 +154,7 @@
   border: 2px solid var(--lsh-accent);
   border-radius: var(--radius-md, 0.5rem);
   padding: 1rem 1.25rem;
-  background: color-mix(in srgb, var(--lsh-accent) 4%, var(--lsh-bg));
+  background: color-mix(in srgb, var(--lsh-accent) 12%, transparent);
   position: relative;
 }
 
@@ -141,11 +166,10 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--lsh-accent);
-  background: var(--lsh-bg);
+  color: #0f1e2e;
+  background: var(--lsh-accent);
   padding: 0.125rem 0.5rem;
   border-radius: var(--radius-sm, 0.25rem);
-  border: 1px solid var(--lsh-accent);
   line-height: 1.2;
 }
 
@@ -160,7 +184,7 @@
   border: 1px solid var(--lsh-border);
   border-radius: var(--radius-md, 0.5rem);
   padding: 0.625rem 0.75rem;
-  background: var(--lsh-bg);
+  background: var(--lsh-card-bg);
 }
 
 /* ── Matchup Row (shared between featured & compact) ── */
@@ -174,7 +198,7 @@
 .lsh__matchup-row + .lsh__matchup-row {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--color-gray-100, #f3f4f6);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Compact rows are tighter */
@@ -207,7 +231,7 @@
 .lsh__team-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-gray-900, #111827);
+  color: rgba(255, 255, 255, 0.85);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -219,13 +243,14 @@
 
 .lsh__team-name--winner {
   font-weight: 700;
+  color: #fff;
 }
 
 .lsh__score {
   font-size: var(--lsh-score-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-gray-900, #111827);
+  color: #fff;
   flex-shrink: 0;
   min-width: 3.5rem;
   text-align: right;
@@ -245,7 +270,7 @@
   font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--color-gray-400, #9ca3af);
+  color: rgba(255, 255, 255, 0.4);
   text-align: center;
   letter-spacing: 0.04em;
   padding: 0 0.5rem;
@@ -280,7 +305,7 @@
 .lsh__champ-name {
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--color-gray-900, #111827);
+  color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -291,7 +316,7 @@
   font-size: var(--lsh-score-size-champ);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-gray-900, #111827);
+  color: #fff;
 }
 
 .lsh__champ-score--leading {
@@ -302,7 +327,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--color-gray-400, #9ca3af);
+  color: rgba(255, 255, 255, 0.4);
   letter-spacing: 0.06em;
   flex-shrink: 0;
 }
@@ -312,7 +337,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-warning, #d97706);
+  color: #f0a23a;
   margin-bottom: 0.25rem;
 }
 
@@ -326,7 +351,7 @@
   flex: 1;
   gap: 0.5rem;
   padding: 1rem 0;
-  color: var(--color-gray-500, #6b7280);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.8125rem;
 }
 
