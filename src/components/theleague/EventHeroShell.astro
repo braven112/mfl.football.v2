@@ -388,6 +388,48 @@ const countAriaLabel = hasCount
     margin: 0;
   }
 
+  /* Shared quick-link rows for panel heroes (Auction, Draft, …). */
+  :global(.tl-hero-panel__links) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  :global(.tl-hero-panel__link) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  :global(.tl-hero-panel__link:hover) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+  :global(.tl-hero-panel__link-icon) {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+    fill: var(--ev-accent);
+  }
+  :global(.tl-hero-panel__link-label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.tl-hero-panel__link-ext) {
+    margin-left: auto;
+    font-size: 0.7rem;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
   /* ── Responsive ── */
   @media (max-width: 640px) {
     .tl-event-hero__player {

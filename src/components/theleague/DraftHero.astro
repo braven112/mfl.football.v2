@@ -1,27 +1,25 @@
 ---
 /**
- * DraftHero - Rookie Draft Command Center hero for the homepage.
- *
- * Replaces the normal HeroBanner during the draft hero window (Monday after
- * NFL Draft through 30 days or draft completion). Same two-column layout as
- * AuctionHero: left side has title, primary CTA, and draft rules; right side
- * has all quick links.
+ * DraftHero — Rookie draft command center (draft hero window: Monday after the
+ * NFL Draft → +30 days / completion). Wears the shared branded EventHeroShell
+ * (draft-purple accent) with a day countdown / LIVE state, the draft-a-player
+ * CTA, and a quick-links panel. Key format rules are folded into the summary;
+ * full rules sit one click away in the panel.
  */
+import EventHeroShell from './EventHeroShell.astro';
+import { getRookieDraftDate } from '../../utils/league-event-resolver';
+
 export interface Props {
-  /** League year for constructing MFL external URLs */
   leagueYear: number;
-  /** MFL host for external links */
   mflHost?: string;
-  /** MFL league ID */
   leagueId?: string;
-  /** Path resolver function from layout */
   resolveLeaguePath: (path: string) => string;
-  /** Cache-busted sprite URL */
+  /** Cache-busted sprite URL (for the quick-link icons) */
   spriteUrl: string;
-  /** Whether the draft is live (true) or upcoming (false) */
   live?: boolean;
-  /** Formatted draft start date string */
   draftStartFormatted: string;
+  /** Reference date (from the resolver) — drives the countdown to the rookie draft. */
+  referenceDate?: Date;
 }
 
 const {
@@ -32,379 +30,64 @@ const {
   spriteUrl,
   live = true,
   draftStartFormatted,
+  referenceDate,
 } = Astro.props;
 
+const now = referenceDate ?? new Date();
 const mflBase = `https://${mflHost}/${leagueYear}/options?L=${leagueId}`;
 
-interface DraftLink {
-  label: string;
-  href: string;
-  icon: string;
-  external: boolean;
-}
+const draftDate = getRookieDraftDate(leagueYear);
+const startOfDay = (d: Date) => { const o = new Date(d); o.setHours(0, 0, 0, 0); return o; };
+const daysUntil = Math.max(0, Math.ceil((startOfDay(draftDate).getTime() - startOfDay(now).getTime()) / 86_400_000));
 
-const quickLinks: DraftLink[] = [
-  {
-    label: 'Draft Order',
-    href: r('/theleague/draft-predictor?view=history&year=' + leagueYear + '&team=all'),
-    icon: 'draft-podium',
-    external: false,
-  },
-  {
-    label: 'Future Draft Picks',
-    href: `${mflBase}&O=100`,
-    icon: 'clipboard',
-    external: true,
-  },
-  {
-    label: 'Draft Results',
-    href: r('/theleague/draft-room'),
-    icon: 'check',
-    external: false,
-  },
-  {
-    label: 'Free Agents',
-    href: r('/theleague/players'),
-    icon: 'binoculars',
-    external: false,
-  },
-  {
-    label: 'Trade Builder',
-    href: r('/theleague/trade-builder'),
-    icon: 'transactions-2',
-    external: false,
-  },
-  {
-    label: 'Rosters',
-    href: r('/theleague/rosters'),
-    icon: 'banknote',
-    external: false,
-  },
-  {
-    label: 'Last Year\'s Draft',
-    href: r('/theleague/draft-predictor?view=history&year=' + (leagueYear - 1) + '&team=all'),
-    icon: 'history',
-    external: false,
-  },
-  {
-    label: 'Calendar',
-    href: r('/theleague/calendar'),
-    icon: 'calendar',
-    external: false,
-  },
+const summary = live
+  ? 'The rookie draft is under way — three rounds, rookies only, 12-hour pick timer. Make your picks.'
+  : `Three rounds, rookies only, 12-hour pick timer (paused 3am–7am PT). Draft starts ${draftStartFormatted}.`;
+
+interface QuickLink { label: string; href: string; icon: string; external: boolean; }
+const quickLinks: QuickLink[] = [
+  { label: 'Draft order', href: r(`/theleague/draft-predictor?view=history&year=${leagueYear}&team=all`), icon: 'standings-2', external: false },
+  { label: 'Draft results', href: r('/theleague/draft-room'), icon: 'check', external: false },
+  { label: 'Future picks', href: `${mflBase}&O=100`, icon: 'calendar', external: true },
+  { label: 'Free agents', href: r('/theleague/players'), icon: 'binoculars', external: false },
+  { label: 'Trade builder', href: r('/theleague/trade-builder'), icon: 'transactions-2', external: false },
+  { label: 'Rosters', href: r('/theleague/rosters'), icon: 'banknote', external: false },
+  { label: 'Draft rules', href: r('/theleague/rules#draft-rules'), icon: 'clipboard', external: false },
 ];
-
-const rules = [
-  { label: 'Rounds', value: '3 rounds, rookies only' },
-  { label: 'Start', value: `${draftStartFormatted}` },
-  { label: 'Pick Timer', value: '12 hours per pick' },
-  { label: 'Overnight', value: 'Timer paused 3am–7am PT' },
-];
-
-const rulesLink = r('/theleague/rules#draft-rules');
 ---
 
-<section class="draft-hero" aria-label="Rookie Draft command center">
-  <div class="draft-hero__columns">
-    <!-- Left: Title, CTA, Rules -->
-    <div class="draft-hero__left">
-      <div class="draft-hero__text">
-        <div class="draft-hero__eyebrow">
-          <span class="draft-hero__badge">{live ? 'Draft Under Way' : 'Draft Day Is Coming'}</span>
-        </div>
-        <h2 class="draft-hero__title">Rookie Draft</h2>
-        <p class="draft-hero__summary">
-          {live
-            ? 'The rookie draft is under way. Make your picks, trade up, and build your dynasty.'
-            : 'Draft day is almost here. Scout the class, check your picks, and plan your strategy.'}
-        </p>
-      </div>
-
-      <a
-        href={`${mflBase}&O=52`}
-        class="draft-hero__cta"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Draft a Player (opens in new tab)"
-      >
-        <svg class="draft-hero__cta-icon" aria-hidden="true">
-          <use href={`${spriteUrl}#icon-draft-podium`}></use>
-        </svg>
-        <span>Draft a Player</span>
-        <span class="draft-hero__external" aria-hidden="true">&#8599;</span>
-      </a>
-
-      <div class="draft-hero__rules">
-        <h3 class="draft-hero__rules-title">Draft Format</h3>
-        <ul class="draft-hero__rules-list">
-          {rules.map(rule => (
-            <li><strong>{rule.label}:</strong> {rule.value}</li>
-          ))}
-          <li><a href={rulesLink} class="draft-hero__rules-link">Full draft rules →</a></li>
-        </ul>
-      </div>
+<EventHeroShell
+  pill={live ? 'Draft under way' : 'Draft day is coming'}
+  headline="Rookie"
+  accentWord="draft."
+  summary={summary}
+  icon="draft-podium"
+  accent="#7c3aed"
+  glow="rgba(124,58,237,.5)"
+  bordered
+  countValue={live ? 'LIVE' : daysUntil}
+  countLabel={live ? 'Drafting now' : 'Days to rookie draft'}
+  link={`${mflBase}&O=52`}
+  linkLabel="Draft a player"
+  isExternal
+  regionLabel="Rookie draft command center"
+>
+  <nav class="tl-hero-panel" slot="panel" aria-label="Rookie draft quick links">
+    <h3 class="tl-hero-panel__title">Quick links</h3>
+    <div class="tl-hero-panel__links">
+      {quickLinks.map((link) => (
+        <a
+          href={link.href}
+          class="tl-hero-panel__link"
+          target={link.external ? '_blank' : undefined}
+          rel={link.external ? 'noopener noreferrer' : undefined}
+          aria-label={link.external ? `${link.label} (opens in new tab)` : undefined}
+        >
+          <svg class="tl-hero-panel__link-icon" aria-hidden="true"><use href={`${spriteUrl}#icon-${link.icon}`}></use></svg>
+          <span class="tl-hero-panel__link-label">{link.label}</span>
+          {link.external && <span class="tl-hero-panel__link-ext" aria-hidden="true">↗</span>}
+        </a>
+      ))}
     </div>
-
-    <!-- Right: Quick Links -->
-    <nav class="draft-hero__links" aria-label="Draft quick links">
-      <h3 class="draft-hero__links-title">Quick Links</h3>
-      <ul class="draft-hero__link-list">
-        {quickLinks.map(link => (
-          <li>
-            <a
-              href={link.href}
-              class="draft-hero__link"
-              target={link.external ? '_blank' : undefined}
-              rel={link.external ? 'noopener noreferrer' : undefined}
-              aria-label={link.external ? `${link.label} (opens in new tab)` : undefined}
-            >
-              <svg class="draft-hero__link-icon" aria-hidden="true">
-                <use href={`${spriteUrl}#icon-${link.icon}`}></use>
-              </svg>
-              <span>{link.label}</span>
-              {link.external && <span class="draft-hero__external" aria-hidden="true">&#8599;</span>}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  </div>
-</section>
-
-<style>
-  .draft-hero {
-    padding: 0.5rem 0 1rem;
-  }
-
-  /* ── Two-column layout ── */
-  .draft-hero__columns {
-    display: grid;
-    grid-template-columns: 1fr 280px;
-    gap: 2rem;
-    align-items: start;
-  }
-
-  /* ── Left column ── */
-  .draft-hero__left {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .draft-hero__text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .draft-hero__eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .draft-hero__badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0.2rem 0.65rem;
-    border-radius: 9999px;
-    background: color-mix(in srgb, var(--cat-draft, #7c3aed) 15%, var(--color-gray-100, #f3f4f6));
-    color: var(--cat-draft, #7c3aed);
-  }
-
-  .draft-hero__title {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--color-dark, #0f1e2e);
-    line-height: 1.25;
-    margin: 0;
-  }
-
-  .draft-hero__summary {
-    font-size: 1rem;
-    line-height: 1.65;
-    color: var(--color-gray-600, #4b5563);
-    max-width: 54ch;
-    margin: 0;
-  }
-
-  /* ── Primary CTA ── */
-  .draft-hero__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    align-self: flex-start;
-    padding: 0.625rem 1.25rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--color-primary, #1c497c);
-    color: #fff;
-    border: 1px solid var(--color-primary, #1c497c);
-    text-decoration: none;
-    font-size: 0.9375rem;
-    font-weight: 700;
-    transition: filter 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .draft-hero__cta:hover {
-    filter: brightness(0.92);
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
-  }
-
-  .draft-hero__cta:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
-
-  .draft-hero__cta-icon {
-    width: 1.125rem;
-    height: 1.125rem;
-    flex-shrink: 0;
-    fill: currentColor;
-  }
-
-  /* ── Rules section ── */
-  .draft-hero__rules {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .draft-hero__rules-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-gray-500, #6b7280);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
-    margin: 0;
-  }
-
-  .draft-hero__rules-list {
-    margin: 0;
-    padding: 0 0 0 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .draft-hero__rules-list li {
-    font-size: 0.8125rem;
-    color: var(--color-gray-600, #4b5563);
-    line-height: 1.5;
-  }
-
-  .draft-hero__rules-list li strong {
-    color: var(--color-gray-700, #374151);
-  }
-
-  .draft-hero__rules-link {
-    color: var(--color-primary, #1c497c);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .draft-hero__rules-link:hover {
-    text-decoration: underline;
-  }
-
-  .draft-hero__rules-link:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
-
-  /* ── Right column: Quick Links ── */
-  .draft-hero__links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .draft-hero__links-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-gray-500, #6b7280);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
-    margin: 0;
-  }
-
-  .draft-hero__link-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
-  .draft-hero__link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--content-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
-    text-decoration: none;
-    color: var(--color-gray-700, #374151);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
-  }
-
-  .draft-hero__link:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
-    border-color: var(--color-gray-300, #d1d5db);
-  }
-
-  .draft-hero__link:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
-
-  .draft-hero__link-icon {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-    fill: currentColor;
-    color: var(--color-primary, #1c497c);
-  }
-
-  .draft-hero__external {
-    margin-left: auto;
-    font-size: 0.75rem;
-    opacity: 0.5;
-    flex-shrink: 0;
-  }
-
-  .draft-hero__cta .draft-hero__external {
-    opacity: 0.7;
-  }
-
-  /* ── Responsive ── */
-  @media (max-width: 768px) {
-    .draft-hero__columns {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-
-    .draft-hero__title {
-      font-size: 1.25rem;
-    }
-
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .draft-hero__cta,
-    .draft-hero__link {
-      transition: none;
-    }
-  }
-</style>
+  </nav>
+</EventHeroShell>
