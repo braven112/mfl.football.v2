@@ -301,3 +301,15 @@ Pattern:
 **Evidence:** `src/utils/team-colors.ts` imports `../data/theleague.config.json` directly and only registers `team.color` values. `data/afl-fantasy/afl.config.json` teams (24 of them) carry `icon`/`banner` but no `color`.
 
 **Recommendation:** For any per-franchise chart on a non-TheLeague site, supply your own palette rather than calling `getTeamColor()`. The AFL Owner Activity page (`src/pages/afl-fantasy/activity.astro`) does this with a local 24-entry `CHART_PALETTE` keyed by franchise index. The shared render component (`src/components/theleague/OwnerActivityReport.astro`) stays color-agnostic — it just consumes a pre-resolved `color` on each chart series, so each league page resolves colors its own way. If colored franchise charts become common for AFL, the durable fix is to add a `color` field per team in `afl.config.json` and generalize `team-colors.ts` to load by league.
+
+---
+
+## 2026-06-24 - Absolutely-Positioned First Child Breaks `:not(:first-child)` Margin Spacing
+
+**Context:** The AFL homepage grid (`src/pages/afl-fantasy/index.astro`) showed a ~2rem empty band above BOTH columns — the hero and the Schefter Report sidebar floated below the grid top instead of sitting flush.
+
+**Insight:** The left column spaced its blocks with `.afl-hp__main > :not(:first-child) { margin-top: 2rem }`. But the column's real first child is a `visually-hidden` `<h2>` accessibility landmark. Because that h2 is `position: absolute` (visually-hidden pattern) it occupies the `:first-child` slot in the selector even though it has no layout box — so the hero, the first *visible* element, matches `:not(:first-child)` and wrongly gets the 2rem top margin. The sidebar then carried a matching `margin-top: 2rem` purely to stay vertically aligned with the displaced hero, doubling the visible gap.
+
+**Evidence:** Switching `.afl-hp__main` to `display: flex; flex-direction: column; gap: 2rem` fixed it: an absolutely-positioned flex item is removed from flex flow and is NOT spaced by `gap`, so the gap only applies between the visible blocks — no leading gap — and the inter-section 2rem is preserved. The sidebar's compensating `margin-top` was then deleted. Verified both columns at `offsetFromGrid: 0`.
+
+**Recommendation:** When a flow container leads with a `visually-hidden` heading (a common a11y landmark pattern), do NOT space siblings with `:not(:first-child)` margins — the hidden-but-present first child throws the selector off by one. Prefer `display: flex; flex-direction: column; gap: …` (or `display: grid; gap: …`): absolutely-positioned children drop out of flex/grid flow, so `gap` naturally ignores them and spaces only the visible items. This also removes the need for compensating margins on sibling columns.
