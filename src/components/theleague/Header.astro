@@ -174,8 +174,8 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 <style>
   /* Breadcrumb Styles */
   .breadcrumb-bar {
-    background: #1c497c;
-    border-bottom: 1px solid #1c497c;
+    background: var(--breadcrumb-bar-bg, #1c497c);
+    border-bottom: 1px solid var(--breadcrumb-bar-bg, #1c497c);
     padding: 0.125rem 0;
   }
 
@@ -559,13 +559,13 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     align-items: center;
     gap: 0.25rem;
     text-decoration: none;
-    color: var(--primary-color, #1c497c);
+    color: var(--header-nav-icon-color, #1c497c);
     transition: color 0.2s ease;
     flex-shrink: 0;
   }
 
   .nav-icon-link:hover {
-    color: var(--secondary-color, #2e8743);
+    color: var(--header-nav-icon-hover-color, #2e8743);
   }
 
   .nav-icon {
