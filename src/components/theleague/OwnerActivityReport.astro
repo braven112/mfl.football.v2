@@ -27,7 +27,9 @@ interface TxLeaderboardEntry {
 	franchiseId: string;
 	name: string;
 	icon: string;
-	counts: { trades: number; freeAgents: number; auctionWins: number; total: number };
+	// `thirdStat` is a league-specific transaction count whose label is set via
+	// the `thirdStatLabel` prop (auction wins for TheLeague, waiver claims for AFL).
+	counts: { trades: number; freeAgents: number; thirdStat: number; total: number };
 }
 
 interface ChartTeam {
@@ -47,6 +49,10 @@ interface Props {
 	ownerPages: Record<string, { page: string; count: number }[]>;
 	chartTeams: ChartTeam[];
 	chartDates: string[];
+	// League-specific third transaction stat. Defaults to TheLeague's auctions;
+	// AFL (no auction) overrides these to surface waiver claims instead.
+	thirdStatLabel?: string;
+	txSubtitle?: string;
 }
 
 const {
@@ -58,6 +64,8 @@ const {
 	ownerPages,
 	chartTeams,
 	chartDates,
+	thirdStatLabel = 'Auctions',
+	txSubtitle = 'Trades, free agent moves, and auction wins this season',
 } = Astro.props;
 
 const hasAnyData = teams.some((t) => t.lastVisit !== null);
@@ -168,7 +176,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 	<!-- Transaction Activity -->
 	<div class="section-header" style="margin-top:2rem">
 		<h2 class="section-header__title">Transaction Activity</h2>
-		<p class="section-header__sub">Trades, free agent moves, and auction wins this season</p>
+		<p class="section-header__sub">{txSubtitle}</p>
 	</div>
 
 	{txLeaderboard.every(t => t.counts.total === 0) ? (
@@ -183,7 +191,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 					<th scope="col" class="activity-table__th activity-table__th--team">Team</th>
 					<th scope="col" class="activity-table__th activity-table__th--stat">Trades</th>
 					<th scope="col" class="activity-table__th activity-table__th--stat">FA</th>
-					<th scope="col" class="activity-table__th activity-table__th--stat">Auctions</th>
+					<th scope="col" class="activity-table__th activity-table__th--stat">{thirdStatLabel}</th>
 					<th scope="col" class="activity-table__th activity-table__th--stat">Total</th>
 				</tr>
 			</thead>
@@ -199,7 +207,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 						</td>
 						<td class="activity-table__td activity-table__td--stat">{team.counts.trades}</td>
 						<td class="activity-table__td activity-table__td--stat">{team.counts.freeAgents}</td>
-						<td class="activity-table__td activity-table__td--stat">{team.counts.auctionWins}</td>
+						<td class="activity-table__td activity-table__td--stat">{team.counts.thirdStat}</td>
 						<td class="activity-table__td activity-table__td--stat">{team.counts.total}</td>
 					</tr>
 				))}
