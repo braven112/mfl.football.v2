@@ -39,7 +39,7 @@ const UPCOMING_EVENT_DAYS = 7;
 
 /** Category color mapping for league events */
 const EVENT_CATEGORY_COLORS: Record<string, string> = {
-  'preseason': 'var(--cat-preseason, #60a5fa)',
+  'preseason': 'var(--cat-preseason, #2563eb)',
   'free-agency': 'var(--cat-free-agency, #2e8743)',
   'draft': 'var(--cat-draft, #7c3aed)',
   'regular-season': 'var(--cat-regular-season, #1c497c)',
@@ -899,7 +899,7 @@ export function resolveHeroState(
         link: '/theleague/rosters',
         linkLabel: 'Manage Your Roster',
         icon: 'tag',
-        accentColor: 'var(--cat-preseason, #60a5fa)',
+        accentColor: 'var(--cat-preseason, #2563eb)',
         kicker: 'Offseason',
         isActive: true,
       },
