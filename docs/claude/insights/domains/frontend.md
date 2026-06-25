@@ -289,3 +289,15 @@ Pattern:
 
 **Recommendation:** For client-side rookie detection on the rosters page, use `contractInfo === 'RC' || contractInfo === 'TO'`. TheLeague's auto-stamp script (`scripts/sync-draft-pick-contracts.mjs`) writes one of those tags onto every drafted rookie within minutes of the pick, so it's a reliable proxy for "is this player a current rookie." For server-side authoritative checks, fetch the players export and check `status === 'R'` — that's MFL's own classification and the right gate for any irreversible action.
 
+
+---
+
+## 2026-06-24 - `getTeamColor()` Only Knows TheLeague's Colors
+
+**Context:** Ported the Owner Activity page (daily page-views line chart, one color-coded line per franchise) from TheLeague to the AFL site. TheLeague's page resolves each series color via `getTeamColor(franchiseId)` from `src/utils/team-colors.ts`. Reusing that for AFL made every line render the same gray.
+
+**Insight:** `src/utils/team-colors.ts` builds its color map *exclusively* from `theleague.config.json` team entries that carry a `color` field. `getTeamColor()` returns a hardcoded `#6b7280` gray fallback for any franchiseId it doesn't recognize. AFL franchises live in `data/afl-fantasy/afl.config.json` and have **no** `color` field, so every AFL franchise hits the fallback — multi-series charts collapse to one indistinguishable color.
+
+**Evidence:** `src/utils/team-colors.ts` imports `../data/theleague.config.json` directly and only registers `team.color` values. `data/afl-fantasy/afl.config.json` teams (24 of them) carry `icon`/`banner` but no `color`.
+
+**Recommendation:** For any per-franchise chart on a non-TheLeague site, supply your own palette rather than calling `getTeamColor()`. The AFL Owner Activity page (`src/pages/afl-fantasy/activity.astro`) does this with a local 24-entry `CHART_PALETTE` keyed by franchise index. The shared render component (`src/components/theleague/OwnerActivityReport.astro`) stays color-agnostic — it just consumes a pre-resolved `color` on each chart series, so each league page resolves colors its own way. If colored franchise charts become common for AFL, the durable fix is to add a `color` field per team in `afl.config.json` and generalize `team-colors.ts` to load by league.
