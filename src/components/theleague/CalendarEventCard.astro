@@ -10,9 +10,8 @@
  * accent palette the hero resolver uses (preseason=blue, free-agency=green,
  * draft=purple, regular-season=navy).
  */
-import type { ResolvedLeagueEvent } from '../../types/league-events';
-import { formatEventDate, formatEventDateRange, getStatusText } from '../../utils/event-date-formatter';
-import { CATEGORY_LABELS } from '../../types/league-events';
+import { type ResolvedLeagueEvent, CATEGORY_LABELS } from '../../types/league-events';
+import { formatEventDate, formatEventDateRange } from '../../utils/event-date-formatter';
 import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
@@ -21,7 +20,6 @@ export interface Props {
 
 const { event } = Astro.props;
 
-const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
 const dateDisplay = event.definition.endDate
   ? formatEventDateRange(event.startDate, event.endDate)
   : formatEventDate(event.startDate);
@@ -85,7 +83,7 @@ const cardClasses = [
         {event.isActive && (
           <div class="calendar-card__live">
             <span class="calendar-card__live-dot" aria-hidden="true"></span>
-            <span class="calendar-card__live-label">{statusText}</span>
+            <span class="calendar-card__live-label">Live</span>
           </div>
         )}
         {links.length > 0 && (

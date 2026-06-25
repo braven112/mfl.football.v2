@@ -8,7 +8,7 @@
  * chip, pill, title, glow wash, border, and countdown number.
  */
 import type { ResolvedLeagueEvent } from '../../types/league-events';
-import { formatEventDate, formatEventDateRange, getStatusText } from '../../utils/event-date-formatter';
+import { formatEventDate, formatEventDateRange } from '../../utils/event-date-formatter';
 import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
@@ -32,7 +32,6 @@ const positionLabels = {
 };
 const pillLabel = label ?? positionLabels[position];
 
-const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
 const dateDisplay = event.definition.endDate
   ? formatEventDateRange(event.startDate, event.endDate)
   : formatEventDate(event.startDate);
@@ -87,7 +86,7 @@ const cardClasses = [
         {event.isActive && (
           <div class="whats-next-card__live">
             <span class="whats-next-card__live-dot" aria-hidden="true"></span>
-            <span class="whats-next-card__live-label">{statusText}</span>
+            <span class="whats-next-card__live-label">Live</span>
           </div>
         )}
         {links.length > 0 && (
