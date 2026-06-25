@@ -11,7 +11,8 @@ import path from 'node:path';
 import type { HeroState } from '../types/hero-state';
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { getCurrentSeasonYear } from './league-year';
-import { getNthDayOfMonth } from './league-event-resolver';
+import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
+import { isCutWatchUrgent } from './hero-resolver';
 
 // ── JSON Data Loaders ──
 
@@ -402,9 +403,52 @@ export async function enrichHeroState(state: HeroState): Promise<HeroState> {
       return enrichTaggedShowcase(state);
     case 'cut-watch':
       return enrichCutWatch(state);
+    case 'preseason-countdown':
+      return enrichPreseason(state);
+    case 'draft-countdown':
+      return enrichDraftCountdown(state);
     default:
       return state;
   }
+}
+
+function enrichDraftCountdown(state: HeroState): HeroState {
+  const refDate = state.metadata.referenceDate;
+  const nflDraft = getNflDraftDate(refDate.getFullYear());
+  const refMidnight = new Date(refDate); refMidnight.setHours(0, 0, 0, 0);
+  const draftMidnight = new Date(nflDraft); draftMidnight.setHours(0, 0, 0, 0);
+  const daysUntilDraft = Math.max(
+    0,
+    Math.round((draftMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24)),
+  );
+  const nflDraftDate = nflDraft.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  return { ...state, draftCountdownProps: { nflDraftDate, daysUntilDraft } };
+}
+
+/** NFL kickoff = Thursday after Labor Day (1st Monday of September). */
+function getKickoffDate(year: number): Date {
+  const laborDay = getNthDayOfMonth(year, 8, 1, 1); // 1st Monday of September
+  const kickoff = new Date(laborDay);
+  kickoff.setDate(kickoff.getDate() + 3); // Thursday = Monday + 3
+  kickoff.setHours(0, 0, 0, 0);
+  return kickoff;
+}
+
+function enrichPreseason(state: HeroState): HeroState {
+  const refDate = state.metadata.referenceDate;
+  const kickoff = getKickoffDate(refDate.getFullYear());
+  const refMidnight2 = new Date(refDate); refMidnight2.setHours(0, 0, 0, 0);
+  const kickoffMidnight = new Date(kickoff); kickoffMidnight.setHours(0, 0, 0, 0);
+  const daysUntilKickoff = Math.max(
+    0,
+    Math.round((kickoffMidnight.getTime() - refMidnight2.getTime()) / (1000 * 60 * 60 * 24)),
+  );
+  const kickoffDate = kickoff.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  return { ...state, preseasonProps: { kickoffDate, daysUntilKickoff } };
 }
 
 function enrichChampion(state: HeroState): HeroState {
@@ -432,7 +476,9 @@ function enrichChampion(state: HeroState): HeroState {
       winnerFranchiseId: result.winnerFranchiseId,
       winnerName: winner.name,
       winnerIcon: winner.icon,
-      winnerColor: winner.color,
+      winnerGroupMeIcon: winner.icon.startsWith('/assets/theleague/icons/')
+        ? winner.icon.replace('/assets/theleague/icons/', '/assets/theleague/group-me/')
+        : winner.icon,
       loserFranchiseId: result.loserFranchiseId,
       loserName: loser.name,
       winnerScore: result.winnerScore,
@@ -482,7 +528,9 @@ function enrichCutWatch(state: HeroState): HeroState {
 
   // Deadline: 3rd Sunday of August
   const deadline = getNthDayOfMonth(leagueYear, 7, 0, 3); // 3rd Sunday of August
-  const daysUntil = Math.max(0, Math.ceil((deadline.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const refMidnightCw = new Date(refDate); refMidnightCw.setHours(0, 0, 0, 0);
+  const deadlineMidnight = new Date(deadline); deadlineMidnight.setHours(0, 0, 0, 0);
+  const daysUntil = Math.max(0, Math.round((deadlineMidnight.getTime() - refMidnightCw.getTime()) / (1000 * 60 * 60 * 24)));
   const deadlineFormatted = deadline.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
   });
@@ -513,6 +561,7 @@ function enrichCutWatch(state: HeroState): HeroState {
       overLimitTeams,
       deadlineDate: deadlineFormatted,
       daysUntilDeadline: daysUntil,
+      urgent: isCutWatchUrgent(refDate),
     },
   };
 }

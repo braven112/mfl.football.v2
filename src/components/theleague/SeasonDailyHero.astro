@@ -25,6 +25,8 @@ import TagExtensionHero from './TagExtensionHero.astro';
 import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
 import CutWatchHero from './CutWatchHero.astro';
 import UDFAHero from './UDFAHero.astro';
+import PreseasonCountdownHero from './PreseasonCountdownHero.astro';
+import DraftCountdownHero from './DraftCountdownHero.astro';
 
 // Daily rotation — real components (Phase D)
 import StandingsHero from './season-heroes/StandingsHero.astro';
@@ -173,10 +175,28 @@ const isFridayArticle = ptWeekday === 'Fri';
   />
 )}
 
+{phase === 'preseason-countdown' && (
+  <PreseasonCountdownHero
+    preseasonProps={state.preseasonProps}
+    resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
+  />
+)}
+
+{phase === 'draft-countdown' && (
+  <DraftCountdownHero
+    draftCountdownProps={state.draftCountdownProps}
+    resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
+  />
+)}
+
 {/* Fallback phases (offseason-fallback): branded LeagueEventHero, with HeroBanner as a defensive fallback */}
 {!slot && !state.auctionProps && !state.draftProps && !state.tradeDeadlineProps
   && !state.championProps && !state.taggedShowcaseProps && !state.cutWatchProps
-  && phase !== 'tag-window' && phase !== 'udfa-window'
+  && !state.preseasonProps && !state.draftCountdownProps
+  && phase !== 'tag-window' && phase !== 'udfa-window' && phase !== 'preseason-countdown'
+  && phase !== 'draft-countdown'
   && (state.eventView ? (
   <LeagueEventHero
     {...state.eventView}

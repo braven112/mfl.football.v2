@@ -17,10 +17,12 @@ export type SeasonPhase =
   | 'tagged-showcase'     // Feb 15 → auction hero start
   | 'auction-preview'     // Mon before 3rd Thu Mar → Thu 7am PT
   | 'auction-live'        // 3rd Thu Mar 7am PT → +10 days
+  | 'draft-countdown'     // Auction Hero end → Draft Hero start (rookie scouting lull)
   | 'draft-announced'     // Mon after NFL Draft → rookie draft starts
   | 'draft-live'          // Rookie draft start → draft completes
   | 'udfa-window'         // Draft completes → +7 days
-  | 'cut-watch'           // ~Jul 15 → Aug 16
+  | 'cut-watch'           // Jun 1 → 3rd Sun of Aug (early=P3 ambient, final 30d=P1 urgent)
+  | 'preseason-countdown' // FA close → NFL kickoff
   | 'regular-season'      // NFL kickoff → end of Week 14
   | 'trade-deadline'      // Nov 13 (24h override)
   | 'playoffs'            // Week 15 → Week 16
@@ -80,7 +82,7 @@ export interface HeroState {
     winnerFranchiseId: string;
     winnerName: string;
     winnerIcon: string;
-    winnerColor: string;
+    winnerGroupMeIcon: string;
     loserFranchiseId: string;
     loserName: string;
     winnerScore: number;
@@ -118,6 +120,22 @@ export interface HeroState {
     }>;
     deadlineDate: string;
     daysUntilDeadline: number;
+    /** True in the final 30 days before the deadline — drives the urgent (red) tier. */
+    urgent: boolean;
+  };
+  /** Preseason countdown props (only when phase is 'preseason-countdown') */
+  preseasonProps?: {
+    /** Formatted NFL kickoff date, e.g. "Thu, Sep 10". */
+    kickoffDate: string;
+    /** Whole days from the reference date to kickoff. */
+    daysUntilKickoff: number;
+  };
+  /** Draft countdown props (only when phase is 'draft-countdown') */
+  draftCountdownProps?: {
+    /** Formatted NFL Draft date, e.g. "Thu, Apr 23". */
+    nflDraftDate: string;
+    /** Whole days from the reference date to the NFL Draft (clamped at 0). */
+    daysUntilDraft: number;
   };
   /** Trade deadline props (only when phase is 'trade-deadline') */
   tradeDeadlineProps?: {

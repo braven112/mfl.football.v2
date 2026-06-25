@@ -91,7 +91,7 @@ describe('getLeagueContext via registry', () => {
     const afl = getLeagueContext(new URL('https://example.com/afl-fantasy/lineup'));
     expect(afl).toMatchObject({
       leagueId: '19621',
-      name: 'American Football League',
+      name: 'AFL',
       slug: 'afl-fantasy',
       dataPath: 'data/afl-fantasy',
     });
