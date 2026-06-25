@@ -533,3 +533,45 @@ The implementation of exact-match logic for parameterized links (NavLinks.astro 
 - No architectural changes needed before AuctionPP integration
 
 The navigation system is substantially complete and ready for feature expansion.
+
+---
+
+## DraftViewSelector button-to-link refactor (2026-06-24, PR #274)
+
+### Pattern: button-to-anchor migration checklist
+
+When converting `<button>` elements to `<a>` links (e.g. for view-transition compatibility):
+
+1. **Add `text-decoration: none; color: inherit;`** — browsers apply link styling by default.
+2. **Add `focus-visible` ring** — `<button>` gets a browser default focus ring; `<a>` does not. Always add:
+   ```css
+   .component:focus-visible {
+     outline: 2px solid var(--color-primary, #1c497c);
+     outline-offset: 2px;
+   }
+   ```
+3. **Switch `aria-pressed` → `aria-current="page"`** — for page-navigation links, `aria-current="page"` is the correct semantic attribute (not `aria-selected` which belongs to `role="tab"` patterns).
+4. **Keep `title` attribute** — preserved correctly in this PR; tooltip is valuable for icon-only tabs at small viewports.
+
+### Root cause pattern: Astro ClientRouter + `DOMContentLoaded` / `astro:after-swap`
+
+Event handlers registered inside `DOMContentLoaded` do NOT re-bind after ClientRouter navigations because the script block itself doesn't re-execute — only `astro:after-swap` fires. However, if the component is re-rendered fresh by ClientRouter, the new DOM elements exist but the script from the *previous* page's component is the one running. The correct fix is to eliminate the JS dependency entirely (server-render the URLs as `<a href>`) rather than adding more lifecycle events.
+
+### Design Token Violations in DraftViewSelector (pre-existing, flagged in review)
+
+These hardcoded colors exist in `src/components/theleague/DraftViewSelector.astro` and should be converted:
+
+| Hardcoded value | Suggested token |
+|---|---|
+| `#f8fafc` (default bg) | `var(--color-gray-50, #f8fafc)` |
+| `#e2e8f0` (hover bg) | `var(--color-gray-100, #e2e8f0)` |
+| `#cbd5e1` (hover border) | `var(--primary-content-border-color, #cbd5e1)` |
+| `#dbeafe` (active bg) | `var(--view-tab-active-bg, rgba(28,73,124,0.1))` |
+| `#3b82f6` (active border/label) | `var(--color-primary, #1c497c)` |
+| `#64748b` (label color) | `var(--color-gray-500, #64748b)` |
+
+The active-state color mismatch (blue-500 vs site primary `#1c497c`) is the most impactful — it creates an inconsistency with every other interactive element on the site.
+
+### VALID_VIEWS / Props type divergence pattern
+
+`draft-predictor.astro` defines `VALID_VIEWS = ['projected', 'final', 'history'] as const` which is a parallel source of truth to the `Props` union type in `DraftViewSelector.astro`. When view names are stable this is low risk, but it is a known pattern to watch for. If a view is added, both must be updated. Consider exporting the view type or constant from the component file for external consumers.
