@@ -77,6 +77,20 @@
       "summary": "Removed the same stray gap from TheLeague homepage — both sites now have their hero and sidebar sitting flush at the top of their columns.",
       "impact": "user",
       "area": "homepage"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "style-tweak",
+      "summary": "AFL Fantasy headings (h1–h4) now render in UFC Sans Condensed — the same athletic, broadcast-style typeface used in hero elements — giving page and section titles a more intentional, editorial feel. Heading sizes were also scaled up slightly to preserve visual weight at the condensed width.",
+      "impact": "user",
+      "area": "design-system"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "style-tweak",
+      "summary": "Conference section labels (\"American League Playoff Standings\", \"Draft Preview\") bumped from 0.75rem to 0.9rem for better readability alongside the new condensed headline font.",
+      "impact": "user",
+      "area": "design-system"
     }
   ]
 }

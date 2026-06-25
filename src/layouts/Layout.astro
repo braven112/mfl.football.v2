@@ -129,14 +129,28 @@ const { title } = Astro.props as Props;
 	}
 
 
+	:global(h1),
+	:global(h2),
+	:global(h3),
+	:global(h4) {
+		font-family: var(--font-display);
+		color: var(--primary-link-default-text-color);
+	}
+
 	:global(h1) {
 		font-size: var(--font-size-xl);
-		color: var(--primary-link-default-text-color);
 	}
 
 	:global(h2) {
 		font-size: var(--font-size-lg);
-		color: var(--primary-link-default-text-color);
+	}
+
+	:global(h3) {
+		font-size: var(--font-size-base);
+	}
+
+	:global(h4) {
+		font-size: var(--font-size-sm);
 	}
 
 	:global(code) {

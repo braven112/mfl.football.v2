@@ -1080,4 +1080,36 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 
 **Tokens established (all in `tokens.css`):** `--league-accent` (TheLeague blue / AFL red `#c41e3a`), `--header-nav-icon-color` + `--header-nav-icon-hover-color` (TheLeague blue→green / AFL navy→red), `--breadcrumb-bar-bg` + `--inverse-bg` (AFL deep navy `#0f1e2e`, DRY'd into one `--afl-navy` since it appears 3×). Crucially `--color-primary` was left **untouched** for AFL — so links, headings, nav-active states, and table headers keep blue while only the deliberately-scoped accents change. Don't reach for overriding `--color-primary` per league unless you really want the blast radius; prefer a dedicated semantic token.
 
+---
+
+## 2026-06-25 - Font Token Architecture and Heading Font System
+
+**Context:** Expanding UFC Sans Condensed from hero/display elements to all h1–h4 headings site-wide.
+
+**Font tokens in `src/styles/tokens.css`:**
+```css
+--font-family-base: var(--font-vend-sans, 'Vend Sans'), system-ui, …;  /* body */
+--font-display: 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', system-ui, sans-serif;  /* headings/hero */
+--font-numeric: 'UFC Sans', 'Vend Sans', system-ui, sans-serif;  /* numbers/stats */
+--font-family-mono: Menlo, Monaco, …;  /* code */
+```
+
+**Vend Sans** is loaded via Astro's `Font` component (Google Fonts optimized) — configured in `astro.config.ts`. **UFC Sans** and **UFC Sans Condensed** are self-hosted `.woff2` files under `public/assets/fonts/`, registered with `@font-face` in `tokens.css`.
+
+**Heading font-family lives in `TheLeagueLayout.astro`**, not `tokens.css` — the global `:global(h1)–:global(h4)` rules are the right place to apply `--font-display` to bare heading elements.
+
+**`TheLeagueLayout.astro` is the real layout for both leagues.** AFL pages import `TheLeagueLayout`, not the base `Layout.astro`. If you're making a site-wide style change for AFL or TheLeague, edit `TheLeagueLayout.astro`. `Layout.astro` has a parallel copy of heading rules for edge-case pages (login, 404) — keep both in sync.
+
+**Heading scale (as of 2026-06-25):**
+| Level | Size |
+|-------|------|
+| h1 | 2.25rem |
+| h2 | 1.75rem |
+| h3 | 1.5rem |
+| h4 | 1.125rem |
+
+These are fixed rem values (not fluid clamps) because UFC Sans Condensed is a display face — its optical weight doesn't need fluid scaling the way body text does.
+
+**Section title labels** (editorial uppercase headers with left border, e.g. `.afl-conf__title`) are separate from bare h3/h4 elements and have their own class-level `font-size` overrides. These are not affected by the global h3/h4 rule because class specificity wins. As of 2026-06-25: `0.9rem` (bumped from `0.75rem` to compensate for UFC Sans Condensed appearing slightly smaller at the same rem value as Vend Sans).
+
 **Verification gotcha.** `@import`ed `tokens.css` inside an Astro `<style>` block does **not** reliably HMR — after editing tokens or a component's scoped style, *restart* the dev server for a clean compile, don't trust the live page. Also, `preview_inspect`/`getComputedStyle` reflects `:hover` if the synthetic cursor is parked over the element — a "resting" color reading that comes back as the hover value usually means the pointer is over it; read all sibling elements at once and the non-hovered ones show the true resting color.
