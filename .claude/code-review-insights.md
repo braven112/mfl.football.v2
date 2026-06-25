@@ -575,3 +575,41 @@ The active-state color mismatch (blue-500 vs site primary `#1c497c`) is the most
 ### VALID_VIEWS / Props type divergence pattern
 
 `draft-predictor.astro` defines `VALID_VIEWS = ['projected', 'final', 'history'] as const` which is a parallel source of truth to the `Props` union type in `DraftViewSelector.astro`. When view names are stable this is low risk, but it is a known pattern to watch for. If a view is added, both must be updated. Consider exporting the view type or constant from the component file for external consumers.
+
+---
+
+## Per-League `<head>` Metadata — TheLeagueLayout Favicon Gate (2026-06-25, PR #277)
+
+### Pattern: Registry-based slug comparison in Astro frontmatter
+
+When gating `<head>` content on league identity, compare against `leagueContext.slug` (the canonical slug from the registry, e.g. `'afl-fantasy'`) rather than the derived `league` nav-slug (`'afl'`). The nav-slug is a UI concern; the canonical slug is the stable identity.
+
+**Violation pattern found:** `league === 'afl'` in `TheLeagueLayout.astro:178` hardcodes the `navSlug` string rather than importing from the registry. The correct form:
+```ts
+import { LEAGUES } from '../config/leagues';
+const league: LeagueSlug = leagueContext.slug === LEAGUES['afl-fantasy'].slug
+  ? (LEAGUES['afl-fantasy'].navSlug as LeagueSlug)
+  : (LEAGUES.theleague.navSlug as LeagueSlug);
+```
+
+### PWA Manifest `scope` gotcha
+
+`site.webmanifest` must include `start_url` and `scope` pointing to the league's actual URL path (e.g. `"/afl-fantasy/"`). When the manifest is served from a subdirectory like `/assets/afl/favicons/site.webmanifest`, browsers default the PWA scope to that directory — meaning no AFL page falls in-scope for standalone mode. This is a silent correctness bug that CI won't catch.
+
+**Rule:** For any manifest not at the root, always set `scope` and `start_url` explicitly.
+
+### Dark-mode favicon wiring
+
+Adding a `favicon-dark.svg` asset without a `<link rel="icon" media="(prefers-color-scheme: dark)">` tag ships dead weight. The full pattern:
+```html
+<link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon.svg" />
+<link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+```
+
+### Hardcoded theme-color hex in `<meta>`
+
+`<meta name="theme-color">` cannot use CSS custom properties — the value must be a literal string. When the same hex appears in both the layout `<meta>` and a JSON manifest, extract to a named constant in the Astro frontmatter to keep the value DRY:
+```ts
+const AFL_THEME_COLOR = '#002244';
+// then: content={AFL_THEME_COLOR}
+```
