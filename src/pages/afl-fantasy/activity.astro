@@ -159,18 +159,28 @@ if (useMock) {
 		txCountMap[fid] = { trades, freeAgents: fa, thirdStat: waivers, total: trades + fa + waivers };
 	}
 } else {
-	// AFL spans many historical seasons; use the most recent year that has a feed.
-	const txYears = Object.keys(txFeeds)
-		.map(p => { const m = p.match(/\/(\d{4})\/transactions\.json$/); return m ? parseInt(m[1], 10) : null; })
-		.filter((y): y is number => y !== null)
-		.sort((a, b) => b - a);
-	const latestYear = txYears[0];
-	const txFeedKey = latestYear ? Object.keys(txFeeds).find(p => p.includes(`/${latestYear}/`)) : undefined;
-	const txMod: any = txFeedKey ? txFeeds[txFeedKey] : null;
-	const txData = txMod && typeof txMod === 'object' && 'default' in txMod ? txMod.default : txMod;
-	const rawTx: any[] = txData?.transactions?.transaction
-		? (Array.isArray(txData.transactions.transaction) ? txData.transactions.transaction : [txData.transactions.transaction])
-		: [];
+	// AFL spans many historical seasons. Walk years newest-first and use the
+	// most recent feed that actually has transactions — early in a new league
+	// year the freshest dir (e.g. 2026) can exist but be near-empty, which would
+	// render a blank leaderboard; fall back to the last season with real moves.
+	const yearKeys = Object.keys(txFeeds)
+		.map(p => { const m = p.match(/\/(\d{4})\/transactions\.json$/); return m ? { year: parseInt(m[1], 10), key: p } : null; })
+		.filter((e): e is { year: number; key: string } => e !== null)
+		.sort((a, b) => b.year - a.year);
+
+	const parseTx = (key: string): any[] => {
+		const txMod: any = txFeeds[key];
+		const txData = txMod && typeof txMod === 'object' && 'default' in txMod ? txMod.default : txMod;
+		return txData?.transactions?.transaction
+			? (Array.isArray(txData.transactions.transaction) ? txData.transactions.transaction : [txData.transactions.transaction])
+			: [];
+	};
+
+	let rawTx: any[] = [];
+	for (const { key } of yearKeys) {
+		const parsed = parseTx(key);
+		if (parsed.length > 0) { rawTx = parsed; break; }
+	}
 
 	for (const tx of rawTx) {
 		if (tx.type === 'TRADE') {
