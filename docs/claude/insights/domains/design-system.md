@@ -1113,3 +1113,25 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 **Webmanifest gotcha:** The `site.webmanifest` from the AFL design system ships with *relative* icon paths (`"src": "favicon-192.png"`). When served from `/assets/afl/favicons/site.webmanifest`, relative paths resolve to `/assets/afl/favicons/favicon-192.png` correctly in most browsers — but to be safe and explicit, update the manifest to use **absolute** paths (`"/assets/afl/favicons/favicon-192.png"`) so it resolves correctly regardless of where the file is served from.
 
 **Verification:** Inspect `Array.from(document.querySelectorAll('link[rel*="icon"], link[rel="manifest"], meta[name="theme-color"]')).map(el => el.outerHTML)` on an `/afl-fantasy/` page to confirm the AFL block renders and the TheLeague defaults are absent.
+
+---
+
+## 2026-06-25 - SVG Sprite Icons Need `fill: currentColor` on the Wrapper
+
+**Context:** AFL homepage Explore section — all icons appeared black except Playoffs, which was red.
+
+**Root cause:** SVG `<use>` elements that reference sprite symbols inherit their fill from the symbol's own path attributes, not from the wrapper SVG's CSS `color`. The browser's default SVG fill is `black`. Setting `color: var(--afl-accent)` on the wrapper alone is insufficient — it only works if the path element inside the symbol has `fill="currentColor"` baked in.
+
+In `public/assets/icons/sprite.svg`, `icon-playoff` had `fill="currentColor"` on its `<path>` elements; all other AFL icons did not.
+
+**Fix:** Add `fill: currentColor` to the CSS rule targeting the wrapper SVG element:
+```css
+.afl-links__icon {
+  color: var(--afl-accent);
+  fill: currentColor;   /* required — CSS color alone doesn't cascade into SVG fill */
+}
+```
+
+This overrides the SVG default for any path that doesn't have an explicit fill attribute, while leaving icons with hardcoded fills (e.g. multi-color logos like `icon-nfl`) unaffected (their paths have explicit fill values that win over the CSS rule).
+
+**When to apply:** Any component that uses `<svg class="…"><use href="…" /></svg>` sprite icons and wants them to pick up an accent color via CSS. Always pair `color` with `fill: currentColor` on the icon wrapper.

@@ -119,6 +119,13 @@
       "summary": "AFL now has its own favicon in the browser tab — the AFL football mark replaces the generic placeholder. Includes the full favicon set (SVG, ICO, Apple Touch Icon, and PWA manifest) from the AFL design system, with AFL navy as the theme color.",
       "impact": "user",
       "area": "design-system"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "bug-fix",
+      "summary": "All icons in the AFL homepage Explore section are now red — previously only the Playoffs icon was red because it was the only one with fill set explicitly; the rest inherited SVG's default black.",
+      "impact": "user",
+      "area": "homepage"
     }
   ]
 }
