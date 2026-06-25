@@ -284,7 +284,7 @@ function buildFeatureView(fallback: HeroContent, now: Date): LeagueEventView {
 
 function buildDefaultView(fallback: HeroContent, now: Date): LeagueEventView {
   return {
-    pill: (fallback.kicker ?? 'TheLeague').toUpperCase(),
+    pill: (fallback.kicker ?? 'The League').toUpperCase(),
     headline: fallback.title,
     accentWord: '',
     summary: fallback.summary,

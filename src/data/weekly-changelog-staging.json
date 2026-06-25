@@ -11,14 +11,14 @@
     {
       "date": "2026-06-22",
       "type": "bug-fix",
-      "summary": "\"Manage keepers\" link on the AFL Fantasy homepage now goes to the Keeper Planner on afl-fantasy.com instead of a broken internal page.",
+      "summary": "\"Manage keepers\" link on the AFL homepage now goes to the Keeper Planner on afl-fantasy.com instead of a broken internal page.",
       "impact": "user",
       "area": "homepage"
     },
     {
       "date": "2026-06-24",
       "type": "style-tweak",
-      "summary": "Removed the stray gap above the AFL Fantasy homepage — the hero and Schefter Report now sit flush at the top of their columns instead of floating below an empty band.",
+      "summary": "Removed the stray gap above the AFL homepage — the hero and Schefter Report now sit flush at the top of their columns instead of floating below an empty band.",
       "impact": "user",
       "area": "homepage"
     },
@@ -32,7 +32,7 @@
     {
       "date": "2026-06-24",
       "type": "bug-fix",
-      "summary": "AFL Fantasy's Owner Activity report now tracks waiver claims instead of auction wins — AFL is a keeper league with no auction, so the old \"Auctions\" column never reflected real activity.",
+      "summary": "AFL's Owner Activity report now tracks waiver claims instead of auction wins — AFL is a keeper league with no auction, so the old \"Auctions\" column never reflected real activity.",
       "impact": "user",
       "area": "other"
     },
@@ -46,7 +46,7 @@
     {
       "date": "2026-06-24",
       "type": "style-tweak",
-      "summary": "AFL Fantasy conferences now carry their own American League (red) and National League (blue) logos across the conference standings headers, the division headers, and the homepage playoff and draft previews, and the Premier League / D-League marks now appear on the homepage tier standings preview too.",
+      "summary": "AFL conferences now carry their own American League (red) and National League (blue) logos across the conference standings headers, the division headers, and the homepage playoff and draft previews, and the Premier League / D-League marks now appear on the homepage tier standings preview too.",
       "impact": "user",
       "area": "standings"
     },
@@ -60,7 +60,7 @@
     {
       "date": "2026-06-24",
       "type": "style-tweak",
-      "summary": "AFL Fantasy got its own identity: the top \"Back to MFL\" bar and footer now use a deep navy, the header nav icons are navy (turning red on hover), and homepage accents — section borders, icons, and links — are now AFL red instead of the borrowed blue. TheLeague's look is unchanged.",
+      "summary": "AFL got its own identity: the top \"Back to MFL\" bar and footer now use a deep navy, the header nav icons are navy (turning red on hover), and homepage accents — section borders, icons, and links — are now AFL red instead of the borrowed blue. The League's look is unchanged.",
       "impact": "user",
       "area": "design-system"
     },
@@ -74,9 +74,16 @@
     {
       "date": "2026-06-24",
       "type": "style-tweak",
-      "summary": "Removed the same stray gap from TheLeague homepage — both sites now have their hero and sidebar sitting flush at the top of their columns.",
+      "summary": "Removed the same stray gap from The League homepage — both sites now have their hero and sidebar sitting flush at the top of their columns.",
       "impact": "user",
       "area": "homepage"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "style-tweak",
+      "summary": "League names are now consistent across the whole site: the league is 'The League' (not 'TheLeague') and the other is 'AFL' (not 'AFL Fantasy' or 'American Football League'). Fixed in the league registry, config files, hero copy, page descriptions, and published What's New articles.",
+      "impact": "user",
+      "area": "design-system"
     }
   ]
 }

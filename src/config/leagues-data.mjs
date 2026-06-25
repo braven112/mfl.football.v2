@@ -36,7 +36,7 @@ export const LEAGUES = {
     id: '19621',
     slug: 'afl-fantasy',
     navSlug: 'afl',
-    name: 'American Football League',
+    name: 'AFL',
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],

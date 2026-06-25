@@ -3,9 +3,9 @@
     "id": "theleague-branded-hero",
     "date": "2026-06-24",
     "title": "The Homepage Hero Gets a Uniform",
-    "summary": "TheLeague's homepage hero now wears one branded deep-navy look across the whole calendar — the draft, the tag window, the trade deadline, the live Sunday slate. One card, a rotating cast of player cut-outs, a per-event accent color, and a border that only shows up when there's a clock running.",
+    "summary": "The League's homepage hero now wears one branded deep-navy look across the whole calendar — the draft, the tag window, the trade deadline, the live Sunday slate. One card, a rotating cast of player cut-outs, a per-event accent color, and a border that only shows up when there's a clock running.",
     "description": [
-      "TheLeague homepage hero used to be a grab-bag. The draft countdown looked like one thing, the tag window looked like another, the trade deadline did its own thing entirely, and the offseason just sort of shrugged. Every season milestone showed up in a slightly different outfit, like a team that never agreed on a jersey — same league, five different sweaters, no two countdowns built the same way.",
+      "The League homepage hero used to be a grab-bag. The draft countdown looked like one thing, the tag window looked like another, the trade deadline did its own thing entirely, and the offseason just sort of shrugged. Every season milestone showed up in a slightly different outfit, like a team that never agreed on a jersey — same league, five different sweaters, no two countdowns built the same way.",
       "Now every hero state runs through the same branded shell. The deep-navy card, the player cut-out fading in on the right, the big headline with a punchy accent word, the countdown chip, the green CTA button — it's one consistent system from the NFL Draft through rookie season, the franchise-tag window, the offseason auction, the trade deadline, the live Sunday slate, and the quiet stretches in between. Each milestone gets its own accent color keyed to where it sits on the calendar: blue for the preseason run-up, green for free agency, purple for the draft, navy for the regular season. The player on the card rotates so it never looks the same two days running.",
       "And like the AFL hero, the border earns its keep: it only frames calendar-anchored events — the deadline you can't miss, the draft that's about to start. Ambient states wear the same card without the frame. One identity, every day of the season, finally reading from the same playbook."
     ],
@@ -14,7 +14,7 @@
     "linkLabel": "See the homepage",
     "icon": "star",
     "image": "theleague-branded-hero.webp",
-    "imageAlt": "TheLeague homepage hero in its franchise-tag-window state — a deep-navy card with a blue 'TAG WINDOW' pill, the headline 'PROTECT YOUR CORE.' with CORE in blue, a 'MANAGE ROSTER' button, a '12 / DAYS TO TAG DEADLINE' countdown chip, and an NFL player cut-out on the right.",
+    "imageAlt": "The League homepage hero in its franchise-tag-window state — a deep-navy card with a blue 'TAG WINDOW' pill, the headline 'PROTECT YOUR CORE.' with CORE in blue, a 'MANAGE ROSTER' button, a '12 / DAYS TO TAG DEADLINE' countdown chip, and an NFL player cut-out on the right.",
     "leagues": [
       "theleague"
     ]
@@ -25,9 +25,9 @@
     "title": "Who's Actually Showing Up — Now for the AFL",
     "summary": "The Owner Activity page lands on the AFL: a leaderboard of who last logged in, a 30-day page-views chart with a line for every franchise, the pages everyone's actually clicking, and a season-long transaction tally. The 'I've been busy' excuse now comes with a timestamp.",
     "description": [
-      "Every league has the owner who swears they're 'staying active' while their roster quietly rots through three waiver cycles. Until now the AFL had no way to call the bluff — activity was a vibe, not a number. TheLeague has had the receipts for a while: a page that shows exactly when each owner last surfaced, what they were looking at, and how many moves they've actually made.",
+      "Every league has the owner who swears they're 'staying active' while their roster quietly rots through three waiver cycles. Until now the AFL had no way to call the bluff — activity was a vibe, not a number. The League has had the receipts for a while: a page that shows exactly when each owner last surfaced, what they were looking at, and how many moves they've actually made.",
       "Owner Activity is now live at /afl-fantasy/activity. The Last Seen table ranks all 24 franchises by most recent visit, with a green/yellow/red dot so you can spot the dormant accounts at a glance. A 30-day page-views chart draws one color-coded line per team — toggle franchises on and off in the legend, hover any day for the breakdown. Below that: the most-visited pages across the whole league, an expandable per-owner view of what each team obsesses over, and a transaction leaderboard tallying trades, free-agent moves, and auction wins for the season. It fills in on its own as owners browse — no setup, no tracking pixel homework.",
-      "TheLeague got to keep score on engagement first. The AFL just got the same scoreboard — and the cold-cereal era keeps getting shorter."
+      "The League got to keep score on engagement first. The AFL just got the same scoreboard — and the cold-cereal era keeps getting shorter."
     ],
     "category": "new-page",
     "link": "/afl-fantasy/activity",
@@ -47,7 +47,7 @@
     "description": [
       "The AFL constitution used to be a 20-section HTML document you'd Cmd-F through whenever a question came up about NIT bonus math, the trade deposit, or whether your kicker has to start (he does). Meanwhile the GroupMe stayed quiet on transactions — no breaking news, no auction recaps, no one yelling about a waiver pickup at 9:01 PM. The AFL was running on a 2008 newsletter cadence in a 2026 league.",
       "Ask Roger is now live at /afl-fantasy/rules-chat. He's read every conference, every division, every promotion/relegation clause, and the fine print about the $50 trade deposit that even the Commissioner forgets about. Ask him anything — \"how does the NIT bonus work,\" \"can I trade my 2027 first,\" \"what happens if I miss the keeper deadline\" — and he answers with citations to the actual constitution. Linked from the rules page, the main nav, and global search. Meanwhile Claude Schefter is now wired into the AFL GroupMe via his own bot, filing breaking news on trades, big-money auction wins, and waiver claims the moment they cross the wire.",
-      "TheLeague has had both of these for months. AFL was the kid eating cold cereal while everyone else got pancakes. Not anymore."
+      "The League has had both of these for months. AFL was the kid eating cold cereal while everyone else got pancakes. Not anymore."
     ],
     "category": "new-feature",
     "link": "/afl-fantasy/rules-chat",
@@ -1121,7 +1121,7 @@
       "Holiday week polish covering playoffs, navigation, and mobile experience:",
       "<strong>Playoffs</strong> — Champion logic updated for accurate bracket progression. AFL bracket fixes applied. Conference and division names corrected. NIT seeding and seed font size adjusted. Playoff icons fixed.",
       "<strong>Navigation</strong> — Header/footer logic refined for consistent layout. Mobile view cleaned up across prize page and playoff brackets. Remove unnecessary links for AFL.",
-      "<strong>Mobile</strong> — Mobile styles fixed for TheLeague pages. Off-white background color adjusted to be Mac-friendly. Apple-safe background colors applied. Franchise icon resizing improved. Mobile padding fixed on AFL playoff page.",
+      "<strong>Mobile</strong> — Mobile styles fixed for The League pages. Off-white background color adjusted to be Mac-friendly. Apple-safe background colors applied. Franchise icon resizing improved. Mobile padding fixed on AFL playoff page.",
       "<strong>Other</strong> — Team nav fixes applied. Draft predictor updated for AFL support. Live data endpoints added for real-time playoff scoring."
     ],
     "category": "bug-fix",
