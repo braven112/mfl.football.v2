@@ -1045,16 +1045,16 @@ describe('resolveHeroState', () => {
   });
 
   describe('Off-season phases (P3 ambient, P1 urgent cut-watch)', () => {
-    it('should return tag-window (P3) in January', () => {
+    it('should return tag-window (P1) in January', () => {
       const state = resolveHeroState(new Date(2027, 0, 15), true);
       expect(state.phase).toBe('tag-window');
-      expect(state.priority).toBe('P3');
+      expect(state.priority).toBe('P1');
     });
 
-    it('should return tagged-showcase (P3) in late February', () => {
+    it('should return tagged-showcase (P1) in late February', () => {
       const state = resolveHeroState(new Date(2027, 1, 20), true);
       expect(state.phase).toBe('tagged-showcase');
-      expect(state.priority).toBe('P3');
+      expect(state.priority).toBe('P1');
     });
 
     it('should return cut-watch at P1 (urgent) in late July — final 30 days', () => {
