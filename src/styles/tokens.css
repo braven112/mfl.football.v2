@@ -215,7 +215,7 @@
   --league-accent: var(--color-primary);
 
   /* Header nav-icon strip — per-league. TheLeague = blue → green hover (default);
-     AFL overrides to deep navy → red hover in html[data-league="afl"]. */
+     AFL overrides to red → navy hover in html[data-league="afl"]. */
   --header-nav-icon-color: var(--color-primary);
   --header-nav-icon-hover-color: var(--color-secondary);
 
@@ -626,8 +626,10 @@ html[data-league="afl"] {
   --breadcrumb-bar-bg: var(--afl-navy);        /* top "Back to MFL" strip */
   --inverse-bg: var(--afl-navy);               /* footer (via --inverse-content-bg) */
   --league-accent: #c41e3a;                    /* AFL accent — red */
-  --header-nav-icon-color: var(--afl-navy);    /* nav icons — deep navy */
-  --header-nav-icon-hover-color: var(--league-accent);  /* nav icons hover — red */
+  --header-nav-icon-color: var(--afl-navy);           /* nav icons — deep navy */
+  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
+  --header-nav-label-color: var(--league-accent);     /* nav labels — red */
+  --header-nav-label-hover-color: var(--league-accent); /* nav labels hover — red */
 }
 
 /* ========================================
