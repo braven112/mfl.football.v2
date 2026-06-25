@@ -13,24 +13,19 @@ import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
   event: ResolvedLeagueEvent | null;
+  /** Timeline position — drives card styling (e.g. the dimmed "upcoming" slot). */
   position: 'current' | 'next' | 'upcoming';
-  /** Explicit pill label. When omitted, falls back to a position-derived label. */
-  label?: string;
+  /**
+   * Pill text. Required: only the caller knows the forward-looking slot order
+   * (Up Next / Coming Soon / Later, or Happening Now when an event is live),
+   * which can't be derived from `position` + `event` alone.
+   */
+  label: string;
 }
 
 const { event, position, label } = Astro.props;
 
 if (!event) return;
-
-// The timeline is forward-looking, so the lead slot is "Up Next" unless an
-// event is genuinely live. Callers pass an explicit `label` to keep the three
-// slots in order (Up Next / Coming Soon / Later); this is the fallback.
-const positionLabels = {
-  current: event.isActive ? 'Happening Now' : 'Up Next',
-  next: 'Up Next',
-  upcoming: 'Coming Soon',
-};
-const pillLabel = label ?? positionLabels[position];
 
 const dateDisplay = event.definition.endDate
   ? formatEventDateRange(event.startDate, event.endDate)
@@ -68,7 +63,7 @@ const cardClasses = [
           </svg>
         </span>
       )}
-      <span class="whats-next-card__pill">{pillLabel}</span>
+      <span class="whats-next-card__pill">{label}</span>
     </div>
 
     <h3 class="whats-next-card__title">{event.definition.name}</h3>
