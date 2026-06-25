@@ -582,6 +582,11 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     font-size: 0.7rem;
     font-weight: 500;
     white-space: nowrap;
+    color: var(--header-nav-label-color, currentColor);
+  }
+
+  .nav-icon-link:hover .nav-label {
+    color: var(--header-nav-label-hover-color, currentColor);
   }
 
   @media (min-width: 992px) {
