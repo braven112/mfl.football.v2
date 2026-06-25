@@ -11,7 +11,8 @@ import path from 'node:path';
 import type { HeroState } from '../types/hero-state';
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { getCurrentSeasonYear } from './league-year';
-import { getNthDayOfMonth } from './league-event-resolver';
+import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
+import { isCutWatchUrgent } from './hero-resolver';
 
 // ── JSON Data Loaders ──
 
@@ -402,9 +403,48 @@ export async function enrichHeroState(state: HeroState): Promise<HeroState> {
       return enrichTaggedShowcase(state);
     case 'cut-watch':
       return enrichCutWatch(state);
+    case 'preseason-countdown':
+      return enrichPreseason(state);
+    case 'draft-countdown':
+      return enrichDraftCountdown(state);
     default:
       return state;
   }
+}
+
+function enrichDraftCountdown(state: HeroState): HeroState {
+  const refDate = state.metadata.referenceDate;
+  const nflDraft = getNflDraftDate(refDate.getFullYear());
+  const daysUntilDraft = Math.max(
+    0,
+    Math.ceil((nflDraft.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)),
+  );
+  const nflDraftDate = nflDraft.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  return { ...state, draftCountdownProps: { nflDraftDate, daysUntilDraft } };
+}
+
+/** NFL kickoff = Thursday after Labor Day (1st Monday of September). */
+function getKickoffDate(year: number): Date {
+  const laborDay = getNthDayOfMonth(year, 8, 1, 1); // 1st Monday of September
+  const kickoff = new Date(laborDay);
+  kickoff.setDate(kickoff.getDate() + 3); // Thursday = Monday + 3
+  kickoff.setHours(0, 0, 0, 0);
+  return kickoff;
+}
+
+function enrichPreseason(state: HeroState): HeroState {
+  const refDate = state.metadata.referenceDate;
+  const kickoff = getKickoffDate(refDate.getFullYear());
+  const daysUntilKickoff = Math.max(
+    0,
+    Math.ceil((kickoff.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)),
+  );
+  const kickoffDate = kickoff.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  return { ...state, preseasonProps: { kickoffDate, daysUntilKickoff } };
 }
 
 function enrichChampion(state: HeroState): HeroState {
@@ -432,6 +472,7 @@ function enrichChampion(state: HeroState): HeroState {
       winnerFranchiseId: result.winnerFranchiseId,
       winnerName: winner.name,
       winnerIcon: winner.icon,
+      winnerGroupMeIcon: winner.icon.replace('/assets/theleague/icons/', '/assets/theleague/group-me/'),
       winnerColor: winner.color,
       loserFranchiseId: result.loserFranchiseId,
       loserName: loser.name,
@@ -513,6 +554,7 @@ function enrichCutWatch(state: HeroState): HeroState {
       overLimitTeams,
       deadlineDate: deadlineFormatted,
       daysUntilDeadline: daysUntil,
+      urgent: isCutWatchUrgent(refDate),
     },
   };
 }

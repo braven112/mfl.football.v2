@@ -84,6 +84,27 @@
       "summary": "League names are now consistent across the whole site: the league is 'The League' (not 'TheLeague') and the other is 'AFL' (not 'AFL Fantasy' or 'American Football League'). Fixed in the league registry, config files, hero copy, page descriptions, and published What's New articles.",
       "impact": "user",
       "area": "design-system"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "bug-fix",
+      "summary": "The homepage hero no longer surfaces a months-old feature as if it were news — a feature stops headlining after 3 weeks. Cut Watch now runs in two tiers (calm roster-planning from June, red-urgent in the final 30 days), and two new countdown heroes fill the old dead zones: Draft Season (post-auction, counting down to the NFL Draft) and Preseason (between roster cuts and Week 1) — instead of a generic What's New card.",
+      "impact": "user",
+      "area": "homepage"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "bug-fix",
+      "summary": "The early Cut Watch hero now uses a readable blue accent instead of the near-invisible dark navy that matched the card background — the countdown number and 'AHEAD.' label are actually legible now.",
+      "impact": "user",
+      "area": "homepage"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "style-tweak",
+      "summary": "The Champion Crowned homepage hero is now a full dark editorial card — the winning team's logo sits large in the background at 50% opacity, the champion gets a personalized message, and the whole thing wears the same deep-navy branded style as every other offseason hero.",
+      "impact": "user",
+      "area": "homepage"
     }
   ]
 }

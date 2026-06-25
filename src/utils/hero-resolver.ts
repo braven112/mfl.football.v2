@@ -34,6 +34,14 @@ function formatKickerDate(dateStr: string): string {
 /** How many days a new feature stays in the hero as top priority */
 const FEATURE_HERO_DAYS = 7;
 
+/**
+ * How many days a feature stays eligible as the default-fallback hero (3 weeks).
+ * Past this, a feature reads like stale news in the hero, so we fall through to
+ * the generic What's New promo (and let lower-priority seasonal phases like Cut
+ * Watch take over instead).
+ */
+const DEFAULT_HERO_MAX_FEATURE_DAYS = 21;
+
 /** How many days before an event to consider it "upcoming" for hero */
 const UPCOMING_EVENT_DAYS = 7;
 
@@ -282,13 +290,17 @@ function getDraftHero(live: boolean): HeroContent {
   };
 }
 
-/** Default fallback: show the newest What's New article (any age) */
-function getDefaultHero(heroEligible: WhatsNewEntry[]): HeroContent {
-  // Pick the newest hero-eligible article regardless of age
+/**
+ * Default fallback: show the newest What's New article, but only if it's still
+ * reasonably fresh (≤3 weeks). A months-old feature in the hero reads like stale
+ * news, so beyond that window we fall through to the generic What's New promo.
+ */
+function getDefaultHero(heroEligible: WhatsNewEntry[], referenceDate: Date): HeroContent {
+  // Pick the newest hero-eligible article, capped at the freshness window.
   const sorted = [...heroEligible].sort(
     (a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime(),
   );
-  if (sorted.length > 0) {
+  if (sorted.length > 0 && daysAgo(sorted[0].date, referenceDate) <= DEFAULT_HERO_MAX_FEATURE_DAYS) {
     return featureToHero(sorted[0]);
   }
   // Ultimate fallback if there are zero What's New entries
@@ -309,6 +321,23 @@ function daysAgo(dateStr: string, referenceDate: Date): number {
   const entryDate = new Date(dateStr + 'T00:00:00');
   const diffMs = referenceDate.getTime() - entryDate.getTime();
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Whether a genuinely fresh (≤7 day) TheLeague feature is competing for the hero.
+ *
+ * Used by the state machine to decide whether an ambient offseason phase (Tag
+ * Window, Tagged Showcase, UDFA, early Cut Watch, Preseason Countdown) should
+ * step aside for a brand-new feature. Mirrors the Priority-1 filter inside
+ * {@link resolveHeroContent} so the two paths agree on "fresh".
+ */
+function hasFreshFeatureEntry(entries: WhatsNewEntry[] | undefined, now: Date): boolean {
+  if (!entries) return false;
+  return entries.some((e) => {
+    if (e.excludeFromHero || !entryAppliesToLeague(e, 'theleague')) return false;
+    const age = daysAgo(e.date, now);
+    return age >= 0 && age <= FEATURE_HERO_DAYS;
+  });
 }
 
 /**
@@ -369,8 +398,8 @@ export function resolveHeroContent(
     return eventToHero(upcomingEvent, now);
   }
 
-  // --- Priority 5: Default fallback (newest article, any age) ---
-  return getDefaultHero(heroEligible);
+  // --- Priority 5: Default fallback (newest article, capped at 3 weeks) ---
+  return getDefaultHero(heroEligible, now);
 }
 
 /** Find an urgent event from the timeline (isUrgent = within urgencyDays) */
@@ -640,15 +669,87 @@ export function isPostDraftPeriod(referenceDate: Date): boolean {
   return referenceDate > draftHeroEnd && referenceDate <= faCloses;
 }
 
-/** Check if in the cut watch period (~Jul 15 → Aug 16) */
+/** How many days before FA close the Cut Watch hero escalates to its urgent tier. */
+const CUT_WATCH_URGENT_DAYS = 30;
+
+/** Free-agency close = 3rd Sunday of August (end of day). The roster deadline. */
+function getFaCloseDate(year: number): Date {
+  const faCloses = getNthDayOfMonth(year, 7, 0, 3); // 3rd Sunday of August
+  faCloses.setHours(23, 59, 59, 999);
+  return faCloses;
+}
+
+/**
+ * Check if in the cut watch period (~Jun 1 → 3rd Sun of Aug).
+ *
+ * Cut Watch runs in two tiers:
+ * - Early/ambient (Jun 1 → faClose −30d): roster planning, sits below a fresh
+ *   feature in the hero — see {@link isCutWatchEarly}.
+ * - Urgent (final 30 days → faClose): the deadline is imminent, outranks
+ *   features — see {@link isCutWatchUrgent}.
+ */
 function isCutWatch(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
 
-  const cutStart = new Date(year, 6, 15); // Jul 15
-  const faCloses = getNthDayOfMonth(year, 7, 0, 3); // 3rd Sunday of August
-  faCloses.setHours(23, 59, 59, 999);
+  const cutStart = new Date(year, 5, 1); // Jun 1
+  return referenceDate >= cutStart && referenceDate <= getFaCloseDate(year);
+}
 
-  return referenceDate >= cutStart && referenceDate <= faCloses;
+/**
+ * Cut Watch — final 30 days before the roster deadline. The imminent-deadline
+ * tier: it beats a fresh feature in the hero (highest-priority offseason state).
+ */
+export function isCutWatchUrgent(referenceDate: Date): boolean {
+  if (!isCutWatch(referenceDate)) return false;
+  const { year } = getPTComponents(referenceDate);
+  const urgentStart = new Date(getFaCloseDate(year));
+  urgentStart.setDate(urgentStart.getDate() - CUT_WATCH_URGENT_DAYS);
+  urgentStart.setHours(0, 0, 0, 0);
+  return referenceDate >= urgentStart;
+}
+
+/**
+ * Cut Watch — early/ambient tier (Jun 1 → faClose −30d). Roster planning, not a
+ * deadline yet, so it yields to a genuinely fresh feature in the hero.
+ */
+export function isCutWatchEarly(referenceDate: Date): boolean {
+  return isCutWatch(referenceDate) && !isCutWatchUrgent(referenceDate);
+}
+
+/**
+ * Check if in the preseason countdown window (after FA close → NFL kickoff).
+ *
+ * Fills the late-summer gap between Cut Watch ending (3rd Sun of Aug) and the
+ * regular season kicking off (Thursday after Labor Day) — otherwise the highest-
+ * traffic hype window of the year would fall through to a generic What's New card.
+ */
+export function isPreseasonCountdown(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+  const start = new Date(getFaCloseDate(year));
+  start.setDate(start.getDate() + 1); // day after FA close
+  start.setHours(0, 0, 0, 0);
+  const kickoff = getKickoffDate(year); // Thursday after Labor Day, midnight
+  return referenceDate >= start && referenceDate < kickoff;
+}
+
+/**
+ * Check if in the draft countdown window (after the Auction Hero → Draft Hero).
+ *
+ * Fills the post-auction lull (~late Mar → late Apr) between the auction wrapping
+ * up and the Draft Hero starting the Monday after the NFL Draft. Otherwise this
+ * rookie-scouting stretch falls through to a generic What's New card. Symmetric
+ * to {@link isPreseasonCountdown} — a countdown into a tentpole, not a deadline.
+ *
+ * The start overlaps the Auction Hero's final day, but that's P0 and resolved
+ * first, so there's no gap and no conflict.
+ */
+export function isDraftCountdown(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const start = new Date(getAuctionHeroStart(year));
+  start.setDate(start.getDate() + AUCTION_HERO_TOTAL_DAYS); // auction hero's last day
+  start.setHours(0, 0, 0, 0);
+  const draftHeroStart = getDraftHeroStart(year); // Mon 9am after the NFL Draft
+  return referenceDate >= start && referenceDate < draftHeroStart;
 }
 
 // ── Daily Slot Routing ──
@@ -940,9 +1041,11 @@ export function resolveHeroState(
     });
   }
 
-  // --- P1: Cut Watch ---
-  if (isCutWatch(now)) {
-    return buildState('cut-watch', 'P1', 'isCutWatch', now, testMode, {
+  // --- P1: Cut Watch — final 30 days (imminent roster deadline) ---
+  // The only ambient offseason state that outranks a fresh feature: the deadline
+  // is close enough that it must lead regardless of what just shipped.
+  if (isCutWatchUrgent(now)) {
+    return buildState('cut-watch', 'P1', 'isCutWatchUrgent', now, testMode, {
       fallbackHero: {
         source: 'event',
         title: 'Cut Watch — Roster Deadline',
@@ -955,6 +1058,117 @@ export function resolveHeroState(
         isUrgent: true,
       },
     });
+  }
+
+  // --- P3: Ambient offseason phases ---
+  // Tag Window, Tagged Showcase, UDFA, early Cut Watch, and the Preseason
+  // Countdown are roster *context*, not deadlines. A genuinely fresh (≤7 day)
+  // feature gets to lead instead — so we step aside when one is competing and
+  // let it surface as P2 in the fallback below. (When no timeline is supplied,
+  // there's nowhere to render the feature, so we don't defer.)
+  const deferToFeature = !!timeline && hasFreshFeatureEntry(entries, now);
+  if (!deferToFeature) {
+    // --- P3: Tag & Extension Window ---
+    if (isTagWindow(now)) {
+      return buildState('tag-window', 'P3', 'isTagWindow', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Franchise Tags & Extensions',
+          summary: 'Protect your core. Tag players to retain exclusive rights. Extend contracts before they hit the open market.',
+          link: '/theleague/rosters',
+          linkLabel: 'Manage Your Roster',
+          icon: 'tag',
+          accentColor: 'var(--cat-preseason, #60a5fa)',
+          kicker: 'Offseason',
+          isActive: true,
+        },
+      });
+    }
+
+    // --- P3: Tagged Player Showcase ---
+    if (isTaggedShowcase(now)) {
+      return buildState('tagged-showcase', 'P3', 'isTaggedShowcase', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Tagged Players — Open for Offers',
+          summary: 'These franchise-tagged players can be poached. Make an offer before the matching period ends.',
+          link: '/theleague/rosters',
+          linkLabel: 'View Roster Details',
+          icon: 'target',
+          accentColor: 'var(--cat-free-agency, #2e8743)',
+          kicker: 'Tag Showcase',
+          isActive: true,
+        },
+      });
+    }
+
+    // --- P3: Draft Countdown (Auction Hero end → Draft Hero start) ---
+    if (isDraftCountdown(now)) {
+      return buildState('draft-countdown', 'P3', 'isDraftCountdown', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Draft Season Is Here',
+          summary: 'The auction is settled — now scout the rookie class. Build your board and rehearse before draft day.',
+          link: '/theleague/mock-draft',
+          linkLabel: 'Run a mock draft',
+          icon: 'draft-podium',
+          accentColor: 'var(--cat-draft, #7c3aed)',
+          kicker: 'Draft Season',
+          isActive: true,
+        },
+      });
+    }
+
+    // --- P3: UDFA Free Agent Window ---
+    if (isUDFAWindow(now, draftComplete)) {
+      return buildState('udfa-window', 'P3', 'isUDFAWindow', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Undrafted Free Agents Available',
+          summary: 'The draft is over but the bargains aren\'t. Undrafted rookies are now free agents.',
+          link: '/theleague/free-agents',
+          linkLabel: 'Browse Free Agents',
+          icon: 'binoculars',
+          accentColor: 'var(--cat-draft, #7c3aed)',
+          kicker: 'UDFA Window',
+          isActive: true,
+        },
+      });
+    }
+
+    // --- P3: Cut Watch — early/ambient tier (Jun 1 → faClose −30d) ---
+    if (isCutWatchEarly(now)) {
+      return buildState('cut-watch', 'P3', 'isCutWatchEarly', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Cut Watch — Roster Planning',
+          summary: 'Rosters trim to 22 active players before the season. Start lining up your cuts.',
+          link: '/theleague/rosters',
+          linkLabel: 'View Full Rosters',
+          icon: 'scissors',
+          accentColor: 'var(--cat-preseason, #60a5fa)',
+          kicker: 'Cut Watch',
+          isActive: true,
+        },
+      });
+    }
+
+    // --- P3: Preseason Countdown (FA close → NFL kickoff) ---
+    if (isPreseasonCountdown(now)) {
+      return buildState('preseason-countdown', 'P3', 'isPreseasonCountdown', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Kickoff Is Coming',
+          summary: 'Rosters are set. The countdown to Week 1 is on — lock your lineup and get ready.',
+          link: '/theleague/standings',
+          linkLabel: 'View Standings',
+          icon: 'whistle',
+          accentColor: 'var(--cat-regular-season, #1c497c)',
+          kicker: 'Preseason',
+          isActive: true,
+        },
+      });
+    }
   }
 
   // --- P2-P5: Fallback through existing resolver ---

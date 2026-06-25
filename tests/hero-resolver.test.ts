@@ -58,6 +58,7 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
     icon: overrides?.icon,
     pinToHero: overrides?.pinToHero,
     excludeFromHero: overrides?.excludeFromHero,
+    leagues: overrides?.leagues,
   };
 }
 
@@ -459,7 +460,8 @@ describe('resolveHeroContent', () => {
 
     it('should NOT show an upcoming event more than 7 days away', () => {
       const entries: WhatsNewEntry[] = [
-        makeEntry({ id: 'old', title: 'Old Feature', date: '2025-11-01' }),
+        // Recent enough (8 days) to still surface via the fallback cap
+        makeEntry({ id: 'recent', title: 'Recent Feature', date: '2026-02-08' }),
       ];
       const farEvent = makeEvent({
         name: 'Far Away Event',
@@ -472,14 +474,28 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      // Falls through to fallback — shows newest article
+      // Far event is skipped — fallback shows the recent article, not the event
       expect(result.source).toBe('feature');
-      expect(result.title).toBe('Old Feature');
+      expect(result.title).toBe('Recent Feature');
     });
   });
 
   describe('Priority 5: Default fallback', () => {
-    it('should show the newest article as fallback when no entries or events qualify for higher priority', () => {
+    it('should show a recent (≤3 week) article as fallback when nothing higher qualifies', () => {
+      const entries: WhatsNewEntry[] = [
+        // 18 days old — outside the 7-day promo window but inside the 3-week fallback cap
+        makeEntry({ id: 'recent', title: 'Recent Feature', date: '2026-01-29' }),
+      ];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 1, 16);
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('feature');
+      expect(result.title).toBe('Recent Feature');
+    });
+
+    it('should fall through to the generic default when the newest article is older than 3 weeks', () => {
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'ancient', title: 'Ancient Feature', date: '2025-01-01' }),
       ];
@@ -488,9 +504,9 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      // Falls through to fallback — shows newest article regardless of age
-      expect(result.source).toBe('feature');
-      expect(result.title).toBe('Ancient Feature');
+      // Too stale to highlight — generic What's New promo instead of the article
+      expect(result.source).toBe('default');
+      expect(result.title).toBe("What's New");
     });
 
     it('should show the generic default only with empty entries', () => {
@@ -692,13 +708,15 @@ describe('resolveHeroContent', () => {
       );
       expect(result.title).toBe('Upcoming');
 
-      // Priority 5: Remove upcoming — fallback shows newest article
+      // Priority 5: Remove upcoming — `old` is >3 weeks stale, so the fallback
+      // shows the generic What's New promo rather than highlighting it.
       result = resolveHeroContent(
         [old],
         makeTimeline(),
         now,
       );
-      expect(result.title).toBe('Old');
+      expect(result.source).toBe('default');
+      expect(result.title).toBe("What's New");
     });
   });
 
@@ -1026,21 +1044,92 @@ describe('resolveHeroState', () => {
     });
   });
 
-  describe('P1 Off-season phases', () => {
-    it('should return tag-window in January', () => {
+  describe('Off-season phases (P3 ambient, P1 urgent cut-watch)', () => {
+    it('should return tag-window (P3) in January', () => {
       const state = resolveHeroState(new Date(2027, 0, 15), true);
       expect(state.phase).toBe('tag-window');
-      expect(state.priority).toBe('P1');
+      expect(state.priority).toBe('P3');
     });
 
-    it('should return tagged-showcase in late February', () => {
+    it('should return tagged-showcase (P3) in late February', () => {
       const state = resolveHeroState(new Date(2027, 1, 20), true);
       expect(state.phase).toBe('tagged-showcase');
-      expect(state.priority).toBe('P1');
+      expect(state.priority).toBe('P3');
     });
 
-    it('should return cut-watch in late July', () => {
+    it('should return cut-watch at P1 (urgent) in late July — final 30 days', () => {
+      // 2027 FA close = 3rd Sun of Aug = Aug 15; urgent window starts Jul 16.
       const state = resolveHeroState(new Date(2027, 6, 20), true);
+      expect(state.phase).toBe('cut-watch');
+      expect(state.priority).toBe('P1');
+      expect(state.metadata.resolvedBy).toBe('isCutWatchUrgent');
+    });
+
+    it('should return cut-watch at P3 (early/ambient) in late June', () => {
+      const state = resolveHeroState(new Date(2027, 5, 24), true);
+      expect(state.phase).toBe('cut-watch');
+      expect(state.priority).toBe('P3');
+      expect(state.metadata.resolvedBy).toBe('isCutWatchEarly');
+    });
+
+    it('should return draft-countdown (P3) in the post-auction lull (mid-April)', () => {
+      // 2027: auction hero ends late March; NFL Draft late April; Draft Hero
+      // starts the Monday after. Mid-April sits in the gap between.
+      const state = resolveHeroState(new Date(2027, 3, 15), true);
+      expect(state.phase).toBe('draft-countdown');
+      expect(state.priority).toBe('P3');
+      expect(state.metadata.resolvedBy).toBe('isDraftCountdown');
+    });
+
+    it('should let a FRESH feature outrank draft-countdown (ambient yields to P2)', () => {
+      const ref = new Date(2027, 3, 15);
+      const fresh = ref.toISOString().slice(0, 10);
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: fresh, leagues: ['theleague'] }),
+      ];
+      const state = resolveHeroState(ref, true, entries, makeTimeline());
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.priority).toBe('P2');
+      expect(state.fallbackHero?.title).toBe('Fresh Feature');
+    });
+
+    it('should return preseason-countdown (P3) between FA close and kickoff', () => {
+      // Late August 2027: after the Aug 15 FA close, before the Sep kickoff.
+      const state = resolveHeroState(new Date(2027, 7, 25), true);
+      expect(state.phase).toBe('preseason-countdown');
+      expect(state.priority).toBe('P3');
+    });
+
+    it('should NOT highlight a stale feature in late June — early cut-watch wins the fallback', () => {
+      // Reproduces the original bug: a months-old feature was surfacing in the
+      // June hero via the P5 fallback. Early Cut Watch (P3) now covers it.
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'stale', title: 'Stale Feature', date: '2027-04-22' }),
+      ];
+      const state = resolveHeroState(new Date(2027, 5, 24), true, entries, makeTimeline());
+      expect(state.phase).toBe('cut-watch');
+      expect(state.fallbackHero?.title).not.toBe('Stale Feature');
+    });
+
+    it('should let a FRESH feature outrank early cut-watch (ambient yields to P2)', () => {
+      const ref = new Date(2027, 5, 24);
+      const fresh = ref.toISOString().slice(0, 10); // 0 days old
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: fresh, leagues: ['theleague'] }),
+      ];
+      const state = resolveHeroState(ref, true, entries, makeTimeline());
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.priority).toBe('P2');
+      expect(state.fallbackHero?.title).toBe('Fresh Feature');
+    });
+
+    it('should keep URGENT cut-watch above a fresh feature (P1 beats P2)', () => {
+      const ref = new Date(2027, 6, 20); // urgent window
+      const fresh = ref.toISOString().slice(0, 10);
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: fresh, leagues: ['theleague'] }),
+      ];
+      const state = resolveHeroState(ref, true, entries, makeTimeline());
       expect(state.phase).toBe('cut-watch');
       expect(state.priority).toBe('P1');
     });

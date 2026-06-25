@@ -1,0 +1,48 @@
+---
+/**
+ * DraftCountdownHero — fills the post-auction lull between the Auction Hero
+ * wrapping up and the Draft Hero starting the Monday after the NFL Draft.
+ * Counts the days down to the NFL Draft and points owners at the scouting tools
+ * (mock draft / the board) so the rookie-prep stretch never falls through to a
+ * generic What's New card.
+ *
+ * Wears the shared branded LeagueEventHero look (draft-purple accent, player
+ * cut-out). Bordered, because it's a real calendar countdown.
+ */
+import LeagueEventHero from './LeagueEventHero.astro';
+import { randomHeroPlayer } from '../../utils/hero-players';
+import type { HeroState } from '../../types/hero-state';
+
+export interface Props {
+  draftCountdownProps?: HeroState['draftCountdownProps'];
+  resolveLeaguePath: (path: string) => string;
+  /** Reference date (from the resolver) — seeds the day-stable player cut-out. */
+  referenceDate?: Date;
+}
+
+const { draftCountdownProps, resolveLeaguePath: r, referenceDate } = Astro.props;
+const days = draftCountdownProps?.daysUntilDraft ?? 0;
+const nflDraftDate = draftCountdownProps?.nflDraftDate ?? '';
+const isDraftHere = days === 0;
+
+const summary = isDraftHere
+  ? 'The NFL Draft is here. Scout the class and rehearse before our rookie draft lands.'
+  : `The auction is settled — now scout the rookie class. The NFL Draft lands ${nflDraftDate}. Build your board and rehearse a mock.`;
+---
+
+<LeagueEventHero
+  pill="Draft season"
+  headline="Scout the"
+  accentWord="class."
+  summary={summary}
+  icon="draft-podium"
+  accent="#7c3aed"
+  glow="rgba(124,58,237,.45)"
+  player={randomHeroPlayer(referenceDate ?? new Date())}
+  countValue={days}
+  countLabel={isDraftHere ? 'NFL Draft is here' : 'Days to NFL Draft'}
+  bordered
+  link={r('/theleague/mock-draft')}
+  linkLabel="Run a mock draft"
+  regionLabel="Draft season countdown"
+/>

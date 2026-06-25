@@ -1,7 +1,11 @@
 ---
 /**
  * CutWatchHero — the cut-to-22 / "declare rookie contracts" roster deadline
- * hero (phase `cut-watch`, Jul 15 → 3rd Sunday of August).
+ * hero (phase `cut-watch`, Jun 1 → 3rd Sunday of August).
+ *
+ * Two tiers, switched by `cutWatchProps.urgent`: an early/ambient planning skin
+ * (preseason blue, no border) from Jun 1 until the final 30 days, then the red
+ * urgency skin for the deadline run-in.
  *
  * Wears the shared branded EventHeroShell (deep navy, red urgency accent) and
  * keeps its full functionality: a day countdown to the deadline plus a panel
@@ -27,6 +31,10 @@ const deadlineDate = cutWatchProps?.deadlineDate ?? '';
 const daysUntilDeadline = cutWatchProps?.daysUntilDeadline ?? 0;
 const hasOverLimit = overLimitTeams.length > 0;
 const isDeadlineDay = daysUntilDeadline === 0;
+// Two tiers: the early/ambient tier (Jun 1 → ~T-30) is roster planning, not a
+// deadline, so it wears a calmer preseason-blue skin. The final 30 days flip to
+// the red urgency tier. Default to urgent if the flag is missing (safe).
+const urgent = cutWatchProps?.urgent ?? true;
 
 // Personalized order: the user's team leads (if over the limit), then everyone
 // else by most active players descending (closest to the chopping block first).
@@ -52,24 +60,28 @@ const playerMeta = (position: string, salary: number) =>
 // How many the logged-in user is over the 22-man limit (0 if not over / not logged in).
 const userOverBy = userTeam ? Math.max(0, userTeam.activeCount - TARGET_ACTIVE_COUNT) : 0;
 
-const summary = userOverBy > 0
-  ? `${isDeadlineDay ? 'Final cuts are due today' : `Roster cuts are due ${deadlineDate}`} — you're ${userOverBy} over the limit.`
-  : isDeadlineDay
-    ? 'Final cuts are due today — every roster must be at 22 active players. Who goes?'
-    : `Teams must cut to 22 active players by ${deadlineDate}. Who's on the bubble?`;
+const summary = !urgent
+  ? (userOverBy > 0
+      ? `Rosters trim to 22 active players by ${deadlineDate} — you're ${userOverBy} over with time to plan.`
+      : `Rosters trim to 22 active players by ${deadlineDate}. Start lining up your cuts.`)
+  : userOverBy > 0
+    ? `${isDeadlineDay ? 'Final cuts are due today' : `Roster cuts are due ${deadlineDate}`} — you're ${userOverBy} over the limit.`
+    : isDeadlineDay
+      ? 'Final cuts are due today — every roster must be at 22 active players. Who goes?'
+      : `Teams must cut to 22 active players by ${deadlineDate}. Who's on the bubble?`;
 ---
 
 <EventHeroShell
   pill="Cut watch"
-  headline="Roster deadline"
-  accentWord={isDeadlineDay ? 'today.' : 'approaching.'}
+  headline={urgent ? 'Roster deadline' : 'Roster planning'}
+  accentWord={!urgent ? 'ahead.' : isDeadlineDay ? 'today.' : 'approaching.'}
   summary={summary}
   icon="clipboard"
-  accent="#dc2626"
-  glow="rgba(220,38,38,.30)"
-  bordered
+  accent={urgent ? '#dc2626' : '#3b82f6'}
+  glow={urgent ? 'rgba(220,38,38,.30)' : 'rgba(59,130,246,.30)'}
+  bordered={urgent}
   countValue={daysUntilDeadline}
-  countLabel={isDeadlineDay ? 'Cuts due today' : 'Days to lock'}
+  countLabel={isDeadlineDay ? 'Cuts due today' : urgent ? 'Days to lock' : 'Days to plan'}
   link={r('/theleague/rosters')}
   linkLabel="View full rosters"
   regionLabel="Cut Watch — roster deadline"

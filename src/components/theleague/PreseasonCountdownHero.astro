@@ -1,0 +1,47 @@
+---
+/**
+ * PreseasonCountdownHero — fills the late-summer gap between Cut Watch ending
+ * (3rd Sunday of August) and the regular season kicking off (Thursday after
+ * Labor Day). Counts the days down to Week 1 so the highest-traffic hype window
+ * of the year never falls through to a generic What's New card.
+ *
+ * Wears the shared branded LeagueEventHero look (regular-season navy accent,
+ * player cut-out). Bordered, because it's a real calendar countdown.
+ */
+import LeagueEventHero from './LeagueEventHero.astro';
+import { randomHeroPlayer } from '../../utils/hero-players';
+import type { HeroState } from '../../types/hero-state';
+
+export interface Props {
+  preseasonProps?: HeroState['preseasonProps'];
+  resolveLeaguePath: (path: string) => string;
+  /** Reference date (from the resolver) — seeds the day-stable player cut-out. */
+  referenceDate?: Date;
+}
+
+const { preseasonProps, resolveLeaguePath: r, referenceDate } = Astro.props;
+const days = preseasonProps?.daysUntilKickoff ?? 0;
+const kickoffDate = preseasonProps?.kickoffDate ?? '';
+const isKickoffDay = days === 0;
+
+const summary = isKickoffDay
+  ? 'Week 1 is here. Lock your lineup — the season starts today.'
+  : `Rosters are set and Week 1 kicks off ${kickoffDate}. Lock your lineup and get ready.`;
+---
+
+<LeagueEventHero
+  pill="Preseason"
+  headline="Kickoff is"
+  accentWord={isKickoffDay ? 'here.' : 'coming.'}
+  summary={summary}
+  icon="whistle"
+  accent="#1c497c"
+  glow="rgba(28,73,124,.45)"
+  player={randomHeroPlayer(referenceDate ?? new Date())}
+  countValue={days}
+  countLabel={isKickoffDay ? 'Kicks off today' : 'Days to kickoff'}
+  bordered
+  link={r('/theleague/standings')}
+  linkLabel="View standings"
+  regionLabel="Preseason countdown to kickoff"
+/>
