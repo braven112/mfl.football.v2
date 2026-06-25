@@ -486,7 +486,7 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     pill: 'AFL',
     headline: 'TWO CONFERENCES.',
     accentWord: 'ONE.',
-    summary: 'Two conferences, 24 teams, one champion. Welcome to the American Football League.',
+    summary: 'Two conferences, 24 teams, one champion. Welcome to the AFL.',
     link: '/afl-fantasy/standings',
     linkLabel: 'VIEW STANDINGS',
     icon: 'star',
@@ -812,7 +812,7 @@ function buildDefaultHero(entries: WhatsNewEntry[]): HeroContent {
   return {
     source: 'default',
     title: 'AFL',
-    summary: 'Two conferences, 24 teams, one champion. Welcome to the American Football League.',
+    summary: 'Two conferences, 24 teams, one champion. Welcome to the AFL.',
     link: '/afl-fantasy/standings',
     linkLabel: 'View Standings',
     icon: 'star',
