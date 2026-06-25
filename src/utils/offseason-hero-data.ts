@@ -415,9 +415,11 @@ export async function enrichHeroState(state: HeroState): Promise<HeroState> {
 function enrichDraftCountdown(state: HeroState): HeroState {
   const refDate = state.metadata.referenceDate;
   const nflDraft = getNflDraftDate(refDate.getFullYear());
+  const refMidnight = new Date(refDate); refMidnight.setHours(0, 0, 0, 0);
+  const draftMidnight = new Date(nflDraft); draftMidnight.setHours(0, 0, 0, 0);
   const daysUntilDraft = Math.max(
     0,
-    Math.ceil((nflDraft.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)),
+    Math.round((draftMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24)),
   );
   const nflDraftDate = nflDraft.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -437,9 +439,11 @@ function getKickoffDate(year: number): Date {
 function enrichPreseason(state: HeroState): HeroState {
   const refDate = state.metadata.referenceDate;
   const kickoff = getKickoffDate(refDate.getFullYear());
+  const refMidnight2 = new Date(refDate); refMidnight2.setHours(0, 0, 0, 0);
+  const kickoffMidnight = new Date(kickoff); kickoffMidnight.setHours(0, 0, 0, 0);
   const daysUntilKickoff = Math.max(
     0,
-    Math.ceil((kickoff.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)),
+    Math.round((kickoffMidnight.getTime() - refMidnight2.getTime()) / (1000 * 60 * 60 * 24)),
   );
   const kickoffDate = kickoff.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -472,8 +476,9 @@ function enrichChampion(state: HeroState): HeroState {
       winnerFranchiseId: result.winnerFranchiseId,
       winnerName: winner.name,
       winnerIcon: winner.icon,
-      winnerGroupMeIcon: winner.icon.replace('/assets/theleague/icons/', '/assets/theleague/group-me/'),
-      winnerColor: winner.color,
+      winnerGroupMeIcon: winner.icon.startsWith('/assets/theleague/icons/')
+        ? winner.icon.replace('/assets/theleague/icons/', '/assets/theleague/group-me/')
+        : winner.icon,
       loserFranchiseId: result.loserFranchiseId,
       loserName: loser.name,
       winnerScore: result.winnerScore,
@@ -523,7 +528,9 @@ function enrichCutWatch(state: HeroState): HeroState {
 
   // Deadline: 3rd Sunday of August
   const deadline = getNthDayOfMonth(leagueYear, 7, 0, 3); // 3rd Sunday of August
-  const daysUntil = Math.max(0, Math.ceil((deadline.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const refMidnightCw = new Date(refDate); refMidnightCw.setHours(0, 0, 0, 0);
+  const deadlineMidnight = new Date(deadline); deadlineMidnight.setHours(0, 0, 0, 0);
+  const daysUntil = Math.max(0, Math.round((deadlineMidnight.getTime() - refMidnightCw.getTime()) / (1000 * 60 * 60 * 24)));
   const deadlineFormatted = deadline.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
   });

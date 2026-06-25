@@ -83,7 +83,6 @@ export interface HeroState {
     winnerName: string;
     winnerIcon: string;
     winnerGroupMeIcon: string;
-    winnerColor: string;
     loserFranchiseId: string;
     loserName: string;
     winnerScore: number;
