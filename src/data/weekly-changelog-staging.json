@@ -126,6 +126,13 @@
       "summary": "All icons in the AFL homepage Explore section are now red — previously only the Playoffs icon was red because it was the only one with fill set explicitly; the rest inherited SVG's default black.",
       "impact": "user",
       "area": "homepage"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "style-tweak",
+      "summary": "AFL homepage section titles (What's Next, standings, quick links, My Team) are now slightly larger — bumped from 0.75rem to 0.9rem to match the visual weight of UFC Sans Condensed, which reads smaller than Vend Sans at the same size.",
+      "impact": "user",
+      "area": "homepage"
     }
   ]
 }
