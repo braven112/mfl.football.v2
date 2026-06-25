@@ -209,6 +209,16 @@
 
   --color-accent: #2e8743;           /* Same as secondary for TheLeague */
 
+  /* Per-league brand accent — single token, value resolved by league.
+     TheLeague = blue (default); AFL overrides to red in html[data-league="afl"].
+     Used by homepage section icons, CTAs, and section-title left borders. */
+  --league-accent: var(--color-primary);
+
+  /* Header nav-icon strip — per-league. TheLeague = blue → green hover (default);
+     AFL overrides to deep navy → red hover in html[data-league="afl"]. */
+  --header-nav-icon-color: var(--color-primary);
+  --header-nav-icon-hover-color: var(--color-secondary);
+
   /* Neutral Colors */
   --color-white: #ffffff;
   --color-black: #000000;
@@ -601,6 +611,22 @@
   --nav-scrollbar-track: transparent;
   --nav-scrollbar-thumb: #d1d5db;
   --nav-scrollbar-thumb-hover: #9ca3af;
+}
+
+/* ========================================
+   AFL Fantasy — deep-navy bookends
+   Scopes the top breadcrumb bar + footer to the design-system deep navy
+   (#0f1e2e, the EventHeroShell hero palette) for AFL only. The brand blue
+   (--color-primary) is intentionally left untouched so links, headings,
+   nav active states, and table headers keep their blue.
+   ======================================== */
+html[data-league="afl"] {
+  --afl-navy: #0f1e2e;                         /* design-system deep navy (EventHeroShell palette) */
+  --breadcrumb-bar-bg: var(--afl-navy);        /* top "Back to MFL" strip */
+  --inverse-bg: var(--afl-navy);               /* footer (via --inverse-content-bg) */
+  --league-accent: #c41e3a;                    /* AFL accent — red */
+  --header-nav-icon-color: var(--afl-navy);    /* nav icons — deep navy */
+  --header-nav-icon-hover-color: var(--league-accent);  /* nav icons hover — red */
 }
 
 /* ========================================
