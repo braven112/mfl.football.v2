@@ -184,6 +184,16 @@
           "visibility": "admin",
           "leagueOnly": "theleague",
           "description": "Personalized player rankings with drag-and-drop reordering"
+        },
+        {
+          "id": "scouting-system",
+          "label": "Scouting System",
+          "icon": "podium-persona",
+          "path": "/admin/scouting",
+          "external": false,
+          "leagueOnly": "theleague",
+          "visibility": "admin",
+          "description": "Year-round per-franchise GM dossiers and event reports (rookie draft, season start, trade deadline, playoffs, year-end)"
         }
       ]
     },
