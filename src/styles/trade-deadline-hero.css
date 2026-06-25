@@ -2,28 +2,49 @@
  * Trade Deadline Hero — CSS
  * Token namespace: --tdhero-*
  * Used by TradeDeadlineHero.tsx React island on Nov 13 (trade deadline day).
+ * Re-skinned to the branded deep-navy hero palette (matches EventHeroShell):
+ * navy card, red urgency accent, white text, white CTA, corner glow.
  */
 
 /* ── Tokens ── */
 :root {
-  --tdhero-bg: var(--content-bg, #fff);
-  --tdhero-border: var(--content-border, #e2e8f0);
+  --tdhero-bg: #0f1e2e;
   --tdhero-radius: var(--radius-lg, 0.75rem);
   --tdhero-accent: var(--color-error, #dc2626);
+  --tdhero-glow: rgba(220, 38, 38, 0.3);
   --tdhero-countdown-size: 2.5rem;
 }
 
 /* ── Container ── */
 .tdhero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   background: var(--tdhero-bg);
+  color: #fff;
   border: 2px solid var(--tdhero-accent);
   border-radius: var(--tdhero-radius);
+  box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
   padding: 2rem 2.5rem;
   min-height: 180px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   align-items: flex-start;
+}
+
+/* Corner accent glow wash (matches EventHeroShell). */
+.tdhero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(86% 92% at 3% -4%, var(--tdhero-glow), transparent 64%);
+  pointer-events: none;
+  z-index: 0;
+}
+.tdhero > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Header / Eyebrow ── */
@@ -40,8 +61,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--tdhero-accent);
-  background: color-mix(in srgb, var(--tdhero-accent) 10%, transparent);
+  color: #fff;
+  background: var(--tdhero-accent);
   padding: 0.25rem 0.625rem;
   border-radius: var(--radius-full, 9999px);
   line-height: 1;
@@ -52,7 +73,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--tdhero-accent);
+  background: #fff;
   animation: tdhero-pulse 1.5s ease-in-out infinite;
 }
 
@@ -65,7 +86,7 @@
 .tdhero__title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--color-gray-900, #111827);
+  color: #fff;
   line-height: 1.2;
   margin: 0;
 }
@@ -103,13 +124,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-gray-400, #9ca3af);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .tdhero__separator {
   font-size: var(--tdhero-countdown-size);
   font-weight: 700;
-  color: var(--color-gray-300, #d1d5db);
+  color: rgba(255, 255, 255, 0.25);
   line-height: 1;
   align-self: flex-start;
 }
@@ -124,7 +145,7 @@
 /* ── Message ── */
 .tdhero__message {
   font-size: 0.875rem;
-  color: var(--color-gray-600, #4b5563);
+  color: rgba(255, 255, 255, 0.72);
   line-height: 1.5;
   margin: 0;
   max-width: 40ch;
@@ -132,7 +153,7 @@
 
 .tdhero__expired {
   font-size: 0.875rem;
-  color: var(--color-gray-500, #6b7280);
+  color: rgba(255, 255, 255, 0.55);
   font-style: italic;
   margin: 0;
 }
@@ -143,18 +164,18 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1.5rem;
-  background: var(--tdhero-accent);
-  color: #fff;
+  background: #fff;
+  color: #0f1e2e;
   font-size: 0.875rem;
   font-weight: 700;
   text-decoration: none;
   border-radius: var(--radius-md, 0.5rem);
-  transition: background 0.15s ease;
+  transition: filter 0.15s ease;
   margin-top: 0.25rem;
 }
 
 .tdhero__cta:hover {
-  background: color-mix(in srgb, var(--tdhero-accent) 85%, #000);
+  filter: brightness(0.92);
 }
 
 /* ── Responsive ── */
