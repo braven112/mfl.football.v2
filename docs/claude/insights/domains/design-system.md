@@ -1094,7 +1094,8 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 {league === 'afl' ? (
   <>
     <link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon.svg" />
-    <link rel="icon" type="image/x-icon" href="/assets/afl/favicons/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/x-icon" href="/assets/afl/favicons/favicon.ico" />
     <link rel="apple-touch-icon" href="/assets/afl/favicons/apple-touch-icon.png" />
     <link rel="manifest" href="/assets/afl/favicons/site.webmanifest" crossorigin="use-credentials" />
     <meta name="theme-color" content="#002244" />
