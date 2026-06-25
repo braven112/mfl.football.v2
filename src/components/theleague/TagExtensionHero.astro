@@ -7,6 +7,7 @@
  */
 import EventHeroShell from './EventHeroShell.astro';
 import { randomHeroPlayer } from '../../utils/hero-players';
+import { CATEGORY_ACCENT, CATEGORY_GLOW } from '../../utils/league-event-hero-view';
 
 export interface Props {
   resolveLeaguePath: (path: string) => string;
@@ -34,8 +35,8 @@ const summary = isDeadlineDay
   accentWord="core."
   summary={summary}
   icon="franchise-tag"
-  accent="#2563eb"
-  glow="rgba(37,99,235,.5)"
+  accent={CATEGORY_ACCENT.preseason}
+  glow={CATEGORY_GLOW.preseason}
   bordered
   countValue={daysRemaining}
   countLabel={isDeadlineDay ? 'Deadline today' : 'Days to tag deadline'}

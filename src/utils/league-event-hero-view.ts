@@ -38,15 +38,17 @@ export interface LeagueEventView {
 // ── Category palette (matches the `--cat-*` tokens) ──────────────────────────
 type EventCategory = ResolvedLeagueEvent['definition']['category'];
 
-const CATEGORY_ACCENT: Record<EventCategory, string> = {
-  preseason: '#60a5fa',
+export const CATEGORY_ACCENT: Record<EventCategory, string> = {
+  // Darkened from #60a5fa: the pill is white text at 13px bold (not WCAG "large"
+  // text), so it needs ≥4.5:1 for AA. #2563eb ≈ 5.2:1 clears it; #60a5fa was ~2.5:1.
+  preseason: '#2563eb',
   'free-agency': '#2e8743',
   draft: '#7c3aed',
   'regular-season': '#1c497c',
 };
 
-const CATEGORY_GLOW: Record<EventCategory, string> = {
-  preseason: 'rgba(96,165,250,.45)',
+export const CATEGORY_GLOW: Record<EventCategory, string> = {
+  preseason: 'rgba(37,99,235,.5)',
   'free-agency': 'rgba(46,135,67,.5)',
   draft: 'rgba(124,58,237,.5)',
   'regular-season': 'rgba(28,73,124,.5)',
