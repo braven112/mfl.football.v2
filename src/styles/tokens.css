@@ -614,11 +614,12 @@
 }
 
 /* ========================================
-   AFL Fantasy — deep-navy bookends
-   Scopes the top breadcrumb bar + footer to the design-system deep navy
-   (#0f1e2e, the EventHeroShell hero palette) for AFL only. The brand blue
-   (--color-primary) is intentionally left untouched so links, headings,
-   nav active states, and table headers keep their blue.
+   AFL Fantasy — per-league theme overrides
+   AFL-only palette: deep navy (#0f1e2e, the EventHeroShell hero palette) for
+   the top breadcrumb bar, footer, and resting nav icons; red (#c41e3a) for the
+   brand accent and nav-icon hover. The brand blue (--color-primary) is
+   intentionally left untouched so links, headings, nav active states, and
+   table headers keep their blue.
    ======================================== */
 html[data-league="afl"] {
   --afl-navy: #0f1e2e;                         /* design-system deep navy (EventHeroShell palette) */
