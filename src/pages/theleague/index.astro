@@ -490,10 +490,9 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
 
   .hp2__main {
     min-width: 0;
-  }
-
-  .hp2__main > :global(:not(:first-child)) {
-    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
   }
 
   .visually-hidden {
@@ -555,7 +554,6 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
 
   .hp2__sidebar {
     min-width: 0;
-    margin-top: 2rem;
     position: sticky;
     top: 2rem;
     max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
@@ -583,6 +581,7 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
       position: static;
       max-height: none;
       overflow-y: visible;
+      margin-top: 2rem;
     }
   }
 </style>

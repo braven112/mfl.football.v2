@@ -70,6 +70,13 @@
       "summary": "The Final / Base / History tabs on the Draft Order page now actually switch views — they were silently dead when you arrived via in-app navigation. An unrecognized view in the URL now falls back to the Final order instead of rendering a blank page.",
       "impact": "user",
       "area": "other"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "style-tweak",
+      "summary": "Removed the same stray gap from TheLeague homepage — both sites now have their hero and sidebar sitting flush at the top of their columns.",
+      "impact": "user",
+      "area": "homepage"
     }
   ]
 }
