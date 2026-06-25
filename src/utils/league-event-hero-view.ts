@@ -39,7 +39,8 @@ export interface LeagueEventView {
 type EventCategory = ResolvedLeagueEvent['definition']['category'];
 
 export const CATEGORY_ACCENT: Record<EventCategory, string> = {
-  // Darkened from #60a5fa: white pill text needs ≥3:1 contrast (#2563eb ≈ 5.2:1).
+  // Darkened from #60a5fa: the pill is white text at 13px bold (not WCAG "large"
+  // text), so it needs ≥4.5:1 for AA. #2563eb ≈ 5.2:1 clears it; #60a5fa was ~2.5:1.
   preseason: '#2563eb',
   'free-agency': '#2e8743',
   draft: '#7c3aed',
