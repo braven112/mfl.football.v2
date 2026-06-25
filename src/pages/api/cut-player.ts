@@ -1,18 +1,28 @@
 /**
  * POST /api/cut-player
  *
- * Drop a player from the authenticated user's roster via MFL's fcfsWaiver endpoint.
+ * Drop a player from the authenticated user's roster via MFL's `add_drop`
+ * page handler — the same endpoint MFL's website uses for an owner's add/drop.
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
- * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
+ *
+ * Why `add_drop` and not `import?TYPE=fcfsWaiver`: the fcfsWaiver API applies a
+ * strict "resulting roster must be within the in-season limit" validation, even
+ * for a pure drop, so it refuses any cut while a roster is over the limit (e.g.
+ * an offseason 19/16). The `add_drop` page handler is the standard owner
+ * free-agent add/drop page every owner uses to cut down to the limit before the
+ * season; it permits reducing an over-limit roster. Captured from MFL's own web
+ * UI: POST https://{host}/{year}/add_drop with form fields
+ *   L, add_settings, PROJSRC=mfl, add_pid (empty), drop_pid=<id>, ROUND, COMMENTS, SUBMIT
+ * It returns an HTML page (not API XML/JSON), so success is verified by
+ * re-reading the roster rather than by parsing the response body.
  *
  * Security:
  * - Validates the user has a resolved franchise before allowing the cut
  * - Verifies the user owns the player being cut (roster check)
- * - Never uses commissioner credentials for owner-level operations
+ * - Never uses commissioner credentials — owner cookie only
  *
- * Uses mflFetch() to handle the cross-origin redirect from
- * api.myfantasyleague.com → www49, which would otherwise strip the
- * Cookie header and cause "API requires a logged in user" errors.
+ * Uses mflFetch() to handle cross-origin redirects while preserving the Cookie
+ * header (Node strips it on cross-origin redirects otherwise).
  */
 
 import type { APIRoute } from 'astro';
@@ -20,6 +30,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
+import { getLeagueById } from '../../config/leagues';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -70,43 +81,49 @@ export const POST: APIRoute = async ({ request }) => {
     const userRoster = rosters[user.franchiseId] || [];
 
     if (!userRoster.includes(String(playerId))) {
+      // The roster page renders from a periodically-synced static feed, so it
+      // can show players that were already dropped from the live MFL roster.
+      // Distinguish "already gone" (stale page) from "never yours" so the user
+      // isn't told they're cutting someone else's player when they're not.
+      const onAnyRoster = Object.values(rosters).some((r) => r.includes(String(playerId)));
+      const message = onAnyRoster
+        ? 'You can only cut players from your own roster.'
+        : 'This player is no longer on your roster — they may have already been dropped. Refresh the page to see your current roster.';
       return new Response(
-        JSON.stringify({ success: false, message: 'You can only cut players from your own roster.' }),
-        { status: 403, headers: JSON_HEADERS }
+        JSON.stringify({ success: false, message }),
+        { status: onAnyRoster ? 403 : 409, headers: JSON_HEADERS }
       );
     }
 
-    // Execute the drop via MFL's fcfsWaiver endpoint
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
+    // Execute the drop via MFL's `add_drop` page handler (the owner add/drop
+    // page) — captured from MFL's own web UI. Unlike the fcfsWaiver API, this
+    // path lets an owner reduce an over-limit roster, which is the whole point
+    // during offseason cutdown. We POST to the league's own MFL web host (the
+    // `api.` gateway is for the API, not page handlers).
+    const host = getLeagueById(leagueId)?.mflHost || 'www44.myfantasyleague.com';
+    const addDropUrl = `https://${host}/${year}/add_drop`;
     const params = new URLSearchParams({
-      TYPE: 'fcfsWaiver',
       L: leagueId,
-      DROP: String(playerId),
-      FRANCHISE_ID: user.franchiseId,
+      add_settings: '',
+      PROJSRC: 'mfl',
+      add_pid: '',
+      drop_pid: String(playerId),
+      ROUND: '1',
+      COMMENTS: '',
+      SUBMIT: 'Perform Add/Drop',
     });
 
-    console.log(`[cut-player] POST ${importUrl} (franchise=${user.franchiseId}, drop=${playerId})`);
+    console.log(`[cut-player] POST ${addDropUrl} add_drop owner-mode (franchise=${user.franchiseId}, drop=${playerId})`);
 
     const mflResponse = await mflFetch({
-      url: importUrl,
+      url: addDropUrl,
       method: 'POST',
       mflUserCookie: user.id,
       body: params.toString(),
     });
 
     const responseText = await mflResponse.text();
-    console.log('[cut-player] MFL response:', mflResponse.status, responseText.substring(0, 500));
-
-    // MFL returns HTTP 200 even for errors — check response body
-    if (responseText.includes('<error>') || responseText.includes('"error"')) {
-      const errorMatch = responseText.match(/<error[^>]*>(.*?)<\/error>/s)
-        || responseText.match(/"error"\s*:\s*"([^"]+)"/);
-      const errorMsg = errorMatch?.[1] || 'MFL rejected the cut request';
-      return new Response(
-        JSON.stringify({ success: false, message: errorMsg }),
-        { status: 400, headers: JSON_HEADERS }
-      );
-    }
+    console.log('[cut-player] MFL response:', mflResponse.status, responseText.substring(0, 300));
 
     if (!mflResponse.ok) {
       return new Response(
@@ -115,8 +132,30 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Detect when MFL returns an HTML page instead of an API response
-    if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+    // add_drop returns an HTML page, not API XML/JSON. On failure it re-renders
+    // the page with MFL's error message; on success it renders the updated
+    // roster page without one. Treat a recognized error message as a definitive
+    // failure first — this is authoritative even if a subsequent roster read
+    // lags. (add_drop's "would create an invalid roster" failure is exactly the
+    // case we expect to NOT see anymore, but other failures — locked period,
+    // auth — still surface here.)
+    const errMatch = responseText.match(/Transaction Would Create[^<]*/i)
+      || responseText.match(/Exceeds League Limit[^<]*/i)
+      || responseText.match(/<error[^>]*>(.*?)<\/error>/s);
+    if (errMatch) {
+      const errorMsg = (errMatch[1] || errMatch[0] || '').trim() || 'MFL rejected the cut request';
+      return new Response(
+        JSON.stringify({ success: false, message: errorMsg }),
+        { status: 400, headers: JSON_HEADERS }
+      );
+    }
+
+    // No MFL error in the page — confirm the drop actually landed by re-reading
+    // the roster. Drops reflect quickly outside the season-end→Feb-14 pre-
+    // rollover window (we're well outside it here).
+    const afterRosters = await mflClient.getRosters();
+    const stillRostered = (afterRosters[user.franchiseId] || []).includes(String(playerId));
+    if (stillRostered) {
       return new Response(
         JSON.stringify({ success: false, message: 'MFL did not process the cut. Please try again.' }),
         { status: 502, headers: JSON_HEADERS }

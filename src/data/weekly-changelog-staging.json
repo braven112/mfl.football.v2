@@ -35,6 +35,13 @@
       "summary": "AFL Fantasy's Owner Activity report now tracks waiver claims instead of auction wins — AFL is a keeper league with no auction, so the old \"Auctions\" column never reflected real activity.",
       "impact": "user",
       "area": "other"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "bug-fix",
+      "summary": "Cutting a player now works even when your offseason roster is over the in-season limit. We switched the cut to the same add/drop path MFL's own site uses for owners, which allows trimming an over-limit roster — so any owner can release a player during the cutdown. Cutting a player that was already dropped now shows a clear 'refresh your roster' message instead of a confusing permissions error. Also fixed AFL confirmation copy that wrongly referenced an \"auction pool\" (AFL drafts, it doesn't auction).",
+      "impact": "user",
+      "area": "rosters"
     }
   ]
 }

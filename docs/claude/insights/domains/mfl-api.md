@@ -1102,3 +1102,119 @@ Champion = franchise with higher `points`. Multi-round brackets have `playoffRou
 2. Use browser automation (Playwright/Puppeteer) targeting the MFL commissioner draft-setup page — brittle but feasible
 3. Request the feature from MFL support if this is a recurring need
 
+---
+
+## 2026-06-24 - `fcfsWaiver` DROP-Only Fails When Roster Exceeds In-Season Limit [SUPERSEDED — see 2026-06-25 `add_drop` fix below]
+
+> ⚠️ The `ir?DROP=` workaround proposed in this section was later disproven
+> (it enforces the limit too). The definitive fix is the **`add_drop` page
+> handler** — jump to the "DEFINITIVE" entry dated 2026-06-25 further down.
+> This section is kept only as a record of the investigation.
+
+**Context:** AFL Fantasy league (19621, www44) — offseason, rosters legally over 16 (in-season limit). `fcfsWaiver` with DROP-only returns "Transaction Would Create An Invalid Roster For X: 19 Players On Roster Exceeds League Limit of 16".
+
+### Root Cause
+
+`fcfsWaiver` validates that the **resulting** roster size is within the in-season `rosterSize` limit — even for a pure drop. If the roster is currently at 19/16, dropping one player leaves it at 18, which still exceeds 16, so MFL rejects it. This validation fires regardless of whether an ADD is included. There is NO documented bypass parameter (`IGNORE_ROSTER_LIMIT`, `OFFSEASON`, etc.) for `fcfsWaiver`.
+
+### Why It's Not a Drop-Only Restriction
+
+The `fcfsWaiver` endpoint documentation explicitly states "At least one player to be added or dropped is required" — drop-only IS supported. The rejection is about the resulting roster count, not about the absence of an ADD.
+
+### Workaround: `ir` Endpoint with `DROP` Parameter
+
+The `ir` import endpoint has a `DROP` parameter documented as:
+
+> "Comma-separated list of player ids to drop from the roster. This applies to all players on the roster, **regardless of roster status**."
+
+The key distinction: `ir?DROP=` is framed as a roster management operation, not a waiver transaction. In practice (confirmed by AFL 2025 transaction history), teams with oversized rosters DO successfully execute pure drops during the offseason — those transactions appear as FREE_AGENT type with `|playerId,` format (pipe prefix, no add). These were likely executed via the MFL web UI, which may route through `ir?DROP=` internally rather than `fcfsWaiver`.
+
+**Recommended endpoint for owner-authenticated drop when over roster limit:**
+```
+POST https://www44.myfantasyleague.com/2025/import?TYPE=ir&L=19621
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={userCookie}
+
+DROP={playerId}
+```
+
+Do NOT send `FRANCHISE_ID` in owner-mode (it triggers impersonation-lockout checks).
+
+### Caveat: Unconfirmed Live
+
+The `ir?DROP=` workaround is strongly inferred from the docs and transaction evidence, but has not been live-tested against AFL 19621. Confirm by testing against a test transaction before shipping.
+
+### Summary Table
+
+| Endpoint | Drop-Only | Over-Limit Safe | Notes |
+|----------|-----------|-----------------|-------|
+| `fcfsWaiver` | Yes (documented) | **No** — validates resulting roster size | Use for normal in-season drops |
+| `ir?DROP=` | Yes | Likely yes — "regardless of roster status" | Intended workaround for over-limit offseason drops |
+| `waiverRequest` | No | N/A | Requires ADD, not applicable |
+
+### Related Files
+- `src/pages/api/cut-player.ts` — see corrected fix below.
+- `src/utils/mfl-fetch.ts` — use for all authenticated writes
+
+### Update 2026-06-25 — DEFINITIVE: use the `add_drop` page handler, not the `import` API
+Captured MFL's own web-UI request (DevTools) for a successful over-limit owner
+drop. It does NOT use the `import` API at all:
+
+```
+POST https://{www-host}/{year}/add_drop          (e.g. www44 for AFL, www49 for TheLeague)
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID=...; (MFL_IS_COMMISH/MFL_PW_SEQ present but incidental)
+
+L={leagueId}&add_settings=&PROJSRC=mfl&add_pid=&drop_pid={playerId}&ROUND=1&COMMENTS=&SUBMIT=Perform+Add%2FDrop
+```
+
+`add_drop` is the standard owner free-agent add/drop **page** every owner uses
+to cut down to the limit before the season — it permits reducing an over-limit
+roster. The `import?TYPE=fcfsWaiver` / `ir` **APIs** apply a stricter
+"resulting roster ≤ in-season limit" validation that refuses over-limit drops.
+That API-vs-page difference — NOT commish status, NOT `FRANCHISE_ID` — is why
+the website worked and our API calls didn't. The commish cookie in the capture
+was incidental (the account happened to be commish).
+
+**Shipped fix (`cut-player.ts`):** POST the form above to
+`https://{getLeagueById(leagueId).mflHost}/{year}/add_drop` with the OWNER's
+own `MFL_USER_ID` cookie (no commish creds). `add_drop` returns an HTML page,
+so success is verified by re-reading the roster and confirming the player is
+gone (not by status code or an `<error>` tag). Works for every owner,
+over-limit or not. Roster-ownership check still scopes the drop.
+
+**Rules of thumb:**
+- For owner roster add/drops that must work over the in-season limit (offseason
+  cutdown), use the `add_drop` page handler, not the waiver/IR import APIs.
+- `add_drop` returns HTML — verify via a roster re-read, never by parsing the body.
+
+### Superseded 2026-06-24 — REAL root cause: a spurious `FRANCHISE_ID` on an owner call
+(Kept for history; the FRANCHISE_ID removal was necessary cleanup but did NOT by
+itself fix over-limit cuts — see the 2026-06-25 entry above for the actual fix.)
+Both earlier theories were wrong dead-ends, recorded here so nobody re-walks them:
+- `ir?DROP=` was shipped + live-tested → **FAILED** ("Activating 0 and only
+  deactivating 0 Would Give You 18 Players ... League Limit is 16"). The `ir`
+  endpoint enforces the limit too.
+- Commissioner-mode was theorized next, but that's NOT why the web-UI drop worked.
+
+**The actual cause:** `cut-player.ts` sent `FRANCHISE_ID` on the owner
+`fcfsWaiver` call. MFL's docs define `FRANCHISE_ID` as *"When called by the
+Commissioner, you must pass this parameter to indicate on which franchise's
+behalf to do the request."* Passing it on an OWNER call forces MFL down the
+commissioner-acting-on-a-franchise validation path — the tell is the error
+phrasing **"...Invalid Roster For Smokane FC..."** (the "For <franchise>" =
+franchise-scoped/commish path). That path refuses any change leaving the roster
+over the in-season limit. A **plain owner drop with NO `FRANCHISE_ID`** (the
+cookie already implies the franchise) goes through the normal free-agency drop
+path, which lets an owner reduce an over-limit roster — exactly what MFL's web
+UI does for any owner. This is the same reason `runRosterMove` (IR/taxi) omits
+`FRANCHISE_ID` in owner mode.
+
+**Shipped fix (`cut-player.ts`):** pure owner mode — `TYPE=fcfsWaiver`, `L`,
+`DROP` only, **no `FRANCHISE_ID`, no commish creds**. Works for every owner,
+over-limit or not. The roster-ownership check still scopes the drop to the
+caller's own players.
+
+**Rule of thumb:** never send `FRANCHISE_ID` on an owner-authenticated MFL
+write. It's commissioner-only and silently changes the validation path.
+
