@@ -63,6 +63,13 @@
       "summary": "AFL Fantasy got its own identity: the top \"Back to MFL\" bar and footer now use a deep navy, the header nav icons are navy (turning red on hover), and homepage accents — section borders, icons, and links — are now AFL red instead of the borrowed blue. TheLeague's look is unchanged.",
       "impact": "user",
       "area": "design-system"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "bug-fix",
+      "summary": "The Final / Base / History tabs on the Draft Order page now actually switch views — they were silently dead when you arrived via in-app navigation. An unrecognized view in the URL now falls back to the Final order instead of rendering a blank page.",
+      "impact": "user",
+      "area": "other"
     }
   ]
 }
