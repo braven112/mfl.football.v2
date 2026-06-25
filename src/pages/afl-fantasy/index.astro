@@ -306,6 +306,11 @@ const heroEventId = heroState.content.heroEventId;
       position: static;
       max-height: none;
       overflow-y: visible;
+      /* Restore the breathing room above the sidebar once it stacks below the
+         main column. The desktop margin-top was removed because it offset the
+         two columns; in single-column flow there's no alignment to preserve, so
+         the extra separation is purely visual and worth keeping. */
+      margin-top: 2rem;
     }
   }
 </style>
