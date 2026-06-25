@@ -214,6 +214,9 @@ transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 ### Section Title Pattern (Signature Element)
 
 The left-border accent on uppercase section titles is the most recognizable editorial pattern:
+
+> **AFL font-size exception:** AFL uses UFC Sans Condensed, which renders visually smaller than The League's Vend Sans at the same rem value. AFL section-title components use `font-size: 0.9rem` (not 0.75rem) to compensate. When bumping section titles in AFL components, use 0.9rem. When bumping in TheLeague components, use 0.75rem (already standard). Don't accidentally "fix" one by copying from the other.
+
 ```css
 .section-title {
   font-size: 0.75rem;
