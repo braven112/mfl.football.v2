@@ -150,9 +150,10 @@ const rawView = Astro.url.searchParams.get('view') || 'final';
 const normalizedView = rawView === 'assets' ? 'final' : rawView === 'trades' ? 'history' : rawView;
 // Fall back to 'final' for any unrecognized value so the page never renders blank.
 const VALID_VIEWS = ['projected', 'final', 'history'] as const;
-const view = (VALID_VIEWS.includes(normalizedView as (typeof VALID_VIEWS)[number])
-  ? normalizedView
-  : 'final') as 'projected' | 'final' | 'history';
+type DraftView = (typeof VALID_VIEWS)[number];
+const view: DraftView = (VALID_VIEWS as readonly string[]).includes(normalizedView)
+  ? (normalizedView as DraftView)
+  : 'final';
 
 // Note: Champion logic is already applied by calculateDraftOrder above
 // No need to apply it again here
