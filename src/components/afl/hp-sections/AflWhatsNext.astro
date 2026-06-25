@@ -29,6 +29,13 @@ if (excludeEventId) {
 }
 
 const hasEvents = current || next || upcoming;
+
+// Forward-looking labels: only lead with "Happening Now" when an event is
+// genuinely live, otherwise the slots read Up Next / Coming Soon / Later.
+const leadActive = current?.isActive ?? false;
+const labels = leadActive
+  ? { current: 'Happening Now', next: 'Up Next', upcoming: 'Coming Soon' }
+  : { current: 'Up Next', next: 'Coming Soon', upcoming: 'Later' };
 ---
 
 {hasEvents && (
@@ -43,9 +50,9 @@ const hasEvents = current || next || upcoming;
       </a>
     </div>
     <div class:list={['afl-next__grid', { 'afl-next__grid--2col': maxCards === 2 }]}>
-      {current && <WhatsNextCard event={current} position="current" />}
-      {maxCards >= 2 && next && <WhatsNextCard event={next} position="next" />}
-      {maxCards >= 3 && upcoming && <WhatsNextCard event={upcoming} position="upcoming" />}
+      {current && <WhatsNextCard event={current} position="current" label={labels.current} />}
+      {maxCards >= 2 && next && <WhatsNextCard event={next} position="next" label={labels.next} />}
+      {maxCards >= 3 && upcoming && <WhatsNextCard event={upcoming} position="upcoming" label={labels.upcoming} />}
     </div>
   </section>
 )}

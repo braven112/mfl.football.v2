@@ -28,6 +28,13 @@ const timeline = excludeEventId
   ? getWhatsNextTimelineExcluding(excludeEventId, demoDate)
   : getWhatsNextTimeline(demoDate);
 const hasEvents = timeline.current || timeline.next || timeline.upcoming;
+
+// Forward-looking labels: only lead with "Happening Now" when an event is
+// genuinely live, otherwise the slots read Up Next / Coming Soon / Later.
+const leadActive = timeline.current?.isActive ?? false;
+const labels = leadActive
+  ? { current: 'Happening Now', next: 'Up Next', upcoming: 'Coming Soon' }
+  : { current: 'Up Next', next: 'Coming Soon', upcoming: 'Later' };
 ---
 
 {hasEvents && (
@@ -42,9 +49,9 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
       </a>
     </div>
     <div class:list={['whats-next__grid', { 'whats-next__grid--2col': maxCards === 2 }]}>
-      {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}
-      {maxCards >= 2 && timeline.next && <WhatsNextCard event={timeline.next} position="next" />}
-      {maxCards >= 3 && timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" />}
+      {timeline.current && <WhatsNextCard event={timeline.current} position="current" label={labels.current} />}
+      {maxCards >= 2 && timeline.next && <WhatsNextCard event={timeline.next} position="next" label={labels.next} />}
+      {maxCards >= 3 && timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" label={labels.upcoming} />}
     </div>
   </section>
 )}

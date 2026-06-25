@@ -154,6 +154,20 @@
       "summary": "Conference section labels (\"American League Playoff Standings\", \"Draft Preview\") bumped from 0.75rem to 0.9rem for better readability alongside the new condensed headline font.",
       "impact": "user",
       "area": "design-system"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "style-tweak",
+      "summary": "Calendar event cards — both the \"What's Next\" cards on the homepage and the full League Calendar — now look like mini versions of the homepage hero: a deep-navy card with a per-category accent color (preseason blue, free agency green, draft purple, regular season navy) carried through the icon chip, status pill, glow wash, border, and a big countdown number, with the days-out clock only showing when there's actually time on the clock.",
+      "impact": "user",
+      "area": "calendar"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "bug-fix",
+      "summary": "The homepage \"What's Next\" timeline is now actually forward-looking — it no longer leads with a months-old completed event labeled \"Most Recent.\" The slots now read Up Next / Coming Soon / Later (or Happening Now when an event is live), so you only ever see what's ahead.",
+      "impact": "user",
+      "area": "homepage"
     }
   ]
 }

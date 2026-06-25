@@ -243,13 +243,15 @@ describe('selectWhatsNextTimeline', () => {
     expect(timeline.next?.isActive).toBe(false);
   });
 
-  it('should fall back to most recently completed event when none is active', () => {
-    // March 10 - after matching period (Mar 1-7), before FA opens (Mar 19)
+  it('should lead with the next future event when none is active (never a past one)', () => {
+    // March 10 - after matching period (Mar 1-7), before FA opens (Mar 19).
+    // The timeline is forward-looking: it leads with the next upcoming event
+    // rather than the most recently completed one.
     const timeline = getTimeline(new Date(2026, 2, 10));
 
-    expect(timeline.current?.definition.id).toBe('tag-matching-period');
-    expect(timeline.current?.isPast).toBe(true);
-    expect(timeline.next?.definition.id).toBe('offseason-fa-opens');
+    expect(timeline.current?.definition.id).toBe('offseason-fa-opens');
+    expect(timeline.current?.isPast).toBe(false);
+    expect(timeline.current?.isActive).toBe(false);
   });
 
   it('should show correct events mid-season', () => {
@@ -266,22 +268,26 @@ describe('selectWhatsNextTimeline', () => {
   });
 
   it('should handle end-of-year gracefully', () => {
-    // December 31 at 11pm - after all events (deadlines default to 8:45 PM PT)
+    // December 31 at 11pm - after all events (deadlines default to 8:45 PM PT).
+    // With no future events left in the year, the forward-looking timeline is
+    // empty rather than surfacing a stale completed event. (In production the
+    // merged-year resolver still surfaces next year's events.)
     const timeline = getTimeline(new Date(2026, 11, 31, 23, 0));
 
-    expect(timeline.current).not.toBeNull();
-    expect(timeline.current?.isPast).toBe(true);
+    expect(timeline.current).toBeNull();
     expect(timeline.next).toBeNull();
     expect(timeline.upcoming).toBeNull();
   });
 
   it('should handle start-of-year (before first event)', () => {
-    // January 15 - before any events
+    // January 15 - before any events. With nothing active or past, the lead
+    // slot holds the first upcoming event (tagging-period starts at midnight
+    // Feb 1, earlier than team-purchase-deadline at 8:45 PM).
     const timeline = getTimeline(new Date(2026, 0, 15));
 
-    // tagging-period starts at midnight Feb 1 (earlier than team-purchase-deadline at 8:45 PM)
-    expect(timeline.next?.definition.id).toBe('tagging-period');
-    expect(timeline.current).toBeNull();
+    expect(timeline.current?.definition.id).toBe('tagging-period');
+    expect(timeline.current?.isPast).toBe(false);
+    expect(timeline.next?.definition.id).toBe('team-purchase-deadline');
   });
 
   it('should always include referenceDate and leagueYear', () => {
