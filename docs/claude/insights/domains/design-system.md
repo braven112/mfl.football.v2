@@ -1053,3 +1053,13 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 ```
 
 **Recommendation:** Any page with JS-populated table bodies, lists, or containers must use this pattern. The parent element (`.editorial-table`) stays scoped for isolation, but child selectors for dynamic content use `:global()`.
+
+---
+
+## 2026-06-24 - EventHeroShell Pill is White-on-Accent — Accents Must Clear Contrast
+
+**Context:** TheLeague's branded homepage hero (`EventHeroShell.astro`) renders its eyebrow pill as `background: var(--ev-accent); color: #fff;`. The `--ev-accent` value comes per-event from `CATEGORY_ACCENT` in `src/utils/league-event-hero-view.ts` (keyed by calendar category: preseason / free-agency / draft / regular-season).
+
+**Insight:** Because the pill is white text on the raw accent color (small, bold, 13px uppercase), every accent must clear contrast against white — aim for ≥3:1 minimum. The original preseason accent `#60a5fa` (light blue) failed badly (~well under 3:1) and rendered an unreadable pill. It was darkened to `#2563eb` (white-on-blue ≈ 5.2:1). The other accents already sit in range: red `#dc2626`, green `#2e8743`, purple `#7c3aed`, navy `#1c497c`.
+
+**Recommendation:** When adding or changing any value in `CATEGORY_ACCENT` (or passing a custom `accent` to `EventHeroShell`), check white-on-accent contrast before shipping — the pill, not the card background, is the binding constraint. `CATEGORY_ACCENT` / `CATEGORY_GLOW` are exported and are the single source of truth; the standalone preseason heroes (`TagExtensionHero`, `TaggedPlayerShowcaseHero`) reference `CATEGORY_ACCENT.preseason` rather than hardcoding the hex, so they stay in sync automatically.
