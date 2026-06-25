@@ -7,7 +7,6 @@
  * full rules sit one click away in the panel.
  */
 import EventHeroShell from './EventHeroShell.astro';
-import { randomHeroPlayer } from '../../utils/hero-players';
 import { getRookieDraftDate } from '../../utils/league-event-resolver';
 
 export interface Props {
@@ -19,7 +18,7 @@ export interface Props {
   spriteUrl: string;
   live?: boolean;
   draftStartFormatted: string;
-  /** Reference date (from the resolver) — countdown + day-stable player image. */
+  /** Reference date (from the resolver) — drives the countdown to the rookie draft. */
   referenceDate?: Date;
 }
 
