@@ -1081,3 +1081,35 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 **Tokens established (all in `tokens.css`):** `--league-accent` (TheLeague blue / AFL red `#c41e3a`), `--header-nav-icon-color` + `--header-nav-icon-hover-color` (TheLeague blue→green / AFL navy→red), `--breadcrumb-bar-bg` + `--inverse-bg` (AFL deep navy `#0f1e2e`, DRY'd into one `--afl-navy` since it appears 3×). Crucially `--color-primary` was left **untouched** for AFL — so links, headings, nav-active states, and table headers keep blue while only the deliberately-scoped accents change. Don't reach for overriding `--color-primary` per league unless you really want the blast radius; prefer a dedicated semantic token.
 
 **Verification gotcha.** `@import`ed `tokens.css` inside an Astro `<style>` block does **not** reliably HMR — after editing tokens or a component's scoped style, *restart* the dev server for a clean compile, don't trust the live page. Also, `preview_inspect`/`getComputedStyle` reflects `:hover` if the synthetic cursor is parked over the element — a "resting" color reading that comes back as the hover value usually means the pointer is over it; read all sibling elements at once and the non-hovered ones show the true resting color.
+
+---
+
+## 2026-06-25 - Per-League Favicons and `<head>` Metadata in TheLeagueLayout
+
+**Context:** Both AFL and TheLeague pages share `TheLeagueLayout.astro`, which previously served one `favicon.ico` and one `manifest.json` for both. The AFL design system ships a distinct favicon set (AFL football mark, navy `#002244` theme color, its own `site.webmanifest`).
+
+**Pattern:** Gate the entire favicon/PWA `<head>` block on the `league` variable that's already derived from `leagueContext.slug` earlier in the layout frontmatter:
+
+```astro
+{league === 'afl' ? (
+  <>
+    <link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/x-icon" href="/assets/afl/favicons/favicon.ico" />
+    <link rel="apple-touch-icon" href="/assets/afl/favicons/apple-touch-icon.png" />
+    <link rel="manifest" href="/assets/afl/favicons/site.webmanifest" crossorigin="use-credentials" />
+    <meta name="theme-color" content="#002244" />
+    <meta name="apple-mobile-web-app-title" content="AFL" />
+  </>
+) : (
+  <>
+    {/* TheLeague defaults */}
+  </>
+)}
+```
+
+**AFL favicon asset location:** `public/assets/afl/favicons/` — includes `favicon.svg`, `favicon-dark.svg`, `favicon.ico`, `favicon-{16,32,48,192,512}.png`, `apple-touch-icon.png`, and `site.webmanifest`.
+
+**Webmanifest gotcha:** The `site.webmanifest` from the AFL design system ships with *relative* icon paths (`"src": "favicon-192.png"`). When served from `/assets/afl/favicons/site.webmanifest`, relative paths resolve to `/assets/afl/favicons/favicon-192.png` correctly in most browsers — but to be safe and explicit, update the manifest to use **absolute** paths (`"/assets/afl/favicons/favicon-192.png"`) so it resolves correctly regardless of where the file is served from.
+
+**Verification:** Inspect `Array.from(document.querySelectorAll('link[rel*="icon"], link[rel="manifest"], meta[name="theme-color"]')).map(el => el.outerHTML)` on an `/afl-fantasy/` page to confirm the AFL block renders and the TheLeague defaults are absent.

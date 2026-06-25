@@ -175,16 +175,31 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<link rel="icon" type="image/svg+xml" href="/assets/logos/theleague-logo.svg" />
-		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		{league === 'afl' ? (
+			<>
+				<link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon.svg" />
+				<link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+				<link rel="icon" type="image/x-icon" href="/assets/afl/favicons/favicon.ico" />
+				<link rel="apple-touch-icon" href="/assets/afl/favicons/apple-touch-icon.png" />
+				<link rel="manifest" href="/assets/afl/favicons/site.webmanifest" crossorigin="use-credentials" />
+				<meta name="theme-color" content="#002244" />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content="AFL" />
+			</>
+		) : (
+			<>
+				<link rel="icon" type="image/svg+xml" href="/assets/logos/theleague-logo.svg" />
+				<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+				<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+				<meta name="theme-color" content="#1c497c" />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content="The League" />
+				<link rel="apple-touch-icon" href="/assets/icons/pwa/apple-touch-icon.png" />
+			</>
+		)}
 		<meta name="generator" content={Astro.generator} />
-		<!-- PWA -->
-		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
-		<meta name="theme-color" content="#1c497c" />
-		<meta name="mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-		<meta name="apple-mobile-web-app-title" content="The League" />
-		<link rel="apple-touch-icon" href="/assets/icons/pwa/apple-touch-icon.png" />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
 		<ClientRouter />
