@@ -8,6 +8,7 @@
  */
 import { chooseTeamName } from '../../utils/team-names';
 import { getConferenceStandings } from '../../utils/standings';
+import { getConferenceLogo, type ConferenceId } from '../../utils/afl-conference';
 
 interface Team {
   franchiseId: string;
@@ -37,7 +38,7 @@ interface SeedEntry {
   isUser: boolean;
 }
 
-function buildConference(code: '00' | '01'): { name: string; seeds: SeedEntry[] } | null {
+function buildConference(code: ConferenceId): { name: string; code: ConferenceId; logo: string; seeds: SeedEntry[] } | null {
   try {
     const result = getConferenceStandings(standings, config, code);
     const top4 = (result.allTeams ?? []).slice(0, 4).map((t: any) => {
@@ -58,7 +59,7 @@ function buildConference(code: '00' | '01'): { name: string; seeds: SeedEntry[] 
         isUser: t.id === userFranchiseId,
       };
     });
-    return { name: result.conference.name, seeds: top4 };
+    return { name: result.conference.name, code, logo: getConferenceLogo(code), seeds: top4 };
   } catch {
     return null;
   }
@@ -83,9 +84,12 @@ function formatRecord(wlt: string): string {
   </div>
 
   <div class="afl-playoffs-hero__grid">
-    {[al, nl].filter((c): c is { name: string; seeds: SeedEntry[] } => !!c).map((conf) => (
+    {[al, nl].filter((c): c is { name: string; code: ConferenceId; logo: string; seeds: SeedEntry[] } => !!c).map((conf) => (
       <div class="afl-playoffs-hero__bracket">
-        <h3 class="afl-playoffs-hero__bracket-title">{conf.name}</h3>
+        <h3 class="afl-playoffs-hero__bracket-title">
+          <img src={conf.logo} alt={`${conf.name} logo`} class="afl-playoffs-hero__bracket-logo" loading="lazy" decoding="async" />
+          <span>{conf.name}</span>
+        </h3>
         {[
           { home: conf.seeds[0], away: conf.seeds[3], label: 'Game 1' },
           { home: conf.seeds[1], away: conf.seeds[2], label: 'Game 2' },
@@ -169,12 +173,22 @@ function formatRecord(wlt: string): string {
   }
 
   .afl-playoffs-hero__bracket-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     margin: 0 0 0.25rem;
     font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--color-gray-500, #6b7280);
+  }
+
+  .afl-playoffs-hero__bracket-logo {
+    height: 1.5rem;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .afl-playoffs-hero__matchup {

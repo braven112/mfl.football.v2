@@ -1,12 +1,15 @@
 ---
 import type { TeamStanding } from '../../types/standings';
 import PlayoffBadge from './PlayoffBadge.astro';
+import { getConferenceLogo, getConferenceName, type ConferenceId } from '../../utils/afl-conference';
 
 export interface Props {
   teams: TeamStanding[];
   view: 'division' | 'league' | 'all_play';
   showDivisionHeader?: boolean;
   divisionName?: string;
+  /** AFL only — when set, the division header shows its conference logo. */
+  conferenceId?: ConferenceId;
   defendingChampion?: string;
   defendingChampionYear?: number;
   year?: number;
@@ -15,7 +18,10 @@ export interface Props {
   franchiseBaseUrl?: string;
 }
 
-const { teams, view, showDivisionHeader = false, divisionName = '', defendingChampion = '', defendingChampionYear, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
+const { teams, view, showDivisionHeader = false, divisionName = '', conferenceId, defendingChampion = '', defendingChampionYear, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
+
+const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
+const conferenceName = conferenceId ? getConferenceName(conferenceId) : '';
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -75,7 +81,18 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 <div class="standings-container">
   {showDivisionHeader && divisionName && (
     <div class="division-header-section">
-      <h3 class="division-header">{divisionName}</h3>
+      <div class="division-header-row">
+        {conferenceLogo && (
+          <img
+            src={conferenceLogo}
+            alt={`${conferenceName} logo`}
+            class="division-conf-logo"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        <h3 class="division-header">{divisionName}</h3>
+      </div>
       {defendingChampion && (
         <p class="champion-subtitle">{defendingChampionYear} Division Champions: <strong>{defendingChampion}</strong></p>
       )}
@@ -245,6 +262,19 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
   .division-header-section {
     margin-bottom: 1.5rem;
     padding-inline: 1.5rem;
+  }
+
+  .division-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .division-conf-logo {
+    height: 1.75rem;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .division-header {

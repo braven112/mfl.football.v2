@@ -123,9 +123,13 @@ const nitTeams = [
   .sort((a, b) => parseFloat(b.pwr || '0') - parseFloat(a.pwr || '0'))
   .map((team, idx) => ({ ...team, nitRank: idx + 1 }));
 
-// Get view from query parameter (default to 'division')
-const view = (Astro.url.searchParams.get('view') ||
-  'division') as 'division' | 'league' | 'all_play';
+// Get view from query parameter (default to 'division').
+// Validate against known views so an unrecognized value (e.g. a stale
+// ?view=conference link) falls back to division instead of a blank page.
+const requestedView = Astro.url.searchParams.get('view');
+const view = (['division', 'league', 'all_play'].includes(requestedView ?? '')
+  ? requestedView
+  : 'division') as 'division' | 'league' | 'all_play';
 
 // Division Champions by Year (defending champions from previous season)
 const championsByYear: Record<number, Record<string, string>> = {
@@ -199,6 +203,7 @@ const promoRegTeams = [
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
+              conferenceId={(aflConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
@@ -213,6 +218,7 @@ const promoRegTeams = [
         <div class="league-view">
           <ConferenceLeagueStandingsTable
             conferenceName={conferenceAStandings.conference.name}
+            conferenceId="00"
             teams={conferenceAStandings.allTeams}
             year={selectedYear}
             preferredTeamId={preferredTeamId}
@@ -220,6 +226,7 @@ const promoRegTeams = [
           />
           <ConferenceLeagueStandingsTable
             conferenceName={conferenceBStandings.conference.name}
+            conferenceId="01"
             teams={conferenceBStandings.allTeams}
             year={selectedYear}
             preferredTeamId={preferredTeamId}

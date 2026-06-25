@@ -42,6 +42,20 @@
       "summary": "Cutting a player now works even when your offseason roster is over the in-season limit. We switched the cut to the same add/drop path MFL's own site uses for owners, which allows trimming an over-limit roster — so any owner can release a player during the cutdown. Cutting a player that was already dropped now shows a clear 'refresh your roster' message instead of a confusing permissions error. Also fixed AFL confirmation copy that wrongly referenced an \"auction pool\" (AFL drafts, it doesn't auction).",
       "impact": "user",
       "area": "rosters"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "style-tweak",
+      "summary": "AFL Fantasy conferences now carry their own American League (red) and National League (blue) logos across the conference standings headers, the division headers, and the homepage playoff and draft previews, and the Premier League / D-League marks now appear on the homepage tier standings preview too.",
+      "impact": "user",
+      "area": "standings"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "bug-fix",
+      "summary": "The Division / Playoff / All-Play tabs on the standings page now actually switch views (they were dead before), and the homepage \"Full bracket\" and \"Full standings\" links no longer land on a blank page.",
+      "impact": "user",
+      "area": "standings"
     }
   ]
 }

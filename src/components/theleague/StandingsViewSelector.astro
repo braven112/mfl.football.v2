@@ -6,45 +6,40 @@ export interface Props {
 }
 
 const { activeView } = Astro.props;
+
+const VIEWS = [
+  { key: 'division', label: 'Division', icon: 'icon-numberone', aria: 'Division Standings' },
+  { key: 'league', label: 'Playoff', icon: 'icon-trophy', aria: 'Playoff Standings' },
+  { key: 'all_play', label: 'All-Play', icon: 'icon-line-chart', aria: 'All-Play Standings' },
+] as const;
+
+// Build each tab's href from the current URL so other params (e.g. ?year=)
+// are preserved. Real <a> links work without JS and survive view transitions,
+// unlike the previous button + click-handler approach (the handler never bound
+// under the ClientRouter, leaving the tabs dead).
+function viewHref(view: string): string {
+  const url = new URL(Astro.url.href);
+  url.searchParams.set('view', view);
+  return url.pathname + url.search;
+}
 ---
 
 <div class="view-selector">
-  <button
-    class={`view-tab ${activeView === 'division' ? 'active' : ''}`}
-    data-view="division"
-    data-active={activeView === 'division' ? 'true' : 'false'}
-    aria-label="Division Standings"
-    title="Division Standings"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href={`${spriteUrl}#icon-numberone`}></use>
-    </svg>
-    <span class="view-tab__label">Division</span>
-  </button>
-  <button
-    class={`view-tab ${activeView === 'league' ? 'active' : ''}`}
-    data-view="league"
-    data-active={activeView === 'league' ? 'true' : 'false'}
-    aria-label="Playoff Standings"
-    title="Playoff Standings"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href={`${spriteUrl}#icon-trophy`}></use>
-    </svg>
-    <span class="view-tab__label">Playoff</span>
-  </button>
-  <button
-    class={`view-tab ${activeView === 'all_play' ? 'active' : ''}`}
-    data-view="all_play"
-    data-active={activeView === 'all_play' ? 'true' : 'false'}
-    aria-label="All-Play Standings"
-    title="All-Play Standings"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href={`${spriteUrl}#icon-line-chart`}></use>
-    </svg>
-    <span class="view-tab__label">All-Play</span>
-  </button>
+  {VIEWS.map((v) => (
+    <a
+      href={viewHref(v.key)}
+      class={`view-tab ${activeView === v.key ? 'active' : ''}`}
+      data-active={activeView === v.key ? 'true' : 'false'}
+      aria-label={v.aria}
+      aria-current={activeView === v.key ? 'page' : undefined}
+      title={v.aria}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+        <use href={`${spriteUrl}#${v.icon}`}></use>
+      </svg>
+      <span class="view-tab__label">{v.label}</span>
+    </a>
+  ))}
 </div>
 
 <style>
@@ -68,6 +63,8 @@ const { activeView } = Astro.props;
     transition: all 0.2s ease;
     position: relative;
     min-width: 69px;
+    text-decoration: none;
+    color: inherit;
   }
   @media (min-width: 640px) {
     .view-tab {
@@ -133,30 +130,3 @@ const { activeView } = Astro.props;
     }
   }
 </style>
-
-<script>
-  function setupViewSelector() {
-    const buttons = document.querySelectorAll('.view-tab');
-
-    buttons.forEach(button => {
-      button.addEventListener('click', () => {
-        const view = button.dataset.view;
-
-        // Update URL and reload page to show correct view
-        const url = new URL(window.location);
-        url.searchParams.set('view', view);
-        window.location.href = url.toString();
-      });
-    });
-  }
-
-  // Initialize on page load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupViewSelector);
-  } else {
-    setupViewSelector();
-  }
-
-  // Re-run on page transitions (for Astro view transitions)
-  document.addEventListener('astro:after-swap', setupViewSelector);
-</script>

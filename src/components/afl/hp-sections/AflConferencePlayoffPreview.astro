@@ -12,6 +12,7 @@
  */
 import { chooseTeamName } from '../../../utils/team-names';
 import { getConferenceStandings } from '../../../utils/standings';
+import { getConferenceLogo } from '../../../utils/afl-conference';
 
 interface Team {
   franchiseId: string;
@@ -60,6 +61,7 @@ if (!confResult) {
 }
 
 const conferenceName = confResult?.conference?.name ?? (conferenceCode === '00' ? 'American League' : 'National League');
+const conferenceLogo = getConferenceLogo(conferenceCode);
 
 interface PreviewRow {
   franchiseId: string;
@@ -102,11 +104,20 @@ const visible = rows.slice(0, 6);
 {rows.length > 0 && (
   <section class="afl-conf" aria-label={`${conferenceName} playoff preview`}>
     <div class="afl-conf__header">
-      <div class="afl-conf__section-header">
-        <h3 class="afl-conf__title">{conferenceName} Playoff Standings</h3>
-        <p class="afl-conf__sub">Top {playoffSlots} clinch playoff seeds. Division winners take seeds 1–2.</p>
+      <div class="afl-conf__heading">
+        <img
+          src={conferenceLogo}
+          alt={`${conferenceName} logo`}
+          class="afl-conf__logo"
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="afl-conf__section-header">
+          <h3 class="afl-conf__title">{conferenceName} Playoff Standings</h3>
+          <p class="afl-conf__sub">Top {playoffSlots} clinch playoff seeds. Division winners take seeds 1–2.</p>
+        </div>
       </div>
-      <a href={`/afl-fantasy/standings?view=conference&conf=${conferenceCode}`} class="afl-conf__cta">
+      <a href="/afl-fantasy/standings?view=league" class="afl-conf__cta">
         Full bracket
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
           <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -173,6 +184,19 @@ const visible = rows.slice(0, 6);
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
+  }
+
+  .afl-conf__heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .afl-conf__logo {
+    height: 1.875rem;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .afl-conf__section-header {
