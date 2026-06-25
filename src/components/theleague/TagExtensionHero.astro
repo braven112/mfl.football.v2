@@ -10,21 +10,22 @@ import { randomHeroPlayer } from '../../utils/hero-players';
 
 export interface Props {
   resolveLeaguePath: (path: string) => string;
-  spriteUrl: string;
   referenceDate: Date;
 }
 
 const { resolveLeaguePath: r, referenceDate } = Astro.props;
 
-const deadlineYear = referenceDate.getFullYear();
-const deadline = new Date(deadlineYear, 1, 14, 23, 59, 59, 999); // Feb 14 end of day
-const daysRemaining = Math.max(0, Math.ceil((deadline.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24)));
+// Calendar-day countdown to the Feb 14 deadline, so the count hits 0 (and the
+// "Deadline today" label shows) on Feb 14 itself rather than only after it passes.
+const startOfDay = (d: Date) => { const o = new Date(d); o.setHours(0, 0, 0, 0); return o; };
+const deadline = new Date(referenceDate.getFullYear(), 1, 14); // Feb 14
+const daysRemaining = Math.max(0, Math.round((startOfDay(deadline).getTime() - startOfDay(referenceDate).getTime()) / 86_400_000));
 const isDeadlineDay = daysRemaining === 0;
 const deadlineFormatted = deadline.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
 const summary = isDeadlineDay
   ? 'Last day to protect your core — file franchise tags and extensions before the new league year begins tonight.'
-  : `Tag players to keep exclusive rights, or extend anyone with 2+ years left. A tag costs 120% of salary (or the top-3 positional average). Deadline ${deadlineFormatted}.`;
+  : `Tag players to keep exclusive rights, or extend anyone with 2+ years left. A tag costs the higher of 120% of salary or the top-3 positional average. Deadline ${deadlineFormatted}.`;
 ---
 
 <EventHeroShell
