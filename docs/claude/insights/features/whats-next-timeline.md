@@ -56,3 +56,17 @@
 **Evidence:** Files: `src/types/league-events.ts`, `src/data/theleague/league-events.ts`, `src/utils/league-event-resolver.ts`
 
 **Recommendation:** When adding AFL events, create `data/afl-fantasy/league-events.ts` with AFL-specific definitions and pass them to the same resolver. The component would select events based on league context.
+
+---
+
+## 2026-06-25 - Timeline Is Forward-Looking (No More "Most Recent" Past Anchor)
+
+**Context:** The section is titled "What's Next" but `selectWhatsNextTimeline` used to fall back to the *most recently completed* event for the lead slot whenever nothing was active — with no recency cutoff. In late June a Rookie Draft that finished ~54 days earlier was sitting at the front of the homepage labeled "Most Recent."
+
+**Insight:** The lead slot is now forward-looking. The selection builds `ordered = activeEvent ? [activeEvent, ...futureEvents] : futureEvents` and takes the first three. A past event is *never* surfaced. NOTE: this supersedes the older notes above that describe `current` as "the last past event" (e.g. the Feb 14 empty-timeline note) — the `hasEvents` guard now passes only when there's an active or future event, not a trailing past one.
+
+**Labels moved to the caller.** The pill text is no longer derived inside `WhatsNextCard` from `position` + `isActive` (which hardcoded "Most Recent"). The card takes an explicit `label` prop; `WhatsNext.astro` and `AflWhatsNext.astro` compute the triple: `Happening Now / Up Next / Coming Soon` when an event is live, else `Up Next / Coming Soon / Later`. The card keeps a position-derived fallback for safety.
+
+**Single-year unit tests can now legitimately be empty.** `selectWhatsNextTimeline` over one year's events at end-of-December returns all-null (no future events) — that's correct. Production never hits this because `getMergedResolvedEvents` spans current + next league year. Tests that asserted a trailing past event as `current` were updated.
+
+**Evidence:** `src/utils/league-event-resolver.ts` (`selectWhatsNextTimeline`), `src/components/theleague/WhatsNext.astro`, `src/components/afl/hp-sections/AflWhatsNext.astro`, `tests/league-event-resolver.test.ts`.
