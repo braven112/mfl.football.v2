@@ -11,6 +11,7 @@
  * Premier League.
  */
 import { chooseTeamName } from '../../../utils/team-names';
+import { getTierLogo } from '../../../utils/afl-tier';
 
 interface Team {
   franchiseId: string;
@@ -164,11 +165,20 @@ if (userRow) {
 
 <section class="afl-tiers" aria-label={`${userTier} standings`}>
   <div class="afl-tiers__header">
-    <div class="afl-tiers__section-header">
-      <h3 class="afl-tiers__title">{userTier} Standings</h3>
-      <p class="afl-tiers__sub">{subtitle}</p>
+    <div class="afl-tiers__heading">
+      <img
+        src={getTierLogo(userTier)}
+        alt={`${userTier} logo`}
+        class="afl-tiers__logo"
+        loading="lazy"
+        decoding="async"
+      />
+      <div class="afl-tiers__section-header">
+        <h3 class="afl-tiers__title">{userTier} Standings</h3>
+        <p class="afl-tiers__sub">{subtitle}</p>
+      </div>
     </div>
-    <a href="/afl-fantasy/standings?view=tier" class="afl-tiers__cta">
+    <a href="/afl-fantasy/standings?view=all_play" class="afl-tiers__cta">
       Full standings
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -229,6 +239,19 @@ if (userRow) {
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
+  }
+
+  .afl-tiers__heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .afl-tiers__logo {
+    height: 2rem;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .afl-tiers__section-header {

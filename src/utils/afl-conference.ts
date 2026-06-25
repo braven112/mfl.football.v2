@@ -57,6 +57,14 @@ export function getConferenceShort(id: ConferenceId): ConferenceShort {
   return CONFERENCE_SHORT[id];
 }
 
+/**
+ * Resolve the branded conference logo path (served from public/).
+ * Single source of truth — call sites derive the path, never hardcode it.
+ */
+export function getConferenceLogo(id: ConferenceId): string {
+  return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}.svg`;
+}
+
 export function getConferenceIdByName(name: ConferenceName): ConferenceId {
   return NAME_TO_ID[name];
 }

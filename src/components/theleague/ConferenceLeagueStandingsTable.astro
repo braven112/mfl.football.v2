@@ -1,15 +1,21 @@
 ---
 import type { TeamStanding } from '../../types/standings';
+import { getConferenceLogo, type ConferenceId } from '../../utils/afl-conference';
 
 export interface Props {
   conferenceName: string;
+  conferenceId?: ConferenceId;
   teams: TeamStanding[];
   year?: number;
   preferredTeamId?: string;
   rosterBaseUrl?: string;
 }
 
-const { conferenceName, teams, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl } = Astro.props;
+const { conferenceName, conferenceId, teams, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl } = Astro.props;
+
+const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
+// Conference accent color for the title — AL red, NL blue (matches each logo).
+const conferenceColor = conferenceId === '01' ? '#1d4f91' : '#c41e3a';
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -46,7 +52,18 @@ function getRowColor(seed: number | undefined): string {
 }
 ---
 <div class="conference-standings-container">
-  <h2 class="conference-title">{conferenceName}</h2>
+  <h2 class="conference-title">
+    {conferenceLogo && (
+      <img
+        src={conferenceLogo}
+        alt={`${conferenceName} logo`}
+        class="conference-logo"
+        loading="lazy"
+        decoding="async"
+      />
+    )}
+    <span class="conference-title__name" style={`color: ${conferenceColor}`}>{conferenceName}</span>
+  </h2>
 
   <div class="table-wrapper">
     <table class="conference-standings-table">
@@ -158,12 +175,23 @@ function getRowColor(seed: number | undefined): string {
   }
 
   .conference-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     font-size: 1.75rem;
     font-weight: 700;
     padding: 1.5rem 2rem;
     margin: 0;
-    background: #154e87;
-    color: white;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .conference-logo {
+    height: 2.25rem;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
   }
 
   .table-wrapper {
@@ -340,6 +368,10 @@ function getRowColor(seed: number | undefined): string {
     .conference-title {
       font-size: 1.5rem;
       padding: 1rem 1.5rem;
+    }
+
+    .conference-logo {
+      height: 1.75rem;
     }
 
     .table-wrapper {

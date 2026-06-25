@@ -323,3 +323,15 @@ Pattern:
 **Evidence:** Switching `.afl-hp__main` to `display: flex; flex-direction: column; gap: 2rem` fixed it: an absolutely-positioned flex item is removed from flex flow and is NOT spaced by `gap`, so the gap only applies between the visible blocks — no leading gap — and the inter-section 2rem is preserved. The sidebar's compensating `margin-top` was removed from the desktop rule (it only existed to offset the displaced hero) but re-added inside the single-column `@container (max-width: 880px)` breakpoint, where the sidebar stacks below the main column and the 2rem is purely visual separation, not column alignment. Verified both columns at `offsetFromGrid: 0` on desktop.
 
 **Recommendation:** When a flow container leads with a `visually-hidden` heading (a common a11y landmark pattern), do NOT space siblings with `:not(:first-child)` margins — the hidden-but-present first child throws the selector off by one. Prefer `display: flex; flex-direction: column; gap: …` (or `display: grid; gap: …`): absolutely-positioned children drop out of flex/grid flow, so `gap` naturally ignores them and spaces only the visible items. This also removes the need for compensating margins on sibling columns.
+
+---
+
+## 2026-06-24 - View-Switcher Tabs: Use Server-Rendered `<a>`, Not JS Click Handlers
+
+**Context:** The standings page tabs (Division / Playoff / All-Play, `src/components/theleague/StandingsViewSelector.astro`) were dead — clicking did nothing. The component rendered `<button>`s and attached `click` listeners in a `<script>` that ran on `DOMContentLoaded` and re-ran on `astro:after-swap`.
+
+**Insight:** Under the layout's `ClientRouter` (View Transitions), those click listeners never bound on the navigation paths users actually took, so the buttons were inert (verified: a programmatic `.click()` did nothing, while setting `window.location.href` directly navigated fine — proving the nav logic was right and only the listener binding was broken). Astro module `<script>`s execute once per session and are NOT re-run on swapped navigations; the `astro:after-swap` re-init is fragile and easy to get wrong. For pure navigation controls this whole machinery is unnecessary.
+
+**Evidence:** Replacing the `<button>` + script with plain `<a href>` links built server-side from `Astro.url` (`url.searchParams.set('view', key)` → `pathname + search`) fixed it instantly, works without JS, survives View Transitions, and preserves other query params (e.g. `?year=`) for free. Keep `data-active`/`aria-current` for styling and a11y; style the `<a>` like the old button (`text-decoration:none; color:inherit`).
+
+**Recommendation:** Any tab/segmented control whose only job is to switch a URL param should render real `<a href>` anchors computed in the component frontmatter from `Astro.url` — never `<button>` + a JS click→`location` handler. Reserve client `<script>` for genuinely interactive state that can't be a link. Related: a page that reads `?view=` (or any enum param) must validate it against the known set and fall back, or an unrecognized value (stale link, typo) renders a blank page — see `src/pages/afl-fantasy/standings.astro`.

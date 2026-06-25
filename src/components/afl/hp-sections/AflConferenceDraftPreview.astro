@@ -5,7 +5,7 @@
  * Surfaces in the run-up to Labor Day weekend. Shows each conference's
  * draft format, date/time, and status (countdown, live, complete).
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { getConferenceLogo } from '../../../utils/afl-conference';
 
 interface Props {
   alDate: Date;
@@ -51,6 +51,7 @@ function statusFor(date: Date, durationHours: number): { label: string; tone: 'u
 
 const al = {
   name: 'American League',
+  logo: getConferenceLogo('00'),
   date: alDate,
   format: 'Live draft · 1 minute per pick',
   status: statusFor(alDate, 8),
@@ -58,6 +59,7 @@ const al = {
 };
 const nl = {
   name: 'National League',
+  logo: getConferenceLogo('01'),
   date: nlDate,
   format: 'Email draft · slow clock',
   status: statusFor(nlDate, 48),
@@ -79,9 +81,7 @@ const nl = {
     {[al, nl].map(conf => (
       <article class:list={['afl-cdraft__card', `afl-cdraft__card--${conf.status.tone}`, { 'afl-cdraft__card--mine': conf.isMine }]}>
         <div class="afl-cdraft__card-head">
-          <svg class="afl-cdraft__icon" width="20" height="20" aria-hidden="true">
-            <use href={`${spriteUrl}#icon-draft-podium`} />
-          </svg>
+          <img src={conf.logo} alt={`${conf.name} logo`} class="afl-cdraft__logo" loading="lazy" decoding="async" />
           <div class="afl-cdraft__card-titles">
             <p class="afl-cdraft__card-eyebrow">{conf.name}{conf.isMine ? ' · Yours' : ''}</p>
             <h4 class="afl-cdraft__card-title">{conf.format}</h4>
@@ -172,8 +172,10 @@ const nl = {
     gap: 0.75rem;
   }
 
-  .afl-cdraft__icon {
-    color: var(--cat-draft, #7c3aed);
+  .afl-cdraft__logo {
+    height: 1.5rem;
+    width: auto;
+    object-fit: contain;
     flex-shrink: 0;
     margin-top: 0.125rem;
   }

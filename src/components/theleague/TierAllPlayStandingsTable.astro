@@ -1,5 +1,6 @@
 ---
 import type { TeamStanding } from '../../types/standings';
+import { getTierLogo } from '../../utils/afl-tier';
 
 export interface Props {
   tierName: string;
@@ -10,10 +11,7 @@ export interface Props {
 
 const { tierName, teams, year = new Date().getFullYear(), rosterBaseUrl } = Astro.props;
 
-// Determine logo based on tier
-const tierLogo = tierName === 'Premier League'
-  ? '/assets/afl/premier.svg'
-  : '/assets/afl/dleague.svg';
+const tierLogo = getTierLogo(tierName);
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
