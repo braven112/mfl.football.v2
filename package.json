@@ -62,7 +62,11 @@
     "party:deploy": "partykit deploy"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["workerd"]
+    "onlyBuiltDependencies": ["workerd"],
+    "overrides": {
+      "astro>vite": "7.3.1",
+      "@astrojs/react>vite": "7.3.1"
+    }
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
