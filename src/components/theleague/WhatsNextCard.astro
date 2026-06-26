@@ -1,28 +1,32 @@
 ---
 /**
- * WhatsNextCard - Individual event card for the "What's Next" timeline.
- * Shows event name, date, description, countdown, and relevant links.
+ * WhatsNextCard - Individual event card for the homepage "What's Next" timeline.
+ *
+ * Design: a "mini hero" — mirrors the deep-navy EventHeroShell chrome so each
+ * event on the homepage reads like a small version of the hero. Shares its
+ * accent system with CalendarEventCard; the per-category accent keys the icon
+ * chip, pill, title, glow wash, border, and countdown number.
  */
 import type { ResolvedLeagueEvent } from '../../types/league-events';
-import { formatEventDate, formatEventDateRange, getStatusText } from '../../utils/event-date-formatter';
+import { formatEventDate, formatEventDateRange } from '../../utils/event-date-formatter';
 import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
   event: ResolvedLeagueEvent | null;
+  /** Timeline position — drives card styling (e.g. the dimmed "upcoming" slot). */
   position: 'current' | 'next' | 'upcoming';
+  /**
+   * Pill text. Required: only the caller knows the forward-looking slot order
+   * (Up Next / Coming Soon / Later, or Happening Now when an event is live),
+   * which can't be derived from `position` + `event` alone.
+   */
+  label: string;
 }
 
-const { event, position } = Astro.props;
+const { event, position, label } = Astro.props;
 
 if (!event) return;
 
-const positionLabels = {
-  current: event.isActive ? 'Happening Now' : 'Most Recent',
-  next: 'Up Next',
-  upcoming: 'Coming Soon',
-};
-
-const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
 const dateDisplay = event.definition.endDate
   ? formatEventDateRange(event.startDate, event.endDate)
   : formatEventDate(event.startDate);
@@ -32,6 +36,11 @@ const iconId = event.definition.icon ? `icon-${event.definition.icon}` : null;
 const category = event.definition.category;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = event.definition.icon ? MULTICOLOR_ICONS.includes(event.definition.icon) : false;
+
+// Big accent countdown — only meaningful for upcoming events.
+const showCountdown = !event.isPast && !event.isActive && event.daysUntilStart > 0;
+const countNum = event.daysUntilStart === 1 ? '1' : String(event.daysUntilStart);
+const countLabel = event.daysUntilStart === 1 ? 'day out' : 'days out';
 
 const cardClasses = [
   'whats-next-card',
@@ -44,39 +53,59 @@ const cardClasses = [
 ---
 
 <article class={cardClasses}>
-  <span class="whats-next-card__badge">{positionLabels[position]}</span>
-  <div class="whats-next-card__header">
-    {iconId && (
-      <svg class={`whats-next-card__icon${isMulticolor ? ' whats-next-card__icon--multicolor' : ''}`} aria-hidden="true">
-        <use href={`${spriteUrl}#${iconId}`}></use>
-      </svg>
-    )}
-    <h3 class="whats-next-card__title">{event.definition.name}</h3>
-  </div>
-  <p class="whats-next-card__date">{dateDisplay}</p>
-  <p class="whats-next-card__description">{event.definition.description}</p>
-  {!event.isPast && !event.isActive && (
-    <p class="whats-next-card__countdown">{statusText}</p>
-  )}
-  {links.length > 0 && (
-    <div class="whats-next-card__links">
-      {links.map((link) => (
-        <a
-          href={link.url}
-          class="whats-next-card__link"
-          target={link.external ? '_blank' : undefined}
-          rel={link.external ? 'noopener noreferrer' : undefined}
-        >
-          {link.label}
-          {link.external && <span class="whats-next-card__external-icon" aria-hidden="true">&nearr;</span>}
-        </a>
-      ))}
+  <span class="whats-next-card__glow" aria-hidden="true"></span>
+  <div class="whats-next-card__body">
+    <div class="whats-next-card__eyebrow">
+      {iconId && (
+        <span class={`whats-next-card__chip${isMulticolor ? ' whats-next-card__chip--multicolor' : ''}`}>
+          <svg class="whats-next-card__icon" aria-hidden="true">
+            <use href={`${spriteUrl}#${iconId}`}></use>
+          </svg>
+        </span>
+      )}
+      <span class="whats-next-card__pill">{label}</span>
     </div>
-  )}
+
+    <h3 class="whats-next-card__title">{event.definition.name}</h3>
+    <p class="whats-next-card__date">{dateDisplay}</p>
+    <p class="whats-next-card__description">{event.definition.description}</p>
+
+    {(showCountdown || event.isActive || links.length > 0) && (
+      <div class="whats-next-card__footer">
+        {showCountdown && (
+          <div class="whats-next-card__count" role="group" aria-label={`${countNum} ${countLabel}`}>
+            <span class="whats-next-card__count-num" aria-hidden="true">{countNum}</span>
+            <span class="whats-next-card__count-label" aria-hidden="true">{countLabel}</span>
+          </div>
+        )}
+        {event.isActive && (
+          <div class="whats-next-card__live">
+            <span class="whats-next-card__live-dot" aria-hidden="true"></span>
+            <span class="whats-next-card__live-label">Live</span>
+          </div>
+        )}
+        {links.length > 0 && (
+          <div class="whats-next-card__links">
+            {links.map((link) => (
+              <a
+                href={link.url}
+                class="whats-next-card__link"
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+              >
+                {link.label}
+                {link.external && <span class="whats-next-card__external-icon" aria-hidden="true">&nearr;</span>}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
 </article>
 
 <style>
-  /* ── Category color tokens ── */
+  /* ── Category accent palette (mirrors hero-resolver EVENT_CATEGORY_COLORS) ── */
   :root {
     --cat-preseason: #2563eb;
     --cat-free-agency: #2e8743;
@@ -84,157 +113,245 @@ const cardClasses = [
     --cat-regular-season: #1c497c;
   }
 
+  /* ── Mini-hero shell ── */
   .whats-next-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.25rem;
-    background: var(--content-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: var(--radius-md, 0.5rem);
-    box-shadow: var(--shadow-md);
-    border-left: 4px solid var(--card-category-color, var(--cat-preseason));
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    --card-accent: var(--cat-regular-season);
+    --card-glow: rgba(28, 73, 124, 0.55);
     position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: flex;
+    padding: 1.25rem;
+    border-radius: var(--radius-lg, 0.75rem);
+    background: #0f1e2e;
+    color: #fff;
+    border: 1px solid color-mix(in srgb, var(--card-accent) 55%, transparent);
+    box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
 
   .whats-next-card:hover {
-    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
     transform: translateY(-2px);
+    border-color: var(--card-accent);
+    box-shadow: 0 14px 32px rgba(15, 30, 46, 0.5);
   }
 
-  /* ── Category variants (border-left + icon color) ── */
-  .whats-next-card--preseason { --card-category-color: var(--cat-preseason); }
-  .whats-next-card--free-agency { --card-category-color: var(--cat-free-agency); }
-  .whats-next-card--draft { --card-category-color: var(--cat-draft); }
-  .whats-next-card--regular-season { --card-category-color: var(--cat-regular-season); }
+  /* Glow wash anchored to the top-left, like the hero. */
+  .whats-next-card__glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(92% 96% at 2% -6%, var(--card-glow), transparent 62%);
+  }
 
-  /* Position variants (opacity only for upcoming) */
+  .whats-next-card__body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  /* ── Category accent variants ── */
+  .whats-next-card--preseason {
+    --card-accent: var(--cat-preseason);
+    --card-glow: rgba(37, 99, 235, 0.5);
+  }
+  .whats-next-card--free-agency {
+    --card-accent: var(--cat-free-agency);
+    --card-glow: rgba(46, 135, 67, 0.5);
+  }
+  .whats-next-card--draft {
+    --card-accent: var(--cat-draft);
+    --card-glow: rgba(124, 58, 237, 0.5);
+  }
+  .whats-next-card--regular-season {
+    --card-accent: var(--cat-regular-season);
+    --card-glow: rgba(28, 73, 124, 0.6);
+  }
+
+  /* Coming-soon cards sit slightly back in the timeline. */
   .whats-next-card--upcoming {
-    opacity: 0.85;
+    opacity: 0.9;
   }
 
-  /* ── State modifiers (affect badge, not border) ── */
+  /* ── Past: dim and drain the accent ── */
   .whats-next-card--past {
-    opacity: 0.7;
-    border-left-color: var(--color-gray-300, #d1d5db);
+    --card-accent: var(--color-gray-400, #9ca3af);
+    --card-glow: rgba(148, 163, 184, 0.18);
+    opacity: 0.72;
   }
 
-  /* Badge */
-  .whats-next-card__badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
-    width: fit-content;
-    color: var(--text-secondary-color, #64748b);
-    background: var(--color-gray-100, #f3f4f6);
-  }
-
-  .whats-next-card--active .whats-next-card__badge {
-    color: #fff;
-    background: var(--color-success, #10b981);
-  }
-
-  .whats-next-card--urgent .whats-next-card__badge {
-    color: #fff;
-    background: var(--color-warning, #f59e0b);
-  }
-
-  /* Header (icon + title) */
-  .whats-next-card__header {
+  /* ── Eyebrow (icon chip + position pill) ── */
+  .whats-next-card__eyebrow {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
-
-  /* Icon (category colored, gray when past) */
-  .whats-next-card__icon {
-    width: 1.25rem;
-    height: 1.25rem;
+  .whats-next-card__chip {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
-    fill: currentColor;
-    color: var(--card-category-color);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--card-accent) 22%, transparent);
   }
-
-  .whats-next-card__icon--multicolor {
+  .whats-next-card__icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: var(--card-accent);
+  }
+  .whats-next-card__chip--multicolor {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .whats-next-card__chip--multicolor .whats-next-card__icon {
     fill: none;
-    color: unset;
   }
 
-  .whats-next-card--past .whats-next-card__icon {
-    color: var(--color-gray-400, #9ca3af);
-  }
-
-  /* Title */
-  .whats-next-card__title {
-    font-size: 1.1rem;
+  .whats-next-card__pill {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
     font-weight: 700;
-    margin: 0;
-    color: var(--primary-link-default-text-color, #1c497c);
-    line-height: 1.3;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--card-accent);
+    color: #fff;
+  }
+  .whats-next-card--active .whats-next-card__pill {
+    background: var(--color-success, #10b981);
+  }
+  .whats-next-card--urgent:not(.whats-next-card--active) .whats-next-card__pill {
+    background: var(--color-warning, #f59e0b);
+  }
+  .whats-next-card--past .whats-next-card__pill {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7);
   }
 
-  /* Date */
+  /* ── Title ── */
+  .whats-next-card__title {
+    margin: 0.15rem 0 0;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 1.3rem;
+    line-height: 1.05;
+    letter-spacing: -0.005em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    color: #fff;
+  }
+
+  /* ── Date ── */
   .whats-next-card__date {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-secondary-color, #64748b);
-    margin: 0;
-  }
-
-  /* Description */
-  .whats-next-card__description {
-    font-size: 0.875rem;
-    color: var(--muted-text-color, #6b7280);
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  /* Countdown */
-  .whats-next-card__countdown {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--color-info, #3b82f6);
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--card-accent) 45%, #fff);
     margin: 0;
   }
 
-  .whats-next-card--urgent .whats-next-card__countdown {
-    color: var(--color-warning, #f59e0b);
+  /* ── Description ── */
+  .whats-next-card__description {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.72);
+    margin: 0;
   }
 
-  /* Links */
+  /* ── Footer (countdown / live status / links) ── */
+  .whats-next-card__footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.1rem;
+    margin-top: 0.4rem;
+  }
+
+  .whats-next-card__count {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  .whats-next-card__count-num {
+    font-family: var(--font-numeric, 'UFC Sans', 'Vend Sans', system-ui, sans-serif);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.9rem;
+    color: var(--card-accent);
+  }
+  .whats-next-card--urgent .whats-next-card__count-num {
+    color: var(--color-warning, #f59e0b);
+  }
+  .whats-next-card__count-label {
+    margin-top: 0.25rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  /* ── Live indicator (active events) ── */
+  .whats-next-card__live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-success, #10b981);
+  }
+  .whats-next-card__live-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--color-success, #10b981);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+    animation: whats-next-card-pulse 1.8s ease-out infinite;
+  }
+  @keyframes whats-next-card-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    70% { box-shadow: 0 0 0 0.5rem rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .whats-next-card__live-dot { animation: none; }
+  }
+
+  /* ── Links (on-navy chips, like the hero panel links) ── */
   .whats-next-card__links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
+    gap: 0.4rem;
+    margin-left: auto;
   }
-
   .whats-next-card__link {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 600;
-    color: var(--color-primary, #1c497c);
+    color: rgba(255, 255, 255, 0.88);
     text-decoration: none;
-    padding: 0.25rem 0.65rem;
-    border-radius: 0.375rem;
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--color-gray-200, #e5e7eb);
-    transition: all 0.15s ease;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
-
   .whats-next-card__link:hover {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
-    border-color: var(--color-primary, #1c497c);
+    background: #fff;
+    color: #0f1e2e;
+    border-color: #fff;
   }
-
   .whats-next-card__external-icon {
     font-size: 0.7rem;
   }
@@ -243,9 +360,11 @@ const cardClasses = [
     .whats-next-card {
       padding: 1rem;
     }
-
     .whats-next-card__title {
-      font-size: 1rem;
+      font-size: 1.2rem;
+    }
+    .whats-next-card__links {
+      margin-left: 0;
     }
   }
 </style>

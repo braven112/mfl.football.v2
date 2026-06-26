@@ -1067,7 +1067,21 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 
 **Recommendation:** When adding or changing any value in `CATEGORY_ACCENT` (or passing a custom `accent` to `EventHeroShell`), check white-on-accent contrast before shipping — the pill, not the card background, is the binding constraint. `CATEGORY_ACCENT` / `CATEGORY_GLOW` are exported and are the single source of truth; the standalone preseason heroes (`TagExtensionHero`, `TaggedPlayerShowcaseHero`) reference `CATEGORY_ACCENT.preseason` rather than hardcoding the hex, so they stay in sync automatically.
 
-**Parallel CSS tokens — keep in lockstep.** The same category palette is *also* declared as `--cat-*` CSS custom properties (`CalendarEventCard.astro`, `WhatsNextCard.astro`) and as `var(--cat-*, <fallback>)` fallbacks in `hero-resolver.ts`. These drive left-border + icon accents on calendar cards (not white-text pills, so no contrast failure), but they must hold the **same hex** as `CATEGORY_ACCENT` or "preseason blue" drifts into two values. When you change a category accent, grep `--cat-<category>` and the resolver fallbacks and update all of them together.
+**Parallel CSS tokens — keep in lockstep.** The same category palette is *also* declared as `--cat-*` CSS custom properties (`CalendarEventCard.astro`, `WhatsNextCard.astro`) and as `var(--cat-*, <fallback>)` fallbacks in `hero-resolver.ts`. They must hold the **same hex** as `CATEGORY_ACCENT` or "preseason blue" drifts into two values. When you change a category accent, grep `--cat-<category>` and the resolver fallbacks and update all of them together. As of 2026-06-25 the calendar cards are "mini heroes" (see below), so they now render the same **white-on-accent pill** as the hero — the AA contrast constraint above now applies to the cards too, not just `EventHeroShell`.
+
+## 2026-06-25 - "Mini Hero" Card Pattern (Calendar / What's Next)
+
+**Context:** Calendar event cards (`CalendarEventCard.astro` for the full calendar, `WhatsNextCard.astro` for the homepage) were restyled to read as small versions of `EventHeroShell`: deep-navy `#0f1e2e` card, per-category accent on the icon chip, pill, glow wash, border, and a big tabular countdown number. No player images.
+
+**Insight / reusable recipe** for making any card adopt the hero look:
+- Set a per-category accent var on the root (`--card-accent`, defaulted then overridden by `.card--<category>`), plus a matching `--card-glow`. Glow is a low-alpha rgba of the accent; the chip tint uses `color-mix(in srgb, var(--card-accent) 22%, transparent)` exactly like the hero (`EventHeroShell.astro:231`).
+- Layer order matters: an absolutely-positioned `__glow` element at `z-index:0` under a `z-index:1` `__body`, with `isolation: isolate` on the card so the glow's radial gradient doesn't bleed past the rounded corners.
+- Title uses `--font-display` condensed uppercase; countdown number uses `--font-numeric` + `tabular-nums` in the accent color; links become on-navy chips (`rgba(255,255,255,.08)` bg, white-on-hover) mirroring `.tl-hero-panel__link`.
+- State handling: `--past` drains `--card-accent` to gray + dims opacity; `--active` swaps the pill to `--color-success` and shows a pulsing dot (gated by `prefers-reduced-motion`); `--urgent` goes `--color-warning`.
+
+**Gotcha:** the multicolor NFL sprite (`MULTICOLOR_ICONS = ['nfl']`) must NOT be tinted — give it a `--chip--multicolor` modifier that sets the chip bg to neutral `rgba(255,255,255,.1)` and the icon `fill: none`, otherwise the accent recolors the league logo.
+
+**Evidence:** `src/components/theleague/CalendarEventCard.astro`, `src/components/theleague/WhatsNextCard.astro`, mirrors `src/components/theleague/EventHeroShell.astro`.
 
 ## 2026-06-24 - Per-League Theming via `html[data-league]` + Single-Value-Per-League Tokens
 

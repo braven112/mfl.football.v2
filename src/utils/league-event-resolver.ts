@@ -346,10 +346,14 @@ export function resolveAllEvents(
 }
 
 /**
- * Select the 3 events for the "What's Next" timeline:
- * - current: the active event, or the most recently completed event
- * - next: the first future event
- * - upcoming: the second future event
+ * Select the 3 events for the "What's Next" timeline.
+ *
+ * Forward-looking: the timeline only ever surfaces an active event or future
+ * events — never a past one. A section titled "What's Next" leading with a
+ * months-old completed event reads as stale, so completed events are dropped.
+ *
+ * - When an event is active, it leads, followed by the next two future events.
+ * - Otherwise the next three future events fill the slots.
  */
 export function selectWhatsNextTimeline(
   resolvedEvents: ResolvedLeagueEvent[],
@@ -358,15 +362,12 @@ export function selectWhatsNextTimeline(
 ): WhatsNextTimeline {
   const activeEvent = resolvedEvents.find((e) => e.isActive) || null;
   const futureEvents = resolvedEvents.filter((e) => !e.isPast && !e.isActive);
-  const pastEvents = resolvedEvents.filter((e) => e.isPast);
 
-  let current: ResolvedLeagueEvent | null = activeEvent;
-  if (!current && pastEvents.length > 0) {
-    current = pastEvents[pastEvents.length - 1];
-  }
+  const ordered = activeEvent ? [activeEvent, ...futureEvents] : futureEvents;
 
-  const next: ResolvedLeagueEvent | null = futureEvents[0] || null;
-  const upcoming: ResolvedLeagueEvent | null = futureEvents[1] || null;
+  const current: ResolvedLeagueEvent | null = ordered[0] || null;
+  const next: ResolvedLeagueEvent | null = ordered[1] || null;
+  const upcoming: ResolvedLeagueEvent | null = ordered[2] || null;
 
   return { current, next, upcoming, referenceDate, leagueYear };
 }

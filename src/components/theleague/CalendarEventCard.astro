@@ -3,13 +3,15 @@
  * CalendarEventCard - Event card for the full League Calendar page.
  * Shows event name, icon, date, description, countdown, and action/result links.
  *
- * Color system:
- * - Border-left: category color (preseason=blue, free-agency=green, draft=purple, regular-season=red)
- * - Badge: urgency indicator (active=green, urgent=amber, past=gray, default=neutral)
- * - Icon: category color, dimmed when past
+ * Design: a "mini hero" — mirrors the deep-navy EventHeroShell chrome so each
+ * calendar event reads like a small version of the homepage hero. The
+ * per-category accent (icon chip, pill, title accent, glow wash, border,
+ * countdown number) is keyed to the event's category, matching the same
+ * accent palette the hero resolver uses (preseason=blue, free-agency=green,
+ * draft=purple, regular-season=navy).
  */
-import type { ResolvedLeagueEvent } from '../../types/league-events';
-import { formatEventDate, formatEventDateRange, getStatusText } from '../../utils/event-date-formatter';
+import { type ResolvedLeagueEvent, CATEGORY_LABELS } from '../../types/league-events';
+import { formatEventDate, formatEventDateRange } from '../../utils/event-date-formatter';
 import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
@@ -18,7 +20,6 @@ export interface Props {
 
 const { event } = Astro.props;
 
-const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
 const dateDisplay = event.definition.endDate
   ? formatEventDateRange(event.startDate, event.endDate)
   : formatEventDate(event.startDate);
@@ -31,6 +32,19 @@ const isMulticolor = event.definition.icon ? MULTICOLOR_ICONS.includes(event.def
 
 const eventStatus = event.isActive ? 'active' : event.isPast ? 'past' : 'upcoming';
 
+// Eyebrow pill: status takes priority over the category label so the card
+// always communicates timing at a glance, the way each hero leads with its phase.
+const pillText = event.isActive
+  ? 'Happening Now'
+  : event.isPast
+    ? 'Completed'
+    : CATEGORY_LABELS[category];
+
+// Big accent countdown — only meaningful for upcoming events.
+const showCountdown = !event.isPast && !event.isActive && event.daysUntilStart > 0;
+const countNum = event.daysUntilStart === 1 ? '1' : String(event.daysUntilStart);
+const countLabel = event.daysUntilStart === 1 ? 'day out' : 'days out';
+
 const cardClasses = [
   'calendar-card',
   `calendar-card--${category}`,
@@ -41,41 +55,59 @@ const cardClasses = [
 ---
 
 <article class={cardClasses} data-event-status={eventStatus}>
-  {(event.isPast || event.isActive) && (
-    <span class="calendar-card__badge">{statusText}</span>
-  )}
-  <div class="calendar-card__header">
-    {iconId && (
-      <svg class={`calendar-card__icon${isMulticolor ? ' calendar-card__icon--multicolor' : ''}`} aria-hidden="true">
-        <use href={`${spriteUrl}#${iconId}`}></use>
-      </svg>
-    )}
-    <h3 class="calendar-card__title">{event.definition.name}</h3>
-  </div>
-  <p class="calendar-card__date">{dateDisplay}</p>
-  <p class="calendar-card__description">{event.definition.description}</p>
-  {!event.isPast && !event.isActive && event.daysUntilStart > 0 && (
-    <p class="calendar-card__countdown">{statusText}</p>
-  )}
-  {links.length > 0 && (
-    <div class="calendar-card__links">
-      {links.map((link) => (
-        <a
-          href={link.url}
-          class="calendar-card__link"
-          target={link.external ? '_blank' : undefined}
-          rel={link.external ? 'noopener noreferrer' : undefined}
-        >
-          {link.label}
-          {link.external && <span class="calendar-card__external-icon" aria-hidden="true">&nearr;</span>}
-        </a>
-      ))}
+  <span class="calendar-card__glow" aria-hidden="true"></span>
+  <div class="calendar-card__body">
+    <div class="calendar-card__eyebrow">
+      {iconId && (
+        <span class={`calendar-card__chip${isMulticolor ? ' calendar-card__chip--multicolor' : ''}`}>
+          <svg class="calendar-card__icon" aria-hidden="true">
+            <use href={`${spriteUrl}#${iconId}`}></use>
+          </svg>
+        </span>
+      )}
+      <span class="calendar-card__pill">{pillText}</span>
     </div>
-  )}
+
+    <h3 class="calendar-card__title">{event.definition.name}</h3>
+    <p class="calendar-card__date">{dateDisplay}</p>
+    <p class="calendar-card__description">{event.definition.description}</p>
+
+    {(showCountdown || event.isActive || links.length > 0) && (
+      <div class="calendar-card__footer">
+        {showCountdown && (
+          <div class="calendar-card__count" role="group" aria-label={`${countNum} ${countLabel}`}>
+            <span class="calendar-card__count-num" aria-hidden="true">{countNum}</span>
+            <span class="calendar-card__count-label" aria-hidden="true">{countLabel}</span>
+          </div>
+        )}
+        {event.isActive && (
+          <div class="calendar-card__live">
+            <span class="calendar-card__live-dot" aria-hidden="true"></span>
+            <span class="calendar-card__live-label">Live</span>
+          </div>
+        )}
+        {links.length > 0 && (
+          <div class="calendar-card__links">
+            {links.map((link) => (
+              <a
+                href={link.url}
+                class="calendar-card__link"
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+              >
+                {link.label}
+                {link.external && <span class="calendar-card__external-icon" aria-hidden="true">&nearr;</span>}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
 </article>
 
 <style>
-  /* ── Category color tokens ── */
+  /* ── Category accent palette (mirrors hero-resolver EVENT_CATEGORY_COLORS) ── */
   :root {
     --cat-preseason: #2563eb;
     --cat-free-agency: #2e8743;
@@ -83,151 +115,240 @@ const cardClasses = [
     --cat-regular-season: #1c497c;
   }
 
+  /* ── Mini-hero shell ── */
   .calendar-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.25rem;
-    background: var(--content-bg, #fff);
-    border-radius: 0.75rem;
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-    border-left: 4px solid var(--card-category-color, var(--cat-preseason));
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    --card-accent: var(--cat-regular-season);
+    --card-glow: rgba(28, 73, 124, 0.55);
     position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: flex;
+    padding: 1.25rem;
+    border-radius: var(--radius-lg, 0.75rem);
+    background: #0f1e2e;
+    color: #fff;
+    border: 1px solid color-mix(in srgb, var(--card-accent) 55%, transparent);
+    box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
 
   .calendar-card:hover {
-    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
     transform: translateY(-2px);
+    border-color: var(--card-accent);
+    box-shadow: 0 14px 32px rgba(15, 30, 46, 0.5);
   }
 
-  /* ── Category variants (border-left + icon color) ── */
-  .calendar-card--preseason { --card-category-color: var(--cat-preseason); }
-  .calendar-card--free-agency { --card-category-color: var(--cat-free-agency); }
-  .calendar-card--draft { --card-category-color: var(--cat-draft); }
-  .calendar-card--regular-season { --card-category-color: var(--cat-regular-season); }
+  /* Glow wash anchored to the top-left, like the hero. */
+  .calendar-card__glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(92% 96% at 2% -6%, var(--card-glow), transparent 62%);
+  }
 
-  /* ── State modifiers (affect badge, not border) ── */
+  .calendar-card__body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  /* ── Category accent variants ── */
+  .calendar-card--preseason {
+    --card-accent: var(--cat-preseason);
+    --card-glow: rgba(37, 99, 235, 0.5);
+  }
+  .calendar-card--free-agency {
+    --card-accent: var(--cat-free-agency);
+    --card-glow: rgba(46, 135, 67, 0.5);
+  }
+  .calendar-card--draft {
+    --card-accent: var(--cat-draft);
+    --card-glow: rgba(124, 58, 237, 0.5);
+  }
+  .calendar-card--regular-season {
+    --card-accent: var(--cat-regular-season);
+    --card-glow: rgba(28, 73, 124, 0.6);
+  }
+
+  /* ── Past: dim and drain the accent ── */
   .calendar-card--past {
-    opacity: 0.7;
-    border-left-color: var(--color-gray-300, #d1d5db);
+    --card-accent: var(--color-gray-400, #9ca3af);
+    --card-glow: rgba(148, 163, 184, 0.18);
+    opacity: 0.72;
   }
 
-  /* ── Badge (urgency/status indicator) ── */
-  .calendar-card__badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
-    width: fit-content;
-    color: var(--text-secondary-color, #64748b);
-    background: var(--color-gray-100, #f3f4f6);
-  }
-
-  .calendar-card--active .calendar-card__badge {
-    color: #fff;
-    background: var(--color-success, #10b981);
-  }
-
-  .calendar-card--urgent .calendar-card__badge {
-    color: #fff;
-    background: var(--color-warning, #f59e0b);
-  }
-
-  /* ── Header (icon + title) ── */
-  .calendar-card__header {
+  /* ── Eyebrow (icon chip + status/category pill) ── */
+  .calendar-card__eyebrow {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
-
-  /* ── Icon (category colored, gray when past) ── */
-  .calendar-card__icon {
-    width: 1.25rem;
-    height: 1.25rem;
+  .calendar-card__chip {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
-    fill: currentColor;
-    color: var(--card-category-color);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--card-accent) 22%, transparent);
   }
-
-  .calendar-card__icon--multicolor {
+  .calendar-card__icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: var(--card-accent);
+  }
+  .calendar-card__chip--multicolor {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .calendar-card__chip--multicolor .calendar-card__icon {
     fill: none;
-    color: unset;
   }
 
-  .calendar-card--past .calendar-card__icon {
-    color: var(--color-gray-400, #9ca3af);
+  .calendar-card__pill {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--card-accent);
+    color: #fff;
+  }
+  .calendar-card--active .calendar-card__pill {
+    background: var(--color-success, #10b981);
+  }
+  .calendar-card--urgent:not(.calendar-card--active) .calendar-card__pill {
+    background: var(--color-warning, #f59e0b);
+  }
+  .calendar-card--past .calendar-card__pill {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7);
   }
 
   /* ── Title ── */
   .calendar-card__title {
-    font-size: 1.1rem;
+    margin: 0.15rem 0 0;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
     font-weight: 700;
-    margin: 0;
-    color: var(--primary-link-default-text-color, #1c497c);
-    line-height: 1.3;
+    font-size: 1.3rem;
+    line-height: 1.05;
+    letter-spacing: -0.005em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    color: #fff;
   }
 
   /* ── Date ── */
   .calendar-card__date {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-secondary-color, #64748b);
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--card-accent) 45%, #fff);
     margin: 0;
   }
 
   /* ── Description ── */
   .calendar-card__description {
-    font-size: 0.875rem;
-    color: var(--muted-text-color, #6b7280);
-    margin: 0;
+    font-size: 0.85rem;
     line-height: 1.5;
-  }
-
-  /* ── Countdown ── */
-  .calendar-card__countdown {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-info, #3b82f6);
+    color: rgba(255, 255, 255, 0.72);
     margin: 0;
   }
 
-  .calendar-card--urgent .calendar-card__countdown {
+  /* ── Footer (countdown / live status / links) ── */
+  .calendar-card__footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.1rem;
+    margin-top: 0.4rem;
+  }
+
+  .calendar-card__count {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  .calendar-card__count-num {
+    font-family: var(--font-numeric, 'UFC Sans', 'Vend Sans', system-ui, sans-serif);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.9rem;
+    color: var(--card-accent);
+  }
+  .calendar-card--urgent .calendar-card__count-num {
     color: var(--color-warning, #f59e0b);
   }
+  .calendar-card__count-label {
+    margin-top: 0.25rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+  }
 
-  /* ── Links ── */
+  /* ── Live indicator (active events) ── */
+  .calendar-card__live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-success, #10b981);
+  }
+  .calendar-card__live-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--color-success, #10b981);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+    animation: calendar-card-pulse 1.8s ease-out infinite;
+  }
+  @keyframes calendar-card-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    70% { box-shadow: 0 0 0 0.5rem rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .calendar-card__live-dot { animation: none; }
+  }
+
+  /* ── Links (on-navy chips, like the hero panel links) ── */
   .calendar-card__links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
+    gap: 0.4rem;
+    margin-left: auto;
   }
-
   .calendar-card__link {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 600;
-    color: var(--color-primary, #1c497c);
+    color: rgba(255, 255, 255, 0.88);
     text-decoration: none;
-    padding: 0.25rem 0.65rem;
-    border-radius: 0.375rem;
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--color-gray-200, #e5e7eb);
-    transition: all 0.15s ease;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
-
   .calendar-card__link:hover {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
-    border-color: var(--color-primary, #1c497c);
+    background: #fff;
+    color: #0f1e2e;
+    border-color: #fff;
   }
-
   .calendar-card__external-icon {
     font-size: 0.7rem;
   }
@@ -236,9 +357,11 @@ const cardClasses = [
     .calendar-card {
       padding: 1rem;
     }
-
     .calendar-card__title {
-      font-size: 1rem;
+      font-size: 1.2rem;
+    }
+    .calendar-card__links {
+      margin-left: 0;
     }
   }
 </style>
