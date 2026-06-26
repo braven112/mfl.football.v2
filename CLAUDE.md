@@ -66,7 +66,7 @@ Config locations:
 
 **Section titles** — Uppercase, left-border accent:
 ```css
-font-size: 0.75rem;
+font-size: 0.75rem; /* AFL: 0.9rem — UFC Sans Condensed compensation */
 font-weight: 700;
 text-transform: uppercase;
 letter-spacing: 0.06em;
@@ -104,7 +104,7 @@ backdrop-filter: blur(2px);
 | Role | Size | Weight | Notes |
 |------|------|--------|-------|
 | Hero/page title | 1.35rem | 700 | line-height: 1.2 |
-| Section title | 0.75rem | 700 | UPPERCASE + left border |
+| Section title | 0.75rem (AFL: 0.9rem) | 700 | UPPERCASE + left border |
 | Body/values | 0.875rem | 400–500 | |
 | Detail label | 0.75rem | 600 | UPPERCASE, gray-400 |
 | Table header | 0.625rem | 600 | UPPERCASE, gray-400 |

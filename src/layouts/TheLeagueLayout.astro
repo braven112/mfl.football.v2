@@ -419,15 +419,31 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 		-webkit-font-smoothing: antialiased;
 	}
 
-	:global(h1) {
-		font-size: var(--font-size-xl);
+	:global(h1),
+	:global(h2),
+	:global(h3),
+	:global(h4) {
+		font-family: var(--font-display);
 		color: var(--primary-link-default-text-color);
+	}
+
+	:global(h1) {
+		font-size: 2.25rem;
 		margin-block: var(--padding-xs);
 	}
 
 	:global(h2) {
-		font-size: var(--font-size-lg);
-		color: var(--primary-link-default-text-color);
+		font-size: 1.75rem;
+		margin-block: 0;
+	}
+
+	:global(h3) {
+		font-size: 1.5rem;
+		margin-block: 0;
+	}
+
+	:global(h4) {
+		font-size: 1.125rem;
 		margin-block: 0;
 	}
 
