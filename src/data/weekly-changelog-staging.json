@@ -133,6 +133,13 @@
       "summary": "AFL homepage section titles (What's Next, standings, quick links, My Team) are now slightly larger — bumped from 0.75rem to 0.9rem to match the visual weight of UFC Sans Condensed, which reads smaller than Vend Sans at the same size.",
       "impact": "user",
       "area": "homepage"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "bug-fix",
+      "summary": "The League homepage quick links icons now display in the correct accent color instead of silently falling back to black — SVG sprite icons render via fill, not color, so the fix mirrors the same correction applied to AFL.",
+      "impact": "user",
+      "area": "homepage"
     }
   ]
 }
