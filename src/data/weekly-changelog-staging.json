@@ -189,6 +189,13 @@
       "summary": "The Move-to-IR button now turns a confirmed green when the move succeeds instead of fading to a washed-out gray, so a completed move actually looks done. The success toast also adapts to dark mode now.",
       "impact": "user",
       "area": "rosters"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "bug-fix",
+      "summary": "The nav drawer footer no longer shows a \"logged-in\" team chip for people who never signed in. Visiting a page with a ?myteam= link used to make the footer claim you were logged in as that team — even though sign-in-only features (like Ask Roger) correctly knew you weren't. The footer now reflects your real signed-in session only, while still letting you browse another team's pages via ?myteam= as before.",
+      "impact": "user",
+      "area": "navigation"
     }
   ]
 }
