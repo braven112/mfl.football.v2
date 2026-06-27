@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { getAflLeagueYear } from '../src/utils/league-year';
 
 /**
@@ -32,5 +32,33 @@ describe('getAflLeagueYear', () => {
     expect(getAflLeagueYear(new Date('2025-06-01T07:00:00Z'))).toBe(2025);
     expect(getAflLeagueYear(new Date('2025-05-31T12:00:00Z'))).toBe(2024);
     expect(getAflLeagueYear(new Date('2027-07-15T12:00:00Z'))).toBe(2027);
+  });
+});
+
+describe('getAflLeagueYear — ?testDate= URL override', () => {
+  afterEach(() => {
+    delete (globalThis as any).window;
+  });
+
+  const stubUrl = (search: string) => {
+    (globalThis as any).window = { location: { search } };
+  };
+
+  it('treats a date-only testDate on the rollover day as that calendar day (PT)', () => {
+    // Date-only would naively parse as UTC midnight (May 31 5pm PT) and read as
+    // the prior year; normalization to local midday keeps it on June 1.
+    stubUrl('?testDate=2026-06-01');
+    expect(getAflLeagueYear()).toBe(2026);
+  });
+
+  it('treats the day before the rollover as the prior year', () => {
+    stubUrl('?testDate=2026-05-31');
+    expect(getAflLeagueYear()).toBe(2025);
+  });
+
+  it('honors an explicit date+time testDate without normalizing', () => {
+    // June 1 06:59 UTC = May 31 23:59 PT → still prior year.
+    stubUrl('?testDate=2026-06-01T06:59:00Z');
+    expect(getAflLeagueYear()).toBe(2025);
   });
 });
