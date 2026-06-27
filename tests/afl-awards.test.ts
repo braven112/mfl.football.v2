@@ -7,6 +7,7 @@ import {
   getAwardType,
   getFranchiseAwards,
   getFranchiseTrophyCase,
+  getFranchiseTrophyRoom,
   countFranchiseBadges,
   type AwardSlug,
 } from '../src/utils/afl-awards';
@@ -133,6 +134,50 @@ describe('awards-history.json data integrity', () => {
         if (val.franchiseId == null) continue;
         expect(getTeam(val.franchiseId), `${slug} ${s.year} → ${val.franchiseId}`).toBeDefined();
       }
+    }
+  });
+});
+
+describe('getFranchiseTrophyRoom (locked placeholders)', () => {
+  const UNIVERSAL = ['afl-championship', 'premier-league', 'dleague-champion', 'nit'];
+
+  it('shows every active award as a locked placeholder for a trophy-less franchise', () => {
+    // 0004 (Get off my Ditka) has no credited awards.
+    const room = getFranchiseTrophyRoom('0004', {
+      divisionSlug: 'al-north',
+      conferenceSlug: 'al-champion',
+    });
+    const items = room.flatMap((g) => g.items);
+    const lockedSlugs = items.filter((i) => i.locked).map((i) => i.slug).sort();
+    expect(lockedSlugs).toEqual(
+      [...UNIVERSAL, 'al-champion', 'al-north'].sort()
+    );
+    // Locked items carry no years and no earned items leaked in.
+    expect(items.every((i) => i.locked && i.years.length === 0)).toBe(true);
+  });
+
+  it('does not lock an award the franchise has already won', () => {
+    // 0002 (Drunk Indians) has won all universal majors + AL conference/division.
+    const room = getFranchiseTrophyRoom('0002', {
+      divisionSlug: 'al-north',
+      conferenceSlug: 'al-champion',
+    });
+    const items = room.flatMap((g) => g.items);
+    expect(items.some((i) => i.locked)).toBe(false);
+    // Earned majors are present and dated.
+    const afl = items.find((i) => i.slug === 'afl-championship');
+    expect(afl?.locked).toBeFalsy();
+    expect(afl?.years.length).toBeGreaterThan(0);
+  });
+
+  it('never adds a locked placeholder for a retired award type', () => {
+    const room = getFranchiseTrophyRoom('0004', {
+      divisionSlug: 'al-north',
+      conferenceSlug: 'al-champion',
+    });
+    const slugs = room.flatMap((g) => g.items).map((i) => i.slug);
+    for (const retired of ['afl-cup', 'al-central', 'nl-pacific']) {
+      expect(slugs).not.toContain(retired);
     }
   });
 });

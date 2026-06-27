@@ -8,10 +8,11 @@ import {
   type AwardSlug,
   type TrophyCaseItem,
 } from '../../../utils/afl-awards';
+import { stampBadgeYear } from '../../../utils/afl-badge';
 
-// Badge art loaded raw so the editable year arc (#yearArc) can be stamped
-// per win. Keyed by filename; dated majors get their year injected, the id is
-// made unique per instance to avoid duplicate #yearArc refs on one page.
+// Badge art loaded raw so the editable year can be stamped per win (an <img>
+// can't be edited per instance). These are build-time repo assets only — safe
+// to inject via set:html. Keyed by filename.
 const badgeSvgRaw = import.meta.glob<string>(
   '../../../../public/assets/afl/awards/*.svg',
   { query: '?raw', import: 'default', eager: true }
@@ -20,28 +21,10 @@ const BADGE_SVG: Record<string, string> = {};
 for (const [p, raw] of Object.entries(badgeSvgRaw)) {
   BADGE_SVG[p.split('/').pop() as string] = raw;
 }
-function renderBadge(badge: string, year?: number, uid = ''): string {
-  let svg = BADGE_SVG[badge] ?? '';
-  if (!svg) return '';
-  if (uid) {
-    svg = svg
-      .replace(/id="yearArc"/, `id="yearArc-${uid}"`)
-      .replace(/href="#yearArc"/, `href="#yearArc-${uid}"`);
-  }
-  if (year != null) {
-    // Curved-arc badges (championship, cup, NIT, tiers) carry the year on a
-    // <textPath>; shield badges (conference/division) carry it as a flat
-    // <text y="266">. Stamp whichever this badge uses.
-    svg = svg.replace(
-      /(<textPath\b[^>]*>)[\s\S]*?(<\/textPath>)/,
-      `$1★  ${year}  ★$2`
-    );
-    svg = svg.replace(
-      /(<text\b[^>]*>[^<]*★[^<]*?)\d{4}([^<]*?<\/text>)/,
-      `$1${year}$2`
-    );
-  }
-  return svg;
+// Stamp the win year (or blank it with '' for a locked placeholder) and make
+// the #yearArc id unique per instance. Pure transform lives in afl-badge.ts.
+function renderBadge(badge: string, year?: number | string, uid = ''): string {
+  return stampBadgeYear(BADGE_SVG[badge] ?? '', year, uid);
 }
 
 export const prerender = false;
@@ -152,7 +135,7 @@ const isOwner =
       <!-- Single header lockup: banner + identity + actions as one unit. -->
       <div class="franchise-lockup">
         {team.banner ? (
-          <img class="franchise-lockup__banner" src={team.banner} alt={`${team.name} banner`} loading="lazy" />
+          <img class="franchise-lockup__banner" src={team.banner} alt="" loading="lazy" />
         ) : null}
 
         <div class="franchise-lockup__bar">
@@ -484,7 +467,7 @@ const isOwner =
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding-left: 0.625rem;
-    border-left: 2px solid var(--afl-gold, #c9a44c);
+    border-left: 2px solid var(--afl-gold, #d97706);
     margin: 0 0 var(--spacing-md, 16px) 0;
     color: var(--text-default);
   }

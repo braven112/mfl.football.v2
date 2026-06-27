@@ -78,14 +78,6 @@ const FIRST_YEAR = 2004;
 // whose brackets/standings aren't final yet (points all 0, no determinate winner).
 const LAST_YEAR = new Date().getFullYear();
 
-// Division id (MFL) → award slug.
-const DIVISION_SLUG = {
-  '00': 'al-north',
-  '01': 'al-south',
-  '02': 'nl-east',
-  '03': 'nl-west',
-};
-
 // Franchise slots that changed HANDS (not just renamed). Awards a slot won
 // before `since` belong to the prior owner, who is no longer in the league, so
 // they must NOT credit the current franchise — otherwise an auto-derived title
@@ -186,10 +178,18 @@ const UA = { 'User-Agent': 'mfl.football.v2 awards (+https://github.com/braven11
 async function fetchExport(year, type, extra = '') {
   const { host, leagueId } = hostFor(year);
   const url = `https://${host}.myfantasyleague.com/${year}/export?TYPE=${type}&L=${leagueId}&JSON=1${extra}`;
-  await sleep(1400); // politeness — MFL rate-limits rapid bursts (429)
-  const res = await fetch(url, { headers: UA });
-  if (!res.ok) throw new Error(`${url} → ${res.status}`);
-  return res.json();
+  // Politeness + 429 backoff — MFL rate-limits rapid bursts. Retry a 429 a
+  // couple times with escalating waits before giving up to the caller.
+  for (let attempt = 0; ; attempt++) {
+    await sleep(1400 * (attempt + 1));
+    const res = await fetch(url, { headers: UA });
+    if (res.ok) return res.json();
+    if (res.status === 429 && attempt < 2) {
+      warn(`${url} → 429, retrying (attempt ${attempt + 2})`);
+      continue;
+    }
+    throw new Error(`${url} → ${res.status}`);
+  }
 }
 
 // --- Per-year sources (local-if-genuine, else online) --------------------------
@@ -237,7 +237,8 @@ function bracketWinner(playoffBracket) {
   const hp = parseNum(home.points);
   const ap = parseNum(away.points);
   if (hp === 0 && ap === 0) return null; // not played yet
-  return hp >= ap ? home.franchise_id : away.franchise_id;
+  if (hp === ap) return null; // exact tie — undeterminable, don't guess
+  return hp > ap ? home.franchise_id : away.franchise_id;
 }
 
 // Per-year bracket metadata: [{ id, name }]. Local playoff-brackets.json holds
@@ -300,10 +301,10 @@ function divisionPct(row) {
 }
 
 // Division NAME (lowercased) → award slug. Era-proof: the 2004-2012 league had
-// six divisions (it also had AL Central and NL Pacific, which have no badge and
-// are skipped); 2013+ has the four below. Division names are unique across the
-// two conferences, so mapping by name works regardless of the id renumbering
-// between eras.
+// six divisions (incl. AL Central and NL Pacific, which have their own badges);
+// 2013+ has the four below. Matching by name rather than id is what makes this
+// work across eras — the division ids were renumbered when the league dropped
+// from six divisions to four. Names are unique across the two conferences.
 const DIVISION_NAME_SLUG = {
   north: 'al-north',
   central: 'al-central',
@@ -313,9 +314,9 @@ const DIVISION_NAME_SLUG = {
   pacific: 'nl-pacific',
 };
 
-// Division winners: top division win pct in each division
-// (tie-break divpf, then pf). Divisions are matched by NAME, so Central/Pacific
-// (pre-2013) are simply skipped.
+// Division winners: top division win pct in each division (tie-break divpf,
+// then pf). Divisions are matched by NAME via DIVISION_NAME_SLUG; any name not
+// in that map is skipped.
 function divisionWinners(league, standings) {
   const out = {};
   const divisions = toArray(league?.league?.divisions?.division);
@@ -334,7 +335,7 @@ function divisionWinners(league, standings) {
   }
   for (const [div, group] of byDiv) {
     const slug = DIVISION_NAME_SLUG[nameOfDiv.get(String(div)) ?? ''];
-    if (!slug) continue; // unmapped (Central / Pacific) — no badge for these
+    if (!slug) continue; // unmapped division name — skip
     group.sort(
       (a, b) =>
         divisionPct(b) - divisionPct(a) ||

@@ -72,10 +72,10 @@ export interface AwardType {
   /** Trophy-room section this award is displayed under. */
   tier: AwardTier;
   /**
-   * True if the badge art carries an editable year arc (`#yearArc` textPath) —
-   * the "major" trophies. Dated badges render one stamped instance per win in
-   * the trophy case; undated badges (divisions, conference) render once with a
-   * win count.
+   * Whether wins expand to one year-stamped badge each (`true`) or collapse to
+   * a single counted item (`false`). Every current award is `dated: true` — each
+   * badge's art carries an editable year — so the collapsed path is vestigial,
+   * kept only so the model can support a count-only award later.
    */
   dated?: boolean;
 }
@@ -190,10 +190,10 @@ export interface TrophyCaseItem {
 }
 
 /**
- * Build a franchise's trophy case: only awards actually won, in taxonomy order,
- * with dated majors expanded to one year-stamped badge per win (most recent
- * first) and undated awards shown once with their win count. Returns [] for a
- * franchise with no hardware.
+ * Build a franchise's trophy case: only awards actually won, in taxonomy order.
+ * Dated awards (every current award) expand to one year-stamped badge per win,
+ * most recent first; a non-dated award would collapse to a single counted item.
+ * Returns [] for a franchise with no hardware.
  */
 export function getFranchiseTrophyCase(franchiseId: string): TrophyCaseItem[] {
   const items: TrophyCaseItem[] = [];
