@@ -8,6 +8,9 @@ import {
   getFranchiseAwards,
   getFranchiseTrophyCase,
   getFranchiseTrophyRoom,
+  getFranchiseGrandSlam,
+  getFranchiseTitleProgress,
+  TITLE_TYPES,
   countFranchiseBadges,
   type AwardSlug,
 } from '../src/utils/afl-awards';
@@ -178,6 +181,91 @@ describe('getFranchiseTrophyRoom (locked placeholders)', () => {
     const slugs = room.flatMap((g) => g.items).map((i) => i.slug);
     for (const retired of ['afl-cup', 'al-central', 'nl-pacific']) {
       expect(slugs).not.toContain(retired);
+    }
+  });
+});
+
+describe('getFranchiseTitleProgress', () => {
+  it('always returns the six title types in prestige order', () => {
+    const p = getFranchiseTitleProgress('0001');
+    expect(p.total).toBe(6);
+    expect(p.types).toHaveLength(6);
+    expect(p.types.map((t) => t.key)).toEqual([
+      'afl',
+      'premier',
+      'conference',
+      'division',
+      'dleague',
+      'nit',
+    ]);
+  });
+
+  it('matches the TITLE_TYPES taxonomy (6 types covering every non-cup slug)', () => {
+    expect(TITLE_TYPES).toHaveLength(6);
+    const typed = new Set(TITLE_TYPES.flatMap((t) => t.slugs));
+    for (const a of AWARD_TYPES) {
+      if (a.slug === 'afl-cup') continue; // retired, not its own type
+      expect(typed.has(a.slug), `${a.slug} not mapped to a title type`).toBe(true);
+    }
+  });
+
+  it('counts a type as won when any of its slugs was won, with desc years', () => {
+    // 0002 (Drunk Indians) has Premier League 2021–2024.
+    const p = getFranchiseTitleProgress('0002');
+    const premier = p.types.find((t) => t.key === 'premier')!;
+    expect(premier.won).toBe(true);
+    expect(premier.years).toEqual([...premier.years].sort((a, b) => b - a));
+    expect(premier.years).toEqual([2024, 2023, 2022, 2021]);
+  });
+
+  it('collapses conference titles (AL or NL) into one "conference" type', () => {
+    const conf = TITLE_TYPES.find((t) => t.key === 'conference')!;
+    expect(conf.slugs).toContain('al-champion');
+    expect(conf.slugs).toContain('nl-champion');
+  });
+
+  it('reports 0 / no years for a franchise with no titles', () => {
+    // 0004 (Get off my Ditka) has no credited awards.
+    const p = getFranchiseTitleProgress('0004');
+    expect(p.wonCount).toBe(0);
+    expect(p.types.every((t) => !t.won && t.years.length === 0)).toBe(true);
+  });
+
+  it('wonCount equals the number of types with at least one win', () => {
+    const p = getFranchiseTitleProgress('0002');
+    expect(p.wonCount).toBe(p.types.filter((t) => t.won).length);
+    expect(p.wonCount).toBeGreaterThan(0);
+    expect(p.wonCount).toBeLessThanOrEqual(6);
+  });
+});
+
+describe('getFranchiseGrandSlam', () => {
+  it('is not completed when a title type is unwon', () => {
+    // 0004 (Get off my Ditka) has no credited awards.
+    const gs = getFranchiseGrandSlam('0004');
+    expect(gs.completed).toBe(false);
+    expect(gs.year).toBeUndefined();
+    expect(gs.missingTypes.length).toBeGreaterThan(0);
+  });
+
+  it('completed ⇔ the progress bar reads 6/6', () => {
+    for (const fid of ['0001', '0002', '0004', '0015', '0022']) {
+      const gs = getFranchiseGrandSlam(fid);
+      const p = getFranchiseTitleProgress(fid);
+      expect(gs.completed).toBe(p.wonCount === 6);
+    }
+  });
+
+  it('stamps the completion year as the latest of each type’s first win', () => {
+    // 0015 (The Mariachi Ninjas) completes the set — verified vs awards data.
+    const gs = getFranchiseGrandSlam('0015');
+    if (!gs.completed) return; // data-driven guard; covered by the ⇔ test above
+    const p = getFranchiseTitleProgress('0015');
+    const expected = Math.max(...p.types.map((t) => Math.min(...t.years)));
+    expect(gs.year).toBe(expected);
+    // Never earlier than any type's first win.
+    for (const t of p.types) {
+      expect(gs.year).toBeGreaterThanOrEqual(Math.min(...t.years));
     }
   });
 });

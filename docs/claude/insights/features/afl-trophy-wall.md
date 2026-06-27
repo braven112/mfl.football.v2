@@ -244,3 +244,66 @@ unevenness doesn't distort order, and cutoff 16 vs 17 produce the *identical*
 promotion/relegation outcome. Don't "fix" this by forcing equal games or moving
 the `tierCompetition.cutoffWeek` — the live page uses the same inclusive cutoff,
 so script and page stay in lockstep.
+
+---
+
+## 2026-06-27 - Title-type progress bar, the stamper comment-trap, and the two golds
+
+Added a compact "how many of the title TYPES have you won" progress bar to the
+franchise lockup, plus a brand-gold cleanup. Non-obvious bits:
+
+**1. Six TITLE TYPES ≠ 13 award slugs.** `getFranchiseTitleProgress(id)` collapses
+the award taxonomy into six *types* (`TITLE_TYPES` in `afl-awards.ts`): AFL,
+Premier, **Conference** (al-champion OR nl-champion), **Division** (any of the 6
+division slugs), D-League, NIT. Conference/Division map to multiple slugs because
+teams realign over the years — "won a division title" means *any* division, not
+the current one. `afl-cup` is deliberately NOT a type (retired). Returns `wonCount`
+(0–6, distinct types won) + per-type `years[]`. `getFranchiseGrandSlam` now
+*derives* from this (`completed ⇔ wonCount === 6`) so the badge phase and the bar
+can never disagree — don't reimplement the "won everything" check separately.
+
+**2. The progress strip lives INSIDE the lockup, forced full-width with
+`flex-basis:100%`.** `.lockup-trophies` is the 3rd child of the flex
+`.franchise-lockup__bar` (after meta + actions); `flex-basis:100%` wraps it onto
+its own row directly under the identity line. Pips are `.title-pips__pip`
+(`data-won` toggles fill); inline separators use `__count::before { content:'·' }`
+scoped to the count only — a generic `* + *::before` middot orphans a stray dot at
+the start of a wrapped line on mobile.
+
+**3. `stampBadgeYear`'s regex matches the FIRST `<textPath>` — including one
+written inside an SVG comment.** A new badge (`grand-slam.svg`) has TWO arcs (a
+year arc + a label arc). Two traps, both real bugs hit during this work:
+(a) the **year arc must be the first `<textPath>` in document order**, else the
+stamper overwrites the label; (b) **never write the literal tag name `<textPath>`
+in a comment inside a stampable SVG** — the stamper's
+`(<textPath\b[^>]*>)[\s\S]*?(</textPath>)` matches the comment first and eats the
+real arc's attributes. `tests/afl-badge.test.ts` now locks both (label survives,
+href intact). Note the per-award drift-guard test iterates
+`public/assets/afl/awards/*.svg` — keep one-off/non-award badges (like the staged
+`grand-slam.svg`) OUTSIDE that dir so they're excluded from that loop.
+
+**4. There are TWO AFL golds and `--afl-gold` is NOT the badge gold.**
+`--afl-gold` (#d97706) is an orange-amber (same value as `--color-warning-dark`).
+The actual metallic gold on the award SVGs is **#c9a44c** (+#e6c976 highlight).
+Added `--afl-trophy-gold` / `--afl-trophy-gold-light` tokens for the real
+badge gold and moved the trophy-wall accents (pips, tier-title left borders) +
+the championship hero onto them. Gotcha: `AflChampionshipHero.astro` *locally
+redefines* `--afl-gold` inside `.afl-champ-hero`, shadowing the global token —
+change the local override, not just the token. Caveat: #c9a44c as small text on a
+white background is low-contrast (the hero kicker/VS sit on white); it reads fine
+as fills/borders and on the navy badges, but watch contrast for gold *text* on
+light.
+
+**5. Dev/HMR trap: editing scoped `.astro` `<style>` across an open tab desyncs
+the `data-astro-cid` hash → the page renders UNSTYLED** (classes present, no rules
+match). A fresh SSR load is consistent; a hard reload (Cmd+Shift+R) fixes it.
+Verify "is the CSS actually broken" by curling the SSR HTML and confirming the
+markup's `data-astro-cid-XXX` matches the `<style>` rule's selector hash before
+chasing a phantom bug.
+
+**6. Previewing phase-gated heroes: `?testDate`.** The championship hero only
+renders during AFL Week 16 (championship-week event start → +7 days =
+`isInChampionshipPhase`). That date = Labor Day + 3 (Thu kickoff) + 15 weeks. For
+2025 that's **2025-12-18 .. 2025-12-24**, so `?testDate=2025-12-20` on
+`/afl-fantasy` forces the championship hero. Standings feeds exist for every year
+back to 2007, so any past season works.

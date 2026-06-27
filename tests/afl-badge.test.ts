@@ -54,4 +54,22 @@ describe('stampBadgeYear', () => {
       expect(stamped, `${f} year not stamped`).toContain('1999');
     }
   });
+
+  // The "Grand Slam" badge has TWO curved arcs — a year arc and a label arc.
+  // Stamping must hit the year arc only, leaving the GRAND SLAM label intact.
+  // (A prior bug had the stamper match the literal tag name inside an SVG
+  // comment, blanking the year arc's attributes; this locks the contract.)
+  it('stamps the year into the grand-slam badge without eating the label', () => {
+    const raw = readFileSync(
+      path.resolve(__dirname, '../public/assets/afl/grand-slam.svg'),
+      'utf8'
+    );
+    const stamped = stampBadgeYear(raw, 2025, 'grand-slam');
+    // Year landed on the bottom arc…
+    expect(stamped).toContain('★  2025  ★');
+    // …the arc kept its href (attributes weren't clobbered)…
+    expect(stamped).toContain('href="#yearArc-grand-slam"');
+    // …and the label arc survived intact.
+    expect(stamped).toContain('>GRAND SLAM</textPath>');
+  });
 });

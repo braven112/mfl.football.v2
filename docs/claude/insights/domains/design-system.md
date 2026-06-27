@@ -1099,6 +1099,18 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 
 ---
 
+## 2026-06-27 - Two AFL golds: `--afl-gold` (orange) vs `--afl-trophy-gold` (badge metallic)
+
+There are **two** AFL gold tokens and they are not interchangeable:
+- `--afl-gold: #d97706` — an orange-amber (literally the same value as `--color-warning-dark`). Despite the comment calling it "trophy gold," it does **not** match the award-badge art.
+- `--afl-trophy-gold: #c9a44c` (+ `--afl-trophy-gold-light: #e6c976`) — the actual metallic gold used in the trophy-badge SVGs. Use this for anything meant to read as the same gold as the trophies (progress-bar pips, tier-title accents, the championship hero).
+
+Two gotchas when unifying gold:
+1. `AflChampionshipHero.astro` **locally redefines** `--afl-gold` inside `.afl-champ-hero`, shadowing the global token — to retheme it, change the local override line, not the global token.
+2. `#c9a44c` is a **low-contrast text color on white** (≈2:1). It's fine as fills/borders and as text on the navy badges, but for gold *text* on a light background (e.g. the hero kicker/"VS"), it's softer than the orange it replaced — neither passes WCAG AA for small text, so it's a judgment call, not a regression.
+
+---
+
 ## 2026-06-25 - Font Token Architecture and Heading Font System
 
 **Context:** Expanding UFC Sans Condensed from hero/display elements to all h1–h4 headings site-wide.

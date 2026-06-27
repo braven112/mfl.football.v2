@@ -623,7 +623,9 @@
    ======================================== */
 html[data-league="afl"] {
   --afl-navy: #0f1e2e;                         /* design-system deep navy (EventHeroShell palette) */
-  --afl-gold: #d97706;                         /* championship/trophy gold (award badges, trophy wall) */
+  --afl-gold: #d97706;                         /* AFL amber accent (championship hero tint/border). NOT the badge gold — use --afl-trophy-gold to match award art. */
+  --afl-trophy-gold: #c9a44c;                  /* metallic badge gold — matches the award SVG art (#c9a44c) */
+  --afl-trophy-gold-light: #e6c976;            /* lighter badge-gold highlight (#e6c976) */
   --breadcrumb-bar-bg: var(--afl-navy);        /* top "Back to MFL" strip */
   --inverse-bg: var(--afl-navy);               /* footer (via --inverse-content-bg) */
   --league-accent: #c41e3a;                    /* AFL accent — red */
