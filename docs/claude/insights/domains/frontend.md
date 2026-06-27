@@ -335,3 +335,15 @@ Pattern:
 **Evidence:** Replacing the `<button>` + script with plain `<a href>` links built server-side from `Astro.url` (`url.searchParams.set('view', key)` → `pathname + search`) fixed it instantly, works without JS, survives View Transitions, and preserves other query params (e.g. `?year=`) for free. Keep `data-active`/`aria-current` for styling and a11y; style the `<a>` like the old button (`text-decoration:none; color:inherit`).
 
 **Recommendation:** Any tab/segmented control whose only job is to switch a URL param should render real `<a href>` anchors computed in the component frontmatter from `Astro.url` — never `<button>` + a JS click→`location` handler. Reserve client `<script>` for genuinely interactive state that can't be a link. Related: a page that reads `?view=` (or any enum param) must validate it against the known set and fall back, or an unrecognized value (stale link, typo) renders a blank page — see `src/pages/afl-fantasy/standings.astro`.
+
+---
+
+## 2026-06-27 - `@astrojs/react` Major Must Match Astro Major (Dev-Only Hydration Crash)
+
+**Context:** React islands that use hooks (e.g. `SuggestionBox.tsx`, which calls `useState`) crashed in local `astro dev` with `Invalid hook call. Hooks can only be called inside the body of a function component` followed by `Uncaught TypeError: Cannot read properties of null (reading 'useState')`. Hook-*less* islands hydrated fine; only hook-*using* ones failed.
+
+**Insight:** The cause was a major-version mismatch between the integration and the framework: `@astrojs/react@^5` (Astro 5 era) was still pinned while the app ran `astro@^6.0.8`. There was exactly ONE `react@19.2.4` / `react-dom` on disk, yet the mismatched integration made Vite split React into two instances during dev, so hooks ran against a null dispatcher. Production bundling masked the bug entirely — only `astro dev` broke, which is why CI and Vercel previews stayed green.
+
+**Evidence:** Bumping `@astrojs/react` to `^6.0.0` and re-running `pnpm install` fully restored hydration (island sheds its `ssr` attribute, console clean, `pnpm build` passes). Known dead ends that waste time: Vite `resolve.dedupe` (only recovers hook-less islands), `optimizeDeps.include`/`force` (no effect), and `resolve.alias` of react/react-dom (actively BREAKS SSR with "module is not defined" — aliasing React's CJS entry is incompatible with Astro's ESM SSR module-runner).
+
+**Recommendation:** When React islands fail to hydrate in dev with "Invalid hook call / more than one copy of React," check the `@astrojs/react`↔`astro` major versions FIRST — before reaching for any Vite dedupe/alias config. Keep the integration major locked to the Astro major on every Astro upgrade.
