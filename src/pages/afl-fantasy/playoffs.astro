@@ -2088,6 +2088,21 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     }
   }
 
+  /* Respect reduced-motion: stop the live-refresh shimmer and score flash/flicker */
+  @media (prefers-reduced-motion: reduce) {
+    .refresh-progress-bar::after,
+    .score-updated,
+    .score-checked {
+      animation: none;
+    }
+
+    /* The countdown bar's width is updated every second from JS; drop the
+       smooth transition so it steps instantly instead of animating. */
+    .refresh-progress-bar {
+      transition: none;
+    }
+  }
+
   .empty-state {
     background: #fff;
     border: 1px dashed #e2e8f0;

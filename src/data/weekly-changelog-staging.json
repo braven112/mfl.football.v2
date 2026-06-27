@@ -175,6 +175,13 @@
       "summary": "Submit buttons now spin consistently while they work: the Set Lineup submit (both leagues), the contract-declaration submit, and the Move-to-IR button all show the same shared loading spinner and stay disabled until the action finishes, so you get clear feedback and can't accidentally double-submit.",
       "impact": "user",
       "area": "design-system"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "bug-fix",
+      "summary": "The playoffs pages now respect the \"reduce motion\" accessibility setting — the live-score refresh countdown bar and the score flash/flicker effects hold still instead of animating for viewers who've asked their device to tone motion down.",
+      "impact": "user",
+      "area": "playoffs"
     }
   ]
 }

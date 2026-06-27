@@ -451,3 +451,28 @@ h1: Page title
 **When NOT to use:** Wrapper sections that are purely structural (e.g., a section wrapping the entire page content).
 
 **Evidence:** Added `aria-labelledby` to Brock Osweiler, Position Worst, and Hall of Shame sections on Dead Money Awards page.
+
+---
+
+## 2026-06-27 - Reduced-Motion: `animation: none` Isn't Enough — Kill `transition` Too
+
+**Context:** Both playoffs pages (`src/pages/theleague/playoffs.astro`, `src/pages/afl-fantasy/playoffs.astro`) have a live-score auto-refresh countdown bar. The `@keyframes shimmer` sweep on `.refresh-progress-bar::after` had no `prefers-reduced-motion` guard. Adding `animation: none` for the shimmer + `scoreFlash`/`scoreFlicker` looked complete — but the bar *still* animated.
+
+**Insight:** Motion on the page came from **two** independent sources. The `::after` shimmer is a CSS `animation`, but the bar itself slides because `.refresh-progress-bar` has `transition: width 1s linear` while JS rewrites `style.width` every second (`startCountdown()`). A reduced-motion block that only zeroes `animation` leaves the `transition`-driven motion running. When auditing a component for `prefers-reduced-motion`, check for **all three** motion sources: `@keyframes`/`animation`, `transition` on any JS-mutated property, and JS-driven scroll/transform.
+
+**Pattern:**
+```css
+@media (prefers-reduced-motion: reduce) {
+  .refresh-progress-bar::after,
+  .score-updated,
+  .score-checked { animation: none; }
+
+  /* width is rewritten from JS every second; drop the smooth slide so it steps instantly */
+  .refresh-progress-bar { transition: none; }
+}
+```
+`transition: none` keeps state legible (the bar still jumps to each value) while removing continuous motion.
+
+**Also:** Don't trust a loading-state audit's category at face value. `loading-inventory.md` listed this shimmer as a "skeleton loader" to migrate to the shared `Skeleton`. It's actually a live/active-state indicator (§8 "Explicitly NOT loading"), not a loader — swapping in `Skeleton` would have broken live scoring. Verify against the rendered behavior before migrating.
+
+**Evidence:** PR #291. The `transition: none` line was a Copilot review catch the initial `animation: none`-only guard missed.

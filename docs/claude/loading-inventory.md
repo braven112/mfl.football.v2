@@ -25,8 +25,8 @@ Four/five distinct inline CSS spinners, each defined per-file, no shared compone
 | File | Mechanism | Reduced-motion guard? | Target |
 |---|---|---|---|
 | [PendingTradesPanel.tsx](../../src/components/theleague/trade-builder/PendingTradesPanel.tsx) | `.ptp-skeleton` cards, `@keyframes ptp-pulse`, container `aria-busy` | **Yes** (line 724) — the best existing impl, use as the model | `Skeleton` |
-| [theleague/playoffs.astro](../../src/pages/theleague/playoffs.astro) | `@keyframes shimmer` sweep | **No guard** — fix on migration | `Skeleton` |
-| [afl-fantasy/playoffs.astro](../../src/pages/afl-fantasy/playoffs.astro) | duplicated shimmer | **No guard** — fix on migration | `Skeleton` |
+
+> **Correction (audit fix):** the playoffs `@keyframes shimmer` is **not** a loading skeleton. In both `theleague/playoffs.astro` and `afl-fantasy/playoffs.astro` it drives `.refresh-progress-bar::after` — the sweep on the live-score 60s auto-refresh countdown bar (`.matchup-card[data-status='live']`). That is a live/active-state indicator and belongs to **§8 (Explicitly NOT loading — leave alone)**, not here. There is no shimmer-animated skeleton on these pages; the `.icon-thumb--placeholder` / `.team-icon--placeholder` elements are static fallbacks for missing icons, not loaders. The genuine gap — the shimmer/`scoreFlash`/`scoreFlicker` animations lacked a `prefers-reduced-motion` guard — was fixed in place (guard added to both files); no `Skeleton` migration applies.
 
 ---
 
@@ -103,6 +103,7 @@ Animated status indicators that signal live/active state, not waiting. Out of sc
 - `TradeDeadlineHero` `.tdhero__pulse` ([trade-deadline-hero.css](../../src/styles/trade-deadline-hero.css)) — countdown
 - Draft room on-the-clock / danger-timer pulses ([draft-room.css](../../src/styles/draft-room.css))
 - `PlayerCell` eligible-avatar pulse ([player-cell.css](../../src/styles/player-cell.css)) — note: **lacks a reduced-motion guard**, worth fixing opportunistically but not a loading state
+- Playoffs live-refresh progress bar `.refresh-progress-bar::after` `@keyframes shimmer` ([theleague/playoffs.astro](../../src/pages/theleague/playoffs.astro), [afl-fantasy/playoffs.astro](../../src/pages/afl-fantasy/playoffs.astro)) — 60s live-score auto-refresh countdown sweep; reduced-motion guard added (covers shimmer + `scoreFlash` + `scoreFlicker`)
 
 ---
 
@@ -111,7 +112,7 @@ Animated status indicators that signal live/active state, not waiting. Out of sc
 | Cluster | Count | Target |
 |---|---|---|
 | Spinners | 5 distinct | one `Spinner` |
-| Skeletons / shimmer | 3 (1 good, 2 unguarded) | one `Skeleton` |
+| Skeletons / shimmer | 1 (`PendingTradesPanel`, good) | one `Skeleton` (playoffs "shimmer" was a misclassified live progress bar — see §8) |
 | Loading-text mutations | ~18 | button-loading / tier rules |
 | CSS button-loading | 3 + ~11 disabled-only | one button-loading pattern |
 | Thinking-dots | 1 | `ThinkingDots` (extract) |
