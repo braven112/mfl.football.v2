@@ -846,3 +846,16 @@ await drawer.screenshot({
 - After setting those pages to `prerender = false`, route entries were present and link integrity checks passed.
 
 **Recommendation:** Any TheLeague page linked from the drawer should remain server-rendered (`prerender = false`) while clean URL rewriting is handled in middleware. If prerendering is required later, add explicit edge rewrites for each clean URL path.
+
+## 2026-06-27 - NavFooter Login Chip Must Use JWT, Not the Preference Cookie
+
+**Context:** The nav drawer footer showed a "logged-in" team chip for users who never signed in. Repro: visit an AFL page with `?myteam=<id>` (no login) → open the drawer → footer shows that team as authenticated, while `getAuthUser`-gated features (Ask Roger) correctly show "Sign in."
+
+**Root cause:** `TheLeagueLayout.astro` populated the nav `teamInfo` from the league **preference cookie** (`afl_team_pref` / `theleague_team_pref`) first, falling back to the JWT. `NavFooter` treats `teamInfo`/`team` as proof of login via `isAuthenticated = !!team`. The preference cookie is **not** auth: it is `httpOnly: false`, unsigned, and `setAFLPreference`/`setTheLeaguePreference` write it from any `?myteam=` param across many pages (rosters, standings, playoffs, draft-predictor, index). Trivially spoofable.
+
+**Fix:** Drive the nav `teamInfo` from the signed JWT session only — `navTeamId = <league>JwtFranchiseId`, where the JWT franchise is taken only when `layoutAuthUser.leagueId` matches that league's MFL id (from `getLeagueBySlug(...).id`, never hardcoded). The page-level `myteam` variable still falls back to the preference cookie, so browse-as personalization is unchanged; the AFL competition nav override reads the cookie directly in `NavLinks.astro`, so it is also unaffected.
+
+**Key takeaways for future sessions:**
+- The preference cookie is a *personalization* signal, never an *auth* signal. Anything that gates "logged-in" UI (the footer chip, owner/admin nav-link visibility via `teamInfo.franchiseId`) must key off `getAuthUser` (the signed JWT), not the cookie.
+- Both AFL and TheLeague logins mint a JWT with `leagueId` + `franchiseId` (`src/pages/api/auth/login.ts`) — TheLeague is **not** cookie-only, so JWT-gating is safe for both.
+- `getLeagueBySlug('afl-fantasy'|'theleague').id` gives the MFL id; don't hardcode `19621`/`13522` (per CLAUDE.md league registry rule).
