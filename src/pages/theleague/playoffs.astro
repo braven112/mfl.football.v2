@@ -1681,6 +1681,12 @@ const grandTotal =
     .score-checked {
       animation: none;
     }
+
+    /* The countdown bar's width is updated every second from JS; drop the
+       smooth transition so it steps instantly instead of animating. */
+    .refresh-progress-bar {
+      transition: none;
+    }
   }
 
   @media (max-width: 1024px) {
