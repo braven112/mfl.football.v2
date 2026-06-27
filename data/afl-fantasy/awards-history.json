@@ -1,0 +1,720 @@
+{
+  "$comment": "AFL award winners per season, 2003-present. League Champion (afl-championship), AL/NL champions, NIT and division titles are auto-derived for 2016+ by scripts/compute-afl-awards.mjs (brackets matched by NAME; divisions = top divpct). HAND-ENTERED from the official League Awards table (source 'manual:league-awards' / 'manual:tier-champion' / 'manual:champion-history'): all Premier League + D-League tier champions (tiers run 2017-present), the AFL Cup (2015 knockout, 2016 all-play; note MFL also has vestigial 2016-2017 AFL Cup brackets but the official awards put the cup at 2015-2016), pre-2016 League Champions (some franchiseId=null where the champion is a defunct/pre-2016 franchise with no current page), and select pre-2016 conference champions. Re-run safe: hand-entered rows are preserved.",
+  "seasons": [
+    {
+      "year": 2025,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0007",
+          "name": "Avenging Amish",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0012",
+          "name": "Suh girls, one cup",
+          "source": "bracket:6"
+        },
+        "nl-east": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0018",
+          "name": "Jewpacabra",
+          "source": "standings:divpct"
+        },
+        "al-south": {
+          "franchiseId": "0011",
+          "name": "Midwestside Connection",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "manual:tier-champion"
+        },
+        "dleague-champion": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "manual:tier-champion"
+        }
+      }
+    },
+    {
+      "year": 2024,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0022",
+          "name": "Balls Deep",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0022",
+          "name": "Balls Deep",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "bracket:6"
+        },
+        "nl-east": {
+          "franchiseId": "0022",
+          "name": "Balls Deep",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0020",
+          "name": "The Boondock Saints",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "standings:divpct"
+        },
+        "al-south": {
+          "franchiseId": "0007",
+          "name": "Avenging Amish",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:tier-champion"
+        },
+        "dleague-champion": {
+          "franchiseId": "0008",
+          "name": "Dicks out for Harambe",
+          "source": "manual:tier-champion"
+        }
+      }
+    },
+    {
+      "year": 2023,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0024",
+          "name": "No Soup For You",
+          "source": "bracket:6"
+        },
+        "nl-west": {
+          "franchiseId": "0021",
+          "name": "Chatmaster",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0010",
+          "name": "Fullybaked",
+          "source": "standings:divpct"
+        },
+        "al-south": {
+          "franchiseId": "0009",
+          "name": "Vitside Mafia",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:tier-champion"
+        },
+        "dleague-champion": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "manual:tier-champion"
+        }
+      }
+    },
+    {
+      "year": 2022,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0020",
+          "name": "The Boondock Saints",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0009",
+          "name": "Vitside Mafia",
+          "source": "bracket:6"
+        },
+        "al-south": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0020",
+          "name": "The Boondock Saints",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:tier-champion"
+        },
+        "dleague-champion": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "manual:tier-champion"
+        }
+      }
+    },
+    {
+      "year": 2021,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0008",
+          "name": "Dicks out for Harambe",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0008",
+          "name": "Dicks out for Harambe",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0021",
+          "name": "Chatmaster",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0003",
+          "name": "Team Minty Fresh",
+          "source": "bracket:6"
+        },
+        "al-south": {
+          "franchiseId": "0008",
+          "name": "Dicks out for Harambe",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0013",
+          "name": "Muck Juggling Micks",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:tier-champion"
+        },
+        "dleague-champion": {
+          "franchiseId": "0008",
+          "name": "Dicks out for Harambe",
+          "source": "manual:tier-champion"
+        }
+      }
+    },
+    {
+      "year": 2020,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0020",
+          "name": "The Boondock Saints",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0020",
+          "name": "The Boondock Saints",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "bracket:6"
+        },
+        "al-south": {
+          "franchiseId": "0009",
+          "name": "Vitside Mafia",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0010",
+          "name": "Fullybaked",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0020",
+          "name": "The Boondock Saints",
+          "source": "manual:tier-champion"
+        },
+        "dleague-champion": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "manual:tier-champion"
+        }
+      }
+    },
+    {
+      "year": 2019,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0015",
+          "name": "The Mariachi Ninjas",
+          "source": "bracket:6"
+        },
+        "al-north": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0024",
+          "name": "No Soup For You",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": null,
+          "name": "Delirium Tremens",
+          "source": "standings:divpct"
+        },
+        "al-south": {
+          "franchiseId": "0003",
+          "name": "Team Minty Fresh",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "manual:league-awards"
+        },
+        "dleague-champion": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2018,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "bracket:1"
+        },
+        "al-champion": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "bracket:2"
+        },
+        "nl-champion": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "bracket:3"
+        },
+        "nit": {
+          "franchiseId": "0012",
+          "name": "Pubes",
+          "source": "bracket:6"
+        },
+        "al-south": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "manual:league-awards"
+        },
+        "dleague-champion": {
+          "franchiseId": "0003",
+          "name": "Team Minty Fresh",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2017,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "bracket:1"
+        },
+        "nit": {
+          "franchiseId": "0009",
+          "name": "Vitside Mafia",
+          "source": "bracket:5"
+        },
+        "nl-west": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "standings:divpct"
+        },
+        "al-south": {
+          "franchiseId": "0011",
+          "name": "Midwestside Connection",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0022",
+          "name": "Balls Deep",
+          "source": "standings:divpct"
+        },
+        "premier-league": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "manual:league-awards"
+        },
+        "dleague-champion": {
+          "franchiseId": "0017",
+          "name": "Titsburgh Feelers",
+          "source": "manual:league-awards"
+        },
+        "al-champion": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2016,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0011",
+          "name": "Midwestside Connection",
+          "source": "bracket:1"
+        },
+        "nit": {
+          "franchiseId": "0019",
+          "name": "Badd Boys",
+          "source": "bracket:5"
+        },
+        "al-south": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "standings:divpct"
+        },
+        "nl-west": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "standings:divpct"
+        },
+        "nl-east": {
+          "franchiseId": "0022",
+          "name": "Balls Deep",
+          "source": "standings:divpct"
+        },
+        "al-north": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "standings:divpct"
+        },
+        "afl-cup": {
+          "franchiseId": "0014",
+          "name": "Thundering Herd",
+          "source": "manual:league-awards"
+        },
+        "nl-champion": {
+          "franchiseId": null,
+          "name": "Delirium Tremens",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2015,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0005",
+          "name": "Computer Jocks",
+          "source": "manual:champion-history"
+        },
+        "afl-cup": {
+          "franchiseId": "0022",
+          "name": "Balls Deep",
+          "source": "manual:league-awards"
+        },
+        "nl-champion": {
+          "franchiseId": null,
+          "name": "Delirium Tremens",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2014,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Cliffside Killer Clowns",
+          "source": "manual:champion-history"
+        },
+        "al-champion": {
+          "franchiseId": null,
+          "name": "booyakasha",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2013,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "manual:champion-history"
+        },
+        "nl-champion": {
+          "franchiseId": null,
+          "name": "Delirium Tremens",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2012,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:champion-history"
+        },
+        "nl-champion": {
+          "franchiseId": null,
+          "name": "Bradys Bastards",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2011,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Delirium Tremens",
+          "source": "manual:champion-history"
+        },
+        "al-champion": {
+          "franchiseId": "0002",
+          "name": "Drunk Indians",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2010,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0021",
+          "name": "Chatmaster",
+          "source": "manual:champion-history"
+        },
+        "al-champion": {
+          "franchiseId": null,
+          "name": "Marriedwithchildren",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2009,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Brady's Bastards",
+          "source": "manual:champion-history"
+        },
+        "al-champion": {
+          "franchiseId": null,
+          "name": "More Cowbell",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2008,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "No Frills",
+          "source": "manual:champion-history"
+        },
+        "al-champion": {
+          "franchiseId": null,
+          "name": "More Cowbell",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2007,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": "0021",
+          "name": "Chatmaster",
+          "source": "manual:champion-history"
+        }
+      }
+    },
+    {
+      "year": 2006,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Marriedwithchildren",
+          "source": "manual:champion-history"
+        }
+      }
+    },
+    {
+      "year": 2005,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Cougs",
+          "source": "manual:champion-history"
+        },
+        "al-champion": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "manual:league-awards"
+        }
+      }
+    },
+    {
+      "year": 2004,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Bukkake Warriors",
+          "source": "manual:champion-history"
+        }
+      }
+    },
+    {
+      "year": 2003,
+      "awards": {
+        "afl-championship": {
+          "franchiseId": null,
+          "name": "Melville Roadsters",
+          "source": "manual:champion-history"
+        }
+      }
+    }
+  ]
+}

@@ -2,6 +2,42 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../../utils/auth';
+import { getFranchiseTrophyCase, type TrophyCaseItem } from '../../../utils/afl-awards';
+
+// Badge art loaded raw so the editable year arc (#yearArc) can be stamped
+// per win. Keyed by filename; dated majors get their year injected, the id is
+// made unique per instance to avoid duplicate #yearArc refs on one page.
+const badgeSvgRaw = import.meta.glob<string>(
+  '../../../../public/assets/afl/awards/*.svg',
+  { query: '?raw', import: 'default', eager: true }
+);
+const BADGE_SVG: Record<string, string> = {};
+for (const [p, raw] of Object.entries(badgeSvgRaw)) {
+  BADGE_SVG[p.split('/').pop() as string] = raw;
+}
+function renderBadge(badge: string, year?: number, uid = ''): string {
+  let svg = BADGE_SVG[badge] ?? '';
+  if (!svg) return '';
+  if (uid) {
+    svg = svg
+      .replace(/id="yearArc"/, `id="yearArc-${uid}"`)
+      .replace(/href="#yearArc"/, `href="#yearArc-${uid}"`);
+  }
+  if (year != null) {
+    // Curved-arc badges (championship, cup, NIT, tiers) carry the year on a
+    // <textPath>; shield badges (conference/division) carry it as a flat
+    // <text y="266">. Stamp whichever this badge uses.
+    svg = svg.replace(
+      /(<textPath\b[^>]*>)[\s\S]*?(<\/textPath>)/,
+      `$1★  ${year}  ★$2`
+    );
+    svg = svg.replace(
+      /(<text\b[^>]*\by="266"[^>]*>)\s*\d{4}\s*(<\/text>)/,
+      `$1${year}$2`
+    );
+  }
+  return svg;
+}
 
 export const prerender = false;
 
@@ -52,6 +88,16 @@ const conference = (aflConfig.conferences ?? []).find(
   (c: any) => c.code === team.conference
 );
 const conferenceName = conference?.name ?? team.conference;
+
+// Trophy case — only awards this franchise actually won. Dated majors (AFL
+// Championship, AFL Cup, NIT, Premier League, D-League) expand to one
+// year-stamped badge per win; undated awards (divisions, conference) show once
+// with a win count. Sourced from data/afl-fantasy/awards-history.json (2016+).
+const trophyCase: TrophyCaseItem[] = getFranchiseTrophyCase(id);
+const totalBadges = trophyCase.reduce(
+  (sum, t) => sum + (t.dated ? 1 : t.years.length),
+  0
+);
 
 // Auth — surface owner-only CTAs at the top of the page when the
 // viewer matches this franchise.
@@ -161,19 +207,33 @@ const isOwner =
       </div>
     </div>
 
-    {wonYears.length > 0 && (
-      <section class="franchise-section">
-        <h2>Championship years</h2>
-        <ul class="champ-list">
-          {wonYears.map((y) => (
-            <li class="champ-list__win">
-              <span class="champ-list__year">{y}</span>
-              <span class="champ-list__verb">— champion</span>
-            </li>
+    <section class="franchise-section">
+      <div class="section-header">
+        <h2 class="section-header__title">Trophy wall</h2>
+        <p class="section-header__sub">
+          {totalBadges > 0
+            ? `${totalBadges} ${totalBadges === 1 ? 'trophy' : 'trophies'} in the case`
+            : 'No hardware yet — this case is waiting for its first trophy'}
+        </p>
+      </div>
+      {totalBadges === 0 ? (
+        <p class="badge-wall__empty">
+          No hardware yet — this case is waiting for its first trophy.
+        </p>
+      ) : (
+        <div class="badge-wall">
+          {trophyCase.map((t) => (
+            <div
+              class="badge-card"
+              data-category={t.category}
+              role="img"
+              aria-label={t.dated ? `${t.label} ${t.year}` : `${t.label} ${t.years.join(', ')}`}
+              set:html={renderBadge(t.badge, t.year, t.dated ? `${t.slug}-${t.year}` : t.slug)}
+            />
           ))}
-        </ul>
-      </section>
-    )}
+        </div>
+      )}
+    </section>
 
     {lostYears.length > 0 && (
       <section class="franchise-section">
@@ -197,12 +257,6 @@ const isOwner =
         </a>
       </div>
     </section>
-
-    <p class="franchise-footer">
-      Wider per-franchise history (year-by-year W-L, MVPs, biggest blowouts)
-      arrives in a later phase once <code>compute-franchise-history.mjs</code>
-      runs against AFL feeds.
-    </p>
   </main>
 </TheLeagueLayout>
 
@@ -392,6 +446,50 @@ const isOwner =
     margin-bottom: var(--spacing-md, 16px);
   }
 
+  /* Editorial section header (title + subtitle, shared left border). */
+  .section-header {
+    border-left: 2px solid var(--primary-color, #c41e3a);
+    padding-left: 0.625rem;
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  .section-header__title {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .section-header__sub {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0.25rem 0 0 0;
+  }
+
+  /* Trophy case — one badge per win; dated majors are year-stamped. */
+  .badge-wall {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+    gap: var(--spacing-sm, 8px);
+    justify-items: center;
+  }
+
+  /* Bare badges — no card chrome or labels; the medallion carries its own
+     title and year, so it stands alone at 2x size. */
+  .badge-card {
+    width: 248px;
+    max-width: 100%;
+  }
+
+  .badge-card :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .badge-wall__empty {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.9375rem;
+  }
+
   .champ-list {
     list-style: none;
     padding: 0;
@@ -433,19 +531,5 @@ const isOwner =
 
   .quick-link:hover {
     background: var(--bg-muted, #f3f4f6);
-  }
-
-  .franchise-footer {
-    margin-top: var(--spacing-xl, 32px);
-    color: var(--text-muted, #6b7280);
-    font-size: 0.875rem;
-    font-style: italic;
-  }
-
-  .franchise-footer code {
-    background: var(--code-bg, #f3f4f6);
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-style: normal;
   }
 </style>
