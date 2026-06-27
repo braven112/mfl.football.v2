@@ -182,6 +182,13 @@
       "summary": "The playoffs pages now respect the \"reduce motion\" accessibility setting — the live-score refresh countdown bar and the score flash/flicker effects hold still instead of animating for viewers who've asked their device to tone motion down.",
       "impact": "user",
       "area": "playoffs"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "style-tweak",
+      "summary": "The Move-to-IR button now turns a confirmed green when the move succeeds instead of fading to a washed-out gray, so a completed move actually looks done. The success toast also adapts to dark mode now.",
+      "impact": "user",
+      "area": "rosters"
     }
   ]
 }

@@ -292,6 +292,23 @@ const containerClasses = [
     box-shadow: none;
   }
 
+  /* Confirmed success state — overrides the disabled gray so the button
+     reads as a completed action rather than an unavailable one. */
+  .action-button.ir-move-button.success,
+  .action-button.ir-move-button.success:disabled {
+    background: linear-gradient(
+      135deg,
+      var(--color-success, #10b981) 0%,
+      var(--color-success-dark, #059669) 100%
+    );
+    color: var(--color-white, #fff);
+    cursor: default;
+    transform: none;
+    /* Match the resting button's translucent shadow — not the opaque
+       --color-success-light token, which would render a solid halo. */
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+  }
+
   .button-icon {
     font-size: 0.875rem;
     flex-shrink: 0;
@@ -427,8 +444,8 @@ const containerClasses = [
               position: fixed;
               top: 20px;
               right: 20px;
-              background: #10b981;
-              color: white;
+              background: var(--color-success, #10b981);
+              color: var(--color-white, #fff);
               padding: 0.75rem 1rem;
               border-radius: 0.5rem;
               box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
