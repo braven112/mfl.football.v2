@@ -1,5 +1,5 @@
 {
-  "$comment": "AFL award winners per season, 2003-present. League Champion (afl-championship), AL/NL champions, NIT and division titles are auto-derived for 2016+ by scripts/compute-afl-awards.mjs (brackets matched by NAME; divisions = top divpct). HAND-ENTERED from the official League Awards table (source 'manual:league-awards' / 'manual:tier-champion' / 'manual:champion-history'): all Premier League + D-League tier champions (tiers run 2017-present), the AFL Cup (2015 knockout, 2016 all-play; note MFL also has vestigial 2016-2017 AFL Cup brackets but the official awards put the cup at 2015-2016), pre-2016 League Champions (some franchiseId=null where the champion is a defunct/pre-2016 franchise with no current page), and select pre-2016 conference champions. Re-run safe: hand-entered rows are preserved.",
+  "$comment": "AFL award winners per season, 2003-present. League Champion (afl-championship), AL/NL champions, NIT and division titles are auto-derived for 2016+ by scripts/compute-afl-awards.mjs (brackets matched by NAME; divisions = top divpct). Premier League + D-League tier champions are auto-derived from data/afl-fantasy/tier-history.json (source \"tier-history\") by the same script, superseding the legacy hand-entered \"manual:tier-champion\" rows. Still HAND-ENTERED from the official League Awards table (source \"manual:league-awards\" / \"manual:champion-history\"): the AFL Cup (2015 knockout, 2016 all-play; note MFL also has vestigial 2016-2017 AFL Cup brackets but the official awards put the cup at 2015-2016), pre-2016 League Champions (some franchiseId=null where the champion is a defunct/pre-2016 franchise with no current page), and select pre-2016 conference champions. Re-run safe: hand-entered rows are preserved.",
   "seasons": [
     {
       "year": 2025,
@@ -47,12 +47,12 @@
         "premier-league": {
           "franchiseId": "0015",
           "name": "The Mariachi Ninjas",
-          "source": "manual:tier-champion"
+          "source": "tier-history"
         },
         "dleague-champion": {
           "franchiseId": "0017",
           "name": "Titsburgh Feelers",
-          "source": "manual:tier-champion"
+          "source": "tier-history"
         }
       }
     },
@@ -102,12 +102,12 @@
         "premier-league": {
           "franchiseId": "0002",
           "name": "Drunk Indians",
-          "source": "manual:tier-champion"
+          "source": "tier-history"
         },
         "dleague-champion": {
           "franchiseId": "0008",
           "name": "Dicks out for Harambe",
-          "source": "manual:tier-champion"
+          "source": "tier-history"
         }
       }
     },

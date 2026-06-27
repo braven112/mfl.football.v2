@@ -21,6 +21,7 @@ import {
 } from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getTierMembership } from '../../utils/afl-tier';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -111,7 +112,11 @@ const calculatedAllPlay = weeklyResultsFeed
 const divisionStandings = getDivisionStandings(franchises, aflConfig);
 const conferenceAStandings = getConferenceStandings(franchises, aflConfig, '00');
 const conferenceBStandings = getConferenceStandings(franchises, aflConfig, '01');
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig, calculatedAllPlay);
+// Group by THIS season's tier makeup (tier-history.json) so promotion/
+// relegation is reflected per-year; falls back to static config.tier for
+// seasons tier-history doesn't record.
+const tierMembership = getTierMembership(selectedYear);
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig, calculatedAllPlay, tierMembership);
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
     team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
