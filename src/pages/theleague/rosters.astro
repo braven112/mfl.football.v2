@@ -9771,6 +9771,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             years: cdmSelectedYears,
           };
         }
+        cdmSubmitBtn.classList.remove('is-loading');
+        cdmSubmitBtn.removeAttribute('aria-busy');
         cdmSubmitBtn.style.display = 'none';
         cdmSuccess.style.display = 'flex';
         updateView();
@@ -9830,6 +9832,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           };
         }
 
+        cdmSubmitBtn.classList.remove('is-loading');
+        cdmSubmitBtn.removeAttribute('aria-busy');
         cdmSubmitBtn.style.display = 'none';
         cdmSuccess.style.display = 'flex';
 
