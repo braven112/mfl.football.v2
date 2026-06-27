@@ -217,6 +217,20 @@
       "summary": "AFL pages now point at the correct MFL season. Set Lineup, the Keeper Planner, the Calendar, and sign-in all roll over to the new league year on June 1 — when the new AFL season actually goes live on MFL — instead of jumping ahead in February like The League does. Owners no longer hit empty rosters or a 'franchise could not be determined' login error in the spring gap before the new season exists.",
       "impact": "user",
       "area": "calendar"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "bug-fix",
+      "summary": "AFL keepers now route to the real tool: the homepage keeper-deadline hero and the Keepers page both open the per-team Keeper Planner (Rosters → Planner) instead of a placeholder page that waited on an MFL feed AFL doesn't have. Each franchise card jumps straight into that team's planner.",
+      "impact": "user",
+      "area": "other"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "bug-fix",
+      "summary": "The AFL Keeper Planner now works after navigating to it from another page — previously the drag-and-drop, arrow buttons, and view tabs only worked on a fresh page load, and silently went dead if you clicked into the planner from elsewhere on the site. The roster view tabs (Roster/Analytics/Planner) had the same issue and are fixed too.",
+      "impact": "user",
+      "area": "rosters"
     }
   ]
 }

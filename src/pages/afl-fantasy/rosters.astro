@@ -1217,11 +1217,25 @@ const pageConfig = {
   <script>
     import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
-    const configEl = document.getElementById('afl-roster-config');
-    const config = configEl ? JSON.parse(configEl.textContent || '{}') : {};
+    // Re-read the page config from the DOM on demand — values like
+    // selectedFranchiseId change between client-side (ClientRouter)
+    // navigations, so we must not capture a stale snapshot.
+    const readConfig = (): Record<string, any> => {
+      const el = document.getElementById('afl-roster-config');
+      return el ? JSON.parse(el.textContent || '{}') : {};
+    };
 
-    // ── View tab switching ──
-    const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');
+    // The action-trigger delegation lives at the document level, so it must
+    // be bound exactly once — not per navigation — or stacked handlers would
+    // double-open the modal. Module-scoped so it survives across page loads.
+    let actionDelegationBound = false;
+
+    // Runs on initial load AND after every ClientRouter navigation. Without
+    // this, Astro evaluates the script module only once, so navigating onto
+    // this page client-side would leave the tabs/planner unwired.
+    function initAflRosterPage() {
+      // ── View tab switching ──
+      const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');
     const containers = document.querySelectorAll<HTMLElement>('[data-view-content]');
 
     const VIEW_LABELS: Record<string, string> = {
@@ -1290,11 +1304,15 @@ const pageConfig = {
     if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
 
     // ── Player action button → AFLActionModal (owner only) ──
+    // Bind the document-level delegation once; re-running init must not stack.
+    if (actionDelegationBound) return;
+    actionDelegationBound = true;
     document.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const trigger = target.closest('[data-action-trigger]') as HTMLButtonElement | null;
       if (!trigger) return;
       e.stopPropagation();
+      const config = readConfig();
       const row = trigger.closest('tr') as HTMLTableRowElement | null;
       if (!row) return;
       const opener = (window as any).openAFLActionModal as
@@ -1377,6 +1395,10 @@ const pageConfig = {
         ...extra,
       });
     });
+    }
+
+    // Fires on first load and after every ClientRouter navigation.
+    document.addEventListener('astro:page-load', initAflRosterPage);
   </script>
 
   <style>

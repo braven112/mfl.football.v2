@@ -273,12 +273,18 @@ const roundLabel = (round: string) => {
     position: string;
   }
 
-  const _root = document.querySelector<HTMLElement>('[data-keeper-planner]');
-  if (!_root) {
-    // Component not on this page — bail silently.
-  } else {
-    // Pin into a const so inner closures keep the non-null narrowing
-    const root: HTMLElement = _root;
+  // Module-scoped guard so the document-level Escape handler binds exactly
+  // once, not once per ClientRouter navigation.
+  let kpKeydownBound = false;
+
+  // Runs on first load AND after every ClientRouter navigation. Astro
+  // evaluates this script module only once, so without re-running on
+  // `astro:page-load` the planner stays unwired when you reach the owner
+  // roster page via client-side navigation (a hard refresh worked, SPA
+  // navigation didn't — that was the "drag stops working" bug).
+  function initKeeperPlanner() {
+    const root = document.querySelector<HTMLElement>('[data-keeper-planner]');
+    if (!root) return; // planner not on this page (non-owner) — bail silently
     const franchiseId = root.dataset.franchiseId || '';
     const year = Number(root.dataset.year || '0');
     const KEEPER_LIMIT = Number(root.dataset.keeperLimit || '7');
@@ -600,9 +606,19 @@ const roundLabel = (round: string) => {
     finalizeModal?.querySelectorAll('[data-finalize-cancel]').forEach((el) => {
       el.addEventListener('click', finalizeClose);
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && finalizeModal && !finalizeModal.hidden) finalizeClose();
-    });
+    if (!kpKeydownBound) {
+      kpKeydownBound = true;
+      // Bound once at the document level; re-query the modal on each press so
+      // it always acts on the current page's planner.
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const modal = document.getElementById('kp-finalize') as HTMLDivElement | null;
+        if (modal && !modal.hidden) {
+          modal.hidden = true;
+          document.body.style.overflow = '';
+        }
+      });
+    }
 
     const confirmBtn = finalizeModal?.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
     confirmBtn?.addEventListener('click', async () => {
@@ -702,6 +718,8 @@ const roundLabel = (round: string) => {
     updateCounters();
     void loadPlan();
   }
+
+  document.addEventListener('astro:page-load', initKeeperPlanner);
 </script>
 
 <style>
