@@ -347,3 +347,15 @@ Pattern:
 **Evidence:** Bumping `@astrojs/react` to `^6.0.0` and re-running `pnpm install` fully restored hydration (island sheds its `ssr` attribute, console clean, `pnpm build` passes). Known dead ends that waste time: Vite `resolve.dedupe` (only recovers hook-less islands), `optimizeDeps.include`/`force` (no effect), and `resolve.alias` of react/react-dom (actively BREAKS SSR with "module is not defined" — aliasing React's CJS entry is incompatible with Astro's ESM SSR module-runner).
 
 **Recommendation:** When React islands fail to hydrate in dev with "Invalid hook call / more than one copy of React," check the `@astrojs/react`↔`astro` major versions FIRST — before reaching for any Vite dedupe/alias config. Keep the integration major locked to the Astro major on every Astro upgrade.
+
+---
+
+## 2026-06-27 - Consuming the Shared Loading System from a React Component
+
+**Context:** Migrating the rules-chat "Ask Roger" button spinner (`src/components/shared/rules-chat/AskInput.tsx`) onto the shared loading system. The Astro `<Spinner>` primitive in `src/components/shared/loading/` can't be imported into a `.tsx` file — Astro components aren't React components.
+
+**Insight:** The shared loading system is class-based by design precisely so non-Astro contexts can use it. From React, render the same class markup directly (`<span className="loading-spinner loading-spinner--compact" role="status" aria-live="polite" aria-label="..." />`) instead of importing a component — identical to what `src/utils/loading-html.ts` does for client-side string builders. The CSS only applies if `src/styles/loading.css` is in scope: a React island doesn't carry styles, so import `'../../styles/loading.css'` in the **host Astro page's** frontmatter (the global-scope / PlayerCell trick), not in the `.tsx`. Accent is automatic via `var(--league-accent)` (resolves blue/AFL-red by `html[data-league]`) — never branch on league.
+
+**Evidence:** `AskInput.tsx` renders the span when `isLoading`; both `src/pages/theleague/rules-chat.astro` and `src/pages/afl-fantasy/rules-chat.astro` import `loading.css` and dropped their duplicated `.rqa-input__spinner` CSS. Verified computed `border-top-color` resolved to `rgb(28,73,124)` on TheLeague and `rgb(196,30,58)` on AFL from the one shared class. Gotcha worth remembering: the old per-screen spinner CSS was **duplicated in both league pages** — migrations like this are a 3-file change (the React component + both league host pages), not one.
+
+**Recommendation:** When pulling a React/`.tsx` loader onto the shared system, render the shared class names directly and import `loading.css` into every Astro page that hosts the island. Grep both `theleague/` and `afl-fantasy/` for the old class — bespoke loaders are frequently copy-pasted across both leagues.
