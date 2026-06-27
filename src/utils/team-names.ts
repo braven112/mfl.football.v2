@@ -152,6 +152,8 @@ export interface TeamConfig {
   groupMe?: string;
   history?: FranchiseHistoryEntry[];
   ownerHistory?: OwnerHistoryEntry[];
+  /** Short, affectionate one-liners shown in the roster loader (see RosterLoader.astro). */
+  loaderQuips?: string[];
 }
 
 /**

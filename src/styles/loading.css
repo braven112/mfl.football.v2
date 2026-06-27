@@ -1,0 +1,270 @@
+/**
+ * Loading System — shared CSS for every loading state on the site.
+ *
+ * The single visual standard for loading feedback. See:
+ *   docs/claude/loading-standards.md  (the contract)
+ *
+ * Used by the Astro components in `src/components/shared/loading/*` (each
+ * imports this file in frontmatter for global scope — the PlayerCell trick)
+ * and by the client-side string builders in `src/utils/loading-html.ts`.
+ * Both render the SAME class names so this stylesheet applies in either path.
+ *
+ * Skin: every accent reads `var(--league-accent)`, which resolves to
+ * TheLeague blue or AFL red via `html[data-league]` in tokens.css. Loaders
+ * never branch on league in code.
+ *
+ * Size/variant: controlled via CSS custom properties on each root class, so
+ * a parent can override per-context, e.g.:
+ *   .my-toolbar .loading-spinner { --spinner-size: 14px; }
+ *
+ * Reduced motion: every animation has a `prefers-reduced-motion: reduce`
+ * guard that collapses motion to a static-but-present state. Non-negotiable.
+ */
+
+/* ════════════════════════════════════════════════════════════════════
+   Tier 2/3 — Spinner
+   ════════════════════════════════════════════════════════════════════ */
+.loading-spinner {
+  --spinner-size: 24px;
+  --spinner-thickness: 3px;
+  --spinner-track: var(--color-gray-200, #e5e7eb);
+  --spinner-accent: var(--league-accent, var(--color-primary, #1c497c));
+  --spinner-speed: 0.7s;
+
+  display: inline-block;
+  width: var(--spinner-size);
+  height: var(--spinner-size);
+  border: var(--spinner-thickness) solid var(--spinner-track);
+  border-top-color: var(--spinner-accent);
+  border-radius: var(--radius-full, 9999px);
+  animation: loading-spin var(--spinner-speed) linear infinite;
+  box-sizing: border-box;
+}
+
+.loading-spinner--compact { --spinner-size: 16px; --spinner-thickness: 2px; }
+.loading-spinner--large   { --spinner-size: 40px; --spinner-thickness: 4px; }
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Tier 3 — Button loading
+   Add `is-loading` to a button: spinner replaces label, button disables.
+   ════════════════════════════════════════════════════════════════════ */
+.loading-btn {
+  position: relative;
+}
+
+.loading-btn.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+  cursor: progress;
+}
+
+.loading-btn.is-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: var(--league-accent, var(--color-primary, #1c497c));
+  border-radius: var(--radius-full, 9999px);
+  animation: loading-spin 0.7s linear infinite;
+}
+
+/* On a solid/branded button the spinner sits on the fill, so tint it white */
+.loading-btn--on-accent.is-loading::after {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Tier 4 — Skeleton
+   Shimmer sweep over a neutral fill; mirrors the final layout's shape.
+   ════════════════════════════════════════════════════════════════════ */
+.loading-skeleton {
+  --skeleton-base: var(--color-gray-200, #e5e7eb);
+  --skeleton-highlight: var(--color-gray-100, #f3f4f6);
+  --skeleton-radius: var(--radius-md, 8px);
+  --skeleton-height: 1rem;
+  --skeleton-speed: 1.4s;
+
+  display: block;
+  width: 100%;
+  height: var(--skeleton-height);
+  border-radius: var(--skeleton-radius);
+  background-color: var(--skeleton-base);
+  background-image: linear-gradient(
+    90deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: loading-shimmer var(--skeleton-speed) ease-in-out infinite;
+}
+
+.loading-skeleton--text   { --skeleton-height: 0.85rem; --skeleton-radius: var(--radius-sm, 4px); }
+.loading-skeleton--title  { --skeleton-height: 1.25rem; --skeleton-radius: var(--radius-sm, 4px); width: 60%; }
+.loading-skeleton--circle { width: var(--skeleton-height); border-radius: var(--radius-full, 9999px); flex-shrink: 0; }
+
+/* Stack of skeleton lines */
+.loading-skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+@keyframes loading-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Tier 5 — Thinking dots (AI / waiting voice)
+   Extracted from the Schefter typing indicator (the most polished loader).
+   ════════════════════════════════════════════════════════════════════ */
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-dots__text {
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: var(--color-gray-500, #6b7280);
+}
+
+.loading-dots__dots {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.loading-dots__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--league-accent, var(--color-primary, #1c497c));
+  animation: loading-dot-bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots__dot:nth-child(2) { animation-delay: 0.16s; }
+.loading-dots__dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes loading-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Tier 5 — Branded "on the wire" moment (10s+ AI waits)
+   The one tier that carries league character. Frosted-glass backdrop.
+   ════════════════════════════════════════════════════════════════════ */
+.loading-branded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+}
+
+/* Overlay variant — covers its positioned parent (or the viewport if fixed) */
+.loading-branded--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal, 1000);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.loading-branded__mark {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full, 9999px);
+  background: color-mix(in srgb, var(--league-accent, #1c497c) 12%, transparent);
+  display: grid;
+  place-items: center;
+}
+
+/* Pulsing ring around the mark */
+.loading-branded__mark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+  animation: loading-branded-pulse 1.8s ease-out infinite;
+}
+
+.loading-branded__mark svg,
+.loading-branded__mark img {
+  width: 28px;
+  height: 28px;
+}
+
+.loading-branded__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--loading-branded-text, var(--color-gray-900, #111827));
+  letter-spacing: 0.01em;
+}
+
+.loading-branded__narration {
+  font-size: 0.875rem;
+  font-style: italic;
+  color: var(--loading-branded-sub, var(--color-gray-500, #6b7280));
+  min-height: 1.2em;
+}
+
+/* On the dark overlay, flip text to light */
+.loading-branded--overlay .loading-branded__title { color: #fff; }
+.loading-branded--overlay .loading-branded__narration { color: rgba(255, 255, 255, 0.85); }
+
+@keyframes loading-branded-pulse {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Reduced motion — collapse every loader to a static, present state.
+   The element stays visible (and keeps its ARIA label); only motion stops.
+   ════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: none;
+    /* show a full ring instead of a sweeping arc */
+    border-top-color: var(--spinner-accent);
+    border-color: var(--spinner-accent);
+    opacity: 0.85;
+  }
+
+  .loading-btn.is-loading::after,
+  .loading-branded__mark::before {
+    animation: none;
+  }
+
+  .loading-skeleton {
+    animation: none;
+    background-image: none; /* flat neutral fill, still a visible placeholder */
+  }
+
+  .loading-dots__dot {
+    animation: none;
+    transform: none;
+    opacity: 0.7;
+  }
+
+  .loading-branded__mark::before {
+    opacity: 0.5;
+    transform: none;
+  }
+}

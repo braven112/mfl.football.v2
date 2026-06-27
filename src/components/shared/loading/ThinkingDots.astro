@@ -1,0 +1,36 @@
+---
+/**
+ * ThinkingDots — three bouncing dots for AI / "voice is working" waits.
+ *
+ * Extracted and generalized from the Schefter typing indicator. Dots take
+ * `var(--league-accent)`. See docs/claude/loading-standards.md.
+ *
+ * @example
+ * <ThinkingDots label="Schefter is on the wire" />
+ * <ThinkingDots />  <!-- dots only, no text -->
+ */
+import '../../../styles/loading.css';
+
+export interface Props {
+  /** Optional italic text shown before the dots. */
+  label?: string;
+  /** Extra classes */
+  class?: string;
+}
+
+const { label, class: className = '' } = Astro.props;
+---
+
+<span
+  class:list={['loading-dots', className]}
+  role="status"
+  aria-live="polite"
+  aria-label={label ?? 'Working'}
+>
+  {label && <span class="loading-dots__text">{label}</span>}
+  <span class="loading-dots__dots" aria-hidden="true">
+    <span class="loading-dots__dot"></span>
+    <span class="loading-dots__dot"></span>
+    <span class="loading-dots__dot"></span>
+  </span>
+</span>

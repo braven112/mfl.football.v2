@@ -1,0 +1,36 @@
+---
+/**
+ * Spinner — tier 2/3 inline loading indicator.
+ *
+ * Accent comes from `var(--league-accent)`, so it skins per league with no
+ * code branch. See docs/claude/loading-standards.md.
+ *
+ * @example
+ * <Spinner label="Loading news" />
+ * <Spinner size="compact" />
+ * <Spinner size="large" />
+ */
+import '../../../styles/loading.css';
+
+export interface Props {
+  /** Size variant */
+  size?: 'compact' | 'default' | 'large';
+  /** Accessible label announced to screen readers */
+  label?: string;
+  /** Extra classes */
+  class?: string;
+}
+
+const { size = 'default', label = 'Loading', class: className = '' } = Astro.props;
+
+const sizeClass =
+  size === 'compact' ? 'loading-spinner--compact' :
+  size === 'large' ? 'loading-spinner--large' : '';
+---
+
+<span
+  class:list={['loading-spinner', sizeClass, className]}
+  role="status"
+  aria-live="polite"
+  aria-label={label}
+></span>

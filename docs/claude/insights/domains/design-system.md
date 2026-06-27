@@ -1184,3 +1184,13 @@ In `public/assets/icons/sprite.svg`, `icon-playoff` had `fill="currentColor"` on
 This overrides the SVG default for any path that doesn't have an explicit fill attribute, while leaving icons with hardcoded fills (e.g. multi-color logos like `icon-nfl`) unaffected (their paths have explicit fill values that win over the CSS rule).
 
 **When to apply:** Any component that uses `<svg class="…"><use href="…" /></svg>` sprite icons and wants them to pick up an accent color via CSS. Always pair `color` with `fill: currentColor` on the icon wrapper.
+
+---
+
+## Loading State Standard (Phase 0 — June 2026)
+
+A site-wide loading standard exists, adapted from the Alaska + Hawaiian guest-app loading framework. Core rule: **choose the loading indicator by elapsed wait time, not by screen** — a duration ladder (nothing < 0.3s → optimistic → skeleton/button-spinner in the 1–10s band → branded 10s+ moment for AI endpoints). It reuses the **structure-vs-skin** model directly: behavior/ARIA identical across both leagues, accent skinned only via `var(--league-accent)`.
+
+The repo had **no shared loading infrastructure** before this — 5 distinct spinners, 1 real skeleton, ~18 ad-hoc text mutations, inconsistent reduced-motion coverage (`PendingTradesPanel` guards its pulse; the playoffs shimmer doesn't). New loaders follow the `PlayerCell` dual Astro + JS pattern and a mandatory `@media (prefers-reduced-motion: reduce)` guard.
+
+**Status:** Phase 1 — primitives, the prototype (`/theleague/loading-prototype`), and the branded roster loader are built; migration of existing pages not yet started. Docs: [loading-standards.md](../../loading-standards.md), [loading-inventory.md](../../loading-inventory.md), [loading-roadmap.md](../../loading-roadmap.md), [loading-prd.md](../../loading-prd.md).

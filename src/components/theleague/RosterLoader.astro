@@ -1,0 +1,154 @@
+---
+/**
+ * RosterLoader — branded "drive down the field" loader for the slow, SSR
+ * roster page. Rendered once in TheLeagueLayout so it's present on the page
+ * you navigate FROM; an inline script shows it during the view-transition
+ * wait when the destination is /rosters, then hides it when the page swaps in.
+ *
+ * Inline script (not a module) so it runs pre-hydration and isn't affected by
+ * the bundler — same approach as the nav-progress bar in the layout.
+ *
+ * See docs/claude/loading-standards.md (tier 5 — branded moment).
+ */
+import '../../styles/roster-loader.css';
+import theleagueConfig from '../../data/theleague.config.json';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+interface Props {
+  /** Current league — picks which logo + lore the loader shows. */
+  league?: 'theleague' | 'afl';
+}
+
+const { league = 'theleague' } = Astro.props;
+const logoUrl =
+  league === 'afl'
+    ? '/assets/logos/afl-logo.svg'
+    : '/assets/logos/theleague-logo.svg';
+
+// Narration comes from the OFFICIAL per-league team data file: general league
+// flavor (`loaderLines`) + one or more quips per team (`loaderQuips`). Baked at
+// SSR for the current league; the two leagues are fully independent.
+const cfg: any = league === 'afl' ? aflConfig : theleagueConfig;
+const loaderLines: string[] = [
+  ...(cfg.loaderLines ?? []),
+  ...cfg.teams.flatMap((t: any) => t.loaderQuips ?? []),
+];
+const firstLine = loaderLines[0] ?? 'Loading your roster…';
+---
+
+<div
+  class="roster-loader"
+  data-roster-loader
+  role="status"
+  aria-live="polite"
+  aria-label="Loading your roster"
+  hidden
+>
+  <div class="roster-loader__panel">
+    <div class="roster-loader__emblem" aria-hidden="true">
+      <div class="roster-loader__disc">
+        <img class:list={['roster-loader__logo', league === 'afl' && 'roster-loader__logo--afl']} src={logoUrl} alt="" />
+        <span class="roster-loader__shine"></span>
+      </div>
+    </div>
+    <p class="roster-loader__title">Loading your roster</p>
+    <p class="roster-loader__line" data-roster-line>{firstLine}</p>
+  </div>
+</div>
+
+<!-- Narration lines for this league, baked from the official team data file. -->
+<script type="application/json" data-roster-loader-lines set:html={JSON.stringify(loaderLines)}></script>
+
+<script is:inline>
+  (function () {
+    if (window.__rosterLoaderInit) return;
+    window.__rosterLoaderInit = true;
+
+    var DELAY_MS = 300;     // don't flash on fast/cached loads (the < 0.3s rule)
+    var CYCLE_MS = 2200;
+
+    // Lines come from the official per-league team data file, serialized into a
+    // JSON script tag at SSR. Read at show() time so the current page's (league's)
+    // lines are always used. Order is shuffled each show — fully random.
+    function readLines() {
+      try {
+        var dataEl = document.querySelector('[data-roster-loader-lines]');
+        var arr = dataEl ? JSON.parse(dataEl.textContent || '[]') : [];
+        return Array.isArray(arr) && arr.length ? arr : ['Loading your roster…'];
+      } catch (e) {
+        return ['Loading your roster…'];
+      }
+    }
+
+    var armTimer = null;
+    var cycleTimer = null;
+    var order = [];
+    var idx = 0;
+
+    function shuffle(arr) {
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      }
+      return arr;
+    }
+
+    function node() { return document.querySelector('[data-roster-loader]'); }
+    function isRoster(path) { return /\/rosters\/?$/.test(path || ''); }
+
+    function show() {
+      var el = node();
+      if (!el) return;
+      order = shuffle(readLines().slice());
+      idx = 0;
+      var line = el.querySelector('[data-roster-line]');
+      if (line) line.textContent = order[0];
+      el.setAttribute('aria-label', 'Loading your roster. ' + order[0]);
+      el.hidden = false;
+      el.classList.add('is-active');
+      if (cycleTimer) clearInterval(cycleTimer);
+      cycleTimer = window.setInterval(function () {
+        idx = (idx + 1) % order.length;
+        var l = node();
+        if (!l) return;
+        var lineEl = l.querySelector('[data-roster-line]');
+        if (lineEl) lineEl.textContent = order[idx];
+        l.setAttribute('aria-label', 'Loading your roster. ' + order[idx]);
+      }, CYCLE_MS);
+    }
+
+    function hide() {
+      if (armTimer) { clearTimeout(armTimer); armTimer = null; }
+      if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+      var el = node();
+      if (el) { el.classList.remove('is-active'); el.hidden = true; }
+    }
+
+    function arm(path) {
+      if (!isRoster(path)) return;
+      if (armTimer) return;                 // already armed
+      var el = node();
+      if (el && el.classList.contains('is-active')) return; // already showing
+      armTimer = window.setTimeout(function () {
+        armTimer = null;
+        show();
+      }, DELAY_MS);
+    }
+
+    // Instant arm on link click (fires before the router prepares).
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      if (a.target === '_blank' || a.origin !== location.origin) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      arm(a.pathname);
+    });
+
+    // View-transition lifecycle (covers programmatic navigations too).
+    document.addEventListener('astro:before-preparation', function (e) {
+      arm(e && e.to ? e.to.pathname : '');
+    });
+    document.addEventListener('astro:after-swap', hide);
+    document.addEventListener('astro:page-load', hide);
+  })();
+</script>

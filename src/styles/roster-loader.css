@@ -1,0 +1,146 @@
+/**
+ * Roster Loader — the tier-5 branded "moment" for the (slow, SSR) roster page.
+ *
+ * Shown during the view-transition wait when navigating TO /rosters, then it
+ * vanishes when the page swaps in. A football drives down the field on a loop
+ * while roster-themed narration cycles. See docs/claude/loading-standards.md.
+ *
+ * Skin: accent (football + end zone) reads var(--league-accent), so it works
+ * for both leagues with no code branch. Zero hex literals except the mandated
+ * frosted-glass backdrop and token fallbacks.
+ */
+
+.roster-loader {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1000);
+  display: none;                 /* shown by JS via .is-active */
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  /* Mandated frosted-glass backdrop */
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.roster-loader.is-active { display: flex; }
+
+.roster-loader__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 340px;
+  padding: 1.75rem 2rem;
+  text-align: center;
+  background: var(--content-bg, #fff);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.2));
+  animation: roster-loader-in 0.25s ease-out both;
+}
+
+@keyframes roster-loader-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── The emblem: helmet on an accent disc, pulsing ring + sweeping shine ── */
+.roster-loader__emblem {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+}
+
+/* pulsing accent ring (expands beyond the disc, so it sits outside overflow) */
+.roster-loader__emblem::before {
+  content: '';
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full, 9999px);
+  border: 2px solid var(--league-accent, #1c497c);
+  animation: roster-emblem-pulse 1.9s ease-out infinite;
+}
+
+/* neutral disc holds the league logo and clips the shine */
+.roster-loader__disc {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--content-bg, #fff);
+  border: 1px solid var(--color-gray-200, #e5e7eb);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.roster-loader__logo {
+  display: block;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+/* AFL mark is a wide 2:1 logo — keep it contained inside the circle, sized up
+   a touch from the base so it doesn't read as tiny, but never cropped. */
+.roster-loader__logo--afl {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+/* sweeping shine across the disc */
+.roster-loader__shine {
+  position: absolute;
+  top: 0;
+  left: -65%;
+  width: 55%;
+  height: 100%;
+  transform: skewX(-18deg);
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  animation: roster-shine 2.6s ease-in-out infinite;
+}
+
+@keyframes roster-emblem-pulse {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes roster-shine {
+  0%        { left: -65%; }
+  45%, 100% { left: 130%; }
+}
+
+/* ── Copy ── */
+.roster-loader__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gray-900, #111827);
+  letter-spacing: 0.01em;
+}
+
+.roster-loader__line {
+  margin: 0;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: var(--color-gray-500, #6b7280);
+  min-height: 1.2em;
+}
+
+/* ── Reduced motion: static helmet + faint ring, no pulse, no shine ── */
+@media (prefers-reduced-motion: reduce) {
+  .roster-loader__panel { animation: none; }
+  .roster-loader__emblem::before { animation: none; transform: none; opacity: 0.5; }
+  .roster-loader__shine { animation: none; opacity: 0; }
+}
