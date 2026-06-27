@@ -2,13 +2,16 @@
 /**
  * Compute AFL Fantasy award history → data/afl-fantasy/awards-history.json.
  *
- * Ten awards per season feed the franchise "trophy wall":
+ * Award slugs that can feed the franchise "trophy wall" (a season carries only
+ * the ones it actually held — eras differ; see below):
  *   - afl-championship  playoff bracket 1 winner
- *   - al-champion       playoff bracket 2 winner
- *   - nl-champion       playoff bracket 3 winner
- *   - nit               playoff bracket 6 winner
- *   - al-north/al-south/nl-east/nl-west   top divpct in each division
+ *   - al-champion / nl-champion   conference-championship brackets (2018+)
+ *   - nit               NIT-championship bracket
+ *   - afl-cup           AFL Cup final (2016–2017 era; hand-entered — see note 2)
+ *   - al-north/al-south/nl-east/nl-west (+ al-central/nl-pacific pre-2013)
+ *                       top divpct in each division
  *   - premier-league / dleague-champion   top of each all-play tier
+ *                       (derived from tier-history.json — note 2)
  *
  * DATA SOURCING NOTES (load-bearing — read before editing):
  *
@@ -18,23 +21,24 @@
  *      stable franchise IDs) before its local cache is trusted; on mismatch
  *      the year is fetched online instead. 2024+ local caches are genuine AFL.
  *
- *   2. Tier champions (Premier League / D-League) are NOT auto-derivable. The
- *      MFL all-play page (O=101) returns a SINGLE all-play-sorted list of all
- *      24 teams with no tier markers; the AFL skin splits the two tiers
- *      client-side from per-year membership that isn't in any server response.
- *      Current afl.config membership doesn't match history (teams are promoted/
- *      relegated), so it can't be back-applied. Tier awards are therefore
- *      HAND-ENTERED into awards-history.json (premier-league / dleague-champion
- *      slugs) and this script PRESERVES them on every re-run (per-year merge).
+ *   2. Tier champions (Premier League / D-League) are derived from
+ *      data/afl-fantasy/tier-history.json — the per-season tier source of truth
+ *      written by scripts/compute-afl-tier-movement.mjs. MFL has no tier markers
+ *      (its all-play export O=101 returns one 24-team list), so membership lives
+ *      in that file; given it, the two tier champions are deterministic. This
+ *      closes the old hand-entry gap: tier-history values supersede legacy
+ *      `manual:tier-champion` rows on re-run. Years tier-history doesn't record
+ *      (pre-2020 tier champions were never captured) simply get no tier award.
  *
  * Usage:
  *   node scripts/compute-afl-awards.mjs            # local where valid, online to fill gaps
  *   node scripts/compute-afl-awards.mjs --offline  # never hit the network (no pre-2024)
  *   node scripts/compute-afl-awards.mjs --year 2023
  *
- * Re-run safe: an existing awards-history.json is read first; hand-entered tier
- * rows (and any award slug this script doesn't compute) are preserved, and the
- * eight auto-derived slugs are refreshed.
+ * Re-run safe: an existing awards-history.json is read first; remaining
+ * hand-curated rows (e.g. afl-cup, pre-2016 titles) and any award slug this
+ * script doesn't compute are preserved, while the auto-derived slugs — the
+ * bracket/division awards plus the two tier champions — are refreshed.
  */
 
 import { promises as fs } from 'node:fs';
@@ -48,6 +52,7 @@ const ROOT = path.resolve(__dirname, '..');
 const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
 const CONFIG_PATH = path.join(ROOT, 'data/afl-fantasy/afl.config.json');
 const OUTPUT_PATH = path.join(ROOT, 'data/afl-fantasy/awards-history.json');
+const TIER_HISTORY_PATH = path.join(ROOT, 'data/afl-fantasy/tier-history.json');
 
 // Per-year MFL host + league id. Pre-2016 the AFL lived on a different host and
 // league id every season (see data/afl-fantasy/year-host-map.json); 2016+
@@ -350,9 +355,29 @@ function divisionWinners(league, standings) {
   return out;
 }
 
-// Tier champions (premier-league / dleague-champion) are intentionally NOT
-// computed here — see header note 2. They are hand-entered into
-// awards-history.json and preserved by the per-year merge in main().
+// Tier champions (premier-league / dleague-champion) are derived from the
+// per-season tier source of truth, data/afl-fantasy/tier-history.json, written
+// by scripts/compute-afl-tier-movement.mjs (see header note 2). This closes the
+// old hand-entry gap. Years tier-history doesn't record champions for yield no
+// tier award; the per-year merge in main() lets these tier-history values
+// supersede any legacy `manual:tier-champion` rows.
+let TIER_HISTORY = null;
+async function loadTierHistory() {
+  if (!TIER_HISTORY) TIER_HISTORY = (await readJson(TIER_HISTORY_PATH)) ?? { seasons: {} };
+  return TIER_HISTORY;
+}
+
+async function tierChampions(year) {
+  const history = await loadTierHistory();
+  const champs = history.seasons?.[String(year)]?.champions;
+  if (!champs) return {};
+  const out = {};
+  if (champs['premier-league'])
+    out['premier-league'] = { franchiseId: champs['premier-league'], source: 'tier-history' };
+  if (champs['dleague-champion'])
+    out['dleague-champion'] = { franchiseId: champs['dleague-champion'], source: 'tier-history' };
+  return out;
+}
 
 // --- Driver --------------------------------------------------------------------
 
@@ -381,6 +406,7 @@ async function computeYear(year) {
   const awards = {
     ...(year >= 2016 ? await bracketWinners(year, localGenuine) : {}),
     ...(standings ? divisionWinners(league, standings) : {}),
+    ...(await tierChampions(year)),
   };
 
   // Enrich with names; drop empties; account for owner turnover.
@@ -443,7 +469,15 @@ async function main() {
     const merged = { ...(prev?.awards ?? {}) };
     for (const [slug, val] of Object.entries(season.awards)) {
       const existingAward = merged[slug];
-      if (typeof existingAward?.source === 'string' && existingAward.source.startsWith('manual:')) {
+      const existingSource =
+        typeof existingAward?.source === 'string' ? existingAward.source : '';
+      // Hand-curated rows (source "manual:*") always win — EXCEPT the tier
+      // champions, which are now auto-derived from tier-history.json and
+      // supersede the legacy `manual:tier-champion` entries.
+      if (
+        existingSource.startsWith('manual:') &&
+        !(val.source === 'tier-history' && existingSource === 'manual:tier-champion')
+      ) {
         continue;
       }
       merged[slug] = val;

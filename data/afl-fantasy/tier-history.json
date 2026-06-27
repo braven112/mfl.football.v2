@@ -1,0 +1,149 @@
+{
+  "$comment": "AFL Fantasy per-season tier (Premier League / D-League) membership and champions — the single source of truth for the all-play side competition. MFL does NOT store tier membership (its all-play export returns one 24-team list with no tier markers), so it lives here. Keyed by year. `membership` maps franchiseId -> tier as teams competed THAT season; `champions` records the #1 of each tier (slugs premier-league / dleague-champion). Membership for the latest completed season is seeded from afl.config.json; future-year membership and computed champions are written by scripts/compute-afl-tier-movement.mjs (promotion/relegation roll-forward, idempotent). Pre-2025 years carry only hand-entered champions because per-year membership was never recorded and is not recoverable from MFL (see docs/claude/insights/features/afl-trophy-wall.md). 2018-2019 tier champions were never recorded.",
+  "movementRules": {
+    "tierSize": 12,
+    "autoPromote": 2,
+    "autoRelegate": 2,
+    "swing": {
+      "premierRanks": [
+        9,
+        10
+      ],
+      "dleagueRanks": [
+        3,
+        4
+      ],
+      "promoteCount": 2
+    }
+  },
+  "seasons": {
+    "2020": {
+      "champions": {
+        "premier-league": "0020",
+        "dleague-champion": "0015"
+      },
+      "championsSource": "manual:skin-standings-header"
+    },
+    "2021": {
+      "champions": {
+        "premier-league": "0002",
+        "dleague-champion": "0008"
+      },
+      "championsSource": "manual:skin-standings-header"
+    },
+    "2022": {
+      "champions": {
+        "premier-league": "0002",
+        "dleague-champion": "0017"
+      },
+      "championsSource": "manual:skin-standings-header"
+    },
+    "2023": {
+      "champions": {
+        "premier-league": "0002",
+        "dleague-champion": "0014"
+      },
+      "championsSource": "manual:skin-standings-header"
+    },
+    "2024": {
+      "champions": {
+        "premier-league": "0002",
+        "dleague-champion": "0008"
+      },
+      "championsSource": "manual:skin-standings-header"
+    },
+    "2025": {
+      "membership": {
+        "0001": "Premier League",
+        "0002": "Premier League",
+        "0003": "D-League",
+        "0004": "D-League",
+        "0005": "D-League",
+        "0006": "Premier League",
+        "0007": "D-League",
+        "0008": "Premier League",
+        "0009": "Premier League",
+        "0010": "Premier League",
+        "0011": "D-League",
+        "0012": "Premier League",
+        "0013": "D-League",
+        "0014": "D-League",
+        "0015": "Premier League",
+        "0016": "D-League",
+        "0017": "D-League",
+        "0018": "D-League",
+        "0019": "Premier League",
+        "0020": "Premier League",
+        "0021": "Premier League",
+        "0022": "Premier League",
+        "0023": "D-League",
+        "0024": "D-League"
+      },
+      "membershipSource": "afl.config snapshot — verified: ranking the 2025 cutoff-week all-play within these tiers reproduces the recorded champions (Premier 0015, D-League 0017)",
+      "champions": {
+        "premier-league": "0015",
+        "dleague-champion": "0017"
+      },
+      "championsSource": "computed",
+      "allPlayStandings": {
+        "Premier League": [
+          "0015",
+          "0022",
+          "0002",
+          "0019",
+          "0008",
+          "0009",
+          "0001",
+          "0012",
+          "0010",
+          "0006",
+          "0020",
+          "0021"
+        ],
+        "D-League": [
+          "0017",
+          "0011",
+          "0005",
+          "0018",
+          "0007",
+          "0024",
+          "0004",
+          "0016",
+          "0023",
+          "0013",
+          "0003",
+          "0014"
+        ]
+      }
+    },
+    "2026": {
+      "membership": {
+        "0015": "Premier League",
+        "0022": "Premier League",
+        "0017": "Premier League",
+        "0002": "Premier League",
+        "0019": "Premier League",
+        "0008": "Premier League",
+        "0011": "Premier League",
+        "0009": "Premier League",
+        "0001": "Premier League",
+        "0005": "Premier League",
+        "0018": "Premier League",
+        "0012": "Premier League",
+        "0007": "D-League",
+        "0024": "D-League",
+        "0010": "D-League",
+        "0006": "D-League",
+        "0020": "D-League",
+        "0004": "D-League",
+        "0016": "D-League",
+        "0023": "D-League",
+        "0021": "D-League",
+        "0013": "D-League",
+        "0003": "D-League",
+        "0014": "D-League"
+      },
+      "membershipSource": "rollforward:2025"
+    }
+  }
+}

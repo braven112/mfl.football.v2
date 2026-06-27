@@ -172,3 +172,75 @@ placeholder. Locked badges render the SVG with the year blanked + grayscale at
 bar; the `<h1>` team name is visually-hidden when a banner exists since the
 banner art carries the name). Trophy badges render with no card chrome at 200px
 (4-across desktop); the small team icon sits left of each tier heading.
+
+---
+
+## 2026-06-25 - Tier champions are now AUTO-DERIVED (manual gap closed)
+
+**Context:** The tier (Premier League / D-League) movement system landed —
+a per-season tier source of truth plus a season-end compute/roll-forward
+pipeline. With it, tier champions no longer need hand-entry.
+
+**What changed (supersedes data gotcha #4 above):** Tier membership now lives
+in `data/afl-fantasy/tier-history.json` (keyed by year → franchiseId → tier) —
+the single source of truth, since MFL still serves no tier markers.
+`scripts/compute-afl-tier-movement.mjs` (+ pure logic in
+`scripts/lib/afl-tier-standings.mjs`) ranks each tier's cutoff-week all-play
+(`afl.config.json#tierCompetition.cutoffWeek`), names the two champions, applies
+the constitution promotion/relegation rule (bottom-2 PL relegated, top-2 DL
+promoted, plus the 4-team swing playoff PL 9/10 vs DL 3/4 decided by all-play),
+and writes next season's makeup back into the same file.
+
+`compute-afl-awards.mjs` now reads `tier-history.json` for the
+`premier-league` / `dleague-champion` slugs (`source: "tier-history"`) instead
+of preserving hand-entered rows. Verified the auto-derived champions match the
+previously hand-entered values exactly (2025 Premier 0015 / D-League 0017; 2024
+0002 / 0008; 2023 0002 / 0014; 2022 0002 / 0017; 2021 0002 / 0008; 2020 0020 /
+0015). The 2025 champions are *computed* from weekly scores; 2020-2024 are the
+recorded values carried in tier-history (membership for those years was never
+captured and isn't recoverable from MFL, so only their champions are stored).
+
+**Offline vs online:** `--offline` only refreshes 2024-2025 tier rows (the
+genuine-local years); a `--online` run fetches the genuine-AFL feeds for
+2020-2023 and flips those tier rows to `source: "tier-history"` too. Pre-2024
+local feeds are still contaminated (gotcha #1), so the genuine-AFL validation
+guards both scripts.
+
+**Note for whoever merges this with the trophy-wall branch:** the tier pipeline
+shipped on a separate branch; `compute-afl-awards.mjs` and `awards-history.json`
+are the integration point and reconcile additively.
+
+---
+
+## 2026-06-26 - All-play is computed ONCE; the live page reads per-year tiers
+
+**Context:** Wired the tier pipeline into the live standings page and removed a
+duplicated all-play calc. Three things a future session must not undo.
+
+**1. There is ONE all-play accumulator: `src/utils/all-play.mjs#accumulateAllPlay`.**
+Both the live standings page (via `src/utils/standings.ts#calculateAllPlayFromWeekly`,
+now a thin typed wrapper) and the node tier scripts
+(`scripts/lib/afl-tier-standings.mjs#computeAllPlayThroughCutoff`) import it. Do
+NOT reimplement the week-by-week all-play loop anywhere — import this. It lives
+in a `.mjs` (not `.ts`) on purpose: a plain-`node` cron script can import a
+`src/**/*.mjs` directly (same pattern `scripts/schefter-scan.mjs` uses for
+`src/config/leagues-data.mjs`), while Vite/Astro bundles it for the page — one
+file, no `tsx` in the cron path. The record now carries `pf` (total points, the
+constitution promotion/relegation tiebreak); the page ignores it.
+
+**2. The standings page groups by PER-YEAR tier membership, not static config.**
+`getTierAllPlayStandings(franchises, config, calculatedAllPlay, tierMembership?)`
+takes an optional `{ franchiseId: tier }` override. `standings.astro` passes
+`getTierMembership(selectedYear)` (from `src/utils/afl-tier.ts`, reading
+`tier-history.json`), falling back to `config.tier` when a year isn't recorded.
+Why it matters: `afl.config.json#teams[].tier` is the CURRENT makeup only — it
+verifies the latest completed season but is wrong for every prior year (and for
+next year after roll-forward). Never rank historical tiers off `config.tier`.
+
+**3. Week-17 all-play is intentionally uneven — rank by pct, and it's robust.**
+2025 week 17 has scores for only 18 of 24 teams, so all-play *games* per team
+range 368–385 (not equal). Ranking is by all-play **pct** (a rate stat), so the
+unevenness doesn't distort order, and cutoff 16 vs 17 produce the *identical*
+promotion/relegation outcome. Don't "fix" this by forcing equal games or moving
+the `tierCompetition.cutoffWeek` — the live page uses the same inclusive cutoff,
+so script and page stay in lockstep.

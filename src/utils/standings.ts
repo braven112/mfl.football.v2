@@ -4,6 +4,9 @@
  */
 
 import type { StandingsFranchise, TeamStanding, DivisionStandings, PlayoffSeeding } from '../types/standings';
+// Single source of truth for the all-play accumulation, shared with the node
+// tier-movement scripts (scripts/lib/afl-tier-standings.mjs). See all-play.mjs.
+import { accumulateAllPlay } from './all-play.mjs';
 
 // Weekly results type for calculating all-play from weekly data
 export type WeeklyResult = {
@@ -15,68 +18,27 @@ export type WeeklyResultsData = {
   weeks: WeeklyResult[];
 };
 
-// Calculated all-play record
+// Calculated all-play record. `pf` (total points scored across counted weeks)
+// is the constitution tiebreak for promotion/relegation; the page ignores it.
 export type AllPlayRecord = {
   wins: number;
   losses: number;
   ties: number;
+  pf: number;
   pct: number;
 };
 
 /**
- * Calculate all-play records from weekly results up to a cutoff week
- * All-play: each team gets wins/losses against all other teams each week based on score
+ * Calculate all-play records from weekly results up to a cutoff week.
+ * Thin typed wrapper over the shared accumulator in all-play.mjs so the live
+ * standings page and the node tier-movement scripts use ONE implementation.
+ * All-play: each team gets wins/losses against all other teams each week based on score.
  */
 export function calculateAllPlayFromWeekly(
   weeklyResults: WeeklyResultsData,
   cutoffWeek: number
 ): Map<string, AllPlayRecord> {
-  const allPlayRecords = new Map<string, AllPlayRecord>();
-
-  // Filter weeks up to and including the cutoff
-  const weeksToProcess = weeklyResults.weeks.filter(w => w.week <= cutoffWeek);
-
-  // Initialize records for all franchises
-  const allFranchiseIds = new Set<string>();
-  weeksToProcess.forEach(week => {
-    Object.keys(week.scores).forEach(id => allFranchiseIds.add(id));
-  });
-
-  allFranchiseIds.forEach(id => {
-    allPlayRecords.set(id, { wins: 0, losses: 0, ties: 0, pct: 0 });
-  });
-
-  // Process each week
-  weeksToProcess.forEach(week => {
-    const scores = Object.entries(week.scores);
-
-    // For each team, compare against all other teams
-    scores.forEach(([teamId, teamScore]) => {
-      const record = allPlayRecords.get(teamId)!;
-
-      scores.forEach(([opponentId, opponentScore]) => {
-        if (teamId === opponentId) return; // Don't compare to self
-
-        if (teamScore > opponentScore) {
-          record.wins++;
-        } else if (teamScore < opponentScore) {
-          record.losses++;
-        } else {
-          record.ties++;
-        }
-      });
-    });
-  });
-
-  // Calculate percentages
-  allPlayRecords.forEach((record, id) => {
-    const total = record.wins + record.losses + record.ties;
-    if (total > 0) {
-      record.pct = (record.wins + record.ties * 0.5) / total;
-    }
-  });
-
-  return allPlayRecords;
+  return accumulateAllPlay(weeklyResults, cutoffWeek) as Map<string, AllPlayRecord>;
 }
 
 // League config type (can come from either league)
@@ -409,11 +371,16 @@ export function getAllPlayStandings(franchises: StandingsFranchise[], config: Le
 
 // Get all-play standings grouped by tier (for AFL Fantasy)
 // Optional calculatedAllPlay parameter allows using week-limited all-play records
-// instead of MFL's cumulative all-play data
+// instead of MFL's cumulative all-play data.
+// Optional tierMembership ({ franchiseId: tier }) overrides the static
+// config.tier so a given season is grouped by THAT season's makeup (from
+// data/afl-fantasy/tier-history.json via getTierMembership), not the current
+// one. Teams absent from the override fall back to config.tier.
 export function getTierAllPlayStandings(
   franchises: StandingsFranchise[],
   config: LeagueConfig,
-  calculatedAllPlay?: Map<string, AllPlayRecord>
+  calculatedAllPlay?: Map<string, AllPlayRecord>,
+  tierMembership?: Record<string, string> | null
 ): { tier: string; teams: TeamStanding[] }[] {
   // First get league standings to get seed information
   const leagueStandings = getLeagueStandings(franchises, config);
@@ -440,7 +407,15 @@ export function getTierAllPlayStandings(
   const tiers: { [key: string]: TeamStanding[] } = {};
   standings.forEach(team => {
     const teamConfig = getTeamConfig(team.id, config);
-    const tier = teamConfig?.tier || 'Unknown';
+    // Only honor a recognized override tier; an unknown value (typo/new tier)
+    // would group the team under a stray key and then get silently dropped by
+    // the `tierOrder` filter below — fall back to config.tier instead.
+    const overrideTier = tierMembership?.[team.id];
+    const validOverride =
+      overrideTier === 'Premier League' || overrideTier === 'D-League'
+        ? overrideTier
+        : undefined;
+    const tier = validOverride || teamConfig?.tier || 'Unknown';
     if (!tiers[tier]) {
       tiers[tier] = [];
     }

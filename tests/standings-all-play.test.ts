@@ -24,9 +24,9 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 17);
 
-    expect(result.get('0001')).toEqual({ wins: 2, losses: 0, ties: 0, pct: 1 });
-    expect(result.get('0002')).toEqual({ wins: 1, losses: 1, ties: 0, pct: 0.5 });
-    expect(result.get('0003')).toEqual({ wins: 0, losses: 2, ties: 0, pct: 0 });
+    expect(result.get('0001')).toEqual({ wins: 2, losses: 0, ties: 0, pf: 100, pct: 1 });
+    expect(result.get('0002')).toEqual({ wins: 1, losses: 1, ties: 0, pf: 80, pct: 0.5 });
+    expect(result.get('0003')).toEqual({ wins: 0, losses: 2, ties: 0, pf: 60, pct: 0 });
   });
 
   it('handles ties as half-wins in pct', () => {
@@ -37,9 +37,9 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 17);
 
-    expect(result.get('0001')).toEqual({ wins: 1, losses: 0, ties: 1, pct: 0.75 });
-    expect(result.get('0002')).toEqual({ wins: 1, losses: 0, ties: 1, pct: 0.75 });
-    expect(result.get('0003')).toEqual({ wins: 0, losses: 2, ties: 0, pct: 0 });
+    expect(result.get('0001')).toEqual({ wins: 1, losses: 0, ties: 1, pf: 100, pct: 0.75 });
+    expect(result.get('0002')).toEqual({ wins: 1, losses: 0, ties: 1, pf: 100, pct: 0.75 });
+    expect(result.get('0003')).toEqual({ wins: 0, losses: 2, ties: 0, pf: 60, pct: 0 });
   });
 
   it('respects cutoff week — weeks past cutoff are ignored', () => {
@@ -52,8 +52,8 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 2);
 
-    expect(result.get('0001')).toEqual({ wins: 1, losses: 1, ties: 0, pct: 0.5 });
-    expect(result.get('0002')).toEqual({ wins: 1, losses: 1, ties: 0, pct: 0.5 });
+    expect(result.get('0001')).toEqual({ wins: 1, losses: 1, ties: 0, pf: 150, pct: 0.5 });
+    expect(result.get('0002')).toEqual({ wins: 1, losses: 1, ties: 0, pf: 170, pct: 0.5 });
   });
 
   it('cutoff at week 17 includes all 17 weeks', () => {
@@ -65,8 +65,8 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 17);
 
-    expect(result.get('0001')).toEqual({ wins: 17, losses: 0, ties: 0, pct: 1 });
-    expect(result.get('0002')).toEqual({ wins: 0, losses: 17, ties: 0, pct: 0 });
+    expect(result.get('0001')).toEqual({ wins: 17, losses: 0, ties: 0, pf: 1700, pct: 1 });
+    expect(result.get('0002')).toEqual({ wins: 0, losses: 17, ties: 0, pf: 850, pct: 0 });
   });
 
   it('aggregates across multiple weeks correctly', () => {
@@ -80,9 +80,9 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 17);
 
-    expect(result.get('0001')).toEqual({ wins: 4, losses: 0, ties: 0, pct: 1 });
-    expect(result.get('0002')).toEqual({ wins: 2, losses: 2, ties: 0, pct: 0.5 });
-    expect(result.get('0003')).toEqual({ wins: 0, losses: 4, ties: 0, pct: 0 });
+    expect(result.get('0001')).toEqual({ wins: 4, losses: 0, ties: 0, pf: 210, pct: 1 });
+    expect(result.get('0002')).toEqual({ wins: 2, losses: 2, ties: 0, pf: 170, pct: 0.5 });
+    expect(result.get('0003')).toEqual({ wins: 0, losses: 4, ties: 0, pf: 130, pct: 0 });
   });
 
   it('does not compare a team against itself', () => {
@@ -93,7 +93,7 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 17);
 
-    expect(result.get('0001')).toEqual({ wins: 0, losses: 0, ties: 0, pct: 0 });
+    expect(result.get('0001')).toEqual({ wins: 0, losses: 0, ties: 0, pf: 100, pct: 0 });
   });
 
   it('initializes records for every franchise that appears in any week', () => {
@@ -107,7 +107,7 @@ describe('calculateAllPlayFromWeekly', () => {
 
     expect(result.has('0003')).toBe(true);
     // 0003 only played in week 2: lost to both 0001 and 0002
-    expect(result.get('0003')).toEqual({ wins: 0, losses: 2, ties: 0, pct: 0 });
+    expect(result.get('0003')).toEqual({ wins: 0, losses: 2, ties: 0, pf: 60, pct: 0 });
   });
 
   it('cutoff of 0 yields empty records (no weeks processed)', () => {
@@ -138,7 +138,7 @@ describe('calculateAllPlayFromWeekly', () => {
     };
     const result = calculateAllPlayFromWeekly(weekly, 17);
     // 0001: weeks 1-3 = 2 wins each (6), weeks 4-5 = 0 wins (4 losses)
-    expect(result.get('0001')).toEqual({ wins: 6, losses: 4, ties: 0, pct: 0.6 });
+    expect(result.get('0001')).toEqual({ wins: 6, losses: 4, ties: 0, pf: 400, pct: 0.6 });
   });
 });
 
@@ -246,8 +246,8 @@ describe('getTierAllPlayStandings', () => {
 
     // Calculated overrides flip the order
     const calculated = new Map([
-      ['0001', { wins: 7, losses: 3, ties: 0, pct: 0.7 }],
-      ['0002', { wins: 3, losses: 7, ties: 0, pct: 0.3 }],
+      ['0001', { wins: 7, losses: 3, ties: 0, pf: 1500, pct: 0.7 }],
+      ['0002', { wins: 3, losses: 7, ties: 0, pf: 1400, pct: 0.3 }],
     ]);
 
     const result = getTierAllPlayStandings(franchises, aflConfigFixture, calculated);
@@ -256,6 +256,55 @@ describe('getTierAllPlayStandings', () => {
     expect(result[0].teams.map(t => t.id)).toEqual(['0001', '0002']);
     expect(result[0].teams[0].all_play_pct).toBe('0.700');
     expect(result[0].teams[0].all_play_wlt).toBe('7-3-0');
+  });
+
+  it('regroups teams by a per-year tierMembership override (promotion/relegation)', () => {
+    // 0003 is 'D-League' in the static config, but this season's membership
+    // (e.g. tier-history.json after a promotion) puts it in Premier League.
+    const franchises = [
+      makeFranchise('0001', '0.700'),
+      makeFranchise('0002', '0.600'),
+      makeFranchise('0003', '0.500'),
+      makeFranchise('0004', '0.400'),
+    ];
+
+    // Swap 0002 (config Premier) down and 0003 (config D-League) up.
+    const membership: Record<string, string> = {
+      '0001': 'Premier League',
+      '0003': 'Premier League',
+      '0002': 'D-League',
+      '0004': 'D-League',
+    };
+
+    const result = getTierAllPlayStandings(franchises, aflConfigFixture, undefined, membership);
+
+    expect(result[0].tier).toBe('Premier League');
+    expect(result[0].teams.map(t => t.id)).toEqual(['0001', '0003']);
+    expect(result[1].tier).toBe('D-League');
+    expect(result[1].teams.map(t => t.id)).toEqual(['0002', '0004']);
+  });
+
+  it('ignores an unrecognized override tier and falls back to config.tier', () => {
+    // A typo / unknown tier in the override must NOT silently drop the team.
+    const franchises = [makeFranchise('0001', '0.700'), makeFranchise('0003', '0.500')];
+    const membership: Record<string, string> = {
+      '0001': 'Premier Leage', // typo
+      '0003': 'D-League',
+    };
+    const result = getTierAllPlayStandings(franchises, aflConfigFixture, undefined, membership);
+    // 0001 falls back to its config tier (Premier League), not dropped
+    expect(result.find(t => t.tier === 'Premier League')?.teams.map(t => t.id)).toEqual(['0001']);
+    expect(result.find(t => t.tier === 'D-League')?.teams.map(t => t.id)).toEqual(['0003']);
+    // No stray "Premier Leage" tier leaks through
+    expect(result.map(t => t.tier).sort()).toEqual(['D-League', 'Premier League']);
+  });
+
+  it('falls back to config.tier when no override is given', () => {
+    const franchises = [makeFranchise('0001', '0.700'), makeFranchise('0003', '0.500')];
+    const result = getTierAllPlayStandings(franchises, aflConfigFixture, undefined, null);
+    // 0001 → Premier (config), 0003 → D-League (config)
+    expect(result.find(t => t.tier === 'Premier League')?.teams.map(t => t.id)).toEqual(['0001']);
+    expect(result.find(t => t.tier === 'D-League')?.teams.map(t => t.id)).toEqual(['0003']);
   });
 
   it('returns only tiers that have teams (filters empty tiers)', () => {
