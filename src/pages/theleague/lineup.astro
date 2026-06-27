@@ -20,6 +20,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerMap } from '../../utils/player-map';
 import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
+import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
 // Auth gate
@@ -1084,8 +1085,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         return;
       }
 
-      submitBtn.className = 'lineup-submit lineup-submit--loading';
+      submitBtn.className = 'lineup-submit lineup-submit--ready loading-btn loading-btn--on-accent is-loading';
       submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
       submitText.textContent = 'Submitting...';
 
       try {
@@ -1104,6 +1106,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
 
           submitBtn.className = 'lineup-submit lineup-submit--success';
+          submitBtn.removeAttribute('aria-busy');
           submitText.textContent = 'Saved!';
           haptic('heavy');
           announce(`Lineup submitted successfully for Week ${data.week}.`);
@@ -1118,12 +1121,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           }, 2000);
         } else {
           submitBtn.className = 'lineup-submit lineup-submit--error';
+          submitBtn.removeAttribute('aria-busy');
           submitText.textContent = 'Failed — Retry';
           submitBtn.disabled = false;
           announce(`Lineup submission failed. ${result.error || 'Please try again.'}`);
         }
       } catch {
         submitBtn.className = 'lineup-submit lineup-submit--error';
+        submitBtn.removeAttribute('aria-busy');
         submitText.textContent = 'Failed — Retry';
         submitBtn.disabled = false;
         announce('Lineup submission failed. Please try again.');
@@ -1721,13 +1726,6 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     color: var(--color-gray-500, #6b7280);
     cursor: not-allowed;
     opacity: 0.7;
-  }
-
-  .lineup-submit--loading {
-    background: var(--lineup-submit-ready);
-    color: var(--text-on-colored, #fff);
-    opacity: 0.8;
-    pointer-events: none;
   }
 
   .lineup-submit--error {

@@ -7935,7 +7935,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmError.style.display = 'none';
       cdmSuccess.style.display = 'none';
       cdmSubmitBtn.disabled = true;
-      cdmSubmitBtn.classList.remove('loading');
+      cdmSubmitBtn.classList.remove('is-loading');
+      cdmSubmitBtn.removeAttribute('aria-busy');
       cdmSubmitBtn.style.display = '';
 
       // Hero — mirror the ESPN → College → MFL → default cascade used by PlayerCell/buildHeadshotOnerror
@@ -9749,7 +9750,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (!cdmPlayerData || cdmSelectedYears === null) return;
 
       const origBtnText = cdmSubmitBtn.textContent;
-      cdmSubmitBtn.classList.add('loading');
+      cdmSubmitBtn.classList.add('is-loading');
+      cdmSubmitBtn.disabled = true;
+      cdmSubmitBtn.setAttribute('aria-busy', 'true');
       cdmSubmitBtn.textContent = 'Submitting...';
       cdmError.style.display = 'none';
 
@@ -9839,7 +9842,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       } catch (err) {
         cdmError.textContent = err.message;
         cdmError.style.display = '';
-        cdmSubmitBtn.classList.remove('loading');
+        cdmSubmitBtn.classList.remove('is-loading');
+        cdmSubmitBtn.disabled = false;
+        cdmSubmitBtn.removeAttribute('aria-busy');
         cdmSubmitBtn.textContent = origBtnText;
       }
     };

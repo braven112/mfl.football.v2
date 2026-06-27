@@ -168,6 +168,13 @@
       "summary": "The homepage \"What's Next\" timeline is now actually forward-looking — it no longer leads with a months-old completed event labeled \"Most Recent.\" The slots now read Up Next / Coming Soon / Later (or Happening Now when an event is live), so you only ever see what's ahead.",
       "impact": "user",
       "area": "homepage"
+    },
+    {
+      "date": "2026-06-26",
+      "type": "style-tweak",
+      "summary": "Submit buttons now spin consistently while they work: the Set Lineup submit (both leagues), the contract-declaration submit, and the Move-to-IR button all show the same shared loading spinner and stay disabled until the action finishes, so you get clear feedback and can't accidentally double-submit.",
+      "impact": "user",
+      "area": "design-system"
     }
   ]
 }

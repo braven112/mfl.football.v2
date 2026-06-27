@@ -10,6 +10,7 @@
  * Follows PlayerDetailsModal editorial design language.
  * Populated entirely by client-side JS — Astro renders the static shell.
  */
+import '../../styles/loading.css';
 ---
 
 <div class="contract-declaration-modal" id="contract-declaration-modal">
@@ -255,7 +256,7 @@
       </div>
       <div class="cdm-footer__actions">
         <button class="cdm-footer__back" id="cdm-back-btn" style="display: none;">Back</button>
-        <button class="cdm-submit" id="cdm-submit" disabled>Declare Contract</button>
+        <button class="cdm-submit loading-btn loading-btn--on-accent" id="cdm-submit" disabled>Declare Contract</button>
       </div>
     </div>
   </div>
@@ -1535,11 +1536,6 @@
   .cdm-submit:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-  }
-
-  .cdm-submit.loading {
-    opacity: 0.7;
-    pointer-events: none;
   }
 
   .cdm-error {
