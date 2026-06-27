@@ -281,7 +281,7 @@ export default function IdeaComposer({ onSubmit, initialTitle, initialBody, init
             >
               {isSubmitting ? (
                 <>
-                  <span className="sb-spinner" aria-hidden="true" />
+                  <span className="loading-spinner loading-spinner--compact" role="status" aria-live="polite" aria-label="Posting" />
                   Posting...
                 </>
               ) : (

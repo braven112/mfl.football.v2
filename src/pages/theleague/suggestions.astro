@@ -5,6 +5,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import SuggestionBox from '../../components/theleague/suggestions/SuggestionBox';
 import config from '../../data/theleague.config.json';
+import '../../styles/loading.css';
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
@@ -535,20 +536,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   .sb-composer__submit:focus-visible {
     outline: 2px solid var(--color-primary, #1c497c);
     outline-offset: 2px;
-  }
-
-  /* ── Spinner ── */
-  .sb-spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: sb-spin 0.6s linear infinite;
-  }
-  @keyframes sb-spin {
-    to { transform: rotate(360deg); }
   }
 
   /* ── Idea Card (List View) ── */
@@ -1946,7 +1933,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
-    .sb-spinner { animation: none; }
     .sb-composer__title,
     .sb-composer__body,
     .sb-comment-composer__input,
