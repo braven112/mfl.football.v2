@@ -2,6 +2,7 @@
 /**
  * PlayerNewsModal - Displays latest news for a player from ESPN
  */
+import Spinner from '../shared/loading/Spinner.astro';
 
 export interface Props {
   /** Additional CSS classes */
@@ -26,7 +27,7 @@ const { class: className } = Astro.props;
 
     <div class="player-news-modal__body">
       <div id="news-loading" class="news-status">
-        <div class="spinner"></div>
+        <Spinner label="Fetching latest news" />
         <p>Fetching latest news...</p>
       </div>
       
@@ -154,21 +155,6 @@ const { class: className } = Astro.props;
     padding: 3rem 2rem;
     text-align: center;
     color: #64748b;
-  }
-
-  .spinner {
-    width: 40px;
-    height: 40px;
-    margin: 0 auto 1rem;
-    border: 3px solid #f1f5f9;
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
   }
 
   .news-list {
