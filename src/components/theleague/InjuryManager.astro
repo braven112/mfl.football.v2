@@ -304,7 +304,9 @@ const containerClasses = [
     color: var(--color-white, #fff);
     cursor: default;
     transform: none;
-    box-shadow: 0 1px 3px var(--color-success-light, rgba(16, 185, 129, 0.3));
+    /* Match the resting button's translucent shadow — not the opaque
+       --color-success-light token, which would render a solid halo. */
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
   }
 
   .button-icon {
