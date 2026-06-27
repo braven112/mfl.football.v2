@@ -21,6 +21,7 @@ import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
 import TradeAlertModal from '../components/theleague/TradeAlertModal.astro';
+import RosterLoader from '../components/theleague/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getCurrentLeagueYear } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
@@ -207,6 +208,9 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 	<body>
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
 		<div id="nav-progress" aria-hidden="true"></div>
+
+		<!-- Branded loader (league logo + pulse) for the slow roster page -->
+		<RosterLoader league={league} />
 
 		<!-- Page wrapper for push behavior when drawer is open on desktop -->
 		<div

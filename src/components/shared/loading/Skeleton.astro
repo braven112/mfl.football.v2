@@ -1,0 +1,77 @@
+---
+/**
+ * Skeleton — tier 4 content placeholder.
+ *
+ * Gray block with a shimmer sweep that mirrors the final layout's shape.
+ * Brand-neutral by design (no accent). See docs/claude/loading-standards.md.
+ *
+ * @example
+ * <Skeleton variant="title" />
+ * <Skeleton variant="text" width="80%" />
+ * <Skeleton variant="circle" height="40px" />
+ * <Skeleton height="5rem" count={3} label="Loading trades" />
+ */
+import '../../../styles/loading.css';
+
+export interface Props {
+  /** Shape variant */
+  variant?: 'block' | 'text' | 'title' | 'circle';
+  /** Explicit width (CSS value). Overrides the variant default. */
+  width?: string;
+  /** Explicit height (CSS value) — maps to --skeleton-height. */
+  height?: string;
+  /** Corner radius (CSS value) — maps to --skeleton-radius. */
+  radius?: string;
+  /** Render N stacked copies (a skeleton list). */
+  count?: number;
+  /** Accessible label for the group. */
+  label?: string;
+  /** Extra classes */
+  class?: string;
+}
+
+const {
+  variant = 'block',
+  width,
+  height,
+  radius,
+  count = 1,
+  label = 'Loading content',
+  class: className = '',
+} = Astro.props;
+
+const variantClass = variant !== 'block' ? `loading-skeleton--${variant}` : '';
+
+const styleFor = () => {
+  const parts: string[] = [];
+  if (width) parts.push(`width:${width}`);
+  if (height) parts.push(`--skeleton-height:${height}`);
+  if (radius) parts.push(`--skeleton-radius:${radius}`);
+  return parts.join(';');
+};
+
+const items = Array.from({ length: Math.max(1, count) });
+---
+
+{count > 1 ? (
+  <div
+    class:list={['loading-skeleton-group', className]}
+    role="status"
+    aria-busy="true"
+    aria-live="polite"
+    aria-label={label}
+  >
+    {items.map(() => (
+      <span class:list={['loading-skeleton', variantClass]} style={styleFor()}></span>
+    ))}
+  </div>
+) : (
+  <span
+    class:list={['loading-skeleton', variantClass, className]}
+    style={styleFor()}
+    role="status"
+    aria-busy="true"
+    aria-live="polite"
+    aria-label={label}
+  ></span>
+)}

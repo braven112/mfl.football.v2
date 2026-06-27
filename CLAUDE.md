@@ -169,6 +169,30 @@ Team defenses (position=DEF) are handled automatically by `PlayerCell` and `buil
 
 ---
 
+## Loading State Standard
+
+**CRITICAL:** All loading feedback follows one shared standard — a duration-keyed ladder, not per-screen improvisation. Choose the indicator by **how long the user actually waits**, never by which page it is.
+
+| Elapsed | Indicator |
+|---------|-----------|
+| < 0.3s | Nothing (a loader that flashes reads as a glitch) |
+| 0.3–1s | Optimistic — show the result, reconcile in background |
+| 1–10s, content | Skeleton mirroring the final layout |
+| 1–10s, action | Inline button spinner (+ disabled) |
+| 10s+ (AI endpoints) | Branded "on the wire" moment with narration |
+
+**Structure vs. skin:** behavior, placement, and ARIA are identical across both leagues; only the accent color differs via `var(--league-accent)` (already resolves blue/AFL-red by `html[data-league]`). Never branch on league in loader code.
+
+**Non-negotiables:** zero hex literals (token everything), full ARIA (`role="status"`/`aria-busy`/`aria-live`/`aria-label`), and an explicit `@media (prefers-reduced-motion: reduce)` guard on **every** loading animation. Build new loaders with the dual Astro + JS pattern (mirror `PlayerCell`).
+
+**Status:** Phase 1 — primitives + clickable prototype built (`/theleague/loading-prototype`); migration not yet started. See:
+- [loading-prd.md](docs/claude/loading-prd.md) — the full PRD (this repo is the reference implementation)
+- [loading-standards.md](docs/claude/loading-standards.md) — the contract
+- [loading-inventory.md](docs/claude/loading-inventory.md) — every current usage + migration map
+- [loading-roadmap.md](docs/claude/loading-roadmap.md) — the phased build plan
+
+---
+
 ## League Context
 
 Two leagues share this codebase:

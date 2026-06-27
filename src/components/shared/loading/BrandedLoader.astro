@@ -1,0 +1,112 @@
+---
+/**
+ * BrandedLoader — tier 5 "on the wire" moment for long (10s+) AI waits.
+ *
+ * The one tier that carries league character. Renders a pulsing branded
+ * mark, a title, and cycling narration. Use `overlay` to cover a positioned
+ * parent with the mandated frosted-glass backdrop.
+ *
+ * Narration cycles client-side via `aria-label` updates on the root (not a
+ * fresh announcement per frame), per the ARIA contract.
+ *
+ * @example
+ * <BrandedLoader title="Schefter is working the phones"
+ *   narration={["Checking the Rolodex…", "Confirming with sources…"]} />
+ *
+ * <div style="position:relative">
+ *   <BrandedLoader overlay title="Asking Roger" narration={["Reading the constitution…"]} />
+ * </div>
+ */
+import '../../../styles/loading.css';
+
+export interface Props {
+  /** Headline shown under the mark. */
+  title?: string;
+  /** One or more narration lines. Multiple lines cycle every ~2.5s. */
+  narration?: string[];
+  /** Cover the positioned parent with a frosted backdrop. */
+  overlay?: boolean;
+  /** Seconds between narration lines (default 2.5). */
+  cycleSeconds?: number;
+  /** Extra classes */
+  class?: string;
+}
+
+const {
+  title = 'Working on it',
+  narration = ['Hold tight…'],
+  overlay = false,
+  cycleSeconds = 2.5,
+  class: className = '',
+} = Astro.props;
+
+const lines = narration.length ? narration : ['Hold tight…'];
+const fullLabel = `${title}. ${lines[0]}`;
+---
+
+<div
+  class:list={['loading-branded', overlay && 'loading-branded--overlay', className]}
+  role="status"
+  aria-live="polite"
+  aria-label={fullLabel}
+  data-branded-loader
+  data-narration={JSON.stringify(lines)}
+  data-cycle-ms={Math.round(cycleSeconds * 1000)}
+>
+  <div class="loading-branded__mark" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M3 12h4l2-7 4 14 2-7h6"
+        stroke="var(--league-accent, #1c497c)"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </div>
+  <p class="loading-branded__title">{title}</p>
+  <p class="loading-branded__narration" data-narration-text>{lines[0]}</p>
+</div>
+
+<script>
+  // Cycle narration lines and keep the aria-label in sync. Reduced-motion
+  // users still get cycling text (text rotation is content, not animation),
+  // but we keep it gentle and announce via the polite live region.
+  function initBrandedLoaders() {
+    document.querySelectorAll<HTMLElement>('[data-branded-loader]').forEach((el) => {
+      if (el.dataset.brandedInit) return;
+      el.dataset.brandedInit = '1';
+
+      let lines: string[] = [];
+      try {
+        lines = JSON.parse(el.dataset.narration || '[]');
+      } catch {
+        lines = [];
+      }
+      if (lines.length < 2) return;
+
+      const textEl = el.querySelector<HTMLElement>('[data-narration-text]');
+      const title = el.querySelector<HTMLElement>('.loading-branded__title')?.textContent ?? '';
+      const cycleMs = Number(el.dataset.cycleMs) || 2500;
+      let i = 0;
+
+      const timer = window.setInterval(() => {
+        i = (i + 1) % lines.length;
+        if (textEl) textEl.textContent = lines[i];
+        el.setAttribute('aria-label', `${title}. ${lines[i]}`);
+      }, cycleMs);
+
+      // Stop when removed from the DOM.
+      const observer = new MutationObserver(() => {
+        if (!el.isConnected) {
+          window.clearInterval(timer);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+
+  initBrandedLoaders();
+  document.addEventListener('astro:page-load', initBrandedLoaders);
+</script>
