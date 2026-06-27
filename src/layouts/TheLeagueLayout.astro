@@ -93,7 +93,9 @@ if (league === 'afl') {
 	// AFL: Check AFL-specific preference cookie first, fall back to JWT
 	const aflPref = getAFLPreference(Astro.cookies);
 	const aflJwtFranchiseId =
-		layoutAuthUser?.leagueId === aflMflId ? layoutAuthUser.franchiseId : null;
+		layoutAuthUser && aflMflId && layoutAuthUser.leagueId === aflMflId
+			? layoutAuthUser.franchiseId
+			: null;
 	myteam = myteamParam || aflPref?.franchiseId || aflJwtFranchiseId || null;
 
 	// The nav footer's "logged-in" chip must reflect the signed JWT session ONLY.
@@ -137,7 +139,9 @@ if (league === 'afl') {
 	// without a login), so it must not feed the chip — only `myteam` above, which
 	// drives personalization/browse-as, may fall back to it.
 	const theLeagueJwtFranchiseId =
-		layoutAuthUser?.leagueId === theLeagueMflId ? layoutAuthUser.franchiseId : null;
+		layoutAuthUser && theLeagueMflId && layoutAuthUser.leagueId === theLeagueMflId
+			? layoutAuthUser.franchiseId
+			: null;
 	const navTeamId = theLeagueJwtFranchiseId || null;
 
 	if (navTeamId) {
