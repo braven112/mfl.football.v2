@@ -35,6 +35,12 @@ describe('stampBadgeYear', () => {
     expect(stampBadgeYear('', 2016)).toBe('');
   });
 
+  it('leaves the year untouched when passed null', () => {
+    // null = "don't stamp" (vs '' = "blank it"); the default art year survives.
+    expect(stampBadgeYear(ARC, null)).toContain('2025');
+    expect(stampBadgeYear(SHIELD, null)).toContain('2025');
+  });
+
   // Guard against badge-art drift: if a future SVG revision changes the year
   // token, stamping would silently no-op and leave the hardcoded placeholder.
   it('actually stamps every shipped award badge', () => {
