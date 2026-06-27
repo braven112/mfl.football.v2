@@ -61,7 +61,7 @@ export default function AskInput({ onSubmit, isLoading, hasCloseMatch, searchTex
         >
           {isLoading ? (
             <>
-              <span className="rqa-input__spinner" aria-hidden="true" />
+              <span className="loading-spinner loading-spinner--compact loading-spinner--on-accent" aria-hidden="true" />
               Consulting the rulebook...
             </>
           ) : (

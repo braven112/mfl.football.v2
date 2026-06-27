@@ -6,6 +6,7 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import RulesChat from '../../components/shared/rules-chat/RulesChat';
 import seedData from '../../data/rules-qa-seeds.json';
 import config from '../../data/theleague.config.json';
+import '../../styles/loading.css';
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
@@ -444,18 +445,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     outline: 2px solid var(--color-primary, #1c497c);
     outline-offset: 2px;
   }
-  .rqa-input__spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: rqa-spin 0.6s linear infinite;
-  }
-  @keyframes rqa-spin {
-    to { transform: rotate(360deg); }
-  }
   .rqa-input__hint {
     font-size: 0.8125rem;
     color: var(--color-gray-500, #6b7280);
@@ -637,7 +626,6 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   @media (prefers-reduced-motion: reduce) {
     .rqa-card--new { animation: none; }
-    .rqa-input__spinner { animation: none; }
     .rqa-input__field { transition: none; }
     .rqa-input__submit { transition: none; }
   }
