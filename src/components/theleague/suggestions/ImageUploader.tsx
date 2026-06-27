@@ -177,7 +177,7 @@ export default function ImageUploader({ onUpload, disabled }: Props) {
         title="Attach image"
       >
         {uploading ? (
-          <span className="sb-spinner" aria-hidden="true" />
+          <span className="loading-spinner loading-spinner--compact" role="status" aria-live="polite" aria-label="Uploading" />
         ) : (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>

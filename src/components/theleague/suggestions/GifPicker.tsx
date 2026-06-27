@@ -113,7 +113,7 @@ export default function GifPicker({ onSelect, disabled }: Props) {
           <div className="sb-gif-results">
             {loading && (
               <div className="sb-gif-loading">
-                <span className="sb-spinner" aria-hidden="true" />
+                <span className="loading-spinner loading-spinner--compact" role="status" aria-live="polite" aria-label="Searching" />
                 Searching...
               </div>
             )}
