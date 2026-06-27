@@ -1674,6 +1674,15 @@ const grandTotal =
     }
   }
 
+  /* Respect reduced-motion: stop the live-refresh shimmer and score flash/flicker */
+  @media (prefers-reduced-motion: reduce) {
+    .refresh-progress-bar::after,
+    .score-updated,
+    .score-checked {
+      animation: none;
+    }
+  }
+
   @media (max-width: 1024px) {
     .playoff-hero {
       flex-direction: column;
