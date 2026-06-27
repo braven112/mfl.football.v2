@@ -104,10 +104,20 @@ const trophyTiers = getFranchiseTrophyRoom(id, { divisionSlug, conferenceSlug })
 // Conference, Division, D-League, NIT) this franchise has won at least one of.
 // Rendered as a segmented progress bar under the Trophy wall headline.
 const titleProgress = getFranchiseTitleProgress(id);
-const wonTypeLabels = titleProgress.types
+// Full accessible summary so the per-type detail isn't mouse-only (the visual
+// pips carry it via `title`): which types are won (+ count) and which aren't.
+const wonTypeSummary = titleProgress.types
   .filter((t) => t.won)
+  .map((t) => `${t.label} (won ${t.years.length})`)
+  .join(', ');
+const unwonTypeSummary = titleProgress.types
+  .filter((t) => !t.won)
   .map((t) => t.label)
   .join(', ');
+const titlePipsLabel =
+  `Title types won: ${titleProgress.wonCount} of ${titleProgress.total}.` +
+  (wonTypeSummary ? ` Won: ${wonTypeSummary}.` : '') +
+  (unwonTypeSummary ? ` Not yet won: ${unwonTypeSummary}.` : '');
 
 // "No X" overlay text for an unwon (locked) badge.
 function lockedLabel(t: TrophyCaseItem): string {
@@ -208,13 +218,7 @@ const isOwner =
             <span class="lockup-trophies__count">
               {totalBadges} {totalBadges === 1 ? 'trophy' : 'trophies'}
             </span>
-            <span
-              class="title-pips"
-              role="img"
-              aria-label={`Title types won: ${titleProgress.wonCount} of ${titleProgress.total}${
-                wonTypeLabels ? ` — ${wonTypeLabels}` : ''
-              }`}
-            >
+            <span class="title-pips" role="img" aria-label={titlePipsLabel}>
               {titleProgress.types.map((t) => (
                 <span
                   class="title-pips__pip"
