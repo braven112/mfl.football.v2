@@ -123,7 +123,8 @@ function formatRecord(wlt: string): string {
 <style>
   .afl-champ-hero {
     --afl-accent: var(--league-accent, #c41e3a);
-    --afl-gold: #d97706;
+    /* Brand trophy gold, shared with the franchise trophy wall (badge art). */
+    --afl-gold: var(--afl-trophy-gold, #c9a44c);
     background:
       radial-gradient(ellipse at top, color-mix(in srgb, var(--afl-gold) 8%, transparent), transparent 70%),
       var(--content-bg, #fff);

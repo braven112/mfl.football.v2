@@ -307,3 +307,108 @@ export function getFranchiseTrophyRoom(
     items: all.filter((t) => t.tier === key),
   })).filter((g) => g.items.length > 0);
 }
+
+/**
+ * The six TITLE TYPES a franchise can win, in prestige order. Each type maps to
+ * one or more award slugs — Conference and Division collapse their multiple
+ * slugs (any conference / any division title counts), the other four are 1:1.
+ * Retired award slugs (AFL Cup) are intentionally not a type of their own.
+ */
+export type TitleTypeKey =
+  | 'afl'
+  | 'premier'
+  | 'conference'
+  | 'division'
+  | 'dleague'
+  | 'nit';
+
+interface TitleTypeDef {
+  key: TitleTypeKey;
+  label: string;
+  slugs: AwardSlug[];
+}
+
+export const TITLE_TYPES: TitleTypeDef[] = [
+  { key: 'afl', label: 'AFL', slugs: ['afl-championship'] },
+  { key: 'premier', label: 'Premier', slugs: ['premier-league'] },
+  { key: 'conference', label: 'Conference', slugs: ['al-champion', 'nl-champion'] },
+  {
+    key: 'division',
+    label: 'Division',
+    slugs: ['al-north', 'al-central', 'al-south', 'nl-east', 'nl-west', 'nl-pacific'],
+  },
+  { key: 'dleague', label: 'D-League', slugs: ['dleague-champion'] },
+  { key: 'nit', label: 'NIT', slugs: ['nit'] },
+];
+
+/** One title type, annotated with whether/when a franchise has won it. */
+export interface TitleTypeProgress {
+  key: TitleTypeKey;
+  label: string;
+  /** Award slugs that satisfy this type. */
+  slugs: AwardSlug[];
+  /** True when the franchise has won at least one title of this type. */
+  won: boolean;
+  /** Winning years across this type's slugs, most recent first. */
+  years: number[];
+}
+
+export interface FranchiseTitleProgress {
+  /** All six title types, in prestige order. */
+  types: TitleTypeProgress[];
+  /** How many distinct types have been won (0–6). */
+  wonCount: number;
+  /** Total number of title types (6). */
+  total: number;
+}
+
+/**
+ * How many of the six title TYPES a franchise has won at least one of. Powers
+ * the trophy-wall progress bar — `wonCount`/`total` is the headline number, and
+ * each `types[]` entry carries the per-type win years (for the segment tooltip).
+ */
+export function getFranchiseTitleProgress(franchiseId: string): FranchiseTitleProgress {
+  const types: TitleTypeProgress[] = TITLE_TYPES.map((t) => {
+    const years: number[] = [];
+    for (const season of SEASONS) {
+      // A season can credit a franchise multiple slugs of one type only in
+      // pathological data; first match per season is enough.
+      if (t.slugs.some((slug) => season.awards?.[slug]?.franchiseId === franchiseId)) {
+        years.push(season.year);
+      }
+    }
+    years.sort((a, b) => b - a);
+    return { key: t.key, label: t.label, slugs: [...t.slugs], won: years.length > 0, years };
+  });
+  const wonCount = types.filter((t) => t.won).length;
+  return { types, wonCount, total: types.length };
+}
+
+/**
+ * "Grand Slam" status — has a franchise won at least one of *every* title type?
+ * Derived from getFranchiseTitleProgress so it stays in lockstep with the
+ * progress bar (completed ⇔ the bar reads 6/6).
+ *
+ * The completion `year` is the season the franchise won its *final missing*
+ * title type — the latest of each type's earliest win. That's the moment the
+ * set was first complete. Reserved for a later phase (a "Grand Slam" badge).
+ */
+export interface GrandSlamStatus {
+  /** True once every title type has been won at least once. */
+  completed: boolean;
+  /** Season the slam was completed (the final missing type's first win). */
+  year?: number;
+  /** Title types still unwon (empty once completed). */
+  missingTypes: TitleTypeKey[];
+}
+
+export function getFranchiseGrandSlam(franchiseId: string): GrandSlamStatus {
+  const { types } = getFranchiseTitleProgress(franchiseId);
+  const missingTypes = types.filter((t) => !t.won).map((t) => t.key);
+  if (missingTypes.length > 0) {
+    return { completed: false, missingTypes };
+  }
+  // Each type's earliest win; the slam completes on the latest of those.
+  const year = Math.max(...types.map((t) => Math.min(...t.years)));
+  return { completed: true, year, missingTypes: [] };
+}
