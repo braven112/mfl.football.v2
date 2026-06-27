@@ -18,6 +18,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentWeekForYear } from '../../utils/current-week';
+import { getAflLeagueYear } from '../../utils/league-year';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerMap } from '../../utils/player-map';
 import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
@@ -35,9 +36,8 @@ if (!user?.franchiseId) {
 // ---------------------------------------------------------------------------
 // Core data loading
 // ---------------------------------------------------------------------------
-// AFL is pinned to 2025 until the league rolls over to 2026 on MFL.
-const AFL_LEAGUE_YEAR = 2025;
-const leagueYear = AFL_LEAGUE_YEAR;
+// AFL league year on MFL (rolls over June 1 — see getAflLeagueYear).
+const leagueYear = getAflLeagueYear();
 const currentWeek = getCurrentWeekForYear(leagueYear);
 const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || currentWeek;
 const week = Math.max(1, Math.min(22, requestedWeek));

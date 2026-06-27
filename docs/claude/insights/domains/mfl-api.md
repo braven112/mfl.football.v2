@@ -4,6 +4,22 @@ Domain knowledge about MyFantasyLeague API integration.
 
 ---
 
+## 2026-06-27 - AFL Rolls Over June 1, NOT Feb 14 — Use getAflLeagueYear()
+
+**Context:** AFL Set Lineup (and keepers/calendar/login) were pointing at the wrong MFL league year.
+
+**Insight:** The Feb 14 league-year rollover documented throughout this file is **TheLeague-specific**. AFL creates its new MFL season much later — roughly late spring — so AFL flips to the new league year on **June 1**, not Feb 14. Using the shared `getCurrentLeagueYear()` (Feb 14) on AFL roster-management pages makes them point at a league year that doesn't exist on MFL yet for ~3.5 months (Feb 14 → June 1), causing empty rosters and "your franchise could not be determined" login errors.
+
+**Pattern:**
+- AFL roster-management pages/endpoints (lineup, keepers, calendar, login) must use **`getAflLeagueYear()`** (src/utils/league-year.ts), never `getCurrentLeagueYear()`.
+- The rollover date is a per-league constant in the registry: `leagues-data.mjs → afl-fantasy.leagueYearRollover = { month: 6, day: 1 }`. Don't hardcode the date elsewhere.
+- It's a **hard flip**: on/after June 1 (PT) it returns the new year regardless of whether the MFL league exists yet. The new AFL league MUST be created on MFL by June 1.
+- **Season** year (standings/playoffs/draft order) is still `getCurrentSeasonYear()` (Labor Day) for *both* leagues — AFL plays the NFL season, so season results roll over the same. Only the *league* year differs.
+
+**Decision rule:** "Does this AFL page manage the roster (lineup/keepers/contracts/calendar/login)?" → `getAflLeagueYear()`. "Does it show game results (standings/playoffs)?" → `getCurrentSeasonYear()`.
+
+---
+
 ## 2026-01-18 - MFL Login Redirects Do Not Include User Identity
 
 **Context:** Researching team verification flow for nav redesign

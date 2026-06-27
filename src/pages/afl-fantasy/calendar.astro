@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAllResolvedAflEvents } from '../../utils/league-event-resolver';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getAflLeagueYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import type { ResolvedLeagueEvent } from '../../types/league-events';
 
@@ -9,7 +9,7 @@ export const prerender = false;
 
 const testDateParam = Astro.url.searchParams.get('testDate');
 const today = testDateParam ? new Date(testDateParam + 'T12:00:00') : new Date();
-const leagueYear = getCurrentLeagueYear(today);
+const leagueYear = getAflLeagueYear(today);
 
 const currentYearEvents = getAllResolvedAflEvents({ leagueYear, referenceDate: today });
 const nextYearEvents = getAllResolvedAflEvents({ leagueYear: leagueYear + 1, referenceDate: today });

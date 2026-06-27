@@ -10,6 +10,8 @@
  * - Season results use currentSeasonYear (previous season)
  */
 
+import { getLeagueBySlug } from '../config/leagues';
+
 export interface LeagueYearConfig {
   /** Current MFL league year (for rosters, contracts, live data) - Updates Feb 14th */
   currentLeagueYear: number;
@@ -64,7 +66,13 @@ export function getTestDateFromUrl(): Date | null {
   const testDate = params.get('testDate');
 
   if (testDate) {
-    const parsed = new Date(testDate);
+    // Date-only strings (YYYY-MM-DD) parse as UTC midnight, which is the
+    // previous evening in PT — that lands on the wrong side of PT-anchored
+    // rollover cutoffs (e.g. ?testDate=2026-06-01 would read as May 31 5pm PT,
+    // before AFL's June 1 flip). Normalize to local midday so the intended
+    // calendar day is unambiguous in any timezone. Date+time inputs pass through.
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(testDate);
+    const parsed = new Date(isDateOnly ? `${testDate}T12:00:00` : testDate);
     // Validate date
     if (!isNaN(parsed.getTime())) {
       return parsed;
@@ -198,4 +206,32 @@ export function getNextAuctionYear(referenceDate?: Date): number {
  */
 export function getLaborDayForYear(year: number): Date {
   return getLaborDay(year);
+}
+
+/**
+ * Get the current AFL MFL league year.
+ *
+ * AFL rolls over on its own date (June 1) — NOT TheLeague's Feb 14 — because
+ * the new AFL season isn't created on MFL until late spring. The rollover date
+ * lives in the league registry (leagues-data.mjs → afl-fantasy.leagueYearRollover).
+ *
+ * Hard flip: on/after June 1 (PT) this returns the new calendar year regardless
+ * of whether the new MFL league exists yet, so the new league must be created on
+ * MFL by June 1. Honors the `?testDate=YYYY-MM-DD` URL override like the other
+ * year helpers.
+ *
+ * @param referenceDate - Optional date for testing
+ * @returns AFL league year (e.g. 2025 until June 1 2026, then 2026)
+ */
+export function getAflLeagueYear(referenceDate?: Date): number {
+  const date = referenceDate || getTestDateFromUrl() || new Date();
+
+  const rollover = getLeagueBySlug('afl-fantasy')?.leagueYearRollover ?? { month: 6, day: 1 };
+  const calendarYear = date.getFullYear();
+
+  // Midnight PT on the rollover date. The AFL rollover (June 1) is always PDT
+  // (UTC-7), so 00:00 PT = 07:00 UTC.
+  const cutoff = new Date(Date.UTC(calendarYear, rollover.month - 1, rollover.day, 7, 0, 0, 0));
+
+  return date >= cutoff ? calendarYear : calendarYear - 1;
 }

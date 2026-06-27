@@ -40,6 +40,15 @@ export const LEAGUES = {
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
+    /**
+     * League-year rollover (month is 1-indexed). AFL flips to the new MFL
+     * league year on June 1 — NOT TheLeague's Feb 14 date — because the new
+     * AFL season isn't created on MFL until late spring. Consumed by
+     * getAflLeagueYear() in src/utils/league-year.ts. Hard flip: on/after this
+     * date AFL points at the new year regardless of whether the MFL league
+     * exists yet, so the new league must be created on MFL by June 1.
+     */
+    leagueYearRollover: { month: 6, day: 1 },
     features: {
       contracts: false,
       salaryCap: false,
