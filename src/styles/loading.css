@@ -44,6 +44,14 @@
 .loading-spinner--compact { --spinner-size: 16px; --spinner-thickness: 2px; }
 .loading-spinner--large   { --spinner-size: 40px; --spinner-thickness: 4px; }
 
+/* On a solid/branded fill (e.g. inside an accent-filled button) the
+   league-accent arc would vanish against the matching background. Flip the
+   spinner to white so the motion stays visible — mirrors .loading-btn--on-accent. */
+.loading-spinner--on-accent {
+  --spinner-track: rgba(255, 255, 255, 0.3);
+  --spinner-accent: #fff;
+}
+
 @keyframes loading-spin {
   to { transform: rotate(360deg); }
 }

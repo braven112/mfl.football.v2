@@ -61,7 +61,7 @@ export default function AskInput({ onSubmit, isLoading, hasCloseMatch, searchTex
         >
           {isLoading ? (
             <>
-              <span className="loading-spinner loading-spinner--compact" role="status" aria-live="polite" aria-label="Asking Roger" />
+              <span className="loading-spinner loading-spinner--compact loading-spinner--on-accent" role="status" aria-live="polite" aria-label="Asking Roger" />
               Consulting the rulebook...
             </>
           ) : (
