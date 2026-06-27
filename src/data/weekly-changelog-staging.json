@@ -196,6 +196,13 @@
       "summary": "The nav drawer footer no longer shows a \"logged-in\" team chip for people who never signed in. Visiting a page with a ?myteam= link used to make the footer claim you were logged in as that team — even though sign-in-only features (like Ask Roger) correctly knew you weren't. The footer now reflects your real signed-in session only, while still letting you browse another team's pages via ?myteam= as before.",
       "impact": "user",
       "area": "navigation"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "style-tweak",
+      "summary": "The AFL team formerly known as \"Cock Gobbler\" has reverted to its original name, The Show, after serving out its last-place D-League naming penalty — with the graffiti banner and logo restored across standings, rosters, and the rules chatbot.",
+      "impact": "user",
+      "area": "other"
     }
   ]
 }
