@@ -1,52 +1,14 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { getAflLeagueYear } from '../../utils/league-year';
 
 export const prerender = false;
 
-// Optional MFL keeperList feed — when present, surfaces real per-franchise
-// keeper selections. Until the feed is being fetched on cron, the page
-// renders the educational/explanatory view below.
-const keeperFeeds = import.meta.glob<{
-  default: {
-    keeperList?: { franchise?: Array<{ id: string; player?: any[] | any }> };
-  };
-}>('../../../data/afl-fantasy/mfl-feeds/*/keeperList.json', { eager: true });
-
-interface KeeperPlayerEntry {
-  id: string;
-  status?: string;
-}
-
-interface KeeperFranchise {
-  franchiseId: string;
-  selections: KeeperPlayerEntry[];
-}
-
-const currentYear = getAflLeagueYear();
-const keeperFeedKey = Object.keys(keeperFeeds).find((k) =>
-  k.includes(`/${currentYear}/keeperList.json`)
-);
-const keeperFeed = keeperFeedKey ? keeperFeeds[keeperFeedKey].default : null;
-
-const keeperByFranchise = new Map<string, KeeperFranchise>();
-if (keeperFeed?.keeperList?.franchise) {
-  const franchises = Array.isArray(keeperFeed.keeperList.franchise)
-    ? keeperFeed.keeperList.franchise
-    : [keeperFeed.keeperList.franchise];
-  for (const f of franchises) {
-    const players = Array.isArray(f.player)
-      ? f.player
-      : f.player
-      ? [f.player]
-      : [];
-    keeperByFranchise.set(f.id, {
-      franchiseId: f.id,
-      selections: players.map((p: any) => ({ id: p.id, status: p.status })),
-    });
-  }
-}
+// The real keeper tool is the per-team Keeper Planner, which lives on the
+// rosters page (`?view=planner`). AFL has no formal keeper construct on MFL,
+// so "keepers" are implicit — whoever's left after the planner's bulk cut.
+// This page is the league-wide hub that routes each franchise into its planner.
+const PLANNER_VIEW = 'view=planner';
 
 const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
   const tierA = a.tier === 'Premier League' ? 0 : 1;
@@ -54,8 +16,6 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
   if (tierA !== tierB) return tierA - tierB;
   return a.name.localeCompare(b.name);
 });
-
-const hasLiveKeeperData = keeperByFranchise.size > 0;
 ---
 
 <TheLeagueLayout title="Keepers | AFL">
@@ -69,60 +29,52 @@ const hasLiveKeeperData = keeperByFranchise.size > 0;
       </p>
     </header>
 
-    {!hasLiveKeeperData && (
-      <section class="afl-keepers__notice">
-        <h2>Live keeper feed not yet wired</h2>
-        <p>
-          Once the <code>keeperList</code> MFL feed is being fetched on cron
-          for AFL, this page will show each franchise's submitted top-7. For
-          now, the franchise grid below links to each team's current roster
-          so you can study who's likely to be kept versus released into the
-          draft pool.
-        </p>
-        <p>
-          To enable: add <code>keeperList</code> to the AFL feed list in
-          <code>scripts/fetch-mfl-feeds.mjs</code>, run a fetch for the
-          current league year, and this page will start populating.
-        </p>
-      </section>
-    )}
+    <section class="afl-keepers__notice">
+      <h2>Declare your 7 in the Keeper Planner</h2>
+      <p>
+        Keepers are managed in your team's <strong>Keeper Planner</strong> — a
+        drag-the-line scratchpad that auto-saves as you sort your roster into
+        the 7 you're protecting versus everyone headed to the draft pool. When
+        you're ready, the planner finalizes your keepers in one step.
+      </p>
+      <a class="afl-keepers__cta" href={`/afl-fantasy/rosters?${PLANNER_VIEW}`}>
+        Manage Keepers →
+      </a>
+    </section>
 
     <section class="afl-keepers__grid-section">
       <h2>By franchise</h2>
+      <p class="afl-keepers__grid-sub">
+        Jump straight into any team's Keeper Planner. The planner itself is
+        private to each owner — you'll only see editable controls on your own.
+      </p>
       <div class="afl-keepers__grid">
-        {teams.map((team) => {
-          const keeper = keeperByFranchise.get(team.franchiseId);
-          const count = keeper?.selections.length ?? 0;
-          return (
-            <a class="keeper-card" href={`/afl-fantasy/rosters?franchise=${team.franchiseId}`}>
-              <div class="keeper-card__icon-wrap">
-                <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+        {teams.map((team) => (
+          <a
+            class="keeper-card"
+            href={`/afl-fantasy/rosters?franchise=${team.franchiseId}&${PLANNER_VIEW}`}
+          >
+            <div class="keeper-card__icon-wrap">
+              <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+            </div>
+            <div class="keeper-card__body">
+              <h3 class="keeper-card__name">{team.name}</h3>
+              <div class="keeper-card__meta">
+                <span class:list={[
+                  'keeper-card__tier',
+                  team.tier === 'Premier League'
+                    ? 'keeper-card__tier--premier'
+                    : 'keeper-card__tier--dleague',
+                ]}>
+                  {team.tier}
+                </span>
+                <span class="keeper-card__count keeper-card__count--placeholder">
+                  Manage keepers →
+                </span>
               </div>
-              <div class="keeper-card__body">
-                <h3 class="keeper-card__name">{team.name}</h3>
-                <div class="keeper-card__meta">
-                  <span class:list={[
-                    'keeper-card__tier',
-                    team.tier === 'Premier League'
-                      ? 'keeper-card__tier--premier'
-                      : 'keeper-card__tier--dleague',
-                  ]}>
-                    {team.tier}
-                  </span>
-                  {hasLiveKeeperData ? (
-                    <span class="keeper-card__count">
-                      {count} / 7 declared
-                    </span>
-                  ) : (
-                    <span class="keeper-card__count keeper-card__count--placeholder">
-                      View roster →
-                    </span>
-                  )}
-                </div>
-              </div>
-            </a>
-          );
-        })}
+            </div>
+          </a>
+        ))}
       </div>
     </section>
 
@@ -162,8 +114,9 @@ const hasLiveKeeperData = keeperByFranchise.size > 0;
   }
 
   .afl-keepers__notice {
-    background: var(--bg-warning, #fef3c7);
-    border: 1px solid #fbbf24;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-left: 3px solid var(--primary-color, #c41e3a);
     border-radius: 8px;
     padding: var(--spacing-md, 16px);
     margin-bottom: var(--spacing-xl, 32px);
@@ -172,20 +125,41 @@ const hasLiveKeeperData = keeperByFranchise.size > 0;
   .afl-keepers__notice h2 {
     font-size: 1.125rem;
     margin: 0 0 var(--spacing-sm, 8px) 0;
-    color: #92400e;
+    color: var(--text-default);
+    border-bottom: none;
+    padding-bottom: 0;
   }
 
   .afl-keepers__notice p {
-    margin: 0 0 var(--spacing-sm, 8px) 0;
+    margin: 0 0 var(--spacing-md, 16px) 0;
     line-height: 1.6;
-    color: #92400e;
+    color: var(--text-muted, #6b7280);
+    max-width: 720px;
   }
 
-  .afl-keepers__notice code {
-    background: rgba(255, 255, 255, 0.5);
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.875em;
+  .afl-keepers__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: var(--primary-color, #c41e3a);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: filter 0.15s ease;
+  }
+
+  .afl-keepers__cta:hover {
+    filter: brightness(0.92);
+  }
+
+  .afl-keepers__grid-sub {
+    color: var(--text-muted, #6b7280);
+    line-height: 1.6;
+    max-width: 720px;
+    margin: 0 0 var(--spacing-md, 16px) 0;
   }
 
   .afl-keepers__grid-section,

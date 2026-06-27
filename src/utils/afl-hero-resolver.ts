@@ -157,7 +157,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           : days === 1
             ? 'Tomorrow at 8pm PT — declare your 7 keepers. Anyone left undeclared hits the draft pool.'
             : `${days} days until the keeper deadline. Lock in your 7 protected players before July 15 @ 8pm PT.`,
-      link: '/afl-fantasy/keepers',
+      link: '/afl-fantasy/rosters?view=planner',
       linkLabel: 'Manage Keepers',
       accent: ACCENT_GOLD,
       glow: GLOW_RED,
