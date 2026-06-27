@@ -49,8 +49,18 @@ const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
 const CONFIG_PATH = path.join(ROOT, 'data/afl-fantasy/afl.config.json');
 const OUTPUT_PATH = path.join(ROOT, 'data/afl-fantasy/awards-history.json');
 
-const HOST = 'www44';
-const LEAGUE_ID = '19621';
+// Per-year MFL host + league id. Pre-2016 the AFL lived on a different host and
+// league id every season (see data/afl-fantasy/year-host-map.json); 2016+
+// settled on www44/19621. Loaded in main().
+const HOST_MAP_PATH = path.join(ROOT, 'data/afl-fantasy/year-host-map.json');
+const DEFAULT_HOST = 'www44';
+const DEFAULT_LEAGUE_ID = '19621';
+let HOST_MAP = {};
+
+function hostFor(year) {
+  const e = HOST_MAP?.[String(year)];
+  return { host: e?.host || DEFAULT_HOST, leagueId: e?.leagueId || DEFAULT_LEAGUE_ID };
+}
 
 const args = process.argv.slice(2);
 const OFFLINE = args.includes('--offline');
@@ -61,7 +71,9 @@ const SINGLE_YEAR = yearArgIdx >= 0 ? parseInt(args[yearArgIdx + 1], 10) : null;
 // The AFL Cup era (2016–2017) predates the AL/NL conference format; bracket IDs
 // were renumbered when the conference championships were introduced in 2018, so
 // brackets are matched by NAME (below), not by fixed ID.
-const FIRST_YEAR = 2016;
+// 2003 exists in MFL but recorded no division play (all divw/divl = 0, pf = 0),
+// so nothing is derivable there — start the divisional backfill at 2004.
+const FIRST_YEAR = 2004;
 // Iterate through the current calendar year; per-award guards skip seasons
 // whose brackets/standings aren't final yet (points all 0, no determinate winner).
 const LAST_YEAR = new Date().getFullYear();
@@ -130,12 +142,27 @@ async function writeJson(filePath, value) {
 // --- AFL identity --------------------------------------------------------------
 
 let CANONICAL_NAMES = null;
+let NAME_TO_ID = null; // current team name + every alias (lowercased) → franchiseId
 async function loadCanonicalNames() {
   if (CANONICAL_NAMES) return CANONICAL_NAMES;
   const cfg = await readJson(CONFIG_PATH);
   CANONICAL_NAMES = new Map();
-  for (const t of cfg?.teams ?? []) CANONICAL_NAMES.set(t.franchiseId, t.name);
+  NAME_TO_ID = new Map();
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  for (const t of cfg?.teams ?? []) {
+    CANONICAL_NAMES.set(t.franchiseId, t.name);
+    NAME_TO_ID.set(norm(t.name), t.franchiseId);
+    for (const a of t.aliases ?? []) NAME_TO_ID.set(norm(a), t.franchiseId);
+  }
   return CANONICAL_NAMES;
+}
+
+// Resolve a historical team NAME to the current franchise that owns it (by
+// name/alias). Pre-2016 the AFL was recreated as a fresh MFL league every year,
+// so franchise NUMBERS are NOT owner-stable — only the team name carries owner
+// identity. Returns null for defunct/unrecognized teams.
+function currentIdForName(name) {
+  return NAME_TO_ID?.get(String(name || '').trim().toLowerCase()) ?? null;
 }
 
 // A league.json is genuine AFL if at least one well-known franchise id maps to
@@ -157,8 +184,9 @@ async function isGenuineAfl(leagueJson) {
 const UA = { 'User-Agent': 'mfl.football.v2 awards (+https://github.com/braven112/mfl.football.v2)' };
 
 async function fetchExport(year, type, extra = '') {
-  const url = `https://${HOST}.myfantasyleague.com/${year}/export?TYPE=${type}&L=${LEAGUE_ID}&JSON=1${extra}`;
-  await sleep(600); // politeness — MFL rate-limits rapid bursts (429)
+  const { host, leagueId } = hostFor(year);
+  const url = `https://${host}.myfantasyleague.com/${year}/export?TYPE=${type}&L=${leagueId}&JSON=1${extra}`;
+  await sleep(1400); // politeness — MFL rate-limits rapid bursts (429)
   const res = await fetch(url, { headers: UA });
   if (!res.ok) throw new Error(`${url} → ${res.status}`);
   return res.json();
@@ -271,10 +299,29 @@ function divisionPct(row) {
   return games ? (w + 0.5 * t) / games : 0;
 }
 
+// Division NAME (lowercased) → award slug. Era-proof: the 2004-2012 league had
+// six divisions (it also had AL Central and NL Pacific, which have no badge and
+// are skipped); 2013+ has the four below. Division names are unique across the
+// two conferences, so mapping by name works regardless of the id renumbering
+// between eras.
+const DIVISION_NAME_SLUG = {
+  north: 'al-north',
+  central: 'al-central',
+  south: 'al-south',
+  east: 'nl-east',
+  west: 'nl-west',
+  pacific: 'nl-pacific',
+};
+
 // Division winners: top division win pct in each division
-// (tie-break divpf, then pf).
+// (tie-break divpf, then pf). Divisions are matched by NAME, so Central/Pacific
+// (pre-2013) are simply skipped.
 function divisionWinners(league, standings) {
   const out = {};
+  const divisions = toArray(league?.league?.divisions?.division);
+  const nameOfDiv = new Map(
+    divisions.map((d) => [String(d.id), String(d.name || '').trim().toLowerCase()])
+  );
   const franchises = toArray(league?.league?.franchises?.franchise);
   const divOf = new Map(franchises.map((f) => [f.id, f.division]));
   const rows = toArray(standings?.leagueStandings?.franchise);
@@ -286,8 +333,8 @@ function divisionWinners(league, standings) {
     byDiv.get(div).push(r);
   }
   for (const [div, group] of byDiv) {
-    const slug = DIVISION_SLUG[div];
-    if (!slug) continue;
+    const slug = DIVISION_NAME_SLUG[nameOfDiv.get(String(div)) ?? ''];
+    if (!slug) continue; // unmapped (Central / Pacific) — no badge for these
     group.sort(
       (a, b) =>
         divisionPct(b) - divisionPct(a) ||
@@ -315,6 +362,7 @@ async function nameMap(league) {
 }
 
 async function computeYear(year) {
+  await loadCanonicalNames(); // ensures CANONICAL_NAMES + NAME_TO_ID are built
   const localLeague = await readJson(path.join(FEEDS_DIR, String(year), 'league.json'));
   const localGenuine = localLeague ? await isGenuineAfl(localLeague) : false;
   const league = await loadLeague(year);
@@ -325,24 +373,46 @@ async function computeYear(year) {
   const names = await nameMap(league);
   const standings = await loadStandings(year, localGenuine);
 
+  // Brackets (championship / cup / conference / NIT) are auto-derived only for
+  // 2016+. Pre-2016 those titles are hand-curated from the official League
+  // Awards table (and the manual-preserving merge keeps them). Division titles
+  // derive from standings for every year back to 2004.
   const awards = {
-    ...(await bracketWinners(year, localGenuine)),
+    ...(year >= 2016 ? await bracketWinners(year, localGenuine) : {}),
     ...(standings ? divisionWinners(league, standings) : {}),
   };
 
-  // Enrich with names; drop empties; de-attribute pre-ownership-change wins.
+  // Enrich with names; drop empties; account for owner turnover.
   const enriched = {};
   for (const [slug, val] of Object.entries(awards)) {
     if (!val?.franchiseId) continue;
+    const histName = names.get(val.franchiseId) || val.franchiseId;
+
+    // Pre-2016 the AFL was recreated as a fresh league every season — owners
+    // changed AND some owners moved slot numbers, so the slot id is not a
+    // reliable owner key. Attribute by the historical team NAME instead: credit
+    // the current franchise whose name/alias matches (owner identity travels
+    // with the team name). Unrecognized names are defunct owners — record the
+    // name but leave the title uncredited.
+    if (year < 2016) {
+      const mapped = currentIdForName(histName);
+      enriched[slug] = mapped
+        ? { franchiseId: mapped, name: CANONICAL_NAMES.get(mapped) || histName, source: val.source }
+        : { franchiseId: null, name: histName, source: val.source };
+      continue;
+    }
+
+    // 2016+: the league is continuous and slot ids are owner-stable. Honor known
+    // ownership changes (stable slot, new owner from `since`).
     const change = OWNERSHIP_CHANGES[val.franchiseId];
     if (change && year < change.since) {
-      // Won by the prior owner — keep the record but don't credit the slot.
       enriched[slug] = { franchiseId: null, name: change.priorName, source: val.source };
       continue;
     }
+
     enriched[slug] = {
       franchiseId: val.franchiseId,
-      name: names.get(val.franchiseId) || val.franchiseId,
+      name: CANONICAL_NAMES.get(val.franchiseId) || histName,
       source: val.source,
     };
   }
@@ -352,6 +422,8 @@ async function computeYear(year) {
 }
 
 async function main() {
+  HOST_MAP = (await readJson(HOST_MAP_PATH))?.years ?? {};
+
   const years = SINGLE_YEAR
     ? [SINGLE_YEAR]
     : Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
@@ -363,13 +435,49 @@ async function main() {
   for (const year of years) {
     const season = await computeYear(year);
     if (!season) continue;
-    // Merge: keep hand-entered tier rows (and any prior award this run didn't
-    // resolve), refresh the eight auto-derived slugs.
+    // Merge: hand-curated rows (source "manual:*") always win — they come from
+    // the official League Awards table and must not be clobbered by an
+    // auto-derived value. Other slots are refreshed from this run.
     const prev = byYear.get(year);
-    byYear.set(year, {
-      year,
-      awards: { ...(prev?.awards ?? {}), ...season.awards },
-    });
+    const merged = { ...(prev?.awards ?? {}) };
+    for (const [slug, val] of Object.entries(season.awards)) {
+      const existingAward = merged[slug];
+      if (typeof existingAward?.source === 'string' && existingAward.source.startsWith('manual:')) {
+        continue;
+      }
+      merged[slug] = val;
+    }
+    byYear.set(year, { year, awards: merged });
+  }
+
+  // The AFL Champion won their conference to reach the final, so they are also
+  // that year's AL/NL champion. Brackets already capture this 2018+, but earlier
+  // seasons (and the AFL Cup era) lack a conference-championship bracket — fill
+  // the conference badge in. Conference is read from the division the champion
+  // played in that year, else inferred as the opposite of the other recorded
+  // conference champion.
+  const AL_DIVS = ['al-north', 'al-central', 'al-south'];
+  const NL_DIVS = ['nl-east', 'nl-west', 'nl-pacific'];
+  for (const season of byYear.values()) {
+    const champ = season.awards['afl-championship'];
+    if (!champ?.franchiseId) continue; // uncredited (defunct) champion — skip
+    const id = champ.franchiseId;
+    if (season.awards['al-champion']?.franchiseId === id || season.awards['nl-champion']?.franchiseId === id) {
+      continue; // already credited as conference champ
+    }
+    let conf = null;
+    if (AL_DIVS.some((s) => season.awards[s]?.franchiseId === id)) conf = 'al';
+    else if (NL_DIVS.some((s) => season.awards[s]?.franchiseId === id)) conf = 'nl';
+    else if (season.awards['nl-champion']) conf = 'al';
+    else if (season.awards['al-champion']) conf = 'nl';
+    if (!conf) {
+      warn(`${season.year}: cannot infer conference for AFL champion ${champ.name} — no conference badge added`);
+      continue;
+    }
+    const slug = `${conf}-champion`;
+    if (!season.awards[slug]) {
+      season.awards[slug] = { franchiseId: id, name: champ.name, source: 'derived:afl-champion' };
+    }
   }
 
   const seasons = [...byYear.values()].sort((a, b) => b.year - a.year);

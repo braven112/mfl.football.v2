@@ -24,9 +24,11 @@ export type AwardSlug =
   | 'al-champion'
   | 'nl-champion'
   | 'al-north'
+  | 'al-central'
   | 'al-south'
   | 'nl-east'
   | 'nl-west'
+  | 'nl-pacific'
   | 'nit'
   | 'premier-league'
   | 'dleague-champion';
@@ -39,6 +41,27 @@ export type AwardCategory =
   | 'consolation'
   | 'tier';
 
+/**
+ * Display tier for the trophy room. Awards are grouped into four labelled
+ * sections in this order: Gold (AFL Championship / Cup / Premier League),
+ * Conference Titles (AL/NL), Division Titles (the four), and Silver Titles
+ * (D-League / NIT).
+ */
+export type AwardTier = 'gold' | 'conference' | 'division' | 'silver';
+
+export interface AwardTierMeta {
+  key: AwardTier;
+  label: string;
+}
+
+/** Trophy-room sections, in display order. */
+export const AWARD_TIERS: AwardTierMeta[] = [
+  { key: 'gold', label: 'Championships' },
+  { key: 'conference', label: 'Conference Titles' },
+  { key: 'division', label: 'Division Titles' },
+  { key: 'silver', label: 'Consolation Titles' },
+];
+
 export interface AwardType {
   slug: AwardSlug;
   /** Short display label for the badge. */
@@ -46,6 +69,8 @@ export interface AwardType {
   /** Badge SVG filename (under public/assets/afl/awards/). */
   badge: string;
   category: AwardCategory;
+  /** Trophy-room section this award is displayed under. */
+  tier: AwardTier;
   /**
    * True if the badge art carries an editable year arc (`#yearArc` textPath) —
    * the "major" trophies. Dated badges render one stamped instance per win in
@@ -57,21 +82,23 @@ export interface AwardType {
 
 /**
  * Canonical, ordered list of every AFL award. Order is load-bearing: the
- * trophy wall renders badges in this sequence (championship → conference →
- * division → consolation → tier) so the locker layout is stable.
+ * trophy room renders badges in this sequence, grouped by `tier` (gold →
+ * conference → division → silver).
  */
 export const AWARD_TYPES: AwardType[] = [
-  { slug: 'afl-championship', label: 'AFL Champion', badge: 'afl-championship.svg', category: 'championship', dated: true },
-  { slug: 'afl-cup', label: 'AFL Cup', badge: 'afl-cup.svg', category: 'cup', dated: true },
-  { slug: 'al-champion', label: 'AL Champion', badge: 'al-champion.svg', category: 'conference', dated: true },
-  { slug: 'nl-champion', label: 'NL Champion', badge: 'nl-champion.svg', category: 'conference', dated: true },
-  { slug: 'al-north', label: 'AL North', badge: 'al-north.svg', category: 'division', dated: true },
-  { slug: 'al-south', label: 'AL South', badge: 'al-south.svg', category: 'division', dated: true },
-  { slug: 'nl-east', label: 'NL East', badge: 'nl-east.svg', category: 'division', dated: true },
-  { slug: 'nl-west', label: 'NL West', badge: 'nl-west.svg', category: 'division', dated: true },
-  { slug: 'nit', label: 'NIT Champion', badge: 'nit.svg', category: 'consolation', dated: true },
-  { slug: 'premier-league', label: 'Premier League', badge: 'premier-league.svg', category: 'tier', dated: true },
-  { slug: 'dleague-champion', label: 'D-League Champion', badge: 'dleague-champion.svg', category: 'tier', dated: true },
+  { slug: 'afl-championship', label: 'AFL Champion', badge: 'afl-championship.svg', category: 'championship', tier: 'gold', dated: true },
+  { slug: 'afl-cup', label: 'AFL Cup', badge: 'afl-cup.svg', category: 'cup', tier: 'gold', dated: true },
+  { slug: 'premier-league', label: 'Premier League', badge: 'premier-league.svg', category: 'tier', tier: 'gold', dated: true },
+  { slug: 'al-champion', label: 'AL Champion', badge: 'al-champion.svg', category: 'conference', tier: 'conference', dated: true },
+  { slug: 'nl-champion', label: 'NL Champion', badge: 'nl-champion.svg', category: 'conference', tier: 'conference', dated: true },
+  { slug: 'al-north', label: 'AL North', badge: 'al-north.svg', category: 'division', tier: 'division', dated: true },
+  { slug: 'al-central', label: 'AL Central', badge: 'al-central.svg', category: 'division', tier: 'division', dated: true },
+  { slug: 'al-south', label: 'AL South', badge: 'al-south.svg', category: 'division', tier: 'division', dated: true },
+  { slug: 'nl-east', label: 'NL East', badge: 'nl-east.svg', category: 'division', tier: 'division', dated: true },
+  { slug: 'nl-west', label: 'NL West', badge: 'nl-west.svg', category: 'division', tier: 'division', dated: true },
+  { slug: 'nl-pacific', label: 'NL Pacific', badge: 'nl-pacific.svg', category: 'division', tier: 'division', dated: true },
+  { slug: 'dleague-champion', label: 'D-League Champion', badge: 'dleague-champion.svg', category: 'tier', tier: 'silver', dated: true },
+  { slug: 'nit', label: 'NIT Champion', badge: 'nit.svg', category: 'consolation', tier: 'silver', dated: true },
 ];
 
 const BY_SLUG = new Map<AwardSlug, AwardType>(
@@ -151,12 +178,15 @@ export interface TrophyCaseItem {
   slug: AwardSlug;
   label: string;
   category: AwardCategory;
+  tier: AwardTier;
   dated: boolean;
   badge: string;
   /** Single winning year — set only for dated awards. */
   year?: number;
-  /** All winning years (desc). Length 1 for a dated item. */
+  /** All winning years (desc). Length 1 for a dated item. Empty when locked. */
   years: number[];
+  /** True for an unwon, greyed-out placeholder (active award not yet earned). */
+  locked?: boolean;
 }
 
 /**
@@ -180,6 +210,7 @@ export function getFranchiseTrophyCase(franchiseId: string): TrophyCaseItem[] {
       slug: type.slug,
       label: type.label,
       category: type.category,
+      tier: type.tier,
       dated: !!type.dated,
       badge: type.badge,
     };
@@ -190,4 +221,89 @@ export function getFranchiseTrophyCase(franchiseId: string): TrophyCaseItem[] {
     }
   }
   return items;
+}
+
+/** A trophy-room section: one tier label plus the trophies that fall under it. */
+export interface TrophyTierGroup {
+  key: AwardTier;
+  label: string;
+  items: TrophyCaseItem[];
+}
+
+/**
+ * A franchise's trophy case grouped into the four display tiers (Gold,
+ * Conference, Division, Silver), in order. Empty tiers are omitted so a
+ * franchise only shows sections it actually has hardware in.
+ */
+export function getFranchiseTrophyCaseByTier(franchiseId: string): TrophyTierGroup[] {
+  const all = getFranchiseTrophyCase(franchiseId);
+  return AWARD_TIERS.map(({ key, label }) => ({
+    key,
+    label,
+    items: all.filter((t) => t.tier === key),
+  })).filter((g) => g.items.length > 0);
+}
+
+/**
+ * Active award types every current franchise competes for — shown as a
+ * greyed-out locked placeholder when the franchise has never won them. Retired
+ * awards (AFL Cup, AL Central, NL Pacific) are intentionally excluded: they only
+ * appear when actually won. The team's own conference/division titles are added
+ * per-franchise in getFranchiseTrophyRoom.
+ */
+const ALWAYS_ACTIVE: AwardSlug[] = [
+  'afl-championship',
+  'premier-league',
+  'dleague-champion',
+  'nit',
+];
+
+export interface TrophyRoomOpts {
+  /** The franchise's current division slug, e.g. 'al-north'. */
+  divisionSlug?: AwardSlug;
+  /** The franchise's current conference slug, e.g. 'al-champion'. */
+  conferenceSlug?: AwardSlug;
+}
+
+/**
+ * A franchise's trophy room: every won trophy (year-stamped) PLUS greyed-out
+ * locked placeholders for the active awards it has never won — the universal
+ * majors (AFL Championship, Premier League, D-League, NIT) and its own
+ * conference + division title. Grouped into the four tiers, in order; earned
+ * items first within each tier, then locked.
+ */
+export function getFranchiseTrophyRoom(
+  franchiseId: string,
+  opts: TrophyRoomOpts = {}
+): TrophyTierGroup[] {
+  const earned = getFranchiseTrophyCase(franchiseId);
+  const earnedSlugs = new Set(earned.map((t) => t.slug));
+
+  const lockable = new Set<AwardSlug>(ALWAYS_ACTIVE);
+  if (opts.conferenceSlug) lockable.add(opts.conferenceSlug);
+  if (opts.divisionSlug) lockable.add(opts.divisionSlug);
+
+  const locked: TrophyCaseItem[] = [];
+  for (const slug of lockable) {
+    if (earnedSlugs.has(slug)) continue;
+    const type = BY_SLUG.get(slug);
+    if (!type) continue;
+    locked.push({
+      slug: type.slug,
+      label: type.label,
+      category: type.category,
+      tier: type.tier,
+      dated: !!type.dated,
+      badge: type.badge,
+      years: [],
+      locked: true,
+    });
+  }
+
+  const all = [...earned, ...locked];
+  return AWARD_TIERS.map(({ key, label }) => ({
+    key,
+    label,
+    items: all.filter((t) => t.tier === key),
+  })).filter((g) => g.items.length > 0);
 }

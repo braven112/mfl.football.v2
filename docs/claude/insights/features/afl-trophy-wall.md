@@ -95,3 +95,80 @@ even though those years had no conference-championship brackets.
 The locker still renders all 11 slots every time — absent awards are just
 locked. Still pending hand-entry: AFL Cup champions (2016-2017) and tier
 champions for 2018-2019.
+
+---
+
+## 2026-06-27 - Backfill to 2004, owner attribution, the tiered room, and SVG year-stamping
+
+Major expansion: history back to **2004**, a four-tier "trophy room" UI, 13 award
+types, year-stamped editable badges, and locked placeholders. The non-obvious
+parts:
+
+**1. Pre-2016 the AFL was a NEW MFL league every season — IDs are stable but
+owners are NOT.** Each year has its own host + leagueId
+(`data/afl-fantasy/year-host-map.json`; `fetchExport` uses `hostFor(year)`).
+Slot numbers (`0001`…`0024`) persist, but owners turned over AND some owners
+moved slot numbers (e.g. "Chatmaster" was slot 0007 in 2007, is 0021 now;
+0007 is "Avenging Amish" today). So **attribute pre-2016 awards by TEAM NAME →
+current franchise (name+alias), never by slot id**. `compute-afl-awards.mjs`
+does this in `computeYear` (`currentIdForName(histName)`); unmatched names are
+defunct owners → recorded with `franchiseId: null` (kept for a future
+league-history page, never shown on a wall). 2016+ uses the slot id directly
+(continuous league). Known modern slot turnover stays in `OWNERSHIP_CHANGES`
+(only `0013` Delirium Tremens → Muck Juggling Micks, since 2020).
+
+**2. Division structure changed: 6 divisions (2004–2012) → 4 (2013+).**
+2004–2012 had North/Central/South (AL) + East/West/Pacific (NL); 2013 dropped
+to North/South + East/West. So **map divisions by NAME, not id**
+(`DIVISION_NAME_SLUG`) — ids renumbered across eras. AL Central / NL Pacific are
+their own badges/slugs but only ever appear when won (no locked placeholder).
+2003 exists in MFL but recorded zero division play (`divw/divl/pf` all 0) — not
+derivable; `FIRST_YEAR = 2004`.
+
+**3. AFL Champion ⇒ conference champion that year.** Winning the title means you
+won your conference, so every `afl-championship` winner also gets `al-champion`
+or `nl-champion`. Brackets capture this 2018+; for earlier years a post-process
+in `main()` infers the conference from the division the champ played in that
+year, else the opposite of the other recorded conference champ.
+
+**4. Manual data must survive auto re-runs.** The merge in `main()` keeps any
+slug whose `source` starts with `manual:` and only refreshes auto-derived
+slugs. This protects the hand-curated League Awards table (AFL Cup, tier
+champions, pre-2016 League Champions) from being clobbered by a bracket/standings
+re-derive. The script is the reproducible source of truth — a clean run
+regenerates identical credited data (verified: 137 credited awards unchanged).
+
+**5. MFL rate-limits hard (429) on bursts.** `fetchExport` sleeps 1400ms between
+calls; a full 2004→present run still trips a few 429s. The merge makes this
+safe (failed years keep prior values), but for a guaranteed-clean run, space it
+out or re-run the failed years with `--year`.
+
+**6. Editable-year badges: inline the SVG, stamp per instance.** Badge art
+(`public/assets/afl/awards/*.svg`) carries an editable year — circular
+"medallion" badges on a `<textPath href="#yearArc">★ YYYY ★</textPath>`,
+shield badges as a flat `<text>★ YYYY ★</text>`. An `<img src>` can't be edited
+per win, so the page loads SVGs raw (`import.meta.glob('…/*.svg', {query:'?raw'})`)
+and `renderBadge(badge, year, uid)` (a) makes the `#yearArc` id unique per
+instance (avoid duplicate-id collisions when several medallions share a page),
+and (b) replaces the year. **Match the year by content (the `★…\d{4}…★`
+pattern), not a fixed `y=` coordinate** — successive art revisions moved the
+shield year from `y=266` to `y=270`.
+
+**7. Trophy ROOM, not wall: 4 tiers + locked placeholders.** `AWARD_TIERS`
+groups the 13 award types into Championships / Conference Titles / Division
+Titles / Consolation Titles (labels are display-only; keys are `gold`,
+`conference`, `division`, `silver`). `getFranchiseTrophyCase` expands every win
+into its own year-stamped item (dated awards). `getFranchiseTrophyRoom(id,
+{divisionSlug, conferenceSlug})` adds greyed-out locked placeholders for the
+ACTIVE awards a franchise hasn't won — the universal majors (AFL Championship,
+Premier League, D-League, NIT) plus the team's OWN current division + conference
+title. Retired types (AFL Cup, AL Central, NL Pacific) never get a locked
+placeholder. Locked badges render the SVG with the year blanked + grayscale at
+~12% opacity, with a "No <thing>" overlay (`lockedLabel()`), and double as the
+`aria-label`.
+
+**8. Page is one lockup, badges are bare.** The header is a single
+`.franchise-lockup` (banner anchors; pill + division + actions in one attached
+bar; the `<h1>` team name is visually-hidden when a banner exists since the
+banner art carries the name). Trophy badges render with no card chrome at 200px
+(4-across desktop); the small team icon sits left of each tier heading.

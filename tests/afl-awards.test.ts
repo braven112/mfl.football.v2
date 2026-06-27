@@ -17,9 +17,9 @@ const ROOT = path.resolve(__dirname, '..');
 const ALL_SLUGS = new Set(AWARD_TYPES.map((a) => a.slug));
 
 describe('afl-awards taxonomy', () => {
-  it('defines exactly 11 awards with unique slugs', () => {
-    expect(AWARD_TYPES).toHaveLength(11);
-    expect(ALL_SLUGS.size).toBe(11);
+  it('defines exactly 13 awards with unique slugs', () => {
+    expect(AWARD_TYPES).toHaveLength(13);
+    expect(ALL_SLUGS.size).toBe(13);
   });
 
   it('every award badge file exists under public/assets/afl/awards/', () => {
@@ -45,9 +45,9 @@ describe('afl-awards taxonomy', () => {
 });
 
 describe('getFranchiseAwards', () => {
-  it('always returns all 11 awards in taxonomy order (locker layout)', () => {
+  it('always returns all 13 awards in taxonomy order (locker layout)', () => {
     const awards = getFranchiseAwards('0001');
-    expect(awards).toHaveLength(11);
+    expect(awards).toHaveLength(13);
     expect(awards.map((a) => a.slug)).toEqual(AWARD_TYPES.map((a) => a.slug));
     for (const a of awards) expect(a.badgePath).toBe(getAwardBadge(a.slug));
   });
@@ -90,12 +90,13 @@ describe('getFranchiseTrophyCase', () => {
   });
 
   it('expands conference titles to one year-stamped item per win', () => {
-    // 0002 won AL Champion in 2023, 2022 and 2011 — every award is now dated,
-    // so each win is its own year-stamped badge (3 items).
+    // 0002 won AL Champion in 2023, 2022, 2012 and 2011 (2012 derived from the
+    // AFL Championship win) — every award is dated, so each win is its own
+    // year-stamped badge (4 items, most recent first).
     const tc = getFranchiseTrophyCase('0002');
     const al = tc.filter((t) => t.slug === 'al-champion');
-    expect(al).toHaveLength(3);
-    expect(al.map((t) => t.year)).toEqual([2023, 2022, 2011]);
+    expect(al).toHaveLength(4);
+    expect(al.map((t) => t.year)).toEqual([2023, 2022, 2012, 2011]);
     for (const t of al) {
       expect(t.dated).toBe(true);
       expect(t.years).toHaveLength(1);

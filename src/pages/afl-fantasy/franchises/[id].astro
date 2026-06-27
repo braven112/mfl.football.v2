@@ -2,7 +2,12 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../../utils/auth';
-import { getFranchiseTrophyCase, type TrophyCaseItem } from '../../../utils/afl-awards';
+import {
+  getFranchiseTrophyCase,
+  getFranchiseTrophyRoom,
+  type AwardSlug,
+  type TrophyCaseItem,
+} from '../../../utils/afl-awards';
 
 // Badge art loaded raw so the editable year arc (#yearArc) can be stamped
 // per win. Keyed by filename; dated majors get their year injected, the id is
@@ -32,7 +37,7 @@ function renderBadge(badge: string, year?: number, uid = ''): string {
       `$1★  ${year}  ★$2`
     );
     svg = svg.replace(
-      /(<text\b[^>]*\by="266"[^>]*>)\s*\d{4}\s*(<\/text>)/,
+      /(<text\b[^>]*>[^<]*★[^<]*?)\d{4}([^<]*?<\/text>)/,
       `$1${year}$2`
     );
   }
@@ -99,6 +104,35 @@ const totalBadges = trophyCase.reduce(
   0
 );
 
+// The team's own division + conference titles also show as locked placeholders
+// when unwon. Map the current config assignment to award slugs.
+const DIVISION_SLUG_BY_NAME: Record<string, AwardSlug> = {
+  North: 'al-north',
+  South: 'al-south',
+  East: 'nl-east',
+  West: 'nl-west',
+};
+const divisionSlug = DIVISION_SLUG_BY_NAME[team.division as string];
+const conferenceSlug: AwardSlug = team.conference === '00' ? 'al-champion' : 'nl-champion';
+const trophyTiers = getFranchiseTrophyRoom(id, { divisionSlug, conferenceSlug });
+
+// "No X" overlay text for an unwon (locked) badge.
+function lockedLabel(t: TrophyCaseItem): string {
+  switch (t.slug) {
+    case 'afl-championship':
+      return 'No AFL Championships';
+    case 'premier-league':
+      return 'No Premier League Championships';
+    case 'dleague-champion':
+      return 'No D-League Championships';
+    case 'nit':
+      return 'No NIT Championships';
+  }
+  if (t.category === 'conference') return 'No conference titles';
+  if (t.category === 'division') return 'No division titles';
+  return 'Not yet won';
+}
+
 // Auth — surface owner-only CTAs at the top of the page when the
 // viewer matches this franchise.
 const authUser = getAuthUser(Astro.request);
@@ -115,19 +149,17 @@ const isOwner =
         ← All franchises
       </a>
 
-      {team.banner ? (
-        <img class="franchise-hero__banner" src={team.banner} alt="" loading="lazy" />
-      ) : null}
+      <!-- Single header lockup: banner + identity + actions as one unit. -->
+      <div class="franchise-lockup">
+        {team.banner ? (
+          <img class="franchise-lockup__banner" src={team.banner} alt={`${team.name} banner`} loading="lazy" />
+        ) : null}
 
-      <div class="franchise-hero__content">
-        {team.icon ? (
-          <img class="franchise-hero__icon" src={team.icon} alt={`${team.name} icon`} loading="lazy" />
-        ) : (
-          <div class="franchise-hero__icon-placeholder" />
-        )}
-
-        <div class="franchise-hero__text">
-          <div class="franchise-hero__tier-row">
+        <div class="franchise-lockup__bar">
+          <div class="franchise-lockup__meta">
+            <h1 class="franchise-lockup__name" data-visual={team.banner ? 'hidden' : 'shown'}>
+              {team.name}
+            </h1>
             <span
               class:list={[
                 'franchise-hero__tier-pill',
@@ -138,21 +170,14 @@ const isOwner =
             >
               {team.tier}
             </span>
-            <span class="franchise-hero__div">
-              {conferenceName} {team.division}
-            </span>
+            <span class="franchise-hero__div">{conferenceName} {team.division}</span>
+            {team.aliases?.length ? (
+              <span class="franchise-lockup__aliases">aka {team.aliases.join(', ')}</span>
+            ) : null}
           </div>
-          <h1 class="franchise-hero__name">{team.name}</h1>
-          {team.aliases?.length ? (
-            <p class="franchise-hero__aliases">
-              Also known as: {team.aliases.join(', ')}
-            </p>
-          ) : null}
-        </div>
-      </div>
 
-      <!-- Action bar: owner-only CTAs + universal roster link -->
-      <div class="franchise-actions">
+          <!-- Action bar: owner-only CTAs + universal roster link -->
+          <div class="franchise-actions">
         <a class="franchise-action franchise-action--primary" href={`/afl-fantasy/rosters?franchise=${id}`}>
           <span class="franchise-action__icon" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -181,33 +206,12 @@ const isOwner =
             </a>
           </>
         )}
+          </div>
+        </div>
       </div>
     </header>
 
-    <div class="franchise-stats">
-      <div class="stat-card">
-        <div class="stat-card__value">
-          {wonYears.length === 0 ? '—' : wonYears.length}
-        </div>
-        <div class="stat-card__label">Championships</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card__value">
-          {lostYears.length === 0 ? '—' : lostYears.length}
-        </div>
-        <div class="stat-card__label">Runner-ups</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card__value">{team.tier === 'Premier League' ? 'P' : 'D'}</div>
-        <div class="stat-card__label">Tier</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card__value">{team.abbrev}</div>
-        <div class="stat-card__label">Abbrev</div>
-      </div>
-    </div>
-
-    <section class="franchise-section">
+    <section class="franchise-section trophy-room">
       <div class="section-header">
         <h2 class="section-header__title">Trophy wall</h2>
         <p class="section-header__sub">
@@ -216,38 +220,48 @@ const isOwner =
             : 'No hardware yet — this case is waiting for its first trophy'}
         </p>
       </div>
-      {totalBadges === 0 ? (
+      {trophyTiers.length === 0 ? (
         <p class="badge-wall__empty">
           No hardware yet — this case is waiting for its first trophy.
         </p>
       ) : (
-        <div class="badge-wall">
-          {trophyCase.map((t) => (
-            <div
-              class="badge-card"
-              data-category={t.category}
-              role="img"
-              aria-label={t.dated ? `${t.label} ${t.year}` : `${t.label} ${t.years.join(', ')}`}
-              set:html={renderBadge(t.badge, t.year, t.dated ? `${t.slug}-${t.year}` : t.slug)}
-            />
+        <div class="trophy-tiers">
+          {trophyTiers.map((tier) => (
+            <section class="trophy-tier" data-tier={tier.key}>
+              <h3 class="trophy-tier__title">
+                {team.icon ? (
+                  <img class="trophy-tier__icon" src={team.icon} alt="" loading="lazy" />
+                ) : null}
+                <span>{tier.label}</span>
+              </h3>
+              <div class="badge-wall">
+                {tier.items.map((t) => (
+                  <div
+                    class="badge-card"
+                    data-category={t.category}
+                    data-locked={t.locked ? 'true' : 'false'}
+                    role="img"
+                    aria-label={t.locked
+                      ? lockedLabel(t)
+                      : t.dated ? `${t.label} ${t.year}` : `${t.label} ${t.years.join(', ')}`}
+                  >
+                    <div
+                      class="badge-card__art"
+                      set:html={renderBadge(
+                        t.badge,
+                        t.locked ? '' : t.year,
+                        t.locked ? `lock-${t.slug}` : t.dated ? `${t.slug}-${t.year}` : t.slug
+                      )}
+                    />
+                    {t.locked ? <span class="badge-card__locked">{lockedLabel(t)}</span> : null}
+                  </div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
     </section>
-
-    {lostYears.length > 0 && (
-      <section class="franchise-section">
-        <h2>Runner-up years</h2>
-        <ul class="champ-list">
-          {lostYears.map((y) => (
-            <li class="champ-list__loss">
-              <span class="champ-list__year">{y}</span>
-              <span class="champ-list__verb">— runner-up</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
 
     <section class="franchise-section">
       <h2>Quick links</h2>
@@ -284,33 +298,69 @@ const isOwner =
     text-decoration: underline;
   }
 
-  .franchise-hero__banner {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-height: 240px;
-    object-fit: contain;
-    background: var(--bg-muted, #f3f4f6);
-    border-radius: 12px;
+  /* One header lockup: banner anchors the top, identity + actions share the
+     attached bar below — a single bordered unit, not stacked blocks. */
+  .franchise-lockup {
     border: 1px solid var(--border-color, #e5e7eb);
-    margin-bottom: var(--spacing-md, 16px);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--card-bg, #ffffff);
+    margin-bottom: var(--spacing-lg, 24px);
   }
 
-  .franchise-hero__content {
+  .franchise-lockup__banner {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: var(--bg-muted, #f3f4f6);
+  }
+
+  .franchise-lockup__bar {
     display: flex;
     align-items: center;
-    gap: var(--spacing-lg, 24px);
-    background: var(--card-bg, #ffffff);
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #e5e7eb);
+    justify-content: space-between;
+    gap: var(--spacing-md, 16px);
+    flex-wrap: wrap;
     padding: var(--spacing-md, 16px);
+  }
+
+  .franchise-lockup__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 8px);
+    min-width: 0;
+  }
+
+  .franchise-lockup__name {
+    font-size: 1.35rem;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .franchise-lockup__name[data-visual='hidden'] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .franchise-lockup__aliases {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
   }
 
   .franchise-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: var(--spacing-md, 16px);
+    margin: 0;
   }
 
   .franchise-action {
@@ -347,25 +397,6 @@ const isOwner =
     display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .franchise-hero__icon,
-  .franchise-hero__icon-placeholder {
-    width: 96px;
-    height: 96px;
-    flex-shrink: 0;
-    object-fit: contain;
-    background: var(--bg-muted, #f3f4f6);
-    border-radius: 12px;
-    padding: 6px;
-  }
-
-  .franchise-hero__icon-placeholder {
-    background: var(--bg-muted, #f3f4f6);
-  }
-
-  .franchise-hero__text {
-    min-width: 0;
   }
 
   .franchise-hero__tier-row {
@@ -410,33 +441,6 @@ const isOwner =
     margin: 0;
   }
 
-  .franchise-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: var(--spacing-md, 16px);
-    margin-bottom: var(--spacing-xl, 32px);
-  }
-
-  .stat-card {
-    text-align: center;
-    padding: var(--spacing-md, 16px);
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 8px;
-  }
-
-  .stat-card__value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--primary-color, #c41e3a);
-  }
-
-  .stat-card__label {
-    font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
-    margin-top: 4px;
-  }
-
   .franchise-section {
     margin-bottom: var(--spacing-xl, 32px);
   }
@@ -465,24 +469,79 @@ const isOwner =
   }
 
   /* Trophy case — one badge per win; dated majors are year-stamped. */
+  .trophy-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl, 32px);
+  }
+
+  .trophy-tier__title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--afl-gold, #c9a44c);
+    margin: 0 0 var(--spacing-md, 16px) 0;
+    color: var(--text-default);
+  }
+
+  /* Small team icon anchoring each tier headline: img | headline. */
+  .trophy-tier__icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+    border-radius: 6px;
+  }
+
   .badge-wall {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--spacing-sm, 8px);
     justify-items: center;
   }
 
   /* Bare badges — no card chrome or labels; the medallion carries its own
-     title and year, so it stands alone at 2x size. */
+     title and year. 200px columns fit four across on desktop. */
   .badge-card {
-    width: 248px;
+    position: relative;
+    width: 200px;
     max-width: 100%;
   }
 
-  .badge-card :global(svg) {
+  .badge-card__art {
+    display: block;
+  }
+
+  .badge-card__art :global(svg) {
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  /* Unwon active award — faint greyed-out placeholder with an overlay label. */
+  .badge-card[data-locked='true'] .badge-card__art {
+    opacity: 0.12;
+    filter: grayscale(1);
+  }
+
+  .badge-card__locked {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted, #9ca3af);
+    pointer-events: none;
   }
 
   .badge-wall__empty {
