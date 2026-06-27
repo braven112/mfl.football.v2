@@ -1234,6 +1234,14 @@ const pageConfig = {
     // this, Astro evaluates the script module only once, so navigating onto
     // this page client-side would leave the tabs/planner unwired.
     function initAflRosterPage() {
+      // Idempotent per rendered DOM: the .roster-page element is replaced on
+      // every ClientRouter swap, so a fresh element re-wires, but a repeat
+      // call for the same DOM (e.g. astro:page-load + the first-load fallback
+      // both firing) short-circuits so element-scoped listeners don't stack.
+      const pageRoot = document.querySelector<HTMLElement>('.roster-page');
+      if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
+      pageRoot.dataset.aflInit = '1';
+
       // ── View tab switching ──
       const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');
     const containers = document.querySelectorAll<HTMLElement>('[data-view-content]');
@@ -1397,8 +1405,13 @@ const pageConfig = {
     });
     }
 
-    // Fires on first load and after every ClientRouter navigation.
+    // Fires on first load and after every ClientRouter navigation. The
+    // readyState/DOMContentLoaded fallback covers pages served without View
+    // Transitions (mirrors src/components/nav/NavLinks.astro); the per-DOM
+    // guard above keeps the double-trigger on first load from double-binding.
     document.addEventListener('astro:page-load', initAflRosterPage);
+    if (document.readyState !== 'loading') initAflRosterPage();
+    else document.addEventListener('DOMContentLoaded', initAflRosterPage);
   </script>
 
   <style>

@@ -285,6 +285,12 @@ const roundLabel = (round: string) => {
   function initKeeperPlanner() {
     const root = document.querySelector<HTMLElement>('[data-keeper-planner]');
     if (!root) return; // planner not on this page (non-owner) — bail silently
+    // Idempotent per rendered DOM: re-wire a fresh planner on each swap, but
+    // skip a repeat call for the same DOM so element-scoped listeners (drag,
+    // arrows) don't stack when astro:page-load and the first-load fallback
+    // both fire.
+    if (root.dataset.kpInit === '1') return;
+    root.dataset.kpInit = '1';
     const franchiseId = root.dataset.franchiseId || '';
     const year = Number(root.dataset.year || '0');
     const KEEPER_LIMIT = Number(root.dataset.keeperLimit || '7');
@@ -720,6 +726,10 @@ const roundLabel = (round: string) => {
   }
 
   document.addEventListener('astro:page-load', initKeeperPlanner);
+  // First-load fallback for pages served without View Transitions (mirrors
+  // src/components/nav/NavLinks.astro); the per-DOM guard prevents double-wiring.
+  if (document.readyState !== 'loading') initKeeperPlanner();
+  else document.addEventListener('DOMContentLoaded', initKeeperPlanner);
 </script>
 
 <style>
