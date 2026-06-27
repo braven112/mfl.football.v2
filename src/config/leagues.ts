@@ -28,6 +28,14 @@ export interface LeagueFeatures {
   schefterFeed: boolean;
 }
 
+/** Date (month is 1-indexed) on which a league flips to the new MFL league year. */
+export interface LeagueYearRollover {
+  /** 1-indexed month (1 = January, 6 = June). */
+  month: number;
+  /** Day of month. */
+  day: number;
+}
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -37,6 +45,13 @@ export interface LeagueDefinition {
   mflHost: string;
   dataPath: string;
   domains: string[];
+  /**
+   * Optional per-league year-rollover date. Present for leagues whose MFL
+   * season is created on a different schedule than TheLeague's Feb 14 default
+   * (e.g. AFL rolls over June 1). Consumed by getAflLeagueYear() in
+   * src/utils/league-year.ts.
+   */
+  leagueYearRollover?: LeagueYearRollover;
   features: LeagueFeatures;
 }
 

@@ -12,10 +12,9 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { getCurrentWeekForYear } from '../../../utils/current-week';
+import { getAflLeagueYear } from '../../../utils/league-year';
 
 const MFL_LEAGUE_ID = '19621';
-// AFL is pinned to 2025 until the league rolls over to 2026 on MFL.
-const AFL_LEAGUE_YEAR = 2025;
 
 // ---------------------------------------------------------------------------
 // POST — Submit lineup to MFL
@@ -46,7 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
       return json({ error: 'Invalid player IDs in lineup.' }, 400);
     }
 
-    const year = AFL_LEAGUE_YEAR;
+    const year = getAflLeagueYear();
     const starterList = starters.join(',');
 
     // MFL lineup import endpoint
@@ -99,15 +98,15 @@ export const GET: APIRoute = async ({ request }) => {
     if (!user?.id) return json({ error: 'Authentication required.' }, 401);
     if (!user.franchiseId) return json({ error: 'No franchise.' }, 403);
 
+    const year = getAflLeagueYear();
+
     const url = new URL(request.url);
     const weekParam = url.searchParams.get('week');
-    const week = weekParam ? parseInt(weekParam, 10) : getCurrentWeekForYear(AFL_LEAGUE_YEAR);
+    const week = weekParam ? parseInt(weekParam, 10) : getCurrentWeekForYear(year);
 
     if (isNaN(week) || week < 1 || week > 22) {
       return json({ error: 'Invalid week.' }, 400);
     }
-
-    const year = AFL_LEAGUE_YEAR;
 
     // Fetch rosters from MFL to get current starters
     const rostersUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`;

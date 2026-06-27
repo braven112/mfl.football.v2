@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getAflLeagueYear } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -24,7 +24,7 @@ interface KeeperFranchise {
   selections: KeeperPlayerEntry[];
 }
 
-const currentYear = getCurrentLeagueYear();
+const currentYear = getAflLeagueYear();
 const keeperFeedKey = Object.keys(keeperFeeds).find((k) =>
   k.includes(`/${currentYear}/keeperList.json`)
 );

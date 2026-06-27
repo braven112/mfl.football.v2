@@ -12,16 +12,16 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import LoginForm from '../../components/theleague/LoginForm.astro';
 import { getAuthUser } from '../../utils/auth';
+import { getAflLeagueYear } from '../../utils/league-year';
 
 export const prerender = false;
 
 const AFL_LEAGUE_ID = '19621';
-// MFL hasn't been set up for AFL 2026 yet — last completed season is 2025.
-// `myleagues` for 2026 returns nothing for this league, which is why owners
-// who tried to sign in before this fix saw "your franchise could not be
-// determined". Once the 2026 AFL league exists on MFL, this can drop back
-// to the current year via getCurrentLeagueYear().
-const AFL_LOGIN_YEAR = 2025;
+// Scope the login (and resulting JWT) to AFL's current MFL league year. AFL
+// rolls over June 1 — see getAflLeagueYear. The new league must exist on MFL
+// by then, or `myleagues` returns nothing and owners see "your franchise could
+// not be determined".
+const AFL_LOGIN_YEAR = getAflLeagueYear();
 
 // If already authenticated as an AFL owner, redirect into the AFL home.
 // If authenticated against a different league, fall through so the user
