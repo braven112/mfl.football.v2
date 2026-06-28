@@ -594,6 +594,16 @@ const isOwner =
     justify-items: center;
   }
 
+  /* Mobile (≤640px): the 200px auto-fill track only fits one badge below
+     ~400px, leaving title badges stacked one-per-row. Pin to exactly two
+     columns so a pair sits side by side all the way down to 320px — the
+     fixed-200px cards shrink via their max-width:100% to fill each track. */
+  @media (max-width: 640px) {
+    .badge-wall {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
   /* Bare badges — no card chrome or labels; the medallion carries its own
      title and year. 200px columns fit four across on desktop. */
   .badge-card {
