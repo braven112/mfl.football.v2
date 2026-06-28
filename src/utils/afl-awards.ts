@@ -17,6 +17,7 @@
  */
 
 import awardsHistory from '../../data/afl-fantasy/awards-history.json';
+import aflConfig from '../../data/afl-fantasy/afl.config.json';
 
 export type AwardSlug =
   | 'afl-championship'
@@ -167,6 +168,43 @@ export function countFranchiseBadges(franchiseId: string): number {
     (sum, a) => sum + a.years.length,
     0
   );
+}
+
+/** Every current AFL franchise id, from the league config (single source). */
+const ALL_FRANCHISE_IDS: string[] = (
+  (aflConfig as { teams?: Array<{ franchiseId?: string }> }).teams ?? []
+)
+  .map((t) => t.franchiseId)
+  .filter((id): id is string => typeof id === 'string');
+
+/** Where a franchise's total trophy count places it across the whole league. */
+export interface FranchiseTrophyRank {
+  /**
+   * 1-based standard competition rank by total badge count, descending. Ties
+   * share a rank and the next rank skips (1, 2, 2, 4) — `rank` is 1 plus the
+   * number of franchises with a strictly greater count.
+   */
+  rank: number;
+  /** Total franchises ranked (the full league). */
+  totalFranchises: number;
+  /** This franchise's total badge count. */
+  count: number;
+  /** True when at least one other franchise shares this rank (count). */
+  tied: boolean;
+}
+
+/**
+ * Rank a franchise by its total trophy count against every other AFL franchise.
+ * Standard competition ranking ("1224") so tied counts share a rank. A franchise
+ * with zero trophies still ranks (last, tied with the other empty cases) — the
+ * caller decides whether to surface or hide that.
+ */
+export function getFranchiseTrophyRank(franchiseId: string): FranchiseTrophyRank {
+  const counts = ALL_FRANCHISE_IDS.map((id) => countFranchiseBadges(id));
+  const count = countFranchiseBadges(franchiseId);
+  const rank = 1 + counts.filter((c) => c > count).length;
+  const tied = counts.filter((c) => c === count).length > 1;
+  return { rank, totalFranchises: counts.length, count, tied };
 }
 
 /**

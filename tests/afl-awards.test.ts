@@ -10,12 +10,14 @@ import {
   getFranchiseTrophyRoom,
   getFranchiseGrandSlam,
   getFranchiseTitleProgress,
+  getFranchiseTrophyRank,
   TITLE_TYPES,
   countFranchiseBadges,
   type AwardSlug,
 } from '../src/utils/afl-awards';
 import { getTeam } from '../src/utils/afl-conference';
 import awardsHistory from '../data/afl-fantasy/awards-history.json';
+import aflConfig from '../data/afl-fantasy/afl.config.json';
 
 const ROOT = path.resolve(__dirname, '..');
 const ALL_SLUGS = new Set(AWARD_TYPES.map((a) => a.slug));
@@ -236,6 +238,66 @@ describe('getFranchiseTitleProgress', () => {
     expect(p.wonCount).toBe(p.types.filter((t) => t.won).length);
     expect(p.wonCount).toBeGreaterThan(0);
     expect(p.wonCount).toBeLessThanOrEqual(6);
+  });
+});
+
+describe('getFranchiseTrophyRank', () => {
+  const TEAM_COUNT = (aflConfig as { teams: unknown[] }).teams.length;
+
+  it('ranks every franchise against the full league', () => {
+    const r = getFranchiseTrophyRank('0001');
+    expect(r.totalFranchises).toBe(TEAM_COUNT);
+    expect(r.count).toBe(countFranchiseBadges('0001'));
+  });
+
+  it('the trophy leader is rank 1 and untied', () => {
+    // 0001 (Smokane FC) has the most hardware in the league — verified vs data.
+    const counts = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => countFranchiseBadges(t.franchiseId)
+    );
+    const max = Math.max(...counts);
+    const leaderIsUnique = counts.filter((c) => c === max).length === 1;
+    const r = getFranchiseTrophyRank('0001');
+    expect(r.count).toBe(max);
+    expect(r.rank).toBe(1);
+    expect(r.tied).toBe(!leaderIsUnique);
+  });
+
+  it('orders franchises by descending trophy count (rank tracks count)', () => {
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
+    );
+    const ranked = ids
+      .map((id) => getFranchiseTrophyRank(id))
+      .sort((a, b) => a.rank - b.rank);
+    // A lower (better) rank never has a smaller trophy count than a worse rank.
+    for (let i = 1; i < ranked.length; i++) {
+      expect(ranked[i].count).toBeLessThanOrEqual(ranked[i - 1].count);
+    }
+  });
+
+  it('uses standard competition ranking — ties share a rank, next rank skips', () => {
+    // 0005, 0015, 0021 all sit on 10 trophies → they share one rank, and the
+    // rank below skips by the size of the tie group.
+    const tied = ['0005', '0015', '0021'].map((id) => getFranchiseTrophyRank(id));
+    expect(new Set(tied.map((r) => r.count)).size).toBe(1); // same count
+    expect(new Set(tied.map((r) => r.rank)).size).toBe(1); // same rank
+    for (const r of tied) expect(r.tied).toBe(true);
+
+    // 0014 (Thundering Herd, 14) sits alone directly above the tie group, so the
+    // shared rank is exactly 0014's rank + 1.
+    const above = getFranchiseTrophyRank('0014');
+    expect(above.tied).toBe(false);
+    expect(tied[0].rank).toBe(above.rank + 1);
+  });
+
+  it('ranks a zero-trophy franchise last (tied) without crashing', () => {
+    // 0004 (Get off my Ditka) has no hardware; several teams share 0.
+    const r = getFranchiseTrophyRank('0004');
+    expect(r.count).toBe(0);
+    expect(r.tied).toBe(true);
+    expect(r.rank).toBeGreaterThan(1);
+    expect(r.rank).toBeLessThanOrEqual(r.totalFranchises);
   });
 });
 
