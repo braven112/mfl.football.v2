@@ -373,3 +373,15 @@ Pattern:
 **Evidence:** After wrapping both scripts in `init()` + `astro:page-load` (with the document-level delegations guarded and config re-read per click), verified via Playwright with a minted owner session: non-owner page → SPA-nav to owner planner wired up correctly (arrow 0→1, drag 1→2, tabs switch); away-to-standings-and-back re-wired with no double-binding; direct hard-load still worked; zero `pageerror`s across all paths.
 
 **Recommendation:** For any interactive `<script>` on a page under `ClientRouter` that is NOT a pure URL-switch (those should be `<a>` links per the 2026-06-24 insight): name your setup `init()`, register it on `astro:page-load`, re-query/re-bind element-scoped listeners freely, guard every `document`-level listener behind a module-scoped once-flag, and re-read any SSR config blob inside handlers instead of capturing it at module-eval.
+
+---
+
+## 2026-06-28 - Forcing N Columns Over Fixed-Width Children Needs `minmax(0, 1fr)`, Not `1fr`
+
+**Context:** The AFL franchise trophy wall (`src/pages/afl-fantasy/franchises/[id].astro`) used `grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))` for its title badges. Below ~400px only one 200px track fit, so on phones the badges stacked one-per-row. The ask was two-across down to 320px while leaving tablet/desktop untouched. First fix pinned the mobile grid to `repeat(2, 1fr)` — and the second column overflowed clean off the right edge of the viewport.
+
+**Insight:** `1fr` is shorthand for `minmax(auto, 1fr)`, and that `auto` *minimum* resolves to the track content's min-content size. The `.badge-card` carried an explicit `width: 200px`, so each track's floor was 200px — two of them demanded 400px, well past the ~288px a 320px phone has after container padding, hence the overflow. Two independent things both had to change: (1) `repeat(2, minmax(0, 1fr))` so the tracks may shrink *below* their content's intrinsic width, and (2) reset the card's fixed width to `width: 100%` inside the mobile query so the badge fills its half instead of forcing the old 200px floor back in. Fixing only one leaves the bug. `max-width: 100%` on the card is NOT enough on its own — it caps growth but doesn't lower the track's min-content floor.
+
+**Evidence:** With `grid-template-columns: repeat(2, minmax(0, 1fr))` + `.badge-card { width: 100%; }` under `@media (max-width: 640px)`, Playwright shots of franchise `0002` (16 trophies) at 320px and 375px showed two badges side-by-side fully inside the viewport, no horizontal overflow. 640px is the codebase's dominant phone breakpoint (85 uses vs. 41 for 767px) — scope mobile-only grid overrides there so tablet/desktop `auto-fill` behavior is untouched.
+
+**Recommendation:** Any time you force a fixed column count (`repeat(N, …)`) over children that carry an explicit `width` (or large min-content), use `minmax(0, 1fr)` and drop/override the child's fixed width in the same breakpoint — `1fr` alone silently overflows because its `auto` floor honors the child's intrinsic size. Verify the narrowest target (320px) in a real browser, not by reasoning about it.
