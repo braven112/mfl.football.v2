@@ -585,11 +585,14 @@ const isOwner =
     color: var(--text-muted, #9ca3af);
   }
 
-  /* Caption + pips travel together so they wrap as one unit on narrow screens. */
+  /* Caption + pips travel together so they wrap as one unit on narrow screens.
+     Pushed to the far right of the line so the complete trophy set + progress
+     bar align right, opposite the label/count/rank cluster. */
   .lockup-trophies__pip-group {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    margin-left: auto;
   }
 
   /* Micro-label naming what the pips measure: breadth across title types,
