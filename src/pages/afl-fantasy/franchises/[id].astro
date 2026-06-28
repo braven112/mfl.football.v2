@@ -6,7 +6,10 @@ import {
   getFranchiseTrophyCase,
   getFranchiseTrophyRoom,
   getFranchiseTitleProgress,
+  getFranchiseTrophyRank,
+  getFranchiseTierRank,
   type AwardSlug,
+  type AwardTier,
   type TrophyCaseItem,
 } from '../../../utils/afl-awards';
 import { stampBadgeYear } from '../../../utils/afl-badge';
@@ -119,6 +122,34 @@ const titlePipsLabel =
   (wonTypeSummary ? ` Won: ${wonTypeSummary}.` : '') +
   (unwonTypeSummary ? ` Not yet won: ${unwonTypeSummary}.` : '');
 
+// Trophy-count rank across all AFL franchises (descending total trophies,
+// standard competition ranking for ties). A zero-trophy case is left
+// "unranked" — we hide the chip rather than show a meaningless "T-22nd".
+const trophyRank = getFranchiseTrophyRank(id);
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1: return `${n}st`;
+    case 2: return `${n}nd`;
+    case 3: return `${n}rd`;
+    default: return `${n}th`;
+  }
+}
+const rankLabel =
+  trophyRank.count > 0
+    ? `${trophyRank.tied ? 'T-' : ''}${ordinal(trophyRank.rank)} of ${trophyRank.totalFranchises}`
+    : null;
+
+// Per-tier rank for each trophy-room section header ("Division Titles ·
+// 1st of 24"). Same hide-when-empty rule as the overall rank — a tier the
+// franchise has nothing in carries no chip.
+function tierRankLabel(tier: AwardTier): string | null {
+  const r = getFranchiseTierRank(id, tier);
+  if (r.count === 0) return null;
+  return `${r.tied ? 'T-' : ''}${ordinal(r.rank)} of ${r.totalFranchises}`;
+}
+
 // "No X" overlay text for an unwon (locked) badge.
 function lockedLabel(t: TrophyCaseItem): string {
   switch (t.slug) {
@@ -218,18 +249,29 @@ const isOwner =
             <span class="lockup-trophies__count">
               {totalBadges} {totalBadges === 1 ? 'trophy' : 'trophies'}
             </span>
-            <span class="title-pips" role="img" aria-label={titlePipsLabel}>
-              {titleProgress.types.map((t) => (
-                <span
-                  class="title-pips__pip"
-                  data-won={t.won ? 'true' : 'false'}
-                  title={t.won
-                    ? `${t.label} — won ${t.years.length} (${t.years.join(', ')})`
-                    : `${t.label} — not yet won`}
-                />
-              ))}
-              <span class="title-pips__ratio">
-                {titleProgress.wonCount}<span class="title-pips__total">/{titleProgress.total}</span>
+            {rankLabel && (
+              <span
+                class="lockup-trophies__rank"
+                title={`Ranked ${rankLabel} among all AFL franchises by total trophies won`}
+              >
+                {rankLabel}
+              </span>
+            )}
+            <span class="lockup-trophies__pip-group">
+              <span class="lockup-trophies__pips-caption" aria-hidden="true">Complete trophy set</span>
+              <span class="title-pips" role="img" aria-label={titlePipsLabel}>
+                {titleProgress.types.map((t) => (
+                  <span
+                    class="title-pips__pip"
+                    data-won={t.won ? 'true' : 'false'}
+                    title={t.won
+                      ? `${t.label} — won ${t.years.length} (${t.years.join(', ')})`
+                      : `${t.label} — not yet won`}
+                  />
+                ))}
+                <span class="title-pips__ratio">
+                  {titleProgress.wonCount}<span class="title-pips__total">/{titleProgress.total}</span>
+                </span>
               </span>
             </span>
           </div>
@@ -252,6 +294,14 @@ const isOwner =
                   <img class="trophy-tier__icon" src={team.icon} alt="" loading="lazy" />
                 ) : null}
                 <span>{tier.label}</span>
+                {tierRankLabel(tier.key) && (
+                  <span
+                    class="trophy-tier__rank"
+                    title={`Ranked ${tierRankLabel(tier.key)} among all AFL franchises in ${tier.label.toLowerCase()}`}
+                  >
+                    {tierRankLabel(tier.key)}
+                  </span>
+                )}
               </h3>
               <div class="badge-wall">
                 {tier.items.map((t) => (
@@ -521,6 +571,37 @@ const isOwner =
     font-variant-numeric: tabular-nums;
   }
 
+  /* League-wide trophy-count rank, e.g. "· 3rd of 24" (T- prefix when tied).
+     Same middot + muted treatment as the count so they read as one cluster. */
+  .lockup-trophies__rank {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lockup-trophies__rank::before {
+    content: '·';
+    margin-right: 0.75rem;
+    color: var(--text-muted, #9ca3af);
+  }
+
+  /* Caption + pips travel together so they wrap as one unit on narrow screens. */
+  .lockup-trophies__pip-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Micro-label naming what the pips measure: breadth across title types,
+     not raw trophy volume. Editorial table-header treatment. */
+  .lockup-trophies__pips-caption {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #9ca3af);
+  }
+
   /* On-brand title-type progress: six slim pips, gold when won, + ratio. */
   .title-pips {
     display: inline-flex;
@@ -567,6 +648,7 @@ const isOwner =
   .trophy-tier__title {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.625rem;
     font-size: 0.875rem;
     font-weight: 700;
@@ -576,6 +658,23 @@ const isOwner =
     border-left: 2px solid var(--afl-trophy-gold, #c9a44c);
     margin: 0 0 var(--spacing-md, 16px) 0;
     color: var(--text-default);
+  }
+
+  /* League-wide rank for this tier, e.g. "· 1st of 24". Muted, mixed-case, and
+     non-bold so it reads as context beside the uppercase section label. */
+  .trophy-tier__rank {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    color: var(--text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trophy-tier__rank::before {
+    content: '·';
+    margin-right: 0.375rem;
+    color: var(--text-muted, #9ca3af);
   }
 
   /* Small team icon anchoring each tier headline: img | headline. */

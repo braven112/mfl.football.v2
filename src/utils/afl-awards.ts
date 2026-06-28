@@ -17,6 +17,7 @@
  */
 
 import awardsHistory from '../../data/afl-fantasy/awards-history.json';
+import aflConfig from '../../data/afl-fantasy/afl.config.json';
 
 export type AwardSlug =
   | 'afl-championship'
@@ -167,6 +168,83 @@ export function countFranchiseBadges(franchiseId: string): number {
     (sum, a) => sum + a.years.length,
     0
   );
+}
+
+/** Every current AFL franchise id, from the league config (single source). */
+const ALL_FRANCHISE_IDS: string[] = (
+  (aflConfig as { teams?: Array<{ franchiseId?: string }> }).teams ?? []
+)
+  .map((t) => t.franchiseId)
+  .filter((id): id is string => typeof id === 'string');
+
+/** Where a franchise's total trophy count places it across the whole league. */
+export interface FranchiseTrophyRank {
+  /**
+   * 1-based standard competition rank by total badge count, descending. Ties
+   * share a rank and the next rank skips (1, 2, 2, 4) — `rank` is 1 plus the
+   * number of franchises with a strictly greater count.
+   */
+  rank: number;
+  /** Total franchises ranked (the full league). */
+  totalFranchises: number;
+  /** This franchise's total badge count. */
+  count: number;
+  /** True when at least one other franchise shares this rank (count). */
+  tied: boolean;
+}
+
+/**
+ * Rank a franchise by its total trophy count against every other AFL franchise.
+ * Standard competition ranking ("1224") so tied counts share a rank. A franchise
+ * with zero trophies still ranks (last, tied with the other empty cases) — the
+ * caller decides whether to surface or hide that.
+ */
+export function getFranchiseTrophyRank(franchiseId: string): FranchiseTrophyRank {
+  const counts = ALL_FRANCHISE_IDS.map((id) => countFranchiseBadges(id));
+  const count = countFranchiseBadges(franchiseId);
+  const rank = 1 + counts.filter((c) => c > count).length;
+  const tied = counts.filter((c) => c === count).length > 1;
+  return { rank, totalFranchises: counts.length, count, tied };
+}
+
+/**
+ * Badge count split by trophy-room tier (gold / conference / division /
+ * silver) — the same four sections the trophy room renders. Each tier sums the
+ * award-years its slugs carry, so it mirrors the overall `countFranchiseBadges`
+ * weighting (one per dated win).
+ */
+export function countFranchiseBadgesByTier(
+  franchiseId: string
+): Record<AwardTier, number> {
+  const counts: Record<AwardTier, number> = {
+    gold: 0,
+    conference: 0,
+    division: 0,
+    silver: 0,
+  };
+  for (const award of getFranchiseAwards(franchiseId)) {
+    counts[award.tier] += award.years.length;
+  }
+  return counts;
+}
+
+/**
+ * Rank a franchise within a single trophy tier against the whole league —
+ * "Division Titles: 1st of 24". Same descending, standard-competition ranking
+ * as {@link getFranchiseTrophyRank}; `count` is this franchise's badge total in
+ * that tier (0 when it has none — the caller decides whether to surface it).
+ */
+export function getFranchiseTierRank(
+  franchiseId: string,
+  tier: AwardTier
+): FranchiseTrophyRank {
+  const counts = ALL_FRANCHISE_IDS.map(
+    (id) => countFranchiseBadgesByTier(id)[tier]
+  );
+  const count = countFranchiseBadgesByTier(franchiseId)[tier];
+  const rank = 1 + counts.filter((c) => c > count).length;
+  const tied = counts.filter((c) => c === count).length > 1;
+  return { rank, totalFranchises: counts.length, count, tied };
 }
 
 /**

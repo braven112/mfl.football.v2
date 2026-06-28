@@ -10,12 +10,18 @@ import {
   getFranchiseTrophyRoom,
   getFranchiseGrandSlam,
   getFranchiseTitleProgress,
+  getFranchiseTrophyRank,
+  getFranchiseTierRank,
+  countFranchiseBadgesByTier,
+  AWARD_TIERS,
   TITLE_TYPES,
   countFranchiseBadges,
   type AwardSlug,
+  type AwardTier,
 } from '../src/utils/afl-awards';
 import { getTeam } from '../src/utils/afl-conference';
 import awardsHistory from '../data/afl-fantasy/awards-history.json';
+import aflConfig from '../data/afl-fantasy/afl.config.json';
 
 const ROOT = path.resolve(__dirname, '..');
 const ALL_SLUGS = new Set(AWARD_TYPES.map((a) => a.slug));
@@ -236,6 +242,140 @@ describe('getFranchiseTitleProgress', () => {
     expect(p.wonCount).toBe(p.types.filter((t) => t.won).length);
     expect(p.wonCount).toBeGreaterThan(0);
     expect(p.wonCount).toBeLessThanOrEqual(6);
+  });
+});
+
+describe('getFranchiseTrophyRank', () => {
+  const TEAM_COUNT = (aflConfig as { teams: unknown[] }).teams.length;
+
+  it('ranks every franchise against the full league', () => {
+    const r = getFranchiseTrophyRank('0001');
+    expect(r.totalFranchises).toBe(TEAM_COUNT);
+    expect(r.count).toBe(countFranchiseBadges('0001'));
+  });
+
+  it('the trophy leader is rank 1 and untied', () => {
+    // 0001 (Smokane FC) has the most hardware in the league — verified vs data.
+    const counts = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => countFranchiseBadges(t.franchiseId)
+    );
+    const max = Math.max(...counts);
+    const leaderIsUnique = counts.filter((c) => c === max).length === 1;
+    const r = getFranchiseTrophyRank('0001');
+    expect(r.count).toBe(max);
+    expect(r.rank).toBe(1);
+    expect(r.tied).toBe(!leaderIsUnique);
+  });
+
+  it('orders franchises by descending trophy count (rank tracks count)', () => {
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
+    );
+    const ranked = ids
+      .map((id) => getFranchiseTrophyRank(id))
+      .sort((a, b) => a.rank - b.rank);
+    // A lower (better) rank never has a smaller trophy count than a worse rank.
+    for (let i = 1; i < ranked.length; i++) {
+      expect(ranked[i].count).toBeLessThanOrEqual(ranked[i - 1].count);
+    }
+  });
+
+  it('uses standard competition ranking — ties share a rank, next rank skips', () => {
+    // 0005, 0015, 0021 all sit on 10 trophies → they share one rank, and the
+    // rank below skips by the size of the tie group.
+    const tied = ['0005', '0015', '0021'].map((id) => getFranchiseTrophyRank(id));
+    expect(new Set(tied.map((r) => r.count)).size).toBe(1); // same count
+    expect(new Set(tied.map((r) => r.rank)).size).toBe(1); // same rank
+    for (const r of tied) expect(r.tied).toBe(true);
+
+    // 0014 (Thundering Herd, 14) sits alone directly above the tie group, so the
+    // shared rank is exactly 0014's rank + 1.
+    const above = getFranchiseTrophyRank('0014');
+    expect(above.tied).toBe(false);
+    expect(tied[0].rank).toBe(above.rank + 1);
+  });
+
+  it('ranks a zero-trophy franchise last (tied) without crashing', () => {
+    // 0004 (Get off my Ditka) has no hardware; several teams share 0.
+    const r = getFranchiseTrophyRank('0004');
+    expect(r.count).toBe(0);
+    expect(r.tied).toBe(true);
+    expect(r.rank).toBeGreaterThan(1);
+    expect(r.rank).toBeLessThanOrEqual(r.totalFranchises);
+  });
+});
+
+describe('countFranchiseBadgesByTier', () => {
+  it('splits a franchise total across the four tiers exactly', () => {
+    for (const fid of ['0001', '0002', '0014', '0004']) {
+      const byTier = countFranchiseBadgesByTier(fid);
+      const sum = AWARD_TIERS.reduce((s, t) => s + byTier[t.key], 0);
+      expect(sum).toBe(countFranchiseBadges(fid));
+    }
+  });
+
+  it('reports zero for every tier of a trophy-less franchise', () => {
+    const byTier = countFranchiseBadgesByTier('0004');
+    for (const t of AWARD_TIERS) expect(byTier[t.key]).toBe(0);
+  });
+});
+
+describe('getFranchiseTierRank', () => {
+  const TEAM_COUNT = (aflConfig as { teams: unknown[] }).teams.length;
+
+  it('ranks within the tier against the full league', () => {
+    const r = getFranchiseTierRank('0001', 'division');
+    expect(r.totalFranchises).toBe(TEAM_COUNT);
+    expect(r.count).toBe(countFranchiseBadgesByTier('0001').division);
+  });
+
+  it('crowns the per-tier leaders (verified vs awards data)', () => {
+    // 0001 Smokane FC leads Division titles; 0002 Drunk Indians lead the gold
+    // (Championships) tier; 0005 Computer Jocks lead Conference titles.
+    const division = getFranchiseTierRank('0001', 'division');
+    expect(division.rank).toBe(1);
+    expect(division.tied).toBe(false);
+
+    const gold = getFranchiseTierRank('0002', 'gold');
+    expect(gold.rank).toBe(1);
+    expect(gold.tied).toBe(false);
+
+    const conference = getFranchiseTierRank('0005', 'conference');
+    expect(conference.rank).toBe(1);
+    expect(conference.tied).toBe(false);
+  });
+
+  it('marks shared tier ranks as tied', () => {
+    // 0014 (Thundering Herd) shares 3rd in both Conference and Division.
+    const conf = getFranchiseTierRank('0014', 'conference');
+    const div = getFranchiseTierRank('0014', 'division');
+    expect(conf.tied).toBe(true);
+    expect(div.tied).toBe(true);
+    // ...but stands alone at 2nd in the gold (Championships) tier.
+    const gold = getFranchiseTierRank('0014', 'gold');
+    expect(gold.rank).toBe(2);
+    expect(gold.tied).toBe(false);
+  });
+
+  it('per-tier ranks are internally consistent with the counts', () => {
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
+    );
+    for (const tier of AWARD_TIERS) {
+      const ranked = ids
+        .map((id) => getFranchiseTierRank(id, tier.key as AwardTier))
+        .sort((a, b) => a.rank - b.rank);
+      for (let i = 1; i < ranked.length; i++) {
+        expect(ranked[i].count).toBeLessThanOrEqual(ranked[i - 1].count);
+      }
+    }
+  });
+
+  it('still returns a (last, tied) rank for a tier the franchise has none in', () => {
+    const r = getFranchiseTierRank('0004', 'gold');
+    expect(r.count).toBe(0);
+    expect(r.tied).toBe(true);
+    expect(r.rank).toBeGreaterThan(1);
   });
 });
 
