@@ -208,6 +208,46 @@ export function getFranchiseTrophyRank(franchiseId: string): FranchiseTrophyRank
 }
 
 /**
+ * Badge count split by trophy-room tier (gold / conference / division /
+ * silver) — the same four sections the trophy room renders. Each tier sums the
+ * award-years its slugs carry, so it mirrors the overall `countFranchiseBadges`
+ * weighting (one per dated win).
+ */
+export function countFranchiseBadgesByTier(
+  franchiseId: string
+): Record<AwardTier, number> {
+  const counts: Record<AwardTier, number> = {
+    gold: 0,
+    conference: 0,
+    division: 0,
+    silver: 0,
+  };
+  for (const award of getFranchiseAwards(franchiseId)) {
+    counts[award.tier] += award.years.length;
+  }
+  return counts;
+}
+
+/**
+ * Rank a franchise within a single trophy tier against the whole league —
+ * "Division Titles: 1st of 24". Same descending, standard-competition ranking
+ * as {@link getFranchiseTrophyRank}; `count` is this franchise's badge total in
+ * that tier (0 when it has none — the caller decides whether to surface it).
+ */
+export function getFranchiseTierRank(
+  franchiseId: string,
+  tier: AwardTier
+): FranchiseTrophyRank {
+  const counts = ALL_FRANCHISE_IDS.map(
+    (id) => countFranchiseBadgesByTier(id)[tier]
+  );
+  const count = countFranchiseBadgesByTier(franchiseId)[tier];
+  const rank = 1 + counts.filter((c) => c > count).length;
+  const tied = counts.filter((c) => c === count).length > 1;
+  return { rank, totalFranchises: counts.length, count, tied };
+}
+
+/**
  * One physical trophy in a franchise's case. Dated (major) awards expand to one
  * item per winning year (`year` set); undated awards (divisions/conference)
  * collapse to a single item carrying all winning `years` + a count.

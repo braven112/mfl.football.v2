@@ -7,7 +7,9 @@ import {
   getFranchiseTrophyRoom,
   getFranchiseTitleProgress,
   getFranchiseTrophyRank,
+  getFranchiseTierRank,
   type AwardSlug,
+  type AwardTier,
   type TrophyCaseItem,
 } from '../../../utils/afl-awards';
 import { stampBadgeYear } from '../../../utils/afl-badge';
@@ -138,6 +140,15 @@ const rankLabel =
   trophyRank.count > 0
     ? `${trophyRank.tied ? 'T-' : ''}${ordinal(trophyRank.rank)} of ${trophyRank.totalFranchises}`
     : null;
+
+// Per-tier rank for each trophy-room section header ("Division Titles ·
+// 1st of 24"). Same hide-when-empty rule as the overall rank — a tier the
+// franchise has nothing in carries no chip.
+function tierRankLabel(tier: AwardTier): string | null {
+  const r = getFranchiseTierRank(id, tier);
+  if (r.count === 0) return null;
+  return `${r.tied ? 'T-' : ''}${ordinal(r.rank)} of ${r.totalFranchises}`;
+}
 
 // "No X" overlay text for an unwon (locked) badge.
 function lockedLabel(t: TrophyCaseItem): string {
@@ -283,6 +294,14 @@ const isOwner =
                   <img class="trophy-tier__icon" src={team.icon} alt="" loading="lazy" />
                 ) : null}
                 <span>{tier.label}</span>
+                {tierRankLabel(tier.key) && (
+                  <span
+                    class="trophy-tier__rank"
+                    title={`Ranked ${tierRankLabel(tier.key)} among all AFL franchises in ${tier.label.toLowerCase()}`}
+                  >
+                    {tierRankLabel(tier.key)}
+                  </span>
+                )}
               </h3>
               <div class="badge-wall">
                 {tier.items.map((t) => (
@@ -629,6 +648,7 @@ const isOwner =
   .trophy-tier__title {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.625rem;
     font-size: 0.875rem;
     font-weight: 700;
@@ -638,6 +658,23 @@ const isOwner =
     border-left: 2px solid var(--afl-trophy-gold, #c9a44c);
     margin: 0 0 var(--spacing-md, 16px) 0;
     color: var(--text-default);
+  }
+
+  /* League-wide rank for this tier, e.g. "· 1st of 24". Muted, mixed-case, and
+     non-bold so it reads as context beside the uppercase section label. */
+  .trophy-tier__rank {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    color: var(--text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trophy-tier__rank::before {
+    content: '·';
+    margin-right: 0.375rem;
+    color: var(--text-muted, #9ca3af);
   }
 
   /* Small team icon anchoring each tier headline: img | headline. */

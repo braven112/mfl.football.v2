@@ -11,9 +11,13 @@ import {
   getFranchiseGrandSlam,
   getFranchiseTitleProgress,
   getFranchiseTrophyRank,
+  getFranchiseTierRank,
+  countFranchiseBadgesByTier,
+  AWARD_TIERS,
   TITLE_TYPES,
   countFranchiseBadges,
   type AwardSlug,
+  type AwardTier,
 } from '../src/utils/afl-awards';
 import { getTeam } from '../src/utils/afl-conference';
 import awardsHistory from '../data/afl-fantasy/awards-history.json';
@@ -298,6 +302,80 @@ describe('getFranchiseTrophyRank', () => {
     expect(r.tied).toBe(true);
     expect(r.rank).toBeGreaterThan(1);
     expect(r.rank).toBeLessThanOrEqual(r.totalFranchises);
+  });
+});
+
+describe('countFranchiseBadgesByTier', () => {
+  it('splits a franchise total across the four tiers exactly', () => {
+    for (const fid of ['0001', '0002', '0014', '0004']) {
+      const byTier = countFranchiseBadgesByTier(fid);
+      const sum = AWARD_TIERS.reduce((s, t) => s + byTier[t.key], 0);
+      expect(sum).toBe(countFranchiseBadges(fid));
+    }
+  });
+
+  it('reports zero for every tier of a trophy-less franchise', () => {
+    const byTier = countFranchiseBadgesByTier('0004');
+    for (const t of AWARD_TIERS) expect(byTier[t.key]).toBe(0);
+  });
+});
+
+describe('getFranchiseTierRank', () => {
+  const TEAM_COUNT = (aflConfig as { teams: unknown[] }).teams.length;
+
+  it('ranks within the tier against the full league', () => {
+    const r = getFranchiseTierRank('0001', 'division');
+    expect(r.totalFranchises).toBe(TEAM_COUNT);
+    expect(r.count).toBe(countFranchiseBadgesByTier('0001').division);
+  });
+
+  it('crowns the per-tier leaders (verified vs awards data)', () => {
+    // 0001 Smokane FC leads Division titles; 0002 Drunk Indians lead the gold
+    // (Championships) tier; 0005 Computer Jocks lead Conference titles.
+    const division = getFranchiseTierRank('0001', 'division');
+    expect(division.rank).toBe(1);
+    expect(division.tied).toBe(false);
+
+    const gold = getFranchiseTierRank('0002', 'gold');
+    expect(gold.rank).toBe(1);
+    expect(gold.tied).toBe(false);
+
+    const conference = getFranchiseTierRank('0005', 'conference');
+    expect(conference.rank).toBe(1);
+    expect(conference.tied).toBe(false);
+  });
+
+  it('marks shared tier ranks as tied', () => {
+    // 0014 (Thundering Herd) shares 3rd in both Conference and Division.
+    const conf = getFranchiseTierRank('0014', 'conference');
+    const div = getFranchiseTierRank('0014', 'division');
+    expect(conf.tied).toBe(true);
+    expect(div.tied).toBe(true);
+    // ...but stands alone at 2nd in the gold (Championships) tier.
+    const gold = getFranchiseTierRank('0014', 'gold');
+    expect(gold.rank).toBe(2);
+    expect(gold.tied).toBe(false);
+  });
+
+  it('per-tier ranks are internally consistent with the counts', () => {
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
+    );
+    for (const tier of AWARD_TIERS) {
+      const ranked = ids
+        .map((id) => getFranchiseTierRank(id, tier.key as AwardTier))
+        .sort((a, b) => a.rank - b.rank);
+      for (let i = 1; i < ranked.length; i++) {
+        expect(ranked[i].count).toBeLessThanOrEqual(ranked[i - 1].count);
+      }
+    }
+  });
+
+  it('still returns a (last, tied) rank for a tier the franchise has none in', () => {
+    const r = getFranchiseTierRank('0004', 'gold');
+    expect(r.count).toBe(0);
+    expect(r.tied).toBe(true);
+    expect(r.rank).toBeGreaterThan(1);
   });
 });
 
