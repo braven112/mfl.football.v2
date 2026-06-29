@@ -4,6 +4,13 @@
     {
       "date": "2026-06-28",
       "type": "style-tweak",
+      "summary": "The AFL franchise page now uses the full page width instead of being boxed into a narrow 960px column — the team hero banner stretches edge to edge and the trophy grid fits an extra badge per row, matching the width of every other page on the site. Under the hood, 35 pages across both leagues also shed a duplicate page-region wrapper, leaving exactly one main content landmark per page for cleaner screen-reader navigation.",
+      "impact": "user",
+      "area": "other"
+    },
+    {
+      "date": "2026-06-28",
+      "type": "style-tweak",
       "summary": "The AFL franchise trophy-wall strip now reads like a proper scoreboard: the team's hardware count and league rank sit on the left while the \"Complete trophy set\" label and its gold-pip progress bar slide all the way to the right edge of the line, so the two halves no longer crowd each other in the middle.",
       "impact": "user",
       "area": "other"

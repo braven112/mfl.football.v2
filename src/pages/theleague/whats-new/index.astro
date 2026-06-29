@@ -52,7 +52,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 ---
 
 <TheLeagueLayout title="What's New - The League">
-  <main class="whats-new-page">
+  <div class="whats-new-page">
     <header class="whats-new-page__header">
       <h1 class="whats-new-page__title">
         What's New
@@ -72,7 +72,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       basePath={basePath}
       spriteUrl={spriteUrl}
     />
-  </main>
+  </div>
 </TheLeagueLayout>
 
 <style is:global>

@@ -348,7 +348,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 ---
 
 <TheLeagueLayout title="Set Lineup" currentPage="lineup">
-  <main class="lineup-page">
+  <div class="lineup-page">
     <!-- Header -->
     <header class="lineup-header">
       <h1 class="lineup-title">Set Lineup</h1>
@@ -558,7 +558,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     <!-- Live region announcer -->
     <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="lineup-announcer"></div>
-  </main>
+  </div>
 
   <!-- Serialize payload -->
   <script is:inline define:vars={{ payloadJson }}>

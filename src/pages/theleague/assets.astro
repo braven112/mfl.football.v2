@@ -74,7 +74,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
 ---
 
 <TheLeagueLayout title="The League Asset Library">
-  <main class="league-gallery">
+  <div class="league-gallery">
     <header class="gallery-header">
       <h1>The League Asset Library</h1>
     </header>
@@ -148,7 +148,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
         </div>
       </>
     )}
-  </main>
+  </div>
 
   {teamList.length > 0 && (
     <script is:inline>
