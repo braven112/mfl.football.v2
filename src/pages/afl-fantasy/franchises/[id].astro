@@ -177,7 +177,7 @@ const isOwner =
 ---
 
 <TheLeagueLayout title={`${team.name} | AFL Franchise`}>
-  <main class="franchise-detail">
+  <div class="franchise-detail">
     <header class="franchise-hero">
       <a class="franchise-hero__back" href="/afl-fantasy/franchises">
         ← All franchises
@@ -340,14 +340,12 @@ const isOwner =
         </a>
       </div>
     </section>
-  </main>
+  </div>
 </TheLeagueLayout>
 
 <style>
   .franchise-detail {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+    padding: var(--spacing-xl, 32px) 0;
   }
 
   .franchise-hero {

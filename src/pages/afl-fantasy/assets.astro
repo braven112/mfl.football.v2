@@ -86,7 +86,7 @@ const getConferenceName = (code: string) => {
 ---
 
 <TheLeagueLayout title="AFL Asset Library">
-  <main class="league-gallery">
+  <div class="league-gallery">
     <header class="gallery-header">
       <h1>AFL Asset Library</h1>
       <p>Team logos, banners, and graphics for all {leagueConfig.teams.length} teams</p>
@@ -172,7 +172,7 @@ const getConferenceName = (code: string) => {
         </div>
       </>
     )}
-  </main>
+  </div>
 
   {teamList.length > 0 && (
     <script is:inline>

@@ -34,7 +34,7 @@ const olderIssues = issues.slice(1);
 ---
 
 <TheLeagueLayout title={latest ? `${latest.data.headline} · Week ${latest.week} Power Rankings` : 'Power Rankings'}>
-  <main class="pr-page">
+  <div class="pr-page">
     <Breadcrumbs items={[
       { label: 'The League', href: '/theleague' },
       { label: 'Power Rankings' },
@@ -67,7 +67,7 @@ const olderIssues = issues.slice(1);
         </p>
       </section>
     )}
-  </main>
+  </div>
 </TheLeagueLayout>
 
 <style>

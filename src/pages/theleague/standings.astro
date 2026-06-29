@@ -141,7 +141,7 @@ const defendingChampions = getDivisionChampions(franchises, yearResolvedConfig);
       </div>
     </div>
 
-    <main class="standings-content">
+    <div class="standings-content">
       {view === 'division' && (
         <div class="division-view">
           {divisionStandings.map(division => (
@@ -177,7 +177,7 @@ const defendingChampions = getDivisionChampions(franchises, yearResolvedConfig);
           Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       )}
-    </main>
+    </div>
   </div>
 </TheLeagueLayout>
 

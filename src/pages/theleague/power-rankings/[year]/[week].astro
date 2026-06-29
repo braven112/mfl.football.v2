@@ -54,7 +54,7 @@ const nextIssue = idx > 0 ? allIssues[idx - 1] : null;  // newer
 ---
 
 <TheLeagueLayout title={`${issue.headline} · Week ${issue.week} Power Rankings`}>
-  <main class="pr-page">
+  <div class="pr-page">
     <Breadcrumbs items={[
       { label: 'The League', href: '/theleague' },
       { label: 'Power Rankings', href: '/theleague/power-rankings' },
@@ -76,7 +76,7 @@ const nextIssue = idx > 0 ? allIssues[idx - 1] : null;  // newer
         </a>
       ) : <span></span>}
     </nav>
-  </main>
+  </div>
 </TheLeagueLayout>
 
 <style>

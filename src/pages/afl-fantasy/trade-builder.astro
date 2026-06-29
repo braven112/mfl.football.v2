@@ -182,7 +182,7 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title="AFL Trade Builder">
-  <main class="trade-builder">
+  <div class="trade-builder">
     {!isAflOwner ? (
       <section class="tb-gate">
         <h1>Trade Builder</h1>
@@ -355,7 +355,7 @@ const pageConfig = {
         </div>
       </>
     )}
-  </main>
+  </div>
 
   <script id="tb-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
 
