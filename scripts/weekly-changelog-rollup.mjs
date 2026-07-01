@@ -4,7 +4,13 @@
  * Weekly Changelog Rollup Script
  *
  * Reads src/data/weekly-changelog-staging.json, groups changes by area,
- * generates a single whats-new.json entry, and resets the staging file.
+ * generates ONE whats-new.json entry PER LEAGUE, and resets the staging file.
+ *
+ * Every staged change must declare a `league` ("theleague" | "afl" | "both").
+ * Changes are routed to the matching league's rollup entry so AFL fixes never
+ * appear on The League's What's New page and vice versa. Each generated entry
+ * carries an explicit `leagues` tag — display code fails closed on untagged
+ * entries, and tests/whats-new-data.test.ts blocks untagged data.
  *
  * Run manually or via GitHub Actions every Monday at 8pm PT.
  */
@@ -141,6 +147,14 @@ function buildDateRange(changes) {
   return `${startMonth} ${start.getDate()}-${endMonth} ${end.getDate()}`;
 }
 
+/** Per-league rollup config: id suffix, link target, and `leagues` tag. */
+const LEAGUE_ROLLUPS = {
+  theleague: { idSuffix: '', link: '/theleague/whats-new', leagues: ['theleague'] },
+  afl: { idSuffix: '-afl', link: '/afl-fantasy/whats-new', leagues: ['afl'] },
+};
+
+const VALID_CHANGE_LEAGUES = ['theleague', 'afl', 'both'];
+
 // ── Main ──
 
 const staging = JSON.parse(readFileSync(STAGING_PATH, 'utf-8'));
@@ -151,34 +165,56 @@ if (!staging.changes || staging.changes.length === 0) {
 }
 
 const changes = staging.changes;
-const groups = groupByArea(changes);
-const totalCount = changes.length;
 
-const today = formatDate(getCurrentMonday());
-const dateRange = buildDateRange(changes);
-
-const entry = {
-  id: `weekly-rollup-${today}`,
-  date: today,
-  title: `Weekly Fixes & Polish (${dateRange})`,
-  summary: buildSummary(totalCount, groups),
-  description: buildDescription(groups, totalCount),
-  category: 'bug-fix',
-  link: '/theleague/whats-new',
-  linkLabel: 'See all updates',
-  icon: 'wrench',
-  excludeFromHero: true,
-};
-
-// Include featured screenshot if provided in staging
-if (staging.featuredImage) {
-  entry.image = staging.featuredImage;
-  entry.imageAlt = staging.featuredImageAlt || 'Weekly rollup screenshot';
+// Refuse to run with untagged changes — a guessed league is how cross-league
+// leaks happen. tests/whats-new-data.test.ts catches this at PR time; this
+// check makes the Monday cron fail loudly instead of publishing a mistag.
+const untagged = changes.filter((c) => !VALID_CHANGE_LEAGUES.includes(c.league));
+if (untagged.length > 0) {
+  console.error('ERROR: staged changes missing a valid "league" (theleague | afl | both):');
+  for (const c of untagged) console.error(`  - [${c.date}] ${c.summary.slice(0, 80)}`);
+  process.exit(1);
 }
 
-// Prepend to whats-new.json
+const today = formatDate(getCurrentMonday());
+const newEntries = [];
+
+for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
+  const leagueChanges = changes.filter(
+    (c) => c.league === leagueSlug || c.league === 'both',
+  );
+  if (leagueChanges.length === 0) continue;
+
+  const groups = groupByArea(leagueChanges);
+  const totalCount = leagueChanges.length;
+  const dateRange = buildDateRange(leagueChanges);
+
+  const entry = {
+    id: `weekly-rollup-${today}${config.idSuffix}`,
+    date: today,
+    title: `Weekly Fixes & Polish (${dateRange})`,
+    summary: buildSummary(totalCount, groups),
+    description: buildDescription(groups, totalCount),
+    category: 'bug-fix',
+    link: config.link,
+    linkLabel: 'See all updates',
+    icon: 'wrench',
+    excludeFromHero: true,
+    leagues: config.leagues,
+  };
+
+  // Include featured screenshot if provided in staging
+  if (staging.featuredImage) {
+    entry.image = staging.featuredImage;
+    entry.imageAlt = staging.featuredImageAlt || 'Weekly rollup screenshot';
+  }
+
+  newEntries.push(entry);
+}
+
+// Prepend to whats-new.json (newest first)
 const whatsNew = JSON.parse(readFileSync(WHATS_NEW_PATH, 'utf-8'));
-whatsNew.unshift(entry);
+whatsNew.unshift(...newEntries);
 writeFileSync(WHATS_NEW_PATH, JSON.stringify(whatsNew, null, 2) + '\n');
 
 // Reset staging file for next week
@@ -189,5 +225,7 @@ const resetStaging = {
 };
 writeFileSync(STAGING_PATH, JSON.stringify(resetStaging, null, 2) + '\n');
 
-console.log(`Rollup complete: "${entry.title}" (${totalCount} changes)`);
+for (const entry of newEntries) {
+  console.log(`Rollup complete: "${entry.title}" [${entry.leagues.join(', ')}] (${entry.id})`);
+}
 console.log(`Staging reset for week of ${resetStaging.weekOf}`);

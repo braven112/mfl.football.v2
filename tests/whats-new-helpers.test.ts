@@ -18,6 +18,7 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
     summary: overrides?.summary ?? 'A test summary',
     description: overrides?.description ?? ['Test description'],
     category: overrides?.category ?? 'new-feature',
+    leagues: overrides?.leagues ?? ['theleague'],
     ...overrides,
   };
 }

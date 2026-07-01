@@ -16,10 +16,12 @@
       "<strong>Playoffs</strong> — The playoffs pages now respect the \"reduce motion\" accessibility setting — the live-score refresh countdown bar and the score flash/flicker effects hold still instead of animating for viewers who've asked their device to tone motion down.."
     ],
     "category": "bug-fix",
-    "link": "/theleague/whats-new",
-    "linkLabel": "See all updates",
     "icon": "wrench",
-    "excludeFromHero": true
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
   },
   {
     "id": "afl-title-progress",
@@ -56,7 +58,10 @@
     "linkLabel": "See your trophy wall",
     "icon": "trophy",
     "image": "afl-trophy-wall.webp",
-    "imageAlt": "An AFL franchise trophy room grouped into Championships, Conference Titles, Division Titles, and Consolation Titles, with year-stamped gold-and-navy badges for each win and faded ‘No …’ placeholders for unwon awards"
+    "imageAlt": "An AFL franchise trophy room grouped into Championships, Conference Titles, Division Titles, and Consolation Titles, with year-stamped gold-and-navy badges for each win and faded ‘No …’ placeholders for unwon awards",
+    "leagues": [
+      "afl"
+    ]
   },
   {
     "id": "theleague-branded-hero",
@@ -115,7 +120,7 @@
     "image": "afl-ask-roger.webp",
     "imageAlt": "Ask Roger AFL page showing the chat interface on the left with seeded Q&A cards about AFL rules, and Roger's personality card on the right with the red AFL theme accent",
     "leagues": [
-      "afl-fantasy"
+      "afl"
     ]
   },
   {

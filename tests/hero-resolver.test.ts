@@ -58,7 +58,7 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
     icon: overrides?.icon,
     pinToHero: overrides?.pinToHero,
     excludeFromHero: overrides?.excludeFromHero,
-    leagues: overrides?.leagues,
+    leagues: overrides?.leagues ?? ['theleague'],
   };
 }
 
