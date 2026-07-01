@@ -1,5 +1,4 @@
 {
-  "encoding": "utf-8",
   "version": "1.0",
   "transactions": {
     "transaction": [
@@ -34,10 +33,10 @@
         "timestamp": "1782415291"
       },
       {
-        "type": "FREE_AGENT",
-        "franchise": "0024",
+        "transaction": "|12860,",
         "timestamp": "1782415276",
-        "transaction": "|12860,"
+        "franchise": "0024",
+        "type": "FREE_AGENT"
       },
       {
         "transaction": "|0530,",
@@ -52,16 +51,16 @@
         "timestamp": "1782415240"
       },
       {
-        "timestamp": "1782415228",
-        "transaction": "|17062,",
+        "franchise": "0024",
         "type": "FREE_AGENT",
-        "franchise": "0024"
+        "transaction": "|17062,",
+        "timestamp": "1782415228"
       },
       {
-        "transaction": "|16628,15368,16896,0509,0522,",
-        "timestamp": "1782398068",
+        "type": "FREE_AGENT",
         "franchise": "0015",
-        "type": "FREE_AGENT"
+        "timestamp": "1782398068",
+        "transaction": "|16628,15368,16896,0509,0522,"
       },
       {
         "type": "FREE_AGENT",
@@ -88,10 +87,10 @@
         "type": "FREE_AGENT"
       },
       {
-        "transaction": "|15368,",
         "timestamp": "1782160094",
-        "franchise": "0009",
-        "type": "FREE_AGENT"
+        "transaction": "|15368,",
+        "type": "FREE_AGENT",
+        "franchise": "0009"
       },
       {
         "transaction": "|0503,",
@@ -100,5 +99,6 @@
         "type": "FREE_AGENT"
       }
     ]
-  }
+  },
+  "encoding": "utf-8"
 }
