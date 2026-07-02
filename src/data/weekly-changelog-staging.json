@@ -6,7 +6,24 @@
       "type": "style-tweak",
       "summary": "The AFL team The Show has fresh artwork — a new graffiti-style avatar now shows up wherever the team appears across the site (standings, rosters, and the GroupMe chat), replacing the old placeholder mark.",
       "impact": "user",
-      "area": "other"
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "bug-fix",
+      "summary": "The League's homepage hero and What's New page no longer pick up AFL-only announcements — an untagged AFL feature (the franchise trophy room) had been headlining The League's homepage. League tagging is now mandatory and fails closed, so cross-league mix-ups can't happen again.",
+      "impact": "user",
+      "area": "whats-new",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "bug-fix",
+      "summary": "The 'Roger and Schefter Suit Up for AFL' announcement is visible again on the AFL What's New page — a mistyped league tag had been silently hiding it from every site since late June.",
+      "impact": "user",
+      "area": "whats-new",
+      "league": "afl"
     }
   ]
 }

@@ -10,8 +10,7 @@ import { resolveHeroContent, isAuctionLive, isAuctionStripPeriod, isDraftLive, g
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear } from '../../utils/league-year';
-import type { WhatsNewEntry } from '../../types/whats-new';
-import whatsNewData from '../../data/whats-new.json';
+import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import { spriteUrl } from '../../utils/sprite-url';
 
 export const prerender = false;
@@ -25,8 +24,10 @@ const referenceDate = testDateParam ? new Date(testDateParam + 'T00:00:00') : un
 const isValidTestDate = referenceDate && !isNaN(referenceDate.getTime());
 const effectiveDate = isValidTestDate ? referenceDate : undefined;
 
+const leagueWhatsNew = getWhatsNewEntriesForLeague('theleague');
+
 const timeline = getWhatsNextTimeline(effectiveDate);
-const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effectiveDate);
+const hero = resolveHeroContent(leagueWhatsNew, timeline, effectiveDate);
 const isAuction = hero.source === 'auction';
 const isDraft = hero.source === 'draft';
 const showAuctionStrip = !isAuction && isAuctionStripPeriod(effectiveDate ?? new Date());
@@ -121,7 +122,7 @@ const pages = {
 
     {(isAuction || isDraft) && (
       <WhatsNewRow
-        entries={whatsNewData as WhatsNewEntry[]}
+        entries={leagueWhatsNew}
         basePath={hideLeaguePrefix ? '' : '/theleague'}
         allReleasesLink={r('/theleague/whats-new')}
         spriteUrl={spriteUrl}

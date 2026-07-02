@@ -10,9 +10,9 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
-import type { WhatsNewEntry, DescriptionImageBlock } from '../../../types/whats-new';
-import { WHATS_NEW_CATEGORY_LABELS, entryAppliesToLeague } from '../../../types/whats-new';
-import entries from '../../../data/whats-new.json';
+import type { DescriptionImageBlock } from '../../../types/whats-new';
+import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
+import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
 import {
   sortEntriesNewestFirst,
   formatEntryDate,
@@ -32,9 +32,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const user = getAuthUser(Astro.request);
 const isAdmin = !!user && isCommissionerOrAdmin(user);
 
-const visible = (entries as WhatsNewEntry[])
-  .filter((e) => e.visibility !== 'admin' || isAdmin)
-  .filter((e) => entryAppliesToLeague(e, 'theleague'));
+const visible = getWhatsNewEntriesForLeague('theleague')
+  .filter((e) => e.visibility !== 'admin' || isAdmin);
 const sorted = sortEntriesNewestFirst(visible);
 const id = Astro.params.id;
 const entry = sorted.find((e) => e.id === id);

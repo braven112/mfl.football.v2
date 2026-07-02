@@ -6,6 +6,9 @@
  * what to promote on the homepage.
  */
 
+import { ALL_LEAGUES } from '../config/leagues';
+import type { LeagueSlug } from './nav';
+
 /** Entry category determines badge color and hero accent */
 export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'bug-fix' | 'league-event';
 
@@ -54,22 +57,37 @@ export interface WhatsNewEntry {
   /** Audience restriction — defaults to "all" if omitted. "admin" hides the entry from non-admin users in both the listing and the detail route. */
   visibility?: 'all' | 'admin';
   /**
-   * League scope — which league(s) the entry applies to. If omitted, the entry is
-   * shown to both leagues (back-compat default). Use this to surface league-specific
-   * features only on the matching homepage / What's New page.
+   * League scope — which league(s) the entry applies to. REQUIRED.
+   * Every entry must be explicitly tagged: `["theleague"]`, `["afl"]`, or both.
+   * Scoping FAILS CLOSED: an entry with a missing/empty/misspelled `leagues`
+   * value is shown NOWHERE (never cross-league). `tests/whats-new-data.test.ts`
+   * blocks the build on untagged or invalid values.
    */
-  leagues?: Array<'theleague' | 'afl'>;
+  leagues: LeagueSlug[];
 }
 
 /** A league slug used by the `leagues` tagging field on What's New entries. */
-export type LeagueSlug = 'theleague' | 'afl';
+export type { LeagueSlug } from './nav';
+
+/**
+ * The only valid `leagues` values, derived from the league registry (the
+ * single source of truth per CLAUDE.md — never hardcode league slugs).
+ * Anything else fails validation AND display.
+ */
+export const VALID_LEAGUE_SLUGS: readonly LeagueSlug[] = ALL_LEAGUES.map(
+  (l) => l.navSlug as LeagueSlug,
+);
 
 /**
  * Returns true if the entry should be shown in the given league context.
- * Missing `leagues` field = visible everywhere (back-compat default).
+ *
+ * FAILS CLOSED: a missing or empty `leagues` field means the entry is shown
+ * in NO league. Cross-league leakage from an untagged entry is impossible —
+ * the worst an authoring mistake can do is hide the entry, and the data test
+ * suite catches that before it ships.
  */
 export function entryAppliesToLeague(entry: WhatsNewEntry, league: LeagueSlug): boolean {
-  if (!entry.leagues || entry.leagues.length === 0) return true;
+  if (!entry.leagues || entry.leagues.length === 0) return false;
   return entry.leagues.includes(league);
 }
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { WhatsNewEntry } from '../src/types/whats-new';
+import { entryAppliesToLeague } from '../src/types/whats-new';
 import {
   sortEntriesNewestFirst,
   formatEntryDate,
@@ -18,9 +19,54 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
     summary: overrides?.summary ?? 'A test summary',
     description: overrides?.description ?? ['Test description'],
     category: overrides?.category ?? 'new-feature',
+    leagues: ['theleague'],
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------------------
+// entryAppliesToLeague — the league-scoping gate. FAIL-CLOSED semantics are
+// load-bearing: an untagged entry must be shown NOWHERE (never cross-league).
+// A regression back to fail-open would leak one league's content into the
+// other's homepage hero, so the contract is pinned here directly.
+// ---------------------------------------------------------------------------
+
+describe('entryAppliesToLeague', () => {
+  it('matches an entry tagged for the league', () => {
+    expect(entryAppliesToLeague(makeEntry({ leagues: ['theleague'] }), 'theleague')).toBe(true);
+    expect(entryAppliesToLeague(makeEntry({ leagues: ['afl'] }), 'afl')).toBe(true);
+  });
+
+  it('rejects an entry tagged only for the other league', () => {
+    expect(entryAppliesToLeague(makeEntry({ leagues: ['afl'] }), 'theleague')).toBe(false);
+    expect(entryAppliesToLeague(makeEntry({ leagues: ['theleague'] }), 'afl')).toBe(false);
+  });
+
+  it('matches both-league entries in both leagues', () => {
+    const entry = makeEntry({ leagues: ['theleague', 'afl'] });
+    expect(entryAppliesToLeague(entry, 'theleague')).toBe(true);
+    expect(entryAppliesToLeague(entry, 'afl')).toBe(true);
+  });
+
+  it('FAILS CLOSED: a missing leagues field is shown nowhere', () => {
+    const entry = makeEntry();
+    delete (entry as Partial<WhatsNewEntry>).leagues;
+    expect(entryAppliesToLeague(entry, 'theleague')).toBe(false);
+    expect(entryAppliesToLeague(entry, 'afl')).toBe(false);
+  });
+
+  it('FAILS CLOSED: an empty leagues array is shown nowhere', () => {
+    const entry = makeEntry({ leagues: [] });
+    expect(entryAppliesToLeague(entry, 'theleague')).toBe(false);
+    expect(entryAppliesToLeague(entry, 'afl')).toBe(false);
+  });
+
+  it('FAILS CLOSED: an invalid slug matches no league', () => {
+    const entry = makeEntry({ leagues: ['afl-fantasy' as never] });
+    expect(entryAppliesToLeague(entry, 'theleague')).toBe(false);
+    expect(entryAppliesToLeague(entry, 'afl')).toBe(false);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // sortEntriesNewestFirst

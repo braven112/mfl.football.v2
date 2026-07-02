@@ -7,10 +7,33 @@
  */
 import type { EnrichedWhatsNewEntry } from '../../../utils/whats-new-helpers';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
+import type { LeagueSlug } from '../../../types/whats-new';
+import { ALL_LEAGUES, getLeagueByPath } from '../../../config/leagues';
+
+/**
+ * Domain + path shown in the thumbnail's browser-frame chrome. League-aware:
+ * a single-league entry gets its own league's apex domain (an AFL entry must
+ * never render "theleague.us" chrome on the AFL What's New page); otherwise
+ * the domain is derived from the link path via the league registry.
+ */
+function browserFrameUrl(entry: EnrichedWhatsNewEntry, pageLeague?: LeagueSlug): string {
+  const tagged =
+    entry.leagues?.length === 1
+      ? ALL_LEAGUES.find((l) => l.navSlug === entry.leagues[0])
+      : undefined;
+  // Both-league entries have a league-neutral link (enforced by the data
+  // tests), so the page's own league is the right chrome context for them.
+  const fromPage = pageLeague ? ALL_LEAGUES.find((l) => l.navSlug === pageLeague) : undefined;
+  const league = tagged ?? fromPage ?? getLeagueByPath(entry.link ?? '/');
+  const path = entry.link ? entry.link.replace(`/${league.slug}`, '') : '';
+  return `${league.domains[0]}${path}`;
+}
 
 interface Props {
   entry: EnrichedWhatsNewEntry;
   featured?: boolean;
+  /** League whose page is rendering this card — chrome context for both-league entries */
+  league?: LeagueSlug;
   /** Base path for detail links (empty string on theleague.us, '/theleague' otherwise) */
   basePath?: string;
   /** Cache-busted sprite URL from the server */
@@ -19,7 +42,7 @@ interface Props {
 
 const MULTICOLOR_ICONS = ['nfl'];
 
-export default function WhatsNewCard({ entry, featured, basePath = '/theleague', spriteUrl: sprite = '/assets/icons/sprite.svg' }: Props) {
+export default function WhatsNewCard({ entry, featured, basePath = '/theleague', league, spriteUrl: sprite = '/assets/icons/sprite.svg' }: Props) {
   const iconId = entry.icon ? `icon-${entry.icon}` : null;
   const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
   const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
@@ -36,7 +59,7 @@ export default function WhatsNewCard({ entry, featured, basePath = '/theleague',
               <span className="browser-frame__dot browser-frame__dot--red" />
               <span className="browser-frame__dot browser-frame__dot--yellow" />
               <span className="browser-frame__dot browser-frame__dot--green" />
-              <span className="browser-frame__url">{entry.link ? `theleague.us${entry.link.replace('/theleague', '')}` : 'theleague.us'}</span>
+              <span className="browser-frame__url">{browserFrameUrl(entry, league)}</span>
             </div>
             <img
               src={imagePath}

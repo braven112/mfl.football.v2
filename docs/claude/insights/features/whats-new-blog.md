@@ -57,3 +57,15 @@
 **Evidence:** `src/utils/nav-utils.ts` ~line 370
 
 **Recommendation:** This pattern works for any page with sub-routes. The `/` guard prevents the homepage from matching everything.
+
+---
+
+## 2026-07-02 - League Scoping Must Fail Closed (and Tests Are the Real Enforcement)
+
+**Context:** An AFL-only announcement (afl-trophy-wall) headlined The League's homepage hero because its entry had no `leagues` tag and `entryAppliesToLeague()` defaulted missing tags to "visible everywhere." A second entry was tagged with the invalid slug `afl-fantasy` and was silently invisible on BOTH sites — same root cause, opposite symptom.
+
+**Insight:** For a scoping field, a fail-open default turns the easiest authoring mistake (omission) into the maximum blast radius (cross-league leak). Flipping to fail-closed means a mistake can only ever hide content, never leak it — and a build-blocking data test catches the hidden entry before it ships. Also: making `leagues` required on the `WhatsNewEntry` TypeScript interface is documentation only — nothing in CI typechecks the JSON cast (`entries as WhatsNewEntry[]`), and vitest strips types without checking them. The vitest data-validation suite (`tests/whats-new-data.test.ts`) is the actual enforcement layer; don't mistake the type for a guard.
+
+**Evidence:** `src/types/whats-new.ts#entryAppliesToLeague` (returns `false` for missing/empty `leagues`), `tests/whats-new-data.test.ts` "league scoping" describe block, `scripts/weekly-changelog-rollup.mjs` (per-league rollups, exits 1 on untagged staging changes).
+
+**Recommendation:** Any new audience/scope field on data-file-driven content (visibility, leagues, tiers) should (1) fail closed in the display helper, (2) be validated by a build-blocking test on the data file itself, and (3) be validated at every automated writer of that file (cron scripts). Validating only at render time is too late; validating only in docs is not validation.

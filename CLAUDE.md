@@ -303,6 +303,15 @@ Every What's New entry MUST be written in the league's established editorial voi
 - Skip the humor — every entry needs personality
 - Write the `summary` as a plain feature description without voice
 
+### League Scoping (MANDATORY)
+
+**Every entry MUST include a `leagues` field** — `["theleague"]`, `["afl"]`, or both. There is no default: display code **fails closed**, so an untagged entry is shown NOWHERE (never cross-league), and `tests/whats-new-data.test.ts` fails the build on untagged or misspelled values (the only valid slugs are `theleague` and `afl` — NOT `afl-fantasy`).
+
+Rules enforced by the tests:
+- `leagues` is required and non-empty on every entry
+- An entry visible in one league must not `link` into the other league's pages (`/theleague/...` vs `/afl-fantasy/...`). Both-league entries must use a league-neutral link or omit `link`.
+- If an entry's `title`/`summary` (the hero/card copy) names a league, the entry must be tagged for EXACTLY that league. This includes both-league entries — copy naming "AFL" can't ship tagged `["theleague", "afl"]` (that would put an AFL headline in The League's hero). Split league-specific announcements into per-league entries with league-neutral copy, or reword.
+
 ### Entry Format
 Add the new entry at the **top** of the array (newest first):
 ```json
@@ -317,7 +326,8 @@ Add the new entry at the **top** of the array (newest first):
   "linkLabel": "CTA text (e.g., 'Try it now')",
   "icon": "sprite-icon-id",
   "image": "feature-name.webp",
-  "imageAlt": "Descriptive alt text for the screenshot"
+  "imageAlt": "Descriptive alt text for the screenshot",
+  "leagues": ["theleague"]
 }
 ```
 
@@ -351,7 +361,7 @@ Add the new entry at the **top** of the array (newest first):
 
 ### Weekly Bug Fix & Style Tweak Changelog
 
-Bug fixes and style tweaks are tracked throughout the week and compiled into a single What's New rollup entry every Monday at 8pm PT via GitHub Actions (`scripts/weekly-changelog-rollup.mjs`).
+Bug fixes and style tweaks are tracked throughout the week and compiled into **one What's New rollup entry per league** every Monday at 8pm PT via GitHub Actions (`scripts/weekly-changelog-rollup.mjs`).
 
 **After completing any bug fix or style tweak** that does NOT qualify for its own What's New entry, append an entry to `src/data/weekly-changelog-staging.json`:
 
@@ -361,13 +371,15 @@ Bug fixes and style tweaks are tracked throughout the week and compiled into a s
   "type": "bug-fix | style-tweak",
   "summary": "User-facing description of what changed and why it matters",
   "impact": "user | admin",
-  "area": "free-agents | rosters | navigation | design-system | homepage | rankings | trade-builder | salary | league-summary | calendar | standings | playoffs | mvp | import-rankings | whats-new | other"
+  "area": "free-agents | rosters | navigation | design-system | homepage | rankings | trade-builder | salary | league-summary | calendar | standings | playoffs | mvp | import-rankings | whats-new | other",
+  "league": "theleague | afl | both"
 }
 ```
 
 **Guidelines:**
 - Write `summary` as a user-facing improvement, not a code change (e.g., "Defense player avatars are now circular with properly centered logos" NOT "use flex centering with container padding")
 - `impact` is `"user"` for anything league members see; `"admin"` for commissioner-only changes
+- **`league` is REQUIRED** — the rollup routes each change to the matching league's What's New entry, and the rollup script exits with an error if any change is untagged. `tests/whats-new-data.test.ts` validates this at PR time so the Monday cron never hits it.
 - Do NOT log: data syncs, refactors with no visible effect, test-only changes, or changes that already got their own What's New entry
 - The staging file resets automatically every Monday after the rollup runs
 
@@ -392,11 +404,12 @@ Each weekly rollup MUST include **one screenshot** of the most noteworthy fix or
      "weekOf": "2026-03-03",
      "featuredImage": "weekly-rollup-2026-03-03.webp",
      "featuredImageAlt": "Descriptive alt text for the screenshot",
+     "featuredImageLeague": "theleague",
      "changes": [...]
    }
    ```
 
-The rollup script will automatically include the `image` and `imageAlt` fields in the generated What's New entry.
+**`featuredImageLeague` is REQUIRED whenever `featuredImage` is set** (`theleague` or `afl` — whichever league's page the screenshot depicts). The rollup generates one entry per league, and the screenshot is attached ONLY to the matching league's entry — without the field, a screenshot of one league's page could ship on the other league's What's New entry. `tests/whats-new-data.test.ts` enforces this.
 
 ---
 

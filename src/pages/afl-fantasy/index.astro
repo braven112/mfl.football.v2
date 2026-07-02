@@ -28,10 +28,8 @@ import AflQuickLinks from '../../components/afl/hp-sections/AflQuickLinks.astro'
 
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import feedData from '../../../data/afl-fantasy/schefter-feed.json';
-import whatsNewData from '../../data/whats-new.json';
+import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 
-import { entryAppliesToLeague } from '../../types/whats-new';
-import type { WhatsNewEntry } from '../../types/whats-new';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { parseTestDate } from '../../utils/hero-resolver';
 import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
@@ -84,13 +82,12 @@ const effectiveDate = parseTestDate(testDateParam) ?? new Date();
 const testMode = !!testDateParam;
 
 const timeline = getAflWhatsNextTimeline(effectiveDate);
-const allWhatsNew = whatsNewData as WhatsNewEntry[];
-const aflWhatsNew = allWhatsNew.filter(e => entryAppliesToLeague(e, 'afl'));
+const aflWhatsNew = getWhatsNewEntriesForLeague('afl');
 
 const heroState = resolveAflHeroState({
   referenceDate: effectiveDate,
   testMode,
-  whatsNewEntries: allWhatsNew,
+  whatsNewEntries: aflWhatsNew,
   timeline,
   userConferenceId,
   userTier: userTeam?.tier,

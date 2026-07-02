@@ -9,9 +9,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import WhatsNewListing from '../../../components/theleague/whats-new/WhatsNewListing';
 import { spriteUrl } from '../../../utils/sprite-url';
-import type { WhatsNewEntry } from '../../../types/whats-new';
-import { entryAppliesToLeague } from '../../../types/whats-new';
-import entries from '../../../data/whats-new.json';
+import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
 import {
   sortEntriesNewestFirst,
   enrichEntries,
@@ -28,9 +26,8 @@ const basePath = hideLeaguePrefix ? '' : '/afl-fantasy';
 const user = getAuthUser(Astro.request);
 const isAdmin = !!user && isCommissionerOrAdmin(user);
 
-const visible = (entries as WhatsNewEntry[])
-  .filter((e) => e.visibility !== 'admin' || isAdmin)
-  .filter((e) => entryAppliesToLeague(e, 'afl'));
+const visible = getWhatsNewEntriesForLeague('afl')
+  .filter((e) => e.visibility !== 'admin' || isAdmin);
 const sorted = sortEntriesNewestFirst(visible);
 
 // Read the last-visit cookie for "NEW" badge computation
@@ -73,6 +70,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       monthsJson={JSON.stringify(months)}
       categoryCountsJson={JSON.stringify(categoryCounts)}
       basePath={basePath}
+      league="afl"
       spriteUrl={spriteUrl}
     />
   </div>
