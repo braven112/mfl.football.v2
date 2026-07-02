@@ -7,6 +7,23 @@
  */
 import type { EnrichedWhatsNewEntry } from '../../../utils/whats-new-helpers';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
+import { ALL_LEAGUES, getLeagueByPath } from '../../../config/leagues';
+
+/**
+ * Domain + path shown in the thumbnail's browser-frame chrome. League-aware:
+ * a single-league entry gets its own league's apex domain (an AFL entry must
+ * never render "theleague.us" chrome on the AFL What's New page); otherwise
+ * the domain is derived from the link path via the league registry.
+ */
+function browserFrameUrl(entry: EnrichedWhatsNewEntry): string {
+  const tagged =
+    entry.leagues?.length === 1
+      ? ALL_LEAGUES.find((l) => l.navSlug === entry.leagues[0])
+      : undefined;
+  const league = tagged ?? getLeagueByPath(entry.link ?? '/');
+  const path = entry.link ? entry.link.replace(`/${league.slug}`, '') : '';
+  return `${league.domains[0]}${path}`;
+}
 
 interface Props {
   entry: EnrichedWhatsNewEntry;
@@ -36,7 +53,7 @@ export default function WhatsNewCard({ entry, featured, basePath = '/theleague',
               <span className="browser-frame__dot browser-frame__dot--red" />
               <span className="browser-frame__dot browser-frame__dot--yellow" />
               <span className="browser-frame__dot browser-frame__dot--green" />
-              <span className="browser-frame__url">{entry.link ? `theleague.us${entry.link.replace('/theleague', '')}` : 'theleague.us'}</span>
+              <span className="browser-frame__url">{browserFrameUrl(entry)}</span>
             </div>
             <img
               src={imagePath}

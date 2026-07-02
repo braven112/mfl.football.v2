@@ -310,7 +310,7 @@ Every What's New entry MUST be written in the league's established editorial voi
 Rules enforced by the tests:
 - `leagues` is required and non-empty on every entry
 - An entry visible in one league must not `link` into the other league's pages (`/theleague/...` vs `/afl-fantasy/...`). Both-league entries must use a league-neutral link or omit `link`.
-- An entry's `title`/`summary` (the hero/card copy) must not name the other league — an AFL feature announcement must be tagged `["afl"]`, not left for The League's homepage hero to pick up
+- If an entry's `title`/`summary` (the hero/card copy) names a league, the entry must be tagged for EXACTLY that league. This includes both-league entries — copy naming "AFL" can't ship tagged `["theleague", "afl"]` (that would put an AFL headline in The League's hero). Split league-specific announcements into per-league entries with league-neutral copy, or reword.
 
 ### Entry Format
 Add the new entry at the **top** of the array (newest first):
@@ -404,11 +404,12 @@ Each weekly rollup MUST include **one screenshot** of the most noteworthy fix or
      "weekOf": "2026-03-03",
      "featuredImage": "weekly-rollup-2026-03-03.webp",
      "featuredImageAlt": "Descriptive alt text for the screenshot",
+     "featuredImageLeague": "theleague",
      "changes": [...]
    }
    ```
 
-The rollup script will automatically include the `image` and `imageAlt` fields in the generated What's New entry.
+**`featuredImageLeague` is REQUIRED whenever `featuredImage` is set** (`theleague` or `afl` — whichever league's page the screenshot depicts). The rollup generates one entry per league, and the screenshot is attached ONLY to the matching league's entry — without the field, a screenshot of one league's page could ship on the other league's What's New entry. `tests/whats-new-data.test.ts` enforces this.
 
 ---
 

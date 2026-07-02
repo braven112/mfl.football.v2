@@ -35,11 +35,10 @@ import { resolveUnsignedFaAlerts, type DashboardPlayerContext } from '../../util
 import { loadActiveAuctions, type MflPlayerExtras } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
-import type { WhatsNewEntry } from '../../types/whats-new';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types/contract-eligibility';
 import feedData from '../../data/theleague/schefter-feed.json';
-import whatsNewData from '../../data/whats-new.json';
+import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import leagueConfig from '../../data/theleague.config.json';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
@@ -81,7 +80,7 @@ const draftComplete = isDraftComplete(leagueYear);
 const hideLeaguePrefix = false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const timeline = getWhatsNextTimeline(effectiveDate);
-const rawHeroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline, draftComplete);
+const rawHeroState = resolveHeroState(effectiveDate, testMode, getWhatsNewEntriesForLeague('theleague'), timeline, draftComplete);
 const heroState = await enrichHeroState(rawHeroState);
 
 // Auctions card: replaces the legacy compact `AuctionStrip` on the homepage.

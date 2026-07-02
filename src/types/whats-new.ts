@@ -6,6 +6,9 @@
  * what to promote on the homepage.
  */
 
+import { ALL_LEAGUES } from '../config/leagues';
+import type { LeagueSlug } from './nav';
+
 /** Entry category determines badge color and hero accent */
 export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'bug-fix' | 'league-event';
 
@@ -64,10 +67,16 @@ export interface WhatsNewEntry {
 }
 
 /** A league slug used by the `leagues` tagging field on What's New entries. */
-export type LeagueSlug = 'theleague' | 'afl';
+export type { LeagueSlug } from './nav';
 
-/** The only valid `leagues` values. Anything else fails validation AND display. */
-export const VALID_LEAGUE_SLUGS: readonly LeagueSlug[] = ['theleague', 'afl'] as const;
+/**
+ * The only valid `leagues` values, derived from the league registry (the
+ * single source of truth per CLAUDE.md — never hardcode league slugs).
+ * Anything else fails validation AND display.
+ */
+export const VALID_LEAGUE_SLUGS: readonly LeagueSlug[] = ALL_LEAGUES.map(
+  (l) => l.navSlug as LeagueSlug,
+);
 
 /**
  * Returns true if the entry should be shown in the given league context.

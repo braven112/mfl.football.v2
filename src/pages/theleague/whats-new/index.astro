@@ -9,9 +9,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import WhatsNewListing from '../../../components/theleague/whats-new/WhatsNewListing';
 import { spriteUrl } from '../../../utils/sprite-url';
-import type { WhatsNewEntry } from '../../../types/whats-new';
-import { entryAppliesToLeague } from '../../../types/whats-new';
-import entries from '../../../data/whats-new.json';
+import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
 import {
   sortEntriesNewestFirst,
   enrichEntries,
@@ -28,9 +26,8 @@ const basePath = hideLeaguePrefix ? '' : '/theleague';
 const user = getAuthUser(Astro.request);
 const isAdmin = !!user && isCommissionerOrAdmin(user);
 
-const visible = (entries as WhatsNewEntry[])
-  .filter((e) => e.visibility !== 'admin' || isAdmin)
-  .filter((e) => entryAppliesToLeague(e, 'theleague'));
+const visible = getWhatsNewEntriesForLeague('theleague')
+  .filter((e) => e.visibility !== 'admin' || isAdmin);
 const sorted = sortEntriesNewestFirst(visible);
 
 // Read the last-visit cookie for "NEW" badge computation

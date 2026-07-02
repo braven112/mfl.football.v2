@@ -45,7 +45,7 @@ If no entry exists, write a new one at the TOP of the array following the mandat
 - Witty, self-aware, columnist voice — never dry release notes
 - Include a `summary` with personality too
 - `image` and `imageAlt` are required — take a Playwright screenshot if a dev server is running, otherwise note that a screenshot is still needed and set a placeholder filename
-- `leagues` is required — `["theleague"]`, `["afl"]`, or both (from Step 3). The entry's `link` must point into a league it's visible in; both-league entries need a league-neutral link or no link.
+- `leagues` is required — `["theleague"]`, `["afl"]`, or both (from Step 3). The entry's `link` must point into a league it's visible in; both-league entries need a league-neutral link or no link. If the `title`/`summary` names a league, the entry must be tagged for exactly that league — both-league entries need league-neutral copy.
 
 **If `bug-fix` or `style-tweak`:**
 
