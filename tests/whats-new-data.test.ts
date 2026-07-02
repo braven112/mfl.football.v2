@@ -146,9 +146,13 @@ describe('whats-new.json data integrity', () => {
  */
 const CROSS_LEAGUE_TEXT_GRANDFATHERED_IDS = new Set(['weekly-rollup-2025-12-08']);
 
-/** Text patterns that name each league in hero/card copy. */
+/**
+ * Text patterns that name each league in hero/card copy. Keys must cover
+ * every registry league — the coverage test below fails when a new league
+ * is added without a pattern, so the tripwire can't silently go partial.
+ */
 const LEAGUE_TEXT_PATTERNS: Record<string, RegExp> = {
-  afl: /\bAFL\b|afl-fantasy/,
+  afl: /\bafl\b|afl-fantasy/i,
   theleague: /\bThe ?League\b|\btheleague\b/,
 };
 
@@ -158,6 +162,15 @@ function leaguesOf(entry: WhatsNewEntry): string[] {
 }
 
 describe('whats-new.json league scoping', () => {
+  it('every registry league has a copy-tripwire text pattern', () => {
+    const missing = VALID_LEAGUE_SLUGS.filter((slug) => !LEAGUE_TEXT_PATTERNS[slug]);
+    expect(
+      missing,
+      `Leagues without a LEAGUE_TEXT_PATTERNS entry — the cross-league copy check would ` +
+        `silently skip them. Add a pattern for each new league.`,
+    ).toEqual([]);
+  });
+
   it('every entry has a non-empty leagues array', () => {
     const untagged = typedEntries.filter((e) => leaguesOf(e).length === 0);
     expect(

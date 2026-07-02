@@ -254,10 +254,16 @@ if (staging.featuredImage) {
     target.entry.image = staging.featuredImage;
     target.entry.imageAlt = staging.featuredImageAlt || 'Weekly rollup screenshot';
   } else {
-    console.warn(
-      `WARN: featuredImage "${staging.featuredImage}" has no matching league entry ` +
-        `(featuredImageLeague: ${JSON.stringify(staging.featuredImageLeague)}) — omitted from all rollups.`,
+    // The weekly screenshot is MANDATORY (CLAUDE.md) — silently publishing
+    // without it would hide the mistake. Fail loud, preserve staging, and let
+    // a human fix featuredImageLeague (or the staged changes) before re-running.
+    console.error(
+      `ERROR: featuredImage "${staging.featuredImage}" has no matching league entry ` +
+        `(featuredImageLeague: ${JSON.stringify(staging.featuredImageLeague)}, ` +
+        `leagues with changes: ${newEntries.map((n) => n.leagueSlug).join(', ')}). ` +
+        `Nothing was published; staging is preserved.`,
     );
+    process.exit(1);
   }
 }
 
