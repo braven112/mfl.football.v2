@@ -270,17 +270,12 @@ its own row directly under the identity line. Pips are `.title-pips__pip`
 scoped to the count only — a generic `* + *::before` middot orphans a stray dot at
 the start of a wrapped line on mobile.
 
-**3. `stampBadgeYear`'s regex matches the FIRST `<textPath>` — including one
-written inside an SVG comment.** A new badge (`grand-slam.svg`) has TWO arcs (a
-year arc + a label arc). Two traps, both real bugs hit during this work:
-(a) the **year arc must be the first `<textPath>` in document order**, else the
-stamper overwrites the label; (b) **never write the literal tag name `<textPath>`
-in a comment inside a stampable SVG** — the stamper's
-`(<textPath\b[^>]*>)[\s\S]*?(</textPath>)` matches the comment first and eats the
-real arc's attributes. `tests/afl-badge.test.ts` now locks both (label survives,
-href intact). Note the per-award drift-guard test iterates
-`public/assets/afl/awards/*.svg` — keep one-off/non-award badges (like the staged
-`grand-slam.svg`) OUTSIDE that dir so they're excluded from that loop.
+**3. `stampBadgeYear`'s regex matches the FIRST `<textPath>` in the document.**
+The stamper's regex `(<textPath\b[^>]*>)[\s\S]*?(</textPath>)` is greedy and will
+overwrite the first match it finds. **Never write the literal tag name `<textPath>`
+in a comment inside a stampable SVG** — it will match the comment first and eat
+the real arc's attributes. The per-award drift-guard test iterates
+`public/assets/afl/awards/*.svg` to ensure all badges are stampable.
 
 **4. There are TWO AFL golds and `--afl-gold` is NOT the badge gold.**
 `--afl-gold` (#d97706) is an orange-amber (same value as `--color-warning-dark`).
