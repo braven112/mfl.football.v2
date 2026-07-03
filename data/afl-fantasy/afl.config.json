@@ -24,7 +24,16 @@
       "division": "North",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/smokane.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/smokane.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/smokane.png",
+      "history": [
+        {
+          "name": "Smokane",
+          "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
+          "banner": "/assets/afl/history/smokane_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2008
+        }
+      ]
     },
     {
       "franchiseId": "0002",
@@ -57,7 +66,23 @@
       "division": "South",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/minty.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/minty.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/minty.png",
+      "history": [
+        {
+          "name": "Marriedwithchildren",
+          "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+          "banner": "/assets/afl/history/marriedwithchildren_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2010
+        },
+        {
+          "name": "Level 3 Inception",
+          "icon": "/assets/afl/history/level_3_inception_banner_icon_circle.png",
+          "banner": "/assets/afl/history/level_3_inception_banner.png",
+          "yearStart": 2011,
+          "yearEnd": 2012
+        }
+      ]
     },
     {
       "franchiseId": "0004",
@@ -74,7 +99,85 @@
       "division": "North",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/ditka.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/ditka.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/ditka.png",
+      "ownerHistory": [
+        {
+          "franchiseId": "0016",
+          "yearStart": 2016,
+          "yearEnd": 2016
+        },
+        {
+          "franchiseId": "0004",
+          "yearStart": 2017,
+          "yearEnd": 9999
+        }
+      ],
+      "history": [
+        {
+          "name": "Coke n Blowjobs",
+          "icon": "/assets/afl/history/coke_n_blowjobs_banner_icon_circle.png",
+          "banner": "/assets/afl/history/coke_n_blowjobs_banner_face.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "The Vandalizers",
+          "icon": "/assets/afl/history/the_vandalizers_icon_gif_icon_circle.png",
+          "banner": "/assets/afl/history/the_vandalizers_banner.gif",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "Muck Juggling Micks",
+          "icon": "/assets/afl/icons/micks.png",
+          "banner": "/assets/afl/history/muck_juggling_micks_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2007
+        },
+        {
+          "name": "Bay Area Ballers",
+          "icon": "/assets/afl/history/bay_area_ballers_banner_icon_circle.png",
+          "banner": "/assets/afl/history/bay_area_ballers_banner.png",
+          "yearStart": 2008,
+          "yearEnd": 2011
+        },
+        {
+          "name": "The Dude that Abides",
+          "icon": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png",
+          "banner": "/assets/afl/history/the_dude_that_abides_banner.png",
+          "yearStart": 2012,
+          "yearEnd": 2016
+        },
+        {
+          "name": "CSKA Sofia",
+          "icon": "/assets/afl/history/cska_sofia_icon_icon_circle.png",
+          "banner": "/assets/afl/history/cska_sofia_banner.png",
+          "conference": "00",
+          "yearStart": 2017,
+          "yearEnd": 2018
+        },
+        {
+          "name": "Maga Nation",
+          "icon": "/assets/afl/history/maga_nation_icon_icon_circle.png",
+          "banner": "/assets/afl/history/maga_nation_banner.png",
+          "yearStart": 2019,
+          "yearEnd": 2022
+        },
+        {
+          "name": "Team Ground N Pound",
+          "icon": "/assets/afl/history/team_ground_n_pound_icon_icon_circle.png",
+          "banner": "/assets/afl/history/team_ground_n_pound_banner.png",
+          "yearStart": 2023,
+          "yearEnd": 2023
+        },
+        {
+          "name": "Can't get over the baby gate",
+          "icon": "/assets/afl/history/can_t_get_over_the_baby_gate_icon_icon_circle.png",
+          "banner": "/assets/afl/history/can_t_get_over_the_baby_gate_banner.png",
+          "yearStart": 2024,
+          "yearEnd": 2024
+        }
+      ]
     },
     {
       "franchiseId": "0005",
@@ -91,7 +194,30 @@
       "division": "South",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/computer_jocks.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/computer_jocks.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/computer_jocks.png",
+      "history": [
+        {
+          "name": "Bernies Brewers",
+          "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png",
+          "banner": "/assets/afl/history/bernies_brewers_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2006
+        },
+        {
+          "name": "420 All-Stars",
+          "icon": "/assets/afl/history/420_all_stars_banner_icon_circle.png",
+          "banner": "/assets/afl/history/420_all_stars_banner.png",
+          "yearStart": 2007,
+          "yearEnd": 2009
+        },
+        {
+          "name": "booyakasha",
+          "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png",
+          "banner": "/assets/afl/history/booyakasha_banner.png",
+          "yearStart": 2010,
+          "yearEnd": 2014
+        }
+      ]
     },
     {
       "franchiseId": "0006",
@@ -108,7 +234,44 @@
       "division": "North",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/da_dangsters.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/da_dangsters.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/da_dangsters.png",
+      "history": [
+        {
+          "name": "Chieftans",
+          "icon": "/assets/afl/history/chieftans_icon_icon_circle.png",
+          "banner": "/assets/afl/history/chieftans_banner_face.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Taco Hell",
+          "icon": "/assets/afl/history/taco_hell_banner_gif_icon_circle.png",
+          "banner": "/assets/afl/history/taco_hell_banner.gif",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "The Street",
+          "icon": "/assets/afl/history/the_street_icon_icon_circle.png",
+          "banner": "/assets/afl/history/the_street_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2007
+        },
+        {
+          "name": "More Cowbell",
+          "icon": "/assets/afl/history/more_cowbell_icon_icon_circle.png",
+          "banner": "/assets/afl/history/more_cowbell_banner.png",
+          "yearStart": 2008,
+          "yearEnd": 2010
+        },
+        {
+          "name": "Whitman's Wonders",
+          "icon": "/assets/afl/history/whitman_s_wonders_icon_icon_circle.png",
+          "banner": "/assets/afl/history/whitman_s_wonders_banner.png",
+          "yearStart": 2011,
+          "yearEnd": 2012
+        }
+      ]
     },
     {
       "franchiseId": "0007",
@@ -124,7 +287,52 @@
       "division": "South",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/amish.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/amish.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/amish.png",
+      "history": [
+        {
+          "name": "The Vandalizers",
+          "icon": "/assets/afl/history/the_vandalizers_icon_jpg_icon_circle.png",
+          "banner": "/assets/afl/history/the_vandalizers_banner_face.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Chatmaster",
+          "icon": "/assets/afl/history/chatmaster_icon_icon_circle.png",
+          "banner": "/assets/afl/history/chatmaster_banner.png",
+          "conference": "00",
+          "yearStart": 2004,
+          "yearEnd": 2009
+        },
+        {
+          "name": "Touchdown My Pants",
+          "icon": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png",
+          "banner": "/assets/afl/history/touchdown_my_pants_banner.png",
+          "yearStart": 2010,
+          "yearEnd": 2013
+        },
+        {
+          "name": "Team Murderface",
+          "icon": "/assets/afl/history/team_murderface_icon_icon_circle.png",
+          "banner": "/assets/afl/history/team_murderface_banner.png",
+          "yearStart": 2014,
+          "yearEnd": 2014
+        },
+        {
+          "name": "Vit's Brother",
+          "icon": "/assets/afl/history/vit_s_brother_icon_icon_circle.png",
+          "banner": "/assets/afl/history/vit_s_brother_banner.png",
+          "yearStart": 2021,
+          "yearEnd": 2021
+        },
+        {
+          "name": "Broke Back 'lil Half Dead's Brother",
+          "icon": "/assets/afl/history/broke_back_lil_half_dead_s_brother_icon_icon_circle.png",
+          "banner": "/assets/afl/history/broke_back_lil_half_dead_s_brother_banner.png",
+          "yearStart": 2023,
+          "yearEnd": 2023
+        }
+      ]
     },
     {
       "franchiseId": "0008",
@@ -141,7 +349,35 @@
       "division": "South",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/harambe.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/harambe.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/harambe.png",
+      "ownerHistory": [
+        {
+          "franchiseId": "0016",
+          "yearStart": 2017,
+          "yearEnd": 2018
+        },
+        {
+          "franchiseId": "0008",
+          "yearStart": 2019,
+          "yearEnd": 9999
+        }
+      ],
+      "history": [
+        {
+          "name": "The Nukes",
+          "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+          "banner": "/assets/afl/history/the_nukes_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2015
+        },
+        {
+          "name": "Blowing My Horn",
+          "icon": "/assets/afl/history/blowing_my_horn_icon_icon_circle.png",
+          "banner": "/assets/afl/history/blowing_my_horn_banner.png",
+          "yearStart": 2016,
+          "yearEnd": 2018
+        }
+      ]
     },
     {
       "franchiseId": "0009",
@@ -158,7 +394,16 @@
       "division": "South",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/vitside_mafia.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/vitside_mafia.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/vitside_mafia.png",
+      "history": [
+        {
+          "name": "Gamecocks",
+          "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+          "banner": "/assets/afl/history/gamecocks_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2009
+        }
+      ]
     },
     {
       "franchiseId": "0010",
@@ -193,7 +438,30 @@
       "division": "South",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/midwestside.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/midwestside.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/midwestside.png",
+      "history": [
+        {
+          "name": "HiGhClImBeRs",
+          "icon": "/assets/afl/history/highclimbers_icon_icon_circle.png",
+          "banner": "/assets/afl/history/highclimbers_banner.gif",
+          "yearStart": 2003,
+          "yearEnd": 2004
+        },
+        {
+          "name": "The Rookies",
+          "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
+          "banner": "/assets/afl/history/the_rookies_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2008
+        },
+        {
+          "name": "The Dark Side",
+          "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
+          "banner": "/assets/afl/history/the_dark_side_banner.png",
+          "yearStart": 2009,
+          "yearEnd": 2009
+        }
+      ]
     },
     {
       "franchiseId": "0012",
@@ -210,7 +478,51 @@
       "division": "North",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/suh.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/suh.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/suh.png",
+      "history": [
+        {
+          "name": "Italian Stalions",
+          "icon": "/assets/afl/history/italian_stalions_icon_icon_circle.png",
+          "banner": "/assets/afl/history/italian_stalions_banner_face.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "C.P. Bruisers",
+          "icon": "/assets/afl/history/c_p_bruisers_icon_icon_circle.png",
+          "banner": "/assets/afl/history/c_p_bruisers_banner.jpg",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "Habanero's",
+          "icon": "/assets/afl/history/habanero_s_banner_icon_circle.png",
+          "banner": "/assets/afl/history/habanero_s_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2006
+        },
+        {
+          "name": "Blitzkrieg",
+          "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
+          "banner": "/assets/afl/history/blitzkrieg_banner.png",
+          "yearStart": 2007,
+          "yearEnd": 2007
+        },
+        {
+          "name": "Shifty Joe",
+          "icon": "/assets/afl/history/shifty_joe_banner_icon_circle.png",
+          "banner": "/assets/afl/history/shifty_joe_banner.png",
+          "yearStart": 2008,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Pubes",
+          "icon": "/assets/afl/history/pubes_banner_icon_circle.png",
+          "banner": "/assets/afl/history/pubes_banner.png",
+          "yearStart": 2009,
+          "yearEnd": 2018
+        }
+      ]
     },
     {
       "franchiseId": "0013",
@@ -227,7 +539,37 @@
       "division": "West",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/micks.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/micks.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/micks.png",
+      "history": [
+        {
+          "name": "Lucky Buck$",
+          "icon": "/assets/afl/history/lucky_buck_icon_icon_circle.png",
+          "banner": "/assets/afl/history/lucky_buck_banner.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Cougs",
+          "icon": "/assets/afl/history/cougs_icon_icon_circle.png",
+          "banner": "/assets/afl/history/cougs_banner.png",
+          "yearStart": 2004,
+          "yearEnd": 2007
+        },
+        {
+          "name": "Dan Marino's Tan Isotoners",
+          "icon": "/assets/afl/history/dan_marino_s_tan_isotoners_banner_icon_circle.png",
+          "banner": "/assets/afl/history/dan_marino_s_tan_isotoners_banner.png",
+          "yearStart": 2008,
+          "yearEnd": 2009
+        },
+        {
+          "name": "Delirium Tremens",
+          "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png",
+          "banner": "/assets/afl/history/delirium_tremens_banner.png",
+          "yearStart": 2010,
+          "yearEnd": 2019
+        }
+      ]
     },
     {
       "franchiseId": "0014",
@@ -244,7 +586,30 @@
       "division": "West",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/herd.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/herd.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/herd.png",
+      "history": [
+        {
+          "name": "Trevors Team",
+          "icon": "/assets/afl/history/trevors_team_icon_icon_circle.png",
+          "banner": "/assets/afl/history/trevors_team_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "The A-Team",
+          "icon": "/assets/afl/history/the_a_team_banner_icon_circle.png",
+          "banner": "/assets/afl/history/the_a_team_banner.jpg",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "ISIS",
+          "icon": "/assets/afl/history/isis_banner_icon_circle.png",
+          "banner": "/assets/afl/history/isis_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2006
+        }
+      ]
     },
     {
       "franchiseId": "0015",
@@ -261,7 +626,23 @@
       "division": "East",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/ninjas.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/ninjas.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/ninjas.png",
+      "history": [
+        {
+          "name": "The Blunt Bros.",
+          "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+          "banner": "/assets/afl/history/the_blunt_bros_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2010
+        },
+        {
+          "name": "Gaelic Rams",
+          "icon": "/assets/afl/history/gaelic_rams_icon_icon_circle.png",
+          "banner": "/assets/afl/history/gaelic_rams_banner.png",
+          "yearStart": 2011,
+          "yearEnd": 2011
+        }
+      ]
     },
     {
       "franchiseId": "0016",
@@ -280,7 +661,102 @@
       "division": "West",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/swift.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/swift.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/swift.png",
+      "history": [
+        {
+          "name": "Its all my fault",
+          "icon": "/assets/afl/history/its_all_my_fault_icon_icon_circle.png",
+          "banner": "/assets/afl/history/its_all_my_fault_banner.gif",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Joey's Team",
+          "icon": "/assets/afl/history/joey_s_team_banner_icon_circle.png",
+          "banner": "/assets/afl/history/joey_s_team_banner.jpg",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "Reckless",
+          "icon": "/assets/afl/history/reckless_icon_icon_circle.png",
+          "banner": "/assets/afl/history/reckless_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2006
+        },
+        {
+          "name": "NOSX",
+          "icon": "/assets/afl/history/nosx_banner_icon_circle.png",
+          "banner": "/assets/afl/history/nosx_banner.png",
+          "yearStart": 2007,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Brady's Bastards",
+          "icon": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png",
+          "banner": "/assets/afl/history/brady_s_bastards_banner.png",
+          "yearStart": 2009,
+          "yearEnd": 2013
+        },
+        {
+          "name": "Incurable Chlamydia",
+          "icon": "/assets/afl/history/incurable_chlamydia_icon_icon_circle.png",
+          "banner": "/assets/afl/history/incurable_chlamydia_banner.png",
+          "yearStart": 2014,
+          "yearEnd": 2015
+        },
+        {
+          "name": "CSKA Sofia",
+          "icon": "/assets/afl/history/cska_sofia_0016_icon_icon_circle.png",
+          "banner": "/assets/afl/history/cska_sofia_0016_banner.png",
+          "conference": "01",
+          "yearStart": 2016,
+          "yearEnd": 2016
+        },
+        {
+          "name": "Dicks out for Harambe",
+          "icon": "/assets/afl/icons/harambe.png",
+          "banner": "/assets/afl/history/dicks_out_for_harambe_banner.png",
+          "conference": "01",
+          "yearStart": 2017,
+          "yearEnd": 2018
+        },
+        {
+          "name": "Be Gentle! It's my first time.",
+          "icon": "/assets/afl/history/be_gentle_it_s_my_first_time_icon_icon_circle.png",
+          "banner": "/assets/afl/history/be_gentle_it_s_my_first_time_banner.png",
+          "yearStart": 2019,
+          "yearEnd": 2019
+        },
+        {
+          "name": "Be Rough! I'm used to it.",
+          "icon": "/assets/afl/history/be_rough_i_m_used_to_it_icon_icon_circle.png",
+          "banner": "/assets/afl/history/be_rough_i_m_used_to_it_banner.png",
+          "yearStart": 2020,
+          "yearEnd": 2020
+        },
+        {
+          "name": "Be Gentle. It's my first time.",
+          "icon": "/assets/afl/history/be_gentle_it_s_my_first_time_icon_icon_circle.png",
+          "banner": "/assets/afl/history/be_gentle_it_s_my_first_time_banner.png",
+          "yearStart": 2021,
+          "yearEnd": 2021
+        },
+        {
+          "name": "Silver Bullets",
+          "icon": "/assets/afl/history/silver_bullets_banner_icon_circle.png",
+          "banner": "/assets/afl/history/silver_bullets_banner.png",
+          "yearStart": 2022,
+          "yearEnd": 2022
+        },
+        {
+          "name": "Swifty 4 Life",
+          "icon": "/assets/afl/history/swifty_4_life_icon_icon_circle.png",
+          "banner": "/assets/afl/history/swifty_4_life_banner.png",
+          "yearStart": 2023,
+          "yearEnd": 2024
+        }
+      ]
     },
     {
       "franchiseId": "0017",
@@ -298,7 +774,44 @@
       "division": "East",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/titsburgh_feelers.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/titsburgh_feelers.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/titsburgh_feelers.png",
+      "history": [
+        {
+          "name": "Fat Chicks & a Six-Pack",
+          "icon": "/assets/afl/history/fat_chicks_a_six_pack_icon_icon_circle.png",
+          "banner": "/assets/afl/history/fat_chicks_a_six_pack_banner_face.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Bukkake Warriors",
+          "icon": "/assets/afl/history/bukkake_warriors_icon_icon_circle.png",
+          "banner": "/assets/afl/history/bukkake_warriors_banner_face.jpg",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "Taco Hell",
+          "icon": "/assets/afl/history/taco_hell_banner_png_icon_circle.png",
+          "banner": "/assets/afl/history/taco_hell_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2006
+        },
+        {
+          "name": "Fly Fishermen",
+          "icon": "/assets/afl/history/fly_fishermen_banner_icon_circle.png",
+          "banner": "/assets/afl/history/fly_fishermen_banner.png",
+          "yearStart": 2007,
+          "yearEnd": 2007
+        },
+        {
+          "name": "Blitzkrieg",
+          "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
+          "banner": "/assets/afl/history/blitzkrieg_banner.png",
+          "yearStart": 2008,
+          "yearEnd": 2012
+        }
+      ]
     },
     {
       "franchiseId": "0018",
@@ -314,7 +827,51 @@
       "division": "West",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/jewpacabra.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/jewpacabra.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/jewpacabra.png",
+      "history": [
+        {
+          "name": "Green Lake Meanies",
+          "icon": "/assets/afl/history/green_lake_meanies_icon_icon_circle.png",
+          "banner": "/assets/afl/history/green_lake_meanies_banner.gif",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Red Dawn",
+          "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png",
+          "banner": "/assets/afl/history/red_dawn_banner.png",
+          "yearStart": 2004,
+          "yearEnd": 2006
+        },
+        {
+          "name": "Carolina Blues",
+          "icon": "/assets/afl/history/carolina_blues_banner_icon_circle.png",
+          "banner": "/assets/afl/history/carolina_blues_banner.png",
+          "yearStart": 2007,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Zephyr",
+          "icon": "/assets/afl/history/zephyr_banner_icon_circle.png",
+          "banner": "/assets/afl/history/zephyr_banner.png",
+          "yearStart": 2009,
+          "yearEnd": 2013
+        },
+        {
+          "name": "Computer Jocks",
+          "icon": "/assets/afl/history/computer_jocks_icon_icon_circle.png",
+          "banner": "/assets/afl/history/computer_jocks_banner.png",
+          "yearStart": 2014,
+          "yearEnd": 2014
+        },
+        {
+          "name": "Jesus Killers",
+          "icon": "/assets/afl/history/jesus_killers_icon_icon_circle.png",
+          "banner": "/assets/afl/history/jesus_killers_banner.png",
+          "yearStart": 2019,
+          "yearEnd": 2019
+        }
+      ]
     },
     {
       "franchiseId": "0019",
@@ -330,7 +887,44 @@
       "division": "East",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/badd_boys.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/badd_boys.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/badd_boys.png",
+      "history": [
+        {
+          "name": "M.L. Maniacs",
+          "icon": "/assets/afl/history/m_l_maniacs_banner_icon_circle.png",
+          "banner": "/assets/afl/history/m_l_maniacs_banner.gif",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "L.C. Maniacs",
+          "icon": "/assets/afl/history/l_c_maniacs_icon_icon_circle.png",
+          "banner": "/assets/afl/history/l_c_maniacs_banner.gif",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "The Bandwagon",
+          "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png",
+          "banner": "/assets/afl/history/the_bandwagon_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Minnesota Road Kill",
+          "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png",
+          "banner": "/assets/afl/history/minnesota_road_kill_banner.png",
+          "yearStart": 2009,
+          "yearEnd": 2010
+        },
+        {
+          "name": "Cliffside Killer Clowns",
+          "icon": "/assets/afl/history/cliffside_killer_clowns_banner_icon_circle.png",
+          "banner": "/assets/afl/history/cliffside_killer_clowns_banner.png",
+          "yearStart": 2011,
+          "yearEnd": 2014
+        }
+      ]
     },
     {
       "franchiseId": "0020",
@@ -348,7 +942,23 @@
       "division": "West",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/saints.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/saints.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/saints.png",
+      "history": [
+        {
+          "name": "Your Team Sucks",
+          "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png",
+          "banner": "/assets/afl/history/your_team_sucks_banner.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2005
+        },
+        {
+          "name": "Limp Ditkas",
+          "icon": "/assets/afl/history/limp_ditkas_banner_icon_circle.png",
+          "banner": "/assets/afl/history/limp_ditkas_banner.png",
+          "yearStart": 2006,
+          "yearEnd": 2007
+        }
+      ]
     },
     {
       "franchiseId": "0021",
@@ -364,7 +974,35 @@
       "division": "West",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/chat.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/chat.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/chat.png",
+      "ownerHistory": [
+        {
+          "franchiseId": "0007",
+          "yearStart": 2004,
+          "yearEnd": 2009
+        },
+        {
+          "franchiseId": "0021",
+          "yearStart": 2010,
+          "yearEnd": 9999
+        }
+      ],
+      "history": [
+        {
+          "name": "Da Dangsters",
+          "icon": "/assets/afl/history/da_dangsters_icon_icon_circle.png",
+          "banner": "/assets/afl/history/da_dangsters_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Tackling Dummies",
+          "icon": "/assets/afl/history/tackling_dummies_banner_icon_circle.png",
+          "banner": "/assets/afl/history/tackling_dummies_banner.png",
+          "yearStart": 2009,
+          "yearEnd": 2009
+        }
+      ]
     },
     {
       "franchiseId": "0022",
@@ -380,7 +1018,30 @@
       "division": "East",
       "tier": "Premier League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/balls_deep.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/balls_deep.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/balls_deep.png",
+      "history": [
+        {
+          "name": "Melville Roadsters",
+          "icon": "/assets/afl/history/melville_roadsters_icon_icon_circle.png",
+          "banner": "/assets/afl/history/melville_roadsters_banner.gif",
+          "yearStart": 2003,
+          "yearEnd": 2004
+        },
+        {
+          "name": "Way More Funner",
+          "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+          "banner": "/assets/afl/history/way_more_funner_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2011
+        },
+        {
+          "name": "Sparta FC",
+          "icon": "/assets/afl/history/sparta_fc_icon_icon_circle.png",
+          "banner": "/assets/afl/history/sparta_fc_banner.png",
+          "yearStart": 2012,
+          "yearEnd": 2012
+        }
+      ]
     },
     {
       "franchiseId": "0023",
@@ -398,7 +1059,37 @@
       "division": "East",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/the_show.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/the_show.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/the_show.png",
+      "history": [
+        {
+          "name": "P-89s",
+          "icon": "/assets/afl/history/p_89s_icon_icon_circle.png",
+          "banner": "/assets/afl/history/p_89s_banner_face.jpg",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Magnum's",
+          "icon": "/assets/afl/history/magnum_s_icon_icon_circle.png",
+          "banner": "/assets/afl/history/magnum_s_banner.jpg",
+          "yearStart": 2004,
+          "yearEnd": 2004
+        },
+        {
+          "name": "No Frills",
+          "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+          "banner": "/assets/afl/history/no_frills_banner.png",
+          "yearStart": 2005,
+          "yearEnd": 2021
+        },
+        {
+          "name": "Cock Gobbler",
+          "icon": "/assets/afl/history/gobblers_icon_circle.png",
+          "banner": "/assets/afl/banners/gobblers.png",
+          "yearStart": 2025,
+          "yearEnd": 2025
+        }
+      ]
     },
     {
       "franchiseId": "0024",
@@ -414,7 +1105,58 @@
       "division": "East",
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/no_soup.png",
-      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/no_soup.png"
+      "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/no_soup.png",
+      "history": [
+        {
+          "name": "Alcohol, Tobacco and Firearms",
+          "icon": "/assets/afl/history/atf_icon_100.png",
+          "banner": "/assets/afl/history/atf_banner.png",
+          "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "ATF",
+          "icon": "/assets/afl/history/atf_icon_100.png",
+          "banner": "/assets/afl/history/atf_banner.png",
+          "yearStart": 2004,
+          "yearEnd": 2006
+        },
+        {
+          "name": "Sharpest Blade",
+          "icon": "/assets/afl/history/sharpest_blade_banner_icon_circle.png",
+          "banner": "/assets/afl/history/sharpest_blade_banner.png",
+          "yearStart": 2007,
+          "yearEnd": 2007
+        },
+        {
+          "name": "The Street",
+          "icon": "/assets/afl/history/the_street_0024_banner_icon_circle.png",
+          "banner": "/assets/afl/history/the_street_0024_banner.png",
+          "yearStart": 2008,
+          "yearEnd": 2011
+        },
+        {
+          "name": "Angry Irish",
+          "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
+          "banner": "/assets/afl/history/angry_irish_banner.png",
+          "yearStart": 2012,
+          "yearEnd": 2012
+        },
+        {
+          "name": "Vinegar Strokes",
+          "icon": "/assets/afl/history/vinegar_strokes_icon_icon_circle.png",
+          "banner": "/assets/afl/history/vinegar_strokes_banner.png",
+          "yearStart": 2013,
+          "yearEnd": 2015
+        },
+        {
+          "name": "BronxBommr",
+          "icon": "/assets/afl/history/bronxbommr_icon_icon_circle.png",
+          "banner": "/assets/afl/history/bronxbommr_banner.png",
+          "yearStart": 2016,
+          "yearEnd": 2018
+        }
+      ]
     }
   ],
   "draftRounds": 9,

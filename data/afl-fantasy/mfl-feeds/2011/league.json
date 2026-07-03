@@ -1,7 +1,384 @@
 {
   "version": "1.0",
-  "error": {
-    "$t": "Invalid league ID 48815"
+  "league": {
+    "lastRegularSeasonWeek": "13",
+    "history": {
+      "league": [
+        {
+          "year": "2011",
+          "url": "https://www49.myfantasyleague.com/2011/home/36377"
+        },
+        {
+          "url": "http://www.geocities.com/braven112/AFL2003_Final_Page.html",
+          "year": "2003"
+        },
+        {
+          "year": "2004",
+          "url": "http://www98.myfantasyleague.com/2004/home/23644"
+        },
+        {
+          "url": "http://www98.myfantasyleague.com/2005/home/29232",
+          "year": "2005"
+        },
+        {
+          "url": "http://www98.myfantasyleague.com/2006/home/49793",
+          "year": "2006"
+        },
+        {
+          "url": "http://www98.myfantasyleague.com/2007/home/47555",
+          "year": "2007"
+        },
+        {
+          "year": "2008",
+          "url": "http://www98.myfantasyleague.com/2008/home/13233"
+        },
+        {
+          "url": "http://www57.myfantasyleague.com/2009/home/21465",
+          "year": "2009"
+        },
+        {
+          "year": "2010",
+          "url": "http://www56.myfantasyleague.com/2010/home/30033"
+        },
+        {
+          "url": "http://www59.myfantasyleague.com/2012/home/26792",
+          "year": "2012"
+        }
+      ]
+    },
+    "draftPlayerPool": "Both",
+    "draft_kind": "email",
+    "baseURL": "https://www49.myfantasyleague.com",
+    "victoryPointsStartWeek": "1",
+    "id": "36377",
+    "playerLimitUnit": "CONFERENCE",
+    "mobileAlerts": "",
+    "partialLineupAllowed": "NO",
+    "franchises": {
+      "franchise": [
+        {
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/smokane.jpg",
+          "waiverSortOrder": "15",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/smokaneicon.png",
+          "division": "00",
+          "name": "Smokane FC",
+          "id": "0001",
+          "abbrev": "SFC"
+        },
+        {
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/drunk_indians.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/drunk_indiansicon.png",
+          "waiverSortOrder": "21",
+          "division": "00",
+          "name": "Drunk Indians",
+          "id": "0002",
+          "abbrev": "DI"
+        },
+        {
+          "division": "02",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/level_3_inception.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/inception_icon.png",
+          "waiverSortOrder": "11",
+          "abbrev": "L3I",
+          "name": "Level 3 Inception",
+          "id": "0003"
+        },
+        {
+          "abbrev": "BAB",
+          "id": "0004",
+          "name": "Bay Area Ballers",
+          "division": "00",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/bay_area_ballers_icon.png",
+          "waiverSortOrder": "10",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/bay_area_ballers.jpg"
+        },
+        {
+          "icon": "http://www.afl-fantasy.com/images/team_banners/booyakasha_icon.png",
+          "waiverSortOrder": "12",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/10/booyakasha.jpg",
+          "division": "00",
+          "id": "0005",
+          "name": "booyakasha",
+          "abbrev": "boo"
+        },
+        {
+          "division": "02",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/whitmans_wonders_icon.png",
+          "waiverSortOrder": "23",
+          "logo": "http://www.afl-fantasy.com/images/team_banners/whitmans_wonders.png",
+          "abbrev": "SB",
+          "id": "0006",
+          "name": "Whitman's Wonders"
+        },
+        {
+          "abbrev": "TDMY",
+          "name": "Touchdown My Pants",
+          "id": "0007",
+          "division": "01",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/10/touchdownmypants.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/touchdownmypants_icon.png",
+          "waiverSortOrder": "17"
+        },
+        {
+          "abbrev": "NUKE",
+          "name": "The Nukes",
+          "id": "0008",
+          "division": "02",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/nukes.jpg",
+          "waiverSortOrder": "6",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/nukesicon.png"
+        },
+        {
+          "division": "01",
+          "waiverSortOrder": "16",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/vitside_mafia_icon.png",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/vitside.jpg",
+          "abbrev": "VM",
+          "id": "0009",
+          "name": "Vitside Mafia"
+        },
+        {
+          "id": "0010",
+          "name": "Fullybaked",
+          "abbrev": "BAKD",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/fullybakedicon.png",
+          "waiverSortOrder": "22",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/10/fullybaked.jpg",
+          "division": "02"
+        },
+        {
+          "abbrev": "MWS",
+          "id": "0011",
+          "name": "Midwestside Connection",
+          "division": "01",
+          "waiverSortOrder": "13",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/midwestside_icon.png",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/midwestside.jpg"
+        },
+        {
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/pubes.jpg",
+          "waiverSortOrder": "2",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/pubes_icon.png",
+          "division": "01",
+          "name": "Pubes",
+          "id": "0012",
+          "abbrev": "PUBE"
+        },
+        {
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/delerium_tremens.jpg",
+          "waiverSortOrder": "9",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/delirium_tremens_icon.png",
+          "division": "04",
+          "name": "Delirium Tremens",
+          "id": "0013",
+          "abbrev": "DEL"
+        },
+        {
+          "division": "04",
+          "logo": "http://afl-fantasy.com/images/team_pages/09/thundering_herd.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/thunderingherd_icon.png",
+          "waiverSortOrder": "20",
+          "abbrev": "HERD",
+          "name": "Thundering Herd",
+          "id": "0014"
+        },
+        {
+          "icon": "http://www.afl-fantasy.com/images/team_banners/gaelic_rams_icon.png",
+          "waiverSortOrder": "19",
+          "logo": "http://www.afl-fantasy.com/images/team_banners/gaelic_rams.png",
+          "division": "03",
+          "id": "0015",
+          "name": "Gaelic Rams",
+          "abbrev": "FT"
+        },
+        {
+          "division": "05",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/bradys_bastards.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/bradys_bastards_icon.png",
+          "waiverSortOrder": "1",
+          "sound": "http://ftp.tomflanagan.com/PLAYLISTS/PBL/Bob.mp3",
+          "abbrev": "BB",
+          "name": "Brady's Bastards",
+          "id": "0016"
+        },
+        {
+          "name": "Blitzkrieg",
+          "id": "0017",
+          "abbrev": "BLTZ",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/blitzkrieg.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/blitzkriegicon.png",
+          "waiverSortOrder": "5",
+          "division": "03"
+        },
+        {
+          "name": "Zephyr",
+          "id": "0018",
+          "abbrev": "ZEP",
+          "logo": "http://afl-fantasy.com/images/team_pages/09/zephyr.jpg",
+          "waiverSortOrder": "7",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/zephyr_icon.png",
+          "division": "05"
+        },
+        {
+          "id": "0019",
+          "name": "Cliffside Killer Clowns",
+          "abbrev": "CKC",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/cliffside_killer_clowns_icon.png",
+          "waiverSortOrder": "14",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/11/cliffside_clowns.jpg",
+          "division": "03"
+        },
+        {
+          "abbrev": "TBS",
+          "id": "0020",
+          "name": "The Boondock Saints",
+          "division": "03",
+          "waiverSortOrder": "8",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/boondock_saints_icon.png",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/boondock.jpg"
+        },
+        {
+          "division": "04",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/chatmastericon.png",
+          "waiverSortOrder": "3",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/10/chatmaster.jpg",
+          "abbrev": "Chat",
+          "id": "0021",
+          "name": "Chatmaster"
+        },
+        {
+          "name": "Way More Funner",
+          "id": "0022",
+          "abbrev": "WMF",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/waymorefunner.jpg",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/waymorefunnericon.png",
+          "waiverSortOrder": "18",
+          "division": "05"
+        },
+        {
+          "id": "0023",
+          "name": "No Frills",
+          "abbrev": "NF",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/no_frillsicon.png",
+          "waiverSortOrder": "24",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/no_frills.jpg",
+          "division": "05"
+        },
+        {
+          "id": "0024",
+          "name": "The Street",
+          "abbrev": "St.",
+          "icon": "http://www.afl-fantasy.com/images/team_banners/the_streeticon.png",
+          "waiverSortOrder": "4",
+          "logo": "http://www.afl-fantasy.com/images/team_pages/09/street.jpg",
+          "division": "04"
+        }
+      ],
+      "count": "24"
+    },
+    "maxWaiverRounds": "8",
+    "taxiSquad": "0",
+    "usesContractYear": "0",
+    "victoryPointsEndWeek": "13",
+    "divisions": {
+      "division": [
+        {
+          "conference": "00",
+          "name": "North",
+          "id": "00"
+        },
+        {
+          "id": "01",
+          "conference": "00",
+          "name": "Central"
+        },
+        {
+          "conference": "00",
+          "name": "South",
+          "id": "02"
+        },
+        {
+          "name": "East",
+          "conference": "01",
+          "id": "03"
+        },
+        {
+          "id": "04",
+          "conference": "01",
+          "name": "West"
+        },
+        {
+          "name": "Pacific",
+          "conference": "01",
+          "id": "05"
+        }
+      ],
+      "count": "6"
+    },
+    "draftLimitHours": "12:00",
+    "name": "American Football League",
+    "lockout": "No",
+    "minKeepers": "7",
+    "loadRosters": "email_draft",
+    "maxKeepers": "7",
+    "endWeek": "17",
+    "h2h": "Doubleheaders",
+    "standingsSort": "PCT,H2H,DIVPCT,CONFPCT,PWR,PTS,VICTORY_POINTS,",
+    "usesSalaries": "0",
+    "conferences": {
+      "conference": [
+        {
+          "name": "American League",
+          "id": "00"
+        },
+        {
+          "id": "01",
+          "name": "National League"
+        }
+      ],
+      "count": "2"
+    },
+    "victoryPointsLoss": "0",
+    "rostersPerPlayer": "1",
+    "defaultTradeExpirationDays": "7",
+    "starters": {
+      "position": [
+        {
+          "limit": "1",
+          "name": "QB"
+        },
+        {
+          "name": "RB",
+          "limit": "1-3"
+        },
+        {
+          "name": "WR",
+          "limit": "1-4"
+        },
+        {
+          "name": "TE",
+          "limit": "1-3"
+        },
+        {
+          "name": "PK",
+          "limit": "1"
+        },
+        {
+          "name": "Def",
+          "limit": "1"
+        }
+      ],
+      "count": "9"
+    },
+    "draftTimer": "ON",
+    "bestLineup": "No",
+    "startWeek": "1",
+    "precision": "2",
+    "injuredReserve": "1",
+    "victoryPointsBuckets": "2 1 0",
+    "victoryPointsWin": "2",
+    "rosterSize": "16",
+    "victoryPointsTie": "1"
   },
   "encoding": "utf-8"
 }

@@ -1,3298 +1,2528 @@
 {
+  "encoding": "utf-8",
   "salaryAdjustments": {
     "salaryAdjustment": [
       {
         "id": "0",
-        "timestamp": "1411530595",
-        "description": "Dropped Woodhead, Danny SDC RB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0001",
-        "amount": "1.00"
+        "amount": "693000.00",
+        "description": "2014 Cap Hits",
+        "timestamp": "1423978890",
+        "franchise_id": "0001"
       },
       {
-        "amount": "0.50",
-        "timestamp": "1411530595",
-        "description": "Dropped Seastrunk, Lache FA RB (Salary: $1.00, Contract: 1, Status: R)",
-        "franchise_id": "0001",
+        "description": "2014 Cap Hits",
+        "timestamp": "1423978890",
+        "franchise_id": "0002",
+        "amount": "1371340.00",
         "id": "1"
       },
       {
         "id": "10",
-        "amount": "-0.50",
-        "franchise_id": "0007",
-        "timestamp": "1409248561",
-        "description": "DEF adjustment"
-      },
-      {
-        "amount": "0.25",
-        "description": "Dropped Rivera, Mychal OAK TE (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1433874012",
-        "franchise_id": "0012",
-        "id": "100"
-      },
-      {
-        "id": "101",
-        "amount": "0.25",
-        "franchise_id": "0012",
-        "timestamp": "1433874012",
-        "description": "Dropped Barth, Connor DEN PK (Salary: $0.50, Contract: 1, Status: FA)"
-      },
-      {
-        "id": "102",
-        "franchise_id": "0012",
-        "timestamp": "1433874012",
-        "description": "Dropped Dolphins, Miami MIA Def (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
-      },
-      {
-        "timestamp": "1433874012",
-        "description": "Dropped Titans, Tennessee TEN Def (Salary: $1.00, Contract: 1, Status: FA)",
-        "franchise_id": "0012",
-        "amount": "0.50",
-        "id": "103"
-      },
-      {
-        "id": "104",
-        "amount": "1.00",
-        "timestamp": "1434079599",
-        "description": "Dropped Dalton, Andy CIN QB (Salary: $2.00, Contract: 3, Status: C)",
-        "franchise_id": "0006"
-      },
-      {
-        "id": "105",
-        "description": "Dropped Kaepernick, Colin SFO QB (Salary: $14.50, Contract: 3, Status: C)",
-        "timestamp": "1434079599",
-        "franchise_id": "0006",
-        "amount": "7.25"
-      },
-      {
-        "id": "106",
-        "timestamp": "1434079599",
-        "franchise_id": "0006",
-        "description": "Dropped Thomas, Pierre FA* RB (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "timestamp": "1434079599",
-        "description": "Dropped Smith, Torrey SFO WR (Salary: $1.00, Contract: 3, Status: C)",
-        "franchise_id": "0006",
-        "amount": "0.50",
-        "id": "107"
-      },
-      {
-        "id": "108",
-        "amount": "0.50",
-        "franchise_id": "0006",
-        "timestamp": "1434079599",
-        "description": "Dropped Graham, Shayne FA* PK (Salary: $1.00, Contract: 1, Status: FA)"
-      },
-      {
-        "franchise_id": "0006",
-        "timestamp": "1434079599",
-        "description": "Dropped Vinatieri, Adam IND PK (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "109"
-      },
-      {
-        "amount": "0.50",
-        "description": "DEF adjustment",
-        "timestamp": "1409248679",
-        "franchise_id": "0007",
-        "id": "11"
-      },
-      {
-        "id": "110",
-        "amount": "2.00",
-        "timestamp": "1434079599",
-        "description": "Dropped 49ers, San Francisco SFO Def (Salary: $4.00, Contract: 1, Status: C)",
-        "franchise_id": "0006"
-      },
-      {
-        "id": "111",
-        "timestamp": "1434079599",
-        "franchise_id": "0006",
-        "description": "Dropped Lions, Detroit DET Def (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
-      },
-      {
-        "amount": "0.25",
+        "amount": "2033015.00",
+        "timestamp": "1423978890",
         "franchise_id": "0011",
-        "timestamp": "1434116130",
-        "description": "Dropped Greene, Shonn TEN RB (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "112"
+        "description": "2014 Cap Hits"
       },
       {
-        "id": "113",
-        "description": "Dropped Ivory, Chris NYJ RB (Salary: $3.00, Contract: 1, Status: FA)",
-        "timestamp": "1434116130",
-        "franchise_id": "0011",
-        "amount": "1.50"
-      },
-      {
-        "description": "Dropped Pierce, Bernard JAC RB (Salary: $13.00, Contract: O - $2, Contract: 1, Status: C)",
-        "timestamp": "1434116130",
-        "franchise_id": "0011",
-        "amount": "6.50",
-        "id": "114"
-      },
-      {
-        "franchise_id": "0011",
-        "timestamp": "1434116130",
-        "description": "Dropped Sproles, Darren PHI RB (Salary: $4.50, Contract: O - $2, Contract: 1, Status: C)",
-        "amount": "2.25",
-        "id": "115"
-      },
-      {
-        "id": "116",
-        "timestamp": "1434116130",
-        "description": "Dropped Cooper, Riley PHI WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "amount": "0.50"
-      },
-      {
-        "timestamp": "1434116130",
-        "description": "Dropped Hunter, Justin TEN WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "amount": "0.50",
-        "id": "117"
-      },
-      {
-        "id": "118",
-        "timestamp": "1434116130",
-        "franchise_id": "0011",
-        "description": "Dropped Jones, Julio ATL WR (Salary: $14.00, Contract: 3, Status: C)",
-        "amount": "7.00"
-      },
-      {
-        "description": "Dropped Green, Ladarius SDC TE (Salary: $4.00, Contract: 1, Status: C)",
-        "timestamp": "1434116130",
-        "franchise_id": "0011",
-        "amount": "2.00",
-        "id": "119"
-      },
-      {
-        "id": "12",
-        "amount": "0.50",
-        "timestamp": "1410963144",
-        "franchise_id": "0007",
-        "description": "Dropped Thompkins, Kenbrell NEP WR (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "120",
-        "amount": "0.25",
-        "timestamp": "1434116130",
-        "description": "Dropped Miller, Heath PIT TE (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0011"
-      },
-      {
-        "amount": "0.25",
-        "franchise_id": "0011",
-        "timestamp": "1434116130",
-        "description": "Dropped Gano, Graham CAR PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "121"
-      },
-      {
-        "id": "122",
-        "amount": "1.50",
-        "franchise_id": "0011",
-        "timestamp": "1434116130",
-        "description": "Dropped Prater, Matt DET PK (Salary: $3.00, Contract: 1, Status: C)"
-      },
-      {
-        "franchise_id": "0011",
-        "timestamp": "1434116130",
-        "description": "Dropped Buccaneers, Tampa Bay TBB Def (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "123"
-      },
-      {
-        "id": "124",
-        "amount": "1.50",
-        "description": "Dropped Cardinals, Arizona ARI Def (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1434116130",
-        "franchise_id": "0011"
-      },
-      {
-        "id": "125",
-        "franchise_id": "0005",
-        "timestamp": "1434194555",
-        "description": "Dropped Charles, Jamaal KCC RB (Salary: $23.50, Contract: 3, Status: C)",
-        "amount": "11.75"
-      },
-      {
-        "id": "126",
-        "amount": "0.50",
-        "timestamp": "1434194555",
-        "franchise_id": "0005",
-        "description": "Dropped Davis, Knile KCC RB (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "127",
-        "timestamp": "1434194555",
-        "description": "Dropped Tate, Ben FA RB (Salary: $3.50, Contract: 2, Status: C)",
-        "franchise_id": "0005",
-        "amount": "1.75"
-      },
-      {
-        "id": "128",
-        "amount": "1.50",
-        "timestamp": "1434194555",
-        "description": "Dropped Williams, DeAngelo PIT RB (Salary: $3.00, Contract: 1, Status: C)",
+        "id": "100",
+        "amount": "1000000.00",
+        "timestamp": "1444575272",
+        "description": "Dropped Hill, Josh NOS TE (Salary: $2,000,000, Years: 1)",
         "franchise_id": "0005"
       },
       {
-        "id": "129",
-        "amount": "0.50",
-        "franchise_id": "0005",
-        "timestamp": "1434194555",
-        "description": "Dropped Amendola, Danny NEP WR (Salary: $1.00, Contract: 1, Status: C)"
+        "id": "101",
+        "amount": "212500.00",
+        "timestamp": "1444755619",
+        "description": "Dropped Cunningham, Benny STL RB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0009"
       },
       {
-        "id": "13",
-        "description": "Dropped Smith, Torrey BAL WR (Salary: $1.00, Contract: 3, Status: C)",
-        "timestamp": "1410963144",
+        "id": "102",
+        "amount": "282837.50",
+        "description": "Dropped Polk, Chris HOU RB (Salary: $565,675, Years: 2)",
+        "timestamp": "1444755619",
+        "franchise_id": "0009"
+      },
+      {
+        "description": "Dropped Paul, Niles WAS TE (Salary: $425,000, Years: 1)",
+        "timestamp": "1444755619",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "103"
+      },
+      {
+        "description": "Dropped Watson, Ben NOS TE (Salary: $425,000, Years: 2)",
+        "timestamp": "1444874405",
+        "franchise_id": "0015",
+        "id": "104",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1444875288",
+        "franchise_id": "0006",
+        "description": "Dropped Thompson, Juwan DEN RB (Salary: $550,000, Years: 5)",
+        "id": "105",
+        "amount": "275000.00"
+      },
+      {
+        "id": "106",
+        "amount": "1650000.00",
+        "franchise_id": "0006",
+        "timestamp": "1444875482",
+        "description": "Dropped Daniels, Owen DEN TE (Salary: $3,300,000, Years: 1)"
+      },
+      {
+        "id": "107",
+        "amount": "233750.00",
+        "timestamp": "1444875855",
+        "description": "Dropped White, James NEP RB (Salary: $467,500, Years: 4)",
+        "franchise_id": "0011"
+      },
+      {
+        "timestamp": "1444877427",
+        "franchise_id": "0011",
+        "description": "Dropped Carter, DeAndre FA WR (Salary: $425,000, Years: 5)",
+        "id": "108",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1444942768",
         "franchise_id": "0007",
-        "amount": "0.50"
+        "description": "Dropped Toon, Nick STL WR (Salary: $565,675, Years: 2)",
+        "amount": "282837.50",
+        "id": "109"
       },
       {
-        "amount": "0.50",
+        "franchise_id": "0012",
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "amount": "1377375.00",
+        "id": "11"
+      },
+      {
+        "description": "Dropped Oliver, Branden SDC RB (Salary: $467,500, Years: 4)",
+        "timestamp": "1444943463",
+        "franchise_id": "0006",
+        "id": "110",
+        "amount": "233750.00"
+      },
+      {
+        "id": "111",
+        "amount": "212500.00",
+        "timestamp": "1445171644",
+        "description": "Dropped Nicks, Hakeem FA* WR (Salary: $425,000, Years: 2)",
+        "franchise_id": "0014"
+      },
+      {
+        "franchise_id": "0011",
+        "timestamp": "1445479208",
+        "description": "Dropped Helu, Roy OAK RB (Salary: $1,000,000, Years: 4)",
+        "id": "112",
+        "amount": "500000.00"
+      },
+      {
+        "franchise_id": "0007",
+        "timestamp": "1445479208",
+        "description": "Dropped Patterson, Cordarrelle MIN WR (Salary: $2,480,500, Years: 3)",
+        "id": "113",
+        "amount": "1240250.00"
+      },
+      {
+        "description": "Dropped Coons, Travis CLE PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1445479208",
+        "franchise_id": "0006",
+        "id": "114",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1445482323",
+        "description": "Dropped Kendricks, Lance STL TE (Salary: $425,000, Years: 2)",
+        "franchise_id": "0001",
+        "amount": "212500.00",
+        "id": "115"
+      },
+      {
+        "description": "Dropped Dixon, Anthony BUF RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1445494746",
+        "franchise_id": "0001",
+        "id": "116",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "117",
+        "timestamp": "1445525657",
+        "description": "Dropped Hocker, Zach FA PK (Salary: $425,000, Years: 1)",
+        "franchise_id": "0008"
+      },
+      {
+        "id": "118",
+        "amount": "212500.00",
+        "timestamp": "1445552398",
+        "franchise_id": "0014",
+        "description": "Dropped Bibbs, Kapri FA RB (Salary: $425,000, Years: 5)"
+      },
+      {
+        "amount": "500000.00",
+        "id": "119",
+        "description": "Dropped Bowe, Dwayne CLE WR (Salary: $1,000,000, Years: 2)",
+        "timestamp": "1445721896",
+        "franchise_id": "0009"
+      },
+      {
+        "id": "12",
+        "amount": "4681813.00",
+        "timestamp": "1423978890",
+        "franchise_id": "0013",
+        "description": "2014 Cap Hits"
+      },
+      {
+        "timestamp": "1445722968",
+        "description": "Dropped Bradshaw, Ahmad IND RB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "120"
+      },
+      {
+        "description": "Dropped Wright, Tim DET TE (Salary: $425,000, Years: 1)",
+        "timestamp": "1445790034",
         "franchise_id": "0005",
-        "timestamp": "1434194555",
-        "description": "Dropped Randle, Rueben NYG WR (Salary: $1.00, Contract: 1, Status: C)",
+        "amount": "212500.00",
+        "id": "121"
+      },
+      {
+        "description": "Dropped Jennings, Greg MIA WR (Salary: $525,000, Years: 2)",
+        "timestamp": "1445924713",
+        "franchise_id": "0001",
+        "amount": "262500.00",
+        "id": "122"
+      },
+      {
+        "id": "123",
+        "amount": "212500.00",
+        "timestamp": "1445956915",
+        "description": "Dropped Manuel, E.J. BUF QB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0009"
+      },
+      {
+        "franchise_id": "0009",
+        "timestamp": "1445956915",
+        "description": "Dropped Forbath, Kai NOS PK (Salary: $425,000, Years: 1)",
+        "id": "124",
+        "amount": "212500.00"
+      },
+      {
+        "id": "125",
+        "amount": "225000.00",
+        "timestamp": "1446084010",
+        "franchise_id": "0011",
+        "description": "Dropped Powell, Bilal NYJ RB (Salary: $450,000, Years: 1)"
+      },
+      {
+        "timestamp": "1446084010",
+        "description": "Dropped Heyward-Bey, Darrius PIT WR (Salary: $500,000, Years: 1)",
+        "franchise_id": "0013",
+        "amount": "250000.00",
+        "id": "126"
+      },
+      {
+        "description": "Dropped Prater, Matt DET PK (Salary: $775,000, Years: 1)",
+        "timestamp": "1446084010",
+        "franchise_id": "0014",
+        "amount": "387500.00",
+        "id": "127"
+      },
+      {
+        "description": "Dropped Colts, Indianapolis IND Def (Salary: $700,000, Years: 1)",
+        "timestamp": "1446084571",
+        "franchise_id": "0014",
+        "id": "128",
+        "amount": "350000.00"
+      },
+      {
+        "timestamp": "1446103777",
+        "franchise_id": "0008",
+        "description": "Dropped Dawson, Phil SFO PK (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
+        "id": "129"
+      },
+      {
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "franchise_id": "0014",
+        "id": "13",
+        "amount": "356703.00"
+      },
+      {
+        "timestamp": "1446103777",
+        "description": "Dropped Lions, Detroit DET Def (Salary: $467,500, Years: 2)",
+        "franchise_id": "0008",
+        "amount": "233750.00",
         "id": "130"
       },
       {
+        "description": "Dropped Suisham, Shaun PIT PK (Salary: $500,000, Years: 1)",
+        "timestamp": "1446540144",
+        "franchise_id": "0002",
         "id": "131",
-        "franchise_id": "0005",
-        "timestamp": "1434194555",
-        "description": "Dropped Stills, Kenny MIA WR (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
+        "amount": "250000.00"
       },
       {
-        "amount": "0.50",
-        "timestamp": "1434194555",
-        "description": "Dropped Toilolo, Levine ATL TE (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0005",
+        "description": "Dropped Bush, Reggie SFO RB (Salary: $1,200,000, Years: 1)",
+        "timestamp": "1446540207",
+        "franchise_id": "0002",
+        "amount": "600000.00",
         "id": "132"
       },
       {
-        "timestamp": "1434194555",
-        "description": "Dropped Bryant, Matt ATL PK (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0005",
-        "amount": "0.50",
-        "id": "133"
+        "description": "Dropped Oliver, Branden SDC RB (Salary: $500,000, Years: 1)",
+        "timestamp": "1446557699",
+        "franchise_id": "0011",
+        "id": "133",
+        "amount": "250000.00"
       },
       {
-        "amount": "1.00",
-        "description": "Dropped Bears, Chicago CHI Def (Salary: $2.00, Contract: 1, Status: C)",
-        "timestamp": "1434194555",
-        "franchise_id": "0005",
+        "timestamp": "1446579318",
+        "franchise_id": "0011",
+        "description": "Dropped Randle, Joseph DAL RB (Salary: $514,250, Years: 3)",
+        "amount": "257125.00",
         "id": "134"
       },
       {
         "id": "135",
-        "amount": "1.00",
-        "timestamp": "1434194555",
+        "amount": "302500.00",
+        "franchise_id": "0008",
+        "timestamp": "1446692416",
+        "description": "Dropped Wright, Jarius MIN WR (Salary: $605,000, Years: 1)"
+      },
+      {
+        "timestamp": "1446692416",
+        "description": "Dropped Fells, Darren ARI TE (Salary: $500,000, Years: 1)",
         "franchise_id": "0005",
-        "description": "Dropped Saints, New Orleans NOS Def (Salary: $2.00, Contract: 1, Status: C)"
-      },
-      {
         "id": "136",
-        "timestamp": "1434843866",
-        "description": "Dropped Anderson, C.J. DEN RB (Salary: $2.00, Contract: 1, Status: FA)",
-        "franchise_id": "0008",
-        "amount": "1.00"
+        "amount": "250000.00"
       },
       {
+        "timestamp": "1446692416",
+        "franchise_id": "0013",
+        "description": "Dropped Sankey, Bishop TEN RB (Salary: $4,950,000, Years: 4)",
         "id": "137",
-        "franchise_id": "0008",
-        "timestamp": "1434843866",
-        "description": "Dropped Gray, Jonas NEP RB (Salary: $2.00, Contract: 1, Status: FA)",
-        "amount": "1.00"
+        "amount": "2475000.00"
       },
       {
-        "franchise_id": "0008",
-        "timestamp": "1434843866",
-        "description": "Dropped Jennings, Rashad NYG RB (Salary: $8.00, Contract: 2, Status: C)",
-        "amount": "4.00",
+        "timestamp": "1446697081",
+        "franchise_id": "0002",
+        "description": "Dropped Mumphery, Keith HOU WR (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
         "id": "138"
       },
       {
-        "description": "Dropped McFadden, Darren DAL RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1434843866",
+        "id": "139",
+        "amount": "4125000.00",
         "franchise_id": "0008",
-        "amount": "0.50",
-        "id": "139"
+        "timestamp": "1446777166",
+        "description": "Dropped Morris, Alfred WAS RB (Salary: $8,250,000, Years: 2)"
       },
       {
+        "amount": "1848625.00",
         "id": "14",
-        "timestamp": "1410963144",
-        "description": "Dropped White, James NEP RB (Salary: $3.00, Contract: 1, Status: R)",
-        "franchise_id": "0007",
-        "amount": "1.50"
+        "description": "2014 Cap Hits",
+        "timestamp": "1423978890",
+        "franchise_id": "0015"
       },
       {
         "id": "140",
-        "timestamp": "1434843866",
-        "franchise_id": "0008",
-        "description": "Dropped Bryant, Martavis PIT WR (Salary: $2.00, Contract: 1, Status: FA)",
-        "amount": "1.00"
+        "amount": "225000.00",
+        "timestamp": "1446850762",
+        "description": "Dropped Douglas, Harry TEN WR (Salary: $450,000, Years: 1)",
+        "franchise_id": "0014"
       },
       {
         "id": "141",
-        "franchise_id": "0008",
-        "timestamp": "1434843866",
-        "description": "Dropped Nelson, Jordy GBP WR (Salary: $12.50, Contract: 3, Status: C)",
-        "amount": "6.25"
+        "amount": "212500.00",
+        "franchise_id": "0001",
+        "timestamp": "1446964168",
+        "description": "Dropped Walters, Bryan JAC WR (Salary: $425,000, Years: 1)"
       },
       {
-        "amount": "0.25",
-        "description": "Dropped Parkey, Cody PHI PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1434843866",
-        "franchise_id": "0008",
-        "id": "142"
+        "id": "142",
+        "amount": "212500.00",
+        "franchise_id": "0011",
+        "timestamp": "1447169179",
+        "description": "Dropped Saints, New Orleans NOS Def (Salary: $425,000, Years: 1)"
       },
       {
+        "description": "Dropped Lewis, Dion NEP RB (Salary: $500,000, Years: 1)",
+        "timestamp": "1447291365",
+        "franchise_id": "0013",
         "id": "143",
-        "description": "Dropped Stafford, Matthew DET QB (Salary: $21.00, Contract: 1, Status: C)",
-        "timestamp": "1434844014",
-        "franchise_id": "0008",
-        "amount": "10.50"
+        "amount": "250000.00"
       },
       {
-        "amount": "13.25",
-        "franchise_id": "0008",
-        "timestamp": "1434844014",
-        "description": "Dropped Johnson, Calvin DET WR (Salary: $26.50, Contract: 2, Status: C)",
-        "id": "144"
+        "id": "144",
+        "amount": "330000.00",
+        "timestamp": "1447297216",
+        "description": "Dropped Ellington, Bruce SFO WR (Salary: $660,000, Years: 4)",
+        "franchise_id": "0001"
       },
       {
         "id": "145",
-        "timestamp": "1434844538",
-        "description": "Dropped Bolden, Brandon NEP RB (Salary: $1.50, Contract: 1, Status: FA)",
-        "franchise_id": "0001",
-        "amount": "0.75"
-      },
-      {
-        "id": "146",
-        "amount": "0.50",
-        "timestamp": "1434844538",
-        "description": "Dropped Cunningham, Benny STL RB (Salary: $1.00, Contract: 1, Status: FA)",
-        "franchise_id": "0001"
-      },
-      {
-        "id": "147",
-        "amount": "1.00",
-        "timestamp": "1434844538",
-        "franchise_id": "0001",
-        "description": "Dropped Ridley, Stevan NYJ RB (Salary: $2.00, Contract: 3, Status: C)"
-      },
-      {
-        "id": "148",
-        "description": "Dropped Jackson, DeSean WAS WR (Salary: $10.00, Contract: 1, Status: C)",
-        "timestamp": "1434844538",
-        "franchise_id": "0001",
-        "amount": "5.00"
-      },
-      {
-        "id": "149",
-        "amount": "9.50",
-        "timestamp": "1434844538",
-        "franchise_id": "0001",
-        "description": "Dropped Marshall, Brandon NYJ WR (Salary: $19.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "15",
-        "amount": "0.50",
-        "timestamp": "1411011651",
-        "description": "Dropped Brown, Bryce BUF RB (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0007"
-      },
-      {
-        "id": "150",
-        "amount": "0.25",
-        "franchise_id": "0001",
-        "timestamp": "1434844538",
-        "description": "Dropped Sanu, Mohamed CIN WR (Salary: $0.50, Contract: 1, Status: FA)"
-      },
-      {
-        "id": "151",
-        "franchise_id": "0001",
-        "timestamp": "1434844538",
-        "description": "Dropped Clay, Charles BUF TE (Salary: $1.00, Contract: 2, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "franchise_id": "0001",
-        "timestamp": "1434844538",
-        "description": "Dropped Graham, Jimmy SEA TE (Salary: $29.00, Contract: 1, Status: C)",
-        "amount": "14.50",
-        "id": "152"
-      },
-      {
-        "id": "153",
-        "amount": "0.50",
-        "description": "Dropped Bailey, Dan DAL PK (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1434844538",
-        "franchise_id": "0001"
-      },
-      {
-        "id": "154",
-        "amount": "0.25",
-        "franchise_id": "0001",
-        "timestamp": "1434844538",
-        "description": "Dropped Bullock, Randy HOU PK (Salary: $0.50, Contract: 1, Status: FA)"
-      },
-      {
-        "id": "155",
-        "timestamp": "1434844538",
-        "franchise_id": "0001",
-        "description": "Dropped Chiefs, Kansas City KCC Def (Salary: $6.00, Contract: 1, Status: C)",
-        "amount": "3.00"
-      },
-      {
-        "timestamp": "1434844538",
-        "description": "Dropped Cowboys, Dallas DAL Def (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0001",
-        "amount": "0.25",
-        "id": "156"
-      },
-      {
-        "timestamp": "1434846073",
-        "description": "Dropped Ryan, Matt ATL QB (Salary: $22.00, Contract: 11.00, Contract: 1, Status: C)",
-        "franchise_id": "0003",
-        "amount": "11.00",
-        "id": "157"
-      },
-      {
-        "franchise_id": "0003",
-        "timestamp": "1434846073",
-        "description": "Dropped Jones-Drew, Maurice FA RB (Salary: $8.00, Contract: 2.00, Contract: 1, Status: C)",
-        "amount": "4.00",
-        "id": "158"
-      },
-      {
-        "id": "159",
-        "description": "Dropped Rodgers, Jacquizz CHI RB (Salary: $1.00, Contract: 1, Status: FA)",
-        "timestamp": "1434846073",
-        "franchise_id": "0003",
-        "amount": "0.50"
-      },
-      {
-        "id": "16",
-        "amount": "0.75",
-        "franchise_id": "0007",
-        "timestamp": "1411011668",
-        "description": "Dropped Bradshaw, Ahmad IND RB (Salary: $1.50, Contract: 1, Status: FA)"
-      },
-      {
-        "amount": "4.00",
-        "franchise_id": "0003",
-        "timestamp": "1434846073",
-        "description": "Dropped Cobb, Randall GBP WR (Salary: $8.00, Contract: 1.50, Contract: 3, Status: C)",
-        "id": "160"
-      },
-      {
-        "id": "161",
-        "amount": "6.75",
-        "timestamp": "1434846073",
-        "description": "Dropped Colston, Marques NOS WR (Salary: $13.50, Contract: 2, Status: C)",
-        "franchise_id": "0003"
-      },
-      {
-        "timestamp": "1434846073",
-        "description": "Dropped Fitzgerald, Larry ARI WR (Salary: $8.00, Contract: 1, Status: C)",
-        "franchise_id": "0003",
-        "amount": "4.00",
-        "id": "162"
-      },
-      {
-        "amount": "4.50",
-        "description": "Dropped Garcon, Pierre WAS WR (Salary: $9.00, Contract: 1, Status: C)",
-        "timestamp": "1434846073",
-        "franchise_id": "0003",
-        "id": "163"
-      },
-      {
-        "timestamp": "1434846073",
-        "franchise_id": "0003",
-        "description": "Dropped Eifert, Tyler CIN TE (Salary: $4.50, Contract: 2, Status: C)",
-        "amount": "2.25",
-        "id": "164"
-      },
-      {
-        "id": "165",
-        "amount": "0.25",
-        "timestamp": "1434846073",
-        "description": "Dropped Fleener, Coby IND TE (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0003"
-      },
-      {
-        "amount": "0.50",
-        "franchise_id": "0003",
-        "timestamp": "1434846073",
-        "description": "Dropped Henery, Alex FA* PK (Salary: $1.00, Contract: 1, Status: C)",
-        "id": "166"
-      },
-      {
-        "franchise_id": "0003",
-        "timestamp": "1434846073",
-        "description": "Dropped Sturgis, Caleb MIA PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
-        "id": "167"
-      },
-      {
-        "amount": "1.75",
-        "description": "Dropped Patriots, New England NEP Def (Salary: $3.50, Contract: 2, Status: C)",
-        "timestamp": "1434846073",
-        "franchise_id": "0003",
-        "id": "168"
-      },
-      {
-        "timestamp": "1434989031",
-        "description": "Dropped Foles, Nick STL QB (Salary: $19.00, Contract: 1, Status: C)",
-        "franchise_id": "0010",
-        "amount": "9.50",
-        "id": "169"
-      },
-      {
-        "id": "17",
-        "amount": "-0.25",
-        "timestamp": "1411012221",
-        "franchise_id": "0007",
-        "description": "Adjust for salary room to add players JM dropped on accident."
-      },
-      {
-        "id": "170",
-        "amount": "1.00",
-        "franchise_id": "0010",
-        "timestamp": "1434989031",
-        "description": "Dropped Brown, Donald SDC RB (Salary: $2.00, Contract: 1, Status: FA)"
-      },
-      {
-        "id": "171",
-        "description": "Dropped Allen, Dwayne IND TE (Salary: $3.50, Contract: 1, Status: FA)",
-        "timestamp": "1434989031",
-        "franchise_id": "0010",
-        "amount": "1.75"
-      },
-      {
-        "id": "172",
-        "description": "Dropped Donnell, Larry NYG TE (Salary: $2.50, Contract: 1, Status: FA)",
-        "timestamp": "1434989031",
-        "franchise_id": "0010",
-        "amount": "1.25"
-      },
-      {
-        "id": "173",
-        "franchise_id": "0010",
-        "timestamp": "1434989031",
-        "description": "Dropped Carpenter, Dan BUF PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
-      },
-      {
-        "id": "174",
-        "timestamp": "1435090202",
-        "description": "Dropped Tannehill, Ryan MIA QB (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0002",
-        "amount": "0.50"
-      },
-      {
-        "id": "175",
-        "timestamp": "1435090202",
-        "description": "Dropped Carey, Ka'Deem CHI RB (Salary: $3.00, Contract: 1, Status: R)",
-        "franchise_id": "0002",
-        "amount": "1.50"
-      },
-      {
-        "id": "176",
-        "amount": "9.00",
-        "timestamp": "1435090202",
-        "franchise_id": "0002",
-        "description": "Dropped Martin, Doug TBB RB (Salary: $18.00, Contract: 1, Status: C)"
-      },
-      {
-        "description": "Dropped Crabtree, Michael OAK WR (Salary: $9.00, Contract: 1, Status: C)",
-        "timestamp": "1435090202",
-        "franchise_id": "0002",
-        "amount": "4.50",
-        "id": "177"
-      },
-      {
-        "amount": "0.50",
-        "timestamp": "1435090202",
-        "franchise_id": "0002",
-        "description": "Dropped Wayne, Reggie FA WR (Salary: $1.00, Contract: 1, Status: C)",
-        "id": "178"
-      },
-      {
-        "timestamp": "1435090202",
-        "description": "Dropped Rudolph, Kyle MIN TE (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0002",
-        "amount": "1.50",
-        "id": "179"
-      },
-      {
-        "franchise_id": "0007",
-        "timestamp": "1411012340",
-        "description": "adjustment b/c he added a player that made him over his limit.",
-        "amount": "-1.00",
-        "id": "18"
-      },
-      {
-        "amount": "0.50",
-        "franchise_id": "0002",
-        "timestamp": "1435090202",
-        "description": "Dropped Walker, Delanie TEN TE (Salary: $1.00, Contract: 1, Status: C)",
-        "id": "180"
-      },
-      {
-        "id": "181",
-        "franchise_id": "0002",
-        "timestamp": "1435090202",
-        "description": "Dropped Tucker, Justin BAL PK (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50"
-      },
-      {
-        "id": "182",
-        "amount": "0.50",
-        "description": "Dropped Walsh, Blair MIN PK (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1435090202",
-        "franchise_id": "0002"
-      },
-      {
-        "id": "183",
-        "franchise_id": "0002",
-        "timestamp": "1435090202",
-        "description": "Dropped Packers, Green Bay GBP Def (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "timestamp": "1435577201",
-        "franchise_id": "0004",
-        "description": "Dropped Richardson, Trent OAK RB (Salary: $11.00, Contract: 1, Status: C)",
-        "amount": "5.50",
-        "id": "184"
-      },
-      {
-        "amount": "1.50",
-        "timestamp": "1435577201",
-        "description": "Dropped Wallace, Mike MIN WR (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0004",
-        "id": "185"
-      },
-      {
-        "timestamp": "1435577201",
-        "description": "Dropped Reed, Jordan WAS TE (Salary: $1.00, Contract: 2, Status: C)",
-        "franchise_id": "0004",
-        "amount": "0.50",
-        "id": "186"
-      },
-      {
-        "franchise_id": "0004",
-        "timestamp": "1435849729",
-        "description": "Dropped Bush, Reggie SFO RB (Salary: $15.00, Contract: 1, Status: C)",
-        "amount": "7.50",
-        "id": "187"
-      },
-      {
-        "id": "188",
-        "amount": "6.00",
-        "description": "Dropped Jackson, Vincent TBB WR (Salary: $12.00, Contract: 1, Status: C)",
-        "timestamp": "1435849729",
-        "franchise_id": "0004"
-      },
-      {
-        "amount": "6.75",
-        "franchise_id": "0011",
-        "timestamp": "1436211013",
-        "description": "Dropped Bernard, Giovani CIN RB (Salary: $13.50, Contract: 2, Status: C)",
-        "id": "189"
-      },
-      {
-        "amount": "0.25",
-        "franchise_id": "0007",
-        "timestamp": "1411014226",
-        "description": "Dropped Jones, James OAK WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "19"
-      },
-      {
-        "amount": "0.50",
-        "timestamp": "1436211013",
-        "description": "Dropped Woods, Robert BUF WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "id": "190"
-      },
-      {
-        "id": "191",
-        "amount": "0.50",
-        "timestamp": "1436730164",
-        "description": "Dropped Blue, Alfred HOU RB (Salary: $1.00, Contract: 1, Status: FA)",
-        "franchise_id": "0006"
-      },
-      {
-        "amount": "2.75",
-        "description": "Dropped Stacy, Zac NYJ RB (Salary: $5.50, Contract: 2, Status: C)",
-        "timestamp": "1436730164",
-        "franchise_id": "0006",
-        "id": "192"
-      },
-      {
-        "timestamp": "1436730164",
-        "franchise_id": "0006",
-        "description": "Dropped Bowe, Dwayne CLE WR (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50",
-        "id": "193"
-      },
-      {
-        "id": "194",
-        "timestamp": "1436730164",
-        "description": "Dropped Cruz, Victor NYG WR (Salary: $4.00, Contract: 1, Status: C)",
-        "franchise_id": "0006",
-        "amount": "2.00"
-      },
-      {
-        "franchise_id": "0006",
-        "timestamp": "1436730164",
-        "description": "Dropped Decker, Eric NYJ WR (Salary: $4.00, Contract: 1, Status: C)",
-        "amount": "2.00",
-        "id": "195"
-      },
-      {
-        "franchise_id": "0006",
-        "timestamp": "1436730164",
-        "description": "Dropped Gordon, Josh CLE WR (Salary: $1.00, Contract: 1, Status: FA)",
-        "amount": "0.50",
-        "id": "196"
-      },
-      {
-        "description": "Dropped Johnson, Andre IND WR (Salary: $15.00, Contract: 1, Status: C)",
-        "timestamp": "1436730164",
-        "franchise_id": "0006",
-        "amount": "7.50",
-        "id": "197"
-      },
-      {
-        "id": "198",
-        "timestamp": "1436730164",
-        "description": "Dropped LaFell, Brandon NEP WR (Salary: $2.00, Contract: 1, Status: FA)",
-        "franchise_id": "0006",
-        "amount": "1.00"
-      },
-      {
-        "id": "199",
-        "amount": "2.50",
-        "timestamp": "1436730164",
-        "franchise_id": "0006",
-        "description": "Dropped Davis, Vernon SFO TE (Salary: $5.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "2",
-        "franchise_id": "0003",
-        "timestamp": "1410485210",
-        "description": "Dropped Green-Ellis, BenJarvus FA RB (Salary: $2.50, Contract: 2, Status: C)",
-        "amount": "1.25"
-      },
-      {
-        "id": "20",
-        "description": "Dropped Brown, Bryce BUF RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1411014226",
-        "franchise_id": "0007",
-        "amount": "0.50"
-      },
-      {
-        "amount": "0.50",
-        "description": "Dropped Archer, Dri PIT RB (Salary: $1.00, Contract: 1, Status: R)",
-        "timestamp": "1436997826",
-        "franchise_id": "0012",
-        "id": "200"
-      },
-      {
-        "id": "201",
-        "amount": "3.00",
-        "franchise_id": "0012",
-        "timestamp": "1436997826",
-        "description": "Dropped Sankey, Bishop TEN RB (Salary: $6.00, Contract: 10.00, Contract: 1, Status: R)"
-      },
-      {
-        "timestamp": "1436997826",
-        "description": "Dropped Lee, Marqise JAC WR (Salary: $2.00, Contract: 1, Status: R)",
-        "franchise_id": "0012",
-        "amount": "1.00",
-        "id": "202"
-      },
-      {
-        "timestamp": "1436997826",
-        "description": "Dropped Thomas, De'Anthony KCC WR (Salary: $1.00, Contract: 1, Status: R)",
-        "franchise_id": "0012",
-        "amount": "0.50",
-        "id": "203"
-      },
-      {
-        "timestamp": "1436997826",
-        "franchise_id": "0012",
-        "description": "Dropped Cameron, Jordan MIA TE (Salary: $1.50, Contract: 2, Status: C)",
-        "amount": "0.75",
-        "id": "204"
-      },
-      {
-        "amount": "7.00",
-        "description": "Dropped Cutler, Jay CHI QB (Salary: $14.00, Contract: 1, Status: C)",
-        "timestamp": "1436999493",
-        "franchise_id": "0007",
-        "id": "205"
-      },
-      {
-        "id": "206",
-        "amount": "0.75",
-        "timestamp": "1436999493",
-        "franchise_id": "0007",
-        "description": "Dropped Herron, Dan IND RB (Salary: $1.50, Contract: 1, Status: FA)"
-      },
-      {
-        "id": "207",
-        "amount": "0.25",
-        "timestamp": "1436999493",
-        "description": "Dropped Robinson, Denard JAC RB (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0007"
-      },
-      {
-        "franchise_id": "0007",
-        "timestamp": "1436999493",
-        "description": "Dropped Baldwin, Doug SEA WR (Salary: $7.00, Contract: 1, Status: FA)",
-        "amount": "3.50",
-        "id": "208"
-      },
-      {
-        "amount": "3.50",
-        "franchise_id": "0007",
-        "timestamp": "1436999493",
-        "description": "Dropped Harvin, Percy BUF WR (Salary: $7.00, Contract: 1, Status: C)",
-        "id": "209"
-      },
-      {
-        "id": "21",
-        "amount": "-0.25",
-        "franchise_id": "0007",
-        "timestamp": "1411014385",
-        "description": "added over salary had to adjust"
-      },
-      {
-        "id": "210",
-        "description": "Dropped Wheaton, Markus PIT WR (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1436999493",
-        "franchise_id": "0007",
-        "amount": "0.50"
-      },
-      {
-        "id": "211",
-        "franchise_id": "0009",
-        "timestamp": "1437424340",
-        "description": "Dropped Brees, Drew NOS QB (Salary: $7.00, Contract: 38.50, Contract: 1, Status: C)",
-        "amount": "3.50"
-      },
-      {
-        "id": "212",
-        "amount": "1.25",
-        "timestamp": "1437424340",
-        "franchise_id": "0009",
-        "description": "Dropped Asiata, Matt MIN RB (Salary: $2.50, Contract: 1, Status: FA)"
-      },
-      {
-        "amount": "0.25",
-        "timestamp": "1437424340",
-        "description": "Dropped Catanzaro, Chandler ARI PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0009",
-        "id": "213"
-      },
-      {
-        "id": "214",
-        "amount": "0.50",
-        "timestamp": "1437424340",
-        "description": "Dropped Crosby, Mason GBP PK (Salary: $1.00, Contract: 1, Status: C)",
+        "amount": "212500.00",
+        "description": "Dropped Asiata, Matt MIN RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1447297216",
         "franchise_id": "0009"
       },
       {
-        "id": "215",
-        "franchise_id": "0009",
-        "timestamp": "1437424340",
-        "description": "Dropped Rams, St. Louis STL Def (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50"
+        "timestamp": "1447297216",
+        "description": "Dropped Hogan, Chris BUF WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0016",
+        "amount": "212500.00",
+        "id": "146"
       },
       {
-        "id": "216",
-        "description": "Dropped Steelers, Pittsburgh PIT Def (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1437424340",
-        "franchise_id": "0009",
-        "amount": "1.50"
+        "amount": "212500.00",
+        "id": "147",
+        "timestamp": "1447297850",
+        "franchise_id": "0016",
+        "description": "Dropped Nelson, J.J. ARI WR (Salary: $425,000, Years: 1)"
       },
       {
-        "id": "217",
-        "amount": "1.50",
-        "franchise_id": "0011",
-        "timestamp": "1438801996",
-        "description": "Dropped Williams, Terrance DAL WR (Salary: $3.00, Contract: 2, Status: C)"
-      },
-      {
-        "amount": "10.00",
-        "franchise_id": "0009",
-        "timestamp": "1438998856",
-        "description": "Dropped McCoy, LeSean BUF RB (Salary: $20.00, Contract: 31.00, Contract: 2, Status: C)",
-        "id": "218"
-      },
-      {
-        "id": "219",
-        "timestamp": "1438998856",
-        "description": "Dropped Patterson, Cordarrelle MIN WR (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0009",
-        "amount": "1.50"
-      },
-      {
-        "id": "22",
-        "timestamp": "1412133627",
-        "description": "Dropped Peterson, Adrian MIN RB (Salary: $24.50, Contract: 3, Status: C)",
-        "franchise_id": "0007",
-        "amount": "12.25"
-      },
-      {
-        "description": "Dropped Wright, Kendall TEN WR (Salary: $3.00, Contract: 1.00, Contract: 1, Status: C)",
-        "timestamp": "1438998856",
-        "franchise_id": "0009",
-        "amount": "1.50",
-        "id": "220"
-      },
-      {
-        "timestamp": "1438998856",
-        "franchise_id": "0009",
-        "description": "Dropped Gates, Antonio SDC TE (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "221"
-      },
-      {
-        "id": "222",
-        "amount": "4.00",
-        "timestamp": "1439141539",
-        "description": "Dropped Vereen, Shane NYG RB (Salary: $8.00, Contract: 1, Status: C)",
-        "franchise_id": "0004"
-      },
-      {
-        "franchise_id": "0004",
-        "timestamp": "1439141539",
-        "description": "Dropped White, Roddy ATL WR (Salary: $5.00, Contract: 1, Status: C)",
-        "amount": "2.50",
-        "id": "223"
-      },
-      {
-        "id": "224",
-        "franchise_id": "0010",
-        "timestamp": "1439304403",
-        "description": "Dropped Jackson, Steven FA* RB (Salary: $5.00, Contract: 1, Status: C)",
-        "amount": "2.50"
-      },
-      {
-        "id": "225",
-        "amount": "0.50",
-        "description": "Dropped Johnson, Storm JAC RB (Salary: $1.00, Contract: 1, Status: R)",
-        "timestamp": "1439304403",
-        "franchise_id": "0010"
-      },
-      {
-        "amount": "0.25",
-        "timestamp": "1439304403",
-        "description": "Dropped Smith, Steve BAL WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0010",
-        "id": "226"
-      },
-      {
-        "timestamp": "1439304403",
-        "franchise_id": "0010",
-        "description": "Dropped Tate, Golden DET WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
-        "id": "227"
-      },
-      {
-        "id": "228",
-        "franchise_id": "0010",
-        "timestamp": "1439304732",
-        "description": "Dropped Mathews, Ryan PHI RB (Salary: $6.00, Contract: 1, Status: C)",
-        "amount": "3.00"
-      },
-      {
-        "id": "229",
-        "amount": "1.50",
-        "description": "Dropped Robinson, Khiry NOS RB (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1439515096",
-        "franchise_id": "0005"
-      },
-      {
-        "id": "23",
-        "amount": "3.50",
-        "description": "Dropped Gerhart, Toby JAC RB (Salary: $7.00, Contract: 1, Status: C)",
-        "timestamp": "1412816897",
-        "franchise_id": "0007"
-      },
-      {
-        "franchise_id": "0005",
-        "timestamp": "1439515096",
-        "description": "Dropped Austin, Miles PHI WR (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "230"
-      },
-      {
-        "id": "231",
-        "amount": "4.00",
-        "timestamp": "1439515096",
-        "description": "Dropped Witten, Jason DAL TE (Salary: $8.00, Contract: 1, Status: C)",
-        "franchise_id": "0005"
-      },
-      {
-        "timestamp": "1439779567",
-        "description": "Dropped Forte, Matt CHI RB (Salary: $29.50, Contract: 3, Status: C)",
-        "franchise_id": "0002",
-        "amount": "14.75",
-        "id": "232"
-      },
-      {
-        "id": "233",
-        "timestamp": "1439780465",
-        "franchise_id": "0003",
-        "description": "Draft preparation",
-        "amount": "-49.50"
-      },
-      {
-        "amount": "-34.50",
-        "description": "Draft preparation",
-        "timestamp": "1439780546",
-        "franchise_id": "0010",
-        "id": "234"
-      },
-      {
-        "id": "235",
-        "timestamp": "1439780606",
-        "franchise_id": "0008",
-        "description": "Draft Preparation",
-        "amount": "-48.25"
-      },
-      {
-        "id": "236",
-        "amount": "-36.25",
-        "timestamp": "1439780643",
-        "description": "Draft Prep",
+        "id": "148",
+        "amount": "302500.00",
+        "description": "Dropped Stacy, Zac NYJ RB (Salary: $605,000, Years: 3)",
+        "timestamp": "1447298128",
         "franchise_id": "0011"
       },
       {
-        "id": "237",
-        "amount": "-0.50",
-        "franchise_id": "0011",
-        "timestamp": "1439780686",
-        "description": "Draft prep"
+        "timestamp": "1447298557",
+        "franchise_id": "0006",
+        "description": "Dropped Johnson, Gus FA RB (Salary: $425,000, Years: 5)",
+        "amount": "212500.00",
+        "id": "149"
       },
       {
-        "amount": "-41.75",
+        "id": "15",
+        "amount": "4389990.00",
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "franchise_id": "0016"
+      },
+      {
+        "description": "Dropped Quarless, Andrew GBP TE (Salary: $467,500, Years: 4)",
+        "timestamp": "1447299198",
+        "franchise_id": "0016",
+        "id": "150",
+        "amount": "233750.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "151",
+        "description": "Dropped Carrier, Derek WAS TE (Salary: $425,000, Years: 1)",
+        "timestamp": "1447545683",
+        "franchise_id": "0009"
+      },
+      {
+        "id": "152",
+        "amount": "212500.00",
+        "timestamp": "1447600518",
+        "description": "Dropped McCown, Josh CLE QB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0016"
+      },
+      {
+        "franchise_id": "0016",
+        "timestamp": "1447896598",
+        "description": "Dropped Herron, Dan BUF RB (Salary: $1,400,000, Years: 4)",
+        "id": "153",
+        "amount": "700000.00"
+      },
+      {
+        "timestamp": "1447902015",
+        "franchise_id": "0008",
+        "description": "Dropped Manning, Peyton DEN QB (Salary: $12,000,000, Years: 1)",
+        "amount": "6000000.00",
+        "id": "154"
+      },
+      {
+        "timestamp": "1447902015",
+        "description": "Dropped Todman, Jordan PIT RB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "155"
+      },
+      {
+        "amount": "257125.00",
+        "id": "156",
+        "description": "Dropped Davis, Knile KCC RB (Salary: $514,250, Years: 3)",
+        "timestamp": "1447902015",
+        "franchise_id": "0009"
+      },
+      {
+        "id": "157",
+        "amount": "2475000.00",
+        "description": "Dropped Wallace, Mike MIN WR (Salary: $4,950,000, Years: 2)",
+        "timestamp": "1447902015",
+        "franchise_id": "0006"
+      },
+      {
+        "amount": "500000.00",
+        "id": "158",
+        "timestamp": "1447902015",
+        "franchise_id": "0012",
+        "description": "Dropped Jones, Landry PIT QB (Salary: $1,000,000, Years: 1)"
+      },
+      {
+        "amount": "500000.00",
+        "id": "159",
+        "timestamp": "1447918716",
+        "description": "Dropped Vick, Michael PIT QB (Salary: $1,000,000, Years: 1)",
+        "franchise_id": "0012"
+      },
+      {
+        "amount": "212500.00",
+        "id": "16",
+        "timestamp": "1431000548",
+        "description": "Dropped Amendola, Danny NEP WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0011"
+      },
+      {
+        "amount": "225000.00",
+        "id": "160",
+        "description": "Dropped Raiders, Oakland OAK Def (Salary: $450,000, Years: 1)",
+        "timestamp": "1447918795",
+        "franchise_id": "0012"
+      },
+      {
+        "amount": "385000.00",
+        "id": "161",
+        "description": "Dropped Carter, Duron FA WR (Salary: $770,000, Years: 4)",
+        "timestamp": "1447918952",
+        "franchise_id": "0012"
+      },
+      {
+        "amount": "481250.00",
+        "id": "162",
+        "description": "Dropped Richardson, Paul SEA WR (Salary: $962,500, Years: 4)",
+        "timestamp": "1448050573",
+        "franchise_id": "0009"
+      },
+      {
+        "timestamp": "1448126723",
+        "franchise_id": "0013",
+        "description": "Dropped O'Shaughnessy, James KCC TE (Salary: $425,000, Years: 5)",
+        "amount": "212500.00",
+        "id": "163"
+      },
+      {
+        "id": "164",
+        "amount": "212500.00",
+        "franchise_id": "0006",
+        "timestamp": "1448141958",
+        "description": "Dropped Coleman, Brandon NOS WR (Salary: $425,000, Years: 5)"
+      },
+      {
+        "id": "165",
+        "amount": "287500.00",
+        "timestamp": "1448328199",
+        "description": "Dropped Carpenter, Dan BUF PK (Salary: $575,000, Years: 1)",
+        "franchise_id": "0016"
+      },
+      {
+        "timestamp": "1448506810",
+        "franchise_id": "0001",
+        "description": "Dropped Bolden, Brandon NEP RB (Salary: $1,200,000, Years: 1)",
+        "id": "166",
+        "amount": "600000.00"
+      },
+      {
+        "timestamp": "1448506810",
+        "franchise_id": "0009",
+        "description": "Dropped McManus, Brandon DEN PK (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
+        "id": "167"
+      },
+      {
+        "franchise_id": "0013",
+        "timestamp": "1448506810",
+        "description": "Dropped 49ers, San Francisco SFO Def (Salary: $475,000, Years: 3)",
+        "amount": "237500.00",
+        "id": "168"
+      },
+      {
+        "amount": "237500.00",
+        "id": "169",
+        "description": "Dropped Cunningham, Benny STL RB (Salary: $475,000, Years: 3)",
+        "timestamp": "1448506810",
+        "franchise_id": "0013"
+      },
+      {
+        "timestamp": "1431000548",
+        "description": "Dropped Jones, James FA WR (Salary: $500,000, Years: 3)",
+        "franchise_id": "0011",
+        "amount": "250000.00",
+        "id": "17"
+      },
+      {
+        "id": "170",
+        "amount": "500000.00",
+        "franchise_id": "0013",
+        "timestamp": "1448506810",
+        "description": "Dropped Randle, Joseph FA* RB (Salary: $1,000,000, Years: 1)"
+      },
+      {
+        "franchise_id": "0011",
+        "timestamp": "1448507566",
+        "description": "Dropped Barth, Connor TBB PK (Salary: $425,000, Years: 1)",
+        "id": "171",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "172",
+        "description": "Dropped Myers, Brandon TBB TE (Salary: $425,000, Years: 1)",
+        "timestamp": "1448507632",
+        "franchise_id": "0005"
+      },
+      {
+        "timestamp": "1448540463",
+        "description": "Dropped Mumphery, Keith HOU WR (Salary: $425,000, Years: 5)",
+        "franchise_id": "0013",
+        "id": "173",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "300000.00",
+        "id": "174",
+        "description": "Dropped Graham, Garrett HOU TE (Salary: $600,000, Years: 3)",
+        "timestamp": "1448551107",
+        "franchise_id": "0007"
+      },
+      {
+        "timestamp": "1448818951",
+        "description": "Dropped Olawale, Jamize OAK RB (Salary: $475,000, Years: 1)",
+        "franchise_id": "0006",
+        "id": "175",
+        "amount": "237500.00"
+      },
+      {
+        "amount": "325000.00",
+        "id": "176",
+        "timestamp": "1448950265",
+        "franchise_id": "0009",
+        "description": "Dropped Yates, T.J. HOU QB (Salary: $650,000, Years: 1)"
+      },
+      {
+        "description": "Dropped Smith, Rod DAL RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1448950265",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "177"
+      },
+      {
+        "id": "178",
+        "amount": "233750.00",
+        "timestamp": "1449106677",
+        "franchise_id": "0008",
+        "description": "Dropped Gray, Jonas FA* RB (Salary: $467,500, Years: 1)"
+      },
+      {
+        "id": "179",
+        "amount": "212500.00",
+        "timestamp": "1449106677",
+        "description": "Dropped Franks, Andrew MIA PK (Salary: $425,000, Years: 1)",
+        "franchise_id": "0008"
+      },
+      {
+        "description": "Dropped Ridley, Stevan NYJ RB (Salary: $4,400,000, Years: 2)",
+        "timestamp": "1431407960",
+        "franchise_id": "0010",
+        "amount": "2200000.00",
+        "id": "18"
+      },
+      {
+        "id": "180",
+        "amount": "233750.00",
+        "description": "Dropped Fiedorowicz, C.J. HOU TE (Salary: $467,500, Years: 4)",
+        "timestamp": "1449111614",
+        "franchise_id": "0011"
+      },
+      {
+        "amount": "212500.00",
+        "id": "181",
+        "timestamp": "1449112143",
+        "description": "Dropped Polk, Chris HOU RB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0001"
+      },
+      {
+        "amount": "500000.00",
+        "id": "182",
+        "franchise_id": "0001",
+        "timestamp": "1449112254",
+        "description": "Dropped Sproles, Darren PHI RB (Salary: $1,000,000, Years: 2)"
+      },
+      {
+        "timestamp": "1449113544",
+        "franchise_id": "0006",
+        "description": "Dropped Bradshaw, Ahmad IND RB (Salary: $425,000, Years: 1)",
+        "id": "183",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1449113686",
+        "description": "Dropped Thomas, De'Anthony KCC WR (Salary: $425,000, Years: 5)",
+        "franchise_id": "0006",
+        "amount": "212500.00",
+        "id": "184"
+      },
+      {
+        "description": "Dropped Hocker, Zach STL PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1449114046",
+        "franchise_id": "0006",
+        "amount": "212500.00",
+        "id": "185"
+      },
+      {
+        "description": "Dropped Zuerlein, Greg STL PK (Salary: $495,000, Years: 4)",
+        "timestamp": "1449114459",
+        "franchise_id": "0006",
+        "amount": "247500.00",
+        "id": "186"
+      },
+      {
+        "id": "187",
+        "amount": "212500.00",
+        "timestamp": "1449115357",
+        "franchise_id": "0006",
+        "description": "Dropped Winston, Glenn CLE RB (Salary: $425,000, Years: 3)"
+      },
+      {
+        "amount": "212500.00",
+        "id": "188",
+        "timestamp": "1449227515",
+        "description": "Dropped Walters, Bryan JAC WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0012"
+      },
+      {
+        "timestamp": "1449315938",
+        "description": "Dropped McCown, Josh CLE QB (Salary: $500,000, Years: 1)",
+        "franchise_id": "0012",
+        "amount": "250000.00",
+        "id": "189"
+      },
+      {
+        "description": "Dropped Leshoure, Mikel FA RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1435188223",
+        "franchise_id": "0003",
+        "amount": "212500.00",
+        "id": "19"
+      },
+      {
+        "description": "Dropped Welker, Wes STL WR (Salary: $425,000, Years: 1)",
+        "timestamp": "1449632988",
+        "franchise_id": "0016",
+        "amount": "212500.00",
+        "id": "190"
+      },
+      {
+        "description": "Dropped Wilson, Albert KCC WR (Salary: $467,500, Years: 4)",
+        "timestamp": "1449716408",
+        "franchise_id": "0001",
+        "amount": "233750.00",
+        "id": "191"
+      },
+      {
+        "timestamp": "1449719289",
+        "franchise_id": "0005",
+        "description": "Dropped Smith, Torrey SFO WR (Salary: $622,242, Years: 1)",
+        "amount": "311121.25",
+        "id": "192"
+      },
+      {
+        "franchise_id": "0001",
+        "timestamp": "1449721030",
+        "description": "Dropped Ingram, Mark NOS RB (Salary: $2,200,000, Years: 1)",
+        "id": "193",
+        "amount": "1100000.00"
+      },
+      {
+        "amount": "312500.00",
+        "id": "194",
+        "timestamp": "1449721468",
+        "description": "Dropped Davis, Austin CLE QB (Salary: $625,000, Years: 1)",
+        "franchise_id": "0008"
+      },
+      {
+        "amount": "212500.00",
+        "id": "195",
+        "timestamp": "1449828456",
+        "franchise_id": "0006",
+        "description": "Dropped Bolden, Brandon NEP RB (Salary: $425,000, Years: 1)"
+      },
+      {
+        "id": "196",
+        "amount": "250000.00",
+        "timestamp": "1449828456",
+        "franchise_id": "0006",
+        "description": "Dropped Grimes, Jonathan HOU RB (Salary: $500,000, Years: 1)"
+      },
+      {
+        "franchise_id": "0008",
+        "timestamp": "1450234243",
+        "description": "Dropped Kerley, Jeremy NYJ WR (Salary: $475,000, Years: 1)",
+        "id": "197",
+        "amount": "237500.00"
+      },
+      {
+        "description": "Dropped McDonald, Vance SFO TE (Salary: $1,575,000, Years: 1)",
+        "timestamp": "1450234243",
+        "franchise_id": "0008",
+        "id": "198",
+        "amount": "787500.00"
+      },
+      {
+        "timestamp": "1450269934",
+        "description": "Dropped Hankerson, Leonard FA WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0011",
+        "id": "199",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "2191688.00",
+        "id": "2",
+        "franchise_id": "0003",
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits"
+      },
+      {
+        "franchise_id": "0003",
+        "timestamp": "1435248610",
+        "description": "Dropped Pierce, Bernard JAC RB (Salary: $565,675, Years: 2)",
+        "id": "20",
+        "amount": "282837.50"
+      },
+      {
+        "description": "Dropped Ryan, Matt ATL QB (Salary: $5,720,000, Years: 3)",
+        "timestamp": "1450288405",
+        "franchise_id": "0013",
+        "amount": "2860000.00",
+        "id": "200"
+      },
+      {
+        "timestamp": "1450288405",
+        "description": "Dropped Ware, Spencer KCC RB (Salary: $2,000,000, Years: 1)",
+        "franchise_id": "0013",
+        "id": "201",
+        "amount": "1000000.00"
+      },
+      {
+        "description": "Dropped Keenum, Case STL QB (Salary: $4,025,000, Years: 1)",
+        "timestamp": "1450321210",
+        "franchise_id": "0008",
+        "amount": "2012500.00",
+        "id": "202"
+      },
+      {
+        "amount": "300000.00",
+        "id": "203",
+        "timestamp": "1450321210",
+        "description": "Dropped Thompson, Chris WAS RB (Salary: $600,000, Years: 4)",
+        "franchise_id": "0013"
+      },
+      {
+        "timestamp": "1450321210",
+        "franchise_id": "0013",
+        "description": "Dropped Quick, Brian STL WR (Salary: $798,600, Years: 2)",
+        "amount": "399300.00",
+        "id": "204"
+      },
+      {
+        "description": "Dropped Celek, Garrett SFO TE (Salary: $425,000, Years: 1)",
+        "timestamp": "1450321210",
+        "franchise_id": "0016",
+        "amount": "212500.00",
+        "id": "205"
+      },
+      {
+        "timestamp": "1450790462",
+        "franchise_id": "0011",
+        "description": "Dropped Escobar, Gavin DAL TE (Salary: $514,250, Years: 3)",
+        "id": "206",
+        "amount": "257125.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "207",
+        "timestamp": "1450813198",
+        "description": "Dropped Givens, Chris BAL WR (Salary: $425,000, Years: 3)",
+        "franchise_id": "0009"
+      },
+      {
+        "id": "208",
+        "amount": "4235000.00",
+        "description": "Dropped Nelson, Jordy GBP WR (Salary: $8,470,000, Years: 1)",
+        "timestamp": "1450813198",
+        "franchise_id": "0009"
+      },
+      {
+        "id": "209",
+        "amount": "2262500.00",
+        "description": "Dropped Cutler, Jay CHI QB (Salary: $4,525,000, Years: 1)",
+        "timestamp": "1450813269",
+        "franchise_id": "0009"
+      },
+      {
+        "timestamp": "1439422556",
+        "description": "Dropped Kerley, Jeremy NYJ WR (Salary: $514,250, Years: 2)",
         "franchise_id": "0007",
-        "timestamp": "1439781130",
-        "description": "Draft prep",
+        "amount": "257125.00",
+        "id": "21"
+      },
+      {
+        "franchise_id": "0013",
+        "timestamp": "1450831976",
+        "description": "Dropped Woods, Robert BUF WR (Salary: $1,391,500, Years: 3)",
+        "id": "210",
+        "amount": "695750.00"
+      },
+      {
+        "timestamp": "1450833374",
+        "franchise_id": "0013",
+        "description": "Dropped Gresham, Jermaine ARI TE (Salary: $425,000, Years: 3)",
+        "id": "211",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1450833374",
+        "description": "Dropped Browns, Cleveland CLE Def (Salary: $605,000, Years: 1)",
+        "franchise_id": "0013",
+        "amount": "302500.00",
+        "id": "212"
+      },
+      {
+        "description": "Dropped Bolden, Brandon NEP RB (Salary: $3,700,000, Years: 1)",
+        "timestamp": "1450926011",
+        "franchise_id": "0008",
+        "id": "213",
+        "amount": "1850000.00"
+      },
+      {
+        "description": "Dropped Blackmon, Justin JAC WR (Salary: $575,000, Years: 2)",
+        "timestamp": "1450930085",
+        "franchise_id": "0012",
+        "id": "214",
+        "amount": "287500.00"
+      },
+      {
+        "timestamp": "1451235433",
+        "franchise_id": "0011",
+        "description": "Dropped Todman, Jordan PIT RB (Salary: $425,000, Years: 1)",
+        "id": "215",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "2420000.00",
+        "id": "216",
+        "timestamp": "1451406554",
+        "description": "Dropped Rivers, Philip SDC QB (Salary: $4,840,000, Years: 1)",
+        "franchise_id": "0011"
+      },
+      {
+        "timestamp": "1451406554",
+        "description": "Dropped Williams, DeAngelo PIT RB (Salary: $1,200,000, Years: 1)",
+        "franchise_id": "0011",
+        "amount": "600000.00",
+        "id": "217"
+      },
+      {
+        "description": "Dropped Bryant, Dez DAL WR (Salary: $10,500,000, Years: 1)",
+        "timestamp": "1451406554",
+        "franchise_id": "0011",
+        "amount": "5250000.00",
+        "id": "218"
+      },
+      {
+        "description": "Dropped Cotchery, Jerricho CAR WR (Salary: $425,000, Years: 1)",
+        "timestamp": "1451406554",
+        "franchise_id": "0011",
+        "id": "219",
+        "amount": "212500.00"
+      },
+      {
+        "id": "22",
+        "amount": "233750.00",
+        "description": "Dropped Wright, James CIN WR (Salary: $467,500, Years: 2)",
+        "timestamp": "1439422556",
+        "franchise_id": "0007"
+      },
+      {
+        "timestamp": "1451406606",
+        "franchise_id": "0011",
+        "description": "Dropped Floyd, Malcom SDC WR (Salary: $625,000, Years: 1)",
+        "amount": "312500.00",
+        "id": "220"
+      },
+      {
+        "id": "221",
+        "amount": "225000.00",
+        "franchise_id": "0011",
+        "timestamp": "1451406606",
+        "description": "Dropped Daniels, Owen DEN TE (Salary: $450,000, Years: 1)"
+      },
+      {
+        "timestamp": "1451406606",
+        "description": "Dropped Miller, Heath PIT TE (Salary: $1,000,000, Years: 1)",
+        "franchise_id": "0011",
+        "id": "222",
+        "amount": "500000.00"
+      },
+      {
+        "timestamp": "1451406606",
+        "franchise_id": "0011",
+        "description": "Dropped Watson, Ben NOS TE (Salary: $1,500,000, Years: 1)",
+        "id": "223",
+        "amount": "750000.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "224",
+        "timestamp": "1451406632",
+        "franchise_id": "0011",
+        "description": "Dropped Brown, Josh NYG PK (Salary: $425,000, Years: 1)"
+      },
+      {
+        "franchise_id": "0009",
+        "timestamp": "1451406848",
+        "description": "Dropped Kroft, Tyler CIN TE (Salary: $425,000, Years: 1)",
+        "id": "225",
+        "amount": "212500.00"
+      },
+      {
+        "description": "Dropped Myers, Jason JAC PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1451406848",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "226"
+      },
+      {
+        "timestamp": "1451429704",
+        "description": "Dropped Ryan, Matt ATL QB (Salary: $1,625,000, Years: 1)",
+        "franchise_id": "0008",
+        "id": "227",
+        "amount": "812500.00"
+      },
+      {
+        "id": "228",
+        "amount": "212500.00",
+        "franchise_id": "0008",
+        "timestamp": "1451429704",
+        "description": "Dropped Yates, T.J. HOU QB (Salary: $425,000, Years: 1)"
+      },
+      {
+        "franchise_id": "0008",
+        "timestamp": "1451429704",
+        "description": "Dropped White, James NEP RB (Salary: $3,025,000, Years: 1)",
+        "amount": "1512500.00",
+        "id": "229"
+      },
+      {
+        "id": "23",
+        "amount": "257125.00",
+        "description": "Dropped Toilolo, Levine ATL TE (Salary: $514,250, Years: 3)",
+        "timestamp": "1439422556",
+        "franchise_id": "0007"
+      },
+      {
+        "amount": "1730300.00",
+        "id": "230",
+        "timestamp": "1451442177",
+        "description": "Dropped Griffin III, Robert WAS QB (Salary: $3,460,600, Years: 2)",
+        "franchise_id": "0003"
+      },
+      {
+        "id": "231",
+        "amount": "500000.00",
+        "description": "Dropped Schaub, Matt BAL QB (Salary: $1,000,000, Years: 1)",
+        "timestamp": "1451442177",
+        "franchise_id": "0003"
+      },
+      {
+        "amount": "233750.00",
+        "id": "232",
+        "timestamp": "1451442177",
+        "description": "Dropped Gaffney, Tyler NEP RB (Salary: $467,500, Years: 4)",
+        "franchise_id": "0003"
+      },
+      {
+        "amount": "212500.00",
+        "id": "233",
+        "timestamp": "1451442177",
+        "franchise_id": "0003",
+        "description": "Dropped McCluster, Dexter TEN RB (Salary: $425,000, Years: 1)"
+      },
+      {
+        "id": "234",
+        "amount": "1000000.00",
+        "description": "Dropped Harvin, Percy BUF WR (Salary: $2,000,000, Years: 1)",
+        "timestamp": "1451442177",
+        "franchise_id": "0003"
+      },
+      {
+        "timestamp": "1451442177",
+        "franchise_id": "0003",
+        "description": "Dropped Johnson, Calvin DET WR (Salary: $16,500,000, Years: 2)",
+        "id": "235",
+        "amount": "8250000.00"
+      },
+      {
+        "amount": "233750.00",
+        "id": "236",
+        "timestamp": "1451442177",
+        "description": "Dropped Street, Devin DAL WR (Salary: $467,500, Years: 4)",
+        "franchise_id": "0003"
+      },
+      {
+        "description": "Dropped Davis, Vernon DEN TE (Salary: $2,000,000, Years: 1)",
+        "timestamp": "1451442177",
+        "franchise_id": "0003",
+        "id": "237",
+        "amount": "1000000.00"
+      },
+      {
+        "description": "Dropped Bryant, Matt ATL PK (Salary: $500,000, Years: 1)",
+        "timestamp": "1451442177",
+        "franchise_id": "0003",
+        "amount": "250000.00",
         "id": "238"
       },
       {
+        "timestamp": "1451442177",
+        "description": "Dropped Gould, Robbie CHI PK (Salary: $425,000, Years: 1)",
+        "franchise_id": "0003",
         "id": "239",
-        "amount": "-37.50",
-        "franchise_id": "0001",
-        "timestamp": "1439781217",
-        "description": "Draft prep"
+        "amount": "212500.00"
       },
       {
-        "description": "AP got picked up",
-        "timestamp": "1412817209",
         "franchise_id": "0007",
-        "amount": "-12.25",
-        "id": "24"
+        "timestamp": "1439422556",
+        "description": "Dropped Bengals, Cincinnati CIN Def (Salary: $852,500, Years: 2)",
+        "id": "24",
+        "amount": "426250.00"
       },
       {
         "id": "240",
-        "amount": "-35.25",
-        "franchise_id": "0002",
-        "timestamp": "1439781400",
-        "description": "Draft prep"
+        "amount": "425000.00",
+        "timestamp": "1451448241",
+        "franchise_id": "0016",
+        "description": "Dropped Brown, Bryce SEA RB (Salary: $850,000, Years: 1)"
       },
       {
-        "amount": "-42.50",
-        "timestamp": "1439781400",
-        "franchise_id": "0004",
-        "description": "Draft Prep",
-        "id": "241"
+        "id": "241",
+        "amount": "1925000.00",
+        "timestamp": "1451448241",
+        "description": "Dropped Gore, Frank IND RB (Salary: $3,850,000, Years: 1)",
+        "franchise_id": "0016"
       },
       {
         "id": "242",
-        "timestamp": "1439781400",
-        "description": "Draft prep",
-        "franchise_id": "0005",
-        "amount": "-26.00"
+        "amount": "625000.00",
+        "description": "Dropped Jennings, Rashad NYG RB (Salary: $1,250,000, Years: 1)",
+        "timestamp": "1451448241",
+        "franchise_id": "0016"
       },
       {
+        "amount": "275000.00",
         "id": "243",
-        "timestamp": "1439781400",
-        "description": "Draft prep",
-        "franchise_id": "0006",
-        "amount": "-36.25"
+        "description": "Dropped Powell, Bilal NYJ RB (Salary: $550,000, Years: 1)",
+        "timestamp": "1451448241",
+        "franchise_id": "0016"
       },
       {
         "id": "244",
-        "franchise_id": "0009",
-        "timestamp": "1439781400",
-        "description": "Draft prep",
-        "amount": "-44.75"
+        "amount": "1762500.00",
+        "timestamp": "1451448241",
+        "franchise_id": "0016",
+        "description": "Dropped Jackson, Vincent TBB WR (Salary: $3,525,000, Years: 1)"
       },
       {
-        "amount": "17.00",
-        "description": "Dropped Brady, Tom NEP QB (Salary: $34.00, Contract: O - $18, Contract: 1, Status: C)",
-        "timestamp": "1439813761",
-        "franchise_id": "0012",
-        "id": "245"
+        "amount": "212500.00",
+        "id": "245",
+        "timestamp": "1451448241",
+        "description": "Dropped Washington, Nate HOU WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0016"
       },
       {
+        "timestamp": "1451522552",
+        "description": "Dropped Rudolph, Kyle MIN TE (Salary: $3,500,000, Years: 1)",
+        "franchise_id": "0003",
         "id": "246",
-        "franchise_id": "0012",
-        "timestamp": "1439813761",
-        "description": "Dropped Foster, Arian HOU RB (Salary: $6.00, Contract: 2, Status: C)",
-        "amount": "3.00"
+        "amount": "1750000.00"
       },
       {
-        "amount": "2.50",
-        "franchise_id": "0012",
-        "timestamp": "1439813761",
-        "description": "Dropped Mason, Tre STL RB (Salary: $5.00, Contract: 1, Status: R)",
-        "id": "247"
+        "id": "247",
+        "amount": "312500.00",
+        "description": "Dropped Steelers, Pittsburgh PIT Def (Salary: $625,000, Years: 1)",
+        "timestamp": "1451522552",
+        "franchise_id": "0003"
       },
       {
+        "amount": "257125.00",
         "id": "248",
-        "amount": "0.50",
-        "timestamp": "1439813761",
-        "description": "Dropped McKinnon, Jerick MIN RB (Salary: $1.00, Contract: 1, Status: R)",
-        "franchise_id": "0012"
+        "description": "Dropped Texans, Houston HOU Def (Salary: $514,250, Years: 1)",
+        "timestamp": "1451522552",
+        "franchise_id": "0003"
       },
       {
+        "description": "Dropped Flacco, Joe BAL QB (Salary: $2,750,000, Years: 3)",
+        "timestamp": "1451523049",
+        "franchise_id": "0003",
         "id": "249",
-        "amount": "2.00",
-        "timestamp": "1439813761",
-        "description": "Dropped West, Terrance CLE RB (Salary: $4.00, Contract: 1, Status: R)",
-        "franchise_id": "0012"
+        "amount": "1375000.00"
       },
       {
+        "timestamp": "1439607421",
+        "franchise_id": "0016",
+        "description": "Dropped Redd, Silas WAS RB (Salary: $425,000, Years: 4)",
         "id": "25",
-        "description": "Dropped Moreno, Knowshon MIA RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1413303370",
-        "franchise_id": "0007",
-        "amount": "0.50"
+        "amount": "212500.00"
       },
       {
         "id": "250",
-        "amount": "-42.50",
-        "timestamp": "1439818766",
-        "franchise_id": "0012",
-        "description": "Draft prep"
+        "amount": "311121.25",
+        "franchise_id": "0008",
+        "timestamp": "1451601163",
+        "description": "Dropped Kaepernick, Colin SFO QB (Salary: $622,242, Years: 1)"
       },
       {
+        "amount": "750000.00",
         "id": "251",
-        "timestamp": "1439822514",
-        "description": "Dropped Ball, Montee DEN RB (Salary: $9.00, Contract: 2, Status: C)",
-        "franchise_id": "0001",
-        "amount": "4.50"
+        "timestamp": "1451952670",
+        "description": "Dropped Darkwa, Orleans NYG RB (Salary: $1,500,000, Years: 1)",
+        "franchise_id": "0014"
       },
       {
-        "id": "252",
-        "amount": "0.25",
-        "franchise_id": "0007",
-        "timestamp": "1439823475",
-        "description": "Dropped Hillman, Ronnie DEN RB (Salary: $0.50, Contract: 1, Status: FA)"
+        "timestamp": "1451952670",
+        "franchise_id": "0014",
+        "description": "Dropped Dyer, Michael FA RB (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
+        "id": "252"
       },
       {
-        "amount": "0.50",
-        "franchise_id": "0007",
-        "timestamp": "1439823475",
-        "description": "Dropped Rainey, Bobby TBB RB (Salary: $1.00, Contract: 1, Status: FA)",
-        "id": "253"
+        "timestamp": "1451952670",
+        "franchise_id": "0014",
+        "description": "Dropped Foster, Arian HOU RB (Salary: $6,820,000, Years: 1)",
+        "id": "253",
+        "amount": "3410000.00"
       },
       {
-        "amount": "0.50",
-        "description": "Dropped Sims, Charles TBB RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1439823850",
-        "franchise_id": "0007",
-        "id": "254"
+        "amount": "247500.00",
+        "id": "254",
+        "franchise_id": "0014",
+        "timestamp": "1451952670",
+        "description": "Dropped Austin, Miles FA WR (Salary: $495,000, Years: 2)"
       },
       {
+        "amount": "400000.00",
         "id": "255",
-        "amount": "2.00",
-        "timestamp": "1439823935",
-        "description": "Dropped Gostkowski, Stephen NEP PK (Salary: $4.00, Contract: 3, Status: C)",
-        "franchise_id": "0004"
+        "description": "Dropped Royal, Eddie CHI WR (Salary: $800,000, Years: 1)",
+        "timestamp": "1451952670",
+        "franchise_id": "0014"
       },
       {
+        "timestamp": "1451952670",
+        "description": "Dropped White, Roddy ATL WR (Salary: $4,000,000, Years: 1)",
+        "franchise_id": "0014",
         "id": "256",
-        "timestamp": "1439824412",
-        "franchise_id": "0004",
-        "description": "Draft prep",
-        "amount": "-2.00"
+        "amount": "2000000.00"
       },
       {
-        "franchise_id": "0007",
-        "timestamp": "1439824412",
-        "description": "Draft prep",
-        "amount": "-1.25",
-        "id": "257"
+        "franchise_id": "0014",
+        "timestamp": "1451952670",
+        "description": "Dropped Hopkins, Dustin WAS PK (Salary: $425,000, Years: 1)",
+        "id": "257",
+        "amount": "212500.00"
       },
       {
+        "franchise_id": "0014",
+        "timestamp": "1451952670",
+        "description": "Dropped Tucker, Justin BAL PK (Salary: $847,000, Years: 1)",
         "id": "258",
-        "description": "Draft Prep",
-        "timestamp": "1439824435",
-        "franchise_id": "0001",
-        "amount": "-4.50"
+        "amount": "423500.00"
       },
       {
+        "description": "Dropped Vikings, Minnesota MIN Def (Salary: $425,000, Years: 1)",
+        "timestamp": "1451952670",
+        "franchise_id": "0014",
         "id": "259",
-        "amount": "0.25",
-        "description": "Dropped Spiller, C.J. NOS RB (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1440267100",
-        "franchise_id": "0010"
+        "amount": "212500.00"
       },
       {
+        "timestamp": "1439607421",
+        "description": "Dropped Blackmon, Justin JAC WR (Salary: $715,000, Years: 4)",
+        "franchise_id": "0016",
         "id": "26",
+        "amount": "357500.00"
+      },
+      {
+        "description": "Dropped Henne, Chad JAC QB (Salary: $514,250, Years: 3)",
+        "timestamp": "1451967257",
         "franchise_id": "0007",
-        "timestamp": "1414026030",
-        "description": "Dropped Dobson, Aaron NEP WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
+        "id": "260",
+        "amount": "257125.00"
       },
       {
-        "amount": "-0.25",
-        "timestamp": "1440713374",
-        "description": "Draft adjustment",
-        "franchise_id": "0010",
-        "id": "260"
+        "amount": "1750000.00",
+        "id": "261",
+        "timestamp": "1451967257",
+        "description": "Dropped Bell, Joique DET RB (Salary: $3,500,000, Years: 3)",
+        "franchise_id": "0007"
       },
       {
-        "timestamp": "1441839367",
-        "description": "Dropped Williams, Maxx BAL TE (Salary: $4.00, Contract: 1, Status: R)",
-        "franchise_id": "0001",
-        "amount": "2.00",
-        "id": "261"
-      },
-      {
-        "timestamp": "1441839367",
-        "franchise_id": "0009",
-        "description": "Dropped Barth, Connor FA* PK (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
+        "timestamp": "1451967257",
+        "franchise_id": "0007",
+        "description": "Dropped Thomas, Pierre WAS RB (Salary: $3,500,000, Years: 1)",
+        "amount": "1750000.00",
         "id": "262"
       },
       {
+        "amount": "275000.00",
         "id": "263",
-        "amount": "0.50",
-        "description": "Dropped Cowboys, Dallas DAL Def (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1441839367",
-        "franchise_id": "0012"
+        "description": "Dropped Moore, Lance DET WR (Salary: $550,000, Years: 1)",
+        "timestamp": "1451967257",
+        "franchise_id": "0007"
       },
       {
-        "id": "264",
-        "amount": "0.50",
-        "timestamp": "1441839367",
-        "franchise_id": "0012",
-        "description": "Dropped Gray, Jonas FA* RB (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "265",
-        "amount": "4.00",
-        "timestamp": "1442379341",
-        "description": "Dropped Jackson, DeSean WAS WR (Salary: $8.00, Contract: 1, Status: C)",
-        "franchise_id": "0008"
-      },
-      {
-        "id": "266",
+        "timestamp": "1451967257",
         "franchise_id": "0007",
-        "timestamp": "1442521495",
-        "description": "Dropped Herron, Dan FA RB (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
+        "description": "Dropped Giants, New York NYG Def (Salary: $907,500, Years: 1)",
+        "amount": "453750.00",
+        "id": "264"
       },
       {
-        "franchise_id": "0012",
-        "timestamp": "1442521495",
-        "description": "Dropped Colts, Indianapolis IND Def (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
+        "timestamp": "1452445253",
+        "description": "Dropped Clausen, Jimmy BAL QB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0013",
+        "id": "265",
+        "amount": "212500.00"
+      },
+      {
+        "description": "Dropped Gabbert, Blaine SFO QB (Salary: $1,000,000, Years: 1)",
+        "timestamp": "1452445253",
+        "franchise_id": "0013",
+        "id": "266",
+        "amount": "500000.00"
+      },
+      {
+        "description": "Dropped Smith, Geno NYJ QB (Salary: $514,250, Years: 3)",
+        "timestamp": "1452445253",
+        "franchise_id": "0013",
+        "amount": "257125.00",
         "id": "267"
       },
       {
-        "amount": "4.50",
-        "franchise_id": "0008",
-        "timestamp": "1442949048",
-        "description": "Dropped Agholor, Nelson PHI WR (Salary: $9.00, Contract: 1, Status: R)",
-        "id": "268"
+        "amount": "375000.00",
+        "id": "268",
+        "timestamp": "1452445253",
+        "description": "Dropped Andrews, Antonio TEN RB (Salary: $750,000, Years: 5)",
+        "franchise_id": "0013"
       },
       {
-        "amount": "4.50",
-        "description": "Dropped Blue, Alfred HOU RB (Salary: $9.00, Contract: 1, Status: C)",
-        "timestamp": "1443039782",
-        "franchise_id": "0008",
+        "franchise_id": "0013",
+        "timestamp": "1452445253",
+        "description": "Dropped Mostert, Raheem CLE RB (Salary: $425,000, Years: 5)",
+        "amount": "212500.00",
         "id": "269"
       },
       {
-        "amount": "0.50",
-        "franchise_id": "0007",
-        "timestamp": "1415157881",
-        "description": "Dropped Paul, Niles WAS TE (Salary: $1.00, Contract: 1, Status: FA)",
-        "id": "27"
+        "timestamp": "1439607777",
+        "franchise_id": "0006",
+        "description": "Dropped Williams, Kerwynn ARI RB (Salary: $467,500, Years: 4)",
+        "id": "27",
+        "amount": "233750.00"
       },
       {
+        "amount": "212500.00",
         "id": "270",
-        "amount": "0.50",
-        "timestamp": "1443062277",
-        "franchise_id": "0012",
-        "description": "Dropped Cutler, Jay CHI QB (Salary: $1.00, Contract: 1, Status: C)"
+        "timestamp": "1452445253",
+        "description": "Dropped Oliver, Branden SDC RB (Salary: $425,000, Years: 4)",
+        "franchise_id": "0013"
       },
       {
+        "amount": "250000.00",
         "id": "271",
-        "amount": "0.50",
-        "timestamp": "1443062277",
-        "description": "Dropped Floyd, Michael ARI WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0012"
+        "description": "Dropped Ginn Jr., Ted CAR WR (Salary: $500,000, Years: 1)",
+        "timestamp": "1452445253",
+        "franchise_id": "0013"
       },
       {
-        "id": "272",
-        "timestamp": "1443648331",
-        "description": "Dropped Oliver, Branden SDC RB (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0007",
-        "amount": "0.50"
+        "description": "Dropped Maclin, Jeremy KCC WR (Salary: $3,850,000, Years: 4)",
+        "timestamp": "1452445253",
+        "franchise_id": "0013",
+        "amount": "1925000.00",
+        "id": "272"
       },
       {
+        "timestamp": "1452445253",
+        "franchise_id": "0013",
+        "description": "Dropped Smith, Torrey SFO WR (Salary: $600,000, Years: 1)",
         "id": "273",
-        "franchise_id": "0012",
-        "timestamp": "1443648331",
-        "description": "Dropped Titans, Tennessee TEN Def (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25"
+        "amount": "300000.00"
       },
       {
-        "amount": "2.00",
-        "description": "Dropped Colston, Marques NOS WR (Salary: $4.00, Contract: 1, Status: C)",
-        "timestamp": "1443648331",
-        "franchise_id": "0012",
-        "id": "274"
+        "timestamp": "1452813788",
+        "description": "Dropped Sproles, Darren PHI RB (Salary: $850,000, Years: 1)",
+        "franchise_id": "0006",
+        "id": "274",
+        "amount": "425000.00"
       },
       {
-        "id": "275",
-        "franchise_id": "0012",
-        "timestamp": "1444328454",
-        "description": "Dropped Prater, Matt DET PK (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
+        "timestamp": "1452813788",
+        "description": "Dropped Thompson, Juwan DEN RB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0006",
+        "amount": "212500.00",
+        "id": "275"
       },
       {
-        "amount": "0.25",
-        "franchise_id": "0008",
-        "timestamp": "1444746370",
-        "description": "Dropped Hocker, Zach NOS PK (Salary: $0.50, Contract: 1, Status: C)",
-        "id": "276"
+        "description": "Dropped Thomas, Demaryius DEN WR (Salary: $10,250,000, Years: 1)",
+        "timestamp": "1452813788",
+        "franchise_id": "0006",
+        "id": "276",
+        "amount": "5125000.00"
       },
       {
+        "description": "Dropped Barth, Connor TBB PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1452813788",
+        "franchise_id": "0006",
         "id": "277",
-        "timestamp": "1444787730",
-        "description": "Dropped Hayne, Jarryd SFO RB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "amount": "1.00"
+        "amount": "212500.00"
       },
       {
-        "timestamp": "1444787730",
-        "description": "Dropped Johnson, Charles MIN WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "amount": "0.50",
-        "id": "278"
+        "amount": "212500.00",
+        "id": "278",
+        "description": "Dropped Williams, Trey IND RB (Salary: $425,000, Years: 5)",
+        "timestamp": "1452815204",
+        "franchise_id": "0014"
       },
       {
-        "description": "Dropped Hill, Josh NOS TE (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1444787730",
-        "franchise_id": "0011",
-        "amount": "0.50",
-        "id": "279"
+        "id": "279",
+        "amount": "300000.00",
+        "timestamp": "1452815204",
+        "franchise_id": "0014",
+        "description": "Dropped Dobson, Aaron NEP WR (Salary: $600,000, Years: 4)"
       },
       {
         "id": "28",
-        "timestamp": "1415157881",
-        "franchise_id": "0007",
-        "description": "Dropped Quick, Brian STL WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
+        "amount": "247500.00",
+        "franchise_id": "0006",
+        "timestamp": "1439607777",
+        "description": "Dropped Harris, Demetrius KCC TE (Salary: $495,000, Years: 4)"
       },
       {
+        "timestamp": "1453081859",
+        "description": "Dropped Murphy, Marcus NOS RB (Salary: $425,000, Years: 4)",
+        "franchise_id": "0006",
         "id": "280",
-        "timestamp": "1444871689",
-        "description": "Dropped Wheaton, Markus PIT WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0007",
-        "amount": "0.50"
+        "amount": "212500.00"
       },
       {
-        "franchise_id": "0012",
-        "timestamp": "1444871689",
-        "description": "Dropped Royal, Eddie CHI WR (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "281"
+        "amount": "357500.00",
+        "id": "281",
+        "timestamp": "1453081859",
+        "franchise_id": "0006",
+        "description": "Dropped Patriots, New England NEP Def (Salary: $715,000, Years: 1)"
       },
       {
-        "franchise_id": "0012",
-        "timestamp": "1445025007",
-        "description": "Salary adjusmtent for trade",
-        "amount": "-0.25",
+        "timestamp": "1453084255",
+        "franchise_id": "0016",
+        "description": "Dropped Rainey, Bobby TBB RB (Salary: $605,000, Years: 3)",
+        "amount": "302500.00",
         "id": "282"
       },
       {
-        "id": "283",
-        "description": "Adjustment for trade",
-        "timestamp": "1445025050",
-        "franchise_id": "0012",
-        "amount": "0.50"
+        "franchise_id": "0016",
+        "timestamp": "1453084255",
+        "description": "Dropped Cooper, Riley PHI WR (Salary: $775,000, Years: 3)",
+        "amount": "387500.00",
+        "id": "283"
       },
       {
-        "id": "284",
-        "timestamp": "1445025170",
-        "description": "adjustment for trade",
-        "franchise_id": "0012",
-        "amount": "0.25"
+        "description": "Dropped Herron, Dan IND RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1453094974",
+        "franchise_id": "0001",
+        "amount": "212500.00",
+        "id": "284"
       },
       {
-        "timestamp": "1445025210",
-        "franchise_id": "0012",
-        "description": "adjustment for trade",
-        "amount": "-0.50",
-        "id": "285"
+        "id": "285",
+        "amount": "550000.00",
+        "timestamp": "1453094974",
+        "description": "Dropped Hightower, Tim NOS RB (Salary: $1,100,000, Years: 1)",
+        "franchise_id": "0001"
       },
       {
+        "amount": "212500.00",
         "id": "286",
-        "franchise_id": "0012",
-        "timestamp": "1445488198",
-        "description": "Dropped Cameron, Jordan MIA TE (Salary: $4.00, Contract: 1, Status: C)",
-        "amount": "2.00"
+        "franchise_id": "0001",
+        "timestamp": "1453094974",
+        "description": "Dropped Harris, Dwayne NYG WR (Salary: $425,000, Years: 1)"
       },
       {
+        "amount": "247500.00",
         "id": "287",
-        "description": "Dropped Adams, Davante GBP WR (Salary: $5.00, Contract: 1, Status: C)",
-        "timestamp": "1445533787",
-        "franchise_id": "0002",
-        "amount": "2.50"
+        "franchise_id": "0001",
+        "timestamp": "1453094974",
+        "description": "Dropped LaFell, Brandon NEP WR (Salary: $495,000, Years: 1)"
       },
       {
-        "description": "Dropped White, Kevin CHI WR (Salary: $4.00, Contract: 1, Status: R)",
-        "timestamp": "1446001768",
-        "franchise_id": "0010",
-        "amount": "2.00",
-        "id": "288"
+        "amount": "233750.00",
+        "id": "288",
+        "description": "Dropped Cowboys, Dallas DAL Def (Salary: $467,500, Years: 4)",
+        "timestamp": "1453173713",
+        "franchise_id": "0009"
       },
       {
         "id": "289",
-        "franchise_id": "0007",
-        "timestamp": "1446094021",
-        "description": "Dropped Spiller, C.J. NOS RB (Salary: $15.00, Contract: 2, Status: C)",
-        "amount": "7.50"
+        "amount": "275000.00",
+        "timestamp": "1453173713",
+        "description": "Dropped Jaguars, Jacksonville JAC Def (Salary: $550,000, Years: 2)",
+        "franchise_id": "0009"
       },
       {
-        "timestamp": "1415851719",
-        "description": "Dropped Fitzpatrick, Ryan HOU QB (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0007",
-        "amount": "0.25",
-        "id": "29"
+        "id": "29",
+        "amount": "212500.00",
+        "description": "Dropped Farmer, George DAL WR (Salary: $425,000, Years: 5)",
+        "timestamp": "1439613323",
+        "franchise_id": "0009"
       },
       {
         "id": "290",
-        "amount": "1.00",
-        "timestamp": "1446559811",
-        "description": "Dropped Bush, Reggie SFO RB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0010"
-      },
-      {
-        "id": "291",
-        "amount": "5.50",
-        "timestamp": "1446738730",
-        "franchise_id": "0006",
-        "description": "Dropped Tate, Golden DET WR (Salary: $11.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "292",
-        "amount": "0.25",
-        "description": "Dropped Catanzaro, Chandler ARI PK (Salary: $0.50, Contract: 1, Status: C)",
-        "timestamp": "1446738730",
+        "amount": "212500.00",
+        "timestamp": "1453425846",
+        "description": "Dropped Coleman, Brandon NOS WR (Salary: $425,000, Years: 1)",
         "franchise_id": "0012"
       },
       {
-        "amount": "7.50",
-        "timestamp": "1446738900",
-        "franchise_id": "0007",
-        "description": "CJ Spiller got picked up",
-        "id": "293"
+        "amount": "212500.00",
+        "id": "291",
+        "timestamp": "1453425846",
+        "franchise_id": "0012",
+        "description": "Dropped Hartline, Brian CLE WR (Salary: $425,000, Years: 1)"
+      },
+      {
+        "amount": "212500.00",
+        "id": "292",
+        "description": "Dropped Buccaneers, Tampa Bay TBB Def (Salary: $425,000, Years: 1)",
+        "timestamp": "1453425846",
+        "franchise_id": "0012"
+      },
+      {
+        "timestamp": "1454345209",
+        "franchise_id": "0004",
+        "description": "Dropped Cassel, Matt DAL QB (Salary: $700,000, Years: 1)",
+        "id": "293",
+        "amount": "350000.00"
       },
       {
         "id": "294",
-        "amount": "-15.00",
-        "timestamp": "1446738956",
-        "description": "CJ Spiller added adjustment",
-        "franchise_id": "0007"
+        "amount": "7512500.00",
+        "timestamp": "1454345209",
+        "description": "Dropped Charles, Jamaal KCC RB (Salary: $15,025,000, Years: 1)",
+        "franchise_id": "0004"
       },
       {
-        "franchise_id": "0012",
-        "timestamp": "1447339394",
-        "description": "Dropped Folk, Nick NYJ PK (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "295"
-      },
-      {
+        "description": "Dropped Amendola, Danny NEP WR (Salary: $450,000, Years: 1)",
+        "timestamp": "1454345209",
         "franchise_id": "0004",
-        "timestamp": "1447856437",
-        "description": "Dropped Kaepernick, Colin SFO QB (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
+        "id": "295",
+        "amount": "225000.00"
+      },
+      {
+        "description": "Dropped Lambo, Josh SDC PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1454345209",
+        "franchise_id": "0004",
+        "amount": "212500.00",
         "id": "296"
       },
       {
+        "amount": "275000.00",
         "id": "297",
+        "timestamp": "1454345209",
+        "description": "Dropped Bears, Chicago CHI Def (Salary: $550,000, Years: 1)",
+        "franchise_id": "0004"
+      },
+      {
         "franchise_id": "0004",
-        "timestamp": "1447856437",
-        "description": "Dropped Helu, Roy OAK RB (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25"
+        "timestamp": "1454345284",
+        "description": "Dropped Mallett, Ryan BAL QB (Salary: $1,000,000, Years: 3)",
+        "amount": "500000.00",
+        "id": "298"
       },
       {
-        "id": "298",
-        "description": "Dropped Michael, Christine FA RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1447867026",
-        "franchise_id": "0007",
-        "amount": "0.50"
-      },
-      {
+        "amount": "1300000.00",
         "id": "299",
-        "franchise_id": "0001",
-        "timestamp": "1447869537",
-        "description": "Adjust due to trade",
-        "amount": "9.00"
+        "timestamp": "1454345284",
+        "franchise_id": "0004",
+        "description": "Dropped Colston, Marques NOS WR (Salary: $2,600,000, Years: 2)"
       },
       {
-        "id": "3",
-        "amount": "8.50",
-        "timestamp": "1413999516",
-        "franchise_id": "0003",
-        "description": "Dropped Spiller, C.J. BUF RB (Salary: $17.00, Contract: 1, Status: C)"
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "franchise_id": "0004",
+        "amount": "2637789.00",
+        "id": "3"
       },
       {
+        "amount": "212500.00",
         "id": "30",
-        "amount": "0.25",
-        "timestamp": "1416978091",
-        "description": "Dropped Mallett, Ryan HOU QB (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0007"
+        "description": "Dropped Whitehurst, Charlie TEN QB (Salary: $425,000, Years: 1)",
+        "timestamp": "1439619271",
+        "franchise_id": "0015"
       },
       {
-        "timestamp": "1447869576",
-        "description": "trade adjustment",
-        "franchise_id": "0001",
-        "amount": "-17.00",
-        "id": "300"
+        "id": "300",
+        "amount": "1361250.00",
+        "description": "Dropped Manning, Eli NYG QB (Salary: $2,722,500, Years: 1)",
+        "timestamp": "1454482311",
+        "franchise_id": "0001"
       },
       {
+        "amount": "4550000.00",
         "id": "301",
-        "franchise_id": "0010",
-        "timestamp": "1447872086",
-        "description": "Dropped Cruz, Victor NYG WR (Salary: $5.00, Contract: 1, Status: C)",
-        "amount": "2.50"
+        "timestamp": "1454482311",
+        "franchise_id": "0001",
+        "description": "Dropped Sanders, Emmanuel DEN WR (Salary: $9,100,000, Years: 1)"
       },
       {
-        "description": "Dropped Perriman, Breshad BAL WR (Salary: $5.00, Contract: 1, Status: R)",
-        "timestamp": "1447906985",
-        "franchise_id": "0012",
-        "amount": "2.50",
+        "timestamp": "1454482311",
+        "description": "Dropped Bailey, Dan DAL PK (Salary: $605,000, Years: 1)",
+        "franchise_id": "0001",
+        "amount": "302500.00",
         "id": "302"
       },
       {
-        "amount": "1.00",
-        "franchise_id": "0006",
-        "timestamp": "1447907335",
-        "description": "Dropped Thomas, Pierre FA* RB (Salary: $2.00, Contract: 1, Status: C)",
-        "id": "303"
+        "amount": "434387.50",
+        "id": "303",
+        "timestamp": "1454486157",
+        "description": "Dropped Bills, Buffalo BUF Def (Salary: $868,775, Years: 1)",
+        "franchise_id": "0001"
       },
       {
         "id": "304",
-        "franchise_id": "0007",
-        "timestamp": "1447907335",
-        "description": "Dropped Ertz, Zach PHI TE (Salary: $3.00, Contract: 3, Status: C)",
-        "amount": "1.50"
+        "amount": "257125.00",
+        "description": "Dropped Eagles, Philadelphia PHI Def (Salary: $514,250, Years: 1)",
+        "timestamp": "1454486157",
+        "franchise_id": "0001"
       },
       {
-        "timestamp": "1448465498",
-        "description": "Dropped Forsett, Justin BAL RB (Salary: $10.00, Contract: 2, Status: C)",
-        "franchise_id": "0012",
-        "amount": "5.00",
-        "id": "305"
+        "id": "305",
+        "amount": "5190900.00",
+        "description": "Dropped Forte, Matt CHI RB (Salary: $10,381,800, Years: 1)",
+        "timestamp": "1454521138",
+        "franchise_id": "0015"
       },
       {
         "id": "306",
-        "amount": "0.50",
-        "timestamp": "1448484023",
-        "description": "Dropped Oliver, Branden SDC RB (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0008"
+        "amount": "600000.00",
+        "description": "Dropped Jackson, Fred SEA RB (Salary: $1,200,000, Years: 1)",
+        "timestamp": "1454521138",
+        "franchise_id": "0015"
       },
       {
-        "amount": "1.50",
-        "description": "Dropped Sproles, Darren PHI RB (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1448484023",
-        "franchise_id": "0008",
-        "id": "307"
+        "id": "307",
+        "amount": "212500.00",
+        "timestamp": "1454521138",
+        "franchise_id": "0015",
+        "description": "Dropped Johnson, Chris ARI RB (Salary: $425,000, Years: 1)"
       },
       {
-        "id": "308",
-        "timestamp": "1448484023",
-        "franchise_id": "0008",
-        "description": "Dropped Snead, Willie NOS WR (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00"
+        "franchise_id": "0015",
+        "timestamp": "1454521138",
+        "description": "Dropped Reece, Marcel OAK RB (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
+        "id": "308"
       },
       {
-        "amount": "1.00",
-        "timestamp": "1448484023",
-        "description": "Dropped Vinatieri, Adam IND PK (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0008",
+        "timestamp": "1454521138",
+        "description": "Dropped West, Charcandrick KCC RB (Salary: $3,425,000, Years: 1)",
+        "franchise_id": "0015",
+        "amount": "1712500.00",
         "id": "309"
       },
       {
         "id": "31",
-        "amount": "3.50",
-        "franchise_id": "0007",
-        "timestamp": "1416978091",
-        "description": "Dropped Brown, Bryce BUF RB (Salary: $7.00, Contract: 1, Status: C)"
+        "amount": "212500.00",
+        "timestamp": "1439619271",
+        "franchise_id": "0015",
+        "description": "Dropped Bradshaw, Ahmad FA* RB (Salary: $425,000, Years: 1)"
       },
       {
-        "id": "310",
-        "amount": "0.50",
+        "timestamp": "1454521138",
+        "franchise_id": "0015",
+        "description": "Dropped Baldwin, Doug SEA WR (Salary: $695,447, Years: 1)",
+        "amount": "347723.75",
+        "id": "310"
+      },
+      {
+        "id": "311",
+        "amount": "212500.00",
+        "franchise_id": "0015",
+        "timestamp": "1454521138",
+        "description": "Dropped Matthews, Rishard MIA WR (Salary: $425,000, Years: 1)"
+      },
+      {
+        "id": "312",
+        "amount": "262500.00",
+        "description": "Dropped Janikowski, Sebastian OAK PK (Salary: $525,000, Years: 1)",
+        "timestamp": "1454521138",
+        "franchise_id": "0015"
+      },
+      {
+        "timestamp": "1454549396",
+        "description": "Dropped Boswell, Chris PIT PK (Salary: $425,000, Years: 1)",
         "franchise_id": "0005",
-        "timestamp": "1448515218",
-        "description": "Dropped Saints, New Orleans NOS Def (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "description": "Dropped Robinson, Josh FA RB (Salary: $1.00, Contract: 1, Status: R)",
-        "timestamp": "1449094313",
-        "franchise_id": "0012",
-        "amount": "0.50",
-        "id": "311"
-      },
-      {
-        "amount": "3.00",
-        "timestamp": "1449686204",
-        "description": "Dropped Mason, Tre STL RB (Salary: $6.00, Contract: O-3, Contract: 1, Status: C)",
-        "franchise_id": "0009",
-        "id": "312"
-      },
-      {
         "id": "313",
-        "amount": "0.25",
-        "timestamp": "1449686204",
-        "franchise_id": "0009",
-        "description": "Dropped Miller, Heath PIT TE (Salary: $0.50, Contract: 1, Status: C)"
+        "amount": "212500.00"
       },
       {
-        "franchise_id": "0009",
-        "timestamp": "1449686204",
-        "description": "Dropped Giants, New York NYG Def (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25",
-        "id": "314"
+        "franchise_id": "0005",
+        "timestamp": "1454549396",
+        "description": "Dropped Bengals, Cincinnati CIN Def (Salary: $425,000, Years: 1)",
+        "id": "314",
+        "amount": "212500.00"
       },
       {
-        "amount": "0.25",
-        "description": "Dropped Barth, Connor TBB PK (Salary: $0.50, Contract: 1, Status: C)",
-        "timestamp": "1449756785",
-        "franchise_id": "0006",
-        "id": "315"
+        "id": "315",
+        "amount": "375000.00",
+        "franchise_id": "0005",
+        "timestamp": "1454549396",
+        "description": "Dropped Chiefs, Kansas City KCC Def (Salary: $750,000, Years: 1)"
       },
       {
-        "description": "Dropped Robinson, Khiry NOS RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1450127854",
-        "franchise_id": "0006",
-        "amount": "0.50",
-        "id": "316"
+        "description": "Dropped Williams, Kerwynn ARI RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1454549417",
+        "franchise_id": "0005",
+        "id": "316",
+        "amount": "212500.00"
       },
       {
-        "franchise_id": "0006",
-        "timestamp": "1450127883",
-        "description": "Dropped White, James NEP RB (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25",
-        "id": "317"
+        "timestamp": "1454618357",
+        "description": "Dropped Williams, Damien MIA RB (Salary: $660,000, Years: 3)",
+        "franchise_id": "0004",
+        "id": "317",
+        "amount": "330000.00"
       },
       {
+        "amount": "357500.00",
         "id": "318",
-        "amount": "4.00",
-        "timestamp": "1450941861",
-        "description": "Dropped Blue, Alfred HOU RB (Salary: $8.00, Contract: 1, Status: C)",
-        "franchise_id": "0007"
+        "description": "Dropped Starks, James GBP RB (Salary: $715,000, Years: 1)",
+        "timestamp": "1454623596",
+        "franchise_id": "0002"
       },
       {
-        "amount": "0.50",
-        "timestamp": "1450941861",
-        "description": "Dropped Sims, Charles TBB RB (Salary: $1.00, Contract: 2, Status: C)",
-        "franchise_id": "0007",
+        "timestamp": "1454623596",
+        "description": "Dropped Shorts, Cecil HOU WR (Salary: $1,098,075, Years: 1)",
+        "franchise_id": "0002",
+        "amount": "549037.50",
         "id": "319"
       },
       {
+        "timestamp": "1439619271",
+        "franchise_id": "0015",
+        "description": "Dropped Jones, T.J. DET WR (Salary: $467,500, Years: 4)",
         "id": "32",
-        "timestamp": "1417531525",
-        "franchise_id": "0007",
-        "description": "Dropped Oliver, Branden SDC RB (Salary: $8.00, Contract: 1, Status: FA)",
-        "amount": "4.00"
+        "amount": "233750.00"
       },
       {
-        "id": "320",
-        "amount": "2.00",
-        "description": "Dropped Bradford, Sam PHI QB (Salary: $4.00, Contract: 1, Status: C)",
-        "timestamp": "1450943606",
-        "franchise_id": "0007"
+        "description": "Dropped Rivera, Mychal OAK TE (Salary: $2,175,000, Years: 1)",
+        "timestamp": "1454623596",
+        "franchise_id": "0002",
+        "amount": "1087500.00",
+        "id": "320"
       },
       {
-        "timestamp": "1450943644",
-        "franchise_id": "0007",
-        "description": "Dropped Cutler, Jay CHI QB (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50",
-        "id": "321"
+        "timestamp": "1454623596",
+        "franchise_id": "0002",
+        "description": "Dropped Crosby, Mason GBP PK (Salary: $550,000, Years: 1)",
+        "id": "321",
+        "amount": "275000.00"
       },
       {
-        "timestamp": "1467405995",
-        "description": "Dropped Smith, Steve BAL WR (Salary: $4.00, Contract: 1, Status: C)",
-        "franchise_id": "0010",
-        "amount": "2.00",
-        "id": "322"
+        "timestamp": "1454623596",
+        "description": "Dropped Sturgis, Caleb PHI PK (Salary: $425,000, Years: 1)",
+        "franchise_id": "0002",
+        "id": "322",
+        "amount": "212500.00"
       },
       {
-        "amount": "0.50",
-        "franchise_id": "0010",
-        "timestamp": "1467405995",
-        "description": "Dropped Wright, Kendall TEN WR (Salary: $1.00, Contract: 1, Status: C)",
+        "description": "Dropped Abbrederis, Jared GBP WR (Salary: $425,000, Years: 4)",
+        "timestamp": "1454637066",
+        "franchise_id": "0006",
+        "amount": "212500.00",
         "id": "323"
       },
       {
+        "description": "Dropped Green, Virgil DEN TE (Salary: $467,500, Years: 4)",
+        "timestamp": "1454637066",
+        "franchise_id": "0006",
         "id": "324",
-        "amount": "0.25",
-        "franchise_id": "0010",
-        "timestamp": "1467405995",
-        "description": "Dropped Fells, Darren ARI TE (Salary: $0.50, Contract: 1, Status: C)"
+        "amount": "233750.00"
       },
       {
-        "amount": "0.25",
-        "franchise_id": "0010",
-        "timestamp": "1467405995",
-        "description": "Dropped Gillmore, Crockett BAL TE (Salary: $0.50, Contract: 1, Status: C)",
-        "id": "325"
-      },
-      {
-        "amount": "5.00",
-        "description": "Dropped Bell, Le'Veon PIT RB (Salary: $10.00, Contract: 3, Status: C)",
-        "timestamp": "1467406127",
-        "franchise_id": "0010",
-        "id": "326"
-      },
-      {
-        "franchise_id": "0010",
-        "timestamp": "1467406127",
-        "description": "Dropped Sankey, Bishop TEN RB (Salary: $4.00, Contract: 1, Status: C)",
-        "amount": "2.00",
-        "id": "327"
-      },
-      {
-        "amount": "0.25",
-        "timestamp": "1467407326",
-        "franchise_id": "0004",
-        "description": "Dropped Hasselbeck, Matt IND QB (Salary: $0.50, Contract: 1, Status: C)",
-        "id": "328"
-      },
-      {
-        "id": "329",
-        "timestamp": "1467407326",
-        "description": "Dropped Andrews, Antonio TEN RB (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0004",
-        "amount": "0.25"
-      },
-      {
-        "id": "33",
-        "timestamp": "1409078290",
-        "description": "Dropped Graham, Shayne NOS PK (Salary: $1.00, Contract: 1, Status: C)",
+        "timestamp": "1454967284",
+        "description": "Dropped Lynch, Marshawn SEA RB (Salary: $9,250,000, Years: 2)",
         "franchise_id": "0008",
-        "amount": "0.50"
+        "id": "325",
+        "amount": "4625000.00"
       },
       {
-        "amount": "1.75",
-        "franchise_id": "0004",
-        "timestamp": "1467407326",
-        "description": "Dropped Bell, Joique DET RB (Salary: $3.50, Contract: 2, Status: C)",
-        "id": "330"
+        "amount": "212500.00",
+        "id": "326",
+        "franchise_id": "0013",
+        "timestamp": "1454974360",
+        "description": "Dropped Santos, Cairo KCC PK (Salary: $425,000, Years: 1)"
       },
       {
-        "description": "Dropped Johnson, Andre IND WR (Salary: $10.00, Contract: 1, Status: C)",
-        "timestamp": "1467407326",
-        "franchise_id": "0004",
-        "amount": "5.00",
-        "id": "331"
+        "amount": "212500.00",
+        "id": "327",
+        "timestamp": "1455022236",
+        "franchise_id": "0011",
+        "description": "Dropped Swoope, Erik IND TE (Salary: $425,000, Years: 5)"
       },
       {
-        "id": "332",
-        "amount": "1.25",
-        "franchise_id": "0004",
-        "timestamp": "1467407326",
-        "description": "Dropped Bennett, Martellus CHI TE (Salary: $2.50, Contract: 2, Status: C)"
+        "timestamp": "1455022236",
+        "description": "Dropped Willson, Luke SEA TE (Salary: $525,000, Years: 4)",
+        "franchise_id": "0011",
+        "id": "328",
+        "amount": "262500.00"
       },
       {
-        "amount": "0.25",
-        "franchise_id": "0004",
-        "timestamp": "1467407326",
-        "description": "Dropped Rudolph, Kyle MIN TE (Salary: $0.50, Contract: 1, Status: C)",
-        "id": "333"
+        "amount": "212500.00",
+        "id": "329",
+        "description": "Dropped Hasselbeck, Matt IND QB (Salary: $425,000, Years: 1)",
+        "timestamp": "1455305156",
+        "franchise_id": "0010"
+      },
+      {
+        "description": "Dropped Lewis, Marcedes JAC TE (Salary: $577,500, Years: 1)",
+        "timestamp": "1439619271",
+        "franchise_id": "0015",
+        "amount": "288750.00",
+        "id": "33"
+      },
+      {
+        "amount": "3000000.00",
+        "id": "330",
+        "timestamp": "1455305156",
+        "franchise_id": "0010",
+        "description": "Dropped Forsett, Justin BAL RB (Salary: $6,000,000, Years: 1)"
+      },
+      {
+        "id": "331",
+        "amount": "212500.00",
+        "timestamp": "1455305156",
+        "description": "Dropped Tolbert, Mike CAR RB (Salary: $425,000, Years: 1)",
+        "franchise_id": "0010"
+      },
+      {
+        "timestamp": "1455305156",
+        "description": "Dropped Johnson, Andre IND WR (Salary: $8,000,000, Years: 1)",
+        "franchise_id": "0010",
+        "amount": "4000000.00",
+        "id": "332"
+      },
+      {
+        "id": "333",
+        "amount": "311121.25",
+        "description": "Dropped Moore, Denarius FA WR (Salary: $622,242, Years: 1)",
+        "timestamp": "1455305156",
+        "franchise_id": "0010"
       },
       {
         "id": "334",
-        "amount": "0.25",
-        "timestamp": "1467407326",
-        "description": "Dropped McManus, Brandon DEN PK (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0004"
+        "amount": "275000.00",
+        "description": "Dropped Ridley, Stevan NYJ RB (Salary: $550,000, Years: 1)",
+        "timestamp": "1455316018",
+        "franchise_id": "0010"
       },
       {
-        "amount": "0.75",
-        "timestamp": "1467407326",
-        "description": "Dropped Bills, Buffalo BUF Def (Salary: $1.50, Contract: 2, Status: C)",
-        "franchise_id": "0004",
-        "id": "335"
+        "id": "335",
+        "amount": "512500.00",
+        "description": "Dropped Packers, Green Bay GBP Def (Salary: $1,025,000, Years: 1)",
+        "timestamp": "1455316082",
+        "franchise_id": "0010"
       },
       {
-        "id": "336",
-        "amount": "3.00",
-        "description": "Dropped Blount, LeGarrette NEP RB (Salary: $6.00, Contract: 1, Status: C)",
-        "timestamp": "1467407619",
-        "franchise_id": "0011"
+        "timestamp": "1455336559",
+        "franchise_id": "0001",
+        "description": "Dropped Murray, DeMarco PHI RB (Salary: $622,242, Years: 1)",
+        "amount": "311121.25",
+        "id": "336"
       },
       {
-        "timestamp": "1467407619",
-        "franchise_id": "0011",
-        "description": "Dropped Mathews, Ryan PHI RB (Salary: $8.00, Contract: 1, Status: C)",
-        "amount": "4.00",
-        "id": "337"
+        "amount": "287500.00",
+        "id": "337",
+        "franchise_id": "0005",
+        "timestamp": "1455395344",
+        "description": "Dropped Fitzpatrick, Ryan NYJ QB (Salary: $575,000, Years: 1)"
       },
       {
+        "amount": "4262500.00",
         "id": "338",
-        "amount": "0.50",
-        "timestamp": "1467407619",
-        "description": "Dropped Beasley, Cole DAL WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0011"
+        "timestamp": "1455395344",
+        "description": "Dropped Stafford, Matthew DET QB (Salary: $8,525,000, Years: 1)",
+        "franchise_id": "0005"
       },
       {
-        "id": "339",
-        "franchise_id": "0011",
-        "timestamp": "1467407619",
-        "description": "Dropped Boldin, Anquan SFO WR (Salary: $1.50, Contract: 1, Status: C)",
-        "amount": "0.75"
+        "timestamp": "1455395344",
+        "franchise_id": "0005",
+        "description": "Dropped Spiller, C.J. NOS RB (Salary: $3,100,000, Years: 3)",
+        "amount": "1550000.00",
+        "id": "339"
       },
       {
-        "franchise_id": "0008",
-        "timestamp": "1409770140",
-        "description": "Dropped Dimke, Derek FA* PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
+        "timestamp": "1439619271",
+        "franchise_id": "0015",
+        "description": "Dropped McDonald, Vance SFO TE (Salary: $514,250, Years: 3)",
+        "amount": "257125.00",
         "id": "34"
       },
       {
         "id": "340",
-        "description": "Dropped Nelson, Jordy GBP WR (Salary: $22.00, Contract: 1, Status: C)",
-        "timestamp": "1467407619",
-        "franchise_id": "0011",
-        "amount": "11.00"
+        "amount": "1000000.00",
+        "franchise_id": "0005",
+        "timestamp": "1455395344",
+        "description": "Dropped Crabtree, Michael OAK WR (Salary: $2,000,000, Years: 1)"
       },
       {
-        "amount": "1.00",
-        "timestamp": "1467407619",
-        "description": "Dropped Smith, Torrey SFO WR (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "id": "341"
+        "id": "341",
+        "amount": "2750000.00",
+        "description": "Dropped Marshall, Brandon NYJ WR (Salary: $5,500,000, Years: 1)",
+        "timestamp": "1455395344",
+        "franchise_id": "0005"
       },
       {
-        "amount": "0.75",
-        "timestamp": "1467407619",
-        "franchise_id": "0011",
-        "description": "Dropped Stills, Kenny MIA WR (Salary: $1.50, Contract: 1, Status: C)",
+        "timestamp": "1455395344",
+        "description": "Dropped Celek, Brent PHI TE (Salary: $425,000, Years: 1)",
+        "franchise_id": "0005",
+        "amount": "212500.00",
         "id": "342"
       },
       {
-        "franchise_id": "0011",
-        "timestamp": "1467407619",
-        "description": "Dropped Daniels, Owen DEN TE (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
+        "franchise_id": "0016",
+        "timestamp": "1455400352",
+        "description": "Dropped McCoy, LeSean BUF RB (Salary: $10,120,000, Years: 2)",
+        "amount": "5060000.00",
         "id": "343"
       },
       {
-        "description": "Dropped Dolphins, Miami MIA Def (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1467407619",
-        "franchise_id": "0011",
-        "amount": "1.50",
-        "id": "344"
+        "franchise_id": "0010",
+        "timestamp": "1455439581",
+        "description": "Dropped Vereen, Shane NYG RB (Salary: $1,134,677, Years: 1)",
+        "id": "344",
+        "amount": "567338.75"
       },
       {
+        "description": "Dropped Brees, Drew NOS QB (Salary: $9,900,000, Years: 1)",
+        "timestamp": "1455476784",
+        "franchise_id": "0002",
         "id": "345",
-        "amount": "8.00",
-        "description": "Dropped Abdullah, Ameer DET RB (Salary: $16.00, Contract: 1, Status: R)",
-        "timestamp": "1467408705",
-        "franchise_id": "0011"
+        "amount": "4950000.00"
       },
       {
-        "id": "346",
-        "franchise_id": "0011",
-        "timestamp": "1467408705",
-        "description": "Dropped Williams, Karlos BUF RB (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50"
+        "timestamp": "1455476784",
+        "description": "Dropped Jackson, DeSean WAS WR (Salary: $4,840,000, Years: 2)",
+        "franchise_id": "0002",
+        "amount": "2420000.00",
+        "id": "346"
       },
       {
-        "timestamp": "1467408705",
-        "description": "Dropped Diggs, Stefon MIN WR (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0011",
-        "amount": "1.00",
-        "id": "347"
+        "description": "Dropped Taylor, Tyrod BUF QB (Salary: $425,000, Years: 1)",
+        "timestamp": "1455488413",
+        "franchise_id": "0004",
+        "id": "347",
+        "amount": "212500.00"
       },
       {
+        "timestamp": "1455504230",
+        "description": "Dropped Manziel, Johnny CLE QB (Salary: $467,500, Years: 4)",
+        "franchise_id": "0014",
         "id": "348",
-        "amount": "1.50",
-        "timestamp": "1467408705",
-        "description": "Dropped Bailey, Dan DAL PK (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0011"
+        "amount": "233750.00"
       },
       {
-        "amount": "0.50",
-        "timestamp": "1467408786",
+        "timestamp": "1455504827",
         "franchise_id": "0011",
-        "description": "Dropped Taylor, Tyrod BUF QB (Salary: $1.00, Contract: 1, Status: C)",
+        "description": "Dropped Dunbar, Lance DAL RB (Salary: $425,000, Years: 4)",
+        "amount": "212500.00",
         "id": "349"
       },
       {
-        "id": "35",
-        "description": "Dropped Watkins, Sammy BUF WR (Salary: $10.00, Contract: 1, Status: R)",
-        "timestamp": "1410278536",
-        "franchise_id": "0008",
-        "amount": "5.00"
+        "description": "Dropped Santos, Cairo KCC PK (Salary: $425,000, Years: 2)",
+        "timestamp": "1439619271",
+        "franchise_id": "0015",
+        "amount": "212500.00",
+        "id": "35"
       },
       {
+        "amount": "1815000.00",
         "id": "350",
-        "amount": "1.00",
-        "timestamp": "1467408786",
-        "franchise_id": "0011",
-        "description": "Dropped McFadden, Darren DAL RB (Salary: $2.00, Contract: 1, Status: C)"
-      },
-      {
-        "amount": "2.50",
-        "timestamp": "1467410798",
-        "description": "Dropped Manziel, Johnny CLE QB (Salary: $5.00, Contract: 1, Status: C)",
+        "timestamp": "1455505267",
         "franchise_id": "0009",
-        "id": "351"
+        "description": "Dropped Roethlisberger, Ben PIT QB (Salary: $3,630,000, Years: 1)"
       },
       {
-        "id": "352",
-        "franchise_id": "0009",
-        "timestamp": "1467410798",
-        "description": "Dropped Wilson, Russell SEA QB (Salary: $3.00, Contract: 3, Status: C)",
-        "amount": "1.50"
-      },
-      {
-        "amount": "4.50",
-        "franchise_id": "0009",
-        "timestamp": "1467410798",
-        "description": "Dropped Morris, Alfred WAS RB (Salary: $9.00, Contract: 1, Status: C)",
-        "id": "353"
-      },
-      {
-        "id": "354",
-        "franchise_id": "0009",
-        "timestamp": "1467410798",
-        "description": "Dropped Jeffery, Alshon CHI WR (Salary: $4.00, Contract: 3, Status: C)",
-        "amount": "2.00"
-      },
-      {
-        "id": "355",
-        "description": "Dropped Matthews, Rishard MIA WR (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1467410798",
-        "franchise_id": "0009",
-        "amount": "0.50"
-      },
-      {
-        "franchise_id": "0009",
-        "timestamp": "1467410798",
-        "description": "Dropped Gates, Antonio SDC TE (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00",
-        "id": "356"
-      },
-      {
-        "amount": "0.75",
-        "timestamp": "1467410798",
-        "franchise_id": "0009",
-        "description": "Dropped Rodgers, Richard GBP TE (Salary: $1.50, Contract: 1, Status: C)",
-        "id": "357"
-      },
-      {
-        "amount": "4.50",
-        "timestamp": "1467410798",
-        "description": "Dropped Thomas, Julius JAC TE (Salary: $9.00, Contract: 3, Status: C)",
-        "franchise_id": "0009",
-        "id": "358"
-      },
-      {
-        "timestamp": "1467410798",
-        "description": "Dropped Catanzaro, Chandler ARI PK (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0009",
-        "amount": "0.25",
-        "id": "359"
-      },
-      {
-        "amount": "-5.00",
-        "franchise_id": "0008",
-        "timestamp": "1410407804",
-        "description": "Sammy Watkins was picked up from FA",
-        "id": "36"
-      },
-      {
-        "description": "Dropped Dawson, Phil SFO PK (Salary: $0.50, Contract: 1, Status: C)",
-        "timestamp": "1467410798",
-        "franchise_id": "0009",
-        "amount": "0.25",
-        "id": "360"
-      },
-      {
-        "franchise_id": "0009",
-        "timestamp": "1467410798",
-        "description": "Dropped Seahawks, Seattle SEA Def (Salary: $5.00, Contract: 1, Status: C)",
-        "amount": "2.50",
-        "id": "361"
-      },
-      {
-        "id": "362",
-        "franchise_id": "0006",
-        "timestamp": "1467427179",
-        "description": "Dropped Manning, Peyton DEN QB (Salary: $37.00, Contract: 1, Status: C)",
-        "amount": "18.50"
-      },
-      {
-        "amount": "0.25",
-        "timestamp": "1467427179",
-        "description": "Dropped Draughn, Shaun SFO RB (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0006",
-        "id": "363"
-      },
-      {
-        "amount": "4.50",
-        "timestamp": "1467427179",
-        "description": "Dropped Ellington, Andre ARI RB (Salary: $9.00, Contract: 3, Status: C)",
-        "franchise_id": "0006",
-        "id": "364"
-      },
-      {
-        "id": "365",
-        "amount": "1.50",
-        "description": "Dropped Hightower, Tim NOS RB (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1467427179",
-        "franchise_id": "0006"
-      },
-      {
-        "id": "366",
-        "timestamp": "1467427179",
-        "franchise_id": "0006",
-        "description": "Dropped Powell, Bilal NYJ RB (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50"
-      },
-      {
-        "id": "367",
-        "amount": "1.50",
-        "timestamp": "1467427179",
-        "description": "Dropped Sproles, Darren PHI RB (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0006"
-      },
-      {
-        "amount": "1.50",
-        "franchise_id": "0006",
-        "timestamp": "1467427179",
-        "description": "Dropped White, James NEP RB (Salary: $3.00, Contract: 1, Status: C)",
-        "id": "368"
-      },
-      {
-        "franchise_id": "0006",
-        "timestamp": "1467427179",
-        "description": "Dropped Floyd, Michael ARI WR (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00",
-        "id": "369"
-      },
-      {
-        "id": "37",
-        "description": "Dropped Floyd, Malcom SDC WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1412713298",
-        "franchise_id": "0008",
-        "amount": "0.25"
-      },
-      {
-        "id": "370",
-        "amount": "1.50",
-        "timestamp": "1467427179",
-        "description": "Dropped Tucker, Justin BAL PK (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0006"
-      },
-      {
-        "id": "371",
-        "timestamp": "1467427179",
-        "franchise_id": "0006",
-        "description": "Dropped Eagles, Philadelphia PHI Def (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50"
-      },
-      {
-        "id": "372",
-        "franchise_id": "0006",
-        "timestamp": "1467427179",
-        "description": "Dropped Steelers, Pittsburgh PIT Def (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25"
-      },
-      {
-        "amount": "0.50",
-        "description": "Dropped Foles, Nick STL QB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1467468981",
-        "franchise_id": "0005",
-        "id": "373"
-      },
-      {
-        "id": "374",
-        "amount": "0.50",
-        "description": "Dropped Mettenberger, Zach TEN QB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1467468981",
-        "franchise_id": "0005"
-      },
-      {
-        "amount": "1.00",
-        "franchise_id": "0005",
-        "timestamp": "1467468981",
-        "description": "Dropped Rivers, Philip SDC QB (Salary: $2.00, Contract: 3, Status: C)",
-        "id": "375"
-      },
-      {
-        "amount": "1.00",
-        "timestamp": "1467468981",
-        "description": "Dropped Davis, Knile KCC RB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0005",
-        "id": "376"
-      },
-      {
-        "timestamp": "1467468981",
-        "description": "Dropped Randle, Joseph FA* RB (Salary: $19.00, Contract: 1, Status: C)",
-        "franchise_id": "0005",
-        "amount": "9.50",
-        "id": "377"
-      },
-      {
-        "id": "378",
-        "timestamp": "1467468981",
-        "franchise_id": "0005",
-        "description": "Dropped Brown, Antonio PIT WR (Salary: $8.00, Contract: 3, Status: C)",
-        "amount": "4.00"
-      },
-      {
-        "description": "Dropped Bryant, Dez DAL WR (Salary: $22.00, Contract: 2, Status: C)",
-        "timestamp": "1467468981",
-        "franchise_id": "0005",
-        "amount": "11.00",
-        "id": "379"
-      },
-      {
-        "amount": "0.25",
-        "timestamp": "1412713298",
-        "franchise_id": "0008",
-        "description": "Dropped Jennings, Greg MIN WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "38"
-      },
-      {
-        "id": "380",
-        "amount": "0.50",
-        "timestamp": "1467468981",
-        "description": "Dropped Randle, Rueben NYG WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0005"
-      },
-      {
-        "id": "381",
-        "amount": "0.50",
-        "franchise_id": "0005",
-        "timestamp": "1467468981",
-        "description": "Dropped Bullock, Randy NYJ PK (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "382",
-        "amount": "0.50",
-        "franchise_id": "0005",
-        "timestamp": "1467468981",
-        "description": "Dropped Novak, Nick HOU PK (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "franchise_id": "0005",
-        "timestamp": "1467468981",
-        "description": "Dropped Vikings, Minnesota MIN Def (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "383"
-      },
-      {
-        "amount": "19.00",
-        "description": "Dropped Rodgers, Aaron GBP QB (Salary: $38.00, Contract: 2, Status: C)",
-        "timestamp": "1467476234",
-        "franchise_id": "0012",
-        "id": "384"
-      },
-      {
-        "amount": "8.50",
-        "franchise_id": "0012",
-        "timestamp": "1467476234",
-        "description": "Dropped Stafford, Matthew DET QB (Salary: $17.00, Contract: 1, Status: C)",
-        "id": "385"
-      },
-      {
-        "timestamp": "1467476234",
-        "franchise_id": "0012",
-        "description": "Dropped Allen, Javorius BAL RB (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00",
-        "id": "386"
-      },
-      {
-        "id": "387",
-        "timestamp": "1467476234",
-        "description": "Dropped Starks, James GBP RB (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0012",
-        "amount": "1.50"
-      },
-      {
-        "id": "388",
-        "timestamp": "1467476234",
-        "description": "Dropped Ware, Spencer KCC RB (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0012",
-        "amount": "1.50"
-      },
-      {
-        "amount": "1.50",
-        "franchise_id": "0012",
-        "timestamp": "1467476234",
-        "description": "Dropped Amendola, Danny NEP WR (Salary: $3.00, Contract: 1, Status: FA)",
-        "id": "389"
-      },
-      {
-        "amount": "0.75",
-        "description": "Dropped Blount, LeGarrette PIT RB (Salary: $1.50, Contract: 1, Status: FA)",
-        "timestamp": "1412713336",
-        "franchise_id": "0008",
-        "id": "39"
-      },
-      {
-        "id": "390",
-        "franchise_id": "0012",
-        "timestamp": "1467476234",
-        "description": "Dropped Chandler, Scott NEP TE (Salary: $1.50, Contract: 1, Status: C)",
-        "amount": "0.75"
-      },
-      {
-        "franchise_id": "0012",
-        "timestamp": "1467476234",
-        "description": "Dropped Clay, Charles BUF TE (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25",
-        "id": "391"
-      },
-      {
-        "id": "392",
-        "timestamp": "1467476234",
-        "description": "Dropped Gano, Graham CAR PK (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0012",
-        "amount": "0.50"
-      },
-      {
-        "id": "393",
-        "amount": "0.25",
-        "timestamp": "1467476234",
-        "description": "Dropped Falcons, Atlanta ATL Def (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0012"
-      },
-      {
-        "amount": "0.50",
-        "description": "Dropped Bengals, Cincinnati CIN Def (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1467477454",
-        "franchise_id": "0012",
-        "id": "394"
-      },
-      {
-        "timestamp": "1467477454",
-        "franchise_id": "0012",
-        "description": "Dropped Rams, St. Louis STL Def (Salary: $4.00, Contract: 1, Status: C)",
-        "amount": "2.00",
-        "id": "395"
-      },
-      {
-        "amount": "1.00",
-        "timestamp": "1467731110",
-        "description": "Dropped Spiller, C.J. NOS RB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0010",
-        "id": "396"
-      },
-      {
-        "amount": "9.50",
-        "franchise_id": "0010",
-        "timestamp": "1467731110",
-        "description": "Dropped Thomas, Demaryius DEN WR (Salary: $19.00, Contract: 1, Status: C)",
-        "id": "397"
-      },
-      {
-        "amount": "0.25",
-        "franchise_id": "0010",
-        "timestamp": "1467731110",
-        "description": "Dropped Gould, Robbie CHI PK (Salary: $0.50, Contract: 1, Status: C)",
-        "id": "398"
-      },
-      {
-        "description": "Dropped Colts, Indianapolis IND Def (Salary: $0.50, Contract: 1, Status: C)",
-        "timestamp": "1467731110",
-        "franchise_id": "0010",
-        "amount": "0.25",
-        "id": "399"
-      },
-      {
-        "amount": "3.00",
-        "timestamp": "1413947510",
-        "description": "Dropped Austin, Tavon STL WR (Salary: $6.00, Contract: 1, Status: C)",
-        "franchise_id": "0006",
-        "id": "4"
-      },
-      {
-        "id": "40",
-        "amount": "0.25",
-        "timestamp": "1412868488",
-        "franchise_id": "0008",
-        "description": "Dropped Gould, Robbie CHI PK (Salary: $0.50, Contract: 1, Status: FA)"
-      },
-      {
-        "franchise_id": "0007",
-        "timestamp": "1468423932",
-        "description": "Dropped Bridgewater, Teddy MIN QB (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "400"
-      },
-      {
-        "description": "Dropped Osweiler, Brock DEN QB (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1468423932",
-        "franchise_id": "0007",
-        "amount": "1.50",
-        "id": "401"
-      },
-      {
-        "id": "402",
-        "amount": "4.50",
-        "description": "Dropped Cobb, David TEN RB (Salary: $9.00, Contract: 1, Status: R)",
-        "timestamp": "1468423932",
-        "franchise_id": "0007"
-      },
-      {
-        "id": "403",
-        "franchise_id": "0007",
-        "timestamp": "1468423932",
-        "description": "Dropped Crowell, Isaiah CLE RB (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "id": "404",
-        "amount": "0.25",
-        "timestamp": "1468423932",
-        "description": "Dropped Hillman, Ronnie DEN RB (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0007"
-      },
-      {
-        "amount": "2.00",
-        "timestamp": "1468423932",
-        "description": "Dropped West, Charcandrick KCC RB (Salary: $4.00, Contract: 1, Status: C)",
-        "franchise_id": "0007",
-        "id": "405"
-      },
-      {
-        "id": "406",
-        "amount": "0.50",
-        "timestamp": "1468423932",
-        "franchise_id": "0007",
-        "description": "Dropped Austin, Tavon STL WR (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "description": "Dropped Ginn Jr., Ted CAR WR (Salary: $4.00, Contract: 1, Status: C)",
-        "timestamp": "1468423932",
-        "franchise_id": "0007",
-        "amount": "2.00",
-        "id": "407"
-      },
-      {
-        "id": "408",
-        "timestamp": "1468423932",
-        "franchise_id": "0007",
-        "description": "Dropped Hilton, T.Y. IND WR (Salary: $6.00, Contract: 3, Status: C)",
-        "amount": "3.00"
-      },
-      {
-        "id": "409",
-        "timestamp": "1468423932",
-        "description": "Dropped Miller, Zach CHI TE (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0007",
-        "amount": "0.50"
-      },
-      {
-        "amount": "1.25",
-        "franchise_id": "0008",
-        "timestamp": "1414768375",
-        "description": "Dropped Smith, Antone ATL RB (Salary: $2.50, Contract: 1, Status: FA)",
-        "id": "41"
-      },
-      {
-        "id": "410",
-        "franchise_id": "0007",
-        "timestamp": "1468423932",
-        "description": "Dropped Tye, Will NYG TE (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00"
-      },
-      {
-        "id": "411",
-        "franchise_id": "0007",
-        "timestamp": "1468423932",
-        "description": "Dropped Crosby, Mason GBP PK (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00"
-      },
-      {
-        "id": "412",
-        "description": "Dropped Cousins, Kirk WAS QB (Salary: $3.00, Contract: 1, Status: C)",
-        "timestamp": "1468424644",
-        "franchise_id": "0007",
-        "amount": "1.50"
-      },
-      {
-        "id": "413",
-        "franchise_id": "0008",
-        "timestamp": "1468860285",
-        "description": "Dropped Ryan, Matt ATL QB (Salary: $12.00, Contract: 1, Status: C)",
-        "amount": "6.00"
-      },
-      {
-        "id": "414",
-        "timestamp": "1468860285",
-        "franchise_id": "0008",
-        "description": "Dropped Anderson, C.J. DEN RB (Salary: $22.00, Contract: 1, Status: C)",
-        "amount": "11.00"
-      },
-      {
-        "amount": "1.00",
-        "timestamp": "1468860285",
-        "description": "Dropped Bradshaw, Ahmad IND RB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0008",
-        "id": "415"
-      },
-      {
-        "id": "416",
-        "timestamp": "1468860285",
-        "description": "Dropped McCluster, Dexter TEN RB (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0008",
-        "amount": "0.50"
-      },
-      {
-        "amount": "1.50",
-        "franchise_id": "0008",
-        "timestamp": "1468860285",
-        "description": "Dropped Vereen, Shane NYG RB (Salary: $3.00, Contract: 1, Status: C)",
-        "id": "417"
-      },
-      {
-        "id": "418",
-        "description": "Dropped Benjamin, Travis CLE WR (Salary: $2.00, Contract: 1, Status: C)",
-        "timestamp": "1468860285",
-        "franchise_id": "0008",
-        "amount": "1.00"
-      },
-      {
-        "franchise_id": "0008",
-        "timestamp": "1468860285",
-        "description": "Dropped Jones, Julio ATL WR (Salary: $18.00, Contract: 1, Status: C)",
-        "amount": "9.00",
-        "id": "419"
-      },
-      {
-        "id": "42",
-        "franchise_id": "0008",
-        "timestamp": "1415721173",
-        "description": "Dropped Davis, Austin STL QB (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
-      },
-      {
-        "id": "420",
-        "amount": "0.50",
-        "timestamp": "1468860285",
-        "description": "Dropped Moncrief, Donte IND WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0008"
-      },
-      {
-        "id": "421",
-        "amount": "4.00",
-        "timestamp": "1468860285",
-        "description": "Dropped Gronkowski, Rob NEP TE (Salary: $8.00, Contract: 3, Status: C)",
-        "franchise_id": "0008"
-      },
-      {
-        "amount": "0.25",
-        "description": "Dropped Santos, Cairo KCC PK (Salary: $0.50, Contract: 1, Status: C)",
-        "timestamp": "1468860285",
-        "franchise_id": "0008",
-        "id": "422"
-      },
-      {
-        "id": "423",
-        "amount": "0.25",
-        "timestamp": "1468860285",
-        "franchise_id": "0008",
-        "description": "Dropped Browns, Cleveland CLE Def (Salary: $0.50, Contract: 1, Status: C)"
-      },
-      {
-        "amount": "0.75",
-        "timestamp": "1468860285",
-        "description": "Dropped Texans, Houston HOU Def (Salary: $1.50, Contract: 2, Status: C)",
-        "franchise_id": "0008",
-        "id": "424"
-      },
-      {
-        "id": "425",
-        "amount": "0.50",
-        "franchise_id": "0002",
-        "timestamp": "1468865016",
-        "description": "Dropped Smith, Alex KCC QB (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "426",
-        "franchise_id": "0002",
-        "timestamp": "1468865016",
-        "description": "Dropped Artis-Payne, Cameron CAR RB (Salary: $7.00, Contract: 1, Status: R)",
-        "amount": "3.50"
-      },
-      {
-        "description": "Dropped Forte, Matt CHI RB (Salary: $16.00, Contract: 1, Status: C)",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "amount": "8.00",
-        "id": "427"
-      },
-      {
-        "amount": "0.75",
-        "timestamp": "1468865016",
-        "description": "Dropped Jackson, Fred SEA RB (Salary: $1.50, Contract: 2, Status: C)",
-        "franchise_id": "0002",
-        "id": "428"
-      },
-      {
-        "amount": "0.50",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "description": "Dropped Johnson, Chris ARI RB (Salary: $1.00, Contract: 1, Status: C)",
-        "id": "429"
-      },
-      {
-        "amount": "0.25",
-        "franchise_id": "0008",
-        "timestamp": "1415721173",
-        "description": "Dropped Miller, Zach SEA TE (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "43"
-      },
-      {
-        "description": "Dropped Taliaferro, Lorenzo BAL RB (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "amount": "0.50",
-        "id": "430"
-      },
-      {
-        "description": "Dropped Allen, Keenan SDC WR (Salary: $11.00, Contract: 1, Status: C)",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "amount": "5.50",
-        "id": "431"
-      },
-      {
-        "id": "432",
-        "amount": "0.50",
-        "franchise_id": "0002",
-        "timestamp": "1468865016",
-        "description": "Dropped Coleman, Brandon NOS WR (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "amount": "1.50",
-        "timestamp": "1468865016",
-        "description": "Dropped Parker, DeVante MIA WR (Salary: $3.00, Contract: 1, Status: R)",
-        "franchise_id": "0002",
-        "id": "433"
-      },
-      {
-        "timestamp": "1468865016",
-        "description": "Dropped Sanders, Emmanuel DEN WR (Salary: $3.50, Contract: 2, Status: C)",
-        "franchise_id": "0002",
-        "amount": "1.75",
-        "id": "434"
-      },
-      {
-        "amount": "2.00",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "description": "Dropped Witten, Jason DAL TE (Salary: $4.00, Contract: 1, Status: C)",
-        "id": "435"
-      },
-      {
-        "description": "Dropped Brown, Josh NYG PK (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "amount": "0.50",
-        "id": "436"
-      },
-      {
-        "id": "437",
-        "amount": "0.50",
-        "timestamp": "1468865016",
-        "franchise_id": "0002",
-        "description": "Dropped Parkey, Cody PHI PK (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "438",
-        "timestamp": "1468865016",
-        "description": "Dropped Chargers, San Diego SDC Def (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0002",
-        "amount": "0.25"
-      },
-      {
-        "franchise_id": "0002",
-        "timestamp": "1468865016",
-        "description": "Dropped Packers, Green Bay GBP Def (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50",
-        "id": "439"
-      },
-      {
-        "id": "44",
-        "franchise_id": "0008",
-        "timestamp": "1415721173",
-        "description": "Dropped Royal, Eddie SDC WR (Salary: $1.00, Contract: 1, Status: FA)",
-        "amount": "0.50"
-      },
-      {
-        "franchise_id": "0001",
-        "timestamp": "1468962423",
-        "description": "Dropped Dalton, Andy CIN QB (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50",
-        "id": "440"
-      },
-      {
-        "id": "441",
-        "amount": "0.75",
-        "description": "Dropped McCown, Josh CLE QB (Salary: $1.50, Contract: 1, Status: C)",
-        "timestamp": "1468962423",
-        "franchise_id": "0001"
-      },
-      {
-        "franchise_id": "0001",
-        "timestamp": "1468962423",
-        "description": "Dropped Ivory, Chris NYJ RB (Salary: $2.00, Contract: 1, Status: C)",
-        "amount": "1.00",
-        "id": "442"
-      },
-      {
-        "timestamp": "1468962423",
-        "franchise_id": "0001",
-        "description": "Dropped Lynch, Marshawn SEA RB (Salary: $25.00, Contract: 1, Status: C)",
-        "amount": "12.50",
-        "id": "443"
-      },
-      {
-        "id": "444",
-        "amount": "0.25",
-        "timestamp": "1468962423",
-        "description": "Dropped Riddick, Theo DET RB (Salary: $0.50, Contract: 1, Status: C)",
-        "franchise_id": "0001"
-      },
-      {
-        "id": "445",
-        "timestamp": "1468962423",
-        "description": "Dropped Williams, Andre NYG RB (Salary: $6.00, Contract: 2, Status: C)",
-        "franchise_id": "0001",
-        "amount": "3.00"
-      },
-      {
-        "amount": "1.00",
-        "franchise_id": "0001",
-        "timestamp": "1468962423",
-        "description": "Dropped Dorsett, Phillip IND WR (Salary: $2.00, Contract: 1, Status: R)",
-        "id": "446"
-      },
-      {
-        "id": "447",
-        "amount": "2.00",
-        "description": "Dropped Funchess, Devin CAR WR (Salary: $4.00, Contract: 1, Status: R)",
-        "timestamp": "1468962423",
-        "franchise_id": "0001"
-      },
-      {
-        "id": "448",
-        "amount": "8.50",
-        "franchise_id": "0001",
-        "timestamp": "1468962423",
-        "description": "Dropped Green, A.J. CIN WR (Salary: $17.00, Contract: 1, Status: C)"
-      },
-      {
-        "franchise_id": "0001",
-        "timestamp": "1468962423",
-        "description": "Dropped Jackson, Vincent TBB WR (Salary: $5.00, Contract: 1, Status: C)",
-        "amount": "2.50",
-        "id": "449"
-      },
-      {
-        "id": "45",
-        "timestamp": "1415721173",
-        "description": "Dropped McManus, Brandon DEN PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0008",
-        "amount": "0.25"
-      },
-      {
-        "amount": "2.00",
-        "timestamp": "1468962423",
-        "description": "Dropped LaFell, Brandon NEP WR (Salary: $4.00, Contract: 1, Status: C)",
-        "franchise_id": "0001",
-        "id": "450"
-      },
-      {
-        "amount": "0.25",
-        "description": "Dropped Montgomery, Ty GBP WR (Salary: $0.50, Contract: 1, Status: C)",
-        "timestamp": "1468962423",
-        "franchise_id": "0001",
-        "id": "451"
-      },
-      {
-        "id": "452",
-        "timestamp": "1468962423",
-        "franchise_id": "0001",
-        "description": "Dropped White, Roddy ATL WR (Salary: $5.00, Contract: 1, Status: C)",
-        "amount": "2.50"
-      },
-      {
-        "id": "453",
-        "timestamp": "1468962423",
-        "description": "Dropped Watson, Ben NOS TE (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0001",
-        "amount": "1.50"
-      },
-      {
-        "id": "454",
-        "franchise_id": "0001",
-        "timestamp": "1468962423",
-        "description": "Dropped Walsh, Blair MIN PK (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "id": "455",
-        "amount": "0.50",
-        "franchise_id": "0003",
-        "timestamp": "1469716753",
-        "description": "Dropped Carr, Derek OAK QB (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "amount": "12.50",
-        "description": "Dropped Charles, Jamaal KCC RB (Salary: $25.00, Contract: 1, Status: C)",
-        "timestamp": "1469716753",
-        "franchise_id": "0003",
-        "id": "456"
-      },
-      {
-        "id": "457",
-        "timestamp": "1469716753",
-        "description": "Dropped Coleman, Tevin ATL RB (Salary: $6.00, Contract: 1, Status: C)",
-        "franchise_id": "0003",
-        "amount": "3.00"
-      },
-      {
-        "timestamp": "1469716753",
-        "franchise_id": "0003",
-        "description": "Dropped Jones, Matt WAS RB (Salary: $1.00, Contract: 1, Status: R)",
-        "amount": "0.50",
-        "id": "458"
-      },
-      {
-        "franchise_id": "0003",
-        "timestamp": "1469716753",
-        "description": "Dropped Yeldon, T.J. JAC RB (Salary: $11.00, Contract: 1, Status: C)",
-        "amount": "5.50",
-        "id": "459"
-      },
-      {
-        "description": "Dropped Stewart, Jonathan CAR RB (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1415721173",
-        "franchise_id": "0008",
-        "amount": "0.25",
-        "id": "46"
-      },
-      {
-        "description": "Dropped Bowe, Dwayne CLE WR (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1469716753",
-        "franchise_id": "0003",
-        "amount": "0.50",
-        "id": "460"
-      },
-      {
-        "franchise_id": "0003",
-        "timestamp": "1469716753",
-        "description": "Dropped Crabtree, Michael OAK WR (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50",
-        "id": "461"
-      },
-      {
-        "timestamp": "1469716753",
-        "description": "Dropped Lockett, Tyler SEA WR (Salary: $1.00, Contract: 1, Status: R)",
-        "franchise_id": "0003",
-        "amount": "0.50",
-        "id": "462"
-      },
-      {
-        "id": "463",
-        "timestamp": "1469716753",
-        "description": "Dropped Patterson, Cordarrelle MIN WR (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0003",
-        "amount": "0.50"
-      },
-      {
-        "timestamp": "1469716753",
-        "franchise_id": "0003",
-        "description": "Dropped Wallace, Mike MIN WR (Salary: $7.00, Contract: 1, Status: C)",
-        "amount": "3.50",
-        "id": "464"
-      },
-      {
-        "amount": "1.00",
-        "description": "Dropped Allen, Dwayne IND TE (Salary: $2.00, Contract: 1, Status: C)",
-        "timestamp": "1469716753",
-        "franchise_id": "0003",
-        "id": "465"
-      },
-      {
-        "id": "466",
-        "timestamp": "1469716753",
-        "franchise_id": "0003",
-        "description": "Dropped Green, Ladarius SDC TE (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "id": "467",
-        "amount": "0.50",
-        "timestamp": "1469716753",
-        "description": "Dropped Bryant, Matt ATL PK (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0003"
-      },
-      {
-        "id": "468",
-        "amount": "0.50",
-        "franchise_id": "0003",
-        "timestamp": "1469716753",
-        "description": "Dropped Panthers, Carolina CAR Def (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "469",
-        "amount": "0.50",
-        "franchise_id": "0003",
-        "timestamp": "1469716753",
-        "description": "Dropped Ravens, Baltimore BAL Def (Salary: $1.00, Contract: 1, Status: C)"
-      },
-      {
-        "id": "47",
-        "franchise_id": "0008",
-        "timestamp": "1415721173",
-        "description": "Dropped Holmes, Andre OAK WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25"
-      },
-      {
-        "id": "48",
-        "amount": "5.00",
-        "description": "Dropped Johnson, Chris NYJ RB (Salary: $10.00, Contract: 6.00, Contract: 1, Status: C)",
-        "timestamp": "1415825332",
-        "franchise_id": "0008"
-      },
-      {
-        "id": "49",
-        "amount": "0.25",
-        "franchise_id": "0008",
-        "timestamp": "1415825532",
-        "description": "Dropped Eagles, Philadelphia PHI Def (Salary: $0.50, Contract: 1, Status: FA)"
-      },
-      {
-        "id": "5",
-        "timestamp": "1415157881",
-        "franchise_id": "0006",
-        "description": "Dropped Shorts, Cecil JAC WR (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
-      },
-      {
-        "id": "50",
-        "timestamp": "1410896761",
-        "description": "Dropped Griffin III, Robert WAS QB (Salary: $15.00, Contract: 3, Status: C)",
-        "franchise_id": "0009",
-        "amount": "7.50"
-      },
-      {
-        "id": "51",
-        "timestamp": "1419376934",
-        "description": "Dropped Gore, Frank SFO RB (Salary: $18.50, Contract: 3, Status: C)",
-        "franchise_id": "0009",
-        "amount": "9.25"
-      },
-      {
-        "id": "52",
-        "amount": "1.50",
-        "franchise_id": "0009",
-        "timestamp": "1419376934",
-        "description": "Dropped Green, A.J. CIN WR (Salary: $3.00, Contract: 3, Status: C)"
-      },
-      {
-        "id": "53",
-        "description": "Dropped Wright, Tim NEP TE (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1419376934",
-        "franchise_id": "0009",
-        "amount": "0.25"
-      },
-      {
-        "amount": "0.25",
-        "franchise_id": "0009",
-        "timestamp": "1419376934",
-        "description": "Dropped Amaro, Jace NYJ TE (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "54"
-      },
-      {
-        "amount": "2.50",
-        "franchise_id": "0009",
-        "timestamp": "1419376934",
-        "description": "Dropped Lynch, Marshawn SEA RB (Salary: $5.00, Contract: 12.50, Contract: 3, Status: C)",
-        "id": "55"
-      },
-      {
-        "id": "56",
-        "amount": "1.25",
-        "timestamp": "1419376934",
-        "description": "Dropped Seahawks, Seattle SEA Def (Salary: $2.50, Contract: 2.00, Contract: 3, Status: C)",
+        "id": "351",
+        "amount": "212500.00",
+        "timestamp": "1455505267",
+        "description": "Dropped Patterson, Cordarrelle MIN WR (Salary: $425,000, Years: 5)",
         "franchise_id": "0009"
       },
       {
-        "timestamp": "1419376934",
-        "description": "Dropped Starks, James GBP RB (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0009",
-        "amount": "0.25",
-        "id": "57"
+        "description": "Dropped West, Terrance BAL RB (Salary: $577,500, Years: 4)",
+        "timestamp": "1455511884",
+        "franchise_id": "0002",
+        "amount": "288750.00",
+        "id": "352"
       },
       {
-        "description": "Dropped Pitta, Dennis BAL TE (Salary: $5.00, Contract: 1, Status: C)",
-        "timestamp": "1411695987",
+        "id": "353",
+        "amount": "332750.00",
+        "description": "Dropped Rams, St. Louis STL Def (Salary: $665,500, Years: 1)",
+        "timestamp": "1455558964",
+        "franchise_id": "0008"
+      },
+      {
+        "timestamp": "1455568544",
+        "description": "Dropped Thomas, Julius JAC TE (Salary: $622,242, Years: 1)",
+        "franchise_id": "0001",
+        "id": "354",
+        "amount": "311121.25"
+      },
+      {
+        "franchise_id": "0012",
+        "timestamp": "1455568620",
+        "description": "Dropped Blount, LeGarrette NEP RB (Salary: $605,000, Years: 1)",
+        "id": "355",
+        "amount": "302500.00"
+      },
+      {
+        "id": "356",
+        "amount": "212500.00",
+        "timestamp": "1455568620",
+        "franchise_id": "0012",
+        "description": "Dropped Benjamin, Travis CLE WR (Salary: $425,000, Years: 1)"
+      },
+      {
+        "timestamp": "1455568620",
+        "description": "Dropped Jones, James GBP WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0012",
+        "amount": "212500.00",
+        "id": "357"
+      },
+      {
+        "amount": "330000.00",
+        "id": "358",
+        "description": "Dropped Gostkowski, Stephen NEP PK (Salary: $660,000, Years: 1)",
+        "timestamp": "1455568620",
+        "franchise_id": "0012"
+      },
+      {
+        "description": "Dropped Hauschka, Steven SEA PK (Salary: $544,500, Years: 1)",
+        "timestamp": "1455568620",
+        "franchise_id": "0012",
+        "amount": "272250.00",
+        "id": "359"
+      },
+      {
+        "timestamp": "1439619271",
+        "franchise_id": "0015",
+        "description": "Dropped Buccaneers, Tampa Bay TBB Def (Salary: $450,000, Years: 1)",
+        "amount": "225000.00",
+        "id": "36"
+      },
+      {
+        "id": "37",
+        "amount": "665500.00",
+        "timestamp": "1439779003",
+        "description": "Dropped Moreno, Knowshon FA* RB (Salary: $1,331,000, Years: 1)",
+        "franchise_id": "0013"
+      },
+      {
+        "id": "38",
+        "amount": "233750.00",
+        "timestamp": "1439783553",
+        "description": "Dropped Vick, Michael FA QB (Salary: $467,500, Years: 1)",
+        "franchise_id": "0001"
+      },
+      {
+        "description": "Dropped Paul, Niles WAS TE (Salary: $425,000, Years: 1)",
+        "timestamp": "1439823410",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "39"
+      },
+      {
+        "description": "2014 Cap Hits",
+        "timestamp": "1423978890",
+        "franchise_id": "0005",
+        "amount": "1978500.00",
+        "id": "4"
+      },
+      {
+        "description": "Dropped Wright, Tim TBB TE (Salary: $665,500, Years: 2)",
+        "timestamp": "1439828588",
+        "franchise_id": "0007",
+        "id": "40",
+        "amount": "332750.00"
+      },
+      {
+        "timestamp": "1439865662",
+        "franchise_id": "0007",
+        "description": "Dropped Hartline, Brian CLE WR (Salary: $600,000, Years: 3)",
+        "amount": "300000.00",
+        "id": "41"
+      },
+      {
+        "franchise_id": "0012",
+        "timestamp": "1439895647",
+        "description": "Dropped Thompson, Juwan DEN RB (Salary: $550,000, Years: 4)",
+        "id": "42",
+        "amount": "275000.00"
+      },
+      {
+        "id": "43",
+        "amount": "212500.00",
+        "timestamp": "1439964844",
+        "description": "Dropped Jones, Seantavius NOS WR (Salary: $425,000, Years: 5)",
+        "franchise_id": "0006"
+      },
+      {
+        "id": "44",
+        "amount": "212500.00",
+        "timestamp": "1439978604",
+        "franchise_id": "0016",
+        "description": "Dropped Tebow, Tim PHI QB (Salary: $425,000, Years: 1)"
+      },
+      {
+        "timestamp": "1440194591",
+        "franchise_id": "0007",
+        "description": "Dropped Asiata, Matt MIN RB (Salary: $1,200,000, Years: 3)",
+        "amount": "600000.00",
+        "id": "45"
+      },
+      {
+        "id": "46",
+        "amount": "233750.00",
+        "franchise_id": "0001",
+        "timestamp": "1440219450",
+        "description": "Dropped Norwood, Kevin SEA WR (Salary: $467,500, Years: 4)"
+      },
+      {
+        "description": "Dropped Rice, Ray FA* RB (Salary: $467,500, Years: 2)",
+        "timestamp": "1440290376",
+        "franchise_id": "0009",
+        "id": "47",
+        "amount": "233750.00"
+      },
+      {
+        "timestamp": "1440351005",
+        "description": "Dropped Davis, Devante FA WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0006",
+        "amount": "212500.00",
+        "id": "48"
+      },
+      {
+        "franchise_id": "0006",
+        "timestamp": "1440351225",
+        "description": "Dropped Cadet, Travaris NEP RB (Salary: $500,000, Years: 5)",
+        "amount": "250000.00",
+        "id": "49"
+      },
+      {
+        "franchise_id": "0006",
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "amount": "3272375.00",
+        "id": "5"
+      },
+      {
+        "description": "Dropped Cousins, Kirk WAS QB (Salary: $565,675, Years: 2)",
+        "timestamp": "1440355434",
+        "franchise_id": "0016",
+        "amount": "282837.50",
+        "id": "50"
+      },
+      {
+        "timestamp": "1440355434",
+        "description": "Dropped Mayle, Vince CLE WR (Salary: $425,000, Years: 5)",
+        "franchise_id": "0016",
+        "amount": "212500.00",
+        "id": "51"
+      },
+      {
+        "description": "Dropped Niklas, Troy ARI TE (Salary: $467,500, Years: 4)",
+        "timestamp": "1440356256",
+        "franchise_id": "0013",
+        "amount": "233750.00",
+        "id": "52"
+      },
+      {
+        "timestamp": "1440377076",
+        "description": "Dropped Seastrunk, Lache FA RB (Salary: $475,000, Years: 3)",
+        "franchise_id": "0012",
+        "id": "53",
+        "amount": "237500.00"
+      },
+      {
+        "id": "54",
+        "amount": "247500.00",
+        "timestamp": "1440387313",
         "franchise_id": "0010",
-        "amount": "2.50",
-        "id": "58"
+        "description": "Dropped Thomas, Logan ARI QB (Salary: $495,000, Years: 4)"
+      },
+      {
+        "description": "Dropped Taylor, Stepfan ARI RB (Salary: $514,250, Years: 3)",
+        "timestamp": "1440387313",
+        "franchise_id": "0010",
+        "amount": "257125.00",
+        "id": "55"
+      },
+      {
+        "timestamp": "1440387313",
+        "franchise_id": "0010",
+        "description": "Dropped Moeaki, Tony ATL TE (Salary: $467,500, Years: 2)",
+        "amount": "233750.00",
+        "id": "56"
+      },
+      {
+        "id": "57",
+        "amount": "412500.00",
+        "timestamp": "1440389324",
+        "description": "Dropped Williams, Ryan DAL RB (Salary: $825,000, Years: 2)",
+        "franchise_id": "0012"
+      },
+      {
+        "amount": "212500.00",
+        "id": "58",
+        "description": "Dropped Gabriel, Taylor CLE WR (Salary: $425,000, Years: 3)",
+        "timestamp": "1440707646",
+        "franchise_id": "0009"
       },
       {
         "id": "59",
-        "timestamp": "1413947790",
-        "franchise_id": "0010",
-        "description": "Dropped Allen, Keenan SDC WR (Salary: $13.00, Contract: 1, Status: C)",
-        "amount": "6.50"
+        "amount": "261250.00",
+        "description": "Dropped Washington, Corey NYG WR (Salary: $522,500, Years: 4)",
+        "timestamp": "1440707646",
+        "franchise_id": "0009"
       },
       {
         "id": "6",
-        "timestamp": "1408893662",
-        "description": "Dropped Manuel, E.J. BUF QB (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0007",
-        "amount": "0.50"
+        "amount": "7420726.00",
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "franchise_id": "0007"
       },
       {
         "id": "60",
-        "amount": "-6.50",
-        "franchise_id": "0010",
-        "timestamp": "1415851767",
-        "description": "Keenan Allen was picked up"
+        "amount": "302500.00",
+        "franchise_id": "0006",
+        "timestamp": "1441165511",
+        "description": "Dropped Cunningham, Benny STL RB (Salary: $605,000, Years: 3)"
       },
       {
+        "timestamp": "1441165511",
+        "franchise_id": "0009",
+        "description": "Dropped Brown, Josh NYG PK (Salary: $425,000, Years: 1)",
         "id": "61",
-        "franchise_id": "0011",
-        "timestamp": "1410262886",
-        "description": "Dropped Rice, Ray BAL RB (Salary: $7.00, Contract: 1, Status: C)",
-        "amount": "3.50"
+        "amount": "212500.00"
       },
       {
-        "description": "Dropped Britt, Kenny STL WR (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1410406790",
-        "franchise_id": "0012",
-        "amount": "0.50",
-        "id": "62"
+        "amount": "212500.00",
+        "id": "62",
+        "timestamp": "1441165511",
+        "description": "Dropped Hartley, Garrett PIT PK (Salary: $425,000, Years: 1)",
+        "franchise_id": "0005"
       },
       {
         "id": "63",
-        "timestamp": "1411686291",
-        "description": "Dropped Dawson, Phil SFO PK (Salary: $1.00, Contract: 1, Status: C)",
-        "franchise_id": "0012",
-        "amount": "0.50"
+        "amount": "233750.00",
+        "description": "Dropped Hunter, Kendall SFO RB (Salary: $467,500, Years: 2)",
+        "timestamp": "1441552692",
+        "franchise_id": "0011"
       },
       {
         "id": "64",
-        "amount": "1.00",
-        "timestamp": "1411686291",
-        "franchise_id": "0012",
-        "description": "Dropped Michael, Christine SEA RB (Salary: $2.00, Contract: 1, Status: C)"
+        "amount": "212500.00",
+        "description": "Dropped Whittaker, Fozzy CAR RB (Salary: $425,000, Years: 1)",
+        "timestamp": "1441850415",
+        "franchise_id": "0015"
       },
       {
+        "timestamp": "1441850415",
+        "franchise_id": "0015",
+        "description": "Dropped Holmes, Andre OAK WR (Salary: $514,250, Years: 1)",
         "id": "65",
-        "franchise_id": "0012",
-        "timestamp": "1413469031",
-        "description": "Dropped Nicks, Hakeem IND WR (Salary: $1.00, Contract: 1, Status: C)",
-        "amount": "0.50"
+        "amount": "257125.00"
       },
       {
-        "amount": "0.50",
-        "description": "Dropped Seferian-Jenkins, Austin TBB TE (Salary: $1.00, Contract: 1, Status: R)",
-        "timestamp": "1413469031",
-        "franchise_id": "0012",
-        "id": "66"
+        "amount": "801625.00",
+        "id": "66",
+        "timestamp": "1441850415",
+        "description": "Dropped Ball, Montee FA* RB (Salary: $1,603,250, Years: 3)",
+        "franchise_id": "0006"
       },
       {
-        "amount": "1.00",
-        "description": "Dropped Cousins, Kirk WAS QB (Salary: $2.00, Contract: 1, Status: FA)",
-        "timestamp": "1414026030",
-        "franchise_id": "0012",
-        "id": "67"
+        "timestamp": "1441850415",
+        "description": "Dropped Sturgis, Caleb FA PK (Salary: $450,000, Years: 1)",
+        "franchise_id": "0011",
+        "id": "67",
+        "amount": "225000.00"
       },
       {
-        "amount": "0.50",
-        "franchise_id": "0012",
-        "timestamp": "1415157881",
-        "description": "Dropped Jones, James OAK WR (Salary: $1.00, Contract: 1, Status: FA)",
+        "description": "Dropped Barth, Connor FA* PK (Salary: $700,000, Years: 1)",
+        "timestamp": "1441850415",
+        "franchise_id": "0004",
+        "amount": "350000.00",
         "id": "68"
       },
       {
-        "amount": "1.00",
-        "timestamp": "1415851719",
-        "description": "Dropped Ertz, Zach PHI TE (Salary: $2.00, Contract: 2.50, Contract: 2, Status: C)",
-        "franchise_id": "0012",
+        "description": "Dropped Boykin, Jarrett FA WR (Salary: $2,750,000, Years: 2)",
+        "timestamp": "1442157582",
+        "franchise_id": "0002",
+        "amount": "1375000.00",
         "id": "69"
       },
       {
+        "amount": "578376.00",
         "id": "7",
-        "amount": "1.00",
-        "timestamp": "1408950589",
-        "description": "Dropped Bradford, Sam STL QB (Salary: $2.00, Contract: 1, Status: C)",
-        "franchise_id": "0007"
+        "description": "2014 Cap Hits",
+        "timestamp": "1423978890",
+        "franchise_id": "0008"
       },
       {
-        "timestamp": "1415851719",
-        "franchise_id": "0012",
-        "description": "Dropped Hurns, Allen JAC WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
-        "id": "70"
+        "timestamp": "1442157582",
+        "franchise_id": "0002",
+        "description": "Dropped Bostick, Brandon FA TE (Salary: $514,250, Years: 3)",
+        "id": "70",
+        "amount": "257125.00"
       },
       {
-        "amount": "0.75",
-        "description": "Dropped Hoyer, Brian CLE QB (Salary: $1.50, Contract: 1, Status: FA)",
-        "timestamp": "1416494788",
-        "franchise_id": "0012",
+        "franchise_id": "0013",
+        "timestamp": "1442355432",
+        "description": "Dropped West, Charcandrick KCC RB (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
         "id": "71"
       },
       {
-        "amount": "0.25",
-        "timestamp": "1417664717",
-        "franchise_id": "0012",
-        "description": "Dropped Santos, Cairo KCC PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "72"
+        "timestamp": "1442355432",
+        "description": "Dropped Pryor, Terrelle FA WR (Salary: $475,000, Years: 1)",
+        "franchise_id": "0013",
+        "id": "72",
+        "amount": "237500.00"
       },
       {
-        "amount": "0.50",
-        "timestamp": "1417664717",
-        "description": "Dropped Chargers, San Diego SDC Def (Salary: $1.00, Contract: 1, Status: FA)",
-        "franchise_id": "0012",
+        "timestamp": "1442455212",
+        "franchise_id": "0005",
+        "description": "Dropped Grice, Marion FA RB (Salary: $715,000, Years: 4)",
+        "amount": "357500.00",
         "id": "73"
       },
       {
+        "amount": "311121.25",
         "id": "74",
-        "amount": "0.25",
-        "franchise_id": "0012",
-        "timestamp": "1417664717",
-        "description": "Dropped Rivera, Mychal OAK TE (Salary: $0.50, Contract: 1, Status: FA)"
+        "timestamp": "1442455212",
+        "franchise_id": "0011",
+        "description": "Dropped Housler, Robert CLE TE (Salary: $622,242, Years: 1)"
       },
       {
+        "franchise_id": "0012",
+        "timestamp": "1442460316",
+        "description": "Dropped Pitta, Dennis BAL TE (Salary: $1,025,000, Years: 1)",
         "id": "75",
+        "amount": "512500.00"
+      },
+      {
+        "description": "Dropped Willson, Luke SEA TE (Salary: $847,000, Years: 3)",
+        "timestamp": "1442460752",
         "franchise_id": "0012",
-        "timestamp": "1418308908",
-        "description": "Dropped Rodgers, Richard GBP TE (Salary: $1.00, Contract: 1, Status: FA)",
-        "amount": "0.50"
+        "amount": "423500.00",
+        "id": "76"
       },
       {
-        "id": "76",
-        "amount": "0.50",
-        "franchise_id": "0012",
-        "timestamp": "1418868261",
-        "description": "Dropped Suisham, Shaun PIT PK (Salary: $1.00, Contract: 1, Status: FA)"
+        "amount": "233750.00",
+        "id": "77",
+        "timestamp": "1442521919",
+        "description": "Dropped Abbrederis, Jared FA WR (Salary: $467,500, Years: 4)",
+        "franchise_id": "0005"
       },
       {
-        "amount": "3.00",
-        "description": "Dropped Boldin, Anquan SFO WR (Salary: $6.00, Contract: 3, Status: C)",
-        "timestamp": "1433866354",
-        "franchise_id": "0010",
-        "id": "77"
+        "id": "78",
+        "amount": "225000.00",
+        "franchise_id": "0011",
+        "timestamp": "1443060299",
+        "description": "Dropped Cumberland, Jeff NYJ TE (Salary: $450,000, Years: 1)"
       },
       {
-        "franchise_id": "0010",
-        "timestamp": "1433866354",
-        "description": "Dropped Welker, Wes FA WR (Salary: $9.00, Contract: 3, Status: C)",
-        "amount": "4.50",
-        "id": "78"
+        "id": "79",
+        "amount": "212500.00",
+        "franchise_id": "0013",
+        "timestamp": "1443311957",
+        "description": "Dropped Inman, Dontrelle SDC WR (Salary: $425,000, Years: 4)"
       },
       {
-        "amount": "0.50",
-        "timestamp": "1433866354",
-        "franchise_id": "0010",
-        "description": "Dropped Eagles, Philadelphia PHI Def (Salary: $1.00, Contract: 1, Status: FA)",
-        "id": "79"
-      },
-      {
+        "amount": "3251525.00",
         "id": "8",
-        "amount": "-2.00",
-        "timestamp": "1409248365",
-        "description": "Sam Bradford was injured before the season",
-        "franchise_id": "0007"
+        "description": "2014 Cap Hits",
+        "timestamp": "1423978890",
+        "franchise_id": "0009"
       },
       {
+        "timestamp": "1443312097",
+        "description": "Dropped Streater, Rod OAK WR (Salary: $425,000, Years: 2)",
+        "franchise_id": "0013",
         "id": "80",
-        "amount": "1.50",
-        "timestamp": "1433866354",
-        "description": "Dropped Panthers, Carolina CAR Def (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0010"
+        "amount": "212500.00"
       },
       {
-        "franchise_id": "0010",
-        "timestamp": "1433866354",
-        "description": "Dropped Vikings, Minnesota MIN Def (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
-        "id": "81"
+        "description": "Dropped Johnson, Storm FA RB (Salary: $467,500, Years: 4)",
+        "timestamp": "1443633585",
+        "franchise_id": "0008",
+        "id": "81",
+        "amount": "233750.00"
       },
       {
-        "description": "Dropped Manning, Peyton DEN QB (Salary: $16.00, Contract: 3, Status: C)",
-        "timestamp": "1433866605",
-        "franchise_id": "0004",
-        "amount": "8.00",
-        "id": "82"
+        "timestamp": "1443633585",
+        "description": "Dropped Wayne, Reggie FA* WR (Salary: $425,000, Years: 1)",
+        "franchise_id": "0008",
+        "id": "82",
+        "amount": "212500.00"
       },
       {
-        "id": "83",
-        "amount": "3.25",
-        "franchise_id": "0004",
-        "timestamp": "1433866605",
-        "description": "Dropped Thomas, Demaryius DEN WR (Salary: $6.50, Contract: 3, Status: C)"
+        "timestamp": "1443664809",
+        "franchise_id": "0008",
+        "description": "Dropped Parkey, Cody PHI PK (Salary: $495,000, Years: 1)",
+        "amount": "247500.00",
+        "id": "83"
       },
       {
-        "amount": "2.00",
-        "franchise_id": "0010",
-        "timestamp": "1433866784",
-        "description": "Dropped Sanchez, Mark PHI QB (Salary: $4.00, Contract: 1, Status: FA)",
+        "description": "Dropped Butler, Brice DAL WR (Salary: $425,000, Years: 1)",
+        "timestamp": "1443664809",
+        "franchise_id": "0009",
+        "amount": "212500.00",
         "id": "84"
       },
       {
-        "timestamp": "1433867282",
-        "description": "Dropped Orton, Kyle FA QB (Salary: $6.00, Contract: 1, Status: FA)",
-        "franchise_id": "0007",
-        "amount": "3.00",
+        "timestamp": "1443664809",
+        "franchise_id": "0012",
+        "description": "Dropped McGloin, Matt OAK QB (Salary: $425,000, Years: 1)",
+        "amount": "212500.00",
         "id": "85"
       },
       {
-        "timestamp": "1433867282",
-        "description": "Dropped Bradshaw, Ahmad FA* RB (Salary: $1.50, Contract: 1, Status: FA)",
-        "franchise_id": "0007",
-        "amount": "0.75",
-        "id": "86"
+        "amount": "212500.00",
+        "id": "86",
+        "timestamp": "1443664809",
+        "description": "Dropped Burton, Trey PHI TE (Salary: $425,000, Years: 1)",
+        "franchise_id": "0013"
       },
       {
-        "description": "Dropped Morris, Alfred WAS RB (Salary: $10.00, Contract: 3, Status: C)",
-        "timestamp": "1433867282",
-        "franchise_id": "0007",
-        "amount": "5.00",
-        "id": "87"
+        "amount": "212500.00",
+        "id": "87",
+        "description": "Dropped Matthews, Chris SEA WR (Salary: $425,000, Years: 2)",
+        "timestamp": "1443664809",
+        "franchise_id": "0013"
       },
       {
-        "timestamp": "1433867282",
-        "franchise_id": "0007",
-        "description": "Dropped Cundiff, Billy FA* PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
+        "description": "Dropped Bullock, Randy FA* PK (Salary: $467,500, Years: 2)",
+        "timestamp": "1443664809",
+        "franchise_id": "0013",
+        "amount": "233750.00",
         "id": "88"
       },
       {
-        "amount": "0.25",
-        "timestamp": "1433867282",
-        "description": "Dropped Novak, Nick SDC PK (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0007",
-        "id": "89"
+        "id": "89",
+        "amount": "212500.00",
+        "timestamp": "1443665741",
+        "description": "Dropped McBride, Tre FA WR (Salary: $425,000, Years: 5)",
+        "franchise_id": "0016"
       },
       {
-        "franchise_id": "0007",
-        "timestamp": "1409248437",
-        "description": "Sam Bradford adjustment",
-        "amount": "1.00",
-        "id": "9"
+        "franchise_id": "0010",
+        "timestamp": "1423978890",
+        "description": "2014 Cap Hits",
+        "id": "9",
+        "amount": "1121250.00"
       },
       {
-        "franchise_id": "0007",
-        "timestamp": "1433867282",
-        "description": "Dropped Broncos, Denver DEN Def (Salary: $0.50, Contract: 1, Status: FA)",
-        "amount": "0.25",
-        "id": "90"
+        "timestamp": "1443829852",
+        "franchise_id": "0003",
+        "description": "Dropped Richardson, Trent FA* RB (Salary: $2,525,000, Years: 2)",
+        "id": "90",
+        "amount": "1262500.00"
       },
       {
-        "id": "91",
-        "amount": "0.25",
-        "description": "Dropped Ravens, Baltimore BAL Def (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1433867282",
-        "franchise_id": "0007"
+        "timestamp": "1443893780",
+        "description": "Dropped Brown, Bryce FA RB (Salary: $565,675, Years: 2)",
+        "franchise_id": "0009",
+        "amount": "282837.50",
+        "id": "91"
       },
       {
+        "description": "Dropped Manuel, E.J. BUF QB (Salary: $514,250, Years: 3)",
+        "timestamp": "1443973427",
+        "franchise_id": "0010",
         "id": "92",
-        "timestamp": "1433872962",
-        "description": "Dropped Smith, Alex KCC QB (Salary: $2.50, Contract: 2, Status: C)",
-        "franchise_id": "0004",
-        "amount": "1.25"
+        "amount": "257125.00"
       },
       {
+        "amount": "212500.00",
         "id": "93",
-        "timestamp": "1433872962",
-        "franchise_id": "0004",
-        "description": "Dropped Dawson, Phil SFO PK (Salary: $0.50, Contract: 1, Status: C)",
-        "amount": "0.25"
+        "description": "Dropped McCown, Luke NOS QB (Salary: $425,000, Years: 1)",
+        "timestamp": "1444269604",
+        "franchise_id": "0009"
       },
       {
-        "franchise_id": "0004",
-        "timestamp": "1433872962",
-        "description": "Dropped Bengals, Cincinnati CIN Def (Salary: $3.00, Contract: 1, Status: C)",
-        "amount": "1.50",
-        "id": "94"
+        "amount": "257125.00",
+        "id": "94",
+        "timestamp": "1444269604",
+        "franchise_id": "0011",
+        "description": "Dropped Dawson, Phil SFO PK (Salary: $514,250, Years: 1)"
       },
       {
-        "description": "Dropped Giants, New York NYG Def (Salary: $1.00, Contract: 1, Status: C)",
-        "timestamp": "1433872962",
-        "franchise_id": "0004",
-        "amount": "0.50",
-        "id": "95"
+        "amount": "233750.00",
+        "id": "95",
+        "timestamp": "1444269604",
+        "description": "Dropped Dunbar, Lance DAL RB (Salary: $467,500, Years: 1)",
+        "franchise_id": "0001"
       },
       {
-        "description": "Dropped Williams, Damien MIA RB (Salary: $0.50, Contract: 1, Status: FA)",
-        "timestamp": "1433873019",
-        "franchise_id": "0004",
-        "amount": "0.25",
-        "id": "96"
+        "amount": "275000.00",
+        "id": "96",
+        "timestamp": "1444269604",
+        "description": "Dropped Brown, Marlon BAL WR (Salary: $550,000, Years: 4)",
+        "franchise_id": "0013"
       },
       {
-        "amount": "0.25",
-        "franchise_id": "0012",
-        "timestamp": "1433874012",
-        "description": "Dropped Allen, Keenan SDC WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "id": "97"
+        "id": "97",
+        "amount": "375000.00",
+        "description": "Dropped Ball, Montee FA* RB (Salary: $750,000, Years: 4)",
+        "timestamp": "1444269604",
+        "franchise_id": "0013"
       },
       {
-        "timestamp": "1433874012",
-        "description": "Dropped Floyd, Michael ARI WR (Salary: $3.00, Contract: 1, Status: C)",
-        "franchise_id": "0012",
-        "amount": "1.50",
-        "id": "98"
+        "id": "98",
+        "amount": "212500.00",
+        "description": "Dropped Sturgis, Caleb PHI PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1444269604",
+        "franchise_id": "0013"
       },
       {
-        "id": "99",
-        "timestamp": "1433874012",
-        "description": "Dropped Johnson, Charles MIN WR (Salary: $0.50, Contract: 1, Status: FA)",
-        "franchise_id": "0012",
-        "amount": "0.25"
+        "description": "Dropped Scobee, Josh FA PK (Salary: $425,000, Years: 1)",
+        "timestamp": "1444272451",
+        "franchise_id": "0005",
+        "amount": "212500.00",
+        "id": "99"
       }
     ]
   },
-  "version": "1.0",
-  "encoding": "utf-8"
+  "version": "1.0"
 }

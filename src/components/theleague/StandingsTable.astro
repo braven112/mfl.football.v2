@@ -2,6 +2,7 @@
 import type { TeamStanding } from '../../types/standings';
 import PlayoffBadge from './PlayoffBadge.astro';
 import { getConferenceLogo, getConferenceName, type ConferenceId } from '../../utils/afl-conference';
+import { HISTORICAL_TEAM_BANNER_FALLBACK } from '../../utils/team-names';
 
 export interface Props {
   teams: TeamStanding[];
@@ -166,6 +167,10 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 
           const isPreferredTeam = preferredTeamId && team.id === preferredTeamId;
 
+          // Historical eras with no surviving banner art resolve to the shared
+          // placeholder — show the team name text instead of a generic image.
+          const hasBannerImage = Boolean(team.teamBanner) && team.teamBanner !== HISTORICAL_TEAM_BANNER_FALLBACK;
+
           const bannerHref = franchiseBaseUrl
             ? `${franchiseBaseUrl}/${team.id}`
             : rosterBaseUrl
@@ -193,7 +198,7 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
               )}
               <td class="col-team">
                 <div class="team-info">
-                  {team.teamBanner && (
+                  {hasBannerImage && (
                     bannerHref ? (
                       <a
                         href={bannerHref}
@@ -216,7 +221,7 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
                       />
                     )
                   )}
-                  <span class="team-name">{team.teamName}</span>
+                  <span class={hasBannerImage ? 'team-name' : 'team-name team-name--fallback'}>{team.teamName}</span>
                 </div>
               </td>
               {view === 'division' && (
@@ -573,6 +578,12 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 
   .team-name {
     display: none;
+  }
+
+  .team-name--fallback {
+    display: inline-block;
+    font-weight: 600;
+    font-size: 0.9rem;
   }
 
   .seed-badge {

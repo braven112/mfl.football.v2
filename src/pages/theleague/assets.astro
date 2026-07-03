@@ -13,12 +13,21 @@ type AssetEntry = {
   extension?: string;
 };
 
+type TeamEra = {
+  yearStart: number;
+  yearEnd: number;
+  franchiseId: string;
+  conference?: string;
+};
+
 type TeamEntry = {
   key: string;
   slug: string;
   id?: string;
   name: string;
+  category?: string;
   division?: string;
+  eras?: TeamEra[];
   aliases?: string[];
   psdAssets?: AssetEntry[];
   assets: Record<string, AssetEntry[]>;
@@ -36,6 +45,11 @@ const formatBucketLabel = (bucket: string) =>
         .replace(/\b\w/g, char => char.toUpperCase());
 
 const PSD_FOLDERS = ['psd', 'psds'];
+
+const withAbsolute = (entry: AssetEntry): AssetEntry => ({
+  ...entry,
+  absoluteUrl: assetDomain ? `${assetDomain}${entry.relativePath}` : entry.relativePath,
+});
 
 const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   const rawAssets = Object.fromEntries(
@@ -65,12 +79,37 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     slug: team.slug,
     id: team.id,
     name: team.name,
+    category: team.category,
     division: team.division,
+    eras: team.eras,
     aliases: team.aliases,
     psdAssets,
     assets,
   };
 });
+
+// "2007 (slot 0002)" — acknowledges franchise-slot moves for identities
+// that migrated between franchises (same owner).
+const formatEra = (era: TeamEra) => {
+  const years = era.yearStart === era.yearEnd ? `${era.yearStart}` : `${era.yearStart}–${era.yearEnd}`;
+  return `${years} (slot ${era.franchiseId})`;
+};
+
+const rawExtras = (aggregatedAssets as { extras?: Record<string, AssetEntry[]> }).extras ?? {};
+const extras = Object.fromEntries(
+  Object.entries(rawExtras).map(([bucket, entries]) => [bucket, (entries ?? []).map(withAbsolute)])
+);
+
+const teamSections: Array<[string, TeamEntry[]]> = [
+  ['Active Teams', teamList.filter((t) => t.category !== 'former')],
+  ['Former Teams', teamList.filter((t) => t.category === 'former')],
+];
+const extraSections: Array<[string, AssetEntry[]]> = [
+  ['Championship Art', extras.championship ?? []],
+  ['League Logos', extras.league ?? []],
+  ['Conferences', extras.conference ?? []],
+  ['Divisions', extras.division ?? []],
+];
 ---
 
 <TheLeagueLayout title="The League Asset Library">
@@ -93,8 +132,11 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
             />
           </label>
         </div>
-        <div class="team-grid">
-          {teamList.map((team) => (
+        {teamSections.map(([sectionTitle, sectionTeams]) => sectionTeams.length > 0 && (
+        <section class="library-section library-section--teams">
+          <h2 class="library-section__title">{sectionTitle}</h2>
+          <div class="team-grid">
+          {sectionTeams.map((team) => (
             <section
               class="team-card"
               id={team.slug}
@@ -105,8 +147,13 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
             >
               <div class="team-card__header">
                 <div class="team-card__info">
-                  <h2>{team.name}</h2>
+                  <h3 class="team-card__name">{team.name}</h3>
                   {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
+                  {team.eras && team.eras.length > 0 && (
+                    <p class="team-eras">
+                      {team.category === 'active' ? 'Formerly: ' : ''}{team.eras.map(formatEra).join(' → ')}
+                    </p>
+                  )}
                   {team.division && <p class="team-division">{team.division} Division</p>}
 
                   {team.psdAssets?.length ? (
@@ -117,7 +164,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
                         </a>
                       ))}
                     </div>
-                  ) : "null"}
+                  ) : null}
                 </div>
               </div>
 
@@ -145,7 +192,30 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
               </div>
             </section>
           ))}
-        </div>
+          </div>
+        </section>
+        ))}
+
+        {extraSections.map(([sectionTitle, entries]) => entries.length > 0 && (
+        <section class="library-section">
+          <h2 class="library-section__title">{sectionTitle}</h2>
+          <div class="asset-list asset-list--extras">
+            {entries.map((asset) => (
+              <article class={`asset-card asset-card--${asset.type}`}>
+                <img src={asset.relativePath} alt={asset.filename} loading="lazy" />
+                <div class="asset-meta">
+                  <p class="filename">{asset.filename}</p>
+                  <p class="asset-dimensions">Loading size…</p>
+                  <label>
+                    <span>URL</span>
+                    <input type="text" value={asset.absoluteUrl} readonly />
+                  </label>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+        ))}
       </>
     )}
   </div>
@@ -154,9 +224,8 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     <script is:inline>
       (() => {
         const input = document.querySelector('#team-filter');
-        const grid = document.querySelector('.team-grid');
-        if (!input || !grid) return;
-        const cards = Array.from(grid.children);
+        const cards = Array.from(document.querySelectorAll('.team-grid .team-card'));
+        if (!input || cards.length === 0) return;
 
         const filterCards = (query) => {
           const needle = query.trim().toLowerCase();
@@ -170,6 +239,12 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
             ].join(' ').toLowerCase();
             const match = needle === '' || haystack.includes(needle);
             card.style.display = match ? '' : 'none';
+          });
+          // Hide a team section header when the filter empties its grid
+          document.querySelectorAll('.library-section--teams').forEach(section => {
+            const anyVisible = [...section.querySelectorAll('.team-card')]
+              .some(card => card.style.display !== 'none');
+            section.style.display = anyVisible ? '' : 'none';
           });
         };
 
@@ -283,9 +358,36 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     align-items: baseline;
   }
 
-  .team-card__header h2 {
+  .team-card__name {
     margin: 0;
     font-size: 1.5rem;
+  }
+
+  .library-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .library-section__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    color: var(--color-gray-700, #374151);
+  }
+
+  .asset-list--extras {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .asset-list--extras .asset-card {
+    background: var(--content-bg, #fff);
   }
 
   .team-id,
@@ -293,6 +395,13 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     margin: 0;
     font-size: 0.9rem;
     color: var(--muted-text-color, #6b7280);
+  }
+
+  .team-eras {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+    font-style: italic;
   }
 
   .team-division {
