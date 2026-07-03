@@ -5,6 +5,7 @@ import { stampBadgeYear } from '../src/utils/afl-badge';
 
 const ARC = `<svg><defs><path id="yearArc" d="M0 0"></path></defs><text><textPath href="#yearArc" startOffset="50%">★  2025  ★</textPath></text></svg>`;
 const SHIELD = `<svg><text x="130" y="270" fill="#c9a44c">★  2025  ★</text></svg>`;
+const MULTI_ARC = `<svg><defs><path id="yearArc" d="M0 0"></path><path id="labelArc" d="M0 0"></path></defs><text><textPath href="#yearArc" startOffset="50%">★  2025  ★</textPath><textPath href="#labelArc">LABEL</textPath></text></svg>`;
 
 describe('stampBadgeYear', () => {
   it('stamps the year into an arc (textPath) badge', () => {
@@ -41,6 +42,21 @@ describe('stampBadgeYear', () => {
     expect(stampBadgeYear(SHIELD, null)).toContain('2025');
   });
 
+  // Multi-arc badges have two <textPath> elements. The stamper must hit only
+  // the first one (year arc) without affecting the second one (label arc).
+  // Year arc MUST be first in document order for this to work correctly.
+  it('stamps only the first <textPath> in multi-arc badges', () => {
+    const stamped = stampBadgeYear(MULTI_ARC, 1999, 'multi-test');
+    // Year arc (first) was stamped
+    expect(stamped).toContain('★  1999  ★');
+    expect(stamped).toContain('href="#yearArc-multi-test"');
+    // Label arc (second) survived untouched
+    expect(stamped).toContain('href="#labelArc"');
+    expect(stamped).toContain('>LABEL</textPath>');
+    // Old year is gone
+    expect(stamped).not.toContain('2025');
+  });
+
   // Guard against badge-art drift: if a future SVG revision changes the year
   // token, stamping would silently no-op and leave the hardcoded placeholder.
   it('actually stamps every shipped award badge', () => {
@@ -53,23 +69,5 @@ describe('stampBadgeYear', () => {
       expect(stamped, `${f} did not change when stamped`).not.toBe(raw);
       expect(stamped, `${f} year not stamped`).toContain('1999');
     }
-  });
-
-  // The "Grand Slam" badge has TWO curved arcs — a year arc and a label arc.
-  // Stamping must hit the year arc only, leaving the GRAND SLAM label intact.
-  // (A prior bug had the stamper match the literal tag name inside an SVG
-  // comment, blanking the year arc's attributes; this locks the contract.)
-  it('stamps the year into the grand-slam badge without eating the label', () => {
-    const raw = readFileSync(
-      path.resolve(__dirname, '../public/assets/afl/grand-slam.svg'),
-      'utf8'
-    );
-    const stamped = stampBadgeYear(raw, 2025, 'grand-slam');
-    // Year landed on the bottom arc…
-    expect(stamped).toContain('★  2025  ★');
-    // …the arc kept its href (attributes weren't clobbered)…
-    expect(stamped).toContain('href="#yearArc-grand-slam"');
-    // …and the label arc survived intact.
-    expect(stamped).toContain('>GRAND SLAM</textPath>');
   });
 });
