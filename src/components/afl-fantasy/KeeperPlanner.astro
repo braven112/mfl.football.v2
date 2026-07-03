@@ -734,7 +734,10 @@ const roundLabel = (round: string) => {
 
 <!-- is:global is required: renderSlots() rebuilds keeper-slot contents (arrows,
      slot numbers, hints) with document.createElement/innerHTML, and those nodes
-     never receive Astro's scoped-style class. All selectors are kp-prefixed. -->
+     never receive Astro's scoped-style class. Safe to expose globally because
+     every selector is anchored under this component's namespace — the
+     .keeper-planner / .kp-finalize roots and kp-* classes (descendant
+     references like `.kp-slot__player .player-cell` stay anchored on kp-*). -->
 <style is:global>
   .keeper-planner {
     display: grid;
