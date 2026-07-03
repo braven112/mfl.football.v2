@@ -124,6 +124,110 @@ interface AwardsHistoryFile {
 
 const SEASONS: AwardSeason[] = (awardsHistory as AwardsHistoryFile).seasons ?? [];
 
+// --- Owner-history attribution ---
+// Some franchise IDs change hands (an owner leaves, later returns under a
+// different current franchise, or a new owner takes over a slot). A current
+// team's `ownerHistory` in afl.config.json claims specific (franchiseId,
+// year) ranges that belonged to that owner under a different ID — award
+// years in that range should credit the CURRENT franchise, not the raw slot.
+// Mirrors scripts/compute-franchise-history.mjs (TheLeague's equivalent).
+type AflTeamConfig = {
+  franchiseId: string;
+  name: string;
+  history?: Array<{ name: string; yearStart: number; yearEnd: number }>;
+  ownerHistory?: Array<{ franchiseId: string; yearStart: number; yearEnd: number }>;
+  currentOwnerSince?: number;
+};
+
+const CURRENT_TEAMS: AflTeamConfig[] = (
+  (aflConfig as { teams?: AflTeamConfig[] }).teams ?? []
+);
+
+const TEAMS_WITH_OWNER_HISTORY = CURRENT_TEAMS.filter(
+  (t) => Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0
+);
+
+const normalizeIdentityName = (s: string | undefined | null): string =>
+  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
+/**
+ * Infer the year the current owner took over a franchise, so former-owner
+ * seasons can be excluded from career stats:
+ *   1. Explicit `currentOwnerSince` wins.
+ *   2. An `ownerHistory` array: earliest yearStart across its entries.
+ *   3. A `history` array whose last entry's name matches the current name:
+ *      walk backwards through consecutive same-name entries, return the
+ *      earliest yearStart of that run.
+ *   4. A `history` array whose last entry doesn't match: that entry's
+ *      yearEnd + 1 (the current owner started right after).
+ *   5. No history at all: null (include every year).
+ */
+function inferCurrentOwnerSince(team: AflTeamConfig): number | null {
+  if (typeof team.currentOwnerSince === 'number') return team.currentOwnerSince;
+  if (Array.isArray(team.ownerHistory) && team.ownerHistory.length > 0) {
+    return Math.min(...team.ownerHistory.map((h) => h.yearStart));
+  }
+  if (!Array.isArray(team.history) || team.history.length === 0) return null;
+  const sorted = [...team.history].sort((a, b) => a.yearStart - b.yearStart);
+  const last = sorted[sorted.length - 1];
+  const currentNorm = normalizeIdentityName(team.name);
+  if (normalizeIdentityName(last.name) !== currentNorm) {
+    return last.yearEnd + 1;
+  }
+  let i = sorted.length - 1;
+  while (i > 0 && normalizeIdentityName(sorted[i - 1].name) === normalizeIdentityName(sorted[i].name)) {
+    i--;
+  }
+  return sorted[i].yearStart;
+}
+
+const CURRENT_OWNER_SINCE = new Map<string, number | null>();
+for (const team of CURRENT_TEAMS) {
+  CURRENT_OWNER_SINCE.set(team.franchiseId, inferCurrentOwnerSince(team));
+}
+
+/**
+ * First year of the current owner's recorded lineage (see
+ * inferCurrentOwnerSince), or null when unknown / owned since founding.
+ * CAVEAT: for a team with `ownerHistory` this is the earliest claimed year
+ * ANYWHERE (possibly on a different franchise slot, possibly followed by a
+ * gap out of the league) — NOT the year they took over this slot. Display
+ * code should treat it as "owner's era starts here", not continuous tenure.
+ * Exposed so the franchise page's owner-based name history splits eras on
+ * the exact same boundary stats use.
+ */
+export function getCurrentOwnerSince(franchiseId: string): number | null {
+  return CURRENT_OWNER_SINCE.get(franchiseId) ?? null;
+}
+
+/**
+ * Resolve which CURRENT franchise ID should get credit for an award recorded
+ * under `sourceId` in `year`. Returns null when the year belongs to a former
+ * owner nobody currently claims (excluded from every franchise's stats).
+ */
+export function attributeAwardYear(sourceId: string | null, year: number): string | null {
+  if (!sourceId) return null;
+  for (const team of TEAMS_WITH_OWNER_HISTORY) {
+    for (const entry of team.ownerHistory!) {
+      if (entry.franchiseId === sourceId && year >= entry.yearStart && year <= entry.yearEnd) {
+        return team.franchiseId;
+      }
+    }
+  }
+  const sourceTeam = CURRENT_TEAMS.find((t) => t.franchiseId === sourceId);
+  // Unknown franchise ID (typo / stale data) — fail closed rather than
+  // crediting a nonexistent franchise key.
+  if (!sourceTeam) return null;
+  // The source team itself claims other franchise IDs via ownerHistory but
+  // none of its entries cover this year — it belongs to a former owner.
+  if (Array.isArray(sourceTeam.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
+    return null;
+  }
+  const since = CURRENT_OWNER_SINCE.get(sourceId);
+  if (since != null && year < since) return null;
+  return sourceId;
+}
+
 /**
  * Resolve the branded award badge path (served from public/). Single source
  * of truth — call sites derive the path, never hardcode it.
@@ -153,7 +257,8 @@ export function getFranchiseAwards(franchiseId: string): FranchiseAward[] {
   return AWARD_TYPES.map((type) => {
     const years: number[] = [];
     for (const season of SEASONS) {
-      if (season.awards?.[type.slug]?.franchiseId === franchiseId) {
+      const raw = season.awards?.[type.slug]?.franchiseId ?? null;
+      if (attributeAwardYear(raw, season.year) === franchiseId) {
         years.push(season.year);
       }
     }
@@ -278,7 +383,8 @@ export function getFranchiseTrophyCase(franchiseId: string): TrophyCaseItem[] {
   for (const type of AWARD_TYPES) {
     const years: number[] = [];
     for (const season of SEASONS) {
-      if (season.awards?.[type.slug]?.franchiseId === franchiseId) {
+      const raw = season.awards?.[type.slug]?.franchiseId ?? null;
+      if (attributeAwardYear(raw, season.year) === franchiseId) {
         years.push(season.year);
       }
     }
@@ -451,7 +557,11 @@ export function getFranchiseTitleProgress(franchiseId: string): FranchiseTitlePr
     for (const season of SEASONS) {
       // A season can credit a franchise multiple slugs of one type only in
       // pathological data; first match per season is enough.
-      if (t.slugs.some((slug) => season.awards?.[slug]?.franchiseId === franchiseId)) {
+      if (
+        t.slugs.some(
+          (slug) => attributeAwardYear(season.awards?.[slug]?.franchiseId ?? null, season.year) === franchiseId
+        )
+      ) {
         years.push(season.year);
       }
     }

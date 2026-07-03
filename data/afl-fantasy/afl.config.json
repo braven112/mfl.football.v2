@@ -13,6 +13,7 @@
     {
       "franchiseId": "0001",
       "name": "Smokane FC",
+      "currentOwnerSince": 2003,
       "nameMedium": "Smokane FC",
       "nameShort": "Smokane FC",
       "abbrev": "SMOKE",
@@ -100,18 +101,7 @@
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/ditka.png",
       "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/ditka.png",
-      "ownerHistory": [
-        {
-          "franchiseId": "0016",
-          "yearStart": 2016,
-          "yearEnd": 2016
-        },
-        {
-          "franchiseId": "0004",
-          "yearStart": 2017,
-          "yearEnd": 9999
-        }
-      ],
+      "currentOwnerSince": 2025,
       "history": [
         {
           "name": "Coke n Blowjobs",
@@ -175,7 +165,8 @@
           "icon": "/assets/afl/history/can_t_get_over_the_baby_gate_icon_icon_circle.png",
           "banner": "/assets/afl/history/can_t_get_over_the_baby_gate_banner.png",
           "yearStart": 2024,
-          "yearEnd": 2024
+          "yearEnd": 2024,
+          "rebrand": { "reason": "last-place", "group": "baby-gate" }
         }
       ]
     },
@@ -225,6 +216,18 @@
       "nameMedium": "Da Dangsters",
       "nameShort": "Dangsters",
       "abbrev": "DANG",
+      "ownerHistory": [
+        {
+          "franchiseId": "0021",
+          "yearStart": 2003,
+          "yearEnd": 2008
+        },
+        {
+          "franchiseId": "0006",
+          "yearStart": 2013,
+          "yearEnd": 9999
+        }
+      ],
       "loaderQuips": ["Cueing the Dangsters' getaway music…", "The world is yours, Dangsters…"],
       "aliases": [
         "Dangsters",
@@ -279,6 +282,7 @@
       "nameMedium": "Avenging Amish",
       "nameShort": "Amish",
       "abbrev": "AMISH",
+      "currentOwnerSince": 2021,
       "loaderQuips": ["Consoling the Avenging Amish after another Cowboys loss…"],
       "aliases": [
         "Amish"
@@ -323,14 +327,16 @@
           "icon": "/assets/afl/history/vit_s_brother_icon_icon_circle.png",
           "banner": "/assets/afl/history/vit_s_brother_banner.png",
           "yearStart": 2021,
-          "yearEnd": 2021
+          "yearEnd": 2021,
+          "rebrand": { "reason": "last-place", "group": "avenging-amish-repeat" }
         },
         {
           "name": "Broke Back 'lil Half Dead's Brother",
           "icon": "/assets/afl/history/broke_back_lil_half_dead_s_brother_icon_icon_circle.png",
           "banner": "/assets/afl/history/broke_back_lil_half_dead_s_brother_banner.png",
           "yearStart": 2023,
-          "yearEnd": 2023
+          "yearEnd": 2023,
+          "rebrand": { "reason": "last-place", "group": "avenging-amish-repeat" }
         }
       ]
     },
@@ -469,6 +475,7 @@
       "nameMedium": "Suh girls",
       "nameShort": "Suh girls",
       "abbrev": "SHIT",
+      "currentOwnerSince": 2008,
       "loaderQuips": ["Tallying the Suh girls' all-time losses…"],
       "aliases": [
         "Suh girls",
@@ -540,6 +547,18 @@
       "tier": "D-League",
       "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/micks.png",
       "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/micks.png",
+      "ownerHistory": [
+        {
+          "franchiseId": "0004",
+          "yearStart": 2005,
+          "yearEnd": 2007
+        },
+        {
+          "franchiseId": "0013",
+          "yearStart": 2020,
+          "yearEnd": 9999
+        }
+      ],
       "history": [
         {
           "name": "Lucky Buck$",
@@ -650,6 +669,7 @@
       "nameMedium": "Swiftie 4 Life",
       "nameShort": "Swiftie",
       "abbrev": "SWIFTY",
+      "currentOwnerSince": 2022,
       "loaderQuips": ["Cueing the Swiftie 4 Life setlist…"],
       "aliases": [
         "Swiftie",
@@ -733,7 +753,8 @@
           "icon": "/assets/afl/history/be_rough_i_m_used_to_it_icon_icon_circle.png",
           "banner": "/assets/afl/history/be_rough_i_m_used_to_it_banner.png",
           "yearStart": 2020,
-          "yearEnd": 2020
+          "yearEnd": 2020,
+          "rebrand": { "reason": "last-place", "group": "be-rough" }
         },
         {
           "name": "Be Gentle. It's my first time.",
@@ -819,6 +840,7 @@
       "nameMedium": "Jewpacabra",
       "nameShort": "Jewpacabra",
       "abbrev": "JEW",
+      "currentOwnerSince": 2015,
       "loaderQuips": ["Respecting the Jewpacabra's authoritah…"],
       "aliases": [
         "Jew"
@@ -865,11 +887,19 @@
           "yearEnd": 2014
         },
         {
+          "name": "Jewpacabra",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/jewpacabra.png",
+          "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/jewpacabra.png",
+          "yearStart": 2015,
+          "yearEnd": 2018
+        },
+        {
           "name": "Jesus Killers",
           "icon": "/assets/afl/history/jesus_killers_icon_icon_circle.png",
           "banner": "/assets/afl/history/jesus_killers_banner.png",
           "yearStart": 2019,
-          "yearEnd": 2019
+          "yearEnd": 2019,
+          "rebrand": { "reason": "last-place", "group": "jesus-killers" }
         }
       ]
     },
@@ -1049,6 +1079,7 @@
       "nameMedium": "The Show",
       "nameShort": "The Show",
       "abbrev": "SHOW",
+      "currentOwnerSince": 2022,
       "loaderQuips": ["Making sure The Show goes on…"],
       "aliases": [
         "Gobbler",
@@ -1087,7 +1118,8 @@
           "icon": "/assets/afl/history/gobblers_icon_circle.png",
           "banner": "/assets/afl/banners/gobblers.png",
           "yearStart": 2025,
-          "yearEnd": 2025
+          "yearEnd": 2025,
+          "rebrand": { "reason": "last-place", "group": "cock-gobbler" }
         }
       ]
     },

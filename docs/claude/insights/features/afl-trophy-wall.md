@@ -305,3 +305,32 @@ renders during AFL Week 16 (championship-week event start → +7 days =
 2025 that's **2025-12-18 .. 2025-12-24**, so `?testDate=2025-12-20` on
 `/afl-fantasy` forces the championship hero. Standings feeds exist for every year
 back to 2007, so any past season works.
+
+---
+
+## 2026-07-03 - Historical tier membership RECOVERED (supersedes "not recoverable")
+
+**Context:** Brandon's screenshot of MFL's official 2021 all-play page revealed
+our per-year tier tables were wrong for 2020-2024 (the page was falling back to
+current `afl.config.json` tiers — five 2021 D-League teams rendered in Premier).
+
+**The discovery:** MFL serves no tier markers, but the league's custom skin
+does — per-year grouping scripts at
+`https://mfl.football/afl-fantasy.com/assets/js/premierleague-<year>.js`
+hardcode `premierteams` / `dleagueteams` as `#franchiseicon_00XX` selector
+lists. Scripts exist for **2020-2024 only** (2016-2019 return 406), which also
+confirms the tier competition began in 2020. Note: `mfl.football` 406s plain
+curl — send a browser `User-Agent` (+ `Referer`) to fetch.
+
+All five years were extracted and recorded into
+`data/afl-fantasy/tier-history.json` `seasons[year].membership`
+(`membershipSource` cites the script). The standings page's
+`getTierMembership(year)` picks them up automatically — verified the rendered
+2021 tables now match MFL's official page team-for-team.
+
+**Identity-dating caveat (from Brandon):** owners sometimes renamed in MFL
+*early* — after the NFL season but before MFL's season rollover — and/or
+swapped banners early while keeping the old name. Per-year
+`mfl-feeds/<year>/league.json` names can therefore be off-by-one on identity
+around season boundaries. `afl.config.json` history entries (Brandon-confirmed
+yearStart/yearEnd) are authoritative over raw feed names.

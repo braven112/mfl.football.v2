@@ -30,3 +30,45 @@ Learnings for renaming an AFL franchise and swapping its artwork (e.g. a loser-p
 **Asset specs** (match existing files): icon `100×100`, group-me `400×400`, banner `950×158`. For a quick placeholder, letterbox the banner's wordmark onto a square canvas with PIL/sharp, then apply a supersampled circular alpha mask if a circular crop is wanted. Verify with `file <png>` (dimensions + `RGBA` for transparency).
 
 **Recommendation:** When verifying a rename locally, assert on the DOM text (`<span>The Show</span>`) rather than expecting the new icon to render. Tell the user the art lands on deploy.
+
+## 2026-07-03 - Owner-based history: rebrand tags, ownerHistory attribution, and the name-inference trap
+
+**Context:** Built the last-place punitive-rename ("💀 Last-Place Rebrand") system and
+made all AFL franchise stats + name history follow OWNERS instead of raw franchise slots.
+
+**The model (all in `afl.config.json` + shared types in `src/utils/team-names.ts`):**
+- `history[].rebrand: { reason: "last-place", group: "<slug>" }` — display tag for a
+  punitive era; `currentRebrand` on the team object when the *current* name is punitive.
+  Purely cosmetic; never affects attribution.
+- `ownerHistory[]` — the current owner's claims on (franchiseId, yearStart, yearEnd)
+  ranges, possibly on OTHER slots (e.g. Micks `0013` claims `0004`'s 2005-07).
+- `currentOwnerSince` — explicit year the current owner took the slot.
+
+**Attribution layer:** `src/utils/afl-awards.ts#attributeAwardYear(sourceId, year)`
+mirrors TheLeague's `compute-franchise-history.mjs` logic: cross-franchise ownerHistory
+claim wins; a team with ownerHistory gets nothing outside its claims; otherwise years
+before `getCurrentOwnerSince()` drop to null (departed owner — credited to nobody).
+**Every AFL stat surface must route raw franchise IDs through it** — trophy case, ranks,
+title progress, and both franchise pages' championship counts now do. A new stat page
+that matches `season.awards[slug].franchiseId === id` directly will silently mis-credit
+departed owners' hardware.
+
+**Trap — owner-since inference is NAME-sensitive:** without explicit fields, the
+current owner's start year is inferred by comparing the last `history` entry's name to
+the current `name` (normalized). A one-letter rebrand ("Swifty 4 Life" → "Swiftie 4
+Life") reads as an ownership change and silently drops the earlier era from stats. Any
+franchise whose owner renamed at the same time they should keep continuity needs an
+explicit `currentOwnerSince`. Six teams now carry it (0004:2025, 0007:2021, 0012:2008,
+0016:2022, 0018:2015, 0023:2022) — all Brandon-confirmed boundaries.
+
+**Display split:** the franchise page (`franchises/[id].astro`) builds the owner's
+lineage from ownerHistory/ownerSince (gap-filling uncovered tenure years with the
+current name — e.g. The Show 2022-24 around the Cock Gobbler punishment year) and puts
+everything earlier under a dimmed "Previous owners of this franchise" section, so
+departed owners' names (Delirium Tremens, CSKA Sofia/Maga Nation) never vanish from
+the site. `rebrand.group` also powers cross-franchise "same owner" links.
+
+**Punitive ledger (Brandon-confirmed):** 2019 Jesus Killers · 2020 Be Rough ·
+2021 Vit's Brother · (2022 skipped — cellar owner left) · 2023 Broke Back ·
+2024 Baby Gate · 2025 Cock Gobbler. Rule: D-League all-play last (official tier
+tables) → renamed next season. Pending: Thundering Herd owes a 2026 name.
