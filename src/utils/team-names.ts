@@ -163,6 +163,8 @@ export interface TeamConfig {
   abbrev?: string;
   aliases?: string[];
   division?: string;
+  /** Conference code (AFL). */
+  conference?: string;
   icon?: string;
   banner?: string;
   groupMe?: string;
@@ -187,6 +189,8 @@ export interface TeamIdentity {
   icon?: string;
   banner?: string;
   groupMe?: string;
+  /** Conference code (AFL) for the era; falls back to the team's current conference. */
+  conference?: string;
   isHistorical: boolean;
   rebrand?: RebrandTag;
 }
@@ -238,6 +242,7 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
           icon: normalizeHistoricalAssetUrl(entry.icon, HISTORICAL_TEAM_ICON_FALLBACK),
           banner: normalizeHistoricalAssetUrl(entry.banner, HISTORICAL_TEAM_BANNER_FALLBACK),
           groupMe: entry.groupMe,
+          conference: entry.conference ?? team.conference,
           isHistorical: true,
           rebrand: entry.rebrand,
         };
@@ -254,6 +259,7 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
     icon: team.icon,
     banner: team.banner,
     groupMe: team.groupMe,
+    conference: team.conference,
     isHistorical: false,
     rebrand: team.currentRebrand,
   };
@@ -330,6 +336,7 @@ export function resolveConfigForYear<T extends { teams: TeamConfig[] }>(config: 
         icon: identity.icon,
         banner: identity.banner,
         groupMe: identity.groupMe,
+        conference: identity.conference,
       };
     }),
   };
