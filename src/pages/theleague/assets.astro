@@ -122,6 +122,7 @@ const copyIcons = `
     <header class="gallery-header">
       <h1>The League Asset Library</h1>
     </header>
+    <div class="visually-hidden" role="status" id="copy-status"></div>
     {teamList.length === 0 ? (
       <p class="empty-state">No team assets found. Drop images into <code>public/assets/theleague</code> to populate this page.</p>
     ) : (
@@ -309,22 +310,33 @@ const copyIcons = `
           scratch.remove();
         };
 
-        document.addEventListener('click', async (event) => {
-          const btn = event.target.closest('.copy-btn');
-          if (!btn || !btn.dataset.copy) return;
-          try {
-            await copyText(btn.dataset.copy);
-            btn.classList.add('copied');
-            clearTimeout(btn._copiedTimer);
-            btn._copiedTimer = setTimeout(() => btn.classList.remove('copied'), 1500);
-          } catch { /* clipboard denied — input remains selectable by hand */ }
-        });
+        // ClientRouter re-runs this inline script on soft navigation back to
+        // this page — element listeners re-bind to swapped-in elements, but
+        // document-level delegation must register exactly once.
+        if (!window.__assetCopyDelegation) {
+          window.__assetCopyDelegation = true;
 
-        document.addEventListener('focusin', (event) => {
-          if (event.target.matches('.asset-meta input[type="text"]')) {
-            event.target.select();
-          }
-        });
+          document.addEventListener('click', async (event) => {
+            const btn = event.target.closest('.copy-btn');
+            if (!btn || !btn.dataset.copy) return;
+            try {
+              await copyText(btn.dataset.copy);
+              btn.classList.add('copied');
+              clearTimeout(btn._copiedTimer);
+              btn._copiedTimer = setTimeout(() => btn.classList.remove('copied'), 1500);
+              const status = document.getElementById('copy-status');
+              if (status) {
+                status.textContent = (btn.getAttribute('aria-label') || 'Copy').replace('Copy', 'Copied');
+              }
+            } catch { /* clipboard denied — input remains selectable by hand */ }
+          });
+
+          document.addEventListener('focusin', (event) => {
+            if (event.target.matches('.asset-meta input[type="text"]')) {
+              event.target.select();
+            }
+          });
+        }
       })();
     </script>
   )}
@@ -553,6 +565,18 @@ const copyIcons = `
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .copy-row {
