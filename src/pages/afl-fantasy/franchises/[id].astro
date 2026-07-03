@@ -15,6 +15,7 @@ import {
   type TrophyCaseItem,
 } from '../../../utils/afl-awards';
 import { stampBadgeYear } from '../../../utils/afl-badge';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
 
 // Badge art loaded raw so the editable year can be stamped per win (an <img>
 // can't be edited per instance). These are build-time repo assets only — safe
@@ -198,7 +199,9 @@ type NameEra = {
   sourceFranchiseId?: string | null;
 };
 
-const CURRENT_YEAR = new Date().getFullYear();
+// Season year (Labor Day rollover), not calendar year — from January to
+// kickoff the "current" era should still label the season actually played.
+const CURRENT_YEAR = getCurrentSeasonYear();
 
 // Build the identity segments for one franchise ID within [rangeStart, rangeEnd],
 // filling any years not covered by its own `history` with its current name.
@@ -261,6 +264,12 @@ function segmentsForFranchiseRange(
       rebrandGroup: t.currentRebrand?.group,
       sourceFranchiseId: isForeignSlot ? franchiseId : null,
     });
+  } else if (finalSegmentIsCurrent && segments.length > 0) {
+    // The last history entry runs through the current season (e.g. a punitive
+    // rename covering this year), so no trailing gap-fill segment was emitted —
+    // the final clipped era IS the current identity. Tag it so the page still
+    // shows a "Current" era.
+    segments[segments.length - 1].isCurrent = true;
   }
   return segments;
 }
@@ -280,16 +289,30 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
   });
   // Anything in THIS slot's own history outside the owner's own-slot claims
   // belonged to a previous owner — keep those names visible on this page.
+  // Subtract the claimed ranges from each entry (rather than all-or-nothing)
+  // so an entry spanning a claim boundary contributes only its unclaimed
+  // years here and never renders the same season in both lists.
   const ownSlotClaims = sortedOwner.filter((o: any) => o.franchiseId === id);
-  const coveredBySelf = (ys: number, ye: number) =>
-    ownSlotClaims.some((o: any) => ys >= o.yearStart && ye <= o.yearEnd);
+  const subtractClaims = (ys: number, ye: number): Array<[number, number]> => {
+    let ranges: Array<[number, number]> = [[ys, ye]];
+    for (const o of ownSlotClaims) {
+      const next: Array<[number, number]> = [];
+      for (const [s, e] of ranges) {
+        if (o.yearEnd < s || o.yearStart > e) { next.push([s, e]); continue; }
+        if (s < o.yearStart) next.push([s, o.yearStart - 1]);
+        if (e > o.yearEnd) next.push([o.yearEnd + 1, e]);
+      }
+      ranges = next;
+    }
+    return ranges;
+  };
   if (Array.isArray(team.history)) {
     for (const h of team.history as any[]) {
-      if (!coveredBySelf(h.yearStart, h.yearEnd)) {
+      for (const [s, e] of subtractClaims(h.yearStart, h.yearEnd)) {
         priorOwnerEras.push({
           name: h.name,
-          yearStart: h.yearStart,
-          yearEnd: h.yearEnd,
+          yearStart: s,
+          yearEnd: e,
           icon: h.icon,
           banner: h.banner,
           isCurrent: false,
@@ -309,11 +332,13 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
   const lineageStart = ownerSince ?? earliestYear;
   nameEras.push(...segmentsForFranchiseRange(id!, lineageStart, CURRENT_YEAR, true));
   for (const h of team.history as any[]) {
-    if (ownerSince != null && h.yearEnd < ownerSince) {
+    // Clip an entry spanning the ownership boundary so its pre-ownerSince
+    // years still show under "Previous owners" instead of vanishing.
+    if (ownerSince != null && h.yearStart < ownerSince) {
       priorOwnerEras.push({
         name: h.name,
         yearStart: h.yearStart,
-        yearEnd: h.yearEnd,
+        yearEnd: Math.min(h.yearEnd, ownerSince - 1),
         icon: h.icon,
         banner: h.banner,
         isCurrent: false,
@@ -339,16 +364,23 @@ priorOwnerEras.sort((a, b) => a.yearStart - b.yearStart);
 // groups — surfaced as "same owner, different franchise ID" cross-links.
 const rebrandGroups = new Set(nameEras.map((e) => e.rebrandGroup).filter(Boolean));
 const relatedRebrands: Array<{ franchiseId: string; teamName: string; eraName: string; group: string }> = [];
+const seenRelated = new Set<string>();
+const pushRelated = (r: { franchiseId: string; teamName: string; eraName: string; group: string }) => {
+  const key = `${r.franchiseId}:${r.eraName}`;
+  if (seenRelated.has(key)) return;
+  seenRelated.add(key);
+  relatedRebrands.push(r);
+};
 if (rebrandGroups.size > 0) {
   for (const t of aflConfig.teams as any[]) {
     if (t.franchiseId === id) continue;
     if (t.currentRebrand?.group && rebrandGroups.has(t.currentRebrand.group)) {
-      relatedRebrands.push({ franchiseId: t.franchiseId, teamName: t.name, eraName: t.name, group: t.currentRebrand.group });
+      pushRelated({ franchiseId: t.franchiseId, teamName: t.name, eraName: t.name, group: t.currentRebrand.group });
     }
     if (Array.isArray(t.history)) {
       for (const h of t.history) {
         if (h.rebrand?.group && rebrandGroups.has(h.rebrand.group)) {
-          relatedRebrands.push({ franchiseId: t.franchiseId, teamName: t.name, eraName: h.name, group: h.rebrand.group });
+          pushRelated({ franchiseId: t.franchiseId, teamName: t.name, eraName: h.name, group: h.rebrand.group });
         }
       }
     }
@@ -865,8 +897,8 @@ for (const t of aflConfig.teams as any[]) {
     margin-left: 0.5rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background: #7c2d12;
-    color: #fff;
+    background: var(--rebrand-tag-bg, #7c2d12);
+    color: var(--rebrand-tag-fg, #fff);
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.02em;

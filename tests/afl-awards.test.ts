@@ -16,6 +16,7 @@ import {
   AWARD_TIERS,
   TITLE_TYPES,
   countFranchiseBadges,
+  attributeAwardYear,
   type AwardSlug,
   type AwardTier,
 } from '../src/utils/afl-awards';
@@ -254,20 +255,16 @@ describe('getFranchiseTrophyRank', () => {
     expect(r.count).toBe(countFranchiseBadges('0001'));
   });
 
-  it('the trophy leader is rank 1 and untied', () => {
-    // Find the current leader dynamically rather than hardcoding a franchise
-    // ID — ownerHistory attribution shifts who leads as config/awards change.
-    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
-      (t) => t.franchiseId
-    );
-    const counts = ids.map((id) => countFranchiseBadges(id));
-    const max = Math.max(...counts);
-    const leaderIsUnique = counts.filter((c) => c === max).length === 1;
-    const leaderId = ids[counts.indexOf(max)];
-    const r = getFranchiseTrophyRank(leaderId);
-    expect(r.count).toBe(max);
+  it('the trophy leader is 0001 (Smokane FC) at rank 1, untied — ground truth pin', () => {
+    // GROUND TRUTH, verified against the awards data + owner-confirmed
+    // ownership boundaries (Smokane → Smokane FC is one owner since 2003,
+    // config `currentOwnerSince`). If this fails after an attribution change,
+    // the change silently re-credited or dropped real hardware — investigate
+    // the data, don't re-derive the expectation from module output.
+    const r = getFranchiseTrophyRank('0001');
+    expect(r.count).toBe(20);
     expect(r.rank).toBe(1);
-    expect(r.tied).toBe(!leaderIsUnique);
+    expect(r.tied).toBe(false);
   });
 
   it('orders franchises by descending trophy count (rank tracks count)', () => {
@@ -297,8 +294,12 @@ describe('getFranchiseTrophyRank', () => {
       byCount.get(c)!.push(id);
     }
     const countsDesc = Array.from(byCount.keys()).sort((a, b) => b - a);
-    const tiedCount = countsDesc.find((c) => byCount.get(c)!.length >= 2);
+    // Skip the zero-trophy bucket — it's covered by its own test below, and
+    // picking it would leave no lower count for the rank-skip assertion.
+    const tiedCount = countsDesc.find((c) => c > 0 && byCount.get(c)!.length >= 2);
     expect(tiedCount).toBeDefined();
+    const nextCountExists = countsDesc.some((c) => c < tiedCount!);
+    expect(nextCountExists).toBe(true);
     const tiedIds = byCount.get(tiedCount!)!;
     const tied = tiedIds.map((id) => getFranchiseTrophyRank(id));
     expect(new Set(tied.map((r) => r.count)).size).toBe(1); // same count
@@ -371,6 +372,7 @@ describe('getFranchiseTierRank', () => {
     const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
       (t) => t.franchiseId
     );
+    let tieGroupsChecked = 0;
     for (const tier of AWARD_TIERS.map((t) => t.key)) {
       const byCount = new Map<number, string[]>();
       for (const id of ids) {
@@ -381,11 +383,14 @@ describe('getFranchiseTierRank', () => {
       }
       for (const tiedIds of byCount.values()) {
         if (tiedIds.length < 2) continue;
+        tieGroupsChecked++;
         for (const id of tiedIds) {
           expect(getFranchiseTierRank(id, tier).tied).toBe(true);
         }
       }
     }
+    // Guard against a vacuous pass — the real data has tier ties today.
+    expect(tieGroupsChecked).toBeGreaterThan(0);
   });
 
   it('per-tier ranks are internally consistent with the counts', () => {
@@ -437,6 +442,85 @@ describe('getFranchiseGrandSlam', () => {
     // Never earlier than any type's first win.
     for (const t of p.types) {
       expect(gs.year).toBeGreaterThanOrEqual(Math.min(...t.years));
+    }
+  });
+});
+
+describe('attributeAwardYear — owner-history attribution ground truth', () => {
+  // Pinned against owner-confirmed boundaries. If one of these fails, the
+  // attribution logic or afl.config.json ownership data regressed — a real
+  // trophy just moved or vanished. Fix the data/logic, not the pin.
+  it('credits cross-slot claims to the current franchise', () => {
+    // Micks owner played slot 0004 in 2005-2007.
+    expect(attributeAwardYear('0004', 2006)).toBe('0013');
+    // Harambe owner played slot 0016 in 2017-2018.
+    expect(attributeAwardYear('0016', 2017)).toBe('0008');
+    // Da Dangsters owner played slot 0021 in 2003-2008 (2007 AFL Championship).
+    expect(attributeAwardYear('0021', 2007)).toBe('0006');
+  });
+
+  it('keeps continuous-owner years on their own slot', () => {
+    // Smokane → Smokane FC is one owner since 2003 (explicit currentOwnerSince
+    // — the name-based inference would wrongly split on the "FC" rename).
+    expect(attributeAwardYear('0001', 2005)).toBe('0001');
+    expect(attributeAwardYear('0001', 2025)).toBe('0001');
+  });
+
+  it('drops departed-owner years to null', () => {
+    // Maga Nation era on 0004 — that owner left the league.
+    expect(attributeAwardYear('0004', 2019)).toBeNull();
+    // The Street era on 0006 — pre-2013 owner departed.
+    expect(attributeAwardYear('0006', 2005)).toBeNull();
+  });
+
+  it('fails closed on unknown or missing source IDs', () => {
+    expect(attributeAwardYear('9999', 2020)).toBeNull();
+    expect(attributeAwardYear(null, 2020)).toBeNull();
+  });
+});
+
+describe('afl.config.json ownerHistory shape', () => {
+  type OwnerClaim = { franchiseId: string; yearStart: number; yearEnd: number };
+  const teams = (aflConfig as {
+    teams: Array<{ franchiseId: string; ownerHistory?: OwnerClaim[] }>;
+  }).teams;
+
+  it('every team with ownerHistory includes an open-ended self-claim', () => {
+    // Without a self-claim ending 9999, attributeAwardYear nulls out EVERY
+    // award the team wins on its own slot — including current seasons.
+    for (const t of teams) {
+      if (!t.ownerHistory?.length) continue;
+      const self = t.ownerHistory.filter((o) => o.franchiseId === t.franchiseId);
+      expect(self.length, `${t.franchiseId} ownerHistory needs a self-claim`).toBeGreaterThan(0);
+      expect(
+        Math.max(...self.map((o) => o.yearEnd)),
+        `${t.franchiseId} self-claim must be open-ended (yearEnd 9999)`
+      ).toBe(9999);
+    }
+  });
+
+  it('no (franchiseId, year) is claimed by two different teams', () => {
+    // attributeAwardYear is first-match-wins over config order — an overlap
+    // would make attribution order-dependent and silent.
+    const claims: Array<{ owner: string; claim: OwnerClaim }> = [];
+    for (const t of teams) {
+      for (const claim of t.ownerHistory ?? []) {
+        claims.push({ owner: t.franchiseId, claim });
+      }
+    }
+    for (let i = 0; i < claims.length; i++) {
+      for (let j = i + 1; j < claims.length; j++) {
+        const a = claims[i];
+        const b = claims[j];
+        if (a.owner === b.owner) continue;
+        if (a.claim.franchiseId !== b.claim.franchiseId) continue;
+        const overlaps =
+          a.claim.yearStart <= b.claim.yearEnd && b.claim.yearStart <= a.claim.yearEnd;
+        expect(
+          overlaps,
+          `slot ${a.claim.franchiseId} years claimed by both ${a.owner} and ${b.owner}`
+        ).toBe(false);
+      }
     }
   });
 });

@@ -187,10 +187,14 @@ for (const team of CURRENT_TEAMS) {
 }
 
 /**
- * Year the current owner of a franchise took over (see inferCurrentOwnerSince),
- * or null when unknown / owned since founding. Exposed so display code (e.g.
- * the franchise page's owner-based name history) can split eras between the
- * current owner and prior owners using the exact same boundary stats use.
+ * First year of the current owner's recorded lineage (see
+ * inferCurrentOwnerSince), or null when unknown / owned since founding.
+ * CAVEAT: for a team with `ownerHistory` this is the earliest claimed year
+ * ANYWHERE (possibly on a different franchise slot, possibly followed by a
+ * gap out of the league) — NOT the year they took over this slot. Display
+ * code should treat it as "owner's era starts here", not continuous tenure.
+ * Exposed so the franchise page's owner-based name history splits eras on
+ * the exact same boundary stats use.
  */
 export function getCurrentOwnerSince(franchiseId: string): number | null {
   return CURRENT_OWNER_SINCE.get(franchiseId) ?? null;
@@ -211,9 +215,12 @@ export function attributeAwardYear(sourceId: string | null, year: number): strin
     }
   }
   const sourceTeam = CURRENT_TEAMS.find((t) => t.franchiseId === sourceId);
+  // Unknown franchise ID (typo / stale data) — fail closed rather than
+  // crediting a nonexistent franchise key.
+  if (!sourceTeam) return null;
   // The source team itself claims other franchise IDs via ownerHistory but
   // none of its entries cover this year — it belongs to a former owner.
-  if (Array.isArray(sourceTeam?.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
+  if (Array.isArray(sourceTeam.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
     return null;
   }
   const since = CURRENT_OWNER_SINCE.get(sourceId);
