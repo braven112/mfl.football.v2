@@ -29,6 +29,12 @@ html.dark {
 
   --color-accent: #4ade80;           /* Green accent for dark mode (mirrors light: accent = secondary family) */
 
+  /* Logo Text Colors (Header component) */
+  --logo-name-primary-color: #10b981;    /* Green "League" text matches logo green */
+  --logo-name-secondary-color: #ffffff;  /* White "The" and ".us" text */
+  --logo-main-color: #ffffff;            /* White elements in logo */
+  --logo-secondary-color: #10b981;       /* Green elements in logo */
+
   /* Neutral Colors (inverted scale) */
   --color-white: #ffffff;
   --color-black: #000000;
