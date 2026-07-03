@@ -92,17 +92,15 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
       <span class="sh-badge">
         <img src={divisionBadge} alt={`${divisionName} division`} width="52" height="52" loading="lazy" decoding="async" />
       </span>
-      <span class="sh-text">
-        <span class:list={['sh-div', { 'sh-div--solo': !defendingChampion }]}>{divisionName}</span>
-        {defendingChampion && (
+      <div class="sh-text">
+        <h3 class:list={['sh-div', { 'sh-div--solo': !(defendingChampion && defendingChampionLogo) }]}>{divisionName}</h3>
+        {defendingChampion && defendingChampionLogo && (
           <span class="sh-row">
             <span class="lbl">Defending Champion</span>
-            {defendingChampionLogo && (
-              <img class="sh-logo" src={defendingChampionLogo} alt={defendingChampion} title={defendingChampion} loading="lazy" decoding="async" />
-            )}
+            <img class="sh-logo" src={defendingChampionLogo} alt={defendingChampion} title={defendingChampion} loading="lazy" decoding="async" />
           </span>
         )}
-      </span>
+      </div>
     </div>
   )}
 
