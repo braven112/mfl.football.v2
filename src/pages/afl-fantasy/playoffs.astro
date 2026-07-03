@@ -12,7 +12,7 @@ import {
   type SeededTeam,
   type NormalizedBracket,
 } from '../../utils/playoffs';
-import { chooseTeamName } from '../../utils/team-names';
+import { chooseTeamName, resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import {
@@ -97,9 +97,20 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
+// Resolve team identities for the selected year (era-correct names/icons for historical seasons)
+// Type cast is needed because JSON imports don't preserve strict type info, but the runtime config always has teams[]
+const yearResolvedConfig = resolveConfigForYear(
+  aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
+  selectedYear
+);
+
+if (!yearResolvedConfig?.teams || yearResolvedConfig.teams.length === 0) {
+  return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
+}
+
 // Get conference standings for both conferences
-const conferenceAStandings = getConferenceStandings(franchises, aflConfig, '00');
-const conferenceBStandings = getConferenceStandings(franchises, aflConfig, '01');
+const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00');
+const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01');
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -118,7 +129,7 @@ const fallbackBracketMetas = fallbackBracketFeed?.playoffBrackets?.playoffBracke
 const fallbackBracketDetails = fallbackBracketFeed?.brackets || {};
 
 const assetMap = new Map(
-  (aflConfig?.teams ?? []).map(team => [
+  (yearResolvedConfig?.teams ?? []).map(team => [
     team.franchiseId,
     {
       icon: team.icon,
@@ -661,7 +672,7 @@ const findFinalGame = (bracketId: string) => {
 };
 
 // Get Premier League and D-League standings
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig);
 const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
 const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
 
