@@ -5,6 +5,7 @@ import { stampBadgeYear } from '../src/utils/afl-badge';
 
 const ARC = `<svg><defs><path id="yearArc" d="M0 0"></path></defs><text><textPath href="#yearArc" startOffset="50%">★  2025  ★</textPath></text></svg>`;
 const SHIELD = `<svg><text x="130" y="270" fill="#c9a44c">★  2025  ★</text></svg>`;
+const MULTI_ARC = `<svg><defs><path id="labelArc" d="M0 0"></path><path id="yearArc" d="M0 0"></path></defs><text><textPath href="#labelArc">LABEL</textPath><textPath href="#yearArc" startOffset="50%">★  2025  ★</textPath></text></svg>`;
 
 describe('stampBadgeYear', () => {
   it('stamps the year into an arc (textPath) badge', () => {
@@ -39,6 +40,17 @@ describe('stampBadgeYear', () => {
     // null = "don't stamp" (vs '' = "blank it"); the default art year survives.
     expect(stampBadgeYear(ARC, null)).toContain('2025');
     expect(stampBadgeYear(SHIELD, null)).toContain('2025');
+  });
+
+  // Multi-arc badges have two <textPath> elements. The stamper must hit only
+  // the first one (year arc) without eating a second one (label arc).
+  it('stamps only the first <textPath> in multi-arc badges', () => {
+    const stamped = stampBadgeYear(MULTI_ARC, 1999, 'multi-test');
+    expect(stamped).toContain('★  1999  ★');
+    expect(stamped).toContain('href="#yearArc-multi-test"');
+    expect(stamped).toContain('href="#labelArc"');
+    expect(stamped).toContain('LABEL');
+    expect(stamped).not.toContain('2025');
   });
 
   // Guard against badge-art drift: if a future SVG revision changes the year

@@ -270,11 +270,14 @@ its own row directly under the identity line. Pips are `.title-pips__pip`
 scoped to the count only — a generic `* + *::before` middot orphans a stray dot at
 the start of a wrapped line on mobile.
 
-**3. `stampBadgeYear`'s regex matches the FIRST `<textPath>` in the document.**
-The stamper's regex `(<textPath\b[^>]*>)[\s\S]*?(</textPath>)` is greedy and will
-overwrite the first match it finds. **Never write the literal tag name `<textPath>`
-in a comment inside a stampable SVG** — it will match the comment first and eat
-the real arc's attributes. The per-award drift-guard test iterates
+**3. `stampBadgeYear` targets the FIRST `<textPath>` — multi-arc badges require
+ordering.** For badges with multiple arcs (e.g., year + label), the year arc MUST
+be first in document order, or the stamper will overwrite the wrong one. The
+regex `(<textPath\b[^>]*>)[\s\S]*?(</textPath>)` is greedy and will match the
+first occurrence. **Never write the literal tag name `<textPath>` in a comment
+inside a stampable SVG** — the regex will match the comment first and clobber the
+real arc's attributes. Tests lock both constraints (`tests/afl-badge.test.ts`
+covers multi-arc ordering). The per-award drift-guard test iterates
 `public/assets/afl/awards/*.svg` to ensure all badges are stampable.
 
 **4. There are TWO AFL golds and `--afl-gold` is NOT the badge gold.**
