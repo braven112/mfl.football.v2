@@ -84,10 +84,14 @@ const buildTeamMeta = () => {
 const aggregateAssets = async () => {
   const teamMeta = buildTeamMeta();
   const teams = new Map();
+  // Franchise ID is the only stable key across active-card registration and
+  // the config's history entries — slugs can diverge (an explicit `slug`
+  // field wouldn't match `fileSlug(team.name)`), franchise IDs can't.
+  const franchiseIdToActiveCard = new Map();
 
   const registerTeam = (slug, meta) => {
     if (!teams.has(slug)) {
-      teams.set(slug, {
+      const card = {
         key: slug,
         slug,
         id: meta?.id,
@@ -98,7 +102,9 @@ const aggregateAssets = async () => {
         tier: meta?.tier,
         aliases: meta?.aliases || [],
         assets: {}
-      });
+      };
+      teams.set(slug, card);
+      if (meta?.id) franchiseIdToActiveCard.set(meta.id, card);
     }
     return teams.get(slug);
   };
@@ -262,8 +268,17 @@ const aggregateAssets = async () => {
     group.eras = coalesceEras(group.eras);
     // A historical era that shares its name with an ACTIVE team (same team,
     // owner moved franchise slots) folds its art into the active card
-    // instead of appearing under Former Teams.
-    const activeCard = teams.get(nameKey);
+    // instead of appearing under Former Teams. Matched by NAME across every
+    // registered active card (not `teams.get(nameKey)`, which only works
+    // because no team config sets an explicit `slug` today — a card's Map
+    // key can diverge from `fileSlug(card.name)` if one ever does). Can't
+    // narrow by `group.ids`: those are the FORMER franchise slot(s) this
+    // identity lived at, which is frequently a different franchise than
+    // wherever the identity currently lives (that's the whole point of the
+    // fold — Harambe's history is filed under franchise 0016, its active
+    // card is franchise 0008).
+    const activeCard = [...franchiseIdToActiveCard.values()]
+      .find((card) => fileSlug(card.name) === nameKey);
     if (activeCard && activeCard.category === 'active') {
       activeCard.eras = [...(activeCard.eras ?? []), ...group.eras]
         .sort((a, b) => a.yearStart - b.yearStart);
