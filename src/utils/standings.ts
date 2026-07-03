@@ -564,6 +564,32 @@ export function getDivisionChampions(franchises: StandingsFranchise[], config: L
   return champions;
 }
 
+export interface DivisionChampion {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+/**
+ * Like {@link getDivisionChampions}, but returns the champion's franchise id,
+ * team name, and square team icon per division — everything the branded
+ * division header needs to render the defending-champion logo.
+ */
+export function getDivisionChampionDetails(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig
+): Record<string, DivisionChampion> {
+  const divStandings = getDivisionStandings(franchises, config);
+  const champions: Record<string, DivisionChampion> = {};
+  for (const division of divStandings) {
+    if (division.teams.length > 0) {
+      const top = division.teams[0];
+      champions[division.name] = { id: top.id, name: top.teamName, icon: top.teamIcon };
+    }
+  }
+  return champions;
+}
+
 // Determine playoff status for seeding view
 export function getPlayoffSeeding(franchises: StandingsFranchise[], config: LeagueConfig): PlayoffSeeding {
   const league = getLeagueStandings(franchises, config);

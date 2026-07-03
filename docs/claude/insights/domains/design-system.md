@@ -1206,3 +1206,13 @@ A site-wide loading standard exists, adapted from the Alaska + Hawaiian guest-ap
 The repo had **no shared loading infrastructure** before this — 5 distinct spinners, 1 real skeleton, ~18 ad-hoc text mutations, inconsistent reduced-motion coverage (`PendingTradesPanel` guards its pulse; the playoffs shimmer doesn't). New loaders follow the `PlayerCell` dual Astro + JS pattern and a mandatory `@media (prefers-reduced-motion: reduce)` guard.
 
 **Status:** Phase 1 — primitives, the prototype (`/theleague/loading-prototype`), and the branded roster loader are built; migration of existing pages not yet started. Docs: [loading-standards.md](../../loading-standards.md), [loading-inventory.md](../../loading-inventory.md), [loading-roadmap.md](../../loading-roadmap.md), [loading-prd.md](../../loading-prd.md).
+
+---
+
+## 2026-06-29 - UFC Sans Condensed Only Ships 400 and 700 — Never Ask for 800
+
+**Context:** The branded division-standings banner spec called for `font-weight: 800` at 26px. Rendered with the body font it looked dramatically bigger/wider than the design; even after switching to the display font, 800 still looked bloated.
+
+**Insight:** The `@font-face` declarations in `src/styles/tokens.css` register UFC Sans Condensed at exactly two weights: 400 (CondensedMedium) and 700 (CondensedBold). Requesting any heavier weight (800/900) makes the browser synthesize faux-bold — it smears the glyphs wider, defeating the condensed face's whole purpose and reading as "too big" even when `font-size` matches the design px-for-px. The same applies to UFC Sans (400/500 only).
+
+**Recommendation:** For display/headline text use `font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif)` with `font-weight: 700` — never 800+. If a design mock looks "smaller" than the implementation at the same px size, check the font family and synthesized weight before touching `font-size`.
