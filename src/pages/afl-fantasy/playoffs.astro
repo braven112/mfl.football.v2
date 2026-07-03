@@ -98,10 +98,15 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 const franchises = selectedFeed.leagueStandings.franchise;
 
 // Resolve team identities for the selected year (era-correct names/icons for historical seasons)
+// Type cast is needed because JSON imports don't preserve strict type info, but the runtime config always has teams[]
 const yearResolvedConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
   selectedYear
 );
+
+if (!yearResolvedConfig?.teams || yearResolvedConfig.teams.length === 0) {
+  return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
+}
 
 // Get conference standings for both conferences
 const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00');
