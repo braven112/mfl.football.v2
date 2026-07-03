@@ -395,3 +395,17 @@ Pattern:
 **Evidence:** Converting `<main class="franchise-detail">` → `<div class="franchise-detail">` and deleting `max-width: 960px; margin: 0 auto` let the page fill the layout's 1232px container (hero banner full-width, trophy grid +1 badge per row). Keep the wrapper's horizontal padding at `var(--spacing-md, 16px)` — sibling AFL pages (`keepers.astro`, `calendar.astro`) add that gutter on top of the layout `<main>`'s `padding-inline` (`--padding-sm` 8px mobile / `--padding-md` 16px desktop), so zeroing it makes the trophy wall hug the screen edges more than every other AFL page (most visible at 320–375px). The franchise wrapper is the only one of the 35 pages with its own width/padding rules; the other 34 are a pure `<main>`→`<div>` swap that's visually inert. A bare-`main`-selector grep across all 35 pages returned zero CSS targeting the element, so the swap (keeping the class) was safe everywhere; those 34 pages were pixel-identical before/after.
 
 **Recommendation:** Pages rendered inside `TheLeagueLayout` should use a plain `<div>` (or `<section>`) as their top-level wrapper, never `<main>` — the layout owns the one main landmark and the 1232px content width. If a page needs to be narrower than 1232px, scope a `max-width` to an inner wrapper, not a second `<main>`. When auditing for this, grep `src/pages` for `<main` among files importing the layout; a child `<main>` is the tell.
+
+---
+
+## 2026-06-29 - Historical Team Identities Carry Dead Remote Asset URLs
+
+**Context:** The branded division-standings header shows the defending champion's logo, and historical season views (`?year=2024` etc.) show each team's banner. Both broke: the images pointed at `https://theleague.us/images/team_banners/…` URLs that no longer resolve.
+
+**Insight:** The `history[]` entries in `theleague.config.json` (resolved by `resolveConfigForYear()` / `getTeamIdentityForYear()`) store their `icon`/`banner` fields as **remote theleague.us URLs, which are dead** — unlike current-year entries, which use working local `/assets/theleague/…` paths. The earlier "Franchise History System" insight above says `identity.icon` and `identity.banner` "resolve correctly" — they resolve to the historically-accurate *value*, but the URL itself 404s for most teams. So year-resolving a config is correct for **names** but currently unsafe for **images**.
+
+Corollary gotcha: "current identity" must come from the **base config** (`leagueConfig.teams`, keyed by `franchiseId`), not from `resolveConfigForYear(config, selectedYear)` — when the user is *viewing* a past year, the selected-year resolution IS the historical one, and you inherit the dead URLs. This exact bug shipped twice in one session before being caught.
+
+**Evidence:** `src/pages/theleague/standings.astro` — `currentIdentityById` is built from `leagueConfig.teams` directly with a comment explaining why; on `?year=2024`, 9 of 16 row banners and 4 of 4 champion icons 404'd when using year-resolved assets, 0 after switching.
+
+**Recommendation:** When displaying a logo/banner for historical data, either (a) use the franchise's present-day identity from the base config keyed by franchise id — right when the image is decorative identity (e.g. "defending champion" medallion), or (b) fix the history entries to point at local assets if the historical artwork actually exists locally. Never assume a year-resolved `icon`/`banner` loads without checking `naturalWidth > 0` in a real browser.

@@ -8,7 +8,7 @@ import {
   getDivisionStandings,
   getLeagueStandings,
   getAllPlayStandings,
-  getDivisionChampions,
+  getDivisionChampionDetails,
 } from '../../utils/standings';
 import leagueConfig from '../../data/theleague.config.json';
 import { getAuthUser } from '../../utils/auth';
@@ -102,8 +102,49 @@ const preferredTeamId = resolveTeamSelection({
 }) || undefined;
 const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfig, preferredTeamId, selectedYear);
 
-// Compute division champions dynamically from standings data
-const defendingChampions = getDivisionChampions(franchises, yearResolvedConfig);
+// Compute the DEFENDING champions — i.e. last season's division winners, not
+// the current year's leaders. Pull the previous year's standings feed to find
+// which franchise won each division last year, then display each champion with
+// its CURRENT identity (name + logo) so we don't surface stale historical icon
+// URLs from the old config.
+const previousYear = selectedYear - 1;
+const previousFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${previousYear}/standings.json`] as
+  | { leagueStandings?: { franchise: any[] }; error?: any }
+  | undefined;
+
+// Present-day identity (working local logo + name) keyed by franchise id.
+// Built from the base config — NOT the year-resolved one — because historical
+// identities carry stale theleague.us icon URLs that no longer load.
+const currentIdentityById = new Map(
+  leagueConfig.teams.map(t => [t.franchiseId, { name: t.name, icon: t.icon }])
+);
+
+const lastYearChampions = previousFeed?.leagueStandings && !previousFeed.error
+  ? getDivisionChampionDetails(
+      previousFeed.leagueStandings.franchise,
+      resolveConfigForYear(leagueConfig, previousYear)
+    )
+  : {};
+
+// Key the defending champion to the division it won last year, but render its
+// present-day name + logo (falling back to last year's data if the franchise is
+// no longer in the league).
+const defendingChampions: Record<string, { name: string; icon: string }> = {};
+for (const [divisionName, champ] of Object.entries(lastYearChampions)) {
+  const current = currentIdentityById.get(champ.id);
+  defendingChampions[divisionName] = {
+    name: current?.name ?? champ.name,
+    icon: current?.icon ?? champ.icon,
+  };
+}
+
+// Map each division to its compass badge artwork
+const divisionBadges: Record<string, string> = {
+  Northwest: '/assets/theleague/division-badges/northwest.svg',
+  Southwest: '/assets/theleague/division-badges/southwest.svg',
+  Central: '/assets/theleague/division-badges/central.svg',
+  East: '/assets/theleague/division-badges/east.svg',
+};
 ---
 
 <TheLeagueLayout title="Standings">
@@ -150,8 +191,10 @@ const defendingChampions = getDivisionChampions(franchises, yearResolvedConfig);
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
-              defendingChampion={defendingChampions[division.name]}
-              defendingChampionYear={selectedYear}
+              divisionBadge={divisionBadges[division.name]}
+              defendingChampion={defendingChampions[division.name]?.name}
+              defendingChampionLogo={defendingChampions[division.name]?.icon}
+              defendingChampionYear={previousYear}
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               franchiseBaseUrl="/theleague/franchises"

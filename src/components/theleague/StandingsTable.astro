@@ -12,16 +12,24 @@ export interface Props {
   conferenceId?: ConferenceId;
   defendingChampion?: string;
   defendingChampionYear?: number;
+  /** Square team-icon for the defending champion, shown on a white circle in the branded header. */
+  defendingChampionLogo?: string;
+  /** Compass-badge SVG path for the division. When set, the branded division header is rendered. */
+  divisionBadge?: string;
   year?: number;
   preferredTeamId?: string;
   rosterBaseUrl?: string;
   franchiseBaseUrl?: string;
 }
 
-const { teams, view, showDivisionHeader = false, divisionName = '', conferenceId, defendingChampion = '', defendingChampionYear, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
+const { teams, view, showDivisionHeader = false, divisionName = '', conferenceId, defendingChampion = '', defendingChampionYear, defendingChampionLogo = '', divisionBadge = '', year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
 
 const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
 const conferenceName = conferenceId ? getConferenceName(conferenceId) : '';
+
+// Branded compass-badge header — when present, the banner bleeds flush to the
+// card edges (no container padding above or beside it).
+const hasBrandedHeader = Boolean(showDivisionHeader && divisionName && divisionBadge);
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -78,8 +86,25 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 }
 ---
 
-<div class="standings-container">
-  {showDivisionHeader && divisionName && (
+<div class:list={['standings-container', { 'standings-container--branded': hasBrandedHeader }]}>
+  {hasBrandedHeader && (
+    <div class="stand-head">
+      <span class="sh-badge">
+        <img src={divisionBadge} alt={`${divisionName} division`} width="52" height="52" loading="lazy" decoding="async" />
+      </span>
+      <div class="sh-text">
+        <h3 class:list={['sh-div', { 'sh-div--solo': !(defendingChampion && defendingChampionLogo) }]}>{divisionName}</h3>
+        {defendingChampion && defendingChampionLogo && (
+          <span class="sh-row">
+            <span class="lbl">Defending Champion</span>
+            <img class="sh-logo" src={defendingChampionLogo} alt={defendingChampion} title={defendingChampion} loading="lazy" decoding="async" />
+          </span>
+        )}
+      </div>
+    </div>
+  )}
+
+  {showDivisionHeader && divisionName && !divisionBadge && (
     <div class="division-header-section">
       <div class="division-header-row">
         {conferenceLogo && (
@@ -258,6 +283,87 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     padding-block: var(--padding-md);
     overflow-x: auto;
   }
+
+  /* ===== Branded division header (compass badge + defending champion) ===== */
+  /* The banner bleeds flush to the card edges: the container drops its top
+     padding and the banner's top corners inherit the card radius. */
+  .standings-container--branded {
+    padding-top: 0;
+  }
+
+  .stand-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 1rem;
+    background: linear-gradient(135deg, var(--color-primary, #1c497c) 0%, #13365d 100%);
+    border-radius: 8px 8px 0 0;
+    padding: 22px 26px;
+  }
+
+  .stand-head .sh-badge {
+    flex-shrink: 0;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
+    display: flex;
+  }
+
+  .stand-head .sh-badge img {
+    display: block;
+    width: 52px;
+    height: 52px;
+  }
+
+  .stand-head .sh-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .stand-head .sh-div {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 0.92;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: #fff;
+    white-space: nowrap;
+    margin: 0 0 -36px;
+  }
+
+  /* No defending champion (e.g. the earliest season) — don't pull the name
+     down into an empty row. */
+  .stand-head .sh-div--solo {
+    margin: 0;
+  }
+
+  .stand-head .sh-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .stand-head .sh-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: #fff;
+    padding: 4px;
+    flex-shrink: 0;
+    margin-bottom: -6px;
+  }
+
+  .stand-head .lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    white-space: nowrap;
+  }
+  /* ===================================================================== */
 
   .division-header-section {
     margin-bottom: 1.5rem;
