@@ -123,6 +123,11 @@ const getConferenceName = (code: string) => {
 };
 
 // Division names are now stored directly on teams, no transformation needed
+
+const copyIcons = `
+  <svg class="icon icon--copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  <svg class="icon icon--check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+`;
 ---
 
 <TheLeagueLayout title="AFL Asset Library">
@@ -202,12 +207,18 @@ const getConferenceName = (code: string) => {
                         <article class={`asset-card asset-card--${folder}`}>
                           <img src={asset.relativePath} alt={`${team.name} ${folder}`} loading="lazy" />
                           <div class="asset-meta">
-                            <p class="filename">{asset.filename}</p>
+                            <div class="copy-row">
+                              <p class="filename" title={asset.filename}>{asset.filename}</p>
+                              <button type="button" class="copy-btn" data-copy={asset.filename} aria-label="Copy file name" title="Copy file name" set:html={copyIcons} />
+                            </div>
                             <p class="asset-dimensions">Loading size…</p>
-                            <label>
-                              <span>URL</span>
-                              <input type="text" value={asset.absoluteUrl} readonly />
-                            </label>
+                            <div class="url-field">
+                              <span class="url-field__label">URL</span>
+                              <div class="copy-row">
+                                <input type="text" value={asset.absoluteUrl} readonly />
+                                <button type="button" class="copy-btn" data-copy={asset.absoluteUrl} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
+                              </div>
+                            </div>
                           </div>
                         </article>
                       ))}
@@ -229,12 +240,18 @@ const getConferenceName = (code: string) => {
               <article class={`asset-card asset-card--${asset.type}`}>
                 <img src={asset.relativePath} alt={asset.filename} loading="lazy" />
                 <div class="asset-meta">
-                  <p class="filename">{asset.filename}</p>
+                  <div class="copy-row">
+                    <p class="filename" title={asset.filename}>{asset.filename}</p>
+                    <button type="button" class="copy-btn" data-copy={asset.filename} aria-label="Copy file name" title="Copy file name" set:html={copyIcons} />
+                  </div>
                   <p class="asset-dimensions">Loading size…</p>
-                  <label>
-                    <span>URL</span>
-                    <input type="text" value={asset.absoluteUrl} readonly />
-                  </label>
+                  <div class="url-field">
+                    <span class="url-field__label">URL</span>
+                    <div class="copy-row">
+                      <input type="text" value={asset.absoluteUrl} readonly />
+                      <button type="button" class="copy-btn" data-copy={asset.absoluteUrl} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
+                    </div>
+                  </div>
                 </div>
               </article>
             ))}
@@ -302,6 +319,39 @@ const getConferenceName = (code: string) => {
         filterCards(input.value);
         input.addEventListener('input', (event) => filterCards(event.target.value));
         initDimensions();
+
+        const copyText = async (text) => {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return;
+          }
+          // http:// dev fallback — clipboard API requires a secure context
+          const scratch = document.createElement('textarea');
+          scratch.value = text;
+          scratch.style.position = 'fixed';
+          scratch.style.opacity = '0';
+          document.body.appendChild(scratch);
+          scratch.select();
+          document.execCommand('copy');
+          scratch.remove();
+        };
+
+        document.addEventListener('click', async (event) => {
+          const btn = event.target.closest('.copy-btn');
+          if (!btn || !btn.dataset.copy) return;
+          try {
+            await copyText(btn.dataset.copy);
+            btn.classList.add('copied');
+            clearTimeout(btn._copiedTimer);
+            btn._copiedTimer = setTimeout(() => btn.classList.remove('copied'), 1500);
+          } catch { /* clipboard denied — input remains selectable by hand */ }
+        });
+
+        document.addEventListener('focusin', (event) => {
+          if (event.target.matches('.asset-meta input[type="text"]')) {
+            event.target.select();
+          }
+        });
       })();
     </script>
   )}
@@ -545,9 +595,76 @@ const getConferenceName = (code: string) => {
     gap: 0.5rem;
   }
 
+  .copy-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
   .filename {
     font-weight: 600;
     margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .url-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .copy-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .copy-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    border-radius: 0.4rem;
+    background: #fff;
+    color: var(--muted-text-color, #6b7280);
+    cursor: pointer;
+  }
+
+  .copy-btn:hover {
+    color: var(--league-accent, var(--color-primary, #1c497c));
+    border-color: currentColor;
+  }
+
+  .copy-btn:focus-visible {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    outline-offset: 1px;
+  }
+
+  .copy-btn :global(.icon--check) {
+    display: none;
+  }
+
+  .copy-btn.copied {
+    color: var(--color-success, #16a34a);
+    border-color: currentColor;
+  }
+
+  .copy-btn.copied :global(.icon--copy) {
+    display: none;
+  }
+
+  .copy-btn.copied :global(.icon--check) {
+    display: block;
   }
 
   .asset-dimensions {
