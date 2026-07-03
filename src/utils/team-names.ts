@@ -110,6 +110,18 @@ export function chooseTeamName(
 }
 
 /**
+ * Marks an identity era as a punitive rename (e.g. a last-place "loser name").
+ * Purely a display tag — it does not affect stat attribution or ownerHistory.
+ * `group` is a free-string ID shared across the eras (and, for cross-franchise
+ * lineages, across different franchiseIds) that should be visually clustered
+ * together as "the same owner's rebrand chain" on the franchise page.
+ */
+export interface RebrandTag {
+  reason: 'last-place';
+  group: string;
+}
+
+/**
  * A historical identity entry for a franchise that changed names/logos.
  */
 export interface FranchiseHistoryEntry {
@@ -125,6 +137,8 @@ export interface FranchiseHistoryEntry {
   conference?: string;
   yearStart: number;
   yearEnd: number;
+  /** Set when this era's name was a punitive last-place rename. */
+  rebrand?: RebrandTag;
 }
 
 /**
@@ -154,6 +168,8 @@ export interface TeamConfig {
   groupMe?: string;
   history?: FranchiseHistoryEntry[];
   ownerHistory?: OwnerHistoryEntry[];
+  /** Set when the CURRENT (non-historical) name is itself a punitive last-place rename. */
+  currentRebrand?: RebrandTag;
   /** Short, affectionate one-liners shown in the roster loader (see RosterLoader.astro). */
   loaderQuips?: string[];
 }
@@ -172,6 +188,7 @@ export interface TeamIdentity {
   banner?: string;
   groupMe?: string;
   isHistorical: boolean;
+  rebrand?: RebrandTag;
 }
 
 function normalizeHistoricalAssetUrl(
@@ -222,6 +239,7 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
           banner: normalizeHistoricalAssetUrl(entry.banner, HISTORICAL_TEAM_BANNER_FALLBACK),
           groupMe: entry.groupMe,
           isHistorical: true,
+          rebrand: entry.rebrand,
         };
       }
     }
@@ -237,6 +255,7 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
     banner: team.banner,
     groupMe: team.groupMe,
     isHistorical: false,
+    rebrand: team.currentRebrand,
   };
 }
 

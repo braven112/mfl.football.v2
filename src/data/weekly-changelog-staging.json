@@ -104,6 +104,14 @@
       "impact": "user",
       "area": "other",
       "league": "both"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "Historical AFL Premier League / D-League standings (2020-2024) now show the correct tier rosters. The all-play view was grouping past seasons by each team's CURRENT tier, so promoted and relegated teams appeared in the wrong league for old years — the official per-season tier makeups were recovered from the league's MFL skin and the standings page now matches MFL's own historical tables team-for-team.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
     }
   ]
 }

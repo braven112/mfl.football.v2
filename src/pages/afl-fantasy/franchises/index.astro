@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+import { attributeAwardYear } from '../../../utils/afl-awards';
 
 // Optional championship history — graceful when not yet committed (PR #207).
 const champHistoryGlob = import.meta.glob<{
@@ -12,13 +13,15 @@ const champHistoryGlob = import.meta.glob<{
 const championships =
   Object.values(champHistoryGlob)[0]?.default?.championships ?? [];
 
-// Build a "championships count" map keyed by current franchise ID.
-// Note: pre-2024 entries reference historical franchise IDs; this is a
-// best-effort current-franchise count. Full mapping needs franchise-history
-// derivations (Phase 5 work).
+// Build a "championships count" map keyed by current franchise ID. Historical
+// entries follow ownerHistory (attributeAwardYear) so a title won under a
+// franchise ID an owner has since left credits their current franchise
+// instead — or drops out entirely if that year belongs to a departed owner.
 const champsByFranchise = new Map<string, number>();
 for (const c of championships) {
-  champsByFranchise.set(c.champion, (champsByFranchise.get(c.champion) ?? 0) + 1);
+  const target = attributeAwardYear(c.champion, c.year);
+  if (!target) continue;
+  champsByFranchise.set(target, (champsByFranchise.get(target) ?? 0) + 1);
 }
 
 const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {

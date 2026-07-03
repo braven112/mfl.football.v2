@@ -255,13 +255,16 @@ describe('getFranchiseTrophyRank', () => {
   });
 
   it('the trophy leader is rank 1 and untied', () => {
-    // 0001 (Smokane FC) has the most hardware in the league — verified vs data.
-    const counts = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
-      (t) => countFranchiseBadges(t.franchiseId)
+    // Find the current leader dynamically rather than hardcoding a franchise
+    // ID — ownerHistory attribution shifts who leads as config/awards change.
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
     );
+    const counts = ids.map((id) => countFranchiseBadges(id));
     const max = Math.max(...counts);
     const leaderIsUnique = counts.filter((c) => c === max).length === 1;
-    const r = getFranchiseTrophyRank('0001');
+    const leaderId = ids[counts.indexOf(max)];
+    const r = getFranchiseTrophyRank(leaderId);
     expect(r.count).toBe(max);
     expect(r.rank).toBe(1);
     expect(r.tied).toBe(!leaderIsUnique);
@@ -281,18 +284,34 @@ describe('getFranchiseTrophyRank', () => {
   });
 
   it('uses standard competition ranking — ties share a rank, next rank skips', () => {
-    // 0005, 0015, 0021 all sit on 10 trophies → they share one rank, and the
-    // rank below skips by the size of the tie group.
-    const tied = ['0005', '0015', '0021'].map((id) => getFranchiseTrophyRank(id));
+    // Find a real tie group dynamically (rather than hardcoding franchise
+    // IDs, which drift as ownerHistory attribution or awards data changes)
+    // and verify the rank below skips by the tie group's size (1224 ranking).
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
+    );
+    const byCount = new Map<number, string[]>();
+    for (const id of ids) {
+      const c = countFranchiseBadges(id);
+      if (!byCount.has(c)) byCount.set(c, []);
+      byCount.get(c)!.push(id);
+    }
+    const countsDesc = Array.from(byCount.keys()).sort((a, b) => b - a);
+    const tiedCount = countsDesc.find((c) => byCount.get(c)!.length >= 2);
+    expect(tiedCount).toBeDefined();
+    const tiedIds = byCount.get(tiedCount!)!;
+    const tied = tiedIds.map((id) => getFranchiseTrophyRank(id));
     expect(new Set(tied.map((r) => r.count)).size).toBe(1); // same count
     expect(new Set(tied.map((r) => r.rank)).size).toBe(1); // same rank
     for (const r of tied) expect(r.tied).toBe(true);
 
-    // 0014 (Thundering Herd, 14) sits alone directly above the tie group, so the
-    // shared rank is exactly 0014's rank + 1.
-    const above = getFranchiseTrophyRank('0014');
-    expect(above.tied).toBe(false);
-    expect(tied[0].rank).toBe(above.rank + 1);
+    const nextCount = countsDesc.find((c) => c < tiedCount!);
+    if (nextCount !== undefined) {
+      const expectedRank = tied[0].rank + tiedIds.length;
+      for (const id of byCount.get(nextCount)!) {
+        expect(getFranchiseTrophyRank(id).rank).toBe(expectedRank);
+      }
+    }
   });
 
   it('ranks a zero-trophy franchise last (tied) without crashing', () => {
@@ -346,15 +365,27 @@ describe('getFranchiseTierRank', () => {
   });
 
   it('marks shared tier ranks as tied', () => {
-    // 0014 (Thundering Herd) shares 3rd in both Conference and Division.
-    const conf = getFranchiseTierRank('0014', 'conference');
-    const div = getFranchiseTierRank('0014', 'division');
-    expect(conf.tied).toBe(true);
-    expect(div.tied).toBe(true);
-    // ...but stands alone at 2nd in the gold (Championships) tier.
-    const gold = getFranchiseTierRank('0014', 'gold');
-    expect(gold.rank).toBe(2);
-    expect(gold.tied).toBe(false);
+    // Find a real tie group per tier dynamically (rather than hardcoding a
+    // franchise ID, which drifts as ownerHistory attribution or awards data
+    // changes) and confirm every franchise in it is marked tied.
+    const ids = (aflConfig as { teams: Array<{ franchiseId: string }> }).teams.map(
+      (t) => t.franchiseId
+    );
+    for (const tier of AWARD_TIERS.map((t) => t.key)) {
+      const byCount = new Map<number, string[]>();
+      for (const id of ids) {
+        const c = countFranchiseBadgesByTier(id)[tier];
+        if (c === 0) continue;
+        if (!byCount.has(c)) byCount.set(c, []);
+        byCount.get(c)!.push(id);
+      }
+      for (const tiedIds of byCount.values()) {
+        if (tiedIds.length < 2) continue;
+        for (const id of tiedIds) {
+          expect(getFranchiseTierRank(id, tier).tied).toBe(true);
+        }
+      }
+    }
   });
 
   it('per-tier ranks are internally consistent with the counts', () => {
