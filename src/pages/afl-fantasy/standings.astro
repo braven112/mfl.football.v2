@@ -22,6 +22,11 @@ import {
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getTierMembership } from '../../utils/afl-tier';
+import {
+  resolveConfigForYear,
+  resolvePreferredTeamIdForYear,
+  type TeamConfig,
+} from '../../utils/team-names';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -71,6 +76,14 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
+// Resolve team identities (name/icon/banner) for the selected year so
+// historical seasons show the era-correct branding from config history
+// (e.g. "The Dude that Abides" in 2013, not today's "Get off my Ditka").
+const yearResolvedConfig = resolveConfigForYear(
+  aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
+  selectedYear
+);
+
 // Team Preference Cookie Integration
 // Get URL parameters for team preference
 const myTeamParam = Astro.url.searchParams.get('myteam');
@@ -94,6 +107,13 @@ const preferredTeamId = resolveAFLTeamSelection({
   cookiePreference: cookiePreference?.franchiseId,
   defaultTeam: '0001',
 });
+// Follow the owner across franchise slots for historical seasons (e.g. the
+// 2016→2017 conference realignment moved owners between franchise IDs).
+const yearPreferredTeamId = resolvePreferredTeamIdForYear(
+  yearResolvedConfig,
+  preferredTeamId,
+  selectedYear
+);
 
 // Get weekly results for selected year to calculate all-play with week cutoff
 const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`] as
@@ -109,14 +129,14 @@ const calculatedAllPlay = weeklyResultsFeed
   : undefined;
 
 // Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises, aflConfig);
-const conferenceAStandings = getConferenceStandings(franchises, aflConfig, '00');
-const conferenceBStandings = getConferenceStandings(franchises, aflConfig, '01');
+const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig);
+const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00');
+const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01');
 // Group by THIS season's tier makeup (tier-history.json) so promotion/
 // relegation is reflected per-year; falls back to static config.tier for
 // seasons tier-history doesn't record.
 const tierMembership = getTierMembership(selectedYear);
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig, calculatedAllPlay, tierMembership);
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig, calculatedAllPlay, tierMembership);
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
     team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
@@ -208,11 +228,11 @@ const promoRegTeams = [
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
-              conferenceId={(aflConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
+              conferenceId={(yearResolvedConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
-              preferredTeamId={preferredTeamId}
+              preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
             />
           ))}
@@ -226,7 +246,7 @@ const promoRegTeams = [
             conferenceId="00"
             teams={conferenceAStandings.allTeams}
             year={selectedYear}
-            preferredTeamId={preferredTeamId}
+            preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
           />
           <ConferenceLeagueStandingsTable
@@ -234,7 +254,7 @@ const promoRegTeams = [
             conferenceId="01"
             teams={conferenceBStandings.allTeams}
             year={selectedYear}
-            preferredTeamId={preferredTeamId}
+            preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
           />
 
