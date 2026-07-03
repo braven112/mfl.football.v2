@@ -28,9 +28,57 @@
     {
       "date": "2026-07-02",
       "type": "bug-fix",
-      "summary": "The 'Roger and Schefter Suit Up for AFL' announcement is visible again on the AFL What's New page — a mistyped league tag had been silently hiding it from every site since late June.",
+      "summary": "Historical standings pages now show every team's real banner from that season — nine or more rows per year had broken images pointing at the league's long-dead old websites. Vintage banners for the Degenerates, Las Vegas Elite, Devil Dogs, Executioners, Sabertooths, and a dozen more were recovered from the Internet Archive and the league's old MFL records.",
       "impact": "user",
-      "area": "whats-new",
+      "area": "standings",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "bug-fix",
+      "summary": "The 2007, 2010, 2011, and 2015 season records were quietly wrong — those years had been synced from other leagues that happened to share an MFL league ID. Standings, schedules, playoff brackets, and weekly scores for those seasons now reflect The League's actual history (2015 has all 16 teams again).",
+      "impact": "user",
+      "area": "standings",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "enhancement",
+      "summary": "Every AFL franchise's full name history is now on the books — 94 legacy identities across 22 teams (from Alcohol, Tobacco and Firearms to all thirteen of franchise 0016's rebrands), each with its authentic banner art recovered from the old afl-fantasy.com site and internet archives. Historical seasons now show the team names and banners as they actually were.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "enhancement",
+      "summary": "Historical team identities now have proper circular icons, cropped from the best part of each vintage banner (mascots and emblems over wordmarks), and the Asset Library is reorganized into Active Teams, Former Teams, Championship Art, League Logos, Conferences, and Divisions — with a card for every legacy identity showing its banner, icon, and the years (and conference) it was active.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "enhancement",
+      "summary": "The AFL Asset Library now has a card for every legacy team identity, reorganized into Active Teams, Former Teams, Championship Art, League Logos, Conferences, and Divisions — each showing its banner, circular icon, and the years (and conference) it was active.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-02",
+      "type": "bug-fix",
+      "summary": "Chatmaster's GroupMe avatar was a stretched copy of the team banner — it's now a proper square avatar featuring the classic AIM running man.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "17 AFL seasons (2007-2023) were quietly wrong — those years had been synced from other leagues that happened to share an MFL league ID (2015-2023 were literally showing The League's data instead of AFL's). Standings, schedules, transactions, drafts, and playoff brackets for all 17 seasons now reflect AFL's actual history.",
+      "impact": "user",
+      "area": "standings",
       "league": "afl"
     }
   ]

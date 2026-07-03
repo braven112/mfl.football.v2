@@ -1,7 +1,2227 @@
 {
   "encoding": "utf-8",
-  "error": {
-    "$t": "Invalid league ID 48815"
-  },
-  "version": "1.0"
+  "version": "1.0",
+  "salaryAdjustments": {
+    "salaryAdjustment": [
+      {
+        "amount": "933625.00",
+        "id": "0",
+        "timestamp": "1297826633",
+        "franchise_id": "0001",
+        "description": "2011 Cap Hits"
+      },
+      {
+        "amount": "603750.00",
+        "id": "1",
+        "timestamp": "1297826633",
+        "franchise_id": "0002",
+        "description": "2011 Cap Hits"
+      },
+      {
+        "amount": "3207163.00",
+        "id": "10",
+        "timestamp": "1297826633",
+        "description": "2011 Cap Hits",
+        "franchise_id": "0011"
+      },
+      {
+        "description": "Dropped Taylor, Chester ARI RB",
+        "timestamp": "1317951916",
+        "franchise_id": "0002",
+        "amount": "212500.00",
+        "id": "100"
+      },
+      {
+        "id": "101",
+        "amount": "212500.00",
+        "franchise_id": "0002",
+        "timestamp": "1317951916",
+        "description": "Dropped Ogletree, Kevin DAL WR"
+      },
+      {
+        "id": "102",
+        "amount": "212500.00",
+        "timestamp": "1317951916",
+        "description": "Dropped Williams, Ricky BAL RB",
+        "franchise_id": "0008"
+      },
+      {
+        "id": "103",
+        "amount": "1012500.00",
+        "description": "Dropped Celek, Brent PHI TE",
+        "timestamp": "1317951916",
+        "franchise_id": "0006"
+      },
+      {
+        "timestamp": "1317951916",
+        "description": "Dropped Tate, Golden SEA WR",
+        "franchise_id": "0006",
+        "amount": "536250.00",
+        "id": "104"
+      },
+      {
+        "amount": "212500.00",
+        "id": "105",
+        "timestamp": "1317951916",
+        "franchise_id": "0011",
+        "description": "Dropped Slaton, Steve MIA RB"
+      },
+      {
+        "franchise_id": "0005",
+        "timestamp": "1317951916",
+        "description": "Dropped Henne, Chad MIA QB",
+        "amount": "282837.50",
+        "id": "106"
+      },
+      {
+        "franchise_id": "0007",
+        "timestamp": "1317951916",
+        "description": "Dropped Seahawks, Seattle SEA Def",
+        "id": "107",
+        "amount": "233750.00"
+      },
+      {
+        "amount": "233750.00",
+        "id": "108",
+        "franchise_id": "0006",
+        "timestamp": "1317956152",
+        "description": "Dropped Douglas, Harry ATL WR"
+      },
+      {
+        "description": "Dropped Jones, Thomas KCC RB",
+        "timestamp": "1318179107",
+        "franchise_id": "0005",
+        "id": "109",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1297826633",
+        "description": "2011 Cap Hits",
+        "franchise_id": "0012",
+        "amount": "2112313.00",
+        "id": "11"
+      },
+      {
+        "id": "110",
+        "amount": "212500.00",
+        "description": "Dropped Briscoe, Dezmon TBB WR",
+        "timestamp": "1318532762",
+        "franchise_id": "0006"
+      },
+      {
+        "timestamp": "1318532762",
+        "description": "Dropped Prater, Matt DEN PK",
+        "franchise_id": "0006",
+        "id": "111",
+        "amount": "225000.00"
+      },
+      {
+        "timestamp": "1318532762",
+        "franchise_id": "0006",
+        "description": "Dropped Chargers, San Diego SDC Def",
+        "id": "112",
+        "amount": "287500.00"
+      },
+      {
+        "id": "113",
+        "amount": "262500.00",
+        "timestamp": "1318556704",
+        "franchise_id": "0001",
+        "description": "Dropped Kitna, Jon DAL QB"
+      },
+      {
+        "id": "114",
+        "amount": "212500.00",
+        "timestamp": "1318767387",
+        "description": "Dropped Pope, Leonard KCC TE",
+        "franchise_id": "0011"
+      },
+      {
+        "franchise_id": "0008",
+        "timestamp": "1318773706",
+        "description": "Dropped Evans, Lee BAL WR",
+        "id": "115",
+        "amount": "300000.00"
+      },
+      {
+        "franchise_id": "0002",
+        "timestamp": "1319161514",
+        "description": "Dropped Reece, Marcel OAK RB",
+        "amount": "212500.00",
+        "id": "116"
+      },
+      {
+        "timestamp": "1319161514",
+        "franchise_id": "0008",
+        "description": "Dropped Chiefs, Kansas City KCC Def",
+        "id": "117",
+        "amount": "257125.00"
+      },
+      {
+        "timestamp": "1319161514",
+        "franchise_id": "0012",
+        "description": "Dropped Campbell, Jason OAK QB",
+        "id": "118",
+        "amount": "1500000.00"
+      },
+      {
+        "franchise_id": "0001",
+        "timestamp": "1319166129",
+        "description": "Dropped Collins, Kerry IND QB",
+        "id": "119",
+        "amount": "300000.00"
+      },
+      {
+        "description": "2011 Cap Hits",
+        "timestamp": "1297826633",
+        "franchise_id": "0013",
+        "id": "12",
+        "amount": "959750.00"
+      },
+      {
+        "id": "120",
+        "amount": "212500.00",
+        "timestamp": "1319196594",
+        "description": "Dropped Harrison, Jerome DET RB",
+        "franchise_id": "0002"
+      },
+      {
+        "timestamp": "1319196594",
+        "description": "Dropped Armstrong, Anthony WAS WR",
+        "franchise_id": "0002",
+        "amount": "212500.00",
+        "id": "121"
+      },
+      {
+        "amount": "500000.00",
+        "id": "122",
+        "description": "Dropped Garrard, David FA* QB",
+        "timestamp": "1319210381",
+        "franchise_id": "0007"
+      },
+      {
+        "timestamp": "1319216253",
+        "franchise_id": "0007",
+        "description": "Dropped Camarillo, Greg MIN WR",
+        "amount": "233750.00",
+        "id": "123"
+      },
+      {
+        "timestamp": "1319236880",
+        "franchise_id": "0006",
+        "description": "Dropped Harbor, Clay PHI TE",
+        "amount": "237500.00",
+        "id": "124"
+      },
+      {
+        "id": "125",
+        "amount": "437500.00",
+        "description": "Dropped Ajirotutu, Seyi CAR WR",
+        "timestamp": "1319388257",
+        "franchise_id": "0004"
+      },
+      {
+        "description": "Dropped Graham, Earnest TBB RB",
+        "timestamp": "1319603452",
+        "franchise_id": "0015",
+        "amount": "487500.00",
+        "id": "126"
+      },
+      {
+        "timestamp": "1319766312",
+        "franchise_id": "0006",
+        "description": "Dropped Davis, Kellen CHI TE",
+        "id": "127",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1319766312",
+        "franchise_id": "0005",
+        "description": "Dropped Dolphins, Miami MIA Def",
+        "id": "128",
+        "amount": "282837.50"
+      },
+      {
+        "id": "129",
+        "amount": "212500.00",
+        "timestamp": "1319766312",
+        "description": "Dropped Caldwell, Andre CIN WR",
+        "franchise_id": "0005"
+      },
+      {
+        "id": "13",
+        "amount": "331513.00",
+        "description": "2011 Cap Hits",
+        "timestamp": "1297826633",
+        "franchise_id": "0014"
+      },
+      {
+        "franchise_id": "0002",
+        "timestamp": "1319987344",
+        "description": "Dropped Dixon, Anthony SFO RB",
+        "id": "130",
+        "amount": "233750.00"
+      },
+      {
+        "id": "131",
+        "amount": "212500.00",
+        "timestamp": "1320371115",
+        "description": "Dropped Colts, Indianapolis IND Def",
+        "franchise_id": "0008"
+      },
+      {
+        "description": "Dropped Ball, Lance DEN RB",
+        "timestamp": "1320371115",
+        "franchise_id": "0011",
+        "id": "132",
+        "amount": "237500.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "133",
+        "timestamp": "1320371115",
+        "description": "Dropped Janikowski, Sebastian OAK PK",
+        "franchise_id": "0011"
+      },
+      {
+        "id": "134",
+        "amount": "212500.00",
+        "timestamp": "1320371115",
+        "franchise_id": "0005",
+        "description": "Dropped Prater, Matt DEN PK"
+      },
+      {
+        "franchise_id": "0007",
+        "timestamp": "1320371115",
+        "description": "Dropped Cooley, Chris WAS TE",
+        "id": "135",
+        "amount": "1189581.25"
+      },
+      {
+        "franchise_id": "0008",
+        "timestamp": "1320471131",
+        "description": "Dropped Bennett, Martellus DAL TE",
+        "amount": "233750.00",
+        "id": "136"
+      },
+      {
+        "amount": "287375.00",
+        "id": "137",
+        "franchise_id": "0015",
+        "timestamp": "1320783642",
+        "description": "Dropped Redskins, Washington WAS Def"
+      },
+      {
+        "amount": "212500.00",
+        "id": "138",
+        "description": "Dropped Panthers, Carolina CAR Def",
+        "timestamp": "1320855120",
+        "franchise_id": "0011"
+      },
+      {
+        "amount": "212500.00",
+        "id": "139",
+        "timestamp": "1320855178",
+        "description": "Dropped Brinkley, Curtis SDC RB",
+        "franchise_id": "0011"
+      },
+      {
+        "description": "2011 Cap Hits",
+        "timestamp": "1297826633",
+        "franchise_id": "0015",
+        "id": "14",
+        "amount": "390625.00"
+      },
+      {
+        "amount": "311121.25",
+        "id": "140",
+        "timestamp": "1320872403",
+        "description": "Dropped Cardinals, Arizona ARI Def",
+        "franchise_id": "0011"
+      },
+      {
+        "amount": "225000.00",
+        "id": "141",
+        "timestamp": "1320981990",
+        "franchise_id": "0001",
+        "description": "Dropped Painter, Curtis IND QB"
+      },
+      {
+        "amount": "212500.00",
+        "id": "142",
+        "timestamp": "1321106842",
+        "franchise_id": "0006",
+        "description": "Dropped Douglas, Harry ATL WR"
+      },
+      {
+        "timestamp": "1321477209",
+        "description": "Dropped McNabb, Donovan MIN QB",
+        "franchise_id": "0001",
+        "amount": "1662500.00",
+        "id": "143"
+      },
+      {
+        "franchise_id": "0011",
+        "timestamp": "1321477209",
+        "description": "Dropped Dolphins, Miami MIA Def",
+        "amount": "225000.00",
+        "id": "144"
+      },
+      {
+        "franchise_id": "0011",
+        "timestamp": "1321477209",
+        "description": "Dropped Fells, Daniel DEN TE",
+        "amount": "300000.00",
+        "id": "145"
+      },
+      {
+        "timestamp": "1321477209",
+        "franchise_id": "0011",
+        "description": "Dropped Succop, Ryan KCC PK",
+        "amount": "225000.00",
+        "id": "146"
+      },
+      {
+        "timestamp": "1321477209",
+        "franchise_id": "0005",
+        "description": "Dropped Karim, Deji JAC RB",
+        "id": "147",
+        "amount": "233750.00"
+      },
+      {
+        "id": "148",
+        "amount": "212500.00",
+        "franchise_id": "0006",
+        "timestamp": "1321490866",
+        "description": "Dropped McMichael, Randy SDC TE"
+      },
+      {
+        "id": "149",
+        "amount": "212500.00",
+        "description": "Dropped Gibson, Brandon STL WR",
+        "timestamp": "1321490960",
+        "franchise_id": "0006"
+      },
+      {
+        "timestamp": "1297826633",
+        "description": "2011 Cap Hits",
+        "franchise_id": "0016",
+        "amount": "884914.00",
+        "id": "15"
+      },
+      {
+        "id": "150",
+        "amount": "494133.75",
+        "timestamp": "1322082003",
+        "description": "Dropped Miller, Zach SEA TE",
+        "franchise_id": "0008"
+      },
+      {
+        "id": "151",
+        "amount": "212500.00",
+        "description": "Dropped Branch, Deion NEP WR",
+        "timestamp": "1322082003",
+        "franchise_id": "0006"
+      },
+      {
+        "amount": "300000.00",
+        "id": "152",
+        "timestamp": "1322082003",
+        "franchise_id": "0006",
+        "description": "Dropped Moore, Evan CLE TE"
+      },
+      {
+        "amount": "212500.00",
+        "id": "153",
+        "timestamp": "1322082003",
+        "franchise_id": "0011",
+        "description": "Dropped McCoy, Anthony SEA TE"
+      },
+      {
+        "description": "Dropped Ivory, Christopher NOS RB",
+        "timestamp": "1322094186",
+        "franchise_id": "0006",
+        "id": "154",
+        "amount": "212500.00"
+      },
+      {
+        "id": "155",
+        "amount": "2093340.50",
+        "description": "Dropped Schaub, Matt HOU QB",
+        "timestamp": "1322686803",
+        "franchise_id": "0008"
+      },
+      {
+        "id": "156",
+        "amount": "212500.00",
+        "timestamp": "1322686803",
+        "franchise_id": "0011",
+        "description": "Dropped Choice, Tashard BUF RB"
+      },
+      {
+        "timestamp": "1322686803",
+        "franchise_id": "0003",
+        "description": "Dropped Jones, Felix DAL RB",
+        "amount": "2162875.00",
+        "id": "157"
+      },
+      {
+        "timestamp": "1322699871",
+        "description": "Dropped Leinart, Matt HOU QB",
+        "franchise_id": "0008",
+        "amount": "212500.00",
+        "id": "158"
+      },
+      {
+        "amount": "508750.00",
+        "id": "159",
+        "description": "Dropped Williams, Keiland DET RB",
+        "timestamp": "1322761868",
+        "franchise_id": "0005"
+      },
+      {
+        "id": "16",
+        "amount": "233750.00",
+        "franchise_id": "0012",
+        "timestamp": "1304489399",
+        "description": "Dropped Branch, Deion NEP WR"
+      },
+      {
+        "amount": "212500.00",
+        "id": "160",
+        "timestamp": "1323014224",
+        "description": "Dropped Battle, Jackie KCC RB",
+        "franchise_id": "0005"
+      },
+      {
+        "id": "161",
+        "amount": "1210000.00",
+        "description": "Dropped Owens, Terrell FA* WR",
+        "timestamp": "1323176298",
+        "franchise_id": "0013"
+      },
+      {
+        "id": "162",
+        "amount": "495000.00",
+        "timestamp": "1323176298",
+        "description": "Dropped Williams, Roy CHI WR",
+        "franchise_id": "0013"
+      },
+      {
+        "timestamp": "1323291607",
+        "franchise_id": "0008",
+        "description": "Dropped Rice, Sidney SEA WR",
+        "amount": "969966.25",
+        "id": "163"
+      },
+      {
+        "id": "164",
+        "amount": "6250000.00",
+        "franchise_id": "0006",
+        "timestamp": "1323291607",
+        "description": "Dropped Johnson, Andre HOU WR"
+      },
+      {
+        "amount": "1250000.00",
+        "id": "165",
+        "franchise_id": "0001",
+        "timestamp": "1323294474",
+        "description": "Dropped Woodhead, Danny NEP RB"
+      },
+      {
+        "id": "166",
+        "amount": "262500.00",
+        "franchise_id": "0005",
+        "timestamp": "1323374444",
+        "description": "Dropped Roosevelt, Naaman BUF WR"
+      },
+      {
+        "description": "Dropped Palmer, Carson OAK QB",
+        "timestamp": "1323783877",
+        "franchise_id": "0008",
+        "amount": "1387500.00",
+        "id": "167"
+      },
+      {
+        "timestamp": "1323880661",
+        "description": "Dropped Forsett, Justin SEA RB",
+        "franchise_id": "0007",
+        "amount": "726000.00",
+        "id": "168"
+      },
+      {
+        "id": "169",
+        "amount": "783750.00",
+        "description": "Dropped Mason, Derrick FA WR",
+        "timestamp": "1323880661",
+        "franchise_id": "0007"
+      },
+      {
+        "amount": "275000.00",
+        "id": "17",
+        "timestamp": "1304489399",
+        "description": "Dropped Burress, Plaxico FA* WR",
+        "franchise_id": "0012"
+      },
+      {
+        "timestamp": "1323896408",
+        "franchise_id": "0002",
+        "description": "Dropped Harbor, Clay PHI TE",
+        "amount": "212500.00",
+        "id": "170"
+      },
+      {
+        "amount": "233750.00",
+        "id": "171",
+        "timestamp": "1323896408",
+        "franchise_id": "0011",
+        "description": "Dropped Dwyer, Jonathan PIT RB"
+      },
+      {
+        "timestamp": "1323896408",
+        "description": "Dropped Davis, Kellen CHI TE",
+        "franchise_id": "0011",
+        "amount": "212500.00",
+        "id": "172"
+      },
+      {
+        "franchise_id": "0007",
+        "timestamp": "1323896408",
+        "description": "Dropped Crayton, Patrick SDC WR",
+        "amount": "512435.00",
+        "id": "173"
+      },
+      {
+        "id": "174",
+        "amount": "225000.00",
+        "franchise_id": "0011",
+        "timestamp": "1323953327",
+        "description": "Dropped Reece, Marcel OAK RB"
+      },
+      {
+        "timestamp": "1324501217",
+        "franchise_id": "0015",
+        "description": "Dropped Gore, Frank SFO RB",
+        "amount": "4840000.00",
+        "id": "175"
+      },
+      {
+        "id": "176",
+        "amount": "2775000.00",
+        "timestamp": "1324501217",
+        "franchise_id": "0012",
+        "description": "Dropped Cassel, Matt KCC QB"
+      },
+      {
+        "amount": "312500.00",
+        "id": "177",
+        "franchise_id": "0005",
+        "timestamp": "1324522324",
+        "description": "Dropped Casey, James HOU TE"
+      },
+      {
+        "amount": "237500.00",
+        "id": "178",
+        "description": "Dropped Hanie, Caleb CHI QB",
+        "timestamp": "1324524463",
+        "franchise_id": "0006"
+      },
+      {
+        "timestamp": "1324557907",
+        "description": "Dropped Leonard, Brian CIN RB",
+        "franchise_id": "0005",
+        "id": "179",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "831875.00",
+        "id": "18",
+        "timestamp": "1304525520",
+        "description": "Dropped Sweed, Limas PIT WR",
+        "franchise_id": "0009"
+      },
+      {
+        "description": "Dropped Smith, Alfonso ARI RB",
+        "timestamp": "1324647400",
+        "franchise_id": "0005",
+        "amount": "225000.00",
+        "id": "180"
+      },
+      {
+        "timestamp": "1324695142",
+        "franchise_id": "0006",
+        "description": "Dropped Barden, Ramses NYG WR",
+        "amount": "212500.00",
+        "id": "181"
+      },
+      {
+        "amount": "212500.00",
+        "id": "182",
+        "timestamp": "1324736507",
+        "franchise_id": "0002",
+        "description": "Dropped Beck, John WAS QB"
+      },
+      {
+        "description": "Dropped Williams, Carnell STL RB",
+        "timestamp": "1324736507",
+        "franchise_id": "0002",
+        "amount": "1000000.00",
+        "id": "183"
+      },
+      {
+        "description": "Dropped Ball, Lance DEN RB",
+        "timestamp": "1325006177",
+        "franchise_id": "0011",
+        "id": "184",
+        "amount": "237500.00"
+      },
+      {
+        "timestamp": "1325006177",
+        "franchise_id": "0011",
+        "description": "Dropped Ogbonnaya, Chris CLE RB",
+        "amount": "237500.00",
+        "id": "185"
+      },
+      {
+        "amount": "212500.00",
+        "id": "186",
+        "timestamp": "1325006245",
+        "franchise_id": "0011",
+        "description": "Dropped Aromashodu, Devin MIN WR"
+      },
+      {
+        "timestamp": "1325006298",
+        "description": "Dropped Romo, Tony DAL QB",
+        "franchise_id": "0011",
+        "amount": "2500000.00",
+        "id": "187"
+      },
+      {
+        "description": "Dropped Holmes, Santonio NYJ WR",
+        "timestamp": "1325006298",
+        "franchise_id": "0011",
+        "id": "188",
+        "amount": "1116376.25"
+      },
+      {
+        "amount": "393250.00",
+        "id": "189",
+        "franchise_id": "0011",
+        "timestamp": "1325006298",
+        "description": "Dropped Jones, Jacoby HOU WR"
+      },
+      {
+        "timestamp": "1304525520",
+        "description": "Dropped Williams, Derrick DET WR",
+        "franchise_id": "0009",
+        "id": "19",
+        "amount": "257125.00"
+      },
+      {
+        "amount": "1125000.00",
+        "id": "190",
+        "description": "Dropped Moss, Santana WAS WR",
+        "timestamp": "1325006298",
+        "franchise_id": "0011"
+      },
+      {
+        "timestamp": "1325006453",
+        "description": "Dropped Hightower, Tim WAS RB",
+        "franchise_id": "0011",
+        "amount": "282837.50",
+        "id": "191"
+      },
+      {
+        "timestamp": "1325141287",
+        "franchise_id": "0001",
+        "description": "Dropped Palko, Tyler KCC QB",
+        "amount": "212500.00",
+        "id": "192"
+      },
+      {
+        "id": "193",
+        "amount": "317625.00",
+        "franchise_id": "0001",
+        "timestamp": "1325141287",
+        "description": "Dropped Watson, Ben CLE TE"
+      },
+      {
+        "id": "194",
+        "amount": "212500.00",
+        "franchise_id": "0001",
+        "timestamp": "1325141287",
+        "description": "Dropped Suisham, Shaun PIT PK"
+      },
+      {
+        "franchise_id": "0001",
+        "timestamp": "1325141287",
+        "description": "Dropped Buccaneers, Tampa Bay TBB Def",
+        "id": "195",
+        "amount": "311121.25"
+      },
+      {
+        "id": "196",
+        "amount": "212500.00",
+        "description": "Dropped Ivory, Christopher NOS RB",
+        "timestamp": "1325172253",
+        "franchise_id": "0005"
+      },
+      {
+        "timestamp": "1325172253",
+        "description": "Dropped Smith, Brad BUF WR",
+        "franchise_id": "0005",
+        "id": "197",
+        "amount": "212500.00"
+      },
+      {
+        "id": "198",
+        "amount": "212500.00",
+        "description": "Dropped Barth, Connor TBB PK",
+        "timestamp": "1325172253",
+        "franchise_id": "0005"
+      },
+      {
+        "timestamp": "1325200280",
+        "description": "Dropped Bowe, Dwayne KCC WR",
+        "franchise_id": "0001",
+        "id": "199",
+        "amount": "2871109.00"
+      },
+      {
+        "id": "2",
+        "amount": "2539225.00",
+        "timestamp": "1297826633",
+        "franchise_id": "0003",
+        "description": "2011 Cap Hits"
+      },
+      {
+        "amount": "1226183.75",
+        "id": "20",
+        "timestamp": "1304783607",
+        "franchise_id": "0012",
+        "description": "Dropped Meachem, Robert NOS WR"
+      },
+      {
+        "timestamp": "1325200280",
+        "description": "Dropped White, Roddy ATL WR",
+        "franchise_id": "0001",
+        "id": "200",
+        "amount": "3403976.50"
+      },
+      {
+        "franchise_id": "0008",
+        "timestamp": "1325276804",
+        "description": "Dropped Wallace, Seneca CLE QB",
+        "amount": "212500.00",
+        "id": "201"
+      },
+      {
+        "amount": "212500.00",
+        "id": "202",
+        "franchise_id": "0008",
+        "timestamp": "1325276804",
+        "description": "Dropped Walter, Kevin HOU WR"
+      },
+      {
+        "timestamp": "1325289059",
+        "franchise_id": "0015",
+        "description": "Dropped Colston, Marques NOS WR",
+        "amount": "3385731.25",
+        "id": "203"
+      },
+      {
+        "amount": "212500.00",
+        "id": "204",
+        "timestamp": "1325289059",
+        "franchise_id": "0015",
+        "description": "Dropped Gaffney, Jabar WAS WR"
+      },
+      {
+        "franchise_id": "0015",
+        "timestamp": "1325289059",
+        "description": "Dropped Garcon, Pierre IND WR",
+        "amount": "378125.00",
+        "id": "205"
+      },
+      {
+        "description": "Dropped Fasano, Anthony MIA TE",
+        "timestamp": "1325289059",
+        "franchise_id": "0015",
+        "amount": "282837.50",
+        "id": "206"
+      },
+      {
+        "timestamp": "1325539183",
+        "description": "Dropped Kolb, Kevin ARI QB",
+        "franchise_id": "0005",
+        "id": "207",
+        "amount": "311121.25"
+      },
+      {
+        "timestamp": "1325539183",
+        "description": "Dropped Bell, Kahlil CHI RB",
+        "franchise_id": "0005",
+        "amount": "212500.00",
+        "id": "208"
+      },
+      {
+        "amount": "3250000.00",
+        "id": "209",
+        "description": "Dropped Williams, DeAngelo CAR RB",
+        "timestamp": "1325539243",
+        "franchise_id": "0005"
+      },
+      {
+        "timestamp": "1304961360",
+        "franchise_id": "0003",
+        "description": "Dropped Gilyard, Mardy STL WR",
+        "id": "21",
+        "amount": "233750.00"
+      },
+      {
+        "timestamp": "1325539243",
+        "franchise_id": "0005",
+        "description": "Dropped Jackson, Vincent SDC WR",
+        "amount": "3100000.00",
+        "id": "210"
+      },
+      {
+        "id": "211",
+        "amount": "247500.00",
+        "description": "Dropped Clausen, Jimmy CAR QB",
+        "timestamp": "1325544142",
+        "franchise_id": "0002"
+      },
+      {
+        "amount": "212500.00",
+        "id": "212",
+        "description": "Dropped Grossman, Rex WAS QB",
+        "timestamp": "1325544142",
+        "franchise_id": "0002"
+      },
+      {
+        "id": "213",
+        "amount": "233750.00",
+        "timestamp": "1325544142",
+        "franchise_id": "0002",
+        "description": "Dropped Hoyer, Brian NEP QB"
+      },
+      {
+        "timestamp": "1325544142",
+        "franchise_id": "0002",
+        "description": "Dropped Jennings, Rashad JAC RB",
+        "id": "214",
+        "amount": "257125.00"
+      },
+      {
+        "timestamp": "1325544142",
+        "description": "Dropped Boss, Kevin OAK TE",
+        "franchise_id": "0002",
+        "id": "215",
+        "amount": "400000.00"
+      },
+      {
+        "description": "Dropped Winslow, Kellen TBB TE",
+        "timestamp": "1325544142",
+        "franchise_id": "0002",
+        "id": "216",
+        "amount": "1372593.75"
+      },
+      {
+        "franchise_id": "0006",
+        "timestamp": "1325590313",
+        "description": "Dropped Brown, Donald IND RB",
+        "amount": "250000.00",
+        "id": "217"
+      },
+      {
+        "id": "218",
+        "amount": "212500.00",
+        "timestamp": "1325590313",
+        "description": "Dropped Morris, Sammy DAL RB",
+        "franchise_id": "0006"
+      },
+      {
+        "id": "219",
+        "amount": "212500.00",
+        "description": "Dropped Gano, Graham WAS PK",
+        "timestamp": "1325590313",
+        "franchise_id": "0006"
+      },
+      {
+        "id": "22",
+        "amount": "212500.00",
+        "timestamp": "1304971566",
+        "description": "Dropped Huggins, Kareem TBB RB",
+        "franchise_id": "0011"
+      },
+      {
+        "amount": "625000.00",
+        "id": "220",
+        "timestamp": "1325699031",
+        "franchise_id": "0007",
+        "description": "Dropped Moore, Matt MIA QB"
+      },
+      {
+        "franchise_id": "0007",
+        "timestamp": "1325699031",
+        "description": "Dropped Brown, Ronnie PHI RB",
+        "amount": "212500.00",
+        "id": "221"
+      },
+      {
+        "amount": "212500.00",
+        "id": "222",
+        "franchise_id": "0007",
+        "timestamp": "1325699031",
+        "description": "Dropped Hagan, Derek BUF WR"
+      },
+      {
+        "amount": "212500.00",
+        "id": "223",
+        "franchise_id": "0007",
+        "timestamp": "1325699056",
+        "description": "Dropped Naanee, Legedu CAR WR"
+      },
+      {
+        "amount": "600000.00",
+        "id": "224",
+        "description": "Dropped Ochocinco, Chad NEP WR",
+        "timestamp": "1325699056",
+        "franchise_id": "0007"
+      },
+      {
+        "timestamp": "1325699056",
+        "description": "Dropped Royal, Eddie DEN WR",
+        "franchise_id": "0007",
+        "amount": "300000.00",
+        "id": "225"
+      },
+      {
+        "description": "Dropped Welker, Wes NEP WR",
+        "timestamp": "1325699056",
+        "franchise_id": "0007",
+        "id": "226",
+        "amount": "5150000.00"
+      },
+      {
+        "timestamp": "1325699077",
+        "description": "Dropped King, Jeff ARI TE",
+        "franchise_id": "0007",
+        "id": "227",
+        "amount": "300000.00"
+      },
+      {
+        "amount": "275000.00",
+        "id": "228",
+        "timestamp": "1325699113",
+        "franchise_id": "0007",
+        "description": "Dropped Parrish, Roscoe BUF WR"
+      },
+      {
+        "amount": "212500.00",
+        "id": "229",
+        "timestamp": "1325725789",
+        "franchise_id": "0012",
+        "description": "Dropped Williams, Ricky BAL RB"
+      },
+      {
+        "timestamp": "1305222018",
+        "description": "Dropped Unga, Harvey CHI RB",
+        "franchise_id": "0003",
+        "id": "23",
+        "amount": "212500.00"
+      },
+      {
+        "franchise_id": "0012",
+        "timestamp": "1325725789",
+        "description": "Dropped Edelman, Julian NEP WR",
+        "id": "230",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "231",
+        "franchise_id": "0012",
+        "timestamp": "1325725789",
+        "description": "Dropped Kerley, Jeremy NYJ WR"
+      },
+      {
+        "id": "232",
+        "amount": "212500.00",
+        "timestamp": "1325725789",
+        "franchise_id": "0012",
+        "description": "Dropped Mare, Olindo CAR PK"
+      },
+      {
+        "id": "233",
+        "amount": "212500.00",
+        "timestamp": "1325725789",
+        "franchise_id": "0012",
+        "description": "Dropped Saunders, Weslye PIT TE"
+      },
+      {
+        "id": "234",
+        "amount": "4365290.00",
+        "franchise_id": "0013",
+        "timestamp": "1325745596",
+        "description": "Dropped Mendenhall, Rashard PIT RB"
+      },
+      {
+        "description": "Dropped Tomlinson, LaDainian NYJ RB",
+        "timestamp": "1325745596",
+        "franchise_id": "0013",
+        "id": "235",
+        "amount": "487500.00"
+      },
+      {
+        "timestamp": "1325745596",
+        "description": "Dropped Daniels, Owen HOU TE",
+        "franchise_id": "0013",
+        "id": "236",
+        "amount": "2200000.00"
+      },
+      {
+        "amount": "1250000.00",
+        "id": "237",
+        "timestamp": "1325745596",
+        "description": "Dropped Gonzalez, Tony ATL TE",
+        "franchise_id": "0013"
+      },
+      {
+        "id": "238",
+        "amount": "233750.00",
+        "description": "Dropped Walker, Delanie SFO TE",
+        "timestamp": "1325745596",
+        "franchise_id": "0013"
+      },
+      {
+        "timestamp": "1325745596",
+        "franchise_id": "0013",
+        "description": "Dropped Carpenter, Dan MIA PK",
+        "amount": "233750.00",
+        "id": "239"
+      },
+      {
+        "id": "24",
+        "amount": "233750.00",
+        "timestamp": "1305222077",
+        "franchise_id": "0003",
+        "description": "Dropped Dickerson, Dorin HOU WR"
+      },
+      {
+        "description": "Dropped Dawson, Phil CLE PK",
+        "timestamp": "1325745596",
+        "franchise_id": "0013",
+        "id": "240",
+        "amount": "212500.00"
+      },
+      {
+        "description": "Dropped Longwell, Ryan MIN PK",
+        "timestamp": "1325745596",
+        "franchise_id": "0013",
+        "id": "241",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1327353379",
+        "franchise_id": "0007",
+        "description": "Dropped Heap, Todd ARI TE",
+        "amount": "250000.00",
+        "id": "242"
+      },
+      {
+        "amount": "212500.00",
+        "id": "243",
+        "timestamp": "1327589531",
+        "franchise_id": "0009",
+        "description": "Dropped Todman, Jordan MIN RB"
+      },
+      {
+        "amount": "212500.00",
+        "id": "244",
+        "timestamp": "1327589531",
+        "description": "Dropped Burton, Stephen MIN WR",
+        "franchise_id": "0009"
+      },
+      {
+        "description": "Dropped Cribbs, Josh CLE WR",
+        "timestamp": "1327589531",
+        "franchise_id": "0009",
+        "id": "245",
+        "amount": "212500.00"
+      },
+      {
+        "id": "246",
+        "amount": "282837.50",
+        "franchise_id": "0009",
+        "timestamp": "1327589531",
+        "description": "Dropped Doucet, Early ARI WR"
+      },
+      {
+        "id": "247",
+        "amount": "343750.00",
+        "timestamp": "1327589531",
+        "description": "Dropped Henderson, Devery NOS WR",
+        "franchise_id": "0009"
+      },
+      {
+        "amount": "225000.00",
+        "id": "248",
+        "description": "Dropped Hill, Jason FA WR",
+        "timestamp": "1327589531",
+        "franchise_id": "0009"
+      },
+      {
+        "timestamp": "1327589531",
+        "description": "Dropped Hixon, Domenik NYG WR",
+        "franchise_id": "0009",
+        "amount": "212500.00",
+        "id": "249"
+      },
+      {
+        "timestamp": "1305342008",
+        "franchise_id": "0003",
+        "description": "Dropped Tate, Ben HOU RB",
+        "amount": "1284250.00",
+        "id": "25"
+      },
+      {
+        "franchise_id": "0009",
+        "timestamp": "1327589531",
+        "description": "Dropped Smith, Steve PHI WR",
+        "id": "250",
+        "amount": "420928.75"
+      },
+      {
+        "id": "251",
+        "amount": "449212.50",
+        "franchise_id": "0009",
+        "timestamp": "1327589531",
+        "description": "Dropped Davis, Fred WAS TE"
+      },
+      {
+        "id": "252",
+        "amount": "212500.00",
+        "franchise_id": "0009",
+        "timestamp": "1327589531",
+        "description": "Dropped Green, Virgil DEN TE"
+      },
+      {
+        "description": "Dropped Lewis, Marcedes JAC TE",
+        "timestamp": "1327589531",
+        "franchise_id": "0009",
+        "amount": "275000.00",
+        "id": "253"
+      },
+      {
+        "timestamp": "1327589531",
+        "description": "Dropped Bills, Buffalo BUF Def",
+        "franchise_id": "0009",
+        "id": "254",
+        "amount": "233750.00"
+      },
+      {
+        "description": "Dropped Jackson, Tarvaris SEA QB",
+        "timestamp": "1327594852",
+        "franchise_id": "0014",
+        "id": "255",
+        "amount": "612500.00"
+      },
+      {
+        "timestamp": "1327594852",
+        "description": "Dropped Whitehurst, Charlie SEA QB",
+        "franchise_id": "0014",
+        "id": "256",
+        "amount": "212500.00"
+      },
+      {
+        "id": "257",
+        "amount": "1425000.00",
+        "timestamp": "1327594852",
+        "franchise_id": "0014",
+        "description": "Dropped Addai, Joseph IND RB"
+      },
+      {
+        "amount": "247500.00",
+        "id": "258",
+        "timestamp": "1327594852",
+        "franchise_id": "0014",
+        "description": "Dropped Torain, Ryan FA RB"
+      },
+      {
+        "amount": "550000.00",
+        "id": "259",
+        "timestamp": "1327594852",
+        "description": "Dropped Alexander, Danario STL WR",
+        "franchise_id": "0014"
+      },
+      {
+        "id": "26",
+        "amount": "212500.00",
+        "franchise_id": "0003",
+        "timestamp": "1306158111",
+        "description": "Dropped Johnson, Stafon TEN RB"
+      },
+      {
+        "franchise_id": "0014",
+        "timestamp": "1327594852",
+        "description": "Dropped Avery, Donnie TEN WR",
+        "id": "260",
+        "amount": "282837.50"
+      },
+      {
+        "amount": "257125.00",
+        "id": "261",
+        "timestamp": "1327594852",
+        "franchise_id": "0014",
+        "description": "Dropped Dillard, Jarett JAC WR"
+      },
+      {
+        "id": "262",
+        "amount": "4512500.00",
+        "timestamp": "1327594852",
+        "franchise_id": "0014",
+        "description": "Dropped Gates, Antonio SDC TE"
+      },
+      {
+        "amount": "250000.00",
+        "id": "263",
+        "franchise_id": "0014",
+        "timestamp": "1327594852",
+        "description": "Dropped Gostkowski, Stephen NEP PK"
+      },
+      {
+        "description": "Dropped Vinatieri, Adam IND PK",
+        "timestamp": "1327594852",
+        "franchise_id": "0014",
+        "id": "264",
+        "amount": "237500.00"
+      },
+      {
+        "id": "265",
+        "amount": "212500.00",
+        "timestamp": "1327594852",
+        "description": "Dropped Browns, Cleveland CLE Def",
+        "franchise_id": "0014"
+      },
+      {
+        "timestamp": "1327594852",
+        "description": "Dropped Jaguars, Jacksonville JAC Def",
+        "franchise_id": "0014",
+        "id": "266",
+        "amount": "212500.00"
+      },
+      {
+        "description": "Dropped Hardesty, Montario CLE RB",
+        "timestamp": "1327597072",
+        "franchise_id": "0011",
+        "id": "267",
+        "amount": "1031250.00"
+      },
+      {
+        "timestamp": "1327597072",
+        "franchise_id": "0011",
+        "description": "Dropped Janikowski, Sebastian OAK PK",
+        "amount": "212500.00",
+        "id": "268"
+      },
+      {
+        "amount": "3930000.00",
+        "id": "269",
+        "timestamp": "1327733674",
+        "franchise_id": "0002",
+        "description": "Dropped Brady, Tom NEP QB"
+      },
+      {
+        "description": "Dropped Boss, Kevin NYG TE",
+        "timestamp": "1306179595",
+        "franchise_id": "0003",
+        "amount": "415937.50",
+        "id": "27"
+      },
+      {
+        "description": "Dropped Kuhn, John GBP RB",
+        "timestamp": "1327733674",
+        "franchise_id": "0002",
+        "id": "270",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1327733674",
+        "franchise_id": "0002",
+        "description": "Dropped Morris, Maurice DET RB",
+        "amount": "750000.00",
+        "id": "271"
+      },
+      {
+        "timestamp": "1327733674",
+        "franchise_id": "0002",
+        "description": "Dropped Avant, Jason PHI WR",
+        "id": "272",
+        "amount": "212500.00"
+      },
+      {
+        "timestamp": "1327733674",
+        "description": "Dropped Novak, Nick SDC PK",
+        "franchise_id": "0002",
+        "amount": "212500.00",
+        "id": "273"
+      },
+      {
+        "description": "Dropped Broncos, Denver DEN Def",
+        "timestamp": "1327733674",
+        "franchise_id": "0002",
+        "amount": "212500.00",
+        "id": "274"
+      },
+      {
+        "franchise_id": "0002",
+        "timestamp": "1327733674",
+        "description": "Dropped Packers, Green Bay GBP Def",
+        "amount": "537500.00",
+        "id": "275"
+      },
+      {
+        "timestamp": "1327784074",
+        "description": "Dropped Celek, Brent PHI TE",
+        "franchise_id": "0006",
+        "id": "276",
+        "amount": "225000.00"
+      },
+      {
+        "description": "Dropped Driver, Donald GBP WR",
+        "timestamp": "1327852512",
+        "franchise_id": "0002",
+        "id": "277",
+        "amount": "212500.00"
+      },
+      {
+        "id": "278",
+        "amount": "212500.00",
+        "timestamp": "1327852512",
+        "description": "Dropped Cundiff, Billy BAL PK",
+        "franchise_id": "0002"
+      },
+      {
+        "timestamp": "1327866810",
+        "franchise_id": "0004",
+        "description": "Dropped Ballard, Jake NYG TE",
+        "id": "279",
+        "amount": "212500.00"
+      },
+      {
+        "franchise_id": "0003",
+        "timestamp": "1311818848",
+        "description": "Dropped Whitehurst, Charlie SEA QB",
+        "amount": "1223750.00",
+        "id": "28"
+      },
+      {
+        "amount": "212500.00",
+        "id": "280",
+        "franchise_id": "0004",
+        "timestamp": "1327866810",
+        "description": "Dropped Pope, Leonard KCC TE"
+      },
+      {
+        "amount": "212500.00",
+        "id": "281",
+        "franchise_id": "0004",
+        "timestamp": "1327866810",
+        "description": "Dropped Feely, Jay ARI PK"
+      },
+      {
+        "amount": "212500.00",
+        "id": "282",
+        "description": "Dropped Nugent, Mike CIN PK",
+        "timestamp": "1327866810",
+        "franchise_id": "0004"
+      },
+      {
+        "timestamp": "1327866810",
+        "description": "Dropped Redskins, Washington WAS Def",
+        "franchise_id": "0004",
+        "id": "283",
+        "amount": "212500.00"
+      },
+      {
+        "description": "Dropped Scott, Bernard CIN RB",
+        "timestamp": "1327866835",
+        "franchise_id": "0004",
+        "amount": "257125.00",
+        "id": "284"
+      },
+      {
+        "amount": "425000.00",
+        "id": "285",
+        "timestamp": "1327866835",
+        "description": "Dropped Parker, Preston TBB WR",
+        "franchise_id": "0004"
+      },
+      {
+        "timestamp": "1327866835",
+        "franchise_id": "0004",
+        "description": "Dropped Sims-Walker, Mike JAC WR",
+        "amount": "311121.25",
+        "id": "286"
+      },
+      {
+        "timestamp": "1327866835",
+        "franchise_id": "0004",
+        "description": "Dropped Wayne, Reggie IND WR",
+        "amount": "3934768.75",
+        "id": "287"
+      },
+      {
+        "timestamp": "1327881268",
+        "description": "Dropped Clayton, Mark STL WR",
+        "franchise_id": "0016",
+        "id": "288",
+        "amount": "233750.00"
+      },
+      {
+        "amount": "350000.00",
+        "id": "289",
+        "franchise_id": "0016",
+        "timestamp": "1327881268",
+        "description": "Dropped Hester, Devin CHI WR"
+      },
+      {
+        "franchise_id": "0012",
+        "timestamp": "1311925410",
+        "description": "Dropped Goodson, Mike CAR RB",
+        "id": "29",
+        "amount": "1025000.00"
+      },
+      {
+        "timestamp": "1327881268",
+        "franchise_id": "0016",
+        "description": "Dropped Stallworth, Donte' WAS WR",
+        "id": "290",
+        "amount": "233750.00"
+      },
+      {
+        "amount": "462500.00",
+        "id": "291",
+        "timestamp": "1327881268",
+        "franchise_id": "0016",
+        "description": "Dropped Ward, Hines PIT WR"
+      },
+      {
+        "id": "292",
+        "amount": "212500.00",
+        "franchise_id": "0016",
+        "timestamp": "1327881268",
+        "description": "Dropped Scheffler, Tony DET TE"
+      },
+      {
+        "id": "293",
+        "amount": "237500.00",
+        "description": "Dropped Bryant, Matt ATL PK",
+        "timestamp": "1327881268",
+        "franchise_id": "0016"
+      },
+      {
+        "id": "294",
+        "amount": "525000.00",
+        "timestamp": "1327881268",
+        "description": "Dropped Jets, New York NYJ Def",
+        "franchise_id": "0016"
+      },
+      {
+        "amount": "4840000.00",
+        "id": "295",
+        "timestamp": "1327881776",
+        "description": "Dropped Turner, Michael ATL RB",
+        "franchise_id": "0008"
+      },
+      {
+        "description": "Dropped Barber, Marion CHI RB",
+        "timestamp": "1327960949",
+        "franchise_id": "0009",
+        "amount": "462500.00",
+        "id": "296"
+      },
+      {
+        "timestamp": "1327960949",
+        "franchise_id": "0009",
+        "description": "Dropped Moreno, Knowshon DEN RB",
+        "amount": "3025000.00",
+        "id": "297"
+      },
+      {
+        "id": "298",
+        "amount": "6606751.25",
+        "timestamp": "1327960949",
+        "franchise_id": "0009",
+        "description": "Dropped Peterson, Adrian MIN RB"
+      },
+      {
+        "amount": "378125.00",
+        "id": "299",
+        "description": "Dropped Robiskie, Brian JAC WR",
+        "timestamp": "1327960949",
+        "franchise_id": "0009"
+      },
+      {
+        "amount": "510606.00",
+        "id": "3",
+        "description": "2011 Cap Hits",
+        "timestamp": "1297826633",
+        "franchise_id": "0004"
+      },
+      {
+        "timestamp": "1311941953",
+        "franchise_id": "0006",
+        "description": "Dropped Gibson, Brandon STL WR",
+        "id": "30",
+        "amount": "261250.00"
+      },
+      {
+        "timestamp": "1327974168",
+        "franchise_id": "0016",
+        "description": "Dropped Ponder, Christian MIN QB",
+        "amount": "212500.00",
+        "id": "300"
+      },
+      {
+        "timestamp": "1327974168",
+        "description": "Dropped Allen, Anthony BAL RB",
+        "franchise_id": "0016",
+        "amount": "212500.00",
+        "id": "301"
+      },
+      {
+        "amount": "212500.00",
+        "id": "302",
+        "description": "Dropped Mallett, Ryan NEP QB",
+        "timestamp": "1327974316",
+        "franchise_id": "0016"
+      },
+      {
+        "franchise_id": "0016",
+        "timestamp": "1327974456",
+        "description": "Dropped Massaquoi, Mohamed CLE WR",
+        "id": "303",
+        "amount": "257125.00"
+      },
+      {
+        "amount": "4600000.00",
+        "id": "304",
+        "timestamp": "1327976889",
+        "description": "Dropped Jackson, Steven STL RB",
+        "franchise_id": "0016"
+      },
+      {
+        "description": "Dropped Boldin, Anquan BAL WR",
+        "timestamp": "1327976889",
+        "franchise_id": "0016",
+        "id": "305",
+        "amount": "2512500.00"
+      },
+      {
+        "timestamp": "1327976889",
+        "description": "Dropped Manningham, Mario NYG WR",
+        "franchise_id": "0016",
+        "id": "306",
+        "amount": "1089000.00"
+      },
+      {
+        "amount": "325000.00",
+        "id": "307",
+        "timestamp": "1327976986",
+        "franchise_id": "0016",
+        "description": "Dropped Crosby, Mason GBP PK"
+      },
+      {
+        "franchise_id": "0016",
+        "timestamp": "1328234009",
+        "description": "Dropped Jones-Drew, Maurice JAC RB",
+        "amount": "4012500.00",
+        "id": "308"
+      },
+      {
+        "id": "309",
+        "amount": "4000000.00",
+        "franchise_id": "0010",
+        "timestamp": "1328238361",
+        "description": "Dropped Manning, Peyton IND QB"
+      },
+      {
+        "franchise_id": "0002",
+        "timestamp": "1312255207",
+        "description": "Dropped Bennett, Michael OAK RB",
+        "id": "31",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "3575000.00",
+        "id": "310",
+        "description": "Dropped Grant, Ryan GBP RB",
+        "timestamp": "1328238361",
+        "franchise_id": "0010"
+      },
+      {
+        "timestamp": "1328238361",
+        "description": "Dropped Jackson, Brandon CLE RB",
+        "franchise_id": "0010",
+        "id": "311",
+        "amount": "612500.00"
+      },
+      {
+        "description": "Dropped Brown, Josh STL PK",
+        "timestamp": "1328238361",
+        "franchise_id": "0010",
+        "id": "312",
+        "amount": "272599.00"
+      },
+      {
+        "id": "313",
+        "amount": "233750.00",
+        "timestamp": "1328238361",
+        "description": "Dropped Rams, St. Louis STL Def",
+        "franchise_id": "0010"
+      },
+      {
+        "amount": "212500.00",
+        "id": "314",
+        "timestamp": "1328253712",
+        "franchise_id": "0001",
+        "description": "Dropped Caldwell, Andre CIN WR"
+      },
+      {
+        "timestamp": "1328313092",
+        "franchise_id": "0009",
+        "description": "Dropped Scobee, Josh JAC PK",
+        "id": "315",
+        "amount": "337500.00"
+      },
+      {
+        "id": "316",
+        "amount": "2625000.00",
+        "timestamp": "1328547991",
+        "description": "Dropped Cutler, Jay CHI QB",
+        "franchise_id": "0004"
+      },
+      {
+        "franchise_id": "0002",
+        "timestamp": "1312255400",
+        "description": "Dropped Davis, Buster FA WR",
+        "amount": "247500.00",
+        "id": "32"
+      },
+      {
+        "id": "33",
+        "amount": "212500.00",
+        "franchise_id": "0003",
+        "timestamp": "1312292840",
+        "description": "Dropped Durham, Kris SEA WR"
+      },
+      {
+        "timestamp": "1312376857",
+        "franchise_id": "0001",
+        "description": "Dropped Bulger, Marc BAL QB",
+        "amount": "225000.00",
+        "id": "34"
+      },
+      {
+        "id": "35",
+        "amount": "375000.00",
+        "timestamp": "1312427884",
+        "franchise_id": "0003",
+        "description": "Dropped Grossman, Rex WAS QB"
+      },
+      {
+        "franchise_id": "0003",
+        "timestamp": "1312467967",
+        "description": "Dropped Stocker, Luke TBB TE",
+        "amount": "212500.00",
+        "id": "36"
+      },
+      {
+        "amount": "225000.00",
+        "id": "37",
+        "description": "Dropped Obomanu, Ben SEA WR",
+        "timestamp": "1312570461",
+        "franchise_id": "0011"
+      },
+      {
+        "timestamp": "1312756331",
+        "description": "Dropped Barber, Tiki FA* RB",
+        "franchise_id": "0002",
+        "amount": "212500.00",
+        "id": "38"
+      },
+      {
+        "timestamp": "1313371874",
+        "description": "Dropped Brown, Ronnie PHI RB",
+        "franchise_id": "0016",
+        "amount": "2000000.00",
+        "id": "39"
+      },
+      {
+        "description": "2011 Cap Hits",
+        "timestamp": "1297826633",
+        "franchise_id": "0005",
+        "amount": "1608601.00",
+        "id": "4"
+      },
+      {
+        "amount": "233750.00",
+        "id": "40",
+        "timestamp": "1313371874",
+        "franchise_id": "0016",
+        "description": "Dropped Janikowski, Sebastian OAK PK"
+      },
+      {
+        "id": "41",
+        "amount": "212500.00",
+        "timestamp": "1313583848",
+        "franchise_id": "0001",
+        "description": "Dropped Hardy, James BAL WR"
+      },
+      {
+        "description": "Dropped Walter, Kevin HOU WR",
+        "timestamp": "1313583918",
+        "franchise_id": "0001",
+        "id": "42",
+        "amount": "233750.00"
+      },
+      {
+        "description": "Dropped Kafka, Mike PHI QB",
+        "timestamp": "1313591807",
+        "franchise_id": "0007",
+        "amount": "233750.00",
+        "id": "43"
+      },
+      {
+        "amount": "257125.00",
+        "id": "44",
+        "timestamp": "1313591807",
+        "franchise_id": "0007",
+        "description": "Dropped Brown, Andre NYG RB"
+      },
+      {
+        "timestamp": "1313591807",
+        "franchise_id": "0007",
+        "description": "Dropped James, Javarris IND RB",
+        "amount": "300000.00",
+        "id": "45"
+      },
+      {
+        "timestamp": "1313591807",
+        "description": "Dropped Butler, Deon SEA WR",
+        "franchise_id": "0007",
+        "id": "46",
+        "amount": "257125.00"
+      },
+      {
+        "description": "Dropped Nedney, Joe FA PK",
+        "timestamp": "1313591807",
+        "franchise_id": "0007",
+        "id": "47",
+        "amount": "233750.00"
+      },
+      {
+        "amount": "233750.00",
+        "id": "48",
+        "franchise_id": "0005",
+        "timestamp": "1313690095",
+        "description": "Dropped Peerman, Cedric CIN RB"
+      },
+      {
+        "amount": "212500.00",
+        "id": "49",
+        "timestamp": "1313759030",
+        "description": "Dropped Burton, Stephen MIN WR",
+        "franchise_id": "0003"
+      },
+      {
+        "description": "2011 Cap Hits",
+        "timestamp": "1297826633",
+        "franchise_id": "0006",
+        "id": "5",
+        "amount": "3056238.00"
+      },
+      {
+        "amount": "233750.00",
+        "id": "50",
+        "timestamp": "1313763504",
+        "description": "Dropped Jones, Donald BUF WR",
+        "franchise_id": "0001"
+      },
+      {
+        "amount": "233750.00",
+        "id": "51",
+        "timestamp": "1313855555",
+        "franchise_id": "0015",
+        "description": "Dropped Osgood, Kassim JAC WR"
+      },
+      {
+        "id": "52",
+        "amount": "288750.00",
+        "franchise_id": "0011",
+        "timestamp": "1313859829",
+        "description": "Dropped Hoomanawanui, Michael STL TE"
+      },
+      {
+        "id": "53",
+        "amount": "302500.00",
+        "franchise_id": "0008",
+        "timestamp": "1313860839",
+        "description": "Dropped Gettis, David CAR WR"
+      },
+      {
+        "franchise_id": "0003",
+        "timestamp": "1313890440",
+        "description": "Dropped Colts, Indianapolis IND Def",
+        "id": "54",
+        "amount": "257125.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "55",
+        "description": "Dropped Westbrook, Brian SFO RB",
+        "timestamp": "1313898750",
+        "franchise_id": "0008"
+      },
+      {
+        "timestamp": "1313936103",
+        "description": "Dropped Grossman, Rex WAS QB",
+        "franchise_id": "0006",
+        "amount": "212500.00",
+        "id": "56"
+      },
+      {
+        "amount": "212500.00",
+        "id": "57",
+        "description": "Dropped Johnson, Josh TBB QB",
+        "timestamp": "1313936103",
+        "franchise_id": "0006"
+      },
+      {
+        "amount": "233750.00",
+        "id": "58",
+        "timestamp": "1313936103",
+        "description": "Dropped Aromashodu, Devin MIN WR",
+        "franchise_id": "0006"
+      },
+      {
+        "id": "59",
+        "amount": "212500.00",
+        "timestamp": "1313936103",
+        "franchise_id": "0006",
+        "description": "Dropped Robinson, Laurent SDC WR"
+      },
+      {
+        "timestamp": "1297826633",
+        "franchise_id": "0007",
+        "description": "2011 Cap Hits",
+        "amount": "1370371.00",
+        "id": "6"
+      },
+      {
+        "amount": "212500.00",
+        "id": "60",
+        "timestamp": "1313936103",
+        "description": "Dropped Buehler, David DAL PK",
+        "franchise_id": "0006"
+      },
+      {
+        "id": "61",
+        "amount": "261250.00",
+        "franchise_id": "0006",
+        "timestamp": "1313937677",
+        "description": "Dropped Carlson, John SEA TE"
+      },
+      {
+        "id": "62",
+        "amount": "272250.00",
+        "franchise_id": "0002",
+        "timestamp": "1314035607",
+        "description": "Dropped Stuckey, Chansi ARI WR"
+      },
+      {
+        "timestamp": "1314035607",
+        "franchise_id": "0002",
+        "description": "Dropped Rosario, Dante DEN TE",
+        "id": "63",
+        "amount": "247500.00"
+      },
+      {
+        "amount": "262500.00",
+        "id": "64",
+        "timestamp": "1314582895",
+        "franchise_id": "0006",
+        "description": "Dropped Spann, Chad IND RB"
+      },
+      {
+        "franchise_id": "0006",
+        "timestamp": "1314594254",
+        "description": "Dropped Washington, Leon SEA RB",
+        "id": "65",
+        "amount": "212500.00"
+      },
+      {
+        "amount": "212500.00",
+        "id": "66",
+        "description": "Dropped Johnson, Jaymar MIN WR",
+        "timestamp": "1315020654",
+        "franchise_id": "0003"
+      },
+      {
+        "id": "67",
+        "amount": "212500.00",
+        "timestamp": "1315184090",
+        "description": "Dropped Gronkowski, Dan FA TE",
+        "franchise_id": "0016"
+      },
+      {
+        "timestamp": "1315237661",
+        "description": "Dropped Johnson, Stafon FA RB",
+        "franchise_id": "0003",
+        "amount": "212500.00",
+        "id": "68"
+      },
+      {
+        "id": "69",
+        "amount": "212500.00",
+        "description": "Dropped Reed, Jeff FA* PK",
+        "timestamp": "1315347887",
+        "franchise_id": "0007"
+      },
+      {
+        "amount": "1530813.00",
+        "id": "7",
+        "timestamp": "1297826633",
+        "franchise_id": "0008",
+        "description": "2011 Cap Hits"
+      },
+      {
+        "id": "70",
+        "amount": "1375000.00",
+        "timestamp": "1315778787",
+        "franchise_id": "0010",
+        "description": "Dropped Houshmandzadeh, T.J. FA* WR"
+      },
+      {
+        "description": "Dropped Jones, Thomas KCC RB",
+        "timestamp": "1316137507",
+        "franchise_id": "0015",
+        "amount": "475000.00",
+        "id": "71"
+      },
+      {
+        "description": "Dropped Avant, Jason PHI WR",
+        "timestamp": "1316137507",
+        "franchise_id": "0015",
+        "id": "72",
+        "amount": "233750.00"
+      },
+      {
+        "timestamp": "1316137507",
+        "franchise_id": "0006",
+        "description": "Dropped White, Blair IND WR",
+        "id": "73",
+        "amount": "247500.00"
+      },
+      {
+        "timestamp": "1316137507",
+        "franchise_id": "0011",
+        "description": "Dropped Tate, Brandon CIN WR",
+        "amount": "257125.00",
+        "id": "74"
+      },
+      {
+        "timestamp": "1316137507",
+        "description": "Dropped Kaeding, Nate SDC PK",
+        "franchise_id": "0004",
+        "id": "75",
+        "amount": "247500.00"
+      },
+      {
+        "id": "76",
+        "amount": "330000.00",
+        "description": "Dropped Hartley, Garrett NOS PK",
+        "timestamp": "1316137507",
+        "franchise_id": "0003"
+      },
+      {
+        "id": "77",
+        "amount": "212500.00",
+        "franchise_id": "0011",
+        "timestamp": "1316138424",
+        "description": "Dropped Beckum, Travis NYG TE"
+      },
+      {
+        "amount": "233750.00",
+        "id": "78",
+        "timestamp": "1316142751",
+        "description": "Dropped Webb, Joe MIN QB",
+        "franchise_id": "0015"
+      },
+      {
+        "id": "79",
+        "amount": "250000.00",
+        "description": "Dropped Smith, Kevin FA* RB",
+        "timestamp": "1316188420",
+        "franchise_id": "0012"
+      },
+      {
+        "amount": "187000.00",
+        "id": "8",
+        "timestamp": "1297826633",
+        "description": "2011 Cap Hits",
+        "franchise_id": "0009"
+      },
+      {
+        "timestamp": "1316188420",
+        "franchise_id": "0012",
+        "description": "Dropped Schilens, Chaz OAK WR",
+        "id": "80",
+        "amount": "325000.00"
+      },
+      {
+        "id": "81",
+        "amount": "212500.00",
+        "franchise_id": "0001",
+        "timestamp": "1316324366",
+        "description": "Dropped Brown, Ronnie PHI RB"
+      },
+      {
+        "franchise_id": "0001",
+        "timestamp": "1316324366",
+        "description": "Dropped Ginn Jr., Ted SFO WR",
+        "amount": "658845.00",
+        "id": "82"
+      },
+      {
+        "franchise_id": "0008",
+        "timestamp": "1316350567",
+        "description": "Dropped Longwell, Ryan MIN PK",
+        "id": "83",
+        "amount": "225000.00"
+      },
+      {
+        "description": "Dropped Panthers, Carolina CAR Def",
+        "timestamp": "1316350567",
+        "franchise_id": "0008",
+        "id": "84",
+        "amount": "275000.00"
+      },
+      {
+        "timestamp": "1316742312",
+        "description": "Dropped Gradkowski, Bruce CIN QB",
+        "franchise_id": "0001",
+        "id": "85",
+        "amount": "233750.00"
+      },
+      {
+        "id": "86",
+        "amount": "212500.00",
+        "description": "Dropped McCown, Luke JAC QB",
+        "timestamp": "1316742312",
+        "franchise_id": "0001"
+      },
+      {
+        "id": "87",
+        "amount": "233750.00",
+        "timestamp": "1316742312",
+        "description": "Dropped Price, Taylor NEP WR",
+        "franchise_id": "0004"
+      },
+      {
+        "amount": "225000.00",
+        "id": "88",
+        "timestamp": "1316742312",
+        "franchise_id": "0004",
+        "description": "Dropped LeFevour, Dan FA QB"
+      },
+      {
+        "id": "89",
+        "amount": "2011625.00",
+        "timestamp": "1316742312",
+        "franchise_id": "0005",
+        "description": "Dropped Brown, Donald IND RB"
+      },
+      {
+        "amount": "2983250.00",
+        "id": "9",
+        "timestamp": "1297826633",
+        "description": "2011 Cap Hits",
+        "franchise_id": "0010"
+      },
+      {
+        "id": "90",
+        "amount": "1622500.00",
+        "franchise_id": "0005",
+        "timestamp": "1316742312",
+        "description": "Dropped Royal, Eddie DEN WR"
+      },
+      {
+        "id": "91",
+        "amount": "852500.00",
+        "franchise_id": "0002",
+        "timestamp": "1316743291",
+        "description": "Dropped Gonzalez, Anthony IND WR"
+      },
+      {
+        "timestamp": "1316797774",
+        "franchise_id": "0004",
+        "description": "Dropped Ivory, Christopher NOS RB",
+        "amount": "233750.00",
+        "id": "92"
+      },
+      {
+        "id": "93",
+        "amount": "562500.00",
+        "timestamp": "1317329798",
+        "franchise_id": "0014",
+        "description": "Dropped Moss, Randy FA* WR"
+      },
+      {
+        "id": "94",
+        "amount": "225000.00",
+        "franchise_id": "0005",
+        "timestamp": "1317347103",
+        "description": "Dropped Hill, Shaun DET QB"
+      },
+      {
+        "description": "Dropped Choice, Tashard DAL RB",
+        "timestamp": "1317347103",
+        "franchise_id": "0005",
+        "id": "95",
+        "amount": "922625.00"
+      },
+      {
+        "id": "96",
+        "amount": "212500.00",
+        "timestamp": "1317347103",
+        "description": "Dropped Berrian, Bernard MIN WR",
+        "franchise_id": "0003"
+      },
+      {
+        "timestamp": "1317348194",
+        "description": "Dropped Harper, Jamie TEN RB",
+        "franchise_id": "0006",
+        "id": "97",
+        "amount": "225000.00"
+      },
+      {
+        "id": "98",
+        "amount": "257125.00",
+        "description": "Dropped Murphy, Louis OAK WR",
+        "timestamp": "1317560012",
+        "franchise_id": "0005"
+      },
+      {
+        "timestamp": "1317951916",
+        "franchise_id": "0002",
+        "description": "Dropped Mare, Olindo CAR PK",
+        "id": "99",
+        "amount": "212500.00"
+      }
+    ]
+  }
 }

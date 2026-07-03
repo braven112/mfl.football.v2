@@ -1,13 +1,99 @@
 {
-  "generatedAt": "2025-12-09T20:45:26.399Z",
+  "generatedAt": "2026-07-03T16:25:38.613Z",
   "teams": [
+    {
+      "key": "history_420_all_stars",
+      "slug": "history_420_all_stars",
+      "id": "0005",
+      "name": "420 All-Stars (2007–2009)",
+      "category": "former",
+      "aliases": [
+        "Computer Jocks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "420_all_stars_banner.png",
+            "relativePath": "/assets/afl/history/420_all_stars_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "420_all_stars_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/420_all_stars_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_alcohol_tobacco_and_firearms",
+      "slug": "history_alcohol_tobacco_and_firearms",
+      "id": "0024",
+      "name": "Alcohol, Tobacco and Firearms (ATF) (2003–2006)",
+      "category": "former",
+      "aliases": [
+        "No Soup For You",
+        "ATF"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "atf_banner.png",
+            "relativePath": "/assets/afl/history/atf_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "atf_icon_100.png",
+            "relativePath": "/assets/afl/history/atf_icon_100.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_angry_irish",
+      "slug": "history_angry_irish",
+      "id": "0024",
+      "name": "Angry Irish (2012)",
+      "category": "former",
+      "aliases": [
+        "No Soup For You"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "angry_irish_banner.png",
+            "relativePath": "/assets/afl/history/angry_irish_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "angry_irish_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/angry_irish_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
     {
       "key": "avenging_amish",
       "slug": "avenging_amish",
       "id": "0007",
       "name": "Avenging Amish",
-      "conference": "B",
-      "division": "01",
+      "category": "active",
+      "conference": "00",
+      "division": "South",
       "tier": "D-League",
       "aliases": [
         "Amish"
@@ -36,14 +122,6 @@
             "relativePath": "/assets/afl/icons/amish.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "avenging_amish.psd",
-            "relativePath": "/assets/afl/psds/avenging_amish.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -52,8 +130,9 @@
       "slug": "badd_boys",
       "id": "0019",
       "name": "Badd Boys",
-      "conference": "A",
-      "division": "02",
+      "category": "active",
+      "conference": "01",
+      "division": "East",
       "tier": "Premier League",
       "aliases": [
         "Badd"
@@ -82,14 +161,6 @@
             "relativePath": "/assets/afl/icons/badd_boys.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "badd_boys.psd",
-            "relativePath": "/assets/afl/psds/badd_boys.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -98,8 +169,9 @@
       "slug": "balls_deep",
       "id": "0022",
       "name": "Balls Deep",
-      "conference": "A",
-      "division": "02",
+      "category": "active",
+      "conference": "01",
+      "division": "East",
       "tier": "Premier League",
       "aliases": [
         "Balls"
@@ -128,13 +200,422 @@
             "relativePath": "/assets/afl/icons/balls_deep.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_bay_area_ballers",
+      "slug": "history_bay_area_ballers",
+      "id": "0004",
+      "name": "Bay Area Ballers (2008–2011)",
+      "category": "former",
+      "aliases": [
+        "Get off my Ditka"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "balls_deep.psd",
-            "relativePath": "/assets/afl/psds/balls_deep.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "bay_area_ballers_banner.png",
+            "relativePath": "/assets/afl/history/bay_area_ballers_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "bay_area_ballers_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/bay_area_ballers_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_be_gentle_it_s_my_first_time",
+      "slug": "history_be_gentle_it_s_my_first_time",
+      "id": "0016",
+      "name": "Be Gentle! It's my first time. (2019, 2021)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2019,
+          "yearEnd": 2019,
+          "franchiseId": "0016"
+        },
+        {
+          "yearStart": 2021,
+          "yearEnd": 2021,
+          "franchiseId": "0016"
+        }
+      ],
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "be_gentle_it_s_my_first_time_banner.png",
+            "relativePath": "/assets/afl/history/be_gentle_it_s_my_first_time_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "be_gentle_it_s_my_first_time_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/be_gentle_it_s_my_first_time_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_be_rough_i_m_used_to_it",
+      "slug": "history_be_rough_i_m_used_to_it",
+      "id": "0016",
+      "name": "Be Rough! I'm used to it. (2020)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "be_rough_i_m_used_to_it_banner.png",
+            "relativePath": "/assets/afl/history/be_rough_i_m_used_to_it_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "be_rough_i_m_used_to_it_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/be_rough_i_m_used_to_it_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_bernies_brewers",
+      "slug": "history_bernies_brewers",
+      "id": "0005",
+      "name": "Bernies Brewers (2003–2006)",
+      "category": "former",
+      "aliases": [
+        "Computer Jocks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "bernies_brewers_banner.png",
+            "relativePath": "/assets/afl/history/bernies_brewers_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "bernies_brewers_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/bernies_brewers_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_blitzkrieg",
+      "slug": "history_blitzkrieg",
+      "id": "0012, 0017",
+      "name": "Blitzkrieg (2007–2012)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "franchiseId": "0012"
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2012,
+          "franchiseId": "0017"
+        }
+      ],
+      "aliases": [
+        "Suh girls, one cup",
+        "Titsburgh Feelers"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "blitzkrieg_banner.png",
+            "relativePath": "/assets/afl/history/blitzkrieg_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "blitzkrieg_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_blowing_my_horn",
+      "slug": "history_blowing_my_horn",
+      "id": "0008",
+      "name": "Blowing My Horn (2016–2018)",
+      "category": "former",
+      "aliases": [
+        "Dicks out for Harambe"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "blowing_my_horn_banner.png",
+            "relativePath": "/assets/afl/history/blowing_my_horn_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "blowing_my_horn_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/blowing_my_horn_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_booyakasha",
+      "slug": "history_booyakasha",
+      "id": "0005",
+      "name": "booyakasha (2010–2014)",
+      "category": "former",
+      "aliases": [
+        "Computer Jocks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "booyakasha_banner.png",
+            "relativePath": "/assets/afl/history/booyakasha_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "booyakasha_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/booyakasha_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_brady_s_bastards",
+      "slug": "history_brady_s_bastards",
+      "id": "0016",
+      "name": "Brady's Bastards (2009–2013)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "brady_s_bastards_banner.png",
+            "relativePath": "/assets/afl/history/brady_s_bastards_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "brady_s_bastards_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_broke_back_lil_half_dead_s_brother",
+      "slug": "history_broke_back_lil_half_dead_s_brother",
+      "id": "0007",
+      "name": "Broke Back 'lil Half Dead's Brother (2023)",
+      "category": "former",
+      "aliases": [
+        "Avenging Amish"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "broke_back_lil_half_dead_s_brother_banner.png",
+            "relativePath": "/assets/afl/history/broke_back_lil_half_dead_s_brother_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "broke_back_lil_half_dead_s_brother_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/broke_back_lil_half_dead_s_brother_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_bronxbommr",
+      "slug": "history_bronxbommr",
+      "id": "0024",
+      "name": "BronxBommr (2016–2018)",
+      "category": "former",
+      "aliases": [
+        "No Soup For You"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "bronxbommr_banner.png",
+            "relativePath": "/assets/afl/history/bronxbommr_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "bronxbommr_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/bronxbommr_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_bukkake_warriors",
+      "slug": "history_bukkake_warriors",
+      "id": "0017",
+      "name": "Bukkake Warriors (2004)",
+      "category": "former",
+      "aliases": [
+        "Titsburgh Feelers"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "bukkake_warriors_banner_face.jpg",
+            "relativePath": "/assets/afl/history/bukkake_warriors_banner_face.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "bukkake_warriors_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/bukkake_warriors_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_c_p_bruisers",
+      "slug": "history_c_p_bruisers",
+      "id": "0012",
+      "name": "C.P. Bruisers (2004)",
+      "category": "former",
+      "aliases": [
+        "Suh girls, one cup"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "c_p_bruisers_banner.jpg",
+            "relativePath": "/assets/afl/history/c_p_bruisers_banner.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "c_p_bruisers_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/c_p_bruisers_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_can_t_get_over_the_baby_gate",
+      "slug": "history_can_t_get_over_the_baby_gate",
+      "id": "0004",
+      "name": "Can't get over the baby gate (2024)",
+      "category": "former",
+      "aliases": [
+        "Get off my Ditka"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "can_t_get_over_the_baby_gate_banner.png",
+            "relativePath": "/assets/afl/history/can_t_get_over_the_baby_gate_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "can_t_get_over_the_baby_gate_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/can_t_get_over_the_baby_gate_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_carolina_blues",
+      "slug": "history_carolina_blues",
+      "id": "0018",
+      "name": "Carolina Blues (2007–2008)",
+      "category": "former",
+      "aliases": [
+        "Jewpacabra"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "carolina_blues_banner.png",
+            "relativePath": "/assets/afl/history/carolina_blues_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "carolina_blues_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/carolina_blues_banner_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -144,8 +625,9 @@
       "slug": "chatmaster",
       "id": "0021",
       "name": "Chatmaster",
-      "conference": "B",
-      "division": "03",
+      "category": "active",
+      "conference": "01",
+      "division": "West",
       "tier": "Premier League",
       "aliases": [
         "Chat"
@@ -156,6 +638,12 @@
             "type": "banners",
             "filename": "chat.png",
             "relativePath": "/assets/afl/banners/chat.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "chatmaster_banner.png",
+            "relativePath": "/assets/afl/history/chatmaster_banner.png",
             "extension": ".png"
           }
         ],
@@ -173,32 +661,2326 @@
             "filename": "chat.png",
             "relativePath": "/assets/afl/icons/chat.png",
             "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "chatmaster_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/chatmaster_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      },
+      "eras": [
+        {
+          "yearStart": 2004,
+          "yearEnd": 2009,
+          "franchiseId": "0007",
+          "conference": "00"
+        }
+      ]
+    },
+    {
+      "key": "history_chieftans",
+      "slug": "history_chieftans",
+      "id": "0006",
+      "name": "Chieftans (2003)",
+      "category": "former",
+      "aliases": [
+        "Da Dangsters"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "chieftans_banner_face.jpg",
+            "relativePath": "/assets/afl/history/chieftans_banner_face.jpg",
+            "extension": ".jpg"
           }
         ],
-        "psds": [
+        "icons": [
           {
-            "type": "psds",
-            "filename": "Chatmaster.psd",
-            "relativePath": "/assets/afl/psds/Chatmaster.psd",
-            "extension": ".psd"
+            "type": "icons",
+            "filename": "chieftans_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/chieftans_icon_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
     },
     {
-      "key": "cock_gobbler",
-      "slug": "cock_gobbler",
+      "key": "history_cliffside_killer_clowns",
+      "slug": "history_cliffside_killer_clowns",
+      "id": "0019",
+      "name": "Cliffside Killer Clowns (2011–2014)",
+      "category": "former",
+      "aliases": [
+        "Badd Boys"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "cliffside_killer_clowns_banner.png",
+            "relativePath": "/assets/afl/history/cliffside_killer_clowns_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "cliffside_killer_clowns_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/cliffside_killer_clowns_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_cock_gobbler",
+      "slug": "history_cock_gobbler",
       "id": "0023",
-      "name": "The Show",
-      "conference": "A",
-      "division": "02",
+      "name": "Cock Gobbler (2025)",
+      "category": "former",
+      "aliases": [
+        "The Show"
+      ],
+      "assets": {
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "gobblers_icon_circle.png",
+            "relativePath": "/assets/afl/history/gobblers_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_coke_n_blowjobs",
+      "slug": "history_coke_n_blowjobs",
+      "id": "0004",
+      "name": "Coke n Blowjobs (2003)",
+      "category": "former",
+      "aliases": [
+        "Get off my Ditka"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "coke_n_blowjobs_banner_face.jpg",
+            "relativePath": "/assets/afl/history/coke_n_blowjobs_banner_face.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "coke_n_blowjobs_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/coke_n_blowjobs_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "computer_jocks",
+      "slug": "computer_jocks",
+      "id": "0005",
+      "name": "Computer Jocks",
+      "category": "active",
+      "conference": "00",
+      "division": "South",
       "tier": "D-League",
       "aliases": [
-        "Pain",
-        "BTP",
-        "The Show",
+        "Jocks",
+        "CPU Jocks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "computer_jocks_banner.png",
+            "relativePath": "/assets/afl/history/computer_jocks_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "computer_jocks.png",
+            "relativePath": "/assets/afl/banners/computer_jocks.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "computer_jocks.png",
+            "relativePath": "/assets/afl/group-me/computer_jocks.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "computer_jocks_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/computer_jocks_icon_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "computer_jocks.png",
+            "relativePath": "/assets/afl/icons/computer_jocks.png",
+            "extension": ".png"
+          }
+        ]
+      },
+      "eras": [
+        {
+          "yearStart": 2014,
+          "yearEnd": 2014,
+          "franchiseId": "0018"
+        }
+      ]
+    },
+    {
+      "key": "history_cougs",
+      "slug": "history_cougs",
+      "id": "0013",
+      "name": "Cougs (2004–2007)",
+      "category": "former",
+      "aliases": [
+        "Muck Juggling Micks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "cougs_banner.png",
+            "relativePath": "/assets/afl/history/cougs_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "cougs_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/cougs_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_cska_sofia",
+      "slug": "history_cska_sofia",
+      "id": "0004, 0016",
+      "name": "CSKA Sofia (2016–2018)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2016,
+          "yearEnd": 2016,
+          "franchiseId": "0016",
+          "conference": "01"
+        },
+        {
+          "yearStart": 2017,
+          "yearEnd": 2018,
+          "franchiseId": "0004",
+          "conference": "00"
+        }
+      ],
+      "aliases": [
+        "Get off my Ditka",
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "cska_sofia_0016_banner.png",
+            "relativePath": "/assets/afl/history/cska_sofia_0016_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "cska_sofia_banner.png",
+            "relativePath": "/assets/afl/history/cska_sofia_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "cska_sofia_0016_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/cska_sofia_0016_icon_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "cska_sofia_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/cska_sofia_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "da_dangsters",
+      "slug": "da_dangsters",
+      "id": "0006",
+      "name": "Da Dangsters",
+      "category": "active",
+      "conference": "00",
+      "division": "North",
+      "tier": "Premier League",
+      "aliases": [
+        "Dangsters",
+        "DD"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "da_dangsters_banner.png",
+            "relativePath": "/assets/afl/history/da_dangsters_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "da_dangsters.png",
+            "relativePath": "/assets/afl/banners/da_dangsters.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "da_dangsters.png",
+            "relativePath": "/assets/afl/group-me/da_dangsters.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "da_dangsters_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/da_dangsters_icon_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "da_dangsters.png",
+            "relativePath": "/assets/afl/icons/da_dangsters.png",
+            "extension": ".png"
+          }
+        ]
+      },
+      "eras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2008,
+          "franchiseId": "0021"
+        }
+      ]
+    },
+    {
+      "key": "history_dan_marino_s_tan_isotoners",
+      "slug": "history_dan_marino_s_tan_isotoners",
+      "id": "0013",
+      "name": "Dan Marino's Tan Isotoners (2008–2009)",
+      "category": "former",
+      "aliases": [
+        "Muck Juggling Micks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "dan_marino_s_tan_isotoners_banner.png",
+            "relativePath": "/assets/afl/history/dan_marino_s_tan_isotoners_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "dan_marino_s_tan_isotoners_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/dan_marino_s_tan_isotoners_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_delirium_tremens",
+      "slug": "history_delirium_tremens",
+      "id": "0013",
+      "name": "Delirium Tremens (2010–2019)",
+      "category": "former",
+      "aliases": [
+        "Muck Juggling Micks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "delirium_tremens_banner.png",
+            "relativePath": "/assets/afl/history/delirium_tremens_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "delirium_tremens_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/delirium_tremens_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "dicks_out_for_harambe",
+      "slug": "dicks_out_for_harambe",
+      "id": "0008",
+      "name": "Dicks out for Harambe",
+      "category": "active",
+      "conference": "00",
+      "division": "South",
+      "tier": "Premier League",
+      "aliases": [
+        "Harambe",
+        "Dicks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "dicks_out_for_harambe_banner.png",
+            "relativePath": "/assets/afl/history/dicks_out_for_harambe_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "harambe.png",
+            "relativePath": "/assets/afl/banners/harambe.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "harambe.png",
+            "relativePath": "/assets/afl/group-me/harambe.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "harambe.png",
+            "relativePath": "/assets/afl/icons/harambe.png",
+            "extension": ".png"
+          }
+        ]
+      },
+      "eras": [
+        {
+          "yearStart": 2017,
+          "yearEnd": 2018,
+          "franchiseId": "0016",
+          "conference": "01"
+        }
+      ]
+    },
+    {
+      "key": "drunk_indians",
+      "slug": "drunk_indians",
+      "id": "0002",
+      "name": "Drunk Indians",
+      "category": "active",
+      "conference": "00",
+      "division": "North",
+      "tier": "Premier League",
+      "aliases": [
+        "Indians"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "drunk_indians.png",
+            "relativePath": "/assets/afl/banners/drunk_indians.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "drunk_indians.png",
+            "relativePath": "/assets/afl/group-me/drunk_indians.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "drunk_indians.png",
+            "relativePath": "/assets/afl/icons/drunk_indians.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_fat_chicks_a_six_pack",
+      "slug": "history_fat_chicks_a_six_pack",
+      "id": "0017",
+      "name": "Fat Chicks & a Six-Pack (2003)",
+      "category": "former",
+      "aliases": [
+        "Titsburgh Feelers"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "fat_chicks_a_six_pack_banner_face.jpg",
+            "relativePath": "/assets/afl/history/fat_chicks_a_six_pack_banner_face.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "fat_chicks_a_six_pack_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/fat_chicks_a_six_pack_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_fly_fishermen",
+      "slug": "history_fly_fishermen",
+      "id": "0017",
+      "name": "Fly Fishermen (2007)",
+      "category": "former",
+      "aliases": [
+        "Titsburgh Feelers"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "fly_fishermen_banner.png",
+            "relativePath": "/assets/afl/history/fly_fishermen_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "fly_fishermen_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/fly_fishermen_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "fullybaked",
+      "slug": "fullybaked",
+      "id": "0010",
+      "name": "Fullybaked",
+      "category": "active",
+      "conference": "00",
+      "division": "North",
+      "tier": "Premier League",
+      "aliases": [
+        "Baked"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "fullybaked.png",
+            "relativePath": "/assets/afl/banners/fullybaked.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "fullybaked.png",
+            "relativePath": "/assets/afl/group-me/fullybaked.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "fullybaked.png",
+            "relativePath": "/assets/afl/icons/fullybaked.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_gaelic_rams",
+      "slug": "history_gaelic_rams",
+      "id": "0015",
+      "name": "Gaelic Rams (2011)",
+      "category": "former",
+      "aliases": [
+        "The Mariachi Ninjas"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "gaelic_rams_banner.png",
+            "relativePath": "/assets/afl/history/gaelic_rams_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "gaelic_rams_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/gaelic_rams_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_gamecocks",
+      "slug": "history_gamecocks",
+      "id": "0009",
+      "name": "Gamecocks (2003–2009)",
+      "category": "former",
+      "aliases": [
+        "Vitside Mafia"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "gamecocks_banner.png",
+            "relativePath": "/assets/afl/history/gamecocks_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "gamecocks_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "get_off_my_ditka",
+      "slug": "get_off_my_ditka",
+      "id": "0004",
+      "name": "Get off my Ditka",
+      "category": "active",
+      "conference": "00",
+      "division": "North",
+      "tier": "D-League",
+      "aliases": [
+        "Ditka",
+        "Ditkas"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "ditka.png",
+            "relativePath": "/assets/afl/banners/ditka.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "ditka.png",
+            "relativePath": "/assets/afl/group-me/ditka.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "ditka.png",
+            "relativePath": "/assets/afl/icons/ditka.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_green_lake_meanies",
+      "slug": "history_green_lake_meanies",
+      "id": "0018",
+      "name": "Green Lake Meanies (2003)",
+      "category": "former",
+      "aliases": [
+        "Jewpacabra"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "green_lake_meanies_banner.gif",
+            "relativePath": "/assets/afl/history/green_lake_meanies_banner.gif",
+            "extension": ".gif"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "green_lake_meanies_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/green_lake_meanies_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_habanero_s",
+      "slug": "history_habanero_s",
+      "id": "0012",
+      "name": "Habanero's (2005–2006)",
+      "category": "former",
+      "aliases": [
+        "Suh girls, one cup"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "habanero_s_banner.png",
+            "relativePath": "/assets/afl/history/habanero_s_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "habanero_s_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/habanero_s_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_highclimbers",
+      "slug": "history_highclimbers",
+      "id": "0011",
+      "name": "HiGhClImBeRs (2003–2004)",
+      "category": "former",
+      "aliases": [
+        "Midwestside Connection"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "highclimbers_banner.gif",
+            "relativePath": "/assets/afl/history/highclimbers_banner.gif",
+            "extension": ".gif"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "highclimbers_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/highclimbers_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_incurable_chlamydia",
+      "slug": "history_incurable_chlamydia",
+      "id": "0016",
+      "name": "Incurable Chlamydia (2014–2015)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "incurable_chlamydia_banner.png",
+            "relativePath": "/assets/afl/history/incurable_chlamydia_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "incurable_chlamydia_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/incurable_chlamydia_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_isis",
+      "slug": "history_isis",
+      "id": "0014",
+      "name": "ISIS (2005–2006)",
+      "category": "former",
+      "aliases": [
+        "Thundering Herd"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "isis_banner.png",
+            "relativePath": "/assets/afl/history/isis_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "isis_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/isis_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_italian_stalions",
+      "slug": "history_italian_stalions",
+      "id": "0012",
+      "name": "Italian Stalions (2003)",
+      "category": "former",
+      "aliases": [
+        "Suh girls, one cup"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "italian_stalions_banner_face.jpg",
+            "relativePath": "/assets/afl/history/italian_stalions_banner_face.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "italian_stalions_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/italian_stalions_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_its_all_my_fault",
+      "slug": "history_its_all_my_fault",
+      "id": "0016",
+      "name": "Its all my fault (2003)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "its_all_my_fault_banner.gif",
+            "relativePath": "/assets/afl/history/its_all_my_fault_banner.gif",
+            "extension": ".gif"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "its_all_my_fault_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/its_all_my_fault_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_jesus_killers",
+      "slug": "history_jesus_killers",
+      "id": "0018",
+      "name": "Jesus Killers (2019)",
+      "category": "former",
+      "aliases": [
+        "Jewpacabra"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "jesus_killers_banner.png",
+            "relativePath": "/assets/afl/history/jesus_killers_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "jesus_killers_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/jesus_killers_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "jewpacabra",
+      "slug": "jewpacabra",
+      "id": "0018",
+      "name": "Jewpacabra",
+      "category": "active",
+      "conference": "01",
+      "division": "West",
+      "tier": "D-League",
+      "aliases": [
+        "Jew"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "jewpacabra.png",
+            "relativePath": "/assets/afl/banners/jewpacabra.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "jewpacabra.png",
+            "relativePath": "/assets/afl/group-me/jewpacabra.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "jewpacabra.png",
+            "relativePath": "/assets/afl/icons/jewpacabra.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_joey_s_team",
+      "slug": "history_joey_s_team",
+      "id": "0016",
+      "name": "Joey's Team (2004)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "joey_s_team_banner.jpg",
+            "relativePath": "/assets/afl/history/joey_s_team_banner.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "joey_s_team_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/joey_s_team_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_l_c_maniacs",
+      "slug": "history_l_c_maniacs",
+      "id": "0019",
+      "name": "L.C. Maniacs (2004)",
+      "category": "former",
+      "aliases": [
+        "Badd Boys"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "l_c_maniacs_banner.gif",
+            "relativePath": "/assets/afl/history/l_c_maniacs_banner.gif",
+            "extension": ".gif"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "l_c_maniacs_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/l_c_maniacs_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_level_3_inception",
+      "slug": "history_level_3_inception",
+      "id": "0003",
+      "name": "Level 3 Inception (2011–2012)",
+      "category": "former",
+      "aliases": [
+        "Team Minty Fresh"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "level_3_inception_banner.png",
+            "relativePath": "/assets/afl/history/level_3_inception_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "level_3_inception_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/level_3_inception_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_limp_ditkas",
+      "slug": "history_limp_ditkas",
+      "id": "0020",
+      "name": "Limp Ditkas (2006–2007)",
+      "category": "former",
+      "aliases": [
+        "The Boondock Saints"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "limp_ditkas_banner.png",
+            "relativePath": "/assets/afl/history/limp_ditkas_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "limp_ditkas_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/limp_ditkas_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_lucky_buck",
+      "slug": "history_lucky_buck",
+      "id": "0013",
+      "name": "Lucky Buck$ (2003)",
+      "category": "former",
+      "aliases": [
+        "Muck Juggling Micks"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "lucky_buck_banner.jpg",
+            "relativePath": "/assets/afl/history/lucky_buck_banner.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "lucky_buck_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/lucky_buck_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_m_l_maniacs",
+      "slug": "history_m_l_maniacs",
+      "id": "0019",
+      "name": "M.L. Maniacs (2003)",
+      "category": "former",
+      "aliases": [
+        "Badd Boys"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "m_l_maniacs_banner.gif",
+            "relativePath": "/assets/afl/history/m_l_maniacs_banner.gif",
+            "extension": ".gif"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "m_l_maniacs_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/m_l_maniacs_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_maga_nation",
+      "slug": "history_maga_nation",
+      "id": "0004",
+      "name": "Maga Nation (2019–2022)",
+      "category": "former",
+      "aliases": [
+        "Get off my Ditka"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "maga_nation_banner.png",
+            "relativePath": "/assets/afl/history/maga_nation_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "maga_nation_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/maga_nation_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_magnum_s",
+      "slug": "history_magnum_s",
+      "id": "0023",
+      "name": "Magnum's (2004)",
+      "category": "former",
+      "aliases": [
+        "The Show"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "magnum_s_banner.jpg",
+            "relativePath": "/assets/afl/history/magnum_s_banner.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "magnum_s_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/magnum_s_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_marriedwithchildren",
+      "slug": "history_marriedwithchildren",
+      "id": "0003",
+      "name": "Marriedwithchildren (2003–2010)",
+      "category": "former",
+      "aliases": [
+        "Team Minty Fresh"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "marriedwithchildren_banner.png",
+            "relativePath": "/assets/afl/history/marriedwithchildren_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "marriedwithchildren_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_melville_roadsters",
+      "slug": "history_melville_roadsters",
+      "id": "0022",
+      "name": "Melville Roadsters (2003–2004)",
+      "category": "former",
+      "aliases": [
+        "Balls Deep"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "melville_roadsters_banner.gif",
+            "relativePath": "/assets/afl/history/melville_roadsters_banner.gif",
+            "extension": ".gif"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "melville_roadsters_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/melville_roadsters_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "midwestside_connection",
+      "slug": "midwestside_connection",
+      "id": "0011",
+      "name": "Midwestside Connection",
+      "category": "active",
+      "conference": "00",
+      "division": "South",
+      "tier": "D-League",
+      "aliases": [
+        "Midwestside",
+        "midwest",
+        "mws",
+        "mwc"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "midwestside.png",
+            "relativePath": "/assets/afl/banners/midwestside.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "midwestside.png",
+            "relativePath": "/assets/afl/group-me/midwestside.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "midwestside.png",
+            "relativePath": "/assets/afl/icons/midwestside.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_minnesota_road_kill",
+      "slug": "history_minnesota_road_kill",
+      "id": "0019",
+      "name": "Minnesota Road Kill (2009–2010)",
+      "category": "former",
+      "aliases": [
+        "Badd Boys"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "minnesota_road_kill_banner.png",
+            "relativePath": "/assets/afl/history/minnesota_road_kill_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "minnesota_road_kill_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_more_cowbell",
+      "slug": "history_more_cowbell",
+      "id": "0006",
+      "name": "More Cowbell (2008–2010)",
+      "category": "former",
+      "aliases": [
+        "Da Dangsters"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "more_cowbell_banner.png",
+            "relativePath": "/assets/afl/history/more_cowbell_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "more_cowbell_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/more_cowbell_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "muck_juggling_micks",
+      "slug": "muck_juggling_micks",
+      "id": "0013",
+      "name": "Muck Juggling Micks",
+      "category": "active",
+      "conference": "01",
+      "division": "West",
+      "tier": "D-League",
+      "aliases": [
+        "Micks",
+        "MJM"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "micks.png",
+            "relativePath": "/assets/afl/banners/micks.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "muck_juggling_micks_banner.png",
+            "relativePath": "/assets/afl/history/muck_juggling_micks_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "micks.png",
+            "relativePath": "/assets/afl/group-me/micks.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "micks.png",
+            "relativePath": "/assets/afl/icons/micks.png",
+            "extension": ".png"
+          }
+        ]
+      },
+      "eras": [
+        {
+          "yearStart": 2005,
+          "yearEnd": 2007,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    {
+      "key": "history_no_frills",
+      "slug": "history_no_frills",
+      "id": "0023",
+      "name": "No Frills (2005–2021)",
+      "category": "former",
+      "aliases": [
+        "The Show"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "no_frills_banner.png",
+            "relativePath": "/assets/afl/history/no_frills_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "no_frills_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/no_frills_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "no_soup_for_you",
+      "slug": "no_soup_for_you",
+      "id": "0024",
+      "name": "No Soup For You",
+      "category": "active",
+      "conference": "01",
+      "division": "East",
+      "tier": "D-League",
+      "aliases": [
+        "No Soup"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "no_soup.png",
+            "relativePath": "/assets/afl/banners/no_soup.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "no_soup.png",
+            "relativePath": "/assets/afl/group-me/no_soup.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "no_soup.png",
+            "relativePath": "/assets/afl/icons/no_soup.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_nosx",
+      "slug": "history_nosx",
+      "id": "0016",
+      "name": "NOSX (2007–2008)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "nosx_banner.png",
+            "relativePath": "/assets/afl/history/nosx_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "nosx_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/nosx_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_p_89s",
+      "slug": "history_p_89s",
+      "id": "0023",
+      "name": "P-89s (2003)",
+      "category": "former",
+      "aliases": [
+        "The Show"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "p_89s_banner_face.jpg",
+            "relativePath": "/assets/afl/history/p_89s_banner_face.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "p_89s_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/p_89s_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_pubes",
+      "slug": "history_pubes",
+      "id": "0012",
+      "name": "Pubes (2009–2018)",
+      "category": "former",
+      "aliases": [
+        "Suh girls, one cup"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "pubes_banner.png",
+            "relativePath": "/assets/afl/history/pubes_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "pubes_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/pubes_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_reckless",
+      "slug": "history_reckless",
+      "id": "0016",
+      "name": "Reckless (2005–2006)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "reckless_banner.png",
+            "relativePath": "/assets/afl/history/reckless_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "reckless_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/reckless_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_red_dawn",
+      "slug": "history_red_dawn",
+      "id": "0018",
+      "name": "Red Dawn (2004–2006)",
+      "category": "former",
+      "aliases": [
+        "Jewpacabra"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "red_dawn_banner.png",
+            "relativePath": "/assets/afl/history/red_dawn_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "red_dawn_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/red_dawn_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_sharpest_blade",
+      "slug": "history_sharpest_blade",
+      "id": "0024",
+      "name": "Sharpest Blade (2007)",
+      "category": "former",
+      "aliases": [
+        "No Soup For You"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "sharpest_blade_banner.png",
+            "relativePath": "/assets/afl/history/sharpest_blade_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "sharpest_blade_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/sharpest_blade_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_shifty_joe",
+      "slug": "history_shifty_joe",
+      "id": "0012",
+      "name": "Shifty Joe (2008)",
+      "category": "former",
+      "aliases": [
+        "Suh girls, one cup"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "shifty_joe_banner.png",
+            "relativePath": "/assets/afl/history/shifty_joe_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "shifty_joe_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/shifty_joe_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_silver_bullets",
+      "slug": "history_silver_bullets",
+      "id": "0016",
+      "name": "Silver Bullets (2022)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "silver_bullets_banner.png",
+            "relativePath": "/assets/afl/history/silver_bullets_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "silver_bullets_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/silver_bullets_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_smokane",
+      "slug": "history_smokane",
+      "id": "0001",
+      "name": "Smokane (2003–2008)",
+      "category": "former",
+      "aliases": [
+        "Smokane FC"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "smokane_banner.png",
+            "relativePath": "/assets/afl/history/smokane_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "smokane_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/smokane_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "smokane_fc",
+      "slug": "smokane_fc",
+      "id": "0001",
+      "name": "Smokane FC",
+      "category": "active",
+      "conference": "00",
+      "division": "North",
+      "tier": "Premier League",
+      "aliases": [
+        "Smokane"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "smokane.png",
+            "relativePath": "/assets/afl/banners/smokane.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "smokane.png",
+            "relativePath": "/assets/afl/group-me/smokane.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "smokane.png",
+            "relativePath": "/assets/afl/icons/smokane.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_sparta_fc",
+      "slug": "history_sparta_fc",
+      "id": "0022",
+      "name": "Sparta FC (2012)",
+      "category": "former",
+      "aliases": [
+        "Balls Deep"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "sparta_fc_banner.png",
+            "relativePath": "/assets/afl/history/sparta_fc_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "sparta_fc_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/sparta_fc_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "suh_girls_one_cup",
+      "slug": "suh_girls_one_cup",
+      "id": "0012",
+      "name": "Suh girls, one cup",
+      "category": "active",
+      "conference": "00",
+      "division": "North",
+      "tier": "Premier League",
+      "aliases": [
+        "Suh girls",
+        "Suh"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "suh.png",
+            "relativePath": "/assets/afl/banners/suh.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "suh.png",
+            "relativePath": "/assets/afl/group-me/suh.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "suh.png",
+            "relativePath": "/assets/afl/icons/suh.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "swiftie_4_life",
+      "slug": "swiftie_4_life",
+      "id": "0016",
+      "name": "Swiftie 4 Life",
+      "category": "active",
+      "conference": "01",
+      "division": "West",
+      "tier": "D-League",
+      "aliases": [
+        "Swiftie",
+        "Swifty",
+        "Swift",
+        "Swiftie4life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "swift.png",
+            "relativePath": "/assets/afl/banners/swift.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "swift.png",
+            "relativePath": "/assets/afl/group-me/swift.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "swift.png",
+            "relativePath": "/assets/afl/icons/swift.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_swifty_4_life",
+      "slug": "history_swifty_4_life",
+      "id": "0016",
+      "name": "Swifty 4 Life (2023–2024)",
+      "category": "former",
+      "aliases": [
+        "Swiftie 4 Life"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "swifty_4_life_banner.png",
+            "relativePath": "/assets/afl/history/swifty_4_life_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "swifty_4_life_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/swifty_4_life_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_tackling_dummies",
+      "slug": "history_tackling_dummies",
+      "id": "0021",
+      "name": "Tackling Dummies (2009)",
+      "category": "former",
+      "aliases": [
+        "Chatmaster"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "tackling_dummies_banner.png",
+            "relativePath": "/assets/afl/history/tackling_dummies_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "tackling_dummies_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/tackling_dummies_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_taco_hell",
+      "slug": "history_taco_hell",
+      "id": "0006, 0017",
+      "name": "Taco Hell (2004–2006)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "franchiseId": "0006"
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2006,
+          "franchiseId": "0017"
+        }
+      ],
+      "aliases": [
+        "Da Dangsters",
+        "Titsburgh Feelers"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "taco_hell_banner.gif",
+            "relativePath": "/assets/afl/history/taco_hell_banner.gif",
+            "extension": ".gif"
+          },
+          {
+            "type": "banners",
+            "filename": "taco_hell_banner.png",
+            "relativePath": "/assets/afl/history/taco_hell_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "taco_hell_banner_gif_icon_circle.png",
+            "relativePath": "/assets/afl/history/taco_hell_banner_gif_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "taco_hell_banner_png_icon_circle.png",
+            "relativePath": "/assets/afl/history/taco_hell_banner_png_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_team_ground_n_pound",
+      "slug": "history_team_ground_n_pound",
+      "id": "0004",
+      "name": "Team Ground N Pound (2023)",
+      "category": "former",
+      "aliases": [
+        "Get off my Ditka"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "team_ground_n_pound_banner.png",
+            "relativePath": "/assets/afl/history/team_ground_n_pound_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "team_ground_n_pound_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/team_ground_n_pound_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "team_minty_fresh",
+      "slug": "team_minty_fresh",
+      "id": "0003",
+      "name": "Team Minty Fresh",
+      "category": "active",
+      "conference": "00",
+      "division": "South",
+      "tier": "D-League",
+      "aliases": [
+        "Minty Fresh",
+        "Minty"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "minty.png",
+            "relativePath": "/assets/afl/banners/minty.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "minty-fresh.png",
+            "relativePath": "/assets/afl/group-me/minty-fresh.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "minty.png",
+            "relativePath": "/assets/afl/icons/minty.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_team_murderface",
+      "slug": "history_team_murderface",
+      "id": "0007",
+      "name": "Team Murderface (2014)",
+      "category": "former",
+      "aliases": [
+        "Avenging Amish"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "team_murderface_banner.png",
+            "relativePath": "/assets/afl/history/team_murderface_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "team_murderface_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/team_murderface_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_a_team",
+      "slug": "history_the_a_team",
+      "id": "0014",
+      "name": "The A-Team (2004)",
+      "category": "former",
+      "aliases": [
+        "Thundering Herd"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_a_team_banner.jpg",
+            "relativePath": "/assets/afl/history/the_a_team_banner.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_a_team_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_a_team_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_bandwagon",
+      "slug": "history_the_bandwagon",
+      "id": "0019",
+      "name": "The Bandwagon (2005–2008)",
+      "category": "former",
+      "aliases": [
+        "Badd Boys"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_bandwagon_banner.png",
+            "relativePath": "/assets/afl/history/the_bandwagon_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_bandwagon_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_bandwagon_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_blunt_bros",
+      "slug": "history_the_blunt_bros",
+      "id": "0015",
+      "name": "The Blunt Bros. (2003–2010)",
+      "category": "former",
+      "aliases": [
+        "The Mariachi Ninjas"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_blunt_bros_banner.png",
+            "relativePath": "/assets/afl/history/the_blunt_bros_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_blunt_bros_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "the_boondock_saints",
+      "slug": "the_boondock_saints",
+      "id": "0020",
+      "name": "The Boondock Saints",
+      "category": "active",
+      "conference": "01",
+      "division": "West",
+      "tier": "Premier League",
+      "aliases": [
+        "Boondock Saints",
+        "Saints",
+        "Boondocksaints"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "saints.png",
+            "relativePath": "/assets/afl/banners/saints.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "saints.png",
+            "relativePath": "/assets/afl/group-me/saints.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "saints.png",
+            "relativePath": "/assets/afl/icons/saints.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_dark_side",
+      "slug": "history_the_dark_side",
+      "id": "0011",
+      "name": "The Dark Side (2009)",
+      "category": "former",
+      "aliases": [
+        "Midwestside Connection"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_dark_side_banner.png",
+            "relativePath": "/assets/afl/history/the_dark_side_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_dark_side_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_dude_that_abides",
+      "slug": "history_the_dude_that_abides",
+      "id": "0004",
+      "name": "The Dude that Abides (2012–2016)",
+      "category": "former",
+      "aliases": [
+        "Get off my Ditka"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_dude_that_abides_banner.png",
+            "relativePath": "/assets/afl/history/the_dude_that_abides_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_dude_that_abides_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "the_mariachi_ninjas",
+      "slug": "the_mariachi_ninjas",
+      "id": "0015",
+      "name": "The Mariachi Ninjas",
+      "category": "active",
+      "conference": "01",
+      "division": "East",
+      "tier": "Premier League",
+      "aliases": [
+        "Ninjas",
+        "Mariachi Ninjas"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "ninjas.png",
+            "relativePath": "/assets/afl/banners/ninjas.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "ninjas.png",
+            "relativePath": "/assets/afl/group-me/ninjas.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "ninjas.png",
+            "relativePath": "/assets/afl/icons/ninjas.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_nukes",
+      "slug": "history_the_nukes",
+      "id": "0008",
+      "name": "The Nukes (2003–2015)",
+      "category": "former",
+      "aliases": [
+        "Dicks out for Harambe"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_nukes_banner.png",
+            "relativePath": "/assets/afl/history/the_nukes_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_nukes_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_rookies",
+      "slug": "history_the_rookies",
+      "id": "0011",
+      "name": "The Rookies (2005–2008)",
+      "category": "former",
+      "aliases": [
+        "Midwestside Connection"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "the_rookies_banner.png",
+            "relativePath": "/assets/afl/history/the_rookies_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "the_rookies_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_rookies_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "the_show",
+      "slug": "the_show",
+      "id": "0023",
+      "name": "The Show",
+      "category": "active",
+      "conference": "01",
+      "division": "East",
+      "tier": "D-League",
+      "aliases": [
         "Gobbler",
-        "Gobblers"
+        "Gobblers",
+        "Cock Gobbler"
       ],
       "assets": {
         "banners": [
@@ -242,772 +3024,111 @@
             "relativePath": "/assets/afl/icons/the_show.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_the_street",
+      "slug": "history_the_street",
+      "id": "0006, 0024",
+      "name": "The Street (2005–2011)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2005,
+          "yearEnd": 2007,
+          "franchiseId": "0006"
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2011,
+          "franchiseId": "0024"
+        }
+      ],
+      "aliases": [
+        "Da Dangsters",
+        "No Soup For You"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "gobbler.psd",
-            "relativePath": "/assets/afl/psds/gobbler.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "the_street_0024_banner.png",
+            "relativePath": "/assets/afl/history/the_street_0024_banner.png",
+            "extension": ".png"
           },
           {
-            "type": "psds",
-            "filename": "the_show.psd",
-            "relativePath": "/assets/afl/psds/the_show.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "computer_jocks",
-      "slug": "computer_jocks",
-      "id": "0005",
-      "name": "Computer Jocks",
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "aliases": [
-        "Jocks",
-        "CPU Jocks"
-      ],
-      "assets": {
-        "banners": [
-          {
             "type": "banners",
-            "filename": "computer_jocks.png",
-            "relativePath": "/assets/afl/banners/computer_jocks.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "computer_jocks.png",
-            "relativePath": "/assets/afl/group-me/computer_jocks.png",
+            "filename": "the_street_banner.png",
+            "relativePath": "/assets/afl/history/the_street_banner.png",
             "extension": ".png"
           }
         ],
         "icons": [
           {
             "type": "icons",
-            "filename": "computer_jocks.png",
-            "relativePath": "/assets/afl/icons/computer_jocks.png",
+            "filename": "the_street_0024_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_street_0024_banner_icon_circle.png",
             "extension": ".png"
-          }
-        ],
-        "psds": [
+          },
           {
-            "type": "psds",
-            "filename": "computer_jocks.psd",
-            "relativePath": "/assets/afl/psds/computer_jocks.psd",
-            "extension": ".psd"
+            "type": "icons",
+            "filename": "the_street_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_street_icon_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
     },
     {
-      "key": "da_dangsters",
-      "slug": "da_dangsters",
-      "id": "0006",
-      "name": "Da Dangsters",
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
+      "key": "history_the_vandalizers",
+      "slug": "history_the_vandalizers",
+      "id": "0004, 0007",
+      "name": "The Vandalizers (2003–2004)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2003,
+          "franchiseId": "0007"
+        },
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "franchiseId": "0004"
+        }
+      ],
       "aliases": [
-        "Dangsters",
-        "DD"
+        "Get off my Ditka",
+        "Avenging Amish"
       ],
       "assets": {
         "banners": [
           {
             "type": "banners",
-            "filename": "da_dangsters.png",
-            "relativePath": "/assets/afl/banners/da_dangsters.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "da_dangsters.png",
-            "relativePath": "/assets/afl/group-me/da_dangsters.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "da_dangsters.png",
-            "relativePath": "/assets/afl/icons/da_dangsters.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "da_dangsters.psd",
-            "relativePath": "/assets/afl/psds/da_dangsters.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "dicks_out_for_harambe",
-      "slug": "dicks_out_for_harambe",
-      "id": "0008",
-      "name": "Dicks out for Harambe",
-      "conference": "B",
-      "division": "01",
-      "tier": "Premier League",
-      "aliases": [
-        "Harambe",
-        "Dicks"
-      ],
-      "assets": {
-        "banners": [
+            "filename": "the_vandalizers_banner_face.jpg",
+            "relativePath": "/assets/afl/history/the_vandalizers_banner_face.jpg",
+            "extension": ".jpg"
+          },
           {
             "type": "banners",
-            "filename": "harambe.png",
-            "relativePath": "/assets/afl/banners/harambe.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "harambe.png",
-            "relativePath": "/assets/afl/group-me/harambe.png",
-            "extension": ".png"
+            "filename": "the_vandalizers_banner.gif",
+            "relativePath": "/assets/afl/history/the_vandalizers_banner.gif",
+            "extension": ".gif"
           }
         ],
         "icons": [
           {
             "type": "icons",
-            "filename": "harambe.png",
-            "relativePath": "/assets/afl/icons/harambe.png",
+            "filename": "the_vandalizers_icon_gif_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_vandalizers_icon_gif_icon_circle.png",
             "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "harambe.psd",
-            "relativePath": "/assets/afl/psds/harambe.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "drunk_indians",
-      "slug": "drunk_indians",
-      "id": "0002",
-      "name": "Drunk Indians",
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "aliases": [
-        "Indians"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "drunk_indians.png",
-            "relativePath": "/assets/afl/banners/drunk_indians.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "drunk_indians.png",
-            "relativePath": "/assets/afl/group-me/drunk_indians.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
+          },
           {
             "type": "icons",
-            "filename": "drunk_indians.png",
-            "relativePath": "/assets/afl/icons/drunk_indians.png",
+            "filename": "the_vandalizers_icon_jpg_icon_circle.png",
+            "relativePath": "/assets/afl/history/the_vandalizers_icon_jpg_icon_circle.png",
             "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "drunk_indians.psd",
-            "relativePath": "/assets/afl/psds/drunk_indians.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "fullybaked",
-      "slug": "fullybaked",
-      "id": "0010",
-      "name": "Fullybaked",
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "aliases": [
-        "Baked"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "fullybaked.png",
-            "relativePath": "/assets/afl/banners/fullybaked.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "fullybaked.png",
-            "relativePath": "/assets/afl/group-me/fullybaked.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "fullybaked.png",
-            "relativePath": "/assets/afl/icons/fullybaked.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "fullybaked.psd",
-            "relativePath": "/assets/afl/psds/fullybaked.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "get_off_my_ditka",
-      "slug": "get_off_my_ditka",
-      "id": "0004",
-      "name": "Get off my Ditka",
-      "conference": "A",
-      "division": "00",
-      "tier": "D-League",
-      "aliases": [
-        "Ditka",
-        "Ditkas"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "ditka.png",
-            "relativePath": "/assets/afl/banners/ditka.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "ditka.png",
-            "relativePath": "/assets/afl/group-me/ditka.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "ditka.png",
-            "relativePath": "/assets/afl/icons/ditka.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "ditka.psd",
-            "relativePath": "/assets/afl/psds/ditka.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "jewpacabra",
-      "slug": "jewpacabra",
-      "id": "0018",
-      "name": "Jewpacabra",
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "aliases": [
-        "Jew"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "jewpacabra.png",
-            "relativePath": "/assets/afl/banners/jewpacabra.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "jewpacabra.png",
-            "relativePath": "/assets/afl/group-me/jewpacabra.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "jewpacabra.png",
-            "relativePath": "/assets/afl/icons/jewpacabra.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "jewpacabra.psd",
-            "relativePath": "/assets/afl/psds/jewpacabra.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "midwestside_connection",
-      "slug": "midwestside_connection",
-      "id": "0011",
-      "name": "Midwestside Connection",
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "aliases": [
-        "Midwestside",
-        "midwest",
-        "mws",
-        "mwc"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "midwestside.png",
-            "relativePath": "/assets/afl/banners/midwestside.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "midwestside.png",
-            "relativePath": "/assets/afl/group-me/midwestside.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "midwestside.png",
-            "relativePath": "/assets/afl/icons/midwestside.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "midwest.psd",
-            "relativePath": "/assets/afl/psds/midwest.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "muck_juggling_micks",
-      "slug": "muck_juggling_micks",
-      "id": "0013",
-      "name": "Muck Juggling Micks",
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "aliases": [
-        "Micks",
-        "MJM"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "micks.png",
-            "relativePath": "/assets/afl/banners/micks.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "micks.png",
-            "relativePath": "/assets/afl/group-me/micks.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "micks.png",
-            "relativePath": "/assets/afl/icons/micks.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "muck-juggling-micks.psd",
-            "relativePath": "/assets/afl/psds/muck-juggling-micks.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "no_soup_for_you",
-      "slug": "no_soup_for_you",
-      "id": "0024",
-      "name": "No Soup For You",
-      "conference": "A",
-      "division": "02",
-      "tier": "D-League",
-      "aliases": [
-        "Amish",
-        "No Soup"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "no_soup.png",
-            "relativePath": "/assets/afl/banners/no_soup.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "no_soup.png",
-            "relativePath": "/assets/afl/group-me/no_soup.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "no_soup.png",
-            "relativePath": "/assets/afl/icons/no_soup.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "no_soup_for_you.psd",
-            "relativePath": "/assets/afl/psds/no_soup_for_you.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "smokane_fc",
-      "slug": "smokane_fc",
-      "id": "0001",
-      "name": "Smokane FC",
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "aliases": [
-        "Smokane"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "smokane.png",
-            "relativePath": "/assets/afl/banners/smokane.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "smokane.png",
-            "relativePath": "/assets/afl/group-me/smokane.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "smokane.png",
-            "relativePath": "/assets/afl/icons/smokane.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "smokane.psd",
-            "relativePath": "/assets/afl/psds/smokane.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "suh_girls_one_cup",
-      "slug": "suh_girls_one_cup",
-      "id": "0012",
-      "name": "Suh girls, one cup",
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "aliases": [
-        "Suh girls",
-        "Suh"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "suh.png",
-            "relativePath": "/assets/afl/banners/suh.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "suh.png",
-            "relativePath": "/assets/afl/group-me/suh.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "suh.png",
-            "relativePath": "/assets/afl/icons/suh.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "suh-girls.psd",
-            "relativePath": "/assets/afl/psds/suh-girls.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "swiftie_4_life",
-      "slug": "swiftie_4_life",
-      "id": "0016",
-      "name": "Swiftie 4 Life",
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "aliases": [
-        "Swiftie",
-        "Swifty",
-        "Swift",
-        "Swiftie4life"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "swift.png",
-            "relativePath": "/assets/afl/banners/swift.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "swift.png",
-            "relativePath": "/assets/afl/group-me/swift.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "swift.png",
-            "relativePath": "/assets/afl/icons/swift.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "swiftie4life.psd",
-            "relativePath": "/assets/afl/psds/swiftie4life.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "team_minty_fresh",
-      "slug": "team_minty_fresh",
-      "id": "0003",
-      "name": "Team Minty Fresh",
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "aliases": [
-        "Minty Fresh",
-        "Minty"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "minty.png",
-            "relativePath": "/assets/afl/banners/minty.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "minty-fresh.png",
-            "relativePath": "/assets/afl/group-me/minty-fresh.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "minty.png",
-            "relativePath": "/assets/afl/icons/minty.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "team_minty_fresh.psd",
-            "relativePath": "/assets/afl/psds/team_minty_fresh.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "the_boondock_saints",
-      "slug": "the_boondock_saints",
-      "id": "0020",
-      "name": "The Boondock Saints",
-      "conference": "B",
-      "division": "03",
-      "tier": "Premier League",
-      "aliases": [
-        "Boondock Saints",
-        "Saints",
-        "Boondocksaints"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "saints.png",
-            "relativePath": "/assets/afl/banners/saints.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "saints.png",
-            "relativePath": "/assets/afl/group-me/saints.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "saints.png",
-            "relativePath": "/assets/afl/icons/saints.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "boondocksaints.psd",
-            "relativePath": "/assets/afl/psds/boondocksaints.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "the_mariachi_ninjas",
-      "slug": "the_mariachi_ninjas",
-      "id": "0015",
-      "name": "The Mariachi Ninjas",
-      "conference": "A",
-      "division": "02",
-      "tier": "Premier League",
-      "aliases": [
-        "Ninjas",
-        "Mariachi Ninjas"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "ninjas.png",
-            "relativePath": "/assets/afl/banners/ninjas.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "ninjas.png",
-            "relativePath": "/assets/afl/group-me/ninjas.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "ninjas.png",
-            "relativePath": "/assets/afl/icons/ninjas.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "mariachi_ninjas.psd",
-            "relativePath": "/assets/afl/psds/mariachi_ninjas.psd",
-            "extension": ".psd"
           }
         ]
       }
@@ -1017,8 +3138,9 @@
       "slug": "thundering_herd",
       "id": "0014",
       "name": "Thundering Herd",
-      "conference": "B",
-      "division": "03",
+      "category": "active",
+      "conference": "01",
+      "division": "West",
       "tier": "D-League",
       "aliases": [
         "Herd",
@@ -1048,14 +3170,6 @@
             "relativePath": "/assets/afl/icons/herd.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "thundering_herd.psd",
-            "relativePath": "/assets/afl/psds/thundering_herd.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -1064,8 +3178,9 @@
       "slug": "titsburgh_feelers",
       "id": "0017",
       "name": "Titsburgh Feelers",
-      "conference": "A",
-      "division": "02",
+      "category": "active",
+      "conference": "01",
+      "division": "East",
       "tier": "D-League",
       "aliases": [
         "Titsburgh",
@@ -1096,13 +3211,117 @@
             "relativePath": "/assets/afl/icons/titsburgh_feelers.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_touchdown_my_pants",
+      "slug": "history_touchdown_my_pants",
+      "id": "0007",
+      "name": "Touchdown My Pants (2010–2013)",
+      "category": "former",
+      "aliases": [
+        "Avenging Amish"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "titsburgh_feelers.psd",
-            "relativePath": "/assets/afl/psds/titsburgh_feelers.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "touchdown_my_pants_banner.png",
+            "relativePath": "/assets/afl/history/touchdown_my_pants_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "touchdown_my_pants_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_trevors_team",
+      "slug": "history_trevors_team",
+      "id": "0014",
+      "name": "Trevors Team (2003)",
+      "category": "former",
+      "aliases": [
+        "Thundering Herd"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "trevors_team_banner.png",
+            "relativePath": "/assets/afl/history/trevors_team_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "trevors_team_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/trevors_team_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_vinegar_strokes",
+      "slug": "history_vinegar_strokes",
+      "id": "0024",
+      "name": "Vinegar Strokes (2013–2015)",
+      "category": "former",
+      "aliases": [
+        "No Soup For You"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "vinegar_strokes_banner.png",
+            "relativePath": "/assets/afl/history/vinegar_strokes_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "vinegar_strokes_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/vinegar_strokes_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_vit_s_brother",
+      "slug": "history_vit_s_brother",
+      "id": "0007",
+      "name": "Vit's Brother (2021)",
+      "category": "former",
+      "aliases": [
+        "Avenging Amish"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "vit_s_brother_banner.png",
+            "relativePath": "/assets/afl/history/vit_s_brother_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "vit_s_brother_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/vit_s_brother_icon_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -1112,8 +3331,9 @@
       "slug": "vitside_mafia",
       "id": "0009",
       "name": "Vitside Mafia",
-      "conference": "B",
-      "division": "01",
+      "category": "active",
+      "conference": "00",
+      "division": "South",
       "tier": "Premier League",
       "aliases": [
         "Vitside",
@@ -1149,16 +3369,244 @@
             "relativePath": "/assets/afl/icons/vitside_mafia.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_way_more_funner",
+      "slug": "history_way_more_funner",
+      "id": "0022",
+      "name": "Way More Funner (2005–2011)",
+      "category": "former",
+      "aliases": [
+        "Balls Deep"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "vitside.psd",
-            "relativePath": "/assets/afl/psds/vitside.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "way_more_funner_banner.png",
+            "relativePath": "/assets/afl/history/way_more_funner_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "way_more_funner_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_whitman_s_wonders",
+      "slug": "history_whitman_s_wonders",
+      "id": "0006",
+      "name": "Whitman's Wonders (2011–2012)",
+      "category": "former",
+      "aliases": [
+        "Da Dangsters"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "whitman_s_wonders_banner.png",
+            "relativePath": "/assets/afl/history/whitman_s_wonders_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "whitman_s_wonders_icon_icon_circle.png",
+            "relativePath": "/assets/afl/history/whitman_s_wonders_icon_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_your_team_sucks",
+      "slug": "history_your_team_sucks",
+      "id": "0020",
+      "name": "Your Team Sucks (2003–2005)",
+      "category": "former",
+      "aliases": [
+        "The Boondock Saints"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "your_team_sucks_banner.jpg",
+            "relativePath": "/assets/afl/history/your_team_sucks_banner.jpg",
+            "extension": ".jpg"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "your_team_sucks_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/your_team_sucks_banner_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_zephyr",
+      "slug": "history_zephyr",
+      "id": "0018",
+      "name": "Zephyr (2009–2013)",
+      "category": "former",
+      "aliases": [
+        "Jewpacabra"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "zephyr_banner.png",
+            "relativePath": "/assets/afl/history/zephyr_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "zephyr_banner_icon_circle.png",
+            "relativePath": "/assets/afl/history/zephyr_banner_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
     }
-  ]
+  ],
+  "extras": {
+    "championship": [
+      {
+        "type": "championship",
+        "filename": "afl-championship.svg",
+        "relativePath": "/assets/afl/awards/afl-championship.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "championship",
+        "filename": "afl-cup.svg",
+        "relativePath": "/assets/afl/awards/afl-cup.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "championship",
+        "filename": "al-champion.svg",
+        "relativePath": "/assets/afl/awards/al-champion.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "championship",
+        "filename": "dleague-champion.svg",
+        "relativePath": "/assets/afl/awards/dleague-champion.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "championship",
+        "filename": "nit.svg",
+        "relativePath": "/assets/afl/awards/nit.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "championship",
+        "filename": "nl-champion.svg",
+        "relativePath": "/assets/afl/awards/nl-champion.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "championship",
+        "filename": "premier-league.svg",
+        "relativePath": "/assets/afl/awards/premier-league.svg",
+        "extension": ".svg"
+      }
+    ],
+    "league": [
+      {
+        "type": "league",
+        "filename": "afl-logo.svg",
+        "relativePath": "/assets/logos/afl-logo.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "league",
+        "filename": "dleague.svg",
+        "relativePath": "/assets/afl/dleague.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "league",
+        "filename": "grand-slam.svg",
+        "relativePath": "/assets/afl/grand-slam.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "league",
+        "filename": "premier.svg",
+        "relativePath": "/assets/afl/premier.svg",
+        "extension": ".svg"
+      }
+    ],
+    "conference": [
+      {
+        "type": "conference",
+        "filename": "al.svg",
+        "relativePath": "/assets/afl/conferences/al.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "conference",
+        "filename": "nl.svg",
+        "relativePath": "/assets/afl/conferences/nl.svg",
+        "extension": ".svg"
+      }
+    ],
+    "division": [
+      {
+        "type": "division",
+        "filename": "al-central.svg",
+        "relativePath": "/assets/afl/awards/al-central.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "al-north.svg",
+        "relativePath": "/assets/afl/awards/al-north.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "al-south.svg",
+        "relativePath": "/assets/afl/awards/al-south.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "nl-east.svg",
+        "relativePath": "/assets/afl/awards/nl-east.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "nl-pacific.svg",
+        "relativePath": "/assets/afl/awards/nl-pacific.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "nl-west.svg",
+        "relativePath": "/assets/afl/awards/nl-west.svg",
+        "extension": ".svg"
+      }
+    ]
+  }
 }

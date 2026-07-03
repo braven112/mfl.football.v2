@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 /**
- * Backfill missing historical MFL feeds for TheLeague.
+ * Backfill missing historical MFL feeds for TheLeague or AFL Fantasy.
  *
- * Reads history.league from data/theleague/mfl-feeds/2025/league.json (which
- * contains the URL + league ID for every season the league has lived under
- * on MFL) and, per year, fetches whichever feeds we don't yet have on disk.
+ * MFL league IDs are per-year: a league keeps its current ID only for seasons
+ * it renewed under it, so querying an old year with the current ID silently
+ * returns a DIFFERENT league's data. This script reads history.league from a
+ * verified-current cached league.json (which contains the URL + league ID for
+ * every season the league has lived under on MFL) and, per year, fetches
+ * whichever feeds we don't yet have on disk — always with that year's correct
+ * host + league ID.
  *
  * What it pulls per year:
  *   league.json, standings.json, schedule.json (H2H pairings — needed for
@@ -12,26 +16,50 @@
  *   playoff-brackets.json, weekly-results-raw.json + weekly-results.json.
  *
  * Usage:
- *   node scripts/backfill-historical-feeds.mjs           # fill gaps only
- *   node scripts/backfill-historical-feeds.mjs --force   # refetch everything
- *   node scripts/backfill-historical-feeds.mjs --dry-run # preview
+ *   node scripts/backfill-historical-feeds.mjs                       # TheLeague, fill gaps only
+ *   node scripts/backfill-historical-feeds.mjs --league=afl          # AFL Fantasy
+ *   node scripts/backfill-historical-feeds.mjs --force               # refetch everything
+ *   node scripts/backfill-historical-feeds.mjs --force --year=2015   # refetch one year (repeatable)
+ *   node scripts/backfill-historical-feeds.mjs --dry-run             # preview
  *
- * If anything new comes back, re-run:
- *   pnpm compute:franchise-history
+ * If anything new comes back, re-run the league's derived-data scripts
+ * (TheLeague: pnpm compute:franchise-history).
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { LEAGUES } from '../src/config/leagues-data.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const FEEDS_DIR = path.join(ROOT, 'data/theleague/mfl-feeds');
-const CURRENT_LEAGUE_JSON = path.join(FEEDS_DIR, '2025/league.json');
+
+// Per-league backfill config. `historySourceYear` is a year whose cached
+// league.json is verified to belong to THIS league (old cached years may be
+// contaminated with another league's data) and carries the full history block.
+const BACKFILL_LEAGUES = {
+  theleague: { registry: LEAGUES.theleague, historySourceYear: '2025' },
+  afl: { registry: LEAGUES['afl-fantasy'], historySourceYear: '2026' },
+};
 
 const args = process.argv.slice(2);
+const LEAGUE_KEY = (args.find((a) => a.startsWith('--league=')) ?? '--league=theleague')
+  .slice('--league='.length);
+const LEAGUE = BACKFILL_LEAGUES[LEAGUE_KEY];
+if (!LEAGUE) {
+  console.error(`Unknown --league=${LEAGUE_KEY} (expected: ${Object.keys(BACKFILL_LEAGUES).join(' | ')})`);
+  process.exit(1);
+}
+
+const FEEDS_DIR = path.join(ROOT, LEAGUE.registry.dataPath, 'mfl-feeds');
+const CURRENT_LEAGUE_JSON = path.join(FEEDS_DIR, `${LEAGUE.historySourceYear}/league.json`);
 const DRY_RUN = args.includes('--dry-run');
 const FORCE = args.includes('--force');
+const ONLY_YEARS = args
+  .filter((a) => a.startsWith('--year='))
+  .map((a) => Number(a.slice('--year='.length)))
+  .filter((y) => Number.isInteger(y));
 
 const readJson = (p) => {
   try {
@@ -177,6 +205,13 @@ if (!current) {
   console.error(`Cannot read ${CURRENT_LEAGUE_JSON}`);
   process.exit(1);
 }
+if (String(current.league?.id ?? '') !== LEAGUE.registry.id) {
+  console.error(
+    `History source ${CURRENT_LEAGUE_JSON} has league id ${current.league?.id} — ` +
+    `expected ${LEAGUE.registry.id}. Refusing to backfill from a contaminated file.`
+  );
+  process.exit(1);
+}
 
 const historyEntries = current.league?.history?.league ?? [];
 const yearList = historyEntries
@@ -186,6 +221,7 @@ const yearList = historyEntries
     return { year: Number(e.year), host: m[1], leagueId: m[3] };
   })
   .filter(Boolean)
+  .filter((e) => ONLY_YEARS.length === 0 || ONLY_YEARS.includes(e.year))
   .sort((a, b) => a.year - b.year);
 
 console.log(`Found ${yearList.length} historical league entries.`);

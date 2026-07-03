@@ -121,6 +121,8 @@ export interface FranchiseHistoryEntry {
   icon?: string;
   banner?: string;
   groupMe?: string;
+  /** Conference code (AFL) the team played in during this era, when it differs from today. */
+  conference?: string;
   yearStart: number;
   yearEnd: number;
 }

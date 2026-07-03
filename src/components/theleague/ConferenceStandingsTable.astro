@@ -1,5 +1,6 @@
 ---
 import { getConferenceLogo, type ConferenceId } from '../../utils/afl-conference';
+import { HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
 
 interface Props {
   conferenceName: string;
@@ -10,6 +11,12 @@ interface Props {
 }
 
 const { conferenceName, conferenceId, divisionWinners, wildCards, year } = Astro.props;
+
+// Historical eras with no surviving icon art resolve to the shared
+// placeholder — skip the generic image and let the team name carry the row,
+// matching the banner fallback treatment in StandingsTable.astro.
+const hasIconImage = (team: any) =>
+  Boolean(team.teamIcon) && team.teamIcon !== HISTORICAL_TEAM_ICON_FALLBACK;
 
 const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
 // Conference accent color for the title — AL red, NL blue (matches each logo).
@@ -50,7 +57,7 @@ const conferenceColor = conferenceId === '01' ? '#1d4f91' : '#c41e3a';
               <td class="seed-col">{team.conferenceSeed}</td>
               <td class="team-col">
                 <div class="team-info">
-                  {team.teamIcon && (
+                  {hasIconImage(team) && (
                     <img src={team.teamIcon} alt={team.teamName} class="team-icon" />
                   )}
                   <div class="team-details">
@@ -89,7 +96,7 @@ const conferenceColor = conferenceId === '01' ? '#1d4f91' : '#c41e3a';
               <td class="seed-col">{team.conferenceSeed}</td>
               <td class="team-col">
                 <div class="team-info">
-                  {team.teamIcon && (
+                  {hasIconImage(team) && (
                     <img src={team.teamIcon} alt={team.teamName} class="team-icon" />
                   )}
                   <div class="team-details">

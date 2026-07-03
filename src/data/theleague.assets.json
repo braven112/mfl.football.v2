@@ -1,11 +1,70 @@
 {
-  "generatedAt": "2026-02-10T01:05:45.198Z",
+  "generatedAt": "2026-07-03T16:25:38.569Z",
   "teams": [
+    {
+      "key": "history_amish_rakefighters",
+      "slug": "history_amish_rakefighters",
+      "id": "0011",
+      "name": "Amish Rakefighters (2007–2015)",
+      "category": "former",
+      "aliases": [
+        "Midwestside Connection",
+        "AMIS"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "amish_rakefighters_icon.png",
+            "relativePath": "/assets/theleague/history/amish_rakefighters_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "amish_rakefighters_icon_circle.png",
+            "relativePath": "/assets/theleague/history/amish_rakefighters_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_boyz_ii_men",
+      "slug": "history_boyz_ii_men",
+      "id": "0012",
+      "name": "BOYZ II MEN (2007–2010)",
+      "category": "former",
+      "aliases": [
+        "Vitside Mafia",
+        "BOYZ"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "boyz2men_icon.png",
+            "relativePath": "/assets/theleague/history/boyz2men_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "boyz2men_icon_circle.png",
+            "relativePath": "/assets/theleague/history/boyz2men_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
     {
       "key": "bring_the_pain",
       "slug": "bring_the_pain",
       "id": "0008",
       "name": "Bring The Pain",
+      "category": "active",
       "division": "Central",
       "aliases": [
         "Pain",
@@ -35,14 +94,6 @@
             "relativePath": "/assets/theleague/icons/bring_the_pain.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "bring_the_pain.psd",
-            "relativePath": "/assets/theleague/psds/bring_the_pain.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -51,6 +102,7 @@
       "slug": "computer_jocks",
       "id": "0010",
       "name": "Computer Jocks",
+      "category": "active",
       "division": "Northwest",
       "aliases": [
         "Jocks",
@@ -81,14 +133,6 @@
             "relativePath": "/assets/theleague/icons/computer_jocks.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "computer_jocks.psd",
-            "relativePath": "/assets/theleague/psds/computer_jocks.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -97,6 +141,7 @@
       "slug": "cowboy_up",
       "id": "0014",
       "name": "Cowboy Up",
+      "category": "active",
       "division": "Central",
       "aliases": [
         "Cowboy",
@@ -126,14 +171,6 @@
             "relativePath": "/assets/theleague/icons/cowboy_up.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "cowboy_up.psd",
-            "relativePath": "/assets/theleague/psds/cowboy_up.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -142,6 +179,7 @@
       "slug": "da_dangsters",
       "id": "0002",
       "name": "Da Dangsters",
+      "category": "active",
       "division": "Northwest",
       "aliases": [
         "Dangsters",
@@ -171,14 +209,6 @@
             "relativePath": "/assets/theleague/icons/da_dangsters.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "da_dangsters.psd",
-            "relativePath": "/assets/theleague/psds/da_dangsters.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -187,6 +217,7 @@
       "slug": "dark_magicians_of_chaos",
       "id": "0015",
       "name": "Dark Magicians of Chaos",
+      "category": "active",
       "division": "East",
       "aliases": [
         "Dark Magicians",
@@ -221,14 +252,6 @@
             "relativePath": "/assets/theleague/icons/dark_magicians.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "dark_magicians_of_chaos.psd",
-            "relativePath": "/assets/theleague/psds/dark_magicians_of_chaos.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -237,8 +260,11 @@
       "slug": "dead_cap_walking",
       "id": "0004",
       "name": "Dead Cap Walking",
+      "category": "active",
       "division": "Southwest",
-      "aliases": ["DCW"],
+      "aliases": [
+        "DCW"
+      ],
       "assets": {
         "banners": [
           {
@@ -263,19 +289,92 @@
             "relativePath": "/assets/theleague/icons/dead_cap_walking.png",
             "extension": ".png"
           }
+        ]
+      }
+    },
+    {
+      "key": "history_degenerates",
+      "slug": "history_degenerates",
+      "id": "0002",
+      "name": "Degenerates (2008–2014)",
+      "category": "former",
+      "aliases": [
+        "Da Dangsters",
+        "DEG"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "degenerates_icon.png",
+            "relativePath": "/assets/theleague/history/degenerates_icon.png",
+            "extension": ".png"
+          }
         ],
-        "psds": [
+        "icons": [
           {
-            "type": "psds",
-            "filename": "dead_cap_walking.psd",
-            "relativePath": "/assets/theleague/psds/dead_cap_walking.psd",
-            "extension": ".psd"
-          },
+            "type": "icons",
+            "filename": "degenerates_icon_circle.png",
+            "relativePath": "/assets/theleague/history/degenerates_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_devil_dogs",
+      "slug": "history_devil_dogs",
+      "id": "0014",
+      "name": "Devil Dogs (2007–2017)",
+      "category": "former",
+      "aliases": [
+        "Cowboy Up",
+        "DOGS"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "dead-cap-walking.psd",
-            "relativePath": "/assets/theleague/psds/dead-cap-walking.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "devil_dogs_icon.png",
+            "relativePath": "/assets/theleague/history/devil_dogs_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "devil_dogs_icon_circle.png",
+            "relativePath": "/assets/theleague/history/devil_dogs_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_drunk_indians",
+      "slug": "history_drunk_indians",
+      "id": "0004",
+      "name": "Drunk Indians (2019)",
+      "category": "former",
+      "aliases": [
+        "Dead Cap Walking",
+        "DI"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "drunk_indians_icon.png",
+            "relativePath": "/assets/theleague/history/drunk_indians_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "drunk_indians_icon_circle.png",
+            "relativePath": "/assets/theleague/history/drunk_indians_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -285,8 +384,11 @@
       "slug": "fire_ready_aim",
       "id": "0007",
       "name": "Fire Ready Aim",
+      "category": "active",
       "division": "East",
-      "aliases": [],
+      "aliases": [
+        "FRA"
+      ],
       "assets": {
         "banners": [
           {
@@ -311,13 +413,62 @@
             "relativePath": "/assets/theleague/icons/fire_ready_aim.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_generals",
+      "slug": "history_generals",
+      "id": "0003",
+      "name": "Generals (2014)",
+      "category": "former",
+      "aliases": [
+        "Maverick"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "fire_ready_aim.psd",
-            "relativePath": "/assets/theleague/psds/fire_ready_aim.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "generals_banner.png",
+            "relativePath": "/assets/theleague/history/generals_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "generals_icon_circle.png",
+            "relativePath": "/assets/theleague/history/generals_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_georgia_punishers",
+      "slug": "history_georgia_punishers",
+      "id": "0003",
+      "name": "Georgia Punishers (2010–2011)",
+      "category": "former",
+      "aliases": [
+        "Maverick",
+        "GAP"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "georgia_punishers_icon.png",
+            "relativePath": "/assets/theleague/history/georgia_punishers_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "georgia_punishers_icon_circle.png",
+            "relativePath": "/assets/theleague/history/georgia_punishers_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -327,6 +478,7 @@
       "slug": "gridiron_geeks",
       "id": "0013",
       "name": "Gridiron Geeks",
+      "category": "active",
       "division": "Southwest",
       "aliases": [
         "Geeks",
@@ -356,13 +508,108 @@
             "relativePath": "/assets/theleague/icons/geeks.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "heavy_chevy",
+      "slug": "heavy_chevy",
+      "name": "Heavy Chevy",
+      "category": "former",
+      "aliases": [],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "gridiron_geeks.psd",
-            "relativePath": "/assets/theleague/psds/gridiron_geeks.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "heavy_chevy.png",
+            "relativePath": "/assets/theleague/banners/heavy_chevy.png",
+            "extension": ".png"
+          }
+        ],
+        "group-me": [
+          {
+            "type": "group-me",
+            "filename": "heavy_chevy.png",
+            "relativePath": "/assets/theleague/group-me/heavy_chevy.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "heavy_chevy.png",
+            "relativePath": "/assets/theleague/icons/heavy_chevy.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_las_vegas_elite",
+      "slug": "history_las_vegas_elite",
+      "id": "0004",
+      "name": "Las Vegas Elite (2007–2017)",
+      "category": "former",
+      "aliases": [
+        "Dead Cap Walking",
+        "LVE"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "art_of_war_icon.png",
+            "relativePath": "/assets/theleague/history/art_of_war_icon.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "las_vegas_icon.png",
+            "relativePath": "/assets/theleague/history/las_vegas_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "art_of_war_icon_circle.png",
+            "relativePath": "/assets/theleague/history/art_of_war_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "las_vegas_icon_circle.png",
+            "relativePath": "/assets/theleague/history/las_vegas_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_lber_decleaters",
+      "slug": "history_lber_decleaters",
+      "id": "0006",
+      "name": "LBer-DeCleaters (2007–2018)",
+      "category": "former",
+      "aliases": [
+        "Music City Mafia",
+        "LBDe"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "lb_decleaters_icon.png",
+            "relativePath": "/assets/theleague/history/lb_decleaters_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "lb_decleaters_icon_circle.png",
+            "relativePath": "/assets/theleague/history/lb_decleaters_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -372,6 +619,7 @@
       "slug": "maverick",
       "id": "0003",
       "name": "Maverick",
+      "category": "active",
       "division": "Central",
       "aliases": [
         "Mavs",
@@ -401,14 +649,6 @@
             "relativePath": "/assets/theleague/icons/maverick.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "maverick.psd",
-            "relativePath": "/assets/theleague/psds/maverick.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -417,6 +657,7 @@
       "slug": "midwestside_connection",
       "id": "0011",
       "name": "Midwestside Connection",
+      "category": "active",
       "division": "Southwest",
       "aliases": [
         "midwest",
@@ -457,6 +698,7 @@
       "slug": "music_city_mafia",
       "id": "0006",
       "name": "Music City Mafia",
+      "category": "active",
       "division": "Southwest",
       "aliases": [
         "Music City",
@@ -486,14 +728,6 @@
             "relativePath": "/assets/theleague/icons/music_city.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "music-city.psd",
-            "relativePath": "/assets/theleague/psds/music-city.psd",
-            "extension": ".psd"
-          }
         ]
       }
     },
@@ -502,6 +736,7 @@
       "slug": "pacific_pigskins",
       "id": "0001",
       "name": "Pacific Pigskins",
+      "category": "active",
       "division": "Northwest",
       "aliases": [
         "Pigskins",
@@ -532,13 +767,86 @@
             "relativePath": "/assets/theleague/icons/pigskins.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_poker_in_the_rear",
+      "slug": "history_poker_in_the_rear",
+      "id": "0003",
+      "name": "Poker in the Rear (2012–2013, 2015)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2012,
+          "yearEnd": 2013,
+          "franchiseId": "0003"
+        },
+        {
+          "yearStart": 2015,
+          "yearEnd": 2015,
+          "franchiseId": "0003"
+        }
+      ],
+      "aliases": [
+        "Maverick"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "pigskins.psd",
-            "relativePath": "/assets/theleague/psds/pigskins.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "poker_in_the_rear_banner.png",
+            "relativePath": "/assets/theleague/history/poker_in_the_rear_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
+            "filename": "poker_in_the_rear_icon.png",
+            "relativePath": "/assets/theleague/history/poker_in_the_rear_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "poker_in_the_rear_2015_icon_circle.png",
+            "relativePath": "/assets/theleague/history/poker_in_the_rear_2015_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
+            "filename": "poker_in_the_rear_icon_circle.png",
+            "relativePath": "/assets/theleague/history/poker_in_the_rear_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_rolling_rockers",
+      "slug": "history_rolling_rockers",
+      "id": "0009",
+      "name": "Rolling Rockers (2007–2011)",
+      "category": "former",
+      "aliases": [
+        "Wascawy Wabbits",
+        "ROCK"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "rolling_rockers_icon.png",
+            "relativePath": "/assets/theleague/history/rolling_rockers_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "rolling_rockers_icon_circle.png",
+            "relativePath": "/assets/theleague/history/rolling_rockers_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -548,6 +856,7 @@
       "slug": "running_down_the_dream",
       "id": "0016",
       "name": "Running down the Dream",
+      "category": "active",
       "division": "East",
       "aliases": [
         "The Dream",
@@ -579,13 +888,135 @@
             "relativePath": "/assets/theleague/icons/the_dream.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_sabertooths",
+      "slug": "history_sabertooths",
+      "id": "0002, 0013",
+      "name": "Sabertooths (2007, 2009–2013)",
+      "category": "former",
+      "eras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "franchiseId": "0002"
+        },
+        {
+          "yearStart": 2009,
+          "yearEnd": 2013,
+          "franchiseId": "0013"
+        }
+      ],
+      "aliases": [
+        "Da Dangsters",
+        "SBR",
+        "Gridiron Geeks",
+        "SABR"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "the_dream.psd",
-            "relativePath": "/assets/theleague/psds/the_dream.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "sabertooths_icon.png",
+            "relativePath": "/assets/theleague/history/sabertooths_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "sabertooths_icon_circle.png",
+            "relativePath": "/assets/theleague/history/sabertooths_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_silver_bullets",
+      "slug": "history_silver_bullets",
+      "id": "0016",
+      "name": "Silver Bullets (2007–2010)",
+      "category": "former",
+      "aliases": [
+        "Running down the Dream",
+        "SLVR"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "silver_bullets_icon.png",
+            "relativePath": "/assets/theleague/history/silver_bullets_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "silver_bullets_icon_circle.png",
+            "relativePath": "/assets/theleague/history/silver_bullets_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_art_of_war",
+      "slug": "history_the_art_of_war",
+      "id": "0004",
+      "name": "The Art of War (2018)",
+      "category": "former",
+      "aliases": [
+        "Dead Cap Walking",
+        "ART"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "art_of_war_icon.png",
+            "relativePath": "/assets/theleague/history/art_of_war_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "art_of_war_icon_circle.png",
+            "relativePath": "/assets/theleague/history/art_of_war_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_the_executioners",
+      "slug": "history_the_executioners",
+      "id": "0005",
+      "name": "The Executioners (2007–2015)",
+      "category": "former",
+      "aliases": [
+        "The Mariachi Ninjas",
+        "THEX"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "executioners_icon.png",
+            "relativePath": "/assets/theleague/history/executioners_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "executioners_icon_circle.png",
+            "relativePath": "/assets/theleague/history/executioners_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -595,6 +1026,7 @@
       "slug": "the_mariachi_ninjas",
       "id": "0005",
       "name": "The Mariachi Ninjas",
+      "category": "active",
       "division": "Central",
       "aliases": [
         "Ninjas",
@@ -624,13 +1056,63 @@
             "relativePath": "/assets/theleague/icons/ninjas.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_treasure_coast_swamp_bandits",
+      "slug": "history_treasure_coast_swamp_bandits",
+      "id": "0016",
+      "name": "Treasure Coast Swamp Bandits (2011–2013)",
+      "category": "former",
+      "aliases": [
+        "Running down the Dream",
+        "TCSB"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "mariachi_ninjas.psd",
-            "relativePath": "/assets/theleague/psds/mariachi_ninjas.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "treasure_coast_icon.png",
+            "relativePath": "/assets/theleague/history/treasure_coast_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "treasure_coast_icon_circle.png",
+            "relativePath": "/assets/theleague/history/treasure_coast_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
+      "key": "history_under_siege",
+      "slug": "history_under_siege",
+      "id": "0011",
+      "name": "Under Siege (2016–2018)",
+      "category": "former",
+      "aliases": [
+        "Midwestside Connection",
+        "UnSg"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "undersiege_icon.png",
+            "relativePath": "/assets/theleague/history/undersiege_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "undersiege_icon_circle.png",
+            "relativePath": "/assets/theleague/history/undersiege_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
@@ -640,6 +1122,7 @@
       "slug": "vitside_mafia",
       "id": "0012",
       "name": "Vitside Mafia",
+      "category": "active",
       "division": "Northwest",
       "aliases": [],
       "assets": {
@@ -674,6 +1157,7 @@
       "slug": "wascawy_wabbits",
       "id": "0009",
       "name": "Wascawy Wabbits",
+      "category": "active",
       "division": "East",
       "aliases": [
         "Wabbits",
@@ -703,16 +1187,63 @@
             "relativePath": "/assets/theleague/icons/wabbits.png",
             "extension": ".png"
           }
-        ],
-        "psds": [
+        ]
+      }
+    },
+    {
+      "key": "history_witch_city_warlocks",
+      "slug": "history_witch_city_warlocks",
+      "id": "0010",
+      "name": "Witch City Warlocks (2007–2010)",
+      "category": "former",
+      "aliases": [
+        "Computer Jocks",
+        "WCW"
+      ],
+      "assets": {
+        "banners": [
           {
-            "type": "psds",
-            "filename": "wabbits.psd",
-            "relativePath": "/assets/theleague/psds/wabbits.psd",
-            "extension": ".psd"
+            "type": "banners",
+            "filename": "witch_city_warlocks_icon.png",
+            "relativePath": "/assets/theleague/history/witch_city_warlocks_icon.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "witch_city_warlocks_icon_circle.png",
+            "relativePath": "/assets/theleague/history/witch_city_warlocks_icon_circle.png",
+            "extension": ".png"
           }
         ]
       }
     }
-  ]
+  ],
+  "extras": {
+    "championship": [
+      {
+        "type": "championship",
+        "filename": "brock-osweiler.jpg",
+        "relativePath": "/assets/theleague/awards/brock-osweiler.jpg",
+        "extension": ".jpg"
+      },
+      {
+        "type": "championship",
+        "filename": "jerry-jones.jpg",
+        "relativePath": "/assets/theleague/awards/jerry-jones.jpg",
+        "extension": ".jpg"
+      }
+    ],
+    "league": [
+      {
+        "type": "league",
+        "filename": "theleague-logo.svg",
+        "relativePath": "/assets/logos/theleague-logo.svg",
+        "extension": ".svg"
+      }
+    ],
+    "conference": [],
+    "division": []
+  }
 }

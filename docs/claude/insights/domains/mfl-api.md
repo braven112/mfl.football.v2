@@ -1234,3 +1234,28 @@ caller's own players.
 **Rule of thumb:** never send `FRANCHISE_ID` on an owner-authenticated MFL
 write. It's commissioner-only and silently changes the validation path.
 
+
+---
+
+## 2026-07-02 - Pre-2016 Feeds Fetched With L=13522 Silently Return the WRONG League
+
+**Context:** 2015 standings showed 12 teams; the league had 16. Root cause: MFL reassigns league IDs to other leagues in years where a league lived under a different ID.
+
+**Insight:** Querying a pre-2016 year with `L=13522` does NOT error — it returns a real, valid-looking response for whatever league owned that ID that year (2015's 13522 is "Most Ultimate Fantasy Football", a 12-team league). `scripts/fetch-mfl-feeds.mjs` uses one league ID for all years, so a `MFL_YEAR=<pre-2016>` run silently contaminates `data/theleague/mfl-feeds/<year>/`. Found contaminated: 2007, 2010, 2011, 2015 (each fetched with a neighboring year's ID or 13522).
+
+**Fix/prevention:**
+- `scripts/backfill-historical-feeds.mjs` resolves per-year IDs from the current league's `history.league` array — it now supports `--force --year=YYYY` for targeted re-pulls. Use it (not fetch-mfl-feeds) for anything pre-2016.
+- Verify with `data/.../mfl-feeds/<year>/league.json` → `league.id` must match the history map (2007: 76273, 2008: 28463, 2009: 42989, 2010: 34479, 2011: 33798, 2012: 48815, 2013: 34526, 2014: 35233, 2015: 28077).
+- After re-pulling history, `pnpm compute:franchise-history` emits retroactive Schefter milestone posts for "new" badges — revert `src/data/theleague/schefter-feed.json` if the badges are just corrected history, not news. Dedupe is snapshot-based (`franchise-history.json`), so the revert doesn't re-emit later.
+
+**Historical banner/icon recovery:** each year's `league.json` franchise records carry `icon` (300×50 mini-banner) and `logo` (full banner) URLs — the authoritative per-season art. Old hosts (`theleague.us`, `dynastytheleague.com`, `afl-fantasy.com`) are dead, but most `*_icon.png` mini-banners are in the Wayback Machine (`web.archive.org/web/<ts>if_/<url>`; find `<ts>` via the CDX API), and `mfladdons.com` assets are still live (needs a browser User-Agent — 406 otherwise). Recovered files live in `public/assets/theleague/history/`. Full-size banners were mostly never archived; the mini-banner doubles as the banner (same 6:1 ratio as current 950×158 banners).
+
+**Update 2026-07-03 — same bug hit AFL, plus two sharper traps found fixing it:**
+
+- `backfill-historical-feeds.mjs` is now league-generic: `--league=theleague|afl` (default `theleague`) selects the feeds dir and the current-league history source from `src/config/leagues-data.mjs`'s `LEAGUES` registry — never hardcode a second league's constants into the script. AFL's per-year map (host `www44.myfantasyleague.com` from 2016+, various earlier hosts): 2003: 55011, 2004: 23644, 2005: 29232, 2006: 49793, 2007: 47555, 2008: 13233, 2009: 21465, 2010: 30033, 2011: 36377, 2012: 26792, 2013: 48338, 2014: 40840, 2015: 14236, 2016+: 19621. AFL's contamination was worse than TheLeague's: **2007–2023 (17 seasons)** were wrong, including 2015–2023 literally serving TheLeague's own 13522 data cross-league.
+
+- **`isInvalidFeed()` cannot detect cross-league contamination.** A wrong-league response is a fully well-formed payload — no `.error` field — so `attemptEndpoint`'s "skip if already valid" check treats it as fine forever. Plain (non-`--force`) runs on a contaminated year are a permanent no-op. `--force --year=YYYY` is mandatory for remediation, not just for refreshing.
+
+- **`SIMPLE_ENDPOINTS` does not include `rosters` or `salaryAdjustments`.** After bulk-refixing 17 AFL years, spot-checking turned up 2019 with a *correct* `league.json`/`standings.json` (24 franchises) but a still-contaminated `rosters.json` (16 franchises, the old wrong league) — the backfill script simply never touches those two endpoints. Verify roster/salary files separately with a small inline fetch loop (same pattern as the TheLeague 2010/2011/2015 fix) any time you backfill a year that has them; don't assume "league.json is right" implies "everything for that year is right."
+
+- **Validate by cross-referencing counts, not just IDs.** The fast sanity check that caught the 2019 gap: for every backfilled year, `league.json`'s `franchises.franchise.length` must equal `standings.json`'s `leagueStandings.franchise.length`. A mismatch means one file got refetched with the correct ID and a sibling didn't — a state that "the ID matches" checks alone won't surface.
