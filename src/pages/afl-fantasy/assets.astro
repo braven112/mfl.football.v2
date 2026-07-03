@@ -213,13 +213,13 @@ const copyIcons = `
                               <button type="button" class="copy-btn" data-copy={asset.filename} aria-label="Copy file name" title="Copy file name" set:html={copyIcons} />
                             </div>
                             <p class="asset-dimensions">Loading size…</p>
-                            <div class="url-field">
+                            <label class="url-field">
                               <span class="url-field__label">URL</span>
                               <div class="copy-row">
                                 <input type="text" value={asset.absoluteUrl} readonly />
                                 <button type="button" class="copy-btn" data-copy={asset.absoluteUrl} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
                               </div>
-                            </div>
+                            </label>
                           </div>
                         </article>
                       ))}
@@ -246,13 +246,13 @@ const copyIcons = `
                     <button type="button" class="copy-btn" data-copy={asset.filename} aria-label="Copy file name" title="Copy file name" set:html={copyIcons} />
                   </div>
                   <p class="asset-dimensions">Loading size…</p>
-                  <div class="url-field">
+                  <label class="url-field">
                     <span class="url-field__label">URL</span>
                     <div class="copy-row">
                       <input type="text" value={asset.absoluteUrl} readonly />
                       <button type="button" class="copy-btn" data-copy={asset.absoluteUrl} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
                     </div>
-                  </div>
+                  </label>
                 </div>
               </article>
             ))}
