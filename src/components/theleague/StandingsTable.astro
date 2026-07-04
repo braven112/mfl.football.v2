@@ -294,6 +294,15 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     overflow-x: auto;
   }
 
+  /* Dark mode: raised-card treatment — 1px border ring via box-shadow (no
+     layout shift, light stays borderless) layered under the strong dark
+     shadow, per the PlayerDetailsModal recipe. */
+  :global(html.dark) .standings-container {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   /* ===== Branded division header (compass badge + defending champion) ===== */
   /* The banner bleeds flush to the card edges: the container drops its top
      padding and the banner's top corners inherit the card radius. */
