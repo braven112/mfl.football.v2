@@ -7,9 +7,23 @@ export interface Props {
   teams: TeamStanding[];
   year?: number;
   rosterBaseUrl?: string;
+  /**
+   * Draw a divider below this rank — the inaugural 2017 season ran as ONE
+   * combined 24-team table, but its top 12 (confirmed to exactly match the
+   * 2018 Premier League roster) really were headed for promotion, so the
+   * relegation/promotion line still belongs on that table even though it
+   * carries no Premier League branding.
+   */
+  promotionCutoff?: number;
 }
 
-const { tierName, teams, year = new Date().getFullYear(), rosterBaseUrl } = Astro.props;
+const {
+  tierName,
+  teams,
+  year = new Date().getFullYear(),
+  rosterBaseUrl,
+  promotionCutoff,
+} = Astro.props;
 
 // Real tiers get their badge; a combined table (the inaugural 2017 season, or
 // any season without a recorded tier split) is a plain all-play table with no
@@ -92,6 +106,7 @@ const prizes: Record<string, string[]> = {
             if (rank === 2) borderClass = 'border-below-green';
             if (rank === 4) borderClass = 'border-below-playoff';
           }
+          if (rank === promotionCutoff) borderClass = 'border-below';
 
           return (
             <tr class={`${rowClass} ${borderClass}`}>
