@@ -319,7 +319,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .draft-round__picks {
@@ -337,7 +337,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     padding: 0.75rem;
     border-radius: 0.5rem;
     border: 2px solid transparent;
-    background: #f3f4f6;
+    background: var(--content-bg-muted, #f3f4f6);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     text-decoration: none;
@@ -410,6 +410,39 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
   }
 
+  /* Dark mode: the status-tinted pick cards were hardcoded light pastels
+     (cream/pink/violet) — re-tint as whisper color-mixes against the card
+     surface, borders stay their bright hues, champion text brightens. */
+  :global(html.dark) .draft-pick--league-winner {
+    background: color-mix(in srgb, #fbbf24 12%, var(--card-bg, #1e1e1e));
+  }
+
+  :global(html.dark) .draft-pick--league-winner:hover {
+    background: color-mix(in srgb, #fbbf24 18%, var(--card-bg, #1e1e1e));
+    box-shadow: 0 0 0 2px var(--card-bg, #1e1e1e), 0 0 0 4px #f59e0b, 0 4px 12px rgb(0 0 0 / 0.4);
+  }
+
+  :global(html.dark) .draft-pick--champion {
+    background: color-mix(in srgb, #fb923c 12%, var(--card-bg, #1e1e1e));
+    color: #fdba74;
+  }
+
+  :global(html.dark) .draft-pick--toilet-bowl {
+    background: color-mix(in srgb, #ff6b6b 10%, var(--card-bg, #1e1e1e));
+  }
+
+  :global(html.dark) .draft-pick--toilet-bowl:hover {
+    background: color-mix(in srgb, #ff6b6b 16%, var(--card-bg, #1e1e1e));
+  }
+
+  :global(html.dark) .draft-pick--tbd {
+    background: color-mix(in srgb, #a78bfa 10%, var(--card-bg, #1e1e1e));
+  }
+
+  :global(html.dark) .draft-pick--tbd:hover {
+    background: color-mix(in srgb, #a78bfa 16%, var(--card-bg, #1e1e1e));
+  }
+
   .draft-pick__content {
     display: flex;
     flex-direction: column;
@@ -452,7 +485,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
   .draft-pick__name {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
