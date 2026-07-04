@@ -1,5 +1,6 @@
 ---
 import { getTeamProjection } from '../../utils/projections';
+import { asArray } from '../../utils/mfl-normalize';
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
 import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
 import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
@@ -12,28 +13,22 @@ const pigskinProjection = getTeamProjection('0001', rostersData, projectedScores
 const midwestsideProjection = getTeamProjection('0011', rostersData, projectedScoresData);
 
 // Get rosters
-const pigskinRoster = rostersData.rosters.franchise.find((f: any) => f.id === '0001');
-const midwestsideRoster = rostersData.rosters.franchise.find((f: any) => f.id === '0011');
+const franchises = asArray(rostersData?.rosters?.franchise);
+const pigskinRoster = franchises.find((f: any) => f.id === '0001');
+const midwestsideRoster = franchises.find((f: any) => f.id === '0011');
 
 // Build player maps
 const playerMap = new Map();
-const playersList = Array.isArray(playersData.players.player)
-  ? playersData.players.player
-  : [playersData.players.player];
-playersList.forEach((p: any) => playerMap.set(p.id, p));
+asArray(playersData?.players?.player).forEach((p: any) => playerMap.set(p.id, p));
 
 const projMap = new Map();
-const projList = Array.isArray(projectedScoresData.projectedScores.playerScore)
-  ? projectedScoresData.projectedScores.playerScore
-  : [projectedScoresData.projectedScores.playerScore];
-projList.forEach((p: any) => projMap.set(p.id, parseFloat(p.score) || 0));
+asArray(projectedScoresData?.projectedScores?.playerScore).forEach((p: any) => {
+  if (p.id) projMap.set(p.id, parseFloat(p.score) || 0);
+});
 
 // Get top players for each team
 function getTopPlayers(roster: any, count: number) {
-  if (!roster?.player) return [];
-  
-  const players = Array.isArray(roster.player) ? roster.player : [roster.player];
-  return players
+  return asArray(roster?.player)
     .filter((p: any) => p.status === 'ROSTER')
     .map((p: any) => {
       const playerInfo = playerMap.get(p.id);

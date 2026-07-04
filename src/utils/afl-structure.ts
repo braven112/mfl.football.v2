@@ -21,6 +21,9 @@
  * mfl-feeds) and pass it in.
  */
 
+// MFL single-item quirk: one-element collections may arrive as a bare object.
+import { asArray as toArray } from './mfl-normalize';
+
 export interface SeasonConference {
   id: string;
   name: string;
@@ -56,12 +59,6 @@ interface StructuredLeagueConfig {
     divisions: string[];
   }>;
   divisionToConference?: Record<string, string>;
-}
-
-// MFL single-item quirk: one-element collections may arrive as a bare object.
-function toArray<T>(value: T | T[] | undefined | null): T[] {
-  if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
 }
 
 /**

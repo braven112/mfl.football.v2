@@ -1312,3 +1312,19 @@ weeks of the affected year, not just week 1.
 **The `backfill-historical-feeds.mjs --force --year=YYYY` blast radius:** there's no per-feed-type flag — `--force` refetches league, standings, schedule, transactions, draftResults, auctionResults, playoffBrackets, AND weekly-results together for that year. Used it to patch missing weekly-results weeks for 2019–2024, but `backfill`'s `playoffBrackets` fetch is a **shallow single call** (`TYPE=playoffBrackets` metadata list only) while `fetch-mfl-feeds.mjs`'s is a **two-step fetch** (metadata, then per-bracket `TYPE=playoffBracket&BRACKET_ID=X` detail merged into a `brackets: {...}` object). Re-running `--force` on years that already had the rich two-step data replaced it with the shallow version, silently breaking `thirdPlace` resolution and `playoffRound`/`playoffBracket` labels in `compute-franchise-history.mjs`'s derived output for 2020 and 2023. Caught it by diffing the derived `franchise-history.json`'s `thirdPlace` field before/after — a value flipping to `null` for a year outside the intended fix is the tell. Fixed by `git checkout HEAD --` on every non-weekly-results file the `--force` run touched, then regenerating derived data from the untouched originals.
 
 **Rule of thumb:** when using `--force --year=YYYY` to patch one feed type, diff `git status` for that year afterward and revert anything you didn't mean to touch — don't assume `--force` is scoped to your target.
+
+---
+
+## 2026-07-04 - Off-Season `projectedScores` Ships an Empty-Field Object, and Shared Utils Must Normalize (Not Just Call Sites)
+
+**Context:** `/theleague/matchup-data` (SSR debug page) threw a 500 `TypeError: playerScores is not iterable` in July. It imports the committed `data/theleague/mfl-feeds/2025/projectedScores.json`.
+
+**Insight:** Two nuances beyond the known single-vs-array quirk:
+
+1. **The "zero entries" off-season shape is a bare object with EMPTY-STRING fields**, not a missing key or empty string: `{"projectedScores": {"week": "23", "playerScore": {"id": "", "score": ""}}}`. So `data?.projectedScores?.playerScore || []` does NOT protect you — the object is truthy, and `for...of` over it throws. The daily sync overwrites this feed year-round, so any page that renders fine in-season can start 500ing the day the season ends.
+
+2. **The crash was in the shared util, not the page.** `matchup-data.astro` dutifully did the `Array.isArray` dance for its own maps, then called `getTeamProjection()` which iterated the raw field directly. Normalizing at call sites gives false confidence — the normalization belongs INSIDE the shared utility so every consumer is covered.
+
+**Evidence:** `src/utils/mfl-normalize.ts` now exports the shared `asArray()`; it's applied in `projections.ts`, `mfl-matchup-api.ts#getProjectedScores` (the live-API twin of this bug, previously masked by a caller's try/catch), `lineup-data-builder.ts`, and `matchup-data.astro`, and it replaces the former private copies in `afl-structure.ts` / `afl-player-scoring.ts`. Regression suite: `tests/projections.test.ts` — includes the exact off-season fixture.
+
+**Recommendation:** When consuming raw MFL feed shapes in TypeScript, import `asArray` from `src/utils/mfl-normalize.ts` (node scripts: `scripts/lib/normalize-weekly-results.mjs#toArray`) and widen the input types to `T[] | T`. Filter empties by field presence (`if (player.id && player.score)`) since the empty-object sentinel survives `asArray`. Do not reuse `asArray` for scalar lists — it drops falsy values by design.

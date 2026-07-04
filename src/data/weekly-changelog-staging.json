@@ -12,6 +12,14 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "The matchup data debug page no longer crashes with a server error during the off-season — team projection math now handles MFL's empty off-season projections feed gracefully (and any page using team projections is protected from the same quirk).",
+      "impact": "admin",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "Franchise history and career records were quietly undercounting years — 2007-2018 was missing week 17 entirely, several seasons between 2019-2024 were missing several weeks outright, and even recent years could drop a team's score when its game didn't fit the usual matchup format. All 2007-2025 seasons now carry every week's real scores, so highest-game and biggest-blowout records reflect what actually happened (turns out someone had a bigger week than anyone knew about).",
       "impact": "user",
       "area": "standings",

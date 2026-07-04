@@ -5,6 +5,7 @@
 
 import type { FantasyPlayer, StartingLineup, PlayerStatus, FantasyTeam } from '../types/matchup-previews';
 import { mflFetch } from './mfl-fetch';
+import { asArray } from './mfl-normalize';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 /**
@@ -413,26 +414,26 @@ export class MFLMatchupApiClient {
     
     const url = this.buildUrl('projectedScores', params);
     
+    interface ProjectedScore {
+      id: string;
+      score: string;
+    }
+
     interface ProjectedScoresResponse {
       projectedScores: {
-        playerScore: Array<{
-          id: string;
-          score: string;
-        }>;
+        playerScore: ProjectedScore[] | ProjectedScore | '';
       };
     }
-    
+
     const response = await this.makeRequest<ProjectedScoresResponse>(url);
     const projections: Record<string, number> = {};
 
-    if (response.projectedScores?.playerScore) {
-      response.projectedScores.playerScore.forEach(player => {
-        const score = parseFloat(player.score);
-        if (!isNaN(score)) {
-          projections[player.id] = score;
-        }
-      });
-    }
+    asArray(response.projectedScores?.playerScore).forEach(player => {
+      const score = parseFloat(player.score);
+      if (player.id && !isNaN(score)) {
+        projections[player.id] = score;
+      }
+    });
 
     return projections;
   }
