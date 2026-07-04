@@ -9,9 +9,23 @@ export interface Props {
   year?: number;
   preferredTeamId?: string;
   rosterBaseUrl?: string;
+  /**
+   * How many of the top conference seeds are division winners. Defaults to the
+   * current 2-divisions-per-conference layout; historical seasons (2003-2012)
+   * had three divisions per conference, so pass 3 there.
+   */
+  divisionWinnerCount?: number;
 }
 
-const { conferenceName, conferenceId, teams, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl } = Astro.props;
+const {
+  conferenceName,
+  conferenceId,
+  teams,
+  year = new Date().getFullYear(),
+  preferredTeamId,
+  rosterBaseUrl,
+  divisionWinnerCount = 2,
+} = Astro.props;
 
 const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
 // Conference accent color for the title — AL red, NL blue (matches each logo).
@@ -23,12 +37,14 @@ function parseWLT(wlt: string | undefined) {
   return { w: parts[0] || 0, l: parts[1] || 0, t: parts[2] || 0 };
 }
 
-// Derive all_play_wlt from percentage when the record is missing
+// Derive all_play_wlt from percentage when the record is missing. A zero pct
+// with no record means the feed simply predates all-play tracking (pre-2017) —
+// deriving 0-240-0 from it would fabricate a season, so treat it as no data.
 function deriveAllPlayWLT(pct: string | undefined, seasonYear: number): { w: number; l: number; t: number } | null {
   if (!pct) return null;
   const TOTAL_GAMES = seasonYear >= 2021 ? 255 : 240;
   const percentage = parseFloat(pct);
-  if (isNaN(percentage)) return null;
+  if (isNaN(percentage) || percentage <= 0) return null;
   const wins = Math.round(TOTAL_GAMES * percentage);
   const losses = TOTAL_GAMES - wins;
   return { w: wins, l: losses, t: 0 };
@@ -44,9 +60,11 @@ function safeParseInt(value: string | undefined): string {
   return parseInt(value).toString();
 }
 
+// Top seeds are division winners, the rest of the playoff field (top 4 per
+// conference in every AFL era) are wild cards.
 function getRowColor(seed: number | undefined): string {
   if (!seed) return '';
-  if (seed <= 2) return 'tier-division-winners';
+  if (seed <= divisionWinnerCount) return 'tier-division-winners';
   if (seed <= 4) return 'tier-wild-cards';
   return 'tier-eliminated';
 }

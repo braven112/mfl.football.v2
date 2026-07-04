@@ -136,6 +136,14 @@
       "impact": "user",
       "area": "standings",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "AFL historical standings now use each season's real division layout. The 2003-2012 seasons ran six divisions (AL North/Central/South, NL East/West/Pacific) with four teams each, but the page had been cramming every year into today's four divisions — inventing division winners, seeds, and playoff fields that never existed. Every season back to 2003 now groups teams into its actual divisions with the right winners and seeds (verified against the trophy room's award history), the playoff view seeds three division winners per conference in the six-division era, and seasons that predate all-play tracking show a dash instead of a fabricated 0-240 record.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
     }
   ]
 }

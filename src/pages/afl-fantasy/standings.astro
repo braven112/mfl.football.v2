@@ -27,6 +27,7 @@ import {
   resolvePreferredTeamIdForYear,
   type TeamConfig,
 } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -39,6 +40,12 @@ const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/s
 
 // Import weekly results data for calculating all-play with week cutoff
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
+  eager: true,
+});
+
+// Import league settings feeds — each season's division/conference structure
+// (the 2003-2012 AFL ran six divisions; see afl-structure.ts)
+const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', {
   eager: true,
 });
 
@@ -83,6 +90,15 @@ const yearResolvedConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
   selectedYear
 );
+
+// Overlay the SELECTED season's division/conference structure from its league
+// feed (2003-2012 ran six divisions with different memberships), so grouping,
+// division winners, and seeds reflect that season — not today's four-division
+// layout. Falls back to the current structure if the feed is missing.
+const seasonStructure = extractSeasonStructure(
+  leagueFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/league.json`]
+);
+const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
 
 // Team Preference Cookie Integration
 // Get URL parameters for team preference
@@ -129,14 +145,14 @@ const calculatedAllPlay = weeklyResultsFeed
   : undefined;
 
 // Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig);
-const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00');
-const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01');
+const divisionStandings = getDivisionStandings(franchises, seasonConfig);
+const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '00');
+const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01');
 // Group by THIS season's tier makeup (tier-history.json) so promotion/
 // relegation is reflected per-year; falls back to static config.tier for
 // seasons tier-history doesn't record.
 const tierMembership = getTierMembership(selectedYear);
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig, calculatedAllPlay, tierMembership);
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, tierMembership);
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
     team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
@@ -197,7 +213,7 @@ const promoRegTeams = [
         {view === 'league' && (
           <>
             <h1 class="section-title">Playoff Standings</h1>
-            <p class="subtitle">Division winners are seeded 1-4</p>
+            <p class="subtitle">Division winners seed first — top 4 in each conference make the playoff bracket</p>
           </>
         )}
         {view === 'all_play' && (
@@ -228,7 +244,7 @@ const promoRegTeams = [
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
-              conferenceId={(yearResolvedConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
+              conferenceId={(seasonConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
@@ -248,6 +264,7 @@ const promoRegTeams = [
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            divisionWinnerCount={conferenceAStandings.conference.divisions.length}
           />
           <ConferenceLeagueStandingsTable
             conferenceName={conferenceBStandings.conference.name}
@@ -256,6 +273,7 @@ const promoRegTeams = [
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            divisionWinnerCount={conferenceBStandings.conference.divisions.length}
           />
 
           {nitTeams.length > 0 && (
