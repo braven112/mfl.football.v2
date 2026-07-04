@@ -1227,6 +1227,8 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     position: fixed;
     inset: 0;
     background: rgba(17, 24, 39, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1302,5 +1304,9 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   @keyframes mock-lobby-confirm-slide {
     from { opacity: 0; transform: translateY(4px) scale(0.98); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mock-lobby__confirm-overlay,
+    .mock-lobby__confirm-dialog { animation: none !important; }
   }
 </style>
