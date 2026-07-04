@@ -243,6 +243,10 @@ const metrics: MetricDef[] = [
   .hp-snapshot__guest-icon {
     flex-shrink: 0;
     color: var(--color-gray-300, #d1d5db);
+    /* Sprite symbols carry no fill attribute — without this they render
+       SVG-initial black (invisible on dark). currentColor pierces the
+       <use> shadow DOM so the icon follows the muted gray token. */
+    fill: currentColor;
   }
 
   .hp-snapshot__guest-text {

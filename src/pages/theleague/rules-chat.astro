@@ -123,9 +123,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     align-items: center;
     gap: 1rem;
     padding: 1.5rem 2rem;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+  :global(html.dark) .rqa-hero {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .rqa-hero__icon {
     width: 56px;
@@ -156,10 +159,13 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* Body */
   .rqa-body {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem;
+  }
+  :global(html.dark) .rqa-body {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
 
   /* ── Right: Sticky Sidebar ── */
@@ -175,11 +181,14 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* Roger personality card */
   .rqa-roger-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem 1.25rem;
     text-align: center;
+  }
+  :global(html.dark) .rqa-roger-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .rqa-roger-card__avatar {
     width: 80px;
@@ -231,10 +240,13 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* Sidebar sections */
   .rqa-sidebar__section {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1rem 1.25rem;
+  }
+  :global(html.dark) .rqa-sidebar__section {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .rqa-sidebar__label {
     font-size: 0.625rem;
@@ -290,7 +302,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .rqa-donate-btn:hover {
     border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.08);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 8%, transparent);
     text-decoration: none;
   }
   .rqa-donate-btn__icon {
@@ -387,7 +399,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding-right: 4rem;
     font-size: 0.875rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-gray-300, #d1d5db);
@@ -406,8 +418,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     outline: none;
     border-color: var(--color-primary, #1c497c);
     border-left-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-    background: var(--color-white, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    background: var(--input-bg, #fff);
   }
   .rqa-input__count {
     position: absolute;
@@ -479,6 +491,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     font-size: 0.8125rem;
     margin-bottom: 1rem;
   }
+  /* --color-error-border isn't inverted for dark mode in tokens-dark.css,
+     so its light-pink fallback would survive; re-derive from the
+     (dark-inverted) --color-error instead, scoped to this page only. */
+  :global(html.dark) .rqa-error {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
+  }
 
   /* ── Q&A List ── */
   .rqa-list {
@@ -518,7 +536,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     animation: rqa-highlight 2s ease-out;
   }
   @keyframes rqa-highlight {
-    0% { background: rgba(28, 73, 124, 0.06); }
+    0% { background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent); }
     100% { background: transparent; }
   }
   .rqa-card__header {
@@ -572,9 +590,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .rqa-card:hover .rqa-card__delete { opacity: 1; }
   .rqa-card__delete:hover {
-    color: var(--color-red-600, #dc2626);
-    border-color: var(--color-red-200, #fecaca);
-    background: var(--color-red-50, #fef2f2);
+    color: var(--color-error, #dc2626);
+    border-color: var(--color-error-border, #fecaca);
+    background: var(--color-error-light, #fef2f2);
+  }
+  :global(html.dark) .rqa-card__delete:hover {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .rqa-card__asker {
     font-size: 0.75rem;

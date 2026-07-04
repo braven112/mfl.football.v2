@@ -95,7 +95,7 @@ const { links, title = "On This Page" } = Astro.props;
   }
 
   .anchor-nav__container {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    background: linear-gradient(135deg, var(--card-bg, #ffffff) 0%, var(--content-bg-muted, #f8f9fa) 100%);
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow:
@@ -107,11 +107,24 @@ const { links, title = "On This Page" } = Astro.props;
     transition: box-shadow 0.3s ease;
   }
 
+  :global(html.dark) .anchor-nav__container {
+    border-color: var(--content-border, #555);
+    box-shadow:
+      0 0 0 1px var(--content-border, #555),
+      var(--shadow-lg);
+  }
+
   .anchor-nav__container:hover {
     box-shadow:
       0 10px 15px -3px rgba(0, 0, 0, 0.1),
       0 4px 6px -2px rgba(0, 0, 0, 0.05),
       0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+
+  :global(html.dark) .anchor-nav__container:hover {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555),
+      var(--shadow-xl, var(--shadow-lg));
   }
 
   .anchor-nav__title {
@@ -120,7 +133,7 @@ const { links, title = "On This Page" } = Astro.props;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
   }
 
   .anchor-nav__list {
@@ -163,7 +176,7 @@ const { links, title = "On This Page" } = Astro.props;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     text-decoration: none;
     border-left: 2px solid transparent;
     border-radius: 4px;
@@ -179,14 +192,14 @@ const { links, title = "On This Page" } = Astro.props;
     left: 0;
     width: 2px;
     height: 100%;
-    background: linear-gradient(to bottom, #3b82f6, #2563eb);
+    background: linear-gradient(to bottom, var(--color-primary, #3b82f6), var(--color-primary-dark, #2563eb));
     transform: scaleY(0);
     transform-origin: top;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .anchor-nav__link:hover {
-    color: #1e293b;
+    color: var(--page-text, #1e293b);
     background: rgba(59, 130, 246, 0.05);
     transform: translateX(2px);
   }
@@ -196,7 +209,7 @@ const { links, title = "On This Page" } = Astro.props;
   }
 
   .anchor-nav__link.active {
-    color: #1e40af;
+    color: var(--color-primary, #1e40af);
     background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
     font-weight: 600;
   }
@@ -223,7 +236,7 @@ const { links, title = "On This Page" } = Astro.props;
     transform: translateY(-50%);
     width: 4px;
     height: 4px;
-    background: #3b82f6;
+    background: var(--color-primary, #3b82f6);
     border-radius: 50%;
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -334,8 +347,8 @@ const { links, title = "On This Page" } = Astro.props;
   .anchor-modal__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -343,7 +356,7 @@ const { links, title = "On This Page" } = Astro.props;
     position: relative;
     width: 100%;
     max-height: 80vh;
-    background: white;
+    background: var(--card-bg, white);
     border-radius: 1.5rem 1.5rem 0 0;
     box-shadow:
       0 -4px 6px -1px rgba(0, 0, 0, 0.1),
@@ -352,6 +365,10 @@ const { links, title = "On This Page" } = Astro.props;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
+  }
+
+  :global(html.dark) .anchor-modal__content {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-xl, var(--shadow-lg));
   }
 
   .anchor-modal.is-open .anchor-modal__content {
@@ -363,7 +380,7 @@ const { links, title = "On This Page" } = Astro.props;
     align-items: center;
     justify-content: space-between;
     padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
     flex-shrink: 0;
   }
 
@@ -371,16 +388,16 @@ const { links, title = "On This Page" } = Astro.props;
     margin: 0;
     font-size: 1.125rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--page-text, #1f2937);
   }
 
   .anchor-modal__close {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #f3f4f6;
+    background: var(--color-gray-100, #f3f4f6);
     border: none;
-    color: #6b7280;
+    color: var(--color-gray-500, #6b7280);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -390,8 +407,8 @@ const { links, title = "On This Page" } = Astro.props;
   }
 
   .anchor-modal__close:hover {
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--color-gray-200, #e5e7eb);
+    color: var(--color-gray-700, #374151);
   }
 
   .anchor-modal__close:active {
@@ -416,7 +433,7 @@ const { links, title = "On This Page" } = Astro.props;
     padding: 1rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
-    color: #4b5563;
+    color: var(--color-gray-600, #4b5563);
     text-decoration: none;
     border-left: 3px solid transparent;
     transition: all 0.2s ease;
@@ -424,19 +441,19 @@ const { links, title = "On This Page" } = Astro.props;
   }
 
   .anchor-modal__link:hover {
-    background: #f9fafb;
-    color: #1f2937;
-    border-left-color: #3b82f6;
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--page-text, #1f2937);
+    border-left-color: var(--color-primary, #3b82f6);
   }
 
   .anchor-modal__link:active {
-    background: #f3f4f6;
+    background: var(--color-gray-100, #f3f4f6);
   }
 
   .anchor-modal__link.active {
     background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
-    color: #1e40af;
-    border-left-color: #3b82f6;
+    color: var(--color-primary, #1e40af);
+    border-left-color: var(--color-primary, #3b82f6);
     font-weight: 600;
   }
 
@@ -444,7 +461,7 @@ const { links, title = "On This Page" } = Astro.props;
     content: '✓';
     position: absolute;
     right: 1.5rem;
-    color: #3b82f6;
+    color: var(--color-primary, #3b82f6);
     font-weight: 700;
   }
 </style>

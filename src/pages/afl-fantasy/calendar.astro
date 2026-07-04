@@ -232,6 +232,10 @@ function countdownLabel(daysUntil: number): string {
 
   .event-card__icon {
     color: var(--league-accent, #c41e3a);
+    /* Sprite symbols carry no fill attribute — without this they render
+       SVG-initial black (invisible on dark). currentColor pierces the
+       <use> shadow DOM so the icon follows the accent in both themes. */
+    fill: currentColor;
     flex-shrink: 0;
   }
 
