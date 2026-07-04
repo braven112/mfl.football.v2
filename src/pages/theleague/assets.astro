@@ -366,6 +366,11 @@ const copyIcons = `
     gap: 0.25rem;
   }
 
+  /* The layout's global h1 color rule beats inherited color — must target the element */
+  .gallery-header h1 {
+    color: var(--color-gray-50, #f9fafb);
+  }
+
   .gallery-header p {
     margin: 0.25rem 0 0;
   }
