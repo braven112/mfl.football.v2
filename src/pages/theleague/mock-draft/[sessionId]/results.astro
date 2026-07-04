@@ -350,6 +350,15 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
     gap: 0.125rem;
   }
 
+  /* Dark mode: --color-gray-50 sits almost flush with --page-bg (#181818 vs
+     #121212), so these tiles wash into the page — this page has no outer
+     section-card wrapper, so the pick tiles themselves are the card surface. */
+  :global(html.dark) .results__pick-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .results__pick-number {
     font-size: 0.625rem;
     font-weight: 600;
@@ -420,6 +429,12 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
     background: var(--color-gray-50, #f9fafb);
     border-radius: 0.5rem;
     padding: 0.75rem;
+  }
+
+  :global(html.dark) .results__team-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
   }
 
   .results__team-header {

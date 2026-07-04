@@ -494,6 +494,13 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		margin-bottom: 0.75rem;
 	}
 
+	/* Dark mode: this panel sits directly on the page floor (no wrapping
+	   card), and the muted gray-50 well color reads as flat against navy —
+	   add the raised-card ring. */
+	:global(html.dark) .chart-container {
+		box-shadow: 0 0 0 1px var(--content-border, #555555);
+	}
+
 	.chart-container :global(.chart-svg) {
 		width: 100%;
 		height: auto;
@@ -508,6 +515,10 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		color: var(--color-gray-500, #6b7280);
 		font-size: 0.875rem;
 		margin-bottom: 0.75rem;
+	}
+
+	:global(html.dark) .chart-empty {
+		box-shadow: 0 0 0 1px var(--content-border, #555555);
 	}
 
 	.chart-empty p { margin: 0; }
@@ -649,6 +660,10 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		color: var(--color-gray-500, #6b7280);
 		font-size: 0.875rem;
 		margin-bottom: 1.5rem;
+	}
+
+	:global(html.dark) .activity-page__empty {
+		box-shadow: 0 0 0 1px var(--content-border, #555555);
 	}
 
 	/* ── Table ── */

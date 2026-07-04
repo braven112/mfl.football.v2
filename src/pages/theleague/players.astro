@@ -3095,6 +3095,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     box-shadow: var(--shadow-sm);
     margin-top: 0.5rem;
   }
+
+  /* Dark mode: raised-card ring (light stays borderless) */
+  :global(html.dark) .table-wrapper {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
   .players-table {
     width: 100%;
     border-collapse: collapse;

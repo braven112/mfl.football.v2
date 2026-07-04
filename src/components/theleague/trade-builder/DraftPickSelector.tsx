@@ -199,7 +199,7 @@ export default function DraftPickSelector({
           font-size: 0.75rem;
           font-weight: 600;
         }
-        :global(html.dark) .draft-picks__badge {
+        html.dark .draft-picks__badge {
           background: rgba(124, 58, 237, 0.2);
           color: #c4b5fd;
         }
@@ -216,7 +216,7 @@ export default function DraftPickSelector({
           padding: 0;
           line-height: 1;
         }
-        :global(html.dark) .draft-picks__remove {
+        html.dark .draft-picks__remove {
           color: #c4b5fd;
         }
         .draft-picks__remove:hover {

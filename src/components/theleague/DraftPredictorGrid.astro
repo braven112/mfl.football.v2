@@ -410,6 +410,16 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
   }
 
+  /* Dark mode: section-level round containers (and the reused Legend block)
+     are flat --card-bg-color surfaces with only a shadow — they wash into the
+     page background. Add the canonical hairline ring so each round/legend
+     panel reads as a raised card, matching rosters.astro's .roster-table-card. */
+  :global(html.dark) .draft-round {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg, var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
+  }
+
   /* Dark mode: the status-tinted pick cards were hardcoded light pastels
      (cream/pink/violet) — re-tint as whisper color-mixes against the card
      surface, borders stay their bright hues, champion text brightens. */
@@ -520,6 +530,12 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     background: var(--card-bg-color, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  :global(html.dark) .draft-grid-legend {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg, var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
   }
 
   .legend-item {

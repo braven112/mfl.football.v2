@@ -269,7 +269,7 @@ export default function PlayerCard({
           border-radius: var(--radius-sm, 0.25rem);
           text-align: center;
         }
-        :global(html.dark) .player-card__tag-badge {
+        html.dark .player-card__tag-badge {
           background: rgba(124, 58, 237, 0.2);
           color: #c4b5fd;
         }

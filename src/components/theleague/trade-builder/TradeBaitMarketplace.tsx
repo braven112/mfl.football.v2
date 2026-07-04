@@ -547,29 +547,29 @@ const marketplaceStyles = `
   /* Dark mode: the amber "marketplace" branding is intentionally saturated
      accent color in both themes, but the light gradients + dark-amber text
      need to flip so they don't wash out against a dark card. */
-  :global(html.dark) .marketplace__header {
+  html.dark .marketplace__header {
     background: linear-gradient(135deg, #3a2e12 0%, #4a3818 100%);
   }
-  :global(html.dark) .marketplace__header:hover {
+  html.dark .marketplace__header:hover {
     background: linear-gradient(135deg, #4a3818 0%, #5a4420 100%);
   }
-  :global(html.dark) .marketplace__count,
-  :global(html.dark) .marketplace__footer-hint,
-  :global(html.dark) .marketplace__filter-btn:hover {
+  html.dark .marketplace__count,
+  html.dark .marketplace__footer-hint,
+  html.dark .marketplace__filter-btn:hover {
     color: #fcd34d;
   }
-  :global(html.dark) .marketplace__player:hover {
+  html.dark .marketplace__player:hover {
     background: #3a2e12;
   }
-  :global(html.dark) .marketplace__badge--rookie {
+  html.dark .marketplace__badge--rookie {
     background: rgba(29, 78, 216, 0.25);
     color: #93bbfd;
   }
-  :global(html.dark) .marketplace__badge--tag {
+  html.dark .marketplace__badge--tag {
     background: rgba(245, 158, 11, 0.2);
     color: #fcd34d;
   }
-  :global(html.dark) .marketplace__footer {
+  html.dark .marketplace__footer {
     background: linear-gradient(135deg, #3a2e12 0%, #4a3818 100%);
     border-top-color: #5a4420;
   }

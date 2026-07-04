@@ -418,7 +418,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
   /* --color-error-border isn't inverted for dark mode in tokens-dark.css,
      so its light-pink fallback would survive; re-derive from the
      (dark-inverted) --color-error instead, scoped to this page only. */
-  :global(html.dark) .rqa-error {
+  html.dark .rqa-error {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .rqa-list { display: flex; flex-direction: column; gap: 0; }
@@ -476,7 +476,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     border-color: var(--color-error-border, #fecaca);
     background: var(--color-error-light, #fef2f2);
   }
-  :global(html.dark) .rqa-card__delete:hover {
+  html.dark .rqa-card__delete:hover {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .rqa-card__asker { font-size: 0.75rem; font-weight: 600; color: var(--color-gray-700, #374151); }

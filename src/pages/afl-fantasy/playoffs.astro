@@ -1439,6 +1439,12 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
      box-shadow: var(--box-shadow-lg);
   }
 
+  :global(html.dark) .brackets-grid {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
   .prizes-card {
     background: var(--card-bg, #ffffff);
     border: 1px solid var(--content-border, #e2e8f0);

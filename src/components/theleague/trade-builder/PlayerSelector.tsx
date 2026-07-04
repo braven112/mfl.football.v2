@@ -349,7 +349,7 @@ function PlayerRow({
           background: var(--color-franchise-tag-light, #ede9fe);
           color: var(--color-franchise-tag, #7c3aed);
         }
-        :global(html.dark) .player-row__badge--tag {
+        html.dark .player-row__badge--tag {
           background: rgba(124, 58, 237, 0.2);
           color: #c4b5fd;
         }

@@ -177,6 +177,21 @@ html.dark .draft-room {
   --dr-tier-f-soft: color-mix(in srgb, var(--dr-tier-f, #9ca3af) 18%, var(--content-bg, #1e1e1e));
 }
 
+/* ── Dark-mode panel elevation ──
+ * .dr-panel-board and .dr-side-panel are the two section-level card surfaces
+ * in the shell (board grid on top, tabbed players/queue/chat below). They sit
+ * flush against the page with only the 1px .dr-main gap-as-divider between
+ * them — in dark mode that reads as flat/washed against the page background.
+ * Canonical hairline ring (rosters.astro's .roster-table-card recipe) so each
+ * panel reads as raised, independent of the seam trick.
+ */
+html.dark .dr-panel-board,
+html.dark .dr-side-panel {
+  box-shadow:
+    0 0 0 1px var(--content-border, #555555),
+    var(--shadow-lg);
+}
+
 /* ── Tier badge ──
  * Small A-F letter badge shown in pool rows, board cells, queue rows.
  * Use `data-tier="A"` attribute for scoped color.

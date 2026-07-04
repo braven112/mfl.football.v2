@@ -201,6 +201,14 @@ function getRowColor(seed: number | undefined): string {
     overflow: hidden;
   }
 
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     the section from the page background; add the border ring. */
+  :global(html.dark) .conference-standings-container {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
   .conference-title {
     display: flex;
     align-items: center;
