@@ -421,7 +421,7 @@ export class MFLMatchupApiClient {
 
     interface ProjectedScoresResponse {
       projectedScores: {
-        playerScore: ProjectedScore[] | ProjectedScore;
+        playerScore: ProjectedScore[] | ProjectedScore | '';
       };
     }
 

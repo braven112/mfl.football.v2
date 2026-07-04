@@ -81,11 +81,11 @@ describe('calculateTeamProjections', () => {
     // MFL's zero-entry shape can also be a literal empty string
     expect(
       calculateTeamProjections(rosters, {
-        projectedScores: { playerScore: '' as any },
+        projectedScores: { playerScore: '' },
       }).get('0001')
     ).toBe(0);
     expect(
-      calculateTeamProjections({ rosters: { franchise: '' as any } }, projected).size
+      calculateTeamProjections({ rosters: { franchise: '' } }, projected).size
     ).toBe(0);
   });
 });

@@ -11,7 +11,7 @@ export interface PlayerProjection {
 
 export interface ProjectedScoresData {
   projectedScores?: {
-    playerScore?: PlayerProjection[] | PlayerProjection;
+    playerScore?: PlayerProjection[] | PlayerProjection | '';
     week?: string;
   };
 }
@@ -26,12 +26,12 @@ export interface RosterPlayer {
 
 export interface Franchise {
   id: string;
-  player?: RosterPlayer[] | RosterPlayer;
+  player?: RosterPlayer[] | RosterPlayer | '';
 }
 
 export interface RostersData {
   rosters?: {
-    franchise?: Franchise[] | Franchise;
+    franchise?: Franchise[] | Franchise | '';
   };
 }
 
