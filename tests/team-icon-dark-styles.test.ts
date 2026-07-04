@@ -118,14 +118,18 @@ describe('theleague config dark icon rollout', () => {
         (t) => [t.franchiseId, t],
       ),
     );
-    // Dangsters, Maverick, Dead Cap Walking, Ninjas, Music City,
-    // Fire Ready Aim, Bring The Pain, Wabbits, Computer Jocks
-    const LAUNCH_FIDS = ['0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010'];
+    // Dangsters, Maverick, Ninjas, Music City,
+    // Fire Ready Aim, Bring The Pain, Wabbits, Computer Jocks.
+    // Dead Cap Walking (0004) is deliberately absent: Brandon chose to keep
+    // its light icon in dark mode too (2026-07-03) — the dark asset stays on
+    // disk unused in case that changes.
+    const LAUNCH_FIDS = ['0002', '0003', '0005', '0006', '0007', '0008', '0009', '0010'];
     for (const fid of LAUNCH_FIDS) {
       const team = byId.get(fid);
       expect(team?.iconDark, `franchise ${fid} should have iconDark`).toBe(
         team?.icon?.replace(/\.png$/, '_dark.png'),
       );
     }
+    expect(byId.get('0004')?.iconDark, 'Dead Cap Walking intentionally has no iconDark').toBeUndefined();
   });
 });
