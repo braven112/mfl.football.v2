@@ -30,8 +30,7 @@ function canonicalSlugFor(navSlug: LeagueSlug): string {
  * (deterministic, and theleague is the default league).
  */
 function detailPathFor(entry: WhatsNewEntry): string {
-  const navSlug: LeagueSlug =
-    entry.leagues.length === 1 ? entry.leagues[0] : ('theleague' as LeagueSlug);
+  const navSlug: LeagueSlug = entry.leagues.length === 1 ? entry.leagues[0] : 'theleague';
   return `/${canonicalSlugFor(navSlug)}/whats-new/${entry.id}`;
 }
 
@@ -63,8 +62,6 @@ export function mergeAndRankEntries(
 
 /** Latest guest-visible entries across every league, newest first. */
 export function getLatestWhatsNewAcrossLeagues(limit = 6): HomepageWhatsNewEntry[] {
-  const slices = ALL_LEAGUES.map((league) =>
-    getWhatsNewEntriesForLeague(league.navSlug as LeagueSlug),
-  );
+  const slices = ALL_LEAGUES.map((league) => getWhatsNewEntriesForLeague(league.navSlug));
   return mergeAndRankEntries(slices, limit);
 }

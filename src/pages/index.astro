@@ -129,12 +129,17 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
 
   .panel:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(17, 17, 17, 0.25);
+    box-shadow: var(--shadow-lg, 0 8px 24px rgba(17, 17, 17, 0.25));
     text-decoration: none;
     color: var(--color-white, #ffffff);
   }
 
-  .panel:focus-visible,
+  /* Panels are dark in both themes — a red ring vanishes on the AFL panel */
+  .panel:focus-visible {
+    outline: 2px solid var(--color-white, #ffffff);
+    outline-offset: 3px;
+  }
+
   .wn-card:focus-visible {
     outline: 2px solid var(--secondary-color, #b22222);
     outline-offset: 3px;
@@ -276,7 +281,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
     font-weight: 700;
     padding: 0.15rem 0.45rem;
     border-radius: 3px;
-    color: #ffffff;
+    color: var(--color-white, #ffffff);
   }
 
   .chip--theleague {
