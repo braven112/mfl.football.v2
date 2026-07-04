@@ -334,3 +334,54 @@ swapped banners early while keeping the old name. Per-year
 `mfl-feeds/<year>/league.json` names can therefore be off-by-one on identity
 around season boundaries. `afl.config.json` history entries (Brandon-confirmed
 yearStart/yearEnd) are authoritative over raw feed names.
+
+---
+
+## 2026-07-03 - CORRECTION: js scripts exist 2018-2025 (not "2020-2024"), tier competition began 2017 (not 2020)
+
+**Context:** The entry above ("Historical tier membership RECOVERED") was
+written from a partial probe that only checked 2020-2024 and concluded the
+competition began then. A follow-up session re-fetched every year 2015-2025
+directly (`mfl.football/afl-fantasy.com/assets/js/premierleague-<year>.js`
+with a browser User-Agent) and found scripts for **2018-2025**, 404 for 2017
+and earlier. Brandon confirmed from memory: the competition began in **2017**
+(the year after the last AFL Cup, whose bracket structure ran through 2017 on
+MFL but last awarded a champion in 2016) as ONE combined 24-team all-play
+table with no Premier/D-League branding; the 2018+ split is what the js
+scripts capture. **2017 has no script because a single table needs no
+grouping** — its absence is not evidence of "no competition."
+
+**2017/2018/2019 recovered and verified:** 2018 and 2019 membership came from
+the (previously un-fetched) js files. Verification technique worth reusing:
+rank that season's all-play records (from `weekly-results.json`, cutoff-gated)
+*within* the recovered tiers and confirm it reproduces the independently
+hand-entered champions in `awards-history.json`. Both years reproduced exactly
+(2018: Premier Thundering Herd/D-League Team Minty Fresh; 2019: Premier
+Smokane FC/D-League Drunk Indians). For 2017 (no script, no split), the same
+technique the other direction confirmed Brandon's memory: ranking the full
+24-team 2017 table and taking the top 12 is an EXACT set-match for the 2018
+Premier League roster — proving 2017 really was one table whose finish order
+seeded the first split. The site brands this season "Founders Table" (not
+"All-Play Standings") with a promotion-line + green arrows on the top 12, but
+zero Premier League logo/styling since no such tier existed yet.
+
+**A stale hand-entry surfaced and got corrected:** `awards-history.json` had
+carried `premier-league`/`dleague-champion` awards for 2017 (Smokane FC /
+Titsburgh Feelers, `manual:league-awards`) from before this was understood —
+neither reproduces from the actual 2017 combined-table ranking (Smokane FC
+finished 2nd, not 1st; there's no real "D-League champion" for a season with
+no D-League). Removed both entries once confirmed. **Lesson: a `manual:*`
+source tag means "hand-entered," not "verified" — cross-check hand-entries
+against computable ground truth when the surrounding picture changes.**
+
+**2025 was also wrong:** tier-history's 2025 membership had been seeded from
+an `afl.config.json` snapshot, not the js file. `premierleague-2025.js` has
+0024 (No Soup For You) in Premier League and 0012 (Suh girls, one cup) in
+D-League — the opposite of what was recorded. Corrected, and 2026's
+roll-forward (`compute-afl-tier-movement.mjs`) was re-run from the fixed base
+so 2026 membership + `afl.config.json` team tiers stayed consistent.
+
+**Constants:** `TIER_COMPETITION_FIRST_SEASON = 2017`,
+`TIER_SPLIT_FIRST_SEASON = 2018` in `src/utils/afl-tier.ts` — supersede any
+earlier "2020" or "2016" assumption found elsewhere (this file's own entry
+above was one such place).
