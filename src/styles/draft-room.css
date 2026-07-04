@@ -1779,7 +1779,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dr-modal-overlay, .dr-modal { animation: none !important; }
+  .dr-modal-overlay, .dr-modal,
+  .dr-confirm-overlay, .dr-confirm-dialog { animation: none !important; }
 }
 
 /* ── Focus styling ── */
