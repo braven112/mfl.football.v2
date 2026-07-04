@@ -1320,3 +1320,60 @@ theme-color meta + fires `theme-change`. Do **not** call
 Restore the visitor's real theme on `astro:before-swap` (soft nav) and
 `pagehide` (hard nav / tab close) by calling `window.__applyTheme()` with no
 argument, which re-resolves from the cookie.
+
+---
+
+## 2026-07-04 - Dark Mode Migration Playbook
+
+**Context:** ~37 commits' worth of per-page dark-mode fixes (theme engine,
+per-page migrations, AFL navy ramp, team icon variants, QA harness) converged
+on the same handful of failure signatures and recipes across every page.
+Recording the playbook so future dark-mode work (new pages, or the remaining
+migration tail) doesn't rediscover it page by page.
+
+**Two failure signatures, in order of how often they bite:**
+
+1. **Hardcoded light hex under inverting text/background.** Literal `white`,
+   `--color-white`, or a hand-picked light hex used where a *surface* token
+   belongs never inverts — the page goes dark around it but that one element
+   stays light-mode. The AFL-specific variant: a raw brand constant like
+   `--afl-navy` used as **text** color is fine on a light card but goes
+   invisible once `html.dark[data-league="afl"]` repoints `--page-bg` to that
+   same navy (see the 2026-07-04 dead-var entry above for the `[id].astro`
+   trophy-wall case). Fix: surfaces route through `--card-bg`/`--input-bg`;
+   any `color-mix(..., white)` must mix against `var(--content-bg, white)`
+   instead of the literal keyword so the mix target inverts too.
+2. **Dead vars** — a `var(--never-defined-name, fallback)` that "worked" in
+   light mode purely because the fallback happened to match, then renders
+   wrong (or invisible) in dark because the fallback is a fixed light hex
+   that never inverts. See the dead-var → real-token mapping table above;
+   the fix is always the same shape (grep for the dead name across
+   not-yet-migrated pages, swap to the real token).
+
+**Five recipe one-liners** (reach for these instead of re-deriving):
+- Raised card in dark: `:global(html.dark) .card { box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg); }` — dark surfaces swallow soft shadows, so elevation needs a hairline border-via-shadow plus the (already ~2.5x brighter) `--shadow-lg`.
+- Tinted card/row: `color-mix(in srgb, <hue> 7-12%, var(--card-bg))` — mixes toward whatever `--card-bg` resolves to per theme, so one line covers both.
+- Darkening a brand hex for a hover state: `color-mix(in srgb, var(--color-primary) 80%, black)` instead of inventing a new fixed hex — tracks the token if the brand color changes and self-adjusts per theme.
+- Sprite icon color: pair `color: var(--accent)` with `fill: currentColor` on the `<use>` wrapper — CSS `color` alone doesn't cascade into SVG fill.
+- Page-local preview toggle (no persistence): call `window.__applyTheme('light'|'dark')` directly (never `setClientThemePreference()`), restore on `astro:before-swap` + `pagehide` by calling it with no argument.
+
+**The `:root {}`-in-scoped-Astro-style gotcha:** an Astro component's scoped
+`<style>` block silently does **not** scope a `:root { --token: ...; }` rule
+the way it scopes every other selector — but it's also easy to *think* you
+declared a token there and then find it "not working" for an unrelated
+reason. Never declare tokens inside a component's scoped styles; tokens only
+belong in `tokens.css` / `tokens-dark.css`.
+
+**Dev staleness (two independent traps, not dark-mode-specific but hit hard
+during this migration because of the sheer page count touched)** — full
+details in memory `project_dev_stale_css_gotchas.md`:
+- The PWA service worker (`public/sw.js`) cache-firsts CSS/JS, so a tab that
+  ever visited the site keeps serving pre-edit stylesheets across dev-server
+  restarts/HMR. `TheLeagueLayout.astro` registers it prod-only and actively
+  unregisters + clears caches in dev; manual escape hatch is DevTools →
+  Application → Service Workers → Unregister.
+- Vite file-watching in this worktree sometimes fires change events without
+  actually refreshing the served transform. When styles look stale after an
+  edit, `curl` the page/CSS from the dev server and `grep` it rather than
+  trusting a browser tab — and restart the dev server after batch edits
+  instead of trusting HMR to catch up.

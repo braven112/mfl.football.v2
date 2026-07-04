@@ -99,6 +99,32 @@ background: rgba(15, 23, 42, 0.45);
 backdrop-filter: blur(2px);
 ```
 
+### Dark Mode
+
+**CRITICAL:** Every component styles through tokens with defensive fallbacks and MUST render correctly under `html.dark` (and `html.dark[data-league="afl"]`'s navy ramp, not neutral gray). Verify both themes before shipping.
+
+The resolved theme is just the `dark` class on `<html>`, set pre-paint by `ThemeScript` from the `theme_pref` cookie (`light` / `dark` / `auto`). Never pick a theme server-side (SSR can't resolve `'auto'`), and never use `prefers-color-scheme` media queries in components — the class is the single resolver.
+
+**Known traps:**
+
+| Trap | Fix |
+|------|-----|
+| `--color-white` / literal `white` never invert | Surfaces must use `--card-bg` / `--input-bg`; `color-mix(..., white)` must mix against `var(--content-bg, white)` |
+| `:root{}` inside a scoped Astro `<style>` is NOT scoped | Never declare tokens there |
+| Dead vars silently fall back to light | Check the token actually exists in `tokens.css` before using it |
+| Sprite icon `<use>` wrappers stay the wrong color | Add `fill: currentColor` |
+
+**Recipes:**
+```css
+/* Dark raised-card */
+:global(html.dark) .card { box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg); }
+
+/* Tint */
+color-mix(in srgb, <hue> 7-12%, var(--card-bg))
+```
+
+QA harness: `/theleague/design-system` has a Light/Dark preview switcher — use it before shipping.
+
 ### Typography Scale
 
 | Role | Size | Weight | Notes |
