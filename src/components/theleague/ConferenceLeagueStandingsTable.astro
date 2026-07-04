@@ -221,7 +221,7 @@ function getRowColor(seed: number | undefined): string {
     border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
 
-  .conference-logo {
+  :global(.conference-logo) {
     height: 2.25rem;
     width: auto;
     object-fit: contain;
@@ -441,7 +441,7 @@ function getRowColor(seed: number | undefined): string {
       padding: 1rem 1.5rem;
     }
 
-    .conference-logo {
+    :global(.conference-logo) {
       height: 1.75rem;
     }
 

@@ -201,7 +201,7 @@ const prizes: Record<string, string[]> = {
     gap: 1rem;
   }
 
-  .tier-logo {
+  :global(.tier-logo) {
     height: 50px;
     width: auto;
     object-fit: contain;
@@ -523,7 +523,7 @@ const prizes: Record<string, string[]> = {
   }
 
   @media (max-width: 767px) {
-    .tier-logo {
+    :global(.tier-logo) {
       height: 35px;
     }
 
