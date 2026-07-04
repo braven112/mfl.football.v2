@@ -1216,3 +1216,13 @@ The repo had **no shared loading infrastructure** before this — 5 distinct spi
 **Insight:** The `@font-face` declarations in `src/styles/tokens.css` register UFC Sans Condensed at exactly two weights: 400 (CondensedMedium) and 700 (CondensedBold). Requesting any heavier weight (800/900) makes the browser synthesize faux-bold — it smears the glyphs wider, defeating the condensed face's whole purpose and reading as "too big" even when `font-size` matches the design px-for-px. The same applies to UFC Sans (400/500 only).
 
 **Recommendation:** For display/headline text use `font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif)` with `font-weight: 700` — never 800+. If a design mock looks "smaller" than the implementation at the same px size, check the font family and synthesized weight before touching `font-size`.
+
+---
+
+## 2026-07-04 - AFL Red via `var(--color-primary, #c41e3a)` Is a Bug — the Fallback Never Fires
+
+**Context:** 19 declarations across 7 AFL pages (about, keepers, calendar, rules, rules-chat, franchises index + [id]) used `var(--color-primary, #c41e3a)` or `var(--primary-color, #c41e3a)` intending "AFL red." Confirmed via computed styles: every one rendered TheLeague blue `#1c497c`, because `--color-primary` (and its `--primary-color` alias, tokens.css ~line 472) is always defined — a var() fallback only applies when the variable is *undefined*, not when its value isn't what you hoped. Under the dark-mode rescope, `--color-primary` becomes gold, so the same declarations would have silently turned gold in dark mode.
+
+**Insight:** A red hex in the fallback slot of a blue-resolving token is a latent copy-paste trap — it looks league-aware in the source and even shows red in devtools' fallback preview, but never on screen. `--color-primary` is intentionally never overridden for AFL (see "Per-League Theming" insight above); the only correct way to say "AFL red / TheLeague blue" is `var(--league-accent, #c41e3a)`, which resolves red on AFL in both light and dark (`html[data-league="afl"]` sets it, and tokens-dark.css leaves it alone).
+
+**Recommendation:** All 19 were swapped to `var(--league-accent, #c41e3a)` (2026-07-04). When writing or reviewing AFL styles, grep for the smell: `grep -rnE 'var\(--(color-primary|primary-color), ?#c41e3a\)' src/`. A fallback hex that differs in *hue* from the token's real value is almost always intent leaking into the wrong slot.
