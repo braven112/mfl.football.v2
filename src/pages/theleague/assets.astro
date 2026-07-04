@@ -357,13 +357,18 @@ const copyIcons = `
   }
 
   .gallery-header {
-    background: var(--gallery-content-bg, #1f2937);
-    color: #fff;
+    background: var(--color-gray-800, #1f2937);
+    color: var(--color-gray-50, #f9fafb);
     padding: 1rem 1.25rem;
     border-radius: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+  }
+
+  /* The layout's global h1 color rule beats inherited color — must target the element */
+  .gallery-header h1 {
+    color: var(--color-gray-50, #f9fafb);
   }
 
   .gallery-header p {

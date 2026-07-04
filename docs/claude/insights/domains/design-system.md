@@ -1226,3 +1226,17 @@ The repo had **no shared loading infrastructure** before this — 5 distinct spi
 **Insight:** A red hex in the fallback slot of a blue-resolving token is a latent copy-paste trap — it looks league-aware in the source and even shows red in devtools' fallback preview, but never on screen. `--color-primary` is intentionally never overridden for AFL (see "Per-League Theming" insight above); the only correct way to say "AFL red / TheLeague blue" is `var(--league-accent, #c41e3a)`, which resolves red on AFL in both light and dark (`html[data-league="afl"]` sets it, and tokens-dark.css leaves it alone).
 
 **Recommendation:** All 19 were swapped to `var(--league-accent, #c41e3a)` (2026-07-04). When writing or reviewing AFL styles, grep for the smell: `grep -rnE 'var\(--(color-primary|primary-color), ?#c41e3a\)' src/`. A fallback hex that differs in *hue* from the token's real value is almost always intent leaking into the wrong slot.
+
+---
+
+## 2026-07-04 - Dark Surface + Text Pairs Must Both Come From the Inverting Gray Scale
+
+**Context:** The Asset Library banner (`.gallery-header` in `src/pages/theleague/assets.astro`) rendered white text on near-white gray — invisible. The CSS was `background: var(--gallery-content-bg, #1f2937); color: #fff`.
+
+**Root cause (two-part):**
+1. **A `var()` fallback is not design intent.** The dark `#1f2937` fallback never applies when the token is defined anywhere up the cascade — and the page's own `<style>` set `--gallery-content-bg: #eeeeee` for its card wells. If an element needs a specific color, point it at the token that IS that color (`--color-gray-800`); don't rely on a fallback that a token definition silently overrides.
+2. **Picking the replacement text color:** in `tokens-dark.css` the gray scale inverts as a unit (`--color-gray-800` flips to light `#d8d8d8`, `--color-gray-50` flips to dark `#181818`) but `--color-white` stays `#ffffff` in both modes. So `gray-800` background + `--color-white` text would recreate the invisible-text bug in dark mode.
+
+**Root cause (part 3 — found in review):** setting `color` on the container is NOT enough. `TheLeagueLayout.astro` has a global element-level rule (`h1, h2, h3, h4 { color: var(--primary-link-default-text-color) }`), and a direct declaration on the element always beats an inherited value — regardless of specificity. The banner's `<h1>` stayed dark (`#111827` on `#1f2937`, 1.21:1) even with `color: var(--color-gray-50)` on `.gallery-header`. The bug slipped past the first verification pass because only the container's computed color and a screenshot were checked. **Verify heading fixes by reading the heading element's computed color, not the container's and not a screenshot.**
+
+**Recommendation:** For any surface/text pair that must keep contrast across light and dark modes, take BOTH sides from the gray scale so they invert together — e.g. `background: var(--color-gray-800, #1f2937); color: var(--color-gray-50, #f9fafb)`. Never pair a gray-scale background with `--color-white` / `--color-black` text. And when the surface contains headings or links, add an explicit rule for those elements (`.my-banner h1 { color: var(--color-gray-50, #f9fafb); }`) — the layout's global `h1`–`h4` and `a` color rules override anything the container tries to pass down by inheritance.
