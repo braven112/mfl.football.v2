@@ -541,7 +541,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
     justify-items: center;
     align-items: center;
     padding: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -558,12 +558,12 @@ const filteredHistoryRows = historyRows.filter((row) =>
     margin: 0;
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .draft-predictor-subtitle {
     margin: 0;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 1rem;
   }
 
@@ -576,7 +576,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
     align-items: center;
     justify-content: center;
     min-height: 400px;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     font-size: 1.125rem;
   }
 
@@ -590,26 +590,27 @@ const filteredHistoryRows = historyRows.filter((row) =>
     align-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 0.75rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
 
   .history-controls label {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .history-controls select {
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    border: 1px solid #cbd5e1;
-    background: #fff;
+    border: 1px solid var(--input-border, #cbd5e1);
+    background: var(--input-bg, #fff);
+    color: var(--input-text, inherit);
     min-width: 120px;
   }
 
   .history-table-wrapper {
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 0.75rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     overflow: auto;
@@ -621,24 +622,24 @@ const filteredHistoryRows = historyRows.filter((row) =>
   }
 
   .history-table thead {
-    background: #f8fafc;
+    background: var(--table-header-bg, #f8fafc);
   }
 
   .history-table th,
   .history-table td {
     padding: 0.75rem 1rem;
     text-align: left;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
     font-size: 0.95rem;
   }
 
   .history-table th {
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--table-header-text, #111827);
   }
 
   .history-table td {
-    color: var(--text-secondary-color, #475569);
+    color: var(--content-text-muted, #475569);
   }
 
   .history-notes {
@@ -659,7 +660,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
     height: 36px;
     border-radius: 50%;
     object-fit: cover;
-    background: #e2e8f0;
+    background: var(--color-gray-100, #e2e8f0);
   }
 
   .history-player__meta {
@@ -669,7 +670,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
 
   .history-player__name {
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
     font-size: 0.95rem;
   }
 
@@ -677,7 +678,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    color: var(--text-secondary-color, #475569);
+    color: var(--content-text-muted, #475569);
     font-size: 0.85rem;
   }
 
@@ -728,14 +729,14 @@ const filteredHistoryRows = historyRows.filter((row) =>
     margin: 0 0 1rem;
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .info-card ul {
     margin: 0;
     padding-left: 1.5rem;
     list-style: disc;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.925rem;
     line-height: 1.6;
   }
@@ -745,12 +746,12 @@ const filteredHistoryRows = historyRows.filter((row) =>
   }
 
   .info-card li strong {
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .info-card p {
     margin: 0;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.925rem;
     line-height: 1.6;
   }

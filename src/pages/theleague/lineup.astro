@@ -1983,7 +1983,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     bottom: calc(var(--lineup-submit-height) + 0.75rem);
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: var(--color-gray-800, #1f2937);
+    /* Fixed dark pill (toast/snackbar convention) — intentionally theme-independent */
+    background: #1f2937;
     color: var(--text-on-colored, #fff);
     padding: 0.5rem 1rem;
     border-radius: var(--radius-full, 9999px);

@@ -926,7 +926,7 @@ for (const p of allRspPlayers) {
     -webkit-overflow-scrolling: touch;
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 0.5rem;
-    background: var(--color-white, #fff);
+    background: var(--content-bg, #fff);
   }
   .rsp-table {
     width: 100%;
@@ -1004,7 +1004,7 @@ for (const p of allRspPlayers) {
     padding: 0.25rem 0.625rem;
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 0.25rem;
-    background: var(--color-white, #fff);
+    background: var(--content-bg, #fff);
     color: var(--color-gray-500, #6b7280);
     cursor: pointer;
     transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -1073,7 +1073,7 @@ for (const p of allRspPlayers) {
     border-left: 2px solid var(--content-border, #e2e8f0);
     border-radius: 0.5rem;
     overflow: hidden;
-    background: var(--color-white, #fff);
+    background: var(--content-bg, #fff);
   }
   .sleeper-card--high {
     border-left-color: var(--color-error, #dc2626);
@@ -1329,14 +1329,14 @@ for (const p of allRspPlayers) {
 
   /* Row highlights */
   .rsp-compare-row--taken {
-    background: #f8fafc !important;
+    background: color-mix(in srgb, var(--color-gray-500, #6b7280) 6%, var(--content-bg, white)) !important;
   }
   .rsp-compare-row--owned {
-    background: #f0fdf4 !important;
-    border-left: 3px solid #16a34a;
+    background: color-mix(in srgb, var(--color-success, #10b981) 8%, var(--content-bg, white)) !important;
+    border-left: 3px solid var(--color-success, #16a34a);
   }
   .rsp-compare-row--owned:hover {
-    background: #dcfce7 !important;
+    background: color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, white)) !important;
   }
 
   /* Owner badge */
@@ -1368,7 +1368,7 @@ for (const p of allRspPlayers) {
     max-width: 9rem;
   }
   .owner-badge--pigskins .owner-badge__name {
-    color: #16a34a;
+    color: var(--color-success-dark, #16a34a);
   }
   .owner-badge__contract {
     font-size: 0.625rem;
@@ -1424,13 +1424,13 @@ for (const p of allRspPlayers) {
     align-items: center;
     gap: 0.625rem;
     padding: 0.5rem 0.75rem;
-    background: #fff;
+    background: var(--content-bg, #fff);
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
   }
-  .affinity-card--high { border-left: 3px solid #16a34a; }
-  .affinity-card--medium { border-left: 3px solid #d97706; }
-  .affinity-card--low { border-left: 3px solid #dc2626; }
+  .affinity-card--high { border-left: 3px solid var(--color-success-dark, #16a34a); }
+  .affinity-card--medium { border-left: 3px solid var(--color-warning-dark, #d97706); }
+  .affinity-card--low { border-left: 3px solid var(--color-error, #dc2626); }
   .affinity-card__icon {
     width: 28px;
     height: 28px;
@@ -1472,6 +1472,49 @@ for (const p of allRspPlayers) {
   .affinity-chip--medium { background: #fef3c7; color: #b45309; }
   .affinity-chip--low { background: #fee2e2; color: #b91c1c; }
 
+  /* ─── Dark mode: badge/chip pill families ─────────────────────
+     Light literal hex pills (red/green/amber/blue/purple) don't invert
+     on their own — recolor to whisper-tint backgrounds + brighter text. */
+  :global(html.dark) .rsp-tab__badge,
+  :global(html.dark) .priority-badge--high,
+  :global(html.dark) .tier-badge--e,
+  :global(html.dark) .affinity-chip--low {
+    background: rgba(220, 38, 38, 0.15);
+    color: #f87171;
+  }
+  :global(html.dark) .affinity-chip--low {
+    color: #fca5a5;
+  }
+  :global(html.dark) .pos-badge--qb,
+  :global(html.dark) .class-badge--2026,
+  :global(html.dark) .tier-badge--b {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+  }
+  :global(html.dark) .pos-badge--rb,
+  :global(html.dark) .class-badge--2025,
+  :global(html.dark) .tier-badge--a,
+  :global(html.dark) .affinity-chip--high {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+  }
+  :global(html.dark) .pos-badge--wr,
+  :global(html.dark) .priority-badge--medium,
+  :global(html.dark) .class-badge--2024,
+  :global(html.dark) .tier-badge--d,
+  :global(html.dark) .affinity-chip--medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+  }
+  :global(html.dark) .pos-badge--te {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+  }
+  :global(html.dark) .tier-badge--c {
+    background: var(--color-gray-100, #1e1e1e);
+    color: var(--color-gray-600, #a0a0a0);
+  }
+
   /* ─── Mobile: table → stacked cards ─────────────────────────── */
   @media (max-width: 640px) {
     .rsp-metrics {
@@ -1486,7 +1529,7 @@ for (const p of allRspPlayers) {
     }
     .rsp-table thead { display: none; }
     .rsp-table tbody tr {
-      background: #fff;
+      background: var(--content-bg, #fff);
       border: 1px solid var(--content-border, #e2e8f0);
       border-radius: 0.5rem;
       margin-bottom: 0.75rem;

@@ -136,6 +136,47 @@
   --dr-chat-mention-color: var(--color-primary, #1c497c);
 }
 
+/* ── Draft Room dark-mode token overrides ──
+ * Self-contained --dr-* system, so dark values are pinned here rather than
+ * relying on the global --color-* fallbacks alone. Three families need fixing:
+ *  1. rgba(28, 73, 124, α) primary-tint washes — invisible against the
+ *     #1e1e1e/#121212 dark surfaces at light-mode alpha values. Rebuilt with
+ *     color-mix against the dark --color-primary (#3b82f6) so the tint reads.
+ *  2. --dr-pos-* position-coding colors — used as small text
+ *     (.dr-cell__meta--pos-*, .dr-board-row__meta--pos-*), and the light hexes
+ *     fall below 4.5:1 on dark cards (qb 3.45:1, wr 3.23:1, te 2.93:1).
+ *     Swapped for the same brightened family already used by
+ *     tokens-dark.css's semantic colors (--color-error/success/info/warning),
+ *     so position colors stay visually consistent with the rest of dark mode.
+ *  3. --dr-tier-*-soft — RSP tier group-header background washes
+ *     (PlayerPoolPanel.tsx .dr-tier-band). Light-mode alpha values wash out
+ *     to invisible on dark cards, which erases the tier grouping visually.
+ *     Rebuilt with color-mix against each tier's *original* accent color —
+ *     the --dr-tier-a..f base hexes themselves are left untouched (they're
+ *     only ever a solid background under fixed white .dr-tier-badge text,
+ *     which stays well above 3:1 in both themes; brightening them for dark
+ *     would break that white-on-badge contrast instead of fixing anything).
+ */
+html.dark .draft-room {
+  --dr-cell-bg-user: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, var(--content-bg, #1e1e1e));
+  --dr-chat-pick-bg: color-mix(in srgb, var(--color-primary, #3b82f6) 10%, var(--content-bg, #1e1e1e));
+  --dr-chat-reaction-active-bg: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #1e1e1e));
+
+  --dr-pos-qb: #f87171;
+  --dr-pos-rb: #34d399;
+  --dr-pos-wr: #60a5fa;
+  --dr-pos-te: #a78bfa;
+  --dr-pos-pk: #fbbf24;
+  --dr-pos-def: #9ca3af;
+
+  --dr-tier-a-soft: color-mix(in srgb, var(--dr-tier-a, #7c3aed) 18%, var(--content-bg, #1e1e1e));
+  --dr-tier-b-soft: color-mix(in srgb, var(--dr-tier-b, #1c497c) 22%, var(--content-bg, #1e1e1e));
+  --dr-tier-c-soft: color-mix(in srgb, var(--dr-tier-c, #16a34a) 18%, var(--content-bg, #1e1e1e));
+  --dr-tier-d-soft: color-mix(in srgb, var(--dr-tier-d, #d97706) 18%, var(--content-bg, #1e1e1e));
+  --dr-tier-e-soft: color-mix(in srgb, var(--dr-tier-e, #6b7280) 18%, var(--content-bg, #1e1e1e));
+  --dr-tier-f-soft: color-mix(in srgb, var(--dr-tier-f, #9ca3af) 18%, var(--content-bg, #1e1e1e));
+}
+
 /* ── Tier badge ──
  * Small A-F letter badge shown in pool rows, board cells, queue rows.
  * Use `data-tier="A"` attribute for scoped color.

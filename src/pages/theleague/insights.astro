@@ -1066,7 +1066,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .insights-card__code {
-    background: var(--color-gray-900, #111827);
+    /* Intentionally theme-independent (terminal/code-snippet styling — always dark bg + light text) */
+    background: #111827;
     color: #e5e7eb;
     border-radius: var(--radius-sm, 0.25rem);
     padding: 0.625rem 0.875rem;

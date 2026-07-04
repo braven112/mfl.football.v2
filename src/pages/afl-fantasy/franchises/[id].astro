@@ -652,20 +652,20 @@ for (const t of aflConfig.teams as any[]) {
   .franchise-hero__back {
     display: inline-block;
     margin-bottom: var(--spacing-md, 16px);
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     text-decoration: none;
     font-size: 0.875rem;
   }
 
   .franchise-hero__back:hover {
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
     text-decoration: underline;
   }
 
   /* One header lockup: banner anchors the top, identity + actions share the
      attached bar below — a single bordered unit, not stacked blocks. */
   .franchise-lockup {
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     border-radius: 12px;
     overflow: hidden;
     background: var(--card-bg, #ffffff);
@@ -677,7 +677,7 @@ for (const t of aflConfig.teams as any[]) {
     width: 100%;
     max-height: 220px;
     object-fit: contain;
-    background: var(--bg-muted, #f3f4f6);
+    background: var(--content-bg-muted, #f3f4f6);
   }
 
   .franchise-lockup__bar {
@@ -717,7 +717,7 @@ for (const t of aflConfig.teams as any[]) {
 
   .franchise-lockup__aliases {
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .franchise-actions {
@@ -732,9 +732,9 @@ for (const t of aflConfig.teams as any[]) {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.875rem;
-    background: #fff;
-    color: #c41e3a;
-    border: 1px solid #c41e3a;
+    background: var(--card-bg, #fff);
+    color: var(--color-primary, #c41e3a);
+    border: 1px solid var(--color-primary, #c41e3a);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -743,18 +743,18 @@ for (const t of aflConfig.teams as any[]) {
   }
 
   .franchise-action:hover {
-    background: #c41e3a;
+    background: var(--color-primary, #c41e3a);
     color: #fff;
   }
 
   .franchise-action--primary {
-    background: #c41e3a;
+    background: var(--color-primary, #c41e3a);
     color: #fff;
   }
 
   .franchise-action--primary:hover {
-    background: #a31a31;
-    border-color: #a31a31;
+    background: color-mix(in srgb, var(--color-primary, #c41e3a) 80%, black);
+    border-color: color-mix(in srgb, var(--color-primary, #c41e3a) 80%, black);
   }
 
   .franchise-action__icon {
@@ -784,13 +784,13 @@ for (const t of aflConfig.teams as any[]) {
   }
 
   .franchise-hero__tier-pill--dleague {
-    background: var(--bg-muted, #e5e7eb);
-    color: var(--text-default);
+    background: var(--content-bg-muted, #e5e7eb);
+    color: var(--page-text, #1a1a1a);
   }
 
   .franchise-hero__div {
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     align-self: center;
   }
 
@@ -800,7 +800,7 @@ for (const t of aflConfig.teams as any[]) {
   }
 
   .franchise-hero__aliases {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-size: 0.875rem;
     margin: 0;
   }
@@ -828,7 +828,7 @@ for (const t of aflConfig.teams as any[]) {
     align-items: center;
     gap: 0.75rem;
     padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     border-radius: 0.5rem;
     background: var(--card-bg, #ffffff);
   }
@@ -843,7 +843,7 @@ for (const t of aflConfig.teams as any[]) {
     height: 32px;
     object-fit: contain;
     border-radius: 0.375rem;
-    background: var(--surface, #fff);
+    background: var(--card-bg, #fff);
     flex-shrink: 0;
   }
 
@@ -861,7 +861,7 @@ for (const t of aflConfig.teams as any[]) {
 
   .name-history__years {
     font-size: 0.75rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-variant-numeric: tabular-nums;
   }
 
@@ -884,8 +884,8 @@ for (const t of aflConfig.teams as any[]) {
     margin-left: 0.5rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background: var(--surface-2, #f0f0f0);
-    color: var(--text-muted, #555);
+    background: var(--content-bg-muted, #f0f0f0);
+    color: var(--content-text-muted, #555);
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -913,7 +913,7 @@ for (const t of aflConfig.teams as any[]) {
     letter-spacing: 0.06em;
     padding-left: 0.625rem;
     border-left: 2px solid var(--league-accent, #1c497c);
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .name-history__list--prior .name-history__item {
@@ -923,7 +923,7 @@ for (const t of aflConfig.teams as any[]) {
   .name-history__related {
     margin: 0.75rem 0 0;
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .name-history__related a {
@@ -953,7 +953,7 @@ for (const t of aflConfig.teams as any[]) {
     gap: 0.5rem 0.75rem;
     margin-top: var(--spacing-sm, 8px);
     padding-top: var(--spacing-sm, 8px);
-    border-top: 1px solid var(--border-color, #e5e7eb);
+    border-top: 1px solid var(--content-border, #e5e7eb);
   }
 
   /* Middot before the count (label · count). The pip group is separated by gap
@@ -961,7 +961,7 @@ for (const t of aflConfig.teams as any[]) {
   .lockup-trophies__count::before {
     content: '·';
     margin-right: 0.75rem;
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
   }
 
   .lockup-trophies__label {
@@ -969,7 +969,10 @@ for (const t of aflConfig.teams as any[]) {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--afl-navy, #0f1e2e);
+    /* Was hardcoded to --afl-navy (#0f1e2e) — correct against a light card,
+       but --afl-navy IS the page background in dark mode, so navy-on-navy
+       text would vanish. Use page-text so it inverts with the theme. */
+    color: var(--page-text, #0f1e2e);
     text-decoration: none;
   }
 
@@ -979,7 +982,7 @@ for (const t of aflConfig.teams as any[]) {
 
   .lockup-trophies__count {
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-variant-numeric: tabular-nums;
   }
 
@@ -987,14 +990,14 @@ for (const t of aflConfig.teams as any[]) {
      Same middot + muted treatment as the count so they read as one cluster. */
   .lockup-trophies__rank {
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-variant-numeric: tabular-nums;
   }
 
   .lockup-trophies__rank::before {
     content: '·';
     margin-right: 0.75rem;
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
   }
 
   /* Caption + pips travel together so they wrap as one unit on narrow screens.
@@ -1014,7 +1017,7 @@ for (const t of aflConfig.teams as any[]) {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
   }
 
   /* On-brand title-type progress: six slim pips, gold when won, + ratio. */
@@ -1028,7 +1031,7 @@ for (const t of aflConfig.teams as any[]) {
     width: 16px;
     height: 5px;
     border-radius: 3px;
-    background: var(--border-color, #e5e7eb);
+    background: var(--content-border, #e5e7eb);
   }
 
   /* Brand trophy gold — matches the award-badge art, not the orange --afl-gold. */
@@ -1046,11 +1049,13 @@ for (const t of aflConfig.teams as any[]) {
     font-size: 0.75rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: var(--afl-navy, #0f1e2e);
+    /* Was hardcoded to --afl-navy — that's the page background in dark
+       mode, so navy-on-navy text would vanish. Use page-text instead. */
+    color: var(--page-text, #0f1e2e);
   }
 
   .title-pips__total {
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
   }
 
   /* Trophy case — one badge per win; dated majors are year-stamped. */
@@ -1072,7 +1077,7 @@ for (const t of aflConfig.teams as any[]) {
     padding-left: 0.625rem;
     border-left: 2px solid var(--afl-trophy-gold, #c9a44c);
     margin: 0 0 var(--spacing-md, 16px) 0;
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
   }
 
   /* League-wide rank for this tier, e.g. "· 1st of 24". Muted, mixed-case, and
@@ -1082,14 +1087,14 @@ for (const t of aflConfig.teams as any[]) {
     font-weight: 600;
     text-transform: none;
     letter-spacing: 0.02em;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-variant-numeric: tabular-nums;
   }
 
   .trophy-tier__rank::before {
     content: '·';
     margin-right: 0.375rem;
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
   }
 
   /* Small team icon anchoring each tier headline: img | headline. */
@@ -1153,7 +1158,7 @@ for (const t of aflConfig.teams as any[]) {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
     pointer-events: none;
   }
 
@@ -1176,7 +1181,7 @@ for (const t of aflConfig.teams as any[]) {
   }
 
   .badge-wall__empty {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-size: 0.9375rem;
   }
 
@@ -1187,7 +1192,7 @@ for (const t of aflConfig.teams as any[]) {
 
   .champ-list li {
     padding: var(--spacing-sm, 8px) 0;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
   }
 
   .champ-list__year {
@@ -1196,11 +1201,11 @@ for (const t of aflConfig.teams as any[]) {
   }
 
   .champ-list__win .champ-list__verb {
-    color: #d97706;
+    color: var(--afl-gold, #d97706);
   }
 
   .champ-list__loss .champ-list__verb {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .quick-links {
@@ -1212,14 +1217,14 @@ for (const t of aflConfig.teams as any[]) {
   .quick-link {
     padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     border-radius: 8px;
     text-decoration: none;
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
     font-weight: 500;
   }
 
   .quick-link:hover {
-    background: var(--bg-muted, #f3f4f6);
+    background: var(--content-bg-muted, #f3f4f6);
   }
 </style>

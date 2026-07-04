@@ -1260,3 +1260,75 @@ The repo had **no shared loading infrastructure** before this — 5 distinct spi
 **Insight:** Every data file that references the shared sprite (`public/assets/icons/sprite.svg`) — `whats-new.json`, `page-directory.json`, `nav-config.json` — stores the bare glyph name; display code prepends `icon-`. A wrong value fails completely silently: `<use>` pointing at a missing fragment renders nothing. This class of bug is now blocked at PR time for all three files: `tests/helpers/sprite-icons.ts` exports `describeSpriteIconValidation(label, refs)`, which registers the standard three-test suite (sprite parse sanity, no `icon-` double-prefix, every value exists as a `<symbol>` glyph). Consumers: `whats-new-data.test.ts`, `page-directory-data.test.ts`, `nav-config-icons.test.ts` (the latter covers `icon`, `iconAFL`, and footer links).
 
 **Recommendation:** When adding an icon reference to any data file, use the bare glyph name and pick from the sprite's actual inventory (`grep -o 'id="icon-[^"]*"' public/assets/icons/sprite.svg`). If a new data file starts referencing the sprite, call `describeSpriteIconValidation()` from `tests/helpers/sprite-icons.ts` in its data test — map each entry to `{ source, icon }` — rather than reimplementing the checks.
+
+---
+## 2026-07-04 - Dark-Mode Token Migration: The AFL Dead-Var Family
+
+**Context:** Migrating older AFL Fantasy pages (`rules.astro`, `rules-chat.astro`,
+`keepers.astro`, `franchises/index.astro`, `franchises/[id].astro`) plus
+`theleague/design-system.astro` to be dark-mode-safe.
+
+**Insight:** A cluster of AFL pages was written against a set of CSS custom
+properties that were **never defined in `tokens.css`/`tokens-dark.css`**.
+Because `var(--undefined-name, fallback)` still renders via its fallback, these
+pages "worked" in light mode by accident — but the fallback is a fixed light
+hex that never inverts, so every one of these was a dark-mode bug waiting to
+surface. The dead-var → real-token mapping (consistent across all 5 files):
+
+| Dead var (never defined) | Real token |
+|---|---|
+| `--text-muted` | `--content-text-muted` |
+| `--text-default` (no fallback) | `--page-text` |
+| `--border-color` | `--content-border` |
+| `--primary-color` | `--color-primary` |
+| `--bg-muted` / `--code-bg` | `--content-bg-muted` |
+| `--surface` / `--surface-2` | `--card-bg` / `--content-bg-muted` |
+| `--color-bg-subtle` / `--color-border-subtle` | `--content-bg-muted` / `--content-border` |
+| `--color-text-strong` / `--color-text-muted` | `--color-gray-900` / `--content-text-muted` |
+
+`--text-default` is the sneaky one: with no fallback value, an undefined
+`var()` makes the whole declaration invalid, which for the inherited `color`
+property computes to the inherited value — so it often *happened* to render
+correctly (inheriting `--page-text` from `body`) while still being wrong to
+leave in place (no dark-mode guarantee, easy to break if the DOM structure
+changes). Grep for `var(--text-default)`, `var(--text-muted`, `var(--border-color`,
+`var(--primary-color`, `var(--bg-muted`, `var(--surface` across any
+not-yet-migrated AFL page — this exact list keeps recurring file to file.
+
+**Second bug pattern found:** `var(--afl-navy, #0f1e2e)` used as a **text**
+color (`franchises/[id].astro` — trophy-wall label + title-pips ratio).
+`--afl-navy` (#0f1e2e) is deep navy — correct for text on a light card, but
+it's *also* the dark-mode page background (`html.dark[data-league="afl"]`
+sets `--page-bg: var(--afl-navy)`), so navy-on-navy text goes invisible.
+Any raw `--afl-navy`/`--afl-gold`-style brand constant used as *text* (not a
+background/border/accent) should be double-checked against dark mode — these
+brand hexes are fixed, not part of the inverted token ramp.
+
+**Third pattern:** hardcoded per-button hex trios like
+`background:#fff; color:#c41e3a; border:1px solid #c41e3a;` with a hover that
+hardcodes a hand-picked darker shade (`#a01830`, `#a31a31`) — convert the base
+three to `--card-bg` / `--color-primary`, and the hover darken to
+`color-mix(in srgb, var(--color-primary) 80%, black)` rather than inventing a
+new fixed hex — it tracks the token if the brand color ever changes and
+self-adjusts in dark mode without a separate override.
+
+**Known pre-existing gotcha (not fixed, flagged separately):** many AFL pages
+write `var(--color-primary, #c41e3a)` intending "AFL red, red fallback" — but
+`--color-primary` is *deliberately* never overridden for AFL (see the comment
+block in `tokens.css` ~line 620: TheLeague blue is kept for links/headings/nav
+on purpose). AFL's actual accent lives in `--league-accent` (red in both
+light and dark AFL modes). This means those `var(--color-primary, #c41e3a)`
+call sites resolve to blue at runtime, not red — the red only shows if you
+read the fallback in devtools. This is a widespread, pre-existing pattern
+across many AFL files (not introduced by dark-mode migration work) and needs
+its own investigation/fix pass rather than a drive-by change during a
+token-migration task.
+
+**Preview switcher pattern (design-system.astro):** to add a page-local
+light/dark toggle that never persists, call `window.__applyTheme('light'|'dark')`
+(defined by `ThemeScript.astro`) directly — it only toggles the `dark` class +
+theme-color meta + fires `theme-change`. Do **not** call
+`setClientThemePreference()` (that's what writes the `theme_pref` cookie).
+Restore the visitor's real theme on `astro:before-swap` (soft nav) and
+`pagehide` (hard nav / tab close) by calling `window.__applyTheme()` with no
+argument, which re-resolves from the cookie.

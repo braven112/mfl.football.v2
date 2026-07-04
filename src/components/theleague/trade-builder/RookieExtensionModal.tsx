@@ -154,7 +154,8 @@ export default function RookieExtensionModal({
           .rookie-modal__overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -182,7 +183,7 @@ export default function RookieExtensionModal({
           .rookie-modal__title {
             font-size: 1.125rem;
             font-weight: 700;
-            color: var(--text-color, #1f2937);
+            color: var(--page-text, #1f2937);
             margin: 0;
           }
           .rookie-modal__close {
@@ -195,7 +196,7 @@ export default function RookieExtensionModal({
             line-height: 1;
           }
           .rookie-modal__close:hover {
-            color: var(--text-color, #1f2937);
+            color: var(--page-text, #1f2937);
           }
           .rookie-modal__player {
             display: flex;
@@ -205,7 +206,7 @@ export default function RookieExtensionModal({
           .rookie-modal__name {
             font-size: 1rem;
             font-weight: 700;
-            color: var(--text-color, #1f2937);
+            color: var(--page-text, #1f2937);
           }
           .rookie-modal__pos {
             font-size: 0.8125rem;
@@ -227,7 +228,7 @@ export default function RookieExtensionModal({
             padding: 0.25rem 0;
           }
           .rookie-modal__row--highlight {
-            background: var(--primary-light-bg, #f0f4f8);
+            background: var(--content-bg-muted, #f0f4f8);
             padding: 0.5rem;
             border-radius: 0.375rem;
           }
@@ -252,7 +253,7 @@ export default function RookieExtensionModal({
           .rookie-modal__formula {
             margin-top: 0.5rem;
             padding: 0.5rem;
-            background: #f8fafc;
+            background: var(--content-bg-muted, #f8fafc);
             border-radius: 0.375rem;
             border: 1px solid var(--primary-content-border-color, #e2e8f0);
           }
@@ -267,7 +268,7 @@ export default function RookieExtensionModal({
           }
           .rookie-modal__formula-text {
             font-size: 0.8125rem;
-            color: var(--text-color, #1f2937);
+            color: var(--page-text, #1f2937);
             font-family: var(--font-family-mono);
           }
           .rookie-modal__cap-preview {
@@ -293,7 +294,7 @@ export default function RookieExtensionModal({
             align-items: center;
             gap: 0.125rem;
             padding: 0.375rem 0.5rem;
-            background: var(--primary-light-bg, #f0f4f8);
+            background: var(--content-bg-muted, #f0f4f8);
             border-radius: 0.375rem;
             min-width: 4rem;
           }
@@ -306,7 +307,7 @@ export default function RookieExtensionModal({
           .rookie-modal__cap-yr-value {
             font-size: 0.8125rem;
             font-weight: 600;
-            color: var(--text-color, #1f2937);
+            color: var(--page-text, #1f2937);
           }
           .rookie-modal__actions {
             display: flex;
@@ -330,8 +331,8 @@ export default function RookieExtensionModal({
             color: var(--muted-text-color, #6b7280);
           }
           .rookie-modal__btn--cancel:hover {
-            border-color: var(--text-color, #1f2937);
-            color: var(--text-color, #1f2937);
+            border-color: var(--page-text, #1f2937);
+            color: var(--page-text, #1f2937);
           }
           .rookie-modal__btn--apply {
             background: var(--primary-color, #1c497c);

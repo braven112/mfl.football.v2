@@ -175,7 +175,7 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd, ranking
         .player-selector__search:focus-visible {
           outline: none;
           border-color: var(--color-primary, #1c497c);
-          box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.1);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 10%, transparent);
         }
         .player-selector__positions {
           display: flex;
@@ -348,6 +348,10 @@ function PlayerRow({
         .player-row__badge--tag {
           background: var(--color-franchise-tag-light, #ede9fe);
           color: var(--color-franchise-tag, #7c3aed);
+        }
+        :global(html.dark) .player-row__badge--tag {
+          background: rgba(124, 58, 237, 0.2);
+          color: #c4b5fd;
         }
         .player-row__trade-bait {
           font-size: 0.75rem;

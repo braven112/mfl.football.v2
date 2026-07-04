@@ -433,7 +433,7 @@ export default function PendingTradesPanel({
           bottom: 0;
           width: 400px;
           max-width: 100%;
-          background: var(--color-white, #fff);
+          background: var(--card-bg, #fff);
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
           display: flex;
           flex-direction: column;
@@ -610,7 +610,7 @@ export default function PendingTradesPanel({
           padding: 0.125rem 0.375rem;
           flex: 1;
           max-width: 70%;
-          background: var(--color-white, #fff);
+          background: var(--input-bg, #fff);
         }
         .ptp-draft-rename:focus {
           outline: 2px solid var(--color-primary, #1c497c);
@@ -711,7 +711,7 @@ export default function PendingTradesPanel({
         }
         .ptp-draft-link:hover { color: var(--color-gray-600, #4b5563); }
         .ptp-draft-link--danger { color: var(--color-error, #dc2626); font-weight: 600; }
-        .ptp-draft-link--danger:hover { color: #b91c1c; }
+        .ptp-draft-link--danger:hover { color: var(--color-error-dark, #b91c1c); }
         .ptp-draft-link:focus-visible {
           outline: 2px solid var(--color-primary, #1c497c);
           outline-offset: 2px;
