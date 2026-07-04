@@ -24,19 +24,22 @@ import { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo } from './afl-tier-
 export { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo };
 
 /**
- * First season of the all-play side competition. The inaugural year ran as ONE
- * combined 24-team table (no separate tier champions — the awards ledger
- * records none for 2016); its final standings seeded the tiers for 2017: top
- * 12 → Premier League, bottom 12 → D-League.
+ * First season of the all-play side competition — the year after the last AFL
+ * Cup (the Cup ran 2015-2016). The inaugural year ran as ONE combined 24-team
+ * table with no Premier League branding; its final standings seeded the tiers
+ * for 2018: top 12 → Premier League, bottom 12 → D-League. No skin grouping
+ * script exists for 2017 because one table needs no grouping.
  */
-export const TIER_COMPETITION_FIRST_SEASON = 2016;
+export const TIER_COMPETITION_FIRST_SEASON = 2017;
 
 /**
- * First season played as split Premier League / D-League tables — the first
- * year with distinct tier champions (awards-history: Smokane FC / Titsburgh
- * Feelers, source manual:league-awards). Per-season tier ROSTERS for 2017-2019
- * were never recorded anywhere recoverable (tier-history.json starts at 2020),
- * so those seasons can only be rendered as a combined all-play table.
+ * First season played as split Premier League / D-League tables. Membership
+ * for every split season 2018+ comes from the league skin's per-year grouping
+ * scripts (mfl.football/afl-fantasy.com/assets/js/premierleague-YYYY.js) —
+ * per Brandon, those js files are THE source of truth for who was in which
+ * league — recorded in tier-history.json. Verified: cutoff-week all-play
+ * within the js tiers reproduces the hand-recorded champions for 2018
+ * (Premier 0014 / D-League 0003) and 2019 (0001 / 0002).
  *
  * Movement rule note: owners who join the league always START in the D-League,
  * regardless of which tier the franchise slot they take over competed in — in
@@ -46,7 +49,7 @@ export const TIER_COMPETITION_FIRST_SEASON = 2016;
  * need the recorded membership (or a manual correction) rather than the pure
  * constitution formula.
  */
-export const TIER_SPLIT_FIRST_SEASON = 2017;
+export const TIER_SPLIT_FIRST_SEASON = 2018;
 
 /** A season's tier champions, keyed by award slug. */
 export interface TierChampions {

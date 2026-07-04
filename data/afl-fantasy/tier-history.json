@@ -1,5 +1,5 @@
 {
-  "$comment": "AFL Fantasy per-season tier (Premier League / D-League) membership and champions — the single source of truth for the all-play side competition. MFL does NOT store tier membership (its all-play export returns one 24-team list with no tier markers), so it lives here. Keyed by year. `membership` maps franchiseId -> tier as teams competed THAT season; `champions` records the #1 of each tier (slugs premier-league / dleague-champion). Membership for the latest completed season is seeded from afl.config.json; future-year membership and computed champions are written by scripts/compute-afl-tier-movement.mjs (promotion/relegation roll-forward, idempotent). 2020-2024 membership was recovered from the league skin's per-year grouping scripts (mfl.football/afl-fantasy.com/assets/js/premierleague-YYYY.js) which hardcode each season's Premier/D-League rosters; those years' champions remain hand-entered. The competition began in 2016 as ONE combined 24-team all-play table (no separate tier champions that year); its top 12 formed the 2017 Premier League, the bottom 12 the D-League. Split-tier seasons ran 2017+ (champions in awards-history.json, source manual:league-awards), but per-season ROSTERS for 2017-2019 were never recorded anywhere recoverable (no grouping script is published before 2020), so those seasons have no membership here and render as a combined table. Movement rule: owners who JOIN the league always start in the D-League regardless of which tier their franchise slot held — a turnover year relegates correspondingly fewer Premier League teams, so the pure constitution roll-forward cannot reconstruct those years.",
+  "$comment": "AFL Fantasy per-season tier (Premier League / D-League) membership and champions — the single source of truth for the all-play side competition. MFL does NOT store tier membership (its all-play export returns one 24-team list with no tier markers), so it lives here. Keyed by year. `membership` maps franchiseId -> tier as teams competed THAT season; `champions` records the #1 of each tier (slugs premier-league / dleague-champion). Membership for the latest completed season is seeded from afl.config.json; future-year membership and computed champions are written by scripts/compute-afl-tier-movement.mjs (promotion/relegation roll-forward, idempotent). 2018-2025 membership was recovered from the league skin's per-year grouping scripts (mfl.football/afl-fantasy.com/assets/js/premierleague-YYYY.js) which hardcode each season's Premier/D-League rosters; those years' champions remain hand-entered. The competition began in 2017 — the year after the last AFL Cup (2015-2016) — as ONE combined 24-team all-play table; its top 12 formed the 2018 Premier League, the bottom 12 the D-League. Split-tier seasons ran 2018+ and every split season 2018-2025 has a skin grouping script (the ONE source of truth for membership, per Brandon); 2017 has none because one table needs no grouping. The 2025 entry was originally mis-seeded from an afl.config snapshot and is corrected to match premierleague-2025.js. Movement rule: owners who JOIN the league always start in the D-League regardless of which tier their franchise slot held — a turnover year relegates correspondingly fewer Premier League teams, so the pure constitution roll-forward cannot reconstruct those years.",
   "movementRules": {
     "tierSize": 12,
     "autoPromote": 2,
@@ -17,6 +17,74 @@
     }
   },
   "seasons": {
+    "2018": {
+      "membership": {
+        "0001": "Premier League",
+        "0002": "D-League",
+        "0003": "D-League",
+        "0004": "Premier League",
+        "0005": "Premier League",
+        "0006": "D-League",
+        "0007": "D-League",
+        "0008": "D-League",
+        "0009": "Premier League",
+        "0010": "Premier League",
+        "0011": "Premier League",
+        "0012": "D-League",
+        "0013": "Premier League",
+        "0014": "Premier League",
+        "0015": "D-League",
+        "0016": "Premier League",
+        "0017": "Premier League",
+        "0018": "D-League",
+        "0019": "D-League",
+        "0020": "D-League",
+        "0021": "Premier League",
+        "0022": "Premier League",
+        "0023": "D-League",
+        "0024": "D-League"
+      },
+      "membershipSource": "recovered from the league skin's official per-year grouping script (mfl.football/afl-fantasy.com/assets/js/premierleague-2018.js), the same script that renders the Premier/D-League tables on the MFL site — verified: cutoff-week all-play within these tiers reproduces the hand-recorded champions (Premier 0014, D-League 0003)",
+      "champions": {
+        "premier-league": "0014",
+        "dleague-champion": "0003"
+      },
+      "championsSource": "manual:league-awards (independently reproduced by computed all-play within the skin-js tiers)"
+    },
+    "2019": {
+      "membership": {
+        "0001": "Premier League",
+        "0002": "D-League",
+        "0003": "Premier League",
+        "0004": "D-League",
+        "0005": "Premier League",
+        "0006": "D-League",
+        "0007": "D-League",
+        "0008": "D-League",
+        "0009": "Premier League",
+        "0010": "Premier League",
+        "0011": "D-League",
+        "0012": "Premier League",
+        "0013": "Premier League",
+        "0014": "Premier League",
+        "0015": "D-League",
+        "0016": "D-League",
+        "0017": "Premier League",
+        "0018": "D-League",
+        "0019": "Premier League",
+        "0020": "D-League",
+        "0021": "D-League",
+        "0022": "Premier League",
+        "0023": "Premier League",
+        "0024": "D-League"
+      },
+      "membershipSource": "recovered from the league skin's official per-year grouping script (mfl.football/afl-fantasy.com/assets/js/premierleague-2019.js), the same script that renders the Premier/D-League tables on the MFL site — verified: cutoff-week all-play within these tiers reproduces the hand-recorded champions (Premier 0001, D-League 0002)",
+      "champions": {
+        "premier-league": "0001",
+        "dleague-champion": "0002"
+      },
+      "championsSource": "manual:league-awards (independently reproduced by computed all-play within the skin-js tiers)"
+    },
     "2020": {
       "membership": {
         "0001": "Premier League",
@@ -200,7 +268,7 @@
         "0009": "Premier League",
         "0010": "Premier League",
         "0011": "D-League",
-        "0012": "Premier League",
+        "0012": "D-League",
         "0013": "D-League",
         "0014": "D-League",
         "0015": "Premier League",
@@ -212,9 +280,9 @@
         "0021": "Premier League",
         "0022": "Premier League",
         "0023": "D-League",
-        "0024": "D-League"
+        "0024": "Premier League"
       },
-      "membershipSource": "afl.config snapshot — verified: ranking the 2025 cutoff-week all-play within these tiers reproduces the recorded champions (Premier 0015, D-League 0017)",
+      "membershipSource": "recovered from the league skin's official per-year grouping script (mfl.football/afl-fantasy.com/assets/js/premierleague-2025.js), the same script that renders the Premier/D-League tables on the MFL site — corrects the earlier afl.config snapshot seed, which had 0012 (Suh girls, one cup) and 0024 (No Soup For You) swapped; champions unaffected (Premier 0015, D-League 0017 reproduce either way)",
       "champions": {
         "premier-league": "0015",
         "dleague-champion": "0017"
@@ -229,7 +297,7 @@
           "0008",
           "0009",
           "0001",
-          "0012",
+          "0024",
           "0010",
           "0006",
           "0020",
@@ -240,8 +308,8 @@
           "0011",
           "0005",
           "0018",
+          "0012",
           "0007",
-          "0024",
           "0004",
           "0016",
           "0023",
@@ -264,9 +332,9 @@
         "0001": "Premier League",
         "0005": "Premier League",
         "0018": "Premier League",
-        "0012": "Premier League",
+        "0024": "Premier League",
+        "0012": "D-League",
         "0007": "D-League",
-        "0024": "D-League",
         "0010": "D-League",
         "0006": "D-League",
         "0020": "D-League",

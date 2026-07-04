@@ -150,13 +150,14 @@ const divisionStandings = getDivisionStandings(franchises, seasonConfig);
 const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '00');
 const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01');
 // All-play side competition, era-aware:
-// - pre-2016: no competition existed — the view is hidden entirely.
-// - 2016: inaugural season, ONE combined 24-team table; its top 12 formed the
-//   2017 Premier League, the bottom 12 the D-League.
-// - 2017-2019: split tiers existed (champions were crowned) but the rosters
-//   were never recorded (tier-history.json starts 2020) — rendering by today's
-//   tiers would be fiction, so these also show the combined table.
-// - 2020+: grouped by THAT season's recorded makeup from tier-history.json.
+// - pre-2017 (the AFL Cup era and before): no competition — view hidden.
+// - 2017: inaugural season, ONE combined 24-team table with no Premier League
+//   branding (its top 12 seeded the 2018 tiers, but the season itself was one
+//   simple all-play table).
+// - 2018+: grouped by THAT season's makeup from tier-history.json, recovered
+//   from the league skin's premierleague-YYYY.js grouping scripts (the source
+//   of truth for who was in which league). Any season missing a record falls
+//   back to the plain combined table rather than inventing a split.
 const tierMembership = getTierMembership(selectedYear);
 const allPlayEra = selectedYear >= TIER_COMPETITION_FIRST_SEASON;
 const hasTierRecord = tierMembership !== null;
@@ -165,7 +166,6 @@ const tierAllPlayStandings = hasTierRecord
   : [];
 const combinedAllPlayStandings =
   allPlayEra && !hasTierRecord ? getAllPlayStandings(franchises, seasonConfig, calculatedAllPlay) : [];
-const isInauguralAllPlaySeason = selectedYear === TIER_COMPETITION_FIRST_SEASON;
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
     team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
@@ -237,16 +237,10 @@ const promoRegTeams = [
             <p class="subtitle">All-play side competition • Bottom 2 of bubble drop to D-League next year</p>
           </>
         )}
-        {view === 'all_play' && !hasTierRecord && isInauguralAllPlaySeason && (
+        {view === 'all_play' && !hasTierRecord && (
           <>
             <h1 class="section-title">All-Play Standings</h1>
-            <p class="subtitle">Inaugural all-play season — one 24-team table. The top 12 formed the {selectedYear + 1} Premier League; the bottom 12 the D-League.</p>
-          </>
-        )}
-        {view === 'all_play' && !hasTierRecord && !isInauguralAllPlaySeason && (
-          <>
-            <h1 class="section-title">All-Play Standings</h1>
-            <p class="subtitle">Premier League / D-League rosters for {selectedYear} weren't recorded — showing the combined all-play table.</p>
+            <p class="subtitle">League-wide all-play — every team plays every other team, every week</p>
           </>
         )}
       </div>
@@ -388,7 +382,6 @@ const promoRegTeams = [
             teams={combinedAllPlayStandings}
             year={selectedYear}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
           />
         </div>
       )}

@@ -7,24 +7,13 @@ export interface Props {
   teams: TeamStanding[];
   year?: number;
   rosterBaseUrl?: string;
-  /**
-   * Draw a divider below this rank — used by the inaugural 2016 season, where
-   * the competition ran as ONE 24-team table and the top 12 formed the next
-   * year's Premier League (bottom 12 the D-League).
-   */
-  promotionCutoff?: number;
 }
 
-const {
-  tierName,
-  teams,
-  year = new Date().getFullYear(),
-  rosterBaseUrl,
-  promotionCutoff,
-} = Astro.props;
+const { tierName, teams, year = new Date().getFullYear(), rosterBaseUrl } = Astro.props;
 
-// Real tiers get their badge; a combined table (the 2016-2019 seasons rendered
-// as one group) has no tier logo.
+// Real tiers get their badge; a combined table (the inaugural 2017 season, or
+// any season without a recorded tier split) is a plain all-play table with no
+// Premier League branding.
 const tierLogo = tierName === PREMIER_LEAGUE || tierName === D_LEAGUE ? getTierLogo(tierName) : null;
 
 function parseWLT(wlt: string | undefined) {
@@ -103,7 +92,6 @@ const prizes: Record<string, string[]> = {
             if (rank === 2) borderClass = 'border-below-green';
             if (rank === 4) borderClass = 'border-below-playoff';
           }
-          if (rank === promotionCutoff) borderClass = 'border-below';
 
           return (
             <tr class={`${rowClass} ${borderClass}`}>
