@@ -1,17 +1,31 @@
 ---
 import type { TeamStanding } from '../../types/standings';
-import { getTierLogo } from '../../utils/afl-tier-logo';
+import { getTierLogo, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
 
 export interface Props {
   tierName: string;
   teams: TeamStanding[];
   year?: number;
   rosterBaseUrl?: string;
+  /**
+   * Draw a divider below this rank — used by the inaugural 2016 season, where
+   * the competition ran as ONE 24-team table and the top 12 formed the next
+   * year's Premier League (bottom 12 the D-League).
+   */
+  promotionCutoff?: number;
 }
 
-const { tierName, teams, year = new Date().getFullYear(), rosterBaseUrl } = Astro.props;
+const {
+  tierName,
+  teams,
+  year = new Date().getFullYear(),
+  rosterBaseUrl,
+  promotionCutoff,
+} = Astro.props;
 
-const tierLogo = getTierLogo(tierName);
+// Real tiers get their badge; a combined table (the 2016-2019 seasons rendered
+// as one group) has no tier logo.
+const tierLogo = tierName === PREMIER_LEAGUE || tierName === D_LEAGUE ? getTierLogo(tierName) : null;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -19,12 +33,14 @@ function parseWLT(wlt: string | undefined) {
   return { w: parts[0] || 0, l: parts[1] || 0, t: parts[2] || 0 };
 }
 
-// Derive all_play_wlt from percentage when the record is missing
+// Derive all_play_wlt from percentage when the record is missing. A zero pct
+// with no record means the feed predates all-play tracking — deriving 0-240-0
+// from it would fabricate a season, so treat that as no data too.
 function deriveAllPlayWLT(pct: string | undefined, seasonYear: number): { w: number; l: number; t: number } | null {
   if (!pct) return null;
   const TOTAL_GAMES = seasonYear >= 2021 ? 255 : 240;
   const percentage = parseFloat(pct);
-  if (isNaN(percentage)) return null;
+  if (isNaN(percentage) || percentage <= 0) return null;
   const wins = Math.round(TOTAL_GAMES * percentage);
   const losses = TOTAL_GAMES - wins;
   return { w: wins, l: losses, t: 0 };
@@ -39,7 +55,7 @@ const prizes: Record<string, string[]> = {
 
 <div class="tier-standings-container">
   <div class="tier-header-section">
-    <img src={tierLogo} alt={`${tierName} Logo`} class="tier-logo" />
+    {tierLogo && <img src={tierLogo} alt={`${tierName} Logo`} class="tier-logo" />}
     <h3 class="tier-header">{tierName}</h3>
   </div>
 
@@ -87,6 +103,7 @@ const prizes: Record<string, string[]> = {
             if (rank === 2) borderClass = 'border-below-green';
             if (rank === 4) borderClass = 'border-below-playoff';
           }
+          if (rank === promotionCutoff) borderClass = 'border-below';
 
           return (
             <tr class={`${rowClass} ${borderClass}`}>

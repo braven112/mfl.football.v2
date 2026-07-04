@@ -3,15 +3,22 @@ import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
   activeView: 'division' | 'league' | 'all_play';
+  /**
+   * Hide the All-Play tab for seasons that predate the side competition
+   * (AFL: before 2016 — see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
+   */
+  showAllPlay?: boolean;
 }
 
-const { activeView } = Astro.props;
+const { activeView, showAllPlay = true } = Astro.props;
 
-const VIEWS = [
+const ALL_VIEWS = [
   { key: 'division', label: 'Division', icon: 'icon-numberone', aria: 'Division Standings' },
   { key: 'league', label: 'Playoff', icon: 'icon-trophy', aria: 'Playoff Standings' },
   { key: 'all_play', label: 'All-Play', icon: 'icon-line-chart', aria: 'All-Play Standings' },
 ] as const;
+
+const VIEWS = ALL_VIEWS.filter((v) => v.key !== 'all_play' || showAllPlay);
 
 // Build each tab's href from the current URL so other params (e.g. ?year=)
 // are preserved. Real <a> links work without JS and survive view transitions,

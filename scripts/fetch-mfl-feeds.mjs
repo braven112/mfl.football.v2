@@ -20,6 +20,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 
 const getNonEmpty = (value) => {
   if (value === undefined || value === null) return undefined;
@@ -689,31 +690,9 @@ const run = async () => {
 
   if (weeklyResults.length > 0) {
     writeOut('weekly-results-raw', weeklyResults);
-    const normalized = {
-      weeks: weeklyResults.map((weekPayload) => {
-        const weekVal = Number(weekPayload?.weeklyResults?.week) || undefined;
-        const matchups = weekPayload?.weeklyResults?.matchup
-          ? Array.isArray(weekPayload.weeklyResults.matchup)
-            ? weekPayload.weeklyResults.matchup
-            : [weekPayload.weeklyResults.matchup]
-          : [];
-        const scores = {};
-        matchups.forEach((m) => {
-          const franchises = m?.franchise
-            ? Array.isArray(m.franchise)
-              ? m.franchise
-              : [m.franchise]
-            : [];
-          franchises.forEach((team) => {
-            if (team?.id) {
-              scores[String(team.id)] = Number(team.score) || 0;
-            }
-          });
-        });
-        return { week: weekVal, scores };
-      }),
-    };
-    writeOut('weekly-results', normalized);
+    // Shared normalizer — handles both MFL payload shapes (matchup[] and the
+    // older flat franchise[] used by archive-year regular seasons).
+    writeOut('weekly-results', normalizeWeeklyResults(weeklyResults));
   }
 
   // Fetch playoff brackets (metadata + individual bracket details)

@@ -353,8 +353,15 @@ export function getLeagueStandings(franchises: StandingsFranchise[], config: Lea
   return league;
 }
 
-// Get all-play standings
-export function getAllPlayStandings(franchises: StandingsFranchise[], config: LeagueConfig): TeamStanding[] {
+// Get all-play standings (one combined table, no tier split).
+// Optional calculatedAllPlay overrides MFL's cumulative all-play with records
+// computed from weekly results (mirrors getTierAllPlayStandings) — required
+// for pre-2017 feeds, which carry no all_play fields at all.
+export function getAllPlayStandings(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  calculatedAllPlay?: Map<string, AllPlayRecord>
+): TeamStanding[] {
   // First get league standings to get seed information
   const leagueStandings = getLeagueStandings(franchises, config);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
@@ -363,6 +370,15 @@ export function getAllPlayStandings(franchises: StandingsFranchise[], config: Le
     const standing = enrichTeamStanding(franchise, config);
     // Add seed from league standings
     standing.seed = seedMap.get(standing.id);
+
+    if (calculatedAllPlay) {
+      const allPlayRecord = calculatedAllPlay.get(standing.id);
+      if (allPlayRecord) {
+        standing.all_play_wlt = `${allPlayRecord.wins}-${allPlayRecord.losses}-${allPlayRecord.ties}`;
+        standing.all_play_pct = allPlayRecord.pct.toFixed(3);
+      }
+    }
+
     return standing;
   });
 

@@ -257,6 +257,10 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 
 **Tiebreakers:** prize ties split; promotion/relegation ties broken by **Total Points Scored**.
 
+**New owners:** anyone joining the league **starts in the D-League**, regardless of which tier the franchise slot they take over competed in — in a turnover year, correspondingly fewer Premier League teams are relegated.
+
+**History:** the competition began in **2016** as one combined 24-team all-play table (no separate tier champions); its top 12 formed the 2017 Premier League and the bottom 12 the D-League. Split tiers ran from **2017**; per-season tier rosters were only recorded from **2020** (`data/afl-fantasy/tier-history.json`).
+
 ---
 
 ## Payouts

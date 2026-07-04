@@ -298,3 +298,27 @@ describe('standings grouping with a six-division season structure', () => {
     expect(league.find((t) => t.seed === 5)).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// getAllPlayStandings with a calculated all-play override (combined table for
+// the 2016-2019 seasons, whose feeds carry no all_play fields)
+// ---------------------------------------------------------------------------
+
+describe('getAllPlayStandings with calculatedAllPlay override', () => {
+  it('applies calculated records and sorts by them', async () => {
+    const { getAllPlayStandings } = await import('../src/utils/standings');
+    const franchises = [
+      makeFranchise('0001', 8, '0'),
+      makeFranchise('0002', 10, '0'),
+    ];
+    // Feed has no usable all-play; calculated map flips the win-based order
+    const calculated = new Map([
+      ['0001', { wins: 200, losses: 40, ties: 0, pf: 1800, pct: 0.833 }],
+      ['0002', { wins: 100, losses: 140, ties: 0, pf: 1500, pct: 0.417 }],
+    ]);
+    const result = getAllPlayStandings(franchises, currentConfig, calculated);
+    expect(result.map((t) => t.id)).toEqual(['0001', '0002']);
+    expect(result[0].all_play_wlt).toBe('200-40-0');
+    expect(result[0].all_play_pct).toBe('0.833');
+  });
+});

@@ -144,6 +144,14 @@
       "impact": "user",
       "area": "standings",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "The All-Play view on historical AFL standings now tells the truth about the early years of the competition. 2016 — the inaugural season, which ran as one 24-team table whose top 12 formed the first Premier League — now shows that single table with the promotion cutoff line, and 2017-2019 (whose tier rosters were never recorded) show the combined all-play table instead of pretending today's Premier/D-League split existed back then. Seasons before 2016 no longer offer an All-Play tab at all. Along the way, four seasons of missing weekly scores (2016-2019 regular seasons, invisible because MFL's archive uses an older data format) were recovered, so those years' all-play records are now real numbers.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
     }
   ]
 }

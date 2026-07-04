@@ -23,6 +23,31 @@ import { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo } from './afl-tier-
 
 export { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo };
 
+/**
+ * First season of the all-play side competition. The inaugural year ran as ONE
+ * combined 24-team table (no separate tier champions — the awards ledger
+ * records none for 2016); its final standings seeded the tiers for 2017: top
+ * 12 → Premier League, bottom 12 → D-League.
+ */
+export const TIER_COMPETITION_FIRST_SEASON = 2016;
+
+/**
+ * First season played as split Premier League / D-League tables — the first
+ * year with distinct tier champions (awards-history: Smokane FC / Titsburgh
+ * Feelers, source manual:league-awards). Per-season tier ROSTERS for 2017-2019
+ * were never recorded anywhere recoverable (tier-history.json starts at 2020),
+ * so those seasons can only be rendered as a combined all-play table.
+ *
+ * Movement rule note: owners who join the league always START in the D-League,
+ * regardless of which tier the franchise slot they take over competed in — in
+ * a season with owner turnover, correspondingly fewer Premier League teams are
+ * relegated. The roll-forward in scripts/compute-afl-tier-movement.mjs is
+ * franchise-id-based and cannot detect owner changes on its own; those years
+ * need the recorded membership (or a manual correction) rather than the pure
+ * constitution formula.
+ */
+export const TIER_SPLIT_FIRST_SEASON = 2017;
+
 /** A season's tier champions, keyed by award slug. */
 export interface TierChampions {
   'premier-league'?: string;
