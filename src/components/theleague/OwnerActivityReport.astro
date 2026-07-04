@@ -597,11 +597,26 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		white-space: nowrap;
 	}
 
-	/* ── Page ── */
+	/* ── Page ──
+	   `main` (TheLeagueLayout) already applies its own horizontal padding
+	   around all page content, unlike the header which has none. To make
+	   this page's content edges align with the header/logo, match the
+	   header's inner content width (1180px minus its 1rem padding) instead
+	   of stacking another layer of horizontal padding on top of main's. */
 	.activity-page {
-		max-width: 52rem;
+		max-width: calc(1180px - 2rem);
 		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
+		padding: 1.5rem 0 3rem;
+	}
+
+	/* Below 768px, `main`'s own gutter shrinks to 0.5rem (see TheLeagueLayout),
+	   while the header's stays a constant 1rem — add back the missing 0.5rem
+	   here so the two keep matching left/right edges on mobile too. */
+	@media (max-width: 767px) {
+		.activity-page {
+			padding-left: 0.5rem;
+			padding-right: 0.5rem;
+		}
 	}
 
 	.activity-page__header {
@@ -772,10 +787,16 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		border-bottom: none;
 	}
 
-	/* ── Desktop ── */
+	/* ── Desktop ──
+	   Only top/bottom padding here — horizontal padding is owned by the base
+	   rule (0) and the `max-width: 767px` mobile compensation above. Since
+	   this query overlaps that one from 640-767px, a shorthand `padding`
+	   here would reset left/right to 0 and win by source order, breaking
+	   header alignment in that range. */
 	@media (min-width: 640px) {
 		.activity-page {
-			padding: 2rem 1.5rem 3rem;
+			padding-top: 2rem;
+			padding-bottom: 3rem;
 		}
 
 		.activity-team__icon {

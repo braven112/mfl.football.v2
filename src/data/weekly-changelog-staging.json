@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-07-04",
+      "type": "style-tweak",
+      "summary": "Owner Activity page content now lines up flush with the header and logo above it — previously the page was noticeably narrower and off-center from the nav bar, at every screen size from phone to desktop.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-04",
       "type": "bug-fix",
       "summary": "AFL accent colors across seven pages (Keepers, About, Calendar, Rules, Ask Roger, and both Franchises pages) now actually render AFL red — buttons, badges, stat highlights, and border accents had been quietly wearing The League's blue for years due to a color-token mix-up. The red was always in the code; it just never got its turn on screen.",
       "impact": "user",

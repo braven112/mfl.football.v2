@@ -90,6 +90,21 @@
       "env": {
         "PATH": "/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin:/usr/local/bin:/usr/bin:/bin"
       }
+    },
+    {
+      "name": "dev-4405",
+      "runtimeExecutable": "/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin/node",
+      "runtimeArgs": [
+        "/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin/pnpm",
+        "dev",
+        "--port",
+        "4405"
+      ],
+      "port": 4405,
+      "autoPort": false,
+      "env": {
+        "PATH": "/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin:/usr/local/bin:/usr/bin:/bin"
+      }
     }
   ]
 }
