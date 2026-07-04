@@ -60,7 +60,7 @@ const { slices = [], chartId } = Astro.props;
   :global(.age-bar-label) {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #111;
+    color: var(--color-gray-900, #111);
     display: flex;
     justify-content: space-between;
   }
@@ -72,7 +72,7 @@ const { slices = [], chartId } = Astro.props;
   :global(.age-bar-label-count) {
     text-align: right;
     flex-shrink: 0;
-    color: #666;
+    color: var(--content-text-muted, #666);
     font-size: 0.7rem;
   }
 
