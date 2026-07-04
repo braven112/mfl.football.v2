@@ -40,6 +40,9 @@
 }
 
 :root {
+  /* Overridden to dark in tokens-dark.css via html.dark */
+  color-scheme: light;
+
   /* ========================================
      Typography
      ======================================== */

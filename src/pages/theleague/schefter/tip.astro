@@ -530,7 +530,7 @@ const preselectTeam = (() => {
   }
 
   .tip-card {
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     border: 1px solid var(--color-gray-100, #f3f4f6);
     border-radius: 0.75rem;
     padding: 1.25rem;
@@ -647,15 +647,11 @@ const preselectTeam = (() => {
     color: var(--color-gray-600, #4b5563);
     font-style: italic;
   }
-  @media (prefers-color-scheme: dark) {
-    .tip-preselect {
-      background: var(--color-gray-900, #111827);
-      border-color: var(--color-gray-700, #374151);
-      border-left-color: var(--sf-accent, var(--color-primary, #1c497c));
-    }
-    .tip-preselect__body { color: var(--color-gray-100, #f3f4f6); }
-    .tip-preselect__body strong { color: #fff; }
-  }
+  /* No dark-mode override needed here — every color above is a token
+     (--color-gray-*) that already inverts under html.dark via
+     tokens-dark.css. A stale prefers-color-scheme block used to duplicate
+     this and could disagree with the site's own light/dark toggle; removed
+     in favor of the single html.dark resolver. */
 
   /* Inline help text under the franchise dropdown — sets expectations that
      picking a team unlocks direct naming on the resulting Schefter post. */
@@ -665,8 +661,8 @@ const preselectTeam = (() => {
     line-height: 1.35;
     color: var(--color-gray-500, #6b7280); /* WCAG AA on white at 0.75rem */
   }
-  @media (prefers-color-scheme: dark) {
-    .tip-field__help { color: var(--color-gray-400, #9ca3af); }
+  :global(html.dark) .tip-field__help {
+    color: var(--color-gray-400, #9ca3af);
   }
 
   .tip-field__textarea,
@@ -674,7 +670,7 @@ const preselectTeam = (() => {
     font: inherit;
     font-size: 0.9375rem;
     color: var(--color-gray-900, #111827);
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
     padding: 0.625rem 0.75rem;
@@ -773,7 +769,7 @@ const preselectTeam = (() => {
     min-height: 1.25rem;
   }
   .tip-status[data-state='success'] {
-    color: #047857;
+    color: var(--color-success-dark, #047857);
   }
   .tip-status[data-state='error'] {
     color: var(--color-error-dark, #b91c1c);
@@ -781,7 +777,7 @@ const preselectTeam = (() => {
 
   /* Right rail: How this works card */
   .tip-rail-card {
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     border: 1px solid var(--color-gray-100, #f3f4f6);
     border-radius: 0.75rem;
     padding: 1rem;
@@ -953,8 +949,8 @@ const preselectTeam = (() => {
     border-left: 2px solid color-mix(in srgb, var(--color-error-dark, #b91c1c) 35%, transparent);
     padding-left: 0.5rem;
   }
-  @media (prefers-color-scheme: dark) {
-    .tip-rail-cooker__hint { color: var(--color-gray-300, #d1d5db); }
+  :global(html.dark) .tip-rail-cooker__hint {
+    color: var(--color-gray-300, #d1d5db);
   }
 
   .tip-rail-hot__chips {
@@ -1213,7 +1209,7 @@ const preselectTeam = (() => {
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-lg, 0.5rem);
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     border: 1px solid var(--color-gray-100, #f3f4f6);
     text-decoration: none;
     color: inherit;

@@ -19,9 +19,9 @@
  */
 
 import tierHistory from '../../data/afl-fantasy/tier-history.json';
-import { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo } from './afl-tier-logo';
+import { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from './afl-tier-logo';
 
-export { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo };
+export { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark };
 
 /**
  * First season of the all-play side competition — branded the "Founders

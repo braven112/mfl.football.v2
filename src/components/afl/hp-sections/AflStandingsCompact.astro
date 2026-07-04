@@ -11,7 +11,8 @@
  * Premier League.
  */
 import { chooseTeamName } from '../../../utils/team-names';
-import { getTierLogo } from '../../../utils/afl-tier-logo';
+import { getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
+import ThemeImage from '../../ThemeImage.astro';
 
 interface Team {
   franchiseId: string;
@@ -166,8 +167,9 @@ if (userRow) {
 <section class="afl-tiers" aria-label={`${userTier} standings`}>
   <div class="afl-tiers__header">
     <div class="afl-tiers__heading">
-      <img
+      <ThemeImage
         src={getTierLogo(userTier)}
+        darkSrc={getTierLogoDark(userTier)}
         alt={`${userTier} logo`}
         class="afl-tiers__logo"
         loading="lazy"

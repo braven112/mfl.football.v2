@@ -1088,7 +1088,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .pos-pill.active {
     background: var(--color-primary, #1c497c);
     border-color: var(--color-primary, #1c497c);
-    color: #ffffff;
+    color: var(--btn-primary-text, #ffffff);
   }
 
   .pos-pill__count {
@@ -1162,10 +1162,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     min-width: 100%;
     max-height: 320px;
     overflow-y: auto;
-    background: white;
+    background: var(--content-bg, #fff);
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
     z-index: 20;
     padding: 0.25rem 0;
     margin: 0;
@@ -1228,7 +1228,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     overflow: hidden;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    background: white;
+    background: var(--content-bg, #fff);
     border-radius: 0.5rem;
   }
 

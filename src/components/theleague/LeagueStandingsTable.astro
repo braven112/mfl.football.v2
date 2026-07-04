@@ -167,7 +167,7 @@ function getRowColor(seed: number | undefined): string {
 <style>
     .standings-container {
     margin-bottom: 2rem;
-    background-color: var(--primary-content-bg-color, #fff);
+    background-color: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     padding-block: var(--padding-md);
@@ -180,11 +180,11 @@ function getRowColor(seed: number | undefined): string {
   .league-standings-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: var(--color-bg-secondary, #f5f5f5);
+    background-color: var(--table-row-bg-alt, #f5f5f5);
   }
 
   thead {
-    background-color: var(--primary-content-bg-color, #fff);
+    background-color: var(--table-header-bg, #fff);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -195,15 +195,15 @@ function getRowColor(seed: number | undefined): string {
     text-align: left;
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--table-header-text-color, #94a3b8);
-    border-bottom: 2px solid var(--color-border, #d0d0d0);
+    color: var(--table-header-text, #94a3b8);
+    border-bottom: 2px solid var(--table-border, #d0d0d0);
   }
 
   td {
     padding: 0.75rem;
-    border-bottom: 1px solid var(--color-border, #e0e0e0);
+    border-bottom: 1px solid var(--table-border, #e0e0e0);
     font-size: var(--table-cell-font-size, .75rem);
-    color: #000;
+    color: var(--page-text, #1a1a1a);
   }
 
   tbody tr {
@@ -214,26 +214,47 @@ function getRowColor(seed: number | undefined): string {
     opacity: 0.85;
   }
 
-  /* Tier Color Schemes - WCAG 2.0 AA compliant with black text */
+  /* Tier Color Schemes - WCAG 2.0 AA compliant with black text.
+     These tiers use light, fixed pastel backgrounds with explicit black
+     text (not the theme text token) — the pairing must move together, so
+     dark mode gets its own darker pastel + swaps to light text. */
 
   /* Division Winners - Light Gold (Tier 1-4) */
   .tier-division-winners {
     background-color: #fef8e7;
+    color: #1a1a1a;
   }
 
   /* Wild Cards - Light Silver (Tier 5-7) */
   .tier-wild-cards {
     background-color: #f3f3f3;
+    color: #1a1a1a;
   }
 
   /* Play-In - No Color (Tier 8-9) */
   .tier-play-in {
-    background-color: var(--color-bg-primary, #fff);
+    background-color: var(--table-row-bg, #fff);
   }
 
   /* Toilet Bowl - Light Brown (Tier 10-16) */
   .tier-toilet-bowl {
     background-color: #f5e6d3;
+    color: #1a1a1a;
+  }
+
+  :global(html.dark) .tier-division-winners {
+    background-color: #4a3f1a;
+    color: #ededed;
+  }
+
+  :global(html.dark) .tier-wild-cards {
+    background-color: #2e2e2e;
+    color: #ededed;
+  }
+
+  :global(html.dark) .tier-toilet-bowl {
+    background-color: #3f2e1f;
+    color: #ededed;
   }
 
   /* Tier Boundary Dividers */
@@ -246,11 +267,23 @@ function getRowColor(seed: number | undefined): string {
   }
 
   .tier-play-in.tier-boundary {
-    border-bottom: 4px solid #dad8d5 !important;
+    border-bottom: 4px solid var(--table-border, #dad8d5) !important;
   }
 
   .tier-toilet-bowl.tier-boundary {
     border-bottom: 4px solid #dad8d5 !important;
+  }
+
+  :global(html.dark) .tier-division-winners.tier-boundary {
+    border-bottom-color: #8a6d2e !important;
+  }
+
+  :global(html.dark) .tier-wild-cards.tier-boundary {
+    border-bottom-color: #4a4a4a !important;
+  }
+
+  :global(html.dark) .tier-toilet-bowl.tier-boundary {
+    border-bottom-color: #5a4632 !important;
   }
 
   /* Column Widths */
@@ -338,7 +371,7 @@ function getRowColor(seed: number | undefined): string {
   }
 
   .team-banner-link:focus-visible {
-    outline: 2px solid var(--color-focus, #2563eb);
+    outline: 2px solid var(--color-primary, #2563eb);
     outline-offset: 2px;
   }
 
@@ -350,17 +383,17 @@ function getRowColor(seed: number | undefined): string {
 
   /* Preferred team highlighting */
   tr.preferred-team {
-    background-color: #2e743d12 !important;
-    border-left: 3px solid #2e743d;
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 12%, var(--table-row-bg, #fff)) !important;
+    border-left: 3px solid var(--color-secondary, #2e743d);
     font-weight: 600;
   }
 
   tr.preferred-team:hover {
-    background-color: #2e743d36 !important;
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 22%, var(--table-row-bg, #fff)) !important;
   }
 
   tr.preferred-team .team-name {
-    color: #2e743d;
+    color: var(--color-secondary, #2e743d);
   }
 
   /* Responsive */

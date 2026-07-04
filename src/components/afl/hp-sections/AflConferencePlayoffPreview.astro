@@ -12,7 +12,8 @@
  */
 import { chooseTeamName } from '../../../utils/team-names';
 import { getConferenceStandings } from '../../../utils/standings';
-import { getConferenceLogo } from '../../../utils/afl-conference';
+import { getConferenceLogo, getConferenceLogoDark } from '../../../utils/afl-conference';
+import ThemeImage from '../../ThemeImage.astro';
 
 interface Team {
   franchiseId: string;
@@ -62,6 +63,7 @@ if (!confResult) {
 
 const conferenceName = confResult?.conference?.name ?? (conferenceCode === '00' ? 'American League' : 'National League');
 const conferenceLogo = getConferenceLogo(conferenceCode);
+const conferenceLogoDark = getConferenceLogoDark(conferenceCode);
 
 interface PreviewRow {
   franchiseId: string;
@@ -105,8 +107,9 @@ const visible = rows.slice(0, 6);
   <section class="afl-conf" aria-label={`${conferenceName} playoff preview`}>
     <div class="afl-conf__header">
       <div class="afl-conf__heading">
-        <img
+        <ThemeImage
           src={conferenceLogo}
+          darkSrc={conferenceLogoDark}
           alt={`${conferenceName} logo`}
           class="afl-conf__logo"
           loading="lazy"

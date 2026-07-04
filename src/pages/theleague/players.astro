@@ -2730,25 +2730,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .hero-search__input {
     width: 100%;
     padding: 0.7rem 0.875rem 0.7rem 2.5rem;
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: 1px solid var(--input-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
-    background: white;
-    color: var(--color-gray-900, #111827);
+    background: var(--input-bg, #fff);
+    color: var(--input-text, #111827);
     font-size: 0.9rem;
     transition: all 0.2s;
   }
   .hero-search__input::placeholder {
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--input-placeholder, #9ca3af);
   }
   .hero-search__input:focus {
     outline: none;
-    border-color: var(--color-primary, #1c497c);
+    border-color: var(--input-border-focus, #1c497c);
     box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.12);
-    background: white;
-    color: var(--color-gray-900, #111827);
+    background: var(--input-bg, #fff);
+    color: var(--input-text, #111827);
   }
   .hero-search__input:focus::placeholder {
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--input-placeholder, #9ca3af);
   }
   .hero-search__input:focus + .hero-search__icon,
   .hero-search:has(.hero-search__input:focus) .hero-search__icon {
@@ -2770,7 +2770,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.4rem 0.85rem;
     border: 1px solid var(--content-border, #d1d5db);
     border-radius: var(--radius-md, 0.5rem);
-    background: white;
+    background: var(--content-bg, #fff);
     color: var(--color-gray-600, #4b5563);
     font-size: 0.8125rem;
     font-weight: 600;
@@ -2781,7 +2781,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .pos-pill:hover {
     border-color: var(--color-primary, #1c497c);
     color: var(--color-primary, #1c497c);
-    background: white;
+    background: var(--content-bg, #fff);
   }
   .pos-pill.active {
     background: var(--color-primary, #1c497c);
@@ -2863,17 +2863,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .col-group-toggles__label {
     font-size: 0.8125rem;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     margin-right: 0.1rem;
   }
   .col-group-btn {
     padding: 0.25rem 0.65rem;
     border: 1px solid var(--content-border, #d1d5db);
     border-radius: var(--radius-full, 999px);
-    background: white;
+    background: var(--content-bg, #fff);
     font-size: 0.78rem;
     font-weight: 600;
-    color: #4b5563;
+    color: var(--color-gray-600, #4b5563);
     cursor: pointer;
     transition: all 0.15s;
     line-height: 1.4;
@@ -2896,7 +2896,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.4rem 0.85rem;
     border: 1px solid var(--content-border, #d1d5db);
     border-radius: var(--radius-md, 0.5rem);
-    background: white;
+    background: var(--content-bg, #fff);
     font-size: 0.8125rem;
     font-weight: 600;
     color: var(--color-gray-600, #4b5563);
@@ -2916,7 +2916,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .filter-toggle-btn.has-filters {
     border-color: var(--color-primary, #1c497c);
     color: var(--color-primary, #1c497c);
-    background: #eef3fb;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--content-bg, white));
   }
   .filter-badge {
     display: inline-flex;
@@ -2943,7 +2943,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     max-height: 300px;
   }
   .filters-panel__inner {
-    background: white;
+    background: var(--content-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     padding: 1rem 1.25rem 1rem;
@@ -2983,11 +2983,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .filter-select {
     padding: 0.4rem 0.6rem;
-    border: 1px solid var(--content-border, #d1d5db);
+    border: 1px solid var(--input-border, #d1d5db);
     border-radius: var(--radius-sm, 0.25rem);
     font-size: 0.8125rem;
-    color: var(--color-gray-700, #374151);
-    background: white;
+    color: var(--input-text, #374151);
+    background: var(--input-bg, #fff);
   }
   .filter-select:focus {
     outline: none;
@@ -3006,11 +3006,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .filter-input-num {
     width: 70px;
     padding: 0.4rem 0.5rem;
-    border: 1px solid var(--content-border, #d1d5db);
+    border: 1px solid var(--input-border, #d1d5db);
     border-radius: var(--radius-sm, 0.25rem);
     font-size: 0.8125rem;
-    color: var(--color-gray-700, #374151);
+    color: var(--input-text, #374151);
     text-align: center;
+    background: var(--input-bg, #fff);
   }
   .filter-input-num:focus {
     outline: none;
@@ -3042,7 +3043,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.3rem 0.75rem;
     border: 1px solid var(--content-border, #d1d5db);
     border-radius: var(--radius-sm, 0.25rem);
-    background: white;
+    background: var(--content-bg, #fff);
     color: var(--color-gray-500, #6b7280);
     font-size: 0.78rem;
     font-weight: 600;
@@ -3068,7 +3069,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.6rem 2rem;
     border: 1px solid var(--content-border, #dee2e6);
     border-radius: var(--radius-md, 0.5rem);
-    background: white;
+    background: var(--content-bg, #fff);
     color: var(--color-primary, #1c497c);
     font-size: 0.875rem;
     font-weight: 600;
@@ -3090,7 +3091,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .table-wrapper {
     overflow-x: auto;
     border-radius: var(--radius-md, 0.5rem);
-    background: white;
+    background: var(--content-bg, #fff);
     box-shadow: var(--shadow-sm);
     margin-top: 0.5rem;
   }
@@ -3179,7 +3180,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.players-table td) {
     padding: 0.45rem 0.375rem;
     vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--table-border, #f1f5f9);
   }
   :global(.players-table td.last-visible-col) {
     padding-right: 0.75rem;
@@ -3257,15 +3258,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     border-right: 1px solid var(--content-border, #e2e8f0);
   }
   :global(td.col-ranking-member-last) {
-    border-right: 1px solid #f1f5f9;
+    border-right: 1px solid var(--table-border, #f1f5f9);
     padding-right: .5rem;
   }
 
   :global(.na) {
-    color: #d1d5db;
+    color: var(--color-gray-300, #d1d5db);
   }
   :global(.fa-tag) {
-    color: #94a3b8;
+    color: var(--color-gray-400, #94a3b8);
     font-size: 0.75rem;
   }
   :global(.cell-sm) {
@@ -3361,10 +3362,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .no-data {
     text-align: center;
     padding: 3rem 1rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
   .no-data code {
-    background: #f1f5f9;
+    background: var(--content-bg-muted, #f1f5f9);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.85rem;

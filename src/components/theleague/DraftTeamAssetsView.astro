@@ -142,38 +142,39 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     align-items: center;
     gap: 1rem;
     padding: var(--padding-md);
-    background: #fff;
+    background: var(--content-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .team-selector label {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .team-select {
     padding: 0.5rem 1rem;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--input-border, #cbd5e1);
     border-radius: 6px;
     font-size: 0.95rem;
-    background: #fff;
+    background: var(--input-bg, #fff);
+    color: var(--input-text, #111827);
     cursor: pointer;
     min-width: 200px;
   }
 
   .team-select:hover {
-    border-color: #94a3b8;
+    border-color: var(--color-gray-500, #94a3b8);
   }
 
   .team-select:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--input-border-focus, #3b82f6);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
   .team-assets-container {
-    background: #fff;
+    background: var(--content-bg, #fff);
     overflow: hidden;
     margin-inline: -0.75rem;
   }
@@ -188,8 +189,8 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     justify-content: space-between;
     align-items: center;
     padding: var(--padding-lg);
-    border-bottom: 2px solid #e2e8f0;
-    background: #f8fafc;
+    border-bottom: 2px solid var(--content-border, #e2e8f0);
+    background: var(--content-bg-muted, #f8fafc);
   }
 
   .team-info {
@@ -208,7 +209,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     margin: 0;
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .assets-summary {
@@ -218,10 +219,10 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
 
   .asset-count {
     padding: 0.5rem 1rem;
-    background: #dbeafe;
+    background: var(--badge-info-bg, #dbeafe);
     border-radius: 6px;
     font-weight: 600;
-    color: #1e40af;
+    color: var(--badge-info-text, #1e40af);
     font-size: 0.875rem;
   }
 
@@ -240,7 +241,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-size: 0.875rem;
@@ -256,9 +257,9 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     grid-template-columns: 60px 1fr;
     gap: var(--padding-md);
     padding: var(--padding-md);
-    background: #f8fafc;
+    background: var(--content-bg-muted, #f8fafc);
     border-radius: 6px;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--color-primary, #3b82f6);
   }
 
   .asset-pick-info {
@@ -271,7 +272,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
 
   .pick-number {
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
     font-size: 1.125rem;
   }
 
@@ -282,7 +283,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     border-radius: 3px;
     font-size: 0.7rem;
     font-weight: 600;
-    color: #1e40af;
+    color: var(--badge-info-text, #1e40af);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -298,26 +299,26 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     gap: 0.5rem;
     flex-wrap: wrap;
     font-size: 0.95rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   .year {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .round-label {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .text {
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   .original-team {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .no-assets {
@@ -325,11 +326,11 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     align-items: center;
     justify-content: center;
     min-height: 300px;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 1.125rem;
-    background: #fff;
+    background: var(--content-bg, #fff);
     border-radius: 8px;
-    border: 2px dashed #cbd5e1;
+    border: 2px dashed var(--content-border, #cbd5e1);
   }
 
   .no-assets p {

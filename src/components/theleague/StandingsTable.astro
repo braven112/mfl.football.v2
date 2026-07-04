@@ -1,7 +1,8 @@
 ---
 import type { TeamStanding } from '../../types/standings';
 import PlayoffBadge from './PlayoffBadge.astro';
-import { getConferenceLogo, getConferenceName, type ConferenceId } from '../../utils/afl-conference';
+import { getConferenceLogo, getConferenceLogoDark, getConferenceName, type ConferenceId } from '../../utils/afl-conference';
+import ThemeImage from '../ThemeImage.astro';
 import { HISTORICAL_TEAM_BANNER_FALLBACK } from '../../utils/team-names';
 
 export interface Props {
@@ -26,6 +27,7 @@ export interface Props {
 const { teams, view, showDivisionHeader = false, divisionName = '', conferenceId, defendingChampion = '', defendingChampionYear, defendingChampionLogo = '', divisionBadge = '', year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl, franchiseBaseUrl } = Astro.props;
 
 const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
+const conferenceLogoDark = conferenceId ? getConferenceLogoDark(conferenceId) : null;
 const conferenceName = conferenceId ? getConferenceName(conferenceId) : '';
 
 // Branded compass-badge header — when present, the banner bleeds flush to the
@@ -110,9 +112,10 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
   {showDivisionHeader && divisionName && !divisionBadge && (
     <div class="division-header-section">
       <div class="division-header-row">
-        {conferenceLogo && (
-          <img
+        {conferenceLogo && conferenceLogoDark && (
+          <ThemeImage
             src={conferenceLogo}
+            darkSrc={conferenceLogoDark}
             alt={`${conferenceName} logo`}
             class="division-conf-logo"
             loading="lazy"
@@ -284,7 +287,7 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 <style>
   .standings-container {
     margin-bottom: 2rem;
-    background-color: var(--primary-content-bg-color, #fff);
+    background-color: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: var(--shadow-card);
     padding-block: var(--padding-md);
@@ -394,13 +397,13 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     font-size: 1.25rem;
     font-weight: 700;
     margin: 0rem;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     padding: 0;
   }
 
   .champion-subtitle {
     font-size: 0.95rem;
-    color: var(--secondary-color, #2e8743);
+    color: var(--color-secondary, #2e8743);
     font-weight: 500;
     margin: 0;
     margin-top: 0.25rem;
@@ -413,11 +416,12 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
   .standings-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: var(--color-bg-secondary, #f5f5f5);
+    background-color: var(--table-row-bg-alt, #f5f5f5);
+    color: var(--page-text, #1a1a1a);
   }
 
   thead {
-    background-color: var(--primary-content-bg-color, #fff);
+    background-color: var(--table-header-bg, #fff);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -428,32 +432,32 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     text-align: left;
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--table-header-text-color, #94a3b8);
-    border-bottom: 2px solid var(--color-border, #d0d0d0);
+    color: var(--table-header-text, #94a3b8);
+    border-bottom: 2px solid var(--table-border, #d0d0d0);
   }
 
   td {
     padding: 0.75rem;
-    border-bottom: 1px solid var(--color-border, #e0e0e0);
+    border-bottom: 1px solid var(--table-border, #e0e0e0);
     font-size: var(--table-cell-font-size, .75rem);
-
+    color: var(--page-text, #1a1a1a);
   }
 
   tbody tr {
-    background-color: var(--color-bg-primary, #fff);
+    background-color: var(--table-row-bg, #fff);
     transition: background-color 0.2s ease;
   }
 
   tbody tr:hover {
-    background-color: var(--color-bg-hover, #f9f9f9);
+    background-color: var(--table-row-bg-hover, #f9f9f9);
   }
 
   tbody tr.row-odd {
-    background-color: var(--color-bg-secondary, #f5f5f5);
+    background-color: var(--table-row-bg-alt, #f5f5f5);
   }
 
   tbody tr.row-odd:hover {
-    background-color: var(--color-bg-hover, #efefef);
+    background-color: var(--table-row-bg-hover, #efefef);
   }
 
   /* Column Widths */
@@ -574,7 +578,7 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
   }
 
   .team-banner-link:focus-visible {
-    outline: 2px solid var(--color-focus, #2563eb);
+    outline: 2px solid var(--color-primary, #2563eb);
     outline-offset: 2px;
   }
 
@@ -591,8 +595,8 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
   .seed-badge {
     font-weight: 700;
     font-size: 0.9rem;
-    color: var(--color-text-primary, #1a1a1a);
-    background-color: var(--color-bg-tertiary, #e8e8e8);
+    color: var(--page-text, #1a1a1a);
+    background-color: var(--content-bg-muted, #e8e8e8);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     display: inline-block;
@@ -600,17 +604,17 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 
   /* Preferred team highlighting */
   tr.preferred-team {
-    background-color: #2e743d12 !important;
-    border-left: 3px solid #2e743d;
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 12%, var(--table-row-bg, #fff)) !important;
+    border-left: 3px solid var(--color-secondary, #2e743d);
     font-weight: 600;
   }
 
   tr.preferred-team:hover {
-    background-color: #2e743d36 !important;
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 22%, var(--table-row-bg, #fff)) !important;
   }
 
   tr.preferred-team .team-name {
-    color: #2e743d;
+    color: var(--color-secondary, #2e743d);
   }
 
   /* Responsive */

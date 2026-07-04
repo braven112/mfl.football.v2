@@ -119,6 +119,10 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 		color: white;
 		margin-top: auto;
 		width: 100%;
+		/* Same accent edge as the breadcrumb bar: league-primary in dark
+		   (blue TheLeague / red AFL via --breadcrumb-bar-border), invisible
+		   in light where the token is unset. */
+		border-top: 2px solid var(--breadcrumb-bar-border, transparent);
 	}
 
 	.footer-container {

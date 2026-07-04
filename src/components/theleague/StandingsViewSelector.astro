@@ -65,7 +65,7 @@ function viewHref(view: string): string {
     padding: 0.5rem .7rem;
     border: 2px solid transparent;
     border-radius: 0.5rem;
-    background: #f8fafc;
+    background: var(--content-bg-muted, #f8fafc);
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
@@ -80,13 +80,13 @@ function viewHref(view: string): string {
   }
 
   .view-tab:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
+    background: var(--table-row-bg-hover, #e2e8f0);
+    border-color: var(--content-border, #cbd5e1);
   }
 
   .view-tab[data-active="true"] {
-    background: #dbeafe;
-    border-color: #3b82f6;
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #fff));
+    border-color: var(--color-primary, #3b82f6);
   }
 
   .view-tab__icon {
@@ -110,7 +110,7 @@ function viewHref(view: string): string {
     transform: translateX(-50%);
     font-size: 0.75rem;
     font-weight: 500;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
@@ -123,7 +123,7 @@ function viewHref(view: string): string {
   }
 
   .view-tab[data-active="true"] .view-tab__label {
-    color: #3b82f6;
+    color: var(--color-primary, #3b82f6);
   }
 
   @media (max-width: 640px) {

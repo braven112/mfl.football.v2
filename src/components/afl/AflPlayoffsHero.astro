@@ -8,7 +8,8 @@
  */
 import { chooseTeamName } from '../../utils/team-names';
 import { getConferenceStandings } from '../../utils/standings';
-import { getConferenceLogo, type ConferenceId } from '../../utils/afl-conference';
+import { getConferenceLogo, getConferenceLogoDark, type ConferenceId } from '../../utils/afl-conference';
+import ThemeImage from '../ThemeImage.astro';
 
 interface Team {
   franchiseId: string;
@@ -38,7 +39,7 @@ interface SeedEntry {
   isUser: boolean;
 }
 
-function buildConference(code: ConferenceId): { name: string; code: ConferenceId; logo: string; seeds: SeedEntry[] } | null {
+function buildConference(code: ConferenceId): { name: string; code: ConferenceId; logo: string; logoDark: string; seeds: SeedEntry[] } | null {
   try {
     const result = getConferenceStandings(standings, config, code);
     const top4 = (result.allTeams ?? []).slice(0, 4).map((t: any) => {
@@ -59,7 +60,7 @@ function buildConference(code: ConferenceId): { name: string; code: ConferenceId
         isUser: t.id === userFranchiseId,
       };
     });
-    return { name: result.conference.name, code, logo: getConferenceLogo(code), seeds: top4 };
+    return { name: result.conference.name, code, logo: getConferenceLogo(code), logoDark: getConferenceLogoDark(code), seeds: top4 };
   } catch {
     return null;
   }
@@ -84,10 +85,10 @@ function formatRecord(wlt: string): string {
   </div>
 
   <div class="afl-playoffs-hero__grid">
-    {[al, nl].filter((c): c is { name: string; code: ConferenceId; logo: string; seeds: SeedEntry[] } => !!c).map((conf) => (
+    {[al, nl].filter((c): c is { name: string; code: ConferenceId; logo: string; logoDark: string; seeds: SeedEntry[] } => !!c).map((conf) => (
       <div class="afl-playoffs-hero__bracket">
         <h3 class="afl-playoffs-hero__bracket-title">
-          <img src={conf.logo} alt={`${conf.name} logo`} class="afl-playoffs-hero__bracket-logo" loading="lazy" decoding="async" />
+          <ThemeImage src={conf.logo} darkSrc={conf.logoDark} alt={`${conf.name} logo`} class="afl-playoffs-hero__bracket-logo" loading="lazy" decoding="async" />
           <span>{conf.name}</span>
         </h3>
         {[

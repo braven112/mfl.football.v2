@@ -74,7 +74,14 @@ const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague
       <img
         src={logoUrl}
         alt={logoAlt}
-        class="nav-header__logo"
+        class="nav-header__logo nav-header__logo--light"
+        width="48"
+        height="48"
+      />
+      <img
+        src={league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
+        alt={logoAlt}
+        class="nav-header__logo nav-header__logo--dark"
         width="48"
         height="48"
       />
@@ -182,10 +189,27 @@ const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague
   }
 
   .nav-header__logo {
-    width: 48px;
-    height: 48px;
+    /* Height-based sizing with natural aspect ratio — identical proportions
+       to the main header logo (which is height + width:auto), just smaller.
+       The old fixed 48x48 box letterboxed the non-square mark. */
+    height: 36px;
+    width: auto;
     object-fit: contain;
     flex-shrink: 0;
+  }
+
+  /* Theme-driven logo swap — mirrors the main header: original blue mark in
+     light, bright variant in dark, driven by CSS so live toggles apply. */
+  .nav-header__logo--dark {
+    display: none;
+  }
+
+  :global(html.dark) .nav-header__logo--light {
+    display: none;
+  }
+
+  :global(html.dark) .nav-header__logo--dark {
+    display: block;
   }
 
   .nav-header__league-name {
@@ -206,7 +230,7 @@ const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague
   }
 
   .nav-header__league-name--afl {
-    background: linear-gradient(135deg, #c41e3a 0%, #c41e3a 100%);
+    background: linear-gradient(135deg, var(--league-accent, #c41e3a) 0%, var(--league-accent, #c41e3a) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -264,42 +288,46 @@ const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague
     box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
   }
 
-  /* Dark mode support via .dark class */
-  :global(.dark) .nav-header {
+  /* Dark mode support via html.dark (set by the theme resolver on
+     documentElement — see ThemeScript.astro / ThemeToggle.astro). Most
+     properties already flow from tokens-dark.css via the plain var()
+     references above; these overrides only handle values that don't have
+     a token (the league-name gradient text colors below). */
+  :global(html.dark) .nav-header {
     background: var(--nav-bg);
     border-bottom-color: var(--nav-border);
   }
 
-  :global(.dark) .nav-header__logo-link {
+  :global(html.dark) .nav-header__logo-link {
     color: var(--nav-text);
   }
 
-  :global(.dark) .nav-header__logo-link:hover {
+  :global(html.dark) .nav-header__logo-link:hover {
     background: var(--nav-hover-bg);
   }
 
-  :global(.dark) .nav-header__league-name--the {
-    color: #60a5fa;
+  :global(html.dark) .nav-header__league-name--the {
+    color: #ffffff; /* matches the dark logo lockup: white THE + green LEAGUE */
   }
 
-  :global(.dark) .nav-header__league-name--league {
-    color: #4ade80;
+  :global(html.dark) .nav-header__league-name--league {
+    color: var(--color-secondary-light, #4ade80); /* matches tokens-dark.css --link-color-hover / --color-secondary-light */
   }
 
-  :global(.dark) .nav-header__switch-btn {
+  :global(html.dark) .nav-header__switch-btn {
     color: var(--nav-text-muted);
   }
 
-  :global(.dark) .nav-header__switch-btn:hover {
+  :global(html.dark) .nav-header__switch-btn:hover {
     background: var(--nav-hover-bg);
     color: var(--nav-text);
   }
 
-  :global(.dark) .nav-header__close-btn {
+  :global(html.dark) .nav-header__close-btn {
     color: var(--nav-text-muted);
   }
 
-  :global(.dark) .nav-header__close-btn:hover {
+  :global(html.dark) .nav-header__close-btn:hover {
     background: var(--nav-hover-bg);
     color: var(--nav-text);
   }
@@ -307,8 +335,8 @@ const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .nav-header__logo {
-      width: 40px;
-      height: 40px;
+      height: 32px;
+      width: auto;
     }
 
     .nav-header__league-name {

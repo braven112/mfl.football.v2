@@ -2,6 +2,8 @@
 import { Font } from 'astro:assets';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { getThemePreference } from '../utils/theme-preference';
+import ThemeScript from '../components/ThemeScript.astro';
 
 export interface Props {
 	title: string;
@@ -10,13 +12,18 @@ export interface Props {
 }
 
 const { title, splash = false } = Astro.props as Props;
+
+// Resolve theme preference (server-side). 'auto' renders no class — the
+// pre-paint ThemeScript resolves it against prefers-color-scheme.
+const themePref = getThemePreference(Astro.cookies);
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class:list={[{ dark: themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
+		<ThemeScript />
 		<link rel="icon" type="image/svg+xml" href="/assets/logos/theleague-logo.svg" />
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
@@ -33,6 +40,8 @@ const { title, splash = false } = Astro.props as Props;
 </html>
 <style>
 	@import '../styles/tokens.css';
+	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
+	@import '../styles/tokens-dark.css';
 
 	:root {
 		--font-size-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);

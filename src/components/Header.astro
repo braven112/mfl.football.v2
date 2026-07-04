@@ -50,58 +50,58 @@ const mflYear = getCurrentLeagueYear();
 				</svg>
 			</button>
 			<div class="login-modal-form">
-				<div style="text-align: center; margin-bottom: 2rem;">
-					<h2 style="margin: 0; font-size: 1.5rem;">Sign In</h2>
-					<p style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">Sign in with your MFL account</p>
+				<div class="login-modal-heading">
+					<h2 class="login-modal-title">Sign In</h2>
+					<p class="login-modal-subtitle">Sign in with your MFL account</p>
 				</div>
 
-				<form id="modal-login-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
-					<div id="modal-error-message" style="padding: 1rem; background-color: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33; display: none;">
-						<p id="modal-error-text" style="margin: 0; font-size: 0.95rem;"></p>
+				<form id="modal-login-form" class="login-form">
+					<div id="modal-error-message" class="login-form-error">
+						<p id="modal-error-text" class="login-form-error-text"></p>
 					</div>
 
-					<div style="display: flex; flex-direction: column; gap: 0.5rem;">
-						<label for="modal-username" style="font-size: 0.95rem; font-weight: 500; color: #333;">Username</label>
+					<div class="login-form-field">
+						<label for="modal-username" class="login-form-label">Username</label>
 						<input
 							id="modal-username"
 							type="text"
 							placeholder="Enter your MFL username"
 							required
-							style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+							class="login-form-input"
 						/>
 					</div>
 
-					<div style="display: flex; flex-direction: column; gap: 0.5rem;">
-						<label for="modal-password" style="font-size: 0.95rem; font-weight: 500; color: #333;">Password</label>
+					<div class="login-form-field">
+						<label for="modal-password" class="login-form-label">Password</label>
 						<input
 							id="modal-password"
 							type="password"
 							placeholder="Enter your MFL password"
 							required
-							style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+							class="login-form-input"
 						/>
 					</div>
 
-					<div style="display: flex; flex-direction: column; gap: 0.5rem;">
-						<label for="modal-leagueId" style="font-size: 0.95rem; font-weight: 500; color: #333;">League ID (optional)</label>
+					<div class="login-form-field">
+						<label for="modal-leagueId" class="login-form-label">League ID (optional)</label>
 						<input
 							id="modal-leagueId"
 							type="text"
 							placeholder="Leave blank to use default league"
-							style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+							class="login-form-input"
 						/>
-						<p style="margin: 0; font-size: 0.85rem; color: #666;">Your league ID (e.g., 13522 from the league URL)</p>
+						<p class="login-form-hint">Your league ID (e.g., 13522 from the league URL)</p>
 					</div>
 
 					<button
 						type="submit"
 						id="modal-submit-btn"
-						style="padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; background-color: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;"
+						class="login-form-submit"
 					>
 						Sign In
 					</button>
 
-					<p style="margin: 0; font-size: 0.8rem; color: #999; text-align: center;">
+					<p class="login-form-disclaimer">
 						Your credentials are securely transmitted and validated only with MyFantasyLeague.com. We never store your password.
 					</p>
 				</form>
@@ -137,10 +137,10 @@ const mflYear = getCurrentLeagueYear();
 		top: 0;
 		left: 0;
 		right: 0;
-		background: white;
-		border-bottom: 1px solid #e5e5e5;
+		background: var(--content-bg, #ffffff);
+		border-bottom: 1px solid var(--content-border, #e5e5e5);
 		z-index: 1000;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		box-shadow: var(--shadow-md, 0 2px 10px rgba(0, 0, 0, 0.1));
 	}
 
 	.header-container {
@@ -157,17 +157,17 @@ const mflYear = getCurrentLeagueYear();
 		align-items: center;
 		gap: 0.75rem;
 		text-decoration: none;
-		color: black;
+		color: var(--page-text, black);
 		transition: all 0.2s ease;
 	}
 
 	.brand:hover {
-		color: #dc2626;
+		color: var(--color-error, #dc2626);
 		text-decoration: none;
 	}
 
 	.brand:hover .brand-text {
-		color: #dc2626;
+		color: var(--color-error, #dc2626);
 	}
 
 	.logo-placeholder svg {
@@ -177,7 +177,7 @@ const mflYear = getCurrentLeagueYear();
 	.brand-text {
 		font-size: 1.5rem;
 		font-weight: bold;
-		color: black;
+		color: var(--page-text, black);
 	}
 
 	/* User Menu Styles - Shared */
@@ -201,7 +201,7 @@ const mflYear = getCurrentLeagueYear();
 		padding: 0;
 		transition: all 0.2s ease;
 		border-radius: 0.5rem;
-		color: black;
+		color: var(--page-text, black);
 	}
 
 	.user-btn svg {
@@ -211,17 +211,17 @@ const mflYear = getCurrentLeagueYear();
 	}
 
 	.user-btn:hover {
-		color: #dc2626;
+		color: var(--color-error, #dc2626);
 	}
 
 	.user-dropdown {
 		position: absolute;
 		top: calc(100% + 0.5rem);
 		right: 0;
-		background: white;
-		border: 1px solid #ddd;
+		background: var(--content-bg, #ffffff);
+		border: 1px solid var(--content-border, #ddd);
 		border-radius: 0.5rem;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.15));
 		min-width: 200px;
 		opacity: 0;
 		visibility: hidden;
@@ -250,12 +250,17 @@ const mflYear = getCurrentLeagueYear();
 		width: 100%;
 		text-align: left;
 		font-size: 0.95rem;
-		color: black;
+		color: var(--page-text, black);
 	}
 
 	.user-dropdown-item:hover {
-		background: #f5f5f5;
-		color: #dc2626;
+		background: var(--nav-hover-bg, #f5f5f5);
+		color: var(--color-error, #dc2626);
+	}
+
+	.user-dropdown-item--static {
+		cursor: default;
+		background: var(--content-bg-muted, #f9fafb);
 	}
 
 	.user-dropdown-item:first-child {
@@ -272,12 +277,12 @@ const mflYear = getCurrentLeagueYear();
 	}
 
 	.logout-btn {
-		color: #c33;
+		color: var(--color-error, #c33);
 	}
 
 	.logout-btn:hover {
-		background: #fef2f2;
-		color: #dc2626;
+		background: var(--badge-error-bg, #fef2f2);
+		color: var(--color-error, #dc2626);
 	}
 
 	/* Login Modal Styles */
@@ -307,14 +312,15 @@ const mflYear = getCurrentLeagueYear();
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: rgba(0, 0, 0, 0.5);
+		background: rgba(15, 23, 42, 0.45);
+		backdrop-filter: blur(2px);
 	}
 
 	.login-modal-content {
 		position: relative;
-		background: white;
+		background: var(--content-bg, #ffffff);
 		border-radius: 0.75rem;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+		box-shadow: var(--shadow-xl, 0 10px 40px rgba(0, 0, 0, 0.2));
 		width: 90%;
 		max-width: 450px;
 		max-height: 90vh;
@@ -328,7 +334,7 @@ const mflYear = getCurrentLeagueYear();
 		background: none;
 		border: none;
 		cursor: pointer;
-		color: #666;
+		color: var(--content-text-muted, #666);
 		padding: 0.5rem;
 		border-radius: 0.25rem;
 		display: flex;
@@ -339,13 +345,97 @@ const mflYear = getCurrentLeagueYear();
 	}
 
 	.login-modal-close:hover {
-		background: #f5f5f5;
-		color: #000;
+		background: var(--nav-hover-bg, #f5f5f5);
+		color: var(--page-text, #000);
 	}
 
 	.login-modal-form {
 		padding: 2rem;
 		padding-top: 1rem;
+	}
+
+	.login-modal-heading {
+		text-align: center;
+		margin-bottom: 2rem;
+	}
+
+	.login-modal-title {
+		margin: 0;
+		font-size: 1.5rem;
+		color: var(--page-text, #111);
+	}
+
+	.login-modal-subtitle {
+		color: var(--content-text-muted, #666);
+		margin-top: 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	.login-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.login-form-error {
+		padding: 1rem;
+		background-color: var(--badge-error-bg, #fee);
+		border: 1px solid var(--color-error, #fcc);
+		border-radius: 4px;
+		color: var(--color-error, #c33);
+		display: none;
+	}
+
+	.login-form-error-text {
+		margin: 0;
+		font-size: 0.95rem;
+	}
+
+	.login-form-field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.login-form-label {
+		font-size: 0.95rem;
+		font-weight: 500;
+		color: var(--page-text, #333);
+	}
+
+	.login-form-input {
+		padding: 0.75rem;
+		font-size: 1rem;
+		border: 1px solid var(--input-border, #ddd);
+		border-radius: 4px;
+		font-family: inherit;
+		box-sizing: border-box;
+		background: var(--input-bg, #ffffff);
+		color: var(--input-text, #111);
+	}
+
+	.login-form-hint {
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--content-text-muted, #666);
+	}
+
+	.login-form-submit {
+		padding: 0.75rem 1.5rem;
+		font-size: 1rem;
+		font-weight: 600;
+		background-color: var(--btn-primary-bg, #0066cc);
+		color: var(--btn-primary-text, white);
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.login-form-disclaimer {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--content-text-muted, #999);
+		text-align: center;
 	}
 
 	.hamburger-btn {
@@ -367,13 +457,13 @@ const mflYear = getCurrentLeagueYear();
 	.hamburger-line {
 		width: 1.5rem;
 		height: 2px;
-		background: black;
+		background: var(--page-text, black);
 		transition: all 0.3s ease;
 		transform-origin: center;
 	}
 
 	.hamburger-btn:hover .hamburger-line {
-		background: #dc2626;
+		background: var(--color-error, #dc2626);
 	}
 
 	.hamburger-btn.active .hamburger-line:nth-child(1) {
@@ -410,7 +500,8 @@ const mflYear = getCurrentLeagueYear();
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: rgba(0, 0, 0, 0.6);
+		background: rgba(15, 23, 42, 0.45);
+		backdrop-filter: blur(2px);
 		opacity: 0;
 		transition: opacity 0.3s ease;
 	}
@@ -425,9 +516,9 @@ const mflYear = getCurrentLeagueYear();
 		right: 0;
 		height: 100%;
 		width: 300px;
-		background: white;
+		background: var(--content-bg, #ffffff);
 		padding: 2rem;
-		box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+		box-shadow: var(--shadow-lg, -2px 0 10px rgba(0, 0, 0, 0.1));
 		transform: translateX(100%);
 		transition: transform 0.3s ease;
 		z-index: 1000;
@@ -443,7 +534,7 @@ const mflYear = getCurrentLeagueYear();
 		right: 1rem;
 		background: none;
 		border: none;
-		color: black;
+		color: var(--page-text, black);
 		cursor: pointer;
 		padding: 0.5rem;
 		border-radius: 0.25rem;
@@ -454,8 +545,8 @@ const mflYear = getCurrentLeagueYear();
 	}
 
 	.close-btn:hover {
-		background: #f5f5f5;
-		color: #dc2626;
+		background: var(--nav-hover-bg, #f5f5f5);
+		color: var(--color-error, #dc2626);
 	}
 
 	.close-btn svg {
@@ -475,17 +566,17 @@ const mflYear = getCurrentLeagueYear();
 
 	.nav-links a {
 		display: block;
-		color: black;
+		color: var(--page-text, black);
 		text-decoration: none;
 		font-size: 1.125rem;
 		font-weight: 500;
 		padding: 0.75rem 0;
-		border-bottom: 1px solid #f5f5f5;
+		border-bottom: 1px solid var(--nav-border-subtle, #f5f5f5);
 		transition: color 0.2s ease;
 	}
 
 	.nav-links a:hover {
-		color: #dc2626;
+		color: var(--color-error, #dc2626);
 	}
 
 	/* Add padding to body when header is fixed */
@@ -575,7 +666,7 @@ const mflYear = getCurrentLeagueYear();
 			if (data.authenticated && data.user) {
 				// User is logged in - show logout option
 				authContent!.innerHTML = `
-					<div class="user-dropdown-item" style="cursor: default; background: #f9fafb;">
+					<div class="user-dropdown-item user-dropdown-item--static">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
 							<circle cx="12" cy="7" r="4"></circle>
