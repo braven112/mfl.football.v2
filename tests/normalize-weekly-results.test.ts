@@ -75,6 +75,20 @@ describe('normalizeWeeklyResults', () => {
     });
   });
 
+  it('normalizes a bare top-level franchise object (flat shape, single team)', () => {
+    const raw = [
+      {
+        weeklyResults: {
+          week: '18',
+          franchise: { id: '0005', score: '99.9' },
+        },
+      },
+    ];
+    expect(normalizeWeeklyResults(raw)).toEqual({
+      weeks: [{ week: 18, scores: { '0005': 99.9 } }],
+    });
+  });
+
   it('skips franchises without a score and handles empty/missing payloads', () => {
     const raw = [
       { weeklyResults: { week: '2', franchise: [{ id: '0001' }, { id: '0002', score: '5' }] } },
