@@ -510,3 +510,15 @@ Also pair the config swap with `resolvePreferredTeamIdForYear()` for the my-team
 **Evidence:** One-line fix in `src/pages/afl-fantasy/icons.astro` (mirror of `src/pages/theleague/icons.astro:7`); route went 500 → 200 with all icons rendered.
 
 **Recommendation:** To read a `public/` (or any repo-root) file in frontmatter, always use `path.join(process.cwd(), '...')`. Reserve `new URL(..., import.meta.url)` for assets that live next to the module and are processed by Vite. When creating a league-twin of an existing page, diff the frontmatter against the original — the theleague version already had the correct pattern with an explanatory comment.
+
+---
+
+## 2026-07-04 - launch.json: One autoPort Dev Config, Never Per-Port Copies
+
+**Context:** `.claude/launch.json` had accreted nine near-identical dev-server configs (`dev`, `dev-4331` … `dev-4417`), one per worktree session. Each pinned a port with `"autoPort": false` and hardcoded absolute nvm paths to node/pnpm under one user's home directory. The accretion pattern: a session's `preview_start` hit a port owned by another session's server, the tooling refused to reuse it, and the session appended a fresh `dev-NNNN` config instead of enabling autoPort.
+
+**Insight:** The Claude Preview tooling fully supports `"autoPort": true` — when the configured port is busy it picks a free port and **substitutes it into `runtimeArgs`** (verified: config said `--port 4322`, 4322 was held by another session, the server was launched with `astro dev --port 60342` and the tool reported the assigned port). Also, a bare `"runtimeExecutable": "pnpm"` resolves via PATH — the absolute `/Users/.../.nvm/...` paths and the machine-specific `env.PATH` block were never necessary and break for other contributors.
+
+**Evidence:** PR #331 collapsed the file 9 configs → 1 (116 lines → 3 net). Tested from a fresh worktree with 4322 busy: auto-assigned port, Astro started, homepage rendered.
+
+**Recommendation:** The file should contain exactly one `dev` config: `"runtimeExecutable": "pnpm"`, `"runtimeArgs": ["dev", "--port", "4322"]`, `"port": 4322`, `"autoPort": true`. If `preview_start` reports a port conflict, that's autoPort working — do NOT append a new config, hardcode toolchain paths, or stop another worktree's server. A fresh worktree needs `pnpm install` first, or the start fails with `sh: astro: command not found`.
