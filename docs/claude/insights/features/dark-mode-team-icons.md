@@ -8,9 +8,10 @@ Insights for the per-team dark-mode icon variant system
 
 ## 2026-07-03 - One generated stylesheet beats touching 20 call sites
 
-**Context:** Teams needed a different icon in dark mode (first four: Da
-Dangsters, Mariachi Ninjas, Music City Mafia, Wascawy Wabbits), falling back
-to the regular icon when no dark variant exists.
+**Context:** Teams needed a different icon in dark mode (launch set: nine
+teams — Dangsters, Maverick, Dead Cap Walking, Ninjas, Music City, Fire Ready
+Aim, Bring The Pain, Wabbits, Computer Jocks), falling back to the regular
+icon when no dark variant exists.
 
 **Architecture decision:** Team icons render as plain `<img>` tags in ~20 call
 sites spanning three paradigms — Astro components (standings tables,

@@ -112,16 +112,20 @@ describe.each([
 });
 
 describe('theleague config dark icon rollout', () => {
-  it('the four launch teams declare iconDark', () => {
+  it('the launch teams declare iconDark named {slug}_dark.png next to the light icon', () => {
     const byId = new Map(
-      (theleagueConfig.teams as Array<{ franchiseId: string; iconDark?: string }>).map((t) => [
-        t.franchiseId,
-        t,
-      ]),
+      (theleagueConfig.teams as Array<{ franchiseId: string; icon?: string; iconDark?: string }>).map(
+        (t) => [t.franchiseId, t],
+      ),
     );
-    // Da Dangsters, Mariachi Ninjas, Music City Mafia, Wascawy Wabbits
-    for (const fid of ['0002', '0005', '0006', '0009']) {
-      expect(byId.get(fid)?.iconDark, `franchise ${fid} should have iconDark`).toMatch(/_dark\.png$/);
+    // Dangsters, Maverick, Dead Cap Walking, Ninjas, Music City,
+    // Fire Ready Aim, Bring The Pain, Wabbits, Computer Jocks
+    const LAUNCH_FIDS = ['0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010'];
+    for (const fid of LAUNCH_FIDS) {
+      const team = byId.get(fid);
+      expect(team?.iconDark, `franchise ${fid} should have iconDark`).toBe(
+        team?.icon?.replace(/\.png$/, '_dark.png'),
+      );
     }
   });
 });
