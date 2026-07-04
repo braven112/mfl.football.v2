@@ -65,6 +65,15 @@ const {
     transform: translateY(-2px);
   }
 
+  /* Dark mode: border ring so cards separate from the page (raised-card
+     recipe — light stays borderless). */
+  :global(html.dark) .metric-card,
+  :global(html.dark) .metric-card:hover {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .metric-card__label {
     font-size: 0.875rem;
     color: var(--content-text-muted, #64748b);

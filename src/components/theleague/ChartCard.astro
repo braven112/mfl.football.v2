@@ -42,6 +42,14 @@ const { title, subtitle, class: className } = Astro.props;
     overflow: auto;
   }
 
+  /* Dark mode: border ring so cards separate from the page (raised-card
+     recipe — light stays borderless). */
+  :global(html.dark) .chart-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .chart-card__header {
     display: grid;
     grid-template-columns: 1fr auto;
