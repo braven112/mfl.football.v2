@@ -286,13 +286,15 @@ function getRowColor(seed: number | undefined): string {
     background-color: var(--table-row-bg, #fff);
   }
 
+  /* Dark tier bands: whisper-tints mixed into the card surface (matches
+     LeagueStandingsTable) — resolves against AFL's navy card too. */
   :global(html.dark) .tier-division-winners {
-    background-color: #4a3f1a;
+    background-color: color-mix(in srgb, #d4a856 12%, var(--card-bg, #1e1e1e));
     color: #ededed;
   }
 
   :global(html.dark) .tier-wild-cards {
-    background-color: #2e2e2e;
+    background-color: color-mix(in srgb, #dad8d5 7%, var(--card-bg, #1e1e1e));
     color: #ededed;
   }
 
