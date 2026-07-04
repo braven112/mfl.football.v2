@@ -148,12 +148,14 @@ html.dark {
   --btn-primary-border: #1d4ed8;
   --btn-primary-border-hover: #3b82f6;
 
-  /* Secondary Button */
-  --btn-secondary-bg: #2e8743;
-  --btn-secondary-bg-hover: #3c9950;
-  --btn-secondary-bg-focus: #3c9950;
-  --btn-secondary-text: #ffffff;
-  --btn-secondary-border: #3c9950;
+  /* Secondary Button — logo-green emerald with near-black text (white on
+     #10b981 is only ~3:1; #121212 is ~6.4:1, same treatment as the dark
+     primary button). */
+  --btn-secondary-bg: #10b981;
+  --btn-secondary-bg-hover: #34d399;
+  --btn-secondary-bg-focus: #34d399;
+  --btn-secondary-text: #121212;
+  --btn-secondary-border: #10b981;
   --btn-secondary-border-hover: #2563eb;
 
   /* Inverse Button */
