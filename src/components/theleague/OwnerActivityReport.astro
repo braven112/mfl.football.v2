@@ -514,7 +514,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		top: 0.5rem;
 		right: 0.75rem;
 		background: var(--color-gray-900, #111827);
-		color: #fff;
+		color: var(--color-white, #fff);
 		font-size: 0.75rem;
 		padding: 0.5rem 0.625rem;
 		border-radius: 0.375rem;
@@ -653,9 +653,13 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		border-collapse: separate;
 		border-spacing: 0;
 		font-size: 0.875rem;
-		background: #fff;
+		background: var(--card-bg, #fff);
 		border-radius: var(--radius-md, 0.5rem);
 		overflow: hidden;
+	}
+
+	:global(html.dark) .activity-table {
+		box-shadow: 0 0 0 1px var(--content-border, #555);
 	}
 
 	.activity-table__th {

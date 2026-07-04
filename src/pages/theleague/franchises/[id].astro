@@ -992,7 +992,7 @@ const formatBid = (n: number): string => {
   }
   .meta {
     margin: 0 0 0.75rem;
-    color: var(--text-secondary, #666);
+    color: var(--content-text-muted, #666);
     font-size: 0.875rem;
     white-space: nowrap;
   }
@@ -1013,7 +1013,7 @@ const formatBid = (n: number): string => {
     border-radius: 999px;
     font-size: 0.8125rem;
     font-weight: 600;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
   }
   .badge-detail {
     font-size: 0.6875rem;
@@ -1060,7 +1060,7 @@ const formatBid = (n: number): string => {
     gap: 0.75rem;
     margin: 0 0 2rem;
     padding: 1rem;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
     border-radius: 0.75rem;
   }
   .stat { display: flex; flex-direction: column; gap: 0.125rem; }
@@ -1068,7 +1068,7 @@ const formatBid = (n: number): string => {
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 600;
   }
   .stat-value {
@@ -1078,7 +1078,7 @@ const formatBid = (n: number): string => {
   }
   .stat-sub {
     font-size: 0.75rem;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
   }
 
   .highlights, .awards, .eras {
@@ -1096,13 +1096,13 @@ const formatBid = (n: number): string => {
   }
   .highlight {
     padding: 1rem;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
     border-radius: 0.5rem;
   }
   .hl-label {
     font-size: 0.75rem;
     text-transform: uppercase;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 600;
   }
   .hl-value {
@@ -1112,13 +1112,30 @@ const formatBid = (n: number): string => {
   }
   .hl-context {
     font-size: 0.8125rem;
-    color: var(--text-secondary, #666);
+    color: var(--content-text-muted, #666);
     line-height: 1.4;
   }
   .highlight--win { background: #e6f7e6; }
   .highlight--win .hl-value { color: #1f5d2d; }
   .highlight--loss { background: #fff5f3; }
   .highlight--loss .hl-value { color: #8b2a1f; }
+
+  :global(html.dark) .highlight--win {
+    background: color-mix(in srgb, #1f5d2d 28%, var(--content-bg-muted));
+  }
+  :global(html.dark) .highlight--win .hl-label,
+  :global(html.dark) .highlight--win .hl-context {
+    color: var(--page-text, #ededed);
+  }
+  :global(html.dark) .highlight--win .hl-value { color: #7ee0a0; }
+  :global(html.dark) .highlight--loss {
+    background: color-mix(in srgb, #8b2a1f 28%, var(--content-bg-muted));
+  }
+  :global(html.dark) .highlight--loss .hl-label,
+  :global(html.dark) .highlight--loss .hl-context {
+    color: var(--page-text, #ededed);
+  }
+  :global(html.dark) .highlight--loss .hl-value { color: #ff9c8a; }
 
   .scoring-chart-section {
     margin: 2.5rem 0;
@@ -1129,7 +1146,7 @@ const formatBid = (n: number): string => {
     gap: 2px;
     height: 180px;
     padding: 0.5rem 0.25rem 1.5rem;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
     border-radius: 0.5rem;
   }
   .bar {
@@ -1155,7 +1172,7 @@ const formatBid = (n: number): string => {
     right: 0;
     text-align: center;
     font-size: 0.625rem;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-variant-numeric: tabular-nums;
   }
 
@@ -1167,8 +1184,8 @@ const formatBid = (n: number): string => {
   .award-card {
     padding: 1rem;
     border-radius: 0.625rem;
-    background: var(--surface-2, #f5f5f5);
-    border-left: 4px solid var(--text-tertiary, #ccc);
+    background: var(--content-bg-muted, #f5f5f5);
+    border-left: 4px solid var(--content-text-muted, #ccc);
   }
   .award-card h3 {
     margin: 0 0 0.5rem;
@@ -1189,6 +1206,15 @@ const formatBid = (n: number): string => {
   .award--jerry { border-left-color: #8b2a1f; background: #fff5f3; }
   .award--osweiler { border-left-color: #4d2c66; background: #f9f4fc; }
 
+  /* Award cards keep the same accent hue in dark mode but tint the muted
+     card surface instead of a near-white pastel — text inside inherits
+     --page-text (already inverted), so only the background needs help. */
+  :global(html.dark) .award--championship { background: color-mix(in srgb, #b58a00 22%, var(--content-bg-muted)); }
+  :global(html.dark) .award--division { background: color-mix(in srgb, #1a3d7c 22%, var(--content-bg-muted)); }
+  :global(html.dark) .award--mvp { background: color-mix(in srgb, #1f5d2d 22%, var(--content-bg-muted)); }
+  :global(html.dark) .award--jerry { background: color-mix(in srgb, #8b2a1f 22%, var(--content-bg-muted)); }
+  :global(html.dark) .award--osweiler { background: color-mix(in srgb, #4d2c66 22%, var(--content-bg-muted)); }
+
   .badges-section {
     margin-bottom: 2.5rem;
   }
@@ -1203,7 +1229,7 @@ const formatBid = (n: number): string => {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 600;
   }
   .badge-grid {
@@ -1219,8 +1245,8 @@ const formatBid = (n: number): string => {
     align-items: flex-start;
     gap: 0.625rem;
     padding: 0.75rem 0.875rem;
-    background: #fff;
-    border: 1px solid var(--border, #e5e5e5);
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e5e5e5);
     border-left: 3px solid var(--accent);
     border-radius: 0.5rem;
   }
@@ -1247,16 +1273,16 @@ const formatBid = (n: number): string => {
     flex-wrap: wrap;
     gap: 0.25rem 0.5rem;
     font-size: 0.75rem;
-    color: var(--text-secondary, #666);
+    color: var(--content-text-muted, #666);
     font-variant-numeric: tabular-nums;
   }
 
   .era {
     margin-bottom: 2rem;
     padding: 1rem 1.25rem;
-    border: 1px solid var(--border, #e5e5e5);
+    border: 1px solid var(--content-border, #e5e5e5);
     border-radius: 0.625rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
   }
   .year-by-year-scroll {
     max-height: 480px;
@@ -1267,14 +1293,14 @@ const formatBid = (n: number): string => {
        up and start scrolling the page once it hits the boundary */
     overscroll-behavior: contain;
     border-radius: 0.375rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
   }
   .year-by-year-scroll thead th {
     position: sticky;
     top: 0;
-    background: #fff;
+    background: var(--card-bg, #fff);
     z-index: 1;
-    box-shadow: inset 0 -1px 0 var(--border, #ececec);
+    box-shadow: inset 0 -1px 0 var(--content-border, #ececec);
   }
   .era-header {
     display: flex;
@@ -1287,7 +1313,7 @@ const formatBid = (n: number): string => {
     height: 48px;
     object-fit: contain;
     border-radius: 0.375rem;
-    background: var(--surface, #fff);
+    background: var(--card-bg, #fff);
   }
   .era-header h3 {
     margin: 0 0 0.125rem;
@@ -1311,8 +1337,8 @@ const formatBid = (n: number): string => {
     margin-left: 0.5rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background: var(--surface-2, #f0f0f0);
-    color: var(--text-secondary, #555);
+    background: var(--content-bg-muted, #f0f0f0);
+    color: var(--content-text-muted, #555);
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1327,7 +1353,7 @@ const formatBid = (n: number): string => {
   .year-by-year th, .year-by-year td {
     padding: 0.5rem 0.625rem;
     text-align: left;
-    border-bottom: 1px solid var(--border, #ececec);
+    border-bottom: 1px solid var(--content-border, #ececec);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -1335,10 +1361,10 @@ const formatBid = (n: number): string => {
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 600;
   }
-  .year-by-year tbody tr:hover { background: var(--surface-2, #f5f5f5); }
+  .year-by-year tbody tr:hover { background: var(--content-bg-muted, #f5f5f5); }
   .row-icon {
     width: 18px;
     height: 18px;
@@ -1363,18 +1389,18 @@ const formatBid = (n: number): string => {
     gap: 0.5rem;
     margin-top: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px dashed var(--border, #e5e5e5);
+    border-top: 1px dashed var(--content-border, #e5e5e5);
   }
   .era-award {
     font-size: 0.75rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background: var(--surface-2, #f5f5f5);
-    color: var(--text-secondary, #555);
+    background: var(--content-bg-muted, #f5f5f5);
+    color: var(--content-text-muted, #555);
     font-weight: 600;
   }
 
-  .dim { color: var(--text-tertiary, #888); }
+  .dim { color: var(--content-text-muted, #888); }
   .small { font-size: 0.75rem; }
   .footnote {
     margin-top: 2rem;
@@ -1406,7 +1432,7 @@ const formatBid = (n: number): string => {
     align-items: center;
     gap: 0.625rem;
     padding: 0.625rem 0.75rem;
-    background: var(--surface-2, #f7f7f7);
+    background: var(--content-bg-muted, #f7f7f7);
     border: 1px solid transparent;
     border-radius: 0.5rem;
     text-decoration: none;
@@ -1435,7 +1461,7 @@ const formatBid = (n: number): string => {
   .rival-record {
     font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
-    color: var(--text-secondary, #555);
+    color: var(--content-text-muted, #555);
   }
   .rival-playoff {
     font-size: 0.6875rem;
@@ -1445,6 +1471,7 @@ const formatBid = (n: number): string => {
     letter-spacing: 0.04em;
     margin-top: 0.125rem;
   }
+  :global(html.dark) .rival-playoff { color: #e0b23d; }
 
   /* ============================================
    * TRADE LEDGER
@@ -1457,9 +1484,9 @@ const formatBid = (n: number): string => {
   }
   .trade-year {
     margin-bottom: 0.625rem;
-    border: 1px solid var(--border, #e5e5e5);
+    border: 1px solid var(--content-border, #e5e5e5);
     border-radius: 0.625rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     overflow: hidden;
   }
   .trade-year > summary {
@@ -1469,13 +1496,13 @@ const formatBid = (n: number): string => {
     align-items: baseline;
     gap: 0.625rem;
     font-weight: 600;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
     list-style: none;
   }
   .trade-year > summary::-webkit-details-marker { display: none; }
   .trade-year > summary::before {
     content: '▸';
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     transition: transform 0.15s ease;
     display: inline-block;
   }
@@ -1493,7 +1520,7 @@ const formatBid = (n: number): string => {
     gap: 0.625rem;
   }
   .trade {
-    background: var(--surface-2, #f7f7f7);
+    background: var(--content-bg-muted, #f7f7f7);
     border-radius: 0.5rem;
     padding: 0.75rem 0.875rem;
   }
@@ -1510,7 +1537,7 @@ const formatBid = (n: number): string => {
     text-decoration: none;
     color: inherit;
     font-weight: 600;
-    background: #fff;
+    background: var(--card-bg, #fff);
     padding: 0.25rem 0.5rem 0.25rem 0.375rem;
     border-radius: 999px;
     border: 1px solid transparent;
@@ -1536,7 +1563,7 @@ const formatBid = (n: number): string => {
     gap: 0.625rem;
   }
   .trade-col {
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 0.375rem;
     padding: 0.5rem 0.625rem;
   }
@@ -1544,7 +1571,7 @@ const formatBid = (n: number): string => {
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 700;
     margin-bottom: 0.25rem;
   }
@@ -1577,9 +1604,9 @@ const formatBid = (n: number): string => {
   }
   .year-group {
     margin-bottom: 0.625rem;
-    border: 1px solid var(--border, #e5e5e5);
+    border: 1px solid var(--content-border, #e5e5e5);
     border-radius: 0.625rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     overflow: hidden;
   }
   .year-group > summary {
@@ -1589,13 +1616,13 @@ const formatBid = (n: number): string => {
     align-items: baseline;
     gap: 0.625rem;
     font-weight: 600;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
     list-style: none;
   }
   .year-group > summary::-webkit-details-marker { display: none; }
   .year-group > summary::before {
     content: '▸';
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     transition: transform 0.15s ease;
     display: inline-block;
   }
@@ -1614,7 +1641,7 @@ const formatBid = (n: number): string => {
     align-items: baseline;
     gap: 0.625rem;
     padding: 0.375rem 0;
-    border-bottom: 1px solid var(--border, #f0f0f0);
+    border-bottom: 1px solid var(--content-border, #f0f0f0);
     font-size: 0.875rem;
   }
   .pick-row:last-child { border-bottom: none; }
@@ -1626,6 +1653,7 @@ const formatBid = (n: number): string => {
     color: var(--accent);
   }
   .pick-bid { color: #1f5d2d; }
+  :global(html.dark) .pick-bid { color: #7ee0a0; }
   .pick-player {
     flex: 1;
     min-width: 0;
@@ -1634,10 +1662,10 @@ const formatBid = (n: number): string => {
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background: var(--surface-3, #ebebeb);
+    background: var(--table-row-bg-hover, #ebebeb);
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
-    color: var(--text-tertiary, #666);
+    color: var(--content-text-muted, #666);
     font-weight: 600;
   }
 </style>

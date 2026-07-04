@@ -232,7 +232,7 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
   }
   .lede {
     margin: 0;
-    color: var(--text-secondary, #666);
+    color: var(--content-text-muted, #666);
     max-width: 60ch;
   }
 
@@ -261,8 +261,8 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
   }
 
   .card-body {
-    background: var(--surface, #fff);
-    border: 1px solid var(--border, #e5e5e5);
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e5e5e5);
     border-radius: 0.75rem;
     padding: 0.875rem 1rem 1rem;
     display: flex;
@@ -270,6 +270,9 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     gap: 0.625rem;
     flex: 1;
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  :global(html.dark) .card-body {
+    box-shadow: 0 0 0 1px var(--content-border, #555);
   }
   .franchise-card:hover .card-body {
     transform: translateY(-2px);
@@ -287,7 +290,7 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
   }
 
   .stats {
@@ -305,7 +308,7 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 600;
   }
   .stats dd {
@@ -313,9 +316,10 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     font-size: 0.9375rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    color: var(--page-text, inherit);
   }
   .dim {
-    color: var(--text-tertiary, #888);
+    color: var(--content-text-muted, #888);
     font-weight: 400;
   }
 
@@ -336,8 +340,8 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
-    background: var(--surface-2, #f5f5f5);
-    color: var(--text-secondary, #555);
+    background: var(--content-bg-muted, #f5f5f5);
+    color: var(--content-text-muted, #555);
   }
   .badge .icon { font-size: 0.875rem; line-height: 1; }
   .badge--championship { background: #fff3c4; color: #7a5b00; }
@@ -346,10 +350,22 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
   .badge--jerry { background: #ffe4e1; color: #8b2a1f; }
   .badge--osweiler { background: #f0e6f7; color: #4d2c66; }
 
+  /* Award pills keep their light pastel/dark-text pairing in dark mode too —
+     both colors are hardcoded together so contrast stays fixed regardless of
+     theme (WCAG AA holds: e.g. #7a5b00 on #fff3c4 ≈ 5:1). Ring them so they
+     read as intentional chips rather than a light-mode leftover. */
+  :global(html.dark) .badge--championship,
+  :global(html.dark) .badge--division,
+  :global(html.dark) .badge--mvp,
+  :global(html.dark) .badge--jerry,
+  :global(html.dark) .badge--osweiler {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  }
+
   .historical-identities {
     margin-top: 3rem;
     padding-top: 2rem;
-    border-top: 1px solid var(--border, #e5e5e5);
+    border-top: 1px solid var(--content-border, #e5e5e5);
   }
   .historical-identities h2 {
     margin: 0 0 0.25rem;
@@ -371,10 +387,10 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    background: var(--surface-2, #f5f5f5);
+    background: var(--content-bg-muted, #f5f5f5);
     text-decoration: none;
     color: inherit;
     font-size: 0.875rem;
   }
-  .identity-list a:hover { background: var(--surface-3, #ebebeb); }
+  .identity-list a:hover { background: var(--table-row-bg-hover, #ebebeb); }
 </style>
