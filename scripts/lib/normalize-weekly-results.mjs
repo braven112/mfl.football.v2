@@ -37,9 +37,12 @@ export function normalizeWeeklyResults(rawWeeks) {
       const scores = {};
 
       const addFranchise = (team) => {
-        if (team?.id != null && team.score != null) {
-          scores[String(team.id)] = Number(team.score) || 0;
-        }
+        if (team?.id == null || team.score == null || String(team.score).trim() === '') return;
+        const score = Number(team.score);
+        // A present-but-unparseable score is exactly the "fake zero" failure
+        // mode this normalizer exists to eliminate — skip rather than mask it.
+        if (Number.isNaN(score)) return;
+        scores[String(team.id)] = score;
       };
 
       for (const matchup of toArray(wr.matchup)) {

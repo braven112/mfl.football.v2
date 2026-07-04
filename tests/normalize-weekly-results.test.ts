@@ -89,4 +89,22 @@ describe('normalizeWeeklyResults', () => {
       ],
     });
   });
+
+  it('skips a present-but-unparseable score instead of defaulting to 0', () => {
+    const raw = [
+      {
+        weeklyResults: {
+          week: '5',
+          franchise: [
+            { id: '0001', score: '' },
+            { id: '0002', score: 'N/A' },
+            { id: '0003', score: '12.5' },
+          ],
+        },
+      },
+    ];
+    expect(normalizeWeeklyResults(raw)).toEqual({
+      weeks: [{ week: 5, scores: { '0003': 12.5 } }],
+    });
+  });
 });
