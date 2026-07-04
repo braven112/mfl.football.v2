@@ -2,10 +2,10 @@
 <!-- Start Home Page Message 18 -->
 <style type="text/css">
     td.round2 {
-        background-color: #eee;
+        background-color: var(--content-bg-muted, #eee);
     }
     td.round3 {
-        background-color: #ccc;
+        background-color: var(--color-gray-300, #ccc);
     }
     .emphasize {
         font-style: italic;
@@ -30,20 +30,20 @@
         margin: 0 0 1rem;
     }
     .constitution-wrapper h3 {
-        color: #1c497c;
-        border-bottom-color: #ddd;
+        color: var(--color-primary, #1c497c);
+        border-bottom-color: var(--content-border, #ddd);
     }
-    blockquote {
-        border: 1px solid #ddd;
+    .constitution-wrapper blockquote {
+        border: 1px solid var(--content-border, #ddd);
         padding: 1rem;
-        border-left: 1rem solid #ddd;
+        border-left: 1rem solid var(--content-border, #ddd);
     }
-    blockquote.fine-print {
+    .constitution-wrapper blockquote.fine-print {
         font-size: 0.9rem;
         margin: 0 0 1rem;
     }
     .fine-print {
-        color: #666;
+        color: var(--content-text-muted, #666);
         font-size: 0.75rem;
     }
     .unstyled {
@@ -57,18 +57,18 @@
         overflow: auto;
     }
     table.tableformat {
-        border: 1px solid #eee;
+        border: 1px solid var(--content-border, #eee);
         margin-bottom: 1rem;
     }
     .tableformat th {
-        background-color: #eee;
+        background-color: var(--table-header-bg, #eee);
         padding: .25rem .5rem;
-        border: 1px solid #ddd;
+        border: 1px solid var(--content-border, #ddd);
     }
     .tableformat td {
-        background-color: #fff;
+        background-color: var(--table-row-bg, #fff);
         padding: .25rem .5rem;
-        border: 1px solid #ddd;
+        border: 1px solid var(--content-border, #ddd);
         font-size: .8rem;
     }
     .player-tags th {
@@ -81,7 +81,7 @@
     .fp td,
     .tp td,
     .divider td {
-        border-bottom: 10px solid #ddd;
+        border-bottom: 10px solid var(--content-border, #ddd);
     }
     table.draftsalaries td:first-child,
     table.draftsalaries th:first-child {
@@ -90,7 +90,7 @@
     #sectionSelect {
         padding: 8px;
         font-size: 1rem;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border, #ccc);
         border-radius: 5px;
         cursor: pointer;
     }
@@ -113,7 +113,7 @@
         right: 20px;
         padding: 10px 15px;
         font-size: 1rem;
-        background-color: #1c497c;
+        background-color: var(--color-primary, #1c497c);
         color: white;
         border: none;
         border-radius: 5px;
