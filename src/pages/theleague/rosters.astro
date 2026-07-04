@@ -3482,6 +3482,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     overflow-x: auto;
   }
 
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     #1e1e1e sections from the #121212 page; add the border ring. */
+  :global(html.dark) .roster-table-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .roster-table-card--sub {
     padding: var(--padding-md);
   }
