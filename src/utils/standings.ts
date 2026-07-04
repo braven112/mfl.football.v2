@@ -80,10 +80,15 @@ type LeagueConfig = {
   [key: string]: any; // Allow additional properties
 };
 
-// Parse W-L-T string to get wins and losses
-function parseWLT(wlt: string): { wins: number; losses: number; ties: number } {
-  const [wins, losses, ties] = wlt.split('-').map(Number);
-  return { wins, losses, ties };
+// Parse W-L-T string to get wins and losses. Defensive against the missing /
+// malformed records in pre-2004 MFL feeds — a blank record parses as 0-0-0.
+function parseWLT(wlt: string | undefined): { wins: number; losses: number; ties: number } {
+  const [wins = 0, losses = 0, ties = 0] = (wlt ?? '').split('-').map(Number);
+  return {
+    wins: Number.isNaN(wins) ? 0 : wins,
+    losses: Number.isNaN(losses) ? 0 : losses,
+    ties: Number.isNaN(ties) ? 0 : ties,
+  };
 }
 
 // Get team config info
@@ -207,22 +212,37 @@ function wildCardTiebreaker(teams: TeamStanding[]): TeamStanding[] {
   return sorted;
 }
 
+// Combine separate W/L/T fields into a "W-L-T" string when the combined field
+// is absent (pre-2004 MFL feeds ship only the separate fields).
+function normalizeWLT(combined: unknown, w: unknown, l: unknown, t: unknown): string {
+  if (combined) return String(combined);
+  if (w !== undefined && l !== undefined) {
+    return `${w || '0'}-${l || '0'}-${t || '0'}`;
+  }
+  return '0-0-0';
+}
+
 // Enrich franchise data with team config info
 export function enrichTeamStanding(franchise: StandingsFranchise, config: LeagueConfig): TeamStanding {
   const teamConfig = getTeamConfig(franchise.id, config);
+  const raw = franchise as Record<string, any>;
 
-  // Normalize h2hwlt field - construct from separate fields if needed (for older MFL data)
-  let h2hwlt = (franchise as any).h2hwlt;
-  if (!h2hwlt && (franchise as any).h2hw !== undefined && (franchise as any).h2hl !== undefined) {
-    const wins = (franchise as any).h2hw || '0';
-    const losses = (franchise as any).h2hl || '0';
-    const ties = (franchise as any).h2ht || '0';
-    h2hwlt = `${wins}-${losses}-${ties}`;
-  }
-
+  // Normalize the fields the tiebreaker comparators read. Older MFL feeds ship
+  // separate W/L/T fields instead of the combined strings (2003) and omit
+  // several metrics entirely (all_play/vp until ~2017, pa/pf in some years).
+  // A missing metric becomes '0' — every team ties on it and the comparison
+  // falls through to the next tiebreaker instead of producing NaN sorts.
   return {
     ...franchise,
-    h2hwlt: h2hwlt || '0-0-0',
+    h2hwlt: normalizeWLT(raw.h2hwlt, raw.h2hw, raw.h2hl, raw.h2ht),
+    divwlt: normalizeWLT(raw.divwlt, raw.divw, raw.divl, raw.divt),
+    divpct: raw.divpct ?? '0',
+    all_play_wlt: raw.all_play_wlt ?? '',
+    all_play_pct: raw.all_play_pct ?? '0',
+    pf: raw.pf ?? '0',
+    pa: raw.pa ?? '0',
+    pwr: raw.pwr ?? '0',
+    vp: raw.vp ?? '0',
     teamName: teamConfig?.name || franchise.fname,
     division: teamConfig?.division || 'Unknown',
     teamIcon: teamConfig?.icon || '',
@@ -322,17 +342,26 @@ export function getLeagueStandings(franchises: StandingsFranchise[], config: Lea
     return bRecord.wins - aRecord.wins || aRecord.losses - bRecord.losses;
   });
 
-  // Combine: seeds 1-4 (div winners), 5-16 (rest sorted by record)
+  // Combine: division winners get the top seeds (1-N, one per division), the
+  // rest follow sorted by record. N is however many divisions the config has —
+  // 4 today, but 6 in the AFL's 2003-2012 layout (see afl-structure.ts).
   const league = [
     ...sortedDivWinners.map((team, idx) => ({ ...team, seed: idx + 1 })),
-    ...sortedNonDivWinners.map((team, idx) => ({ ...team, seed: idx + 5 })),
+    ...sortedNonDivWinners.map((team, idx) => ({ ...team, seed: sortedDivWinners.length + idx + 1 })),
   ];
 
   return league;
 }
 
-// Get all-play standings
-export function getAllPlayStandings(franchises: StandingsFranchise[], config: LeagueConfig): TeamStanding[] {
+// Get all-play standings (one combined table, no tier split).
+// Optional calculatedAllPlay overrides MFL's cumulative all-play with records
+// computed from weekly results (mirrors getTierAllPlayStandings) — required
+// for pre-2017 feeds, which carry no all_play fields at all.
+export function getAllPlayStandings(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  calculatedAllPlay?: Map<string, AllPlayRecord>
+): TeamStanding[] {
   // First get league standings to get seed information
   const leagueStandings = getLeagueStandings(franchises, config);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
@@ -341,6 +370,15 @@ export function getAllPlayStandings(franchises: StandingsFranchise[], config: Le
     const standing = enrichTeamStanding(franchise, config);
     // Add seed from league standings
     standing.seed = seedMap.get(standing.id);
+
+    if (calculatedAllPlay) {
+      const allPlayRecord = calculatedAllPlay.get(standing.id);
+      if (allPlayRecord) {
+        standing.all_play_wlt = `${allPlayRecord.wins}-${allPlayRecord.losses}-${allPlayRecord.ties}`;
+        standing.all_play_pct = allPlayRecord.pct.toFixed(3);
+      }
+    }
+
     return standing;
   });
 
@@ -536,9 +574,9 @@ export function getConferenceStandings(franchises: StandingsFranchise[], config:
     return 0;
   });
 
-  // Assign seeds within conference
-  // Division winners get seeds 1-2 (however many divisions in conference)
-  // Wild cards get seeds 3-4
+  // Assign seeds within conference: division winners take the top seeds
+  // (1..sortedDivWinners.length — 2 today, but 3 in the AFL's 2003-2012
+  // six-division layout, see afl-structure.ts), wild cards fill in after.
   const conferenceStandings = [
     ...sortedDivWinners.map((team, idx) => ({ ...team, conferenceSeed: idx + 1 })),
     ...sortedWildCards.map((team, idx) => ({ ...team, conferenceSeed: sortedDivWinners.length + idx + 1 })),

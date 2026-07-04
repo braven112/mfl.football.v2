@@ -41,12 +41,14 @@ function parseWLT(wlt: string | undefined) {
 // Derive all_play_wlt from percentage when the record is missing
 // NFL schedule: 16 weeks × 15 opponents = 240 games (2020 and earlier)
 //               17 weeks × 15 opponents = 255 games (2021+)
-// Returns null if percentage data is not available
+// Returns null if percentage data is not available. A zero pct with no record
+// means the feed predates all-play tracking (pre-2017) — deriving 0-240-0 from
+// it would fabricate a season, so treat that as no data too.
 function deriveAllPlayWLT(pct: string | undefined, seasonYear: number): { w: number; l: number; t: number } | null {
   if (!pct) return null; // No data available
   const TOTAL_GAMES = seasonYear >= 2021 ? 255 : 240;
   const percentage = parseFloat(pct);
-  if (isNaN(percentage)) return null;
+  if (isNaN(percentage) || percentage <= 0) return null;
   const wins = Math.round(TOTAL_GAMES * percentage);
   const losses = TOTAL_GAMES - wins;
   return { w: wins, l: losses, t: 0 };

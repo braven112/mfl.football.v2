@@ -22,6 +22,15 @@
  * and scripts/compute-afl-awards.mjs (offline-by-default, --online to fill
  * gaps, --year for a single season, genuine-AFL cache validation).
  *
+ * OWNER-TURNOVER CAVEAT (constitution rule the formula can't see): owners who
+ * JOIN the league always start in the D-League, regardless of which tier their
+ * franchise slot competed in — so a turnover year relegates correspondingly
+ * fewer Premier League teams. This roll-forward is franchise-id-based and
+ * cannot detect owner changes; when an owner leaves, hand-correct the NEXT
+ * season's membership in tier-history.json after running this (the re-run
+ * preserves the correction). Also why 2017-2019 membership can't be
+ * reconstructed by formula (2016→2017 alone had slot swaps AND new owners).
+ *
  * DATA SOURCING NOTE (load-bearing): pre-2024 local feeds under
  * data/afl-fantasy/mfl-feeds/<year>/ are CONTAMINATED with TheLeague (13522)
  * data. Every year's weekly results are validated against the canonical AFL

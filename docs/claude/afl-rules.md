@@ -257,6 +257,10 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 
 **Tiebreakers:** prize ties split; promotion/relegation ties broken by **Total Points Scored**.
 
+**New owners:** anyone joining the league **starts in the D-League**, regardless of which tier the franchise slot they take over competed in — in a turnover year, correspondingly fewer Premier League teams are relegated.
+
+**History:** the competition began in **2017** — the year after the last AFL Cup (the Cup ran 2015-2016) — as one combined 24-team all-play table with no Premier League branding; its top 12 formed the 2018 Premier League and the bottom 12 the D-League. Split tiers ran from **2018**; per-season membership for every split season comes from the league skin's `premierleague-YYYY.js` grouping scripts (the source of truth for who was in which league), recorded in `data/afl-fantasy/tier-history.json`.
+
 ---
 
 ## Payouts
@@ -313,19 +317,19 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 | 0001 | Smokane FC | SMOKE | Premier League |
 | 0002 | Drunk Indians | DRUNK | Premier League |
 | 0004 | Get off my Ditka | DITKA | D-League |
-| 0006 | Da Dangsters | DANG | Premier League |
-| 0010 | Fullybaked | BAKD | Premier League |
-| 0012 | Suh girls, one cup | SHIT | Premier League |
+| 0006 | Da Dangsters | DANG | D-League |
+| 0010 | Fullybaked | BAKD | D-League |
+| 0012 | Suh girls, one cup | SHIT | D-League |
 
 #### South Division
 | ID | Team | Abbrev | Tier |
 |----|------|--------|------|
 | 0003 | Team Minty Fresh | MINT | D-League |
-| 0005 | Computer Jocks | JOCKS | D-League |
+| 0005 | Computer Jocks | JOCKS | Premier League |
 | 0007 | Avenging Amish | AMISH | D-League |
 | 0008 | Dicks out for Harambe | DICK | Premier League |
 | 0009 | Vitside Mafia | VIT | Premier League |
-| 0011 | Midwestside Connection | MWS | D-League |
+| 0011 | Midwestside Connection | MWS | Premier League |
 
 ### National League (Conference `01`)
 
@@ -333,11 +337,11 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 | ID | Team | Abbrev | Tier |
 |----|------|--------|------|
 | 0015 | The Mariachi Ninjas | NINJAS | Premier League |
-| 0017 | Titsburgh Feelers | TITS | D-League |
+| 0017 | Titsburgh Feelers | TITS | Premier League |
 | 0019 | Badd Boys | BADD | Premier League |
 | 0022 | Balls Deep | BALLS | Premier League |
 | 0023 | Cock Gobbler | DkLuvr | D-League |
-| 0024 | No Soup For You | SOUP | D-League |
+| 0024 | No Soup For You | SOUP | Premier League |
 
 #### West Division
 | ID | Team | Abbrev | Tier |
@@ -345,9 +349,9 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 | 0013 | Muck Juggling Micks | MICKS | D-League |
 | 0014 | Thundering Herd | HERD | D-League |
 | 0016 | Swiftie 4 Life | SWIFTY | D-League |
-| 0018 | Jewpacabra | JEW | D-League |
-| 0020 | The Boondock Saints | SAINTS | Premier League |
-| 0021 | Chatmaster | CHAT | Premier League |
+| 0018 | Jewpacabra | JEW | Premier League |
+| 0020 | The Boondock Saints | SAINTS | D-League |
+| 0021 | Chatmaster | CHAT | D-League |
 
 ---
 

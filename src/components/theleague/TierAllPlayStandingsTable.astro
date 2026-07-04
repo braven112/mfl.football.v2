@@ -1,17 +1,35 @@
 ---
 import type { TeamStanding } from '../../types/standings';
-import { getTierLogo } from '../../utils/afl-tier-logo';
+import { getTierLogo, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
 
 export interface Props {
   tierName: string;
   teams: TeamStanding[];
   year?: number;
   rosterBaseUrl?: string;
+  /**
+   * Draw a divider below this rank, and a promotion arrow (⬆) in the Prize
+   * column for every row at or above it — the inaugural 2017 season ran as
+   * ONE combined 24-team table, but its top 12 (confirmed to exactly match
+   * the 2018 Premier League roster) really were headed for promotion, so the
+   * relegation/promotion line and arrow still belong on that table even
+   * though it carries no Premier League branding.
+   */
+  promotionCutoff?: number;
 }
 
-const { tierName, teams, year = new Date().getFullYear(), rosterBaseUrl } = Astro.props;
+const {
+  tierName,
+  teams,
+  year = new Date().getFullYear(),
+  rosterBaseUrl,
+  promotionCutoff,
+} = Astro.props;
 
-const tierLogo = getTierLogo(tierName);
+// Real tiers get their badge; a combined table (the inaugural 2017 season, or
+// any season without a recorded tier split) is a plain all-play table with no
+// Premier League branding.
+const tierLogo = tierName === PREMIER_LEAGUE || tierName === D_LEAGUE ? getTierLogo(tierName) : null;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -19,12 +37,14 @@ function parseWLT(wlt: string | undefined) {
   return { w: parts[0] || 0, l: parts[1] || 0, t: parts[2] || 0 };
 }
 
-// Derive all_play_wlt from percentage when the record is missing
+// Derive all_play_wlt from percentage when the record is missing. A zero pct
+// with no record means the feed predates all-play tracking — deriving 0-240-0
+// from it would fabricate a season, so treat that as no data too.
 function deriveAllPlayWLT(pct: string | undefined, seasonYear: number): { w: number; l: number; t: number } | null {
   if (!pct) return null;
   const TOTAL_GAMES = seasonYear >= 2021 ? 255 : 240;
   const percentage = parseFloat(pct);
-  if (isNaN(percentage)) return null;
+  if (isNaN(percentage) || percentage <= 0) return null;
   const wins = Math.round(TOTAL_GAMES * percentage);
   const losses = TOTAL_GAMES - wins;
   return { w: wins, l: losses, t: 0 };
@@ -39,7 +59,7 @@ const prizes: Record<string, string[]> = {
 
 <div class="tier-standings-container">
   <div class="tier-header-section">
-    <img src={tierLogo} alt={`${tierName} Logo`} class="tier-logo" />
+    {tierLogo && <img src={tierLogo} alt={`${tierName} Logo`} class="tier-logo" />}
     <h3 class="tier-header">{tierName}</h3>
   </div>
 
@@ -78,7 +98,11 @@ const prizes: Record<string, string[]> = {
             else if (rank === 12) rowClass = 'last-place';
           }
 
-          // Add border classes
+          // Add border classes. promotionCutoff is only ever passed for the
+          // combined (non-tier) table — real Premier League / D-League
+          // callers never set it, so this can't silently clobber their
+          // tier-specific border above; guard kept explicit in case a future
+          // caller ever combines both.
           let borderClass = '';
           if (tierName === 'Premier League') {
             if (rank === 8) borderClass = 'border-below';
@@ -86,6 +110,9 @@ const prizes: Record<string, string[]> = {
           } else if (tierName === 'D-League') {
             if (rank === 2) borderClass = 'border-below-green';
             if (rank === 4) borderClass = 'border-below-playoff';
+          }
+          if (promotionCutoff !== undefined && tierName !== 'Premier League' && tierName !== 'D-League' && rank === promotionCutoff) {
+            borderClass = 'border-below';
           }
 
           return (
@@ -136,6 +163,9 @@ const prizes: Record<string, string[]> = {
                 {tierName === 'Premier League' && rank === 10 && <span class="promo-arrow pl-rank-10">⬇</span>}
                 {tierName === 'Premier League' && rank === 11 && <span class="promo-arrow pl-rank-11">⬇</span>}
                 {tierName === 'Premier League' && rank === 12 && <span class="promo-arrow pl-rank-12">⬇</span>}
+                {promotionCutoff !== undefined && rank <= promotionCutoff && (
+                  <span class="promo-arrow founders-promoted">⬆</span>
+                )}
               </td>
             </tr>
           );
@@ -466,6 +496,11 @@ const prizes: Record<string, string[]> = {
   .promo-arrow.pl-rank-11,
   .promo-arrow.pl-rank-12 {
     color: #ef4444;
+  }
+
+  /* Founders Table (2017) — every top-12 row promoted into the 2018 Premier League */
+  .promo-arrow.founders-promoted {
+    color: #22c55e;
   }
 
   @media (max-width: 767px) {

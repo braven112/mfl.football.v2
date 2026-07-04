@@ -1259,3 +1259,41 @@ write. It's commissioner-only and silently changes the validation path.
 - **`SIMPLE_ENDPOINTS` does not include `rosters` or `salaryAdjustments`.** After bulk-refixing 17 AFL years, spot-checking turned up 2019 with a *correct* `league.json`/`standings.json` (24 franchises) but a still-contaminated `rosters.json` (16 franchises, the old wrong league) — the backfill script simply never touches those two endpoints. Verify roster/salary files separately with a small inline fetch loop (same pattern as the TheLeague 2010/2011/2015 fix) any time you backfill a year that has them; don't assume "league.json is right" implies "everything for that year is right."
 
 - **Validate by cross-referencing counts, not just IDs.** The fast sanity check that caught the 2019 gap: for every backfilled year, `league.json`'s `franchises.franchise.length` must equal `standings.json`'s `leagueStandings.franchise.length`. A mismatch means one file got refetched with the correct ID and a sibling didn't — a state that "the ID matches" checks alone won't surface.
+
+
+---
+
+## 2026-07-03 - weeklyResults has TWO payload shapes; the older one silently produced empty scores
+
+**Context:** AFL 2016-2019 regular-season weeks all-play records computed to
+garbage/empty — `weekly-results.json`'s `scores` maps were empty for weeks
+1-13 of those years, only weeks 14-17 (playoff weeks) had data.
+
+**Insight:** MFL's `TYPE=weeklyResults` response shape depends on era, not
+just on whether the week is a playoff week:
+- **Modern shape:** `weeklyResults.matchup[]`, each matchup wrapping a
+  `franchise[]` pair — this is what every existing normalizer (both
+  `fetch-mfl-feeds.mjs` and `backfill-historical-feeds.mjs`) understood.
+- **Older archive-year shape (regular-season weeks, pre-2020ish):** a FLAT
+  `weeklyResults.franchise[]` with no `matchup` wrapper at all. Playoff weeks
+  in the SAME season/year can still be matchup-shaped (MFL apparently only
+  flattened the regular-season display, not every week), so a year can be a
+  mix of both shapes across its own 17 weeks.
+
+Both normalizers only read `.matchup`, so any week in the flat shape silently
+normalized to `{ week, scores: {} }` — no error, no thrown exception, just an
+empty week that looked like "no games happened."
+
+**Fix:** extracted a shared `scripts/lib/normalize-weekly-results.mjs` that
+reads BOTH shapes per week (adds from `matchup[].franchise[]` AND top-level
+`franchise[]`, whichever/however-many are present) and is now imported by
+both `fetch-mfl-feeds.mjs` and `backfill-historical-feeds.mjs` so they can't
+drift apart again. As with other MFL single-item quirks, both `matchup` and
+`franchise` may arrive as a bare object instead of an array when there's only
+one — normalize with `Array.isArray ? x : [x]` before iterating.
+
+**Recommendation:** any time a season's derived stat (all-play, VBD, etc.)
+looks suspiciously flat or zero for older years, check whether the *source*
+week data is actually flat-shaped before assuming the derivation logic itself
+is broken — sanity-check with `Object.keys(week.scores).length` across all 17
+weeks of the affected year, not just week 1.

@@ -10,6 +10,7 @@ import {
   getDivisionStandings,
   getConferenceStandings,
   getTierAllPlayStandings,
+  getAllPlayStandings,
   calculateAllPlayFromWeekly,
   type WeeklyResultsData,
 } from '../../utils/standings';
@@ -21,12 +22,13 @@ import {
 } from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { getTierMembership } from '../../utils/afl-tier';
+import { getTierMembership, TIER_COMPETITION_FIRST_SEASON } from '../../utils/afl-tier';
 import {
   resolveConfigForYear,
   resolvePreferredTeamIdForYear,
   type TeamConfig,
 } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -39,6 +41,12 @@ const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/s
 
 // Import weekly results data for calculating all-play with week cutoff
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
+  eager: true,
+});
+
+// Import league settings feeds — each season's division/conference structure
+// (the 2003-2012 AFL ran six divisions; see afl-structure.ts)
+const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', {
   eager: true,
 });
 
@@ -83,6 +91,15 @@ const yearResolvedConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
   selectedYear
 );
+
+// Overlay the SELECTED season's division/conference structure from its league
+// feed (2003-2012 ran six divisions with different memberships), so grouping,
+// division winners, and seeds reflect that season — not today's four-division
+// layout. Falls back to the current structure if the feed is missing.
+const seasonStructure = extractSeasonStructure(
+  leagueFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/league.json`]
+);
+const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
 
 // Team Preference Cookie Integration
 // Get URL parameters for team preference
@@ -129,14 +146,31 @@ const calculatedAllPlay = weeklyResultsFeed
   : undefined;
 
 // Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig);
-const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00');
-const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01');
-// Group by THIS season's tier makeup (tier-history.json) so promotion/
-// relegation is reflected per-year; falls back to static config.tier for
-// seasons tier-history doesn't record.
+const divisionStandings = getDivisionStandings(franchises, seasonConfig);
+const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '00');
+const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01');
+// All-play side competition, era-aware:
+// - pre-2017 (the AFL Cup era and before): no competition — view hidden.
+// - 2017: inaugural season, branded the "Founders Table" — ONE combined
+//   24-team table with no Premier League branding, but its top 12 really
+//   were headed for promotion (confirmed to exactly match the 2018 Premier
+//   League roster), so the table still carries the relegation/promotion
+//   cutoff line after rank 12.
+// - 2018+: grouped by THAT season's makeup from tier-history.json, recovered
+//   from the league skin's premierleague-YYYY.js grouping scripts (the source
+//   of truth for who was in which league). Any season missing a record falls
+//   back to the plain combined table rather than inventing a split.
 const tierMembership = getTierMembership(selectedYear);
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig, calculatedAllPlay, tierMembership);
+const allPlayEra = selectedYear >= TIER_COMPETITION_FIRST_SEASON;
+const hasTierRecord = tierMembership !== null;
+const tierAllPlayStandings = hasTierRecord
+  ? getTierAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, tierMembership)
+  : [];
+const combinedAllPlayStandings =
+  allPlayEra && !hasTierRecord ? getAllPlayStandings(franchises, seasonConfig, calculatedAllPlay) : [];
+// 2017 is branded "Founders Table" — the season that founded the Premier
+// League / D-League split (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
+const isInauguralAllPlaySeason = selectedYear === TIER_COMPETITION_FIRST_SEASON;
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
     team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
@@ -151,8 +185,10 @@ const nitTeams = [
 // Get view from query parameter (default to 'division').
 // Validate against known views so an unrecognized value (e.g. a stale
 // ?view=conference link) falls back to division instead of a blank page.
+// all_play is only a valid view for seasons the competition existed.
+const validViews = allPlayEra ? ['division', 'league', 'all_play'] : ['division', 'league'];
 const requestedView = Astro.url.searchParams.get('view');
-const view = (['division', 'league', 'all_play'].includes(requestedView ?? '')
+const view = (validViews.includes(requestedView ?? '')
   ? requestedView
   : 'division') as 'division' | 'league' | 'all_play';
 
@@ -197,18 +233,30 @@ const promoRegTeams = [
         {view === 'league' && (
           <>
             <h1 class="section-title">Playoff Standings</h1>
-            <p class="subtitle">Division winners are seeded 1-4</p>
+            <p class="subtitle">Division winners seed first — top 4 in each conference make the playoff bracket</p>
           </>
         )}
-        {view === 'all_play' && (
+        {view === 'all_play' && hasTierRecord && (
           <>
             <h1 class="section-title">Premier League Standings</h1>
             <p class="subtitle">All-play side competition • Bottom 2 of bubble drop to D-League next year</p>
           </>
         )}
+        {view === 'all_play' && !hasTierRecord && isInauguralAllPlaySeason && (
+          <>
+            <h1 class="section-title">Founders Table</h1>
+            <p class="subtitle">The one-table season that founded the Premier League / D-League split. The top 12 went on to form the {selectedYear + 1} Premier League.</p>
+          </>
+        )}
+        {view === 'all_play' && !hasTierRecord && !isInauguralAllPlaySeason && (
+          <>
+            <h1 class="section-title">All-Play Standings</h1>
+            <p class="subtitle">League-wide all-play — every team plays every other team, every week</p>
+          </>
+        )}
       </div>
       <div class="standings-hero__actions">
-        <StandingsViewSelector activeView={view} />
+        <StandingsViewSelector activeView={view} showAllPlay={allPlayEra} />
       </div>
     </header>
 
@@ -228,7 +276,7 @@ const promoRegTeams = [
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
-              conferenceId={(yearResolvedConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
+              conferenceId={(seasonConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
@@ -248,6 +296,7 @@ const promoRegTeams = [
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            divisionWinnerCount={conferenceAStandings.conference.divisions.length}
           />
           <ConferenceLeagueStandingsTable
             conferenceName={conferenceBStandings.conference.name}
@@ -256,6 +305,7 @@ const promoRegTeams = [
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            divisionWinnerCount={conferenceBStandings.conference.divisions.length}
           />
 
           {nitTeams.length > 0 && (
@@ -323,7 +373,7 @@ const promoRegTeams = [
         </div>
       )}
 
-      {view === 'all_play' && (
+      {view === 'all_play' && hasTierRecord && (
         <div class="all-play-view tier-grid">
           {tierAllPlayStandings.map(tierGroup => (
             <TierAllPlayStandingsTable
@@ -333,6 +383,18 @@ const promoRegTeams = [
               rosterBaseUrl={`${baseUrl}/rosters`}
             />
           ))}
+        </div>
+      )}
+
+      {view === 'all_play' && !hasTierRecord && (
+        <div class="all-play-view">
+          <TierAllPlayStandingsTable
+            tierName={isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play'}
+            teams={combinedAllPlayStandings}
+            year={selectedYear}
+            rosterBaseUrl={`${baseUrl}/rosters`}
+            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
+          />
         </div>
       )}
 

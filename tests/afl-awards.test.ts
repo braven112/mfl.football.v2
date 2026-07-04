@@ -261,8 +261,16 @@ describe('getFranchiseTrophyRank', () => {
     // config `currentOwnerSince`). If this fails after an attribution change,
     // the change silently re-credited or dropped real hardware — investigate
     // the data, don't re-derive the expectation from module output.
+    //
+    // Pin dropped 20→19 on 2026-07-03: 2017's premier-league award (credited
+    // to Smokane FC) was removed. 2017 was confirmed to be ONE combined
+    // 24-team all-play table (its top 12 exactly match the 2018 Premier
+    // League roster from premierleague-2018.js) — there was no Premier
+    // League to be "champion" of that year, and Smokane FC actually finished
+    // 2nd in the combined table, not 1st. See TIER_COMPETITION_FIRST_SEASON
+    // in src/utils/afl-tier.ts.
     const r = getFranchiseTrophyRank('0001');
-    expect(r.count).toBe(20);
+    expect(r.count).toBe(19);
     expect(r.rank).toBe(1);
     expect(r.tied).toBe(false);
   });

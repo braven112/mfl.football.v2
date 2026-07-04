@@ -31,6 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -172,30 +173,9 @@ async function fetchWeeklyResults(host, year, leagueId, yearDir) {
 
   fs.writeFileSync(rawPath, JSON.stringify(rawWeeks, null, 2));
 
-  // Normalize: { weeks: [{ week, scores: { fid: pts } }] }
-  const normalized = {
-    weeks: rawWeeks.map((payload) => {
-      const weekVal = Number(payload?.weeklyResults?.week) || undefined;
-      const matchups = payload?.weeklyResults?.matchup
-        ? Array.isArray(payload.weeklyResults.matchup)
-          ? payload.weeklyResults.matchup
-          : [payload.weeklyResults.matchup]
-        : [];
-      const scores = {};
-      for (const m of matchups) {
-        const franchises = m?.franchise
-          ? Array.isArray(m.franchise)
-            ? m.franchise
-            : [m.franchise]
-          : [];
-        for (const f of franchises) {
-          if (f?.id != null) scores[f.id] = Number(f.score) || 0;
-        }
-      }
-      return { week: weekVal, scores };
-    }),
-  };
-  fs.writeFileSync(normPath, JSON.stringify(normalized, null, 2));
+  // Shared normalizer — handles both MFL payload shapes (matchup[] and the
+  // older flat franchise[] used by archive-year regular seasons).
+  fs.writeFileSync(normPath, JSON.stringify(normalizeWeeklyResults(rawWeeks), null, 2));
 
   return { written: true, weeks: rawWeeks.length };
 }

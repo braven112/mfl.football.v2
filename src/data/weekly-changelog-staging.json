@@ -136,6 +136,38 @@
       "impact": "user",
       "area": "standings",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "AFL historical standings now use each season's real division layout. The 2003-2012 seasons ran six divisions (AL North/Central/South, NL East/West/Pacific) with four teams each, but the page had been cramming every year into today's four divisions — inventing division winners, seeds, and playoff fields that never existed. Every season back to 2003 now groups teams into its actual divisions with the right winners and seeds (verified against the trophy room's award history), the playoff view seeds three division winners per conference in the six-division era, and seasons that predate all-play tracking show a dash instead of a fabricated 0-240 record.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "The All-Play view on historical AFL standings now matches the competition's real history. 2017 — the inaugural season, the year after the last AFL Cup, which ran as one 24-team table — shows that single unbranded table, and the 2018 and 2019 Premier League / D-League rosters were recovered from the league's own website scripts (the official source for who played in which league), so those seasons now show their true two-table split. Seasons before 2017 no longer offer an All-Play tab at all. Along the way, four seasons of missing weekly scores (2016-2019 regular seasons, invisible because MFL's archive uses an older data format) were recovered, so every all-play record shown is a real number — and the recovered 2018/2019 tables were verified by reproducing the known champions of both leagues in both years.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "bug-fix",
+      "summary": "Corrected the 2025 Premier League roster: No Soup For You played in the Premier League and Suh girls, one cup in the D-League — the site had them swapped (the league website's official groupings say otherwise, and they win). The 2026 makeup was recalculated from the corrected base, so this year's Premier League and D-League rosters shown around the site now match where teams will actually play.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "style-tweak",
+      "summary": "2017's one-table all-play season has a name now: the Founders Table — the year that decided who started in the Premier League and who started in the D-League when the split launched in 2018. It still has no Premier League branding (there wasn't one yet), but the promotion line is back after the 12th-place team, exactly where it belonged, with a green arrow marking every team that moved on to the inaugural Premier League.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
     }
   ]
 }
