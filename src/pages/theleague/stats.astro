@@ -203,6 +203,10 @@ for (const section of SECTIONS) {
   .stats-card__icon {
     flex-shrink: 0;
     color: var(--hub-accent);
+    /* Sprite symbols carry no fill attributes — without this they render
+       SVG-initial black (invisible on dark). currentColor pierces the <use>
+       shadow DOM so the icon follows --hub-accent in both themes. */
+    fill: currentColor;
     margin-top: 0.125rem;
   }
 
