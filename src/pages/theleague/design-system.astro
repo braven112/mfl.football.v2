@@ -30,6 +30,47 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
       </p>
     </header>
 
+    <!-- ===== Dark-Mode Preview Switcher =====
+         QA harness for this page only: toggles the `dark` class on <html>
+         directly for a live preview, WITHOUT writing the theme_pref cookie.
+         Uses window.__applyTheme('light'|'dark') to apply the same resolver
+         the real ThemeToggle uses, but never calls setClientThemePreference
+         — so the visitor's actual site-wide setting is untouched, and the
+         resolved theme is restored from the cookie when they leave the page. -->
+    <div class="ds-preview-switcher" data-ds-preview-switcher>
+      <div class="ds-preview-switcher__label" id="ds-preview-switcher-label">
+        Preview theme
+        <span class="ds-preview-switcher__hint">— does not change your setting</span>
+      </div>
+      <div class="ds-preview-switcher__group" role="radiogroup" aria-labelledby="ds-preview-switcher-label">
+        <button
+          type="button"
+          class="ds-preview-switcher__option"
+          role="radio"
+          aria-checked="false"
+          data-preview-value="light"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="8" r="3.25" />
+            <path d="M8 0.75v1.75M8 13.5v1.75M2.4 2.4l1.24 1.24M12.36 12.36l1.24 1.24M0.75 8h1.75M13.5 8h1.75M2.4 13.6l1.24-1.24M12.36 3.64l1.24-1.24" />
+          </svg>
+          Light
+        </button>
+        <button
+          type="button"
+          class="ds-preview-switcher__option"
+          role="radio"
+          aria-checked="false"
+          data-preview-value="dark"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M13.5 8.6A5.75 5.75 0 1 1 7.4 2.5a4.6 4.6 0 0 0 6.1 6.1z" />
+          </svg>
+          Dark
+        </button>
+      </div>
+    </div>
+
     <!-- ===== Typography Scale ===== -->
     <section class="ds-section">
       <h2 class="ds-section-title">Typography</h2>
@@ -1029,6 +1070,73 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
       box.addEventListener('animationend', () => box.classList.remove('playing'), { once: true });
     });
   });
+
+  // ── Dark-mode preview switcher (this page only) ──
+  // Deliberately does NOT import theme-preference.ts / call
+  // setClientThemePreference — this is a transient QA preview, not a saved
+  // setting. It reuses window.__applyTheme() (defined by ThemeScript, see
+  // src/components/ThemeScript.astro) purely to toggle the `dark` class +
+  // theme-color meta the same way the real toggle does, then restores the
+  // visitor's actual cookie-resolved theme when they navigate away so the
+  // preview never leaks into the rest of the site.
+  declare global {
+    interface Window {
+      __applyTheme?: (pref?: 'light' | 'dark' | 'auto') => string;
+    }
+  }
+
+  (function () {
+    const wrapper = document.querySelector<HTMLElement>('[data-ds-preview-switcher]');
+    if (!wrapper) return;
+
+    const options = wrapper.querySelectorAll<HTMLButtonElement>('.ds-preview-switcher__option');
+    const originallyDark = document.documentElement.classList.contains('dark');
+
+    function applyPreview(pref: 'light' | 'dark'): void {
+      if (typeof window.__applyTheme === 'function') {
+        window.__applyTheme(pref);
+      } else {
+        // Fallback: toggle the class directly if the resolver script hasn't
+        // loaded yet — still cookie-free.
+        document.documentElement.classList.toggle('dark', pref === 'dark');
+      }
+      sync(pref);
+    }
+
+    function sync(pref: 'light' | 'dark'): void {
+      options.forEach((btn) => {
+        const isChecked = btn.dataset.previewValue === pref;
+        btn.setAttribute('aria-checked', String(isChecked));
+        btn.tabIndex = isChecked ? 0 : -1;
+      });
+    }
+
+    options.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.dataset.previewValue as 'light' | 'dark' | undefined;
+        if (!value) return;
+        applyPreview(value);
+      });
+    });
+
+    // Reflect whatever the page actually resolved to on load (cookie/system),
+    // so the control isn't blank before the first click.
+    sync(originallyDark ? 'dark' : 'light');
+
+    // Restore the visitor's real theme when they leave this page — the
+    // preview must never persist past this page view. astro:before-swap
+    // covers ClientRouter soft navigation; pagehide covers full navigation
+    // and tab close.
+    function restoreRealTheme(): void {
+      if (typeof window.__applyTheme === 'function') {
+        window.__applyTheme(); // no arg => re-resolve from the theme_pref cookie
+      } else {
+        document.documentElement.classList.toggle('dark', originallyDark);
+      }
+    }
+    document.addEventListener('astro:before-swap', restoreRealTheme);
+    window.addEventListener('pagehide', restoreRealTheme);
+  })();
 </script>
 
 <style>
@@ -1066,6 +1174,79 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   /* ========================================
+     Dark-mode Preview Switcher
+     QA-only control — see script block for why it never touches the
+     theme_pref cookie. Styled like a compact ThemeToggle, but visually
+     distinct (dashed border) so it doesn't get mistaken for the real
+     site-wide toggle in the header.
+     ======================================== */
+  .ds-preview-switcher {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0 var(--spacing-2xl, 3rem);
+    padding: 0.625rem 0.875rem;
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px dashed var(--content-border, #cbd5e1);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .ds-preview-switcher__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ds-preview-switcher__hint {
+    font-weight: 400;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ds-preview-switcher__group {
+    display: inline-flex;
+    gap: 0.25rem;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-full, 9999px);
+    padding: 0.1875rem;
+  }
+
+  .ds-preview-switcher__option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.75rem;
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    background: transparent;
+    color: var(--content-text-muted, #6b7280);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .ds-preview-switcher__option svg {
+    flex-shrink: 0;
+  }
+
+  .ds-preview-switcher__option:hover {
+    color: var(--color-gray-900, #111827);
+  }
+
+  .ds-preview-switcher__option[aria-checked='true'] {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+  }
+
+  .ds-preview-switcher__option:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* ========================================
      Sections
      ======================================== */
   .ds-section {
@@ -1087,7 +1268,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
      Cards (containers for each demo)
      ======================================== */
   .ds-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     padding: var(--spacing-lg, 1.5rem);
@@ -1406,18 +1587,18 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-type-badge--veteran {
-    background: #f0f9ff;
-    color: #0369a1;
+    background: var(--badge-info-bg, #f0f9ff);
+    color: var(--badge-info-text, #0369a1);
   }
 
   .ds-type-badge--rookie {
-    background: #fefce8;
-    color: #a16207;
+    background: var(--badge-warning-bg, #fefce8);
+    color: var(--badge-warning-text, #a16207);
   }
 
   .ds-type-badge--extension {
-    background: #f0fdf4;
-    color: #15803d;
+    background: var(--badge-success-bg, #f0fdf4);
+    color: var(--badge-success-text, #15803d);
   }
 
   /* Contract Status Designation Chips */
@@ -1436,8 +1617,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-designation--rc {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--color-gray-100, #f1f5f9);
+    color: var(--color-gray-600, #475569);
   }
 
   .ds-designation--to {
@@ -1445,9 +1626,14 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     color: #7c3aed;
   }
 
+  :global(html.dark) .ds-designation--to {
+    background: color-mix(in srgb, #a78bfa 15%, transparent);
+    color: #c4b5fd;
+  }
+
   .ds-designation--f {
-    background: #fffbeb;
-    color: #b45309;
+    background: var(--badge-warning-bg, #fffbeb);
+    color: var(--badge-warning-text, #b45309);
   }
 
   .ds-designation-examples {
@@ -1461,9 +1647,9 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     align-items: center;
     gap: 0.75rem;
     padding: 0.625rem 0.75rem;
-    background: var(--color-bg-subtle, #f8fafc);
+    background: var(--content-bg-muted, #f8fafc);
     border-radius: 8px;
-    border: 1px solid var(--color-border-subtle, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
   }
 
   .ds-designation-info {
@@ -1475,12 +1661,12 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-designation-name {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-text-strong, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .ds-designation-meta {
     font-size: 0.75rem;
-    color: var(--color-text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .ds-badge-grid {
@@ -1580,9 +1766,9 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     justify-content: space-between;
     padding: 0.75rem 1rem;
     border: 1px solid var(--content-border, #e2e8f0);
-    border-left: 2px solid #cbd5e1;
+    border-left: 2px solid var(--color-gray-300, #cbd5e1);
     border-radius: 6px;
-    background: #fafbfc;
+    background: var(--content-bg-muted, #fafbfc);
     cursor: pointer;
     transition: all var(--transition-fast, 150ms ease);
   }
@@ -1594,13 +1780,21 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
 
   .ds-option-card--selected {
     border-left: 2px solid var(--color-primary, #1c497c);
-    background: linear-gradient(135deg, #f0f5fa 0%, #e8eff7 100%);
-    box-shadow: 0 1px 3px rgba(28, 73, 124, 0.08);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--card-bg, #fff)) 0%,
+      color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--card-bg, #fff)) 100%
+    );
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-primary, #1c497c) 8%, transparent);
   }
 
   .ds-option-card--selected:hover {
     border-left-color: var(--color-primary, #1c497c);
-    background: linear-gradient(135deg, #f0f5fa 0%, #e8eff7 100%);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--card-bg, #fff)) 0%,
+      color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--card-bg, #fff)) 100%
+    );
   }
 
   .ds-option-card__years {
@@ -1668,13 +1862,17 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-shadow-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-md, 0.5rem);
     padding: 1.25rem 1rem;
     text-align: center;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+  }
+
+  :global(html.dark) .ds-shadow-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555);
   }
 
   .ds-shadow-label {
@@ -1761,7 +1959,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
      Composite Profile Card
      ======================================== */
   .ds-profile-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-lg, 1rem);
     padding: 1.75rem;

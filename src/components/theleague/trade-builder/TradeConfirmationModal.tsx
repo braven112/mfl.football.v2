@@ -332,7 +332,7 @@ export default function TradeConfirmationModal({
           max-height: 88vh;
           border-radius: var(--radius-lg, 1rem);
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-          background: var(--color-white, #fff);
+          background: var(--card-bg, #fff);
           display: flex;
           flex-direction: column;
           animation: tcm-enter 0.22s ease-out;
@@ -560,7 +560,7 @@ export default function TradeConfirmationModal({
         .tcm-textarea:focus-visible {
           outline: none;
           border-color: var(--color-primary, #1c497c);
-          box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
         }
         .tcm-char-count {
           position: absolute;

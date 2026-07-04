@@ -226,7 +226,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     justify-items: center;
     align-items: center;
     padding: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -243,19 +243,19 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     margin: 0;
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .draft-predictor-subtitle {
     margin: 0;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 1rem;
   }
 
   .conference-tabs {
     display: flex;
     gap: 0.5rem;
-    background: #f8fafc;
+    background: var(--table-header-bg, #f8fafc);
     padding: 0.5rem;
     border-radius: 0.75rem;
   }
@@ -266,20 +266,20 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     font-weight: 600;
     font-size: 0.95rem;
     text-decoration: none;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     background: transparent;
     transition: all 0.2s ease;
     white-space: nowrap;
   }
 
   .conference-tab:hover {
-    background: #e2e8f0;
-    color: #334155;
+    background: var(--color-gray-100, #e2e8f0);
+    color: var(--color-gray-700, #334155);
   }
 
   .conference-tab.active {
-    background: #c41e3a;
-    color: white;
+    background: var(--league-accent, #c41e3a);
+    color: #fff;
     box-shadow: 0 2px 4px rgba(196, 30, 58, 0.2);
   }
 
@@ -300,7 +300,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     align-items: center;
     justify-content: center;
     min-height: 400px;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     font-size: 1.125rem;
   }
 
@@ -321,14 +321,14 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     margin: 0 0 1rem;
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .info-card ul {
     margin: 0;
     padding-left: 1.5rem;
     list-style: disc;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.925rem;
     line-height: 1.6;
   }
@@ -338,7 +338,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
   }
 
   .info-card li strong {
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   @media (max-width: 767px) {

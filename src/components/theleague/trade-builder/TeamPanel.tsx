@@ -196,7 +196,7 @@ export default function TeamPanel({
         .team-panel__select:focus-visible {
           outline: none;
           border-color: var(--color-primary, #1c497c);
-          box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
         }
         .team-panel__trade-bait-hint {
           font-size: 0.75rem;

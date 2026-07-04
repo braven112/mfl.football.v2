@@ -1720,7 +1720,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-submit--ready {
     background: var(--lineup-submit-ready);
-    color: var(--text-on-colored, #fff);
+    /* Rides the secondary-button text token: white in light, near-black in
+       dark where the fill is the bright logo-green emerald. */
+    color: var(--btn-secondary-text, var(--text-on-colored, #fff));
   }
   .lineup-submit--ready:hover { filter: brightness(1.05); }
   .lineup-submit--ready:active { transform: scale(0.98); }
@@ -1739,7 +1741,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-submit--success {
     background: var(--lineup-submit-success);
-    color: var(--text-on-colored, #fff);
+    color: var(--btn-secondary-text, var(--text-on-colored, #fff));
     animation: lineup-submit-success 0.4s ease-out;
   }
 
@@ -1985,7 +1987,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     bottom: calc(var(--lineup-submit-height) + 0.75rem);
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: var(--color-gray-800, #1f2937);
+    /* Fixed dark pill (toast/snackbar convention) — intentionally theme-independent */
+    background: #1f2937;
     color: var(--text-on-colored, #fff);
     padding: 0.5rem 1rem;
     border-radius: var(--radius-full, 9999px);

@@ -181,7 +181,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-filters__tab:hover:not(.wn-filters__tab--active) {
     background: var(--color-gray-200, #e5e7eb);
     border-color: var(--color-gray-300, #d1d5db);
-    color: var(--text-color, #374151);
+    color: var(--color-gray-700, #374151);
   }
 
   .wn-filters__tab--active {
@@ -359,7 +359,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   .wn-card__thumbnail .browser-frame {
-    background: #e5e7eb;
+    background: var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
@@ -379,7 +379,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     align-items: center;
     gap: 6px;
     padding: 6px 10px;
-    background: #e5e7eb;
+    background: var(--color-gray-200, #e5e7eb);
   }
 
   .browser-frame__dot {
@@ -395,11 +395,11 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .browser-frame__url {
     flex: 1;
     margin-left: 6px;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 3px;
     padding: 2px 8px;
     font-size: 10px;
-    color: #6b7280;
+    color: var(--color-gray-500, #6b7280);
     font-family: ui-monospace, monospace;
     white-space: nowrap;
     overflow: hidden;
@@ -575,7 +575,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-timeline__label {
     font-size: 0.8rem;
     font-weight: var(--font-weight-semibold, 600);
-    color: var(--text-secondary-color, #4b5563);
+    color: var(--color-gray-600, #4b5563);
     transition: color 0.15s ease;
   }
 

@@ -108,24 +108,28 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
   }
 
   .afl-keepers__hero p {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     max-width: 700px;
     line-height: 1.6;
   }
 
   .afl-keepers__notice {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     border-left: 3px solid var(--league-accent, #c41e3a);
     border-radius: 8px;
     padding: var(--spacing-md, 16px);
     margin-bottom: var(--spacing-xl, 32px);
   }
 
+  :global(html.dark) .afl-keepers__notice {
+    box-shadow: 0 0 0 1px var(--content-border, #555);
+  }
+
   .afl-keepers__notice h2 {
     font-size: 1.125rem;
     margin: 0 0 var(--spacing-sm, 8px) 0;
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
     border-bottom: none;
     padding-bottom: 0;
   }
@@ -133,7 +137,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
   .afl-keepers__notice p {
     margin: 0 0 var(--spacing-md, 16px) 0;
     line-height: 1.6;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     max-width: 720px;
   }
 
@@ -156,7 +160,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
   }
 
   .afl-keepers__grid-sub {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     line-height: 1.6;
     max-width: 720px;
     margin: 0 0 var(--spacing-md, 16px) 0;
@@ -172,7 +176,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
     font-size: 1.375rem;
     margin-bottom: var(--spacing-md, 16px);
     padding-bottom: var(--spacing-sm, 8px);
-    border-bottom: 2px solid var(--border-color, #e5e7eb);
+    border-bottom: 2px solid var(--content-border, #e5e7eb);
   }
 
   .afl-keepers__grid {
@@ -187,16 +191,24 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-md, 16px);
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     border-radius: 8px;
     text-decoration: none;
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
   .keeper-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(html.dark) .keeper-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555);
+  }
+
+  :global(html.dark) .keeper-card:hover {
+    box-shadow: 0 0 0 1px var(--content-border, #555), 0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
   .keeper-card__icon-wrap {
@@ -251,12 +263,12 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
   }
 
   .keeper-card__tier--dleague {
-    background: var(--bg-muted, #e5e7eb);
-    color: var(--text-default);
+    background: var(--content-bg-muted, #e5e7eb);
+    color: var(--page-text, #1a1a1a);
   }
 
   .keeper-card__count {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-weight: 500;
   }
 

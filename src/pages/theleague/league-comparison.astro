@@ -192,19 +192,19 @@ const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalar
     font-size: 2rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    color: #1a1a1a;
+    color: var(--color-gray-900, #1a1a1a);
   }
 
   .subtitle {
     font-size: 1rem;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     margin-bottom: 3rem;
   }
 
   .comparison-section {
     margin-bottom: 4rem;
     padding-bottom: 2rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
 
   .comparison-section:last-child {
@@ -215,12 +215,12 @@ const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalar
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #1a1a1a;
+    color: var(--color-gray-900, #1a1a1a);
   }
 
   .section-description {
     font-size: 0.9rem;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     margin-bottom: 1.5rem;
   }
 </style>

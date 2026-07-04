@@ -119,10 +119,11 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
   .franchises-hero h1 {
     font-size: 2.5rem;
     margin-bottom: var(--spacing-sm, 8px);
+    color: var(--page-text, #1a1a1a);
   }
 
   .subtitle {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     max-width: 600px;
     margin: 0 auto;
   }
@@ -138,7 +139,7 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
     align-items: center;
     gap: var(--spacing-md, 16px);
     padding-bottom: var(--spacing-sm, 8px);
-    border-bottom: 2px solid var(--border-color, #e5e7eb);
+    border-bottom: 2px solid var(--content-border, #e5e7eb);
   }
 
   .tier-title--premier {
@@ -148,7 +149,7 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
   .tier-count {
     font-size: 0.875rem;
     font-weight: 400;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .franchises-grid {
@@ -163,16 +164,24 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-md, 16px);
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     border-radius: 8px;
     text-decoration: none;
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
   .franchise-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(html.dark) .franchise-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555);
+  }
+
+  :global(html.dark) .franchise-card:hover {
+    box-shadow: 0 0 0 1px var(--content-border, #555), 0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
   .franchise-card__icon-wrap {
@@ -202,23 +211,24 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--page-text, #1a1a1a);
   }
 
   .franchise-card__meta {
     display: flex;
     gap: var(--spacing-sm, 8px);
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .franchise-card__div {
-    background: var(--code-bg, #f3f4f6);
+    background: var(--content-bg-muted, #f3f4f6);
     padding: 2px 8px;
     border-radius: 9999px;
   }
 
   .franchise-card__champs {
-    color: #d97706;
+    color: var(--afl-gold, #d97706);
     font-weight: 600;
   }
 </style>

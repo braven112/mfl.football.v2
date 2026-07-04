@@ -215,7 +215,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522'
         }
         .lm-content {
           position: relative;
-          background: var(--color-white, #fff);
+          background: var(--card-bg, #fff);
           border-radius: var(--radius-lg, 1rem);
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
           width: 100%;
@@ -329,8 +329,8 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522'
           padding: 0.75rem;
           font-size: 0.875rem;
           font-family: inherit;
-          color: var(--text-color, #1f2937);
-          background: var(--color-gray-50, #f9fafb);
+          color: var(--input-text, #1f2937);
+          background: var(--input-bg, #f9fafb);
           border: 1px solid var(--content-border, #e2e8f0);
           border-left: 2px solid var(--color-gray-300, #d1d5db);
           border-radius: var(--radius-sm, 0.25rem);
@@ -345,8 +345,8 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522'
           outline: none;
           border-color: var(--color-primary, #1c497c);
           border-left-color: var(--color-primary, #1c497c);
-          box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-          background: var(--color-white, #fff);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+          background: var(--card-bg, #fff);
         }
         .lm-input:disabled {
           opacity: 0.6;

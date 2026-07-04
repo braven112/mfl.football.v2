@@ -205,7 +205,7 @@ const yearsRecorded = championships.length;
 
   .about-hero__eyebrow {
     font-size: 0.875rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     margin-bottom: var(--spacing-md, 16px);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -228,6 +228,7 @@ const yearsRecorded = championships.length;
     font-weight: 800;
     line-height: 1.2;
     margin-bottom: var(--spacing-md, 16px);
+    color: var(--page-text, #1a1a1a);
   }
 
   .about-hero__deck {
@@ -235,7 +236,7 @@ const yearsRecorded = championships.length;
     line-height: 1.6;
     max-width: 720px;
     margin: 0 auto;
-    color: var(--text-default);
+    color: var(--page-text, #1a1a1a);
   }
 
   .about-stats {
@@ -243,8 +244,8 @@ const yearsRecorded = championships.length;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-lg, 24px) 0;
-    border-top: 1px solid var(--border-color, #e5e7eb);
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-top: 1px solid var(--content-border, #e5e7eb);
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
     margin: var(--spacing-xl, 32px) 0;
   }
 
@@ -261,7 +262,7 @@ const yearsRecorded = championships.length;
 
   .about-stats__label {
     font-size: 0.8125rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     margin-top: var(--spacing-xs, 4px);
   }
 
@@ -288,10 +289,11 @@ const yearsRecorded = championships.length;
     font-size: 1.375rem;
     font-weight: 700;
     margin: 0;
+    color: var(--page-text, #1a1a1a);
   }
 
   .about-section-sub {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     margin: 4px 0 0 0;
   }
 
@@ -318,24 +320,24 @@ const yearsRecorded = championships.length;
 
   .about-champ-list li {
     padding: var(--spacing-sm, 8px) 0;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
   }
 
   .about-champ-list__loser {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     margin-left: var(--spacing-sm, 8px);
     font-size: 0.875rem;
   }
 
   .about-prose__footer {
-    color: var(--text-muted, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-size: 0.875rem;
     font-style: italic;
     margin-top: var(--spacing-lg, 24px);
   }
 
   .about-prose code {
-    background: var(--code-bg, #f3f4f6);
+    background: var(--content-bg-muted, #f3f4f6);
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 0.875em;

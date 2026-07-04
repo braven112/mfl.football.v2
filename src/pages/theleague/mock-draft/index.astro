@@ -820,7 +820,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     padding: 0.4375rem 0.625rem;
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: var(--radius-sm, 0.375rem);
-    background: #fff;
+    background: var(--input-bg, #fff);
     color: var(--color-gray-900, #111827);
     font-size: 0.8125rem;
     font-weight: 500;
@@ -965,7 +965,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   .mock-lobby__error {
     font-size: 0.8125rem;
-    color: var(--color-red-500, #ef4444);
+    color: var(--color-error, #ef4444);
     margin: 0;
     min-height: 1.25rem;
   }
@@ -1017,15 +1017,15 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   .mock-lobby__session-card:hover,
   .mock-lobby__session-card:focus-visible {
-    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
+    box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.08));
     transform: translateY(-2px);
     outline: none;
   }
 
   /* Status variants — set the left-rail color */
-  .mock-lobby__session-card--lobby { --session-accent: var(--color-blue-500, #3b82f6); }
-  .mock-lobby__session-card--active { --session-accent: var(--color-green-500, #22c55e); }
-  .mock-lobby__session-card--paused { --session-accent: var(--color-yellow-500, #eab308); }
+  .mock-lobby__session-card--lobby { --session-accent: var(--color-info, #3b82f6); }
+  .mock-lobby__session-card--active { --session-accent: var(--color-success, #22c55e); }
+  .mock-lobby__session-card--paused { --session-accent: var(--color-warning, #eab308); }
   .mock-lobby__session-card--completed {
     --session-accent: var(--color-gray-300, #d1d5db);
     opacity: 0.7;
@@ -1144,18 +1144,18 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   }
 
   .mock-lobby__status--lobby {
-    background: var(--color-blue-50, #eff6ff);
-    color: var(--color-blue-600, #2563eb);
+    background: var(--badge-info-bg, #eff6ff);
+    color: var(--badge-info-text, #2563eb);
   }
 
   .mock-lobby__status--active {
-    background: var(--color-green-50, #f0fdf4);
-    color: var(--color-green-600, #16a34a);
+    background: var(--badge-success-bg, #f0fdf4);
+    color: var(--badge-success-text, #16a34a);
   }
 
   .mock-lobby__status--paused {
-    background: var(--color-yellow-50, #fefce8);
-    color: var(--color-yellow-600, #ca8a04);
+    background: var(--badge-warning-bg, #fefce8);
+    color: var(--badge-warning-text, #ca8a04);
   }
 
   .mock-lobby__status--completed {

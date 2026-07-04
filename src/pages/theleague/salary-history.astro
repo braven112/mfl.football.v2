@@ -265,11 +265,11 @@ function formatCurrency(val: number | null): string {
 
   .chart-tab:hover {
     color: var(--color-gray-900, #111827);
-    background: rgba(255, 255, 255, 0.5);
+    background: color-mix(in srgb, var(--content-bg, white) 50%, transparent);
   }
 
   .chart-tab[aria-selected="true"] {
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     color: var(--color-gray-900, #111827);
     box-shadow: var(--shadow-sm);
   }
@@ -378,7 +378,7 @@ function formatCurrency(val: number | null): string {
 
   :global(.chart-tooltip) {
     position: absolute;
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-lg);
@@ -508,7 +508,7 @@ function formatCurrency(val: number | null): string {
     font-weight: 600;
     position: sticky;
     left: 0;
-    background: var(--color-white, #ffffff);
+    background: var(--card-bg, #ffffff);
     z-index: 1;
   }
 
@@ -658,6 +658,9 @@ function formatCurrency(val: number | null): string {
 
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const isMobile = window.matchMedia('(max-width: 640px)').matches;
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+        const tickColor = getComputedStyle(document.documentElement).getPropertyValue('--color-gray-500').trim() || '#6b7280';
 
         const tickFont = {
           family: "'Vend Sans', system-ui, -apple-system, sans-serif",
@@ -735,6 +738,11 @@ function formatCurrency(val: number | null): string {
           el.style.transform = 'translate(-50%, calc(-100% - 12px))';
         }
 
+        const cardBgColor = getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim() || '#ffffff';
+        chartConfigs.franchise?.datasets?.forEach((ds) => { ds.pointHoverBorderColor = cardBgColor; });
+        chartConfigs.extension?.datasets?.forEach((ds) => { ds.pointHoverBorderColor = cardBgColor; });
+        chartConfigs['team-option']?.datasets?.forEach((ds) => { ds.pointHoverBorderColor = cardBgColor; });
+
         const chart = new Chart(ctx, {
           type: 'line',
           data: chartConfigs.franchise,
@@ -763,14 +771,14 @@ function formatCurrency(val: number | null): string {
               y: {
                 beginAtZero: false,
                 grid: {
-                  color: 'rgba(0, 0, 0, 0.06)',
+                  color: gridColor,
                   lineWidth: 1,
                   drawTicks: false,
                 },
                 border: { display: false },
                 ticks: {
                   font: tickFont,
-                  color: '#6b7280',
+                  color: tickColor,
                   padding: 8,
                   callback: (value) => currencyCompact.format(value),
                 },
@@ -781,7 +789,7 @@ function formatCurrency(val: number | null): string {
                 border: { display: false },
                 ticks: {
                   font: tickFont,
-                  color: '#6b7280',
+                  color: tickColor,
                   padding: 4,
                   maxRotation: 0,
                   autoSkip: true,
