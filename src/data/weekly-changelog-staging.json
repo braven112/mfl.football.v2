@@ -3,14 +3,6 @@
   "changes": [
     {
       "date": "2026-07-04",
-      "type": "style-tweak",
-      "summary": "The confirmation and detail pop-ups in the Draft Room, Mock Draft lobby, and Import Rankings preview now use the same frosted-glass backdrop as every other modal on the site — the page behind them softly blurs instead of just dimming.",
-      "impact": "user",
-      "area": "design-system",
-      "league": "theleague"
-    },
-    {
-      "date": "2026-07-04",
       "type": "bug-fix",
       "summary": "AFL accent colors across seven pages (Keepers, About, Calendar, Rules, Ask Roger, and both Franchises pages) now actually render AFL red — buttons, badges, stat highlights, and border accents had been quietly wearing The League's blue for years due to a color-token mix-up. The red was always in the code; it just never got its turn on screen.",
       "impact": "user",

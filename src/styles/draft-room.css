@@ -1752,8 +1752,6 @@
   position: fixed;
   inset: 0;
   background: var(--dr-modal-overlay);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1779,8 +1777,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dr-modal-overlay, .dr-modal,
-  .dr-confirm-overlay, .dr-confirm-dialog { animation: none !important; }
+  .dr-modal-overlay, .dr-modal { animation: none !important; }
 }
 
 /* ── Focus styling ── */
@@ -2062,8 +2059,6 @@
   position: fixed;
   inset: 0;
   background: var(--dr-modal-overlay, rgba(17, 24, 39, 0.55));
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
