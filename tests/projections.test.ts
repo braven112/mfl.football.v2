@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { asArray } from '../src/utils/mfl-normalize';
 import {
   calculateTeamProjections,
   getTeamProjection,
   getMultipleTeamProjections,
 } from '../src/utils/projections';
+import { buildStartingLineupFromMFL } from '../src/utils/lineup-data-builder';
 
 /**
  * Team Projections — MFL shape normalization
@@ -75,6 +77,50 @@ describe('calculateTeamProjections', () => {
       projectedScores: { playerScore: [{ id: '100', score: '5' }] },
     };
     expect(calculateTeamProjections(single, projected).get('0001')).toBe(5);
+
+    // MFL's zero-entry shape can also be a literal empty string
+    expect(
+      calculateTeamProjections(rosters, {
+        projectedScores: { playerScore: '' as any },
+      }).get('0001')
+    ).toBe(0);
+    expect(
+      calculateTeamProjections({ rosters: { franchise: '' as any } }, projected).size
+    ).toBe(0);
+  });
+});
+
+describe('asArray', () => {
+  it('normalizes all three MFL list shapes', () => {
+    expect(asArray([{ id: '1' }])).toEqual([{ id: '1' }]);
+    expect(asArray({ id: '1' })).toEqual([{ id: '1' }]);
+    expect(asArray('')).toEqual([]);
+    expect(asArray(null)).toEqual([]);
+    expect(asArray(undefined)).toEqual([]);
+  });
+});
+
+describe('buildStartingLineupFromMFL', () => {
+  const players = { players: { player: [{ id: '100', name: 'Barkley, Saquon', position: 'RB', team: 'PHI' }] } };
+
+  it('survives the off-season empty projectedScores shapes', () => {
+    const rostersSingle = {
+      rosters: { franchise: { id: '0001', player: { id: '100', status: 'ROSTER' } } },
+    };
+    for (const playerScore of [{ id: '', score: '' }, '', undefined]) {
+      const lineup = buildStartingLineupFromMFL(
+        '0001', 15, rostersSingle, { projectedScores: { playerScore } }, players
+      );
+      const everyone = [...Object.values(lineup.positions).flat(), ...lineup.bench];
+      expect(everyone).toHaveLength(1);
+      expect(everyone[0].projectedPoints).toBe(0);
+    }
+  });
+
+  it('throws a clear error when the franchise is missing', () => {
+    expect(() =>
+      buildStartingLineupFromMFL('9999', 15, { rosters: { franchise: '' } }, {}, players)
+    ).toThrow('No roster found for team 9999');
   });
 });
 

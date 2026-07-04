@@ -4,6 +4,7 @@
  */
 
 import type { FantasyPlayer, StartingLineup } from '../types/matchup-previews';
+import { asArray } from './mfl-normalize';
 
 /**
  * Build starting lineup data from MFL roster and projection data
@@ -17,26 +18,24 @@ export function buildStartingLineupFromMFL(
   startingLineupMap?: Map<string, any>
 ): StartingLineup {
   // Find the team's roster
-  const teamRoster = rostersData.rosters.franchise.find((f: any) => f.id === teamId);
+  const teamRoster = asArray(rostersData?.rosters?.franchise).find((f: any) => f.id === teamId);
   if (!teamRoster) {
     throw new Error(`No roster found for team ${teamId}`);
   }
 
   // Build player maps
   const playerMap = new Map();
-  const playersList = Array.isArray(playersData.players.player)
-    ? playersData.players.player
-    : [playersData.players.player];
+  const playersList = asArray(playersData?.players?.player);
   playersList.forEach((p: any) => playerMap.set(p.id, p));
 
   const projMap = new Map();
-  const projList = Array.isArray(projectedScoresData.projectedScores.playerScore)
-    ? projectedScoresData.projectedScores.playerScore
-    : [projectedScoresData.projectedScores.playerScore];
-  projList.forEach((p: any) => projMap.set(p.id, parseFloat(p.score) || 0));
+  const projList = asArray(projectedScoresData?.projectedScores?.playerScore);
+  projList.forEach((p: any) => {
+    if (p.id) projMap.set(p.id, parseFloat(p.score) || 0);
+  });
 
   // Get roster players
-  const rosterPlayers = Array.isArray(teamRoster.player) ? teamRoster.player : [teamRoster.player];
+  const rosterPlayers = asArray(teamRoster.player);
 
   // Build fantasy players
   const fantasyPlayers: FantasyPlayer[] = rosterPlayers.map((rosterPlayer: any) => {

@@ -2,6 +2,8 @@
  * Utility functions for calculating team projections from MFL player projections
  */
 
+import { asArray } from './mfl-normalize';
+
 export interface PlayerProjection {
   id: string;
   score: string;
@@ -31,17 +33,6 @@ export interface RostersData {
   rosters?: {
     franchise?: Franchise[] | Franchise;
   };
-}
-
-/**
- * MFL returns a bare object instead of a single-element array when a list
- * has exactly one entry, and an empty string when it has none. Normalize
- * all three shapes to an array.
- */
-function asArray<T>(value: T[] | T | '' | null | undefined): T[] {
-  if (Array.isArray(value)) return value;
-  if (!value) return [];
-  return [value];
 }
 
 /**

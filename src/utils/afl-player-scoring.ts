@@ -13,6 +13,7 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { asArray as ensureArray } from './mfl-normalize';
 
 interface ScoreEntry {
   id: string;
@@ -48,11 +49,6 @@ function readJson<T>(path: string): T | null {
   } catch {
     return null;
   }
-}
-
-function ensureArray<T>(v: T | T[] | undefined | null): T[] {
-  if (v == null) return [];
-  return Array.isArray(v) ? v : [v];
 }
 
 /**
