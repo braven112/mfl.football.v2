@@ -382,7 +382,7 @@ tfoot td {
 ### Modal Shell (Reference)
 
 **CRITICAL:** When building new modals or overlays, the backdrop MUST use the frosted-glass blur effect. Never use a plain dark overlay without blur — this is a core part of the site's visual identity.
-- **Overlay (mandatory):** `rgba(15, 23, 42, 0.45)` + `backdrop-filter: blur(2px)` — the blur is NOT optional
+- **Overlay (mandatory):** `rgba(15, 23, 42, 0.45)` + `backdrop-filter: blur(2px)` — the blur is NOT optional. Include `-webkit-backdrop-filter: blur(2px)` alongside it (Safari). The rule applies to native `<dialog>` elements too via `::backdrop` — when auditing for compliance, grep `::backdrop` in addition to overlay class names, or dialogs slip through (import-rankings did until July 2026).
 - Modal: `max-width: 580px`, `border-radius: var(--radius-lg)`, `box-shadow: var(--shadow-xl)`
 - Body padding: 1.75rem desktop, 1.25rem mobile
 - Entry animation: `0.32s ease-out` scale(0.96→1) + translateY(12px→0) — see ContractDemoOverlay `cdemo-card-enter`
