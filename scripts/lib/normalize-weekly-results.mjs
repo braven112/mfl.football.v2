@@ -46,9 +46,10 @@ export function normalizeWeeklyResults(rawWeeks) {
         for (const team of toArray(matchup?.franchise)) addFranchise(team);
       }
       // Older flat shape — regular-season weeks in MFL's archive years.
-      // (A payload carries either matchups or the flat list, never both with
-      // different data; adding by franchise id makes a hypothetical overlap
-      // idempotent anyway.)
+      // Every year observed so far carries either matchups or the flat list,
+      // never overlapping franchise ids with conflicting scores for the same
+      // week — but if a future payload ever does, this second pass wins
+      // (last-write) since franchise ids key the scores map.
       for (const team of toArray(wr.franchise)) addFranchise(team);
 
       return { week, scores };

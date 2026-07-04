@@ -98,7 +98,11 @@ const prizes: Record<string, string[]> = {
             else if (rank === 12) rowClass = 'last-place';
           }
 
-          // Add border classes
+          // Add border classes. promotionCutoff is only ever passed for the
+          // combined (non-tier) table — real Premier League / D-League
+          // callers never set it, so this can't silently clobber their
+          // tier-specific border above; guard kept explicit in case a future
+          // caller ever combines both.
           let borderClass = '';
           if (tierName === 'Premier League') {
             if (rank === 8) borderClass = 'border-below';
@@ -107,7 +111,9 @@ const prizes: Record<string, string[]> = {
             if (rank === 2) borderClass = 'border-below-green';
             if (rank === 4) borderClass = 'border-below-playoff';
           }
-          if (rank === promotionCutoff) borderClass = 'border-below';
+          if (promotionCutoff !== undefined && tierName !== 'Premier League' && tierName !== 'D-League' && rank === promotionCutoff) {
+            borderClass = 'border-below';
+          }
 
           return (
             <tr class={`${rowClass} ${borderClass}`}>

@@ -574,9 +574,9 @@ export function getConferenceStandings(franchises: StandingsFranchise[], config:
     return 0;
   });
 
-  // Assign seeds within conference
-  // Division winners get seeds 1-2 (however many divisions in conference)
-  // Wild cards get seeds 3-4
+  // Assign seeds within conference: division winners take the top seeds
+  // (1..sortedDivWinners.length — 2 today, but 3 in the AFL's 2003-2012
+  // six-division layout, see afl-structure.ts), wild cards fill in after.
   const conferenceStandings = [
     ...sortedDivWinners.map((team, idx) => ({ ...team, conferenceSeed: idx + 1 })),
     ...sortedWildCards.map((team, idx) => ({ ...team, conferenceSeed: sortedDivWinners.length + idx + 1 })),
