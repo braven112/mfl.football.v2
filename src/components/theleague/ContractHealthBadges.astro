@@ -118,16 +118,22 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   }
 
   .health-card {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--card-bg, white);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 8px;
     padding: 1.5rem;
     transition: all 0.2s;
   }
 
   .health-card:hover {
-    border-color: #cbd5e1;
+    border-color: var(--content-text-muted, #cbd5e1);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Dark mode: raised-card treatment — background alone can't separate
+     the card from the page floor; add the border ring. */
+  :global(html.dark) .health-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
   }
 
   .card-header {
@@ -141,7 +147,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   .team-name {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--page-text, #1a1a1a);
     margin: 0;
   }
 
@@ -183,7 +189,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   .metric-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -191,17 +197,17 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   .metric-value {
     font-size: 1rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--page-text, #1a1a1a);
   }
 
   .metric-percent {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--content-text-muted, #94a3b8);
   }
 
   .cap-bar {
     height: 12px;
-    background: #e2e8f0;
+    background: var(--content-bg-muted, #e2e8f0);
     border-radius: 6px;
     overflow: hidden;
     margin-bottom: 0.5rem;
@@ -215,7 +221,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
 
   .cap-bar-label {
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     text-align: center;
     font-weight: 500;
   }
