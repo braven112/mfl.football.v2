@@ -114,6 +114,7 @@ The resolved theme is just the `dark` class on `<html>`, set pre-paint by `Theme
 | Dead vars silently fall back to light | Check the token actually exists in `tokens.css` before using it |
 | Sprite icon `<use>` wrappers stay the wrong color | Add `fill: currentColor` |
 | `:global(...)` is INERT in `<style is:global>` blocks and React template-literal styles — the rule ships as unmatchable text | Use plain `html.dark .x` there; `:global()` only works inside scoped Astro `<style>` |
+| A light-mode `:hover { box-shadow: ... }` REPLACES the dark raised-card ring on hover | Add a dark hover rule that re-asserts the ring: `html.dark .x:hover { box-shadow: 0 0 0 1px var(--content-border, #555), <hover shadow>; }` |
 
 **Recipes:**
 ```css

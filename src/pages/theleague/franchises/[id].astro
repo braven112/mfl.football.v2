@@ -1314,6 +1314,12 @@ const formatBid = (n: number): string => {
     border-color: var(--accent, var(--color-primary, #1c497c));
     box-shadow: 0 4px 12px rgba(0,0,0,0.06);
   }
+  /* Hover must re-assert the dark ring — a bare hover box-shadow drops it. */
+  :global(html.dark) .rival-card:hover {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 4px 12px rgba(0,0,0,0.3);
+  }
   .rival-icon {
     width: 36px;
     height: 36px;
