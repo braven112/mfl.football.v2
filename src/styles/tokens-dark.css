@@ -506,6 +506,22 @@ html.dark[data-league="afl"] {
 }
 
 /* ========================================
+   Text Selection (Dark Mode)
+   Without this, selected text keeps its muted dark-mode color on the
+   browser's default highlight — near-unreadable slate-on-slate. Force
+   white text on a strong primary-tinted highlight.
+   ======================================== */
+html.dark ::selection {
+  background: rgba(59, 130, 246, 0.55);
+  color: #ffffff;
+}
+
+html.dark[data-league="afl"] ::selection {
+  background: rgba(239, 83, 80, 0.5);
+  color: #ffffff;
+}
+
+/* ========================================
    Focus Visible Styles (Dark Mode)
    ======================================== */
 html.dark :focus-visible {
