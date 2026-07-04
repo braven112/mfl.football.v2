@@ -166,6 +166,12 @@ export interface TeamConfig {
   /** Conference code (AFL). */
   conference?: string;
   icon?: string;
+  /**
+   * Optional dark-mode variant of `icon`. Rendered via the generated
+   * `html.dark` CSS swap (see src/utils/team-icon-dark-css.ts) — call sites
+   * keep rendering `icon`; the swap is global CSS, never a server-side pick.
+   */
+  iconDark?: string;
   banner?: string;
   groupMe?: string;
   history?: FranchiseHistoryEntry[];

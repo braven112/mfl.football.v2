@@ -20,6 +20,9 @@ import { Font } from 'astro:assets';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
+import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
+import ThemeScript from '../components/ThemeScript.astro';
+import { getThemePreference } from '../utils/theme-preference';
 import TradeAlertModal from '../components/theleague/TradeAlertModal.astro';
 import RosterLoader from '../components/theleague/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
@@ -225,6 +228,7 @@ const themePref = getThemePreference(Astro.cookies);
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
+		<TeamIconDarkStyles />
 		<ClientRouter />
 	</head>
 	<body>
