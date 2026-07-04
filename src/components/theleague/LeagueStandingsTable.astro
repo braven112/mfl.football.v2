@@ -242,18 +242,21 @@ function getRowColor(seed: number | undefined): string {
     color: #1a1a1a;
   }
 
+  /* Dark tier bands: whisper-tints of each tier's hue mixed into the card
+     surface (the opaque "darkened pastel" first cut read as mud). Same
+     recipe as the preferred-team highlight rows. */
   :global(html.dark) .tier-division-winners {
-    background-color: #4a3f1a;
+    background-color: color-mix(in srgb, #d4a856 12%, var(--card-bg, #1e1e1e));
     color: #ededed;
   }
 
   :global(html.dark) .tier-wild-cards {
-    background-color: #2e2e2e;
+    background-color: color-mix(in srgb, #dad8d5 7%, var(--card-bg, #1e1e1e));
     color: #ededed;
   }
 
   :global(html.dark) .tier-toilet-bowl {
-    background-color: #3f2e1f;
+    background-color: color-mix(in srgb, #b5773a 10%, var(--card-bg, #1e1e1e));
     color: #ededed;
   }
 
