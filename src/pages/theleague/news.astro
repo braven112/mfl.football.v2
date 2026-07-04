@@ -334,6 +334,13 @@ const tabs = [
     color: inherit;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
+
+  /* Dark mode: --color-gray-100 border resolves to the same value as the
+     card backgrounds around it (#1e1e1e), so the 1px border is invisible —
+     swap in the real content-border token so the card reads as raised. */
+  :global(html.dark) .sf-rail-promo {
+    border-color: var(--content-border, #555555);
+  }
   .sf-rail-promo:hover {
     border-color: var(--color-gray-200, #e5e7eb);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -398,6 +405,12 @@ const tabs = [
     color: inherit;
     overflow: hidden;
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+
+  /* Dark mode: --color-gray-100 border == --card-bg (#1e1e1e) — invisible
+     without swapping to the real content-border token. */
+  :global(html.dark) .sf-rail-article-card {
+    border-color: var(--content-border, #555555);
   }
   .sf-rail-article-card:hover {
     border-color: var(--color-gray-200, #e5e7eb);

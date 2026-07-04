@@ -134,6 +134,14 @@ const isEmpty = rows.length === 0;
     padding: 0.875rem 1rem 0.5rem;
   }
 
+  /* Dark mode: raised-card treatment — shadow alone can't separate the
+     card surface from the page floor; add the border ring. */
+  :global(html.dark) .sf-rail-hottest {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--card-shadow, var(--shadow-card));
+  }
+
   .sf-rail-hottest .sf-rail-section__title {
     /* Override the rail's shared section-title chrome (uppercase eyebrow
        with a primary-color left border). Inside a card, that left border

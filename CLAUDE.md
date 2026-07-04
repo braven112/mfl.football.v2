@@ -113,6 +113,7 @@ The resolved theme is just the `dark` class on `<html>`, set pre-paint by `Theme
 | `:root{}` inside a scoped Astro `<style>` is NOT scoped | Never declare tokens there |
 | Dead vars silently fall back to light | Check the token actually exists in `tokens.css` before using it |
 | Sprite icon `<use>` wrappers stay the wrong color | Add `fill: currentColor` |
+| `:global(...)` is INERT in `<style is:global>` blocks and React template-literal styles — the rule ships as unmatchable text | Use plain `html.dark .x` there; `:global()` only works inside scoped Astro `<style>` |
 
 **Recipes:**
 ```css
