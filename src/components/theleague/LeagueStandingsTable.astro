@@ -173,6 +173,14 @@ function getRowColor(seed: number | undefined): string {
     padding-block: var(--padding-md);
     overflow-x: auto;
   }
+
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     the section from the page background; add the border ring. */
+  :global(html.dark) .standings-container {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+  }
   .league-standings-wrapper {
     width: 100%;
   }

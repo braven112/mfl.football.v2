@@ -94,9 +94,12 @@
         border-radius: 5px;
         cursor: pointer;
     }
-    nav {
+    /* Scoped to the constitution content — a bare `nav` selector here is
+       GLOBAL (this file is injected via set:html, Astro scoping never
+       applies) and used to paint every nav on the page white. */
+    .constitution-wrapper nav {
         float: right;
-        background: white;
+        background: var(--card-bg, #ffffff);
         margin-bottom: 1rem;
     }
     h2#league-information {

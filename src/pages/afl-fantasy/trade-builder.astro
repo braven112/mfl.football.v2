@@ -616,6 +616,12 @@ const pageConfig = {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
+    :global(html.dark) .tb-gate {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
     .tb-header {
       margin-bottom: 1.25rem;
     }
@@ -662,6 +668,12 @@ const pageConfig = {
       padding: 1.25rem;
       display: grid;
       gap: 1rem;
+    }
+
+    :global(html.dark) .tb-side {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .tb-side__header {
@@ -856,6 +868,12 @@ const pageConfig = {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       display: grid;
       gap: 0.75rem;
+    }
+
+    :global(html.dark) .tb-fairness {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .tb-center__title {

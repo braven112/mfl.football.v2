@@ -416,7 +416,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   /* --color-error-border isn't inverted for dark mode in tokens-dark.css,
      so its light-pink fallback would survive; re-derive from the
      (dark-inverted) --color-error instead, scoped to this page only. */
-  :global(html.dark) .sb-error {
+  html.dark .sb-error {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
 
@@ -657,7 +657,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-color: var(--color-error-border, #fecaca);
     background: var(--color-error-light, #fef2f2);
   }
-  :global(html.dark) .sb-card__delete:hover {
+  html.dark .sb-card__delete:hover {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .sb-card__title {
@@ -1397,7 +1397,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     z-index: 50;
     width: 240px;
   }
-  :global(html.dark) .sb-emoji-picker {
+  html.dark .sb-emoji-picker {
     box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-emoji-picker__grid {
@@ -1501,7 +1501,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     flex-direction: column;
     overflow: hidden;
   }
-  :global(html.dark) .sb-gif-popover {
+  html.dark .sb-gif-popover {
     box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-gif-search {
@@ -1830,7 +1830,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     color: var(--color-error, #dc2626);
     border-color: var(--color-error-border, #fecaca);
   }
-  :global(html.dark) .sb-poll-creator__remove:hover {
+  html.dark .sb-poll-creator__remove:hover {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .sb-poll-creator__add {
@@ -1918,7 +1918,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-color: var(--color-error-border, #fecaca);
     background: var(--color-error-light, #fef2f2);
   }
-  :global(html.dark) .sb-admin__btn--danger:hover {
+  html.dark .sb-admin__btn--danger:hover {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
 
@@ -1939,7 +1939,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     z-index: 50;
     min-width: 160px;
   }
-  :global(html.dark) .sb-admin__dropdown {
+  html.dark .sb-admin__dropdown {
     box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-admin__dropdown-item {

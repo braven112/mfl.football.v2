@@ -216,7 +216,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   padding: 1.5rem 1rem 4rem;
 }
 .pr-hero {
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  border-bottom: 1px solid var(--content-border, #e5e7eb);
   padding-bottom: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -227,7 +227,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--content-text-muted, #6b7280);
   margin-bottom: 0.75rem;
 }
 .pr-hero__badge {
@@ -241,18 +241,18 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--color-text-muted, #6b7280);
+  background: var(--content-text-muted, #6b7280);
 }
 .pr-hero__title {
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   line-height: 1.1;
   margin: 0 0 0.5rem;
-  color: var(--color-text, #111827);
+  color: var(--page-text, #111827);
 }
 .pr-hero__lede {
   font-size: 1.05rem;
   line-height: 1.6;
-  color: var(--color-text-muted, #4b5563);
+  color: var(--content-text-muted, #4b5563);
   margin: 0;
   max-width: 70ch;
 }
@@ -262,7 +262,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 1rem;
-  color: var(--color-text, #111827);
+  color: var(--page-text, #111827);
   border-left: 3px solid var(--color-primary, #2563eb);
   padding-left: 0.6rem;
 }
@@ -280,8 +280,8 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid var(--color-border, #e5e7eb);
-  background: var(--color-surface-2, #f3f4f6);
+  border: 2px solid var(--content-border, #e5e7eb);
+  background: var(--content-bg-muted, #f3f4f6);
 }
 
 .pr-rankings {
@@ -297,10 +297,10 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   gap: 1rem;
   align-items: center;
   padding: 0.85rem;
-  border: 1px solid var(--color-border, #e5e7eb);
+  border: 1px solid var(--content-border, #e5e7eb);
   border-left: 4px solid var(--pr-accent);
   border-radius: 0.5rem;
-  background: var(--color-surface-1, #fff);
+  background: var(--card-bg, #fff);
 }
 .pr-card__rank {
   display: flex;
@@ -323,7 +323,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
 }
 .pr-card__trend--up { color: #16a34a; }
 .pr-card__trend--down { color: #dc2626; }
-.pr-card__trend--flat { color: var(--color-text-muted, #6b7280); }
+.pr-card__trend--flat { color: var(--content-text-muted, #6b7280); }
 .pr-card__heading {
   display: flex;
   align-items: center;
@@ -340,7 +340,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
 .pr-card__name a:hover { text-decoration: underline; }
 .pr-card__blurb {
   margin: 0.1rem 0 0.4rem;
-  color: var(--color-text-muted, #4b5563);
+  color: var(--content-text-muted, #4b5563);
   font-size: 0.95rem;
   line-height: 1.4;
 }
@@ -349,7 +349,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.75rem;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--content-text-muted, #6b7280);
 }
 .pr-card__metric {
   display: inline-flex;
@@ -357,7 +357,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   gap: 0.25rem;
 }
 .pr-card__metric strong {
-  color: var(--color-text, #111827);
+  color: var(--page-text, #111827);
   font-weight: 700;
 }
 
@@ -367,8 +367,8 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   gap: 0.75rem;
 }
 .pr-award {
-  background: var(--color-surface-1, #fff);
-  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--content-border, #e5e7eb);
   border-top: 3px solid var(--pr-accent);
   border-radius: 0.5rem;
   padding: 0.85rem;
@@ -377,7 +377,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--content-text-muted, #6b7280);
   font-weight: 600;
   margin-bottom: 0.4rem;
 }
@@ -391,21 +391,21 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
 }
 .pr-award__vs {
   font-weight: 400;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--content-text-muted, #6b7280);
 }
 .pr-award__blurb {
   margin: 0;
   font-size: 0.85rem;
   line-height: 1.4;
-  color: var(--color-text-muted, #4b5563);
+  color: var(--content-text-muted, #4b5563);
 }
 
 .pr-footnote {
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px dashed var(--color-border, #e5e7eb);
+  border-top: 1px dashed var(--content-border, #e5e7eb);
   font-size: 0.8rem;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--content-text-muted, #6b7280);
 }
 .pr-footnote p { margin: 0; }
 

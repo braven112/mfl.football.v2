@@ -185,6 +185,14 @@ const prizes: Record<string, string[]> = {
     overflow: hidden;
   }
 
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     the section from the page background; add the border ring. */
+  :global(html.dark) .tier-standings-container {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
   .tier-header-section {
     padding: 1.5rem 2rem;
     background: var(--card-bg, #fff);

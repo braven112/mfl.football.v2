@@ -215,6 +215,12 @@ const siteConfigs = [
     box-shadow: var(--shadow-sm);
   }
 
+  html.dark .ri-section {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .ri-section__title {
     display: flex;
     align-items: center;

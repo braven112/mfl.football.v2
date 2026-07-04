@@ -999,6 +999,14 @@ const grandTotal =
      box-shadow: var(--box-shadow-lg);
   }
 
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     the section from the page background; add the border ring. */
+  :global(html.dark) .brackets-grid {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
   .prizes-card {
     background: var(--card-bg, #ffffff);
     border: 1px solid var(--content-border, #e2e8f0);

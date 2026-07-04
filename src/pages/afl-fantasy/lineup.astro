@@ -1795,6 +1795,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     animation: lineup-cdm-enter-mobile 0.25s ease-out;
   }
 
+  /* Dark mode: raised-card ring (light stays borderless) */
+  html.dark .lineup-cdm__sheet {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-xl, 0 20px 25px rgba(0,0,0,.1));
+  }
+
   @keyframes lineup-cdm-enter-mobile {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }

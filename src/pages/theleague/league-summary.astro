@@ -251,6 +251,12 @@ const teamsForDisplay = teamSummaries.map((team) => {
     box-sizing: border-box;
   }
 
+  /* Dark mode: raised-card treatment — a background-color step alone can't
+     separate the section from the page floor; add the border ring. */
+  :global(html.dark) .league-summary-container {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
   h1 {
     font-size: 1.5rem;
     font-weight: 700;

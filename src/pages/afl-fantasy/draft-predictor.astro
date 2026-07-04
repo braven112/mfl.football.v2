@@ -231,6 +231,12 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
+  :global(html.dark) .draft-predictor-header {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
   @media (min-width: 550px) {
     .draft-predictor-header {
       grid-template-columns: 1fr auto;
@@ -315,6 +321,12 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     border-radius: 1rem;
     padding: 1.5rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  :global(html.dark) .info-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg, var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
   }
 
   .info-card h3 {

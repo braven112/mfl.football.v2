@@ -1232,6 +1232,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     border-radius: 0.5rem;
   }
 
+  /* Dark mode: raised-card ring (light stays borderless) */
+  html.dark .pfa-table-wrapper {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .pfa-table {
     width: 100%;
     border-collapse: collapse;

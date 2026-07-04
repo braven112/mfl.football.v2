@@ -1445,6 +1445,14 @@ const pageConfig = {
       text-align: center;
     }
 
+    /* Dark mode: raised-card treatment — shadow alone can't separate this
+       section from the navy page floor; add the border ring. */
+    :global(html.dark) .team-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-lg);
+    }
+
     @media (min-width: 480px) {
       .team-card {
         display: flex;
@@ -1667,6 +1675,12 @@ const pageConfig = {
       box-shadow: var(--shadow-md);
     }
 
+    :global(html.dark) .roster-summary article {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-md);
+    }
+
     .roster-summary p {
       margin: 0;
       color: var(--color-gray-500, #6b7280);
@@ -1705,6 +1719,12 @@ const pageConfig = {
       padding: var(--padding-md, 1rem);
       box-shadow: var(--shadow-lg);
       overflow: hidden;
+    }
+
+    :global(html.dark) .roster-table-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-lg);
     }
 
     .roster-table-wrapper {
@@ -1915,6 +1935,12 @@ const pageConfig = {
       border-radius: 0.75rem;
       padding: 1.25rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    :global(html.dark) .chart-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .chart-card--span-2 {
@@ -2315,6 +2341,13 @@ const pageConfig = {
       text-align: center;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       color: var(--content-text-muted, #6b7280);
+    }
+
+    :global(html.dark) .empty-state,
+    :global(html.dark) .coming-soon {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .coming-soon h2 {

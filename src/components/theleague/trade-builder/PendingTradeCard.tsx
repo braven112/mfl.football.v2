@@ -287,7 +287,7 @@ export default function PendingTradeCard({
           color: #fff;
         }
         .ptc-btn--accept:hover:not(:disabled) { background: #047857; }
-        :global(html.dark) .ptc-btn--accept:hover:not(:disabled) { background: #10b981; }
+        html.dark .ptc-btn--accept:hover:not(:disabled) { background: #10b981; }
         .ptc-btn--reject {
           background: transparent;
           border-color: var(--color-error, #dc2626);

@@ -699,6 +699,12 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     border-radius: 0.5rem;
   }
 
+  html.dark .mock-lobby__auth-wall {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .mock-lobby__auth-wall p {
     color: var(--color-gray-500, #6b7280);
     margin: 0 0 1rem;
@@ -785,6 +791,12 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: var(--radius-md, 0.5rem);
+  }
+
+  html.dark .mock-lobby__board {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
   }
 
   .mock-lobby__board-head {
@@ -1020,6 +1032,22 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.08));
     transform: translateY(-2px);
     outline: none;
+  }
+
+  /* Dark mode: card washes into the page bg since --card-bg and --page-bg
+     sit close together; add the canonical hairline ring so each session
+     card reads as raised. The left-rail status accent border is untouched. */
+  html.dark .mock-lobby__session-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
+  html.dark .mock-lobby__session-card:hover,
+  html.dark .mock-lobby__session-card:focus-visible {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
   }
 
   /* Status variants — set the left-rail color */

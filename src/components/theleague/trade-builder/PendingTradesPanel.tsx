@@ -439,6 +439,12 @@ export default function PendingTradesPanel({
           flex-direction: column;
           animation: ptp-slide-in 0.26s ease-out;
         }
+        /* Dark mode: raised-card ring (light stays borderless) */
+        html.dark .ptp-panel {
+          box-shadow:
+            0 0 0 1px var(--content-border, #555555),
+            0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
         @keyframes ptp-slide-in {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
