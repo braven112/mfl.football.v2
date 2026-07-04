@@ -151,10 +151,11 @@ const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '0
 const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01');
 // All-play side competition, era-aware:
 // - pre-2017 (the AFL Cup era and before): no competition — view hidden.
-// - 2017: inaugural season, ONE combined 24-team table with no Premier League
-//   branding — but its top 12 really were headed for promotion (confirmed to
-//   exactly match the 2018 Premier League roster), so the table still carries
-//   the relegation/promotion cutoff line after rank 12.
+// - 2017: inaugural season, branded the "Founders Table" — ONE combined
+//   24-team table with no Premier League branding, but its top 12 really
+//   were headed for promotion (confirmed to exactly match the 2018 Premier
+//   League roster), so the table still carries the relegation/promotion
+//   cutoff line after rank 12.
 // - 2018+: grouped by THAT season's makeup from tier-history.json, recovered
 //   from the league skin's premierleague-YYYY.js grouping scripts (the source
 //   of truth for who was in which league). Any season missing a record falls
@@ -167,6 +168,8 @@ const tierAllPlayStandings = hasTierRecord
   : [];
 const combinedAllPlayStandings =
   allPlayEra && !hasTierRecord ? getAllPlayStandings(franchises, seasonConfig, calculatedAllPlay) : [];
+// 2017 is branded "Founders Table" — the season that founded the Premier
+// League / D-League split (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
 const isInauguralAllPlaySeason = selectedYear === TIER_COMPETITION_FIRST_SEASON;
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
@@ -241,8 +244,8 @@ const promoRegTeams = [
         )}
         {view === 'all_play' && !hasTierRecord && isInauguralAllPlaySeason && (
           <>
-            <h1 class="section-title">All-Play Standings</h1>
-            <p class="subtitle">Inaugural all-play season — one 24-team table. The top 12 went on to form the {selectedYear + 1} Premier League.</p>
+            <h1 class="section-title">Founders Table</h1>
+            <p class="subtitle">The one-table season that founded the Premier League / D-League split. The top 12 went on to form the {selectedYear + 1} Premier League.</p>
           </>
         )}
         {view === 'all_play' && !hasTierRecord && !isInauguralAllPlaySeason && (
@@ -386,7 +389,7 @@ const promoRegTeams = [
       {view === 'all_play' && !hasTierRecord && (
         <div class="all-play-view">
           <TierAllPlayStandingsTable
-            tierName="All-Play"
+            tierName={isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play'}
             teams={combinedAllPlayStandings}
             year={selectedYear}
             rosterBaseUrl={`${baseUrl}/rosters`}

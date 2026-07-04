@@ -24,19 +24,21 @@ import { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo } from './afl-tier-
 export { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo };
 
 /**
- * First season of the all-play side competition — the year after the last AFL
- * Cup (the Cup's bracket structure ran through 2017 on MFL but its last
- * awarded champion was 2016; the AFL Cup bracket slot survived as unused
- * config through 2017). The inaugural year ran as ONE combined 24-team table
- * with no Premier League branding, but the promotion cutoff was real: its
- * top 12 by all-play record are an EXACT match for the 2018 Premier League
- * roster (verified against premierleague-2018.js), so the standings page
- * still draws the relegation/promotion line after rank 12 for this season.
- * No skin grouping script exists for 2017 itself because one table needs no
- * grouping. awards-history.json originally carried mistaken premier-league /
- * dleague-champion entries for 2017 (Smokane FC / Titsburgh Feelers, neither
- * of which is actually rank 1 of the combined table or rank 1 of the bottom
- * 12) — removed once the combined-table structure was confirmed.
+ * First season of the all-play side competition — branded the "Founders
+ * Table" on the standings page (src/pages/afl-fantasy/standings.astro), the
+ * year after the last AFL Cup (the Cup's bracket structure ran through 2017
+ * on MFL but its last awarded champion was 2016; the AFL Cup bracket slot
+ * survived as unused config through 2017). The inaugural year ran as ONE
+ * combined 24-team table with no Premier League branding, but the promotion
+ * cutoff was real: its top 12 by all-play record are an EXACT match for the
+ * 2018 Premier League roster (verified against premierleague-2018.js), so
+ * the standings page still draws the relegation/promotion line after rank 12
+ * for this season. No skin grouping script exists for 2017 itself because
+ * one table needs no grouping. awards-history.json originally carried
+ * mistaken premier-league / dleague-champion entries for 2017 (Smokane FC /
+ * Titsburgh Feelers, neither of which is actually rank 1 of the combined
+ * table or rank 1 of the bottom 12) — removed once the combined-table
+ * structure was confirmed.
  */
 export const TIER_COMPETITION_FIRST_SEASON = 2017;
 
