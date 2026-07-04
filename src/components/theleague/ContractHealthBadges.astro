@@ -126,7 +126,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   }
 
   .health-card:hover {
-    border-color: var(--content-text-muted, #cbd5e1);
+    border-color: var(--content-border-hover, #cbd5e1);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   }
 
@@ -134,6 +134,15 @@ const sortedMetrics = [...metrics].sort((a, b) => {
      the card from the page floor; add the border ring. */
   :global(html.dark) .health-card {
     box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  /* Hover overwrites box-shadow, so the ring must be re-composed with
+     the lift shadow or the card loses its edge mid-hover. */
+  :global(html.dark) .health-card:hover {
+    border-color: var(--content-text-muted, #8a8a8a);
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 4px 6px rgba(0, 0, 0, 0.05);
   }
 
   .card-header {
@@ -147,7 +156,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   .team-name {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--page-text, #1a1a1a);
+    color: var(--page-text, #111827);
     margin: 0;
   }
 
@@ -189,7 +198,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   .metric-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--content-text-muted, #64748b);
+    color: var(--content-text-muted, #6b7280);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -197,17 +206,17 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   .metric-value {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--page-text, #1a1a1a);
+    color: var(--page-text, #111827);
   }
 
   .metric-percent {
     font-size: 0.75rem;
-    color: var(--content-text-muted, #94a3b8);
+    color: var(--content-text-muted, #6b7280);
   }
 
   .cap-bar {
     height: 12px;
-    background: var(--content-bg-muted, #e2e8f0);
+    background: var(--content-border, #e2e8f0);
     border-radius: 6px;
     overflow: hidden;
     margin-bottom: 0.5rem;
@@ -221,7 +230,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
 
   .cap-bar-label {
     font-size: 0.75rem;
-    color: var(--content-text-muted, #64748b);
+    color: var(--content-text-muted, #6b7280);
     text-align: center;
     font-weight: 500;
   }
