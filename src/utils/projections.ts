@@ -9,7 +9,7 @@ export interface PlayerProjection {
 
 export interface ProjectedScoresData {
   projectedScores?: {
-    playerScore?: PlayerProjection[];
+    playerScore?: PlayerProjection[] | PlayerProjection;
     week?: string;
   };
 }
@@ -24,13 +24,24 @@ export interface RosterPlayer {
 
 export interface Franchise {
   id: string;
-  player?: RosterPlayer[];
+  player?: RosterPlayer[] | RosterPlayer;
 }
 
 export interface RostersData {
   rosters?: {
-    franchise?: Franchise[];
+    franchise?: Franchise[] | Franchise;
   };
+}
+
+/**
+ * MFL returns a bare object instead of a single-element array when a list
+ * has exactly one entry, and an empty string when it has none. Normalize
+ * all three shapes to an array.
+ */
+function asArray<T>(value: T[] | T | '' | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  return [value];
 }
 
 /**
@@ -47,7 +58,7 @@ export function calculateTeamProjections(
 
   // Build a map of player_id -> projected score for quick lookup
   const playerProjectionMap = new Map<string, number>();
-  const playerScores = projectedScoresData?.projectedScores?.playerScore || [];
+  const playerScores = asArray(projectedScoresData?.projectedScores?.playerScore);
 
   for (const player of playerScores) {
     if (player.id && player.score) {
@@ -59,13 +70,13 @@ export function calculateTeamProjections(
   }
 
   // Calculate total projection for each franchise
-  const franchises = rostersData?.rosters?.franchise || [];
+  const franchises = asArray(rostersData?.rosters?.franchise);
 
   for (const franchise of franchises) {
     if (!franchise.id) continue;
 
     let totalProjection = 0;
-    const players = franchise.player || [];
+    const players = asArray(franchise.player);
 
     for (const player of players) {
       // Only count ROSTER players (not TAXI_SQUAD, INJURED_RESERVE, etc.)
