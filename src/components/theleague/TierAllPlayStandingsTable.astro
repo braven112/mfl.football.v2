@@ -8,11 +8,12 @@ export interface Props {
   year?: number;
   rosterBaseUrl?: string;
   /**
-   * Draw a divider below this rank — the inaugural 2017 season ran as ONE
-   * combined 24-team table, but its top 12 (confirmed to exactly match the
-   * 2018 Premier League roster) really were headed for promotion, so the
-   * relegation/promotion line still belongs on that table even though it
-   * carries no Premier League branding.
+   * Draw a divider below this rank, and a promotion arrow (⬆) in the Prize
+   * column for every row at or above it — the inaugural 2017 season ran as
+   * ONE combined 24-team table, but its top 12 (confirmed to exactly match
+   * the 2018 Premier League roster) really were headed for promotion, so the
+   * relegation/promotion line and arrow still belong on that table even
+   * though it carries no Premier League branding.
    */
   promotionCutoff?: number;
 }
@@ -156,6 +157,9 @@ const prizes: Record<string, string[]> = {
                 {tierName === 'Premier League' && rank === 10 && <span class="promo-arrow pl-rank-10">⬇</span>}
                 {tierName === 'Premier League' && rank === 11 && <span class="promo-arrow pl-rank-11">⬇</span>}
                 {tierName === 'Premier League' && rank === 12 && <span class="promo-arrow pl-rank-12">⬇</span>}
+                {promotionCutoff !== undefined && rank <= promotionCutoff && (
+                  <span class="promo-arrow founders-promoted">⬆</span>
+                )}
               </td>
             </tr>
           );
@@ -486,6 +490,11 @@ const prizes: Record<string, string[]> = {
   .promo-arrow.pl-rank-11,
   .promo-arrow.pl-rank-12 {
     color: #ef4444;
+  }
+
+  /* Founders Table (2017) — every top-12 row promoted into the 2018 Premier League */
+  .promo-arrow.founders-promoted {
+    color: #22c55e;
   }
 
   @media (max-width: 767px) {
