@@ -1,6 +1,7 @@
 ---
 import type { TeamStanding } from '../../types/standings';
-import { getTierLogo, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import ThemeImage from '../ThemeImage.astro';
 
 export interface Props {
   tierName: string;
@@ -30,6 +31,7 @@ const {
 // any season without a recorded tier split) is a plain all-play table with no
 // Premier League branding.
 const tierLogo = tierName === PREMIER_LEAGUE || tierName === D_LEAGUE ? getTierLogo(tierName) : null;
+const tierLogoDark = tierLogo ? getTierLogoDark(tierName) : null;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -59,7 +61,7 @@ const prizes: Record<string, string[]> = {
 
 <div class="tier-standings-container">
   <div class="tier-header-section">
-    {tierLogo && <img src={tierLogo} alt={`${tierName} Logo`} class="tier-logo" />}
+    {tierLogo && tierLogoDark && <ThemeImage src={tierLogo} darkSrc={tierLogoDark} alt={`${tierName} Logo`} class="tier-logo" />}
     <h3 class="tier-header">{tierName}</h3>
   </div>
 
@@ -177,7 +179,7 @@ const prizes: Record<string, string[]> = {
 
 <style>
   .tier-standings-container {
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     overflow: hidden;
@@ -185,7 +187,7 @@ const prizes: Record<string, string[]> = {
 
   .tier-header-section {
     padding: 1.5rem 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -201,7 +203,7 @@ const prizes: Record<string, string[]> = {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #002244;
+    color: var(--page-text, #002244);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -217,15 +219,15 @@ const prizes: Record<string, string[]> = {
   }
 
   thead {
-    background: var(--color-bg-secondary, #f8f9fa);
-    border-bottom: 2px solid var(--color-border, #dee2e6);
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #dee2e6);
   }
 
   th {
     padding: 0.75rem 1rem;
     text-align: left;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--table-header-text, #111827);
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
@@ -251,12 +253,12 @@ const prizes: Record<string, string[]> = {
   }
 
   tbody tr {
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
     transition: background-color 0.15s ease;
   }
 
   tbody tr:hover {
-    background-color: var(--color-bg-hover, #f9fafb);
+    background-color: var(--table-row-bg-hover, #f9fafb);
   }
 
   tbody tr:last-child {
@@ -341,7 +343,7 @@ const prizes: Record<string, string[]> = {
   }
 
   a.team-info-link:focus-visible {
-    outline: 2px solid var(--color-focus, #2563eb);
+    outline: 2px solid var(--color-primary, #2563eb);
     outline-offset: 2px;
   }
 
@@ -354,7 +356,7 @@ const prizes: Record<string, string[]> = {
 
   .team-name {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--page-text, #111827);
   }
 
   .col-record td {
@@ -414,7 +416,9 @@ const prizes: Record<string, string[]> = {
     border-bottom: 3px solid #dc2626;
   }
 
-  /* D-League tier styling */
+  /* D-League tier styling. The green tint is translucent, so it composites
+     over the page's own text color rather than a fixed background — force
+     dark text only in light mode; dark mode keeps the theme's light text. */
   tbody tr.second-place {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.18) 100%);
     color: #000;
@@ -424,6 +428,13 @@ const prizes: Record<string, string[]> = {
   tbody tr.second-place .col-record,
   tbody tr.second-place .col-prize {
     color: #000;
+  }
+
+  :global(html.dark) tbody tr.second-place,
+  :global(html.dark) tbody tr.second-place .team-name,
+  :global(html.dark) tbody tr.second-place .col-record,
+  :global(html.dark) tbody tr.second-place .col-prize {
+    color: var(--page-text, #ededed);
   }
 
   tbody tr.last-place {

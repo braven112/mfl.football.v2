@@ -1,0 +1,127 @@
+---
+/**
+ * ThemeScript
+ *
+ * Pre-paint dark-mode theme resolver. Rendered as EARLY as possible in <head>
+ * (before any stylesheet/link tags) in every layout so the correct theme class
+ * is applied before first paint — no flash of wrong theme.
+ *
+ * Responsibilities:
+ * - Define window.__applyTheme(prefArg?) which resolves the theme
+ *   ('light' | 'dark') from an explicit pref or the `theme_pref` cookie,
+ *   toggles the `dark` class on <html>, updates <meta name="theme-color">,
+ *   and dispatches a `theme-change` CustomEvent.
+ * - Apply the theme immediately (pre-paint).
+ * - Register (once) a prefers-color-scheme change listener (only re-applies
+ *   when the current cookie pref is 'auto') and an astro:after-swap listener
+ *   (ClientRouter replaces <html> attributes on soft navigation, wiping the
+ *   class — this restores it before the swapped page paints).
+ *
+ * NOTE: This is an is:inline script — it must NOT import modules. All cookie
+ * parsing / validation is duplicated inline and kept in sync with
+ * src/utils/theme-preference.ts (THEME_COOKIE_NAME = 'theme_pref').
+ */
+---
+<script is:inline>
+	(function () {
+		var COOKIE_NAME = 'theme_pref';
+		var DARK_THEME_COLOR = '#121212';
+
+		function readCookiePref() {
+			try {
+				var cookieString = document.cookie;
+				if (!cookieString) return 'auto';
+				var parts = cookieString.split(';');
+				for (var i = 0; i < parts.length; i++) {
+					var kv = parts[i].trim().split('=');
+					if (kv[0] === COOKIE_NAME) {
+						var val = decodeURIComponent(kv[1] || '');
+						if (val === 'light' || val === 'dark' || val === 'auto') return val;
+					}
+				}
+			} catch (e) {}
+			return 'auto';
+		}
+
+		function systemPrefersDark() {
+			try {
+				return (
+					typeof window.matchMedia === 'function' &&
+					window.matchMedia('(prefers-color-scheme: dark)').matches
+				);
+			} catch (e) {
+				return false;
+			}
+		}
+
+		function updateThemeColorMeta(resolved) {
+			try {
+				var meta = document.querySelector('meta[name="theme-color"]');
+				if (!meta) return; // layouts without a theme-color meta: no-op
+				if (resolved === 'dark') {
+					meta.setAttribute('content', DARK_THEME_COLOR);
+				} else {
+					// Restore the light value captured server-side.
+					var light = meta.getAttribute('data-theme-color-light');
+					if (light) meta.setAttribute('content', light);
+				}
+			} catch (e) {}
+		}
+
+		window.__applyTheme = function (prefArg) {
+			var pref = prefArg;
+			if (pref !== 'light' && pref !== 'dark' && pref !== 'auto') {
+				pref = readCookiePref();
+			}
+			var resolved = pref === 'auto' ? (systemPrefersDark() ? 'dark' : 'light') : pref;
+			try {
+				var root = document.documentElement;
+				if (resolved === 'dark') root.classList.add('dark');
+				else root.classList.remove('dark');
+			} catch (e) {}
+			updateThemeColorMeta(resolved);
+			try {
+				document.dispatchEvent(
+					new CustomEvent('theme-change', { detail: { pref: pref, resolved: resolved } })
+				);
+			} catch (e) {}
+			return resolved;
+		};
+
+		// Apply immediately, pre-paint.
+		var initialResolved = window.__applyTheme();
+
+		// This script runs before the rest of <head> is parsed, so the
+		// theme-color meta doesn't exist yet on initial load — patch it once
+		// the DOM is ready. (Subsequent toggles/soft-navs hit the meta live.)
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', function () {
+				updateThemeColorMeta(initialResolved);
+			});
+		}
+
+		// Register global listeners only once (guard against re-execution on soft nav).
+		if (!window.__themeListenersRegistered) {
+			window.__themeListenersRegistered = true;
+
+			try {
+				var mq = window.matchMedia('(prefers-color-scheme: dark)');
+				var onSystemChange = function () {
+					// Only react to system changes when the user pref is 'auto'.
+					if (readCookiePref() === 'auto') window.__applyTheme();
+				};
+				if (typeof mq.addEventListener === 'function') {
+					mq.addEventListener('change', onSystemChange);
+				} else if (typeof mq.addListener === 'function') {
+					mq.addListener(onSystemChange); // legacy Safari
+				}
+			} catch (e) {}
+
+			// ClientRouter swaps <html> on soft navigation, wiping the class.
+			// after-swap fires before the new page paints — restore the theme here.
+			document.addEventListener('astro:after-swap', function () {
+				window.__applyTheme();
+			});
+		}
+	})();
+</script>

@@ -277,11 +277,10 @@ const isEmpty = rows.length === 0;
   /* Dark mode — mirror schefter-feed.css pattern (token-driven, no overrides
      needed because every color above is a CSS var with a light fallback).
      Belt-and-suspenders: tighten the divider in dark mode if the global
-     gray-50 fallback isn't dark-mode-aware. */
-  @media (prefers-color-scheme: dark) {
-    .sf-rail-hottest__item {
-      border-bottom-color: var(--color-gray-800, #1f2937);
-    }
+     gray-50 fallback isn't dark-mode-aware. html.dark is the single
+     resolver for theme state (see tokens-dark.css), not the media query. */
+  :global(html.dark) .sf-rail-hottest__item {
+    border-bottom-color: var(--color-gray-800, #1f2937);
   }
 
   /* Mobile — let team names wrap once horizontal real-estate opens up

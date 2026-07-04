@@ -428,9 +428,9 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   .veteran-extension-candidates .no-results {
     text-align: center;
     padding: 2rem;
-    background: #f5f5f5;
+    background: var(--content-bg-muted, #f5f5f5);
     border-radius: 8px;
-    color: #666;
+    color: var(--content-text-muted, #666);
     font-size: 0.95rem;
   }
 
@@ -445,15 +445,15 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   }
 
   .veteran-extension-candidates .eligibility-table thead {
-    background: #f8f9fa;
-    border-bottom: 2px solid #e9ecef;
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #e9ecef);
   }
 
   .veteran-extension-candidates .eligibility-table th {
     padding: 0.75rem;
     text-align: left;
     font-weight: 600;
-    color: #333;
+    color: var(--table-header-text, #333);
   }
 
   .veteran-extension-candidates .eligibility-table th.align-right {
@@ -465,16 +465,16 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   }
 
   .veteran-extension-candidates .eligibility-table tbody tr {
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--table-border, #e9ecef);
     transition: background 0.2s ease;
   }
 
   .veteran-extension-candidates .eligibility-table tbody tr:nth-child(even) {
-    background: #e0e0e0;
+    background: var(--table-row-bg-alt, #e0e0e0);
   }
 
   .veteran-extension-candidates .eligibility-table tbody tr:hover {
-    background: #eef1fb;
+    background: var(--table-row-bg-hover, #eef1fb);
   }
 
   .veteran-extension-candidates .eligibility-table td {
@@ -494,7 +494,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   .veteran-extension-candidates .contract-cell {
     white-space: nowrap;
     font-size: 0.85rem;
-    color: #555;
+    color: var(--content-text-muted, #555);
   }
 
   .veteran-extension-candidates .contract-cell__x {

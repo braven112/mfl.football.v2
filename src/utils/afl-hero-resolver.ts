@@ -46,6 +46,8 @@ export interface EventHeroView {
   isExternal?: boolean;
   icon?: string;
   badge?: string;
+  /** Dark-mode variant of `badge` — required whenever `badge` is set. */
+  badgeDark?: string;
   badgeAlt?: string;
   accent?: string;
   glow?: string;
@@ -163,6 +165,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       glow: GLOW_RED,
       player: randomHeroPlayer(now),
       badge: dleague ? '/assets/afl/dleague.svg' : '/assets/afl/premier.svg',
+      badgeDark: dleague ? '/assets/afl/dleague-dark.svg' : '/assets/afl/premier-dark.svg',
       badgeAlt: dleague ? 'D-League' : 'Premier League',
       countValue: days,
       countLabel: days === 0 ? 'Lock by 8PM PT — today' : 'Days to lock · Jul 15 · 8PM PT',

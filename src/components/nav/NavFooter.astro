@@ -17,6 +17,7 @@
 import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav';
 import { spriteUrl } from '../../utils/sprite-url';
 import leagueConfigData from '../../data/theleague.config.json';
+import ThemeToggle from '../ThemeToggle.astro';
 
 interface Props extends NavFooterProps {
   /** Current league for constructing roster link */
@@ -195,6 +196,12 @@ const showCommish = isCommissioner && isCommishMode;
       </svg>
     </a>
   )}
+
+  {/* Theme preference — compact row, own top border so it doesn't crowd team identity */}
+  <div class="nav-footer__theme-row">
+    <span class="nav-footer__theme-label">Theme</span>
+    <ThemeToggle size="compact" />
+  </div>
 
   {/* Footer Links (e.g., "Back to MFL") */}
   {footerLinks.length > 0 && (
@@ -596,6 +603,26 @@ const showCommish = isCommissioner && isCommishMode;
 
   .nav-footer__verify:hover .nav-footer__verify-arrow {
     transform: translateX(2px);
+  }
+
+  /* ==============================================
+   * THEME ROW - Compact theme preference control
+   * ============================================== */
+  .nav-footer__theme-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--nav-spacing-sm, 8px);
+    padding-top: var(--nav-spacing-sm, 8px);
+    border-top: 1px solid var(--nav-border-subtle, #f3f4f6);
+  }
+
+  .nav-footer__theme-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--nav-footer-text-muted, #9ca3af);
   }
 
   /* ==============================================

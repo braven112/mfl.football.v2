@@ -65,6 +65,17 @@ export function getConferenceLogo(id: ConferenceId): string {
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}.svg`;
 }
 
+/**
+ * Resolve the dark-mode conference logo path. Convention: same path + `-dark`
+ * suffix (see /public/assets/afl/conferences/al-dark.svg, nl-dark.svg).
+ * Pair with ThemeImage (src/components/ThemeImage.astro) for the CSS swap —
+ * SSR can never know the resolved theme, so both variants must render and
+ * the swap happens client-side via html.dark.
+ */
+export function getConferenceLogoDark(id: ConferenceId): string {
+  return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}-dark.svg`;
+}
+
 export function getConferenceIdByName(name: ConferenceName): ConferenceId {
   return NAME_TO_ID[name];
 }

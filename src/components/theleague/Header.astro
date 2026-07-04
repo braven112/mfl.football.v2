@@ -15,9 +15,7 @@ import { getLeagueContext } from '../../utils/league-context';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
-import { getThemePreference } from '../../utils/theme-preference';
 import NavToggleButton from '../nav/NavToggleButton.astro';
-import ThemeToggle from '../ThemeToggle.astro';
 
 interface Props {
   host?: string;
@@ -46,9 +44,6 @@ const normalize = (value: string) => value.replace(/\/+$/, "");
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
-
-// Get theme preference for logo selection
-const themePref = getThemePreference(Astro.cookies);
 
 // Use the year passed from the page, or fall back to the environment variable/current year.
 const year = (Astro.props.year || envYear).toString();
@@ -84,9 +79,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
           <use href={`${spriteUrl}#icon-search`}></use>
         </svg>
       </a>
-      <div class="breadcrumb-theme-toggle">
-        <ThemeToggle size="compact" />
-      </div>
       <!-- Hamburger Menu Toggle (triggers NavDrawer in layout) -->
       <NavToggleButton
         ariaLabel="Toggle navigation menu"
@@ -103,15 +95,27 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : "/theleague", hideLeaguePrefix)}>
           <div class="league_logo" id="league_logo">
             {isAFL ? (
-              <!-- AFL Logo -->
-              <img src="/assets/logos/afl-logo.svg" alt="AFL Logo" class="header-logo-img" />
+              <!-- AFL Logo — dual variant, CSS-swapped on html.dark -->
+              <>
+                <img src="/assets/logos/afl-logo.svg" alt="AFL Logo" class="header-logo-img header-logo-img--light" />
+                <img src="/assets/logos/afl-logo-dark.svg" alt="AFL Logo" class="header-logo-img header-logo-img--dark" />
+              </>
             ) : (
-              <!-- The League Logo (dark mode variant) -->
-              <img
-                src={themePref === 'dark' ? '/assets/logos/theleague-logo-dark.svg' : '/assets/logos/theleague-logo.svg'}
-                alt="The League Logo"
-                class="header-logo-img"
-              />
+              <!-- The League Logo — both variants rendered; CSS swaps on
+                   html.dark so the logo tracks the LIVE theme (cookie 'auto'
+                   + client toggles), which a server-side pick cannot. -->
+              <>
+                <img
+                  src="/assets/logos/theleague-logo.svg"
+                  alt="The League Logo"
+                  class="header-logo-img header-logo-img--light"
+                />
+                <img
+                  src="/assets/logos/theleague-logo-dark.svg"
+                  alt="The League Logo"
+                  class="header-logo-img header-logo-img--dark"
+                />
+              </>
             )}
           </div>
           <div class="leaguename">
@@ -187,7 +191,10 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   /* Breadcrumb Styles */
   .breadcrumb-bar {
     background: var(--breadcrumb-bar-bg, var(--color-primary, #1c497c));
-    border-bottom: 1px solid var(--breadcrumb-bar-bg, var(--color-primary, #1c497c));
+    /* --breadcrumb-bar-border: transparent-ish in light (bar is already the
+       brand blue); dark mode sets it to --color-primary so the near-black
+       strip gets a brand accent edge. */
+    border-bottom: 2px solid var(--breadcrumb-bar-border, var(--breadcrumb-bar-bg, var(--color-primary, #1c497c)));
     padding: 0.125rem 0;
   }
 
@@ -266,32 +273,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     fill: currentColor;
   }
 
-  /* Theme toggle sits on the dark breadcrumb bar, so it needs its own
-     contrast treatment rather than the light-panel defaults baked into
-     ThemeToggle.astro (those assume a white dropdown/drawer background). */
-  .breadcrumb-theme-toggle :global(.theme-toggle__group) {
-    background: rgba(255, 255, 255, 0.12);
-  }
-
-  .breadcrumb-theme-toggle :global(.theme-toggle__option) {
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .breadcrumb-theme-toggle :global(.theme-toggle__option:hover) {
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
-  }
-
-  .breadcrumb-theme-toggle :global(.theme-toggle__option[aria-checked='true']) {
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--breadcrumb-bar-bg, var(--color-primary, #1c497c));
-  }
-
-  .breadcrumb-theme-toggle :global(.theme-toggle__option[aria-checked='true']:hover) {
-    background: #fff;
-    color: var(--breadcrumb-bar-bg, var(--color-primary, #1c497c));
-  }
-
   .theleague-header {
     background: var(--content-bg, #ffffff);
     border-bottom: 1px solid var(--content-border, #e2e8f0);
@@ -362,6 +343,21 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   .league_logo .header-logo-img {
     height: 45px;
     width: auto;
+    display: block;
+  }
+
+  /* Theme-driven logo swap: light shows the original blue mark, dark shows
+     the bright variant. CSS (not SSR) so it tracks live toggles and 'auto'.
+     Selectors include .league_logo to outweigh the base display:block rule. */
+  .league_logo .header-logo-img--dark {
+    display: none;
+  }
+
+  :global(html.dark) .league_logo .header-logo-img--light {
+    display: none;
+  }
+
+  :global(html.dark) .league_logo .header-logo-img--dark {
     display: block;
   }
 

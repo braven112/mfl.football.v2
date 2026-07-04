@@ -13,6 +13,7 @@
  * site's CSS custom properties where they exist.
  */
 import { spriteUrl } from '../../utils/sprite-url';
+import ThemeImage from '../ThemeImage.astro';
 
 interface Props {
   /** Pill label, e.g. "2026 Keeper Deadline" */
@@ -29,6 +30,8 @@ interface Props {
   icon?: string;
   /** Optional tier/conference badge svg (e.g. /assets/afl/premier.svg). Replaces the icon chip. */
   badge?: string;
+  /** Dark-mode variant of `badge` (e.g. /assets/afl/premier-dark.svg). Required whenever `badge` is set. */
+  badgeDark?: string;
   badgeAlt?: string;
   /** Accent color for the headline word, countdown number and rail. */
   accent?: string;
@@ -57,6 +60,7 @@ const {
   isExternal = false,
   icon,
   badge,
+  badgeDark,
   badgeAlt = '',
   accent = '#c9a94e',
   glow = 'rgba(196,30,58,.6)',
@@ -96,7 +100,11 @@ const countAriaLabel = hasCount
   <div class="afl-event-hero__content">
     <div class="afl-event-hero__eyebrow">
       {badge ? (
-        <img class="afl-event-hero__badge" src={badge} alt={badgeAlt} />
+        badgeDark ? (
+          <ThemeImage class="afl-event-hero__badge" src={badge} darkSrc={badgeDark} alt={badgeAlt} />
+        ) : (
+          <img class="afl-event-hero__badge" src={badge} alt={badgeAlt} />
+        )
       ) : icon ? (
         <span class="afl-event-hero__chip">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href={`${spriteUrl}#icon-${icon}`}></use></svg>
