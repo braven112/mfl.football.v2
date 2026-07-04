@@ -1,0 +1,34 @@
+---
+/**
+ * Global dark-mode team icon swap styles.
+ *
+ * Included once in the shared layout <head>. For every team (either league)
+ * that declares an `iconDark` in its config, emits a CSS rule that swaps the
+ * rendered <img> to the dark variant under `html.dark`. Teams without
+ * `iconDark` get no rule and render exactly as before in both themes.
+ *
+ * This is intentionally CSS-only: with theme preference 'auto' the server
+ * cannot know the resolved theme, so a server-side src pick would be wrong
+ * (see src/utils/team-icon-dark-css.ts for the full rationale).
+ *
+ * Rules for both leagues are always emitted (exact src matches can never
+ * collide across leagues) — no league branching, per the loading-standard
+ * "structure vs. skin" rule.
+ */
+import theleagueConfig from '../data/theleague.config.json';
+import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import { buildTeamIconDarkCss } from '../utils/team-icon-dark-css';
+
+const css = [
+  buildTeamIconDarkCss(theleagueConfig.teams, {
+    franchiseIconDir: '/assets/theleague/icons',
+  }),
+  buildTeamIconDarkCss(aflConfig.teams, {
+    franchiseIconDir: '/assets/afl/icons',
+  }),
+]
+  .filter(Boolean)
+  .join('\n');
+---
+
+{css && <style is:inline set:html={css} />}
