@@ -1260,7 +1260,6 @@ write. It's commissioner-only and silently changes the validation path.
 
 - **Validate by cross-referencing counts, not just IDs.** The fast sanity check that caught the 2019 gap: for every backfilled year, `league.json`'s `franchises.franchise.length` must equal `standings.json`'s `leagueStandings.franchise.length`. A mismatch means one file got refetched with the correct ID and a sibling didn't — a state that "the ID matches" checks alone won't surface.
 
-
 ---
 
 ## 2026-07-03 - weeklyResults has TWO payload shapes; the older one silently produced empty scores
@@ -1297,3 +1296,19 @@ looks suspiciously flat or zero for older years, check whether the *source*
 week data is actually flat-shaped before assuming the derivation logic itself
 is broken — sanity-check with `Object.keys(week.scores).length` across all 17
 weeks of the affected year, not just week 1.
+
+---
+
+## 2026-07-04 - `weeklyResults` Payload Shape Varies THREE Ways, Not Just Two — and Backfill `--force` Has a Blast Radius Beyond Weekly Scores
+
+**Context:** Auditing TheLeague's `weekly-results.json` for the same flat-shape bug already found and fixed in AFL (see the 2026-07-02/03 entries above — that fix added `scripts/lib/normalize-weekly-results.mjs`, shared by `fetch-mfl-feeds.mjs` and `backfill-historical-feeds.mjs`). Ported the shared normalizer to TheLeague and found the bug is not one shape variant but three, all silently dropping real scores under the old per-script inline normalizers:
+
+1. **Flat archive-year shape** (the original AFL finding): `weeklyResults.franchise[]` with no `matchup[]` wrapper — hit TheLeague's week 17 for 2007–2018.
+2. **Whole weeks missing from the raw feed entirely** — not a shape bug, a fetch gap. 2019–2024 raw files had as few as 5 of 17 weeks on disk (transient fetch failures were silently `continue`d past, never retried). Only fixable by refetching, not by re-normalizing local raw.
+3. **Mixed shape within a single week** — some 2025+ weeks carry BOTH a `matchup[]` (paired teams) AND a separate flat `weeklyResults.franchise[]` for teams with no pairing that week (e.g. a playoff bye). The old normalizer only read `matchup`, so paired teams scored fine but the bye team's real score vanished. `normalizeWeeklyResults()` now reads both structures unconditionally and merges by franchise ID.
+
+**A quiet trap in the old normalizers, not just missing shapes:** the pre-fix inline code computed `Number(team.score) || 0` with no null check, so a franchise entry present in the payload but genuinely lacking a `score` field (true of an unplayed future season, e.g. auditing 2026 in July before the NFL season starts) still produced a fake `0` — making an empty season look "fully scored." The shared normalizer's `addFranchise()` requires `team.score != null` before writing anything, so a season with no real data now correctly reports zero scored weeks instead of a wall of zeroes.
+
+**The `backfill-historical-feeds.mjs --force --year=YYYY` blast radius:** there's no per-feed-type flag — `--force` refetches league, standings, schedule, transactions, draftResults, auctionResults, playoffBrackets, AND weekly-results together for that year. Used it to patch missing weekly-results weeks for 2019–2024, but `backfill`'s `playoffBrackets` fetch is a **shallow single call** (`TYPE=playoffBrackets` metadata list only) while `fetch-mfl-feeds.mjs`'s is a **two-step fetch** (metadata, then per-bracket `TYPE=playoffBracket&BRACKET_ID=X` detail merged into a `brackets: {...}` object). Re-running `--force` on years that already had the rich two-step data replaced it with the shallow version, silently breaking `thirdPlace` resolution and `playoffRound`/`playoffBracket` labels in `compute-franchise-history.mjs`'s derived output for 2020 and 2023. Caught it by diffing the derived `franchise-history.json`'s `thirdPlace` field before/after — a value flipping to `null` for a year outside the intended fix is the tell. Fixed by `git checkout HEAD --` on every non-weekly-results file the `--force` run touched, then regenerating derived data from the untouched originals.
+
+**Rule of thumb:** when using `--force --year=YYYY` to patch one feed type, diff `git status` for that year afterward and revert anything you didn't mean to touch — don't assume `--force` is scoped to your target.

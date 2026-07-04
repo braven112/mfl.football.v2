@@ -2,6 +2,14 @@
   "weekOf": "2026-07-06",
   "changes": [
     {
+      "date": "2026-07-04",
+      "type": "bug-fix",
+      "summary": "Franchise history and career records were quietly undercounting years — 2007-2018 was missing week 17 entirely, several seasons between 2019-2024 were missing several weeks outright, and even recent years could drop a team's score when its game didn't fit the usual matchup format. All 2007-2025 seasons now carry every week's real scores, so highest-game and biggest-blowout records reflect what actually happened (turns out someone had a bigger week than anyone knew about).",
+      "impact": "user",
+      "area": "standings",
+      "league": "theleague"
+    },
+    {
       "date": "2026-07-03",
       "type": "bug-fix",
       "summary": "The AFL playoffs page now shows era-correct team names and icons when browsing past seasons — flipping back to 2013 gets you The Nukes, booyakasha, and The Dude that Abides with their vintage artwork, instead of every bracket wearing this year's rebrands.",
