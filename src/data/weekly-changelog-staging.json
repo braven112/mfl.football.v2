@@ -12,6 +12,14 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "The AFL Icon Gallery was flat-out refusing to load (a wrong turn in how the page located the icon sprite file). It now opens like it always should have, with all 100+ icons browsable and searchable.",
+      "impact": "admin",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "AFL accent colors across seven pages (Keepers, About, Calendar, Rules, Ask Roger, and both Franchises pages) now actually render AFL red — buttons, badges, stat highlights, and border accents had been quietly wearing The League's blue for years due to a color-token mix-up. The red was always in the code; it just never got its turn on screen.",
       "impact": "user",
       "area": "design-system",

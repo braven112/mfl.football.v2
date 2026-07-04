@@ -1,9 +1,10 @@
 ---
 import fs from 'fs';
+import path from 'path';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
-// Resolve to the project-level public folder
-const spritePath = new URL('../../public/assets/icons/sprite.svg', import.meta.url);
+// Use process.cwd() so the path resolves correctly during both dev and prerender build
+const spritePath = path.join(process.cwd(), 'public/assets/icons/sprite.svg');
 const spriteContent = fs.readFileSync(spritePath, 'utf-8');
 const iconEntries = Array.from(spriteContent.matchAll(/<symbol[^>]+id="([^"]+)"[^>]*viewBox="([^"]+)"/g)).map(match => ({
   id: match[1],
