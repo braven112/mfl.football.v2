@@ -174,12 +174,34 @@ function getRowColor(seed: number | undefined): string {
     overflow-x: auto;
   }
 
-  /* Dark mode: raised-card treatment — shadow alone can't separate
-     the section from the page background; add the border ring. */
+  /* Dark mode: mirror the branded division-standings design — the blue
+     accent is the card's own background, fading from the upper-left into
+     the surface, with the raised ring. */
   :global(html.dark) .standings-container {
+    background: linear-gradient(135deg,
+      rgba(59, 130, 246, 0.5) 0%,
+      rgba(59, 130, 246, 0.16) 22%,
+      var(--card-surface, #262626) 52%);
     box-shadow:
       0 0 0 1px var(--content-border, #555555),
       0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Table goes glass so the gradient shows through. */
+  :global(html.dark) .league-standings-table {
+    background-color: transparent;
+  }
+
+  :global(html.dark) thead {
+    background-color: transparent;
+  }
+
+  :global(html.dark) th {
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
+  :global(html.dark) td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
   }
   .league-standings-wrapper {
     width: 100%;
@@ -250,21 +272,26 @@ function getRowColor(seed: number | undefined): string {
     color: #1a1a1a;
   }
 
-  /* Dark tier bands: whisper-tints of each tier's hue mixed into the card
-     surface (the opaque "darkened pastel" first cut read as mud). Same
-     recipe as the preferred-team highlight rows. */
+  /* Dark tier bands: translucent playoff-colored washes (gold = division
+     winners, silver glass = wild cards, ember = toilet bowl) so the card's
+     blue gradient shows through, mirroring the division-standings glass. */
   :global(html.dark) .tier-division-winners {
-    background-color: color-mix(in srgb, #d4a856 12%, var(--card-surface, #1e1e1e));
+    background-color: rgba(212, 168, 86, 0.13);
     color: #ededed;
   }
 
   :global(html.dark) .tier-wild-cards {
-    background-color: color-mix(in srgb, #dad8d5 7%, var(--card-surface, #1e1e1e));
+    background-color: rgba(255, 255, 255, 0.055);
+    color: #ededed;
+  }
+
+  :global(html.dark) .tier-play-in {
+    background-color: transparent;
     color: #ededed;
   }
 
   :global(html.dark) .tier-toilet-bowl {
-    background-color: color-mix(in srgb, #b5773a 10%, var(--card-surface, #1e1e1e));
+    background-color: rgba(181, 119, 58, 0.11);
     color: #ededed;
   }
 
@@ -286,15 +313,19 @@ function getRowColor(seed: number | undefined): string {
   }
 
   :global(html.dark) .tier-division-winners.tier-boundary {
-    border-bottom-color: #8a6d2e !important;
+    border-bottom-color: rgba(212, 168, 86, 0.55) !important;
   }
 
   :global(html.dark) .tier-wild-cards.tier-boundary {
-    border-bottom-color: #4a4a4a !important;
+    border-bottom-color: rgba(255, 255, 255, 0.28) !important;
+  }
+
+  :global(html.dark) .tier-play-in.tier-boundary {
+    border-bottom-color: rgba(255, 255, 255, 0.2) !important;
   }
 
   :global(html.dark) .tier-toilet-bowl.tier-boundary {
-    border-bottom-color: #5a4632 !important;
+    border-bottom-color: rgba(181, 119, 58, 0.5) !important;
   }
 
   /* Column Widths */
@@ -397,6 +428,18 @@ function getRowColor(seed: number | undefined): string {
     background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 12%, var(--table-row-bg, #fff)) !important;
     border-left: 3px solid var(--color-secondary, #2e743d);
     font-weight: 600;
+  }
+
+  /* Dark mode: the green highlight clashes with the blue-gradient glass —
+     your team rides the blue accent family (matches division standings). */
+  :global(html.dark) tr.preferred-team {
+    background-color: rgba(59, 130, 246, 0.18) !important;
+    border-left-color: var(--color-primary, #3b82f6);
+  }
+
+  :global(html.dark) tr.preferred-team:hover {
+    background-color: rgba(59, 130, 246, 0.28) !important;
+    opacity: 1;
   }
 
   tr.preferred-team:hover {
