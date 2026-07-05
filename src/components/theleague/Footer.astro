@@ -122,7 +122,14 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 		/* Same accent edge as the breadcrumb bar: league-primary in dark
 		   (blue TheLeague / red AFL via --breadcrumb-bar-border), invisible
 		   in light where the token is unset. */
-		border-top: 2px solid var(--breadcrumb-bar-border, transparent);
+		border-top: 0.1rem solid var(--breadcrumb-bar-border, transparent);
+	}
+
+	/* Dark: footer mirrors the breadcrumb strip — TheLeague gets the rising
+	   deep-blue glow (gradient token), AFL its solid navy. background is
+	   SHORTHAND because the token can be a gradient. */
+	:global(html.dark) .site-footer {
+		background: var(--breadcrumb-bar-bg, var(--inverse-content-bg));
 	}
 
 	.footer-container {
