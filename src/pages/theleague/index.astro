@@ -19,10 +19,11 @@ import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.as
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod } from '../../utils/hero-resolver';
-import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
+import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
+import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { resolveLeaguePath } from '../../utils/nav-utils';
@@ -270,6 +271,85 @@ if (cachedRosterPlayers) {
   }
 }
 
+// Cast the model for the fresh What's New composite hero, by entry category
+// (hero casting rules): new pages/features → rookie (rookies represent
+// "new"); enhancements → rostered player in his first five NFL seasons
+// ("same guy, leveled up"); bug-fix rollups → no player (the component
+// shows the league logo silhouette instead). Rostered players always win —
+// the roster set unions live salary data with the on-disk MFL rosters feed
+// so the preference holds even when the Redis roster cache is unavailable.
+const isFreshFeatureHero =
+  heroState.phase === 'offseason-fallback' && heroState.fallbackHero?.source === 'feature';
+const isAuctionPhase = heroState.phase === 'auction-preview' || heroState.phase === 'auction-live';
+
+// Roster set for casting (memoized) — live salary data unioned with the
+// on-disk MFL rosters feed so the rostered-first preference holds even when
+// the Redis roster cache is unavailable (dev).
+let _heroRosteredIds: Set<string> | null = null;
+const heroRosteredIds = () => {
+  if (!_heroRosteredIds) {
+    _heroRosteredIds = getRosteredPlayerIds(leagueYear);
+    for (const p of salaryPlayers) {
+      if (p.franchiseId) _heroRosteredIds.add(p.id);
+    }
+  }
+  return _heroRosteredIds;
+};
+
+let featureModel = null;
+let auctionModel = null;
+let cutWatchModel = null;
+if ((isFreshFeatureHero && heroState.fallbackHero?.heroCategory !== 'bug-fix') || isAuctionPhase) {
+  if (isAuctionPhase) {
+    // Auction hero: the highest-ranked available free agent (dynasty ADP).
+    auctionModel = castTopFreeAgentModel(hpPlayerIdentityMap, now, heroRosteredIds(), getAdpRankedIds(leagueYear));
+  } else {
+    featureModel =
+      heroState.fallbackHero?.heroCategory === 'enhancement'
+        ? castEnhancementModel(hpPlayerIdentityMap, now, heroRosteredIds())
+        : castRookieModel(hpPlayerIdentityMap, now, heroRosteredIds());
+  }
+}
+// UDFA window: the best rookies still on the board, four panels side by side.
+// Cast eight — four render, four are spares the component swaps in for any
+// rookie whose ESPN headshot 404s.
+let udfaModels: ReturnType<typeof castRookiesOnBoard> = [];
+if (heroState.phase === 'udfa-window') {
+  udfaModels = castRookiesOnBoard(hpPlayerIdentityMap, heroRosteredIds(), getAdpRankedIds(leagueYear), 8, now);
+}
+if (heroState.phase === 'cut-watch' && heroState.cutWatchProps) {
+  // Cut watch hero: a real bubble player — YOUR suggested cut candidate when
+  // your team is over the limit; a league-wide candidate for everyone else.
+  const candidates = heroState.cutWatchProps.overLimitTeams.flatMap((team) =>
+    team.cutCandidates.map((c) => ({ playerId: c.playerId, franchiseId: team.franchiseId })),
+  );
+  cutWatchModel = castRosterModel(candidates, hpPlayerIdentityMap, userFranchiseId, now, 'On the Bubble');
+}
+let preseasonModel = null;
+let preseasonModelIsOwn = false;
+let kickoffGame = null;
+if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
+  // Preseason hero: a likely starter in the earliest game of the week (the
+  // season opener), rotating daily. Signed-in owners with a player in that
+  // game see one of their own likely starters in it instead.
+  kickoffGame = getKickoffGame(leagueYear);
+  const candidates = getKickoffGameCandidates(leagueYear);
+  preseasonModel = castRandomStarterModel(candidates, hpPlayerIdentityMap, userFranchiseId, now, 'Kickoff Night');
+  preseasonModelIsOwn =
+    !!preseasonModel &&
+    !!userFranchiseId &&
+    candidates.some((c) => c.franchiseId === userFranchiseId && c.playerId === preseasonModel!.mflId);
+  // No opener data (schedule feed missing) → fall back to franchise headliners.
+  if (!preseasonModel) {
+    const headliners = getFranchiseHeadliners(leagueYear);
+    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, 'Headliner');
+    preseasonModelIsOwn =
+      !!preseasonModel &&
+      !!userFranchiseId &&
+      headliners.some((h) => h.franchiseId === userFranchiseId && h.playerId === preseasonModel!.mflId);
+  }
+}
+
 const teamSummaries = computeLeagueSummary(salaryPlayers, rawAdjustments, draftCapitalMap, teamConfigs);
 const activeRosterCount = userFranchiseId
   ? salaryPlayers.filter(p => p.franchiseId === userFranchiseId && p.status !== 'INJURED_RESERVE' && p.status !== 'TAXI_SQUAD' && parseNumber(p.contractYear) > 0).length
@@ -295,9 +375,10 @@ const unsignedFaAlerts = resolveUnsignedFaAlerts({
   referenceDate: now,
 });
 
-// Active auctions card — only fetch when the card is eligible to show.
+// Active auctions card — only fetch when the card is eligible to show OR the
+// auction hero is active (the live hero features the soonest-closing bid).
 // Avoids hitting MFL year-round on every homepage render.
-const activeAuctions = showAuctionsCard
+const activeAuctions = showAuctionsCard || isAuctionHeroActive
   ? await loadActiveAuctions({
       year: leagueYear,
       leagueId: mflLeagueId,
@@ -306,6 +387,20 @@ const activeAuctions = showAuctionsCard
       teams: (leagueConfig.teams ?? []) as any[],
     })
   : [];
+
+// Live auction hero: the player whose bid clock runs out first replaces the
+// ADP best-available model, and the caption carries the high bid.
+let auctionClosingBid = null;
+if (isAuctionHeroActive && activeAuctions.length > 0) {
+  const closingModel = castClosingAuctionModel(activeAuctions, hpPlayerIdentityMap);
+  if (closingModel) {
+    const row = activeAuctions.find((a) => a.playerId === closingModel.mflId);
+    auctionModel = closingModel;
+    auctionClosingBid = row
+      ? { bid: row.bid, franchiseName: row.franchiseName, endsAtMs: (row.anchorTimestamp + 36 * 3600) * 1000 }
+      : null;
+  }
+}
 
 // Fetch live scoring data when slot is 'live-scoring'
 let liveScoring: {
@@ -416,6 +511,14 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         liveScoring={liveScoring}
         userFranchiseId={userFranchiseId}
         isAuthenticated={isAuthenticated}
+        featureModel={featureModel}
+        auctionModel={auctionModel}
+        auctionClosingBid={auctionClosingBid}
+        cutWatchModel={cutWatchModel}
+        udfaModels={udfaModels}
+        preseasonModel={preseasonModel}
+        preseasonModelIsOwn={preseasonModelIsOwn}
+        kickoffGame={kickoffGame}
       />
       {showAuctionsCard && activeAuctions.length > 0 && (
         <>

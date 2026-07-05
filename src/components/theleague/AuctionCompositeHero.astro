@@ -1,0 +1,482 @@
+---
+/**
+ * AuctionCompositeHero — the free-agent auction hero, composite edition.
+ *
+ * The highest-ranked available free agent (dynasty ADP, top-5 daily
+ * rotation — see hero-casting) models the auction window: transparent ESPN
+ * cutout, glow tinted by his NFL team color, ghost AUCTION wordmark, amber
+ * money accent on the countdown. Keeps the command-center essentials from
+ * the legacy AuctionHero as a compact chip row instead of the side panel.
+ *
+ * The router falls back to the legacy AuctionHero when no model resolves.
+ */
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getNthDayOfMonth } from '../../utils/league-event-resolver';
+import { formatCompactNumber } from '../../utils/formatters';
+
+interface Props {
+  leagueYear: number;
+  live: boolean;
+  model: HeroModel;
+  /** Live only: the soonest-closing auction the model represents */
+  closingBid?: { bid: number; franchiseName: string; endsAtMs: number } | null;
+  resolveLeaguePath: (path: string) => string;
+  referenceDate?: Date;
+  mflHost?: string;
+  leagueId?: string;
+}
+
+const {
+  leagueYear,
+  live,
+  model,
+  closingBid = null,
+  resolveLeaguePath: r,
+  referenceDate,
+  mflHost = 'www49.myfantasyleague.com',
+  leagueId = '13522',
+} = Astro.props;
+
+const now = referenceDate ?? new Date();
+const mflBase = `https://${mflHost}/${leagueYear}/options?L=${leagueId}`;
+
+const auctionStartDate = getNthDayOfMonth(leagueYear, 2, 4, 3); // 3rd Thursday of March
+const startOfDay = (d: Date) => { const o = new Date(d); o.setHours(0, 0, 0, 0); return o; };
+const daysUntil = Math.max(0, Math.ceil((startOfDay(auctionStartDate).getTime() - startOfDay(now).getTime()) / 86_400_000));
+
+const summary = live
+  ? closingBid
+    ? `The auction is under way — and the clock is running out on the next winner. ${closingBid.franchiseName} lead the bidding.`
+    : 'The auction is under way — place bids, track results, and build your roster.'
+  : 'Auction season is almost here — $425K minimum bid, $25K increments, 36 hours without a new bid wins.';
+
+// Hours left on the featured bid's 36h clock (only when it's still running).
+const bidHoursLeft = closingBid
+  ? Math.max(0, Math.floor((closingBid.endsAtMs - (referenceDate ?? new Date()).getTime()) / 3_600_000))
+  : null;
+
+const teamCode = normalizeTeamCode(model.nflTeam);
+const { primary } = getNflTeamColors(teamCode);
+const glowDark = hexToRgba(primary, 0.38);
+const glowLight = hexToRgba(primary, 0.2);
+
+const chips = [
+  { label: 'Auction summary', href: `${mflBase}&O=44`, external: true },
+  { label: 'Completed auctions', href: `${mflBase}&O=43`, external: true },
+  { label: 'Free agents', href: r('/theleague/players'), external: false },
+  { label: 'Auction rules', href: r('/theleague/rules#free-agent-bidding'), external: false },
+];
+---
+
+<section
+  class:list={['ach', { 'ach--live': live }]}
+  style={`--ach-glow-dark: ${glowDark}; --ach-glow-light: ${glowLight};`}
+  aria-label="Free agent auction command center"
+>
+  {live ? (
+    <>
+      <img class="ach__backdrop ach__backdrop--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="eager" />
+      <img class="ach__backdrop ach__backdrop--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="eager" />
+    </>
+  ) : (
+    <span class="ach__ghost" aria-hidden="true">AUCTION</span>
+  )}
+  <div class="ach__glow" aria-hidden="true"></div>
+  <img
+    class="ach__model"
+    src={model.headshot}
+    alt=""
+    aria-hidden="true"
+    loading="eager"
+    decoding="async"
+    onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.ach').classList.add('ach--no-model')"
+  />
+  <span class="ach__caption">
+    <strong>{model.name}</strong>
+    <span class="ach__caption-meta">{model.descriptor} {model.position} · {teamCode}</span>
+    {closingBid && (
+      <span class="ach__caption-bid">
+        ${formatCompactNumber(closingBid.bid)} high bid{bidHoursLeft !== null && bidHoursLeft > 0 ? ` · ~${bidHoursLeft}h left` : ''}
+      </span>
+    )}
+  </span>
+
+  <img class="ach__logo-art ach__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+  <img class="ach__logo-art ach__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+
+  <div class="ach__content">
+    <p class="ach__eyebrow">
+      <span class="ach__pill">{live ? 'Auction live' : 'Auction opens soon'}</span>
+    </p>
+    <h2 class="ach__title">Free agent <span class="ach__title-accent">auction.</span></h2>
+    <p class="ach__summary">{summary}</p>
+
+    <div class="ach__footer">
+      <div class="ach__count" role="group" aria-label={live ? 'Bidding now' : `${daysUntil} days to auction, 7AM Pacific`}>
+        <span class="ach__count-num" aria-hidden="true">{live ? 'LIVE' : daysUntil}</span>
+        <span class="ach__count-label" aria-hidden="true">{live ? 'Bidding now' : 'Days to auction · 7AM PT'}</span>
+      </div>
+      <span class="ach__divider" aria-hidden="true"></span>
+      <a class="ach__cta" href={`${mflBase}&O=43`} target="_blank" rel="noopener noreferrer">
+        Place auction bid
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <nav class="ach__chips" aria-label="Auction quick links">
+      {chips.map((chip) => (
+        <a
+          href={chip.href}
+          class="ach__chip"
+          target={chip.external ? '_blank' : undefined}
+          rel={chip.external ? 'noopener noreferrer' : undefined}
+          aria-label={chip.external ? `${chip.label} (opens in new tab)` : undefined}
+        >
+          {chip.label}{chip.external && <span aria-hidden="true"> ↗</span>}
+        </a>
+      ))}
+    </nav>
+  </div>
+</section>
+
+<style>
+  .ach {
+    /* Light theme (default); html.dark flips to the deep-navy chrome. */
+    --ach-surface: linear-gradient(115deg, #fbf7ef 0%, #f3ead8 52%, #e9dcc0 100%);
+    --ach-ink: var(--color-gray-900, #0f1419);
+    --ach-body: rgba(22, 32, 44, 0.72);
+    --ach-ghost: rgba(146, 91, 10, 0.07);
+    --ach-glow: var(--ach-glow-light, rgba(217, 119, 6, 0.2));
+    --ach-shadow: rgba(15, 30, 46, 0.3);
+    --ach-accent: #b45309;
+    --ach-cta-bg: var(--color-primary, #1c497c);
+    --ach-cta-ink: #ffffff;
+    --ach-pill-bg: rgba(217, 119, 6, 0.12);
+    --ach-pill-border: rgba(180, 83, 9, 0.4);
+    --ach-pill-ink: #92400e;
+    --ach-chip-bg: rgba(22, 32, 44, 0.05);
+    --ach-chip-border: rgba(22, 32, 44, 0.16);
+    --ach-chip-ink: rgba(22, 32, 44, 0.78);
+    --ach-border: rgba(146, 91, 10, 0.25);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(250px, 25vw, 300px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--ach-border);
+    background: var(--ach-surface);
+    color: var(--ach-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .ach {
+    --ach-surface: linear-gradient(115deg, #12100b 0%, #221a10 46%, #4a3410 130%);
+    --ach-ink: #ffffff;
+    --ach-body: rgba(255, 255, 255, 0.78);
+    --ach-ghost: rgba(255, 255, 255, 0.045);
+    --ach-glow: var(--ach-glow-dark, rgba(217, 119, 6, 0.35));
+    --ach-shadow: rgba(0, 0, 0, 0.5);
+    --ach-accent: #fbbf24;
+    --ach-cta-bg: #ffffff;
+    --ach-cta-ink: #1c1408;
+    --ach-pill-bg: rgba(251, 191, 36, 0.16);
+    --ach-pill-border: rgba(251, 191, 36, 0.45);
+    --ach-pill-ink: #fcd34d;
+    --ach-chip-bg: rgba(255, 255, 255, 0.06);
+    --ach-chip-border: rgba(255, 255, 255, 0.2);
+    --ach-chip-ink: rgba(255, 255, 255, 0.8);
+    --ach-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .ach__ghost {
+    position: absolute;
+    left: 38%;
+    top: -1.1rem;
+    font-size: clamp(4rem, 9vw, 7rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--ach-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .ach__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--ach-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  /* Live state: the league logo IS the background art (player sits over it) */
+  .ach__backdrop {
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    width: clamp(280px, 38vw, 460px);
+    opacity: 0.09;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .ach__backdrop--light {
+    display: block;
+  }
+
+  :global(html.dark) .ach__backdrop--light {
+    display: none;
+  }
+
+  :global(html.dark) .ach__backdrop--dark {
+    display: block;
+    opacity: 0.13;
+  }
+
+  .ach__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(230px, 30vw, 350px);
+    filter: drop-shadow(0 16px 32px var(--ach-shadow));
+  }
+
+  /* Headshot 404 fallback — league logo silhouette (revealed by onerror) */
+  .ach__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 250px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .ach--no-model .ach__logo-art--light {
+    display: block;
+  }
+
+  /* Live mode already has the logo backdrop — don't stack a second logo
+     when the headshot 404s */
+  .ach--live .ach__logo-art,
+  :global(html.dark) .ach--live .ach__logo-art {
+    display: none;
+  }
+
+  :global(html.dark) .ach--no-model .ach__logo-art--light {
+    display: none;
+  }
+
+  :global(html.dark) .ach--no-model .ach__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
+  .ach__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .ach__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .ach__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .ach__caption-bid {
+    font-size: 0.6875rem;
+    font-weight: 800;
+    color: #fcd34d;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ach__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .ach__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .ach__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ach-pill-ink);
+    background: var(--ach-pill-bg);
+    border: 1px solid var(--ach-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .ach__title {
+    color: var(--ach-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .ach__title-accent {
+    color: var(--ach-accent);
+  }
+
+  .ach__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--ach-body);
+    max-width: 46ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .ach__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin: 0 0 0.875rem;
+  }
+
+  .ach__count {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .ach__count-num {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--ach-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .ach__count-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ach-body);
+  }
+
+  .ach__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--ach-chip-border);
+  }
+
+  .ach__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--ach-cta-bg);
+    color: var(--ach-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .ach__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .ach__cta:focus-visible {
+    outline: 2px solid var(--ach-pill-ink);
+    outline-offset: 2px;
+  }
+
+  .ach__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .ach__chip {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--ach-chip-ink);
+    background: var(--ach-chip-bg);
+    border: 1px solid var(--ach-chip-border);
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .ach__chip:hover {
+    border-color: var(--ach-pill-border);
+  }
+
+  .ach__chip:focus-visible {
+    outline: 2px solid var(--ach-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ach__cta {
+      transition: none;
+    }
+
+    .ach__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .ach {
+      min-height: 270px;
+    }
+
+    .ach__model {
+      width: 175px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .ach__caption {
+      display: none;
+    }
+
+    .ach__content {
+      max-width: 100%;
+    }
+  }
+</style>

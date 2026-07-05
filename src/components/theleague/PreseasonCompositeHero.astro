@@ -1,0 +1,360 @@
+---
+/**
+ * PreseasonCompositeHero — the countdown-to-kickoff hero, composite edition.
+ *
+ * The model is a franchise headliner (hero casting rules): the signed-in
+ * owner's own top-projected player — the guy they're locking in for Week 1 —
+ * or a league-wide headliner for guests, rotating daily. Replaces the legacy
+ * PreseasonCountdownHero's randomHeroPlayer decoration.
+ *
+ * The router falls back to the legacy hero when no model resolves.
+ */
+import type { HeroState } from '../../types/hero-state';
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+
+interface Props {
+  preseasonProps: NonNullable<HeroState['preseasonProps']>;
+  model: HeroModel;
+  resolveLeaguePath: (path: string) => string;
+  /** Whether the model is the signed-in owner's own player in the opener */
+  isOwnHeadliner?: boolean;
+  /** The earliest game of the week — names the opener in the summary */
+  kickoffGame?: { awayName: string; homeName: string } | null;
+}
+
+const { preseasonProps, model, resolveLeaguePath: r, isOwnHeadliner = false, kickoffGame = null } = Astro.props;
+
+const days = preseasonProps.daysUntilKickoff;
+const kickoffDate = preseasonProps.kickoffDate;
+const isKickoffDay = days === 0;
+
+const openerLine = kickoffGame ? ` — ${kickoffGame.awayName} at ${kickoffGame.homeName} under the lights` : '';
+const summary = isKickoffDay
+  ? `Week 1 is here${openerLine}. Lock your lineup — the season starts today.`
+  : isOwnHeadliner
+    ? `Week 1 kicks off ${kickoffDate}${openerLine}, and your guy is in the opener. Is the rest of your lineup ready?`
+    : `Rosters are set and Week 1 kicks off ${kickoffDate}${openerLine}. Lock your lineup and get ready.`;
+
+const teamCode = normalizeTeamCode(model.nflTeam);
+const { primary } = getNflTeamColors(teamCode);
+const glowDark = hexToRgba(primary, 0.38);
+const glowLight = hexToRgba(primary, 0.2);
+---
+
+<section
+  class="psh"
+  style={`--psh-glow-dark: ${glowDark}; --psh-glow-light: ${glowLight};`}
+  aria-label="Preseason countdown to kickoff"
+>
+  <span class="psh__ghost" aria-hidden="true">KICKOFF</span>
+  <div class="psh__glow" aria-hidden="true"></div>
+  <img
+    class="psh__model"
+    src={model.headshot}
+    alt=""
+    aria-hidden="true"
+    loading="eager"
+    decoding="async"
+    onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.psh').classList.add('psh--no-model')"
+  />
+  <span class="psh__caption">
+    <strong>{model.name}</strong>
+    <span class="psh__caption-meta">{isOwnHeadliner ? 'Your Kickoff Starter' : model.descriptor} {model.position} · {teamCode}</span>
+  </span>
+  <img class="psh__logo-art psh__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+  <img class="psh__logo-art psh__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+
+  <div class="psh__content">
+    <p class="psh__eyebrow">
+      <span class="psh__pill">Preseason</span>
+    </p>
+    <h2 class="psh__title">Kickoff is <span class="psh__title-accent">{isKickoffDay ? 'here.' : 'coming.'}</span></h2>
+    <p class="psh__summary">{summary}</p>
+
+    <div class="psh__footer">
+      <div class="psh__count" role="group" aria-label={isKickoffDay ? 'Kicks off today' : `${days} days to kickoff`}>
+        <span class="psh__count-num" aria-hidden="true">{days}</span>
+        <span class="psh__count-label" aria-hidden="true">{isKickoffDay ? 'Kicks off today' : 'Days to kickoff'}</span>
+      </div>
+      <span class="psh__divider" aria-hidden="true"></span>
+      <a class="psh__cta" href={r('/theleague/standings')}>
+        View standings
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .psh {
+    /* Light theme (default); html.dark flips to the deep-navy chrome. */
+    --psh-surface: linear-gradient(115deg, #f2f7fc 0%, #e2edf9 52%, #cfe1f4 100%);
+    --psh-ink: var(--color-gray-900, #0f1419);
+    --psh-body: rgba(22, 32, 44, 0.72);
+    --psh-ghost: rgba(28, 73, 124, 0.06);
+    --psh-glow: var(--psh-glow-light, rgba(28, 73, 124, 0.2));
+    --psh-shadow: rgba(15, 30, 46, 0.3);
+    --psh-accent: var(--color-primary, #1c497c);
+    --psh-cta-bg: var(--color-primary, #1c497c);
+    --psh-cta-ink: #ffffff;
+    --psh-pill-bg: rgba(28, 73, 124, 0.08);
+    --psh-pill-border: rgba(28, 73, 124, 0.35);
+    --psh-pill-ink: var(--color-primary, #1c497c);
+    --psh-divider: rgba(22, 32, 44, 0.16);
+    --psh-border: rgba(28, 73, 124, 0.2);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--psh-border);
+    background: var(--psh-surface);
+    color: var(--psh-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .psh {
+    --psh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%);
+    --psh-ink: #ffffff;
+    --psh-body: rgba(255, 255, 255, 0.78);
+    --psh-ghost: rgba(255, 255, 255, 0.045);
+    --psh-glow: var(--psh-glow-dark, rgba(96, 165, 250, 0.35));
+    --psh-shadow: rgba(0, 0, 0, 0.5);
+    --psh-accent: #a8cdf8;
+    --psh-cta-bg: #ffffff;
+    --psh-cta-ink: #0f1e2e;
+    --psh-pill-bg: rgba(96, 165, 250, 0.18);
+    --psh-pill-border: rgba(96, 165, 250, 0.45);
+    --psh-pill-ink: #a8cdf8;
+    --psh-divider: rgba(255, 255, 255, 0.2);
+    --psh-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .psh__ghost {
+    position: absolute;
+    left: 38%;
+    top: -1.1rem;
+    font-size: clamp(4rem, 9vw, 7rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--psh-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .psh__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--psh-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .psh__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(230px, 30vw, 350px);
+    filter: drop-shadow(0 16px 32px var(--psh-shadow));
+  }
+
+  .psh__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 250px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .psh--no-model .psh__logo-art--light {
+    display: block;
+  }
+
+  :global(html.dark) .psh--no-model .psh__logo-art--light {
+    display: none;
+  }
+
+  :global(html.dark) .psh--no-model .psh__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
+  .psh__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .psh__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .psh__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .psh__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .psh__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .psh__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--psh-pill-ink);
+    background: var(--psh-pill-bg);
+    border: 1px solid var(--psh-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .psh__title {
+    color: var(--psh-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .psh__title-accent {
+    color: var(--psh-accent);
+  }
+
+  .psh__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--psh-body);
+    max-width: 46ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .psh__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .psh__count {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .psh__count-num {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--psh-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .psh__count-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--psh-body);
+  }
+
+  .psh__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--psh-divider);
+  }
+
+  .psh__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--psh-cta-bg);
+    color: var(--psh-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .psh__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .psh__cta:focus-visible {
+    outline: 2px solid var(--psh-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .psh__cta {
+      transition: none;
+    }
+
+    .psh__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .psh {
+      min-height: 260px;
+    }
+
+    .psh__model {
+      width: 175px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .psh__caption {
+      display: none;
+    }
+
+    .psh__logo-art {
+      width: 150px;
+      right: -1rem;
+    }
+
+    .psh__content {
+      max-width: 100%;
+    }
+  }
+</style>

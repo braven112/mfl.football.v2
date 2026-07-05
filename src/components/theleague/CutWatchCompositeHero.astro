@@ -1,0 +1,467 @@
+---
+/**
+ * CutWatchCompositeHero — the cut-to-22 roster deadline hero, composite
+ * edition.
+ *
+ * The face of the deadline is a real bubble player (hero casting rules):
+ * the signed-in owner's suggested cut candidate when their team is over
+ * the limit, otherwise a league-wide candidate. Keeps the legacy hero's
+ * two tiers (early planning blue → final-30-days urgency red), the
+ * personalized summary, and the countdown; the over-limit panel compresses
+ * into a key-metrics row plus team chips.
+ *
+ * The router falls back to the legacy CutWatchHero when no model resolves
+ * (nobody over the limit, or no candidate has a usable cutout).
+ */
+import type { HeroState } from '../../types/hero-state';
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { formatCompactNumber } from '../../utils/formatters';
+import { TARGET_ACTIVE_COUNT } from '../../utils/salary-calculations';
+import { chooseTeamName } from '../../utils/team-names';
+
+interface Props {
+  cutWatchProps: NonNullable<HeroState['cutWatchProps']>;
+  model: HeroModel;
+  resolveLeaguePath: (path: string) => string;
+  userFranchiseId?: string;
+}
+
+const { cutWatchProps, model, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+
+const { overLimitTeams, deadlineDate, daysUntilDeadline, urgent } = cutWatchProps;
+const isDeadlineDay = daysUntilDeadline === 0;
+
+const userTeam = userFranchiseId
+  ? overLimitTeams.find((t) => t.franchiseId === userFranchiseId)
+  : undefined;
+const userOverBy = userTeam ? Math.max(0, userTeam.activeCount - TARGET_ACTIVE_COUNT) : 0;
+
+const summary = !urgent
+  ? (userOverBy > 0
+      ? `Rosters trim to ${TARGET_ACTIVE_COUNT} active players by ${deadlineDate} — you're ${userOverBy} over with time to plan.`
+      : `Rosters trim to ${TARGET_ACTIVE_COUNT} active players by ${deadlineDate}. Start lining up your cuts.`)
+  : userOverBy > 0
+    ? `${isDeadlineDay ? 'Final cuts are due today' : `Roster cuts are due ${deadlineDate}`} — you're ${userOverBy} over the limit.`
+    : isDeadlineDay
+      ? 'Final cuts are due today — every roster must be at 22 active players. Who goes?'
+      : `Teams must cut to ${TARGET_ACTIVE_COUNT} active players by ${deadlineDate}. Who's on the bubble?`;
+
+const biggestAtRisk = Math.max(
+  0,
+  ...overLimitTeams.flatMap((t) => t.cutCandidates.map((c) => c.salary || 0)),
+);
+const cutsRequired = overLimitTeams.reduce(
+  (sum, t) => sum + Math.max(0, t.activeCount - TARGET_ACTIVE_COUNT),
+  0,
+);
+
+// Over-limit team chips — the user's team leads, then closest to the block.
+const orderedTeams = [...overLimitTeams].sort((a, b) => b.activeCount - a.activeCount);
+if (userTeam) {
+  orderedTeams.splice(orderedTeams.indexOf(userTeam), 1);
+  orderedTeams.unshift(userTeam);
+}
+const chipTeams = orderedTeams.slice(0, 5);
+const moreTeams = Math.max(0, orderedTeams.length - chipTeams.length);
+const chipName = (t: (typeof overLimitTeams)[number]) =>
+  chooseTeamName({ fullName: t.franchiseName, nameShort: t.franchiseNameShort }, 'short');
+
+const teamCode = normalizeTeamCode(model.nflTeam);
+const { primary } = getNflTeamColors(teamCode);
+const glowDark = hexToRgba(primary, 0.38);
+const glowLight = hexToRgba(primary, 0.2);
+---
+
+<section
+  class:list={['cwh', { 'cwh--urgent': urgent }]}
+  style={`--cwh-glow-dark: ${glowDark}; --cwh-glow-light: ${glowLight};`}
+  aria-label="Cut Watch — roster deadline"
+>
+  <span class="cwh__ghost" aria-hidden="true">CUT&nbsp;WATCH</span>
+  <div class="cwh__glow" aria-hidden="true"></div>
+  <img
+    class="cwh__model"
+    src={model.headshot}
+    alt=""
+    aria-hidden="true"
+    loading="eager"
+    decoding="async"
+    onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.cwh').classList.add('cwh--no-model')"
+  />
+  <span class="cwh__caption">
+    <strong>{model.name}</strong>
+    <span class="cwh__caption-meta">{model.descriptor} {model.position} · {teamCode}</span>
+  </span>
+  <img class="cwh__logo-art cwh__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+  <img class="cwh__logo-art cwh__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+
+  <div class="cwh__content">
+    <p class="cwh__eyebrow">
+      <span class="cwh__pill">{isDeadlineDay ? 'Cut watch · Cuts due today' : `Cut watch · ${daysUntilDeadline} days left`}</span>
+    </p>
+    <h2 class="cwh__title">
+      {urgent ? 'Roster deadline ' : 'Roster planning '}
+      <span class="cwh__title-accent">{!urgent ? 'ahead.' : isDeadlineDay ? 'today.' : 'approaching.'}</span>
+    </h2>
+    <p class="cwh__summary">{summary}</p>
+
+    <div class="cwh__metrics" role="group" aria-label="Cut watch status">
+      <div class="cwh__metric">
+        <b>{overLimitTeams.length}</b>
+        <span>{overLimitTeams.length === 1 ? 'Team over limit' : 'Teams over limit'}</span>
+      </div>
+      <div class="cwh__metric">
+        <b>{cutsRequired}</b>
+        <span>Cuts still required</span>
+      </div>
+      {biggestAtRisk > 0 && (
+        <div class="cwh__metric">
+          <b>${formatCompactNumber(biggestAtRisk)}</b>
+          <span>Biggest contract at risk</span>
+        </div>
+      )}
+    </div>
+
+    <div class="cwh__footer">
+      <a class="cwh__cta" href={r('/theleague/rosters')}>
+        {userOverBy > 0 ? 'Plan your cuts' : "See who's on the bubble"}
+        <span aria-hidden="true">→</span>
+      </a>
+      {chipTeams.length > 0 && (
+        <span class="cwh__chips" aria-label="Teams over the limit">
+          {chipTeams.map((t) => (
+            <span class:list={['cwh__chip', { 'cwh__chip--you': t.franchiseId === userFranchiseId }]}>
+              {t.franchiseId === userFranchiseId ? 'You' : chipName(t)} +{Math.max(0, t.activeCount - TARGET_ACTIVE_COUNT)}
+            </span>
+          ))}
+          {moreTeams > 0 && <span class="cwh__chip cwh__chip--more">+{moreTeams} more</span>}
+        </span>
+      )}
+    </div>
+  </div>
+</section>
+
+<style>
+  .cwh {
+    /* Early tier, light theme (defaults) — planning blue. */
+    --cwh-surface: linear-gradient(115deg, #f2f7fc 0%, #e2edf9 52%, #cfe1f4 100%);
+    --cwh-ink: var(--color-gray-900, #0f1419);
+    --cwh-body: rgba(22, 32, 44, 0.72);
+    --cwh-ghost: rgba(28, 73, 124, 0.06);
+    --cwh-glow: var(--cwh-glow-light, rgba(59, 130, 246, 0.2));
+    --cwh-shadow: rgba(15, 30, 46, 0.3);
+    --cwh-accent: #1d4ed8;
+    --cwh-cta-bg: var(--color-primary, #1c497c);
+    --cwh-cta-ink: #ffffff;
+    --cwh-pill-bg: rgba(59, 130, 246, 0.1);
+    --cwh-pill-border: rgba(29, 78, 216, 0.4);
+    --cwh-pill-ink: #1d4ed8;
+    --cwh-chip-bg: rgba(22, 32, 44, 0.05);
+    --cwh-chip-border: rgba(22, 32, 44, 0.16);
+    --cwh-chip-ink: rgba(22, 32, 44, 0.78);
+    --cwh-border: rgba(28, 73, 124, 0.2);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(260px, 26vw, 310px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--cwh-border);
+    background: var(--cwh-surface);
+    color: var(--cwh-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  .cwh--urgent {
+    --cwh-surface: linear-gradient(115deg, #fdf3f3 0%, #fbe3e3 52%, #f6cfcf 100%);
+    --cwh-ghost: rgba(153, 27, 27, 0.06);
+    --cwh-accent: #b91c1c;
+    --cwh-pill-bg: rgba(220, 38, 38, 0.1);
+    --cwh-pill-border: rgba(185, 28, 28, 0.45);
+    --cwh-pill-ink: #b91c1c;
+    --cwh-border: rgba(185, 28, 28, 0.3);
+  }
+
+  :global(html.dark) .cwh {
+    --cwh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%);
+    --cwh-ink: #ffffff;
+    --cwh-body: rgba(255, 255, 255, 0.78);
+    --cwh-ghost: rgba(255, 255, 255, 0.045);
+    --cwh-glow: var(--cwh-glow-dark, rgba(59, 130, 246, 0.35));
+    --cwh-shadow: rgba(0, 0, 0, 0.5);
+    --cwh-accent: #93c5fd;
+    --cwh-cta-bg: #ffffff;
+    --cwh-cta-ink: #0f1e2e;
+    --cwh-pill-bg: rgba(147, 197, 253, 0.16);
+    --cwh-pill-border: rgba(147, 197, 253, 0.45);
+    --cwh-pill-ink: #bfdbfe;
+    --cwh-chip-bg: rgba(255, 255, 255, 0.06);
+    --cwh-chip-border: rgba(255, 255, 255, 0.2);
+    --cwh-chip-ink: rgba(255, 255, 255, 0.8);
+    --cwh-border: rgba(255, 255, 255, 0.1);
+  }
+
+  :global(html.dark) .cwh--urgent {
+    --cwh-surface: linear-gradient(115deg, #170b0d 0%, #2a1216 46%, #6e1220 130%);
+    --cwh-ghost: rgba(255, 255, 255, 0.05);
+    --cwh-accent: #fca5a5;
+    --cwh-pill-bg: rgba(252, 165, 165, 0.14);
+    --cwh-pill-border: rgba(252, 165, 165, 0.45);
+    --cwh-pill-ink: #fecaca;
+    --cwh-cta-ink: #2a0d12;
+    --cwh-border: rgba(255, 255, 255, 0.12);
+  }
+
+  .cwh__ghost {
+    position: absolute;
+    left: 1rem;
+    top: -1.2rem;
+    font-size: clamp(4rem, 8.5vw, 6.75rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--cwh-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .cwh__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--cwh-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .cwh__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(220px, 28vw, 330px);
+    filter: drop-shadow(0 16px 32px var(--cwh-shadow));
+  }
+
+  .cwh__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 250px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .cwh--no-model .cwh__logo-art--light {
+    display: block;
+  }
+
+  :global(html.dark) .cwh--no-model .cwh__logo-art--light {
+    display: none;
+  }
+
+  :global(html.dark) .cwh--no-model .cwh__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
+  .cwh__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .cwh__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .cwh__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .cwh__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(33rem, 64%);
+  }
+
+  .cwh__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .cwh__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--cwh-pill-ink);
+    background: var(--cwh-pill-bg);
+    border: 1px solid var(--cwh-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .cwh__title {
+    color: var(--cwh-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .cwh__title-accent {
+    color: var(--cwh-accent);
+  }
+
+  .cwh__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cwh-body);
+    max-width: 46ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .cwh__metrics {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0 0 0.875rem;
+  }
+
+  .cwh__metric b {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--cwh-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .cwh__metric span {
+    display: block;
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--cwh-body);
+    margin-top: 0.2rem;
+  }
+
+  .cwh__footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+  }
+
+  .cwh__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--cwh-cta-bg);
+    color: var(--cwh-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .cwh__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .cwh__cta:focus-visible {
+    outline: 2px solid var(--cwh-pill-ink);
+    outline-offset: 2px;
+  }
+
+  .cwh__chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .cwh__chip {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--cwh-chip-ink);
+    background: var(--cwh-chip-bg);
+    border: 1px solid var(--cwh-chip-border);
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cwh__chip--you {
+    border-color: var(--cwh-pill-border);
+    color: var(--cwh-pill-ink);
+    font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cwh__cta {
+      transition: none;
+    }
+
+    .cwh__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .cwh {
+      min-height: 280px;
+    }
+
+    .cwh__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .cwh__caption {
+      display: none;
+    }
+
+    .cwh__logo-art {
+      width: 150px;
+      right: -1rem;
+    }
+
+    .cwh__content {
+      max-width: 100%;
+    }
+
+    .cwh__metrics {
+      gap: 1rem;
+    }
+  }
+</style>

@@ -303,6 +303,15 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    // League-agnostic NFL game schedule for the current week (W omitted =
+    // MFL's current week; week 1 during the preseason). Carries kickoff
+    // timestamps per matchup — powers "earliest game of the week" hero
+    // casting (kickoff-game headliner).
+    key: 'nflSchedule',
+    url: `${host}/${year}/export?TYPE=nflSchedule&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
     key: 'salaryAdjustments',
     url: `${host}/${year}/export?TYPE=salaryAdjustments&L=${leagueId}&JSON=1`,
     parser: (t) => JSON.parse(t),

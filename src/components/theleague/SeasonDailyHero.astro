@@ -9,9 +9,12 @@
 import type { HeroState } from '../../types/hero-state';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import AuctionHero from './AuctionHero.astro';
+import AuctionCompositeHero from './AuctionCompositeHero.astro';
 import DraftHero from './DraftHero.astro';
+import FeatureCompositeHero from './FeatureCompositeHero.astro';
 import HeroBanner from './HeroBanner.astro';
 import LeagueEventHero from './LeagueEventHero.astro';
+import type { HeroModel } from '../../utils/hero-casting';
 import LiveScoringHero from '../shared/LiveScoringHero';
 import TradeDeadlineHero from './TradeDeadlineHero';
 import PlayoffBracketHero from './PlayoffBracketHero';
@@ -24,6 +27,9 @@ import ChampionCrownedHero from './ChampionCrownedHero.astro';
 import TagExtensionHero from './TagExtensionHero.astro';
 import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
 import CutWatchHero from './CutWatchHero.astro';
+import CutWatchCompositeHero from './CutWatchCompositeHero.astro';
+import PreseasonCompositeHero from './PreseasonCompositeHero.astro';
+import UdfaCompositeHero from './UdfaCompositeHero.astro';
 import UDFAHero from './UDFAHero.astro';
 import PreseasonCountdownHero from './PreseasonCountdownHero.astro';
 import DraftCountdownHero from './DraftCountdownHero.astro';
@@ -56,9 +62,32 @@ export interface Props {
   userFranchiseId?: string;
   /** Whether the user is authenticated */
   isAuthenticated?: boolean;
+  /** Cast rookie model for the fresh What's New composite hero (page-resolved) */
+  featureModel?: HeroModel | null;
+  /** Cast best-available free agent for the auction composite hero (page-resolved) */
+  auctionModel?: HeroModel | null;
+  /** Live auction: the soonest-closing bid the model represents */
+  auctionClosingBid?: { bid: number; franchiseName: string; endsAtMs: number } | null;
+  /** Cast bubble player for the cut-watch composite hero (page-resolved) */
+  cutWatchModel?: HeroModel | null;
+  /** Best rookies on the board for the UDFA panel hero (page-resolved) */
+  udfaModels?: HeroModel[];
+  /** Cast kickoff-game headliner for the preseason composite hero (page-resolved) */
+  preseasonModel?: HeroModel | null;
+  /** Whether preseasonModel is the signed-in owner's own player */
+  preseasonModelIsOwn?: boolean;
+  /** The earliest game of the week (for the opener line in the summary) */
+  kickoffGame?: { awayName: string; homeName: string } | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], preseasonModel, preseasonModelIsOwn, kickoffGame } = Astro.props;
+
+// Fresh What's New (P2) always gets the composite treatment. The model is
+// category-cast in the page frontmatter (rookie for new pages/features,
+// first-five-years for enhancements) and deliberately null for bug-fix
+// rollups — the component renders the league logo silhouette instead.
+const showFeatureComposite =
+  state.phase === 'offseason-fallback' && state.fallbackHero?.source === 'feature';
 
 const phase = state.phase;
 const slot = state.slot;
@@ -71,15 +100,27 @@ const ptWeekday = slot === 'article'
 const isFridayArticle = ptWeekday === 'Fri';
 ---
 
-{/* P0: Auction hero — delegate to existing component */}
+{/* P0: Auction hero — composite with the best available free agent when a
+    model was cast; legacy command-center shell as the defensive fallback */}
 {(phase === 'auction-preview' || phase === 'auction-live') && state.auctionProps && (
-  <AuctionHero
-    leagueYear={state.auctionProps.leagueYear}
-    resolveLeaguePath={resolveLeaguePath}
-    spriteUrl={spriteUrl}
-    live={state.auctionProps.live}
-    referenceDate={state.metadata.referenceDate}
-  />
+  auctionModel ? (
+    <AuctionCompositeHero
+      leagueYear={state.auctionProps.leagueYear}
+      resolveLeaguePath={resolveLeaguePath}
+      live={state.auctionProps.live}
+      model={auctionModel}
+      closingBid={auctionClosingBid}
+      referenceDate={state.metadata.referenceDate}
+    />
+  ) : (
+    <AuctionHero
+      leagueYear={state.auctionProps.leagueYear}
+      resolveLeaguePath={resolveLeaguePath}
+      spriteUrl={spriteUrl}
+      live={state.auctionProps.live}
+      referenceDate={state.metadata.referenceDate}
+    />
+  )
 )}
 
 {/* P0: Draft hero — delegate to existing component */}
@@ -160,27 +201,50 @@ const isFridayArticle = ptWeekday === 'Fri';
 )}
 
 {phase === 'udfa-window' && (
-  <UDFAHero
-    resolveLeaguePath={resolveLeaguePath}
-    referenceDate={state.metadata.referenceDate}
-  />
+  udfaModels.length >= 2 ? (
+    <UdfaCompositeHero models={udfaModels} resolveLeaguePath={resolveLeaguePath} />
+  ) : (
+    <UDFAHero
+      resolveLeaguePath={resolveLeaguePath}
+      referenceDate={state.metadata.referenceDate}
+    />
+  )
 )}
 
 {phase === 'cut-watch' && (
-  <CutWatchHero
-    cutWatchProps={state.cutWatchProps}
-    resolveLeaguePath={resolveLeaguePath}
-    spriteUrl={spriteUrl}
-    userFranchiseId={userFranchiseId}
-  />
+  cutWatchModel && state.cutWatchProps ? (
+    <CutWatchCompositeHero
+      cutWatchProps={state.cutWatchProps}
+      model={cutWatchModel}
+      resolveLeaguePath={resolveLeaguePath}
+      userFranchiseId={userFranchiseId}
+    />
+  ) : (
+    <CutWatchHero
+      cutWatchProps={state.cutWatchProps}
+      resolveLeaguePath={resolveLeaguePath}
+      spriteUrl={spriteUrl}
+      userFranchiseId={userFranchiseId}
+    />
+  )
 )}
 
 {phase === 'preseason-countdown' && (
-  <PreseasonCountdownHero
-    preseasonProps={state.preseasonProps}
-    resolveLeaguePath={resolveLeaguePath}
-    referenceDate={state.metadata.referenceDate}
-  />
+  preseasonModel && state.preseasonProps ? (
+    <PreseasonCompositeHero
+      preseasonProps={state.preseasonProps}
+      model={preseasonModel}
+      resolveLeaguePath={resolveLeaguePath}
+      isOwnHeadliner={preseasonModelIsOwn}
+      kickoffGame={kickoffGame}
+    />
+  ) : (
+    <PreseasonCountdownHero
+      preseasonProps={state.preseasonProps}
+      resolveLeaguePath={resolveLeaguePath}
+      referenceDate={state.metadata.referenceDate}
+    />
+  )
 )}
 
 {phase === 'draft-countdown' && (
@@ -191,8 +255,17 @@ const isFridayArticle = ptWeekday === 'Fri';
   />
 )}
 
+{/* P2 fresh What's New: composite hero with a rookie model */}
+{showFeatureComposite && (
+  <FeatureCompositeHero
+    content={state.fallbackHero!}
+    model={featureModel}
+    resolveLeaguePath={resolveLeaguePath}
+  />
+)}
+
 {/* Fallback phases (offseason-fallback): branded LeagueEventHero, with HeroBanner as a defensive fallback */}
-{!slot && !state.auctionProps && !state.draftProps && !state.tradeDeadlineProps
+{!showFeatureComposite && !slot && !state.auctionProps && !state.draftProps && !state.tradeDeadlineProps
   && !state.championProps && !state.taggedShowcaseProps && !state.cutWatchProps
   && !state.preseasonProps && !state.draftCountdownProps
   && phase !== 'tag-window' && phase !== 'udfa-window' && phase !== 'preseason-countdown'

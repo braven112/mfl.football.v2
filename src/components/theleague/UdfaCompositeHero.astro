@@ -1,0 +1,337 @@
+---
+/**
+ * UdfaCompositeHero — the UDFA window hero: the best rookies still on the
+ * board, four team-gradient panels side by side (matchup-card style).
+ *
+ * Each panel is a composite: the player's NFL team logo as a permanent
+ * background watermark, his transparent ESPN cutout over it, ranked left to
+ * right by dynasty ADP. A green "go get them" band underneath carries the
+ * pitch and the CTA.
+ *
+ * Resilience: the caller passes up to EIGHT rookies. Four render; the rest
+ * are hidden spares. A post-load script keeps the first four panels whose
+ * headshot actually loads (deep UDFA rookies often lack an ESPN photo),
+ * swapping in spares so the board never shows fewer than four real players.
+ * Even a kept panel always has the team logo behind the player, so a slow
+ * or missing photo never leaves an empty flank.
+ *
+ * The router falls back to the legacy UDFAHero when fewer than two rookies
+ * resolve.
+ */
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl-logo';
+
+interface Props {
+  /** Best rookies on the board in rank order — pass up to 8: four show, the
+      rest are spares that swap in when a headshot 404s. */
+  models: HeroModel[];
+  resolveLeaguePath: (path: string) => string;
+}
+
+const { models, resolveLeaguePath: r } = Astro.props;
+
+const panels = models.slice(0, 8).map((model, index) => {
+  const teamCode = normalizeTeamCode(model.nflTeam);
+  const { primary } = getNflTeamColors(teamCode);
+  return {
+    model,
+    teamCode,
+    rank: index + 1,
+    spare: index >= 4,
+    gradient: `linear-gradient(160deg, #0b0e12 0%, ${primary} 150%)`,
+    glow: hexToRgba(primary, 0.35),
+    teamLogo: getNFLTeamLogo(teamCode),
+  };
+});
+---
+
+<section class="udh" aria-label="Undrafted free agents — best rookies on the board">
+  <div class="udh__panels">
+    {panels.map(({ model, teamCode, rank, spare, gradient, glow, teamLogo }) => (
+      <div class="udh__panel" style={`background: ${gradient};`} data-spare={spare ? 'true' : undefined} hidden={spare}>
+        <span class="udh__panel-glow" style={`background: radial-gradient(circle, ${glow} 0%, transparent 65%);`} aria-hidden="true"></span>
+        <img class="udh__logo" src={teamLogo} alt="" aria-hidden="true" loading="eager" />
+        <span class="udh__rank" aria-hidden="true">No. {rank}</span>
+        <img
+          class="udh__cutout"
+          src={model.headshot}
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          decoding="async"
+          onerror="this.style.visibility='hidden'"
+        />
+        <span class="udh__player">
+          <strong>{model.name}</strong>
+          <span class="udh__player-meta">{model.position} · {teamCode}</span>
+        </span>
+      </div>
+    ))}
+  </div>
+
+  <div class="udh__band">
+    <div class="udh__band-left">
+      <p class="udh__eyebrow">UDFA window · Best on the board</p>
+      <h2 class="udh__title">The draft is over. The bargains aren't.</h2>
+    </div>
+    <a class="udh__cta" href={r('/theleague/players')}>
+      Browse free agents
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+</section>
+
+<script>
+  // Keep the first four panels whose headshot actually loads; swap in spares
+  // for any that 404, then renumber the shown panels 1-4. The team-logo
+  // watermark means a panel still reads as complete while its photo settles.
+  const MAX_PANELS = 4;
+
+  function settle(img: HTMLImageElement): Promise<boolean> {
+    if (img.complete) return Promise.resolve(img.naturalWidth > 0);
+    return new Promise((resolve) => {
+      img.addEventListener('load', () => resolve(true), { once: true });
+      img.addEventListener('error', () => resolve(false), { once: true });
+    });
+  }
+
+  async function resolvePanels(hero: HTMLElement) {
+    const panels = [...hero.querySelectorAll<HTMLElement>('.udh__panel')];
+    const settled = await Promise.all(
+      panels.map(async (panel) => {
+        const cutout = panel.querySelector<HTMLImageElement>('.udh__cutout');
+        return { panel, ok: cutout ? await settle(cutout) : false };
+      }),
+    );
+    // Prefer panels whose photo loaded (board order preserved); if fewer than
+    // four loaded, pad with the remaining panels so the hero is never barren —
+    // the team-logo watermark carries a photoless panel. Always exactly four.
+    const loaded = settled.filter((s) => s.ok).map((s) => s.panel);
+    const rest = settled.filter((s) => !s.ok).map((s) => s.panel);
+    const chosen = new Set([...loaded, ...rest].slice(0, MAX_PANELS));
+
+    let rank = 0;
+    for (const panel of panels) {
+      if (chosen.has(panel)) {
+        panel.hidden = false;
+        rank += 1;
+        const chip = panel.querySelector('.udh__rank');
+        if (chip) chip.textContent = `No. ${rank}`;
+      } else {
+        panel.hidden = true;
+      }
+    }
+  }
+
+  function run() {
+    document.querySelectorAll<HTMLElement>('.udh').forEach((hero) => resolvePanels(hero));
+  }
+
+  run();
+  // Re-run after ClientRouter (view transitions) swaps in a fresh homepage.
+  document.addEventListener('astro:page-load', run);
+</script>
+
+<style>
+  .udh {
+    /* The player panels are always dark team-gradient "trading cards"; only
+       the info band + frame follow the theme. Light band by default; the
+       html.dark block below swaps to the dark band. */
+    --udh-border: rgba(46, 135, 67, 0.3);
+    --udh-band-bg: var(--color-surface, #ffffff);
+    --udh-band-ink: var(--color-gray-900, #0f1419);
+    --udh-accent: #15803d;
+    --udh-cta-bg: var(--color-primary, #1c497c);
+    --udh-cta-ink: #ffffff;
+
+    overflow: hidden;
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--udh-border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(html.dark) .udh {
+    --udh-border: rgba(255, 255, 255, 0.1);
+    --udh-band-bg: #0b0e12;
+    --udh-band-ink: #ffffff;
+    --udh-accent: #4ade80;
+    --udh-cta-bg: #ffffff;
+    --udh-cta-ink: #0b0e12;
+  }
+
+  .udh__panels {
+    display: flex;
+  }
+
+  .udh__panel {
+    position: relative;
+    flex: 1;
+    min-height: clamp(190px, 19vw, 230px);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .udh__panel[hidden] {
+    display: none;
+  }
+
+  .udh__panel-glow {
+    position: absolute;
+    inset: -40% -30% auto -30%;
+    height: 140%;
+    pointer-events: none;
+  }
+
+  /* Permanent team-logo watermark behind every player */
+  .udh__logo {
+    position: absolute;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: clamp(120px, 15vw, 190px);
+    opacity: 0.16;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .udh__rank {
+    position: absolute;
+    top: 0.625rem;
+    left: 0.625rem;
+    z-index: 3;
+    color: #fff;
+    font-size: 0.575rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.28rem 0.5rem;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+
+  .udh__cutout {
+    position: relative;
+    z-index: 1;
+    width: clamp(120px, 14vw, 175px);
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+  }
+
+  .udh__player {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.45rem 0.625rem;
+    color: #fff;
+    background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
+  }
+
+  .udh__player strong {
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .udh__player-meta {
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .udh__band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1.25rem;
+    background: var(--udh-band-bg);
+    color: var(--udh-band-ink);
+  }
+
+  .udh__eyebrow {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--udh-accent);
+    margin: 0 0 0.2rem;
+  }
+
+  .udh__title {
+    color: var(--udh-band-ink);
+    font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .udh__cta {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--udh-cta-bg);
+    color: var(--udh-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .udh__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .udh__cta:focus-visible {
+    outline: 2px solid var(--udh-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .udh__cta {
+      transition: none;
+    }
+
+    .udh__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .udh__panels {
+      flex-wrap: wrap;
+    }
+
+    .udh__panel {
+      flex: 1 1 50%;
+      min-height: 160px;
+    }
+
+    .udh__cutout {
+      width: 110px;
+    }
+
+    .udh__band {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.625rem;
+    }
+  }
+</style>
