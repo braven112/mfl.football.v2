@@ -167,7 +167,7 @@ function getRowColor(seed: number | undefined): string {
 <style>
     .standings-container {
     margin-bottom: 2rem;
-    background-color: var(--card-bg, #fff);
+    background: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     padding-block: var(--padding-md);
@@ -254,17 +254,17 @@ function getRowColor(seed: number | undefined): string {
      surface (the opaque "darkened pastel" first cut read as mud). Same
      recipe as the preferred-team highlight rows. */
   :global(html.dark) .tier-division-winners {
-    background-color: color-mix(in srgb, #d4a856 12%, var(--card-bg, #1e1e1e));
+    background-color: color-mix(in srgb, #d4a856 12%, var(--card-surface, #1e1e1e));
     color: #ededed;
   }
 
   :global(html.dark) .tier-wild-cards {
-    background-color: color-mix(in srgb, #dad8d5 7%, var(--card-bg, #1e1e1e));
+    background-color: color-mix(in srgb, #dad8d5 7%, var(--card-surface, #1e1e1e));
     color: #ededed;
   }
 
   :global(html.dark) .tier-toilet-bowl {
-    background-color: color-mix(in srgb, #b5773a 10%, var(--card-bg, #1e1e1e));
+    background-color: color-mix(in srgb, #b5773a 10%, var(--card-surface, #1e1e1e));
     color: #ededed;
   }
 

@@ -281,6 +281,9 @@
      Component Tokens - Cards
      ======================================== */
   --card-bg: var(--color-white);
+  /* Solid twin of --card-bg for contexts where a gradient is invalid
+     (color-mix, background-color). Dark mode overrides both. */
+  --card-surface: var(--color-white);
   --card-border: var(--content-border);
   --card-shadow: var(--shadow-card);
   --card-radius: var(--radius-md);
