@@ -3224,7 +3224,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   gap: var(--padding-sm);
   justify-content: center;
   align-items: center;
-  background: var(--card-bg-color);
+  /* No card treatment — the strip sits flat inside the hero card. */
+  background: transparent;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -4869,6 +4870,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     color: #64748b;
   }
 
+  /* Dark mode spread pills — translucent tints, bright text. */
+  :global(html.dark .spread-favorite) {
+    background-color: var(--badge-success-bg, rgba(16, 185, 129, 0.15));
+    color: var(--badge-success-text, #6ee7b7);
+  }
+
+  :global(html.dark .spread-underdog) {
+    background-color: var(--badge-error-bg, rgba(220, 38, 38, 0.15));
+    color: var(--badge-error-text, #fca5a5);
+  }
+
+  :global(html.dark .spread-neutral) {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
   :global(.rank-badge) {
     display: inline-block;
     padding: .12rem .75rem;
@@ -4881,6 +4898,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   :global(.rank-tier-3) { background-color: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }      /* Rank 17-24 (Good) */
   :global(.rank-tier-2) { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }      /* Rank 9-16 (Bad) */
   :global(.rank-tier-1) { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }      /* Rank 1-8 (Worst) */
+
+  /* Dark mode: whisper tints + bright text (badge-token values) instead of
+     light pastels. */
+  :global(html.dark .rank-tier-4) { background-color: var(--badge-success-bg, rgba(16,185,129,0.15)); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.35); }
+  :global(html.dark .rank-tier-3) { background-color: rgba(16, 185, 129, 0.09); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.25); }
+  :global(html.dark .rank-tier-2) { background-color: rgba(220, 38, 38, 0.10); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.25); }
+  :global(html.dark .rank-tier-1) { background-color: var(--badge-error-bg, rgba(220,38,38,0.15)); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.4); }
 
   /* Sortable Column Headers */
   :global(th[data-sortable]) {
