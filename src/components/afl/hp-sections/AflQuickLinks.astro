@@ -134,15 +134,14 @@ const pages = [...aflPages].sort((a, b) => b.popularity - a.popularity).slice(0,
   }
 
   /* Dark mode: translucent tiles so the card's slate glow shows through
-     instead of solid near-black wells. */
+     instead of solid near-black wells. Resting = dark wash, hover lifts
+     to the light wash. */
   :global(html.dark) .afl-links__card {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.18);
   }
 
   :global(html.dark) .afl-links__card:hover {
-    /* Hover darkens (matches the standings-row direction) but stays
-       translucent so the card glow shows through. */
-    background: rgba(0, 0, 0, 0.18);
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .afl-links__icon {
