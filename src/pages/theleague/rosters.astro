@@ -3492,9 +3492,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     overflow-x: auto;
   }
 
-  /* Dark mode: raised-card treatment — shadow alone can't separate
-     #1e1e1e sections from the #121212 page; add the border ring. */
+  /* Dark mode: same blue-glow card treatment as the team hero above, plus
+     the raised ring. */
   :global(html.dark) .roster-table-card {
+    background: radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%);
     box-shadow:
       0 0 0 1px var(--content-border, #555555),
       var(--shadow-lg);
@@ -3786,6 +3787,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     overflow-x: auto;
     border-radius: var(--radius-md, 0.5rem);
     background: var(--content-bg, #fff);
+  }
+
+  /* Dark mode: transparent so the card's blue glow shows through. */
+  :global(html.dark) .roster-table-wrapper {
+    background: transparent;
   }
 
   .roster-table {
@@ -4814,11 +4820,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     box-shadow: var(--shadow-md);
   }
 
-  /* Dark mode: keep the light-mode "inverted button" feel — the active
-     mode pops as a bright pill with primary text, mirroring light. */
+  /* Dark mode: active mode matches the view-switcher's blue treatment —
+     primary-tinted fill, blue ring, bright blue text. */
   :global(html.dark) .mode-btn.active {
-    background: #ffffff;
-    color: var(--color-primary-dark, #2563eb);
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 15%, var(--card-surface, #262626));
+    color: var(--color-primary-light, #60a5fa);
+    box-shadow: 0 0 0 1.5px var(--color-primary, #3b82f6);
   }
 
   :global(html.dark) .mode-btn:hover:not(.active) {
