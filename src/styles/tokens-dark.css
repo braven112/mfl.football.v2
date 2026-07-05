@@ -80,7 +80,7 @@ html.dark {
   --color-surface-1: #121212;         /* Lowest: page background */
   --color-surface-2: #1e1e1e;         /* Mid: cards, panels */
   --color-surface-3: #2a2a2a;         /* Highest: dropdowns, tooltips */
-  --color-border-default: #3a3a3a;    /* Standard borders */
+  --color-border-default: #5f6885;    /* Standard borders (slate-tinted) */
   --color-border-subtle: #2e2e2e;     /* Faint dividers */
   --color-text-primary: #e0e0e0;      /* Body copy */
   --color-text-secondary: #8a8a8a;    /* Labels, captions */
@@ -96,7 +96,7 @@ html.dark {
      Component Tokens - Content Areas
      ======================================== */
   --content-bg: #1e1e1e;
-  --content-border: #555555;
+  --content-border: #5f6885;   /* slate-tinted to match the card glow */
   --content-shadow: var(--shadow-card);
 
   --content-bg-muted: #181818;
@@ -106,8 +106,12 @@ html.dark {
   /* ========================================
      Component Tokens - Cards
      ======================================== */
-  --card-bg: #1e1e1e;
-  --card-border: #555555;
+  /* Card surface: slate glow from the top-left corner fading to #333.
+     --card-bg is a GRADIENT — only valid in `background:` shorthand.
+     Use --card-surface (solid) for color-mix / background-color. */
+  --card-bg: radial-gradient(92% 96% at 2% -6%, rgb(113 124 169 / 50%), #333333 62%);
+  --card-surface: #333333;
+  --card-border: #6f79a8;           /* complements the rgb(113,124,169) glow */
   --card-shadow: var(--shadow-card);
 
   /* Legacy alias */
@@ -292,7 +296,7 @@ html.dark {
   --secondary-content-bg-color: var(--content-bg);
   --secondary-content-border-color: var(--content-border);
   --secondary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
-  --content-border-color: #555555;
+  --content-border-color: #5f6885;
   --gallery-content-bg: var(--content-bg-muted);
 
   /* ========================================
@@ -441,6 +445,7 @@ html.dark[data-league="afl"] {
   --color-surface-1: var(--afl-navy, #0f1e2e);
   --content-bg: #16283c;                               /* cards / panels — one step up */
   --card-bg: #16283c;
+  --card-surface: #16283c;
   --color-surface-2: #16283c;
   --nav-bg: #16283c;
   --table-row-bg: #16283c;

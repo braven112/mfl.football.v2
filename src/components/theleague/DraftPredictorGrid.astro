@@ -424,33 +424,33 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
      (cream/pink/violet) — re-tint as whisper color-mixes against the card
      surface, borders stay their bright hues, champion text brightens. */
   :global(html.dark) .draft-pick--league-winner {
-    background: color-mix(in srgb, #fbbf24 12%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #fbbf24 12%, var(--card-surface, #1e1e1e));
   }
 
   :global(html.dark) .draft-pick--league-winner:hover {
-    background: color-mix(in srgb, #fbbf24 18%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #fbbf24 18%, var(--card-surface, #1e1e1e));
     box-shadow: 0 0 0 2px var(--card-bg, #1e1e1e), 0 0 0 4px #f59e0b, 0 4px 12px rgb(0 0 0 / 0.4);
   }
 
   :global(html.dark) .draft-pick--champion {
-    background: color-mix(in srgb, #fb923c 12%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #fb923c 12%, var(--card-surface, #1e1e1e));
     color: #fdba74;
   }
 
   :global(html.dark) .draft-pick--toilet-bowl {
-    background: color-mix(in srgb, #ff6b6b 10%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #ff6b6b 10%, var(--card-surface, #1e1e1e));
   }
 
   :global(html.dark) .draft-pick--toilet-bowl:hover {
-    background: color-mix(in srgb, #ff6b6b 16%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #ff6b6b 16%, var(--card-surface, #1e1e1e));
   }
 
   :global(html.dark) .draft-pick--tbd {
-    background: color-mix(in srgb, #a78bfa 10%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #a78bfa 10%, var(--card-surface, #1e1e1e));
   }
 
   :global(html.dark) .draft-pick--tbd:hover {
-    background: color-mix(in srgb, #a78bfa 16%, var(--card-bg, #1e1e1e));
+    background: color-mix(in srgb, #a78bfa 16%, var(--card-surface, #1e1e1e));
   }
 
   .draft-pick__content {
@@ -489,7 +489,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     border: 1px solid #fff;
     border-radius: 50%;
     object-fit: contain;
-    background-color: var(--card-bg-color, #fff);
+    background: var(--card-bg-color, #fff);
   }
 
   .draft-pick__name {
