@@ -440,6 +440,26 @@ html.dark {
    --afl-trophy-gold* are left untouched (they match the award SVG art). */
 html.dark[data-league="afl"] {
   --league-accent: #ef5350;                            /* AFL accent — brightened red for dark */
+
+  /* ── Brand primary remap ──
+     html.dark's --color-primary is TheLeague electric blue; on the navy
+     ramp it reads as the wrong league (blue page titles / franchise card
+     headings on a red-accent site). AFL dark headings go white-family —
+     red stays reserved for --league-accent. Button/nav/input tokens are
+     pinned as literals in html.dark, so they are NOT affected by this. */
+  --color-primary: #e8eef4;
+  --color-primary-dark: #b9c5d2;
+  --color-primary-light: #ffffff;
+
+  /* Headings + plain anchors: the layout colors h1–h4 and bare <a> via
+     --primary-link-default-text-color → --link-color, which html.dark
+     pins to TheLeague blue #60a5fa. AFL dark goes white with a red
+     hover so red stays the accent, not the body voice. */
+  --link-color: #e8eef4;
+  --link-color-hover: #ef5350;
+  --link-color-focus: #ef5350;
+  --link-color-accent: #ef5350;
+  --link-color-accent-hover: #ff8a80;
   --header-nav-icon-color: #ffffff;                    /* resting nav icons — white (navy would vanish on dark) */
   --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
   --header-nav-label-color: var(--league-accent);      /* nav labels — red */

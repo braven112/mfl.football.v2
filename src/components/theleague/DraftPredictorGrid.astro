@@ -511,6 +511,11 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     font-weight: 700;
     color: #2563eb;
   }
+  /* Dark: league accent instead of the hardcoded blue — TheLeague stays
+     blue, AFL resolves to its red. */
+  :global(html.dark) .draft-pick__number {
+    color: var(--league-accent, #60a5fa);
+  }
 
   .draft-pick__label {
     font-size: 0.625rem;
