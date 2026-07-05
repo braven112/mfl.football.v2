@@ -12,7 +12,7 @@ per player.
 
 | File | Role |
 |------|------|
-| `src/components/shared/PlayerHeroComposite.astro` | The composite banner (gradient + ghost wordmark + glow + headshot + position chip) |
+| `src/components/theleague/*CompositeHero.astro` | Per-phase composite heroes; each owns its gradient + ghost wordmark + glow + headshot + chip. (An early single-banner prototype, `PlayerHeroComposite.astro`, was removed unused — the heroes don't share a base component.) |
 | `src/utils/nfl-team-colors.ts` | 32-team primary/secondary hex map (ESPN codes), nickname helper, `hexToRgba` |
 | `src/components/shared/SchefterPostCard.astro` | First integration — breaking-tier feed posts |
 | `scripts/schefter-scan.mjs` | Attaches `playerIds` on TRADE / AUCTION_WON / FREE_AGENT posts at generation time |

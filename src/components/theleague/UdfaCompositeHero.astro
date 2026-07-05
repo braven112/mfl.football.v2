@@ -98,33 +98,28 @@ const panels = models.slice(0, 8).map((model, index) => {
 
   async function resolvePanels(hero: HTMLElement) {
     const panels = [...hero.querySelectorAll<HTMLElement>('.udh__panel')];
-    let shown = 0;
+    const settled = await Promise.all(
+      panels.map(async (panel) => {
+        const cutout = panel.querySelector<HTMLImageElement>('.udh__cutout');
+        return { panel, ok: cutout ? await settle(cutout) : false };
+      }),
+    );
+    // Prefer panels whose photo loaded (board order preserved); if fewer than
+    // four loaded, pad with the remaining panels so the hero is never barren —
+    // the team-logo watermark carries a photoless panel. Always exactly four.
+    const loaded = settled.filter((s) => s.ok).map((s) => s.panel);
+    const rest = settled.filter((s) => !s.ok).map((s) => s.panel);
+    const chosen = new Set([...loaded, ...rest].slice(0, MAX_PANELS));
+
+    let rank = 0;
     for (const panel of panels) {
-      if (shown >= MAX_PANELS) {
-        panel.hidden = true;
-        continue;
-      }
-      const cutout = panel.querySelector<HTMLImageElement>('.udh__cutout');
-      const ok = cutout ? await settle(cutout) : false;
-      if (ok) {
+      if (chosen.has(panel)) {
         panel.hidden = false;
-        shown += 1;
+        rank += 1;
         const chip = panel.querySelector('.udh__rank');
-        if (chip) chip.textContent = `No. ${shown}`;
+        if (chip) chip.textContent = `No. ${rank}`;
       } else {
         panel.hidden = true;
-      }
-    }
-    // Fewer than four loaded (thin board / offline): show the first four
-    // regardless so the hero is never barren — the team logos carry them.
-    if (shown < MAX_PANELS) {
-      let filled = 0;
-      for (const panel of panels) {
-        if (filled >= MAX_PANELS) break;
-        panel.hidden = false;
-        const chip = panel.querySelector('.udh__rank');
-        if (chip) chip.textContent = `No. ${filled + 1}`;
-        filled += 1;
       }
     }
   }
@@ -140,16 +135,30 @@ const panels = models.slice(0, 8).map((model, index) => {
 
 <style>
   .udh {
-    --udh-border: rgba(46, 135, 67, 0.35);
-    --udh-band-bg: #0b0e12;
-    --udh-band-ink: #ffffff;
-    --udh-accent: #4ade80;
+    /* The player panels are always dark team-gradient "trading cards"; only
+       the info band + frame follow the theme. Light band by default; the
+       html.dark block below swaps to the dark band. */
+    --udh-border: rgba(46, 135, 67, 0.3);
+    --udh-band-bg: var(--color-surface, #ffffff);
+    --udh-band-ink: var(--color-gray-900, #0f1419);
+    --udh-accent: #15803d;
+    --udh-cta-bg: var(--color-primary, #1c497c);
+    --udh-cta-ink: #ffffff;
 
     overflow: hidden;
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--udh-border);
     display: flex;
     flex-direction: column;
+  }
+
+  :global(html.dark) .udh {
+    --udh-border: rgba(255, 255, 255, 0.1);
+    --udh-band-bg: #0b0e12;
+    --udh-band-ink: #ffffff;
+    --udh-accent: #4ade80;
+    --udh-cta-bg: #ffffff;
+    --udh-cta-ink: #0b0e12;
   }
 
   .udh__panels {
@@ -276,8 +285,8 @@ const panels = models.slice(0, 8).map((model, index) => {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: #ffffff;
-    color: #0b0e12;
+    background: var(--udh-cta-bg);
+    color: var(--udh-cta-ink);
     font-size: 0.8125rem;
     font-weight: 700;
     padding: 0.6rem 1.05rem;

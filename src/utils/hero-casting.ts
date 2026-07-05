@@ -259,6 +259,50 @@ export function castBestScoredModel(
   return toModel(players.get(best.playerId)!, descriptor);
 }
 
+/**
+ * Cast a RANDOM likely starter from a scored candidate pool — daily rotation.
+ *
+ * Kickoff rule: rotate among the likely starters in the earliest game of the
+ * week, not just the single best. "Likely starters" = the top `perTeam`
+ * fantasy players per NFL team by projection (the real starters, not the
+ * deep bench); a projection of 0 is never a starter. When signed in, the
+ * pool narrows to the owner's own likely starters in that game, falling back
+ * to the full pool when they roster none. The pick rotates by PT day so the
+ * same face doesn't hold the hero all window.
+ */
+export function castRandomStarterModel(
+  candidates: ScoredCastCandidate[],
+  players: Map<string, PlayerIdentity>,
+  userFranchiseId: string | undefined,
+  referenceDate: Date,
+  descriptor: string,
+  perTeam: number = 8,
+): HeroModel | null {
+  // Group compositable, projected candidates by NFL team.
+  const byTeam = new Map<string, ScoredCastCandidate[]>();
+  for (const c of candidates) {
+    const p = players.get(c.playerId);
+    if (!p || !isCompositable(p) || c.score <= 0) continue;
+    const arr = byTeam.get(p.nflTeam) ?? [];
+    arr.push(c);
+    byTeam.set(p.nflTeam, arr);
+  }
+
+  // Keep each team's top `perTeam` by projection — that's the starter tier.
+  const pool: ScoredCastCandidate[] = [];
+  for (const arr of byTeam.values()) {
+    arr.sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId));
+    pool.push(...arr.slice(0, perTeam));
+  }
+  if (pool.length === 0) return null;
+
+  const own = userFranchiseId ? pool.filter((c) => c.franchiseId === userFranchiseId) : [];
+  const finalPool = own.length > 0 ? own : pool;
+
+  const pick = dailyPick(finalPool, referenceDate, 'starter', (c) => c.playerId);
+  return pick ? toModel(players.get(pick.playerId)!, descriptor) : null;
+}
+
 /** A candidate for a roster-action hero (cut watch, tag window, contracts…). */
 export interface RosterCastCandidate {
   playerId: string;

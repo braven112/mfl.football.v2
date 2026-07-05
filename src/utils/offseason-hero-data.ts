@@ -81,7 +81,15 @@ export function getFranchiseHeadliners(
       if (!p?.id || (p.status && p.status !== 'ROSTER')) continue;
       const score = projections.get(p.id) ?? 0;
       const salary = parseFloat(p.salary || '0') || 0;
-      if (!best || score > best.score || (score === best.score && salary > best.salary)) {
+      // Score, then salary, then player id — the id tie-break keeps the pick
+      // stable when a franchise has two players with equal projection+salary
+      // (e.g. before projections publish), regardless of roster feed order.
+      if (
+        !best ||
+        score > best.score ||
+        (score === best.score && salary > best.salary) ||
+        (score === best.score && salary === best.salary && p.id < best.playerId)
+      ) {
         best = { playerId: p.id, score, salary };
       }
     }

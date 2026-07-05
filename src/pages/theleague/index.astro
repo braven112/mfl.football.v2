@@ -23,7 +23,7 @@ import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
-import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castBestScoredModel, castClosingAuctionModel, castRookiesOnBoard } from '../../utils/hero-casting';
+import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { resolveLeaguePath } from '../../utils/nav-utils';
@@ -329,12 +329,12 @@ let preseasonModel = null;
 let preseasonModelIsOwn = false;
 let kickoffGame = null;
 if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
-  // Preseason hero: the kickoff-game headliner — the best player starting in
-  // the earliest game of the week (the season opener). Signed-in owners with
-  // a player in that game see their own best player in it instead.
+  // Preseason hero: a likely starter in the earliest game of the week (the
+  // season opener), rotating daily. Signed-in owners with a player in that
+  // game see one of their own likely starters in it instead.
   kickoffGame = getKickoffGame(leagueYear);
   const candidates = getKickoffGameCandidates(leagueYear);
-  preseasonModel = castBestScoredModel(candidates, hpPlayerIdentityMap, userFranchiseId, 'Kickoff Night');
+  preseasonModel = castRandomStarterModel(candidates, hpPlayerIdentityMap, userFranchiseId, now, 'Kickoff Night');
   preseasonModelIsOwn =
     !!preseasonModel &&
     !!userFranchiseId &&

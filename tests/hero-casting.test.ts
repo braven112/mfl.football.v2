@@ -5,6 +5,7 @@ import {
   castRosterModel,
   castTopFreeAgentModel,
   castBestScoredModel,
+  castRandomStarterModel,
   castClosingAuctionModel,
   castRookiesOnBoard,
 } from '../src/utils/hero-casting';
@@ -263,6 +264,78 @@ describe('castBestScoredModel', () => {
       castBestScoredModel([{ playerId: '4', franchiseId: '', score: 99 }, { playerId: '1', franchiseId: '', score: 1 }], players, undefined, 'x')?.mflId,
     ).toBe('1');
     expect(castBestScoredModel([], players, undefined, 'x')).toBeNull();
+  });
+});
+
+describe('castRandomStarterModel', () => {
+  // Two NFL teams: NE (1,2,3,4) and SEA (5,6,7,8), descending projection.
+  const players = mapOf(
+    player({ mflId: '1', nflTeam: 'NE' }),
+    player({ mflId: '2', nflTeam: 'NE' }),
+    player({ mflId: '3', nflTeam: 'NE' }),
+    player({ mflId: '4', nflTeam: 'NE' }),
+    player({ mflId: '5', nflTeam: 'SEA' }),
+    player({ mflId: '6', nflTeam: 'SEA' }),
+    player({ mflId: '7', nflTeam: 'SEA', headshot: MFL('7') }), // no cutout
+    player({ mflId: '8', nflTeam: 'SEA' }),
+  );
+  const cands = (fr = '') => [
+    { playerId: '1', franchiseId: fr, score: 20 },
+    { playerId: '2', franchiseId: fr, score: 15 },
+    { playerId: '3', franchiseId: fr, score: 3 },
+    { playerId: '4', franchiseId: fr, score: 0 }, // zero projection — never a starter
+    { playerId: '5', franchiseId: fr, score: 18 },
+    { playerId: '6', franchiseId: fr, score: 9 },
+    { playerId: '7', franchiseId: fr, score: 22 }, // top SEA but no cutout — excluded
+    { playerId: '8', franchiseId: fr, score: 6 },
+  ];
+
+  it('rotates among likely starters (top perTeam by projection, both teams), excluding zero-proj and photoless', () => {
+    const picks = new Set(
+      Array.from({ length: 25 }, (_, d) =>
+        castRandomStarterModel(
+          cands(),
+          players,
+          undefined,
+          new Date(`2026-08-${String(1 + d).padStart(2, '0')}T12:00:00-07:00`),
+          'Kickoff Night',
+          2, // top 2 per team
+        )?.mflId,
+      ),
+    );
+    // NE top-2 = 1,2 · SEA top-2 compositable = 5,6 (7 excluded: no cutout). 3,4,8 out.
+    expect([...picks].sort()).toEqual(['1', '2', '5', '6']);
+  });
+
+  it('is deterministic within a PT day', () => {
+    const a = castRandomStarterModel(cands(), players, undefined, JUL_4, 'Kickoff Night', 2);
+    const b = castRandomStarterModel(cands(), players, undefined, new Date('2026-07-04T22:00:00-07:00'), 'Kickoff Night', 2);
+    expect(a?.mflId).toBe(b?.mflId);
+    expect(a?.descriptor).toBe('Kickoff Night');
+  });
+
+  it("narrows to the signed-in owner's likely starters, else the whole pool", () => {
+    const mixed = [
+      { playerId: '1', franchiseId: '0002', score: 20 },
+      { playerId: '2', franchiseId: '0001', score: 15 },
+      { playerId: '5', franchiseId: '0002', score: 18 },
+      { playerId: '6', franchiseId: '0001', score: 9 },
+    ];
+    const owned = new Set(
+      Array.from({ length: 20 }, (_, d) =>
+        castRandomStarterModel(mixed, players, '0001', new Date(`2026-08-${String(1 + d).padStart(2, '0')}T12:00:00-07:00`), 'x', 4)?.mflId,
+      ),
+    );
+    expect([...owned].sort()).toEqual(['2', '6']); // only 0001's players
+    // Guest with no players in the game → full pool
+    expect(castRandomStarterModel(mixed, players, '0099', JUL_4, 'x', 4)).not.toBeNull();
+  });
+
+  it('returns null when nothing qualifies', () => {
+    expect(castRandomStarterModel([], players, undefined, JUL_4, 'x')).toBeNull();
+    expect(
+      castRandomStarterModel([{ playerId: '4', franchiseId: '', score: 0 }], players, undefined, JUL_4, 'x'),
+    ).toBeNull();
   });
 });
 
