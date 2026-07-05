@@ -331,6 +331,15 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
       var(--card-surface, #262626) 52%);
   }
 
+  /* AFL dark: divisions aren't branded (no compass badge) but mirror the
+     same whole-card glow in the league's red, fading into the navy card. */
+  :global(html.dark[data-league="afl"]) .standings-container {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
+      color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
+      var(--card-surface, #16283c) 52%);
+  }
+
   :global(html.dark) .stand-head {
     background: transparent;
   }
@@ -431,6 +440,12 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     font-weight: 500;
     margin: 0;
     margin-top: 0.25rem;
+  }
+
+  /* AFL dark: emerald is TheLeague's voice — champions read in trophy
+     gold on the red-glass card. */
+  :global(html.dark[data-league="afl"]) .champion-subtitle {
+    color: var(--afl-trophy-gold, #c9a44c);
   }
 
   .table-wrapper {
@@ -674,15 +689,18 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     color: var(--color-secondary, #2e743d);
   }
 
-  /* Dark mode: the green highlight clashes with the blue-gradient glass
-     design — your team rides the card's own blue accent family instead. */
+  /* Dark mode: the green highlight clashes with the accent-gradient glass
+     design — your team rides the card's own accent family instead
+     (league-accent: TheLeague blue, AFL red). color-mix at 16%/26% over
+     transparent is pixel-identical to the old rgba(59,130,246,…) stops
+     for TheLeague. */
   :global(html.dark) tr.preferred-team {
-    background-color: rgba(59, 130, 246, 0.16) !important;
-    border-left-color: var(--color-primary, #3b82f6);
+    background-color: color-mix(in srgb, var(--league-accent, #3b82f6) 16%, transparent) !important;
+    border-left-color: var(--league-accent, #3b82f6);
   }
 
   :global(html.dark) tr.preferred-team:hover {
-    background-color: rgba(59, 130, 246, 0.26) !important;
+    background-color: color-mix(in srgb, var(--league-accent, #3b82f6) 26%, transparent) !important;
   }
 
   :global(html.dark) tr.preferred-team .team-name {
