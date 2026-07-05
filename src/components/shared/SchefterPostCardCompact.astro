@@ -7,7 +7,7 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime } from '../../utils/schefter-feed';
+import { formatRelativeTime, getMilestoneLabel } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -45,15 +45,7 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
 
 // Franchise milestone posts carry badge metadata — surface it as a chip so
 // the body's flavor line has context ("what was this announcement for?").
-const MILESTONE_TIER_LABELS: Record<string, string> = {
-  career: 'Career milestone',
-  season: 'Season honor',
-  game: 'League record',
-  trade: 'League record',
-};
-const milestoneLabel = post.milestone
-  ? `${MILESTONE_TIER_LABELS[post.milestone.tier] ?? 'Milestone'} · ${post.milestone.badgeName}`
-  : null;
+const milestoneLabel = getMilestoneLabel(post);
 
 // GroupMe rich content
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];

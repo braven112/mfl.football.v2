@@ -15,7 +15,7 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime, isRumorLikePost } from '../../utils/schefter-feed';
+import { formatRelativeTime, getMilestoneLabel, isRumorLikePost } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -52,15 +52,7 @@ const isRumorLike = isRumorLikePost(post);
 
 // Franchise milestone posts carry badge metadata — surface it as a chip so
 // the body's flavor line has context ("what was this announcement for?").
-const MILESTONE_TIER_LABELS: Record<string, string> = {
-  career: 'Career milestone',
-  season: 'Season honor',
-  game: 'League record',
-  trade: 'League record',
-};
-const milestoneLabel = post.milestone
-  ? `${MILESTONE_TIER_LABELS[post.milestone.tier] ?? 'Milestone'} · ${post.milestone.badgeName}`
-  : null;
+const milestoneLabel = getMilestoneLabel(post);
 const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumorLike ? ' sf-post--rumor' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body

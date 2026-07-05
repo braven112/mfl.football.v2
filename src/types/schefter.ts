@@ -178,13 +178,22 @@ export type SchefterPostType =
   | 'odds'
   | 'groupme';
 
-/** MFL transaction sub-types we care about (plus site-generated 'milestone') */
+/**
+ * Transaction sub-types. UPPER_CASE values come straight from MFL's
+ * transactions feed; lower_case values are site-generated lanes.
+ */
 export type TransactionSubType =
+  // MFL transaction types
   | 'TRADE'
   | 'AUCTION_WON'
   | 'FREE_AGENT'
   | 'BBID_WAIVER'
-  | 'milestone';
+  | 'TRADE_PENDING'
+  // Site-generated lanes
+  | 'milestone'
+  | 'rumor_mill'
+  | 'trade_speculation'
+  | 'trade_pending_rumor';
 
 /** Badge metadata attached to franchise milestone posts
  *  (emitted by scripts/lib/franchise-milestone-posts.mjs) */
