@@ -12,6 +12,22 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "The Former Identities strip on the Franchise History page no longer sends you on links to nowhere. Identities that belonged to a prior owner of a franchise slot (Mistakes Were Made, Devil Dogs, and friends) used to link to an era section that doesn't exist on the current owner's page — they now take you to that identity's vintage art in the Asset Library instead, and identities from a current owner's tenure still jump straight to their era.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "style-tweak",
+      "summary": "The AFL Franchises page now has a Former Identities archive — all 94 names these clubs have played under since 2003, punitive last-place rebrands included, each with its restored vintage icon and a link to that franchise's name history. Tucked into a collapsible section so the page doesn't become a scroll marathon.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "The Potential Targets card on the League Planner no longer shows up two, three, or even four times in a row for teams with a storied rebrand history — the planner was quietly rendering one copy per former team identity (Poker in the Rear and the Georgia Punishers don't need free agent advice anymore). Exactly one copy now renders for every team at every screen size.",
       "impact": "user",
       "area": "rosters",

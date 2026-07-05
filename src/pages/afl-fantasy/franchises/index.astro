@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { attributeAwardYear } from '../../../utils/afl-awards';
+import { buildHistoricalIdentities } from '../../../utils/franchise-eras';
 
 // Optional championship history — graceful when not yet committed (PR #207).
 const champHistoryGlob = import.meta.glob<{
@@ -35,6 +36,14 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
 const totalFranchises = teams.length;
 const premierCount = teams.filter(t => t.tier === 'Premier League').length;
 const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
+
+// Every distinct historical identity across all franchises, newest-first —
+// grouped by ownerEra when set, otherwise by normalized name, skipping
+// groups whose dominant name matches the current franchise (see
+// buildHistoricalIdentities). AFL detail pages render a slot's complete
+// name history — the current owner's lineage AND previous owners — so every
+// identity has a real landing spot at #name-history.
+const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[]);
 ---
 
 <TheLeagueLayout title="Franchises | AFL">
@@ -101,6 +110,31 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
         ))}
       </div>
     </section>
+
+    {historicalIdentities.length > 0 && (
+      <details class="historical-identities">
+        <summary>
+          <span class="historical-identities__chevron" aria-hidden="true">▸</span>
+          <span class="historical-identities__title">Former Identities</span>
+          <span class="historical-identities__count">{historicalIdentities.length} names</span>
+        </summary>
+        <p class="historical-identities__sub">
+          Every name these clubs have played under — punitive last-place
+          rebrands included. Each links to the franchise's name history.
+        </p>
+        <ul class="identity-list">
+          {historicalIdentities.map((h) => (
+            <li>
+              <a href={`/afl-fantasy/franchises/${h.franchiseId}#name-history`}>
+                {h.icon && <img class="identity-icon" src={h.icon} alt="" loading="lazy" width="32" height="32" />}
+                <strong>{h.name}</strong>
+                <span class="identity-years">{h.yearStart === h.yearEnd ? h.yearStart : `${h.yearStart}–${h.yearEnd}`}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    )}
   </div>
 </TheLeagueLayout>
 
@@ -220,5 +254,105 @@ const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
   .franchise-card__champs {
     color: #d97706;
     font-weight: 600;
+  }
+
+  .historical-identities {
+    margin-top: var(--spacing-xl, 32px);
+    padding-top: var(--spacing-lg, 24px);
+    border-top: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .historical-identities summary {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-sm, 8px);
+    cursor: pointer;
+    list-style: none;
+    /* AFL editorial section title — 0.9rem (UFC Sans Condensed compensation) */
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #c41e3a);
+    color: var(--text-default, #111827);
+  }
+
+  .historical-identities summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .historical-identities__chevron {
+    color: var(--text-muted, #6b7280);
+  }
+
+  .historical-identities[open] .historical-identities__chevron {
+    transform: rotate(90deg);
+  }
+
+  .historical-identities__count {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--text-muted, #6b7280);
+  }
+
+  .historical-identities__sub {
+    margin: var(--spacing-sm, 8px) 0 var(--spacing-md, 16px);
+    padding-left: 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    max-width: 60ch;
+  }
+
+  .identity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .identity-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    text-decoration: none;
+    color: var(--text-default, #111827);
+    font-size: 0.875rem;
+  }
+
+  .identity-list a:hover {
+    border-color: var(--league-accent, #c41e3a);
+  }
+
+  .identity-list a strong {
+    flex: 1;
+    min-width: 0;
+    /* break-word (not anywhere) — anywhere collapses the flex item to
+       min-content and splits AFL's long names mid-word */
+    overflow-wrap: break-word;
+  }
+
+  .identity-list .identity-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--content-bg, #fff);
+  }
+
+  .identity-years {
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    color: var(--text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
   }
 </style>

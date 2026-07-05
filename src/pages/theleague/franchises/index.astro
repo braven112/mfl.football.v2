@@ -4,6 +4,12 @@ import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
+import aggregatedAssets from '../../../data/theleague.assets.json';
+import {
+  buildHistoricalIdentities,
+  normalizeIdentity,
+  renderedEraStarts,
+} from '../../../utils/franchise-eras';
 
 interface FranchiseRow {
   franchiseId: string;
@@ -62,61 +68,43 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
 // Only include entries that are actually a different name from the current
 // franchise — same-name history entries (banner refreshes, minor casing
 // differences, "The " prefix tweaks) are filtered out.
-type HistoricalIdentity = {
-  franchiseId: string;
-  name: string;
-  yearStart: number;
-  yearEnd: number;
-  banner: string | null;
-  icon: string | null;
-};
-const normalizeIdentity = (s: string): string =>
-  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+const historicalIdentities = buildHistoricalIdentities(leagueConfig.teams as any[]);
 
-const historicalIdentities: HistoricalIdentity[] = [];
-for (const team of leagueConfig.teams as any[]) {
-  if (!Array.isArray(team.history)) continue;
-  const currentNorm = normalizeIdentity(team.name);
-  // Group entries by ownerEra when set (multiple aliases under one owner —
-  // e.g. franchise 0003's Poker in the Rear / Generals run), otherwise by
-  // normalized name. Skip groups that match the current franchise name.
-  const groups = new Map<string, { entries: typeof team.history; nameTally: Map<string, number> }>();
-  for (const h of team.history) {
-    const groupKey =
-      h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
-    if (!groups.has(groupKey)) {
-      groups.set(groupKey, { entries: [], nameTally: new Map() });
-    }
-    const g = groups.get(groupKey)!;
-    g.entries.push(h);
-    const yearSpan = h.yearEnd - h.yearStart + 1;
-    g.nameTally.set(h.name, (g.nameTally.get(h.name) || 0) + yearSpan);
-  }
-  for (const { entries, nameTally } of groups.values()) {
-    const uniqueNames = Array.from(nameTally.entries()).sort((a, b) => b[1] - a[1]);
-    const dominantName = uniqueNames[0][0];
-    if (normalizeIdentity(dominantName) === currentNorm) continue;
-    const yearStart = Math.min(...entries.map((e: any) => e.yearStart));
-    const yearEnd = Math.max(...entries.map((e: any) => e.yearEnd));
-    const displayName =
-      uniqueNames.length > 1
-        ? uniqueNames.map(([name]) => name).join(' / ')
-        : dominantName;
-    const dominantEntry =
-      entries.find((e: any) => e.name === dominantName && e.icon) ??
-      entries.find((e: any) => e.icon) ??
-      entries[0];
-    historicalIdentities.push({
-      franchiseId: team.franchiseId,
-      name: displayName,
-      yearStart,
-      yearEnd,
-      banner: entries[0].banner ?? null,
-      icon: dominantEntry.icon ?? null,
-    });
+// Franchise detail pages are owner-scoped: they only render `#era-` sections
+// for eras with seasons in the current owner's yearByYear data, so an
+// identity held by a PRIOR owner of the slot has no anchor there. Compute the
+// anchors each detail page actually renders, and route identities without
+// one to their card in the Asset Library instead (matched by name against
+// the aggregated assets data — the cards carry `id={slug}` anchors).
+const renderedAnchorsByFranchise = new Map<string, Set<number>>();
+for (const f of allFranchises) {
+  const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === f.franchiseId);
+  renderedAnchorsByFranchise.set(
+    f.franchiseId,
+    renderedEraStarts(team, leagueConfig.teams as any[], f.yearByYear.map((y: any) => y.year))
+  );
+}
+
+const assetSlugByName = new Map<string, string>();
+for (const t of (aggregatedAssets.teams ?? []) as any[]) {
+  if (!t.slug || !t.name) continue;
+  // Card names carry a year suffix, e.g. "Devil Dogs (2007–2017)".
+  const bareName = normalizeIdentity(String(t.name).replace(/\s*\([^)]*\)\s*$/, ''));
+  // Former-team cards win over an active card that shares the name.
+  if (t.category === 'former' || !assetSlugByName.has(bareName)) {
+    assetSlugByName.set(bareName, t.slug);
   }
 }
-historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yearStart);
+
+const identityHref = (h: (typeof historicalIdentities)[number]): string => {
+  if (renderedAnchorsByFranchise.get(h.franchiseId)?.has(h.yearStart)) {
+    return resolveLeaguePath(`/theleague/franchises/${h.franchiseId}#era-${h.yearStart}`, hideLeaguePrefix);
+  }
+  // Dominant name is the first segment of a combined "A / B" display name.
+  const dominantName = h.name.split(' / ')[0];
+  const slug = assetSlugByName.get(normalizeIdentity(dominantName));
+  return resolveLeaguePath(`/theleague/assets${slug ? `#${slug}` : ''}`, hideLeaguePrefix);
+};
 ---
 
 <TheLeagueLayout title="Franchise History">
@@ -205,13 +193,14 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
       <section class="historical-identities">
         <h2>Former Identities</h2>
         <p class="dim">
-          Historical names this league has used. These eras are displayed
-          inline on the relevant franchise page.
+          Historical names this league has used. Identities from the current
+          owner's tenure link to their era on the franchise page; earlier ones
+          link to their art in the Asset Library.
         </p>
         <ul class="identity-list">
           {historicalIdentities.map((h) => (
             <li>
-              <a href={resolveLeaguePath(`/theleague/franchises/${h.franchiseId}#era-${h.yearStart}`, hideLeaguePrefix)}>
+              <a href={identityHref(h)}>
                 {h.icon && <img class="identity-icon" src={h.icon} alt="" loading="lazy" width="32" height="32" />}
                 <strong>{h.name}</strong>
                 <span class="dim">{h.yearStart === h.yearEnd ? h.yearStart : `${h.yearStart}–${h.yearEnd}`}</span>
