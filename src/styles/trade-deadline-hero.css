@@ -6,13 +6,33 @@
  * navy card, red urgency accent, white text, white CTA, corner glow.
  */
 
-/* ── Tokens ── */
+/* ── Tokens ──
+   Light (default): white editorial card with the red urgency accent.
+   html.dark restores the branded deep-navy hero palette (the navy card IS
+   the dark-mode look). */
 :root {
-  --tdhero-bg: #0f1e2e;
+  --tdhero-bg: var(--color-white, #ffffff);
+  --tdhero-ink: var(--color-gray-900, #111827);
+  --tdhero-ink-soft: var(--color-gray-600, #4b5563);
+  --tdhero-ink-faint: var(--color-gray-500, #6b7280);
+  --tdhero-separator: var(--color-gray-300, #d1d5db);
+  --tdhero-cta-bg: #0f1e2e;
+  --tdhero-cta-ink: #ffffff;
   --tdhero-radius: var(--radius-lg, 0.75rem);
   --tdhero-accent: var(--color-error, #dc2626);
-  --tdhero-glow: rgba(220, 38, 38, 0.3);
+  --tdhero-glow: rgba(220, 38, 38, 0.1);
   --tdhero-countdown-size: 2.5rem;
+}
+
+html.dark {
+  --tdhero-bg: #0f1e2e;
+  --tdhero-ink: #ffffff;
+  --tdhero-ink-soft: rgba(255, 255, 255, 0.72);
+  --tdhero-ink-faint: rgba(255, 255, 255, 0.55);
+  --tdhero-separator: rgba(255, 255, 255, 0.25);
+  --tdhero-cta-bg: #ffffff;
+  --tdhero-cta-ink: #0f1e2e;
+  --tdhero-glow: rgba(220, 38, 38, 0.3);
 }
 
 /* ── Container ── */
@@ -21,7 +41,7 @@
   overflow: hidden;
   isolation: isolate;
   background: var(--tdhero-bg);
-  color: #fff;
+  color: var(--tdhero-ink);
   border: 2px solid var(--tdhero-accent);
   border-radius: var(--tdhero-radius);
   box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
@@ -86,7 +106,7 @@
 .tdhero__title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--tdhero-ink);
   line-height: 1.2;
   margin: 0;
 }
@@ -124,13 +144,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--tdhero-ink-faint);
 }
 
 .tdhero__separator {
   font-size: var(--tdhero-countdown-size);
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--tdhero-separator);
   line-height: 1;
   align-self: flex-start;
 }
@@ -145,7 +165,7 @@
 /* ── Message ── */
 .tdhero__message {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--tdhero-ink-soft);
   line-height: 1.5;
   margin: 0;
   max-width: 40ch;
@@ -153,7 +173,7 @@
 
 .tdhero__expired {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--tdhero-ink-faint);
   font-style: italic;
   margin: 0;
 }
@@ -164,8 +184,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1.5rem;
-  background: #fff;
-  color: #0f1e2e;
+  background: var(--tdhero-cta-bg);
+  color: var(--tdhero-cta-ink);
   font-size: 0.875rem;
   font-weight: 700;
   text-decoration: none;

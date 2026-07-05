@@ -148,10 +148,11 @@ const summary = !urgent
     object-fit: cover;
     flex-shrink: 0;
   }
+  /* Inherits the --ev-* theme vars from EventHeroShell (light/dark aware). */
   .cw-team__name {
     font-size: 0.8125rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--ev-ink, #fff);
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -181,8 +182,8 @@ const summary = !urgent
 
   /* The logged-in user's team — brighter row so it reads as "yours". */
   .tl-hero-panel__row--mine {
-    border-color: rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--ev-tile-hover-border, rgba(255, 255, 255, 0.4));
+    background: var(--ev-tile-hover-bg, rgba(255, 255, 255, 0.12));
   }
 
   /* Side-by-side panel is height-matched to the content — show the top 3.
@@ -211,7 +212,7 @@ const summary = !urgent
     margin: 0;
     font-size: 0.72rem;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--ev-ink-soft, rgba(255, 255, 255, 0.82));
     overflow-wrap: break-word;
   }
   .cw-bubble__label {
@@ -219,17 +220,17 @@ const summary = !urgent
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--ev-ink-faint, rgba(255, 255, 255, 0.4));
     margin-right: 0.4rem;
   }
   .cw-bubble__player {
     white-space: nowrap;
   }
   .cw-bubble__sep {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--ev-ink-faint, rgba(255, 255, 255, 0.3));
   }
   .cw-bubble__meta {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--ev-ink-faint, rgba(255, 255, 255, 0.5));
     font-variant-numeric: tabular-nums;
   }
 </style>
