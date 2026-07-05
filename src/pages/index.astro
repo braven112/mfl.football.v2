@@ -1,50 +1,346 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { ALL_LEAGUES } from '../config/leagues';
+import type { CanonicalLeagueSlug } from '../config/leagues';
+import { getLatestWhatsNewAcrossLeagues } from '../utils/whats-new-cross-league';
+
+interface PanelMeta {
+  logo: string;
+  /** On-dark variant (white fills) — the panels are dark gradients in both themes */
+  logoDark: string;
+  estYear: number;
+  stats: string;
+}
+
+// Presentational-only data; ids/slugs/names come from the league registry.
+const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
+  theleague: {
+    logo: '/assets/logos/theleague-logo.svg',
+    logoDark: '/assets/logos/theleague-logo-dark.svg',
+    estYear: 2007,
+    stats: '16 Teams · 1 Conference · 3 Draft Rounds',
+  },
+  'afl-fantasy': {
+    logo: '/assets/logos/afl-logo.svg',
+    logoDark: '/assets/logos/afl-logo-dark.svg',
+    estYear: 2003,
+    stats: '24 Teams · 2 Conferences · 9 Draft Rounds',
+  },
+};
+
+const CHIP_LABELS: Record<string, string> = {
+  theleague: 'The League',
+  afl: 'AFL',
+};
+
+const entries = getLatestWhatsNewAcrossLeagues(6);
 ---
 
-<Layout title="MFL Fantasy Football">
-  <main class="container mx-auto px-4 py-16">
-    <h1 class="text-4xl font-bold text-center mb-12">
-      MFL Fantasy Football Leagues
-    </h1>
+<Layout title="MFL Fantasy Football" splash>
+  <section class="masthead">
+    <p class="eyebrow">MFL Fantasy Football</p>
+    <h1>Two Leagues. One Home.</h1>
+  </section>
 
-    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-      <!-- The League Card -->
-      <a
-        href="/theleague"
-        class="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-transparent hover:border-blue-500"
-      >
-        <h2 class="text-2xl font-bold mb-4 text-blue-600">The League</h2>
-        <p class="text-gray-600 mb-4">
-          16 teams • Single conference • 3 draft rounds
-        </p>
-        <div class="text-sm text-gray-500">
-          League ID: 13522
-        </div>
-      </a>
+  <section class="hero" aria-label="Choose your league">
+    {ALL_LEAGUES.map((league) => {
+      const meta = PANEL_META[league.slug];
+      return (
+        <a class="panel" data-league={league.navSlug} href={`/${league.slug}`}>
+          <img class="watermark" src={meta.logo} alt="" aria-hidden="true" loading="lazy" />
+          <p class="kicker">Est. {meta.estYear} · Dynasty</p>
+          <span class="lockup">
+            <img class="lockup-logo" src={meta.logoDark} alt="" />
+            <span class="lockup-name">{league.name}</span>
+          </span>
+          <p class="stats">{meta.stats}</p>
+          <span class="cta">Enter {league.name} →</span>
+        </a>
+      );
+    })}
+  </section>
 
-      <!-- AFL Card -->
-      <a
-        href="/afl-fantasy"
-        class="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-transparent hover:border-green-500"
-      >
-        <h2 class="text-2xl font-bold mb-4 text-green-600">AFL</h2>
-        <p class="text-gray-600 mb-4">
-          24 teams • 2 conferences • 9 draft rounds
-        </p>
-        <div class="text-sm text-gray-500">
-          League ID: 19621
-        </div>
-      </a>
-    </div>
-  </main>
+  <section class="whats-new" aria-labelledby="whats-new-heading">
+    <h2 id="whats-new-heading" class="section-title">What's New — Both Leagues</h2>
+    <ul class="wn-grid">
+      {entries.map((entry) => (
+        <li>
+          <a class="wn-card" href={entry.detailPath}>
+            <span class="wn-meta">
+              {entry.leagues.map((slug) => (
+                <span class={`chip chip--${slug}`}>{CHIP_LABELS[slug] ?? slug}</span>
+              ))}
+              <time datetime={entry.date}>{entry.formattedDate}</time>
+            </span>
+            <h3>{entry.title}</h3>
+            <p>{entry.summary}</p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
 </Layout>
 
 <style>
-  main {
-    min-height: 80vh;
+  .masthead {
+    text-align: center;
+    margin: 2rem 0 2.5rem;
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--secondary-color, #b22222);
+    margin: 0;
+  }
+
+  .masthead h1 {
+    font-size: clamp(2.2rem, 4vw, 3.4rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0.4rem 0 0;
+    text-wrap: balance;
+  }
+
+  /* ---------- Hero: league split panels ---------- */
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg, 1.5rem);
+  }
+
+  .panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg, 10px);
+    padding: 3rem 2rem 2rem;
+    min-height: 280px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    color: var(--color-white, #ffffff);
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .panel:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg, 0 8px 24px rgba(17, 17, 17, 0.25));
+    text-decoration: none;
+    color: var(--color-white, #ffffff);
+  }
+
+  /* Panels are dark in both themes — a red ring vanishes on the AFL panel */
+  .panel:focus-visible {
+    outline: 2px solid var(--color-white, #ffffff);
+    outline-offset: 3px;
+  }
+
+  .wn-card:focus-visible {
+    outline: 2px solid var(--secondary-color, #b22222);
+    outline-offset: 3px;
+  }
+
+  .panel[data-league='theleague'] {
+    background: linear-gradient(160deg, #1c497c 0%, #102b48 100%);
+  }
+
+  .panel[data-league='afl'] {
+    background: linear-gradient(160deg, #c41e3a 0%, #002244 100%);
+  }
+
+  .watermark {
+    position: absolute;
+    top: -12%;
+    right: -8%;
+    height: 85%;
+    width: auto;
+    opacity: 0.14;
+    filter: brightness(0) invert(1);
+    pointer-events: none;
+  }
+
+  .kicker {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    opacity: 0.85;
+    margin: 0;
+  }
+
+  .lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+
+  .lockup-logo {
+    height: 56px;
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .lockup-name {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+
+  .stats {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+  }
+
+  .cta {
+    align-self: flex-start;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--primary-color, #111111);
+    background: var(--color-white, #ffffff);
+    padding: 0.6rem 1.3rem;
+    border-radius: var(--radius-sm, 4px);
+  }
+
+  /* ---------- What's New ---------- */
+
+  .whats-new {
+    margin-top: 3.5rem;
+  }
+
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--secondary-color, #b22222);
+    margin: 0 0 1.25rem;
+  }
+
+  .wn-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md, 1.1rem);
+  }
+
+  .wn-grid li {
+    display: flex;
+  }
+
+  .wn-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    background: var(--primary-content-bg-color, #ffffff);
+    border: 1px solid var(--primary-content-border-color, #dddddd);
+    border-radius: var(--radius-md, 8px);
+    padding: 1.1rem 1.1rem 1.3rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .wn-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--primary-content-boxshadow-size, 0 0 2px 0)
+      var(--primary-content-boxshadow-color, rgba(17, 17, 17, 0.16));
+    text-decoration: none;
+  }
+
+  .wn-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .wn-meta time {
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chip {
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    color: var(--color-white, #ffffff);
+  }
+
+  .chip--theleague {
+    background: #1c497c;
+  }
+
+  .chip--afl {
+    background: #c41e3a;
+  }
+
+  .wn-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+
+  .wn-card p {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+  }
+
+  /* ---------- Responsive & motion ---------- */
+
+  @media (max-width: 1000px) {
+    .wn-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+
+    .wn-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .panel {
+      min-height: 220px;
+      padding: 2.25rem 1.5rem 1.5rem;
+    }
+
+    .lockup-logo {
+      height: 44px;
+    }
+
+    .lockup-name {
+      font-size: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel,
+    .wn-card {
+      transition: none;
+    }
   }
 </style>
