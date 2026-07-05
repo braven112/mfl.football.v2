@@ -441,20 +441,13 @@ html.dark {
 html.dark[data-league="afl"] {
   --league-accent: #ef5350;                            /* AFL accent — brightened red for dark */
 
-  /* ── Brand primary remap ──
-     html.dark's --color-primary is TheLeague electric blue; on the navy
-     ramp it reads as the wrong league (blue page titles / franchise card
-     headings on a red-accent site). AFL dark headings go white-family —
-     red stays reserved for --league-accent. Button/nav/input tokens are
-     pinned as literals in html.dark, so they are NOT affected by this. */
-  --color-primary: #e8eef4;
-  --color-primary-dark: #b9c5d2;
-  --color-primary-light: #ffffff;
-
   /* Headings + plain anchors: the layout colors h1–h4 and bare <a> via
      --primary-link-default-text-color → --link-color, which html.dark
      pins to TheLeague blue #60a5fa. AFL dark goes white with a red
-     hover so red stays the accent, not the body voice. */
+     hover so red stays the accent, not the body voice.
+     NOTE: --color-primary is deliberately NOT remapped here — it feeds
+     FILLS (nav active pill, buttons, focus rings) where a white value
+     produces white-on-white. Blue fills are acceptable shared chrome. */
   --link-color: #e8eef4;
   --link-color-hover: #ef5350;
   --link-color-focus: #ef5350;
