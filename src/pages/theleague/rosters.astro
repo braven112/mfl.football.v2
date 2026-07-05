@@ -567,7 +567,9 @@ const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.is
 
 const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
 
-const teamsList = getActiveTeams(leagueAssets)
+const activeTeams = getActiveTeams(leagueAssets);
+
+const teamsList = activeTeams
   .map((team) => ({
     id: team.id,
     name: team.name,
