@@ -320,13 +320,19 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     padding: 22px 26px;
   }
 
-  /* Dark mode: accent bleeds from the upper-left and fades into the card
-     surface (calendar-card style) instead of a full-bleed blue banner. */
+  /* Dark mode: the blue accent is the CARD's background — bleeding from
+     the upper-left of the whole standings card and fading into the surface
+     (calendar-card style), with the header band transparent on top so the
+     gradient runs continuously through the standings. */
+  :global(html.dark) .standings-container--branded {
+    background: linear-gradient(135deg,
+      rgba(59, 130, 246, 0.5) 0%,
+      rgba(59, 130, 246, 0.16) 22%,
+      var(--card-surface, #262626) 52%);
+  }
+
   :global(html.dark) .stand-head {
-    background: linear-gradient(115deg,
-      rgba(59, 130, 246, 0.55) 0%,
-      rgba(59, 130, 246, 0.18) 34%,
-      var(--card-surface, #262626) 72%);
+    background: transparent;
   }
 
   .stand-head .sh-badge {
