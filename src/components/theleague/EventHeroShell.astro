@@ -161,6 +161,17 @@ const countAriaLabel = hasCount
        derive a faint accent wash instead; dark restores the passed --ev-glow. */
     --ev-glow-resolved: color-mix(in srgb, var(--ev-accent, #1c497c) 10%, transparent);
     --ev-border-strength: 45%;
+    /* Left feather over the player cut-out. On white the photo contrasts much
+       harder than on navy, so light mode washes wider and stronger — otherwise
+       the fade's end reads as a vertical border. Dark keeps the tighter fade. */
+    --ev-fade-left: linear-gradient(
+      90deg,
+      var(--ev-surface) 0%,
+      color-mix(in srgb, var(--ev-surface) 92%, transparent) 22%,
+      color-mix(in srgb, var(--ev-surface) 55%, transparent) 55%,
+      color-mix(in srgb, var(--ev-surface) 18%, transparent) 82%,
+      transparent 100%
+    );
     position: relative;
     overflow: hidden;
     display: flex;
@@ -190,6 +201,13 @@ const countAriaLabel = hasCount
     --ev-divider: rgba(255, 255, 255, 0.16);
     --ev-glow-resolved: var(--ev-glow, rgba(28, 73, 124, 0.55));
     --ev-border-strength: 55%;
+    --ev-fade-left: linear-gradient(
+      90deg,
+      var(--ev-surface) 0%,
+      color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%,
+      color-mix(in srgb, var(--ev-surface) 10%, transparent) 60%,
+      transparent 100%
+    );
   }
 
   .tl-event-hero--bordered {
@@ -234,7 +252,7 @@ const countAriaLabel = hasCount
     pointer-events: none;
   }
   .tl-event-hero__fade--left {
-    background: linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%, color-mix(in srgb, var(--ev-surface) 10%, transparent) 60%, transparent 100%);
+    background: var(--ev-fade-left);
   }
   .tl-event-hero__fade--bottom {
     background: linear-gradient(0deg, color-mix(in srgb, var(--ev-surface) 50%, transparent) 0%, transparent 42%);
