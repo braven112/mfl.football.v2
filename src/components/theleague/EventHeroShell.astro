@@ -229,6 +229,10 @@ const countAriaLabel = hasCount
     inset: 0;
     background: radial-gradient(86% 92% at 3% -4%, var(--ev-glow-resolved), transparent 64%);
     pointer-events: none;
+    /* Above the player cut-out (content stays at z 2): the wash must continue
+       over the photo's white feather, otherwise the tint stopping dead at the
+       photo boundary reads as a vertical line on light surfaces. */
+    z-index: 1;
   }
 
   /* ── Player panel ── */
@@ -248,7 +252,11 @@ const countAriaLabel = hasCount
   }
   .tl-event-hero__fade {
     position: absolute;
-    inset: 0;
+    /* 1.5px overdraw: the replaced <img> and this overlay can snap to
+       different pixel edges when the container lands on a fractional x,
+       leaving a hairline sliver of raw photo that reads as a vertical
+       border on the light card. The card's overflow:hidden clips the rest. */
+    inset: -1.5px;
     pointer-events: none;
   }
   .tl-event-hero__fade--left {
