@@ -484,6 +484,29 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     background-color: var(--table-row-bg-hover, #efefef);
   }
 
+  /* Dark mode: the table goes translucent so the card's blue gradient
+     shows through — header fully transparent, rows as glass washes. */
+  :global(html.dark) .standings-table {
+    background-color: transparent;
+  }
+
+  :global(html.dark) thead {
+    background-color: transparent;
+  }
+
+  :global(html.dark) tbody tr {
+    background-color: rgba(255, 255, 255, 0.025);
+  }
+
+  :global(html.dark) tbody tr.row-odd {
+    background-color: rgba(255, 255, 255, 0.055);
+  }
+
+  :global(html.dark) tbody tr:hover,
+  :global(html.dark) tbody tr.row-odd:hover {
+    background-color: rgba(0, 0, 0, 0.22);
+  }
+
   /* Column Widths */
   .col-seed {
     width: 70px;
