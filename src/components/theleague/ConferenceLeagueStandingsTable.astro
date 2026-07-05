@@ -35,6 +35,9 @@ const conferenceLogoDark = conferenceId ? getConferenceLogoDark(conferenceId) : 
 // (the raw brand hexes fail contrast against the dark card background).
 const conferenceColor = conferenceId === '01' ? '#1d4f91' : '#c41e3a';
 const conferenceColorDark = conferenceId === '01' ? '#5b9bd5' : '#f47a8f';
+// NL cards glow conference blue in dark (card gradient + seeds + your-team
+// highlight); AL falls through to the league red via the CSS var chain.
+const divisionAccentDark = conferenceId === '01' ? '#5b9bd5' : null;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -74,7 +77,10 @@ function getRowColor(seed: number | undefined): string {
   return 'tier-eliminated';
 }
 ---
-<div class="conference-standings-container">
+<div
+  class="conference-standings-container"
+  style={divisionAccentDark ? `--division-accent: ${divisionAccentDark};` : undefined}
+>
   <h2 class="conference-title">
     {conferenceLogo && conferenceLogoDark && (
       <ThemeImage
@@ -207,8 +213,8 @@ function getRowColor(seed: number | undefined): string {
      surface, mirroring the division/playoff standings design. */
   :global(html.dark) .conference-standings-container {
     background: linear-gradient(135deg,
-      color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
-      color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 50%, transparent) 0%,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) 22%,
       var(--card-surface, #16283c) 52%);
     box-shadow:
       0 0 0 1px var(--content-border, #555555),
@@ -368,7 +374,9 @@ function getRowColor(seed: number | undefined): string {
   }
 
   :global(html.dark) .col-seed {
-    color: #f47a8f;
+    /* NL cards set --division-accent (conference blue); AL keeps the
+       brightened red. */
+    color: var(--division-accent, #f47a8f);
   }
 
   .col-team {
@@ -472,12 +480,12 @@ function getRowColor(seed: number | undefined): string {
   /* Dark mode: green clashes with the accent-glass design — your team
      rides the league accent (AFL red) like the other standings views. */
   :global(html.dark) tbody tr.preferred-team {
-    background-color: color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) !important;
-    border-left-color: var(--league-accent, #ef5350);
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) !important;
+    border-left-color: var(--division-accent, var(--league-accent, #ef5350));
   }
 
   :global(html.dark) tbody tr.preferred-team:hover {
-    background-color: color-mix(in srgb, var(--league-accent, #ef5350) 26%, transparent) !important;
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 26%, transparent) !important;
   }
 
   /* Responsive */
