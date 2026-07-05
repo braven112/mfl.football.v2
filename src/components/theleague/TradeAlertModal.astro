@@ -168,9 +168,18 @@
     cursor: pointer;
   }
 
+  /* Dark: page is already dark, so the mandated frosted scrim goes a touch
+     deeper (pure black, higher alpha) to separate the modal from the page.
+     Blur is preserved per the modal-backdrop standard. */
+  :global(html.dark) .tam-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
   .tam-content {
     position: relative;
-    background: var(--color-white, #fff);
+    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
+       becomes the dark card surface in dark mode. */
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--shadow-xl, 0 8px 32px rgba(0, 0, 0, 0.12));
     width: 100%;
@@ -180,6 +189,13 @@
     flex-direction: column;
     overflow: hidden;
     animation: tam-enter 0.22s ease-out;
+  }
+
+  /* Border is dark-only (added via box-shadow spread so it costs no layout
+     box — panel stays pixel-identical in light). Paired with --shadow-lg it
+     lifts the panel off the dark page as a raised surface. */
+  :global(html.dark) .tam-content {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
 
   @keyframes tam-enter {
@@ -302,7 +318,7 @@
     padding: 0.75rem;
     border: 1px solid var(--color-gray-100, #f3f4f6);
     border-radius: var(--radius-md, 0.5rem);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
@@ -534,7 +550,7 @@
     gap: 0.5rem;
     padding: 1rem 1.75rem 1.25rem;
     border-top: 1px solid var(--content-border, #e2e8f0);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     flex-shrink: 0;
   }
 
@@ -548,8 +564,8 @@
     font-size: 0.8125rem;
     color: var(--color-error, #dc2626);
     padding: 0.5rem 0.75rem;
-    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, white);
-    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, var(--content-bg, white));
     border-radius: var(--radius-sm, 0.25rem);
   }
 
@@ -560,8 +576,8 @@
     font-size: 0.8125rem;
     color: var(--color-success-dark, #059669);
     padding: 0.5rem 0.75rem;
-    background: color-mix(in srgb, var(--color-success, #10b981) 6%, white);
-    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, white);
+    background: color-mix(in srgb, var(--color-success, #10b981) 6%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, white));
     border-radius: var(--radius-sm, 0.25rem);
   }
 
@@ -608,7 +624,7 @@
   }
 
   .tam-btn--reject:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, var(--content-bg, white));
   }
 
   .tam-btn--dismiss {
@@ -685,7 +701,7 @@
     width: 56px;
     height: 56px;
     border-radius: var(--radius-full, 9999px);
-    background: color-mix(in srgb, var(--color-success, #10b981) 8%, white);
+    background: color-mix(in srgb, var(--color-success, #10b981) 8%, var(--content-bg, white));
     color: var(--color-success, #10b981);
     display: flex;
     align-items: center;
@@ -762,7 +778,7 @@
   }
 
   :global(.tam-btn--approve-secondary:hover:not(:disabled)) {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--content-bg, white));
   }
 
   /* ================================================================

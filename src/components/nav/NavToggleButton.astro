@@ -182,10 +182,19 @@ const {
    * BREADCRUMB BAR VARIANT
    * When used in the breadcrumb bar, use light colors
    * ============================================== */
+  /* The breadcrumb bar is a dark/colored surface in BOTH themes (brand blue
+     light, navy AFL, near-black dark) — the lines must stay white, so don't
+     ride --nav-bg (which goes dark in dark mode and made the lines vanish). */
   :global(.breadcrumb-bar) .nav-toggle-btn__inner,
   :global(.breadcrumb-bar) .nav-toggle-btn__inner::before,
   :global(.breadcrumb-bar) .nav-toggle-btn__inner::after {
-    background-color: var(--nav-bg, #ffffff);
+    background-color: var(--color-white, #ffffff);
+  }
+
+  /* Dark mode: subtle resting plate behind the hamburger so it reads as a
+     button on the near-black strip. */
+  :global(html.dark .breadcrumb-bar) .nav-toggle-btn {
+    background: rgba(255, 255, 255, 0.08);
   }
 
   :global(.breadcrumb-bar) .nav-toggle-btn:hover {

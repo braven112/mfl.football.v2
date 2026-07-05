@@ -3224,7 +3224,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   gap: var(--padding-sm);
   justify-content: center;
   align-items: center;
-  background-color: var(--card-bg-color);
+  /* No card treatment — the strip sits flat inside the hero card. */
+  background: transparent;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -3280,6 +3281,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       background: var(--content-bg, #fff);
       box-shadow: var(--shadow-lg);
       position: relative;
+    }
+
+    /* Dark mode: card-gradient treatment with the system-blue highlight
+       glow (same geometry as --card-bg, primary-tinted) + raised ring. */
+    :global(html.dark) .team-card {
+      background: radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%);
+      box-shadow:
+        0 0 0 1px var(--content-border, #5f6885),
+        var(--shadow-lg);
     }
 
 
@@ -3342,7 +3352,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   }
 
   .view-tab[data-active="true"] {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
     border-color: var(--color-primary, #1c497c);
   }
 
@@ -3480,6 +3490,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     padding: var(--padding-md);
     box-shadow: var(--shadow-lg);
     overflow-x: auto;
+  }
+
+  /* Dark mode: same blue-glow card treatment as the team hero above, plus
+     the raised ring. */
+  :global(html.dark) .roster-table-card {
+    background: radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%);
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
   }
 
   .roster-table-card--sub {
@@ -3729,7 +3748,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   #rosterCountLabel {
     font-weight: 600;
     color: var(--color-primary, #1c497c);
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--content-bg, white));
     padding: 0.35rem 0.85rem;
     border-radius: 999px;
     font-variant-numeric: tabular-nums;
@@ -3768,6 +3787,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     overflow-x: auto;
     border-radius: var(--radius-md, 0.5rem);
     background: var(--content-bg, #fff);
+  }
+
+  /* Dark mode: transparent so the card's blue glow shows through. */
+  :global(html.dark) .roster-table-wrapper {
+    background: transparent;
   }
 
   .roster-table {
@@ -3812,6 +3836,43 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     padding: 0.75rem 0.5rem;
     border-bottom: 1px solid var(--color-gray-50, #f9fafb);
     vertical-align: middle;
+  }
+
+  /* ── Dark mode: glass table over the card's blue glow ──
+     Header transparent, base rows transparent, alternating rows carry a
+     left-to-right white wash that fades out, separators translucent,
+     text brightened. */
+  :global(html.dark) .roster-table thead,
+  :global(html.dark) .roster-table th {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+    /* Bright headers — the muted gray-400 vanishes on the glow. */
+    color: var(--color-gray-700, #c0c0c0);
+  }
+
+  :global(html.dark) .division-label {
+    color: var(--color-gray-700, #c0c0c0);
+  }
+
+  :global(html.dark) .roster-table thead tr {
+    border-left-color: transparent;
+  }
+
+  :global(html.dark) .roster-table td {
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+    color: #f2f5f9;
+  }
+
+  :global(html.dark .roster-row--active) {
+    background: transparent;
+  }
+
+  :global(html.dark .roster-row--active-alt) {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 78%, transparent 100%);
+  }
+
+  :global(html.dark .roster-table .player-cell__name) {
+    color: #ffffff;
   }
 
 
@@ -3889,7 +3950,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   :global(.salary-cell--team-option-expired) {
     text-align: center;
-    color: var(--color-text-tertiary, #9ca3af);
+    color: var(--color-gray-400, #9ca3af);
     font-size: 0.75rem;
     text-decoration: line-through;
     opacity: 0.7;
@@ -3909,18 +3970,18 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     width: 24px;
     height: 24px;
     padding: 0;
-    border: 1px solid var(--color-border, #d1d5db);
-    background: var(--color-surface, #fff);
-    color: var(--color-text-tertiary, #6b7280);
+    border: 1px solid var(--content-border, #d1d5db);
+    background: var(--content-bg, #fff);
+    color: var(--color-gray-500, #6b7280);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.18s ease;
   }
 
   :global(.ufa-action-btn:hover) {
-    background: var(--color-bg-hover, #f3f4f6);
-    color: var(--color-text-secondary, #374151);
-    border-color: var(--color-border-strong, #9ca3af);
+    background: var(--table-row-bg-hover, #f3f4f6);
+    color: var(--color-gray-700, #374151);
+    border-color: var(--color-gray-400, #9ca3af);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
@@ -3944,6 +4005,28 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     border-left: 2.5px solid #d97706;
     background: linear-gradient(135deg, #fffbeb, #fef3c7);
     color: #d97706;
+  }
+
+  /* Dark: the light-mode pastel gradients (#eff6ff→#dbeafe etc.) go muddy
+     pale-on-dark, so dark retints each state to a subtle tinted-surface
+     wash via color-mix against --content-bg, matching the CDM action-option
+     accent colors these buttons trigger. Text colors already ride tokens
+     (--color-primary) or invert acceptably (success/error/warning hexes are
+     the same brand hexes CDM uses); only the backgrounds need a dark swap. */
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="franchise"]) {
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 15%, var(--content-bg, #1e1e1e));
+  }
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="extension"]) {
+    background: color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, #1e1e1e));
+    color: var(--color-success-dark, #6ee7b7);
+  }
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="cut"]) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 15%, var(--content-bg, #1e1e1e));
+    color: var(--color-error-dark, #fca5a5);
+  }
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="trade"]) {
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, var(--content-bg, #1e1e1e));
+    color: var(--color-warning-dark, #fcd34d);
   }
 
   :global(.ufa-action-btn svg) {
@@ -4200,11 +4283,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   :global(.deadmoney-row) {
     border-left: 0;
-    background: var(--color-bg-base, #fff);
+    background: var(--table-row-bg, #fff);
   }
 
   :global(.deadmoney-row--alt) {
-    background: var(--color-bg-subtle, #f7f8fb);
+    background: var(--table-row-bg-alt, #f7f8fb);
   }
 
   /* Roster table uses 32px avatars (smaller than the 40px default) */
@@ -4217,7 +4300,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     align-items: center;
     padding: 0.15rem 0.9rem;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
     color: var(--color-primary, #1c497c);
     font-size: 0.85rem;
     font-weight: 600;
@@ -4280,16 +4363,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   }
 
   :global(.roster-row:hover) {
-    background: var(--color-gray-50, #f9fafb);
+    background: var(--table-row-bg-hover, #f9fafb);
   }
 
   :global(.roster-row--active) {
     border-left-color: #57b881;
-    background: var(--color-bg-base, #fff);
+    background: var(--table-row-bg, #fff);
   }
 
   :global(.roster-row--active-alt) {
-    background: var(--color-bg-subtle, #f7f8fb);
+    background: var(--table-row-bg-alt, #f7f8fb);
   }
 
   /* Mock player indicator — subtle avatar glow pulse for test/demo rows only */
@@ -4303,20 +4386,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   :global(.roster-row--practice) {
     border-left-color: #487ae7;
-    background: var(--color-bg-practice, #f0f7ff);
+    background: color-mix(in srgb, #487ae7 8%, var(--table-row-bg, #f0f7ff));
   }
 
   :global(.roster-row--practice:nth-of-type(even)) {
-    background: var(--color-bg-practice-alt, #e0efff);
+    background: color-mix(in srgb, #487ae7 14%, var(--table-row-bg, #e0efff));
   }
 
   :global(.roster-row--injured) {
     border-left-color: #e56263;
-    background: var(--color-bg-injured, #fff5f5);
+    background: color-mix(in srgb, #e56263 6%, var(--table-row-bg, #fff5f5));
   }
 
   :global(.roster-row--injured:nth-of-type(even)) {
-    background: var(--color-bg-injured-alt, #ffe8e8);
+    background: color-mix(in srgb, #e56263 11%, var(--table-row-bg, #ffe8e8));
   }
 
   :global(.roster-row--position-divider) {
@@ -4331,11 +4414,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   }
   :global(.roster-row--practice.roster-row--position-divider-end td) {
     padding-bottom: 0.75rem;
-    border-bottom: 3px solid var(--color-border-practice, #bfdbfe);
+    border-bottom: 3px solid color-mix(in srgb, #487ae7 35%, var(--table-row-bg, #bfdbfe));
   }
   :global(.roster-row--injured.roster-row--position-divider-end td) {
     padding-bottom: 0.75rem;
-    
+
   }
 
   :global(.roster-row--tier-divider td) {
@@ -4343,12 +4426,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   }
 
   :global(.roster-row--practice.roster-row--tier-divider td) {
-    border-top: 3px solid var(--color-border-practice, #bfdbfe);
+    border-top: 3px solid color-mix(in srgb, #487ae7 35%, var(--table-row-bg, #bfdbfe));
         padding-top: 0.5rem;
   }
 
   :global(.roster-row--injured.roster-row--tier-divider td) {
-    border-top: 3px solid var(--color-border-injured, #fecaca);
+    border-top: 3px solid color-mix(in srgb, #e56263 30%, var(--table-row-bg, #fecaca));
         padding-top: 0.5rem;
   }
 
@@ -4399,12 +4482,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   /* Contract Action Visual Indicators */
   :global(.roster-row--contract-action) {
-    background: #fef3c7 !important;
+    background: color-mix(in srgb, #f59e0b 18%, var(--table-row-bg, #fef3c7)) !important;
     border-left: 3px solid #f59e0b !important;
   }
 
   :global(.roster-row--contract-action.roster-row--active-alt) {
-    background: #fde68a !important;
+    background: color-mix(in srgb, #f59e0b 28%, var(--table-row-bg, #fde68a)) !important;
   }
 
   :global(.contract-action-badge) {
@@ -4442,12 +4525,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   :global(.roster-row--cut),
   :global(.roster-row--trade) {
     opacity: 0.5;
-    background: #f3f4f6 !important;
+    background: var(--table-row-bg, #f3f4f6) !important;
   }
 
   :global(.roster-row--cut.roster-row--active-alt),
   :global(.roster-row--trade.roster-row--active-alt) {
-    background: #e5e7eb !important;
+    background: var(--table-row-bg-alt, #e5e7eb) !important;
   }
 
   :global(.contract-action-remove) {
@@ -4582,7 +4665,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   :global(.team-group__name) {
     font-size: 1rem;
     font-weight: 600;
-    color: #111;
+    color: var(--color-gray-900, #111);
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -4600,7 +4683,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   :global(.team-group__name) {
     display: block;
     font-size: 0.75rem;
-    color: var(--text-secondary, #64748b);
+    color: var(--content-text-muted, #64748b);
     margin-top: 0.25rem;
     font-weight: 500;
   }
@@ -4608,8 +4691,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     height: 2rem;
     width: 2rem;
     border-radius: 0.5rem;
-    background: #e2e8f0;
-    color: #0f172a;
+    background: var(--color-gray-100, #e2e8f0);
+    color: var(--color-gray-900, #0f172a);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -4629,7 +4712,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem;
-    background: #f9fafb;
+    background: var(--content-bg-muted, #f9fafb);
     border-radius: 4px;
     gap: 1rem;
   }
@@ -4640,7 +4723,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   :global(.players-team__salary) {
     font-weight: 600;
-    color: #111;
+    color: var(--color-gray-900, #111);
     white-space: nowrap;
     flex-shrink: 0;
     font-size: 0.875rem;
@@ -4724,7 +4807,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   .data-disclaimer {
     margin: 1rem 0 0;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.95rem;
   }
 
@@ -4766,7 +4849,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
    @media (min-width: 640px) {
     .mode-toggle {
-          margin-top: -2rem;
+          margin-top: -2.5rem;
           margin-right: 0;
     }
   }
@@ -4780,20 +4863,35 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     border-radius: 0.25rem;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--color-gray-500);
+    color: var(--content-text-muted, var(--color-gray-500));
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .mode-btn:hover:not(.active) {
-    color: var(--color-gray-600);
-    background: rgba(255, 255, 255, 0.4);
+    color: var(--color-gray-700, var(--color-gray-600));
+    background: var(--content-bg-muted, rgba(255, 255, 255, 0.4));
   }
 
   .mode-btn.active {
-    background: #fff;
-    color: var(--color-gray-700);
+    background: var(--content-bg, #fff);
+    color: var(--color-primary, var(--color-gray-700));
     box-shadow: var(--shadow-md);
+  }
+
+  /* Dark mode: active mode is an outlined blue pill (transparent fill,
+     blue ring + text) per the design example. Tab-style radius — square
+     top so the ring meets the tray's top edge, rounded bottom. */
+  :global(html.dark) .mode-btn.active {
+    background: transparent;
+    color: var(--color-primary-light, #60a5fa);
+    box-shadow: 0 0 0 1.5px var(--color-primary, #3b82f6);
+    border-radius: 0 0 0.4rem 0.4rem;
+  }
+
+  :global(html.dark) .mode-btn:hover:not(.active) {
+    color: var(--color-gray-800, #d8d8d8);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .mode-icon {
@@ -4861,6 +4959,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     color: #64748b;
   }
 
+  /* Dark mode spread pills — translucent tints, bright text. */
+  :global(html.dark .spread-favorite) {
+    background-color: var(--badge-success-bg, rgba(16, 185, 129, 0.15));
+    color: var(--badge-success-text, #6ee7b7);
+  }
+
+  :global(html.dark .spread-underdog) {
+    background-color: var(--badge-error-bg, rgba(220, 38, 38, 0.15));
+    color: var(--badge-error-text, #fca5a5);
+  }
+
+  :global(html.dark .spread-neutral) {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
   :global(.rank-badge) {
     display: inline-block;
     padding: .12rem .75rem;
@@ -4873,6 +4987,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   :global(.rank-tier-3) { background-color: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }      /* Rank 17-24 (Good) */
   :global(.rank-tier-2) { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }      /* Rank 9-16 (Bad) */
   :global(.rank-tier-1) { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }      /* Rank 1-8 (Worst) */
+
+  /* Dark mode: whisper tints + bright text (badge-token values) instead of
+     light pastels. */
+  :global(html.dark .rank-tier-4) { background-color: var(--badge-success-bg, rgba(16,185,129,0.15)); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.35); }
+  :global(html.dark .rank-tier-3) { background-color: rgba(16, 185, 129, 0.09); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.25); }
+  :global(html.dark .rank-tier-2) { background-color: rgba(220, 38, 38, 0.10); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.25); }
+  :global(html.dark .rank-tier-1) { background-color: var(--badge-error-bg, rgba(220,38,38,0.15)); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.4); }
 
   /* Sortable Column Headers */
   :global(th[data-sortable]) {
@@ -7378,7 +7499,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const buildDonut = (el, slices = [], total = 0) => {
       if (!el) return;
       if (!total || total <= 0 || !slices.length) {
-        el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+        el.style.background = 'conic-gradient(var(--color-gray-200, #e2e8f0) 0deg, var(--color-gray-200, #e2e8f0) 360deg)';
         return;
       }
       let start = 0;
@@ -7392,7 +7513,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           return gradient;
         });
       if (!parts.length) {
-        el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+        el.style.background = 'conic-gradient(var(--color-gray-200, #e2e8f0) 0deg, var(--color-gray-200, #e2e8f0) 360deg)';
         return;
       }
       el.style.background = `conic-gradient(${parts.join(',')})`;

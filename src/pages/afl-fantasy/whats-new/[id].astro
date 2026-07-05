@@ -314,10 +314,16 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   .wn-detail__author-card,
   .wn-detail__release-card,
   .wn-detail__nav-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1rem 1.25rem;
+  }
+
+  :global(html.dark) .wn-detail__author-card,
+  :global(html.dark) .wn-detail__release-card,
+  :global(html.dark) .wn-detail__nav-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
 
   /* ── Author card ── */
@@ -360,7 +366,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 
   /* ── Article card ── */
   .wn-detail__article {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-lg, 1rem);
     overflow: hidden;
@@ -381,7 +387,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   }
 
   .browser-frame {
-    background: #e5e7eb;
+    background: var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
     overflow: hidden;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
@@ -401,7 +407,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     align-items: center;
     gap: 6px;
     padding: 6px 10px;
-    background: #e5e7eb;
+    background: var(--color-gray-200, #e5e7eb);
   }
 
   .browser-frame__dot {
@@ -418,11 +424,11 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   .browser-frame__url {
     flex: 1;
     margin-left: 6px;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 3px;
     padding: 2px 8px;
     font-size: 10px;
-    color: #6b7280;
+    color: var(--color-gray-500, #6b7280);
     font-family: ui-monospace, monospace;
     white-space: nowrap;
     overflow: hidden;

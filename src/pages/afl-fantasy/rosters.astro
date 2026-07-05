@@ -937,7 +937,7 @@ const pageConfig = {
                 role="img"
                 aria-label="Position composition donut chart"
               >
-                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="14" />
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="var(--content-bg-muted, #f3f4f6)" stroke-width="14" />
                 {donutSegments.map((seg) => (
                   <circle
                     cx="50"
@@ -996,7 +996,7 @@ const pageConfig = {
                     x2={stripMapX(t)}
                     y1={STRIP_PAD_T}
                     y2={STRIP_H - STRIP_PAD_B}
-                    stroke="#f3f4f6"
+                    stroke="var(--content-bg-muted, #f3f4f6)"
                     stroke-width="1"
                   />
                 ))}
@@ -1010,7 +1010,7 @@ const pageConfig = {
                         x2={STRIP_W - STRIP_PAD_R}
                         y1={cy}
                         y2={cy}
-                        stroke="#e5e7eb"
+                        stroke="var(--content-border, #e5e7eb)"
                         stroke-width="1"
                         stroke-dasharray="2 3"
                       />
@@ -1044,7 +1044,7 @@ const pageConfig = {
                     r="4"
                     fill={POSITION_COLORS[dot.position] ?? '#64748b'}
                     fill-opacity="0.85"
-                    stroke="#fff"
+                    stroke="var(--content-bg, #fff)"
                     stroke-width="1"
                   >
                     <title>{dot.name} — {dot.position}, age {dot.age}</title>
@@ -1445,6 +1445,14 @@ const pageConfig = {
       text-align: center;
     }
 
+    /* Dark mode: raised-card treatment — shadow alone can't separate this
+       section from the navy page floor; add the border ring. */
+    :global(html.dark) .team-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-lg);
+    }
+
     @media (min-width: 480px) {
       .team-card {
         display: flex;
@@ -1614,11 +1622,11 @@ const pageConfig = {
 
     .roster-controls-bar__group select {
       padding: 0.35rem 0.5rem;
-      border: 1px solid var(--color-gray-200, #e5e7eb);
+      border: 1px solid var(--input-border, #e5e7eb);
       border-radius: var(--radius-sm, 0.25rem);
-      background: #fff;
+      background: var(--input-bg, #fff);
       font-size: 0.85rem;
-      color: var(--color-gray-900, #111827);
+      color: var(--input-text, #111827);
       cursor: pointer;
     }
 
@@ -1667,6 +1675,12 @@ const pageConfig = {
       box-shadow: var(--shadow-md);
     }
 
+    :global(html.dark) .roster-summary article {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-md);
+    }
+
     .roster-summary p {
       margin: 0;
       color: var(--color-gray-500, #6b7280);
@@ -1705,6 +1719,12 @@ const pageConfig = {
       padding: var(--padding-md, 1rem);
       box-shadow: var(--shadow-lg);
       overflow: hidden;
+    }
+
+    :global(html.dark) .roster-table-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-lg);
     }
 
     .roster-table-wrapper {
@@ -1911,10 +1931,16 @@ const pageConfig = {
     }
 
     .chart-card {
-      background: #fff;
+      background: var(--content-bg, #fff);
       border-radius: 0.75rem;
       padding: 1.25rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    :global(html.dark) .chart-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .chart-card--span-2 {
@@ -1929,19 +1955,19 @@ const pageConfig = {
       margin: 0;
       font-size: 0.875rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--color-gray-900, #0f172a);
     }
 
     .chart-card__subtitle {
       margin: 0.125rem 0 0;
       font-size: 0.75rem;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .chart-card__empty {
       margin: 0;
       font-size: 0.8125rem;
-      color: #9ca3af;
+      color: var(--color-gray-400, #9ca3af);
       text-align: center;
       padding: 1rem 0;
     }
@@ -1976,13 +2002,13 @@ const pageConfig = {
     .strip-plot__lane-label {
       font-size: 10px;
       font-weight: 700;
-      fill: #6b7280;
+      fill: var(--content-text-muted, #6b7280);
       letter-spacing: 0.04em;
     }
 
     .strip-plot__x-label {
       font-size: 9px;
-      fill: #9ca3af;
+      fill: var(--color-gray-400, #9ca3af);
       font-variant-numeric: tabular-nums;
     }
 
@@ -2012,13 +2038,13 @@ const pageConfig = {
     .donut-chart__num {
       font-size: 14px;
       font-weight: 800;
-      fill: #0f172a;
+      fill: var(--color-gray-900, #0f172a);
     }
 
     .donut-chart__label {
       font-size: 4px;
       letter-spacing: 0.5px;
-      fill: #6b7280;
+      fill: var(--content-text-muted, #6b7280);
       font-weight: 700;
     }
 
@@ -2053,18 +2079,18 @@ const pageConfig = {
     }
 
     .donut-legend__label {
-      color: #0f172a;
+      color: var(--color-gray-900, #0f172a);
       font-weight: 600;
     }
 
     .donut-legend__count {
-      color: #374151;
+      color: var(--color-gray-700, #374151);
       font-weight: 600;
       font-variant-numeric: tabular-nums;
     }
 
     .donut-legend__pct {
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
       font-size: 0.75rem;
       font-variant-numeric: tabular-nums;
     }
@@ -2109,7 +2135,7 @@ const pageConfig = {
       gap: 0.5rem;
       align-items: center;
       padding: 0.375rem 0.625rem;
-      background: #f9fafb;
+      background: var(--content-bg-muted, #f9fafb);
       border-radius: 0.375rem;
       font-size: 0.8125rem;
     }
@@ -2119,11 +2145,11 @@ const pageConfig = {
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .age-stats__row-name {
-      color: #0f172a;
+      color: var(--color-gray-900, #0f172a);
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -2132,7 +2158,7 @@ const pageConfig = {
 
     .age-stats__row-age {
       font-weight: 700;
-      color: #0f172a;
+      color: var(--color-gray-900, #0f172a);
       font-variant-numeric: tabular-nums;
     }
 
@@ -2157,7 +2183,7 @@ const pageConfig = {
     }
 
     .bar-row__label {
-      color: #374151;
+      color: var(--color-gray-700, #374151);
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -2172,7 +2198,7 @@ const pageConfig = {
     .bar-row__track {
       position: relative;
       height: 12px;
-      background: #f3f4f6;
+      background: var(--content-bg-muted, #f3f4f6);
       border-radius: 6px;
       overflow: hidden;
     }
@@ -2194,7 +2220,7 @@ const pageConfig = {
     }
 
     .bar-row__count {
-      color: #374151;
+      color: var(--color-gray-700, #374151);
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       text-align: right;
@@ -2278,8 +2304,8 @@ const pageConfig = {
       width: 2rem;
       height: 2rem;
       border-radius: 0.5rem;
-      background: #e2e8f0;
-      color: #0f172a;
+      background: var(--color-gray-100, #e2e8f0);
+      color: var(--color-gray-900, #0f172a);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -2290,7 +2316,7 @@ const pageConfig = {
     .team-group__name {
       font-size: 0.9375rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--color-gray-900, #0f172a);
       letter-spacing: 0.02em;
     }
 
@@ -2302,24 +2328,31 @@ const pageConfig = {
 
     .players-team__player {
       padding: 0.5rem 0.625rem;
-      background: #f9fafb;
+      background: var(--content-bg-muted, #f9fafb);
       border-radius: 0.375rem;
     }
 
     /* ── Empty / coming-soon states ── */
     .empty-state,
     .coming-soon {
-      background: #fff;
+      background: var(--content-bg, #fff);
       border-radius: 0.75rem;
       padding: 3rem 1.5rem;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
+    }
+
+    :global(html.dark) .empty-state,
+    :global(html.dark) .coming-soon {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .coming-soon h2 {
       margin: 0 0 0.5rem;
-      color: #111827;
+      color: var(--color-gray-900, #111827);
       font-size: 1.25rem;
     }
 

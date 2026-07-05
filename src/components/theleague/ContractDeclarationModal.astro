@@ -292,9 +292,21 @@ import '../../styles/loading.css';
     cursor: pointer;
   }
 
+  /* Dark: page is already dark, so the mandated frosted scrim goes a touch
+     deeper (pure black, higher alpha) to separate the modal from the page.
+     Blur is preserved per the modal-backdrop standard. Matches
+     PlayerDetailsModal's .player-details-modal__overlay recipe. */
+  :global(html.dark) .cdm-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
   .cdm-content {
     position: relative;
-    background: var(--color-white, #fff);
+    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
+       becomes the dark radial-gradient card surface in dark. background is
+       SHORTHAND here (never color-mix) because the dark token is a gradient,
+       not a flat color. */
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--shadow-xl);
     width: 100%;
@@ -307,6 +319,16 @@ import '../../styles/loading.css';
     flex-direction: column;
     overflow: hidden;
     animation: cdm-enter 0.22s ease-out;
+  }
+
+  /* Border is dark-only (added via box-shadow spread so it costs no layout
+     box — panel stays pixel-identical in light). Paired with --shadow-xl it
+     lifts the panel off the #121212 page as the top elevation layer —
+     matches PlayerDetailsModal's .player-details-modal__content recipe. */
+  :global(html.dark) .cdm-content {
+    box-shadow:
+      var(--shadow-xl),
+      0 0 0 1px var(--content-border, #5f6885);
   }
 
   @keyframes cdm-enter {
@@ -374,7 +396,7 @@ import '../../styles/loading.css';
     height: 28px;
     border-radius: var(--radius-full, 9999px);
     border: 2px solid var(--color-gray-200, #e5e7eb);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -402,12 +424,12 @@ import '../../styles/loading.css';
 
   .cdm-stepper__dot.completed {
     border-color: var(--color-primary, #1c497c);
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--content-bg, white));
     cursor: pointer;
   }
 
   .cdm-stepper__dot.completed:hover {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 18%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 18%, var(--content-bg, white));
   }
 
   .cdm-stepper__dot.completed span {
@@ -651,8 +673,8 @@ import '../../styles/loading.css';
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: color-mix(in srgb, var(--color-warning, #f59e0b) 8%, white);
-    border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 20%, white);
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 8%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 20%, var(--content-bg, white));
     border-radius: var(--radius-sm, 0.25rem);
     font-size: 0.8125rem;
     font-weight: 500;
@@ -660,14 +682,14 @@ import '../../styles/loading.css';
   }
 
   .cdm-deadline--urgent {
-    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, white);
-    border-color: color-mix(in srgb, var(--color-error, #dc2626) 15%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, var(--content-bg, white));
+    border-color: color-mix(in srgb, var(--color-error, #dc2626) 15%, var(--content-bg, white));
     color: var(--color-error-dark, #b91c1c);
   }
 
   .cdm-deadline--critical {
-    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, white);
-    border-color: color-mix(in srgb, var(--color-error, #dc2626) 15%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, var(--content-bg, white));
+    border-color: color-mix(in srgb, var(--color-error, #dc2626) 15%, var(--content-bg, white));
     color: var(--color-error-dark, #b91c1c);
     animation: cdm-pulse 2s ease-in-out infinite;
   }
@@ -879,7 +901,7 @@ import '../../styles/loading.css';
   .cdm-year-options :global(.cdm-year-btn.selected) {
     border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
     border-left: 2px solid var(--color-primary, #1c497c);
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--content-bg, white));
     box-shadow: var(--shadow-sm);
   }
 
@@ -920,6 +942,24 @@ import '../../styles/loading.css';
 
   .cdm-action-options :global(.cdm-action-option:hover) {
     background: var(--color-gray-100, #f3f4f6);
+  }
+
+  /* Dark mode: glass tiles on the gradient panel (Explore-tile recipe) —
+     gray-50 wells read as black holes and the gray-200 left edge vanishes. */
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    border-left-color: rgba(255, 255, 255, 0.3);
+  }
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option:hover) {
+    background: rgba(255, 255, 255, 0.09);
+  }
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option__icon) {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--color-gray-600, #9ca3af);
+  }
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option__chevron) {
+    color: rgba(255, 255, 255, 0.3);
   }
 
   .cdm-action-options :global(.cdm-action-option:disabled),
@@ -975,7 +1015,7 @@ import '../../styles/loading.css';
     border-left-color: var(--color-success-dark, #059669);
   }
   .cdm-action-options :global(.cdm-action-option--franchise:hover .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-success, #10b981) 12%, white);
+    background: color-mix(in srgb, var(--color-success, #10b981) 12%, var(--content-bg, white));
     color: var(--color-success-dark, #059669);
   }
 
@@ -983,7 +1023,7 @@ import '../../styles/loading.css';
     border-left-color: var(--color-primary, #1c497c);
   }
   .cdm-action-options :global(.cdm-action-option--extension:hover .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--content-bg, white));
     color: var(--color-primary, #1c497c);
   }
 
@@ -991,7 +1031,7 @@ import '../../styles/loading.css';
     border-left-color: var(--color-error, #dc2626);
   }
   .cdm-action-options :global(.cdm-action-option--cut:hover .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-error, #dc2626) 8%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 8%, var(--content-bg, white));
     color: var(--color-error, #dc2626);
   }
 
@@ -1001,7 +1041,7 @@ import '../../styles/loading.css';
   }
   .cdm-action-options :global(.cdm-action-option--trade:hover .cdm-action-option__icon),
   .cdm-action-options :global(.cdm-action-option--trade-simulate:hover .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, white);
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, var(--content-bg, white));
     color: var(--color-warning-dark, #d97706);
   }
 
@@ -1009,7 +1049,7 @@ import '../../styles/loading.css';
     border-left-color: var(--color-primary, #1c497c);
   }
   .cdm-action-options :global(.cdm-action-option--trade-block:hover .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, var(--content-bg, white));
     color: var(--color-primary, #1c497c);
   }
 
@@ -1020,10 +1060,10 @@ import '../../styles/loading.css';
   /* Trade block success state */
   .cdm-action-options :global(.cdm-action-option--success) {
     border-left-color: var(--color-success, #10b981);
-    background: color-mix(in srgb, var(--color-success, #10b981) 8%, white);
+    background: color-mix(in srgb, var(--color-success, #10b981) 8%, var(--content-bg, white));
   }
   .cdm-action-options :global(.cdm-action-option--success .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-success, #10b981) 15%, white);
+    background: color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, white));
     color: var(--color-success-dark, #059669);
   }
   .cdm-action-options :global(.cdm-action-option--success .cdm-action-option__label) {
@@ -1043,17 +1083,17 @@ import '../../styles/loading.css';
   }
   .cdm-action-options :global(.cdm-action-option--cut-real:hover) {
     border-left-color: var(--color-error, #dc2626);
-    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, var(--content-bg, white));
   }
   .cdm-action-options :global(.cdm-action-option--cut-real:hover .cdm-action-option__icon) {
-    background: color-mix(in srgb, var(--color-error, #dc2626) 12%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 12%, var(--content-bg, white));
     color: var(--color-error, #dc2626);
   }
 
   /* Danger confirmation state (cut-real after first click) */
   .cdm-action-options :global(.cdm-action-option--danger) {
     border-left-color: var(--color-error, #dc2626);
-    background: color-mix(in srgb, var(--color-error, #dc2626) 10%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 10%, var(--content-bg, white));
     animation: cdm-danger-pulse 0.3s ease;
   }
   .cdm-action-options :global(.cdm-action-option--danger .cdm-action-option__icon) {
@@ -1068,7 +1108,7 @@ import '../../styles/loading.css';
     color: var(--color-error, #dc2626);
   }
   .cdm-action-options :global(.cdm-action-option--danger:hover) {
-    background: color-mix(in srgb, var(--color-error, #dc2626) 15%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 15%, var(--content-bg, white));
   }
   .cdm-action-options :global(.cdm-action-option--danger.loading) {
     opacity: 0.7;
@@ -1478,7 +1518,7 @@ import '../../styles/loading.css';
     gap: 0.5rem;
     padding: 1rem 1.75rem 1.25rem;
     border-top: 1px solid var(--content-border, #e2e8f0);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     flex-shrink: 0;
   }
 
@@ -1542,8 +1582,8 @@ import '../../styles/loading.css';
     font-size: 0.8125rem;
     color: var(--color-error, #dc2626);
     padding: 0.5rem 0.75rem;
-    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, white);
-    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, white);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, var(--content-bg, white));
     border-radius: var(--radius-sm, 0.25rem);
   }
 
@@ -1554,8 +1594,8 @@ import '../../styles/loading.css';
     font-size: 0.8125rem;
     color: var(--color-success-dark, #059669);
     padding: 0.5rem 0.75rem;
-    background: color-mix(in srgb, var(--color-success, #10b981) 6%, white);
-    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, white);
+    background: color-mix(in srgb, var(--color-success, #10b981) 6%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, white));
     border-radius: var(--radius-sm, 0.25rem);
   }
 

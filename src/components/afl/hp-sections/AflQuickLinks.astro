@@ -64,7 +64,7 @@ const pages = [...aflPages].sort((a, b) => b.popularity - a.popularity).slice(0,
 <style>
   .afl-links {
     --afl-accent: var(--league-accent, #c41e3a);
-    background: var(--content-bg, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-md);
@@ -131,6 +131,18 @@ const pages = [...aflPages].sort((a, b) => b.popularity - a.popularity).slice(0,
   .afl-links__card:hover {
     background: var(--color-gray-100, #f3f4f6);
     transform: translateY(-1px);
+  }
+
+  /* Dark mode: translucent tiles so the card's slate glow shows through
+     instead of solid near-black wells. Resting = dark wash, hover lifts
+     to the light wash. */
+  :global(html.dark) .afl-links__card {
+    background: rgba(0, 0, 0, 0.075);
+  }
+
+  :global(html.dark) .afl-links__card:hover {
+    /* Slate-violet lift matching the card gradient's hue. */
+    background: rgb(86 85 167 / 11%);
   }
 
   .afl-links__icon {

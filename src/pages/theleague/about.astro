@@ -907,7 +907,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-domain-type--prob {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, var(--content-bg, white));
     border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
   }
 
@@ -981,7 +981,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-arch__layer--prob {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, var(--content-bg, white));
   }
 
   .about-arch__layer-header {
@@ -1018,14 +1018,14 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-arch__module {
-    background: #fff;
+    background: var(--content-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 6px;
     padding: 0.625rem 0.75rem;
   }
 
   .about-arch__layer--prob .about-arch__module {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, var(--content-bg, white));
     border-color: color-mix(in srgb, var(--color-primary, #1c497c) 20%, transparent);
   }
 
@@ -1056,7 +1056,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     align-items: center;
     gap: 1rem;
     padding: 0.75rem 1.5rem;
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, var(--content-bg, white));
     border-top: 1px dashed color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
     border-bottom: 1px dashed color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
   }
@@ -1083,8 +1083,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   .about-quote {
     margin: 0;
     padding: 1.25rem 1.5rem;
-    background: #f0f5fa;
-    border: 1px solid #cddaea;
+    background: var(--color-gray-50, #f0f5fa);
+    border: 1px solid var(--content-border, #cddaea);
     border-left: 3px solid var(--color-primary, #1c497c);
     border-radius: var(--radius-md, 0.5rem);
     font-size: 0.9375rem;
@@ -1181,7 +1181,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     padding: 0.4rem 0.75rem;
     border-radius: 6px;
     border: 1px solid var(--content-border, #e2e8f0);
-    background: #fff;
+    background: var(--content-bg, #fff);
     color: var(--color-gray-700, #374151);
     width: 100%;
   }
@@ -1285,7 +1285,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-timeline__phase--next {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, var(--content-bg, white));
   }
 
   .about-timeline__arrow {
@@ -1331,7 +1331,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     border-radius: var(--radius-md, 0.5rem);
     overflow: hidden;
     max-width: 56rem;
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, white);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, var(--content-bg, white));
   }
 
   .about-predictor-box__title {

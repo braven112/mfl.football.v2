@@ -161,8 +161,8 @@ const basePath = '/theleague';
     border: 2px solid var(--color-gray-100, #e2e8f0);
     border-radius: 10px;
     font-size: 0.875rem;
-    color: var(--color-gray-900, #0f172a);
-    background: var(--color-white, #fff);
+    color: var(--input-text, #0f172a);
+    background: var(--input-bg, #fff);
     outline: none;
     transition: border-color 0.15s;
   }
@@ -186,7 +186,7 @@ const basePath = '/theleague';
     padding: 0.35rem 0.85rem;
     border: 2px solid var(--color-gray-100, #e2e8f0);
     border-radius: 20px;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     color: var(--color-gray-600, #475569);
     font-size: 0.8rem;
     font-weight: 600;
@@ -202,18 +202,18 @@ const basePath = '/theleague';
   .directory__chip.active {
     background: var(--color-gray-900, #0f172a);
     border-color: var(--color-gray-900, #0f172a);
-    color: var(--color-white, #fff);
+    color: var(--page-bg, #fff);
   }
 
   .directory__chip--clear {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: var(--color-error, #ef4444);
+    color: var(--color-error, #ef4444);
   }
 
   .directory__chip--clear:hover {
-    background: #ef4444;
-    border-color: #ef4444;
-    color: var(--color-white, #fff);
+    background: var(--color-error, #ef4444);
+    border-color: var(--color-error, #ef4444);
+    color: var(--btn-primary-text, #fff);
   }
 
   /* Card grid */
@@ -230,7 +230,7 @@ const basePath = '/theleague';
     padding: 0.875rem;
     border: 1px solid var(--color-gray-100, #e2e8f0);
     border-radius: 12px;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     text-decoration: none;
     color: inherit;
     transition: box-shadow 0.15s, border-color 0.15s;
@@ -240,6 +240,14 @@ const basePath = '/theleague';
   .directory__card:hover {
     border-color: var(--color-gray-200, #cbd5e1);
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  :global(html.dark) .directory__card {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+  }
+
+  :global(html.dark) .directory__card:hover {
+    box-shadow: 0 0 0 1px var(--color-gray-200, #555), var(--shadow-lg);
   }
 
   .directory__card[hidden] {
@@ -289,8 +297,8 @@ const basePath = '/theleague';
     flex-shrink: 0;
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--badge-warning-bg, #fef3c7);
+    color: var(--badge-warning-text, #92400e);
     font-size: 0.625rem;
     font-weight: 700;
     text-transform: uppercase;

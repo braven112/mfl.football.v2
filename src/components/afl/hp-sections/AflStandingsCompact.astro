@@ -11,7 +11,8 @@
  * Premier League.
  */
 import { chooseTeamName } from '../../../utils/team-names';
-import { getTierLogo } from '../../../utils/afl-tier-logo';
+import { getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
+import ThemeImage from '../../ThemeImage.astro';
 
 interface Team {
   franchiseId: string;
@@ -166,8 +167,9 @@ if (userRow) {
 <section class="afl-tiers" aria-label={`${userTier} standings`}>
   <div class="afl-tiers__header">
     <div class="afl-tiers__heading">
-      <img
+      <ThemeImage
         src={getTierLogo(userTier)}
+        darkSrc={getTierLogoDark(userTier)}
         alt={`${userTier} logo`}
         class="afl-tiers__logo"
         loading="lazy"
@@ -226,7 +228,7 @@ if (userRow) {
   .afl-tiers {
     --afl-accent: var(--league-accent, #c41e3a);
     --afl-highlight-bg: color-mix(in srgb, var(--afl-accent) 6%, transparent);
-    background: var(--content-bg, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-md);
@@ -247,7 +249,7 @@ if (userRow) {
     gap: 0.75rem;
   }
 
-  .afl-tiers__logo {
+  :global(.afl-tiers__logo) {
     height: 2rem;
     width: auto;
     object-fit: contain;

@@ -343,9 +343,6 @@ const copyIcons = `
 </TheLeagueLayout>
 
 <style>
-  :root {
-    --gallery-content-bg: #eeeeee;
-  }
 .league-gallery {
   margin-top: 1rem;
 }
@@ -399,7 +396,8 @@ const copyIcons = `
     border-radius: 0.5rem;
     border: 1px solid var(--content-border-color, #d1d5db);
     font-size: 0.95rem;
-    background: #fff;
+    background: var(--input-bg, #fff);
+    color: var(--input-text, inherit);
   }
 
   .team-grid {
@@ -624,7 +622,7 @@ const copyIcons = `
     padding: 0;
     border: 1px solid var(--content-border-color, #d1d5db);
     border-radius: 0.4rem;
-    background: #fff;
+    background: var(--input-bg, #fff);
     color: var(--muted-text-color, #6b7280);
     cursor: pointer;
   }
@@ -676,7 +674,8 @@ const copyIcons = `
     border: 1px solid var(--content-border-color, #d1d5db);
     font-family: var(--font-family-base);
     font-size: 0.85rem;
-    background: #fff;
+    background: var(--input-bg, #fff);
+    color: var(--input-text, inherit);
     display: block;
     width: 100%;
     box-sizing: border-box;

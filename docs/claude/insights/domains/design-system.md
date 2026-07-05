@@ -4,6 +4,110 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-07-05 - Dark-Mode Token-Mapping Gotchas (QA/polish pass)
+
+**Context:** A full light/dark × desktop/mobile QA sweep over every public page,
+plus authenticated-page spot fixes, surfaced a cluster of token traps that all
+share one root cause: a token's *name* implies one role but it feeds another
+consumer where the dark value is wrong. None are visible from reading a single
+component — you only see them when the token resolves on a dark surface.
+
+- **`--card-bg` is a GRADIENT in dark — never paint form fields with it.**
+  Inputs/selects/textarea that used `background: var(--card-bg)` got the radial
+  corner-glow smeared across the field (Tip Schefter). Use `--input-bg` (solid;
+  white in light). Same rule as color-mix/background-color: `--card-bg` is only
+  valid in `background:` shorthand on a *card-sized* element.
+
+- **Never remap `--color-primary` per-league to fix headings — it feeds FILLS.**
+  AFL dark headings rendered TheLeague blue; the tempting fix (remap
+  `--color-primary` to white in the `html.dark[data-league="afl"]` block) turned
+  the nav drawer's active pill (`--nav-switcher-active-bg`) and every primary
+  button white-on-white. Headings/plain anchors are colored at the LAYOUT level
+  via `:global(h1..h4)`/`:global(a) { color: var(--primary-link-default-text-color) }`
+  → `--link-color`. Fix heading color by overriding the **`--link-color` family**
+  (`--link-color`, `-hover`, `-focus`, `-accent`), and leave `--color-primary`
+  alone so fills stay a readable accent. Blue fills on AFL dark are acceptable
+  shared chrome (AFL light's active pill is navy, also a primary fill — never red).
+
+- **Inverted gray ramp: `--color-gray-50..300` are SURFACES in dark, not text.**
+  `tokens-dark.css` inverts the gray scale, so `gray-300` is a near-black surface
+  value. Using it for muted text (`--tip-rail-cooker__hint`) makes it invisible;
+  `gray-700` is the readable muted-text gray. Same trap makes `gray-50/100`
+  backgrounds/borders vanish — glass-wash pills instead
+  (`rgba(255,255,255,0.06)` bg + `0.12` border).
+
+- **Accent text sinks into dark cards — brighten toward white.**
+  Big countdown digits / date lines that used the raw category or league accent
+  disappeared on the `#0f1e2e`/`#262626` card (regular-season navy especially).
+  Add a `--card-count-ink`-style var: raw accent in light (unchanged),
+  `color-mix(in srgb, <accent> 55%, #ffffff)` in dark — keeps enough saturation
+  to still read as "its" accent while clearing contrast.
+
+- **Per-conference accent via a fallback-chain var.** AFL standings needed NL
+  cards blue and AL red on the *same* `StandingsTable`/`ConferenceLeagueStandingsTable`
+  component. Set `--division-accent` inline only for NL (`conferenceId === '01'`
+  → `#5b9bd5`), then write every accent consumer as
+  `var(--division-accent, var(--league-accent, #ef5350))`. AL and TheLeague (no
+  conferenceId, var unset) fall through to `--league-accent` untouched. Drives
+  the card gradient, seed-number color, and preferred-team highlight from one hook.
+
+**Meta-lesson:** when a dark value looks wrong, trace the token to *every* consumer
+before overriding it — the fix belongs on the token that only the broken consumer
+reads (`--link-color`, `--input-bg`, a scoped `--card-*` var), never on a shared
+primitive (`--color-primary`, `--color-gray-*`) that also feeds correct consumers.
+
+---
+
+## 2026-07-04 - Theme-Aware Mini-Hero Chrome (Light Default, Navy Dark)
+
+**Context:** The deep-navy hero/event-card chrome (EventHeroShell, WhatsNextCard,
+CalendarEventCard) became the dark-mode look, so light mode needed a light
+editorial version of the same cards.
+
+**Pattern:** Route every surface-dependent color through component-local custom
+properties declared on the root class with LIGHT values, then override the whole
+set in one `:global(html.dark) .component { ... }` block with the original navy
+literals. One set of rules serves both themes — no duplicated selectors.
+
+- Surface/ink set: `--card-surface`, `--card-ink`, `--card-ink-soft` (~body),
+  `--card-ink-faint` (micro labels), plus per-role vars for link chips, muted
+  pills, CTA. Light = editorial tokens (`--color-white`, `--color-gray-900/600/500`);
+  dark = the original literals (`#0f1e2e`, `rgba(255,255,255,.72)`, …).
+- Accent glow washes: derive from the accent instead of hardcoding per-category
+  rgba — `--card-glow: color-mix(in srgb, var(--card-accent) var(--card-glow-strength), transparent)`
+  with `--card-glow-strength` theme-keyed (≈12% light, ≈52% dark; past events
+  8%/18%). Category variants then only set `--card-accent`.
+- Photo cut-out fades: never hardcode the fade color — build gradients from the
+  surface var: `linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%, …)`
+  so the image feathers into whichever surface is active.
+- CTA inverts per theme: light = navy button/white text, dark = white button/navy
+  text (`--ev-cta-bg`/`--ev-cta-ink`).
+- Accent-on-surface text (event date): light needs darkening
+  (`color-mix(accent 75%, gray-900)`), dark needs lightening (`color-mix(accent 45%, #fff)`).
+
+**Why:** The navy card IS the dark-mode design; scattering `html.dark` overrides
+per-property would have doubled the stylesheet and drifted. The var-set approach
+keeps the dark look byte-identical while the light version rides the editorial
+tokens.
+
+**Global-CSS variant (React hero stylesheets):** `live-scoring-hero.css`,
+`trade-deadline-hero.css`, `playoff-bracket-hero.css` use the same pattern with
+plain `html.dark { ... }` blocks (never `:global()` in .css files). Two extras:
+- A derived var like `--lsh-glow: color-mix(... var(--lsh-accent) ...)` must be
+  declared on the **component root element** (`.lsh`), not `:root` — custom
+  properties resolve where declared, so a `:root`-level derivation ignores
+  variant accent overrides like `.lsh--playoffs`.
+- Amber/sky accents that are *text* on the card need theme-keyed darkening for
+  light (`#f0a23a → #d97706`, `#60a5fa → #2563eb`); borders/pills can keep the
+  bright brand hue in both themes.
+All heroes are covered: EventHeroShell wrappers (Auction/Draft/CutWatch/Tagged/
+TagExtension/UDFA/Preseason/DraftCountdown via LeagueEventHero) inherit the
+shell's `--ev-*` vars — panel-slot content must reference those vars, never
+`rgba(255,255,255,…)` literals. Season heroes + hero-stub.css were already
+token-based (light) and invert via tokens-dark.
+
+---
+
 ## 2026-03-02 - Editorial Hero Banner Pattern
 
 **Context:** Homepage hero redesign to match the magazine/editorial style from `about.astro`.
@@ -1260,3 +1364,132 @@ The repo had **no shared loading infrastructure** before this — 5 distinct spi
 **Insight:** Every data file that references the shared sprite (`public/assets/icons/sprite.svg`) — `whats-new.json`, `page-directory.json`, `nav-config.json` — stores the bare glyph name; display code prepends `icon-`. A wrong value fails completely silently: `<use>` pointing at a missing fragment renders nothing. This class of bug is now blocked at PR time for all three files: `tests/helpers/sprite-icons.ts` exports `describeSpriteIconValidation(label, refs)`, which registers the standard three-test suite (sprite parse sanity, no `icon-` double-prefix, every value exists as a `<symbol>` glyph). Consumers: `whats-new-data.test.ts`, `page-directory-data.test.ts`, `nav-config-icons.test.ts` (the latter covers `icon`, `iconAFL`, and footer links).
 
 **Recommendation:** When adding an icon reference to any data file, use the bare glyph name and pick from the sprite's actual inventory (`grep -o 'id="icon-[^"]*"' public/assets/icons/sprite.svg`). If a new data file starts referencing the sprite, call `describeSpriteIconValidation()` from `tests/helpers/sprite-icons.ts` in its data test — map each entry to `{ source, icon }` — rather than reimplementing the checks.
+
+---
+## 2026-07-04 - Dark-Mode Token Migration: The AFL Dead-Var Family
+
+**Context:** Migrating older AFL Fantasy pages (`rules.astro`, `rules-chat.astro`,
+`keepers.astro`, `franchises/index.astro`, `franchises/[id].astro`) plus
+`theleague/design-system.astro` to be dark-mode-safe.
+
+**Insight:** A cluster of AFL pages was written against a set of CSS custom
+properties that were **never defined in `tokens.css`/`tokens-dark.css`**.
+Because `var(--undefined-name, fallback)` still renders via its fallback, these
+pages "worked" in light mode by accident — but the fallback is a fixed light
+hex that never inverts, so every one of these was a dark-mode bug waiting to
+surface. The dead-var → real-token mapping (consistent across all 5 files):
+
+| Dead var (never defined) | Real token |
+|---|---|
+| `--text-muted` | `--content-text-muted` |
+| `--text-default` (no fallback) | `--page-text` |
+| `--border-color` | `--content-border` |
+| `--primary-color` | `--color-primary` |
+| `--bg-muted` / `--code-bg` | `--content-bg-muted` |
+| `--surface` / `--surface-2` | `--card-bg` / `--content-bg-muted` |
+| `--color-bg-subtle` / `--color-border-subtle` | `--content-bg-muted` / `--content-border` |
+| `--color-text-strong` / `--color-text-muted` | `--color-gray-900` / `--content-text-muted` |
+
+`--text-default` is the sneaky one: with no fallback value, an undefined
+`var()` makes the whole declaration invalid, which for the inherited `color`
+property computes to the inherited value — so it often *happened* to render
+correctly (inheriting `--page-text` from `body`) while still being wrong to
+leave in place (no dark-mode guarantee, easy to break if the DOM structure
+changes). Grep for `var(--text-default)`, `var(--text-muted`, `var(--border-color`,
+`var(--primary-color`, `var(--bg-muted`, `var(--surface` across any
+not-yet-migrated AFL page — this exact list keeps recurring file to file.
+
+**Second bug pattern found:** `var(--afl-navy, #0f1e2e)` used as a **text**
+color (`franchises/[id].astro` — trophy-wall label + title-pips ratio).
+`--afl-navy` (#0f1e2e) is deep navy — correct for text on a light card, but
+it's *also* the dark-mode page background (`html.dark[data-league="afl"]`
+sets `--page-bg: var(--afl-navy)`), so navy-on-navy text goes invisible.
+Any raw `--afl-navy`/`--afl-gold`-style brand constant used as *text* (not a
+background/border/accent) should be double-checked against dark mode — these
+brand hexes are fixed, not part of the inverted token ramp.
+
+**Third pattern:** hardcoded per-button hex trios like
+`background:#fff; color:#c41e3a; border:1px solid #c41e3a;` with a hover that
+hardcodes a hand-picked darker shade (`#a01830`, `#a31a31`) — convert the base
+three to `--card-bg` / `--color-primary`, and the hover darken to
+`color-mix(in srgb, var(--color-primary) 80%, black)` rather than inventing a
+new fixed hex — it tracks the token if the brand color ever changes and
+self-adjusts in dark mode without a separate override.
+
+**Known pre-existing gotcha (not fixed, flagged separately):** many AFL pages
+write `var(--color-primary, #c41e3a)` intending "AFL red, red fallback" — but
+`--color-primary` is *deliberately* never overridden for AFL (see the comment
+block in `tokens.css` ~line 620: TheLeague blue is kept for links/headings/nav
+on purpose). AFL's actual accent lives in `--league-accent` (red in both
+light and dark AFL modes). This means those `var(--color-primary, #c41e3a)`
+call sites resolve to blue at runtime, not red — the red only shows if you
+read the fallback in devtools. This is a widespread, pre-existing pattern
+across many AFL files (not introduced by dark-mode migration work) and needs
+its own investigation/fix pass rather than a drive-by change during a
+token-migration task.
+
+**Preview switcher pattern (design-system.astro):** to add a page-local
+light/dark toggle that never persists, call `window.__applyTheme('light'|'dark')`
+(defined by `ThemeScript.astro`) directly — it only toggles the `dark` class +
+theme-color meta + fires `theme-change`. Do **not** call
+`setClientThemePreference()` (that's what writes the `theme_pref` cookie).
+Restore the visitor's real theme on `astro:before-swap` (soft nav) and
+`pagehide` (hard nav / tab close) by calling `window.__applyTheme()` with no
+argument, which re-resolves from the cookie.
+
+---
+
+## 2026-07-04 - Dark Mode Migration Playbook
+
+**Context:** ~37 commits' worth of per-page dark-mode fixes (theme engine,
+per-page migrations, AFL navy ramp, team icon variants, QA harness) converged
+on the same handful of failure signatures and recipes across every page.
+Recording the playbook so future dark-mode work (new pages, or the remaining
+migration tail) doesn't rediscover it page by page.
+
+**Two failure signatures, in order of how often they bite:**
+
+1. **Hardcoded light hex under inverting text/background.** Literal `white`,
+   `--color-white`, or a hand-picked light hex used where a *surface* token
+   belongs never inverts — the page goes dark around it but that one element
+   stays light-mode. The AFL-specific variant: a raw brand constant like
+   `--afl-navy` used as **text** color is fine on a light card but goes
+   invisible once `html.dark[data-league="afl"]` repoints `--page-bg` to that
+   same navy (see the 2026-07-04 dead-var entry above for the `[id].astro`
+   trophy-wall case). Fix: surfaces route through `--card-bg`/`--input-bg`;
+   any `color-mix(..., white)` must mix against `var(--content-bg, white)`
+   instead of the literal keyword so the mix target inverts too.
+2. **Dead vars** — a `var(--never-defined-name, fallback)` that "worked" in
+   light mode purely because the fallback happened to match, then renders
+   wrong (or invisible) in dark because the fallback is a fixed light hex
+   that never inverts. See the dead-var → real-token mapping table above;
+   the fix is always the same shape (grep for the dead name across
+   not-yet-migrated pages, swap to the real token).
+
+**Five recipe one-liners** (reach for these instead of re-deriving):
+- Raised card in dark: `:global(html.dark) .card { box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg); }` — dark surfaces swallow soft shadows, so elevation needs a hairline border-via-shadow plus the (already ~2.5x brighter) `--shadow-lg`.
+- Tinted card/row: `color-mix(in srgb, <hue> 7-12%, var(--card-bg))` — mixes toward whatever `--card-bg` resolves to per theme, so one line covers both.
+- Darkening a brand hex for a hover state: `color-mix(in srgb, var(--color-primary) 80%, black)` instead of inventing a new fixed hex — tracks the token if the brand color changes and self-adjusts per theme.
+- Sprite icon color: pair `color: var(--accent)` with `fill: currentColor` on the `<use>` wrapper — CSS `color` alone doesn't cascade into SVG fill.
+- Page-local preview toggle (no persistence): call `window.__applyTheme('light'|'dark')` directly (never `setClientThemePreference()`), restore on `astro:before-swap` + `pagehide` by calling it with no argument.
+
+**The `:root {}`-in-scoped-Astro-style gotcha:** an Astro component's scoped
+`<style>` block silently does **not** scope a `:root { --token: ...; }` rule
+the way it scopes every other selector — but it's also easy to *think* you
+declared a token there and then find it "not working" for an unrelated
+reason. Never declare tokens inside a component's scoped styles; tokens only
+belong in `tokens.css` / `tokens-dark.css`.
+
+**Dev staleness (two independent traps, not dark-mode-specific but hit hard
+during this migration because of the sheer page count touched)** — full
+details in memory `project_dev_stale_css_gotchas.md`:
+- The PWA service worker (`public/sw.js`) cache-firsts CSS/JS, so a tab that
+  ever visited the site keeps serving pre-edit stylesheets across dev-server
+  restarts/HMR. `TheLeagueLayout.astro` registers it prod-only and actively
+  unregisters + clears caches in dev; manual escape hatch is DevTools →
+  Application → Service Workers → Unregister.
+- Vite file-watching in this worktree sometimes fires change events without
+  actually refreshing the served transform. When styles look stale after an
+  edit, `curl` the page/CSS from the dev server and `grep` it rather than
+  trusting a browser tab — and restart the dev server after batch edits
+  instead of trusting HMR to catch up.

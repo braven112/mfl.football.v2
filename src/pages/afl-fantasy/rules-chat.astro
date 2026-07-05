@@ -85,9 +85,12 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
 <style>
   /* ── 2-Column Blog Layout ── */
   .rqa-page {
-    /* AFL theme tokens — scoped to this page so they don't leak. */
+    /* AFL theme tokens — scoped to this page so they don't leak.
+       Derived from --afl-accent via color-mix rather than fixed hex steps,
+       so hover/soft/tint shades self-adjust in dark mode instead of
+       surviving as light-mode literals against the navy surface ramp. */
     --afl-accent: var(--league-accent, #c41e3a);
-    --afl-accent-hover: color-mix(in srgb, var(--afl-accent) 82%, black);
+    --afl-accent-hover: color-mix(in srgb, var(--afl-accent) 80%, black);
     --afl-accent-soft: color-mix(in srgb, var(--afl-accent) 10%, transparent);
     --afl-accent-card-tint: color-mix(in srgb, var(--afl-accent) 6%, transparent);
 
@@ -112,9 +115,12 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     align-items: center;
     gap: 1rem;
     padding: 1.5rem 2rem;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+  :global(html.dark) .rqa-hero {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .rqa-hero__icon {
     width: 56px;
@@ -145,10 +151,13 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
 
   /* Body */
   .rqa-body {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem;
+  }
+  :global(html.dark) .rqa-body {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
 
   /* ── Right: Sticky Sidebar ── */
@@ -164,11 +173,14 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
 
   /* Roger personality card */
   .rqa-roger-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem 1.25rem;
     text-align: center;
+  }
+  :global(html.dark) .rqa-roger-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .rqa-roger-card__avatar {
     width: 80px;
@@ -220,10 +232,13 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
 
   /* Sidebar sections */
   .rqa-sidebar__section {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1rem 1.25rem;
+  }
+  :global(html.dark) .rqa-sidebar__section {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .rqa-sidebar__label {
     font-size: 0.625rem;
@@ -322,7 +337,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     padding-right: 4rem;
     font-size: 0.875rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-gray-300, #d1d5db);
@@ -340,7 +355,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     border-color: var(--afl-accent);
     border-left-color: var(--afl-accent);
     box-shadow: 0 0 0 3px var(--afl-accent-soft);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
   }
   .rqa-input__count {
     position: absolute;
@@ -400,6 +415,12 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     font-size: 0.8125rem;
     margin-bottom: 1rem;
   }
+  /* --color-error-border isn't inverted for dark mode in tokens-dark.css,
+     so its light-pink fallback would survive; re-derive from the
+     (dark-inverted) --color-error instead, scoped to this page only. */
+  html.dark .rqa-error {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
+  }
   .rqa-list { display: flex; flex-direction: column; gap: 0; }
   .rqa-empty {
     text-align: center;
@@ -451,9 +472,12 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
   }
   .rqa-card:hover .rqa-card__delete { opacity: 1; }
   .rqa-card__delete:hover {
-    color: var(--color-red-600, #dc2626);
-    border-color: var(--color-red-200, #fecaca);
-    background: var(--color-red-50, #fef2f2);
+    color: var(--color-error, #dc2626);
+    border-color: var(--color-error-border, #fecaca);
+    background: var(--color-error-light, #fef2f2);
+  }
+  html.dark .rqa-card__delete:hover {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .rqa-card__asker { font-size: 0.75rem; font-weight: 600; color: var(--color-gray-700, #374151); }
   .rqa-card__time { font-size: 0.6875rem; color: var(--color-gray-400, #9ca3af); font-variant-numeric: tabular-nums; }

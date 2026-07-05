@@ -609,9 +609,9 @@ const getNflLogo = (team: string) => {
     gap: 1rem;
     flex-wrap: wrap;
     padding: 1.25rem;
-    background: #ffffff;
+    background: var(--card-bg, #ffffff);
     border-radius: 0.75rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--content-border, #e2e8f0);
   }
 
   .filter-group {
@@ -623,16 +623,16 @@ const getNflLogo = (team: string) => {
   .filter-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     margin: 0;
   }
 
   .filter-select {
     padding: 0.625rem 0.875rem;
-    border: 2px solid #cbd5e1;
+    border: 2px solid var(--input-border, #cbd5e1);
     border-radius: 0.5rem;
-    background-color: #fff;
-    color: #1e293b;
+    background-color: var(--input-bg, #fff);
+    color: var(--input-text, #1e293b);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -641,12 +641,12 @@ const getNflLogo = (team: string) => {
   }
 
   .filter-select:hover {
-    border-color: #94a3b8;
+    border-color: var(--content-text-muted, #94a3b8);
   }
 
   .filter-select:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary, #3b82f6);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -670,10 +670,10 @@ const getNflLogo = (team: string) => {
   .team-of-year-title {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--page-text, #1e293b);
     margin: 0;
     padding-bottom: 0.5rem;
-    border-bottom: 3px solid #3b82f6;
+    border-bottom: 3px solid var(--color-primary, #3b82f6);
   }
 
   .team-of-year-roster {
@@ -691,7 +691,7 @@ const getNflLogo = (team: string) => {
   .position-group-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     margin: 0;
     padding-bottom: 0.5rem;
   }
@@ -766,8 +766,8 @@ const getNflLogo = (team: string) => {
   }
 
   .mvp-card {
-    background: #fff;
-    border: 1px solid #d7dce3;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #d7dce3);
     border-radius: 1rem;
     padding: 1.25rem;
     box-shadow: var(--shadow-lg);
@@ -812,19 +812,19 @@ const getNflLogo = (team: string) => {
     height: 64px;
     border-radius: 50%;
     object-fit: cover;
-    background: #f3f4f6;
+    background: var(--content-bg-muted, #f3f4f6);
     flex-shrink: 0;
   }
 
   .mvp-season {
     margin: 0;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--content-text-muted, #6b7280);
   }
 
   .mvp-meta {
     margin: 0;
-    color: #4b5563;
+    color: var(--content-text-muted, #4b5563);
     display: flex;
     align-items: center;
     gap: 0.35rem;
@@ -847,7 +847,7 @@ const getNflLogo = (team: string) => {
   dt {
     font-size: 0.85rem;
     text-transform: uppercase;
-    color: #6b7280;
+    color: var(--content-text-muted, #6b7280);
     margin-bottom: 0.25rem;
   }
 
@@ -871,7 +871,7 @@ const getNflLogo = (team: string) => {
 
   .empty-state {
     margin: 0;
-    color: #6b7280;
+    color: var(--content-text-muted, #6b7280);
   }
 
   .cross-link {
@@ -885,6 +885,10 @@ const getNflLogo = (team: string) => {
 
   .cross-link:hover {
     text-decoration: underline;
+  }
+
+  :global(html.dark) .cross-link {
+    color: var(--color-error, #f87171);
   }
 </style>
 

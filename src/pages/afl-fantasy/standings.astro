@@ -29,6 +29,7 @@ import {
   type TeamConfig,
 } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
+import ThemeImage from '../../components/ThemeImage.astro';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -401,7 +402,7 @@ const promoRegTeams = [
       {view === 'all_play' && promoRegTeams.length === 4 && (
         <div class="promo-reg-section">
           <div class="promo-reg-header">
-            <img src="/assets/afl/premier.svg" alt="Premier League Logo" class="promo-reg-logo" />
+            <ThemeImage src="/assets/afl/premier.svg" darkSrc="/assets/afl/premier-dark.svg" alt="Premier League Logo" class="promo-reg-logo" />
             <div class="promo-reg-text">
               <h2 class="promo-reg-title">Promotion/Relegation cutoff</h2>
               <p class="promo-reg-subtitle">Final all-play standings cut — top 2 are in Premier League next season, bottom 2 in D-League.</p>
@@ -471,9 +472,17 @@ const promoRegTeams = [
     align-items: center;
     gap: 1.5rem;
     padding: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  /* Dark mode: raised-card treatment — shadow alone can't separate the
+     section from the navy page floor; add the border ring. */
+  :global(html.dark) .standings-hero {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
   }
 @media screen and (min-width: 600px) {
   .standings-hero {
@@ -490,7 +499,7 @@ const promoRegTeams = [
   }
 
   .standings-filters {
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1rem 1.5rem;
@@ -499,12 +508,18 @@ const promoRegTeams = [
     align-items: center;
   }
 
+  :global(html.dark) .standings-filters {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
   .filter-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--page-text, #111827);
   }
 
   .card {
@@ -513,21 +528,27 @@ const promoRegTeams = [
     gap: var(--padding-md);
     padding: var(--padding-lg);
     border-radius: 1rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     box-shadow: var(--box-shadow-lg);
     position: relative;
 }
 
+  :global(html.dark) .card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
   .standings-header h1 {
     font-size: 2.5rem;
     font-weight: 700;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0 0 0.5rem 0;
   }
 
   .subtitle {
     font-size: 1rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     margin: 0;
   }
 
@@ -537,9 +558,15 @@ const promoRegTeams = [
     gap: 2rem;
     margin-bottom: 2rem;
     padding: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(html.dark) .standings-header-bar {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 2px 8px rgba(0, 0, 0, 0.1);
   }
    @media (min-width: 550px) {
      .standings-header-bar {
@@ -566,12 +593,12 @@ const promoRegTeams = [
   .section-title {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0;
   }
 
   .section-subtitle {
-    color: var(--color-text-secondary, #666);
+    color: var(--content-text-muted, #666);
     margin: 0;
     font-size: 0.95rem;
   }
@@ -615,14 +642,14 @@ const promoRegTeams = [
   .standings-info {
     margin-top: 3rem;
     padding: 2rem;
-    background-color: var(--color-bg-secondary, #f5f5f5);
+    background-color: var(--content-bg-muted, #f5f5f5);
     border-radius: 8px;
   }
 
   .standings-info h2 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0 0 1.5rem 0;
   }
 
@@ -633,7 +660,7 @@ const promoRegTeams = [
   }
 
   .info-card {
-    background-color: var(--color-bg-primary, #fff);
+    background: var(--card-bg, #fff);
     padding: 1.5rem;
     border-radius: 6px;
     border-left: 4px solid var(--color-primary, #2c3e50);
@@ -642,7 +669,7 @@ const promoRegTeams = [
   .info-card h3 {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0 0 1rem 0;
   }
 
@@ -650,7 +677,7 @@ const promoRegTeams = [
   .info-card ol {
     margin: 0;
     padding-left: 1.5rem;
-    color: var(--color-text-secondary, #555);
+    color: var(--content-text-muted, #555);
   }
 
   .info-card li {
@@ -659,22 +686,28 @@ const promoRegTeams = [
 
   .info-card p {
     margin: 0 0 0.5rem 0;
-    color: var(--color-text-secondary, #555);
+    color: var(--content-text-muted, #555);
   }
 
   .tiebreaker-type {
     font-weight: 600;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin-bottom: 0.75rem !important;
   }
 
   /* Promotion/Relegation Section */
   .promo-reg-section {
     margin-top: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     overflow: hidden;
+  }
+
+  :global(html.dark) .promo-reg-section {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
   }
 
   .promo-reg-header {
@@ -685,7 +718,7 @@ const promoRegTeams = [
     gap: 1rem;
   }
 
-  .promo-reg-logo {
+  :global(.promo-reg-logo) {
     height: 50px;
     width: auto;
     object-fit: contain;
@@ -721,15 +754,15 @@ const promoRegTeams = [
   }
 
   .promo-reg-table thead {
-    background: var(--color-bg-secondary, #f8f9fa);
-    border-bottom: 2px solid var(--color-border, #dee2e6);
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #dee2e6);
   }
 
   .promo-reg-table th {
     padding: 0.75rem 1rem;
     text-align: left;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--table-header-text, #111827);
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
@@ -755,7 +788,7 @@ const promoRegTeams = [
   }
 
   .promo-reg-table tbody tr {
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
     transition: background-color 0.15s ease;
   }
 
@@ -829,7 +862,7 @@ const promoRegTeams = [
 
   .promo-reg-table .team-name {
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--page-text, #111827);
   }
 
   .promo-reg-table .col-record td {
@@ -852,10 +885,16 @@ const promoRegTeams = [
   /* NIT Section */
   .nit-section {
     margin-top: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     overflow: hidden;
+  }
+
+  :global(html.dark) .nit-section {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
   }
 
   .nit-header {
@@ -896,15 +935,15 @@ const promoRegTeams = [
   }
 
   .nit-table thead {
-    background: var(--color-bg-secondary, #f8f9fa);
-    border-bottom: 2px solid var(--color-border, #e5e7eb);
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #e5e7eb);
   }
 
   .nit-table th {
     padding: 0.85rem 1rem;
     text-align: left;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--table-header-text, #111827);
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
@@ -912,7 +951,7 @@ const promoRegTeams = [
 
   .nit-table td {
     padding: 0.9rem 1rem;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
   }
 
   .nit-table .col-rank {
@@ -953,11 +992,11 @@ const promoRegTeams = [
 
   .nit-table .team-name {
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--page-text, #111827);
   }
 
   .nit-table .team-division {
-    color: var(--text-secondary-color, #6b7280);
+    color: var(--content-text-muted, #6b7280);
     font-size: 0.9rem;
   }
 
@@ -974,7 +1013,7 @@ const promoRegTeams = [
   }
 
   .nit-table tbody tr:hover {
-    background: rgba(15, 23, 42, 0.04);
+    background: var(--table-row-bg-hover, rgba(15, 23, 42, 0.04));
   }
 
   /* Responsive */

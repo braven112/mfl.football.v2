@@ -1325,7 +1325,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
 <style>
   .playoff-page {
-    color: var(--primary-text-color, #0f172a);
+    color: var(--page-text, #0f172a);
   }
 
   .playoff-hero {
@@ -1334,8 +1334,8 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     gap: 1.5rem;
     align-items: center;
     padding: clamp(1.25rem, 2vw, 1.75rem);
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 20px;
     box-shadow: var(--box-shadow-lg);
     margin-bottom: 1rem;
@@ -1344,12 +1344,12 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .hero-title {
     margin: 0;
     font-size: clamp(1.8rem, 2vw, 2.2rem);
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
   }
 
   .hero-subtitle {
     margin: 0.35rem 0 0;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     max-width: 720px;
     font-size: 0.98rem;
   }
@@ -1358,9 +1358,9 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     display: flex;
     align-items: center;
     gap: 1rem;
-    background: #ffffff;
+    background: var(--card-bg, #ffffff);
     padding: 0.9rem 1.1rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 16px;
     box-shadow: var(--box-shadow-lg);
     margin-bottom: 1rem;
@@ -1375,7 +1375,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
   .filter-label {
     font-size: 0.85rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .view-selector {
@@ -1393,7 +1393,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     padding: 0.5rem .7rem;
     border: 2px solid transparent;
     border-radius: 0.5rem;
-    background: #f8fafc;
+    background: var(--content-bg-muted, #f8fafc);
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
@@ -1406,13 +1406,13 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .view-tab:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
+    background: var(--table-row-bg-hover, #e2e8f0);
+    border-color: var(--content-border, #cbd5e1);
   }
 
   .view-tab.active {
-    background: #dbeafe;
-    border-color: #3b82f6;
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #fff));
+    border-color: var(--color-primary, #3b82f6);
   }
 
   .view-tab__icon {
@@ -1434,14 +1434,20 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     grid-template-columns: 1fr;
     gap: 1.25rem;
     padding: 1.25rem;
-    background: white;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
      box-shadow: var(--box-shadow-lg);
   }
 
+  :global(html.dark) .brackets-grid {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
   .prizes-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 16px;
     padding: 1.25rem;
     box-shadow: var(--box-shadow-lg);
@@ -1461,7 +1467,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
   .prizes-subtitle {
     margin: 0.25rem 0 0;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .prizes-total {
@@ -1543,10 +1549,10 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .prize-section {
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 12px;
     padding: 0.75rem;
-    background: #f8fafc;
+    background: var(--content-bg-muted, #f8fafc);
   }
 
   .prize-section__header {
@@ -1559,13 +1565,13 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .prize-section__header h3 {
     margin: 0;
     font-size: 1rem;
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
   }
 
   .section-total {
     font-weight: 700;
-    color: #0f172a;
-    background: #e2e8f0;
+    color: var(--page-text, #0f172a);
+    background: var(--content-bg-accent, #e2e8f0);
     padding: 0.2rem 0.6rem;
     border-radius: 6px;
   }
@@ -1588,8 +1594,8 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     gap: 0.75rem;
     padding: 0.65rem 0.5rem;
     border-radius: 10px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
   }
 
   .prize-row--projected {
@@ -1606,9 +1612,9 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .prizes-legend {
     margin-top: 1.5rem;
     padding: 1rem;
-    background: #f8fafc;
+    background: var(--content-bg-muted, #f8fafc);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--content-border, #e2e8f0);
   }
 
   .legend-item {
@@ -1636,19 +1642,19 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .legend-marker--final {
-    border: 1px solid #e2e8f0;
-    background: #fff;
+    border: 1px solid var(--content-border, #e2e8f0);
+    background: var(--card-bg, #fff);
   }
 
   .legend-marker--projected {
-    border: 1px dashed #cbd5e1;
-    background: #fff;
+    border: 1px dashed var(--content-border, #cbd5e1);
+    background: var(--card-bg, #fff);
     opacity: 0.8;
   }
 
   .legend-text {
     font-size: 0.9rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .prize-row__left {
@@ -1667,23 +1673,23 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .prize-label {
     margin: 0;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
   }
 
   .prize-team {
     margin: 0;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     font-size: 0.95rem;
   }
 
   .prize-score {
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
     font-weight: 600;
   }
 
   .prize-row__amount {
     font-weight: 700;
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
     white-space: nowrap;
   }
 
@@ -1692,7 +1698,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     height: 48px;
     border-radius: 12px;
     overflow: hidden;
-    background: #e2e8f0;
+    background: var(--content-bg-muted, #e2e8f0);
     display: grid;
     place-items: center;
   }
@@ -1706,13 +1712,13 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .icon-thumb--placeholder {
     width: 48px;
     height: 48px;
-    background: #cbd5e1;
+    background: var(--content-bg-accent, #cbd5e1);
     border-radius: 12px;
   }
 
   .week-badge {
-    background: #e2e8f0;
-    color: #0f172a;
+    background: var(--content-bg-accent, #e2e8f0);
+    color: var(--page-text, #0f172a);
     padding: 0.35rem 0.55rem;
     border-radius: 8px;
     font-weight: 700;
@@ -1722,7 +1728,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
   .prize-titles {
     margin: 0;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     font-size: 0.9rem;
   }
 
@@ -1762,26 +1768,26 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     margin: 0;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #2e8743;
+    color: var(--color-secondary, #2e8743);
     letter-spacing: 0.04em;
   }
 
   .bracket-title {
     margin: 0.1rem 0;
     font-size: 1.35rem;
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
   }
 
   .bracket-meta {
     margin: 0;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     font-size: 0.9rem;
   }
 
   .bracket-pill {
     padding: 0.45rem 0.75rem;
-    background: #eef2ff;
-    color: #312e81;
+    background: var(--content-bg-muted, #eef2ff);
+    color: var(--page-text, #312e81);
     border-radius: 999px;
     font-weight: 700;
     font-size: 0.85rem;
@@ -1804,6 +1810,15 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     color: #0c4a6e;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  :global(html.dark) .championship-highlight {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(14, 165, 233, 0.08) 100%);
+    border-color: #0ea5e9;
+  }
+
+  :global(html.dark) .championship-label {
+    color: #7dd3fc;
   }
 
 
@@ -1848,7 +1863,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .round-label {
     font-weight: 800;
     font-size: 0.95rem;
-    color: #1c497c;
+    color: var(--color-primary, #1c497c);
     margin: 0 0 0.35rem 0.25rem;
   }
 
@@ -1872,8 +1887,8 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .matchup-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 12px;
     padding: 0.75rem;
     position: relative;
@@ -1888,6 +1903,12 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
   .matchup-card[data-status='final'] {
     border-color: rgba(28, 73, 124, 0.35);
+  }
+
+  /* Dark mode: final cards use the standard card border (AFL resolves to its
+     navy-tinted --content-border). */
+  :global(html.dark) .matchup-card[data-status='final'] {
+    border-color: var(--content-border, #555555);
   }
 
   .matchup-card[data-status='scheduled'] {
@@ -1916,7 +1937,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     margin: 0;
     font-weight: 800;
     font-size: 0.75rem;
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1925,7 +1946,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .team-record {
     margin: 0.15rem 0 0;
     font-size: 0.82rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .team-icon {
@@ -1935,9 +1956,9 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .team-icon--placeholder {
-    background: #e2e8f0;
+    background: var(--content-bg-accent, #e2e8f0);
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--content-border, #e2e8f0);
   }
 
   .seed-badge {
@@ -1946,8 +1967,8 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     justify-content: center;
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
-    background: #e2e8f0;
-    color: #0f172a;
+    background: var(--content-bg-accent, #e2e8f0);
+    color: var(--page-text, #0f172a);
     font-weight: 700;
     font-size: 0.65rem;
     min-width: 1rem;
@@ -1956,7 +1977,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .score {
     font-weight: 800;
     font-size: 1.05rem;
-    color: #0f172a;
+    color: var(--page-text, #0f172a);
     min-width: 3.4rem;
     text-align: right;
   }
@@ -2003,13 +2024,13 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     align-items: center;
     margin-top: 0.35rem;
     font-size: 0.82rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .status-pill {
     padding: 0.25rem 0.55rem;
     border-radius: 999px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--content-border, #e2e8f0);
     font-weight: 700;
   }
 
@@ -2031,9 +2052,24 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     border-color: rgba(49, 46, 129, 0.25);
   }
 
+  :global(html.dark) .status-live {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+  }
+
+  :global(html.dark) .status-final {
+    background: rgba(34, 211, 238, 0.15);
+    color: #67e8f9;
+  }
+
+  :global(html.dark) .status-scheduled {
+    background: rgba(165, 180, 252, 0.15);
+    color: #a5b4fc;
+  }
+
   .winner-flag {
     font-weight: 700;
-    color: #1c497c;
+    color: var(--color-primary, #1c497c);
   }
 
   .status-left {
@@ -2059,7 +2095,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .refresh-progress-container {
     flex: 1;
     height: 5px;
-    background: #e2e8f0;
+    background: var(--content-bg-accent, #e2e8f0);
     border-radius: 3px;
     overflow: hidden;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -2115,20 +2151,20 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .empty-state {
-    background: #fff;
-    border: 1px dashed #e2e8f0;
+    background: var(--card-bg, #fff);
+    border: 1px dashed var(--content-border, #e2e8f0);
     border-radius: 14px;
     padding: 1.5rem;
     text-align: center;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .bracket-missing {
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed var(--content-border, #cbd5e1);
     border-radius: 10px;
     padding: 1rem;
-    color: #475569;
-    background: #f8fafc;
+    color: var(--content-text-muted, #475569);
+    background: var(--content-bg-muted, #f8fafc);
     text-align: center;
     font-weight: 600;
   }
@@ -2136,8 +2172,8 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   .mfl-link-footer {
     margin-top: 1.5rem;
     padding: 1rem;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 12px;
     text-align: center;
      box-shadow: var(--box-shadow-lg);
@@ -2148,14 +2184,14 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .mfl-link {
-    color: var(--primary-color, #1c497c);
+    color: var(--color-primary, #1c497c);
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s ease;
   }
 
   .mfl-link:hover {
-    color: var(--secondary-color, #2e8743);
+    color: var(--color-secondary, #2e8743);
     text-decoration: underline;
   }
 
@@ -2233,7 +2269,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     padding: 1rem 0 0.5rem;
     position: sticky;
     bottom: 0;
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 70%, transparent);
+    background: linear-gradient(to top, var(--card-bg, rgba(255, 255, 255, 0.95)) 70%, transparent);
     z-index: 10;
   }
 
@@ -2247,13 +2283,13 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     width: 8px;
     height: 16px;
     border-radius: 50%;
-    background: #cbd5e1;
+    background: var(--content-bg-accent, #cbd5e1);
     transition: all 0.3s ease;
     cursor: pointer;
   }
 
   .scroll-indicator.active {
-    background: #1c497c;
+    background: var(--color-primary, #1c497c);
     width: 24px;
     border-radius: 4px;
   }
@@ -2296,7 +2332,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     font-size: 1.75rem;
     font-weight: 700;
     margin: 0 0 1.5rem 0;
-    color: #1e293b;
+    color: var(--page-text, #1e293b);
     text-align: center;
   }
 

@@ -270,7 +270,7 @@ const nextYearGroups = groupByCategory(nextYearEvents);
     background: var(--primary-content-bg-color, #fff);
     font-size: 0.78rem;
     font-weight: var(--font-weight-semibold, 600);
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     cursor: pointer;
     transition: all var(--transition-fast, 150ms ease);
   }
@@ -284,13 +284,13 @@ const nextYearGroups = groupByCategory(nextYearEvents);
   .calendar-filter__chip--active:hover {
     background: var(--color-primary, #1c497c);
     border-color: var(--color-primary, #1c497c);
-    color: #fff;
+    color: var(--btn-primary-text, #fff);
   }
 
   .calendar-hero__label {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   .calendar-hero__select {

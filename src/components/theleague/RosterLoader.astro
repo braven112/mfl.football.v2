@@ -24,6 +24,10 @@ const logoUrl =
   league === 'afl'
     ? '/assets/logos/afl-logo.svg'
     : '/assets/logos/theleague-logo.svg';
+const logoDarkUrl =
+  league === 'afl'
+    ? '/assets/logos/afl-logo-dark.svg'
+    : '/assets/logos/theleague-logo-dark.svg';
 
 // Narration comes from the OFFICIAL per-league team data file: general league
 // flavor (`loaderLines`) + one or more quips per team (`loaderQuips`). Baked at
@@ -47,7 +51,8 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
   <div class="roster-loader__panel">
     <div class="roster-loader__emblem" aria-hidden="true">
       <div class="roster-loader__disc">
-        <img class:list={['roster-loader__logo', league === 'afl' && 'roster-loader__logo--afl']} src={logoUrl} alt="" />
+        <img class:list={['roster-loader__logo', 'roster-loader__logo--light', league === 'afl' && 'roster-loader__logo--afl']} src={logoUrl} alt="" />
+        <img class:list={['roster-loader__logo', 'roster-loader__logo--dark', league === 'afl' && 'roster-loader__logo--afl']} src={logoDarkUrl} alt="" />
         <span class="roster-loader__shine"></span>
       </div>
     </div>

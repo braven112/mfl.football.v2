@@ -1,0 +1,25 @@
+/**
+ * Theme-driven image swap (ThemeImage.astro).
+ *
+ * SSR can never know the resolved theme (the theme_pref cookie can be
+ * 'auto', resolved pre-paint by an inline script) — so both light and dark
+ * <img> variants always render, and CSS decides which one is visible based
+ * on html.dark. This mirrors the "Theme-driven logo swap" pattern in
+ * src/components/theleague/Header.astro.
+ *
+ * Specificity note: the .theme-img wrapper class is included on every
+ * selector so these rules reliably beat generic sizing/display rules at
+ * call sites (e.g. `.tier-logo`, `.conference-logo`) without needing !important.
+ */
+
+.theme-img--dark {
+  display: none;
+}
+
+html.dark .theme-img--light {
+  display: none;
+}
+
+html.dark .theme-img--dark {
+  display: block;
+}

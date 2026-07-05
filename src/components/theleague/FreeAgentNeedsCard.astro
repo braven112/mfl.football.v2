@@ -120,14 +120,14 @@ const hasNeeds = needs.length > 0;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
     transition: color 0.15s, border-color 0.15s;
   }
 
   .fa-needs__tab:hover {
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   .fa-needs__tab--active {
@@ -148,7 +148,7 @@ const hasNeeds = needs.length > 0;
   .fa-needs__thead :global(th) {
     font-size: 0.6875rem;
     font-weight: 700;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.025em;
@@ -165,7 +165,7 @@ const hasNeeds = needs.length > 0;
   }
 
   .fa-needs__player:nth-child(odd) {
-    background: var(--table-stripe-bg, rgba(0, 0, 0, 0.02));
+    background: var(--table-row-bg-alt, rgba(0, 0, 0, 0.02));
   }
 
   .fa-needs__player :global(td) {
@@ -183,7 +183,7 @@ const hasNeeds = needs.length > 0;
   .fa-needs__rank {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     text-align: center;
     width: 1.5rem;
   }
@@ -222,7 +222,7 @@ const hasNeeds = needs.length > 0;
 
   .fa-needs__empty p {
     margin: 0 0 0.5rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.875rem;
   }
 
@@ -230,7 +230,7 @@ const hasNeeds = needs.length > 0;
   :global(.fa-needs__rank-value) {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     text-align: center;
     white-space: nowrap;
     padding: 0.5rem 0.25rem;

@@ -188,7 +188,7 @@ const siteConfigs = [
   }
 
   .ri-page__subtitle {
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.95rem;
     margin: 0;
     line-height: 1.5;
@@ -215,6 +215,12 @@ const siteConfigs = [
     box-shadow: var(--shadow-sm);
   }
 
+  html.dark .ri-section {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg);
+  }
+
   .ri-section__title {
     display: flex;
     align-items: center;
@@ -226,7 +232,7 @@ const siteConfigs = [
   }
 
   .ri-section__desc {
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.9rem;
     margin: 0 0 1rem;
     line-height: 1.5;
@@ -237,11 +243,11 @@ const siteConfigs = [
     margin-top: 0.4rem;
     font-size: 0.82rem;
     font-style: italic;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   .ri-section__empty {
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-style: italic;
     margin: 0;
   }
@@ -347,14 +353,14 @@ const siteConfigs = [
 
   .bm-card__desc {
     font-size: 0.82rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     line-height: 1.4;
     margin: 0;
   }
 
   .bm-card__instructions {
     font-size: 0.8rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     line-height: 1.4;
   }
 
@@ -453,7 +459,7 @@ const siteConfigs = [
   }
 
   .bm-card__drag-link:hover {
-    background: #163c65;
+    background: var(--btn-primary-bg-hover, #163c65);
   }
 
   /* ---- Import Section ---- */
@@ -468,7 +474,7 @@ const siteConfigs = [
 
   .ri-import__type-label {
     font-size: 0.85rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -506,15 +512,15 @@ const siteConfigs = [
   }
 
   .ri-import__result--success {
-    background: #ecfdf5;
-    border: 1px solid #10b981;
-    color: #065f46;
+    background: var(--badge-success-bg, #ecfdf5);
+    border: 1px solid var(--color-success, #10b981);
+    color: var(--badge-success-text, #065f46);
   }
 
   .ri-import__result--error {
-    background: #fef2f2;
-    border: 1px solid #ef4444;
-    color: #991b1b;
+    background: var(--badge-error-bg, #fef2f2);
+    border: 1px solid var(--color-error, #ef4444);
+    color: var(--badge-error-text, #991b1b);
   }
 
   .ri-import__result p {
@@ -552,7 +558,7 @@ const siteConfigs = [
 
   .ri-import__status {
     font-weight: 500;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   .ri-import__manual {
@@ -591,7 +597,7 @@ const siteConfigs = [
   }
 
   .ri-import__manual-summary:hover {
-    color: var(--primary-hover-color, #163d68);
+    color: var(--btn-primary-bg-hover, #163d68);
   }
 
   .ri-import__manual-content {
@@ -622,7 +628,7 @@ const siteConfigs = [
   }
 
   .ri-btn--primary:hover:not(:disabled) {
-    background: #163c65;
+    background: var(--btn-primary-bg-hover, #163c65);
   }
 
   .ri-btn--secondary {
@@ -638,21 +644,21 @@ const siteConfigs = [
   .ri-btn--sm {
     padding: 0.25rem 0.55rem;
     font-size: 0.78rem;
-    background: #f1f5f9;
-    color: #334155;
+    background: var(--color-gray-100, #f1f5f9);
+    color: var(--color-gray-700, #334155);
   }
 
   .ri-btn--sm:hover {
-    background: #e2e8f0;
+    background: var(--color-gray-200, #e2e8f0);
   }
 
   .ri-btn--danger {
-    color: #dc2626;
-    background: #fef2f2;
+    color: var(--color-error, #dc2626);
+    background: var(--badge-error-bg, #fef2f2);
   }
 
   .ri-btn--danger:hover {
-    background: #fee2e2;
+    background: var(--color-error-light, #fee2e2);
   }
 
   /* ---- Manage Table ---- */
@@ -719,9 +725,9 @@ const siteConfigs = [
     font-variant-numeric: tabular-nums;
   }
 
-  .ri-manage__rate--good { color: #059669; }
-  .ri-manage__rate--ok { color: #d97706; }
-  .ri-manage__rate--low { color: #dc2626; }
+  .ri-manage__rate--good { color: var(--color-success-dark, #059669); }
+  .ri-manage__rate--ok { color: var(--color-warning-dark, #d97706); }
+  .ri-manage__rate--low { color: var(--color-error, #dc2626); }
 
   .ri-manage__actions {
     display: flex;
@@ -738,7 +744,7 @@ const siteConfigs = [
   .ri-manage__drag-handle {
     cursor: grab;
     padding: 0.5rem !important;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     user-select: none;
     text-align: center;
     touch-action: none;
@@ -814,15 +820,15 @@ const siteConfigs = [
     padding: 0.125rem 0.375rem;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     cursor: pointer;
     line-height: 1.2;
     transition: background 0.15s, color 0.15s;
   }
 
   .ri-manage__weight-btn:hover {
-    background: rgba(255, 255, 255, 0.6);
-    color: var(--text-primary-color, #1e293b);
+    background: var(--color-gray-50, rgba(255, 255, 255, 0.6));
+    color: var(--color-gray-900, #1e293b);
   }
 
   .ri-manage__weight-btn.active {
@@ -837,8 +843,8 @@ const siteConfigs = [
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.5rem;
-    background: rgba(28, 73, 124, 0.06);
-    border: 1px solid rgba(28, 73, 124, 0.15);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--card-surface, #fff));
+    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 15%, var(--card-surface, #fff));
     border-radius: 6px;
     font-size: 0.8125rem;
   }
@@ -849,7 +855,7 @@ const siteConfigs = [
   }
 
   .ri-manage__composite-bar-detail {
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   /* ---- Modal ---- */
@@ -897,7 +903,7 @@ const siteConfigs = [
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     padding: 0;
     line-height: 1;
   }
@@ -907,7 +913,7 @@ const siteConfigs = [
     gap: 1rem;
     padding: 0.75rem 1.25rem;
     font-size: 0.82rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
     flex-wrap: wrap;
   }
@@ -938,16 +944,16 @@ const siteConfigs = [
     text-align: left;
     font-weight: 600;
     padding: 0.35rem 0.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
     position: sticky;
     top: 0;
-    background: #fff;
+    background: var(--card-bg, #fff);
     z-index: 1;
   }
 
   .ri-modal__table td {
     padding: 0.3rem 0.5rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-gray-100, #f1f5f9);
   }
 
   .ri-modal__footer {
@@ -977,7 +983,7 @@ const siteConfigs = [
 
   .ri-modal__hint {
     font-size: 0.82rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
 
   /* ---- Custom Guide ---- */
@@ -996,7 +1002,7 @@ const siteConfigs = [
 
   .ri-guide__arrow {
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--content-text-muted, #64748b);
     transition: transform 0.2s;
   }
 
@@ -1015,12 +1021,12 @@ const siteConfigs = [
 
   .ri-guide__content p {
     margin: 0 0 0.75rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .ri-guide__code {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 6px;
     padding: 0.75rem 1rem;
     font-family: var(--font-family-mono);
@@ -1045,17 +1051,17 @@ const siteConfigs = [
     text-align: left;
     font-weight: 600;
     padding: 0.35rem 0.5rem;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--content-border, #e2e8f0);
     color: var(--primary-color, #1c497c);
   }
 
   .ri-guide__fields-table td {
     padding: 0.35rem 0.5rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-gray-100, #f1f5f9);
   }
 
   .ri-guide__fields-table code {
-    background: #f1f5f9;
+    background: var(--color-gray-100, #f1f5f9);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
     font-size: 0.78rem;
@@ -1064,7 +1070,7 @@ const siteConfigs = [
   .ri-guide__tips {
     margin: 0;
     padding: 0 0 0 1.25rem;
-    color: #475569;
+    color: var(--content-text-muted, #475569);
   }
 
   .ri-guide__tips li {

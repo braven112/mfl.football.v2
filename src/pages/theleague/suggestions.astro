@@ -126,9 +126,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     align-items: center;
     gap: 1rem;
     padding: 1.5rem 2rem;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+  :global(html.dark) .sb-hero {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-hero__icon {
     width: 56px;
@@ -164,10 +167,13 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* Body */
   .sb-body {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem;
+  }
+  :global(html.dark) .sb-body {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
 
   /* ── Sidebar ── */
@@ -183,11 +189,14 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* About card */
   .sb-about-card {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem 1.25rem;
     text-align: center;
+  }
+  :global(html.dark) .sb-about-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-about-card__icon-wrap {
     width: 64px;
@@ -220,10 +229,13 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
   /* Sidebar sections */
   .sb-sidebar__section {
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1rem 1.25rem;
+  }
+  :global(html.dark) .sb-sidebar__section {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-sidebar__label {
     font-size: 0.625rem;
@@ -234,6 +246,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding-left: 0.5rem;
     border-left: 2px solid var(--color-gray-200, #e5e7eb);
     margin-bottom: 0.625rem;
+  }
+  /* Dark: gray-200 inverts to near-black (invisible edge) and gray-400
+     sinks — use the accent edge + brighter muted text. */
+  :global(html.dark) .sb-sidebar__label {
+    border-left-color: var(--color-primary, #3b82f6);
+    color: var(--color-gray-600, #a0a0a0);
   }
   .sb-sidebar__steps {
     font-size: 0.6875rem;
@@ -274,7 +292,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-promo:hover {
     border-color: var(--color-gray-200, #e5e7eb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
   .sb-promo__avatar {
     width: 40px;
@@ -401,6 +419,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     font-size: 0.8125rem;
     margin-bottom: 1rem;
   }
+  /* --color-error-border isn't inverted for dark mode in tokens-dark.css,
+     so its light-pink fallback would survive; re-derive from the
+     (dark-inverted) --color-error instead, scoped to this page only. */
+  html.dark .sb-error {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
+  }
 
   /* ── Loading / Empty ── */
   .sb-loading,
@@ -436,7 +460,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     font-size: 0.9375rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-gray-300, #d1d5db);
@@ -452,8 +476,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     outline: none;
     border-color: var(--color-primary, #1c497c);
     border-left-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-    background: var(--color-white, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    background: var(--input-bg, #fff);
   }
   .sb-composer__body-wrap {
     position: relative;
@@ -464,7 +488,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding-right: 4rem;
     font-size: 0.875rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-gray-300, #d1d5db);
@@ -483,8 +507,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     outline: none;
     border-color: var(--color-primary, #1c497c);
     border-left-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-    background: var(--color-white, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    background: var(--input-bg, #fff);
   }
   .sb-composer__count {
     position: absolute;
@@ -560,7 +584,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-bottom: none;
   }
   .sb-card--pinned {
-    background: rgba(28, 73, 124, 0.03);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 3%, transparent);
     border-left: 2px solid var(--color-primary, #1c497c);
   }
   .sb-card__header {
@@ -635,9 +659,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-card:hover .sb-card__delete { opacity: 1; }
   .sb-card__delete:hover {
-    color: var(--color-red-600, #dc2626);
-    border-color: var(--color-red-200, #fecaca);
-    background: var(--color-red-50, #fef2f2);
+    color: var(--color-error, #dc2626);
+    border-color: var(--color-error-border, #fecaca);
+    background: var(--color-error-light, #fef2f2);
+  }
+  html.dark .sb-card__delete:hover {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .sb-card__title {
     font-size: 0.9375rem;
@@ -709,20 +736,20 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     color: var(--color-gray-600, #4b5563);
   }
   .sb-status--review {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--badge-warning-bg, #fef3c7);
+    color: var(--badge-warning-text, #92400e);
   }
   .sb-status--approved {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--badge-success-bg, #d1fae5);
+    color: var(--badge-success-text, #065f46);
   }
   .sb-status--rejected {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--badge-error-bg, #fee2e2);
+    color: var(--badge-error-text, #991b1b);
   }
   .sb-status--implemented {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--badge-info-bg, #dbeafe);
+    color: var(--badge-info-text, #1e40af);
   }
   .sb-status--tabled {
     background: var(--color-gray-100, #f3f4f6);
@@ -745,12 +772,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     margin-right: 0.375rem;
   }
   .sb-cat--rule {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--badge-warning-bg, #fef3c7);
+    color: var(--badge-warning-text, #92400e);
   }
   .sb-cat--website {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--badge-info-bg, #dbeafe);
+    color: var(--badge-info-text, #1e40af);
   }
   .sb-cat--general {
     background: var(--color-gray-100, #f3f4f6);
@@ -779,12 +806,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     margin-right: 0.375rem;
   }
   .sb-ws-type--bug {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--badge-error-bg, #fee2e2);
+    color: var(--badge-error-text, #991b1b);
   }
   .sb-ws-type--feature {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--badge-success-bg, #d1fae5);
+    color: var(--badge-success-text, #065f46);
   }
 
   /* ── Category Picker (Composer) ── */
@@ -810,11 +837,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-category-pill:hover {
     border-color: var(--color-gray-300, #d1d5db);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
   }
   .sb-category-pill--active {
     border-color: var(--color-primary, #1c497c);
-    background: rgba(28, 73, 124, 0.06);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
     color: var(--color-primary, #1c497c);
     font-weight: 600;
   }
@@ -848,7 +875,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding: 0.625rem 0.75rem;
     font-size: 0.875rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
@@ -858,8 +885,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   .sb-ws-form__input:focus-visible {
     outline: none;
     border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-    background: var(--color-white, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    background: var(--input-bg, #fff);
   }
   .sb-ws-form__input::placeholder {
     color: var(--color-gray-400, #9ca3af);
@@ -869,7 +896,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding: 0.625rem 0.75rem;
     font-size: 0.8125rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
@@ -882,8 +909,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   .sb-ws-form__textarea:focus-visible {
     outline: none;
     border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-    background: var(--color-white, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    background: var(--input-bg, #fff);
   }
   .sb-ws-form__textarea::placeholder {
     color: var(--color-gray-400, #9ca3af);
@@ -910,15 +937,15 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     transition: border-color 0.15s ease, background 0.15s ease;
   }
   .sb-ws-toggle--active.sb-ws-toggle--bug {
-    border-color: #f87171;
-    background: #fef2f2;
-    color: #991b1b;
+    border-color: var(--color-error, #f87171);
+    background: var(--color-error-light, #fef2f2);
+    color: var(--badge-error-text, #991b1b);
     font-weight: 600;
   }
   .sb-ws-toggle--active.sb-ws-toggle--feature {
-    border-color: #34d399;
-    background: #ecfdf5;
-    color: #065f46;
+    border-color: var(--color-success, #34d399);
+    background: var(--color-success-light, #ecfdf5);
+    color: var(--badge-success-text, #065f46);
     font-weight: 600;
   }
 
@@ -951,7 +978,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-filter__pill--active {
     border-color: var(--color-primary, #1c497c);
-    background: rgba(28, 73, 124, 0.06);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
     color: var(--color-primary, #1c497c);
     font-weight: 600;
   }
@@ -972,7 +999,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     text-align: center;
   }
   .sb-filter__pill--active .sb-filter__count {
-    background: rgba(28, 73, 124, 0.12);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, transparent);
   }
 
   /* ── Website Fields in Detail View ── */
@@ -1186,8 +1213,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     background: var(--color-gray-50, #f9fafb);
   }
   .sb-thread__action--danger:hover {
-    color: var(--color-red-600, #dc2626);
-    background: var(--color-red-50, #fef2f2);
+    color: var(--color-error, #dc2626);
+    background: var(--color-error-light, #fef2f2);
   }
 
   /* ── Comment Edit ── */
@@ -1199,7 +1226,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding: 0.5rem;
     font-size: 0.8125rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
@@ -1211,7 +1238,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   .sb-thread__edit-input:focus-visible {
     outline: none;
     border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
   }
   .sb-thread__edit-actions {
     display: flex;
@@ -1266,7 +1293,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding: 0.625rem;
     font-size: 0.8125rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
+    color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-gray-300, #d1d5db);
@@ -1285,8 +1312,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     outline: none;
     border-color: var(--color-primary, #1c497c);
     border-left-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
-    background: var(--color-white, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    background: var(--input-bg, #fff);
   }
   .sb-comment-composer__actions {
     display: flex;
@@ -1319,11 +1346,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-reaction-pill:hover {
     border-color: var(--color-gray-300, #d1d5db);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
   }
   .sb-reaction-pill--active {
     border-color: var(--color-primary, #1c497c);
-    background: rgba(28, 73, 124, 0.06);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
   }
   .sb-reaction-pill__emoji {
     font-size: 0.875rem;
@@ -1368,13 +1395,16 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     bottom: 100%;
     left: 0;
     margin-bottom: 0.375rem;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 0.5rem;
     z-index: 50;
     width: 240px;
+  }
+  html.dark .sb-emoji-picker {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-emoji-picker__grid {
     display: grid;
@@ -1468,14 +1498,17 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     right: 0;
     width: 340px;
     max-height: 420px;
-    background: var(--color-surface, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: var(--radius-lg, 0.5rem);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     z-index: 100;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+  html.dark .sb-gif-popover {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-gif-search {
     padding: 0.5rem 0.625rem;
@@ -1654,8 +1687,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     letter-spacing: 0.04em;
   }
   .sb-poll__closed {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--badge-error-bg, #fee2e2);
+    color: var(--badge-error-text, #991b1b);
   }
   .sb-poll__vote-count {
     margin-left: auto;
@@ -1673,7 +1706,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
@@ -1689,7 +1722,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-poll__option--selected {
     border-color: var(--color-primary, #1c497c);
-    background: rgba(28, 73, 124, 0.03);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 3%, transparent);
   }
   .sb-poll__option:disabled {
     cursor: default;
@@ -1699,7 +1732,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     left: 0;
     top: 0;
     bottom: 0;
-    background: rgba(28, 73, 124, 0.08);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, transparent);
     border-radius: var(--radius-sm, 0.25rem);
     transition: width 0.3s ease;
   }
@@ -1773,8 +1806,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     padding: 0.375rem 0.625rem;
     font-size: 0.8125rem;
     font-family: inherit;
-    color: var(--text-color, #1f2937);
-    background: var(--color-white, #fff);
+    color: var(--input-text, #1f2937);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
     box-sizing: border-box;
@@ -1782,7 +1815,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   .sb-poll-creator__input:focus-visible {
     outline: none;
     border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
   }
   .sb-poll-creator__input::placeholder {
     color: var(--color-gray-400, #9ca3af);
@@ -1800,8 +1833,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     cursor: pointer;
   }
   .sb-poll-creator__remove:hover {
-    color: var(--color-red-600, #dc2626);
-    border-color: var(--color-red-200, #fecaca);
+    color: var(--color-error, #dc2626);
+    border-color: var(--color-error-border, #fecaca);
+  }
+  html.dark .sb-poll-creator__remove:hover {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
   .sb-poll-creator__add {
     padding: 0.25rem 0.5rem;
@@ -1863,7 +1899,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     font-size: 0.6875rem;
     font-weight: 500;
     font-family: inherit;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
@@ -1872,11 +1908,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   }
   .sb-admin__btn:hover {
     border-color: var(--color-gray-300, #d1d5db);
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
   }
   .sb-admin__btn--active {
     border-color: var(--color-primary, #1c497c);
-    background: rgba(28, 73, 124, 0.06);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
     color: var(--color-primary, #1c497c);
     font-weight: 600;
   }
@@ -1884,9 +1920,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     color: var(--color-gray-400, #9ca3af);
   }
   .sb-admin__btn--danger:hover {
-    color: var(--color-red-600, #dc2626);
-    border-color: var(--color-red-200, #fecaca);
-    background: var(--color-red-50, #fef2f2);
+    color: var(--color-error, #dc2626);
+    border-color: var(--color-error-border, #fecaca);
+    background: var(--color-error-light, #fef2f2);
+  }
+  html.dark .sb-admin__btn--danger:hover {
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
 
   /* Status dropdown */
@@ -1898,13 +1937,16 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     top: 100%;
     left: 0;
     margin-top: 0.25rem;
-    background: var(--color-white, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 0.25rem;
     z-index: 50;
     min-width: 160px;
+  }
+  html.dark .sb-admin__dropdown {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-admin__dropdown-item {
     display: flex;
@@ -1928,7 +1970,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
   .sb-admin__dropdown-item--active {
     font-weight: 600;
     color: var(--color-primary, #1c497c);
-    background: rgba(28, 73, 124, 0.04);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, transparent);
   }
 
   /* ── Reduced motion ── */

@@ -241,7 +241,7 @@ const marketplaceStyles = `
   .marketplace__title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     margin: 0;
   }
   .marketplace__count {
@@ -312,7 +312,7 @@ const marketplaceStyles = `
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: var(--primary-light-bg, #f8fafc);
+    background: var(--content-bg-muted, #f8fafc);
     border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
   }
   .marketplace__team-icon {
@@ -324,7 +324,7 @@ const marketplaceStyles = `
   .marketplace__team-name {
     font-size: 0.8125rem;
     font-weight: 700;
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
   }
   .marketplace__players {
     display: flex;
@@ -360,8 +360,8 @@ const marketplaceStyles = `
     height: 32px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--avatar-bg-color, #f3f4f6);
-    border: 1px solid #e2e8f0;
+    background: var(--content-bg-muted, #f3f4f6);
+    border: 1px solid var(--content-border, #e2e8f0);
   }
   .marketplace__player-avatar img {
     width: 100%;
@@ -383,7 +383,7 @@ const marketplaceStyles = `
   .marketplace__player-name {
     font-weight: 600;
     font-size: 0.8125rem;
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -394,7 +394,7 @@ const marketplaceStyles = `
     align-items: center;
     gap: 0.25rem;
     font-size: 0.75rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
   .marketplace__player-nfl-logo {
     width: 14px;
@@ -498,7 +498,7 @@ const marketplaceStyles = `
   .marketplace__empty-title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     margin: 0;
   }
   .marketplace__empty-text {
@@ -542,5 +542,35 @@ const marketplaceStyles = `
     .marketplace__cta-btn {
       justify-content: center;
     }
+  }
+
+  /* Dark mode: the amber "marketplace" branding is intentionally saturated
+     accent color in both themes, but the light gradients + dark-amber text
+     need to flip so they don't wash out against a dark card. */
+  html.dark .marketplace__header {
+    background: linear-gradient(135deg, #3a2e12 0%, #4a3818 100%);
+  }
+  html.dark .marketplace__header:hover {
+    background: linear-gradient(135deg, #4a3818 0%, #5a4420 100%);
+  }
+  html.dark .marketplace__count,
+  html.dark .marketplace__footer-hint,
+  html.dark .marketplace__filter-btn:hover {
+    color: #fcd34d;
+  }
+  html.dark .marketplace__player:hover {
+    background: #3a2e12;
+  }
+  html.dark .marketplace__badge--rookie {
+    background: rgba(29, 78, 216, 0.25);
+    color: #93bbfd;
+  }
+  html.dark .marketplace__badge--tag {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+  }
+  html.dark .marketplace__footer {
+    background: linear-gradient(135deg, #3a2e12 0%, #4a3818 100%);
+    border-top-color: #5a4420;
   }
 `;

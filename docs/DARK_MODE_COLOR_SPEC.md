@@ -1,64 +1,70 @@
 # Dark Mode Color Specification
 
-> **For the designer:** The "Dark Mode" column has been pre-filled based on the reference screenshot.
-> Review and adjust as needed. The "Light Mode" column shows the current value for comparison.
+> **This document describes what SHIPPED.** `src/styles/tokens-dark.css` is authoritative — if this doc and the CSS ever disagree, trust the CSS and update this file.
 >
-> **Reference screenshot:** MFL dark-themed standings page with dark charcoal surfaces, gold accents, and light gray text.
->
-> **Notes:**
-> - Use hex values (e.g., `#1a1a2e`) or rgba (e.g., `rgba(255,255,255,0.1)`)
-> - Surfaces use elevation-based brightness (darker = lower, lighter = higher)
-> - Text needs WCAG AA contrast (4.5:1) against its background surface
-> - Semantic colors (success, warning, error, info) use muted backgrounds with brighter text in dark mode
+> An earlier draft of this spec proposed a charcoal-and-gold palette. That direction was abandoned during implementation in favor of a **neutral dark-gray surface system with the brand blue/emerald palette brightened for contrast**, plus a separate **navy-based ramp for AFL Fantasy**. Everything below reflects the shipped tokens.
 
 ---
 
 ## 1. Brand Colors
 
-In dark mode the brand colors shift slightly brighter to maintain vibrancy against dark surfaces. The gold accent from the screenshot replaces green as the dark-mode accent.
+Dark mode brightens the brand colors for vibrancy against dark surfaces — it does not introduce a new accent hue.
 
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Primary** | `#1c497c` | `#1c497c` |
-| **Primary Dark** | `#164066` | `#0f2d4a` |
-| **Primary Light** | `#2563eb` | `#3b82f6` |
-| **Secondary** | `#2e8743` | `#3c9950` |
+| **Primary** | `#1c497c` | `#3b82f6` (bright blue) |
+| **Primary Dark** | `#164066` | `#2563eb` |
+| **Primary Light** | `#2563eb` | `#60a5fa` |
+| **Secondary** | `#2e8743` | `#10b981` (emerald, matches logo green) |
 | **Secondary Dark** | `#26743a` | `#2e8743` |
 | **Secondary Light** | `#3c9950` | `#4ade80` |
-| **Accent** | `#2e8743` | `#c9a94e` |
+| **Accent** | `#2e8743` | `#4ade80` |
 
 ---
 
 ## 2. Neutral / Gray Scale
 
-The scale effectively inverts for dark mode. Light grays become dark surfaces, dark grays become readable text.
+The scale inverts: light grays become dark surfaces, dark grays become readable text.
 
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Gray 50** (lightest) | `#f9fafb` | `#18182a` |
-| **Gray 100** | `#f3f4f6` | `#1e1e32` |
-| **Gray 200** | `#dddedf` | `#2a2a3d` |
-| **Gray 300** | `#d1d5db` | `#3a3a50` |
-| **Gray 400** | `#9ca3af` | `#6b6b80` |
-| **Gray 500** | `#6b7280` | `#8a8a9a` |
-| **Gray 600** | `#4b5563` | `#a0a0b0` |
-| **Gray 700** | `#374151` | `#c0c0cc` |
-| **Gray 800** | `#1f2937` | `#d8d8e0` |
-| **Gray 900** (darkest) | `#111827` | `#ededf0` |
+| **Gray 50** (lightest → darkest surface) | `#f9fafb` | `#181818` |
+| **Gray 100** | `#f3f4f6` | `#1e1e1e` |
+| **Gray 200** | `#dddedf` | `#2a2a2a` |
+| **Gray 300** | `#d1d5db` | `#3a3a3a` |
+| **Gray 400** | `#9ca3af` | `#6b6b6b` |
+| **Gray 500** | `#6b7280` | `#8a8a8a` |
+| **Gray 600** | `#4b5563` | `#a0a0a0` |
+| **Gray 700** | `#374151` | `#c0c0c0` |
+| **Gray 800** | `#1f2937` | `#d8d8d8` |
+| **Gray 900** (darkest → brightest text) | `#111827` | `#ededed` |
 
 ---
 
 ## 3. Page & Content Surfaces
 
-Three elevation levels create depth: page (deepest dark), content panels (mid), and accented areas (brightest dark).
+Three elevation levels: page (lowest), content/card (mid), elevated (dropdowns/tooltips).
 
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
-| **Page Background** | Full page behind everything | `#e0e0e0` | `#121220` |
-| **Content Background** | Main content panels | `#ffffff` | `#1e1e32` |
-| **Content Background Muted** | Subtle/recessed areas | `#eeeeee` | `#18182a` |
-| **Content Background Accent** | Highlighted sections | `#66abea` | `#2a4a6e` |
-| **Content Border** | Panel borders | `#e2e8f0` | `#2e2e44` |
+| **Page Background** | Full page behind everything | `#e0e0e0` | `#121212` |
+| **Content Background** | Main content panels, cards | `#ffffff` | `#1e1e1e` |
+| **Content Background Muted** | Subtle/recessed areas | `#eeeeee` | `#181818` |
+| **Content Background Accent** | Highlighted sections | `#66abea` | `#2a2a2a` |
+| **Content Border** | Panel borders | `#e2e8f0` | `#555555` |
+
+### Surface Elevation System (new tokens)
+
+| Token | Purpose | Dark Mode Value |
+|-------|---------|-----------------|
+| `--color-surface-1` | Lowest — page background | `#121212` |
+| `--color-surface-2` | Mid — cards, panels | `#1e1e1e` |
+| `--color-surface-3` | Highest — dropdowns, tooltips | `#2a2a2a` |
+| `--color-border-default` | Standard borders | `#3a3a3a` |
+| `--color-border-subtle` | Faint dividers | `#2e2e2e` |
+| `--color-text-primary` | Body copy | `#e0e0e0` |
+| `--color-text-secondary` | Labels, captions | `#8a8a8a` |
+| `--color-text-disabled` | Disabled text | `#5a5a5a` |
 
 ---
 
@@ -66,8 +72,8 @@ Three elevation levels create depth: page (deepest dark), content panels (mid), 
 
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
-| **Page Text** (primary) | Main body text | `#111827` | `#e0e0e8` |
-| **Text Muted** | Secondary/helper text | `#6b7280` | `#8a8a9a` |
+| **Page Text** (primary) | Main body text | `#111827` | `#ededed` |
+| **Text Muted** | Secondary/helper text | `#6b7280` | `#8a8a8a` |
 
 ---
 
@@ -75,13 +81,13 @@ Three elevation levels create depth: page (deepest dark), content panels (mid), 
 
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
-| **Link Default** | Standard link text | `#111827` | `#7eb8da` |
-| **Link Hover** | Link on hover | `#2e8743` | `#c9a94e` |
-| **Link Focus** | Link on focus | `#2e8743` | `#c9a94e` |
-| **Link Inverse** | Links on dark backgrounds | `#e2e8f0` | `#e2e8f0` |
-| **Link Inverse Hover** | Inverse link hover | `#2e8743` | `#c9a94e` |
+| **Link Default** | Standard link text | `#111827` | `#60a5fa` |
+| **Link Hover** | Link on hover | `#2e8743` | `#2563eb` |
+| **Link Focus** | Link on focus | `#2e8743` | `#2563eb` |
+| **Link Inverse** | Links on dark backgrounds | `#e2e8f0` | `#e2e2e2` |
+| **Link Inverse Hover** | Inverse link hover | `#2e8743` | `#3b82f6` |
 | **Link Accent** | Accent-styled links | `#2563eb` | `#60a5fa` |
-| **Link Accent Hover** | Accent link hover | `#b45309` | `#d4a44a` |
+| **Link Accent Hover** | Accent link hover | `#2e8743` | `#3b82f6` |
 
 ---
 
@@ -90,36 +96,38 @@ Three elevation levels create depth: page (deepest dark), content panels (mid), 
 ### Primary Button
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Background** | `#1c497c` | `#1c497c` |
-| **Background Hover** | `#164066` | `#245a94` |
-| **Background Focus** | `#164066` | `#245a94` |
+| **Background** | `#1c497c` | `#2563eb` |
+| **Background Hover** | `#164066` | `#1d4ed8` |
+| **Background Focus** | `#164066` | `#1d4ed8` |
 | **Text** | `#ffffff` | `#ffffff` |
-| **Border** | `#1c497c` | `#2e5f8f` |
-| **Border Hover** | `#2e8743` | `#c9a94e` |
+| **Border** | `#1c497c` | `#1d4ed8` |
+| **Border Hover** | `#2e8743` | `#3b82f6` |
 
 ### Secondary Button
+Uses the logo-green emerald with **near-black text** — white-on-`#10b981` is only ~3:1 contrast; `#121212`-on-`#10b981` is ~6.4:1 (same treatment as the dark primary button).
+
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Background** | `#2e8743` | `#2e8743` |
-| **Background Hover** | `#26743a` | `#3c9950` |
-| **Background Focus** | `#22663a` | `#3c9950` |
-| **Text** | `#ffffff` | `#ffffff` |
-| **Border** | `#2e8743` | `#3c9950` |
-| **Border Hover** | `#1c497c` | `#c9a94e` |
+| **Background** | `#2e8743` | `#10b981` |
+| **Background Hover** | `#26743a` | `#34d399` |
+| **Background Focus** | `#22663a` | `#34d399` |
+| **Text** | `#ffffff` | `#121212` |
+| **Border** | `#2e8743` | `#10b981` |
+| **Border Hover** | `#1c497c` | `#2563eb` |
 
 ### Inverse Button
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Background** | `#e2e8f0` | `#2a2a3d` |
-| **Background Hover** | `#1c497c` | `#1c497c` |
-| **Background Focus** | `#1c497c` | `#1c497c` |
-| **Text** | `#1f2937` | `#d8d8e0` |
+| **Background** | `#e2e8f0` | `#2a2a2a` |
+| **Background Hover** | `#1c497c` | `#3a3a3a` |
+| **Background Focus** | `#1c497c` | `#3a3a3a` |
+| **Text** | `#1f2937` | `#d8d8d8` |
 | **Text Hover** | `#ffffff` | `#ffffff` |
 
 ### Icon Button
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Text** | `#6b7280` | `#8a8a9a` |
+| **Text** | `#6b7280` | `#8a8a8a` |
 | **Text Focus** | `#3b82f6` | `#60a5fa` |
 
 ---
@@ -128,8 +136,20 @@ Three elevation levels create depth: page (deepest dark), content panels (mid), 
 
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Background** | `#ffffff` | `#1e1e32` |
-| **Border** | `#e2e8f0` | `#2e2e44` |
+| **Background** | `#ffffff` | `#1e1e1e` |
+| **Border** | `#e2e8f0` | `#555555` |
+
+**Raised-card recipe** (dark only, since flat borders read as invisible on dark surfaces):
+```css
+:global(html.dark) .card {
+  box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+}
+```
+
+**Tint recipe** (accent-tinted cards/rows):
+```css
+color-mix(in srgb, <hue> 7-12%, var(--card-bg))
+```
 
 ---
 
@@ -137,12 +157,12 @@ Three elevation levels create depth: page (deepest dark), content panels (mid), 
 
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
-| **Header Background** | Column headers | `#f9fafb` | `#18182a` |
-| **Header Text** | Column header text | `#9ca3af` | `#8a8a9a` |
-| **Row Background** | Odd rows | `#ffffff` | `#1e1e32` |
-| **Row Background Alt** | Even rows (zebra striping) | `#ececec` | `#232338` |
-| **Row Background Hover** | Row on hover | `#f9fafb` | `#2a2a3d` |
-| **Table Border** | Cell/row borders | `#e2e8f0` | `#2e2e44` |
+| **Header Background** | Column headers | `#f9fafb` | `#181818` |
+| **Header Text** | Column header text | `#9ca3af` | `#8a8a8a` |
+| **Row Background** | Odd rows | `#ffffff` | `#1e1e1e` |
+| **Row Background Alt** | Even rows (zebra striping) | `#ececec` | `#232323` |
+| **Row Background Hover** | Row on hover | `#f9fafb` | `#2a2a2a` |
+| **Table Border** | Cell/row borders | `#e2e8f0` | `#3a3a3a` |
 
 ---
 
@@ -150,25 +170,25 @@ Three elevation levels create depth: page (deepest dark), content panels (mid), 
 
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
-| **Input Background** | Text input fill | `#ffffff` | `#18182a` |
-| **Input Border** | Input border default | `#d1d5db` | `#3a3a50` |
+| **Input Background** | Text input fill | `#ffffff` | `#181818` |
+| **Input Border** | Input border default | `#d1d5db` | `#3a3a3a` |
 | **Input Border Focus** | Input border on focus | `#1c497c` | `#3b82f6` |
-| **Input Text** | Typed text | `#111827` | `#e0e0e8` |
-| **Input Placeholder** | Placeholder text | `#9ca3af` | `#6b6b80` |
-| **Input Disabled Background** | Disabled input fill | `#f3f4f6` | `#151526` |
+| **Input Text** | Typed text | `#111827` | `#e0e0e0` |
+| **Input Placeholder** | Placeholder text | `#9ca3af` | `#6b6b6b` |
+| **Input Disabled Background** | Disabled input fill | `#f3f4f6` | `#151515` |
 
 ---
 
 ## 10. Inverse Sections (Dark Headers/Footers)
 
-The top nav bar and header sections. In dark mode these blend more seamlessly but stay distinct.
-
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
-| **Background** | Dark section fill | `#1c497c` | `#10101c` |
-| **Background Accent** | Accent within dark section | `#2e8743` | `#c9a94e` |
-| **Border** | Border in dark section | `#164066` | `#1a1a2e` |
-| **Text** | Text in dark section | `#ffffff` | `#e0e0e8` |
+| **Background** | Dark section fill (footer) | `#1c497c` | `#101010` |
+| **Background Accent** | Accent within dark section | `#2e8743` | `#2563eb` (bright blue strip) |
+| **Border** | Border in dark section | `#164066` | `#1a1a1a` |
+| **Text** | Text in dark section | `#ffffff` | `#e0e0e0` |
+
+**Breadcrumb "Back to MFL" strip:** pinned to `var(--inverse-bg, #101010)` with a `var(--color-primary, #3b82f6)` accent edge in dark mode — without the pin it would fall back to `--color-primary` (a bright blue bar glaring against the `#121212` page).
 
 ---
 
@@ -176,9 +196,9 @@ The top nav bar and header sections. In dark mode these blend more seamlessly bu
 
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Background** | `#66abea` | `#1c3a5c` |
-| **Border** | `#d6e3f0` | `#2a4a6e` |
-| **Text** | `#ffffff` | `#e0e0e8` |
+| **Background** | `#66abea` | `#2a2a2a` |
+| **Border** | `#d6e3f0` | `#3a3a3a` |
+| **Text** | `#ffffff` | `#e0e0e0` |
 
 ---
 
@@ -214,6 +234,12 @@ Dark mode uses translucent/muted backgrounds with brighter foreground text for s
 | **Light** (badge/alert bg) | `#dbeafe` | `rgba(59, 130, 246, 0.15)` |
 | **Dark** (badge/alert text) | `#2563eb` | `#93bbfd` |
 
+### Franchise Tag
+| Token | Light Mode | Dark Mode |
+|-------|-----------|-----------|
+| **Color** | `#7c3aed` | `#a78bfa` |
+| **Light** (badge bg) | `#ede9fe` | `rgba(124, 58, 237, 0.2)` |
+
 ---
 
 ## 13. Legacy Alerts
@@ -232,112 +258,179 @@ Dark mode uses translucent/muted backgrounds with brighter foreground text for s
 
 ---
 
-## 14. Miscellaneous
+## 14. Shadows
 
-| Token | Used For | Light Mode | Dark Mode |
-|-------|----------|-----------|-----------|
-| **Add Color** | Player add indicator | `green` | `#4ade80` |
-| **Drop Color** | Player drop indicator | `red` | `#f87171` |
-| **Code Background** | Code/message blocks | `#31382d` | `#151526` |
-| **Shadow Color** | Base shadow tint (HSL) | `220deg 3% 15%` | `240deg 10% 4%` |
-| **Focus Ring Shadow** | Focus indicator | `rgba(28,73,124,0.25)` | `rgba(59,130,246,0.4)` |
-| **Button Hover Shadow** | Button lift effect | `rgba(37,99,235,0.35)` | `rgba(59,130,246,0.3)` |
+Dark surfaces swallow low-alpha shadows — elevation needs **pure-black shadows at roughly 2.5x the light-mode opacity** to read as "raised."
+
+| Token | Light Mode (hue/opacity) | Dark Mode (hue/opacity) |
+|-------|--------------------------|--------------------------|
+| **Shadow Color (HSL hue)** | `220deg 3% 15%` (blue-tinted) | `0deg 0% 0%` (pure black) |
+| **Shadow SM** | `0.09` alpha | `0.5` alpha |
+| **Shadow MD** (3 layers) | `0.08 / 0.06 / 0.04` | `0.45 / 0.35 / 0.28` |
+| **Shadow LG** (4 layers) | `0.06 / 0.05 / 0.04 / 0.03` | `0.4 / 0.32 / 0.26 / 0.2` |
+| **Shadow XL** (5 layers) | `0.05 / 0.04 / 0.035 / 0.03 / 0.025` | `0.35 / 0.3 / 0.24 / 0.18 / 0.12` |
+| **Button Hover Shadow** | `rgba(37,99,235,0.35)` | `rgba(59,130,246,0.3)` |
+| **Focus Ring Shadow** | `rgba(28,73,124,0.25)` | `rgba(59,130,246,0.4)` |
 
 ---
 
-## 15. Navigation Drawer
+## 15. Selection Colors
+
+Without an explicit rule, selected text keeps its muted dark-mode color against the browser's default highlight — near-unreadable slate-on-slate. Forced per-league:
+
+| League | Selection Background | Selection Text |
+|--------|----------------------|-----------------|
+| TheLeague (`html.dark`) | `rgba(59, 130, 246, 0.55)` | `#ffffff` |
+| AFL (`html.dark[data-league="afl"]`) | `rgba(239, 83, 80, 0.5)` | `#ffffff` |
+
+---
+
+## 16. Navigation Drawer
 
 ### Backgrounds
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Nav Background** | `#ffffff` | `#1e1e32` |
-| **Nav Background Subtle** | `#f9fafb` | `#18182a` |
-| **Footer Background** | `#f9fafb` | `#151526` |
+| **Nav Background** | `#ffffff` | `#1e1e1e` |
+| **Nav Background Subtle** | `#f9fafb` | `#181818` |
+| **Footer Background** | `#f9fafb` | `#151515` |
 
 ### Text
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Nav Text** | `#333333` | `#d8d8e0` |
-| **Nav Text Muted** | `#6b7280` | `#8a8a9a` |
-| **Nav Text Subtle** | `#9ca3af` | `#6b6b80` |
-| **Section Header** | `#777777` | `#8a8a9a` |
-| **Footer Text Muted** | `#6b7280` | `#6b6b80` |
+| **Nav Text** | `#333333` | `#d8d8d8` |
+| **Nav Text Muted** | `#6b7280` | `#8a8a8a` |
+| **Nav Text Subtle** | `#9ca3af` | `#6b6b6b` |
+| **Section Header** | `#777777` | `#8a8a8a` |
+| **Footer Text Muted** | `#6b7280` | `#6b6b6b` |
 
 ### Borders
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Nav Border** | `#d0d2d6` | `#2e2e44` |
-| **Nav Border Subtle** | `#f3f4f6` | `#232338` |
-| **Footer Border** | `#e5e7eb` | `#2a2a3d` |
+| **Nav Border** | `#d0d2d6` | `#3a3a3a` |
+| **Nav Border Subtle** | `#f3f4f6` | `#2e2e2e` |
+| **Footer Border** | `#e5e7eb` | `#2a2a2a` |
 
 ### Interactive States
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
-| **Hover Background** | `#f3f4f6` | `#2a2a3d` |
-| **Active Background** | `rgba(28,73,124,0.1)` | `rgba(201,169,78,0.15)` |
-| **Active Text** | `#1c497c` | `#c9a94e` |
-| **Active Border Left** | `#1c497c` | `#c9a94e` |
+| **Hover Background** | `#f3f4f6` | `#2a2a2a` |
+| **Active Background** | `rgba(28,73,124,0.1)` | `rgba(37,99,235,0.15)` |
+| **Active Text** | `#1c497c` | `#3b82f6` |
+| **Active Border Left** | `#1c497c` | `#3b82f6` |
 
 ### Subcomponents
 | Token | Used For | Light Mode | Dark Mode |
 |-------|----------|-----------|-----------|
 | **Badge Background** | Notification count | `#ef4444` | `#ef4444` |
 | **Badge Text** | Notification text | `#ffffff` | `#ffffff` |
-| **Switcher Background** | League toggle bg | `#f3f4f6` | `#18182a` |
-| **Switcher Border** | League toggle border | `#e5e7eb` | `#2e2e44` |
-| **Switcher Active Bg** | Selected league | `#1c497c` | `#c9a94e` |
-| **Switcher Active Text** | Selected league text | `#ffffff` | `#121220` |
-| **Switcher Inactive Text** | Unselected league | `#6b7280` | `#6b6b80` |
-| **Tooltip Background** | Hover tooltip | `#1f2937` | `#2a2a3d` |
-| **Tooltip Text** | Tooltip text | `#ffffff` | `#e0e0e8` |
-| **Verify Prompt Bg** | Team verify area | `rgba(28,73,124,0.05)` | `rgba(201,169,78,0.08)` |
-| **Verify Prompt Border** | Team verify border | `#1c497c` | `#c9a94e` |
-| **Verify Prompt Text** | Team verify text | `#1c497c` | `#c9a94e` |
+| **Switcher Background** | League toggle bg | `#f3f4f6` | `#181818` |
+| **Switcher Border** | League toggle border | `#e5e7eb` | `#3a3a3a` |
+| **Switcher Active Bg** | Selected league | `#1c497c` | `#2563eb` |
+| **Switcher Active Text** | Selected league text | `#ffffff` | `#ffffff` |
+| **Switcher Inactive Text** | Unselected league | `#6b7280` | `#6b6b6b` |
+| **Tooltip Background** | Hover tooltip | `#1f2937` | `#2a2a2a` |
+| **Tooltip Text** | Tooltip text | `#ffffff` | `#e0e0e0` |
+| **Verify Prompt Bg** | Team verify area | `rgba(28,73,124,0.05)` | `rgba(37,99,235,0.08)` |
+| **Verify Prompt Border** | Team verify border | `#1c497c` | `#2563eb` |
+| **Verify Prompt Text** | Team verify text | `#1c497c` | `#2563eb` |
 | **Overlay** | Backdrop behind drawer | `rgba(0,0,0,0.5)` | `rgba(0,0,0,0.7)` |
 
 ### Scrollbar
 | Token | Light Mode | Dark Mode |
 |-------|-----------|-----------|
 | **Track** | `transparent` | `transparent` |
-| **Thumb** | `#d1d5db` | `#3a3a50` |
-| **Thumb Hover** | `#9ca3af` | `#5a5a70` |
+| **Thumb** | `#d1d5db` | `#3a3a3a` |
+| **Thumb Hover** | `#9ca3af` | `#5a5a5a` |
 
 ---
 
-## 16. New Tokens (Dark Mode Only)
+## 17. AFL Fantasy — Dark Navy Ramp
 
-These are new tokens that create the elevation system for dark mode surfaces.
+AFL's dark mode is **navy-based, not neutral-gray** (`html.dark[data-league="afl"]`). The whole surface elevation ramp derives from `--afl-navy` (`#0f1e2e`) as the page floor, stepping lighter for cards → elevated surfaces, with blue-tinted borders/grays so everything stays in the navy family. Red brand identity is preserved via a brightened accent (`#ef5350`, 5.4:1 contrast on the navy page). `--afl-trophy-gold` / `--afl-trophy-gold-light` are left untouched in dark mode — they match the award SVG art and don't need to invert.
 
-| Token | Purpose | Suggested Usage | Dark Mode Value |
-|-------|---------|-----------------|-----------------|
-| **Surface 1** | Lowest elevation | Page background, recessed areas | `#121220` |
-| **Surface 2** | Mid elevation | Content panels, cards | `#1e1e32` |
-| **Surface 3** | Highest elevation | Dropdowns, modals, tooltips | `#2a2a3d` |
-| **Border Default** | Standard border | Card/content borders | `#2e2e44` |
-| **Border Subtle** | Faint dividers | Section separators | `#232338` |
-| **Text Primary** | Primary text | Body copy, headings | `#e0e0e8` |
-| **Text Secondary** | De-emphasized text | Captions, labels | `#8a8a9a` |
-| **Text Disabled** | Non-interactive text | Disabled form labels | `#5a5a6a` |
-| **Scrollbar Thumb** | Page scrollbar handle | Global scrollbar | `#3a3a50` |
-| **Scrollbar Track** | Page scrollbar track | Global scrollbar | `transparent` |
+### Surface Ramp
+| Token | Value | Role |
+|-------|-------|------|
+| `--afl-navy` | `#0f1e2e` | Page floor (`--page-bg`, `--color-surface-1`) |
+| Cards/panels | `#16283c` | One step up (`--content-bg`, `--card-bg`, `--nav-bg`, `--table-row-bg`) |
+| Recessed | `#122132` | `--content-bg-muted`, `--table-header-bg`, `--input-bg`, `--nav-bg-subtle` |
+| Alt row | `#182b40` | `--table-row-bg-alt` |
+| Elevated (dropdowns/tooltips/hover) | `#1d3349` | `--color-surface-3`, `--table-row-bg-hover`, `--nav-hover-bg`, `--nav-tooltip-bg` |
+| Inverse buttons | `#1d3349` → hover `#27405c` | `--btn-inverse-bg` / `--btn-inverse-bg-hover` |
+| Footer (deepest) | `#0a1622` | `--inverse-bg`, `--breadcrumb-bar-bg` |
+| Footer border / bg | `#16283c` / `#0d1a28` | `--inverse-border` / `--nav-footer-bg` |
+
+### Borders (blue-tinted)
+| Token | Value |
+|-------|-------|
+| Standard border | `#2e4560` (`--content-border`, `--card-border`, `--table-border`, `--input-border`, `--nav-border`) |
+| Subtle border | `#24374d` (`--nav-footer-border`, `--color-border-subtle`) |
+
+### Inverted Gray Scale (navy-tinted; 50–300 = surfaces/borders, 400+ = text)
+| Token | Value |
+|-------|-------|
+| Gray 50 | `#122132` |
+| Gray 100 | `#16283c` |
+| Gray 200 | `#1d3349` |
+| Gray 300 | `#2e4560` |
+| Gray 400 | `#64788c` |
+| Gray 500 | `#8fa0b3` |
+| Gray 600 | `#9dadbe` |
+| Gray 700 | `#b9c5d2` |
+| Gray 800 | `#d3dce5` |
+| Gray 900 | `#e8eef4` |
+
+### Text
+| Token | Value |
+|-------|-------|
+| Page text | `#e8eef4` |
+| Text primary | `#dbe4ec` |
+| Text secondary / muted | `#8fa0b3` |
+| Placeholder | `#64788c` |
+
+### Accent & Chrome
+| Token | Value | Note |
+|-------|-------|------|
+| `--league-accent` | `#ef5350` | Brightened red for dark (vs. `#c41e3a` in light) |
+| `--header-nav-icon-color` | `#ffffff` | Resting icons; navy would vanish on dark |
+| `--header-nav-icon-hover-color` / `--header-nav-label-color` | `var(--league-accent)` | Red hover/labels |
+| `--logo-name-primary-color` | `#ffffff` | "AFL" wordmark (TheLeague's `html.dark` green doesn't apply) |
+| `--breadcrumb-bar-bg` | `#0a1622` | Deeper than the navy page so it still reads as its own band |
+| `--breadcrumb-bar-border` | `var(--league-accent, #ef5350)` | Red accent edge |
+| Selection background | `rgba(239, 83, 80, 0.5)` | Red-tinted, vs. blue for TheLeague |
+
+**Cascade note:** `html.dark[data-league="afl"]` loads after the light-mode `html[data-league="afl"]` block and the neutral `html.dark` block, so it re-asserts navy values that would otherwise be overwritten by `html.dark`'s generic dark tokens (e.g. `--breadcrumb-bar-bg`).
+
+---
+
+## 18. Logo / Icon Dark-Mode Swap Conventions
+
+Team and brand art that doesn't hold up when inverted (e.g. dark logo strokes on a now-dark page) ships a **dark-specific asset variant** rather than relying on CSS filters:
+
+- Per-team config carries an `iconDark` field (alongside the light `icon`) in `src/data/theleague.config.json` / `data/afl-fantasy/afl.config.json`. When present, dark mode renders the `-dark` suffixed asset instead of filtering the light one.
+- The `ThemeImage` component swaps `src` for the dark variant based on the resolved `dark` class rather than duplicating markup per theme.
+- Generated `TeamIconDarkStyles` emits the `html.dark` CSS rules that point each team's icon selector at its `iconDark` asset, so pages don't hand-write a dark override per team.
 
 ---
 
 ## Color Palette Summary
 
-The dark mode theme is built from these core values:
+The shipped dark mode theme is built from these core values:
 
 | Role | Hex | Description |
 |------|-----|-------------|
-| **Deepest background** | `#121220` | Page body, recessed areas |
-| **Base surface** | `#1e1e32` | Cards, panels, content areas |
-| **Elevated surface** | `#2a2a3d` | Hovers, dropdowns, tooltips |
-| **Subtle border** | `#232338` | Dividers, subtle separation |
-| **Standard border** | `#2e2e44` | Card borders, input borders |
-| **Muted text** | `#6b6b80` | Placeholders, disabled hints |
-| **Secondary text** | `#8a8a9a` | Labels, table headers, captions |
-| **Primary text** | `#e0e0e8` | Body copy, readable content |
-| **Bright text** | `#ededf0` | Headings, emphasis |
-| **Gold accent** | `#c9a94e` | Active states, hover accents, CTA highlights |
-| **Brand blue** | `#1c497c` | Primary buttons, brand identity |
-| **Bright blue** | `#3b82f6` | Links, focus rings, info states |
+| **Deepest background (page)** | `#121212` | TheLeague page body |
+| **Base surface (cards)** | `#1e1e1e` | Cards, panels, content areas |
+| **Elevated surface** | `#2a2a2a` | Hovers, dropdowns, tooltips |
+| **Subtle border** | `#2e2e2e` | Dividers, subtle separation |
+| **Standard border** | `#555555` (content) / `#3a3a3a` (input/table/nav) | Card borders, input borders |
+| **Muted text** | `#6b6b6b` | Placeholders, disabled hints |
+| **Secondary text** | `#8a8a8a` | Labels, table headers, captions |
+| **Primary text** | `#e0e0e0` | Body copy, readable content |
+| **Bright text** | `#ededed` | Headings, emphasis |
+| **Bright blue (brand)** | `#3b82f6` | Primary buttons, links, focus rings |
+| **Emerald (secondary)** | `#10b981` | Secondary buttons, logo green |
+| **AFL navy floor** | `#0f1e2e` | AFL page background (dark) |
+| **AFL card surface** | `#16283c` | AFL cards/panels (dark) |
+| **AFL elevated surface** | `#1d3349` | AFL dropdowns/hover (dark) |
+| **AFL red accent** | `#ef5350` | AFL brand accent (dark, brightened for contrast) |

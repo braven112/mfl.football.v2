@@ -134,6 +134,14 @@ const isEmpty = rows.length === 0;
     padding: 0.875rem 1rem 0.5rem;
   }
 
+  /* Dark mode: raised-card treatment — shadow alone can't separate the
+     card surface from the page floor; add the border ring. */
+  :global(html.dark) .sf-rail-hottest {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--card-shadow, var(--shadow-card));
+  }
+
   .sf-rail-hottest .sf-rail-section__title {
     /* Override the rail's shared section-title chrome (uppercase eyebrow
        with a primary-color left border). Inside a card, that left border
@@ -277,11 +285,10 @@ const isEmpty = rows.length === 0;
   /* Dark mode — mirror schefter-feed.css pattern (token-driven, no overrides
      needed because every color above is a CSS var with a light fallback).
      Belt-and-suspenders: tighten the divider in dark mode if the global
-     gray-50 fallback isn't dark-mode-aware. */
-  @media (prefers-color-scheme: dark) {
-    .sf-rail-hottest__item {
-      border-bottom-color: var(--color-gray-800, #1f2937);
-    }
+     gray-50 fallback isn't dark-mode-aware. html.dark is the single
+     resolver for theme state (see tokens-dark.css), not the media query. */
+  :global(html.dark) .sf-rail-hottest__item {
+    border-bottom-color: var(--color-gray-800, #1f2937);
   }
 
   /* Mobile — let team names wrap once horizontal real-estate opens up

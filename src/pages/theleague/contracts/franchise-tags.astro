@@ -156,7 +156,7 @@ function formatDate(iso: string): string {
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: 6px;
     text-decoration: none;
-    background: white;
+    background: var(--card-bg, white);
     white-space: nowrap;
     flex-shrink: 0;
     transition: all 0.15s ease;
@@ -321,6 +321,29 @@ function formatDate(iso: string): string {
   .ft-status--expired {
     background: var(--color-gray-100, #f3f4f6);
     color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Dark mode: the light-tinted badge backgrounds above are literal hexes
+     tuned for light mode; override with the dark badge tokens so they don't
+     glow against a dark card. */
+  :global(html.dark) .ft-status--pending {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+  }
+
+  :global(html.dark) .ft-status--approved {
+    background: var(--badge-success-bg);
+    color: var(--badge-success-text);
+  }
+
+  :global(html.dark) .ft-status--applied {
+    background: var(--badge-info-bg);
+    color: var(--badge-info-text);
+  }
+
+  :global(html.dark) .ft-status--rejected {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
   }
 
   @media (max-width: 640px) {

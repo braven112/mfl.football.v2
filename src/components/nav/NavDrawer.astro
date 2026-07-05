@@ -319,21 +319,28 @@ const footerLinks = [
 
   /* ==============================================
    * DARK MODE
+   * These rules re-assert the same var() calls as the base rules above,
+   * since tokens-dark.css already redefines --nav-bg / --nav-shadow /
+   * --nav-text-muted / --nav-hover-bg / --nav-overlay-bg under html.dark.
+   * Kept (scoped to html.dark, matching the theme resolver's
+   * documentElement.classList.add('dark') and tokens-dark.css's own
+   * selector) for explicitness / to survive future refactors that might
+   * hardcode a light fallback here.
    * ============================================== */
-  :global(.dark) .nav-overlay {
+  :global(html.dark) .nav-overlay {
     background: var(--nav-overlay-bg);
   }
 
-  :global(.dark) .nav-drawer {
+  :global(html.dark) .nav-drawer {
     background: var(--nav-bg);
     box-shadow: var(--nav-shadow);
   }
 
-  :global(.dark) .nav-drawer__close-btn {
+  :global(html.dark) .nav-drawer__close-btn {
     color: var(--nav-text-muted);
   }
 
-  :global(.dark) .nav-drawer__close-btn:hover {
+  :global(html.dark) .nav-drawer__close-btn:hover {
     color: var(--nav-text);
     background: var(--nav-hover-bg);
   }

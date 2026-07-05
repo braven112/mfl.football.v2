@@ -200,9 +200,24 @@ for (const section of SECTIONS) {
     transform: translateY(-1px);
   }
 
+  /* Dark mode: raised-card treatment — the tile background (#181818) is
+     nearly identical to the section card behind it (#1e1e1e); add a ring
+     so tiles read as distinct cards instead of washing out. */
+  :global(html.dark) .stats-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  :global(html.dark) .stats-card:hover {
+    box-shadow: 0 0 0 1px var(--color-primary-light, #60a5fa);
+  }
+
   .stats-card__icon {
     flex-shrink: 0;
     color: var(--hub-accent);
+    /* Sprite symbols carry no fill attributes — without this they render
+       SVG-initial black (invisible on dark). currentColor pierces the <use>
+       shadow DOM so the icon follows --hub-accent in both themes. */
+    fill: currentColor;
     margin-top: 0.125rem;
   }
 

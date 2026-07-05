@@ -126,7 +126,7 @@ const metrics: MetricDef[] = [
 <style>
   .hp-snapshot {
     --dh-accent: var(--color-primary, #1c497c);
-    background: var(--content-bg, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-md);
@@ -243,6 +243,15 @@ const metrics: MetricDef[] = [
   .hp-snapshot__guest-icon {
     flex-shrink: 0;
     color: var(--color-gray-300, #d1d5db);
+    /* Sprite symbols carry no fill attribute — without this they render
+       SVG-initial black (invisible on dark). currentColor pierces the
+       <use> shadow DOM so the icon follows the muted gray token. */
+    fill: currentColor;
+  }
+
+  /* Dark mode: the muted gray vanishes on the gradient card — go bright. */
+  :global(html.dark) .hp-snapshot__guest-icon {
+    color: #ffffff;
   }
 
   .hp-snapshot__guest-text {

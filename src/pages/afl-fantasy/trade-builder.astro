@@ -610,10 +610,16 @@ const pageConfig = {
       max-width: 480px;
       margin: 4rem auto;
       text-align: center;
-      background: #fff;
+      background: var(--card-bg, #fff);
       padding: 2rem;
       border-radius: 0.75rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    :global(html.dark) .tb-gate {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .tb-header {
@@ -626,7 +632,7 @@ const pageConfig = {
     }
 
     .tb-header__crumbs a {
-      color: #c41e3a;
+      color: var(--league-accent, #c41e3a);
       text-decoration: none;
       font-weight: 600;
     }
@@ -639,12 +645,12 @@ const pageConfig = {
       margin: 0;
       font-size: 1.75rem;
       font-weight: 800;
-      color: #0f172a;
+      color: var(--page-text, #0f172a);
     }
 
     .tb-header__sub {
       margin: 0.25rem 0 0;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
       font-size: 0.875rem;
     }
 
@@ -656,12 +662,18 @@ const pageConfig = {
     }
 
     .tb-side {
-      background: #fff;
+      background: var(--card-bg, #fff);
       border-radius: 0.75rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       padding: 1.25rem;
       display: grid;
       gap: 1rem;
+    }
+
+    :global(html.dark) .tb-side {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .tb-side__header {
@@ -680,7 +692,7 @@ const pageConfig = {
       margin: 0;
       font-size: 1.125rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--page-text, #0f172a);
     }
 
     .tb-side__role {
@@ -689,17 +701,17 @@ const pageConfig = {
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .tb-to-select {
       font-size: 1.125rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--page-text, #0f172a);
       padding: 0.125rem 0.375rem;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--content-border, #e5e7eb);
       border-radius: 0.375rem;
-      background: #fff;
+      background: var(--input-bg, #fff);
       cursor: pointer;
       max-width: 100%;
     }
@@ -709,15 +721,15 @@ const pageConfig = {
       margin: 0;
       padding: 0.75rem;
       min-height: 80px;
-      background: #f9fafb;
+      background: var(--content-bg-muted, #f9fafb);
       border-radius: 0.5rem;
-      border: 2px dashed #e5e7eb;
+      border: 2px dashed var(--content-border, #e5e7eb);
       display: grid;
       gap: 0.375rem;
     }
 
     .tb-empty {
-      color: #9ca3af;
+      color: var(--color-gray-400, #9ca3af);
       font-size: 0.8125rem;
       text-align: center;
       padding: 0.625rem;
@@ -729,15 +741,15 @@ const pageConfig = {
       justify-content: space-between;
       gap: 0.5rem;
       padding: 0.5rem 0.625rem;
-      background: #fff;
-      border: 1px solid #e5e7eb;
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--content-border, #e5e7eb);
       border-radius: 0.375rem;
     }
 
     .tb-asset__label {
       font-size: 0.8125rem;
       font-weight: 600;
-      color: #0f172a;
+      color: var(--page-text, #0f172a);
     }
 
     .tb-asset__remove {
@@ -768,7 +780,7 @@ const pageConfig = {
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .tb-picker {
@@ -788,11 +800,11 @@ const pageConfig = {
       gap: 0.5rem;
       padding: 0.375rem 0.5rem;
       border-radius: 0.375rem;
-      border: 1px solid #f3f4f6;
+      border: 1px solid var(--content-border, #f3f4f6);
     }
 
     .tb-picker__item:hover {
-      background: #f9fafb;
+      background: var(--content-bg-muted, #f9fafb);
     }
 
     .tb-picker__item.is-selected {
@@ -810,14 +822,14 @@ const pageConfig = {
 
     .tb-picker__adp {
       font-size: 0.75rem;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
       font-weight: 600;
       font-variant-numeric: tabular-nums;
     }
 
     .tb-picker__pick-label {
       font-size: 0.8125rem;
-      color: #0f172a;
+      color: var(--page-text, #0f172a);
       font-weight: 600;
     }
 
@@ -850,12 +862,18 @@ const pageConfig = {
     }
 
     .tb-fairness {
-      background: #fff;
+      background: var(--card-bg, #fff);
       border-radius: 0.75rem;
       padding: 1.25rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       display: grid;
       gap: 0.75rem;
+    }
+
+    :global(html.dark) .tb-fairness {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .tb-center__title {
@@ -864,7 +882,7 @@ const pageConfig = {
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .tb-balance {
@@ -876,16 +894,16 @@ const pageConfig = {
       display: flex;
       justify-content: space-between;
       font-size: 0.8125rem;
-      color: #374151;
+      color: var(--color-gray-700, #374151);
     }
 
     .tb-balance__label {
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .tb-balance__value {
       font-weight: 800;
-      color: #0f172a;
+      color: var(--page-text, #0f172a);
       font-variant-numeric: tabular-nums;
     }
 
@@ -909,7 +927,7 @@ const pageConfig = {
       margin: 0.25rem 0 0;
       font-size: 0.8125rem;
       text-align: center;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .tb-balance__verdict[data-kind="ok"] { color: #166534; }
@@ -921,23 +939,25 @@ const pageConfig = {
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
     }
 
     .tb-comments {
       width: 100%;
       padding: 0.5rem 0.625rem;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--content-border, #e5e7eb);
       border-radius: 0.375rem;
       font-size: 0.875rem;
       font-family: inherit;
       resize: vertical;
+      background: var(--input-bg, #fff);
+      color: var(--input-text, #0f172a);
     }
 
     .tb-comments:focus {
-      outline: 2px solid #c41e3a;
+      outline: 2px solid var(--league-accent, #c41e3a);
       outline-offset: -1px;
-      border-color: #c41e3a;
+      border-color: var(--league-accent, #c41e3a);
     }
 
     .tb-btn {
@@ -955,18 +975,18 @@ const pageConfig = {
     }
 
     .tb-btn--primary {
-      background: #c41e3a;
+      background: var(--league-accent, #c41e3a);
       color: #fff;
     }
 
     .tb-btn--primary:hover:not(:disabled) {
-      background: #a31a31;
+      background: color-mix(in srgb, var(--league-accent, #c41e3a) 85%, black);
     }
 
     .tb-submit-hint {
       margin: 0;
       font-size: 0.75rem;
-      color: #6b7280;
+      color: var(--content-text-muted, #6b7280);
       text-align: center;
     }
 
@@ -982,6 +1002,47 @@ const pageConfig = {
         position: static;
         order: -1;
       }
+    }
+
+    /* Dark mode — the light-tinted red/green pills and semantic text colors
+       above are literal hexes with no direct token equivalent; override them
+       here rather than change the light-mode fallback (which must stay
+       pixel-identical). */
+    :global(html.dark) .tb-picker__item.is-selected {
+      background: rgba(220, 38, 38, 0.12);
+      border-color: rgba(220, 38, 38, 0.35);
+    }
+    :global(html.dark) .tb-picker__add {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+    }
+    :global(html.dark) .tb-picker__add:hover {
+      background: rgba(16, 185, 129, 0.25);
+    }
+    :global(html.dark) .tb-picker__item.is-selected .tb-picker__add,
+    :global(html.dark) .tb-asset__remove {
+      background: rgba(220, 38, 38, 0.15);
+      color: #fca5a5;
+    }
+    :global(html.dark) .tb-asset__remove:hover {
+      background: rgba(220, 38, 38, 0.25);
+    }
+    :global(html.dark) .tb-balance__bar {
+      background: rgba(220, 38, 38, 0.15);
+    }
+    :global(html.dark) .tb-balance__bar-fill {
+      background: rgba(16, 185, 129, 0.35);
+    }
+    :global(html.dark) .tb-balance__verdict[data-kind="ok"],
+    :global(html.dark) .tb-submit-hint[data-kind="ok"] {
+      color: #6ee7b7;
+    }
+    :global(html.dark) .tb-balance__verdict[data-kind="warn"],
+    :global(html.dark) .tb-submit-hint[data-kind="err"] {
+      color: #fca5a5;
+    }
+    :global(html.dark) .tb-balance__verdict[data-kind="good"] {
+      color: #7dd3fc;
     }
   </style>
 </TheLeagueLayout>

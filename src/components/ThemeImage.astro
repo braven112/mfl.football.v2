@@ -1,0 +1,67 @@
+---
+/**
+ * ThemeImage — dual-<img> theme swap for static icon/badge assets that have
+ * a hand-authored dark-mode variant (e.g. AFL conference + tier badges).
+ *
+ * SSR can NEVER know the resolved theme (the theme_pref cookie can be
+ * 'auto', resolved pre-paint by an inline script) — so both light and dark
+ * <img> elements always render server-side, and CSS (not SSR) picks which
+ * one is visible based on html.dark. See src/styles/theme-image.css.
+ *
+ * Preserve each call site's exact sizing/class/alt/loading attributes on
+ * BOTH images — pass them through `class` here and they land on both.
+ *
+ * @example
+ * ```astro
+ * <ThemeImage
+ *   src={getTierLogo(tierName)}
+ *   darkSrc={getTierLogoDark(tierName)}
+ *   alt={`${tierName} Logo`}
+ *   class="tier-logo"
+ * />
+ * ```
+ */
+import '../styles/theme-image.css';
+
+export interface Props {
+  /** Light-mode (default) image src. */
+  src: string;
+  /** Dark-mode image src, shown only when html.dark is set. */
+  darkSrc: string;
+  alt: string;
+  width?: number | string;
+  height?: number | string;
+  class?: string;
+  loading?: 'lazy' | 'eager';
+  decoding?: 'async' | 'sync' | 'auto';
+}
+
+const {
+  src,
+  darkSrc,
+  alt,
+  width,
+  height,
+  class: className,
+  loading = 'lazy',
+  decoding = 'async',
+} = Astro.props;
+---
+
+<img
+  src={src}
+  alt={alt}
+  width={width}
+  height={height}
+  loading={loading}
+  decoding={decoding}
+  class:list={['theme-img', 'theme-img--light', className]}
+/><img
+  src={darkSrc}
+  alt={alt}
+  width={width}
+  height={height}
+  loading={loading}
+  decoding={decoding}
+  class:list={['theme-img', 'theme-img--dark', className]}
+/>

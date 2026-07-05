@@ -494,6 +494,13 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		margin-bottom: 0.75rem;
 	}
 
+	/* Dark mode: this panel sits directly on the page floor (no wrapping
+	   card), and the muted gray-50 well color reads as flat against navy —
+	   add the raised-card ring. */
+	:global(html.dark) .chart-container {
+		box-shadow: 0 0 0 1px var(--content-border, #555555);
+	}
+
 	.chart-container :global(.chart-svg) {
 		width: 100%;
 		height: auto;
@@ -510,6 +517,10 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		margin-bottom: 0.75rem;
 	}
 
+	:global(html.dark) .chart-empty {
+		box-shadow: 0 0 0 1px var(--content-border, #555555);
+	}
+
 	.chart-empty p { margin: 0; }
 
 	/* Tooltip */
@@ -518,7 +529,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		top: 0.5rem;
 		right: 0.75rem;
 		background: var(--color-gray-900, #111827);
-		color: #fff;
+		color: var(--color-white, #fff);
 		font-size: 0.75rem;
 		padding: 0.5rem 0.625rem;
 		border-radius: 0.375rem;
@@ -651,15 +662,23 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		margin-bottom: 1.5rem;
 	}
 
+	:global(html.dark) .activity-page__empty {
+		box-shadow: 0 0 0 1px var(--content-border, #555555);
+	}
+
 	/* ── Table ── */
 	.activity-table {
 		width: 100%;
 		border-collapse: separate;
 		border-spacing: 0;
 		font-size: 0.875rem;
-		background: #fff;
+		background: var(--card-bg, #fff);
 		border-radius: var(--radius-md, 0.5rem);
 		overflow: hidden;
+	}
+
+	:global(html.dark) .activity-table {
+		box-shadow: 0 0 0 1px var(--content-border, #555);
 	}
 
 	.activity-table__th {

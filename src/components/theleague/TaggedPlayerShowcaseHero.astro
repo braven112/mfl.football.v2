@@ -76,12 +76,13 @@ const summary = hasPlayers
     align-items: center;
     gap: 0.55rem;
   }
+  /* Inherits the --ev-* theme vars from EventHeroShell (light/dark aware). */
   .tps-row__head {
     width: 30px;
     height: 30px;
     border-radius: 50%;
     object-fit: cover;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--ev-tile-hover-bg, rgba(255, 255, 255, 0.1));
     flex-shrink: 0;
   }
   .tps-row__id {
@@ -93,14 +94,14 @@ const summary = hasPlayers
   .tps-row__name {
     font-size: 0.8125rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--ev-ink, #fff);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .tps-row__meta {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--ev-ink-faint, rgba(255, 255, 255, 0.5));
   }
   .tps-row__fran {
     width: 18px;

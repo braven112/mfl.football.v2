@@ -5,24 +5,39 @@
  * It provides CSS custom property values derived from the dark mode
  * color spec (docs/DARK_MODE_COLOR_SPEC.md).
  *
- * Usage: Include this file AFTER tokens.css in dark mode layouts.
+ * Usage: Imported globally after tokens.css; all rules are scoped to html.dark,
+ * which is set by the theme resolver script based on the theme_pref cookie / prefers-color-scheme.
  */
 
-:root {
+html.dark {
+  /* Native form controls, scrollbars follow the theme */
+  color-scheme: dark;
   /* ========================================
      Colors - Dark Mode Theme
      ======================================== */
 
-  /* Brand Colors */
-  --color-primary: #c9a94e;
-  --color-primary-dark: #a8893a;
-  --color-primary-light: #d4b85e;
+  /* Brand Colors — Bright blue from hero section for maximum visibility in dark mode.
+     --league-accent (tokens.css) resolves to --color-primary, so this
+     matches the bright accent from the light mode hero. */
+  --color-primary: #3b82f6;          /* Bright blue for dark mode */
+  --color-primary-dark: #2563eb;     /* darker step (borders, hover-dark) */
+  --color-primary-light: #60a5fa;    /* brighter step (accent links, active nav) */
 
-  --color-secondary: #3c9950;
+  --color-secondary: #10b981;        /* Emerald — matches the logo green */
   --color-secondary-dark: #2e8743;
   --color-secondary-light: #4ade80;
 
-  --color-accent: #c9a94e;           /* Gold accent for dark mode */
+  --color-accent: #4ade80;           /* Green accent for dark mode (mirrors light: accent = secondary family) */
+
+  /* Header nav-icon strip — white icons on the dark header; hover stays
+     green via --header-nav-icon-hover-color → --color-secondary (tokens.css). */
+  --header-nav-icon-color: #ffffff;
+
+  /* Logo Text Colors (Header component) */
+  --logo-name-primary-color: #10b981;    /* Green "League" text matches logo green */
+  --logo-name-secondary-color: #ffffff;  /* White "The" and ".us" text */
+  --logo-main-color: #ffffff;            /* White elements in logo */
+  --logo-secondary-color: #10b981;       /* Green elements in logo */
 
   /* Neutral Colors (inverted scale) */
   --color-white: #ffffff;
@@ -54,6 +69,9 @@
 
   --color-info: #60a5fa;
   --color-info-light: rgba(59, 130, 246, 0.15);
+
+  --color-franchise-tag: #a78bfa;
+  --color-franchise-tag-light: rgba(124, 58, 237, 0.2);
   --color-info-dark: #93bbfd;
 
   /* ========================================
@@ -62,8 +80,8 @@
   --color-surface-1: #121212;         /* Lowest: page background */
   --color-surface-2: #1e1e1e;         /* Mid: cards, panels */
   --color-surface-3: #2a2a2a;         /* Highest: dropdowns, tooltips */
-  --color-border-default: #2e2e2e;    /* Standard borders */
-  --color-border-subtle: #232323;     /* Faint dividers */
+  --color-border-default: #5f6885;    /* Standard borders (slate-tinted) */
+  --color-border-subtle: #2e2e2e;     /* Faint dividers */
   --color-text-primary: #e0e0e0;      /* Body copy */
   --color-text-secondary: #8a8a8a;    /* Labels, captions */
   --color-text-disabled: #5a5a5a;     /* Disabled text */
@@ -78,18 +96,27 @@
      Component Tokens - Content Areas
      ======================================== */
   --content-bg: #1e1e1e;
-  --content-border: #2e2e2e;
+  --content-border: #5f6885;   /* slate-tinted to match the card glow */
   --content-shadow: var(--shadow-card);
 
   --content-bg-muted: #181818;
   --content-bg-accent: #2a2a2a;
   --content-text-muted: #8a8a8a;
 
+  /* Draft pick tiles: translucent washes so the card gradient shows
+     through (values dialed in via DevTools). */
+  --draft-pick-bg: #18181842;
+  --draft-pick-border: #6e6e6e3d;
+
   /* ========================================
      Component Tokens - Cards
      ======================================== */
-  --card-bg: #1e1e1e;
-  --card-border: #2e2e2e;
+  /* Card surface: slate glow from the top-left corner fading to #333.
+     --card-bg is a GRADIENT — only valid in `background:` shorthand.
+     Use --card-surface (solid) for color-mix / background-color. */
+  --card-bg: radial-gradient(92% 96% at 2% -6%, rgb(74 83 121 / 50%), #262626 62%);
+  --card-surface: #262626;
+  --card-border: var(--color-border-default, #5f6885);
   --card-shadow: var(--shadow-card);
 
   /* Legacy alias */
@@ -98,15 +125,15 @@
   /* ========================================
      Component Tokens - Links
      ======================================== */
-  --link-color: #7eb8da;
-  --link-color-hover: #c9a94e;
-  --link-color-focus: #c9a94e;
+  --link-color: #60a5fa;
+  --link-color-hover: #2563eb;
+  --link-color-focus: #2563eb;
 
   --link-color-inverse: #e2e2e2;
-  --link-color-inverse-hover: #c9a94e;
+  --link-color-inverse-hover: #3b82f6;
 
   --link-color-accent: #60a5fa;
-  --link-color-accent-hover: #d4a44a;
+  --link-color-accent-hover: #3b82f6;
 
   /* Legacy aliases */
   --primary-link-default-text-color: var(--link-color);
@@ -125,21 +152,23 @@
      Component Tokens - Buttons
      ======================================== */
 
-  /* Primary Button */
-  --btn-primary-bg: #c9a94e;
-  --btn-primary-bg-hover: #d4b85e;
-  --btn-primary-bg-focus: #d4b85e;
-  --btn-primary-text: #121212;
-  --btn-primary-border: #a8893a;
-  --btn-primary-border-hover: #c9a94e;
+  /* Primary Button — bright blue bg + white text */
+  --btn-primary-bg: #2563eb;
+  --btn-primary-bg-hover: #1d4ed8;
+  --btn-primary-bg-focus: #1d4ed8;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: #1d4ed8;
+  --btn-primary-border-hover: #3b82f6;
 
-  /* Secondary Button */
-  --btn-secondary-bg: #2e8743;
-  --btn-secondary-bg-hover: #3c9950;
-  --btn-secondary-bg-focus: #3c9950;
-  --btn-secondary-text: #ffffff;
-  --btn-secondary-border: #3c9950;
-  --btn-secondary-border-hover: #c9a94e;
+  /* Secondary Button — logo-green emerald with near-black text (white on
+     #10b981 is only ~3:1; #121212 is ~6.4:1, same treatment as the dark
+     primary button). */
+  --btn-secondary-bg: #10b981;
+  --btn-secondary-bg-hover: #34d399;
+  --btn-secondary-bg-focus: #34d399;
+  --btn-secondary-text: #121212;
+  --btn-secondary-border: #10b981;
+  --btn-secondary-border-hover: #2563eb;
 
   /* Inverse Button */
   --btn-inverse-bg: #2a2a2a;
@@ -191,7 +220,7 @@
   --table-row-bg: #1e1e1e;
   --table-row-bg-alt: #232323;
   --table-row-bg-hover: #2a2a2a;
-  --table-border: #2e2e2e;
+  --table-border: #3a3a3a;
 
   /* Legacy aliases */
   --table-header-text-color: var(--table-header-text);
@@ -202,7 +231,7 @@
      Component Tokens - Inverse (Dark Sections)
      ======================================== */
   --inverse-bg: #101010;
-  --inverse-bg-accent: #c9a94e;
+  --inverse-bg-accent: #2563eb;      /* bright blue accent strip */
   --inverse-border: #1a1a1a;
   --inverse-text: #e0e0e0;
 
@@ -272,33 +301,35 @@
   --secondary-content-bg-color: var(--content-bg);
   --secondary-content-border-color: var(--content-border);
   --secondary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
-  --content-border-color: #2e2e2e;
+  --content-border-color: #5f6885;
   --gallery-content-bg: var(--content-bg-muted);
 
   /* ========================================
      Shadows (adjusted for dark surfaces)
      ======================================== */
-  --shadow-color: 0deg 0% 4%;
+  /* Dark surfaces swallow low-alpha shadows — elevation needs pure-black
+     shadows at roughly 2.5x the light-mode opacity to read as "raised". */
+  --shadow-color: 0deg 0% 0%;
 
-  --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.2);
+  --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.5);
 
   --shadow-md:
-    0 1px 1px hsl(var(--shadow-color) / 0.18),
-    0 2px 2px hsl(var(--shadow-color) / 0.14),
-    0 3px 4px hsl(var(--shadow-color) / 0.10);
+    0 1px 1px hsl(var(--shadow-color) / 0.45),
+    0 2px 3px hsl(var(--shadow-color) / 0.35),
+    0 4px 6px hsl(var(--shadow-color) / 0.28);
 
   --shadow-lg:
-    0 1px 1px hsl(var(--shadow-color) / 0.15),
-    0 2px 2px hsl(var(--shadow-color) / 0.12),
-    0 4px 4px hsl(var(--shadow-color) / 0.10),
-    0 6px 8px hsl(var(--shadow-color) / 0.08);
+    0 1px 1px hsl(var(--shadow-color) / 0.4),
+    0 2px 3px hsl(var(--shadow-color) / 0.32),
+    0 5px 6px hsl(var(--shadow-color) / 0.26),
+    0 8px 12px hsl(var(--shadow-color) / 0.2);
 
   --shadow-xl:
-    0 1px 1px hsl(var(--shadow-color) / 0.12),
-    0 2px 2px hsl(var(--shadow-color) / 0.10),
-    0 4px 4px hsl(var(--shadow-color) / 0.08),
-    0 8px 8px hsl(var(--shadow-color) / 0.06),
-    0 12px 16px hsl(var(--shadow-color) / 0.04);
+    0 1px 1px hsl(var(--shadow-color) / 0.35),
+    0 2px 3px hsl(var(--shadow-color) / 0.3),
+    0 5px 6px hsl(var(--shadow-color) / 0.24),
+    0 10px 12px hsl(var(--shadow-color) / 0.18),
+    0 16px 24px hsl(var(--shadow-color) / 0.12);
 
   --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.25);
   --shadow-inset-md:
@@ -331,17 +362,17 @@
   --nav-text-subtle: #6b6b6b;
 
   /* Border colors */
-  --nav-border: #2e2e2e;
-  --nav-border-subtle: #232323;
+  --nav-border: #3a3a3a;
+  --nav-border-subtle: #2e2e2e;
 
   /* Interactive states */
   --nav-hover-bg: #2a2a2a;
   --nav-hover-text: var(--nav-text);
 
   /* Active/selected link */
-  --nav-active-bg: rgba(201, 169, 78, 0.15);
-  --nav-active-text: #c9a94e;
-  --nav-active-border-left: #c9a94e;
+  --nav-active-bg: rgba(37, 99, 235, 0.15);
+  --nav-active-text: #3b82f6;
+  --nav-active-border-left: #3b82f6;
 
   /* Focus state */
   --nav-focus-ring: 0 0 0 2px #3b82f6;
@@ -356,10 +387,10 @@
   --nav-footer-text-muted: #6b6b6b;
 
   /* Verify team prompt */
-  --nav-verify-bg: rgba(201, 169, 78, 0.08);
-  --nav-verify-border: #c9a94e;
-  --nav-verify-text: #c9a94e;
-  --nav-verify-hover-bg: rgba(201, 169, 78, 0.15);
+  --nav-verify-bg: rgba(37, 99, 235, 0.08);
+  --nav-verify-border: #2563eb;
+  --nav-verify-text: #2563eb;
+  --nav-verify-hover-bg: rgba(37, 99, 235, 0.15);
 
   /* Overlay */
   --nav-overlay-bg: rgba(0, 0, 0, 0.7);
@@ -370,9 +401,9 @@
 
   /* League switcher */
   --nav-switcher-bg: #181818;
-  --nav-switcher-border: #2e2e2e;
-  --nav-switcher-active-bg: #c9a94e;
-  --nav-switcher-active-text: #121212;
+  --nav-switcher-border: #3a3a3a;
+  --nav-switcher-active-bg: #2563eb;
+  --nav-switcher-active-text: #ffffff;
   --nav-switcher-inactive-text: #6b6b6b;
 
   /* Tooltip */
@@ -387,27 +418,153 @@
   /* Scrollbar */
   --nav-scrollbar-thumb: #3a3a3a;
   --nav-scrollbar-thumb-hover: #5a5a5a;
+
+  /* Breadcrumb "Back to MFL" strip — deep-blue glow rising from the accent
+     edge, fading to transparent (near-black page) toward the top. GRADIENT:
+     only valid in `background:` shorthand. Without this pin it would fall
+     back to --color-primary (bright blue bar glaring against #121212).
+     AFL re-asserts navy below (this html.dark rule loads after the light AFL
+     block and would otherwise win the cascade). */
+  --breadcrumb-bar-bg: linear-gradient(0deg, #122e5b 10%, #13365d00 80%);
+  /* Brand accent edge under the near-black strip. */
+  --breadcrumb-bar-border: var(--color-primary, #3b82f6);
+}
+
+/* ========================================
+   AFL Fantasy — dark-mode per-league overrides
+   AFL's dark mode is NAVY-based, not neutral-gray: the whole surface
+   elevation ramp derives from --afl-navy #0f1e2e (page bg), stepping
+   lighter for cards → elevated surfaces, with blue-tinted borders and
+   text grays so everything stays in the navy family. Red identity is
+   preserved via the brightened accent #ef5350 (5.4:1 on the navy page).
+   --afl-trophy-gold* are left untouched (they match the award SVG art). */
+html.dark[data-league="afl"] {
+  --league-accent: #ef5350;                            /* AFL accent — brightened red for dark */
+
+  /* Headings + plain anchors: the layout colors h1–h4 and bare <a> via
+     --primary-link-default-text-color → --link-color, which html.dark
+     pins to TheLeague blue #60a5fa. AFL dark goes white with a red
+     hover so red stays the accent, not the body voice.
+     NOTE: --color-primary is deliberately NOT remapped here — it feeds
+     FILLS (nav active pill, buttons, focus rings) where a white value
+     produces white-on-white. Blue fills are acceptable shared chrome. */
+  --link-color: #e8eef4;
+  --link-color-hover: #ef5350;
+  --link-color-focus: #ef5350;
+  --link-color-accent: #ef5350;
+  --link-color-accent-hover: #ff8a80;
+  --header-nav-icon-color: #ffffff;                    /* resting nav icons — white (navy would vanish on dark) */
+  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
+  --header-nav-label-color: var(--league-accent);      /* nav labels — red */
+  --header-nav-label-hover-color: var(--league-accent);/* nav labels hover — red */
+  --logo-name-primary-color: #ffffff;                  /* "AFL" wordmark — white (html.dark's green is TheLeague's logo green) */
+
+  /* ── Navy surface elevation ramp (from --afl-navy #0f1e2e) ── */
+  --page-bg: var(--afl-navy, #0f1e2e);                 /* page floor = brand navy */
+  --color-surface-1: var(--afl-navy, #0f1e2e);
+  --content-bg: #16283c;                               /* cards / panels — one step up */
+  --card-bg: #16283c;
+  --card-surface: #16283c;
+  --color-surface-2: #16283c;
+  --nav-bg: #16283c;
+  --table-row-bg: #16283c;
+  --content-bg-muted: #122132;                         /* recessed */
+  --table-header-bg: #122132;
+  --input-bg: #122132;
+  --nav-bg-subtle: #122132;
+  --nav-switcher-bg: #122132;
+  --table-row-bg-alt: #182b40;
+  --color-surface-3: #1d3349;                          /* elevated: dropdowns, tooltips, hover */
+  --table-row-bg-hover: #1d3349;
+  --nav-hover-bg: #1d3349;
+  --content-bg-accent: #1d3349;
+  --accent-content-bg-color: #1d3349;
+  --nav-tooltip-bg: #1d3349;
+  --btn-inverse-bg: #1d3349;
+  --btn-inverse-bg-hover: #27405c;
+  --btn-inverse-bg-focus: #27405c;
+  --inverse-bg: #0a1622;                               /* footer — deepest navy */
+  --inverse-border: #16283c;
+  --nav-footer-bg: #0d1a28;
+  --input-disabled-bg: #0d1a28;
+
+  /* ── Borders (blue-tinted, visible against the navy ramp) ── */
+  --content-border: #2e4560;
+  --card-border: #2e4560;
+  --table-border: #2e4560;
+  --color-border-default: #2e4560;
+  --content-border-color: #2e4560;
+  --input-border: #2e4560;
+  --nav-border: #2e4560;
+  --nav-switcher-border: #2e4560;
+  --nav-footer-border: #24374d;
+  --color-border-subtle: #24374d;
+  --nav-border-subtle: #24374d;
+  --accent-content-border-color: #2e4560;
+
+  /* ── Inverted gray scale, navy-tinted ──
+     50–300 are surfaces/borders in dark; 400+ are text grays. */
+  --color-gray-50: #122132;
+  --color-gray-100: #16283c;
+  --color-gray-200: #1d3349;
+  --color-gray-300: #2e4560;
+  --color-gray-400: #64788c;
+  --color-gray-500: #8fa0b3;
+  --color-gray-600: #9dadbe;
+  --color-gray-700: #b9c5d2;
+  --color-gray-800: #d3dce5;
+  --color-gray-900: #e8eef4;
+
+  /* ── Text ── */
+  --page-text: #e8eef4;
+  --color-text-primary: #dbe4ec;
+  --color-text-secondary: #8fa0b3;
+  --content-text-muted: #8fa0b3;
+  --input-placeholder: #64788c;
+  --input-text: #dbe4ec;
+  --nav-text: #d3dce5;
+  --nav-text-muted: #8fa0b3;
+  --nav-text-subtle: #64788c;
+  --nav-scrollbar-thumb: #2e4560;
+  --nav-scrollbar-thumb-hover: #3d587a;
+
+  /* ── Breadcrumb strip — deeper than the navy page so it still reads
+     as its own band, with the red accent edge. ── */
+  --breadcrumb-bar-bg: #0a1622;
+  --breadcrumb-bar-border: var(--league-accent, #ef5350);
+}
+
+/* ========================================
+   Text Selection (Dark Mode)
+   Without this, selected text keeps its muted dark-mode color on the
+   browser's default highlight — near-unreadable slate-on-slate. Force
+   white text on a strong primary-tinted highlight.
+   ======================================== */
+html.dark ::selection {
+  background: rgba(59, 130, 246, 0.55);
+  color: #ffffff;
+}
+
+html.dark[data-league="afl"] ::selection {
+  background: rgba(239, 83, 80, 0.5);
+  color: #ffffff;
 }
 
 /* ========================================
    Focus Visible Styles (Dark Mode)
    ======================================== */
-:focus-visible {
+html.dark :focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[role="button"]:focus-visible,
-[tabindex]:focus-visible {
+html.dark a:focus-visible,
+html.dark button:focus-visible,
+html.dark input:focus-visible,
+html.dark select:focus-visible,
+html.dark textarea:focus-visible,
+html.dark [role="button"]:focus-visible,
+html.dark [tabindex]:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
   box-shadow: var(--shadow-focus-ring);

@@ -235,9 +235,17 @@ const divisionBadges: Record<string, string> = {
     align-items: center;
     gap: 1.5rem;
     padding: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     the section from the page background; add the border ring. */
+  :global(html.dark) .standings-hero {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
 @media screen and (min-width: 600px) {
   .standings-hero {
@@ -254,7 +262,7 @@ const divisionBadges: Record<string, string> = {
   }
 
   .standings-filters {
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1rem 1.5rem;
@@ -263,12 +271,18 @@ const divisionBadges: Record<string, string> = {
     align-items: center;
   }
 
+  :global(html.dark) .standings-filters {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
   .filter-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     font-weight: 700;
-    color: var(--text-primary-color, #111827);
+    color: var(--page-text, #111827);
   }
 
   .card {
@@ -277,7 +291,7 @@ const divisionBadges: Record<string, string> = {
     gap: var(--padding-md);
     padding: var(--padding-lg);
     border-radius: 1rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     box-shadow: var(--box-shadow-lg);
     position: relative;
 }
@@ -285,13 +299,13 @@ const divisionBadges: Record<string, string> = {
   .standings-header h1 {
     font-size: 2.5rem;
     font-weight: 700;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0 0 0.5rem 0;
   }
 
   .subtitle {
     font-size: 1rem;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     margin: 0;
   }
 
@@ -301,7 +315,7 @@ const divisionBadges: Record<string, string> = {
     gap: 2rem;
     margin-bottom: 2rem;
     padding: 2rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -330,12 +344,12 @@ const divisionBadges: Record<string, string> = {
   .section-title {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0;
   }
 
   .section-subtitle {
-    color: var(--color-text-secondary, #666);
+    color: var(--content-text-muted, #666);
     margin: 0;
     font-size: 0.95rem;
   }
@@ -366,14 +380,14 @@ const divisionBadges: Record<string, string> = {
   .standings-info {
     margin-top: 3rem;
     padding: 2rem;
-    background-color: var(--color-bg-secondary, #f5f5f5);
+    background-color: var(--content-bg-muted, #f5f5f5);
     border-radius: 8px;
   }
 
   .standings-info h2 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0 0 1.5rem 0;
   }
 
@@ -384,7 +398,7 @@ const divisionBadges: Record<string, string> = {
   }
 
   .info-card {
-    background-color: var(--color-bg-primary, #fff);
+    background: var(--card-bg, #fff);
     padding: 1.5rem;
     border-radius: 6px;
     border-left: 4px solid var(--color-primary, #2c3e50);
@@ -393,7 +407,7 @@ const divisionBadges: Record<string, string> = {
   .info-card h3 {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin: 0 0 1rem 0;
   }
 
@@ -401,7 +415,7 @@ const divisionBadges: Record<string, string> = {
   .info-card ol {
     margin: 0;
     padding-left: 1.5rem;
-    color: var(--color-text-secondary, #555);
+    color: var(--content-text-muted, #555);
   }
 
   .info-card li {
@@ -410,12 +424,12 @@ const divisionBadges: Record<string, string> = {
 
   .info-card p {
     margin: 0 0 0.5rem 0;
-    color: var(--color-text-secondary, #555);
+    color: var(--content-text-muted, #555);
   }
 
   .tiebreaker-type {
     font-weight: 600;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--page-text, #1a1a1a);
     margin-bottom: 0.75rem !important;
   }
 
@@ -440,7 +454,7 @@ const divisionBadges: Record<string, string> = {
 
   .data-disclaimer {
     margin: 1rem 0 0;
-    color: var(--text-secondary-color, #64748b);
+    color: var(--content-text-muted, #64748b);
     font-size: 0.95rem;
   }
 </style>

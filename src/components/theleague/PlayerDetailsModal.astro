@@ -162,9 +162,19 @@ const { class: className, hideContract = false } = Astro.props;
     cursor: pointer;
   }
 
+  /* Dark: page is already dark, so the mandated frosted scrim goes a touch
+     deeper (pure black, higher alpha) to separate the modal from the page.
+     Blur is preserved per the modal-backdrop standard. */
+  :global(html.dark) .player-details-modal__overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
   .player-details-modal__content {
     position: relative;
-    background: var(--color-white, #fff);
+    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
+       becomes the #1e1e1e card surface in dark. Border + strong shadow make
+       it read as the top elevation layer against the #121212 page. */
+    background: var(--card-bg, #fff);
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--shadow-xl);
     width: 100%;
@@ -174,6 +184,15 @@ const { class: className, hideContract = false } = Astro.props;
     flex-direction: column;
     overflow: hidden;
     animation: pdm-enter 0.22s ease-out;
+  }
+
+  /* Border is dark-only (added via box-shadow spread so it costs no layout
+     box — panel stays pixel-identical in light). Paired with --shadow-xl it
+     lifts the panel off the #121212 page as the top elevation layer. */
+  :global(html.dark) .player-details-modal__content {
+    box-shadow:
+      var(--shadow-xl),
+      0 0 0 1px var(--content-border, #3a3a3a);
   }
 
   @keyframes pdm-enter {
@@ -389,6 +408,14 @@ const { class: className, hideContract = false } = Astro.props;
     border-left: 2px solid var(--color-primary, #1c497c);
   }
 
+  /* Dark: the accent border rides --league-accent so it's the per-league
+     bright accent — bright blue (#3b82f6) for TheLeague, bright red
+     (#ef5350) for AFL — instead of the light-mode navy that would go muddy
+     on a dark card. Light stays --color-primary (pixel-identical). */
+  :global(html.dark) .pdm-section__title {
+    border-left-color: var(--league-accent, var(--color-primary, #3b82f6));
+  }
+
   /* ================================================================
      Weekly Results Table
      ================================================================ */
@@ -482,6 +509,47 @@ const { class: className, hideContract = false } = Astro.props;
 
   .weekly-results-table :global(.wr-starter) { color: var(--color-success-dark, #059669); }
   .weekly-results-table :global(.wr-nonstarter) { color: var(--color-gray-400, #9ca3af); }
+
+  /* Weekly-results status badge (franchise icon + S/NS pill).
+     Injected via innerHTML → :global. Light values reproduce the former
+     inline styles exactly (28px wrap, 24px icon, blue/purple pill, 1.5px
+     white ring). Dark retints the ring to the card surface so it doesn't
+     halo, and swaps the pill fills to the bright dark-mode accents. */
+  .weekly-results-table :global(.wr-badge-wrap) {
+    position: relative;
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+  }
+
+  .weekly-results-table :global(.wr-badge-icon) {
+    width: 24px;
+    height: 24px;
+    display: block;
+  }
+
+  .weekly-results-table :global(.wr-badge) {
+    position: absolute;
+    bottom: -3px;
+    right: -5px;
+    color: #fff;
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 3px;
+    border-radius: 50%;
+    border: 1.5px solid var(--card-bg, #fff);
+    min-width: 12px;
+    text-align: center;
+  }
+
+  .weekly-results-table :global(.wr-badge--starter) { background: #2563eb; }
+  .weekly-results-table :global(.wr-badge--nonstarter) { background: #9333ea; }
+
+  /* Dark: brighter pill fills for contrast on the dark table; ring already
+     follows --card-bg (#1e1e1e) via the base rule. */
+  :global(html.dark) .weekly-results-table :global(.wr-badge--starter) { background: #3b82f6; }
+  :global(html.dark) .weekly-results-table :global(.wr-badge--nonstarter) { background: #a855f7; }
 
   /* ================================================================
      Details Section
@@ -998,12 +1066,15 @@ const { class: className, hideContract = false } = Astro.props;
             var avgStr = w.avg !== null ? w.avg.toFixed(1) : '';
             var rankStr = w.rank !== null ? String(w.rank) : '';
 
-            var badgeBg = w.st === 'S' ? '#2563eb' : '#9333ea';
+            // Badge colors/border ring live in scoped CSS (.wr-badge*) so
+            // dark mode can retint them — the ring must match the card
+            // surface, not stay hard #fff, or it halos on a dark table.
+            var badgeClass = w.st === 'S' ? 'wr-badge wr-badge--starter' : 'wr-badge wr-badge--nonstarter';
             var statusStr = '';
             if (isBye) {
               statusStr = '';
             } else if (w.fi && w.st) {
-              statusStr = '<div style="position:relative;display:inline-block;width:28px;height:28px;"><img src="/assets/theleague/icons/' + w.fi + '.png" alt="' + (w.fn || '') + '" style="width:24px;height:24px;display:block;" onerror="this.style.display=\'none\'"><span style="position:absolute;bottom:-3px;right:-5px;background:' + badgeBg + ';color:#fff;font-size:0.5rem;font-weight:700;line-height:1;padding:2px 3px;border-radius:50%;border:1.5px solid #fff;min-width:12px;text-align:center;">' + w.st + '</span></div>';
+              statusStr = '<div class="wr-badge-wrap"><img src="/assets/theleague/icons/' + w.fi + '.png" alt="' + (w.fn || '') + '" class="wr-badge-icon" onerror="this.style.display=\'none\'"><span class="' + badgeClass + '">' + w.st + '</span></div>';
             } else if (w.st) {
               statusStr = w.st;
             }

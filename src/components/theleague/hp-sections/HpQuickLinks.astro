@@ -77,7 +77,7 @@ const pages = [...pinned, ...rest].slice(0, 8);
 <style>
   .hp-links {
     --dh-accent: var(--league-accent, #1c497c);
-    background: var(--content-bg, #fff);
+    background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-md);
@@ -138,6 +138,18 @@ const pages = [...pinned, ...rest].slice(0, 8);
   .hp-links__card:hover {
     background: var(--color-gray-100, #f3f4f6);
     transform: translateY(-1px);
+  }
+
+  /* Dark mode: translucent tiles so the card's slate glow shows through
+     instead of solid near-black wells. Resting = dark wash, hover lifts
+     to the light wash. */
+  :global(html.dark) .hp-links__card {
+    background: rgba(0, 0, 0, 0.075);
+  }
+
+  :global(html.dark) .hp-links__card:hover {
+    /* Slate-violet lift matching the card gradient's hue. */
+    background: rgb(86 85 167 / 11%);
   }
 
   .hp-links__icon {
