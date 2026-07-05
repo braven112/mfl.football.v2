@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
+import { getActiveTeams } from '../../utils/league-assets';
 import MetricCard from '../../components/theleague/MetricCard.astro';
 import ChartCard from '../../components/theleague/ChartCard.astro';
 import DonutChart from '../../components/theleague/DonutChart.astro';
@@ -566,11 +567,7 @@ const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.is
 
 const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
 
-const teamsList = (leagueAssets.teams ?? [])
-  // The assets file also carries historical/former franchise identities
-  // (category: 'former', including entries with compound or missing ids) —
-  // only current franchises belong in the roster team list.
-  .filter((team) => team.category !== 'former')
+const teamsList = getActiveTeams(leagueAssets)
   .map((team) => ({
     id: team.id,
     name: team.name,

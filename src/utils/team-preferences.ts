@@ -6,6 +6,7 @@
 import type { AstroCookies } from 'astro';
 import leagueAssets from '../data/theleague.assets.json';
 import aflAssets from '../../data/afl-fantasy/afl.assets.json';
+import { getActiveTeams } from './league-assets';
 
 /**
  * TheLeague team preference structure
@@ -75,9 +76,9 @@ export function validateFranchiseId(franchiseId: string | number | null | undefi
   // category: 'former' historical identities (including compound ids like
   // "0002, 0013") that have no rosters or per-team UI.
   if (league === 'theleague') {
-    return leagueAssets.teams.some(team => team.category !== 'former' && team.id === normalized);
+    return getActiveTeams(leagueAssets).some(team => team.id === normalized);
   } else {
-    return aflAssets.teams.some(team => team.category !== 'former' && team.id === normalized);
+    return getActiveTeams(aflAssets).some(team => team.id === normalized);
   }
 }
 
@@ -156,7 +157,7 @@ export function clearTheLeaguePreference(cookies: AstroCookies): void {
  */
 export function getAFLTeamData(franchiseId: string): { conference: string; tier: string } | null {
   const normalized = normalizeFranchiseId(franchiseId);
-  const team = aflAssets.teams.find(t => t.id === normalized);
+  const team = getActiveTeams(aflAssets).find(t => t.id === normalized);
 
   if (!team) return null;
 

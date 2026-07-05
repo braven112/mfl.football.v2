@@ -27,6 +27,7 @@ import leagueData from '../../../data/theleague/mfl-feeds/2025/league.json';
 import weeklyResults from '../../../data/theleague/mfl-feeds/2025/weekly-results.json';
 import weeklyResultsRaw from '../../../data/theleague/mfl-feeds/2025/weekly-results-raw.json';
 import leagueAssets from '../../data/theleague.assets.json';
+import { getActiveTeams } from '../../utils/league-assets';
 
 // Load real injury data from MFL player salaries (same as rosters page)
 import playerSalariesData from '../../data/mfl-player-salaries-2025.json';
@@ -253,7 +254,7 @@ async function generateAllMatchups(week: number): Promise<Matchup[]> {
   const teamLookup = new Map();
   franchises.forEach((franchise: any) => {
     // Find matching assets
-    const assetTeam = leagueAssets.teams.find((team: any) => team.id === franchise.id);
+    const assetTeam = getActiveTeams(leagueAssets).find((team: any) => team.id === franchise.id);
     
     teamLookup.set(franchise.id, {
       id: franchise.id,

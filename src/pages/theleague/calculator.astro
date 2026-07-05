@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
+import { getActiveTeams } from '../../utils/league-assets';
 
 const salarySummaryModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
@@ -29,7 +30,7 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 });
 
 const franchiseMetaMap = new Map(
-  (leagueAssets.teams ?? []).map((team) => {
+  getActiveTeams(leagueAssets).map((team) => {
     const aliases = team.aliases ?? [];
     const tokens = [
       team.name,
