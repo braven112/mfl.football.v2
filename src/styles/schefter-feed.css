@@ -193,6 +193,24 @@
   font-style: normal;
 }
 
+/* ── Milestone badge chip ── */
+.sf-post__milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sf-accent, var(--color-primary, #1c497c));
+  margin-bottom: 0.25rem;
+}
+
+.sf-post__milestone-icon {
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
 /* ── Link ── */
 .sf-post__link {
   display: inline-flex;

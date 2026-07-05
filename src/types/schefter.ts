@@ -178,12 +178,25 @@ export type SchefterPostType =
   | 'odds'
   | 'groupme';
 
-/** MFL transaction sub-types we care about */
+/** MFL transaction sub-types we care about (plus site-generated 'milestone') */
 export type TransactionSubType =
   | 'TRADE'
   | 'AUCTION_WON'
   | 'FREE_AGENT'
-  | 'BBID_WAIVER';
+  | 'BBID_WAIVER'
+  | 'milestone';
+
+/** Badge metadata attached to franchise milestone posts
+ *  (emitted by scripts/lib/franchise-milestone-posts.mjs) */
+export interface SchefterMilestoneMeta {
+  badgeId: string;
+  badgeName: string;
+  icon: string;
+  /** Badge tier from scripts/badges.mjs */
+  tier: 'career' | 'season' | 'game' | 'trade';
+  awardKey: string;
+  award: { year?: number; week?: number; value?: number; suffix?: string; label?: string };
+}
 
 /** Visual treatment and content depth */
 export type PostTier = 'breaking' | 'standard' | 'minor';
@@ -226,6 +239,8 @@ export interface SchefterPost {
   type: SchefterPostType;
   /** Transaction sub-type (only when type === 'transaction') */
   transactionSubType?: TransactionSubType;
+  /** Badge metadata (only when transactionSubType === 'milestone') */
+  milestone?: SchefterMilestoneMeta;
   /** Feed category for filtering (defaults to 'transactions') */
   category?: SchefterCategory;
   /** Visual/content tier */

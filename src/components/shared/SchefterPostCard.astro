@@ -49,6 +49,18 @@ const isExternal = post.type === 'external';
 // tracking) but NOT the tip-back UI.
 const isTipRumor = post.type === 'transaction' && post.transactionSubType === 'rumor_mill';
 const isRumorLike = isRumorLikePost(post);
+
+// Franchise milestone posts carry badge metadata — surface it as a chip so
+// the body's flavor line has context ("what was this announcement for?").
+const MILESTONE_TIER_LABELS: Record<string, string> = {
+  career: 'Career milestone',
+  season: 'Season honor',
+  game: 'League record',
+  trade: 'League record',
+};
+const milestoneLabel = post.milestone
+  ? `${MILESTONE_TIER_LABELS[post.milestone.tier] ?? 'Milestone'} · ${post.milestone.badgeName}`
+  : null;
 const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumorLike ? ' sf-post--rumor' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body
@@ -210,6 +222,13 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 
         {isArticle && (
           <div class="sf-post__headline">{post.headline}</div>
+        )}
+
+        {milestoneLabel && (
+          <div class="sf-post__milestone">
+            {post.milestone!.icon && <span class="sf-post__milestone-icon" aria-hidden="true">{post.milestone!.icon}</span>}
+            {milestoneLabel}
+          </div>
         )}
 
         <div class="sf-post__body" set:html={post.body} />
