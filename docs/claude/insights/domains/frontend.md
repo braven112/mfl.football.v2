@@ -522,3 +522,15 @@ Also pair the config swap with `resolvePreferredTeamIdForYear()` for the my-team
 **Evidence:** PR #331 collapsed the file 9 configs → 1 (116 lines → 3 net). Tested from a fresh worktree with 4322 busy: auto-assigned port, Astro started, homepage rendered.
 
 **Recommendation:** The file should contain exactly one `dev` config: `"runtimeExecutable": "pnpm"`, `"runtimeArgs": ["dev", "--port", "4322"]`, `"port": 4322`, `"autoPort": true`. If `preview_start` reports a port conflict, that's autoPort working — do NOT append a new config, hardcode toolchain paths, or stop another worktree's server. A fresh worktree needs `pnpm install` first, or the start fails with `sh: astro: command not found`.
+
+---
+
+## 2026-07-04 - Schefter Post Headlines Are Invisible Outside Articles — Context Must Live in the Body or an Explicit Chip
+
+**Context:** A franchise milestone post ("Gridiron Geeks clipped a 5th playoff appearance. Not a tourist anymore.") appeared on the homepage sidebar with no indication of what it was announcing. The post *had* a perfectly clear `headline` ("Gridiron Geeks earns Playoff Veteran status") and a structured `milestone` payload (badge name, icon, tier) — none of it rendered.
+
+**Insight:** Both feed cards drop most post fields on the floor: `SchefterPostCardCompact.astro` renders ONLY `post.body` (headline never shown, for any type), and the full `SchefterPostCard.astro` shows `post.headline` only when `type === 'article'`. Any generator that writes a Schefter post whose body is a flavor line and relies on `headline` or a structured payload for meaning will read as a context-free quip everywhere it matters. The `milestone` payload also shipped untyped — `SchefterPost` didn't declare the field, so nothing flagged that no renderer consumed it.
+
+**Evidence:** Fixed by rendering the payload as an explicit chip (`.sf-post__milestone` / `.sfc-post__milestone`, styled like `.sf-post__analysis-label`: 0.6875rem/0.625rem, 700, uppercase, `var(--sf-accent)`) above the body in both cards, plus a `link` to `/theleague/franchises/{id}#badges`. Chip renders retroactively for old posts since the payload was always in the feed JSON.
+
+**Recommendation:** When adding a new Schefter post lane, assume ONLY `body` + `link` are visible. Either make the body self-contained, or add the structured payload to `SchefterPost` in `src/types/schefter.ts` AND render it explicitly in BOTH `SchefterPostCard.astro` and `SchefterPostCardCompact.astro` (they don't share markup). Grep both cards for your new field before calling the lane done.

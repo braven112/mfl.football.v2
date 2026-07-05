@@ -235,6 +235,8 @@ export function buildMilestonePost({ franchiseId, badge, award, franchise, now }
     authorId: 'claude',
     franchiseIds: [franchiseId],
     league: 'theleague',
+    link: `/theleague/franchises/${franchiseId}#badges`,
+    linkLabel: 'View the badge wall →',
     milestone: {
       badgeId: badge.id,
       badgeName: badge.name,
