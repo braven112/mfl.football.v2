@@ -419,12 +419,13 @@ html.dark {
   --nav-scrollbar-thumb: #3a3a3a;
   --nav-scrollbar-thumb-hover: #5a5a5a;
 
-  /* Breadcrumb "Back to MFL" strip — near-black in dark mode (matches the
-     inverse/footer surface) with white text/icons. Without this pin it would
-     fall back to --color-primary (bright blue bar glaring against #121212).
+  /* Breadcrumb "Back to MFL" strip — deep-blue glow rising from the accent
+     edge, fading to transparent (near-black page) toward the top. GRADIENT:
+     only valid in `background:` shorthand. Without this pin it would fall
+     back to --color-primary (bright blue bar glaring against #121212).
      AFL re-asserts navy below (this html.dark rule loads after the light AFL
      block and would otherwise win the cascade). */
-  --breadcrumb-bar-bg: var(--inverse-bg, #101010);
+  --breadcrumb-bar-bg: linear-gradient(0deg, #122e5b 10%, #13365d00 80%);
   /* Brand accent edge under the near-black strip. */
   --breadcrumb-bar-border: var(--color-primary, #3b82f6);
 }
