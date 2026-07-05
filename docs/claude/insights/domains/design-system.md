@@ -36,6 +36,20 @@ component — you only see them when the token resolves on a dark surface.
   backgrounds/borders vanish — glass-wash pills instead
   (`rgba(255,255,255,0.06)` bg + `0.12` border).
 
+- **An ALWAYS-dark (theme-independent) surface must use a literal, never
+  `var(--color-gray-900)`.** The ramp inverts both ways: `gray-900` is `#111827`
+  (dark) in light mode but resolves to a near-WHITE surface (`rgb(237,237,237)`)
+  under `html.dark`. The Free Agents hero spotlight panel used
+  `var(--color-gray-900)` as its "dark broadcast panel" background and silently
+  turned white in dark mode. If a surface is meant to stay dark in both themes
+  (broadcast panels, photo backdrops, video letterboxing), hardcode `#111827`
+  (or similar) — do NOT reach for a gray token. Confirm with
+  `getComputedStyle(el).backgroundColor` under `html.dark`: a light rgb on a
+  "should-be-dark" element is this bug. Corollary for theme-SPLIT surfaces: set
+  each theme explicitly with literals (`#eef1f6` light / `#111827` dark via an
+  `html.dark` override) rather than one gray token that flips — the flip is
+  rarely the tone you want.
+
 - **Accent text sinks into dark cards — brighten toward white.**
   Big countdown digits / date lines that used the raw category or league accent
   disappeared on the `#0f1e2e`/`#262626` card (regular-season navy especially).

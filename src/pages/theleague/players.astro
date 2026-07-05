@@ -546,6 +546,23 @@ for (const p of freeAgents) {
   faCounts[p.position] = (faCounts[p.position] || 0) + 1;
 }
 
+// Initial hero spotlight: the top free agent by the default sort (highest projected).
+// The client rehydrates this on every filter/sort change via updateSpotlight().
+const topFa = freeAgents[0] ?? null;
+const topFaIsDef = topFa?.position === 'DEF';
+const topFaLogo = topFa && topFa.team && topFa.team !== 'FA'
+  ? `/assets/nfl-logos/${topFa.team}.svg`
+  : '/assets/nfl-logos/NFL.svg';
+// Falls back to the (NFL) logo rather than an empty string so we never emit
+// <img src=""> (which re-requests the document) when there are no free agents.
+const topFaHead = topFa
+  ? (topFaIsDef
+      ? topFaLogo
+      : (topFa.espnId
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${topFa.espnId}.png`
+          : `https://www49.myfantasyleague.com/player_photos_big_2014/${topFa.id}_thumb.jpg`))
+  : topFaLogo;
+
 // Build unique NFL teams list for team filter dropdown
 const nflTeamsSet = new Set<string>();
 for (const p of playerList) {
@@ -569,37 +586,22 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <div class="players-page">
     <!-- Dark Gradient Hero -->
     <div class="players-hero">
-      <div class="hero-players-bg" aria-hidden="true">
-        <img data-hero-pool data-pos="50% 67%" alt="" class="hero-player-img" data-src="/assets/hero-players/hawks.webp" />
-        <img data-hero-pool data-pos="50% 30%" alt="" class="hero-player-img" data-src="/assets/hero-players/puka.webp" />
-        <img data-hero-pool data-pos="50% 0%" alt="" class="hero-player-img" data-src="/assets/hero-players/maye.webp" />
-        <img data-hero-pool data-pos="70% 10%" alt="" class="hero-player-img" data-src="/assets/hero-players/jefferson.webp" />
-        <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/bijan.webp" />
-        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/breece.webp" />
-        <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/sam.webp" />
-        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/lamar.webp" />
-        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/josh.webp" />
-        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/pat.webp" />
+      <!-- Dynamic spotlight: the #1 player in the current filter/sort.
+           ESPN headshot in front, NFL team logo watermark behind. Rehydrated
+           client-side by updateSpotlight() whenever the list re-renders. -->
+      <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'}>
+        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" />
+        <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" />
       </div>
-      <script is:inline>
-        (function() {
-          var imgs = Array.from(document.querySelectorAll('[data-hero-pool]'));
-          // Shuffle and pick 3
-          for (var i = imgs.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var t = imgs[i]; imgs[i] = imgs[j]; imgs[j] = t;
-          }
-          var picked = imgs.slice(0, 3);
-          var rest = imgs.slice(3);
-          rest.forEach(function(img) { img.remove(); });
-          picked.forEach(function(img, i) {
-            img.src = img.getAttribute('data-src');
-            img.style.animationDelay = (i * 10) + 's';
-            var pos = img.getAttribute('data-pos');
-            if (pos) img.style.objectPosition = pos;
-          });
-        })();
-      </script>
+      {topFa && (
+        <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite">
+          <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
+          <span class="hero-spotlight__name" id="hero-spotlight-name">{topFa.name}</span>
+          <span class="hero-spotlight__meta" id="hero-spotlight-meta">
+            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
+          </span>
+        </div>
+      )}
       <div class="hero-top">
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
@@ -1235,6 +1237,76 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ── Hero spotlight: mirror the #1 player of the current filter/sort ──
+  const spotlightEl = document.getElementById('hero-spotlight');
+  const spotlightLogoEl = document.getElementById('hero-spotlight-logo');
+  const spotlightHeadEl = document.getElementById('hero-spotlight-head');
+  const spotlightCaptionEl = document.getElementById('hero-spotlight-caption');
+  const spotlightLabelEl = document.getElementById('hero-spotlight-label');
+  const spotlightNameEl = document.getElementById('hero-spotlight-name');
+  const spotlightMetaEl = document.getElementById('hero-spotlight-meta');
+  let spotlightPlayerId = null;
+
+  function updateSpotlight(p) {
+    if (!spotlightEl) return;
+    // No match for the current filter — hide the caption + headshot and reset
+    // the panel so a stale team logo / DEF state doesn't linger behind it.
+    if (!p) {
+      spotlightPlayerId = null;
+      spotlightEl.setAttribute('data-def', 'false');
+      if (spotlightLogoEl) spotlightLogoEl.src = '/assets/nfl-logos/NFL.svg';
+      if (spotlightCaptionEl) spotlightCaptionEl.style.display = 'none';
+      if (spotlightHeadEl) spotlightHeadEl.style.visibility = 'hidden';
+      return;
+    }
+    if (spotlightCaptionEl) spotlightCaptionEl.style.display = '';
+    if (spotlightHeadEl) spotlightHeadEl.style.visibility = '';
+
+    // The caption depends on the active position filter, not just the player,
+    // so always refresh it — switching ALL→QB can keep the same #1 player but
+    // the label must still flip from "Top Free Agent" to "Top QB".
+    if (spotlightLabelEl) {
+      spotlightLabelEl.textContent = activePosition && activePosition !== 'ALL'
+        ? 'Top ' + (activePosition === 'PK' ? 'K' : activePosition)
+        : 'Top Free Agent';
+    }
+    if (spotlightNameEl) spotlightNameEl.textContent = p.name;
+    if (spotlightMetaEl) {
+      const posLabel = p.position === 'PK' ? 'K' : p.position;
+      const parts = [posLabel];
+      if (p.team && p.team !== 'FA') parts.push(p.team);
+      if (p.projected != null) parts.push(p.projected.toFixed(1) + ' pts');
+      spotlightMetaEl.textContent = parts.join(' · ');
+    }
+
+    // Only the image swap (and its entrance animation) is skipped when the #1
+    // player is unchanged — the caption above has already been refreshed.
+    if (p.id === spotlightPlayerId) return;
+    spotlightPlayerId = p.id;
+
+    const isDef = p.position === 'DEF';
+    const logo = getNflLogo(p.team);
+    spotlightEl.setAttribute('data-def', isDef ? 'true' : 'false');
+
+    if (spotlightLogoEl) spotlightLogoEl.src = logo;
+
+    if (spotlightHeadEl) {
+      const head = isDef ? logo : getHeadshotUrl(p.id, p.espnId);
+      spotlightHeadEl.onerror = null;
+      if (isDef) {
+        spotlightHeadEl.removeAttribute('onerror');
+      } else {
+        spotlightHeadEl.setAttribute('onerror', buildOnerror(p.id, p.espnId));
+      }
+      spotlightHeadEl.src = head;
+      // Restart the entrance animation for the new headshot.
+      spotlightHeadEl.style.animation = 'none';
+      // eslint-disable-next-line no-unused-expressions
+      spotlightHeadEl.offsetHeight;
+      spotlightHeadEl.style.animation = '';
+    }
+  }
+
   // ── Auction view helpers ──
   function getTimeLeftMs(anchorTime) {
     if (anchorTime == null) return null;
@@ -1833,6 +1905,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     // Re-apply column group visibility after tbody re-render
     applyGroupVisibility();
     applyContractVisibility();
+
+    // Mirror the #1 player of the current filter/sort in the hero spotlight
+    updateSpotlight(filteredPlayers[0] || null);
   }
 
   // Columns that default to desc when first clicked
@@ -2594,8 +2669,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: none;
   }
 
-  /* ── Hero Player Background Images (broadcast diagonal cut) ── */
-  .hero-players-bg {
+  /* ── Hero Spotlight (broadcast diagonal cut: top-FA headshot + team logo) ── */
+  .hero-spotlight {
     position: absolute;
     top: 0;
     right: 0;
@@ -2604,10 +2679,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     overflow: hidden;
     pointer-events: none;
     clip-path: polygon(20% 0, 110% 0, 90% 100%, 0% 100%);
-    background: var(--color-gray-900, #111827);
+    /* Light mode: light panel. Literal colors on purpose — the --color-gray-*
+       scale INVERTS under html.dark, so a gray token here would flip the panel
+       to the wrong tone in the other theme. Each theme is set explicitly. */
+    background:
+      radial-gradient(120% 120% at 80% 20%, rgba(28, 73, 124, 0.12) 0%, transparent 60%),
+      #eef1f6;
+  }
+  /* Dark mode: dark broadcast panel */
+  :global(html.dark) .hero-spotlight {
+    background:
+      radial-gradient(120% 120% at 80% 20%, rgba(28, 73, 124, 0.55) 0%, transparent 60%),
+      #111827;
   }
   /* Diagonal accent stripe — left edge */
-  .hero-players-bg::before {
+  .hero-spotlight::before {
     content: '';
     position: absolute;
     top: 0;
@@ -2624,7 +2710,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     pointer-events: none;
   }
   /* Diagonal accent stripe — right edge */
-  .hero-players-bg::after {
+  .hero-spotlight::after {
     content: '';
     position: absolute;
     top: 0;
@@ -2640,29 +2726,117 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     clip-path: polygon(110% 0, 107.5% 0, 87.5% 100%, 90% 100%);
     pointer-events: none;
   }
-  .hero-player-img {
+  /* NFL team logo watermark behind the headshot */
+  .hero-spotlight__logo {
+    position: absolute;
+    top: 50%;
+    left: 58%;
+    transform: translate(-50%, -50%);
+    width: 78%;
+    height: auto;
+    max-height: 150%;
+    object-fit: contain;
+    opacity: 0.16;
+    filter: grayscale(0.1);
+    z-index: 1;
+    transition: opacity 0.35s ease;
+  }
+  /* Foreground headshot of the current #1 player — contained + bottom-anchored
+     so the whole player (head through shoulders/torso) shows, not just a face crop */
+  .hero-spotlight__head {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: 50% 20%;
-    filter: brightness(1.02) contrast(1.1) saturate(1.15);
+    object-fit: contain;
+    object-position: 60% 100%;
+    padding: 0.5rem 0 0;
+    filter: brightness(1.02) contrast(1.05) saturate(1.1) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+    z-index: 2;
     opacity: 0;
-    animation: heroRotate 30s ease-in-out infinite;
+    animation: spotlightIn 0.45s ease forwards;
+  }
+  /* DEF: there's no headshot for a team defense — drop the redundant foreground
+     crest and let the single team logo (the watermark) be the hero. */
+  .hero-spotlight[data-def='true'] .hero-spotlight__head {
+    display: none;
+  }
+  .hero-spotlight[data-def='true'] .hero-spotlight__logo {
+    opacity: 0.92;
+    filter: none;
+    width: 62%;
+    left: 60%;
   }
 
-  @keyframes heroRotate {
-    0%   { opacity: 0; }
-    3%   { opacity: 1; }
-    33%  { opacity: 1; }
-    36%  { opacity: 0; }
-    100% { opacity: 0; }
+  @keyframes spotlightIn {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Caption — light mode: dark text on a light frosted pill;
+     dark mode (override below): light text on a soft scrim. */
+  .hero-spotlight-caption {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.85rem;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.05rem;
+    max-width: 60%;
+    text-align: right;
+    pointer-events: none;
+    padding: 0.35rem 0.6rem 0.4rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+  /* Dark mode: white text on the dark panel, soft feathered scrim (no pill). */
+  :global(html.dark) .hero-spotlight-caption {
+    padding: 0.4rem 0.65rem 0.45rem 1.75rem;
+    border-radius: 0;
+    background: radial-gradient(130% 150% at 100% 100%, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.3) 48%, transparent 78%);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
+  }
+  .hero-spotlight__label {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #6b7280;
+  }
+  :global(html.dark) .hero-spotlight__label {
+    color: rgba(255, 255, 255, 0.75);
+  }
+  .hero-spotlight__name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #111827;
+    letter-spacing: -0.01em;
+  }
+  :global(html.dark) .hero-spotlight__name {
+    color: #fff;
+  }
+  .hero-spotlight__meta {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #4b5563;
+    font-variant-numeric: tabular-nums;
+  }
+  :global(html.dark) .hero-spotlight__meta {
+    color: rgba(255, 255, 255, 0.85);
   }
 
   .hero-top {
     position: relative;
-    z-index: 2;
+    z-index: 5;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -2670,20 +2844,31 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 1rem;
     flex-wrap: wrap;
   }
+  /* Filled pill so the link stays legible over the dark spotlight panel it sits on */
   .hero-cross-link {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--color-primary, #1c497c);
+    color: #fff;
+    background: var(--color-primary, #1c497c);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-full, 999px);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    transition: gap 0.15s ease, background 0.15s ease, transform 0.15s ease;
     white-space: nowrap;
   }
   .hero-cross-link:hover {
     gap: 0.5rem;
-    text-decoration: underline;
+    background: var(--color-primary-dark, #163a63);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  :global(html.dark) .hero-cross-link {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
   }
   .hero-title-group {
     display: flex;
@@ -2768,9 +2953,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     gap: 0.35rem;
     padding: 0.4rem 0.85rem;
-    border: 1px solid var(--content-border, #d1d5db);
+    border: 1px solid color-mix(in srgb, var(--content-border, #d1d5db) 70%, transparent);
     border-radius: var(--radius-md, 0.5rem);
-    background: var(--content-bg, #fff);
+    /* Frosted glass — translucent surface lets the hero background show through */
+    background: color-mix(in srgb, var(--content-bg, #fff) 55%, transparent);
+    -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    backdrop-filter: blur(8px) saturate(1.4);
     color: var(--color-gray-600, #4b5563);
     font-size: 0.8125rem;
     font-weight: 600;
@@ -2781,7 +2969,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .pos-pill:hover {
     border-color: var(--color-primary, #1c497c);
     color: var(--color-primary, #1c497c);
-    background: var(--content-bg, #fff);
+    background: color-mix(in srgb, var(--content-bg, #fff) 72%, transparent);
   }
   .pos-pill.active {
     background: var(--color-primary, #1c497c);
@@ -3384,7 +3572,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       padding: 1.25rem 1rem 1.25rem;
       margin: 0.75rem 0 0 0;
     }
-    .hero-players-bg {
+    .hero-spotlight,
+    .hero-spotlight-caption {
       display: none;
     }
     .hero-title {
@@ -3566,6 +3755,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
+    .hero-spotlight__head {
+      animation: none;
+      opacity: 1;
+    }
     :global(td.col-value-bid--hot)::before,
     :global(td.col-value-bid--warm)::before,
     :global(td.col-value-bid--cool)::before,
