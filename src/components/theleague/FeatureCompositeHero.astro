@@ -1,0 +1,335 @@
+---
+/**
+ * FeatureCompositeHero — the fresh What's New hero, composite edition.
+ *
+ * Replaces the branded event shell for P2 fresh-feature states. A rookie
+ * models the announcement (rookies represent "new" — see hero casting rules
+ * in docs/claude/insights/features/player-composites.md): transparent ESPN
+ * cutout over the league-blue gradient, ghost WHAT'S NEW wordmark, and a
+ * glow tinted by the rookie's NFL team color.
+ *
+ * Callers must pass a resolvable model — when casting fails, the router
+ * falls back to the standard LeagueEventHero instead of rendering this.
+ */
+import type { HeroContent } from '../../types/whats-new';
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+
+interface Props {
+  content: HeroContent;
+  /** Cast player, or null for player-less entries (bug-fix rollups) — the
+      league logo silhouette stands in where the player would be. */
+  model?: HeroModel | null;
+  resolveLeaguePath: (path: string) => string;
+}
+
+const { content, model = null, resolveLeaguePath } = Astro.props;
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = getNflTeamColors(teamCode);
+const glowDark = hexToRgba(primary, 0.38);
+const glowLight = hexToRgba(primary, 0.2);
+const ctaHref = content.link ? resolveLeaguePath(content.link) : resolveLeaguePath('/theleague/whats-new');
+
+// The hero follows the site theme, but an entry can force the dark treatment
+// in light mode when the dark card IS the story (e.g. the dark mode launch).
+const forceDark = content.heroTheme === 'dark';
+---
+
+<article
+  class={`fch${forceDark ? ' fch--dark' : ''}`}
+  style={`--fch-glow-dark: ${glowDark}; --fch-glow-light: ${glowLight};`}
+  aria-label={`What's new: ${content.title}`}
+>
+  <span class="fch__ghost" aria-hidden="true">WHAT'S&nbsp;NEW</span>
+  <div class="fch__glow" aria-hidden="true"></div>
+  {model ? (
+    <>
+      <img
+        class="fch__model"
+        src={model.headshot}
+        alt=""
+        aria-hidden="true"
+        loading="eager"
+        decoding="async"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='none'"
+      />
+      <span class="fch__caption">
+        <strong>{model.name}</strong>
+        <span class="fch__caption-meta">{model.descriptor ? `${model.descriptor} ` : ''}{model.position} · {teamCode}</span>
+      </span>
+    </>
+  ) : (
+    <>
+      <img class="fch__logo-art fch__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="eager" />
+      <img class="fch__logo-art fch__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="eager" />
+    </>
+  )}
+
+  <div class="fch__content">
+    <p class="fch__eyebrow">
+      <span class="fch__pill">{content.kicker ?? 'New this week'}</span>
+      {content.kickerDate && <span class="fch__date">{content.kickerDate}</span>}
+    </p>
+    <h3 class="fch__title">{content.title}</h3>
+    <p class="fch__summary">{content.summary}</p>
+    <a class="fch__cta" href={ctaHref}>
+      {content.linkLabel ?? 'Check it out'}
+      <span class="fch__cta-arrow" aria-hidden="true">→</span>
+    </a>
+  </div>
+</article>
+
+<style>
+  .fch {
+    /* Light theme (default). Dark values applied by html.dark AND .fch--dark. */
+    --fch-surface: linear-gradient(115deg, #f4f8fc 0%, #e4eef8 52%, #d2e2f2 100%);
+    --fch-ink: var(--color-gray-900, #0f1419);
+    --fch-body: rgba(22, 32, 44, 0.72);
+    --fch-date: rgba(22, 32, 44, 0.55);
+    --fch-ghost: rgba(28, 73, 124, 0.06);
+    --fch-glow: var(--fch-glow-light, rgba(28, 73, 124, 0.2));
+    --fch-shadow: rgba(15, 30, 46, 0.3);
+    --fch-cta-bg: var(--color-primary, #1c497c);
+    --fch-cta-ink: #ffffff;
+    --fch-pill-bg: rgba(28, 73, 124, 0.08);
+    --fch-pill-border: rgba(28, 73, 124, 0.35);
+    --fch-pill-ink: var(--color-primary, #1c497c);
+    --fch-border: rgba(28, 73, 124, 0.18);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(230px, 23vw, 280px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--fch-border);
+    background: var(--fch-surface);
+    color: var(--fch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  .fch--dark,
+  :global(html.dark) .fch {
+    --fch-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+    --fch-ink: #ffffff;
+    --fch-body: rgba(255, 255, 255, 0.78);
+    --fch-date: rgba(255, 255, 255, 0.55);
+    --fch-ghost: rgba(255, 255, 255, 0.04);
+    --fch-glow: var(--fch-glow-dark, rgba(96, 165, 250, 0.3));
+    --fch-shadow: rgba(0, 0, 0, 0.5);
+    --fch-cta-bg: #ffffff;
+    --fch-cta-ink: #0f1e2e;
+    --fch-pill-bg: rgba(96, 165, 250, 0.18);
+    --fch-pill-border: rgba(96, 165, 250, 0.45);
+    --fch-pill-ink: #a8cdf8;
+    --fch-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .fch__ghost {
+    position: absolute;
+    left: 40%;
+    top: -1.1rem;
+    font-size: clamp(3.75rem, 8vw, 6.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--fch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .fch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--fch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .fch__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(250px, 33vw, 390px);
+    filter: drop-shadow(0 16px 32px var(--fch-shadow));
+  }
+
+  /* Player-less entries (bug-fix rollups): league logo silhouette instead */
+  .fch__logo-art {
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(180px, 24vw, 280px);
+    opacity: 0.16;
+    pointer-events: none;
+  }
+
+  .fch__logo-art--dark {
+    display: none;
+  }
+
+  .fch--dark .fch__logo-art--light,
+  :global(html.dark) .fch__logo-art--light {
+    display: none;
+  }
+
+  .fch--dark .fch__logo-art--dark,
+  :global(html.dark) .fch__logo-art--dark {
+    display: block;
+    opacity: 0.22;
+  }
+
+  .fch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    /* Always white — the caption sits on its own dark frosted pill in both themes */
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .fch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .fch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .fch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(30rem, 58%);
+  }
+
+  .fch__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .fch__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--fch-pill-ink);
+    background: var(--fch-pill-bg);
+    border: 1px solid var(--fch-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .fch__date {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fch-date);
+  }
+
+  .fch__title {
+    /* Explicit — global heading rules (and html.dark accent overrides) must
+       never restyle text sitting on the composite gradient */
+    color: var(--fch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.5rem;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+
+  .fch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--fch-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .fch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--fch-cta-bg);
+    color: var(--fch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .fch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .fch__cta:focus-visible {
+    outline: 2px solid var(--fch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fch__cta {
+      transition: none;
+    }
+
+    .fch__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .fch {
+      min-height: 250px;
+    }
+
+    .fch__model {
+      width: 190px;
+      right: -1.5rem;
+      opacity: 0.45;
+    }
+
+    .fch__caption {
+      display: none;
+    }
+
+    .fch__logo-art {
+      width: 150px;
+      right: -1rem;
+    }
+
+    .fch__content {
+      max-width: 100%;
+    }
+  }
+</style>

@@ -34,6 +34,8 @@ export interface PlayerIdentity {
   nflTeam: string;
   headshot: string;
   espnId: string | null;
+  /** NFL draft year from the MFL feed (e.g. '2026'); empty for undrafted/unknown */
+  draftYear: string;
 }
 
 /** Fantasy-relevant positions to include */
@@ -134,6 +136,7 @@ export function getPlayerMap(year: number): Map<string, PlayerIdentity> {
         nflTeam,
         headshot,
         espnId,
+        draftYear: p.draft_year || '',
       });
     }
   } catch {

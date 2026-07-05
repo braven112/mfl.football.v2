@@ -67,6 +67,8 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     imageAlt: entry.imageAlt,
     kicker: WHATS_NEW_CATEGORY_LABELS[entry.category],
     kickerDate: formatKickerDate(entry.date),
+    heroTheme: entry.heroTheme,
+    heroCategory: entry.category,
   };
 }
 
