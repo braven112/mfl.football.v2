@@ -30,6 +30,11 @@ const conferenceLogo = conferenceId ? getConferenceLogo(conferenceId) : null;
 const conferenceLogoDark = conferenceId ? getConferenceLogoDark(conferenceId) : null;
 const conferenceName = conferenceId ? getConferenceName(conferenceId) : '';
 
+// AFL conference identity: NL ('01') cards glow blue instead of the league's
+// red — same per-conference hues as ConferenceLeagueStandingsTable. AL and
+// TheLeague (no conferenceId) fall back to --league-accent via the CSS chain.
+const divisionAccentDark = conferenceId === '01' ? '#5b9bd5' : null;
+
 // Branded compass-badge header — when present, the banner bleeds flush to the
 // card edges (no container padding above or beside it).
 const hasBrandedHeader = Boolean(showDivisionHeader && divisionName && divisionBadge);
@@ -91,7 +96,10 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 }
 ---
 
-<div class:list={['standings-container', { 'standings-container--branded': hasBrandedHeader }]}>
+<div
+  class:list={['standings-container', { 'standings-container--branded': hasBrandedHeader }]}
+  style={divisionAccentDark ? `--division-accent: ${divisionAccentDark};` : undefined}
+>
   {hasBrandedHeader && (
     <div class="stand-head">
       <span class="sh-badge">
@@ -332,11 +340,12 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
   }
 
   /* AFL dark: divisions aren't branded (no compass badge) but mirror the
-     same whole-card glow in the league's red, fading into the navy card. */
+     same whole-card glow, fading into the navy card. AL glows league red;
+     NL cards carry --division-accent (conference blue) set inline. */
   :global(html.dark[data-league="afl"]) .standings-container {
     background: linear-gradient(135deg,
-      color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
-      color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 50%, transparent) 0%,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) 22%,
       var(--card-surface, #16283c) 52%);
   }
 
@@ -695,12 +704,12 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
      transparent is pixel-identical to the old rgba(59,130,246,…) stops
      for TheLeague. */
   :global(html.dark) tr.preferred-team {
-    background-color: color-mix(in srgb, var(--league-accent, #3b82f6) 16%, transparent) !important;
-    border-left-color: var(--league-accent, #3b82f6);
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #3b82f6)) 16%, transparent) !important;
+    border-left-color: var(--division-accent, var(--league-accent, #3b82f6));
   }
 
   :global(html.dark) tr.preferred-team:hover {
-    background-color: color-mix(in srgb, var(--league-accent, #3b82f6) 26%, transparent) !important;
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #3b82f6)) 26%, transparent) !important;
   }
 
   :global(html.dark) tr.preferred-team .team-name {
