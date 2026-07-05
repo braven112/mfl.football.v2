@@ -158,8 +158,8 @@ const countAriaLabel = hasCount
     --ev-cta-ink: #ffffff;
     --ev-divider: var(--color-gray-200, #e5e7eb);
     /* On white, the per-event glow rgba (~55% alpha) would swamp the card —
-       derive a faint accent wash instead; dark restores the passed --ev-glow. */
-    --ev-glow-resolved: color-mix(in srgb, var(--ev-accent, #1c497c) 10%, transparent);
+       derive a softer accent wash instead; dark restores the passed --ev-glow. */
+    --ev-glow-resolved: color-mix(in srgb, var(--ev-accent, #1c497c) 22%, transparent);
     --ev-border-strength: 45%;
     /* Left feather over the player cut-out. On white the photo contrasts much
        harder than on navy, so light mode washes wider and stronger — otherwise

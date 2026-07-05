@@ -120,7 +120,7 @@ const cardClasses = [
      so both themes share one set of rules. */
   .whats-next-card {
     --card-accent: var(--cat-regular-season);
-    --card-glow-strength: 12%;
+    --card-glow-strength: 24%;
     --card-glow: color-mix(in srgb, var(--card-accent) var(--card-glow-strength), transparent);
     --card-border-strength: 45%;
     --card-surface: var(--color-white, #ffffff);
@@ -217,7 +217,7 @@ const cardClasses = [
   /* ── Past: dim and drain the accent ── */
   .whats-next-card--past {
     --card-accent: var(--color-gray-400, #9ca3af);
-    --card-glow-strength: 8%;
+    --card-glow-strength: 12%;
     opacity: 0.72;
   }
   :global(html.dark) .whats-next-card--past {
