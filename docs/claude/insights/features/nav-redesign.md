@@ -859,3 +859,18 @@ await drawer.screenshot({
 - The preference cookie is a *personalization* signal, never an *auth* signal. Anything that gates "logged-in" UI (the footer chip, owner/admin nav-link visibility via `teamInfo.franchiseId`) must key off `getAuthUser` (the signed JWT), not the cookie.
 - Both AFL and TheLeague logins mint a JWT with `leagueId` + `franchiseId` (`src/pages/api/auth/login.ts`) — TheLeague is **not** cookie-only, so JWT-gating is safe for both.
 - `getLeagueBySlug('afl-fantasy'|'theleague').id` gives the MFL id; don't hardcode `19621`/`13522` (per CLAUDE.md league registry rule).
+
+## 2026-07-04 - Closed Drawer Exposed by Page-Level Horizontal Overflow
+
+**Context:** On /theleague/activity (and the AFL twin) at 375px, QA screenshots showed the nav drawer apparently pinned open along the right edge, in both themes.
+
+**Root cause:** Two bugs compounding. (1) The activity tables (`.activity-table`, 449px/401px min-content width) had no `overflow-x: auto` wrapper, so the document itself scrolled horizontally (scrollWidth 465 at a 375 viewport). (2) The drawer's closed state hid it only via `transform: translateX(100%)` — still `visibility: visible` — so once the page had horizontal overflow, full-page screenshots (and sideways scroll / mobile zoom-out) revealed the "closed" drawer sitting past the right edge. Its links were also still tab-focusable while `aria-hidden="true"`.
+
+**Fix:**
+- Wrapped both activity tables in the existing global `.table-wrapper` (`overflow-x: auto`, defined in `TheLeagueLayout.astro`) — the repo's standard for wide tables.
+- Hardened `NavDrawer.astro`: closed state now also gets `visibility: hidden`, with `transition: ..., visibility 0s linear var(--nav-transition-duration, 0.3s)` so it hides only after the slide-out finishes; the `--open` state resets the delay to 0s so it's visible during slide-in.
+
+**Key takeaways:**
+- Off-canvas panels hidden only by transform are one page-overflow away from being visible. Pair the transform with delayed `visibility: hidden` (also fixes the tab-order leak behind `aria-hidden`).
+- Any table that can exceed ~360px min-content width needs the `.table-wrapper` scroll container (Editorial Design Standard: the page body must never scroll horizontally).
+- Headless preview tabs throttle CSS transitions — mid-transition `getComputedStyle` reads can look like a broken rule. Verify end states with an active Playwright page instead.

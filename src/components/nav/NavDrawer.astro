@@ -218,7 +218,14 @@ const footerLinks = [
     box-shadow: var(--nav-shadow, -4px 0 24px rgba(0, 0, 0, 0.12));
     z-index: var(--nav-z-drawer, 950);
     transform: translateX(100%);
-    transition: var(--nav-drawer-transition, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1));
+    /* visibility keeps the closed drawer out of horizontal overflow (it would
+       otherwise appear pinned to the right edge on any page whose content
+       overflows the viewport) and out of the tab order while aria-hidden.
+       The delay hides it only after the slide-out transform finishes. */
+    visibility: hidden;
+    transition:
+      var(--nav-drawer-transition, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)),
+      visibility 0s linear var(--nav-transition-duration, 0.3s);
     display: flex;
     flex-direction: column;
   }
@@ -226,6 +233,10 @@ const footerLinks = [
   /* Open state */
   .nav-drawer.nav-drawer--open {
     transform: translateX(0);
+    visibility: visible;
+    transition:
+      var(--nav-drawer-transition, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)),
+      visibility 0s;
   }
 
   /* Disable transition on initial page load when drawer is already open */

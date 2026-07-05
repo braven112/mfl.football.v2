@@ -184,6 +184,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 			<p>No transactions recorded yet this season.</p>
 		</div>
 	) : (
+		<div class="table-wrapper">
 		<table class="activity-table" aria-label="Transaction activity leaderboard">
 			<thead>
 				<tr>
@@ -213,6 +214,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 				))}
 			</tbody>
 		</table>
+		</div>
 	)}
 
 	<!-- Last Seen Table -->
@@ -226,6 +228,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 			<p>No activity data yet. Visit tracking begins once owners start logging in.</p>
 		</div>
 	) : (
+		<div class="table-wrapper">
 		<table class="activity-table" aria-label="Owner activity ranked by most recent visit">
 			<thead>
 				<tr>
@@ -271,6 +274,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 				))}
 			</tbody>
 		</table>
+		</div>
 	)}
 </section>
 
