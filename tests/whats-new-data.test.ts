@@ -6,7 +6,7 @@ import { VALID_LEAGUE_SLUGS } from '../src/types/whats-new';
 import { ALL_LEAGUES } from '../src/config/leagues';
 import entries from '../src/data/whats-new.json';
 import stagingFile from '../src/data/weekly-changelog-staging.json';
-import { loadSpriteIconIds, SPRITE_REL_PATH } from './helpers/sprite-icons';
+import { describeSpriteIconValidation } from './helpers/sprite-icons';
 
 /**
  * What's New Data Validation
@@ -138,36 +138,10 @@ describe('whats-new.json data integrity', () => {
 // resolves to #icon-icon-eye — which doesn't exist — and silently rendered an
 // empty hero eyebrow chip when the dark-mode entry shipped that way.
 
-describe('whats-new.json sprite icons', () => {
-  const spriteIds = loadSpriteIconIds();
-
-  it(`parsed glyph ids from ${SPRITE_REL_PATH} (sanity check)`, () => {
-    expect(spriteIds.size).toBeGreaterThan(0);
-  });
-
-  it('no icon value carries the "icon-" prefix (consumers add it)', () => {
-    const doublePrefixed = typedEntries
-      .filter((e) => e.icon?.startsWith('icon-'))
-      .map((e) => `${e.id} -> "${e.icon}"`);
-    expect(
-      doublePrefixed,
-      `Icon values must be bare glyph names ("eye", not "icon-eye"). Display code prepends ` +
-        `"icon-", so a prefixed value resolves to a nonexistent #icon-icon-* glyph and ` +
-        `renders an empty icon.`,
-    ).toEqual([]);
-  });
-
-  it(`every icon refers to a real glyph in ${SPRITE_REL_PATH}`, () => {
-    const unknown = typedEntries
-      .filter((e) => e.icon && !spriteIds.has(e.icon))
-      .map((e) => `${e.id} -> "${e.icon}"`);
-    expect(
-      unknown,
-      `Icons not found in the sprite. Use an existing glyph id (without the "icon-" ` +
-        `prefix) or add the glyph to ${SPRITE_REL_PATH}.`,
-    ).toEqual([]);
-  });
-});
+describeSpriteIconValidation(
+  'whats-new.json',
+  typedEntries.map((e) => ({ source: e.id, icon: e.icon })),
+);
 
 // ---------------------------------------------------------------------------
 // League scoping — content separation between The League and the AFL
