@@ -3834,6 +3834,37 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     vertical-align: middle;
   }
 
+  /* ── Dark mode: glass table over the card's blue glow ──
+     Header transparent, base rows transparent, alternating rows carry a
+     left-to-right white wash that fades out, separators translucent,
+     text brightened. */
+  :global(html.dark) .roster-table thead,
+  :global(html.dark) .roster-table th {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
+  :global(html.dark) .roster-table thead tr {
+    border-left-color: transparent;
+  }
+
+  :global(html.dark) .roster-table td {
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+    color: #f2f5f9;
+  }
+
+  :global(html.dark .roster-row--active) {
+    background: transparent;
+  }
+
+  :global(html.dark .roster-row--active-alt) {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 78%, transparent 100%);
+  }
+
+  :global(html.dark .roster-table .player-cell__name) {
+    color: #ffffff;
+  }
+
 
   :global(.roster-table th[data-column='player']) {
     text-align: left !important;
@@ -4816,12 +4847,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     box-shadow: var(--shadow-md);
   }
 
-  /* Dark mode: active mode matches the view-switcher's blue treatment —
-     primary-tinted fill, blue ring, bright blue text. */
+  /* Dark mode: active mode is an outlined blue pill (transparent fill,
+     blue ring + text) per the design example. */
   :global(html.dark) .mode-btn.active {
-    background: color-mix(in srgb, var(--color-primary, #3b82f6) 15%, var(--card-surface, #262626));
+    background: transparent;
     color: var(--color-primary-light, #60a5fa);
     box-shadow: 0 0 0 1.5px var(--color-primary, #3b82f6);
+    border-radius: 0.4rem;
   }
 
   :global(html.dark) .mode-btn:hover:not(.active) {
