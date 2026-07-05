@@ -567,6 +567,10 @@ const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.is
 const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
 
 const teamsList = (leagueAssets.teams ?? [])
+  // The assets file also carries historical/former franchise identities
+  // (category: 'former', including entries with compound or missing ids) —
+  // only current franchises belong in the roster team list.
+  .filter((team) => team.category !== 'former')
   .map((team) => ({
     id: team.id,
     name: team.name,
