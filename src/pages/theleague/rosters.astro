@@ -4849,7 +4849,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
    @media (min-width: 640px) {
     .mode-toggle {
-          margin-top: -2rem;
+          margin-top: -2.5rem;
           margin-right: 0;
     }
   }
@@ -4880,12 +4880,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   }
 
   /* Dark mode: active mode is an outlined blue pill (transparent fill,
-     blue ring + text) per the design example. */
+     blue ring + text) per the design example. Tab-style radius — square
+     top so the ring meets the tray's top edge, rounded bottom. */
   :global(html.dark) .mode-btn.active {
     background: transparent;
     color: var(--color-primary-light, #60a5fa);
     box-shadow: 0 0 0 1.5px var(--color-primary, #3b82f6);
-    border-radius: 0.4rem;
+    border-radius: 0 0 0.4rem 0.4rem;
   }
 
   :global(html.dark) .mode-btn:hover:not(.active) {
