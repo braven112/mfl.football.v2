@@ -1,5 +1,6 @@
 ---
 import leagueAssets from '../../data/theleague.assets.json';
+import { getActiveTeams } from '../../utils/league-assets';
 import { calculatePickValue } from '../../utils/league-comparison-utils';
 
 // Sample draft capital data - in a real app, this would come from MFL draft tracker
@@ -23,7 +24,7 @@ const draftCapitalData = {
   // Add placeholder data for all teams
 };
 
-const teamsList = leagueAssets.teams ?? [];
+const teamsList = getActiveTeams(leagueAssets);
 
 const getTeamName = (franchiseId: string) => {
   const team = teamsList.find((t) => t.id === franchiseId);

@@ -28,6 +28,22 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "A handful of pages had been quietly haunted by the league's past lives — the Salary Analytics player tables credited players to retired identities like Under Siege and Devil Dogs instead of their current franchises, League Comparison and the draft capital table double-counted historical rebrands, and the roster page's draft cards could pull a vintage banner. Every franchise lookup now resolves to the team's current identity; the ghosts stay in the Asset Library where they belong.",
+      "impact": "user",
+      "area": "salary",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
+      "summary": "Your saved team preference now always resolves to your club's current identity. With 82 retired team names in the AFL archives sharing franchise numbers with today's clubs, the preference system could quietly look up your conference and league placement against a name you rebranded away from years ago — it now only consults the current 24.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "Franchise milestone posts in the Schefter Report now say what they're announcing — a labeled badge chip (like \"🎯 Career Milestone · Playoff Veteran\") sits above the one-liner, and every milestone post links straight to that team's badge wall. Previously you got a cryptic quip like \"Not a tourist anymore\" and were left to guess what happened.",
       "impact": "user",
       "area": "homepage",

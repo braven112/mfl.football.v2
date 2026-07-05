@@ -4,6 +4,7 @@ import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueAssets from '../../data/theleague.assets.json';
 import archiveUrls from '../../data/theleague/salary-archive-urls.json';
+import { getActiveTeams } from '../../utils/league-assets';
 
 const summaryModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
@@ -105,7 +106,7 @@ const generatedLabel =
     : 'Unknown';
 
 const franchiseMeta = new Map(
-  (leagueAssets.teams ?? []).map((team) => [
+  getActiveTeams(leagueAssets).map((team) => [
     team.id,
     {
       name: team.name,

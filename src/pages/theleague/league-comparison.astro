@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
+import { getActiveTeams } from '../../utils/league-assets';
 import ChartCard from '../../components/theleague/ChartCard.astro';
 import BarChart from '../../components/theleague/BarChart.astro';
 import LeagueRosterStrengthChart from '../../components/theleague/LeagueRosterStrengthChart.astro';
@@ -41,7 +42,7 @@ const extractFeedSeason = (filepath) => {
 };
 
 // Get team lookup
-const teamsList = (leagueAssets.teams ?? []).map((team) => ({
+const teamsList = getActiveTeams(leagueAssets).map((team) => ({
   id: team.id,
   name: team.name,
 }));
