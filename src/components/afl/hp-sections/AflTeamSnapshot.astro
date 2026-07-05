@@ -323,6 +323,11 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
     fill: currentColor;
   }
 
+  /* Dark mode: the muted gray vanishes on the gradient card — go bright. */
+  :global(html.dark) .afl-snapshot__guest-icon {
+    color: #ffffff;
+  }
+
   .afl-snapshot__guest-text {
     flex: 1;
     min-width: 0;

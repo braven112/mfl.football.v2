@@ -249,6 +249,11 @@ const metrics: MetricDef[] = [
     fill: currentColor;
   }
 
+  /* Dark mode: the muted gray vanishes on the gradient card — go bright. */
+  :global(html.dark) .hp-snapshot__guest-icon {
+    color: #ffffff;
+  }
+
   .hp-snapshot__guest-text {
     flex: 1;
     min-width: 0;
