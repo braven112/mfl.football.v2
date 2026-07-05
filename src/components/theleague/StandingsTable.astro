@@ -490,6 +490,16 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     background-color: transparent;
   }
 
+  /* Row separators go translucent too — solid gray lines read as harsh
+     cuts where the blue glow is strongest on the left. */
+  :global(html.dark) td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  :global(html.dark) th {
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
   :global(html.dark) thead {
     background-color: transparent;
   }
