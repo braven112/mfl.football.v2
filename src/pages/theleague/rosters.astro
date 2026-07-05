@@ -3846,6 +3846,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   :global(html.dark) .roster-table th {
     background: transparent;
     border-bottom-color: rgba(255, 255, 255, 0.14);
+    /* Bright headers — the muted gray-400 vanishes on the glow. */
+    color: var(--color-gray-700, #c0c0c0);
+  }
+
+  :global(html.dark) .division-label {
+    color: var(--color-gray-700, #c0c0c0);
   }
 
   :global(html.dark) .roster-table thead tr {
@@ -3999,6 +4005,28 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     border-left: 2.5px solid #d97706;
     background: linear-gradient(135deg, #fffbeb, #fef3c7);
     color: #d97706;
+  }
+
+  /* Dark: the light-mode pastel gradients (#eff6ff→#dbeafe etc.) go muddy
+     pale-on-dark, so dark retints each state to a subtle tinted-surface
+     wash via color-mix against --content-bg, matching the CDM action-option
+     accent colors these buttons trigger. Text colors already ride tokens
+     (--color-primary) or invert acceptably (success/error/warning hexes are
+     the same brand hexes CDM uses); only the backgrounds need a dark swap. */
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="franchise"]) {
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 15%, var(--content-bg, #1e1e1e));
+  }
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="extension"]) {
+    background: color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, #1e1e1e));
+    color: var(--color-success-dark, #6ee7b7);
+  }
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="cut"]) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 15%, var(--content-bg, #1e1e1e));
+    color: var(--color-error-dark, #fca5a5);
+  }
+  :global(html.dark) :global(.ufa-action-btn[data-action-type="trade"]) {
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, var(--content-bg, #1e1e1e));
+    color: var(--color-warning-dark, #fcd34d);
   }
 
   :global(.ufa-action-btn svg) {
