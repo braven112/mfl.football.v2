@@ -147,7 +147,9 @@ const pages = [...pinned, ...rest].slice(0, 8);
   }
 
   :global(html.dark) .hp-links__card:hover {
-    background: rgba(255, 255, 255, 0.11);
+    /* Hover darkens (matches the standings-row direction) but stays
+       translucent so the card glow shows through. */
+    background: rgba(0, 0, 0, 0.18);
   }
 
   .hp-links__icon {

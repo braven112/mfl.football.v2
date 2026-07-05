@@ -140,7 +140,9 @@ const pages = [...aflPages].sort((a, b) => b.popularity - a.popularity).slice(0,
   }
 
   :global(html.dark) .afl-links__card:hover {
-    background: rgba(255, 255, 255, 0.11);
+    /* Hover darkens (matches the standings-row direction) but stays
+       translucent so the card glow shows through. */
+    background: rgba(0, 0, 0, 0.18);
   }
 
   .afl-links__icon {
