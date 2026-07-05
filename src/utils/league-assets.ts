@@ -36,7 +36,8 @@ interface TeamAssets {
  *
  * Active-team asset arrays are ordered oldest-first and fold the franchise's
  * former-identity art in at index 0 — e.g. Pigskins' `icons` is
- * [`/history/pigskins_2007_icon_circle.png`, `/icons/pigskins.png`]. Taking
+ * [`/assets/theleague/history/pigskins_2007_icon_circle.png`,
+ * `/assets/theleague/icons/pigskins.png`]. Taking
  * `[0]` therefore renders the retired logo for every team that has a former
  * identity (Pigskins, BTP, Midwestside, Dark Magicians…). Consumers that want
  * the live logo must skip anything under `/history/` and prefer the newest
