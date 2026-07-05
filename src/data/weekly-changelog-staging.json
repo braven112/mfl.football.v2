@@ -4,6 +4,14 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "The Potential Targets card on the League Planner no longer shows up two, three, or even four times in a row for teams with a storied rebrand history — the planner was quietly rendering one copy per former team identity (Poker in the Rear and the Georgia Punishers don't need free agent advice anymore). Exactly one copy now renders for every team at every screen size.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "Franchise milestone posts in the Schefter Report now say what they're announcing — a labeled badge chip (like \"🎯 Career Milestone · Playoff Veteran\") sits above the one-liner, and every milestone post links straight to that team's badge wall. Previously you got a cryptic quip like \"Not a tourist anymore\" and were left to guess what happened.",
       "impact": "user",
       "area": "homepage",

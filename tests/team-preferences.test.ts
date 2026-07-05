@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { AstroCookies } from 'astro';
+import leagueAssets from '../src/data/theleague.assets.json';
 import {
   validateFranchiseId,
   resolveTeamSelection,
@@ -60,6 +61,29 @@ describe('Team Preferences - validateFranchiseId', () => {
   it('should normalize and validate commissioner ID (0000 → 0001)', () => {
     // 0000 gets normalized to 0001, which is valid
     expect(validateFranchiseId('0001', 'theleague')).toBe(true);
+  });
+
+  it('should reject former-identity ids that only exist as historical entries', () => {
+    // The assets files carry category:'former' historical identities.
+    // "0002, 0013" (Sabertooths) exists ONLY as a former entry — accepting it
+    // would persist a preference with no roster, teamLookup entry, or FA panel.
+    expect(validateFranchiseId('0002, 0013', 'theleague')).toBe(false);
+  });
+
+  it('should accept every active franchise id and no former-only ids', () => {
+    // Every category:'active' entry must validate; ids that appear ONLY on
+    // former entries must not. Former entries that share an id with an active
+    // one (rebrands) stay valid via the active entry.
+    const teams = (leagueAssets.teams ?? []) as Array<{ id?: string; category?: string }>;
+    const activeIds = new Set(teams.filter(t => t.category !== 'former').map(t => t.id));
+    for (const id of activeIds) {
+      expect(validateFranchiseId(id!, 'theleague'), `active id ${id} should validate`).toBe(true);
+    }
+    for (const team of teams) {
+      if (team.category === 'former' && team.id && !activeIds.has(team.id)) {
+        expect(validateFranchiseId(team.id, 'theleague'), `former-only id ${team.id} should be rejected`).toBe(false);
+      }
+    }
   });
 });
 
