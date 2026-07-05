@@ -68,6 +68,7 @@ type HistoricalIdentity = {
   yearStart: number;
   yearEnd: number;
   banner: string | null;
+  icon: string | null;
 };
 const normalizeIdentity = (s: string): string =>
   (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
@@ -101,12 +102,17 @@ for (const team of leagueConfig.teams as any[]) {
       uniqueNames.length > 1
         ? uniqueNames.map(([name]) => name).join(' / ')
         : dominantName;
+    const dominantEntry =
+      entries.find((e: any) => e.name === dominantName && e.icon) ??
+      entries.find((e: any) => e.icon) ??
+      entries[0];
     historicalIdentities.push({
       franchiseId: team.franchiseId,
       name: displayName,
       yearStart,
       yearEnd,
       banner: entries[0].banner ?? null,
+      icon: dominantEntry.icon ?? null,
     });
   }
 }
@@ -206,6 +212,7 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
           {historicalIdentities.map((h) => (
             <li>
               <a href={resolveLeaguePath(`/theleague/franchises/${h.franchiseId}#era-${h.yearStart}`, hideLeaguePrefix)}>
+                {h.icon && <img class="identity-icon" src={h.icon} alt="" loading="lazy" width="32" height="32" />}
                 <strong>{h.name}</strong>
                 <span class="dim">{h.yearStart === h.yearEnd ? h.yearStart : `${h.yearStart}–${h.yearEnd}`}</span>
               </a>
@@ -361,20 +368,29 @@ historicalIdentities.sort((a, b) => b.yearEnd - a.yearEnd || b.yearStart - a.yea
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 0.5rem;
   }
   .identity-list a {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.625rem;
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
     background: var(--surface-2, #f5f5f5);
     text-decoration: none;
     color: inherit;
     font-size: 0.875rem;
+  }
+  .identity-list a strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .identity-list a .dim { flex-shrink: 0; }
+  .identity-list .identity-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--content-bg, #fff);
   }
   .identity-list a:hover { background: var(--surface-3, #ebebeb); }
 </style>

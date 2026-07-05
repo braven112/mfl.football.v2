@@ -120,7 +120,7 @@ const aggregateAssets = async () => {
     // it gets its own config-driven cards below instead of the generic scan.
     // Awards/conference/league art is aggregated into `extras` buckets below,
     // and favicons are site chrome, not library assets.
-    if (['history', 'awards', 'conferences', 'favicons'].includes(dirent.name)) continue;
+    if (['history', 'awards', 'conferences', 'division-badges', 'favicons'].includes(dirent.name)) continue;
     const folder = dirent.name;
     const folderPath = path.join(leagueAssetsDir, folder);
     let files = [];
@@ -347,6 +347,7 @@ const aggregateAssets = async () => {
   };
   await readExtraDir('awards', (base) => (isDivisionBadge(base) ? 'division' : 'championship'));
   await readExtraDir('conferences', () => 'conference');
+  await readExtraDir('division-badges', () => 'division');
   // League logo lives in the shared logos dir; root-level files in the league
   // assets dir (tier marks etc.) also count as league-level logos.
   for (const dirent of directories) {
