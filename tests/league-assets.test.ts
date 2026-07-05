@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getActiveTeams } from '../src/utils/league-assets';
+import {
+  getActiveTeams,
+  getCurrentAssetPath,
+  getCurrentIconPath,
+  getCurrentBannerPath,
+} from '../src/utils/league-assets';
 import theleagueAssets from '../src/data/theleague.assets.json';
 import aflAssets from '../data/afl-fantasy/afl.assets.json';
 
@@ -46,6 +51,54 @@ describe('getActiveTeams', () => {
     for (const team of active) {
       expect(team.category).toBe('active');
       expect(team.name).not.toMatch(/\(\d{4}/); // no "(2007–2015)"-style era suffixes
+    }
+  });
+});
+
+describe('getCurrentAssetPath', () => {
+  const p = (relativePath: string) => ({ relativePath });
+
+  it('skips folded-in /history/ art and returns the current asset', () => {
+    // Oldest-first ordering with the retired icon at index 0 — the exact shape
+    // that made the roster nav render 2007-era logos.
+    const icons = [p('/assets/theleague/history/pigskins_2007_icon_circle.png'), p('/assets/theleague/icons/pigskins.png')];
+    expect(getCurrentAssetPath(icons)).toBe('/assets/theleague/icons/pigskins.png');
+  });
+
+  it('takes the newest live entry when multiple non-history entries exist', () => {
+    const icons = [p('/assets/theleague/icons/old.png'), p('/assets/theleague/icons/new.png')];
+    expect(getCurrentAssetPath(icons)).toBe('/assets/theleague/icons/new.png');
+  });
+
+  it('falls back to the last entry when every entry is under /history/', () => {
+    const icons = [p('/assets/theleague/history/a.png'), p('/assets/theleague/history/b.png')];
+    expect(getCurrentAssetPath(icons)).toBe('/assets/theleague/history/b.png');
+  });
+
+  it('returns undefined for empty or missing input', () => {
+    expect(getCurrentAssetPath(undefined)).toBeUndefined();
+    expect(getCurrentAssetPath([])).toBeUndefined();
+  });
+
+  it('resolves the four TheLeague teams with a former identity to their /icons/ logo', () => {
+    // Pigskins, Bring The Pain, Midwestside, Dark Magicians each carry a
+    // /history/ icon at index 0 — regression guard for the reported bug.
+    const active = getActiveTeams(theleagueAssets);
+    for (const id of ['0001', '0008', '0011', '0015']) {
+      const team = active.find((t) => t.id === id)!;
+      const icon = getCurrentIconPath(team);
+      expect(icon, `team ${id}`).toBeDefined();
+      expect(icon, `team ${id}`).not.toContain('/history/');
+      expect(icon, `team ${id}`).toContain('/icons/');
+    }
+  });
+
+  it('every active TheLeague team resolves to a non-history icon and banner', () => {
+    for (const team of getActiveTeams(theleagueAssets)) {
+      const icon = getCurrentIconPath(team);
+      if (icon) expect(icon, `${team.name} icon`).not.toContain('/history/');
+      const banner = getCurrentBannerPath(team);
+      if (banner) expect(banner, `${team.name} banner`).not.toContain('/history/');
     }
   });
 });
