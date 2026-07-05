@@ -18,7 +18,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
+import { resolveConfigForYear, resolvePreferredTeamIdForYear, HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -104,17 +104,15 @@ const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfig, preferre
 
 // Compute the DEFENDING champions — i.e. last season's division winners, not
 // the current year's leaders. Pull the previous year's standings feed to find
-// which franchise won each division last year, then display each champion with
-// its CURRENT identity (name + logo) so we don't surface stale historical icon
-// URLs from the old config.
+// which franchise won each division last year, then display each champion
+// era-correct: the identity (name + icon) it wore the season it won. All
+// historical identities now have authentic local icons, so we only fall back
+// to the present-day identity if an era icon is the placeholder.
 const previousYear = selectedYear - 1;
 const previousFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${previousYear}/standings.json`] as
   | { leagueStandings?: { franchise: any[] }; error?: any }
   | undefined;
 
-// Present-day identity (working local logo + name) keyed by franchise id.
-// Built from the base config — NOT the year-resolved one — because historical
-// identities carry stale theleague.us icon URLs that no longer load.
 const currentIdentityById = new Map(
   leagueConfig.teams.map(t => [t.franchiseId, { name: t.name, icon: t.icon }])
 );
@@ -126,15 +124,16 @@ const lastYearChampions = previousFeed?.leagueStandings && !previousFeed.error
     )
   : {};
 
-// Key the defending champion to the division it won last year, but render its
-// present-day name + logo (falling back to last year's data if the franchise is
-// no longer in the league).
+// Key the defending champion to the division it won last year, rendering the
+// identity it had that season (with a present-day fallback if the era icon is
+// missing or the franchise left the league).
 const defendingChampions: Record<string, { name: string; icon: string }> = {};
 for (const [divisionName, champ] of Object.entries(lastYearChampions)) {
   const current = currentIdentityById.get(champ.id);
+  const eraIconUsable = champ.icon && champ.icon !== HISTORICAL_TEAM_ICON_FALLBACK;
   defendingChampions[divisionName] = {
-    name: current?.name ?? champ.name,
-    icon: current?.icon ?? champ.icon,
+    name: champ.name ?? current?.name ?? '',
+    icon: eraIconUsable ? champ.icon : (current?.icon ?? champ.icon),
   };
 }
 

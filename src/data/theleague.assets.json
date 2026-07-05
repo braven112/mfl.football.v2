@@ -1,6 +1,35 @@
 {
-  "generatedAt": "2026-07-03T16:49:28.534Z",
+  "generatedAt": "2026-07-05T05:51:23.360Z",
   "teams": [
+    {
+      "key": "history_acer_fc_edge",
+      "slug": "history_acer_fc_edge",
+      "id": "0007",
+      "name": "Acer FC Edge (2007–2009)",
+      "category": "former",
+      "aliases": [
+        "Fire Ready Aim",
+        "ACER"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "acer_fc_edge_banner.png",
+            "relativePath": "/assets/theleague/history/acer_fc_edge_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "acer_fc_edge_icon_circle.png",
+            "relativePath": "/assets/theleague/history/acer_fc_edge_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
     {
       "key": "history_amish_rakefighters",
       "slug": "history_amish_rakefighters",
@@ -15,8 +44,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "amish_rakefighters_icon.png",
-            "relativePath": "/assets/theleague/history/amish_rakefighters_icon.png",
+            "filename": "amish_rakefighters_banner.png",
+            "relativePath": "/assets/theleague/history/amish_rakefighters_banner.png",
             "extension": ".png"
           }
         ],
@@ -44,8 +73,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "boyz2men_icon.png",
-            "relativePath": "/assets/theleague/history/boyz2men_icon.png",
+            "filename": "boyz2men_banner.png",
+            "relativePath": "/assets/theleague/history/boyz2men_banner.png",
             "extension": ".png"
           }
         ],
@@ -74,6 +103,12 @@
         "banners": [
           {
             "type": "banners",
+            "filename": "bring_the_pain_2007_banner.png",
+            "relativePath": "/assets/theleague/history/bring_the_pain_2007_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
             "filename": "bring_the_pain.png",
             "relativePath": "/assets/theleague/banners/bring_the_pain.png",
             "extension": ".png"
@@ -90,12 +125,25 @@
         "icons": [
           {
             "type": "icons",
+            "filename": "bring_the_pain_2007_icon_circle.png",
+            "relativePath": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
             "filename": "bring_the_pain.png",
             "relativePath": "/assets/theleague/icons/bring_the_pain.png",
             "extension": ".png"
           }
         ]
-      }
+      },
+      "eras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2022,
+          "franchiseId": "0008"
+        }
+      ]
     },
     {
       "key": "computer_jocks",
@@ -213,6 +261,35 @@
       }
     },
     {
+      "key": "history_dangerzone",
+      "slug": "history_dangerzone",
+      "id": "0013",
+      "name": "DangerZone (2007–2008)",
+      "category": "former",
+      "aliases": [
+        "Gridiron Geeks",
+        "DGRZ"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "dangerzone_banner.png",
+            "relativePath": "/assets/theleague/history/dangerzone_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "dangerzone_icon_circle.png",
+            "relativePath": "/assets/theleague/history/dangerzone_icon_circle.png",
+            "extension": ".png"
+          }
+        ]
+      }
+    },
+    {
       "key": "dark_magicians_of_chaos",
       "slug": "dark_magicians_of_chaos",
       "id": "0015",
@@ -232,6 +309,12 @@
         "banners": [
           {
             "type": "banners",
+            "filename": "dark_magicians_2007_banner.png",
+            "relativePath": "/assets/theleague/history/dark_magicians_2007_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
             "filename": "dark_magicians.png",
             "relativePath": "/assets/theleague/banners/dark_magicians.png",
             "extension": ".png"
@@ -248,12 +331,25 @@
         "icons": [
           {
             "type": "icons",
+            "filename": "dark_magicians_2007_icon_circle.png",
+            "relativePath": "/assets/theleague/history/dark_magicians_2007_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
             "filename": "dark_magicians.png",
             "relativePath": "/assets/theleague/icons/dark_magicians.png",
             "extension": ".png"
           }
         ]
-      }
+      },
+      "eras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2022,
+          "franchiseId": "0015"
+        }
+      ]
     },
     {
       "key": "dead_cap_walking",
@@ -306,8 +402,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "degenerates_icon.png",
-            "relativePath": "/assets/theleague/history/degenerates_icon.png",
+            "filename": "degenerates_banner.png",
+            "relativePath": "/assets/theleague/history/degenerates_banner.png",
             "extension": ".png"
           }
         ],
@@ -364,16 +460,16 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "drunk_indians_icon.png",
-            "relativePath": "/assets/theleague/history/drunk_indians_icon.png",
+            "filename": "drunk_indians_banner.png",
+            "relativePath": "/assets/theleague/history/drunk_indians_banner.png",
             "extension": ".png"
           }
         ],
         "icons": [
           {
             "type": "icons",
-            "filename": "drunk_indians_afl_icon.png",
-            "relativePath": "/assets/theleague/history/drunk_indians_afl_icon.png",
+            "filename": "drunk_indians_icon_circle.png",
+            "relativePath": "/assets/theleague/history/drunk_indians_icon_circle.png",
             "extension": ".png"
           }
         ]
@@ -458,8 +554,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "georgia_punishers_icon.png",
-            "relativePath": "/assets/theleague/history/georgia_punishers_icon.png",
+            "filename": "georgia_punishers_banner.png",
+            "relativePath": "/assets/theleague/history/georgia_punishers_banner.png",
             "extension": ".png"
           }
         ],
@@ -558,8 +654,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "las_vegas_icon.png",
-            "relativePath": "/assets/theleague/history/las_vegas_icon.png",
+            "filename": "las_vegas_banner.png",
+            "relativePath": "/assets/theleague/history/las_vegas_banner.png",
             "extension": ".png"
           }
         ],
@@ -674,8 +770,55 @@
         "icons": [
           {
             "type": "icons",
+            "filename": "midwestside_icon_circle.png",
+            "relativePath": "/assets/theleague/history/midwestside_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
             "filename": "midwestside.png",
             "relativePath": "/assets/theleague/icons/midwestside.png",
+            "extension": ".png"
+          }
+        ]
+      },
+      "eras": [
+        {
+          "yearStart": 2011,
+          "yearEnd": 2015,
+          "franchiseId": "0010"
+        },
+        {
+          "yearStart": 2019,
+          "yearEnd": 2024,
+          "franchiseId": "0011"
+        }
+      ]
+    },
+    {
+      "key": "history_mistakes_were_made",
+      "slug": "history_mistakes_were_made",
+      "id": "0003",
+      "name": "Mistakes Were Made (2007–2009)",
+      "category": "former",
+      "aliases": [
+        "Maverick",
+        "MWM"
+      ],
+      "assets": {
+        "banners": [
+          {
+            "type": "banners",
+            "filename": "mistakes_were_made_banner.png",
+            "relativePath": "/assets/theleague/history/mistakes_were_made_banner.png",
+            "extension": ".png"
+          }
+        ],
+        "icons": [
+          {
+            "type": "icons",
+            "filename": "mistakes_were_made_icon_circle.png",
+            "relativePath": "/assets/theleague/history/mistakes_were_made_icon_circle.png",
             "extension": ".png"
           }
         ]
@@ -735,6 +878,12 @@
         "banners": [
           {
             "type": "banners",
+            "filename": "pigskins_2007_banner.png",
+            "relativePath": "/assets/theleague/history/pigskins_2007_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
             "filename": "pigskins.png",
             "relativePath": "/assets/theleague/banners/pigskins.png",
             "extension": ".png"
@@ -751,12 +900,25 @@
         "icons": [
           {
             "type": "icons",
+            "filename": "pigskins_2007_icon_circle.png",
+            "relativePath": "/assets/theleague/history/pigskins_2007_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
             "filename": "pigskins.png",
             "relativePath": "/assets/theleague/icons/pigskins.png",
             "extension": ".png"
           }
         ]
-      }
+      },
+      "eras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2012,
+          "franchiseId": "0001"
+        }
+      ]
     },
     {
       "key": "history_poker_in_the_rear",
@@ -783,14 +945,14 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "poker_in_the_rear_banner.png",
-            "relativePath": "/assets/theleague/history/poker_in_the_rear_banner.png",
+            "filename": "poker_in_the_rear_2012_banner.png",
+            "relativePath": "/assets/theleague/history/poker_in_the_rear_2012_banner.png",
             "extension": ".png"
           },
           {
             "type": "banners",
-            "filename": "poker_in_the_rear_icon.png",
-            "relativePath": "/assets/theleague/history/poker_in_the_rear_icon.png",
+            "filename": "poker_in_the_rear_banner.png",
+            "relativePath": "/assets/theleague/history/poker_in_the_rear_banner.png",
             "extension": ".png"
           }
         ],
@@ -824,8 +986,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "rolling_rockers_icon.png",
-            "relativePath": "/assets/theleague/history/rolling_rockers_icon.png",
+            "filename": "rolling_rockers_banner.png",
+            "relativePath": "/assets/theleague/history/rolling_rockers_banner.png",
             "extension": ".png"
           }
         ],
@@ -907,8 +1069,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "sabertooths_icon.png",
-            "relativePath": "/assets/theleague/history/sabertooths_icon.png",
+            "filename": "sabertooths_banner.png",
+            "relativePath": "/assets/theleague/history/sabertooths_banner.png",
             "extension": ".png"
           }
         ],
@@ -936,8 +1098,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "silver_bullets_icon.png",
-            "relativePath": "/assets/theleague/history/silver_bullets_icon.png",
+            "filename": "silver_bullets_banner.png",
+            "relativePath": "/assets/theleague/history/silver_bullets_banner.png",
             "extension": ".png"
           }
         ],
@@ -965,8 +1127,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "art_of_war_icon.png",
-            "relativePath": "/assets/theleague/history/art_of_war_icon.png",
+            "filename": "art_of_war_banner.png",
+            "relativePath": "/assets/theleague/history/art_of_war_banner.png",
             "extension": ".png"
           }
         ],
@@ -994,8 +1156,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "executioners_icon.png",
-            "relativePath": "/assets/theleague/history/executioners_icon.png",
+            "filename": "executioners_banner.png",
+            "relativePath": "/assets/theleague/history/executioners_banner.png",
             "extension": ".png"
           }
         ],
@@ -1061,8 +1223,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "treasure_coast_icon.png",
-            "relativePath": "/assets/theleague/history/treasure_coast_icon.png",
+            "filename": "treasure_coast_banner.png",
+            "relativePath": "/assets/theleague/history/treasure_coast_banner.png",
             "extension": ".png"
           }
         ],
@@ -1090,8 +1252,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "undersiege_icon.png",
-            "relativePath": "/assets/theleague/history/undersiege_icon.png",
+            "filename": "undersiege_banner.png",
+            "relativePath": "/assets/theleague/history/undersiege_banner.png",
             "extension": ".png"
           }
         ],
@@ -1192,8 +1354,8 @@
         "banners": [
           {
             "type": "banners",
-            "filename": "witch_city_warlocks_icon.png",
-            "relativePath": "/assets/theleague/history/witch_city_warlocks_icon.png",
+            "filename": "witch_city_warlocks_banner.png",
+            "relativePath": "/assets/theleague/history/witch_city_warlocks_banner.png",
             "extension": ".png"
           }
         ],
@@ -1232,6 +1394,31 @@
       }
     ],
     "conference": [],
-    "division": []
+    "division": [
+      {
+        "type": "division",
+        "filename": "central.svg",
+        "relativePath": "/assets/theleague/division-badges/central.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "east.svg",
+        "relativePath": "/assets/theleague/division-badges/east.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "northwest.svg",
+        "relativePath": "/assets/theleague/division-badges/northwest.svg",
+        "extension": ".svg"
+      },
+      {
+        "type": "division",
+        "filename": "southwest.svg",
+        "relativePath": "/assets/theleague/division-badges/southwest.svg",
+        "extension": ".svg"
+      }
+    ]
   }
 }
