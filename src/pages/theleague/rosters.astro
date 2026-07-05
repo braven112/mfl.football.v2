@@ -576,6 +576,7 @@ const teamsList = (leagueAssets.teams ?? [])
     name: team.name,
     division: team.division ?? '',
     icon: team.assets?.icons?.[0]?.relativePath ?? '',
+    banner: team.assets?.banners?.[0]?.relativePath ?? '',
   }))
   .sort((a, b) => {
     // Sort by division order first
@@ -1539,7 +1540,7 @@ if (standingsData?.leagueStandings?.franchise) {
         id: team.id,
         name: team.name,
         icon: team.icon,
-        banner: leagueAssets.teams?.find((t) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+        banner: team.banner,
       },
     ])
   );
@@ -1599,7 +1600,7 @@ if (plannerPhase.showDualDraftCards && transactionsData && standingsData?.league
         id: team.id,
         name: team.name,
         icon: team.icon,
-        banner: leagueAssets.teams?.find((t: any) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+        banner: team.banner,
       },
     ])
   );
