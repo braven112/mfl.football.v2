@@ -15,7 +15,7 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime, isRumorLikePost } from '../../utils/schefter-feed';
+import { formatRelativeTime, getMilestoneLabel, isRumorLikePost } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -49,6 +49,10 @@ const isExternal = post.type === 'external';
 // tracking) but NOT the tip-back UI.
 const isTipRumor = post.type === 'transaction' && post.transactionSubType === 'rumor_mill';
 const isRumorLike = isRumorLikePost(post);
+
+// Franchise milestone posts carry badge metadata — surface it as a chip so
+// the body's flavor line has context ("what was this announcement for?").
+const milestoneLabel = getMilestoneLabel(post);
 const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumorLike ? ' sf-post--rumor' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body
@@ -210,6 +214,13 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 
         {isArticle && (
           <div class="sf-post__headline">{post.headline}</div>
+        )}
+
+        {milestoneLabel && (
+          <div class="sf-post__milestone">
+            {post.milestone!.icon && <span class="sf-post__milestone-icon" aria-hidden="true">{post.milestone!.icon}</span>}
+            {milestoneLabel}
+          </div>
         )}
 
         <div class="sf-post__body" set:html={post.body} />

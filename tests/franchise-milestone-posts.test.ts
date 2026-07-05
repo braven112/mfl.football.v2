@@ -205,6 +205,18 @@ describe('buildMilestonePost', () => {
     });
   });
 
+  it('links to the franchise badge wall so the post explains itself', () => {
+    const post = buildMilestonePost({
+      franchiseId: '0013',
+      badge: badge('playoff-veteran', [{ value: 5, suffix: 'appearances' }]),
+      award: { value: 5, suffix: 'appearances' },
+      franchise: { franchiseId: '0013', currentName: 'Gridiron Geeks' },
+      now,
+    });
+    expect(post.link).toBe('/theleague/franchises/0013#badges');
+    expect(post.linkLabel).toBe('View the badge wall →');
+  });
+
   it('sets `type: "transaction"` + `transactionSubType: "milestone"` for renderer compatibility', () => {
     const post = buildMilestonePost({
       franchiseId: '0001',

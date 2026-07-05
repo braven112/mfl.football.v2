@@ -161,6 +161,24 @@
   overflow: hidden;
 }
 
+/* Milestone badge chip — names the badge the post's flavor line refers to */
+.sfc-post__milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sf-accent, var(--color-primary, #1c497c));
+  margin-top: 0.1875rem;
+}
+
+.sfc-post__milestone-icon {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
 .sfc-post__link {
   display: inline-block;
   margin-top: 0.25rem;

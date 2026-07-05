@@ -7,7 +7,7 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime } from '../../utils/schefter-feed';
+import { formatRelativeTime, getMilestoneLabel } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -42,6 +42,10 @@ const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
 const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isExternal = post.type === 'external';
 const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}${isGroupMe ? ' sfc-post--groupme' : ''}`;
+
+// Franchise milestone posts carry badge metadata — surface it as a chip so
+// the body's flavor line has context ("what was this announcement for?").
+const milestoneLabel = getMilestoneLabel(post);
 
 // GroupMe rich content
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
@@ -110,7 +114,15 @@ if (firstEmbedUrl) {
         )}
       </>
     ) : (
-      <div class="sfc-post__body" set:html={post.body} />
+      <>
+        {milestoneLabel && (
+          <div class="sfc-post__milestone">
+            {post.milestone!.icon && <span class="sfc-post__milestone-icon" aria-hidden="true">{post.milestone!.icon}</span>}
+            {milestoneLabel}
+          </div>
+        )}
+        <div class="sfc-post__body" set:html={post.body} />
+      </>
     )}
 
     {post.link && (

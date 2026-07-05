@@ -7,7 +7,7 @@
  *   - data/afl-fantasy/schefter-feed.json
  */
 
-import type { SchefterFeed, SchefterPost } from '../types/schefter';
+import type { SchefterFeed, SchefterMilestoneMeta, SchefterPost } from '../types/schefter';
 
 /** Get posts for a league, optionally filtered */
 export function getFeedPosts(
@@ -101,4 +101,24 @@ export function isRumorLikePost(post: { type?: string; transactionSubType?: stri
   if (post.type !== 'transaction') return false;
   if (!post.transactionSubType) return false;
   return RUMOR_LIKE_SUB_TYPES.has(post.transactionSubType);
+}
+
+/**
+ * Chip label for franchise milestone posts — names the badge the post's
+ * flavor-line body refers to ("Career milestone · Playoff Veteran").
+ * Shared by SchefterPostCard and SchefterPostCardCompact so the two
+ * cards can't drift. Keyed on the badge tier union so adding a tier in
+ * scripts/badges.mjs forces this map to be updated.
+ */
+const MILESTONE_TIER_LABELS: Record<SchefterMilestoneMeta['tier'], string> = {
+  career: 'Career milestone',
+  season: 'Season honor',
+  game: 'League record',
+  trade: 'League record',
+};
+
+export function getMilestoneLabel(post: Pick<SchefterPost, 'milestone'>): string | null {
+  if (!post.milestone) return null;
+  const tierLabel = MILESTONE_TIER_LABELS[post.milestone.tier] ?? 'Milestone';
+  return `${tierLabel} · ${post.milestone.badgeName}`;
 }
