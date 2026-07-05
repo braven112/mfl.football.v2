@@ -4,6 +4,60 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-07-05 - Dark-Mode Token-Mapping Gotchas (QA/polish pass)
+
+**Context:** A full light/dark × desktop/mobile QA sweep over every public page,
+plus authenticated-page spot fixes, surfaced a cluster of token traps that all
+share one root cause: a token's *name* implies one role but it feeds another
+consumer where the dark value is wrong. None are visible from reading a single
+component — you only see them when the token resolves on a dark surface.
+
+- **`--card-bg` is a GRADIENT in dark — never paint form fields with it.**
+  Inputs/selects/textarea that used `background: var(--card-bg)` got the radial
+  corner-glow smeared across the field (Tip Schefter). Use `--input-bg` (solid;
+  white in light). Same rule as color-mix/background-color: `--card-bg` is only
+  valid in `background:` shorthand on a *card-sized* element.
+
+- **Never remap `--color-primary` per-league to fix headings — it feeds FILLS.**
+  AFL dark headings rendered TheLeague blue; the tempting fix (remap
+  `--color-primary` to white in the `html.dark[data-league="afl"]` block) turned
+  the nav drawer's active pill (`--nav-switcher-active-bg`) and every primary
+  button white-on-white. Headings/plain anchors are colored at the LAYOUT level
+  via `:global(h1..h4)`/`:global(a) { color: var(--primary-link-default-text-color) }`
+  → `--link-color`. Fix heading color by overriding the **`--link-color` family**
+  (`--link-color`, `-hover`, `-focus`, `-accent`), and leave `--color-primary`
+  alone so fills stay a readable accent. Blue fills on AFL dark are acceptable
+  shared chrome (AFL light's active pill is navy, also a primary fill — never red).
+
+- **Inverted gray ramp: `--color-gray-50..300` are SURFACES in dark, not text.**
+  `tokens-dark.css` inverts the gray scale, so `gray-300` is a near-black surface
+  value. Using it for muted text (`--tip-rail-cooker__hint`) makes it invisible;
+  `gray-700` is the readable muted-text gray. Same trap makes `gray-50/100`
+  backgrounds/borders vanish — glass-wash pills instead
+  (`rgba(255,255,255,0.06)` bg + `0.12` border).
+
+- **Accent text sinks into dark cards — brighten toward white.**
+  Big countdown digits / date lines that used the raw category or league accent
+  disappeared on the `#0f1e2e`/`#262626` card (regular-season navy especially).
+  Add a `--card-count-ink`-style var: raw accent in light (unchanged),
+  `color-mix(in srgb, <accent> 55%, #ffffff)` in dark — keeps enough saturation
+  to still read as "its" accent while clearing contrast.
+
+- **Per-conference accent via a fallback-chain var.** AFL standings needed NL
+  cards blue and AL red on the *same* `StandingsTable`/`ConferenceLeagueStandingsTable`
+  component. Set `--division-accent` inline only for NL (`conferenceId === '01'`
+  → `#5b9bd5`), then write every accent consumer as
+  `var(--division-accent, var(--league-accent, #ef5350))`. AL and TheLeague (no
+  conferenceId, var unset) fall through to `--league-accent` untouched. Drives
+  the card gradient, seed-number color, and preferred-team highlight from one hook.
+
+**Meta-lesson:** when a dark value looks wrong, trace the token to *every* consumer
+before overriding it — the fix belongs on the token that only the broken consumer
+reads (`--link-color`, `--input-bg`, a scoped `--card-*` var), never on a shared
+primitive (`--color-primary`, `--color-gray-*`) that also feeds correct consumers.
+
+---
+
 ## 2026-07-04 - Theme-Aware Mini-Hero Chrome (Light Default, Navy Dark)
 
 **Context:** The deep-navy hero/event-card chrome (EventHeroShell, WhatsNextCard,
