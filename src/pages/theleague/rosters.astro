@@ -4805,6 +4805,18 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     box-shadow: var(--shadow-md);
   }
 
+  /* Dark mode: keep the light-mode "inverted button" feel — the active
+     mode pops as a bright pill with primary text, mirroring light. */
+  :global(html.dark) .mode-btn.active {
+    background: #ffffff;
+    color: var(--color-primary-dark, #2563eb);
+  }
+
+  :global(html.dark) .mode-btn:hover:not(.active) {
+    color: var(--color-gray-800, #d8d8d8);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
   .mode-icon {
     width: 1rem;
     height: 1rem;
