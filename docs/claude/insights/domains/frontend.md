@@ -534,3 +534,15 @@ Also pair the config swap with `resolvePreferredTeamIdForYear()` for the my-team
 **Evidence:** Fixed by rendering the payload as an explicit chip (`.sf-post__milestone` / `.sfc-post__milestone`, styled like `.sf-post__analysis-label`: 0.6875rem/0.625rem, 700, uppercase, `var(--sf-accent)`) above the body in both cards, plus a `link` to `/theleague/franchises/{id}#badges`. Chip renders retroactively for old posts since the payload was always in the feed JSON.
 
 **Recommendation:** When adding a new Schefter post lane, assume ONLY `body` + `link` are visible. Either make the body self-contained, or add the structured payload to `SchefterPost` in `src/types/schefter.ts` AND render it explicitly in BOTH `SchefterPostCard.astro` and `SchefterPostCardCompact.astro` (they don't share markup). Grep both cards for your new field before calling the lane done.
+
+---
+
+## 2026-07-04 - theleague.assets.json `teams[]` Includes Former Identities — Filter `category !== 'former'` Before Iterating
+
+**Context:** The League Planner's "Potential Targets" section rendered 2-4 duplicate copies depending on which team was active. The planner renders one hidden per-team panel from `teamsList`, and the team switcher shows every panel whose `data-fa-needs-team-id` matches — so duplicate ids in the list become duplicate visible sections.
+
+**Insight:** Since the franchise history system landed, `src/data/theleague.assets.json` `teams[]` holds 35 entries for 16 franchises: `category: 'active'` (current identity) plus `category: 'former'` historical identities that REUSE the same franchise `id` (e.g. three entries with id `0011`). Former entries can also have a compound id (`"0002, 0013"` for the Sabertooths) or no id at all (Heavy Chevy). Consequences by consumption pattern: `.map()` over the array duplicates UI per identity; `new Map(teams.map(t => [t.id, ...]))` silently resolves to a HISTORICAL name/icon wherever a former entry sorts later (the salary page showed "Under Siege (2016–2018)" for 0011); random-pick (`teamsList[Math.floor(Math.random()*...)]`) can select a dead identity. The AFL twin (`data/afl-fantasy/afl.assets.json`) is worse: 82 former vs 24 active. Note this is a different file from `theleague.config.json` — the year-resolution helpers (`getTeamIdentityForYear()`) don't apply here.
+
+**Evidence:** `src/pages/theleague/rosters.astro:569` — fixed by adding `.filter((team) => team.category !== 'former')` before mapping `teamsList`; DOM went from 34 fa-needs panels (duplicate ids) to exactly 16. Sibling consumers (salary.astro:108, calculator.astro:32, DraftCapitalTable.astro:26, league-comparison.astro:44) spun off to a follow-up task.
+
+**Recommendation:** Any consumer of `leagueAssets.teams` that represents "the current franchises" must filter `category !== 'former'` (or use a shared active-teams helper if one exists by the time you read this). Only the asset-library pages (`theleague.astro`, `assets.astro`) legitimately want the full array. When a per-id lookup Map is built from this file, a wrong-but-plausible team name on screen is the symptom to watch for.
