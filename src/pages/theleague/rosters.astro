@@ -3283,6 +3283,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       position: relative;
     }
 
+    /* Dark mode: card-gradient treatment with the system-blue highlight
+       glow (same geometry as --card-bg, primary-tinted) + raised ring. */
+    :global(html.dark) .team-card {
+      background: radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%);
+      box-shadow:
+        0 0 0 1px var(--content-border, #5f6885),
+        var(--shadow-lg);
+    }
+
 
   @media (min-width: 480px) {
   .team-card {
