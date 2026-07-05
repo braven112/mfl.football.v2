@@ -4,6 +4,14 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "On phones, the Owner Activity page no longer stretches wider than the screen — the transaction and last-seen tables now scroll within their own lane, and the navigation drawer no longer peeks out along the right edge of the page.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "The Potential Targets card on the League Planner no longer shows up two, three, or even four times in a row for teams with a storied rebrand history — the planner was quietly rendering one copy per former team identity (Poker in the Rear and the Georgia Punishers don't need free agent advice anymore). Exactly one copy now renders for every team at every screen size.",
       "impact": "user",
       "area": "rosters",
