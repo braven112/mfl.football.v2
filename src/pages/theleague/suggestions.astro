@@ -247,6 +247,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-left: 2px solid var(--color-gray-200, #e5e7eb);
     margin-bottom: 0.625rem;
   }
+  /* Dark: gray-200 inverts to near-black (invisible edge) and gray-400
+     sinks — use the accent edge + brighter muted text. */
+  :global(html.dark) .sb-sidebar__label {
+    border-left-color: var(--color-primary, #3b82f6);
+    color: var(--color-gray-600, #a0a0a0);
+  }
   .sb-sidebar__steps {
     font-size: 0.6875rem;
     line-height: 1.55;
