@@ -944,6 +944,24 @@ import '../../styles/loading.css';
     background: var(--color-gray-100, #f3f4f6);
   }
 
+  /* Dark mode: glass tiles on the gradient panel (Explore-tile recipe) —
+     gray-50 wells read as black holes and the gray-200 left edge vanishes. */
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    border-left-color: rgba(255, 255, 255, 0.3);
+  }
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option:hover) {
+    background: rgba(255, 255, 255, 0.09);
+  }
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option__icon) {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--color-gray-600, #9ca3af);
+  }
+  :global(html.dark) .cdm-action-options :global(.cdm-action-option__chevron) {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
   .cdm-action-options :global(.cdm-action-option:disabled),
   .cdm-action-options :global(.cdm-action-option--disabled) {
     opacity: 0.45;
