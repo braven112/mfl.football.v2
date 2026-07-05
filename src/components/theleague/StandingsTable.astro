@@ -674,6 +674,21 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     color: var(--color-secondary, #2e743d);
   }
 
+  /* Dark mode: the green highlight clashes with the blue-gradient glass
+     design — your team rides the card's own blue accent family instead. */
+  :global(html.dark) tr.preferred-team {
+    background-color: rgba(59, 130, 246, 0.16) !important;
+    border-left-color: var(--color-primary, #3b82f6);
+  }
+
+  :global(html.dark) tr.preferred-team:hover {
+    background-color: rgba(59, 130, 246, 0.26) !important;
+  }
+
+  :global(html.dark) tr.preferred-team .team-name {
+    color: var(--color-primary-light, #60a5fa);
+  }
+
   /* Responsive */
   @media (max-width: 767px) {
     .col-team {
