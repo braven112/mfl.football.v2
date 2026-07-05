@@ -133,6 +133,16 @@ const pages = [...aflPages].sort((a, b) => b.popularity - a.popularity).slice(0,
     transform: translateY(-1px);
   }
 
+  /* Dark mode: translucent tiles so the card's slate glow shows through
+     instead of solid near-black wells. */
+  :global(html.dark) .afl-links__card {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  :global(html.dark) .afl-links__card:hover {
+    background: rgba(255, 255, 255, 0.11);
+  }
+
   .afl-links__icon {
     flex-shrink: 0;
     color: var(--afl-accent);
