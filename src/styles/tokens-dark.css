@@ -103,6 +103,11 @@ html.dark {
   --content-bg-accent: #2a2a2a;
   --content-text-muted: #8a8a8a;
 
+  /* Draft pick tiles: translucent washes so the card gradient shows
+     through (values dialed in via DevTools). */
+  --draft-pick-bg: #18181842;
+  --draft-pick-border: #6e6e6e3d;
+
   /* ========================================
      Component Tokens - Cards
      ======================================== */
