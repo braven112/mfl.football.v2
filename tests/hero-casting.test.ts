@@ -337,6 +337,17 @@ describe('castRandomStarterModel', () => {
       castRandomStarterModel([{ playerId: '4', franchiseId: '', score: 0 }], players, undefined, JUL_4, 'x'),
     ).toBeNull();
   });
+
+  it('excludes non-finite (NaN) projections from a malformed feed', () => {
+    const cands = [
+      { playerId: '1', franchiseId: '', score: NaN },
+      { playerId: '2', franchiseId: '', score: 12 },
+    ];
+    expect(castRandomStarterModel(cands, players, undefined, JUL_4, 'x', 8)?.mflId).toBe('2');
+    expect(
+      castRandomStarterModel([{ playerId: '1', franchiseId: '', score: NaN }], players, undefined, JUL_4, 'x'),
+    ).toBeNull();
+  });
 });
 
 describe('castRosterModel', () => {

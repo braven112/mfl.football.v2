@@ -282,7 +282,8 @@ export function castRandomStarterModel(
   const byTeam = new Map<string, ScoredCastCandidate[]>();
   for (const c of candidates) {
     const p = players.get(c.playerId);
-    if (!p || !isCompositable(p) || c.score <= 0) continue;
+    // A non-finite projection (malformed feed → NaN) is never a likely starter.
+    if (!p || !isCompositable(p) || !Number.isFinite(c.score) || c.score <= 0) continue;
     const arr = byTeam.get(p.nflTeam) ?? [];
     arr.push(c);
     byTeam.set(p.nflTeam, arr);
