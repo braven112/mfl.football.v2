@@ -540,6 +540,16 @@ const preselectTeam = (() => {
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
+  /* Dark: raised-card ring — gray-100 inverts to near-black so the
+     border vanishes; the ring separates cards from the page. */
+  :global(html.dark) .tip-card,
+  :global(html.dark) .tip-rail-card {
+    border-color: transparent;
+    box-shadow:
+      0 0 0 1px var(--content-border, #5f6885),
+      var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
   .section-header {
     display: flex;
     flex-direction: column;
@@ -670,7 +680,9 @@ const preselectTeam = (() => {
     font: inherit;
     font-size: 0.9375rem;
     color: var(--color-gray-900, #111827);
-    background: var(--card-bg, #ffffff);
+    /* --input-bg, never --card-bg: the card token is a radial GRADIENT in
+       dark and smears across form fields. */
+    background: var(--input-bg, #ffffff);
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
     padding: 0.625rem 0.75rem;
@@ -950,7 +962,9 @@ const preselectTeam = (() => {
     padding-left: 0.5rem;
   }
   :global(html.dark) .tip-rail-cooker__hint {
-    color: var(--color-gray-300, #d1d5db);
+    /* gray-300 is a SURFACE value in the inverted dark ramp (near-black);
+       gray-700 is the readable muted text gray. */
+    color: var(--color-gray-700, #c0c0c0);
   }
 
   .tip-rail-hot__chips {
@@ -975,6 +989,13 @@ const preselectTeam = (() => {
     font-size: 0.75rem;
     color: var(--color-gray-700, #374151);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Dark: gray-50/100 invert to near-black — glass wash so the pill
+     still reads as a chip on the card. */
+  :global(html.dark) .tip-rail-hot__chip {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
   }
   .tip-rail-hot__chip[data-rank="1"] {
     background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
@@ -1220,6 +1241,14 @@ const preselectTeam = (() => {
     border-color: var(--color-gray-200, #e5e7eb);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
+  }
+  /* Dark: gray-100/200 borders invert to near-black — translucent edge
+     so the nested article tile keeps its outline. */
+  :global(html.dark) .tip-rail-article-card {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  :global(html.dark) .tip-rail-article-card:hover {
+    border-color: rgba(255, 255, 255, 0.24);
   }
   .tip-rail-article-card__image {
     width: 100%;
