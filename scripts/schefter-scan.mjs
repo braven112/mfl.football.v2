@@ -233,11 +233,28 @@ function classifyTier(raw, salary) {
 
 // ── Post Generation ──
 
+/** Extract player IDs (non-pick assets) from a raw MFL asset string. */
+function extractTradePlayerIds(str) {
+  if (!str) return [];
+  return str
+    .split(',')
+    .map((s) => s.trim())
+    .filter((part) => part && !part.startsWith('FP_'));
+}
+
 function generateTradePost(raw, players, teams, leagueSlug) {
   const team1 = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
   const team2 = teams.get(raw.franchise2)?.name ?? `Team ${raw.franchise2}`;
   const gave1 = parseTradeAssets(raw.franchise1_gave_up, players, teams);
   const gave2 = parseTradeAssets(raw.franchise2_gave_up, players, teams);
+
+  // Ordered so playerIds[0] is the headline player (team1's first acquisition
+  // = first asset of franchise2_gave_up) — the feed card features playerIds[0]
+  // in the hero composite.
+  const playerIds = [
+    ...extractTradePlayerIds(raw.franchise2_gave_up),
+    ...extractTradePlayerIds(raw.franchise1_gave_up),
+  ];
 
   const team1Gets = [...gave2.playerNames, ...gave2.pickNames];
   const team2Gets = [...gave1.playerNames, ...gave1.pickNames];
@@ -263,6 +280,7 @@ function generateTradePost(raw, players, teams, leagueSlug) {
     headline,
     body,
     franchiseIds,
+    ...(playerIds.length > 0 ? { playerIds } : {}),
     sourceTimestamp: raw.timestamp,
     tradeSignature: buildTradeSignature(raw.franchise, raw.franchise2, raw.franchise1_gave_up, raw.franchise2_gave_up),
     league: leagueSlug,
@@ -375,7 +393,7 @@ function pickTemplate(templates, timestamp) {
 
 function generateAuctionPost(raw, players, teams, leagueSlug) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
-  const { playerName, isDef, salary } = parseAuctionTransaction(raw.transaction, players);
+  const { playerId, playerName, isDef, salary } = parseAuctionTransaction(raw.transaction, players);
   const tier = classifyTier(raw, salary);
   const salaryStr = salary ? formatSalary(salary) : 'minimum salary';
 
@@ -400,6 +418,7 @@ function generateAuctionPost(raw, players, teams, leagueSlug) {
     headline,
     body,
     franchiseIds: [raw.franchise],
+    ...(playerId ? { playerIds: [playerId] } : {}),
     sourceTimestamp: raw.timestamp,
     league: leagueSlug,
   };
@@ -501,7 +520,7 @@ function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMa
   const salaryStr = salary ? ` (${formatSalary(salary)})` : '';
   const faPool = added.isDef ? FA_DEF_TEMPLATES : FA_TEMPLATES;
   const { headline, body } = pickTemplate(faPool, raw.timestamp)(team, added.playerName, salaryStr);
-  return { ...base, tier, headline, body };
+  return { ...base, tier, headline, body, playerIds: [added.playerId] };
 }
 
 // ── AI Commentary (breaking tier) ──
