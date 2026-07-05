@@ -140,6 +140,16 @@ const pages = [...pinned, ...rest].slice(0, 8);
     transform: translateY(-1px);
   }
 
+  /* Dark mode: translucent tiles so the card's slate glow shows through
+     instead of solid near-black wells. */
+  :global(html.dark) .hp-links__card {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  :global(html.dark) .hp-links__card:hover {
+    background: rgba(255, 255, 255, 0.11);
+  }
+
   .hp-links__icon {
     flex-shrink: 0;
     color: var(--dh-accent);
