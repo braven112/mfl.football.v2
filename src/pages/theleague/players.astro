@@ -553,13 +553,15 @@ const topFaIsDef = topFa?.position === 'DEF';
 const topFaLogo = topFa && topFa.team && topFa.team !== 'FA'
   ? `/assets/nfl-logos/${topFa.team}.svg`
   : '/assets/nfl-logos/NFL.svg';
+// Falls back to the (NFL) logo rather than an empty string so we never emit
+// <img src=""> (which re-requests the document) when there are no free agents.
 const topFaHead = topFa
   ? (topFaIsDef
       ? topFaLogo
       : (topFa.espnId
           ? `https://a.espncdn.com/i/headshots/nfl/players/full/${topFa.espnId}.png`
           : `https://www49.myfantasyleague.com/player_photos_big_2014/${topFa.id}_thumb.jpg`))
-  : '';
+  : topFaLogo;
 
 // Build unique NFL teams list for team filter dropdown
 const nflTeamsSet = new Set<string>();
@@ -1247,36 +1249,22 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   function updateSpotlight(p) {
     if (!spotlightEl) return;
-    // No match for the current filter — hide the caption, keep the panel.
+    // No match for the current filter — hide the caption + headshot and reset
+    // the panel so a stale team logo / DEF state doesn't linger behind it.
     if (!p) {
       spotlightPlayerId = null;
+      spotlightEl.setAttribute('data-def', 'false');
+      if (spotlightLogoEl) spotlightLogoEl.src = '/assets/nfl-logos/NFL.svg';
       if (spotlightCaptionEl) spotlightCaptionEl.style.display = 'none';
       if (spotlightHeadEl) spotlightHeadEl.style.visibility = 'hidden';
       return;
     }
     if (spotlightCaptionEl) spotlightCaptionEl.style.display = '';
     if (spotlightHeadEl) spotlightHeadEl.style.visibility = '';
-    if (p.id === spotlightPlayerId) return; // already showing this player
-    spotlightPlayerId = p.id;
 
-    const isDef = p.position === 'DEF';
-    const logo = getNflLogo(p.team);
-    spotlightEl.setAttribute('data-def', isDef ? 'true' : 'false');
-
-    if (spotlightLogoEl) spotlightLogoEl.src = logo;
-
-    if (spotlightHeadEl) {
-      const head = isDef ? logo : getHeadshotUrl(p.id, p.espnId);
-      spotlightHeadEl.onerror = null;
-      spotlightHeadEl.setAttribute('onerror', isDef ? '' : buildOnerror(p.id, p.espnId));
-      spotlightHeadEl.src = head;
-      // Restart the entrance animation for the new headshot.
-      spotlightHeadEl.style.animation = 'none';
-      // eslint-disable-next-line no-unused-expressions
-      spotlightHeadEl.offsetHeight;
-      spotlightHeadEl.style.animation = '';
-    }
-
+    // The caption depends on the active position filter, not just the player,
+    // so always refresh it — switching ALL→QB can keep the same #1 player but
+    // the label must still flip from "Top Free Agent" to "Top QB".
     if (spotlightLabelEl) {
       spotlightLabelEl.textContent = activePosition && activePosition !== 'ALL'
         ? 'Top ' + (activePosition === 'PK' ? 'K' : activePosition)
@@ -1289,6 +1277,33 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (p.team && p.team !== 'FA') parts.push(p.team);
       if (p.projected != null) parts.push(p.projected.toFixed(1) + ' pts');
       spotlightMetaEl.textContent = parts.join(' · ');
+    }
+
+    // Only the image swap (and its entrance animation) is skipped when the #1
+    // player is unchanged — the caption above has already been refreshed.
+    if (p.id === spotlightPlayerId) return;
+    spotlightPlayerId = p.id;
+
+    const isDef = p.position === 'DEF';
+    const logo = getNflLogo(p.team);
+    spotlightEl.setAttribute('data-def', isDef ? 'true' : 'false');
+
+    if (spotlightLogoEl) spotlightLogoEl.src = logo;
+
+    if (spotlightHeadEl) {
+      const head = isDef ? logo : getHeadshotUrl(p.id, p.espnId);
+      spotlightHeadEl.onerror = null;
+      if (isDef) {
+        spotlightHeadEl.removeAttribute('onerror');
+      } else {
+        spotlightHeadEl.setAttribute('onerror', buildOnerror(p.id, p.espnId));
+      }
+      spotlightHeadEl.src = head;
+      // Restart the entrance animation for the new headshot.
+      spotlightHeadEl.style.animation = 'none';
+      // eslint-disable-next-line no-unused-expressions
+      spotlightHeadEl.offsetHeight;
+      spotlightHeadEl.style.animation = '';
     }
   }
 
@@ -2758,8 +2773,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     to   { opacity: 1; transform: scale(1); }
   }
 
-  /* Caption over the dark panel — always light text (panel is dark in both themes) */
-  /* Caption — light mode: dark text on a light frosted pill. */
+  /* Caption — light mode: dark text on a light frosted pill;
+     dark mode (override below): light text on a soft scrim. */
   .hero-spotlight-caption {
     position: absolute;
     right: 1rem;
