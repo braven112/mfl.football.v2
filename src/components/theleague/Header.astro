@@ -281,6 +281,12 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     margin-bottom: 1.5rem;
   }
 
+  /* Dark mode: translucent blue edge under the header (subtle sibling of
+     the breadcrumb's accent edge). */
+  :global(html.dark) .theleague-header {
+    border-bottom-color: #3474dc26;
+  }
+
   .theleague-header .container {
     max-width: 1180px;
     margin: 0 auto;
