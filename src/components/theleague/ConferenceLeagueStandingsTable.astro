@@ -202,11 +202,41 @@ function getRowColor(seed: number | undefined): string {
   }
 
   /* Dark mode: raised-card treatment — shadow alone can't separate
-     the section from the page background; add the border ring. */
+     the section from the page background; add the border ring. The card
+     itself carries the league-accent glow (AFL red) fading into the navy
+     surface, mirroring the division/playoff standings design. */
   :global(html.dark) .conference-standings-container {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
+      color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
+      var(--card-surface, #16283c) 52%);
     box-shadow:
       0 0 0 1px var(--content-border, #555555),
       0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  /* Glass table + transparent bands so the gradient shows through
+     (playoff-view recipe). */
+  :global(html.dark) .conference-title {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
+  :global(html.dark) thead {
+    background-color: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
+  :global(html.dark) th {
+    color: #ffffff;
+  }
+
+  :global(html.dark) td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  :global(html.dark) tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.22);
   }
 
   .conference-title {
@@ -294,16 +324,21 @@ function getRowColor(seed: number | undefined): string {
     background-color: var(--table-row-bg, #fff);
   }
 
-  /* Dark tier bands: whisper-tints mixed into the card surface (matches
-     LeagueStandingsTable) — resolves against AFL's navy card too. */
+  /* Dark tier bands: TRANSLUCENT washes (not surface-mixed) so the card's
+     accent gradient shows through — same values as LeagueStandingsTable's
+     playoff tiers. */
   :global(html.dark) .tier-division-winners {
-    background-color: color-mix(in srgb, #d4a856 12%, var(--card-surface, #1e1e1e));
+    background-color: rgba(212, 168, 86, 0.13);
     color: #ededed;
   }
 
   :global(html.dark) .tier-wild-cards {
-    background-color: color-mix(in srgb, #dad8d5 7%, var(--card-surface, #1e1e1e));
+    background-color: rgba(255, 255, 255, 0.055);
     color: #ededed;
+  }
+
+  :global(html.dark) .tier-eliminated {
+    background-color: transparent;
   }
 
   /* Tier Boundary Dividers */
@@ -316,11 +351,11 @@ function getRowColor(seed: number | undefined): string {
   }
 
   :global(html.dark) .tier-division-winners.tier-boundary {
-    border-bottom-color: #8a6d2e !important;
+    border-bottom-color: rgba(212, 168, 86, 0.55) !important;
   }
 
   :global(html.dark) .tier-wild-cards.tier-boundary {
-    border-bottom-color: #4a4a4a !important;
+    border-bottom-color: rgba(255, 255, 255, 0.28) !important;
   }
 
   /* Column Widths */
@@ -432,6 +467,17 @@ function getRowColor(seed: number | undefined): string {
 
   tbody tr.preferred-team:hover {
     background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 22%, var(--table-row-bg, #fff)) !important;
+  }
+
+  /* Dark mode: green clashes with the accent-glass design — your team
+     rides the league accent (AFL red) like the other standings views. */
+  :global(html.dark) tbody tr.preferred-team {
+    background-color: color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) !important;
+    border-left-color: var(--league-accent, #ef5350);
+  }
+
+  :global(html.dark) tbody tr.preferred-team:hover {
+    background-color: color-mix(in srgb, var(--league-accent, #ef5350) 26%, transparent) !important;
   }
 
   /* Responsive */

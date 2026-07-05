@@ -186,11 +186,39 @@ const prizes: Record<string, string[]> = {
   }
 
   /* Dark mode: raised-card treatment — shadow alone can't separate
-     the section from the page background; add the border ring. */
+     the section from the page background; add the border ring. The card
+     carries the league-accent glow (AFL red) fading into the navy
+     surface, mirroring the division/playoff standings design. */
   :global(html.dark) .tier-standings-container {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
+      color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
+      var(--card-surface, #16283c) 52%);
     box-shadow:
       0 0 0 1px var(--content-border, #555555),
       var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  /* Glass table so the gradient shows through (playoff-view recipe). */
+  :global(html.dark) .tier-header-section {
+    background: transparent;
+  }
+
+  :global(html.dark) thead {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
+  :global(html.dark) th {
+    color: #ffffff;
+  }
+
+  :global(html.dark) tbody tr {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  :global(html.dark) tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.22);
   }
 
   .tier-header-section {
