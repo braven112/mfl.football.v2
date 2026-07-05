@@ -7,17 +7,28 @@
  * leading score, red LIVE / green FINAL status. Playoffs uses an amber accent.
  */
 
-/* ── Tokens ── */
+/* ── Tokens ──
+   Light (default): white editorial card, gray inks, darkened accents.
+   html.dark restores the branded deep-navy hero palette (the navy card IS
+   the dark-mode look). */
 :root {
-  --lsh-bg: #0f1e2e;
-  --lsh-border: rgba(255, 255, 255, 0.12);
-  --lsh-card-bg: rgba(255, 255, 255, 0.05);
+  --lsh-bg: var(--color-white, #ffffff);
+  --lsh-border: var(--color-gray-200, #e5e7eb);
+  --lsh-card-bg: var(--color-gray-50, #f9fafb);
+  --lsh-row-border: var(--color-gray-100, #f3f4f6);
+  --lsh-ink: var(--color-gray-900, #111827);
+  --lsh-ink-soft: var(--color-gray-700, #374151);
+  --lsh-ink-faint: var(--color-gray-500, #6b7280);
+  --lsh-ink-dim: var(--color-gray-400, #9ca3af);
+  --lsh-next-bg: var(--color-gray-100, #f3f4f6);
   --lsh-radius: var(--radius-lg, 0.75rem);
   --lsh-live-color: #f04848;
-  --lsh-final-color: #22c55e;
-  --lsh-next-color: rgba(255, 255, 255, 0.55);
-  --lsh-accent: #60a5fa;
-  --lsh-glow: color-mix(in srgb, var(--lsh-accent) 28%, transparent);
+  --lsh-final-color: #15803d;
+  --lsh-next-color: var(--color-gray-500, #6b7280);
+  --lsh-accent: #2563eb;
+  --lsh-amber: #d97706;
+  --lsh-glow-strength: 22%;
+  --lsh-featured-badge-ink: #ffffff;
   --lsh-score-size: 1.5rem;
   --lsh-score-size-compact: 1.125rem;
   --lsh-score-size-champ: 2rem;
@@ -26,13 +37,34 @@
   --lsh-icon-size-champ: 48px;
 }
 
+html.dark {
+  --lsh-bg: #0f1e2e;
+  --lsh-border: rgba(255, 255, 255, 0.12);
+  --lsh-card-bg: rgba(255, 255, 255, 0.05);
+  --lsh-row-border: rgba(255, 255, 255, 0.1);
+  --lsh-ink: #ffffff;
+  --lsh-ink-soft: rgba(255, 255, 255, 0.85);
+  --lsh-ink-faint: rgba(255, 255, 255, 0.55);
+  --lsh-ink-dim: rgba(255, 255, 255, 0.4);
+  --lsh-next-bg: rgba(255, 255, 255, 0.1);
+  --lsh-final-color: #22c55e;
+  --lsh-next-color: rgba(255, 255, 255, 0.6);
+  --lsh-accent: #60a5fa;
+  --lsh-amber: #f0a23a;
+  --lsh-glow-strength: 28%;
+  --lsh-featured-badge-ink: #0f1e2e;
+}
+
 /* ── Container ── */
 .lsh {
+  /* Derived on the element (not :root) so variant accent overrides
+     (.lsh--playoffs) re-resolve the glow. */
+  --lsh-glow: color-mix(in srgb, var(--lsh-accent) var(--lsh-glow-strength), transparent);
   position: relative;
   overflow: hidden;
   isolation: isolate;
   background: var(--lsh-bg);
-  color: #fff;
+  color: var(--lsh-ink);
   border: 1px solid var(--lsh-border);
   border-radius: var(--lsh-radius);
   box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
@@ -70,7 +102,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #fff;
+  color: var(--lsh-ink);
   padding-left: 0.625rem;
   border-left: 2px solid var(--lsh-accent);
   margin: 0;
@@ -102,8 +134,8 @@
 }
 
 .lsh__badge--next {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--lsh-next-bg);
+  color: var(--lsh-next-color);
   font-weight: 600;
 }
 
@@ -123,9 +155,8 @@
 
 /* ── Playoff Variant ── */
 .lsh--playoffs {
-  --lsh-accent: #f0a23a;
-  --lsh-glow: color-mix(in srgb, #f0a23a 30%, transparent);
-  border-color: color-mix(in srgb, #f0a23a 40%, var(--lsh-border));
+  --lsh-accent: var(--lsh-amber);
+  border-color: color-mix(in srgb, var(--lsh-amber) 40%, var(--lsh-border));
 }
 
 .lsh--playoffs .lsh__title {
@@ -138,7 +169,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--lsh-ink-faint);
   margin: 0;
 }
 
@@ -166,7 +197,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #0f1e2e;
+  color: var(--lsh-featured-badge-ink);
   background: var(--lsh-accent);
   padding: 0.125rem 0.5rem;
   border-radius: var(--radius-sm, 0.25rem);
@@ -198,7 +229,7 @@
 .lsh__matchup-row + .lsh__matchup-row {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--lsh-row-border);
 }
 
 /* Compact rows are tighter */
@@ -231,7 +262,7 @@
 .lsh__team-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--lsh-ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -243,14 +274,14 @@
 
 .lsh__team-name--winner {
   font-weight: 700;
-  color: #fff;
+  color: var(--lsh-ink);
 }
 
 .lsh__score {
   font-size: var(--lsh-score-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--lsh-ink);
   flex-shrink: 0;
   min-width: 3.5rem;
   text-align: right;
@@ -270,7 +301,7 @@
   font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--lsh-ink-dim);
   text-align: center;
   letter-spacing: 0.04em;
   padding: 0 0.5rem;
@@ -305,7 +336,7 @@
 .lsh__champ-name {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--lsh-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -316,7 +347,7 @@
   font-size: var(--lsh-score-size-champ);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--lsh-ink);
 }
 
 .lsh__champ-score--leading {
@@ -327,7 +358,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--lsh-ink-dim);
   letter-spacing: 0.06em;
   flex-shrink: 0;
 }
@@ -337,7 +368,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #f0a23a;
+  color: var(--lsh-amber);
   margin-bottom: 0.25rem;
 }
 
@@ -351,7 +382,7 @@
   flex: 1;
   gap: 0.5rem;
   padding: 1rem 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--lsh-ink-faint);
   font-size: 0.8125rem;
 }
 

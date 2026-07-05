@@ -4,6 +4,56 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-07-04 - Theme-Aware Mini-Hero Chrome (Light Default, Navy Dark)
+
+**Context:** The deep-navy hero/event-card chrome (EventHeroShell, WhatsNextCard,
+CalendarEventCard) became the dark-mode look, so light mode needed a light
+editorial version of the same cards.
+
+**Pattern:** Route every surface-dependent color through component-local custom
+properties declared on the root class with LIGHT values, then override the whole
+set in one `:global(html.dark) .component { ... }` block with the original navy
+literals. One set of rules serves both themes — no duplicated selectors.
+
+- Surface/ink set: `--card-surface`, `--card-ink`, `--card-ink-soft` (~body),
+  `--card-ink-faint` (micro labels), plus per-role vars for link chips, muted
+  pills, CTA. Light = editorial tokens (`--color-white`, `--color-gray-900/600/500`);
+  dark = the original literals (`#0f1e2e`, `rgba(255,255,255,.72)`, …).
+- Accent glow washes: derive from the accent instead of hardcoding per-category
+  rgba — `--card-glow: color-mix(in srgb, var(--card-accent) var(--card-glow-strength), transparent)`
+  with `--card-glow-strength` theme-keyed (≈12% light, ≈52% dark; past events
+  8%/18%). Category variants then only set `--card-accent`.
+- Photo cut-out fades: never hardcode the fade color — build gradients from the
+  surface var: `linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%, …)`
+  so the image feathers into whichever surface is active.
+- CTA inverts per theme: light = navy button/white text, dark = white button/navy
+  text (`--ev-cta-bg`/`--ev-cta-ink`).
+- Accent-on-surface text (event date): light needs darkening
+  (`color-mix(accent 75%, gray-900)`), dark needs lightening (`color-mix(accent 45%, #fff)`).
+
+**Why:** The navy card IS the dark-mode design; scattering `html.dark` overrides
+per-property would have doubled the stylesheet and drifted. The var-set approach
+keeps the dark look byte-identical while the light version rides the editorial
+tokens.
+
+**Global-CSS variant (React hero stylesheets):** `live-scoring-hero.css`,
+`trade-deadline-hero.css`, `playoff-bracket-hero.css` use the same pattern with
+plain `html.dark { ... }` blocks (never `:global()` in .css files). Two extras:
+- A derived var like `--lsh-glow: color-mix(... var(--lsh-accent) ...)` must be
+  declared on the **component root element** (`.lsh`), not `:root` — custom
+  properties resolve where declared, so a `:root`-level derivation ignores
+  variant accent overrides like `.lsh--playoffs`.
+- Amber/sky accents that are *text* on the card need theme-keyed darkening for
+  light (`#f0a23a → #d97706`, `#60a5fa → #2563eb`); borders/pills can keep the
+  bright brand hue in both themes.
+All heroes are covered: EventHeroShell wrappers (Auction/Draft/CutWatch/Tagged/
+TagExtension/UDFA/Preseason/DraftCountdown via LeagueEventHero) inherit the
+shell's `--ev-*` vars — panel-slot content must reference those vars, never
+`rgba(255,255,255,…)` literals. Season heroes + hero-stub.css were already
+token-based (light) and invert via tokens-dark.
+
+---
+
 ## 2026-03-02 - Editorial Hero Banner Pattern
 
 **Context:** Homepage hero redesign to match the magazine/editorial style from `about.astro`.
