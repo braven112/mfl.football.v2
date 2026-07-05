@@ -557,7 +557,7 @@ for (const t of aflConfig.teams as any[]) {
     </section>
 
     {(nameEras.length > 1 || priorOwnerEras.length > 0) && (
-      <section class="franchise-section name-history">
+      <section class="franchise-section name-history" id="name-history">
         <h2>Team Name History</h2>
         <ul class="name-history__list">
           {nameEras.slice().reverse().map((era) => (
