@@ -346,7 +346,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522'
           border-color: var(--color-primary, #1c497c);
           border-left-color: var(--color-primary, #1c497c);
           box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
-          background: var(--card-bg, #fff);
+          background: var(--input-bg, #fff);
         }
         .lm-input:disabled {
           opacity: 0.6;
