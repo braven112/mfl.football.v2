@@ -138,6 +138,33 @@
   min-height: 1.2em;
 }
 
+/* ── Dark mode ──
+   This file is a GLOBAL stylesheet — plain html.dark selectors (never
+   :global(), which is inert outside scoped Astro styles). */
+
+/* Theme-swapped league logo (mirrors the header's dual-img pattern). */
+.roster-loader__logo--dark { display: none; }
+html.dark .roster-loader__logo--light { display: none; }
+html.dark .roster-loader__logo--dark { display: block; }
+
+/* Deepen the scrim: 45% slate over an already-dark page reads as a gray
+   wash. Pure black at higher alpha separates the moment from the page —
+   same recipe as PlayerDetailsModal/CDM. Blur preserved (mandated). */
+html.dark .roster-loader {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Panel + disc: raised-card ring and a visible disc edge. */
+html.dark .roster-loader__panel {
+  box-shadow:
+    var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.2)),
+    0 0 0 1px var(--content-border, #5f6885);
+}
+
+html.dark .roster-loader__disc {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
 /* ── Reduced motion: static helmet + faint ring, no pulse, no shine ── */
 @media (prefers-reduced-motion: reduce) {
   .roster-loader__panel { animation: none; }
