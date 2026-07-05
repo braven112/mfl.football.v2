@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import entries from '../src/data/page-directory.json';
+import { describeSpriteIconValidation } from './helpers/sprite-icons';
 
 /**
  * Page Directory Data Validation
@@ -92,3 +93,16 @@ describe('page-directory.json data integrity', () => {
 		});
 	}
 });
+
+// ---------------------------------------------------------------------------
+// Sprite icon validation
+// ---------------------------------------------------------------------------
+//
+// The directory page and homepage quick links render
+// `<use href="${sprite}#icon-${page.icon}">`, so the stored value must be the
+// bare glyph name — a prefixed or unknown value silently renders a blank icon.
+
+describeSpriteIconValidation(
+	'page-directory.json',
+	typedEntries.map((e) => ({ source: e.id, icon: e.icon })),
+);

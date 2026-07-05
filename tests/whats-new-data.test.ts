@@ -6,6 +6,7 @@ import { VALID_LEAGUE_SLUGS } from '../src/types/whats-new';
 import { ALL_LEAGUES } from '../src/config/leagues';
 import entries from '../src/data/whats-new.json';
 import stagingFile from '../src/data/weekly-changelog-staging.json';
+import { describeSpriteIconValidation } from './helpers/sprite-icons';
 
 /**
  * What's New Data Validation
@@ -127,6 +128,20 @@ describe('whats-new.json data integrity', () => {
     expect(missing, 'Missing inline description images').toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprite icon validation
+// ---------------------------------------------------------------------------
+//
+// Consumers render `<use href="${sprite}#icon-${entry.icon}">`, so the stored
+// value must be the bare glyph name. A double-prefixed value ("icon-eye")
+// resolves to #icon-icon-eye — which doesn't exist — and silently rendered an
+// empty hero eyebrow chip when the dark-mode entry shipped that way.
+
+describeSpriteIconValidation(
+  'whats-new.json',
+  typedEntries.map((e) => ({ source: e.id, icon: e.icon })),
+);
 
 // ---------------------------------------------------------------------------
 // League scoping — content separation between The League and the AFL

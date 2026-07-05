@@ -12,6 +12,22 @@
     {
       "date": "2026-07-04",
       "type": "bug-fix",
+      "summary": "The 2026 Rookie Rankings card in the page directory and homepage quick links has its icon back — it had been pointing at an icon that doesn't exist and rendering blank. Every icon in the directory is now checked against the real icon set automatically, so a missing icon can't quietly ship again.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
+      "summary": "The Constitution card in the page directory has its icon back (a gavel, matching the other rules pages) — it had been pointing at an icon that doesn't exist and rendering blank.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-04",
+      "type": "bug-fix",
       "summary": "Franchise milestone posts in the Schefter Report now say what they're announcing — a labeled badge chip (like \"🎯 Career Milestone · Playoff Veteran\") sits above the one-liner, and every milestone post links straight to that team's badge wall. Previously you got a cryptic quip like \"Not a tourist anymore\" and were left to guess what happened.",
       "impact": "user",
       "area": "homepage",
