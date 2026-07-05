@@ -149,6 +149,10 @@ const countAriaLabel = hasCount
     border-radius: var(--radius-lg, 0.75rem);
     background: #0f1e2e;
     color: #fff;
+    /* Accent-matched border, same recipe as the What's Next mini-heroes
+       (55% translucent event accent). The --bordered variant below stays
+       the stronger full-accent 2px ring for calendar events. */
+    border: 1px solid color-mix(in srgb, var(--ev-accent, #3b82f6) 55%, transparent);
     box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
     isolation: isolate;
   }
