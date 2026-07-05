@@ -21,3 +21,46 @@ export function getActiveTeams<T extends { category?: string }>(
 ): T[] {
   return (assets?.teams ?? []).filter((team) => team.category !== 'former');
 }
+
+interface AssetEntry {
+  relativePath?: string;
+}
+
+interface TeamAssets {
+  icons?: AssetEntry[];
+  banners?: AssetEntry[];
+}
+
+/**
+ * Pick a franchise's CURRENT asset (icon/banner) from its asset array.
+ *
+ * Active-team asset arrays are ordered oldest-first and fold the franchise's
+ * former-identity art in at index 0 — e.g. Pigskins' `icons` is
+ * [`/history/pigskins_2007_icon_circle.png`, `/icons/pigskins.png`]. Taking
+ * `[0]` therefore renders the retired logo for every team that has a former
+ * identity (Pigskins, BTP, Midwestside, Dark Magicians…). Consumers that want
+ * the live logo must skip anything under `/history/` and prefer the newest
+ * remaining entry, falling back so single-entry teams still resolve.
+ */
+export function getCurrentAssetPath(entries: AssetEntry[] | undefined): string | undefined {
+  if (!entries || entries.length === 0) return undefined;
+  const live = entries.filter(
+    (e) => e.relativePath && !e.relativePath.includes('/history/')
+  );
+  const pick = live.length ? live[live.length - 1] : entries[entries.length - 1];
+  return pick?.relativePath;
+}
+
+/** Current icon path for a team, skipping folded-in historical icons. */
+export function getCurrentIconPath(
+  team: { assets?: TeamAssets } | null | undefined
+): string | undefined {
+  return getCurrentAssetPath(team?.assets?.icons);
+}
+
+/** Current banner path for a team, skipping folded-in historical banners. */
+export function getCurrentBannerPath(
+  team: { assets?: TeamAssets } | null | undefined
+): string | undefined {
+  return getCurrentAssetPath(team?.assets?.banners);
+}

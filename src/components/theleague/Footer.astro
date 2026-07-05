@@ -3,7 +3,7 @@
 import { getLeagueContext } from '../../utils/league-context';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
-import { getActiveTeams } from '../../utils/league-assets';
+import { getActiveTeams, getCurrentIconPath, getCurrentBannerPath } from '../../utils/league-assets';
 import { extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 
@@ -46,8 +46,8 @@ const championYear = champion.year;
 const championTeam = (!isAFL && championTeamId)
 	? getActiveTeams(leagueAssets).find(team => team.id === championTeamId)
 	: null;
-const championBanner = championTeam?.assets?.banners?.[0]?.relativePath;
-const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
+const championBanner = getCurrentBannerPath(championTeam);
+const championIcon = getCurrentIconPath(championTeam);
 ---
 
 <footer class="site-footer">

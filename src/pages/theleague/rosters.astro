@@ -2,7 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
-import { getActiveTeams } from '../../utils/league-assets';
+import { getActiveTeams, getCurrentIconPath, getCurrentBannerPath } from '../../utils/league-assets';
 import MetricCard from '../../components/theleague/MetricCard.astro';
 import ChartCard from '../../components/theleague/ChartCard.astro';
 import DonutChart from '../../components/theleague/DonutChart.astro';
@@ -574,8 +574,8 @@ const teamsList = activeTeams
     id: team.id,
     name: team.name,
     division: team.division ?? '',
-    icon: team.assets?.icons?.[0]?.relativePath ?? '',
-    banner: team.assets?.banners?.[0]?.relativePath ?? '',
+    icon: getCurrentIconPath(team) ?? '',
+    banner: getCurrentBannerPath(team) ?? '',
   }))
   .sort((a, b) => {
     // Sort by division order first

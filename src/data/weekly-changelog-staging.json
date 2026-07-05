@@ -2,6 +2,14 @@
   "weekOf": "2026-07-06",
   "changes": [
     {
+      "date": "2026-07-05",
+      "type": "bug-fix",
+      "summary": "The roster page's team switcher (and the team icons on Salary Analytics, the Cap Calculator, and the footer's defending-champion medallion) now show each club's current logo. Teams with a former identity — the Pigskins, Bring The Pain, Midwestside Connection, and the Dark Magicians of Chaos — were flying their retired 2007-era circle logo because the icon list was read oldest-first; it now skips the archived art and lands on the live logo.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
       "date": "2026-07-04",
       "type": "bug-fix",
       "summary": "On phones, the Owner Activity page no longer stretches wider than the screen — the transaction and last-seen tables now scroll within their own lane, and the navigation drawer no longer peeks out along the right edge of the page.",
