@@ -71,12 +71,13 @@ export function validateFranchiseId(franchiseId: string | number | null | undefi
 
   const normalized = normalizeFranchiseId(franchiseId);
 
+  // Only current franchises are selectable — the assets files also carry
+  // category: 'former' historical identities (including compound ids like
+  // "0002, 0013") that have no rosters or per-team UI.
   if (league === 'theleague') {
-    // Check if franchise ID exists in theleague assets
-    return leagueAssets.teams.some(team => team.id === normalized);
+    return leagueAssets.teams.some(team => team.category !== 'former' && team.id === normalized);
   } else {
-    // Check if franchise ID exists in AFL assets
-    return aflAssets.teams.some(team => team.id === normalized);
+    return aflAssets.teams.some(team => team.category !== 'former' && team.id === normalized);
   }
 }
 
