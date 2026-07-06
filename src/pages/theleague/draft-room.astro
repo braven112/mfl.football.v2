@@ -13,6 +13,7 @@ import { getTheLeaguePreference, resolveTeamSelection } from '../../utils/team-p
 import { getAuthUser } from '../../utils/auth';
 import { parseTradeFromComment } from '../../utils/draft-utils';
 import { buildDraftPlayers } from '../../utils/build-draft-players';
+import { getFranchiseBrand } from '../../utils/franchise-brand';
 import type { DraftRoomPageData, DraftRoomPick, DraftRoomTeam } from '../../types/draft-room';
 
 export const prerender = false;
@@ -61,14 +62,21 @@ const leagueKey = Object.keys(leagueFeeds).find(
 const leagueData = leagueKey ? getModuleData(leagueFeeds[leagueKey]) : null;
 
 // ── Build team configs ──
-const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => ({
-  franchiseId: team.franchiseId,
-  name: team.name,
-  nameMedium: team.nameMedium || team.name,
-  nameShort: team.nameShort || team.name,
-  abbrev: team.abbrev || '',
-  icon: team.icon || '',
-}));
+const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
+  const brand = getFranchiseBrand(team.franchiseId);
+  return {
+    franchiseId: team.franchiseId,
+    name: team.name,
+    nameMedium: team.nameMedium || team.name,
+    nameShort: team.nameShort || team.name,
+    abbrev: team.abbrev || '',
+    icon: team.icon || '',
+    // Brand colors drive the pick-reveal splash — rookies rarely have an NFL
+    // team at draft time, so the drafting franchise tints the moment.
+    colorPrimary: brand.colorPrimary,
+    colorSecondary: brand.colorSecondary,
+  };
+});
 
 // ── Build player pool (shared util; ADP is public, RSP gated to owner) ──
 // Live draft room sends the full draftable pool — rookies and veterans both

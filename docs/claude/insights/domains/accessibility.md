@@ -476,3 +476,28 @@ h1: Page title
 **Also:** Don't trust a loading-state audit's category at face value. `loading-inventory.md` listed this shimmer as a "skeleton loader" to migrate to the shared `Skeleton`. It's actually a live/active-state indicator (§8 "Explicitly NOT loading"), not a loader — swapping in `Skeleton` would have broken live scoring. Verify against the rendered behavior before migrating.
 
 **Evidence:** PR #291. The `transition: none` line was a Copilot review catch the initial `animation: none`-only guard missed.
+
+## 2026-07-06 - `.visually-hidden` Is Per-Component, Not a Shared Utility — New Consumers Must Ship Their Own Rule
+
+**Context:** The draft-room pick-reveal splash made picks a live on-screen moment, which surfaced that the room's aria-live pick announcement (`<div class="visually-hidden" role="status" aria-live="polite">`) rendered as **visible page text** whenever a pick landed. There is **no shared/global `.visually-hidden` utility** — components that use the class each define their own rule in their scoped `<style>` block (e.g. `salary.astro`, `TradeBuilder.tsx`, several nav components). DraftRoom used the class without shipping a rule, so its live region was plain visible markup.
+
+**Insight:** Using `.visually-hidden` in markup is not evidence it's styled on that page. Because the definitions are component-scoped, a grep for the class name returns dozens of confident-looking usages — some are consumers with a local provider, some (like DraftRoom was) are consumers with none. When adding the class to a new component, grep that component's own style scope for the *rule* (`\.visually-hidden\s*{`), and add it if absent.
+
+**Pattern (now in `src/styles/draft-room.css`, scoped `.draft-room .visually-hidden`):**
+```css
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+```
+
+**Recommendation:** Audit the remaining consumers for missing local rules, or promote one shared global utility so this class stops being a per-component trap (background task spawned 2026-07-06). Until that lands, any NEW aria-live region must ship its own rule.
+
+**Evidence:** Playwright screenshot of the draft room after a simulated pick: "Pick 1.03: Cowboy Up selects Jeremiyah Love, RB" rendered as plain text above the timer banner. Fixed in the pick-reveal splash PR. (Copilot review corrected an earlier draft of this insight that overstated the gap as "defined nowhere".)

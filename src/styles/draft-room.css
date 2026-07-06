@@ -2302,3 +2302,167 @@ a.dr-submit-pick-btn {
   color: var(--color-gray-500, #6b7280);
   line-height: 1.4;
 }
+
+/* ══ Pick Reveal Splash ═══════════════════════════════════════════════════
+ * The broadcast moment when a pick lands: "With the 1.03, the {franchise}
+ * select {player}" over a franchise-color gradient with the player's ESPN
+ * cutout. Scoped to the BOARD panel — the timer banner, mobile tab bar, and
+ * side panel (the mock-mode pick-submit path) all live outside the overlay
+ * and can never be covered. Inherently dark in both themes, like the other
+ * composite surfaces. Mobile-first.
+ */
+.dr-panel-board {
+  position: relative;
+}
+/* Screen-reader-only pick announcements. There's no SHARED .visually-hidden
+ * utility — components that use the class each ship their own scoped rule
+ * (salary.astro, TradeBuilder.tsx, …) and DraftRoom never did, so its live
+ * region rendered as visible text whenever a pick landed. */
+.draft-room .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.dr-splash-overlay {
+  --dr-splash-base: #0b0e12;
+  position: absolute;
+  inset: 0;
+  z-index: 40; /* above sticky board chrome (≤20), below fixed dialogs (≥50) */
+  display: flex;
+  align-items: center;
+  background: rgba(9, 12, 18, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  /* Backdrop is pointer-transparent — only the card takes pointer events
+   * (tap to dismiss), so board chrome under the dim stays clickable. */
+  pointer-events: none;
+  animation: dr-splash-fade-in 0.2s var(--dr-easing-ease);
+}
+.dr-splash-overlay--exit {
+  opacity: 0;
+  transition: opacity 0.24s var(--dr-easing-ease);
+}
+.dr-splash-overlay--exit .dr-splash {
+  pointer-events: none;
+}
+.dr-splash {
+  position: relative;
+  width: 100%;
+  height: clamp(200px, 42vh, 340px);
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  /* Explicit color — global heading/link rules restyle bare text over composites */
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 78% 28%, color-mix(in srgb, var(--dr-splash-secondary, #0e2440) 32%, transparent) 0%, transparent 62%),
+    linear-gradient(160deg, var(--dr-splash-base) 0%, var(--dr-splash-primary, var(--color-primary, #1c497c)) 150%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  animation: dr-splash-card-in 0.38s var(--dr-easing-spring) both;
+}
+/* Ghost pick number — composite wordmark language */
+.dr-splash__ghost {
+  position: absolute;
+  right: -0.04em;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: clamp(6rem, 34vw, 13rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.07);
+  user-select: none;
+  pointer-events: none;
+}
+/* Franchise crest watermark behind the cutout (~0.16 = site watermark opacity) */
+.dr-splash__crest {
+  position: absolute;
+  right: clamp(0.75rem, 8vw, 5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(110px, 30vw, 220px);
+  height: clamp(110px, 30vw, 220px);
+  object-fit: contain;
+  opacity: 0.16;
+  pointer-events: none;
+}
+.dr-splash__model {
+  position: absolute;
+  right: clamp(0rem, 4vw, 3rem);
+  bottom: 0;
+  height: 94%;
+  max-width: 46vw;
+  object-fit: contain;
+  object-position: bottom;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+  animation: dr-splash-model-in 0.45s 0.08s var(--dr-easing-spring) backwards;
+  pointer-events: none;
+}
+.dr-splash__text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem clamp(1rem, 5vw, 3rem);
+  max-width: 62%;
+  animation: dr-splash-text-in 0.4s 0.05s var(--dr-easing-ease) backwards;
+}
+.dr-splash__kicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.85);
+}
+.dr-splash__team {
+  font-size: clamp(0.95rem, 2.5vw, 1.25rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+.dr-splash__player {
+  font-size: clamp(1.6rem, 6vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.05;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  text-wrap: balance;
+}
+.dr-splash__meta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.75);
+}
+@keyframes dr-splash-fade-in {
+  from { opacity: 0; }
+}
+@keyframes dr-splash-card-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+}
+@keyframes dr-splash-model-in {
+  from { opacity: 0; transform: translateX(36px); }
+}
+@keyframes dr-splash-text-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+/* Reduced motion: static card, no entrance/exit choreography */
+@media (prefers-reduced-motion: reduce) {
+  .dr-splash-overlay,
+  .dr-splash,
+  .dr-splash__model,
+  .dr-splash__text {
+    animation: none !important;
+  }
+  .dr-splash-overlay--exit {
+    transition: none;
+  }
+}

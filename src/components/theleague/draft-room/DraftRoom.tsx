@@ -17,7 +17,9 @@ import { DraftBoardPanel } from './DraftBoardPanel';
 import { PlayerPoolPanel } from './PlayerPoolPanel';
 import { MobileTabBar } from './MobileTabBar';
 import { DraftChatPanel, broadcastPickToChat } from './DraftChatPanel';
+import { PickRevealSplash } from './PickRevealSplash';
 import { getQueue, saveQueue } from '../../../utils/draft-queue-storage';
+import { collectFreshPicks, buildSplashItem, type PickSplashItem } from '../../../utils/pick-reveal';
 import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
 import '../../../styles/draft-room.css';
 
@@ -298,6 +300,36 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     }
     prevPickNumberRef.current = state.currentPickNumber;
   }, [state.currentPickNumber, state.picks, playerMap, teamMap]);
+
+  // ── Pick-reveal splash ──
+  // Diffing state.picks catches every path a pick lands through: live polling,
+  // mock-socket pick-made events, AND the user's own submission (which also
+  // arrives back as a picks update). Queue so fast autopick runs never overlap.
+  const [splashQueue, setSplashQueue] = useState<PickSplashItem[]>([]);
+  const seenFilledRef = useRef<Set<number> | null>(null);
+  const prevSlotCountRef = useRef(0);
+
+  useEffect(() => {
+    const fresh = collectFreshPicks(seenFilledRef.current, prevSlotCountRef.current, state.picks);
+    // Track the CURRENT filled set (not a grow-only union) so a mock-mode
+    // undo followed by a re-pick of the same slot splashes again.
+    seenFilledRef.current = new Set(
+      state.picks.filter((p) => p.playerId).map((p) => p.overallPickNumber)
+    );
+    prevSlotCountRef.current = state.picks.length;
+    if (fresh.length === 0) return;
+    setSplashQueue((q) => {
+      const merged = [...q, ...fresh.map((p) => buildSplashItem(p, teamMap, playerMap))];
+      // If splashes back up behind a fast autopick run, drop the oldest
+      // WAITING items — never merged[0], which is on screen right now —
+      // stale reveals lagging the board are worse than missed ones.
+      return merged.length > 4 ? [merged[0], ...merged.slice(-3)] : merged;
+    });
+  }, [state.picks, teamMap, playerMap]);
+
+  const handleSplashConsume = useCallback((id: string) => {
+    setSplashQueue((q) => q.filter((s) => s.id !== id));
+  }, []);
 
   // Load queue from localStorage on mount
   useEffect(() => {
@@ -613,6 +645,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           aria-labelledby="dr-tab-board"
           className="dr-panel-board"
         >
+          {/* Scoped to the board panel: the side panel (pick-submit path) is
+              structurally outside the overlay and can never be covered. */}
+          <PickRevealSplash queue={splashQueue} onConsume={handleSplashConsume} />
           <DraftBoardPanel
             picks={state.picks}
             teams={state.teams}

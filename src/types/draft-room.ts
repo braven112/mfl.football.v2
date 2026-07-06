@@ -44,6 +44,10 @@ export interface DraftRoomTeam {
   nameShort: string;
   abbrev: string;
   icon: string;
+  /** Franchise brand primary (hex) — tints the pick-reveal splash gradient */
+  colorPrimary?: string;
+  /** Franchise brand secondary (hex) — splash glow accent */
+  colorSecondary?: string;
 }
 
 /** RSP tier grades A (elite) → F (UDFA watch) */
