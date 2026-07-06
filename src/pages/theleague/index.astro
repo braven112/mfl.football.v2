@@ -23,7 +23,9 @@ import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
-import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel } from '../../utils/hero-casting';
+import { chooseTeamName } from '../../utils/team-names';
+import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels } from '../../utils/hero-casting';
+import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { buildPlayoffRoundView } from '../../utils/hero-data/playoff-round-data';
@@ -339,6 +341,32 @@ let udfaModels: ReturnType<typeof castRookiesOnBoard> = [];
 if (heroState.phase === 'udfa-window') {
   udfaModels = castRookiesOnBoard(hpPlayerIdentityMap, heroRosteredIds(), getAdpRankedIds(leagueYear), 8, now);
 }
+// Tagged showcase: one composite panel per franchise-tagged player with a
+// usable ESPN cutout. Cast eight — four render, four are spares the component
+// swaps in for any player whose headshot 404s. Each panel resolves its tagging
+// franchise to a short chip name + crest from the league config; the panel
+// headshot comes from the player map (the props' Sleeper JPG isn't compositable).
+let showcasePanels: Array<{ model: HeroModel; franchiseName: string; franchiseCrest: string }> = [];
+if (heroState.phase === 'tagged-showcase' && heroState.taggedShowcaseProps) {
+  const candidates = heroState.taggedShowcaseProps.taggedPlayers.map((t) => ({
+    playerId: t.playerId,
+    franchiseId: t.franchiseId,
+  }));
+  const franchiseById = new Map(teamConfigs.map((tc) => [tc.franchiseId, tc]));
+  showcasePanels = castShowcasePanels(candidates, hpPlayerIdentityMap, 8, 'Tagged').map((panel) => {
+    const tc = franchiseById.get(panel.franchiseId);
+    return {
+      model: panel,
+      franchiseName: tc
+        ? chooseTeamName(
+            { fullName: tc.name, nameMedium: tc.nameMedium, nameShort: tc.nameShort, abbrev: tc.abbrev },
+            'short',
+          )
+        : '',
+      franchiseCrest: tc?.icon ?? '',
+    };
+  });
+}
 if (heroState.phase === 'cut-watch' && heroState.cutWatchProps) {
   // Cut watch hero: a real bubble player — YOUR suggested cut candidate when
   // your team is over the limit; a league-wide candidate for everyone else.
@@ -562,6 +590,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         auctionClosingBid={auctionClosingBid}
         cutWatchModel={cutWatchModel}
         udfaModels={udfaModels}
+        showcasePanels={showcasePanels}
         preseasonModel={preseasonModel}
         preseasonModelIsOwn={preseasonModelIsOwn}
         kickoffGame={kickoffGame}

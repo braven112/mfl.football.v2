@@ -10,6 +10,7 @@ import {
   castRandomStarterModel,
   castClosingAuctionModel,
   castRookiesOnBoard,
+  castShowcasePanels,
 } from '../src/utils/hero-casting';
 import type { PlayerIdentity } from '../src/utils/player-map';
 
@@ -424,5 +425,52 @@ describe('castArticleModel', () => {
   it('is deterministic — no daily rotation, same id in → same model out', () => {
     expect(castArticleModel('10', players)?.mflId).toBe('10');
     expect(castArticleModel('10', players)?.mflId).toBe('10');
+  });
+});
+
+describe('castShowcasePanels', () => {
+  const players = mapOf(
+    player({ mflId: '1' }),
+    player({ mflId: '2', position: 'DEF' }),        // not a person
+    player({ mflId: '3', headshot: MFL('3') }),      // no ESPN cutout
+    player({ mflId: '4' }),
+    player({ mflId: '5' }),
+  );
+
+  it('keeps compositable candidates in filed order and remembers the franchise', () => {
+    const candidates = [
+      { playerId: '1', franchiseId: '0001' },
+      { playerId: '2', franchiseId: '0002' }, // DEF — dropped
+      { playerId: '3', franchiseId: '0003' }, // MFL photo — dropped
+      { playerId: '4', franchiseId: '0004' },
+      { playerId: '5', franchiseId: '0005' },
+    ];
+    const panels = castShowcasePanels(candidates, players);
+    expect(panels.map((p) => p.mflId)).toEqual(['1', '4', '5']);
+    expect(panels.map((p) => p.franchiseId)).toEqual(['0001', '0004', '0005']);
+    expect(panels[0].descriptor).toBe('Tagged');
+  });
+
+  it('honors a custom descriptor', () => {
+    const panels = castShowcasePanels([{ playerId: '1', franchiseId: '0001' }], players, 8, 'On the Tag');
+    expect(panels[0].descriptor).toBe('On the Tag');
+  });
+
+  it('caps at count and is deterministic (no rotation, filed order)', () => {
+    const candidates = [
+      { playerId: '1', franchiseId: '0001' },
+      { playerId: '4', franchiseId: '0004' },
+      { playerId: '5', franchiseId: '0005' },
+    ];
+    expect(castShowcasePanels(candidates, players, 2).map((p) => p.mflId)).toEqual(['1', '4']);
+    expect(castShowcasePanels([], players)).toEqual([]);
+  });
+
+  it('skips unknown ids entirely', () => {
+    const candidates = [
+      { playerId: '99', franchiseId: '0009' }, // unknown to the map
+      { playerId: '4', franchiseId: '0004' },
+    ];
+    expect(castShowcasePanels(candidates, players).map((p) => p.mflId)).toEqual(['4']);
   });
 });

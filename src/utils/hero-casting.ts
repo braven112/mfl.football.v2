@@ -397,3 +397,40 @@ export function castRosterModel(
   const pick = dailyPick(pool, referenceDate, 'roster', (c) => `${c.franchiseId}:${c.playerId}`);
   return pick ? toModel(players.get(pick.playerId)!, descriptor) : null;
 }
+
+/** A composite panel model that remembers which franchise tagged the player. */
+export interface PanelModel extends HeroModel {
+  /** League franchise that filed the tag — resolved to a crest + chip by the hero. */
+  franchiseId: string;
+}
+
+/**
+ * Cast the panels for a multi-team showcase hero (franchise-tagged players).
+ *
+ * Walks the candidate list in filed order, keeps the ones with a usable ESPN
+ * cutout (DEF "players" and MFL-JPG-only photos are dropped — a gradient with
+ * no face reads as broken), and remembers each player's franchise so the panel
+ * can chip the tagging team and watermark its crest. Cast MORE than you show
+ * (default 8) — the component keeps the first four panels whose headshot
+ * actually loads and swaps in the rest when a deep player's photo 404s, exactly
+ * like the UDFA board.
+ *
+ * DETERMINISTIC by design: the tag list is the tag list, rendered in filed
+ * order — no daily rotation (every tagged player is the story, not a rotating
+ * pick).
+ */
+export function castShowcasePanels(
+  candidates: RosterCastCandidate[],
+  players: Map<string, PlayerIdentity>,
+  count: number = 8,
+  descriptor: string = 'Tagged',
+): PanelModel[] {
+  const panels: PanelModel[] = [];
+  for (const c of candidates) {
+    const p = players.get(c.playerId);
+    if (!p || !isCompositable(p)) continue;
+    panels.push({ ...toModel(p, descriptor), franchiseId: c.franchiseId });
+    if (panels.length >= count) break;
+  }
+  return panels;
+}
