@@ -38,8 +38,8 @@ const { view } = Astro.props;
         <>
           <div class={`psf__game${g.isUserGame ? ' psf__game--user' : ''}`}>
             <div class="psf__pair">
-              <div class="psf__panel" style={`background:${franchiseGradient(a.color)};`}>
-                <span class="psf__pglow" style={`background:radial-gradient(circle, ${franchiseGlow(a.color, 0.42)} 0%, transparent 66%);`} aria-hidden="true"></span>
+              <div class="psf__panel" style={`background:${franchiseGradient(a.colorPrimary)};`}>
+                <span class="psf__pglow" style={`background:radial-gradient(circle, ${franchiseGlow(a.colorPrimary, 0.42)} 0%, transparent 66%);`} aria-hidden="true"></span>
                 {a.crest && <img class="psf__crest" src={a.crest} alt="" aria-hidden="true" loading="lazy" />}
                 <span class="psf__chip">{a.seed != null && <b>{a.seed} </b>}{a.short}</span>
                 {a.player && (
@@ -48,8 +48,8 @@ const { view } = Astro.props;
                 {a.player && <span class="psf__pl"><strong>{a.player.name}</strong><span>{a.player.position} · {a.player.nflTeam}</span></span>}
               </div>
               <span class="psf__vs" aria-hidden="true">VS</span>
-              <div class="psf__panel" style={`background:${franchiseGradient(b.color)};`}>
-                <span class="psf__pglow" style={`background:radial-gradient(circle, ${franchiseGlow(b.color, 0.42)} 0%, transparent 66%);`} aria-hidden="true"></span>
+              <div class="psf__panel" style={`background:${franchiseGradient(b.colorPrimary)};`}>
+                <span class="psf__pglow" style={`background:radial-gradient(circle, ${franchiseGlow(b.colorPrimary, 0.42)} 0%, transparent 66%);`} aria-hidden="true"></span>
                 {b.crest && <img class="psf__crest" src={b.crest} alt="" aria-hidden="true" loading="lazy" />}
                 <span class="psf__chip psf__chip--r">{b.seed != null && <b>{b.seed} </b>}{b.short}</span>
                 {b.player && (

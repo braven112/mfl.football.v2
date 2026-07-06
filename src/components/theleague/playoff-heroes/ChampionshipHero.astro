@@ -39,7 +39,7 @@ if (a && b) {
     <!-- One continuous side-by-side gradient across the whole stage (team A →
          black → team B); the center is just where the two colors meet, not a
          panel with its own fill. -->
-    <div class="pch__stage" style={`--pch-a: ${a.color}; --pch-b: ${b.color};`}>
+    <div class="pch__stage" style={`--pch-a: ${a.colorPrimary}; --pch-b: ${b.colorPrimary};`}>
       <div class="pch__panel">
         {a.crest && <img class="pch__crest" src={a.crest} alt="" aria-hidden="true" loading="lazy" />}
         {a.player && (

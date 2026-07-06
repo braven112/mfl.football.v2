@@ -17,7 +17,7 @@ export interface Props {
 
 const { view, r } = Astro.props;
 const featured = view.featured;
-const accent = featured?.color ?? '#1c497c';
+const accent = featured?.colorPrimary ?? '#1c497c';
 const teamCount = view.games.length * 2;
 ---
 
