@@ -7,6 +7,14 @@
     {
       "date": "2026-07-05",
       "type": "bug-fix",
+      "summary": "The trade deadline countdown hero no longer risks flashing wrong numbers when the page loads. The countdown briefly showed the server's idea of the time remaining before the browser corrected it — on deadline day the digits could visibly disagree for a beat (and in date-testing mode the clock read a surreal 3,265 hours). It now waits for the browser clock and counts down cleanly from the first tick.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
+      "date": "2026-07-05",
+      "type": "bug-fix",
       "summary": "Feature announcements in the homepage hero now send you somewhere useful — the button links straight to the full article about that feature. Previously, announcements without a destination page pointed at the What's New listing (or, in one memorable case, at the very homepage you were already standing on).",
       "impact": "user",
       "area": "whats-new",

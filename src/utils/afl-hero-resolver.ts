@@ -72,7 +72,7 @@ export type AflHeroState =
         userConference?: '00' | '01';
       };
     }
-  | { kind: 'trade-deadline'; priority: 'P0++'; content: HeroContent; deadlineMidnightPT: string }
+  | { kind: 'trade-deadline'; priority: 'P0++'; content: HeroContent; deadlineMidnightPT: string; referenceNowISO: string }
   | { kind: 'championship'; priority: 'P0'; content: HeroContent }
   | { kind: 'playoffs'; priority: 'P0'; content: HeroContent; slot?: DailySlot; gameWindow?: GameWindow; week?: number }
   | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; view: EventHeroView; slot: DailySlot; gameWindow: GameWindow; week?: number }
@@ -892,6 +892,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       priority: 'P0++',
       content: buildTradeDeadlineHero(),
       deadlineMidnightPT: midnightAfter(tradeDeadline.startDate),
+      referenceNowISO: now.toISOString(),
     };
   }
 
