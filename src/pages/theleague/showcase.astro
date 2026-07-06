@@ -8,15 +8,18 @@
  * it's rendered. Built as a portfolio/interview surface in the editorial voice
  * of /theleague/about.
  *
- * The composite hero components + utils ship on the dark-mode branch
- * (claude/stoic-gauss-85d450, PR #342). This page reproduces the shipped
- * `.fch` hero treatment inline — real players, real NFL team colors, the exact
- * gradient/glow/ghost-wordmark/frosted-caption CSS — so the gallery renders
- * without importing the (branch-local) components.
+ * The composite hero components + utils are live on main (PR #346). This page
+ * deliberately reproduces the shipped `.fch` hero treatment inline — real
+ * players, real NFL team colors, the exact gradient/glow/ghost-wordmark/
+ * frosted-caption CSS — rather than importing those components, so the whole
+ * showcase stays a single self-contained file.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
-export const prerender = true;
+// SSR (not prerendered) — mirrors about.astro. The apex-host clean-URL rewrite
+// in src/middleware.ts (/showcase → /theleague/showcase) only runs for SSR
+// routes; a prerendered route can 404 on theleague.us. Content is fully static
+// so SSR is effectively free.
 
 /** Local copy of the shipped hexToRgba (src/utils/nfl-team-colors.ts). */
 function hexToRgba(hex: string, alpha: number): string {
@@ -114,7 +117,8 @@ const gallery = [
   },
 ];
 const galleryVars = (primary: string) =>
-  `--hc-glow-dark: ${hexToRgba(primary, 0.4)}; --hc-glow-light: ${hexToRgba(primary, 0.22)};`;
+  // Match the shipped FeatureCompositeHero glow alphas exactly: 0.38 dark, 0.2 light.
+  `--hc-glow-dark: ${hexToRgba(primary, 0.38)}; --hc-glow-light: ${hexToRgba(primary, 0.2)};`;
 
 // The 14 season phases — verbatim windows from src/types/hero-state.ts.
 const phases = [
@@ -193,7 +197,11 @@ const castFns = [
     <!-- ===== GALLERY (show, don't tell) ===== -->
     <section class="hc-gallery" aria-label="Composite hero gallery">
       {gallery.map((g) => (
-        <article class={`hcx hcx--${g.accent}`} style={galleryVars(g.primary ?? '#1c497c')} aria-label={g.title}>
+        <article
+          class={`hcx hcx--${g.accent}`}
+          style={galleryVars(g.primary ?? '#1c497c')}
+          aria-label={`${g.title} — featuring ${g.name}, ${g.descriptor}, ${g.pos}, ${g.code}`}
+        >
           <span class="hcx__ghost" aria-hidden="true">{g.wordmark}</span>
           <div class="hcx__glow" aria-hidden="true"></div>
           <img
@@ -203,12 +211,16 @@ const castFns = [
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='none'"
+            onerror="this.closest('.hcx').classList.add('hcx--no-model')"
           />
           <span class="hcx__caption">
             <strong>{g.name}</strong>
             <span class="hcx__caption-meta">{g.descriptor} · {g.pos} · {g.code}</span>
           </span>
+          <!-- On a headshot 404 the card reveals the league-logo silhouette
+               instead of an empty flank — mirrors the shipped .fch behavior. -->
+          <img class="hcx__logo-art hcx__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+          <img class="hcx__logo-art hcx__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
           <div class="hcx__content">
             <p class="hcx__eyebrow">
               <span class="hcx__pill">{g.pill}</span>
@@ -294,7 +306,7 @@ const castFns = [
             <div class="hc-layer__z">z-2</div>
             <div class="hc-layer__body">
               <div class="hc-layer__name">Transparent ESPN headshot cutout</div>
-              <div class="hc-layer__desc">Anchored bottom-right with a soft drop-shadow. <code>loading="eager"</code>, <code>decoding="async"</code>, decorative <code>alt=""</code>.</div>
+              <div class="hc-layer__desc">Anchored bottom-right with a soft drop-shadow. On the real homepage hero it's <code>loading="eager"</code> (above the fold); the reproductions below lazy-load. Always <code>decoding="async"</code>, decorative <code>alt=""</code>.</div>
             </div>
           </div>
           <div class="hc-layer">
@@ -826,6 +838,32 @@ function dailyPick(pool, date, seedKey, keyOf) {
     pointer-events: none;
   }
 
+  /* League-logo silhouette — hidden until a headshot 404 sets .hcx--no-model. */
+  .hcx__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(150px, 20vw, 240px);
+    opacity: 0.16;
+    pointer-events: none;
+  }
+  .hcx--no-model .hcx__model,
+  .hcx--no-model .hcx__caption {
+    display: none;
+  }
+  .hcx--no-model .hcx__logo-art--light {
+    display: block;
+  }
+  :global(html.dark) .hcx--no-model .hcx__logo-art--light {
+    display: none;
+  }
+  :global(html.dark) .hcx--no-model .hcx__logo-art--dark {
+    display: block;
+    opacity: 0.22;
+  }
+
   .hcx__caption {
     position: absolute;
     z-index: 3;
@@ -1323,7 +1361,6 @@ function dailyPick(pool, date, seedKey, keyOf) {
      Responsive
   =========================== */
   @media (max-width: 1000px) {
-    .hc-gallery { grid-template-columns: 1fr; }
     .hc-layers, .hc-cat-grid, .hc-phase-grid { grid-template-columns: repeat(2, 1fr); }
     .hc-ship-grid { grid-template-columns: repeat(2, 1fr); }
   }
