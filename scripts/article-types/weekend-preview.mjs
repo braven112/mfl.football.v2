@@ -10,6 +10,7 @@ import { loadTeams, flipName, normalizePosition, formatDefName } from '../articl
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
+import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_weekend_preview_w${String(week).padStart(2, '0')}`,
@@ -25,6 +26,8 @@ export function guardSeason(week, year, now, { currentWeek }) {
 
 export async function buildFactSheet(data, week, year, projectRoot) {
   const players = new Map();
+  // Raw feed records (position + espn_id) for hero-player selection.
+  const playerMeta = new Map();
   for (const p of data.players.players.player) {
     if (p.id) {
       const pos = normalizePosition(p.position);
@@ -34,6 +37,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
         position: pos,
         team: p.team,
       });
+      playerMeta.set(p.id, p);
     }
   }
 
@@ -53,6 +57,15 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     rosterMap[f.id] = playerList
       .filter(p => p.status === 'ROSTER')
       .map(p => p.id);
+  }
+
+  // Scored candidates for the composite hero — the marquee (highest-projected
+  // rostered player across the slate) gets the face.
+  const heroCandidates = [];
+  for (const pids of Object.values(rosterMap)) {
+    for (const pid of pids) {
+      heroCandidates.push({ id: pid, score: projections.get(pid) || 0 });
+    }
   }
 
   // Get matchup pairings
@@ -114,7 +127,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     lines.push(`Teams on losing streaks: ${onSkids.map(([id, s]) => `${teams.get(id)?.name} (${s.streak})`).join(', ')}`);
   }
 
-  return { factSheet: lines.join('\n'), enrichment: {} };
+  const heroPlayerId = pickHeroPlayer(heroCandidates, playerMeta);
+  return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
 }
 
 export function getSystemPrompt() {
@@ -166,5 +180,8 @@ export function buildPost(aiOutput, enrichment, articleId) {
     league: 'theleague',
     authorId: 'claude',
     content: aiOutput.content,
+    ...(enrichment.heroPlayerId
+      ? { heroPlayerId: enrichment.heroPlayerId, playerIds: [enrichment.heroPlayerId] }
+      : {}),
   };
 }

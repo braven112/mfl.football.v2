@@ -3,6 +3,8 @@ import {
   castRookieModel,
   castEnhancementModel,
   castRosterModel,
+  castArticleModel,
+  heroModelHasCutout,
   castTopFreeAgentModel,
   castBestScoredModel,
   castRandomStarterModel,
@@ -381,5 +383,46 @@ describe('castRosterModel', () => {
     ];
     expect(castRosterModel(candidates, players, '0001', JUL_4)?.mflId).toBe('10');
     expect(castRosterModel([{ playerId: '99', franchiseId: '0001' }], players, undefined, JUL_4)).toBeNull();
+  });
+});
+
+describe('castArticleModel', () => {
+  const players = mapOf(
+    player({ mflId: '10', name: 'Ja Marr Chase', position: 'WR', nflTeam: 'CIN' }),
+    player({ mflId: '12', position: 'DEF' }),           // no ESPN cutout
+    player({ mflId: '13', headshot: MFL('13') }),        // MFL photo, no cutout
+  );
+
+  it('casts the exact featured player with the given descriptor', () => {
+    const model = castArticleModel('10', players, 'Top Pickup');
+    expect(model?.mflId).toBe('10');
+    expect(model?.name).toBe('Ja Marr Chase');
+    expect(model?.descriptor).toBe('Top Pickup');
+  });
+
+  it('returns null when no hero id is set (old posts)', () => {
+    expect(castArticleModel(undefined, players, 'Top Pickup')).toBeNull();
+    expect(castArticleModel('', players)).toBeNull();
+  });
+
+  it('returns null only for unknown ids (→ classic card fallback)', () => {
+    expect(castArticleModel('99', players)).toBeNull();
+  });
+
+  it('still casts DEF / non-ESPN players — the team logo becomes the art', () => {
+    // The generator named the genuinely-featured player; swapping faces would
+    // betray the story. The render layer checks heroModelHasCutout.
+    const def = castArticleModel('12', players);
+    const mflPhoto = castArticleModel('13', players);
+    expect(def?.mflId).toBe('12');
+    expect(mflPhoto?.mflId).toBe('13');
+    expect(heroModelHasCutout(def!)).toBe(false);
+    expect(heroModelHasCutout(mflPhoto!)).toBe(false);
+    expect(heroModelHasCutout(castArticleModel('10', players)!)).toBe(true);
+  });
+
+  it('is deterministic — no daily rotation, same id in → same model out', () => {
+    expect(castArticleModel('10', players)?.mflId).toBe('10');
+    expect(castArticleModel('10', players)?.mflId).toBe('10');
   });
 });

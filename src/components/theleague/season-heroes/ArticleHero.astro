@@ -5,10 +5,22 @@
  * Shows the most recent matching article from the Schefter feed.
  * Used for waiver pickup reports (Wed night → Thu), weekend previews (Fri),
  * and generic article slots. Falls back to ArticleHeroStub if no match.
+ *
+ * When the matched article names a hero player (`heroPlayerId`, chosen by the
+ * generator from the players graded in the body), the hero renders as a
+ * COMPOSITE — the player's ESPN cutout over their NFL team gradient, following
+ * the player-composites pattern (see docs/claude/insights/features/
+ * player-composites.md). Posts without a compositable hero fall back to the
+ * classic image/text card, so nothing regresses for older feed entries.
  */
 import type { HeroState } from '../../../types/hero-state';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { castArticleModel, heroModelHasCutout } from '../../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import ArticleHeroStub from '../hero-stubs/ArticleHeroStub.astro';
 import feedData from '../../../data/theleague/schefter-feed.json';
 
@@ -58,6 +70,31 @@ const kickerLabels: Record<string, string> = {
 };
 const kicker = kickerLabels[articleType] ?? 'Schefter Report';
 
+// Caption qualifier explaining why this player fronts the story.
+const descriptorLabels: Record<string, string> = {
+  'waiver-pickup': 'Top Pickup',
+  'weekend-preview': 'One to Watch',
+  'generic': 'In the Spotlight',
+};
+const descriptor = descriptorLabels[articleType] ?? 'In the Spotlight';
+
+// Cast the player the article features. Deterministic — the post already named
+// its hero. Null (no id / unknown id) → classic card fallback. A resolved
+// player WITHOUT an ESPN cutout (or a DEF) still composites — his team logo
+// stands in as the art, because swapping in a different player's face would
+// betray the story the article actually tells.
+const seasonYear = getCurrentSeasonYear(state.metadata.referenceDate);
+const model = article
+  ? castArticleModel(article.heroPlayerId, getPlayerMap(seasonYear), descriptor)
+  : null;
+const hasCutout = model ? heroModelHasCutout(model) : false;
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = getNflTeamColors(teamCode);
+const glowDark = hexToRgba(primary, 0.42);
+const glowLight = hexToRgba(primary, 0.22);
+const teamLogo = teamCode ? `/assets/nfl-logos/${teamCode}.svg` : '';
+
 const formattedDate = article
   ? new Date(article.timestamp).toLocaleDateString('en-US', {
       weekday: 'short', month: 'short', day: 'numeric',
@@ -71,6 +108,66 @@ const excerpt = article?.body
 ---
 
 {article ? (
+  model ? (
+    <section
+      class="ahc"
+      style={`--ahc-glow-dark: ${glowDark}; --ahc-glow-light: ${glowLight};`}
+      aria-label={kicker}
+    >
+      <div class="ahc__glow" aria-hidden="true"></div>
+      <div class="ahc__art" aria-hidden="true">
+        {hasCutout && (
+          <img
+            class="ahc__model"
+            src={model.headshot}
+            alt=""
+            loading="eager"
+            decoding="async"
+            onerror="this.style.display='none'; const f=this.parentElement.querySelector('.ahc__model-fallback'); if (f) f.style.display='block';"
+          />
+        )}
+        {teamLogo && (
+          <img
+            class="ahc__model-fallback"
+            src={teamLogo}
+            alt=""
+            loading={hasCutout ? 'lazy' : 'eager'}
+            style={hasCutout ? undefined : 'display: block;'}
+          />
+        )}
+      </div>
+      <span class="ahc__caption">
+        <strong>{model.name}</strong>
+        <span class="ahc__caption-meta">{model.descriptor ? `${model.descriptor} · ` : ''}{model.position} · {teamCode}</span>
+      </span>
+
+      <div class="ahc__content">
+        <div class="ahc__eyebrow">
+          <span class="ahc__pill">{kicker}</span>
+          <span class="ahc__dot" aria-hidden="true">&middot;</span>
+          <time class="ahc__date">{formattedDate}</time>
+        </div>
+        <h3 class="ahc__headline">{article.headline}</h3>
+        <p class="ahc__excerpt">{excerpt}</p>
+        <div class="ahc__footer">
+          {author && avatarUrl && (
+            <div class="ahc__author">
+              <img src={avatarUrl} alt="" class="ahc__avatar" width="24" height="24" />
+              <span class="ahc__author-name">{author.name}</span>
+            </div>
+          )}
+          {article.link && (
+            <a href={article.link} class="ahc__cta">
+              {article.linkLabel ?? 'Read full article'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
+  ) : (
   <section class="article-hero" aria-label={kicker}>
     <div class="article-hero__layout">
       {article.image && (
@@ -110,11 +207,261 @@ const excerpt = article?.body
       </div>
     </div>
   </section>
+  )
 ) : (
   <ArticleHeroStub />
 )}
 
 <style>
+  /* ── Composite variant (article features a player) ─────────────────── */
+  .ahc {
+    /* Light theme (default); dark values applied under html.dark. */
+    --ahc-surface: linear-gradient(115deg, #f4f8fc 0%, #e4eef8 52%, #d2e2f2 100%);
+    --ahc-ink: var(--color-gray-900, #0f1419);
+    --ahc-body: rgba(22, 32, 44, 0.72);
+    --ahc-date: rgba(22, 32, 44, 0.55);
+    --ahc-glow: var(--ahc-glow-light, rgba(28, 73, 124, 0.22));
+    --ahc-shadow: rgba(15, 30, 46, 0.3);
+    --ahc-pill-bg: rgba(28, 73, 124, 0.08);
+    --ahc-pill-border: rgba(28, 73, 124, 0.35);
+    --ahc-pill-ink: var(--color-primary, #1c497c);
+    --ahc-border: rgba(28, 73, 124, 0.18);
+    --ahc-cta: var(--color-primary, #1c497c);
+    /* Caption pill is deliberately theme-invariant — a dark frosted chip over
+       the artwork in both themes (matches FeatureCompositeHero). */
+    --ahc-caption-ink: #ffffff;
+    --ahc-caption-bg: rgba(6, 9, 13, 0.55);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(220px, 22vw, 268px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--ahc-border);
+    background: var(--ahc-surface);
+    color: var(--ahc-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .ahc {
+    --ahc-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+    --ahc-ink: #ffffff;
+    --ahc-body: rgba(255, 255, 255, 0.78);
+    --ahc-date: rgba(255, 255, 255, 0.55);
+    --ahc-glow: var(--ahc-glow-dark, rgba(96, 165, 250, 0.32));
+    --ahc-shadow: rgba(0, 0, 0, 0.5);
+    --ahc-pill-bg: rgba(96, 165, 250, 0.18);
+    --ahc-pill-border: rgba(96, 165, 250, 0.45);
+    --ahc-pill-ink: #a8cdf8;
+    --ahc-border: rgba(255, 255, 255, 0.1);
+    --ahc-cta: #a8cdf8;
+  }
+
+  .ahc__glow {
+    position: absolute;
+    right: -70px;
+    top: -110px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--ahc-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .ahc__art {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(220px, 30vw, 340px);
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .ahc__model {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: bottom;
+    filter: drop-shadow(0 16px 32px var(--ahc-shadow));
+  }
+
+  /* Headshot 404 → team logo silhouette (still the player's team) */
+  .ahc__model-fallback {
+    display: none;
+    width: clamp(120px, 16vw, 190px);
+    height: auto;
+    margin-bottom: clamp(1.5rem, 4vw, 2.75rem);
+    opacity: 0.85;
+    filter: drop-shadow(0 12px 24px var(--ahc-shadow));
+  }
+
+  .ahc__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: var(--ahc-caption-ink);
+    background: var(--ahc-caption-bg);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .ahc__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .ahc__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .ahc__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(30rem, 60%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ahc__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.125rem;
+  }
+
+  .ahc__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ahc-pill-ink);
+    background: var(--ahc-pill-bg);
+    border: 1px solid var(--ahc-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .ahc__dot {
+    color: var(--ahc-date);
+  }
+
+  .ahc__date {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ahc-date);
+  }
+
+  .ahc__headline {
+    /* Explicit — global heading/accent rules must never restyle text on the
+       composite gradient */
+    color: var(--ahc-ink);
+    font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    margin: 0;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+
+  .ahc__excerpt {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--ahc-body);
+    max-width: 42ch;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ahc__footer {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 0.375rem;
+  }
+
+  .ahc__author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--ahc-body);
+  }
+
+  .ahc__avatar {
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+  }
+
+  .ahc__author-name {
+    font-weight: 600;
+  }
+
+  .ahc__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--ahc-cta);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .ahc__cta:hover {
+    gap: 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ahc__cta {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .ahc {
+      min-height: 240px;
+      padding: 1.25rem;
+    }
+
+    .ahc__art {
+      width: 175px;
+      right: -1.25rem;
+      opacity: 0.5;
+    }
+
+    .ahc__caption {
+      display: none;
+    }
+
+    .ahc__content {
+      max-width: 100%;
+    }
+  }
+
+  /* ── Classic card (fallback: no compositable hero player) ──────────── */
   .article-hero {
     background: var(--content-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
@@ -227,6 +574,12 @@ const excerpt = article?.body
   /* No image → single column */
   .article-hero__layout:not(:has(.article-hero__image-wrap)) {
     grid-template-columns: 1fr;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article-hero__cta {
+      transition: none;
+    }
   }
 
   @media (max-width: 640px) {

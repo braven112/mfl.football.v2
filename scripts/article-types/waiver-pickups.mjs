@@ -9,6 +9,7 @@
 import { loadTeams, formatSalary, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
+import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_waiver_pickups_w${String(week).padStart(2, '0')}`,
@@ -24,6 +25,8 @@ export function guardSeason(week, year, now, { completedWeek }) {
 
 export async function buildFactSheet(data, week, year, projectRoot) {
   const players = new Map();
+  // Raw feed records (position + espn_id) for hero-player selection.
+  const playerMeta = new Map();
   for (const p of data.players.players.player) {
     if (p.id) {
       const pos = normalizePosition(p.position);
@@ -33,6 +36,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
         position: pos,
         team: p.team,
       });
+      playerMeta.set(p.id, p);
     }
   }
 
@@ -51,6 +55,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   const claimsByTeam = {};
   let totalSpent = 0;
   let highestBid = { amount: 0, player: '', team: '' };
+  // Scored candidates for the composite hero — the biggest bid gets the face.
+  const heroCandidates = [];
 
   for (const txn of txns) {
     const fid = txn.franchise;
@@ -73,6 +79,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 
     claimsByTeam[fid].claims.push(claim);
     totalSpent += bidAmount;
+    if (playerId) heroCandidates.push({ id: playerId, score: bidAmount });
 
     if (bidAmount > highestBid.amount) {
       highestBid = { amount: bidAmount, player: claim.player, team: teamName };
@@ -109,7 +116,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   lines.push(`Highest single bid: ${formatSalary(highestBid.amount)} for ${highestBid.player} by ${highestBid.team}`);
   lines.push(`Most claims: ${sortedTeams[0]?.[1]?.name} (${sortedTeams[0]?.[1]?.claims.length})`);
 
-  return { factSheet: lines.join('\n'), enrichment: {} };
+  const heroPlayerId = pickHeroPlayer(heroCandidates, playerMeta);
+  return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
 }
 
 export function getSystemPrompt() {
@@ -160,5 +168,8 @@ export function buildPost(aiOutput, enrichment, articleId) {
     league: 'theleague',
     authorId: 'claude',
     content: aiOutput.content,
+    ...(enrichment.heroPlayerId
+      ? { heroPlayerId: enrichment.heroPlayerId, playerIds: [enrichment.heroPlayerId] }
+      : {}),
   };
 }
