@@ -11,18 +11,13 @@ import { useState, useEffect, useRef } from 'react';
 interface TradeDeadlineHeroProps {
   deadlineMidnightPT: string;
   /**
-   * The page's SSR reference instant (honors ?testDate=). When the client's
-   * real clock is far from this instant (test mode), the countdown ticks
-   * against the reference clock instead of Date.now().
+   * Test-mode reference instant — the page's ?testDate= clock. Callers pass
+   * this ONLY when the page was rendered in test mode; when present, the
+   * countdown ticks against this clock instead of Date.now(). Never pass it
+   * in production: the real deadline must be measured on the real clock.
    */
   referenceNowISO?: string;
 }
-
-/**
- * Skew beyond this means the page was rendered with ?testDate= — anything
- * smaller is just SSR-to-hydration latency and the real clock wins.
- */
-const TEST_CLOCK_SKEW_MS = 60_000;
 
 /**
  * Returns ms remaining, or null before mount. The countdown is deliberately
@@ -36,11 +31,8 @@ function useCountdown(targetISO: string, referenceNowISO?: string) {
 
   useEffect(() => {
     const targetMs = new Date(targetISO).getTime();
-    let clockOffset = 0;
-    if (referenceNowISO) {
-      const skew = Date.now() - new Date(referenceNowISO).getTime();
-      if (Math.abs(skew) > TEST_CLOCK_SKEW_MS) clockOffset = skew;
-    }
+    const refMs = referenceNowISO ? new Date(referenceNowISO).getTime() : NaN;
+    const clockOffset = Number.isFinite(refMs) ? Date.now() - refMs : 0;
 
     const tick = () => {
       const diff = targetMs - (Date.now() - clockOffset);
