@@ -53,6 +53,16 @@ function mixHex(a: string, b: string, t: number): string {
   return `#${mix.map(c => c.toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** True only when the URL's actual hostname is ESPN's CDN (or a subdomain) */
+function isEspnCdnUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'espncdn.com' || host.endsWith('.espncdn.com');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolve the transparent-cutout URL for a player, or null when the band
  * must stay gradient-only (DEF, or no ESPN source available).
@@ -60,7 +70,12 @@ function mixHex(a: string, b: string, t: number): string {
 export function resolveCutoutUrl(player: BandPlayer): string | null {
   if ((player.position || '').toUpperCase() === 'DEF') return null;
   const shot = player.headshot || '';
-  if (shot.includes('espncdn.com')) return shot;
+  if (shot) {
+    // A caller-resolved headshot is authoritative: when it isn't an ESPN CDN
+    // URL (e.g. the roster avatar already fell back to the MFL JPG after an
+    // ESPN 404), don't re-derive the known-bad ESPN URL from espnId.
+    return isEspnCdnUrl(shot) ? shot : null;
+  }
   if (player.espnId) {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espnId}.png`;
   }
