@@ -14,6 +14,9 @@
  */
 import { spriteUrl } from '../../utils/sprite-url';
 import ThemeImage from '../ThemeImage.astro';
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
 
 interface Props {
   /** Pill label, e.g. "2026 Keeper Deadline" */
@@ -40,6 +43,9 @@ interface Props {
   /** Player cut-out, e.g. /assets/hero-players/josh.webp */
   player?: string;
   playerAlt?: string;
+  /** Cast composite model — transparent ESPN cutout over a team-color glow
+      with a frosted caption. Takes precedence over `player` when set. */
+  model?: HeroModel | null;
   /** Big countdown value (number of days, or a short string like "LIVE"). */
   countValue?: string | number;
   /** Small caps label under the countdown number. */
@@ -66,11 +72,20 @@ const {
   glow = 'rgba(196,30,58,.6)',
   player,
   playerAlt = '',
+  model = null,
   countValue,
   countLabel,
   bordered = false,
   regionLabel = 'AFL hero',
 } = Astro.props;
+
+// Composite model treatment: the model's NFL team primary color tints the
+// glow behind the cutout (alpha differs per theme — white needs a lighter wash).
+const modelTeamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const modelColors = model ? getNflTeamColors(modelTeamCode) : null;
+const modelGlowLight = modelColors ? hexToRgba(modelColors.primary, 0.22) : '';
+const modelGlowDark = modelColors ? hexToRgba(modelColors.primary, 0.42) : '';
+const modelStyle = model ? `--ev-model-glow-light:${modelGlowLight};--ev-model-glow-dark:${modelGlowDark};` : '';
 
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
 const hasFooter = hasCount || !!link;
@@ -84,12 +99,33 @@ const countAriaLabel = hasCount
 
 <section
   class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered }]}
-  style={`--ev-accent:${accent};--ev-glow:${glow};`}
+  style={`--ev-accent:${accent};--ev-glow:${glow};${modelStyle}`}
   aria-label={regionLabel}
 >
   <span class="afl-event-hero__glow" aria-hidden="true"></span>
 
-  {player && (
+  {model ? (
+    <>
+      <div class="afl-event-hero__model" aria-hidden="true">
+        <span class="afl-event-hero__model-glow"></span>
+        <img
+          class="afl-event-hero__cutout"
+          src={model.headshot}
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          onerror="this.closest('.afl-event-hero').classList.add('afl-event-hero--no-model')"
+        />
+        <img class="afl-event-hero__logo-art afl-event-hero__logo-art--light" src="/assets/logos/afl-logo.svg" alt="" loading="lazy" />
+        <img class="afl-event-hero__logo-art afl-event-hero__logo-art--dark" src="/assets/logos/afl-logo-dark.svg" alt="" loading="lazy" />
+      </div>
+      <span class="afl-event-hero__model-caption">
+        <strong>{model.name}</strong>
+        <span class="afl-event-hero__model-meta">{model.descriptor ? `${model.descriptor} · ` : ''}{model.position} · {modelTeamCode}</span>
+      </span>
+    </>
+  ) : player && (
     <div class="afl-event-hero__player" aria-hidden="true">
       <img src={player} alt={playerAlt} loading="eager" fetchpriority="high" />
       <span class="afl-event-hero__fade afl-event-hero__fade--left"></span>
@@ -239,6 +275,101 @@ const countAriaLabel = hasCount
   .afl-event-hero__fade--bottom {
     background: linear-gradient(0deg, color-mix(in srgb, var(--ev-surface) 50%, transparent) 0%, transparent 42%);
   }
+
+  /* ── Composite model panel (cast player) ── */
+  /* Transparent ESPN cutout over a team-color glow — no fades needed (fades
+     exist to blend rectangular photos; the cutout has no background). */
+  .afl-event-hero {
+    --ev-model-glow: var(--ev-model-glow-light, transparent);
+    --ev-model-shadow: rgba(15, 30, 46, 0.3);
+  }
+  :global(html.dark) .afl-event-hero {
+    --ev-model-glow: var(--ev-model-glow-dark, transparent);
+    --ev-model-shadow: rgba(0, 0, 0, 0.5);
+  }
+  .afl-event-hero__model {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: clamp(240px, 38%, 400px);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .afl-event-hero__model-glow {
+    position: absolute;
+    right: -70px;
+    top: -90px;
+    width: 460px;
+    height: 460px;
+    background: radial-gradient(circle, var(--ev-model-glow) 0%, transparent 65%);
+  }
+  .afl-event-hero__cutout {
+    position: absolute;
+    right: clamp(0.5rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(230px, 28vw, 340px);
+    max-height: 96%;
+    object-fit: contain;
+    object-position: bottom;
+    filter: drop-shadow(0 16px 32px var(--ev-model-shadow));
+  }
+  /* Headshot 404 → hide the cutout + caption, show the AFL logo silhouette
+     (theme pair) so the flank never sits empty. */
+  .afl-event-hero__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 260px);
+    opacity: 0.14;
+  }
+  .afl-event-hero--no-model .afl-event-hero__cutout {
+    display: none;
+  }
+  .afl-event-hero--no-model .afl-event-hero__model-caption {
+    display: none;
+  }
+  .afl-event-hero--no-model .afl-event-hero__logo-art--light {
+    display: block;
+  }
+  :global(html.dark) .afl-event-hero--no-model .afl-event-hero__logo-art--light {
+    display: none;
+  }
+  :global(html.dark) .afl-event-hero--no-model .afl-event-hero__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+  .afl-event-hero__model-caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    /* Always white — the caption sits on its own dark frosted pill in both themes */
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+  .afl-event-hero__model-caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .afl-event-hero__model-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
   /* ── Content ── */
   .afl-event-hero__content {
     position: relative;
@@ -379,6 +510,21 @@ const countAriaLabel = hasCount
     .afl-event-hero__player {
       width: 42%;
       opacity: 0.5;
+    }
+    .afl-event-hero__model {
+      width: 52%;
+      opacity: 0.45;
+    }
+    .afl-event-hero__cutout {
+      width: 200px;
+      right: -1.25rem;
+    }
+    .afl-event-hero__model-caption {
+      display: none;
+    }
+    .afl-event-hero__logo-art {
+      width: 140px;
+      right: -0.75rem;
     }
     .afl-event-hero__fade--left {
       background: linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 75%, transparent) 45%, color-mix(in srgb, var(--ev-surface) 20%, transparent) 100%);

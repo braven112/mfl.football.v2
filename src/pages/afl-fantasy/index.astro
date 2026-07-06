@@ -33,8 +33,9 @@ import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { parseTestDate } from '../../utils/hero-resolver';
 import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
+import { castAflHeroModel } from '../../utils/afl-hero-casting';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
-import { getCurrentSeasonYear, getLaborDayForYear } from '../../utils/league-year';
+import { getAflLeagueYear, getCurrentSeasonYear, getLaborDayForYear } from '../../utils/league-year';
 import {
   getAFLPreference,
   setAFLPreference,
@@ -141,6 +142,31 @@ const record = recordParts.length === 3 && recordParts.every(Number.isFinite)
   : undefined;
 
 const inSeasonVariant = heroState.kind === 'regular-season' || heroState.kind === 'playoffs' || heroState.kind === 'championship';
+
+// ── Hero composite casting ──────────────────────────────────────────────────
+// Attach the cast player model to the hero view (composite ESPN cutout over
+// team-color treatment). Every state casts a semantically relevant player;
+// null (missing feeds) falls back to the existing webp art inside the hero.
+// The standings leader personalizes the Monday standings slot.
+const standingsLeaderId = standingsFranchises.length
+  ? [...standingsFranchises].sort((a: any, b: any) => {
+      const pct = (f: any) => {
+        const [w, l, t] = (f.h2hwlt ?? '').split('-').map((n: string) => parseInt(n, 10));
+        const games = (w || 0) + (l || 0) + (t || 0);
+        return games ? ((w || 0) + (t || 0) * 0.5) / games : 0;
+      };
+      return pct(b) - pct(a) || parseFloat(b.pf || '0') - parseFloat(a.pf || '0');
+    })[0]?.id
+  : undefined;
+
+if ('view' in heroState) {
+  heroState.view.model = castAflHeroModel(heroState, {
+    referenceDate: effectiveDate,
+    leagueYear: getAflLeagueYear(effectiveDate),
+    userFranchiseId,
+    standingsLeaderId,
+  });
+}
 
 // ── Schefter feed ───────────────────────────────────────────────────────────
 const feed = feedData as FeedType;

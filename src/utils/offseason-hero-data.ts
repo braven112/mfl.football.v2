@@ -14,6 +14,7 @@ import { getCurrentSeasonYear } from './league-year';
 import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
 import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
 // ── JSON Data Loaders ──
 
@@ -27,6 +28,15 @@ function readJsonFile(relativePath: string): any {
   }
 }
 
+/**
+ * Repo-relative path to a synced MFL feed file for a league year. League data
+ * roots come from the league registry — never hardcode 'data/theleague' etc.
+ */
+function feedPath(league: CanonicalLeagueSlug, leagueYear: number, file: string): string {
+  const dataPath = getLeagueBySlug(league)?.dataPath ?? 'data/theleague';
+  return `${dataPath}/mfl-feeds/${leagueYear}/${file}`;
+}
+
 // ── Rostered Player IDs ──
 
 /**
@@ -35,8 +45,11 @@ function readJsonFile(relativePath: string): any {
  * the Redis roster cache is fresher but unavailable in local dev, and
  * salary-file data can lag for recent pickups (rookies especially).
  */
-export function getRosteredPlayerIds(leagueYear: number): Set<string> {
-  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+export function getRosteredPlayerIds(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Set<string> {
+  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
   const ids = new Set<string>();
   const franchises = rosterData?.rosters?.franchise;
   if (!franchises) return ids;
@@ -53,6 +66,27 @@ export function getRosteredPlayerIds(leagueYear: number): Set<string> {
   return ids;
 }
 
+/** Map of rostered playerId → owning franchiseId, from the rosters feed. */
+function getOwnerByPlayer(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Map<string, string> {
+  const ownerByPlayer = new Map<string, string>();
+  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
+  const franchises = rosterData?.rosters?.franchise;
+  for (const franchise of franchises ? (Array.isArray(franchises) ? franchises : [franchises]) : []) {
+    const players = Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : [];
+    for (const p of players) {
+      if (p?.id) ownerByPlayer.set(p.id, franchise.id);
+    }
+  }
+  return ownerByPlayer;
+}
+
 // ── Franchise Headliners ──
 
 /**
@@ -63,11 +97,19 @@ export function getRosteredPlayerIds(leagueYear: number): Set<string> {
  */
 export function getFranchiseHeadliners(
   leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
 ): Array<{ playerId: string; franchiseId: string }> {
-  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
   const franchises = rosterData?.rosters?.franchise;
   if (!franchises) return [];
-  const projections = getProjectionMap(leagueYear);
+  const projections = getProjectionMap(leagueYear, league);
+  const playerMap = getUnifiedPlayerMap(leagueYear);
+  // ADP rank is the deep tie-break: in a league year whose projections feed is
+  // dead (post-season Feb–May) and whose rosters carry no salaries (AFL),
+  // score and salary are 0 for everyone and a bare id tie-break degenerates to
+  // "lowest MFL id" — each team's DEF. ADP keeps the pick a real headliner.
+  const adpRank = new Map<string, number>();
+  getAdpRankedIds(leagueYear, league).forEach((id, i) => adpRank.set(id, i));
 
   const headliners: Array<{ playerId: string; franchiseId: string }> = [];
   for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
@@ -76,21 +118,25 @@ export function getFranchiseHeadliners(
       : franchise.player
         ? [franchise.player]
         : [];
-    let best: { playerId: string; score: number; salary: number } | null = null;
+    let best: { playerId: string; score: number; salary: number; rank: number } | null = null;
     for (const p of players) {
       if (!p?.id || (p.status && p.status !== 'ROSTER')) continue;
+      // A headliner is a player, never a team DEF (and DEF can't composite).
+      if (playerMap.get(p.id)?.position === 'DEF') continue;
       const score = projections.get(p.id) ?? 0;
       const salary = parseFloat(p.salary || '0') || 0;
-      // Score, then salary, then player id — the id tie-break keeps the pick
-      // stable when a franchise has two players with equal projection+salary
-      // (e.g. before projections publish), regardless of roster feed order.
+      const rank = adpRank.get(p.id) ?? Number.MAX_SAFE_INTEGER;
+      // Score, then salary, then ADP rank, then player id — the trailing
+      // tie-breaks keep the pick stable and meaningful when projections
+      // and/or salaries are empty, regardless of roster feed order.
       if (
         !best ||
         score > best.score ||
         (score === best.score && salary > best.salary) ||
-        (score === best.score && salary === best.salary && p.id < best.playerId)
+        (score === best.score && salary === best.salary && rank < best.rank) ||
+        (score === best.score && salary === best.salary && rank === best.rank && p.id < best.playerId)
       ) {
-        best = { playerId: p.id, score, salary };
+        best = { playerId: p.id, score, salary, rank };
       }
     }
     if (best) headliners.push({ playerId: best.playerId, franchiseId: franchise.id });
@@ -113,8 +159,11 @@ export interface KickoffGame {
  * kickoff-headliner hero casting rule: "the best player starting in the
  * earliest game of the week."
  */
-export function getKickoffGame(leagueYear: number): KickoffGame | null {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/nflSchedule.json`);
+export function getKickoffGame(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): KickoffGame | null {
+  const data = readJsonFile(feedPath(league, leagueYear, 'nflSchedule.json'));
   const matchups = data?.nflSchedule?.matchup;
   if (!matchups) return null;
 
@@ -146,26 +195,15 @@ export function getKickoffGame(leagueYear: number): KickoffGame | null {
  */
 export function getKickoffGameCandidates(
   leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
 ): Array<{ playerId: string; franchiseId: string; score: number }> {
-  const game = getKickoffGame(leagueYear);
+  const game = getKickoffGame(leagueYear, league);
   if (!game) return [];
 
-  const projections = getProjectionMap(leagueYear);
+  const projections = getProjectionMap(leagueYear, league);
   const playerMap = getUnifiedPlayerMap(leagueYear);
 
-  const ownerByPlayer = new Map<string, string>();
-  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
-  const franchises = rosterData?.rosters?.franchise;
-  for (const franchise of franchises ? (Array.isArray(franchises) ? franchises : [franchises]) : []) {
-    const players = Array.isArray(franchise.player)
-      ? franchise.player
-      : franchise.player
-        ? [franchise.player]
-        : [];
-    for (const p of players) {
-      if (p?.id) ownerByPlayer.set(p.id, franchise.id);
-    }
-  }
+  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
 
   const codes = new Set(game.teamCodes);
   const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
@@ -191,8 +229,11 @@ export function getKickoffGameCandidates(
  * Player IDs in dynasty-ADP order (best consensus rank first), from the MFL
  * ADP feed on disk. Drives "best available free agent" hero casting.
  */
-export function getAdpRankedIds(leagueYear: number): string[] {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/adp-dynasty.json`);
+export function getAdpRankedIds(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): string[] {
+  const data = readJsonFile(feedPath(league, leagueYear, 'adp-dynasty.json'));
   const list = data?.adp?.player;
   if (!list) return [];
   const players = Array.isArray(list) ? list : [list];
@@ -200,6 +241,60 @@ export function getAdpRankedIds(leagueYear: number): string[] {
     .filter((p: any) => p?.id && Number.isFinite(parseFloat(p.averagePick)))
     .sort((a: any, b: any) => parseFloat(a.averagePick) - parseFloat(b.averagePick))
     .map((p: any) => p.id);
+}
+
+// ── Trade Bait ──
+
+/**
+ * Players currently listed on trade blocks, with their owning franchise.
+ * The synced tradeBait feed is a flat array of player ids (the fetch script
+ * pre-processes MFL's response); ownership comes from the rosters feed.
+ * Drives "on the block" hero casting for trade-window states.
+ */
+export function getTradeBaitCandidates(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Array<{ playerId: string; franchiseId: string }> {
+  const data = readJsonFile(feedPath(league, leagueYear, 'tradeBait.json'));
+  if (!Array.isArray(data)) return [];
+
+  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  return data
+    .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+    .map((playerId: string) => ({
+      playerId,
+      franchiseId: ownerByPlayer.get(playerId) ?? '',
+    }))
+    // A block listing for a player no longer rostered is stale — drop it.
+    .filter((c) => c.franchiseId !== '');
+}
+
+// ── Weekly Top Scorers ──
+
+/**
+ * Scored candidates from the current playerScores feed (the most recent
+ * scored week): every ROSTERED player with a positive score, tagged with the
+ * franchise that owns him. Drives "week's top scorer" hero casting for the
+ * recap slot. Empty out of season (the feed carries week 0 with no scores).
+ */
+export function getWeeklyTopScorerCandidates(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Array<{ playerId: string; franchiseId: string; score: number }> {
+  const data = readJsonFile(feedPath(league, leagueYear, 'playerScores.json'));
+  const list = data?.playerScores?.playerScore;
+  if (!list) return [];
+
+  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  const scores = Array.isArray(list) ? list : [list];
+  const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  for (const ps of scores) {
+    const score = parseFloat(ps?.score || '');
+    const franchiseId = ps?.id ? ownerByPlayer.get(ps.id) : undefined;
+    if (!ps?.id || !franchiseId || !Number.isFinite(score) || score <= 0) continue;
+    candidates.push({ playerId: ps.id, franchiseId, score });
+  }
+  return candidates;
 }
 
 // ── Championship Result ──
@@ -291,8 +386,11 @@ interface CutCandidateRaw {
 /**
  * Get projected scores as a Map<playerId, score>.
  */
-function getProjectionMap(leagueYear: number): Map<string, number> {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/projectedScores.json`);
+function getProjectionMap(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Map<string, number> {
+  const data = readJsonFile(feedPath(league, leagueYear, 'projectedScores.json'));
   const map = new Map<string, number>();
   if (!data?.projectedScores?.playerScore) return map;
 
