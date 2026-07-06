@@ -44,21 +44,26 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
 /**
  * Entries whose screenshots are staged by hand — a blind capture of the
  * entry's link shoots a sign-in screen, an unpopulated analytics page, or
- * the wrong scroll position. Skipped unless named explicitly on the CLI.
+ * the wrong scroll position (exactly what the 2026-07-06 backfill did
+ * before this list existed). Skipped in bulk runs; naming one explicitly
+ * on the CLI captures it anyway — that's a deliberate act, and the staging
+ * notes below make it reproducible:
  *
- * - submit-lineup / tip-schefter-gets-louder / mock-draft: auth-gated pages
- * - owner-activity / afl-owner-activity: analytics only populate in prod
- *   (locally, append ?mock=true for a staged capture)
- * - afl-trophy-wall: needs a franchise profile scrolled to the trophy wall
+ * - auth-gated pages: mint a session via a temporary DEV-only route
+ * - analytics pages: append ?mock=true locally for a staged capture
+ * - afl-trophy-wall: scroll a franchise profile to the trophy wall
+ *
+ * Values are the per-entry reason, shown when a bulk --force run skips one.
+ * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
-const MANUAL_CAPTURE_ONLY = new Set([
-  'submit-lineup',
-  'tip-schefter-gets-louder',
-  'mock-draft',
-  'owner-activity',
-  'afl-owner-activity',
-  'afl-trophy-wall',
-]);
+const MANUAL_CAPTURE_ONLY = {
+  'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
+  'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
+  'mock-draft': 'sign-in gate replaces the draft config UI',
+  'afl-trophy-wall': 'hand-staged scroll to a franchise trophy wall',
+  'owner-activity': 'analytics only populate in prod — dev shows the empty state',
+  'afl-owner-activity': 'analytics only populate in prod — dev shows the empty state',
+};
 
 /**
  * Per-entry page setup hooks.
@@ -120,7 +125,12 @@ async function main() {
     if (!e.image) return false; // must have image field set in JSON
     if (hasTargets && !targetSet.has(e.id)) return false;
     // Manual-capture entries only run when explicitly named on the CLI
-    if (!hasTargets && MANUAL_CAPTURE_ONLY.has(e.id)) return false;
+    if (!hasTargets && MANUAL_CAPTURE_ONLY[e.id]) {
+      if (force) {
+        console.log(`  [${e.id}] SKIPPED (manual capture only): ${MANUAL_CAPTURE_ONLY[e.id]}`);
+      }
+      return false;
+    }
     if (force) return true;
     // Capture if either half of the theme pair is missing OR stale
     // (json was updated more recently than the screenshot)
@@ -144,7 +154,7 @@ async function main() {
   if (!hasTargets) {
     const missingManual = entries.filter(
       (e) =>
-        MANUAL_CAPTURE_ONLY.has(e.id) &&
+        MANUAL_CAPTURE_ONLY[e.id] &&
         SCREENSHOT_CATEGORIES.includes(e.category) &&
         e.image &&
         !existsSync(resolve(ASSETS_DIR, e.image)),
