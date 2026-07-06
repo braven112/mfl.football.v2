@@ -283,3 +283,70 @@ soft; `.fch__art` does this and says so in a comment.
 **Recommendation:** Prefer `heroArt` over inventing new player-casting rules
 whenever the announcement's subject is an image or object rather than a
 feature people use.
+## Playoff round heroes (shipped 2026-07-05)
+
+The playoff standings slot is no longer one static bracket — it's **three
+round-shaped composite heroes** that escalate as the bracket narrows. Which one
+shows is chosen from bracket completion, not a hardcoded week:
+
+| Round | Week | Component | Shape |
+|-------|------|-----------|-------|
+| Wild Card | 15 | `WildCardHero.astro` | 3 game cards (per-team projected total) + the round's **highest-projected team's** headliner as the crested composite |
+| Semifinals | 16 | `SemifinalHero.astro` | one hero, **both games / four players** — two franchise-colored pairs split by a seam, a Proj/Record stat row under each |
+| Championship | 17 | `ChampionshipHero.astro` | 2-up dark-gold spotlight + trophy + full comparison table (seed · record · points-for · proj) |
+
+**Data layer** — `src/utils/hero-data/playoff-round-data.ts`:
+- `assembleRoundView(bracketSummary, deps)` is **pure** (deps injected) — picks
+  the current round (earliest round week with an unplayed game; else the final
+  round lingers), classifies it by game count (3+ → wild-card, 2 → semifinals,
+  1 → championship), resolves each team, and for wild-card selects the featured
+  team (highest projected with a compositable headliner). 14 unit tests in
+  `tests/playoff-round-data.test.ts`.
+- `buildPlayoffRoundView(...)` is the SSR wrapper that gathers deps from the
+  feeds/config. Projected total = each franchise's **top-9 rostered
+  projections** (`getFranchiseProjectedTotals` in `offseason-hero-data.ts`,
+  TheLeague starts 9); record + points-for from the standings feed.
+
+**Wiring** — `index.astro` runs the bracket block for `phase === 'playoffs'`
+**and** `phase === 'championship'` (standings slot), builds `roundView`, and
+hangs it on `playoffProps.roundView`. `SeasonDailyHero` renders
+`PlayoffRoundHero` (dispatcher) when the view is present, falling back to the
+legacy `PlayoffBracketHero` list, then to `StandingsCompositeHero`.
+
+**Styling** — one global sheet `src/styles/playoff-round-hero.css` (`--prh-*`
+tokens, plain `html.dark`, never `:global()` since it's not a scoped block). The
+composite panels + player cutouts are inherently dark in both themes; only the
+outer chrome (surface, cards, stat rows, ink) re-tokenizes. The championship
+keeps its dark-gold spotlight in **both** themes on purpose.
+
+**Casting rule:** playoff teams are franchise-branded (crest + team color), never
+NFL-logo'd — the hero is about the fantasy matchup, and the teams are rostered by
+definition. Signed-in owner's game gets an accent ring; the featured wild-card
+face is whoever projects highest that week (guests and owners see the same slate).
+
+**Three gotchas that ate a full session (worth the future-session tax):**
+1. **Feeds that change under a running dev server: read with `fs.readFileSync`,
+   not `await import()`.** Vite caches the JSON module and (in a worktree, where
+   the file watcher is flaky) never invalidates it — the page silently serves a
+   pre-edit copy across restarts *and* a `.vite` cache clear. Symptom here:
+   `buildSeedMaps` saw `seedKeys: []` because the imported standings lacked the
+   seeds that were on disk. The hero-data helpers already used `readJsonFile`
+   (fs) and were always fresh; `index.astro`'s playoff block was the lone
+   `await import` and the only stale reader. Match the fs pattern for any feed
+   that a cron/sync (or a demo seed) rewrites.
+2. **`getCurrentSeasonYear(referenceDate)` is NON-MONOTONIC across the Dec→Jan
+   boundary** — it mixes the env-pinned real "now" with the arg, so a
+   `?testDate` of Dec-21-2026 resolved to **2027** while Jan-4-2027 resolved to
+   **2026**. That split the three playoff rounds across two season-year folders
+   and only the championship (Jan) found the seeded data. For the playoff data
+   loader use the **no-arg** `getCurrentSeasonYear()` (env-pinned, consistent
+   for every request); the phase machine still keys off the testDate. Do NOT
+   "fix" it to be testDate-aware.
+3. **`buildSeedMaps` reads an explicit numeric `seed` field off each standings
+   franchise**, and `championshipSeeds` only keeps `seed <= 7`. Historical
+   seasons' standings feeds often lack `seed` entirely, so a bracket whose
+   wild-card games reference `seed` refs resolves to `Seed N` placeholders while
+   later rounds (real `franchise_id` refs) resolve fine. Seed as a JSON *number*
+   (the map key is numeric; `ref.seed` is `toNumber`'d — a string key silently
+   misses).
+

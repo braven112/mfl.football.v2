@@ -58,6 +58,19 @@ function resolveRef(
         icon: team.icon,
       };
     }
+    // The seed map has no entry for this seed — common when the standings feed
+    // omits the `seed` field (most completed seasons). Played/known games carry
+    // the actual franchise on the ref too, so resolve from that instead of
+    // falling back to a "Seed N" placeholder; keep the seed for the chip.
+    if (ref.franchise_id) {
+      const teamInfo = allTeamsMap.get(ref.franchise_id);
+      return {
+        franchiseId: ref.franchise_id,
+        seed: ref.seed,
+        displayName: teamInfo?.name ?? ref.franchise_id,
+        icon: teamInfo?.icon,
+      };
+    }
     return { seed: ref.seed, displayName: `Seed ${ref.seed}` };
   }
 

@@ -26,6 +26,8 @@ import { getPlayerMap } from '../../utils/player-map';
 import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
+import { buildPlayoffRoundView } from '../../utils/hero-data/playoff-round-data';
+import fs from 'node:fs';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import { SALARY_YEARS } from '../../utils/salary-calculations';
@@ -445,12 +447,16 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
   } catch { /* live scoring is best-effort */ }
 }
 
-// Fetch playoff bracket data when slot is 'standings' during playoffs
-if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
+// Fetch playoff bracket data when slot is 'standings' during the playoff rounds
+// (Weeks 15-16) or championship week (Week 17). The round hero picks the live
+// round from bracket completion; the legacy bracket list is the fallback.
+if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && heroState.slot === 'standings') {
   try {
     const seasonYear = getCurrentSeasonYear();
-    const bracketFeed = await import(`../../../data/theleague/mfl-feeds/${seasonYear}/playoff-brackets.json`);
-    const feedData = bracketFeed.default ?? bracketFeed;
+    // Read the feeds from disk (not `await import`) so live feed updates aren't
+    // masked by Vite's JSON module cache — matches the readJsonFile pattern used
+    // across the hero-data helpers, and keeps dev + prod reading the same bytes.
+    const feedData = JSON.parse(fs.readFileSync(`data/theleague/mfl-feeds/${seasonYear}/playoff-brackets.json`, 'utf8'));
     const champRaw = feedData?.brackets?.['1'];
 
     if (champRaw) {
@@ -458,8 +464,7 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
 
       if (champBracket) {
         // Build standings + seed maps for resolving bracket references
-        const standingsFeed = await import(`../../../data/theleague/mfl-feeds/${seasonYear}/standings.json`);
-        const standingsData = standingsFeed.default ?? standingsFeed;
+        const standingsData = JSON.parse(fs.readFileSync(`data/theleague/mfl-feeds/${seasonYear}/standings.json`, 'utf8'));
         const franchiseList = standingsData?.leagueStandings?.franchise
           ? Array.isArray(standingsData.leagueStandings.franchise)
             ? standingsData.leagueStandings.franchise
@@ -490,11 +495,32 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
           ? isEliminated(userFranchiseId, champBracket)
           : undefined;
 
+        // Resolve the live round to the composite round-hero shape (wild card /
+        // semifinals / championship). Falls back to the bracket list if null.
+        let roundView = null;
+        try {
+          const teamAssets = new Map(
+            allTeams.map((t: any) => [
+              t.franchiseId,
+              { name: t.name, nameMedium: t.nameMedium, nameShort: t.nameShort, abbrev: t.abbrev },
+            ]),
+          );
+          roundView = buildPlayoffRoundView({
+            seasonYear,
+            bracketSummary,
+            standingsFranchises: franchiseList,
+            teamAssets,
+            userFranchiseId,
+            currentWeek: heroState.metadata.week,
+          });
+        } catch { /* round view is optional — falls back to bracket list */ }
+
         heroState.playoffProps = {
           leagueYear: seasonYear,
           userFranchiseId,
           userIsEliminated: userEliminated,
           bracketSummary,
+          roundView,
         };
       }
     }

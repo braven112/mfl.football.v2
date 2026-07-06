@@ -8,6 +8,7 @@
 
 import type { HeroContent } from './whats-new';
 import type { LeagueEventView } from '../utils/league-event-hero-view';
+import type { PlayoffRoundView } from '../utils/hero-data/playoff-round-data';
 
 /** The 14 season phases that drive hero selection */
 export type SeasonPhase =
@@ -148,6 +149,12 @@ export interface HeroState {
     userFranchiseId?: string;
     userIsEliminated?: boolean;
     bracketSummary: PlayoffBracketSummaryGame[];
+    /**
+     * The current playoff round resolved to the round-hero shape (wild card /
+     * semifinals / championship). When present, SeasonDailyHero renders the
+     * composite round hero; otherwise it falls back to the legacy bracket list.
+     */
+    roundView?: PlayoffRoundView | null;
   };
   /** Metadata for debugging and display */
   metadata: {
