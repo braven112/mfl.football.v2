@@ -11,6 +11,19 @@ entries for gotchas that have bitten us and would bite a future session too.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
 
+## Local env — `vercel env pull`, and worktrees don't inherit it
+
+Server code reads `process.env` (auth JWT, every Upstash storage util), but
+Vite only exposes `.env` files to `import.meta.env` — `astro.config.ts`
+bridges the gap by hydrating `process.env` from `.env` / `.env.local` at
+startup (real env always wins). Without a valid `.env.local`, local dev gets
+a random JWT secret per restart and KV-backed writes fail (drafts POST →
+503/500). Refresh with `pnpm dlx vercel env pull` in the repo root, and
+**copy `.env` + `.env.local` into each worktree** — they're untracked, so
+worktrees start without them. Gotcha from July 2026: a stale pre-migration
+`.env.local` pointed at a deleted KV host (`ENOTFOUND …upstash.io`) — if a
+Redis error names a host that's NXDOMAIN, re-pull the env.
+
 ## Feature flags — code, not GitHub Actions variables
 
 Do not introduce new `vars.*` references in workflows as feature gates

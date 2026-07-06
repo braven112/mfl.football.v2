@@ -9,6 +9,7 @@ import type {
   TradeSubmissionState,
 } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
+import TradeCompositeStrip, { isCompositableTradePlayer } from './TradeCompositeStrip';
 
 interface Props {
   teamA: TradeBuilderTeam;
@@ -60,6 +61,14 @@ export default function TradeConfirmationModal({
   const userIsTeamB = userFranchiseId === teamB.franchiseId;
   const userIsPartOfTrade = userIsTeamA || userIsTeamB;
   const userTeam = userIsTeamA ? teamA : userIsTeamB ? teamB : null;
+
+  // Headline player per side = the first player asset in each package
+  // (mirrors the feed's received-side-first playerIds convention). The strip
+  // itself skips sides whose headline is a DEF or lacks an ESPN cutout, and
+  // renders nothing when neither side composites.
+  const headlineA = teamAPlayers[0];
+  const headlineB = teamBPlayers[0];
+  const hasHero = isCompositableTradePlayer(headlineA) || isCompositableTradePlayer(headlineB);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -199,6 +208,18 @@ export default function TradeConfirmationModal({
             <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
+
+        {hasHero && (
+          <div className="tcm-hero">
+            <TradeCompositeStrip
+              left={headlineA}
+              right={headlineB}
+              leftLabel={teamA.abbrev || teamA.nameShort}
+              rightLabel={teamB.abbrev || teamB.nameShort}
+              size="tall"
+            />
+          </div>
+        )}
 
         <div className="tcm-body">
           <h2 id="tcm-title" className="tcm-title">Confirm Trade Proposal</h2>
@@ -342,6 +363,14 @@ export default function TradeConfirmationModal({
           from { opacity: 0; transform: scale(0.97) translateY(6px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
+        .tcm-hero {
+          flex-shrink: 0;
+          border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+          overflow: hidden;
+        }
+        .tcm-hero .tcs { border-radius: 0; }
+        /* Keep the right panel's chip clear of the absolute close button */
+        .tcm-hero .tcs__chip--right { right: 3rem; }
         .tcm-close {
           position: absolute;
           top: 0.75rem;
@@ -356,7 +385,7 @@ export default function TradeConfirmationModal({
           justify-content: center;
           cursor: pointer;
           color: var(--color-gray-500, #6b7280);
-          z-index: 1;
+          z-index: 5;
         }
         .tcm-close:hover { background: var(--color-gray-200, #e5e7eb); }
         .tcm-close:focus-visible {

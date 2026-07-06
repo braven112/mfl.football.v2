@@ -1,7 +1,18 @@
 import './src/utils/ensure-pt-timezone';
 import { defineConfig, fontProviders } from 'astro/config';
+import { loadEnv } from 'vite';
 import vercel from '@astrojs/vercel';
 import react from '@astrojs/react';
+
+// Local dev: hydrate process.env from .env / .env.local (`pnpm vercel env pull`).
+// Vite only exposes those files to import.meta.env, but the server utils
+// (auth/session, every Upstash-backed storage module) read process.env — without
+// this, local dev gets a random JWT secret per restart and KV writes 503.
+// Real environment variables always win; on Vercel the files don't exist, no-op.
+const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
+for (const [key, value] of Object.entries(fileEnv)) {
+  process.env[key] ??= value;
+}
 
 export default defineConfig({
   output: 'server',

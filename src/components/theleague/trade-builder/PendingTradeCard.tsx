@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import type { PendingTrade, TradeBuilderTeam } from '../../../types/trade-builder';
+import React, { useMemo, useState } from 'react';
+import type { PendingTrade, TradeBuilderTeam, TradeBuilderPlayer } from '../../../types/trade-builder';
 import { parseAssets, formatPickCode, formatRelativeTime } from '../../../utils/trade-asset-parsing';
 import { chooseTeamName } from '../../../utils/team-names';
+import TradeCompositeStrip from './TradeCompositeStrip';
 
 interface Props {
   trade: PendingTrade;
@@ -57,13 +58,30 @@ export default function PendingTradeCard({
     }
   };
 
-  const resolvePlayerName = (playerId: string): string => {
+  // Flat id → player lookup, built once per allTeams change. A player is on
+  // exactly one roster, so first-writer-wins matches the old linear scan while
+  // making every resolvePlayer call O(1) instead of O(teams × players).
+  const playerById = useMemo(() => {
+    const map = new Map<string, TradeBuilderPlayer>();
     for (const team of allTeams) {
-      const player = team.players.find(p => p.id === playerId);
-      if (player) return player.name;
+      for (const player of team.players) {
+        if (!map.has(player.id)) map.set(player.id, player);
+      }
     }
-    return `Unknown Player (${playerId})`;
-  };
+    return map;
+  }, [allTeams]);
+
+  const resolvePlayer = (playerId: string): TradeBuilderPlayer | undefined =>
+    playerById.get(playerId);
+
+  const resolvePlayerName = (playerId: string): string =>
+    resolvePlayer(playerId)?.name ?? `Unknown Player (${playerId})`;
+
+  // Headline player per side = the first player asset (mirrors the feed's
+  // received-side-first playerIds convention). The strip skips a side whose
+  // headline is a DEF, a draft pick, or lacks a transparent ESPN cutout.
+  const receiveHeadline = receiveParsed.playerIds.length > 0 ? resolvePlayer(receiveParsed.playerIds[0]) : undefined;
+  const giveHeadline = giveParsed.playerIds.length > 0 ? resolvePlayer(giveParsed.playerIds[0]) : undefined;
 
   const teamDisplayName = counterpartyTeam
     ? chooseTeamName({
@@ -115,6 +133,14 @@ export default function PendingTradeCard({
         </div>
         <span className="ptc-timestamp">{formatRelativeTime(trade.timestamp)}</span>
       </div>
+
+      <TradeCompositeStrip
+        left={receiveHeadline}
+        right={giveHeadline}
+        leftLabel="You receive"
+        rightLabel="You give"
+        size="compact"
+      />
 
       <div className="ptc-assets-grid">
         {renderAssetList(receiveParsed, 'You receive', 'ptc-assets-label--receive')}
