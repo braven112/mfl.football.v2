@@ -476,3 +476,28 @@ h1: Page title
 **Also:** Don't trust a loading-state audit's category at face value. `loading-inventory.md` listed this shimmer as a "skeleton loader" to migrate to the shared `Skeleton`. It's actually a live/active-state indicator (§8 "Explicitly NOT loading"), not a loader — swapping in `Skeleton` would have broken live scoring. Verify against the rendered behavior before migrating.
 
 **Evidence:** PR #291. The `transition: none` line was a Copilot review catch the initial `animation: none`-only guard missed.
+
+## 2026-07-06 - `.visually-hidden` Was Documented Everywhere but Defined Nowhere
+
+**Context:** The draft-room pick-reveal splash made picks a live on-screen moment, which surfaced that the room's aria-live pick announcement (`<div class="visually-hidden" role="status" aria-live="polite">`) rendered as **visible page text** whenever a pick landed. The class is used across the codebase (DraftRoom, TradeBuilder, PendingTradesPanel, NavFooter, NavDrawer, dead-money, salary-history, lineup, AFL assets) and this file documents it as the standard SR-only pattern — but **no `.visually-hidden` CSS rule existed in any stylesheet**. Every one of those regions has been silently visible when it fires; most just fire rarely (or hold empty text), so nobody noticed.
+
+**Insight:** A utility class referenced in docs and markup is not evidence it exists. Grep for the *rule* (`\.visually-hidden\s*{`), not the class name, before relying on it — the class-name grep returns dozens of confident-looking usages that are all consumers, no provider.
+
+**Pattern (now in `src/styles/draft-room.css`, scoped `.draft-room .visually-hidden`):**
+```css
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+```
+
+**Recommendation:** The scoped draft-room fix covers only that surface. The remaining consumers need either per-surface scoped copies or one shared global utility (background task spawned 2026-07-06). Until that lands, any NEW aria-live region must ship its own rule.
+
+**Evidence:** Playwright screenshot of the draft room after a simulated pick: "Pick 1.03: Cowboy Up selects Jeremiyah Love, RB" rendered as plain text above the timer banner. Fixed in the pick-reveal splash PR.
