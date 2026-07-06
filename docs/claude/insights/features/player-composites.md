@@ -296,6 +296,32 @@ NFL-logo'd — the hero is about the fantasy matchup, and the teams are rostered
 definition. Signed-in owner's game gets an accent ring; the featured wild-card
 face is whoever projects highest that week (guests and owners see the same slate).
 
+**Three gotchas that ate a full session (worth the future-session tax):**
+1. **Feeds that change under a running dev server: read with `fs.readFileSync`,
+   not `await import()`.** Vite caches the JSON module and (in a worktree, where
+   the file watcher is flaky) never invalidates it — the page silently serves a
+   pre-edit copy across restarts *and* a `.vite` cache clear. Symptom here:
+   `buildSeedMaps` saw `seedKeys: []` because the imported standings lacked the
+   seeds that were on disk. The hero-data helpers already used `readJsonFile`
+   (fs) and were always fresh; `index.astro`'s playoff block was the lone
+   `await import` and the only stale reader. Match the fs pattern for any feed
+   that a cron/sync (or a demo seed) rewrites.
+2. **`getCurrentSeasonYear(referenceDate)` is NON-MONOTONIC across the Dec→Jan
+   boundary** — it mixes the env-pinned real "now" with the arg, so a
+   `?testDate` of Dec-21-2026 resolved to **2027** while Jan-4-2027 resolved to
+   **2026**. That split the three playoff rounds across two season-year folders
+   and only the championship (Jan) found the seeded data. For the playoff data
+   loader use the **no-arg** `getCurrentSeasonYear()` (env-pinned, consistent
+   for every request); the phase machine still keys off the testDate. Do NOT
+   "fix" it to be testDate-aware.
+3. **`buildSeedMaps` reads an explicit numeric `seed` field off each standings
+   franchise**, and `championshipSeeds` only keeps `seed <= 7`. Historical
+   seasons' standings feeds often lack `seed` entirely, so a bracket whose
+   wild-card games reference `seed` refs resolves to `Seed N` placeholders while
+   later rounds (real `franchise_id` refs) resolve fine. Seed as a JSON *number*
+   (the map key is numeric; `ref.seed` is `toNumber`'d — a string key silently
+   misses).
+
 ## Future Directions (mocked, not built)
 
 Cut-watch urgent hero already ships (see #3); remaining mock ideas: compact
