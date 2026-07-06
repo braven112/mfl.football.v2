@@ -3,11 +3,13 @@
  * PlayerDetailsModal — Refined editorial player profile
  *
  * Information hierarchy:
- * 1. Hero identity (name, team, position, age)
+ * 1. Hero identity band — team-color composite (gradient + ghost wordmark +
+ *    ESPN cutout via player-modal-band; gradient-only for DEF / MFL-JPG-only)
  * 2. Key metrics strip (points, PPG, contract)
  * 3. Weekly results (game-by-game performance)
  * 4. Supporting details (physical, status, draft, contract breakdown)
  */
+import '../../styles/player-modal-band.css';
 
 export interface Props {
   class?: string;
@@ -30,25 +32,25 @@ const { class: className, hideContract = false } = Astro.props;
       </svg>
     </button>
 
-    <div class="pdm-body">
-      <!-- Hero Profile -->
-      <div class="pdm-hero">
-        <div class="pdm-hero__avatar" id="pdm-avatar-wrap">
-          <img id="detail-headshot" src="" alt="Player headshot" />
+    <!-- Hero Identity Band (composite: gradient + ghost wordmark + cutout) -->
+    <div class="pdm-hero pmb" id="pdm-band">
+      <span class="pmb__ghost" aria-hidden="true"></span>
+      <div class="pmb__glow" aria-hidden="true"></div>
+      <img class="pmb__cutout" alt="" aria-hidden="true" loading="eager" decoding="async" />
+      <div class="pdm-hero__info">
+        <div class="pdm-hero__name-row">
+          <h3 class="pdm-hero__name" id="detail-name">&mdash;</h3>
+          <span class="pdm-hero__age" id="detail-age-pill"></span>
         </div>
-        <div class="pdm-hero__info">
-          <div class="pdm-hero__name-row">
-            <h3 class="pdm-hero__name" id="detail-name">&mdash;</h3>
-            <span class="pdm-hero__age" id="detail-age-pill"></span>
-          </div>
-          <div class="pdm-hero__meta">
-            <img class="pdm-hero__team-logo" id="detail-nfl-team-logo" src="" alt="" />
-            <span class="pdm-hero__meta-text" id="detail-meta-text">&mdash;</span>
-          </div>
-          <div class="pdm-hero__sub" id="detail-sub-text">&mdash;</div>
+        <div class="pdm-hero__meta">
+          <img class="pdm-hero__team-logo" id="detail-nfl-team-logo" src="" alt="" />
+          <span class="pdm-hero__meta-text" id="detail-meta-text">&mdash;</span>
         </div>
+        <div class="pdm-hero__sub" id="detail-sub-text">&mdash;</div>
       </div>
+    </div>
 
+    <div class="pdm-body">
       <!-- Key Metrics -->
       <div class="pdm-metrics" id="pdm-metrics">
         <div class="pdm-metric" id="metric-card-points">
@@ -209,12 +211,15 @@ const { class: className, hideContract = false } = Astro.props;
   /* ================================================================
      Close Button
      ================================================================ */
+  /* Frosted dark chip — the button now floats over the composite band, so
+     it needs to read on any team-color gradient (mandated blur backdrop). */
   .pdm-close {
     position: absolute;
     top: 0.875rem;
     right: 0.875rem;
-    z-index: 2;
-    background: var(--color-gray-100, #f3f4f6);
+    z-index: 3;
+    background: rgba(6, 9, 13, 0.4);
+    backdrop-filter: blur(2px);
     border: none;
     border-radius: var(--radius-full, 9999px);
     width: 32px;
@@ -222,14 +227,14 @@ const { class: className, hideContract = false } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-gray-500, #6b7280);
+    color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
   }
 
   .pdm-close:hover {
-    background: var(--color-gray-200, #dddedf);
-    color: var(--color-gray-800, #1f2937);
+    background: rgba(6, 9, 13, 0.65);
+    color: #fff;
   }
 
   /* ================================================================
@@ -242,52 +247,28 @@ const { class: className, hideContract = false } = Astro.props;
   }
 
   /* ================================================================
-     Hero Section
+     Hero Identity Band (composite mini hero — .pmb paints the gradient,
+     ghost wordmark, glow and cutout; see src/styles/player-modal-band.css)
      ================================================================ */
   .pdm-hero {
     display: flex;
-    align-items: flex-start;
-    gap: 1.125rem;
-    margin-bottom: 1.5rem;
-    position: relative;
-  }
-
-  .pdm-hero__avatar {
-    width: 88px;
-    height: 88px;
-    border-radius: var(--radius-lg, 1rem);
-    overflow: hidden;
-    flex-shrink: 0;
-    background: var(--color-gray-100, #f3f4f6);
-    box-shadow: var(--shadow-md);
-  }
-
-  .pdm-hero__avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center top;
-  }
-
-  .pdm-hero__avatar--def {
-    background: transparent;
-    box-shadow: none;
-    display: flex;
     align-items: center;
-    justify-content: center;
-  }
-
-  .pdm-hero__avatar--def img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
+    flex-shrink: 0;
+    min-height: 108px;
+    padding: 1.1rem 1.5rem 1rem 1.75rem;
   }
 
   .pdm-hero__info {
+    position: relative;
+    z-index: 2;
     flex: 1;
     min-width: 0;
-    padding-top: 0.125rem;
+    /* Keep text clear of the cutout on the right */
+    padding-right: clamp(88px, 30%, 170px);
+  }
+
+  .pdm-hero.pmb--no-cutout .pdm-hero__info {
+    padding-right: 2.25rem;
   }
 
   .pdm-hero__name-row {
@@ -295,15 +276,17 @@ const { class: className, hideContract = false } = Astro.props;
     align-items: baseline;
     gap: 0.5rem;
     margin: 0 0 0.375rem;
-    padding-right: 2rem;
   }
 
   .pdm-hero__name {
+    /* Explicit white — text sits on the team-color gradient; global heading
+       rules (and html.dark accent overrides) must never restyle it */
     font-size: 1.35rem;
     font-weight: 700;
-    color: var(--color-gray-900, #111827);
+    color: #fff;
     margin: 0;
     line-height: 1.2;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
   }
 
   .pdm-hero__meta {
@@ -318,25 +301,27 @@ const { class: className, hideContract = false } = Astro.props;
     height: 20px;
     object-fit: contain;
     flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
   }
 
   .pdm-hero__meta-text {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--color-gray-600, #4b5563);
+    color: rgba(255, 255, 255, 0.85);
   }
 
   .pdm-hero__sub {
     font-size: 0.8125rem;
-    color: var(--color-gray-400, #9ca3af);
+    color: rgba(255, 255, 255, 0.62);
     line-height: 1.4;
   }
 
   .pdm-hero__age {
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--color-gray-600, #4b5563);
-    background: var(--color-gray-100, #f3f4f6);
+    color: #fff;
+    background: rgba(6, 9, 13, 0.4);
+    backdrop-filter: blur(2px);
     padding: 0.2rem 0.6rem;
     border-radius: var(--radius-full, 9999px);
     white-space: nowrap;
@@ -630,18 +615,17 @@ const { class: className, hideContract = false } = Astro.props;
       padding: 1.25rem;
     }
 
-    .pdm-hero__avatar {
-      width: 64px;
-      height: 64px;
-      border-radius: var(--radius-md, 0.5rem);
+    .pdm-hero {
+      min-height: 92px;
+      padding: 0.9rem 1.1rem 0.8rem 1.25rem;
+    }
+
+    .pdm-hero__info {
+      padding-right: clamp(72px, 26%, 120px);
     }
 
     .pdm-hero__name {
       font-size: 1.125rem;
-    }
-
-    .pdm-hero__name-row {
-      padding-right: 1.5rem;
     }
 
     .pdm-hero__meta-text {
@@ -694,6 +678,7 @@ const { class: className, hideContract = false } = Astro.props;
 
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
+  import { applyPlayerModalBand } from '../../utils/player-modal-band';
 
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
@@ -806,61 +791,16 @@ const { class: className, hideContract = false } = Astro.props;
       const isDefense = position ? position.toUpperCase() === 'DEF' : false;
       const teamCode = normalizeTeamCode(playerData.nflTeam);
 
-      // ── Hero: Headshot ──
+      // ── Hero: Composite band (gradient + ghost wordmark + ESPN cutout;
+      //    gradient-only for DEF or players without a transparent headshot) ──
 
-      const headshot = document.getElementById('detail-headshot');
-      if (headshot && playerData.id) {
-        const DEFAULT_IMG = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
-        const MFL_IMG = 'https://www49.myfantasyleague.com/player_photos_big_2014/' + playerData.id + '_thumb.jpg';
-        const COLLEGE_IMG = playerData.espnId
-          ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + playerData.espnId + '.png'
-          : null;
-
-        if (isDefense && teamCode) {
-          headshot.src = '/assets/nfl-logos/' + teamCode + '.svg';
-          headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
-        } else if (playerData.headshot) {
-          headshot.src = playerData.headshot;
-          // Fallback chain from pre-set headshot: College → MFL → default
-          if (COLLEGE_IMG) {
-            headshot.onerror = function() {
-              headshot.onerror = function() {
-                headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
-                headshot.src = MFL_IMG;
-              };
-              headshot.src = COLLEGE_IMG;
-            };
-          } else {
-            headshot.onerror = function() {
-              headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
-              headshot.src = MFL_IMG;
-            };
-          }
-        } else if (playerData.espnId) {
-          headshot.src = 'https://a.espncdn.com/i/headshots/nfl/players/full/' + playerData.espnId + '.png';
-          // Fallback chain: NFL → College → MFL → default
-          headshot.onerror = function() {
-            headshot.onerror = function() {
-              headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
-              headshot.src = MFL_IMG;
-            };
-            headshot.src = COLLEGE_IMG;
-          };
-        } else {
-          headshot.src = MFL_IMG;
-          headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
-        }
-        headshot.alt = playerData.name || 'Player headshot';
-      }
-
-      const avatarWrap = document.getElementById('pdm-avatar-wrap');
-      if (avatarWrap) {
-        if (isDefense) {
-          avatarWrap.classList.add('pdm-hero__avatar--def');
-        } else {
-          avatarWrap.classList.remove('pdm-hero__avatar--def');
-        }
-      }
+      applyPlayerModalBand(document.getElementById('pdm-band'), {
+        name: playerData.name,
+        position: position,
+        nflTeam: playerData.nflTeam,
+        espnId: playerData.espnId,
+        headshot: playerData.headshot,
+      });
 
       // ── Hero: Name ──
 

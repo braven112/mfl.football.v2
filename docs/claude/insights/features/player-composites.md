@@ -297,6 +297,43 @@ Traps hit:
    `FRANCHISE_TAG` txns) in light + dark + mobile; seed reverted with
    `git checkout`.
 
+## Player modal mini-hero bands (shipped 2026-07-06)
+
+The three player modals (`PlayerDetailsModal`, `PlayerInjuryModal`,
+`PlayerNewsModal`) replaced their plain headers with compact composite bands
+— gradient + ghost wordmark + glow + cutout at modal-header height. What's
+different from every other composite, and why:
+
+- **These composites are painted CLIENT-SIDE, not SSR'd.** The modals are
+  empty shells populated at open time via `window.openPlayer*Modal(data)`,
+  so the band logic lives in a shared client util
+  (`src/utils/player-modal-band.ts#applyPlayerModalBand` +
+  `src/styles/player-modal-band.css`, `.pmb` prefix). It enforces the same
+  three hard rules as the SSR casters (espncdn-only cutouts, DEF excluded,
+  404 → gradient-only). `nfl-team-colors.ts` and `nfl-logo.ts` are safe to
+  import from Astro `<script>` blocks — no node built-ins.
+- **Re-open reset ordering matters.** Clear `pmb--no-cutout` and the
+  cutout's `display` BEFORE setting `src`; `onerror` re-adds them. Done the
+  other way, one 404'd player leaves every later player's cutout hidden.
+- **The injury button rides the details modal's JSON.** Injury indicators
+  render inside the `[data-player-modal]` name element (both the SSR
+  PlayerCell path and `buildPlayerCellHTML`), so
+  `btn.closest('[data-player-modal]')` recovers team/position/espnId for
+  the band with zero new data attributes.
+- **The row avatar's live `src` is the right compositability input.**
+  rosters' `extractPlayerDataFromRow` reads `imgEl.src` — if PlayerCell's
+  onerror already swapped it to the MFL JPG, the espncdn gate correctly
+  falls back to gradient-only. Don't "fix" it to re-derive from espnId.
+- **The band is dark in BOTH themes** (team colors are the surface), so
+  there are no `html.dark` overrides — ink is always explicit white
+  (the composite-gradient heading gotcha applies here too).
+- `PlayerNewsModal` is currently orphaned (no page imports it) — it got the
+  standard band for consistency but can't be browser-verified until a page
+  mounts it.
+- Injury modal note: the offseason feed has no `injuryStatus` players, so
+  the click path can't be exercised live off-season — verify by calling
+  `window.openPlayerInjuryModal({...})` with the enriched payload shape.
+
 ## Future Directions (mocked, not built)
 
 Split matchup card, compact spotlight card. Mockups: scratchpad
