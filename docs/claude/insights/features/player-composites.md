@@ -300,7 +300,7 @@ shows is chosen from bracket completion, not a hardcoded week:
   the current round (earliest round week with an unplayed game; else the final
   round lingers), classifies it by game count (3+ → wild-card, 2 → semifinals,
   1 → championship), resolves each team, and for wild-card selects the featured
-  team (highest projected with a compositable headliner). 12 unit tests in
+  team (highest projected with a compositable headliner). 14 unit tests in
   `tests/playoff-round-data.test.ts`.
 - `buildPlayoffRoundView(...)` is the SSR wrapper that gathers deps from the
   feeds/config. Projected total = each franchise's **top-9 rostered

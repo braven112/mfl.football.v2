@@ -157,8 +157,8 @@ export function getFranchiseHeadliners(
  * player whose ESPN cutout composites (position !== DEF, headshot on espncdn).
  * Unlike `getFranchiseHeadliners` (the single top player, compositable or not),
  * this skips down the roster until it finds a face that renders, so playoff/
- * matchup panels don't come up empty when the #1 projected player is a kicker,
- * a defense, or lacks a transparent headshot.
+ * matchup panels don't come up empty when the #1 projected player is a team
+ * defense or lacks a transparent ESPN headshot.
  */
 export function getFranchiseCompositableHeadliners(
   leagueYear: number,
@@ -179,7 +179,9 @@ export function getFranchiseCompositableHeadliners(
     )
       .filter((p: any) => p?.id && (!p.status || p.status === 'ROSTER'))
       .map((p: any) => ({ id: p.id, score: projections.get(p.id) ?? 0, salary: parseFloat(p.salary || '0') || 0 }))
-      .sort((a: any, b: any) => b.score - a.score || b.salary - a.salary);
+      // id tie-break keeps the pick stable (deterministic SSR) when a franchise
+      // has players tied on both projection and salary — mirrors getFranchiseHeadliners.
+      .sort((a: any, b: any) => b.score - a.score || b.salary - a.salary || String(a.id).localeCompare(String(b.id)));
     for (const p of roster) {
       const pm = players.get(p.id);
       if (pm && pm.position !== 'DEF' && pm.headshot.includes('espncdn.com')) {
