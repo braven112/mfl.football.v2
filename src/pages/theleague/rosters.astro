@@ -7291,10 +7291,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         document.querySelectorAll('.injury-indicator').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            // The button sits inside the player-cell name element, which
+            // carries the full PlayerDetailsModal JSON — reuse it so the
+            // injury modal's composite band gets team/position/espnId.
+            let playerMeta = {};
+            const modalJson = btn.closest('[data-player-modal]')?.getAttribute('data-player-modal');
+            if (modalJson) {
+              try { playerMeta = JSON.parse(modalJson); } catch { /* leave empty */ }
+            }
             const injuryData = {
               name: btn.dataset.playerName,
               injuryStatus: btn.dataset.injuryStatus,
               injuryBodyPart: btn.dataset.injuryBodyPart,
+              position: playerMeta.position,
+              nflTeam: playerMeta.nflTeam,
+              espnId: playerMeta.espnId,
+              headshot: btn.closest('.player-cell')?.querySelector('.player-cell__avatar img')?.src,
             };
             if (window.openPlayerInjuryModal) {
               window.openPlayerInjuryModal(injuryData);
