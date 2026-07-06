@@ -1,0 +1,20 @@
+/* ==========================================================================
+   Global utility classes
+   Imported by the base layouts (Layout.astro, TheLeagueLayout.astro), so
+   these apply on every page. Add shared single-purpose classes here instead
+   of re-declaring them in per-page <style> blocks.
+   ========================================================================== */
+
+/* Screen-reader-only content: visually hidden but still announced by AT.
+   !important defends against higher-specificity scoped page styles. */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

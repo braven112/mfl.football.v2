@@ -4,6 +4,9 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import ThemeScript from '../components/ThemeScript.astro';
+// Global utility classes (.visually-hidden, etc.) — frontmatter import so the
+// CSS ships unscoped; @import inside the <style> block below would get scoped.
+import '../styles/utilities.css';
 
 export interface Props {
 	title: string;
