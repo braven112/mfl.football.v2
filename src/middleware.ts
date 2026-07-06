@@ -19,6 +19,7 @@
  * src/utils/league-host-map.ts and are unit-tested.
  */
 
+import './utils/ensure-pt-timezone';
 import { defineMiddleware } from 'astro:middleware';
 import { HOST_TO_SLUG, resolveLeagueRewrite } from './utils/league-host-map';
 
