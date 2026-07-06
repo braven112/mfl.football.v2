@@ -874,3 +874,14 @@ await drawer.screenshot({
 - Off-canvas panels hidden only by transform are one page-overflow away from being visible. Pair the transform with delayed `visibility: hidden` (also fixes the tab-order leak behind `aria-hidden`).
 - Any table that can exceed ~360px min-content width needs the `.table-wrapper` scroll container (Editorial Design Standard: the page body must never scroll horizontally).
 - Headless preview tabs throttle CSS transitions — mid-transition `getComputedStyle` reads can look like a broken rule. Verify end states with an active Playwright page instead.
+
+## 2026-07-06 - Hamburger Has No Background Fill (Owner Preference) + phpBB Embed Must Be Synced
+
+**Context:** Brandon asked to remove the "glossy" pill behind the breadcrumb-bar hamburger. The visible plate was the dark-mode resting background (`html.dark .breadcrumb-bar .nav-toggle-btn { background: rgba(255,255,255,0.08) }`) plus `:hover` fills that stick after a tap on touch devices.
+
+**Fix:** Removed all background fills from `NavToggleButton.astro` (resting plate, base hover, breadcrumb hover). The three lines are the whole affordance; line-color hover feedback and the `:focus-visible` ring stay.
+
+**Key takeaways:**
+- **Owner preference, don't re-add:** the hamburger toggle gets *no* background fill in any state or theme — future dark-mode passes should resist giving it a "button plate."
+- `public/embed/phpbb-nav.html` is a hand-synced copy of the nav CSS with a `.tl-` prefix (used on the phpBB forum). It is not generated — any visual change to `NavToggleButton.astro` / drawer styles must be manually mirrored there, and there's a "Last synced from source" date in its header comment worth bumping.
+- On touch devices `:hover` backgrounds persist after a tap until the next touch, so a hover-only background reads as a stuck highlight on mobile — prefer color shifts on the glyph itself for hover feedback on icon buttons.
