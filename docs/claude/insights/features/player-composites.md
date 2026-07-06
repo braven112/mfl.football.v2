@@ -382,6 +382,32 @@ Three traps, all hit in one session:
    (George Kittle 13299 works). Also: the seed timestamp must be BEFORE the
    testDate — future posts are rejected.
 
+## Per-post OG unfurl cards (shipped 2026-07-06)
+
+8. **Schefter feed OG images** — `/api/og/schefter/<postId>.png`
+   (`src/pages/api/og/schefter/[postId].png.ts` + `src/utils/schefter-og.ts`)
+   renders the composite language as a real 1200×630 PNG via **satori +
+   @resvg/resvg-js** (OG images can't be CSS). GroupMe deep links now carry
+   `?post=<id>` (see `buildSpeculationDeepLink`) because unfurlers strip the
+   `#post-<id>` fragment; the SSR news pages read the param and emit per-post
+   `og:*` / `twitter:*` meta via the new `og` prop on `TheLeagueLayout`.
+   - Composite when `playerIds[0]` resolves compositable (same DEF/espncdn
+     gate); branded text-only card otherwise — every known post gets a PNG,
+     unknown/malformed ids 404 (feed JSON is the allowlist).
+   - Satori can't read woff2 — the UFC Sans TTFs in `src/assets/fonts/og/`
+     were decompressed from the site's woff2 files (wawoff2), and they plus
+     the logos/feeds are declared in the adapter's `includeFiles` because
+     Vercel's file tracing can't follow dynamic `join()` fs reads.
+   - The league crest SVGs rasterize with an empty banner under resvg — not
+     a bug, the PWA icon PNGs have the same empty banner; it IS the mark.
+   - ESPN fetch: 4s AbortController timeout, in-memory success-only cache,
+     failure → text card. Response cached `max-age=86400, s-maxage=31536000,
+     immutable` (Vercel edge cache resets on deploy = renderer-bug escape
+     hatch).
+   - Rumor-like posts title from the BODY (their headline is boilerplate
+     "Schefter speculating…"), shared with the meta tags via
+     `schefterPostOgText` in `src/utils/schefter-feed.ts`.
+
 ## Future Directions (mocked, not built)
 
 Split matchup card, compact spotlight card. Mockups: scratchpad

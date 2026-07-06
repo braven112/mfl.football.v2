@@ -13,7 +13,7 @@ describe('buildSpeculationDeepLink', () => {
       postId: 'sf_speculation_123_abcd',
       publicBaseUrl: 'https://theleague.us',
     });
-    expect(url).toBe('https://theleague.us/news#post-sf_speculation_123_abcd');
+    expect(url).toBe('https://theleague.us/news?post=sf_speculation_123_abcd#post-sf_speculation_123_abcd');
   });
 
   it('strips trailing slashes from the base url', () => {
@@ -21,12 +21,12 @@ describe('buildSpeculationDeepLink', () => {
       postId: 'sf_speculation_x',
       publicBaseUrl: 'https://theleague.us//',
     });
-    expect(url).toBe('https://theleague.us/news#post-sf_speculation_x');
+    expect(url).toBe('https://theleague.us/news?post=sf_speculation_x#post-sf_speculation_x');
   });
 
   it('falls back to theleague.us when no base url is provided', () => {
     const url = buildSpeculationDeepLink({ postId: 'sf_speculation_x' });
-    expect(url).toBe('https://theleague.us/news#post-sf_speculation_x');
+    expect(url).toBe('https://theleague.us/news?post=sf_speculation_x#post-sf_speculation_x');
   });
 
   it('throws when postId is missing', () => {
@@ -43,7 +43,7 @@ describe('buildSpeculationGroupMeText', () => {
       publicBaseUrl: 'https://example.com',
     });
     expect(text).toBe(
-      '🟡 Local fan boards are floating Bowers…\n\nRead the speculation → https://example.com/news#post-sf_speculation_42',
+      '🟡 Local fan boards are floating Bowers…\n\nRead the speculation → https://example.com/news?post=sf_speculation_42#post-sf_speculation_42',
     );
   });
 
@@ -82,7 +82,7 @@ describe('postSpeculationToGroupMe — dry run', () => {
     });
     expect(result.posted).toBe(false);
     expect(result.reason).toBe('dry-run');
-    expect(result.text).toContain('https://theleague.us/news#post-sf_speculation_dry');
+    expect(result.text).toContain('https://theleague.us/news?post=sf_speculation_dry#post-sf_speculation_dry');
     expect(fetcher).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledTimes(1);
   });
@@ -124,7 +124,7 @@ describe('postSpeculationToGroupMe — live', () => {
     const payload = JSON.parse(init.body);
     expect(payload.bot_id).toBe('BOT_LIVE');
     expect(payload.text).toContain('🟡 live body');
-    expect(payload.text).toContain('https://theleague.us/news#post-sf_speculation_live');
+    expect(payload.text).toContain('https://theleague.us/news?post=sf_speculation_live#post-sf_speculation_live');
   });
 
   it('skips the network call when GROUPME_SCHEFTER_BOT_ID is unset', async () => {

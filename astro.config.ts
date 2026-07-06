@@ -11,6 +11,18 @@ export default defineConfig({
       enabled: true,
     },
     maxDuration: 30,
+    // Files the Schefter OG renderer (src/utils/schefter-og.ts) reads with
+    // fs at runtime — dynamic join() paths that Vercel's file tracing can't
+    // follow on its own.
+    includeFiles: [
+      'src/assets/fonts/og/UFCSans-Regular.ttf',
+      'src/assets/fonts/og/UFCSans-Medium.ttf',
+      'src/assets/fonts/og/UFCSans-CondensedBold.ttf',
+      'public/assets/logos/theleague-logo-dark.svg',
+      'public/assets/logos/afl-logo-dark.svg',
+      'src/data/theleague/schefter-feed.json',
+      'data/afl-fantasy/schefter-feed.json',
+    ],
   }),
   integrations: [react()],
   fonts: [

@@ -207,8 +207,10 @@ export interface SchefterMilestoneMeta {
   award: { year?: number; week?: number; value?: number; suffix?: string; label?: string };
 }
 
-/** Visual treatment and content depth */
-export type PostTier = 'breaking' | 'standard' | 'minor';
+/** Visual treatment and content depth. 'rumor' is the rumor-mill /
+ *  speculation card treatment (see isRumorLikePost) — it appears in the
+ *  committed feed JSON, so the union must carry it. */
+export type PostTier = 'breaking' | 'standard' | 'minor' | 'rumor';
 
 /** Feed category for filtering */
 export type SchefterCategory = 'transactions' | 'articles';
