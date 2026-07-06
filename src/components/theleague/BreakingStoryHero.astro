@@ -298,10 +298,21 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
       min-height: 260px;
     }
 
+    /* ESPN `full` cutouts are landscape frames (350×254) with the player
+       centered, so height-driven sizing alone would park the face mid-card
+       under the text. Instead: a portrait box anchored bottom-right with a
+       cover crop — the face keeps its full 90%-height size, the shoulders
+       crop at the box edges, and the left-edge mask fades the crop line
+       into the gradient so no hard rectangle shows. */
     .bsh__model {
-      width: 175px;
-      right: -1.5rem;
-      opacity: 0.4;
+      width: 44%;
+      height: 90%;
+      right: 0;
+      bottom: 0;
+      object-fit: cover;
+      object-position: 50% top;
+      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
+      mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
     }
 
     .bsh__caption {
@@ -309,7 +320,21 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
     }
 
     .bsh__content {
-      max-width: 100%;
+      max-width: 62%;
+    }
+  }
+
+  /* Narrow phones: the constrained text column runs taller, so the headshot
+     cedes a little width (the cover crop trims more shoulder, the face keeps
+     its size) rather than letting the two meet. */
+  @media (max-width: 400px) {
+    .bsh__model {
+      width: 38%;
+      height: 86%;
+    }
+
+    .bsh__content {
+      max-width: 66%;
     }
   }
 </style>
