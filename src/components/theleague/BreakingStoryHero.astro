@@ -47,14 +47,17 @@ const summary =
     ? story.summary.slice(0, 180).replace(/\s+\S*$/, '') + '…'
     : story.summary;
 
-// Prefer the post's external source URL (ESPN etc.), but only when it's a real
-// http(s) link — never trust a feed-supplied `javascript:`/`data:` scheme.
-// Breaking transactions have no source URL, so fall back to the Schefter feed
-// page (the thread route only renders rumor-mill posts, not transactions).
+// A breaking transaction points at the acquiring team's roster — go see the
+// player on his new team. Otherwise a real http(s) source URL (never a
+// feed-supplied `javascript:`/`data:` scheme), else the Schefter feed.
+const rosterHref = story.franchiseId
+  ? r(`/theleague/rosters?franchise=${encodeURIComponent(story.franchiseId)}`)
+  : null;
 const safeExternal =
   typeof story.link === 'string' && /^https?:\/\//i.test(story.link) ? story.link : null;
-const ctaHref = safeExternal ?? r('/theleague/news');
-const ctaExternal = !!safeExternal;
+const ctaHref = rosterHref ?? safeExternal ?? r('/theleague/news');
+const ctaExternal = !rosterHref && !!safeExternal;
+const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full story' : 'See the latest';
 ---
 
 <section
@@ -91,7 +94,7 @@ const ctaExternal = !!safeExternal;
       target={ctaExternal ? '_blank' : undefined}
       rel={ctaExternal ? 'noopener noreferrer' : undefined}
     >
-      Read the full story
+      {ctaLabel}
       <span aria-hidden="true">→</span>
     </a>
   </div>

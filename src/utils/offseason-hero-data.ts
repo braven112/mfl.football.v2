@@ -374,6 +374,9 @@ export interface BreakingStory {
   summary: string;
   /** External source URL when the post has one (breaking transactions don't) */
   link?: string;
+  /** The subject franchise — the team that ACQUIRED the headline player
+   *  (franchiseIds[0] for auction wins and trades). Drives the CTA → its roster. */
+  franchiseId?: string;
   /** Post timestamp in epoch ms — drives the "N hrs ago" eyebrow */
   timestampMs: number;
 }
@@ -444,6 +447,9 @@ export function selectBreakingStory(
     headline: typeof post.headline === 'string' && post.headline ? post.headline : 'Breaking news',
     summary,
     link: typeof post.link === 'string' ? post.link : undefined,
+    franchiseId: Array.isArray(post.franchiseIds) && post.franchiseIds[0] != null
+      ? String(post.franchiseIds[0])
+      : undefined,
     timestampMs: ts,
   };
 }
