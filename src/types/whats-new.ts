@@ -26,6 +26,20 @@ export interface DescriptionImageBlock {
 /** A single block in the article description — either a text paragraph or an inline image */
 export type DescriptionBlock = string | DescriptionImageBlock;
 
+/**
+ * Custom artwork for the composite hero, replacing the cast player.
+ * The image is decorative (captioned via the chip, not alt text) — same
+ * treatment as the player headshot it stands in for.
+ */
+export interface HeroArt {
+  /** Absolute path to the artwork (e.g. "/assets/theleague/history/....png") */
+  src: string;
+  /** Caption chip main line (where the player name would go) */
+  caption?: string;
+  /** Caption chip meta line (uppercase micro text, e.g. "CIRCA 2007") */
+  captionMeta?: string;
+}
+
 /** A single feature announcement entry in whats-new.json */
 export interface WhatsNewEntry {
   /** Unique ID for the entry (kebab-case) */
@@ -40,9 +54,17 @@ export interface WhatsNewEntry {
   description: DescriptionBlock[];
   /** Entry category */
   category: WhatsNewCategory;
-  /** Optional link to the relevant page */
+  /**
+   * Optional link to the relevant page. When omitted, the homepage hero CTA
+   * defaults to the entry's own article (/{league}/whats-new/{id}) — never
+   * set this to the article URL yourself, or the article page renders a
+   * self-referential CTA.
+   */
   link?: string;
-  /** Optional link label (defaults to "Check it out") */
+  /**
+   * Optional link label. Defaults to "Check it out" when `link` is set, or
+   * "Read the full story" when the CTA falls back to the entry's article.
+   */
   linkLabel?: string;
   /** Optional icon ID from sprite.svg (without "icon-" prefix) */
   icon?: string;
@@ -56,6 +78,12 @@ export interface WhatsNewEntry {
    * entries where the dark card IS the story (e.g. a dark mode announcement).
    */
   heroTheme?: 'dark';
+  /**
+   * Composite-hero artwork override. When set, the homepage hero shows this
+   * artwork instead of casting a player — for entries where a specific image
+   * IS the story (e.g. a recovered vintage logo). Player casting is skipped.
+   */
+  heroArt?: HeroArt;
   /** Optional screenshot filename relative to /assets/whats-new/ (e.g., "trade-builder.webp") */
   image?: string;
   /** Alt text for the screenshot image (required when image is provided) */
@@ -131,6 +159,8 @@ export interface HeroContent {
   kickerDate?: string;
   /** Feature-only: forces the dark composite-hero treatment in light mode */
   heroTheme?: 'dark';
+  /** Feature-only: custom artwork shown instead of a cast player */
+  heroArt?: HeroArt;
   /** Feature-only: the source entry's category — drives composite-hero casting */
   heroCategory?: WhatsNewCategory;
 }

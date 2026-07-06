@@ -476,8 +476,10 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
       headline: 'FRESH ON THE',
       accentWord: 'SITE.',
       summary: entry?.summary ?? 'New on the AFL site — take a look.',
-      link: entry?.link,
-      linkLabel: (entry?.linkLabel ?? 'CHECK IT OUT').toUpperCase(),
+      // No explicit link → CTA into the entry's own article, never the listing
+      // (same rule as featureToHero — this view is what AflEventHero renders).
+      link: entry ? (entry.link ?? `/afl-fantasy/whats-new/${entry.id}`) : undefined,
+      linkLabel: (entry?.linkLabel ?? (entry?.link ? 'CHECK IT OUT' : 'READ THE FULL STORY')).toUpperCase(),
       icon: entry?.icon ?? 'news',
       accent: ACCENT_GOLD,
       glow: GLOW_GOLD,
@@ -637,19 +639,26 @@ function formatKickerDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/**
+ * Entries without an explicit link CTA into their own What's New article —
+ * never the generic listing.
+ * ⚠️ Duplicated in hero-resolver.ts, and SLOT_VIEW.feature above must apply
+ * the same link default — it builds the view AflEventHero actually renders.
+ */
 function featureToHero(entry: WhatsNewEntry): HeroContent {
   return {
     source: 'feature',
     title: entry.title,
     summary: entry.summary,
-    link: entry.link,
-    linkLabel: entry.linkLabel ?? 'Check it out',
+    link: entry.link ?? `/afl-fantasy/whats-new/${entry.id}`,
+    linkLabel: entry.linkLabel ?? (entry.link ? 'Check it out' : 'Read the full story'),
     icon: entry.icon,
     accentColor: 'var(--color-secondary, #2e8743)',
     image: entry.image,
     imageAlt: entry.imageAlt,
     kicker: WHATS_NEW_CATEGORY_LABELS[entry.category],
     kickerDate: formatKickerDate(new Date(entry.date + 'T00:00:00')),
+    heroArt: entry.heroArt,
   };
 }
 

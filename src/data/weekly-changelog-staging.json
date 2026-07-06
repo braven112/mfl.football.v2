@@ -6,6 +6,22 @@
   "changes": [
     {
       "date": "2026-07-05",
+      "type": "bug-fix",
+      "summary": "Feature announcements in the homepage hero now send you somewhere useful — the button links straight to the full article about that feature. Previously, announcements without a destination page pointed at the What's New listing (or, in one memorable case, at the very homepage you were already standing on).",
+      "impact": "user",
+      "area": "whats-new",
+      "league": "both"
+    },
+    {
+      "date": "2026-07-05",
+      "type": "style-tweak",
+      "summary": "The Lost Archives announcement in the homepage hero now stars what it's actually about: the recovered vintage Mistakes Were Made logo button, captioned \"Circa 2007 · Recovered,\" instead of a rookie who wasn't even born when that logo was drawn. Announcements can now bring their own artwork whenever an image is the story.",
+      "impact": "user",
+      "area": "whats-new",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-05",
       "type": "style-tweak",
       "summary": "Claude Schefter's homepage article heroes — the waiver report and the Friday weekend preview — now put a face to the story. The hero features whichever player the article actually leans on (the biggest waiver bid, the marquee projected starter), composited over his real NFL team's colors, instead of a generic card. If a player's photo is missing, his team logo stands in rather than an empty frame. Same treatment in light and dark mode.",
       "impact": "user",
