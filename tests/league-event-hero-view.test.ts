@@ -25,6 +25,8 @@ function makeEvent(
     isPast: overrides.isPast ?? false,
     isUrgent: overrides.isUrgent ?? false,
     daysUntilStart: overrides.daysUntilStart ?? 5,
+    daysUntilStartCalendar:
+      overrides.daysUntilStartCalendar ?? overrides.daysUntilStart ?? 5,
     actionLinks: overrides.actionLinks ?? [],
     resultLinks: overrides.resultLinks ?? [],
   } as ResolvedLeagueEvent;

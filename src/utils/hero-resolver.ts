@@ -85,7 +85,7 @@ function eventToHero(event: ResolvedLeagueEvent, referenceDate?: Date): HeroCont
   const dateDisplay = event.definition.endDate
     ? formatEventDateRange(event.startDate, event.endDate)
     : formatEventDate(event.startDate);
-  const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
+  const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStartCalendar);
   const summary = buildEventSummary(event, referenceDate);
 
   return {

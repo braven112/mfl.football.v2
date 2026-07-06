@@ -37,10 +37,14 @@ const category = event.definition.category;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = event.definition.icon ? MULTICOLOR_ICONS.includes(event.definition.icon) : false;
 
-// Big accent countdown — only meaningful for upcoming events.
-const showCountdown = !event.isPast && !event.isActive && event.daysUntilStart > 0;
-const countNum = event.daysUntilStart === 1 ? '1' : String(event.daysUntilStart);
-const countLabel = event.daysUntilStart === 1 ? 'day out' : 'days out';
+// Big accent countdown — only meaningful for upcoming events. Calendar days
+// (not the timestamp-ceil daysUntilStart) so a timed event later today reads
+// "Today", never "1 day out".
+const daysOut = event.daysUntilStartCalendar;
+const showCountdown = !event.isPast && !event.isActive && daysOut >= 0;
+const countIsToday = daysOut === 0;
+const countNum = countIsToday ? 'Today' : String(daysOut);
+const countLabel = countIsToday ? '' : daysOut === 1 ? 'day out' : 'days out';
 
 const cardClasses = [
   'whats-next-card',
@@ -73,9 +77,9 @@ const cardClasses = [
     {(showCountdown || event.isActive || links.length > 0) && (
       <div class="whats-next-card__footer">
         {showCountdown && (
-          <div class="whats-next-card__count" role="group" aria-label={`${countNum} ${countLabel}`}>
-            <span class="whats-next-card__count-num" aria-hidden="true">{countNum}</span>
-            <span class="whats-next-card__count-label" aria-hidden="true">{countLabel}</span>
+          <div class="whats-next-card__count" role="group" aria-label={`${countNum} ${countLabel}`.trim()}>
+            <span class={`whats-next-card__count-num${countIsToday ? ' whats-next-card__count-num--text' : ''}`} aria-hidden="true">{countNum}</span>
+            {countLabel && <span class="whats-next-card__count-label" aria-hidden="true">{countLabel}</span>}
           </div>
         )}
         {event.isActive && (
@@ -327,6 +331,11 @@ const cardClasses = [
     font-weight: 700;
     font-size: 1.9rem;
     color: var(--card-count-ink, var(--card-accent));
+  }
+  .whats-next-card__count-num--text {
+    font-size: 1.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
   .whats-next-card--urgent .whats-next-card__count-num {
     color: var(--color-warning, #f59e0b);

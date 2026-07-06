@@ -240,8 +240,14 @@ export function resolveDateForYear(
       return date;
     }
 
-    case 'computed':
-      return resolveComputedDate(resolution.rule, leagueYear);
+    case 'computed': {
+      const date = resolveComputedDate(resolution.rule, leagueYear);
+      if (resolution.time) {
+        const [hours, minutes] = resolution.time.split(':').map(Number);
+        date.setHours(hours, minutes, 0, 0);
+      }
+      return date;
+    }
 
     case 'configured': {
       const overrides = LEAGUE_YEAR_OVERRIDES[leagueYear];
@@ -319,6 +325,13 @@ export function resolveAllEvents(
       const isActive = now >= startMs && now <= endMs;
       const isPast = now > endMs;
       const daysUntilStart = Math.ceil((startMs - now) / (1000 * 60 * 60 * 24));
+      const startMidnight = new Date(startDate);
+      startMidnight.setHours(0, 0, 0, 0);
+      const refMidnight = new Date(referenceDate);
+      refMidnight.setHours(0, 0, 0, 0);
+      const daysUntilStartCalendar = Math.round(
+        (startMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24),
+      );
       const isUrgent =
         !isPast &&
         !isActive &&
@@ -334,6 +347,7 @@ export function resolveAllEvents(
         isPast,
         isUrgent,
         daysUntilStart,
+        daysUntilStartCalendar,
         actionLinks: resolveLinks(def.actionLinks, linkVars),
         resultLinks: resolveLinks(def.resultLinks, linkVars),
       };

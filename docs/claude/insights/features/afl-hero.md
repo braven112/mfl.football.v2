@@ -106,6 +106,56 @@ with its end.
 
 ---
 
+## 2026-07-05 - Dedup gotcha strikes again: sibling-event lookups need rawEvents too
+
+**Context:** The dual AL/NL conference-draft pills showed "Sat, Aug 28" for the
+AL draft when viewed on NL draft day (Aug 30, 2026) — that's 2027's AL draft
+date, rendered without a year, on a weekend where Aug 28 is a Friday.
+
+**The gotcha (third victim):** the phase-check rule above also applies to
+**sibling-event lookups**. `pickLeadCalendarEvent`'s conferenceDraft block did
+`events.find('afl-al-draft')` against the deduped list; once the AL draft was
+`isPast`, dedup had promoted 2027's occurrence into the slot. Fix:
+`nearestOccurrence(rawEvents, id, lead.startDate)` — pair siblings from the raw
+list anchored on the lead event's date (occurrences across years are ~364 days
+apart vs. 1 day for the true sibling, so nearest-wins is unambiguous).
+
+**Bonus root cause:** `resolveDateForYear` only applied the `time` field for
+`fixed` date resolutions — `computed` rules silently dropped it, so both drafts
+(defined with `"time": "09:00"`) resolved to midnight and the pills rendered
+"12:00 AM PDT". `computed` now supports `time` (type + resolver). Note the
+endDate default (8:45 PM same day for single-day events) still applies to
+computed-with-time events since `hasExplicitTime` remains fixed-only — which is
+what the drafts want: `isActive` spans 9:00 AM–8:45 PM on draft day, not the
+9:00 instant.
+
+Regression suite: `tests/afl-conference-draft-pills.test.ts` (sweeps Aug 26/29/30).
+
+**Review follow-ups (Codex caught both):**
+
+1. **Production Vercel runs in UTC — verified live.** The pills used
+   `toLocaleString(..., timeZoneName: 'short')`, which rendered
+   "12:00 AM UTC" in prod (and would have rendered "9:00 AM UTC" — a wrong
+   claim — after the time fix). League times are DEFINED in PT and the
+   resolver constructs dates with local setters, so the safe pattern is
+   formatting from the Date's **local fields with a hardcoded "PT" label** —
+   exactly what `event-date-formatter.ts#formatEventDate` does. Never use
+   `timeZoneName` on resolver-constructed dates. (`AflHero.astro` and
+   `AflConferenceDraftPreview.astro` both fixed. The deeper prod issue —
+   `isActive` windows shifted ~7h because the whole resolver runs in server
+   TZ — needs a `TZ=America/Los_Angeles` env var on the Vercel project.)
+
+2. **`daysUntilStart` is timestamp-ceil, not calendar days.** Giving the
+   drafts a 9 AM start made What's Next / calendar cards read "2 days out"
+   at 8:59 AM Saturday for a Sunday-9 AM draft. `ResolvedLeagueEvent` now
+   carries `daysUntilStartCalendar` (midnight-to-midnight) — display code
+   uses it (cards render "Today" on day-of pre-start); the ceil variant
+   stays for the urgency/lead-picker `> 0` gates, which NEED "started but
+   not past" to count as 0 — switching those to calendar days would drop
+   the draft from hero candidacy on draft morning.
+
+---
+
 ## 2026-06-23 - Hero player images: explicit list, day-seeded random, optimize on add
 
 **Context:** Hero player cut-outs in `public/assets/hero-players/`.
