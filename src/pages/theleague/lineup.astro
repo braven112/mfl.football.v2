@@ -16,10 +16,18 @@ import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
-import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl-logo';
 import { getPlayerMap } from '../../utils/player-map';
 import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
+import {
+  castBestScoredModel,
+  scoreFaceoffSides,
+  type FaceoffScoreSource,
+  type FaceoffStatCandidate,
+} from '../../utils/hero-casting';
+import { getFranchiseBrand } from '../../utils/franchise-brand';
+import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
 import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
@@ -41,9 +49,11 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 const MFL_LEAGUE_ID = '13522';
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
-// Parallel data fetches (all 8 run concurrently to avoid waterfall)
-const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes] = await Promise.all([
-  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+// Parallel data fetches (all 9 run concurrently to avoid waterfall).
+// Rosters are fetched league-wide (no FRANCHISE filter) so the weekly
+// opponent's roster is available for the faceoff composite.
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes, leagueSchedRes] = await Promise.all([
+  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=fantasyPointsAllowed&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
@@ -51,9 +61,11 @@ const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes
   loadLiveOdds(week),
   fetch(`${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=schedule&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
 const rostersData = rostersRes?.ok ? await rostersRes.json() : null;
+const leagueSchedData = leagueSchedRes?.ok ? await leagueSchedRes.json().catch(() => null) : null;
 const projData = projRes?.ok ? await projRes.json() : null;
 const weeklyData = weeklyRes?.ok ? await weeklyRes.json() : null;
 const fpaData = fpaRes?.ok ? await fpaRes.json() : null;
@@ -324,6 +336,151 @@ for (let w = 1; w <= 22; w++) {
 }
 
 // ---------------------------------------------------------------------------
+// Player-of-the-game faceoff — this week's matchup as a two-player split
+// composite: each side's top starter (ESPN cutout over his NFL team-color
+// gradient). Selection is deterministic (castBestScoredModel: highest score,
+// id tie-break) and gated to compositable players (no DEF, no MFL JPGs);
+// when either side fails to cast, the section simply doesn't render.
+// ---------------------------------------------------------------------------
+
+// Find this week's opponent from the league schedule feed.
+const rawWeeklySched = leagueSchedData?.schedule?.weeklySchedule;
+const schedWeekEntry = Array.isArray(rawWeeklySched)
+  ? rawWeeklySched.find((w: any) => parseInt(w?.week, 10) === week)
+  : rawWeeklySched;
+const schedMatchups = Array.isArray(schedWeekEntry?.matchup)
+  ? schedWeekEntry.matchup
+  : schedWeekEntry?.matchup ? [schedWeekEntry.matchup] : [];
+
+let opponentFranchiseId: string | null = null;
+let userIsHome = false;
+for (const m of schedMatchups) {
+  const sides = Array.isArray(m?.franchise) ? m.franchise : m?.franchise ? [m.franchise] : [];
+  const mine = sides.find((f: any) => f?.id === user.franchiseId);
+  const theirs = sides.find((f: any) => f?.id && f.id !== user.franchiseId);
+  if (mine && theirs) {
+    opponentFranchiseId = theirs.id;
+    userIsHome = mine.isHome === '1';
+    break;
+  }
+}
+
+// This week's weeklyResults entry (from the YTD fetch) — the authoritative
+// record of who actually started, and their actual points.
+const rawWeeklyList = Array.isArray(weeklyUnwrapped)
+  ? weeklyUnwrapped
+  : Array.isArray(weeklyUnwrapped?.weeklyResults)
+    ? weeklyUnwrapped.weeklyResults
+    : weeklyUnwrapped?.weeklyResults ? [weeklyUnwrapped.weeklyResults] : [];
+const resultsWeekEntry = rawWeeklyList
+  .map((item: any) => item?.weeklyResults ?? item)
+  .find((wr: any) => parseInt(wr?.week, 10) === week);
+
+/** Started player ids + actual points for a franchise in this week's results. */
+function weekStarters(franchiseId: string): Array<{ id: string; score: number }> {
+  const matchupsList = Array.isArray(resultsWeekEntry?.matchup)
+    ? resultsWeekEntry.matchup
+    : resultsWeekEntry?.matchup ? [resultsWeekEntry.matchup] : [];
+  for (const m of matchupsList) {
+    const sides = Array.isArray(m?.franchise) ? m.franchise : m?.franchise ? [m.franchise] : [];
+    const side = sides.find((f: any) => f?.id === franchiseId);
+    if (!side) continue;
+    const playerList = Array.isArray(side.player) ? side.player : side.player ? [side.player] : [];
+    return playerList
+      .filter((p: any) => p?.id && p.status === 'starter')
+      .map((p: any) => ({ id: p.id, score: parseFloat(p.score) || 0 }));
+  }
+  return [];
+}
+
+const salaryById = new Map<string, number>();
+const franchiseListForSalary = Array.isArray(allFranchises) ? allFranchises : allFranchises ? [allFranchises] : [];
+for (const f of franchiseListForSalary) {
+  const playerList = Array.isArray(f?.player) ? f.player : f?.player ? [f.player] : [];
+  for (const p of playerList) {
+    const s = parseFloat(p?.salary);
+    if (p?.id && Number.isFinite(s)) salaryById.set(p.id, s);
+  }
+}
+
+function faceoffCandidates(franchiseId: string, playerIds: string[], actualById?: Map<string, number>): FaceoffStatCandidate[] {
+  return playerIds.map((id) => ({
+    playerId: id,
+    franchiseId,
+    projected: projMap.get(id) ?? 0,
+    actual: actualById?.get(id) ?? playerScoresMap.get(id)?.[week] ?? 0,
+    salary: salaryById.get(id) ?? 0,
+  }));
+}
+
+const isPastWeek = week < currentWeek;
+
+// User side: the starters this page renders (falls back to the roster when no
+// lineup resolves yet). Opponent side: their recorded starters for the week;
+// before they exist (upcoming week), their whole roster — the top projected
+// player is the presumptive starter.
+const userStarterIds = slots.map((s) => s.playerId).filter((id): id is string => !!id);
+const userSideIds = userStarterIds.length > 0 ? userStarterIds : roster.map((p) => p.id);
+
+let opponentSideIds: string[] = [];
+let opponentActualById: Map<string, number> | undefined;
+if (opponentFranchiseId) {
+  const recorded = weekStarters(opponentFranchiseId);
+  if (recorded.length > 0) {
+    opponentSideIds = recorded.map((p) => p.id);
+    opponentActualById = new Map(recorded.map((p) => [p.id, p.score]));
+  } else {
+    const oppFranchise = franchiseListForSalary.find((f: any) => f?.id === opponentFranchiseId);
+    const oppPlayers = Array.isArray(oppFranchise?.player) ? oppFranchise.player : oppFranchise?.player ? [oppFranchise.player] : [];
+    opponentSideIds = oppPlayers.filter((p: any) => p?.id && p.status !== 'INJURED_RESERVE').map((p: any) => p.id);
+  }
+}
+
+// Upcoming week previews by projection; a completed week recaps by actual
+// points. Salary is the last-resort tie to keep the panel honest pre-season.
+const faceoffOrder: FaceoffScoreSource[] = isPastWeek
+  ? ['actual', 'projected', 'salary']
+  : ['projected', 'actual', 'salary'];
+
+let lineupFaceoff: { away: FaceoffSide; home: FaceoffSide; statSource: FaceoffScoreSource } | null = null;
+if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0) {
+  const userCands = faceoffCandidates(user.franchiseId, userSideIds);
+  const oppCands = faceoffCandidates(opponentFranchiseId, opponentSideIds, opponentActualById);
+  const scored = scoreFaceoffSides(
+    userIsHome ? oppCands : userCands,
+    userIsHome ? userCands : oppCands,
+    faceoffOrder,
+  );
+  if (scored.source) {
+    const awayModel = castBestScoredModel(scored.away, lineupPlayerIdentityMap, undefined, 'Player of the Game');
+    const homeModel = castBestScoredModel(scored.home, lineupPlayerIdentityMap, undefined, 'Player of the Game');
+    if (awayModel && homeModel) {
+      const scoreOf = (side: typeof scored.away, id: string) => side.find((c) => c.playerId === id)?.score ?? 0;
+      const statFor = (side: typeof scored.away, id: string) => {
+        const v = scoreOf(side, id);
+        if (scored.source === 'salary') return `$${Math.round(v / 1000)}K`;
+        return `${v.toFixed(1)} ${scored.source === 'projected' ? 'proj' : 'pts'}`;
+      };
+      const sideFor = (model: NonNullable<typeof awayModel>, cands: typeof scored.away, franchiseId: string): FaceoffSide => ({
+        model,
+        chip: getFranchiseBrand(franchiseId).name || `Franchise ${franchiseId}`,
+        watermark: getNFLTeamLogo(model.nflTeam),
+        stat: statFor(cands, model.mflId),
+      });
+      lineupFaceoff = {
+        away: sideFor(awayModel, scored.away, userIsHome ? opponentFranchiseId : user.franchiseId),
+        home: sideFor(homeModel, scored.home, userIsHome ? user.franchiseId : opponentFranchiseId),
+        statSource: scored.source,
+      };
+    }
+  }
+}
+
+const faceoffTitle = lineupFaceoff
+  ? `${lineupFaceoff.away.chip} vs ${lineupFaceoff.home.chip}`
+  : '';
+
+// ---------------------------------------------------------------------------
 // Serialize payload for client
 // ---------------------------------------------------------------------------
 const lineupPayload = {
@@ -362,6 +519,16 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         </svg>
       </div>
     </header>
+
+    {lineupFaceoff && (
+      <section class="lineup-faceoff" aria-label={`Week ${week} matchup — ${faceoffTitle}`}>
+        <FaceoffComposite away={lineupFaceoff.away} home={lineupFaceoff.home} size="card" />
+        <div class="lineup-faceoff__band">
+          <span class="lineup-faceoff__eyebrow">Week {week} · Players of the game</span>
+          <span class="lineup-faceoff__title">{faceoffTitle}</span>
+        </div>
+      </section>
+    )}
 
     <!-- Toolbar -->
     <div class="lineup-toolbar">
@@ -1371,6 +1538,44 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     right: 0.625rem;
     pointer-events: none;
     color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Player-of-the-game faceoff — the panels are inherently dark (team-color
+     gradients over near-black) in both themes; only the border re-tokenizes. */
+  .lineup-faceoff {
+    overflow: hidden;
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--content-border, #e2e8f0);
+    margin-bottom: 0.875rem;
+  }
+
+  html.dark .lineup-faceoff {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .lineup-faceoff__band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    padding: 0.5rem 0.875rem;
+    background: #0b0e12;
+    color: #ffffff;
+  }
+
+  .lineup-faceoff__eyebrow {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #7cb2ff;
+  }
+
+  .lineup-faceoff__title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   /* Toolbar */

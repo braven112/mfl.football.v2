@@ -11,6 +11,7 @@ import {
   castClosingAuctionModel,
   castRookiesOnBoard,
   castShowcasePanels,
+  scoreFaceoffSides,
 } from '../src/utils/hero-casting';
 import type { PlayerIdentity } from '../src/utils/player-map';
 
@@ -481,5 +482,76 @@ describe('castShowcasePanels', () => {
       { playerId: '99', franchiseId: '0009' }, // unknown
     ];
     expect(castShowcasePanels(candidates, players)).toEqual([]);
+  });
+});
+
+describe('scoreFaceoffSides', () => {
+  const c = (playerId: string, stats: { projected?: number | null; actual?: number | null; salary?: number | null }, franchiseId = '') =>
+    ({ playerId, franchiseId, ...stats });
+
+  it('elects projected when both sides have projection signal', () => {
+    const { away, home, source } = scoreFaceoffSides(
+      [c('1', { projected: 24.6, actual: 30 })],
+      [c('2', { projected: 18.2, actual: 40 })],
+    );
+    expect(source).toBe('projected');
+    expect(away[0].score).toBe(24.6);
+    expect(home[0].score).toBe(18.2);
+  });
+
+  it('falls through to actual when projections have no signal (empty completed-season feed)', () => {
+    const { source, away } = scoreFaceoffSides(
+      [c('1', { projected: 0, actual: 31.2, salary: 50 })],
+      [c('2', { actual: 22.4, salary: 40 })],
+    );
+    expect(source).toBe('actual');
+    expect(away[0].score).toBe(31.2);
+  });
+
+  it('falls through to salary when neither side has scored (pre-season)', () => {
+    const { source, home } = scoreFaceoffSides(
+      [c('1', { salary: 62 })],
+      [c('2', { projected: NaN, salary: 41 })],
+    );
+    expect(source).toBe('salary');
+    expect(home[0].score).toBe(41);
+  });
+
+  it('requires signal on BOTH sides — one projected side cannot elect projections', () => {
+    const { source } = scoreFaceoffSides(
+      [c('1', { projected: 20, actual: 15 })],
+      [c('2', { projected: 0, actual: 12 })],
+    );
+    expect(source).toBe('actual');
+  });
+
+  it('returns a null source when no stat qualifies on both sides', () => {
+    const { away, home, source } = scoreFaceoffSides(
+      [c('1', { projected: 0 })],
+      [c('2', { actual: 10 })],
+    );
+    expect(source).toBeNull();
+    expect(away).toEqual([]);
+    expect(home).toEqual([]);
+  });
+
+  it('respects a custom order (recap context: actual before projected)', () => {
+    const { source, away } = scoreFaceoffSides(
+      [c('1', { projected: 20, actual: 31 })],
+      [c('2', { projected: 25, actual: 8 })],
+      ['actual', 'projected', 'salary'],
+    );
+    expect(source).toBe('actual');
+    expect(away[0].score).toBe(31);
+  });
+
+  it('scores a candidate missing the elected stat as 0 (loses cleanly, no NaN win)', () => {
+    const { home, source } = scoreFaceoffSides(
+      [c('1', { projected: 20 })],
+      [c('2', { projected: 12 }), c('3', { projected: null })],
+    );
+    expect(source).toBe('projected');
+    const best = castBestScoredModel(home, mapOf(player({ mflId: '2' }), player({ mflId: '3' })), undefined, 'Player of the Game');
+    expect(best?.mflId).toBe('2');
   });
 });
