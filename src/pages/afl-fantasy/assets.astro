@@ -100,6 +100,19 @@ const formatEra = (era: TeamEra) => {
   return `${years}${conf} (slot ${era.franchiseId})`;
 };
 
+type MasterAsset = {
+  label: string;
+  description?: string;
+  filename: string;
+  relativePath: string;
+};
+const masterAssets: Array<MasterAsset & { url: string }> = (
+  (leagueConfig as { masterAssets?: MasterAsset[] }).masterAssets ?? []
+).map((asset) => ({
+  ...asset,
+  url: blobDomain ? `${blobDomain}${asset.relativePath}` : asset.relativePath,
+}));
+
 const rawExtras = (aggregatedAssets as { extras?: Record<string, AssetEntry[]> }).extras ?? {};
 const extras = Object.fromEntries(
   Object.entries(rawExtras).map(([bucket, entries]) => [bucket, (entries ?? []).map(withAbsolute)])
@@ -137,6 +150,32 @@ const copyIcons = `
       <p>Team logos, banners, and graphics for all {leagueConfig.teams.length} teams</p>
     </header>
     <div class="visually-hidden" role="status" id="copy-status"></div>
+    {masterAssets.length > 0 && (
+    <section class="library-section">
+      <h2 class="library-section__title">Master Files</h2>
+      <div class="master-list">
+        {masterAssets.map((asset) => (
+          <article class="master-card">
+            <div class="master-card__info">
+              <p class="master-card__label">{asset.label}</p>
+              {asset.description && <p class="master-card__desc">{asset.description}</p>}
+              <p class="filename" title={asset.filename}>{asset.filename}</p>
+            </div>
+            <div class="master-card__actions asset-meta">
+              <a class="master-download" href={asset.url} download={asset.filename}>Download PSD</a>
+              <label class="url-field">
+                <span class="url-field__label">URL</span>
+                <div class="copy-row">
+                  <input type="text" value={asset.url} readonly />
+                  <button type="button" class="copy-btn" data-copy={asset.url} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
+                </div>
+              </label>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+    )}
     {teamList.length === 0 ? (
       <p class="empty-state">No team assets found. Drop images into <code>public/assets/afl</code> to populate this page.</p>
     ) : (
@@ -518,6 +557,73 @@ const copyIcons = `
     font-size: 0.85rem;
     color: var(--muted-text-color, #6b7280);
     font-weight: 500;
+  }
+
+  .master-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .master-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    background: var(--content-bg, #fff);
+  }
+
+  /* Match the sibling .team-card raised treatment in dark: drop the light
+     border and use the single-ring shadow so there's no double edge. */
+  :global(html.dark) .master-card {
+    border-color: transparent;
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  .master-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .master-card__label {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .master-card__desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .master-card__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .master-download {
+    align-self: flex-start;
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.5rem;
+    background: var(--league-accent, var(--color-primary, #1c497c));
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .master-download:hover {
+    filter: brightness(0.95);
+  }
+
+  .master-download:focus-visible {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    outline-offset: 2px;
   }
 
   .psd-links {
