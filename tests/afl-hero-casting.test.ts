@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { castAflHeroModel, type AflCastingInput } from '../src/utils/afl-hero-casting';
-import type { AflHeroState, EventHeroView } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState, type AflHeroState, type EventHeroView } from '../src/utils/afl-hero-resolver';
+import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { HeroContent } from '../src/types/whats-new';
 import {
   getAdpRankedIds,
@@ -229,5 +230,34 @@ describe('castAflHeroModel', () => {
   it('returns null gracefully when feeds are missing (bad year)', () => {
     const state = { kind: 'default', priority: 'P5', content: stubContent, view: stubView } as AflHeroState;
     expect(castAflHeroModel(state, input({ leagueYear: 1999 }))).toBeNull();
+  });
+});
+
+describe('resolveAflHeroState fresh-feature pick', () => {
+  it('is deterministic across same-day requests (no per-request random)', () => {
+    // Quiet-offseason date with multiple fresh AFL entries → the P2 feature
+    // hero must pick the SAME entry on every SSR render that day.
+    const now = new Date('2026-04-10T12:00:00-07:00');
+    const entries = ['a', 'b', 'c', 'd', 'e'].map(
+      (id, i): WhatsNewEntry =>
+        ({
+          id: `fresh-${id}`,
+          date: '2026-04-09',
+          title: `Entry ${id}`,
+          summary: 's',
+          description: ['d'],
+          category: 'enhancement',
+          leagues: ['afl'],
+          icon: 'star',
+          image: `x-${i}.webp`,
+          imageAlt: 'x',
+        }) as WhatsNewEntry,
+    );
+    const first = resolveAflHeroState({ referenceDate: now, whatsNewEntries: entries });
+    expect(first.kind).toBe('feature');
+    for (let i = 0; i < 5; i++) {
+      const again = resolveAflHeroState({ referenceDate: now, whatsNewEntries: entries });
+      expect(again.content.title).toBe(first.content.title);
+    }
   });
 });

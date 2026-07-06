@@ -73,8 +73,10 @@ function hashSeed(seed: string): number {
   return hash >>> 0;
 }
 
-/** Deterministic daily pick from a candidate pool (stable order first). */
-function dailyPick<T>(pool: T[], referenceDate: Date, seedKey: string, keyOf: (item: T) => string): T | null {
+/** Deterministic daily pick from a candidate pool (stable order first).
+ *  Exported for resolvers that need SSR-stable daily rotation outside the
+ *  casters (e.g. the AFL fresh-feature hero pick). */
+export function dailyPick<T>(pool: T[], referenceDate: Date, seedKey: string, keyOf: (item: T) => string): T | null {
   if (pool.length === 0) return null;
   const sorted = [...pool].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
   const index = hashSeed(`${ptDayKey(referenceDate)}:${seedKey}`) % sorted.length;

@@ -78,6 +78,10 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
   };
 
   const bestAvailable = (descriptor: string): HeroModel | null => {
+    // An empty roster set means the rosters feed is missing/unreadable (a
+    // real AFL roster is never empty) — ownership can't be trusted, so don't
+    // claim anyone is "available". Callers fall back to headliner → webp.
+    if (rostered().size === 0) return null;
     const model = castTopFreeAgentModel(
       players,
       referenceDate,
