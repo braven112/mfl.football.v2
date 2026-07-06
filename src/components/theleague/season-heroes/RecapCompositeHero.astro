@@ -44,7 +44,7 @@ const winner = model ? candidates.find((c) => c.playerId === model.mflId) ?? nul
 // This hero is about the FANTASY team's week — they rostered the top scorer —
 // so brand the background with the rostering franchise: crest + team color.
 const brand = winner ? getFranchiseBrand(winner.franchiseId) : null;
-const ownerName = brand?.name ?? '';
+const franchiseName = brand?.name ?? '';
 const franchiseColor = brand?.color ?? '#1c497c';
 const crest = brand?.groupMe ?? '';
 const glowDark = franchiseGlow(franchiseColor, 0.42);
@@ -52,8 +52,8 @@ const glowLight = franchiseGlow(franchiseColor, 0.24);
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 const points = winner ? winner.score.toFixed(1) : '';
-const summary = ownerName
-  ? `${ownerName} rostered the week's highest score. See how the rest of the league stacked up.`
+const summary = franchiseName
+  ? `${franchiseName} rostered the week's highest score. See how the rest of the league stacked up.`
   : "The week's highest fantasy score. See how the rest of the league stacked up.";
 ---
 

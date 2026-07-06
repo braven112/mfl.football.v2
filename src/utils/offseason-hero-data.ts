@@ -378,36 +378,54 @@ function getActualScoreMap(
  */
 function getGameScoreMap(
   seasonYear: number,
-  league: CanonicalLeagueSlug = 'theleague',
+  league: CanonicalLeagueSlug,
+  source: MarqueeSource,
 ): Map<string, number> {
   const projections = getProjectionMap(seasonYear, league);
+  // A LIVE game is a genuine pre-game preview — score by projection ONLY. If the
+  // projection feed is empty/unpublished, the caller must come up empty and fall
+  // back, NEVER borrow last week's box score (that would headline the wrong
+  // players mid-week). Only the completed-season ARCHIVE path, whose projections
+  // are long gone, falls through to the week's actual points.
+  if (source === 'live') return projections;
   for (const v of projections.values()) {
     if (v > 0) return projections;
   }
   return getActualScoreMap(seasonYear, league);
 }
 
+/** Where a marquee game came from — gates whether actual scores may stand in. */
+type MarqueeSource = 'live' | 'archive';
+
+interface MarqueeGame extends KickoffGame {
+  source: MarqueeSource;
+}
+
 /**
  * The marquee game of the current NFL week — its earliest kickoff, the same
  * opener the kickoff hero features. Reads the live current-week feed
- * (`nflSchedule.matchup`) first; for a completed/synced season (only
- * `fullNflSchedule` on disk) it falls back to the latest scored week's
- * earliest game so the recap and preview share one week.
+ * (`nflSchedule.matchup`) first (source `'live'`); for a completed/synced
+ * season (only `fullNflSchedule` on disk) it falls back to the latest scored
+ * week's earliest game (source `'archive'`) so the recap and preview share one
+ * week. The source flows to `getGameScoreMap` so only the archive path may
+ * score by actual points.
  */
 function getMarqueeGame(
   seasonYear: number,
   league: CanonicalLeagueSlug = 'theleague',
   referenceDate?: Date,
-): KickoffGame | null {
+): MarqueeGame | null {
   // Live current-week slate (in-season production path).
   const live = getKickoffGame(seasonYear, league, referenceDate);
-  if (live) return live;
+  if (live) return { ...live, source: 'live' };
 
   // Completed season: full-schedule feed. Pick the latest scored week (matches
-  // the recap), then its earliest kickoff game.
+  // the recap), then its earliest kickoff game. Normalize MFL's single-object
+  // shape (a one-item list can arrive as a bare object).
   const data = readJsonFile(feedPath(league, seasonYear, 'nflSchedule.json'));
-  const weeks = data?.fullNflSchedule?.nflSchedule;
-  if (!Array.isArray(weeks) || weeks.length === 0) return null;
+  const rawWeeks = data?.fullNflSchedule?.nflSchedule;
+  const weeks = Array.isArray(rawWeeks) ? rawWeeks : rawWeeks ? [rawWeeks] : [];
+  if (weeks.length === 0) return null;
 
   const targetWeek = getLatestScoredWeek(seasonYear, league);
   const week =
@@ -419,7 +437,8 @@ function getMarqueeGame(
   const earliest = [...games].sort(
     (a: any, b: any) => parseInt(a.kickoff, 10) - parseInt(b.kickoff, 10),
   )[0];
-  return matchupToKickoffGame(earliest);
+  const resolved = matchupToKickoffGame(earliest);
+  return resolved ? { ...resolved, source: 'archive' } : null;
 }
 
 /**
@@ -441,17 +460,21 @@ export function getMarqueeGameStars(
   const [awayCode, homeCode] = game.teamCodes;
   const playerMap = getUnifiedPlayerMap(seasonYear);
   const ownerByPlayer = getOwnerByPlayer(seasonYear, league);
-  const scoreOf = getGameScoreMap(seasonYear, league);
+  const scoreOf = getGameScoreMap(seasonYear, league, game.source);
 
   const awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
   const homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
   for (const p of playerMap.values()) {
     if (p.position === 'DEF') continue;
     if (p.nflTeam !== awayCode && p.nflTeam !== homeCode) continue;
+    // Coerce a non-finite score (malformed feed → NaN) to 0 — `?? 0` wouldn't
+    // (NaN isn't null), and castBestScoredModel doesn't filter finite, so a NaN
+    // candidate could otherwise win the pick.
+    const rawScore = scoreOf.get(p.mflId);
     const candidate = {
       playerId: p.mflId,
       franchiseId: ownerByPlayer.get(p.mflId) ?? '',
-      score: scoreOf.get(p.mflId) ?? 0,
+      score: Number.isFinite(rawScore) ? (rawScore as number) : 0,
     };
     if (p.nflTeam === awayCode) awayCandidates.push(candidate);
     else homeCandidates.push(candidate);

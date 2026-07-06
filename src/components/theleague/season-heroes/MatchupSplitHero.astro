@@ -114,6 +114,8 @@ const home = resolved ? sidePanel(resolved.homeStar, resolved.stars.homeCode) : 
     flex-direction: column;
   }
 
+  /* The panels + band are inherently dark (team-color gradients over near-black)
+     in both themes on purpose — only the outer border re-tokenizes for dark. */
   :global(html.dark) .msh {
     --msh-border: rgba(255, 255, 255, 0.12);
   }

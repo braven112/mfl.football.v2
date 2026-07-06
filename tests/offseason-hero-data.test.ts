@@ -118,11 +118,10 @@ describe('getLatestScoredWeek', () => {
     expect(getLatestScoredWeek(2025)).toBe(17);
   });
 
-  it('returns 0 out of season (2026 feed carries an empty week)', () => {
-    expect(getLatestScoredWeek(2026)).toBe(0);
-  });
-
-  it('returns 0 for a non-existent year', () => {
+  // No assertion on the live/in-progress year: its playerScores feed fills in
+  // as the season plays, so a hardcoded expectation would go flaky. The
+  // missing-feed path (→ 0) is covered by the non-existent year below.
+  it('returns 0 for a non-existent year (no feed on disk)', () => {
     expect(getLatestScoredWeek(1999)).toBe(0);
   });
 });
