@@ -64,8 +64,15 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
   const players = getPlayerMap(leagueYear);
   if (players.size === 0) return null;
 
+  // Feed-derived pools memoized for this invocation — the fallback ladder
+  // (primary cast → headliner) would otherwise re-read the same feeds.
+  let rosteredIds: Set<string> | null = null;
+  const rostered = () => (rosteredIds ??= getRosteredPlayerIds(leagueYear, AFL));
+  let headlinerPool: Array<{ playerId: string; franchiseId: string }> | null = null;
+  const headliners = () => (headlinerPool ??= getFranchiseHeadliners(leagueYear, AFL));
+
   const headliner = (descriptor: string, franchiseId?: string): HeroModel | null => {
-    let pool = getFranchiseHeadliners(leagueYear, AFL);
+    let pool = headliners();
     if (franchiseId) pool = pool.filter((c) => c.franchiseId === franchiseId);
     return castRosterModel(pool, players, userFranchiseId, referenceDate, descriptor);
   };
@@ -74,7 +81,7 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     const model = castTopFreeAgentModel(
       players,
       referenceDate,
-      getRosteredPlayerIds(leagueYear, AFL),
+      rostered(),
       getAdpRankedIds(leagueYear, AFL),
     );
     return model ? { ...model, descriptor } : null;
@@ -82,7 +89,7 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
 
   const gameStarter = (descriptor: string): HeroModel | null =>
     castRandomStarterModel(
-      getKickoffGameCandidates(leagueYear, AFL),
+      getKickoffGameCandidates(leagueYear, AFL, referenceDate),
       players,
       userFranchiseId,
       referenceDate,
@@ -121,10 +128,7 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
           );
         case 'afl-new-season-starts':
           // Rookies represent "new" — the newest class models the reset.
-          return (
-            castRookieModel(players, referenceDate, getRosteredPlayerIds(leagueYear, AFL)) ??
-            headliner('Headliner')
-          );
+          return castRookieModel(players, referenceDate, rostered()) ?? headliner('Headliner');
         default:
           // regular-season-ends / playoffs lead / championship lead / champion
           // crowned: a franchise headliner — the faces of the race.
@@ -163,10 +167,7 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     case 'feature':
       // New features cast a rookie (rostered-first; unrostered only when no
       // rookie is rostered anywhere in the league).
-      return (
-        castRookieModel(players, referenceDate, getRosteredPlayerIds(leagueYear, AFL)) ??
-        headliner('Headliner')
-      );
+      return castRookieModel(players, referenceDate, rostered()) ?? headliner('Headliner');
 
     case 'event':
     case 'default':

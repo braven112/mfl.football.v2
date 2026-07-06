@@ -5,6 +5,7 @@ import type { HeroContent } from '../src/types/whats-new';
 import {
   getAdpRankedIds,
   getFranchiseHeadliners,
+  getKickoffGame,
   getRosteredPlayerIds,
   getTradeBaitCandidates,
   getWeeklyTopScorerCandidates,
@@ -102,6 +103,15 @@ describe('league-aware hero data helpers (AFL)', () => {
       expect(c.score).toBeGreaterThan(0);
       expect(rostered.has(c.playerId)).toBe(true);
     }
+  });
+
+  it('kickoff game honors the live window and falls back past week end', () => {
+    const absolute = getKickoffGame(YEAR, AFL);
+    if (!absolute) return; // schedule feed empty — nothing to assert
+    // A reference date before every kickoff picks the same earliest game.
+    expect(getKickoffGame(YEAR, AFL, new Date(0))).toEqual(absolute);
+    // A reference date after the whole week falls back to the earliest game.
+    expect(getKickoffGame(YEAR, AFL, new Date('2100-01-01T00:00:00Z'))).toEqual(absolute);
   });
 
   it('returns empty for a non-existent year', () => {

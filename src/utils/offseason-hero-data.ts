@@ -108,8 +108,16 @@ export function getFranchiseHeadliners(
   // dead (post-season Feb–May) and whose rosters carry no salaries (AFL),
   // score and salary are 0 for everyone and a bare id tie-break degenerates to
   // "lowest MFL id" — each team's DEF. ADP keeps the pick a real headliner.
-  const adpRank = new Map<string, number>();
-  getAdpRankedIds(leagueYear, league).forEach((id, i) => adpRank.set(id, i));
+  // Loaded lazily: with live projections/salaries the earlier comparisons
+  // decide, and the extra feed read never happens.
+  let adpRank: Map<string, number> | null = null;
+  const rankOf = (id: string): number => {
+    if (!adpRank) {
+      adpRank = new Map();
+      getAdpRankedIds(leagueYear, league).forEach((pid, i) => adpRank!.set(pid, i));
+    }
+    return adpRank.get(id) ?? Number.MAX_SAFE_INTEGER;
+  };
 
   const headliners: Array<{ playerId: string; franchiseId: string }> = [];
   for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
@@ -118,26 +126,26 @@ export function getFranchiseHeadliners(
       : franchise.player
         ? [franchise.player]
         : [];
-    let best: { playerId: string; score: number; salary: number; rank: number } | null = null;
+    let best: { playerId: string; score: number; salary: number } | null = null;
     for (const p of players) {
       if (!p?.id || (p.status && p.status !== 'ROSTER')) continue;
       // A headliner is a player, never a team DEF (and DEF can't composite).
       if (playerMap.get(p.id)?.position === 'DEF') continue;
       const score = projections.get(p.id) ?? 0;
       const salary = parseFloat(p.salary || '0') || 0;
-      const rank = adpRank.get(p.id) ?? Number.MAX_SAFE_INTEGER;
       // Score, then salary, then ADP rank, then player id — the trailing
       // tie-breaks keep the pick stable and meaningful when projections
       // and/or salaries are empty, regardless of roster feed order.
-      if (
-        !best ||
-        score > best.score ||
-        (score === best.score && salary > best.salary) ||
-        (score === best.score && salary === best.salary && rank < best.rank) ||
-        (score === best.score && salary === best.salary && rank === best.rank && p.id < best.playerId)
-      ) {
-        best = { playerId: p.id, score, salary, rank };
+      let better = false;
+      if (!best) better = true;
+      else if (score !== best.score) better = score > best.score;
+      else if (salary !== best.salary) better = salary > best.salary;
+      else {
+        const rank = rankOf(p.id);
+        const bestRank = rankOf(best.playerId);
+        better = rank !== bestRank ? rank < bestRank : p.id < best.playerId;
       }
+      if (better) best = { playerId: p.id, score, salary };
     }
     if (best) headliners.push({ playerId: best.playerId, franchiseId: franchise.id });
   }
@@ -158,10 +166,16 @@ export interface KickoffGame {
  * feed (week 1 during the preseason — the season opener). Drives the
  * kickoff-headliner hero casting rule: "the best player starting in the
  * earliest game of the week."
+ *
+ * With a `referenceDate`, prefers the earliest game still upcoming or live
+ * (kickoff + 4h grace) so a mid-week caller doesn't feature Thursday's
+ * finished game on Sunday; falls back to the absolute earliest when the
+ * whole week has been played.
  */
 export function getKickoffGame(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
+  referenceDate?: Date,
 ): KickoffGame | null {
   const data = readJsonFile(feedPath(league, leagueYear, 'nflSchedule.json'));
   const matchups = data?.nflSchedule?.matchup;
@@ -172,9 +186,12 @@ export function getKickoffGame(
   );
   if (games.length === 0) return null;
 
-  const earliest = games.reduce((a: any, b: any) =>
-    parseInt(a.kickoff, 10) <= parseInt(b.kickoff, 10) ? a : b,
-  );
+  const sorted = [...games].sort((a: any, b: any) => parseInt(a.kickoff, 10) - parseInt(b.kickoff, 10));
+  let earliest = sorted[0];
+  if (referenceDate) {
+    const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
+    earliest = sorted.find((m: any) => parseInt(m.kickoff, 10) >= cutoff) ?? sorted[0];
+  }
   const away = earliest.team.find((t: any) => t.isHome !== '1') ?? earliest.team[0];
   const home = earliest.team.find((t: any) => t.isHome === '1') ?? earliest.team[1];
   const awayCode = normalizeTeamCode(away.id || '');
@@ -196,8 +213,9 @@ export function getKickoffGame(
 export function getKickoffGameCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
+  referenceDate?: Date,
 ): Array<{ playerId: string; franchiseId: string; score: number }> {
-  const game = getKickoffGame(leagueYear, league);
+  const game = getKickoffGame(leagueYear, league, referenceDate);
   if (!game) return [];
 
   const projections = getProjectionMap(leagueYear, league);
