@@ -315,8 +315,9 @@ const isFridayArticle = ptWeekday === 'Fri';
   />
 ) : null)}
 
-{/* Defensive empty-state: ensures the section landmark is never silently empty */}
-{!slot && !state.auctionProps && !state.draftProps && !fallback && (
+{/* Defensive empty-state: ensures the section landmark is never silently empty.
+    Excludes breaking-story (a slot-less, fallback-less P0 that renders above). */}
+{!slot && !state.auctionProps && !state.draftProps && !fallback && phase !== 'breaking-story' && (
   <div class="hero-stub">
     <div class="hero-stub__body">
       <p class="hero-stub__desc">League updates coming soon.</p>

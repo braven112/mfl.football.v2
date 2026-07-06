@@ -47,10 +47,14 @@ const summary =
     ? story.summary.slice(0, 180).replace(/\s+\S*$/, '') + '…'
     : story.summary;
 
-// Prefer an external source URL (ESPN etc.); breaking transactions have none,
-// so fall back to the post's own thread page.
-const ctaHref = story.link || r(`/theleague/schefter/thread/${story.id}`);
-const ctaExternal = /^https?:\/\//.test(ctaHref);
+// Prefer the post's external source URL (ESPN etc.), but only when it's a real
+// http(s) link — never trust a feed-supplied `javascript:`/`data:` scheme.
+// Breaking transactions have no source URL, so fall back to the Schefter feed
+// page (the thread route only renders rumor-mill posts, not transactions).
+const safeExternal =
+  typeof story.link === 'string' && /^https?:\/\//i.test(story.link) ? story.link : null;
+const ctaHref = safeExternal ?? r('/theleague/news');
+const ctaExternal = !!safeExternal;
 ---
 
 <section

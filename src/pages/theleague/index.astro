@@ -19,7 +19,7 @@ import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.as
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod } from '../../utils/hero-resolver';
-import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, getBreakingStoryPost } from '../../utils/offseason-hero-data';
+import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
@@ -86,9 +86,18 @@ const timeline = getWhatsNextTimeline(effectiveDate);
 // Detect a fresh breaking-tier Schefter story (<48h) and cast its headline
 // player BEFORE resolving the hero state, so the resolver stays feed-free and
 // just takes a boolean. The model + story ride to SeasonDailyHero below.
-const breakingStory = getBreakingStoryPost(effectiveDate ?? new Date());
+// Reuse the already-imported feed (no second sync disk read on the hot path).
+// Pass a castability predicate so a newer non-compositable bomb (K/DEF, MFL-only
+// photo) doesn't hide an older story whose player actually renders.
+const breakingPlayerMap = getPlayerMap(getCurrentSeasonYear());
+const breakingStory = selectBreakingStory(
+  feed.posts,
+  effectiveDate ?? new Date(),
+  48,
+  (ids) => !!castStoryModel(ids, breakingPlayerMap),
+);
 const breakingModel = breakingStory
-  ? castStoryModel(breakingStory.playerIds, getPlayerMap(getCurrentSeasonYear()))
+  ? castStoryModel(breakingStory.playerIds, breakingPlayerMap)
   : null;
 const hasBreakingStory = !!(breakingStory && breakingModel);
 

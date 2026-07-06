@@ -11,7 +11,7 @@ function post(over: Record<string, any> = {}) {
     tier: 'breaking',
     playerIds: ['13593'],
     headline: 'Blockbuster trade',
-    hotTake: 'A stunner.',
+    body: 'A stunner.',
     timestamp: '2026-07-15T09:00:00-07:00', // 3h before REF
     ...over,
   };
@@ -33,8 +33,8 @@ describe('selectBreakingStory', () => {
     expect(selectBreakingStory([post({ timestamp: '2026-07-10T09:00:00-07:00' })], REF)).toBeNull(); // >48h
   });
 
-  it('maps hotTake→summary and stringifies playerIds', () => {
-    const s = selectBreakingStory([post({ playerIds: [13593], hotTake: 'Wow.' })], REF);
+  it('maps body→summary and stringifies playerIds', () => {
+    const s = selectBreakingStory([post({ playerIds: [13593], body: 'Wow.' })], REF);
     expect(s?.playerIds).toEqual(['13593']);
     expect(s?.summary).toBe('Wow.');
   });
@@ -42,6 +42,25 @@ describe('selectBreakingStory', () => {
   it('returns null for non-array input', () => {
     expect(selectBreakingStory(undefined, REF)).toBeNull();
     expect(selectBreakingStory('', REF)).toBeNull();
+  });
+
+  it('skips a newer uncastable post for an older castable one (predicate given)', () => {
+    const posts = [
+      post({ id: 'newer', playerIds: ['DEF'], timestamp: '2026-07-15T11:00:00-07:00' }),
+      post({ id: 'older', playerIds: ['13593'], timestamp: '2026-07-15T09:00:00-07:00' }),
+    ];
+    const canCast = (ids: string[]) => ids.includes('13593');
+    expect(selectBreakingStory(posts, REF, 48, canCast)?.id).toBe('older');
+  });
+
+  it('does not crash on a non-string body (malformed feed)', () => {
+    const s = selectBreakingStory([post({ body: { text: 'x' } as any })], REF);
+    expect(s?.summary).toBe('');
+  });
+
+  it('excludes a post exactly at the 48h edge (strictly < window)', () => {
+    const edge = new Date(REF.getTime() - 48 * 3_600_000).toISOString();
+    expect(selectBreakingStory([post({ timestamp: edge })], REF)).toBeNull();
   });
 });
 

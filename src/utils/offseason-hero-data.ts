@@ -406,35 +406,45 @@ export function selectBreakingStory(
   posts: any,
   referenceDate: Date,
   windowHours: number = 48,
+  canCast?: (playerIds: string[]) => boolean,
 ): BreakingStory | null {
   if (!Array.isArray(posts)) return null;
 
   const nowMs = referenceDate.getTime();
   const windowMs = windowHours * 3_600_000;
 
-  let best: { post: any; ts: number } | null = null;
+  // Collect every qualifying breaking post (right tier, has playerIds, fresh),
+  // MFL ids normalized to strings (feed can send numbers) so the player-map
+  // lookup key always matches.
+  const qualifying: Array<{ post: any; ts: number; playerIds: string[] }> = [];
   for (const post of posts) {
     if (post?.tier !== 'breaking') continue;
     if (!Array.isArray(post.playerIds) || post.playerIds.length === 0) continue;
     const ts = Date.parse(post.timestamp);
     if (!Number.isFinite(ts)) continue;
-    // Fresh: within the window and not in the future relative to the ref date.
-    if (ts > nowMs || nowMs - ts > windowMs) continue;
-    if (!best || ts > best.ts) best = { post, ts };
+    // Fresh: strictly within the window, not in the future vs the ref date.
+    if (ts > nowMs || nowMs - ts >= windowMs) continue;
+    qualifying.push({ post, ts, playerIds: post.playerIds.map(String) });
   }
-  if (!best) return null;
 
-  const { post } = best;
-  const summary = (post.hotTake || post.body || '').trim();
+  // Freshest first, then skip posts whose players won't composite so a newer
+  // uncastable bomb doesn't hide an older castable one (when a predicate is
+  // supplied by the caller that has the player map).
+  qualifying.sort((a, b) => b.ts - a.ts);
+  const chosen = canCast ? qualifying.find((q) => canCast(q.playerIds)) : qualifying[0];
+  if (!chosen) return null;
+
+  const { post, ts, playerIds } = chosen;
+  // The Schefter feed stores the take in `body`; `analysis`/`hotTake` are
+  // defensive fallbacks. Guard against non-string values (malformed feed).
+  const summary = (([post.body, post.analysis, post.hotTake].find((v) => typeof v === 'string') as string) ?? '').trim();
   return {
     id: post.id || '',
-    // MFL ids arrive as strings from the feed but can be numbers in fixtures/
-    // older posts — normalize so the player-map lookup key always matches.
-    playerIds: post.playerIds.map(String),
-    headline: post.headline || 'Breaking news',
+    playerIds,
+    headline: typeof post.headline === 'string' && post.headline ? post.headline : 'Breaking news',
     summary,
-    link: post.link,
-    timestampMs: best.ts,
+    link: typeof post.link === 'string' ? post.link : undefined,
+    timestampMs: ts,
   };
 }
 
