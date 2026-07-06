@@ -473,4 +473,13 @@ describe('castShowcasePanels', () => {
     ];
     expect(castShowcasePanels(candidates, players).map((p) => p.mflId)).toEqual(['4']);
   });
+
+  it('returns [] when every candidate is non-compositable (DEF / MFL photo / unknown)', () => {
+    const candidates = [
+      { playerId: '2', franchiseId: '0002' }, // DEF
+      { playerId: '3', franchiseId: '0003' }, // MFL photo
+      { playerId: '99', franchiseId: '0009' }, // unknown
+    ];
+    expect(castShowcasePanels(candidates, players)).toEqual([]);
+  });
 });

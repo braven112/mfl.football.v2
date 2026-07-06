@@ -65,7 +65,7 @@ const title =
     {panels.map(({ model, franchiseName, franchiseCrest, teamCode, spare, gradient, glow }) => (
       <div class="tsh__panel" style={`background: ${gradient};`} data-spare={spare ? 'true' : undefined} hidden={spare}>
         <span class="tsh__panel-glow" style={`background: radial-gradient(circle, ${glow} 0%, transparent 65%);`} aria-hidden="true"></span>
-        {franchiseCrest && <img class="tsh__crest" src={franchiseCrest} alt="" aria-hidden="true" loading="eager" />}
+        {franchiseCrest && <img class="tsh__crest" src={franchiseCrest} alt="" aria-hidden="true" loading="eager" decoding="async" />}
         <span class="tsh__chip" aria-hidden="true">{[franchiseName, model.position].filter(Boolean).join(' · ')}</span>
         <span class="tsh__tag" aria-hidden="true">Tagged</span>
         <img
@@ -120,12 +120,14 @@ const title =
         return { panel, ok: cutout ? await settle(cutout) : false };
       }),
     );
-    // Prefer panels whose photo loaded (filed order preserved); if fewer than
-    // four loaded, pad with the remaining panels so the hero is never barren —
-    // the franchise-crest watermark carries a photoless panel. Caps at four.
+    // Show the first four panels whose headshot loaded (filed order preserved),
+    // dropping any that 404 — a photoless panel next to real faces looks broken.
+    // Only when NOTHING loaded (thin tag year / offline) do we fall back to the
+    // first few panels regardless, so the hero is never barren: the permanent
+    // franchise-crest watermark + name band carry a photoless card.
     const loaded = settled.filter((s) => s.ok).map((s) => s.panel);
-    const rest = settled.filter((s) => !s.ok).map((s) => s.panel);
-    const chosen = new Set([...loaded, ...rest].slice(0, MAX_PANELS));
+    const shown = loaded.length > 0 ? loaded : panels;
+    const chosen = new Set(shown.slice(0, MAX_PANELS));
 
     for (const panel of panels) {
       panel.hidden = !chosen.has(panel);

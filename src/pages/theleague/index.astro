@@ -344,8 +344,12 @@ if (heroState.phase === 'udfa-window') {
 // Tagged showcase: one composite panel per franchise-tagged player with a
 // usable ESPN cutout. Cast eight — four render, four are spares the component
 // swaps in for any player whose headshot 404s. Each panel resolves its tagging
-// franchise to a short chip name + crest from the league config; the panel
-// headshot comes from the player map (the props' Sleeper JPG isn't compositable).
+// franchise to a short chip name + crest from the league config.
+// CRITICAL: the composite headshot MUST come from the player map (ESPN cutout).
+// Do NOT pass `taggedShowcaseProps.taggedPlayers[].headshot` to the hero — that
+// is a Sleeper CDN JPG with a baked background, which `isCompositable` rejects
+// (it would render an opaque box, not a cutout). castShowcasePanels resolves
+// the cutout via hpPlayerIdentityMap; we only borrow franchiseId from the props.
 let showcasePanels: Array<{ model: HeroModel; franchiseName: string; franchiseCrest: string }> = [];
 if (heroState.phase === 'tagged-showcase' && heroState.taggedShowcaseProps) {
   const candidates = heroState.taggedShowcaseProps.taggedPlayers.map((t) => ({
