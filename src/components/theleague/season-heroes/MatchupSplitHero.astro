@@ -1,0 +1,323 @@
+---
+/**
+ * MatchupSplitHero — the Saturday/Sunday game-day-preview slot, composite
+ * edition. The marquee game of the week (its earliest kickoff — the same
+ * opener the kickoff hero features) rendered as a split matchup card: each
+ * team's top-scored fantasy star on his own team-color gradient, cutouts
+ * mirrored toward the center VS. A band underneath names the game and points
+ * at the full preview.
+ *
+ * Self-loads from the season's schedule + score feeds and casts each side
+ * internally. The DATA year is the no-arg getCurrentSeasonYear() — env-pinned
+ * to the last completed season, so a past-date preview reads real prior-season
+ * data (a completed season falls back from projections to the actual box
+ * score). The router falls back to the personalized MatchupPreviewHero grid
+ * when the marquee game or its stars don't resolve.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getMarqueeGameStars } from '../../../utils/offseason-hero-data';
+import { castBestScoredModel, type HeroModel } from '../../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
+import { getNFLTeamLogo } from '../../../utils/nfl-logo';
+import MatchupPreviewHero from './MatchupPreviewHero.astro';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+  userFranchiseId?: string;
+}
+
+const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+
+// No-arg season year (env-pinned to the last completed season); referenceDate
+// only steers which game of the current-week slate is "upcoming" in the live
+// feed path.
+const year = getCurrentSeasonYear();
+const players = getPlayerMap(year);
+const stars = getMarqueeGameStars(year, 'theleague', state.metadata.referenceDate);
+
+const awayStar = stars ? castBestScoredModel(stars.awayCandidates, players, undefined, 'Team Star') : null;
+const homeStar = stars ? castBestScoredModel(stars.homeCandidates, players, undefined, 'Team Star') : null;
+const resolved = stars && awayStar && homeStar ? { stars, awayStar, homeStar } : null;
+
+function sidePanel(star: HeroModel, code: string) {
+  const { primary } = getNflTeamColors(code);
+  return {
+    star,
+    code,
+    gradient: `linear-gradient(160deg, #0b0e12 0%, ${primary} 150%)`,
+    glow: hexToRgba(primary, 0.35),
+    logo: getNFLTeamLogo(code),
+  };
+}
+
+const away = resolved ? sidePanel(resolved.awayStar, resolved.stars.awayCode) : null;
+const home = resolved ? sidePanel(resolved.homeStar, resolved.stars.homeCode) : null;
+---
+
+{resolved && away && home ? (
+  <section class="msh" aria-label={`Game of the week — ${resolved.stars.awayName} at ${resolved.stars.homeName}`}>
+    <div class="msh__panels">
+      <div class="msh__panel msh__panel--away" style={`background: ${away.gradient};`}>
+        <span class="msh__glow" style={`background: radial-gradient(circle, ${away.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
+        <img class="msh__logo" src={away.logo} alt="" aria-hidden="true" loading="eager" />
+        <span class="msh__chip" aria-hidden="true">{away.code}</span>
+        <img class="msh__cutout msh__cutout--away" src={away.star.headshot} alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.style.visibility='hidden'" />
+        <span class="msh__player">
+          <strong>{away.star.name}</strong>
+          <span class="msh__player-meta">{away.star.position} · {away.code}</span>
+        </span>
+      </div>
+
+      <span class="msh__vs" aria-hidden="true">VS</span>
+
+      <div class="msh__panel msh__panel--home" style={`background: ${home.gradient};`}>
+        <span class="msh__glow" style={`background: radial-gradient(circle, ${home.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
+        <img class="msh__logo" src={home.logo} alt="" aria-hidden="true" loading="eager" />
+        <span class="msh__chip msh__chip--right" aria-hidden="true">{home.code}</span>
+        <img class="msh__cutout msh__cutout--home" src={home.star.headshot} alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.style.visibility='hidden'" />
+        <span class="msh__player msh__player--right">
+          <strong>{home.star.name}</strong>
+          <span class="msh__player-meta">{home.star.position} · {home.code}</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="msh__band">
+      <div class="msh__band-left">
+        <p class="msh__eyebrow">Game of the week</p>
+        <h2 class="msh__title">{resolved.stars.awayName} at {resolved.stars.homeName}</h2>
+      </div>
+      <a class="msh__cta" href={r('/theleague/matchups')}>
+        Full preview
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </section>
+) : (
+  <MatchupPreviewHero state={state} resolveLeaguePath={r} userFranchiseId={userFranchiseId} />
+)}
+
+<style>
+  .msh {
+    --msh-border: rgba(28, 73, 124, 0.35);
+    --msh-band-bg: #0b0e12;
+    --msh-band-ink: #ffffff;
+    --msh-accent: #7cb2ff;
+
+    overflow: hidden;
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--msh-border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(html.dark) .msh {
+    --msh-border: rgba(255, 255, 255, 0.12);
+  }
+
+  .msh__panels {
+    position: relative;
+    display: flex;
+  }
+
+  .msh__panel {
+    position: relative;
+    flex: 1;
+    min-height: clamp(200px, 20vw, 250px);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .msh__glow {
+    position: absolute;
+    inset: -40% -30% auto -30%;
+    height: 140%;
+    pointer-events: none;
+  }
+
+  .msh__logo {
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: clamp(130px, 16vw, 200px);
+    opacity: 0.16;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .msh__chip {
+    position: absolute;
+    top: 0.7rem;
+    left: 0.75rem;
+    z-index: 3;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.28rem 0.55rem;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+
+  .msh__chip--right {
+    left: auto;
+    right: 0.75rem;
+  }
+
+  .msh__cutout {
+    position: relative;
+    z-index: 1;
+    width: clamp(150px, 17vw, 210px);
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+  }
+
+  /* Mirror the away star to face the center VS. */
+  .msh__cutout--away {
+    transform: scaleX(-1);
+  }
+
+  .msh__player {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.75rem;
+    color: #fff;
+    background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
+  }
+
+  .msh__player--right {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .msh__player strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .msh__player-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .msh__vs {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    font-size: clamp(1rem, 2.2vw, 1.4rem);
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    width: clamp(2.4rem, 5vw, 3rem);
+    height: clamp(2.4rem, 5vw, 3rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    backdrop-filter: blur(2px);
+  }
+
+  .msh__band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1.25rem;
+    background: var(--msh-band-bg);
+    color: var(--msh-band-ink);
+  }
+
+  .msh__eyebrow {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--msh-accent);
+    margin: 0 0 0.2rem;
+  }
+
+  .msh__title {
+    color: var(--msh-band-ink);
+    font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .msh__cta {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #ffffff;
+    color: #0b0e12;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .msh__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .msh__cta:focus-visible {
+    outline: 2px solid var(--msh-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .msh__cta {
+      transition: none;
+    }
+
+    .msh__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .msh__panel {
+      min-height: 170px;
+    }
+
+    .msh__cutout {
+      width: 130px;
+    }
+
+    .msh__band {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.625rem;
+    }
+  }
+</style>

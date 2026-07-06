@@ -1,0 +1,369 @@
+---
+/**
+ * RecapCompositeHero — the Tuesday-AM recap slot, composite edition. The
+ * player who put up the most actual fantasy points in the just-completed
+ * week models the hero: transparent ESPN cutout on the rostering franchise's
+ * color + crest, his point total as the stat, and the owner named in the
+ * summary ("Pacific Pigskins rostered the week's highest score"). Same "best
+ * in a pool" spine as the kickoff hero, pointed at the box score.
+ *
+ * Self-loads from the season's playerScores feed and casts internally
+ * (mirrors the other season heroes). The DATA year is the no-arg
+ * getCurrentSeasonYear() — env-pinned to the last completed season, so a
+ * past-date recap view reads real prior-season scores. The router falls back
+ * to the article-driven RecapHero when no scorer resolves to a usable cutout.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getWeeklyTopScorerCandidates, getLatestScoredWeek } from '../../../utils/offseason-hero-data';
+import { castBestScoredModel } from '../../../utils/hero-casting';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { getFranchiseBrand, franchiseGlow } from '../../../utils/franchise-brand';
+import RecapHero from './RecapHero.astro';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+}
+
+const { state, resolveLeaguePath: r } = Astro.props;
+
+// No-arg season year: env-pinned to the last COMPLETED season, so the data is
+// real regardless of the testDate driving the slot (the phase machine keys off
+// the date; this hero just reads the box score).
+const year = getCurrentSeasonYear();
+const players = getPlayerMap(year);
+const candidates = getWeeklyTopScorerCandidates(year);
+const week = getLatestScoredWeek(year);
+const model = candidates.length > 0 ? castBestScoredModel(candidates, players, undefined, 'Top Scorer') : null;
+
+// The winning candidate carries the score + rostering franchise.
+const winner = model ? candidates.find((c) => c.playerId === model.mflId) ?? null : null;
+
+// This hero is about the FANTASY team's week — they rostered the top scorer —
+// so brand the background with the rostering franchise: crest + team color.
+const brand = winner ? getFranchiseBrand(winner.franchiseId) : null;
+const ownerName = brand?.name ?? '';
+const franchiseColor = brand?.color ?? '#1c497c';
+const crest = brand?.groupMe ?? '';
+const glowDark = franchiseGlow(franchiseColor, 0.42);
+const glowLight = franchiseGlow(franchiseColor, 0.24);
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const points = winner ? winner.score.toFixed(1) : '';
+const summary = ownerName
+  ? `${ownerName} rostered the week's highest score. See how the rest of the league stacked up.`
+  : "The week's highest fantasy score. See how the rest of the league stacked up.";
+---
+
+{model ? (
+  <section
+    class="rch"
+    style={`--rch-glow-dark: ${glowDark}; --rch-glow-light: ${glowLight};`}
+    aria-label={`Week ${week} recap — top scorer`}
+  >
+    {crest ? (
+      <img class="rch__crest" src={crest} alt="" aria-hidden="true" loading="lazy" />
+    ) : (
+      <span class="rch__ghost" aria-hidden="true">WEEK {week}</span>
+    )}
+    <div class="rch__glow" aria-hidden="true"></div>
+    <img
+      class="rch__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.rch').classList.add('rch--no-model')"
+    />
+    <span class="rch__caption">
+      <strong>{model.name}</strong>
+      <span class="rch__caption-meta">{model.position} · {teamCode}</span>
+    </span>
+
+    <div class="rch__content">
+      <p class="rch__eyebrow"><span class="rch__pill">Weekly Recap · Week {week}</span></p>
+      <h2 class="rch__title">{model.name}{' '}<span class="rch__title-accent">led the week.</span></h2>
+      <p class="rch__summary">{summary}</p>
+
+      <div class="rch__footer">
+        <div class="rch__stat" role="group" aria-label={`${points} points`}>
+          <span class="rch__stat-num" aria-hidden="true">{points}</span>
+          <span class="rch__stat-label" aria-hidden="true">Points · Week {week}</span>
+        </div>
+        <span class="rch__divider" aria-hidden="true"></span>
+        <a class="rch__cta" href={r('/theleague/standings')}>
+          See the full week
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <RecapHero state={state} />
+)}
+
+<style>
+  .rch {
+    --rch-surface: linear-gradient(115deg, #f6f8fb 0%, #eef2f7 52%, #e4ebf3 100%);
+    --rch-ink: var(--color-gray-900, #0f1419);
+    --rch-body: rgba(22, 32, 44, 0.72);
+    --rch-ghost: rgba(28, 73, 124, 0.06);
+    --rch-glow: var(--rch-glow-light, rgba(28, 73, 124, 0.2));
+    --rch-shadow: rgba(15, 30, 46, 0.3);
+    --rch-accent: var(--color-primary, #1c497c);
+    --rch-pill-bg: rgba(28, 73, 124, 0.1);
+    --rch-pill-border: rgba(28, 73, 124, 0.35);
+    --rch-pill-ink: #1c497c;
+    --rch-cta-bg: var(--color-primary, #1c497c);
+    --rch-cta-ink: #ffffff;
+    --rch-border: rgba(28, 73, 124, 0.18);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--rch-border);
+    background: var(--rch-surface);
+    color: var(--rch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .rch {
+    --rch-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+    --rch-ink: #ffffff;
+    --rch-body: rgba(255, 255, 255, 0.78);
+    --rch-ghost: rgba(255, 255, 255, 0.045);
+    --rch-glow: var(--rch-glow-dark, rgba(28, 73, 124, 0.4));
+    --rch-shadow: rgba(0, 0, 0, 0.5);
+    --rch-accent: #7cb2ff;
+    --rch-pill-bg: rgba(124, 178, 255, 0.16);
+    --rch-pill-border: rgba(124, 178, 255, 0.45);
+    --rch-pill-ink: #a9ccff;
+    --rch-cta-bg: #ffffff;
+    --rch-cta-ink: #0b1017;
+    --rch-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .rch__ghost {
+    position: absolute;
+    left: 40%;
+    top: -0.6rem;
+    font-size: clamp(3.5rem, 8vw, 6rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--rch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  /* Rostering franchise's GroupMe crest as the background watermark — the
+     week's top score belongs to a fantasy team, so the team wears the hero. */
+  .rch__crest {
+    position: absolute;
+    right: 24%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(180px, 24vw, 300px);
+    aspect-ratio: 1;
+    object-fit: contain;
+    opacity: 0.09;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :global(html.dark) .rch__crest {
+    opacity: 0.12;
+  }
+
+  .rch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--rch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .rch__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--rch-shadow));
+  }
+
+  .rch--no-model .rch__caption {
+    display: none;
+  }
+
+  .rch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .rch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .rch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .rch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .rch__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .rch__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--rch-pill-ink);
+    background: var(--rch-pill-bg);
+    border: 1px solid var(--rch-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .rch__title {
+    color: var(--rch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .rch__title-accent {
+    color: var(--rch-accent);
+  }
+
+  .rch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--rch-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .rch__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .rch__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .rch__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--rch-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .rch__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--rch-body);
+  }
+
+  .rch__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--rch-pill-border);
+  }
+
+  .rch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--rch-cta-bg);
+    color: var(--rch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .rch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .rch__cta:focus-visible {
+    outline: 2px solid var(--rch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rch__cta {
+      transition: none;
+    }
+
+    .rch__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .rch {
+      min-height: 260px;
+    }
+
+    .rch__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .rch__caption {
+      display: none;
+    }
+
+    .rch__content {
+      max-width: 100%;
+    }
+  }
+</style>

@@ -37,11 +37,11 @@ import DraftCountdownHero from './DraftCountdownHero.astro';
 
 // Daily rotation — real components (Phase D)
 import StandingsHero from './season-heroes/StandingsHero.astro';
-import RecapHero from './season-heroes/RecapHero.astro';
+import RecapCompositeHero from './season-heroes/RecapCompositeHero.astro';
 import WaiverWireHero from './season-heroes/WaiverWireHero.astro';
 import ArticleHero from './season-heroes/ArticleHero.astro';
 import WeekendPreviewHero from './season-heroes/WeekendPreviewHero.astro';
-import MatchupPreviewHero from './season-heroes/MatchupPreviewHero.astro';
+import MatchupSplitHero from './season-heroes/MatchupSplitHero.astro';
 import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
 import BreakingStoryHero from './BreakingStoryHero.astro';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
@@ -193,11 +193,11 @@ const isFridayArticle = ptWeekday === 'Fri';
 {slot === 'standings' && ((phase !== 'playoffs' && phase !== 'championship') || !state.playoffProps) && (
   <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />
 )}
-{slot === 'recap' && <RecapHero state={state} />}
+{slot === 'recap' && <RecapCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
 {slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}
-{slot === 'game-day-preview' && <MatchupPreviewHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
+{slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
 
 {/* Off-season heroes: dedicated components */}
 {phase === 'champion-crowned' && state.championProps && (
