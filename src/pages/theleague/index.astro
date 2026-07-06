@@ -299,7 +299,8 @@ const heroRosteredIds = () => {
 let featureModel = null;
 let auctionModel = null;
 let cutWatchModel = null;
-if ((isFreshFeatureHero && heroState.fallbackHero?.heroCategory !== 'bug-fix') || isAuctionPhase) {
+// Entries with heroArt bring their own artwork — no player casting needed.
+if ((isFreshFeatureHero && heroState.fallbackHero?.heroCategory !== 'bug-fix' && !heroState.fallbackHero?.heroArt) || isAuctionPhase) {
   if (isAuctionPhase) {
     // Auction hero: the highest-ranked available free agent (dynasty ADP).
     auctionModel = castTopFreeAgentModel(hpPlayerIdentityMap, now, heroRosteredIds(), getAdpRankedIds(leagueYear));

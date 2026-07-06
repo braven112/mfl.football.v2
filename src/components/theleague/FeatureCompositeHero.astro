@@ -10,6 +10,8 @@
  *
  * Callers must pass a resolvable model — when casting fails, the router
  * falls back to the standard LeagueEventHero instead of rendering this.
+ * Entries with `heroArt` skip the model entirely and show their own
+ * artwork (e.g. a recovered vintage logo) in the player's spot.
  */
 import type { HeroContent } from '../../types/whats-new';
 import type { HeroModel } from '../../utils/hero-casting';
@@ -44,7 +46,25 @@ const forceDark = content.heroTheme === 'dark';
 >
   <span class="fch__ghost" aria-hidden="true">WHAT'S&nbsp;NEW</span>
   <div class="fch__glow" aria-hidden="true"></div>
-  {model ? (
+  {content.heroArt ? (
+    <>
+      <img
+        class="fch__art"
+        src={content.heroArt.src}
+        alt=""
+        aria-hidden="true"
+        loading="eager"
+        decoding="async"
+        onerror="this.style.display='none'; if (this.nextElementSibling?.classList.contains('fch__caption')) this.nextElementSibling.style.display='none'"
+      />
+      {content.heroArt.caption && (
+        <span class="fch__caption">
+          <strong>{content.heroArt.caption}</strong>
+          {content.heroArt.captionMeta && <span class="fch__caption-meta">{content.heroArt.captionMeta}</span>}
+        </span>
+      )}
+    </>
+  ) : model ? (
     <>
       <img
         class="fch__model"
@@ -157,6 +177,19 @@ const forceDark = content.heroTheme === 'dark';
     bottom: 0;
     width: clamp(250px, 33vw, 390px);
     filter: drop-shadow(0 16px 32px var(--fch-shadow));
+  }
+
+  /* Entry-supplied artwork (heroArt override): the image IS the story, so it
+     renders at full opacity where the player would stand — not as a watermark.
+     Width is capped at ~2x the 100px vintage-button sources to limit upscale blur. */
+  .fch__art {
+    position: absolute;
+    right: clamp(1.5rem, 6vw, 4.5rem);
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(150px, 18vw, 200px);
+    filter: drop-shadow(0 16px 32px var(--fch-shadow));
+    pointer-events: none;
   }
 
   /* Player-less entries (bug-fix rollups): league logo silhouette instead */
@@ -316,6 +349,12 @@ const forceDark = content.heroTheme === 'dark';
     .fch__model {
       width: 190px;
       right: -1.5rem;
+      opacity: 0.45;
+    }
+
+    .fch__art {
+      width: 140px;
+      right: -1rem;
       opacity: 0.45;
     }
 

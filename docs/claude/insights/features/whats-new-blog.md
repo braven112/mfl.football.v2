@@ -69,3 +69,23 @@
 **Evidence:** `src/types/whats-new.ts#entryAppliesToLeague` (returns `false` for missing/empty `leagues`), `tests/whats-new-data.test.ts` "league scoping" describe block, `scripts/weekly-changelog-rollup.mjs` (per-league rollups, exits 1 on untagged staging changes).
 
 **Recommendation:** Any new audience/scope field on data-file-driven content (visibility, leagues, tiers) should (1) fail closed in the display helper, (2) be validated by a build-blocking test on the data file itself, and (3) be validated at every automated writer of that file (cron scripts). Validating only at render time is too late; validating only in docs is not validation.
+
+---
+
+## 2026-07-05 - Hero CTAs Default to the Entry's Article, Not the Listing
+
+**Context:** Feature-hero CTAs with no `link` fell back to the What's New
+listing page — and one entry linked to `/theleague` itself, a circular CTA on
+the homepage hero. Brandon's rule: a hero CTA links to the article about the
+feature, or a page the feature lives on — never the generic listing.
+
+**Insight:** Both `featureToHero()` implementations (`hero-resolver.ts` for
+The League, `afl-hero-resolver.ts` for AFL — they are separate copies, fix
+both) now default a missing `link` to the entry's own article page
+(`/{league}/whats-new/{id}`, label "Read the full story"). The component-level
+fallback in `FeatureCompositeHero.astro` (`/theleague/whats-new`) is now dead
+code for feature entries but kept as a safety net.
+
+**Recommendation:** Resolver-level defaults beat per-entry data fixes — every
+current and future untagged entry gets the right CTA. When touching hero link
+behavior, remember there are TWO resolvers; grep for `featureToHero`.

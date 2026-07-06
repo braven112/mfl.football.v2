@@ -210,3 +210,29 @@ tagged-showcase panels (per-tag team-gradient panels), split matchup card,
 compact spotlight card. Mockups: scratchpad `hero-explorations.html` from the
 2026-07-04 session. This work sits on the dark-mode branch
 (claude/stoic-gauss-85d450 base).
+
+## heroArt override — when the image IS the story (2026-07-05, Brandon)
+
+**Context:** The "Lost Archives" vintage-logo announcement was casting a rookie
+(per the new-feature rule), but a story about recovered 2007 artwork should
+show the artwork, not a player who wasn't alive for it.
+
+**Insight:** What's New entries now take an optional `heroArt` field
+(`{ src, caption, captionMeta }` — `HeroArt` in `src/types/whats-new.ts`)
+that overrides player casting entirely. Amendment to the binding casting
+rules: when a specific image is the story (a recovered logo, a trophy, an
+artifact), the hero casts the artifact. The chain: JSON entry → both
+`featureToHero()`s (hero-resolver.ts AND afl-hero-resolver.ts — two
+independent implementations, keep in sync) → `HeroContent.heroArt` →
+`FeatureCompositeHero` renders `.fch__art` full-opacity where the player
+would stand, caption chip reused for provenance ("Circa 2007 · Recovered").
+`index.astro` skips `castRookieModel`/`castEnhancementModel` when
+`fallbackHero.heroArt` is set — don't burn casting work the component ignores.
+
+**Gotcha:** the recovered vintage `*_icon_circle.png` buttons are all 100×100
+(original MFL button size). Cap on-screen width at ~2× (200px) or they go
+soft; `.fch__art` does this and says so in a comment.
+
+**Recommendation:** Prefer `heroArt` over inventing new player-casting rules
+whenever the announcement's subject is an image or object rather than a
+feature people use.

@@ -637,19 +637,22 @@ function formatKickerDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** Entries without an explicit link CTA into their own What's New article —
+    never the generic listing. */
 function featureToHero(entry: WhatsNewEntry): HeroContent {
   return {
     source: 'feature',
     title: entry.title,
     summary: entry.summary,
-    link: entry.link,
-    linkLabel: entry.linkLabel ?? 'Check it out',
+    link: entry.link ?? `/afl-fantasy/whats-new/${entry.id}`,
+    linkLabel: entry.linkLabel ?? (entry.link ? 'Check it out' : 'Read the full story'),
     icon: entry.icon,
     accentColor: 'var(--color-secondary, #2e8743)',
     image: entry.image,
     imageAlt: entry.imageAlt,
     kicker: WHATS_NEW_CATEGORY_LABELS[entry.category],
     kickerDate: formatKickerDate(new Date(entry.date + 'T00:00:00')),
+    heroArt: entry.heroArt,
   };
 }
 
