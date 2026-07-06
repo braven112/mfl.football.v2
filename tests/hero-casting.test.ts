@@ -4,6 +4,7 @@ import {
   castEnhancementModel,
   castRosterModel,
   castArticleModel,
+  heroModelHasCutout,
   castTopFreeAgentModel,
   castBestScoredModel,
   castRandomStarterModel,
@@ -389,7 +390,7 @@ describe('castArticleModel', () => {
   const players = mapOf(
     player({ mflId: '10', name: 'Ja Marr Chase', position: 'WR', nflTeam: 'CIN' }),
     player({ mflId: '12', position: 'DEF' }),           // no ESPN cutout
-    player({ mflId: '13', headshot: MFL('13') }),        // MFL photo, not compositable
+    player({ mflId: '13', headshot: MFL('13') }),        // MFL photo, no cutout
   );
 
   it('casts the exact featured player with the given descriptor', () => {
@@ -404,10 +405,20 @@ describe('castArticleModel', () => {
     expect(castArticleModel('', players)).toBeNull();
   });
 
-  it('returns null for unknown, DEF, or non-ESPN players (→ card fallback)', () => {
-    expect(castArticleModel('99', players)).toBeNull(); // unknown id
-    expect(castArticleModel('12', players)).toBeNull(); // DEF
-    expect(castArticleModel('13', players)).toBeNull(); // MFL photo
+  it('returns null only for unknown ids (→ classic card fallback)', () => {
+    expect(castArticleModel('99', players)).toBeNull();
+  });
+
+  it('still casts DEF / non-ESPN players — the team logo becomes the art', () => {
+    // The generator named the genuinely-featured player; swapping faces would
+    // betray the story. The render layer checks heroModelHasCutout.
+    const def = castArticleModel('12', players);
+    const mflPhoto = castArticleModel('13', players);
+    expect(def?.mflId).toBe('12');
+    expect(mflPhoto?.mflId).toBe('13');
+    expect(heroModelHasCutout(def!)).toBe(false);
+    expect(heroModelHasCutout(mflPhoto!)).toBe(false);
+    expect(heroModelHasCutout(castArticleModel('10', players)!)).toBe(true);
   });
 
   it('is deterministic — no daily rotation, same id in → same model out', () => {

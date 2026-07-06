@@ -48,7 +48,16 @@ export function pickHeroPlayer(candidates, playerMeta) {
   const pool = withHeadshot.length > 0 ? withHeadshot : positionPool;
 
   const winner = pool.reduce((best, c) =>
-    c.score > best.score || (c.score === best.score && c.id < best.id) ? c : best,
+    c.score > best.score || (c.score === best.score && idBefore(c.id, best.id)) ? c : best,
   );
   return winner.id;
+}
+
+/** Ascending-id tiebreak. MFL ids are numeric strings of varying length, so
+ *  compare numerically ('99' before '100'); lexicographic only as a fallback. */
+function idBefore(a, b) {
+  const na = Number(a);
+  const nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na < nb;
+  return a < b;
 }

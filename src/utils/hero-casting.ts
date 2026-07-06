@@ -311,9 +311,15 @@ export function castRandomStarterModel(
  * Unlike the rotating casters, this is DETERMINISTIC by design: the article
  * body already names a specific hero (top scorer, biggest waiver bid, marquee
  * projection), captured as `heroPlayerId` on the post. We simply resolve that
- * id to a compositable model. Returns null — so the caller falls back to the
- * post's static image or the team logo — when the id is absent, unknown, or
- * not compositable (DEF, or no ESPN cutout).
+ * id to a model.
+ *
+ * Deliberately does NOT gate on compositability: the generator always names
+ * the genuinely-featured player even when he has no ESPN cutout (or is a
+ * DEF), and the article hero renders his TEAM LOGO as the art in that case —
+ * swapping in a different player's face would betray the story. Callers check
+ * `heroModelHasCutout` to pick cutout vs logo art. Returns null — so the
+ * caller falls back to the post's static image card — only when the id is
+ * absent (old posts) or unknown to the player map.
  *
  * @param heroPlayerId - The post's `heroPlayerId` (may be undefined on old posts)
  * @param players - Player identity map (getPlayerMap)
@@ -326,8 +332,14 @@ export function castArticleModel(
 ): HeroModel | null {
   if (!heroPlayerId) return null;
   const player = players.get(heroPlayerId);
-  if (!player || !isCompositable(player)) return null;
+  if (!player) return null;
   return toModel(player, descriptor);
+}
+
+/** Whether a cast model has a transparent ESPN cutout to composite (vs
+ *  rendering the team logo as the hero art). Same rule as `isCompositable`. */
+export function heroModelHasCutout(model: HeroModel): boolean {
+  return model.position !== 'DEF' && model.headshot.includes('espncdn.com');
 }
 
 /** A candidate for a roster-action hero (cut watch, tag window, contracts…). */

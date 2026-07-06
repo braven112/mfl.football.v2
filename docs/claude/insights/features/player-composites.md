@@ -180,13 +180,16 @@ article actually highlights**, not a stock face. Two halves:
 2. **Render → `castArticleModel`.** New caster in `hero-casting.ts`:
    `castArticleModel(heroPlayerId, players, descriptor)` — **deterministic, no
    daily rotation** (the post already named its hero). Resolves the id through
-   `getPlayerMap` and returns null (→ classic image/text card) when the id is
-   absent, unknown, or not compositable. ArticleHero renders the FeatureComposite
-   language (team-gradient surface, team-color glow, ESPN cutout bleeding right,
-   frosted `name · descriptor · pos · team` caption) when a model casts, else the
-   original card — so **old posts with no `heroPlayerId` never regress**.
-   Descriptor is derived from the article type (`Top Pickup` / `One to Watch` /
-   `In the Spotlight`).
+   `getPlayerMap`; returns null (→ classic image/text card) only when the id is
+   absent or unknown. Unlike the other casters it does NOT gate on
+   compositability: a resolved DEF / no-cutout player still composites, with
+   his **team logo as the art** (`heroModelHasCutout` decides cutout vs logo) —
+   swapping in a different player's face would betray the story. ArticleHero
+   renders the FeatureComposite language (team-gradient surface, team-color
+   glow, ESPN cutout bleeding right, frosted `name · descriptor · pos · team`
+   caption) when a model casts, else the original card — so **old posts with no
+   `heroPlayerId` never regress**. Descriptor is derived from the article type
+   (`Top Pickup` / `One to Watch` / `In the Spotlight`).
 
 Traps hit:
 - **404 fallback differs from the offseason heroes.** Those hide the whole

@@ -55,6 +55,15 @@ describe('pickHeroPlayer', () => {
     expect(pickHeroPlayer([{ id: '22', score: 10 }, { id: '11', score: 10 }], players)).toBe('11');
   });
 
+  it('tiebreak compares ids numerically, not lexicographically', () => {
+    const players = meta([
+      ['100', { position: 'WR', espn_id: 'a' }],
+      ['99', { position: 'RB', espn_id: 'b' }],
+    ]);
+    // Lexicographic would pick '100' ('1' < '9'); numeric order picks '99'.
+    expect(pickHeroPlayer([{ id: '100', score: 10 }, { id: '99', score: 10 }], players)).toBe('99');
+  });
+
   it('ignores candidates with no id or no feed record', () => {
     const players = meta([['10', { position: 'WR', espn_id: 'a' }]]);
     expect(pickHeroPlayer([{ id: '', score: 99 }, { score: 99 } as any, { id: '404', score: 99 }, { id: '10', score: 5 }], players)).toBe('10');

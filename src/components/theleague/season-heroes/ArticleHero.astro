@@ -18,7 +18,7 @@ import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
-import { castArticleModel } from '../../../utils/hero-casting';
+import { castArticleModel, heroModelHasCutout } from '../../../utils/hero-casting';
 import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import ArticleHeroStub from '../hero-stubs/ArticleHeroStub.astro';
@@ -79,11 +79,15 @@ const descriptorLabels: Record<string, string> = {
 const descriptor = descriptorLabels[articleType] ?? 'In the Spotlight';
 
 // Cast the player the article features. Deterministic — the post already named
-// its hero. Null (no id / unknown / not compositable) → classic card fallback.
+// its hero. Null (no id / unknown id) → classic card fallback. A resolved
+// player WITHOUT an ESPN cutout (or a DEF) still composites — his team logo
+// stands in as the art, because swapping in a different player's face would
+// betray the story the article actually tells.
 const seasonYear = getCurrentSeasonYear(state.metadata.referenceDate);
 const model = article
   ? castArticleModel(article.heroPlayerId, getPlayerMap(seasonYear), descriptor)
   : null;
+const hasCutout = model ? heroModelHasCutout(model) : false;
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 const { primary } = getNflTeamColors(teamCode);
@@ -112,16 +116,24 @@ const excerpt = article?.body
     >
       <div class="ahc__glow" aria-hidden="true"></div>
       <div class="ahc__art" aria-hidden="true">
-        <img
-          class="ahc__model"
-          src={model.headshot}
-          alt=""
-          loading="eager"
-          decoding="async"
-          onerror="this.style.display='none'; const f=this.parentElement.querySelector('.ahc__model-fallback'); if (f) f.style.display='block';"
-        />
+        {hasCutout && (
+          <img
+            class="ahc__model"
+            src={model.headshot}
+            alt=""
+            loading="eager"
+            decoding="async"
+            onerror="this.style.display='none'; const f=this.parentElement.querySelector('.ahc__model-fallback'); if (f) f.style.display='block';"
+          />
+        )}
         {teamLogo && (
-          <img class="ahc__model-fallback" src={teamLogo} alt="" loading="lazy" />
+          <img
+            class="ahc__model-fallback"
+            src={teamLogo}
+            alt=""
+            loading={hasCutout ? 'lazy' : 'eager'}
+            style={hasCutout ? undefined : 'display: block;'}
+          />
         )}
       </div>
       <span class="ahc__caption">
@@ -215,6 +227,10 @@ const excerpt = article?.body
     --ahc-pill-ink: var(--color-primary, #1c497c);
     --ahc-border: rgba(28, 73, 124, 0.18);
     --ahc-cta: var(--color-primary, #1c497c);
+    /* Caption pill is deliberately theme-invariant — a dark frosted chip over
+       the artwork in both themes (matches FeatureCompositeHero). */
+    --ahc-caption-ink: #ffffff;
+    --ahc-caption-bg: rgba(6, 9, 13, 0.55);
 
     position: relative;
     overflow: hidden;
@@ -293,9 +309,8 @@ const excerpt = article?.body
     align-items: flex-end;
     gap: 0.125rem;
     text-align: right;
-    /* Always white — the caption sits on its own dark frosted pill in both themes */
-    color: #fff;
-    background: rgba(6, 9, 13, 0.55);
+    color: var(--ahc-caption-ink);
+    background: var(--ahc-caption-bg);
     padding: 0.4rem 0.65rem;
     border-radius: 6px;
     backdrop-filter: blur(2px);
