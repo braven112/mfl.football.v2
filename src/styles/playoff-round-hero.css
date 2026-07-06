@@ -153,10 +153,11 @@ html.dark .prh-head__lg--dark {
 }
 .pwc__ghost {
   position: absolute;
-  top: 0.7rem;
-  right: 1.4rem;
+  /* Peeks up from the very bottom-left, clear of the crest behind the player. */
+  bottom: -1.6rem;
+  left: 1.4rem;
   font-family: var(--font-display);
-  font-size: clamp(2.4rem, 7vw, 4.4rem);
+  font-size: clamp(2rem, 6vw, 3.6rem);
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.02em;
@@ -167,9 +168,10 @@ html.dark .prh-head__lg--dark {
 }
 .pwc__crest {
   position: absolute;
-  right: clamp(3rem, 13vw, 10rem);
+  /* Pinned to the right edge so it reads as the featured player's team backdrop. */
+  right: clamp(-0.5rem, 7vw, 0.25rem);
   top: 50%;
-  transform: translateY(-46%);
+  transform: translateY(-54%);
   width: clamp(210px, 25vw, 300px);
   aspect-ratio: 1;
   object-fit: contain;
