@@ -71,13 +71,8 @@ const {
     cursor: pointer;
     padding: var(--nav-spacing-sm, 8px);
     border-radius: var(--nav-border-radius-md, 8px);
-    transition: background-color var(--nav-transition-duration, 0.3s) var(--nav-transition-timing, cubic-bezier(0.4, 0, 0.2, 1));
     position: relative;
     z-index: var(--nav-z-close-btn, 970);
-  }
-
-  .nav-toggle-btn:hover {
-    background: var(--nav-hover-bg, rgba(0, 0, 0, 0.05));
   }
 
   .nav-toggle-btn:focus-visible {
@@ -189,16 +184,6 @@ const {
   :global(.breadcrumb-bar) .nav-toggle-btn__inner::before,
   :global(.breadcrumb-bar) .nav-toggle-btn__inner::after {
     background-color: var(--color-white, #ffffff);
-  }
-
-  /* Dark mode: subtle resting plate behind the hamburger so it reads as a
-     button on the near-black strip. */
-  :global(html.dark .breadcrumb-bar) .nav-toggle-btn {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  :global(.breadcrumb-bar) .nav-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
   }
 
   :global(.breadcrumb-bar) .nav-toggle-btn:hover .nav-toggle-btn__inner,
