@@ -493,8 +493,16 @@ ESCALATION_RATE = 1.10        // 10% annual
 pnpm dev          # Start dev server
 pnpm build        # Production build
 pnpm test         # Run all tests
+pnpm vitest run path/to/foo.test.ts   # Run one unit-test file
 pnpm sync:all     # Sync data from MFL
 ```
+
+### Project basics
+
+- **Framework:** Astro (SSR + SSG). React for client-hydrated islands.
+- **Package manager:** pnpm (not npm). Scripts: see `package.json`.
+- **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
+  parallel. Add new build-time fetches there.
 
 ---
 
