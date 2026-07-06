@@ -43,6 +43,8 @@ import ArticleHero from './season-heroes/ArticleHero.astro';
 import WeekendPreviewHero from './season-heroes/WeekendPreviewHero.astro';
 import MatchupPreviewHero from './season-heroes/MatchupPreviewHero.astro';
 import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
+import BreakingStoryHero from './BreakingStoryHero.astro';
+import type { BreakingStory } from '../../utils/offseason-hero-data';
 
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
@@ -80,9 +82,12 @@ export interface Props {
   preseasonModelIsOwn?: boolean;
   /** The earliest game of the week (for the opener line in the summary) */
   kickoffGame?: { awayName: string; homeName: string } | null;
+  /** Cast headline player + story for the breaking-story hero (page-resolved) */
+  breakingModel?: HeroModel | null;
+  breakingStory?: BreakingStory | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], preseasonModel, preseasonModelIsOwn, kickoffGame } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -143,6 +148,16 @@ const isFridayArticle = ptWeekday === 'Fri';
     client:load
     deadlineMidnightPT={state.tradeDeadlineProps.deadlineMidnightPT}
     referenceNowISO={state.metadata.testMode ? state.metadata.referenceDate.toISOString() : undefined}
+  />
+)}
+
+{/* Breaking story (P0) — a fresh <48h trade/auction bomb leads every non-live slot. */}
+{phase === 'breaking-story' && breakingModel && breakingStory && (
+  <BreakingStoryHero
+    model={breakingModel}
+    story={breakingStory}
+    resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 

@@ -875,6 +875,7 @@ export function resolveHeroState(
   entries?: WhatsNewEntry[],
   timeline?: WhatsNextTimeline,
   draftComplete?: boolean,
+  hasBreakingStory: boolean = false,
 ): HeroState {
   const now = referenceDate ?? new Date();
   const week = getCurrentNFLWeek(now) ?? undefined;
@@ -964,6 +965,15 @@ export function resolveHeroState(
         },
       },
     );
+  }
+
+  // --- P0: Breaking Story (fresh <48h trade/auction bomb) ---
+  // Sits below the trade-deadline / championship / auction / draft windows but
+  // above every ambient slot (regular-season, playoffs, offseason). Yields only
+  // to a game that's ACTUALLY in-season live — isGameLive alone is true on any
+  // game-time window (incl. offseason Sundays), which would wrongly suppress it.
+  if (hasBreakingStory && !(isGameLive(now) && (isRegularSeason(now) || isPlayoffPeriod(now)))) {
+    return buildState('breaking-story', 'P0', 'hasBreakingStory', now, testMode, {});
   }
 
   // --- P0: Regular Season Daily Rotation ---

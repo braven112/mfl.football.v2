@@ -362,6 +362,80 @@ export function getTradeBaitCandidates(
 
 // ── Weekly Top Scorers ──
 
+// ── Breaking Story ──
+
+export interface BreakingStory {
+  /** Feed post id — used to link the hero to the post's own thread page */
+  id: string;
+  /** The headline player's MFL id (feed posts order received-side first) */
+  playerIds: string[];
+  headline: string;
+  /** Longer body / Schefter hot take used as the hero sub-line */
+  summary: string;
+  /** External source URL when the post has one (breaking transactions don't) */
+  link?: string;
+  /** Post timestamp in epoch ms — drives the "N hrs ago" eyebrow */
+  timestampMs: number;
+}
+
+/**
+ * The freshest breaking-tier Schefter post with a compositable player,
+ * within `windowHours` (default 48h) of the reference date. Powers the
+ * breaking-story hero: a trade or auction bomb takes the homepage while it's
+ * still news. Returns null when nothing qualifies (the common case — the
+ * hero only exists for genuine breaking moments).
+ *
+ * Auction-win posts never surface here in practice: during the auction their
+ * dates resolve to the auction hero (a higher-priority state), and once the
+ * auction closes they've aged out of the window.
+ */
+export function getBreakingStoryPost(
+  referenceDate: Date,
+  windowHours: number = 48,
+): BreakingStory | null {
+  const feed = readJsonFile('src/data/theleague/schefter-feed.json');
+  return selectBreakingStory(feed?.posts, referenceDate, windowHours);
+}
+
+/**
+ * Pure selection: the freshest qualifying breaking post from a posts array.
+ * Exported so the window/tier/freshness logic is testable with fixtures
+ * (the on-disk feed is cron-regenerated and can't anchor assertions).
+ */
+export function selectBreakingStory(
+  posts: any,
+  referenceDate: Date,
+  windowHours: number = 48,
+): BreakingStory | null {
+  if (!Array.isArray(posts)) return null;
+
+  const nowMs = referenceDate.getTime();
+  const windowMs = windowHours * 3_600_000;
+
+  let best: { post: any; ts: number } | null = null;
+  for (const post of posts) {
+    if (post?.tier !== 'breaking') continue;
+    if (!Array.isArray(post.playerIds) || post.playerIds.length === 0) continue;
+    const ts = Date.parse(post.timestamp);
+    if (!Number.isFinite(ts)) continue;
+    // Fresh: within the window and not in the future relative to the ref date.
+    if (ts > nowMs || nowMs - ts > windowMs) continue;
+    if (!best || ts > best.ts) best = { post, ts };
+  }
+  if (!best) return null;
+
+  const { post } = best;
+  const summary = (post.hotTake || post.body || '').trim();
+  return {
+    id: post.id || '',
+    playerIds: post.playerIds.map(String),
+    headline: post.headline || 'Breaking news',
+    summary,
+    link: post.link,
+    timestampMs: best.ts,
+  };
+}
+
 /**
  * Scored candidates from the current playerScores feed (the most recent
  * scored week): every ROSTERED player with a positive score, tagged with the
