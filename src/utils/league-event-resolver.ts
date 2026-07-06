@@ -240,8 +240,14 @@ export function resolveDateForYear(
       return date;
     }
 
-    case 'computed':
-      return resolveComputedDate(resolution.rule, leagueYear);
+    case 'computed': {
+      const date = resolveComputedDate(resolution.rule, leagueYear);
+      if (resolution.time) {
+        const [hours, minutes] = resolution.time.split(':').map(Number);
+        date.setHours(hours, minutes, 0, 0);
+      }
+      return date;
+    }
 
     case 'configured': {
       const overrides = LEAGUE_YEAR_OVERRIDES[leagueYear];

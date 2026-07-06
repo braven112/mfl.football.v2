@@ -8,7 +8,7 @@
 /** How to compute a date: fixed calendar date, computed rule, or manually configured */
 export type DateResolution =
   | { type: 'fixed'; month: number; day: number; time?: string }
-  | { type: 'computed'; rule: string }
+  | { type: 'computed'; rule: string; time?: string }
   | { type: 'configured'; configKey: string }
   | { type: 'relative'; rule: string; relativeTo: string };
 

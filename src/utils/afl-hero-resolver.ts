@@ -545,8 +545,33 @@ const URGENCY_OVERRIDES: Record<string, number> = {
   'afl-new-season-starts': 14,
 };
 
+/**
+ * Find the occurrence of an event id closest in time to an anchor date.
+ * Must run against the RAW (pre-dedup) list: dedup keeps only the soonest
+ * upcoming occurrence, so a just-passed sibling (e.g. the AL draft on NL
+ * draft day) would otherwise resolve to NEXT year's date.
+ */
+function nearestOccurrence(
+  rawEvents: ResolvedLeagueEvent[],
+  id: string,
+  anchor: Date,
+): ResolvedLeagueEvent | undefined {
+  let best: ResolvedLeagueEvent | undefined;
+  let bestDelta = Infinity;
+  for (const e of rawEvents) {
+    if (e.definition.id !== id) continue;
+    const delta = Math.abs(e.startDate.getTime() - anchor.getTime());
+    if (delta < bestDelta) {
+      best = e;
+      bestDelta = delta;
+    }
+  }
+  return best;
+}
+
 function pickLeadCalendarEvent(
   events: ResolvedLeagueEvent[],
+  rawEvents: ResolvedLeagueEvent[],
   ctx: ViewContext,
 ): LeadPick | null {
   const candidates = events
@@ -566,10 +591,13 @@ function pickLeadCalendarEvent(
   const priority: 'P0' | 'P1' = lead.isActive ? 'P0' : 'P1';
 
   // For the conference-draft week, surface BOTH AL & NL dates so the page can render the dual pills.
+  // Pair from rawEvents anchored on the lead's date: the deduped list swaps a
+  // just-passed sibling for next year's occurrence (the AL pill showed 2027's
+  // date on NL draft day).
   let conferenceDraft: LeadPick['conferenceDraft'];
   if (lead.definition.id === 'afl-al-draft' || lead.definition.id === 'afl-nl-draft') {
-    const al = events.find((e) => e.definition.id === 'afl-al-draft');
-    const nl = events.find((e) => e.definition.id === 'afl-nl-draft');
+    const al = nearestOccurrence(rawEvents, 'afl-al-draft', lead.startDate);
+    const nl = nearestOccurrence(rawEvents, 'afl-nl-draft', lead.startDate);
     if (al && nl) {
       conferenceDraft = {
         al: { date: al.startDate, live: al.isActive },
@@ -921,7 +949,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
   }
 
   // P0/P1: Calendar-driven lead event — the new branded AflEventHero.
-  const lead = pickLeadCalendarEvent(events, ctx);
+  const lead = pickLeadCalendarEvent(events, rawEvents, ctx);
   if (lead) {
     return {
       kind: 'calendar-event',
