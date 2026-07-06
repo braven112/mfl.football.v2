@@ -32,6 +32,25 @@ const VIEWPORT = { width: 2560, height: 1440 };
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
 
 /**
+ * Entries whose screenshots are staged by hand — a blind capture of the
+ * entry's link shoots a sign-in screen, an unpopulated analytics page, or
+ * the wrong scroll position. Skipped unless named explicitly on the CLI.
+ *
+ * - submit-lineup / tip-schefter-gets-louder / mock-draft: auth-gated pages
+ * - owner-activity / afl-owner-activity: analytics only populate in prod
+ *   (locally, append ?mock=true for a staged capture)
+ * - afl-trophy-wall: needs a franchise profile scrolled to the trophy wall
+ */
+const MANUAL_CAPTURE_ONLY = new Set([
+  'submit-lineup',
+  'tip-schefter-gets-louder',
+  'mock-draft',
+  'owner-activity',
+  'afl-owner-activity',
+  'afl-trophy-wall',
+]);
+
+/**
  * Per-entry page setup hooks.
  * Each key is an entry ID; the value is an async function that runs
  * after navigation + initial wait, right before the screenshot is taken.
@@ -72,6 +91,8 @@ async function main() {
     if (!SCREENSHOT_CATEGORIES.includes(e.category)) return false;
     if (!e.image) return false; // must have image field set in JSON
     if (hasTargets && !targetSet.has(e.id)) return false;
+    // Manual-capture entries only run when explicitly named on the CLI
+    if (!hasTargets && MANUAL_CAPTURE_ONLY.has(e.id)) return false;
     if (force) return true;
     const imagePath = resolve(ASSETS_DIR, e.image);
     // Capture if missing OR stale (json was updated more recently than the screenshot)
