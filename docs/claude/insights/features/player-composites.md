@@ -199,8 +199,9 @@ Traps hit:
 - **Theme resolves via `html.dark`, not `prefers-color-scheme`** — the preview
   tool's `colorScheme` emulation does nothing; add the class (or set the cookie)
   to verify dark. Scoped-`<style>` `:global(html.dark)` is correct here.
-- Worktree branched off `mystifying-bun` (#342 + the sibling's in-season hero
-  infra) since none of the composite engine is on main yet.
+- Built while the composite engine was still branch-only (worktree stacked on
+  `mystifying-bun`); the base landed on `main` mid-session via #346, and this
+  work was rebased onto `main` after — the engine IS on main now.
 
 ## Future Directions (mocked, not built)
 
