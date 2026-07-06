@@ -333,6 +333,53 @@ different from every other composite, and why:
 - Injury modal note: the offseason feed has no `injuryStatus` players, so
   the click path can't be exercised live off-season — verify by calling
   `window.openPlayerInjuryModal({...})` with the enriched payload shape.
+## Mobile cutout layout — portrait cover-crop, not width/height auto (2026-07-06)
+
+Fixed on `FeatureCompositeHero` + `BreakingStoryHero`; the other composite
+heroes' mobile blocks still use the old ghosted-overlap pattern and should
+adopt this when touched.
+
+- **ESPN `full` cutouts are LANDSCAPE frames (350×254) with the player
+  centered.** On a phone card, `height: 90%; width: auto` makes the frame
+  span nearly the whole card and parks the face mid-card — directly under
+  the text. Don't size the element by the frame; size it as a **portrait box
+  anchored bottom-right with a cover crop**:
+  `width: 44%; height: 90%; right: 0; bottom: 0; object-fit: cover;
+  object-position: 50% top;` — the face keeps its full height, the shoulders
+  crop at the box edges.
+- **Mask the crop line:** `mask-image: linear-gradient(90deg, transparent 0%,
+  #000 22%)` (+ `-webkit-` prefix) fades the left edge into the gradient so
+  no hard rectangle shows. With the mask doing the blending, drop the old
+  `opacity: 0.4`-style ghosting — full opacity reads intentional.
+- **Constrain the text column instead of letting it overlap:** cap
+  `__content` at ~62% (66% under 400px, where the model box narrows to 38%).
+  The cover crop means ceding width trims shoulder, not face size.
+- Verified with Playwright at 412/360px, both themes. The sandbox blocks
+  `espncdn.com` — route-fulfill the request with a synthetic 350×254
+  transparent PNG (sharp + inline SVG) to test real geometry.
+
+## Rendering BreakingStoryHero in dev (verification recipe, 2026-07-06)
+
+Three traps, all hit in one session:
+
+1. **Phase priority:** breaking-story is P0 but sits BELOW trade-deadline /
+   championship / auction / draft windows — a `?testDate` in March (where all
+   the real breaking posts live) renders the auction hero instead. Seed a
+   clone of a real breaking post with a fresh timestamp into
+   `schefter-feed.json` and use an offseason testDate; revert with
+   `git checkout` after capture.
+2. **The feed is a STATIC import in `index.astro`** (`import feedData from
+   '...schefter-feed.json'`) — editing the JSON under a running dev server
+   isn't reliably picked up (same Vite JSON-module caching as the playoff
+   gotcha). Restart the dev server after seeding.
+3. **The seeded post's player must composite from the pinned season year's
+   map** (`getPlayerMap(getCurrentSeasonYear())` = 2025 locally). Some
+   players lack `espn_id` in the 2025 feed (e.g. DeVonta Smith, 15282) even
+   though the 2026 feed has it — `castStoryModel` rejects them and
+   `hasBreakingStory` goes false with no error anywhere. Pick a post whose
+   `playerIds[0]` has an `espn_id` in `data/theleague/mfl-feeds/2025/players.json`
+   (George Kittle 13299 works). Also: the seed timestamp must be BEFORE the
+   testDate — future posts are rejected.
 
 ## Future Directions (mocked, not built)
 
