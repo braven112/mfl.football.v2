@@ -49,7 +49,15 @@ export interface ResolvedLeagueEvent {
   isActive: boolean;
   isPast: boolean;
   isUrgent: boolean;
+  /**
+   * Timestamp-based countdown: Math.ceil of the delta to startDate.
+   * Load-bearing for urgency/lead-picker gates (`> 0` means "hasn't started").
+   * Do NOT render this — for timed events it reads "1 day out" on the morning
+   * of the event. Display code uses daysUntilStartCalendar.
+   */
   daysUntilStart: number;
+  /** Calendar-day countdown (midnight-to-midnight): 0 = today, 1 = tomorrow. Use for display. */
+  daysUntilStartCalendar: number;
   actionLinks: EventLink[];
   resultLinks: EventLink[];
 }

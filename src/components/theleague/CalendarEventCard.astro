@@ -40,10 +40,14 @@ const pillText = event.isActive
     ? 'Completed'
     : CATEGORY_LABELS[category];
 
-// Big accent countdown — only meaningful for upcoming events.
-const showCountdown = !event.isPast && !event.isActive && event.daysUntilStart > 0;
-const countNum = event.daysUntilStart === 1 ? '1' : String(event.daysUntilStart);
-const countLabel = event.daysUntilStart === 1 ? 'day out' : 'days out';
+// Big accent countdown — only meaningful for upcoming events. Calendar days
+// (not the timestamp-ceil daysUntilStart) so a timed event later today reads
+// "Today", never "1 day out".
+const daysOut = event.daysUntilStartCalendar;
+const showCountdown = !event.isPast && !event.isActive && daysOut >= 0;
+const countIsToday = daysOut === 0;
+const countNum = countIsToday ? 'Today' : String(daysOut);
+const countLabel = countIsToday ? '' : daysOut === 1 ? 'day out' : 'days out';
 
 const cardClasses = [
   'calendar-card',
@@ -75,9 +79,9 @@ const cardClasses = [
     {(showCountdown || event.isActive || links.length > 0) && (
       <div class="calendar-card__footer">
         {showCountdown && (
-          <div class="calendar-card__count" role="group" aria-label={`${countNum} ${countLabel}`}>
-            <span class="calendar-card__count-num" aria-hidden="true">{countNum}</span>
-            <span class="calendar-card__count-label" aria-hidden="true">{countLabel}</span>
+          <div class="calendar-card__count" role="group" aria-label={`${countNum} ${countLabel}`.trim()}>
+            <span class={`calendar-card__count-num${countIsToday ? ' calendar-card__count-num--text' : ''}`} aria-hidden="true">{countNum}</span>
+            {countLabel && <span class="calendar-card__count-label" aria-hidden="true">{countLabel}</span>}
           </div>
         )}
         {event.isActive && (
@@ -325,6 +329,11 @@ const cardClasses = [
     font-weight: 700;
     font-size: 1.9rem;
     color: var(--card-count-ink, var(--card-accent));
+  }
+  .calendar-card__count-num--text {
+    font-size: 1.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
   .calendar-card--urgent .calendar-card__count-num {
     color: var(--color-warning, #f59e0b);

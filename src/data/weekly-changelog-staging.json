@@ -5,6 +5,14 @@
   "featuredImageLeague": "theleague",
   "changes": [
     {
+      "date": "2026-07-06",
+      "type": "bug-fix",
+      "summary": "Event countdowns on the homepage What's Next cards and the League Calendar now count real calendar days. Events with a set time (deadlines, drafts) were shown as \"1 day out\" all morning on the day they actually happen — and occasionally \"2 days out\" for tomorrow's event. Day-of events now say \"Today,\" which is when you most need them to.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "both"
+    },
+    {
       "date": "2026-07-05",
       "type": "bug-fix",
       "summary": "The conference-draft pills on the AFL homepage now tell the truth on draft weekend. Once the American League's Saturday draft wrapped, its pill quietly skipped ahead to NEXT year's date (\"Sat, Aug 28\" — a Friday in 2026, which raised some eyebrows). Both pills also claimed the drafts start at 12:00 AM; they now show the real 9:00 AM PT start time everywhere, including the calendar.",

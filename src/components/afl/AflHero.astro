@@ -21,6 +21,7 @@ import AflPlayoffsHero from './AflPlayoffsHero.astro';
 import AflChampionshipHero from './AflChampionshipHero.astro';
 import AflEventHero from './AflEventHero.astro';
 import '../../styles/trade-deadline-hero.css';
+import { formatEventDate } from '../../utils/event-date-formatter';
 import type { AflHeroState } from '../../utils/afl-hero-resolver';
 
 /** Region label per state — gives screen-reader users a meaningful landmark cue. */
@@ -43,8 +44,12 @@ interface Props {
 
 const { state, config, standings, userFranchiseId } = Astro.props;
 
-const fmtTime = (d: Date) =>
-  d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+// formatEventDate builds "Sat, Aug 29, 9:00 AM PT" from the Date's LOCAL
+// fields with a fixed PT label — league times are defined in PT, and local
+// fields reproduce the configured values in any runtime. Never format these
+// with toLocaleString + timeZoneName: on a UTC server that renders the
+// server's zone ("9:00 AM UTC"), mislabeling the draft time.
+const fmtTime = (d: Date) => formatEventDate(d);
 
 const conferenceDraft = state.kind === 'calendar-event' ? state.conferenceDraft : undefined;
 ---

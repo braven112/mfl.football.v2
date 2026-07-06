@@ -94,6 +94,29 @@ what the drafts want: `isActive` spans 9:00 AM–8:45 PM on draft day, not the
 
 Regression suite: `tests/afl-conference-draft-pills.test.ts` (sweeps Aug 26/29/30).
 
+**Review follow-ups (Codex caught both):**
+
+1. **Production Vercel runs in UTC — verified live.** The pills used
+   `toLocaleString(..., timeZoneName: 'short')`, which rendered
+   "12:00 AM UTC" in prod (and would have rendered "9:00 AM UTC" — a wrong
+   claim — after the time fix). League times are DEFINED in PT and the
+   resolver constructs dates with local setters, so the safe pattern is
+   formatting from the Date's **local fields with a hardcoded "PT" label** —
+   exactly what `event-date-formatter.ts#formatEventDate` does. Never use
+   `timeZoneName` on resolver-constructed dates. (`AflHero.astro` and
+   `AflConferenceDraftPreview.astro` both fixed. The deeper prod issue —
+   `isActive` windows shifted ~7h because the whole resolver runs in server
+   TZ — needs a `TZ=America/Los_Angeles` env var on the Vercel project.)
+
+2. **`daysUntilStart` is timestamp-ceil, not calendar days.** Giving the
+   drafts a 9 AM start made What's Next / calendar cards read "2 days out"
+   at 8:59 AM Saturday for a Sunday-9 AM draft. `ResolvedLeagueEvent` now
+   carries `daysUntilStartCalendar` (midnight-to-midnight) — display code
+   uses it (cards render "Today" on day-of pre-start); the ceil variant
+   stays for the urgency/lead-picker `> 0` gates, which NEED "started but
+   not past" to count as 0 — switching those to calendar days would drop
+   the draft from hero candidacy on draft morning.
+
 ---
 
 ## 2026-06-23 - Hero player images: explicit list, day-seeded random, optimize on add

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
-import { resolveDateForYear } from '../src/utils/league-event-resolver';
+import { resolveDateForYear, getAllResolvedAflEvents } from '../src/utils/league-event-resolver';
 
 /**
  * AFL conference-draft pills — date pairing + draft start time.
@@ -84,5 +84,38 @@ describe('AFL conference-draft pills', () => {
     expect(ymd(cd.nl.date)).toBe('2026-8-30');
     expect(cd.al.live).toBe(false);
     expect(cd.nl.live).toBe(true);
+  });
+
+  it('draft-day live boundaries: not live at 8:59 AM, live 9:00 AM through 8:45 PM, over at 8:46 PM', () => {
+    const at = (h: number, m: number) => draftState(new Date(2026, 7, 29, h, m)).conferenceDraft!;
+    expect(at(8, 59).al.live).toBe(false);
+    expect(at(9, 0).al.live).toBe(true);
+    expect(at(20, 45).al.live).toBe(true);
+    // 8:46 PM: AL is over; the lead flips to the NL draft but the AL pill
+    // must still show THIS year's date.
+    const after = draftState(new Date(2026, 7, 29, 20, 46));
+    expect(after.eventId).toBe('afl-nl-draft');
+    expect(ymd(after.conferenceDraft!.al.date)).toBe('2026-8-29');
+  });
+});
+
+describe('calendar-day countdown (daysUntilStartCalendar)', () => {
+  const nlDraft = (referenceDate: Date) => {
+    const e = getAllResolvedAflEvents({ leagueYear: 2026, referenceDate })
+      .find((x) => x.definition.id === 'afl-nl-draft');
+    if (!e) throw new Error('afl-nl-draft not resolved');
+    return e;
+  };
+
+  it('Sat 8:59 AM: the Sunday 9 AM draft is 1 calendar day out (ceil says 2)', () => {
+    const e = nlDraft(new Date(2026, 7, 29, 8, 59));
+    expect(e.daysUntilStart).toBe(2); // the old display bug: "2 days out"
+    expect(e.daysUntilStartCalendar).toBe(1); // what cards must render
+  });
+
+  it('draft-day morning pre-start: 0 calendar days (ceil says 1)', () => {
+    const e = nlDraft(new Date(2026, 7, 30, 8, 0));
+    expect(e.daysUntilStart).toBe(1);
+    expect(e.daysUntilStartCalendar).toBe(0);
   });
 });

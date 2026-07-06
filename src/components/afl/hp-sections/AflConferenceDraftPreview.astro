@@ -26,15 +26,18 @@ function daysBetween(later: Date, earlier: Date): number {
   return Math.round((a.getTime() - b.getTime()) / day);
 }
 
+// Build from the Date's LOCAL fields with a fixed PT label — league times are
+// defined in PT and local fields reproduce the configured values in any
+// runtime. toLocaleString + timeZoneName would render the SERVER's zone on
+// Vercel ("9:00 AM UTC"), mislabeling the draft time.
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function fmt(d: Date): string {
-  return d.toLocaleString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short',
-  });
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${displayHours}:${minutes} ${period} PT`;
 }
 
 function statusFor(date: Date, durationHours: number): { label: string; tone: 'upcoming' | 'live' | 'complete' } {
