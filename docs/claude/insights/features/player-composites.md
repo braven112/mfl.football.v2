@@ -408,6 +408,51 @@ Three traps, all hit in one session:
      "Schefter speculating…"), shared with the meta tags via
      `schefterPostOgText` in `src/utils/schefter-feed.ts`.
 
+## Trade UI composites — first React-island integration (shipped 2026-07-06)
+
+The trade builder's two moments got the split-panel treatment via
+`src/components/theleague/trade-builder/TradeCompositeStrip.tsx` — a React
+port of the MatchupSplitHero language (team gradient + glow + ghost logo
+watermark + mirrored cutouts toward a center swap badge). First composite in
+a `.tsx` island; the engine imports cleanly client-side because
+`nfl-team-colors.ts` / `nfl-logo.ts` are pure TS with no `node:fs`.
+
+- **PendingTradeCard** — compact strip between header and asset columns.
+  Headline per side = `parseAssets(...).playerIds[0]` (received-side-first,
+  same as the feed). Chips read "You receive" / "You give".
+- **TradeConfirmationModal** — `size="tall"` full-bleed hero above the
+  confirm content (`.tcm-hero`); chips are the franchise abbrevs. The close
+  button needed `z-index: 5` and the right chip `right: 3rem` to coexist
+  with the dark panels.
+- **Gating is per side**: a DEF / draft-pick / MFL-JPG headline skips its
+  side (two-panel → single-panel → nothing). `isCompositableTradePlayer`
+  re-implements `isCompositable` client-side since `hero-casting.ts` is
+  server-only (`getPlayerMap` → fs). The page already ships ESPN headshots +
+  normalized `nflTeam` on `TradeBuilderPlayer`, so no new data plumbing.
+- **Headline = first ASSET, not first roster player.** For the pending card
+  that's `parseAssets(...).playerIds[0]` (the MFL asset string is already
+  received-side-first). For the confirmation modal the headline is
+  `teamAPlayers[0]`, but those arrays MUST be built in trade-add order —
+  `state.teamA.playerIds.flatMap(id => resolve(id))`, NOT
+  `teamA.players.filter(...)` (roster order), or a multi-player package
+  headlines an arbitrary player (Codex/Copilot both caught this).
+- **404 handling is PER SIDE** (React state `leftFailed`/`rightFailed`): a
+  single cutout error degrades to the single-panel layout — the same path as
+  a DEF/pick headline — and only a both-sides failure hides the strip. The
+  strip is additive over the text asset lists that always render, so nothing
+  is lost either way.
+- **Verify traps:** the preview-panel browser ran at a 0×0 viewport (lazy
+  images never load, `vw` units collapse) — Playwright against the dev
+  server is the reliable route, same as the What's New screenshot finding.
+  Auth for the trade surfaces: set `JWT_SECRET` for the dev server, mint a
+  token with `createSessionToken`'s HMAC shape, and add it as a cookie
+  (document.cookie can't overwrite a stale HttpOnly `session_token` on
+  localhost — use Playwright `addCookies` or a more-specific `Path=`).
+  Stub `/api/trades/pending` with fixtures; the trade-alert bell modal
+  auto-opens over the page when pending trades exist — dismiss it before
+  clicking. NEVER click "Send Proposal" against real MFL; route-block
+  `/api/trades/submit` in the script as a safety net.
+
 ## Future Directions (mocked, not built)
 
 Split matchup card, compact spotlight card. Mockups: scratchpad
