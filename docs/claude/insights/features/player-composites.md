@@ -333,6 +333,7 @@ different from every other composite, and why:
 - Injury modal note: the offseason feed has no `injuryStatus` players, so
   the click path can't be exercised live off-season — verify by calling
   `window.openPlayerInjuryModal({...})` with the enriched payload shape.
+
 ## Mobile cutout layout — portrait cover-crop, not width/height auto (2026-07-06)
 
 Fixed on `FeatureCompositeHero` + `BreakingStoryHero`; the other composite

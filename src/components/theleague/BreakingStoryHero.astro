@@ -310,7 +310,8 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
       right: 0;
       bottom: 0;
       object-fit: cover;
-      object-position: 50% top;
+      object-position: center top;
+      opacity: 1;
       -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
       mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
     }
@@ -321,6 +322,13 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
 
     .bsh__content {
       max-width: 62%;
+    }
+
+    /* When the cutout 404s at runtime (`bsh--no-model` from the img
+       onerror), the text reflows back to full width instead of leaving
+       a dead right column. */
+    .bsh--no-model .bsh__content {
+      max-width: 100%;
     }
   }
 

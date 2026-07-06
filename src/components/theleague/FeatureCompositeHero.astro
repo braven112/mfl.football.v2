@@ -40,7 +40,7 @@ const forceDark = content.heroTheme === 'dark';
 ---
 
 <article
-  class={`fch${forceDark ? ' fch--dark' : ''}`}
+  class={`fch${forceDark ? ' fch--dark' : ''}${!content.heroArt && model ? ' fch--has-model' : ''}`}
   style={`--fch-glow-dark: ${glowDark}; --fch-glow-light: ${glowLight};`}
   aria-label={`What's new: ${content.title}`}
 >
@@ -73,7 +73,7 @@ const forceDark = content.heroTheme === 'dark';
         aria-hidden="true"
         loading="eager"
         decoding="async"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='none'"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.fch').classList.add('fch--no-model')"
       />
       <span class="fch__caption">
         <strong>{model.name}</strong>
@@ -358,7 +358,7 @@ const forceDark = content.heroTheme === 'dark';
       right: 0;
       bottom: 0;
       object-fit: cover;
-      object-position: 50% top;
+      object-position: center top;
       opacity: 1;
       -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
       mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
@@ -379,8 +379,21 @@ const forceDark = content.heroTheme === 'dark';
       right: -1rem;
     }
 
+    /* The text cap only exists to dodge the opaque bottom-right cutout —
+       the heroArt / logo-art variants are faint centered watermarks, so
+       they keep the full-width reflow. When the cutout 404s at runtime
+       (`fch--no-model` from the img onerror), the text reflows back to
+       full width too instead of leaving a dead right column. */
     .fch__content {
+      max-width: 100%;
+    }
+
+    .fch--has-model .fch__content {
       max-width: 62%;
+    }
+
+    .fch--has-model.fch--no-model .fch__content {
+      max-width: 100%;
     }
   }
 
@@ -393,7 +406,7 @@ const forceDark = content.heroTheme === 'dark';
       height: 86%;
     }
 
-    .fch__content {
+    .fch--has-model .fch__content {
       max-width: 66%;
     }
   }
