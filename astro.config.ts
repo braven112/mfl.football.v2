@@ -1,3 +1,4 @@
+import './src/utils/ensure-pt-timezone';
 import { defineConfig, fontProviders } from 'astro/config';
 import vercel from '@astrojs/vercel';
 import react from '@astrojs/react';

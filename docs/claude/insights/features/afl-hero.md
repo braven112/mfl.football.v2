@@ -143,7 +143,14 @@ Regression suite: `tests/afl-conference-draft-pills.test.ts` (sweeps Aug 26/29/3
    `timeZoneName` on resolver-constructed dates. (`AflHero.astro` and
    `AflConferenceDraftPreview.astro` both fixed. The deeper prod issue —
    `isActive` windows shifted ~7h because the whole resolver runs in server
-   TZ — needs a `TZ=America/Los_Angeles` env var on the Vercel project.)
+   TZ — is fixed in code: `src/utils/ensure-pt-timezone.ts` pins
+   `process.env.TZ = 'America/Los_Angeles'` and is imported first by
+   `src/middleware.ts` (SSR runtime) and `astro.config.ts` (build /
+   prerender). The assignment is unconditional because Lambda presets
+   `TZ=:UTC`; regression test: `tests/ensure-pt-timezone.test.ts`. A
+   dashboard `TZ` env var on the Vercel project is no longer required —
+   the code pin makes prod match the PT-pinned test suite regardless of
+   project settings.)
 
 2. **`daysUntilStart` is timestamp-ceil, not calendar days.** Giving the
    drafts a 9 AM start made What's Next / calendar cards read "2 days out"

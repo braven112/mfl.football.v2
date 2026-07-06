@@ -15,6 +15,14 @@
     {
       "date": "2026-07-06",
       "type": "bug-fix",
+      "summary": "Event windows and day boundaries across the site now flip on Pacific Time, not the server's clock. The production server lives in UTC, so \"active now\" banners lit up around 2 AM, deadlines read \"Completed\" by early afternoon on deadline day, and \"Today\" became \"Tomorrow\" at 5 PM. The server has been told what time zone the league actually lives in.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "both"
+    },
+    {
+      "date": "2026-07-06",
+      "type": "bug-fix",
       "summary": "Event countdowns on the homepage What's Next cards and the League Calendar now count real calendar days. Events with a set time (deadlines, drafts) were shown as \"1 day out\" all morning on the day they actually happen — and occasionally \"2 days out\" for tomorrow's event. Day-of events now say \"Today,\" which is when you most need them to.",
       "impact": "user",
       "area": "calendar",
