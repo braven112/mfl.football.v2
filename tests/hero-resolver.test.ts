@@ -28,6 +28,8 @@ function makeEvent(overrides: Partial<ResolvedLeagueEvent> & { name?: string; ca
     isPast: overrides.isPast ?? false,
     isUrgent: overrides.isUrgent ?? false,
     daysUntilStart: overrides.daysUntilStart ?? 30,
+    daysUntilStartCalendar:
+      overrides.daysUntilStartCalendar ?? overrides.daysUntilStart ?? 30,
     actionLinks: overrides.actionLinks ?? [],
     resultLinks: overrides.resultLinks ?? [],
   };
