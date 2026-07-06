@@ -46,8 +46,12 @@ export interface PlayoffTeamView {
   /** Short chip name (nameShort → abbrev → last word). */
   short: string;
   seed?: number;
-  /** Franchise primary color (hex). */
+  /** Franchise chart/graph color (hex) — what the panels currently tint with. */
   color: string;
+  /** Brand primary color (hex) — panel fill / main identity. */
+  colorPrimary: string;
+  /** Brand secondary color (hex) — accent (e.g. a two-tone empty panel). */
+  colorSecondary: string;
   /** Franchise GroupMe crest — the panel/background watermark. */
   crest: string;
   /** Square franchise icon — the card/table row marker. */
@@ -88,7 +92,7 @@ export interface PlayoffRoundView {
 
 /** Dependencies injected into the pure assembler (all franchise-id keyed). */
 export interface RoundViewDeps {
-  brandOf: (fid: string) => { name: string; color: string; crest: string; icon: string };
+  brandOf: (fid: string) => { name: string; color: string; colorPrimary: string; colorSecondary: string; crest: string; icon: string };
   shortNameOf: (fid: string) => string;
   mediumNameOf: (fid: string) => string;
   headlinerOf: (fid: string) => PlayoffPlayerModel | null;
@@ -124,6 +128,8 @@ function toTeamView(
     short: deps.shortNameOf(fid) || slot.displayName,
     seed: slot.seed,
     color: brand.color,
+    colorPrimary: brand.colorPrimary,
+    colorSecondary: brand.colorSecondary,
     crest: brand.crest,
     icon: brand.icon || slot.icon || '',
     record: deps.recordOf(fid),
@@ -249,7 +255,7 @@ export function buildPlayoffRoundView(params: {
   const deps: RoundViewDeps = {
     brandOf: (fid) => {
       const b = getFranchiseBrand(fid);
-      return { name: b.name, color: b.color, crest: b.groupMe, icon: b.icon };
+      return { name: b.name, color: b.color, colorPrimary: b.colorPrimary, colorSecondary: b.colorSecondary, crest: b.groupMe, icon: b.icon };
     },
     shortNameOf: (fid) => {
       const a = teamAssets.get(fid);

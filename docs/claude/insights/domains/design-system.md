@@ -1507,3 +1507,38 @@ details in memory `project_dev_stale_css_gotchas.md`:
   edit, `curl` the page/CSS from the dev server and `grep` it rather than
   trusting a browser tab — and restart the dev server after batch edits
   instead of trusting HMR to catch up.
+
+---
+
+## Franchise brand colors — three roles, two utils, one AFL trap
+
+Each franchise now carries a **chart color** and **up to four brand colors**,
+and conflating them is the easy mistake:
+
+- **`color`** (config) — the legacy chart/graph color, used on the owner-activity
+  page. **Do not repurpose it.** It was chosen for distinctness on a white bar
+  graph, not for brand identity, so a team's `color` and `colorPrimary` often
+  differ (e.g. Maverick's chart color is gold but its brand primary is black).
+- **`colorPrimary` / `colorSecondary` / `colorTertiary` / `colorQuaternary`**
+  (config) — hand-tuned brand colors sampled from each team's icon + banner.
+  Primary + secondary always resolve; tertiary/quaternary are optional.
+
+Two utilities, deliberately layered so the fallback logic lives in one place:
+- **`src/utils/team-colors.ts`** — league-aware (`getTeamColor` = chart color,
+  unchanged; `getTeamColorPrimary/Secondary/Tertiary/Quaternary(fid, 'theleague'|'afl')`).
+  Secondary falls back to a 40%-darkened primary; primary falls back to the
+  chart color then gray.
+- **`src/utils/franchise-brand.ts`** — TheLeague-only; `FranchiseBrand` **reuses**
+  the team-colors accessors for its brand fields rather than re-deriving. Keeps
+  `color` for legacy callers. The playoff round heroes tint via
+  `brand.colorPrimary` (not `color`) — `franchiseGradient(colorPrimary)` for the
+  panel fill, `franchiseGlow(colorPrimary, 0.42)` behind the crest.
+
+**AFL config trap:** `data/afl-fantasy/afl.config.json` teams have nested
+`ownerHistory[]` entries that carry their **own `franchiseId`**. A naive
+"insert colors after the first `franchiseId` match" mis-targets those nested
+blocks — franchises `0016` (Swiftie) and `0021` (Chatmaster) got their colors
+written into an `ownerHistory` entry instead of the top-level team. Always
+target the **top-level** team object, and audit with a JSON parse (count teams
+with `colorPrimary`, and count `colorPrimary` leaks inside `ownerHistory`)
+rather than a line-based grep.

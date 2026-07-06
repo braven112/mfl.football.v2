@@ -10,7 +10,7 @@ import type { PlayoffBracketSummaryGame } from '../src/types/hero-state';
 /** Minimal deps: brand echoes the id, one team carries a compositable headliner. */
 function makeDeps(overrides: Partial<RoundViewDeps> = {}): RoundViewDeps {
   return {
-    brandOf: (fid) => ({ name: `Team ${fid}`, color: '#123456', crest: `/crest/${fid}.png`, icon: `/icon/${fid}.png` }),
+    brandOf: (fid) => ({ name: `Team ${fid}`, color: '#123456', colorPrimary: '#123456', colorSecondary: '#0a1a2a', crest: `/crest/${fid}.png`, icon: `/icon/${fid}.png` }),
     shortNameOf: (fid) => `T${fid}`,
     mediumNameOf: (fid) => `Team ${fid}`,
     headlinerOf: (fid) => ({ name: `Star ${fid}`, position: 'QB', nflTeam: 'BAL', headshot: 'https://a.espncdn.com/x.png' }),
@@ -115,6 +115,25 @@ describe('assembleRoundView — team resolution', () => {
     expect(view?.games[0].isUserGame).toBe(true);
     const mine = view?.games[0].teams.find((t) => t.franchiseId === '6');
     expect(mine?.isUser).toBe(true);
+  });
+
+  it('surfaces the franchise brand primary + secondary colors on each team', () => {
+    const view = assembleRoundView(
+      bracket,
+      makeDeps({
+        brandOf: (fid) => ({
+          name: `Team ${fid}`,
+          color: '#123456',
+          colorPrimary: fid === '3' ? '#bd1f2b' : '#111111',
+          colorSecondary: fid === '3' ? '#181818' : '#222222',
+          crest: `/crest/${fid}.png`,
+          icon: `/icon/${fid}.png`,
+        }),
+      }),
+    );
+    const three = view?.games[0].teams.find((t) => t.franchiseId === '3');
+    expect(three?.colorPrimary).toBe('#bd1f2b');
+    expect(three?.colorSecondary).toBe('#181818');
   });
 });
 

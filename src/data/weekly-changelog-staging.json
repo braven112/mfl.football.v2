@@ -6,6 +6,14 @@
   "changes": [
     {
       "date": "2026-07-06",
+      "type": "style-tweak",
+      "summary": "The homepage playoff heroes now wear their team's actual colors. The semifinal panels, the championship stage, and the wild-card glow used to tint from a chart color picked for looking distinct on a bar graph — fine for a spreadsheet, a little random on a hero. Every franchise now has a hand-tuned brand primary (pulled from its real logo and crest), so the Pigskins panel runs deep red, Bring The Pain goes black, Midwestside glows Hawkeye gold, and the title-game field melts from one team's color through black into the other's. Same crests, same layout — just the right paint.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-06",
       "type": "bug-fix",
       "summary": "Event countdowns on the homepage What's Next cards and the League Calendar now count real calendar days. Events with a set time (deadlines, drafts) were shown as \"1 day out\" all morning on the day they actually happen — and occasionally \"2 days out\" for tomorrow's event. Day-of events now say \"Today,\" which is when you most need them to.",
       "impact": "user",
