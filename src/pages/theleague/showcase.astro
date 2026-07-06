@@ -1,0 +1,1384 @@
+---
+/**
+ * Composite Player-Image Hero System — engineering showcase.
+ *
+ * A self-contained, guest-visible deep-dive on the homepage composite hero
+ * system: the casting rules, the personalization, the image pipeline, and the
+ * calendar-driven state machine that decides which player's face shows and how
+ * it's rendered. Built as a portfolio/interview surface in the editorial voice
+ * of /theleague/about.
+ *
+ * The composite hero components + utils are live on main (PR #346). This page
+ * deliberately reproduces the shipped `.fch` hero treatment inline — real
+ * players, real NFL team colors, the exact gradient/glow/ghost-wordmark/
+ * frosted-caption CSS — rather than importing those components, so the whole
+ * showcase stays a single self-contained file.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+
+// SSR (not prerendered) — mirrors about.astro. The apex-host clean-URL rewrite
+// in src/middleware.ts (/showcase → /theleague/showcase) only runs for SSR
+// routes; a prerendered route can 404 on theleague.us. Content is fully static
+// so SSR is effectively free.
+
+/** Local copy of the shipped hexToRgba (src/utils/nfl-team-colors.ts). */
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return `rgba(22, 32, 44, ${alpha})`;
+  const v = parseInt(m[1], 16);
+  return `rgba(${(v >> 16) & 255}, ${(v >> 8) & 255}, ${v & 255}, ${alpha})`;
+}
+
+const headshot = (espnId: string) =>
+  `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+
+// Real players, real ESPN ids, real NFL team primary colors (from the shipped
+// 32-team NFL_TEAM_COLORS map). Each card reproduces one shipped treatment.
+const gallery = [
+  {
+    key: 'feature',
+    accent: 'blue',
+    component: 'FeatureCompositeHero',
+    wordmark: "WHAT'S NEW",
+    pill: 'New this week',
+    title: 'Dynamic top-player spotlight on Free Agents',
+    summary:
+      'A new feature casts a rookie — because rookies represent “new.” Transparent ESPN cutout over the league-blue gradient, glow tinted by his NFL team, ghost wordmark bled off the top.',
+    name: 'Ashton Jeanty',
+    descriptor: 'Rookie',
+    pos: 'RB',
+    code: 'LV',
+    espnId: '4890973',
+    primary: '#101820',
+  },
+  {
+    key: 'enhancement',
+    accent: 'blue',
+    component: 'FeatureCompositeHero · enhancement',
+    wordmark: "WHAT'S NEW",
+    pill: 'Improved this week',
+    title: 'Trade Builder now shows live cap impact',
+    summary:
+      '“Same guy, leveled up” — an enhancement casts a rostered player in his first five NFL seasons. Strictly someone an owner invested in; the caption reads his year.',
+    name: 'Jahmyr Gibbs',
+    descriptor: '4th Year',
+    pos: 'RB',
+    code: 'DET',
+    espnId: '4429795',
+    primary: '#0076b6',
+  },
+  {
+    key: 'auction',
+    accent: 'amber',
+    component: 'AuctionCompositeHero',
+    wordmark: 'AUCTION',
+    pill: 'Bidding open',
+    title: 'The auction is live',
+    summary:
+      'Best available by dynasty ADP models the money window — the pick rotates daily so one face doesn’t own the whole auction. Amber money accent.',
+    name: "Ja'Marr Chase",
+    descriptor: 'Best Available',
+    pos: 'WR',
+    code: 'CIN',
+    espnId: '4362628',
+    primary: '#fb4f14',
+  },
+  {
+    key: 'cut',
+    accent: 'red',
+    component: 'CutWatchCompositeHero',
+    wordmark: 'CUT WATCH',
+    pill: 'Final 30 days',
+    title: 'Two teams are over the roster limit',
+    summary:
+      'Signed in, the hero casts a suggested cut candidate from YOUR team, chip reads “You +2.” The blue planning tier flips to this urgent red inside the final 30 days.',
+    name: 'Bijan Robinson',
+    descriptor: 'Your bubble player',
+    pos: 'RB',
+    code: 'ATL',
+    espnId: '4430807',
+    primary: '#a71930',
+  },
+  {
+    key: 'kickoff',
+    accent: 'green',
+    component: 'PreseasonCompositeHero',
+    wordmark: 'KICKOFF',
+    pill: 'Season opener',
+    title: 'Football is back Thursday night',
+    summary:
+      'The best projected starter in the week’s earliest game — and if you roster a player in that opener, you see your own best one. “Your Kickoff Starter.”',
+    name: 'Lamar Jackson',
+    descriptor: 'Your Kickoff Starter',
+    pos: 'QB',
+    code: 'BAL',
+    espnId: '3916387',
+    primary: '#241773',
+  },
+];
+const galleryVars = (primary: string) =>
+  // Match the shipped FeatureCompositeHero glow alphas exactly: 0.38 dark, 0.2 light.
+  `--hc-glow-dark: ${hexToRgba(primary, 0.38)}; --hc-glow-light: ${hexToRgba(primary, 0.2)};`;
+
+// The 14 season phases — verbatim windows from src/types/hero-state.ts.
+const phases = [
+  ['championship', 'Week 17 Thu → Mon night final'],
+  ['champion-crowned', 'Championship decided → +7 days'],
+  ['tag-window', 'After champion crowned → Feb 14'],
+  ['tagged-showcase', 'Feb 15 → auction hero start'],
+  ['auction-preview', 'Mon before 3rd Thu Mar → Thu 7am PT'],
+  ['auction-live', '3rd Thu Mar 7am PT → +10 days'],
+  ['draft-countdown', 'Auction end → Draft hero (scouting lull)'],
+  ['draft-announced', 'Mon after NFL Draft → rookie draft'],
+  ['draft-live', 'Rookie draft start → draft completes'],
+  ['udfa-window', 'Draft completes → +7 days'],
+  ['cut-watch', 'Jun 1 → 3rd Sun of Aug'],
+  ['preseason-countdown', 'FA close → NFL kickoff'],
+  ['regular-season', 'NFL kickoff → end of Week 14'],
+  ['trade-deadline', 'Nov 13 (24h override)'],
+  ['playoffs', 'Week 15 → Week 16'],
+  ['offseason-fallback', 'Any gap not covered above'],
+];
+const slots = [
+  ['live-scoring', 'TNF, Sunday, MNF game windows'],
+  ['standings', 'Monday pre-game'],
+  ['recap', 'Tuesday AM'],
+  ['waiver-wire', 'Tuesday PM → Wednesday 8pm'],
+  ['article', 'Schefter articles (pickups, preview)'],
+  ['game-day-preview', 'Saturday, Sunday pre-game'],
+];
+
+// The eight real casting functions (src/utils/hero-casting.ts).
+const castFns = [
+  ['castRookieModel', 'New feature / What’s New', 'Newest draft class in the pool, rostered-first, daily rotation.'],
+  ['castEnhancementModel', 'Enhancement announcement', 'Rostered player in his first 5 NFL seasons — “same guy, leveled up.” Strictly rostered.'],
+  ['castTopFreeAgentModel', 'Auction preview / live', 'Top-5 unrostered free agents by dynasty ADP, rotated daily.'],
+  ['castClosingAuctionModel', 'Auction, live bids', 'The player whose bid clock runs out first (oldest anchor + MFL’s 36h rule).'],
+  ['castRookiesOnBoard', 'UDFA window', 'Best current-class rookies still unrostered — the board is the board (no rotation).'],
+  ['castBestScoredModel', 'Preseason / kickoff', 'Highest-projected starter in the earliest game — your player if you roster one.'],
+  ['castRandomStarterModel', 'Preseason / kickoff', 'Rotates among likely starters (top-8/team by projection) in that game.'],
+  ['castRosterModel', 'Roster actions (cuts, tags)', 'A candidate from YOUR franchise; guests get a league-wide daily pick.'],
+];
+---
+
+<TheLeagueLayout title="Composite Hero System | The League">
+  <div class="hc-page">
+
+    <!-- ===== HERO ===== -->
+    <header class="hc-hero">
+      <div class="hc-hero__eyebrow">
+        <span class="hc-tag">Feature Deep-Dive</span>
+        <span class="hc-dot">·</span>
+        <span class="hc-hero__date">Homepage Hero System</span>
+      </div>
+
+      <h1 class="hc-hero__title">Every hero puts a real player on screen.<br>The face always means something.</h1>
+
+      <p class="hc-hero__deck">
+        The homepage hero isn't decoration. A rules engine decides <em>which</em> player's
+        face appears on any given day, and a small image pipeline decides <em>how</em> it's
+        rendered — a free ESPN cutout composited over his NFL team's colors, personalized to
+        the signed-in owner, and stable for a full Pacific-Time day. This is how it works.
+      </p>
+
+      <div class="hc-hero__stack">
+        <span class="hc-stack-item">Astro SSR</span>
+        <span class="hc-stack-dot">·</span>
+        <span class="hc-stack-item">Deterministic casting</span>
+        <span class="hc-stack-dot">·</span>
+        <span class="hc-stack-item">CSS composites over ESPN CDN</span>
+        <span class="hc-stack-dot">·</span>
+        <span class="hc-stack-item">14-phase state machine</span>
+        <span class="hc-stack-dot">·</span>
+        <span class="hc-stack-item">Light + dark</span>
+      </div>
+    </header>
+
+    <!-- ===== GALLERY (show, don't tell) ===== -->
+    <section class="hc-gallery" aria-label="Composite hero gallery">
+      {gallery.map((g) => (
+        <article
+          class={`hcx hcx--${g.accent}`}
+          style={galleryVars(g.primary ?? '#1c497c')}
+          aria-label={`${g.title} — featuring ${g.name}, ${g.descriptor}, ${g.pos}, ${g.code}`}
+        >
+          <span class="hcx__ghost" aria-hidden="true">{g.wordmark}</span>
+          <div class="hcx__glow" aria-hidden="true"></div>
+          <img
+            class="hcx__model"
+            src={headshot(g.espnId)}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            onerror="this.closest('.hcx').classList.add('hcx--no-model')"
+          />
+          <span class="hcx__caption">
+            <strong>{g.name}</strong>
+            <span class="hcx__caption-meta">{g.descriptor} · {g.pos} · {g.code}</span>
+          </span>
+          <!-- On a headshot 404 the card reveals the league-logo silhouette
+               instead of an empty flank — mirrors the shipped .fch behavior. -->
+          <img class="hcx__logo-art hcx__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+          <img class="hcx__logo-art hcx__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+          <div class="hcx__content">
+            <p class="hcx__eyebrow">
+              <span class="hcx__pill">{g.pill}</span>
+              <span class="hcx__component">{g.component}</span>
+            </p>
+            <h3 class="hcx__title">{g.title}</h3>
+            <p class="hcx__summary">{g.summary}</p>
+            <span class="hcx__cta">Check it out <span aria-hidden="true">→</span></span>
+          </div>
+        </article>
+      ))}
+    </section>
+    <p class="hc-gallery__note">
+      Reproductions of the shipped hero treatment — real players, real NFL team colors, and the
+      exact gradient / radial glow / ghost-wordmark / frosted-caption CSS from the live components.
+      Toggle your theme: the gradient, glow, and tokens re-resolve for dark mode.
+    </p>
+
+    <div class="hc-body">
+
+      <!-- ===== 01: THE PREMISE ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">01</span>
+          <div>
+            <h2 class="hc-section-title">The Premise</h2>
+            <p class="hc-section-sub">Why there's a real player on the hero at all — and the one rule that governs it</p>
+          </div>
+        </div>
+
+        <div class="hc-two-col">
+          <div class="hc-prose">
+            <p>
+              Identifiable NFL action photography is rights-managed — Getty, AP, Imagn. A fantasy
+              site can't ship it. The easy fallback is a gradient with a headline slapped on top,
+              which is exactly how most fantasy homepages look: fine, forgettable, decorative.
+            </p>
+            <p>
+              The approach here is different. Every NFL player has a <strong>free, transparent
+              headshot on ESPN's CDN</strong>. Layer that cutout over his team's colors with a
+              little typography and glow, and you get a branded, on-topic hero — automatically, for
+              any player, with zero licensing. The constraint became the design language.
+            </p>
+            <p>
+              That unlocks the actual rule, which is the whole point of the system:
+            </p>
+          </div>
+          <blockquote class="hc-quote hc-quote--binding">
+            <div class="hc-quote__label">Casting Rule — Brandon, binding</div>
+            “Every hero casts a <strong>semantically relevant</strong> player — the actual player
+            in a breaking story, the rookie behind a new feature, a bubble player from
+            <em>your</em> roster on cut watch. Never a random star for decoration.”
+          </blockquote>
+        </div>
+      </section>
+
+      <!-- ===== 02: THE IMAGE PIPELINE ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">02</span>
+          <div>
+            <h2 class="hc-section-title">The Image Pipeline</h2>
+            <p class="hc-section-sub">How a name becomes a composite — and the gate that keeps it from breaking</p>
+          </div>
+        </div>
+
+        <div class="hc-layers">
+          <div class="hc-layer">
+            <div class="hc-layer__z">z-0</div>
+            <div class="hc-layer__body">
+              <div class="hc-layer__name">Team-color gradient + ghost wordmark</div>
+              <div class="hc-layer__desc">A diagonal gradient (league-blue base) with an oversized, barely-there wordmark — <code>WHAT'S&nbsp;NEW</code>, <code>AUCTION</code>, <code>CUT&nbsp;WATCH</code> — bled off the top edge.</div>
+            </div>
+          </div>
+          <div class="hc-layer">
+            <div class="hc-layer__z">z-1</div>
+            <div class="hc-layer__body">
+              <div class="hc-layer__name">Radial glow, tinted by NFL team color</div>
+              <div class="hc-layer__desc"><code>hexToRgba(primary, 0.38)</code> in dark, <code>0.2</code> in light — the player's team hue bleeds in from the corner behind him.</div>
+            </div>
+          </div>
+          <div class="hc-layer">
+            <div class="hc-layer__z">z-2</div>
+            <div class="hc-layer__body">
+              <div class="hc-layer__name">Transparent ESPN headshot cutout</div>
+              <div class="hc-layer__desc">Anchored bottom-right with a soft drop-shadow. On the real homepage hero it's <code>loading="eager"</code> (above the fold); the reproductions below lazy-load. Always <code>decoding="async"</code>, decorative <code>alt=""</code>.</div>
+            </div>
+          </div>
+          <div class="hc-layer">
+            <div class="hc-layer__z">z-3</div>
+            <div class="hc-layer__body">
+              <div class="hc-layer__name">Frosted caption + editorial copy</div>
+              <div class="hc-layer__desc">Player name on a <code>backdrop-filter: blur(2px)</code> pill bottom-right; kicker, title, summary, CTA bottom-left with an <strong>explicit</strong> text color so global heading rules can't restyle it.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hc-two-col hc-two-col--code-left">
+          <figure class="hc-code">
+            <figcaption class="hc-code__cap">src/utils/hero-casting.ts</figcaption>
+            <pre class="hc-code__pre"><code>{`/** Composites need a transparent ESPN cutout —
+    MFL JPGs have baked backgrounds. */
+function isCompositable(player: PlayerIdentity): boolean {
+  return player.position !== 'DEF'
+    && player.headshot.includes('espncdn.com');
+}`}</code></pre>
+          </figure>
+          <div class="hc-prose">
+            <p>
+              Two failure modes get gated out before anything renders. <strong>Transparency is
+              load-bearing:</strong> the ESPN headshot has an alpha channel; MFL's fallback JPG
+              (<code>player_photos_big_2014/…_thumb.jpg</code>) has a baked-in background that ruins
+              the composite. So the gate requires an <code>espncdn.com</code> URL. And a
+              <strong>team defense isn't a person</strong> — <code>position === 'DEF'</code> is
+              excluded, since a "DEF player" is a logo, not a face.
+            </p>
+            <p>
+              Even a valid ESPN id can 404 (deep free agents sometimes have no photo). The cutout
+              carries an inline <code>onerror</code> that hides itself and its caption, and the
+              hero swaps to the <strong>league-logo silhouette</strong> — a gradient with an empty
+              flank reads as broken, so it never ships one.
+            </p>
+          </div>
+        </div>
+
+        <div class="hc-chips">
+          <span class="hc-chip">DEF → excluded</span>
+          <span class="hc-chip">MFL JPG → excluded</span>
+          <span class="hc-chip">404 → league-logo silhouette</span>
+          <span class="hc-chip">tabular-nums on every metric</span>
+          <span class="hc-chip">prefers-reduced-motion guarded</span>
+        </div>
+      </section>
+
+      <!-- ===== 03: BRANDING & COLOR ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">03</span>
+          <div>
+            <h2 class="hc-section-title">Branding &amp; Color</h2>
+            <p class="hc-section-sub">The player's NFL team paints the hero; his fantasy team rides alongside</p>
+          </div>
+        </div>
+
+        <div class="hc-prose">
+          <p>
+            Color comes from one source of truth: a <strong>32-team NFL brand-color map</strong>
+            (<code>NFL_TEAM_COLORS</code>, keyed by ESPN codes) with a hand-picked primary and
+            secondary per team — secondary deliberately skips near-white "official" colors that
+            would be useless on a dark composite. The player's NFL team drives the gradient anchor
+            and the glow tint. Unknown or free-agent codes fall back to <strong>TheLeague
+            blue, <code>#1c497c</code></strong>.
+          </p>
+        </div>
+
+        <div class="hc-brand-grid">
+          <div class="hc-brand-card">
+            <div class="hc-brand-card__head">Rostered player</div>
+            <p class="hc-brand-card__body">
+              The hero is about a fantasy team, so franchise identity rides alongside the NFL
+              color — the owner's <strong>crest and short name</strong> as a chip, a
+              <strong>“You&nbsp;+N”</strong> marker when it's your own player. Cut watch and the
+              tagged-player showcase are the roster-branded surfaces.
+            </p>
+            <div class="hc-brand-card__tag">franchise crest · chooseTeamName(…, 'short')</div>
+          </div>
+          <div class="hc-brand-card">
+            <div class="hc-brand-card__head">Free agent / unrostered</div>
+            <p class="hc-brand-card__body">
+              No fantasy team to brand to, so the hero leans on <strong>NFL identity</strong> — the
+              team-color gradient and glow, the league logo as backdrop art on the live auction.
+              Auction and UDFA are the free-agent surfaces; deep FAs fall back to league blue.
+            </p>
+            <div class="hc-brand-card__tag">NFL_TEAM_COLORS · #1c497c fallback</div>
+          </div>
+        </div>
+
+        <div class="hc-swatches" role="list" aria-label="Sample NFL team colors">
+          <div class="hc-swatch" role="listitem" style="--sw: #241773"><span class="hc-swatch__dot"></span>BAL <code>#241773</code></div>
+          <div class="hc-swatch" role="listitem" style="--sw: #fb4f14"><span class="hc-swatch__dot"></span>CIN <code>#fb4f14</code></div>
+          <div class="hc-swatch" role="listitem" style="--sw: #0b162a"><span class="hc-swatch__dot"></span>CHI <code>#0b162a</code></div>
+          <div class="hc-swatch" role="listitem" style="--sw: #a71930"><span class="hc-swatch__dot"></span>ATL <code>#a71930</code></div>
+          <div class="hc-swatch" role="listitem" style="--sw: #e31837"><span class="hc-swatch__dot"></span>KC <code>#e31837</code></div>
+          <div class="hc-swatch" role="listitem" style="--sw: #1c497c"><span class="hc-swatch__dot"></span>FA <code>#1c497c</code></div>
+        </div>
+      </section>
+
+      <!-- ===== 04: PERSONALIZATION ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">04</span>
+          <div>
+            <h2 class="hc-section-title">Personalization Without Randomness</h2>
+            <p class="hc-section-sub">Signed-in owners see their own player; guests see a deterministic public pick</p>
+          </div>
+        </div>
+
+        <div class="hc-two-col hc-two-col--wide-text">
+          <div class="hc-prose">
+            <p>
+              Same layout, different casting. The roster-action and kickoff heroes take an optional
+              <code>userFranchiseId</code>. When it's set and the owner has a relevant candidate,
+              the pool <strong>narrows to their own players</strong> — your bubble cut, your
+              kickoff starter, your suggested tag. When it's empty (a guest, or an owner with no
+              candidate), the hero falls back to a <strong>league-wide pick</strong>.
+            </p>
+            <p>
+              The catch: this is server-rendered, and SSR can't call <code>Math.random()</code> at
+              request time — two loads of the same page would disagree, and the cache would be
+              useless. So the pick is <strong>deterministic per Pacific-Time calendar day</strong>:
+              an FNV-1a hash of the PT day-key plus a per-hero seed indexes into the sorted
+              candidate pool. Stable across every request that day, then it rotates at midnight PT
+              so one face doesn't own the window.
+            </p>
+            <p>
+              It's testable, too — <code>?testDate=YYYY-MM-DD</code> drives both the phase and the
+              rotation seed, so any day's hero can be previewed on demand.
+            </p>
+          </div>
+          <figure class="hc-code">
+            <figcaption class="hc-code__cap">The deterministic daily pick</figcaption>
+            <pre class="hc-code__pre"><code>{`// PT calendar day (YYYY-MM-DD) — the rotation seed
+function ptDayKey(date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles', …
+  }).format(date);
+}
+
+function dailyPick(pool, date, seedKey, keyOf) {
+  if (pool.length === 0) return null;
+  const sorted = [...pool].sort(
+    (a, b) => keyOf(a).localeCompare(keyOf(b)));
+  const i = hashSeed(\`\${ptDayKey(date)}:\${seedKey}\`)
+            % sorted.length;
+  return sorted[i];        // same all day, rotates at PT midnight
+}`}</code></pre>
+          </figure>
+        </div>
+
+        <div class="hc-persona">
+          <div class="hc-persona__col">
+            <div class="hc-persona__who hc-persona__who--owner">Signed-in owner</div>
+            <div class="hc-persona__line">Cut watch → <strong>your</strong> suggested cut, chip reads “You&nbsp;+2”</div>
+            <div class="hc-persona__line">Kickoff → <strong>your</strong> best starter in the opener</div>
+            <div class="hc-persona__line">Pool narrows to <code>franchiseId === userFranchiseId</code></div>
+          </div>
+          <div class="hc-persona__col">
+            <div class="hc-persona__who hc-persona__who--guest">Guest</div>
+            <div class="hc-persona__line">Cut watch → a league-wide bubble candidate</div>
+            <div class="hc-persona__line">Kickoff → the opener's highest projection</div>
+            <div class="hc-persona__line">Deterministic daily pick from the full pool</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 05: THE CASTING RULES ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">05</span>
+          <div>
+            <h2 class="hc-section-title">The Casting Rules, by Category</h2>
+            <p class="hc-section-sub">What's New heroes cast by entry type — the taxonomy Brandon locked in</p>
+          </div>
+        </div>
+
+        <div class="hc-cat-grid">
+          <div class="hc-cat">
+            <div class="hc-cat__type">new-page · new-feature</div>
+            <div class="hc-cat__cast">Rookie</div>
+            <div class="hc-cat__desc">Rookies represent “new.” Rostered-first; an unrostered rookie only when no rookie is rostered.</div>
+          </div>
+          <div class="hc-cat">
+            <div class="hc-cat__type">enhancement</div>
+            <div class="hc-cat__cast">Rostered, first 5 yrs</div>
+            <div class="hc-cat__desc">“Same guy, leveled up.” Strictly a player an owner invested in — caption reads “3rd Year,” etc. No unrostered fallback.</div>
+          </div>
+          <div class="hc-cat">
+            <div class="hc-cat__type">bug-fix</div>
+            <div class="hc-cat__cast">No player</div>
+            <div class="hc-cat__desc">League-logo silhouette (light/dark asset pair). A bug fix doesn't get a face.</div>
+          </div>
+          <div class="hc-cat">
+            <div class="hc-cat__type">league-event</div>
+            <div class="hc-cat__cast">Relevant player</div>
+            <div class="hc-cat__desc">The player who's actually in the story. (Event-hero conversions in progress.)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 06: THE CAST FUNCTIONS ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">06</span>
+          <div>
+            <h2 class="hc-section-title">Eight Casting Functions</h2>
+            <p class="hc-section-sub">Each surface has a purpose-built picker in <code>hero-casting.ts</code> — all deterministic, all reusable</p>
+          </div>
+        </div>
+
+        <div class="hc-table-wrap">
+          <table class="hc-table">
+            <thead>
+              <tr><th>Function</th><th>Surface</th><th>Who it picks</th></tr>
+            </thead>
+            <tbody>
+              {castFns.map(([fn, surface, who]) => (
+                <tr>
+                  <td><code>{fn}</code></td>
+                  <td>{surface}</td>
+                  <td>{who}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== 07: THE STATE MACHINE ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">07</span>
+          <div>
+            <h2 class="hc-section-title">The Calendar Decides</h2>
+            <p class="hc-section-sub">14 core season phases resolve by date — plus a trade-deadline override and an offseason fallback; the two live phases subdivide into 6 daily slots</p>
+          </div>
+        </div>
+
+        <div class="hc-prose">
+          <p>
+            Which hero shows isn't a toggle — it's resolved from the calendar. The
+            <code>hero-resolver</code> maps the current Pacific-Time date to a season phase.
+            <strong>Fourteen are real windows</strong> on the league year; the
+            <code>SeasonPhase</code> union below adds two more — a 24-hour
+            <code>trade-deadline</code> override and an <code>offseason-fallback</code> catch-all
+            for any gap (16 states in all). During the two live phases the resolver drops into a
+            second axis — six <strong>daily slots</strong> keyed on day-of-week and game windows —
+            so a Monday standings hero gives way to a Tuesday recap gives way to a waiver-wire
+            push. A priority ladder (P0++ → P5) breaks ties.
+          </p>
+        </div>
+
+        <div class="hc-phase-grid" aria-label="Season phases">
+          {phases.map(([name, window], i) => (
+            <div class={`hc-phase${['auction-live','cut-watch','preseason-countdown','udfa-window','offseason-fallback'].includes(name) ? ' hc-phase--shipped' : ''}`}>
+              <span class="hc-phase__i">{String(i + 1).padStart(2, '0')}</span>
+              <div>
+                <div class="hc-phase__name">{name}</div>
+                <div class="hc-phase__window">{window}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div class="hc-slots">
+          <div class="hc-slots__label">Daily slots · regular-season + playoffs</div>
+          <div class="hc-slots__row">
+            {slots.map(([name, when]) => (
+              <div class="hc-slot"><span class="hc-slot__name">{name}</span><span class="hc-slot__when">{when}</span></div>
+            ))}
+          </div>
+        </div>
+        <p class="hc-phase-legend"><span class="hc-legend-swatch"></span> Phases with a shipped composite hero today</p>
+      </section>
+
+      <!-- ===== 08: SHIPPED HEROES ===== -->
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">08</span>
+          <div>
+            <h2 class="hc-section-title">What's Shipped</h2>
+            <p class="hc-section-sub">Five composite heroes live today; each owns its gradient, wordmark, glow, and casting</p>
+          </div>
+        </div>
+
+        <div class="hc-ship-grid">
+          <div class="hc-ship">
+            <div class="hc-ship__name">FeatureCompositeHero</div>
+            <div class="hc-ship__cast">castRookie/ castEnhancement</div>
+            <p class="hc-ship__desc">The What's New hero. A rookie models a new feature; an enhancement casts a rostered player in his first five years. Can force the dark treatment when the dark card <em>is</em> the story.</p>
+          </div>
+          <div class="hc-ship">
+            <div class="hc-ship__name">AuctionCompositeHero</div>
+            <div class="hc-ship__cast">castTopFreeAgent / castClosingAuction</div>
+            <p class="hc-ship__desc">Amber money accent. Best-available-by-ADP in preview; once bids are live, it flips to the player whose clock runs out first and adds a high-bid line.</p>
+          </div>
+          <div class="hc-ship">
+            <div class="hc-ship__name">CutWatchCompositeHero</div>
+            <div class="hc-ship__cast">castRosterModel</div>
+            <p class="hc-ship__desc">The first personalized hero — your own bubble player, “You&nbsp;+N” chip. Blue planning tier flips red inside the final 30 days.</p>
+          </div>
+          <div class="hc-ship">
+            <div class="hc-ship__name">PreseasonCompositeHero</div>
+            <div class="hc-ship__cast">castBestScored / castRandomStarter</div>
+            <p class="hc-ship__desc">The best (or a rotating) likely starter in the week's earliest game — your player if you roster one in the opener.</p>
+          </div>
+          <div class="hc-ship">
+            <div class="hc-ship__name">UdfaCompositeHero</div>
+            <div class="hc-ship__cast">castRookiesOnBoard</div>
+            <p class="hc-ship__desc">Four team-gradient panels of the best rookies still on the board. Casts eight, renders the four whose photos actually load — a 404 never costs a slot.</p>
+          </div>
+          <div class="hc-ship hc-ship--muted">
+            <div class="hc-ship__name">Honest scope</div>
+            <div class="hc-ship__cast">not composites (yet)</div>
+            <p class="hc-ship__desc">The playoff hero is a bracket-summary table, not a player composite. Feed-card composites were built and deliberately reverted. Breaking-story and tagged-showcase panels are mocked, not shipped.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== CLOSING ===== -->
+      <section class="hc-closing">
+        <div class="hc-closing__inner">
+          <div class="hc-closing__text">
+            <h2 class="hc-closing__title">The Bottom Line</h2>
+            <p>
+              The interesting part isn't the gradient — it's that a licensing constraint turned into
+              a rule (“every hero means something”), the rule turned into eight small deterministic
+              pickers, and those plug into a calendar-driven state machine that already knew what day
+              it was. Personalization fell out for free, because the casting functions already took a
+              franchise id.
+            </p>
+            <p>
+              It renders on the server, stays stable for a Pacific-Time day, degrades gracefully when
+              a photo 404s, and looks right in light and dark. No stock photos. No licensed action
+              shots. Just the right player, rendered the right way, every day.
+            </p>
+          </div>
+          <div class="hc-closing__meta">
+            <div class="hc-closing__meta-label">Key files</div>
+            <ul class="hc-closing__files">
+              <li>src/utils/hero-casting.ts</li>
+              <li>src/utils/nfl-team-colors.ts</li>
+              <li>src/utils/hero-resolver.ts · src/types/hero-state.ts</li>
+              <li>src/components/theleague/*CompositeHero.astro</li>
+              <li>docs/…/features/player-composites.md</li>
+            </ul>
+          </div>
+          <div class="hc-closing__ctas">
+            <a href="/theleague/about" class="hc-btn hc-btn--primary">The full case study <span class="hc-btn__arrow">→</span></a>
+            <a href="/theleague/whats-new" class="hc-btn hc-btn--ghost">See heroes in the wild <span class="hc-btn__arrow">→</span></a>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.hc-body -->
+  </div>
+</TheLeagueLayout>
+
+<style>
+  /* ===========================
+     Shell
+  =========================== */
+  .hc-page {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+  }
+
+  /* ===========================
+     Hero
+  =========================== */
+  .hc-hero {
+    padding: 2.75rem 0 2rem;
+    max-width: 68rem;
+  }
+
+  .hc-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .hc-tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+  }
+
+  .hc-dot { color: var(--color-gray-400, #9ca3af); font-size: 0.75rem; }
+
+  .hc-hero__date {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-weight: 500;
+  }
+
+  .hc-hero__title {
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 1.125rem;
+  }
+
+  .hc-hero__deck {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 66ch;
+    margin: 0 0 1.5rem;
+  }
+
+  .hc-hero__deck em { font-style: italic; color: var(--color-gray-800, #1f2937); }
+
+  .hc-hero__stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .hc-stack-item { font-size: 0.8125rem; font-weight: 500; color: var(--color-gray-600, #4b5563); }
+  .hc-stack-dot { color: var(--color-gray-300, #d1d5db); font-size: 0.75rem; }
+
+  /* ===========================
+     Gallery — reproduced .fch treatment
+  =========================== */
+  .hc-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0.5rem 0 0.75rem;
+  }
+
+  .hcx {
+    /* light theme defaults */
+    --hc-surface: linear-gradient(115deg, #f4f8fc 0%, #e4eef8 52%, #d2e2f2 100%);
+    --hc-ink: var(--color-gray-900, #0f1419);
+    --hc-body: rgba(22, 32, 44, 0.72);
+    --hc-ghost: rgba(28, 73, 124, 0.06);
+    --hc-glow: var(--hc-glow-light, rgba(28, 73, 124, 0.2));
+    --hc-shadow: rgba(15, 30, 46, 0.3);
+    --hc-pill-bg: rgba(28, 73, 124, 0.08);
+    --hc-pill-border: rgba(28, 73, 124, 0.35);
+    --hc-pill-ink: var(--color-primary, #1c497c);
+    --hc-cta: var(--color-primary, #1c497c);
+    --hc-border: rgba(28, 73, 124, 0.18);
+
+    position: relative;
+    overflow: hidden;
+    /* Cap at the real homepage hero column width so these read at true scale,
+       not stretched across the wider showcase container. Mirrors the homepage
+       math exactly: main (1232px) − 2× inline padding − 380px sidebar − 1.5rem
+       grid gap. Uses the same units so it tracks any rem scaling. */
+    width: 100%;
+    max-width: calc(1232px - 2 * var(--padding-md, 1rem) - 380px - 1.5rem);
+    min-height: clamp(230px, 22vw, 270px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--hc-border);
+    background: var(--hc-surface);
+    color: var(--hc-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  .hcx--amber { --hc-pill-ink: #b45309; --hc-pill-border: rgba(180, 83, 9, 0.4); --hc-pill-bg: rgba(217, 119, 6, 0.1); --hc-cta: #b45309; }
+  .hcx--red   { --hc-pill-ink: #b91c1c; --hc-pill-border: rgba(185, 28, 28, 0.4); --hc-pill-bg: rgba(220, 38, 38, 0.1); --hc-cta: #b91c1c; }
+  .hcx--green { --hc-pill-ink: #15803d; --hc-pill-border: rgba(21, 128, 61, 0.4); --hc-pill-bg: rgba(22, 163, 74, 0.1); --hc-cta: #15803d; }
+
+  :global(html.dark) .hcx {
+    --hc-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+    --hc-ink: #ffffff;
+    --hc-body: rgba(255, 255, 255, 0.78);
+    --hc-ghost: rgba(255, 255, 255, 0.05);
+    --hc-glow: var(--hc-glow-dark, rgba(96, 165, 250, 0.3));
+    --hc-shadow: rgba(0, 0, 0, 0.5);
+    --hc-pill-bg: rgba(96, 165, 250, 0.18);
+    --hc-pill-border: rgba(96, 165, 250, 0.45);
+    --hc-pill-ink: #a8cdf8;
+    --hc-cta: #ffffff;
+    --hc-border: rgba(255, 255, 255, 0.1);
+  }
+  :global(html.dark) .hcx--amber { --hc-pill-ink: #fcd34d; --hc-pill-border: rgba(251, 191, 36, 0.5); --hc-pill-bg: rgba(217, 119, 6, 0.22); }
+  :global(html.dark) .hcx--red { --hc-pill-ink: #fca5a5; --hc-pill-border: rgba(248, 113, 113, 0.5); --hc-pill-bg: rgba(220, 38, 38, 0.24); }
+  :global(html.dark) .hcx--green { --hc-pill-ink: #86efac; --hc-pill-border: rgba(74, 222, 128, 0.5); --hc-pill-bg: rgba(22, 163, 74, 0.24); }
+
+  .hcx__ghost {
+    position: absolute;
+    left: 40%;
+    top: -1.1rem;
+    font-size: clamp(3.75rem, 8vw, 6.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--hc-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .hcx__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--hc-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .hcx__model {
+    position: absolute;
+    right: clamp(0.5rem, 3vw, 2.5rem);
+    bottom: 0;
+    width: clamp(240px, 30vw, 360px);
+    filter: drop-shadow(0 16px 32px var(--hc-shadow));
+    pointer-events: none;
+  }
+
+  /* League-logo silhouette — hidden until a headshot 404 sets .hcx--no-model. */
+  .hcx__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(150px, 20vw, 240px);
+    opacity: 0.16;
+    pointer-events: none;
+  }
+  .hcx--no-model .hcx__model,
+  .hcx--no-model .hcx__caption {
+    display: none;
+  }
+  .hcx--no-model .hcx__logo-art--light {
+    display: block;
+  }
+  :global(html.dark) .hcx--no-model .hcx__logo-art--light {
+    display: none;
+  }
+  :global(html.dark) .hcx--no-model .hcx__logo-art--dark {
+    display: block;
+    opacity: 0.22;
+  }
+
+  .hcx__caption {
+    position: absolute;
+    z-index: 3;
+    right: 0.7rem;
+    bottom: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.35rem 0.55rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .hcx__caption strong { font-size: 0.75rem; font-weight: 800; line-height: 1.1; }
+  .hcx__caption-meta {
+    font-size: 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .hcx__content { position: relative; z-index: 2; max-width: min(32rem, 60%); }
+
+  .hcx__eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 0.7rem; }
+  .hcx__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--hc-pill-ink);
+    background: var(--hc-pill-bg);
+    border: 1px solid var(--hc-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+  .hcx__component {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--hc-body);
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    opacity: 0.8;
+  }
+
+  .hcx__title {
+    color: var(--hc-ink);
+    font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.5rem;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+
+  .hcx__summary {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--hc-body);
+    max-width: 46ch;
+    margin: 0 0 0.85rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hcx__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--hc-cta);
+  }
+
+  @media (max-width: 560px) {
+    .hcx { min-height: 240px; }
+    .hcx__content { max-width: 100%; }
+    .hcx__model { width: 170px; right: -1.25rem; opacity: 0.45; }
+    .hcx__caption { display: none; }
+  }
+
+  .hc-gallery__note {
+    font-size: 0.75rem;
+    line-height: 1.55;
+    color: var(--color-gray-500, #6b7280);
+    max-width: 62ch;
+    margin: 0 0 2.75rem;
+  }
+
+  /* ===========================
+     Body / sections (mirrors about.astro)
+  =========================== */
+  .hc-body { display: flex; flex-direction: column; gap: 4rem; }
+  .hc-section { display: flex; flex-direction: column; gap: 1.75rem; }
+
+  .hc-section-header { display: flex; gap: 1.125rem; align-items: flex-start; }
+
+  .hc-section-num {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.5;
+    letter-spacing: 0.06em;
+    padding-top: 0.05rem;
+    min-width: 1.75rem;
+  }
+
+  .hc-section-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    line-height: 1;
+  }
+
+  .hc-section-sub {
+    margin: 0.3rem 0 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+  .hc-section-sub code, .hc-section-title code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.9em; }
+
+  .hc-prose { display: flex; flex-direction: column; gap: 1rem; }
+  .hc-prose p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: var(--color-gray-700, #374151);
+    max-width: 68ch;
+  }
+  .hc-prose strong { font-weight: 600; color: var(--color-gray-900, #111827); }
+  .hc-prose em { font-style: italic; }
+  .hc-prose code, .hc-layer__desc code, .hc-brand-card__body code {
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 0.8em;
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+  .hc-two-col--wide-text { grid-template-columns: 1.2fr 1fr; }
+  .hc-two-col--code-left { grid-template-columns: 1fr 1fr; }
+
+  /* Quote */
+  .hc-quote {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-gray-50, #f0f5fa);
+    border: 1px solid var(--content-border, #cddaea);
+    border-left: 3px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.9375rem;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--color-gray-700, #374151);
+  }
+  .hc-quote strong { font-style: normal; }
+  .hc-quote__label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-style: normal;
+    color: var(--color-primary, #1c497c);
+    margin-bottom: 0.6rem;
+  }
+
+  /* Layers */
+  .hc-layers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    max-width: 56rem;
+  }
+  .hc-layer {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .hc-layer__z {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    opacity: 0.8;
+  }
+  .hc-layer__name { font-size: 0.8125rem; font-weight: 700; color: var(--color-gray-900, #111827); line-height: 1.25; }
+  .hc-layer__desc { font-size: 0.75rem; line-height: 1.5; color: var(--color-gray-600, #4b5563); }
+
+  /* Code blocks */
+  .hc-code {
+    margin: 0;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    background: var(--color-gray-50, #f9fafb);
+  }
+  .hc-code__cap {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+  }
+  .hc-code__pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto;
+  }
+  .hc-code__pre code {
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--color-gray-800, #1f2937);
+    white-space: pre;
+  }
+
+  /* Chips */
+  .hc-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .hc-chip {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    background: var(--color-gray-100, #f3f4f6);
+    border: 1px solid var(--content-border, #e2e8f0);
+    padding: 0.3rem 0.65rem;
+    border-radius: 9999px;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+  }
+
+  /* Brand grid */
+  .hc-brand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 56rem; }
+  .hc-brand-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-top: 3px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .hc-brand-card__head { font-size: 0.875rem; font-weight: 700; color: var(--color-gray-900, #111827); }
+  .hc-brand-card__body { margin: 0; font-size: 0.8125rem; line-height: 1.6; color: var(--color-gray-600, #4b5563); }
+  .hc-brand-card__tag {
+    font-size: 0.6875rem;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.8;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  /* Swatches */
+  .hc-swatches { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .hc-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    padding: 0.3rem 0.6rem;
+    border-radius: 9999px;
+  }
+  .hc-swatch code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.9em; color: var(--color-gray-500, #6b7280); }
+  .hc-swatch__dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
+
+  /* Persona */
+  .hc-persona { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 56rem; }
+  .hc-persona__col {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .hc-persona__who {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    align-self: flex-start;
+  }
+  .hc-persona__who--owner { background: color-mix(in srgb, var(--color-primary, #1c497c) 15%, transparent); color: var(--color-primary, #1c497c); }
+  .hc-persona__who--guest { background: var(--color-gray-200, #e5e7eb); color: var(--color-gray-600, #4b5563); }
+  .hc-persona__line { font-size: 0.8125rem; line-height: 1.5; color: var(--color-gray-700, #374151); }
+  .hc-persona__line code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.8em; background: var(--color-gray-100, #f3f4f6); padding: 0.05rem 0.25rem; border-radius: 3px; }
+
+  /* Category grid */
+  .hc-cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; max-width: 56rem; }
+  .hc-cat {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .hc-cat__type { font-size: 0.6875rem; font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-500, #6b7280); }
+  .hc-cat__cast {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: var(--color-primary, #1c497c);
+    line-height: 1.1;
+  }
+  .hc-cat__desc { font-size: 0.75rem; line-height: 1.5; color: var(--color-gray-600, #4b5563); }
+
+  /* Table */
+  .hc-table-wrap { overflow-x: auto; border: 1px solid var(--content-border, #e2e8f0); border-radius: var(--radius-md, 0.5rem); max-width: 56rem; }
+  .hc-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+  .hc-table thead th {
+    position: sticky;
+    top: 0;
+    text-align: left;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    background: var(--color-gray-50, #f9fafb);
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .hc-table td {
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    color: var(--color-gray-700, #374151);
+    line-height: 1.45;
+    vertical-align: top;
+  }
+  .hc-table tr:last-child td { border-bottom: none; }
+  .hc-table tbody tr:hover { background: var(--color-gray-50, #f9fafb); }
+  .hc-table td code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.85em; color: var(--color-primary, #1c497c); font-weight: 600; white-space: nowrap; }
+  .hc-table td:nth-child(2) { color: var(--color-gray-500, #6b7280); white-space: nowrap; }
+
+  /* Phase grid */
+  .hc-phase-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; max-width: 56rem; }
+  .hc-phase {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 6px;
+    padding: 0.6rem 0.7rem;
+  }
+  .hc-phase--shipped {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--content-bg, white));
+    border-color: color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
+  }
+  .hc-phase__i {
+    font-size: 0.625rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.6;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+  }
+  .hc-phase__name { font-size: 0.75rem; font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
+  .hc-phase__window { font-size: 0.6875rem; color: var(--color-gray-500, #6b7280); line-height: 1.35; margin-top: 0.15rem; }
+
+  .hc-slots { margin-top: 0.25rem; max-width: 56rem; }
+  .hc-slots__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    margin-bottom: 0.5rem;
+  }
+  .hc-slots__row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .hc-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    background: var(--color-gray-100, #f3f4f6);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 6px;
+    padding: 0.45rem 0.7rem;
+  }
+  .hc-slot__name { font-size: 0.6875rem; font-weight: 700; color: var(--color-gray-800, #1f2937); font-family: ui-monospace, 'Cascadia Code', monospace; }
+  .hc-slot__when { font-size: 0.625rem; color: var(--color-gray-500, #6b7280); }
+
+  .hc-phase-legend { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--color-gray-500, #6b7280); margin: 0; }
+  .hc-legend-swatch {
+    width: 0.85rem; height: 0.85rem; border-radius: 3px;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
+  }
+
+  /* Shipped grid */
+  .hc-ship-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  .hc-ship {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-top: 3px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .hc-ship--muted { border-top-color: var(--color-gray-300, #d1d5db); }
+  .hc-ship__name { font-size: 0.8125rem; font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
+  .hc-ship__cast { font-size: 0.6875rem; color: var(--color-primary, #1c497c); font-family: ui-monospace, 'Cascadia Code', monospace; opacity: 0.85; }
+  .hc-ship--muted .hc-ship__cast { color: var(--color-gray-500, #6b7280); }
+  .hc-ship__desc { margin: 0.15rem 0 0; font-size: 0.8125rem; line-height: 1.6; color: var(--color-gray-600, #4b5563); }
+  .hc-ship__desc em { font-style: italic; }
+
+  /* Closing */
+  .hc-closing { margin-top: 1rem; padding-top: 3rem; border-top: 2px solid var(--color-gray-200, #e5e7eb); }
+  .hc-closing__inner { display: grid; grid-template-columns: 1.4fr 1fr; gap: 2rem 3rem; align-items: start; }
+  .hc-closing__title {
+    grid-column: 1 / -1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.5rem;
+  }
+  .hc-closing__text { max-width: 62ch; }
+  .hc-closing__text p { margin: 0 0 0.875rem; font-size: 0.9375rem; line-height: 1.75; color: var(--color-gray-700, #374151); }
+  .hc-closing__text p:last-child { margin-bottom: 0; }
+  .hc-closing__meta {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1.2rem;
+  }
+  .hc-closing__meta-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    margin-bottom: 0.6rem;
+  }
+  .hc-closing__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+  .hc-closing__files li { font-size: 0.75rem; font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-600, #4b5563); }
+  .hc-closing__ctas { grid-column: 1 / -1; display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+  .hc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .hc-btn--primary { background: var(--btn-primary-bg, #1c497c); color: #fff; border: 1px solid transparent; }
+  .hc-btn--primary:hover { background: var(--btn-primary-bg-hover, #164066); }
+  .hc-btn--ghost { background: transparent; color: var(--color-primary, #1c497c); border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent); }
+  .hc-btn--ghost:hover { background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent); }
+  .hc-btn__arrow { transition: transform 0.15s ease; }
+  .hc-btn:hover .hc-btn__arrow { transform: translateX(3px); }
+
+  /* ===========================
+     Responsive
+  =========================== */
+  @media (max-width: 1000px) {
+    .hc-layers, .hc-cat-grid, .hc-phase-grid { grid-template-columns: repeat(2, 1fr); }
+    .hc-ship-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 820px) {
+    .hc-two-col, .hc-two-col--wide-text, .hc-two-col--code-left,
+    .hc-brand-grid, .hc-persona, .hc-closing__inner { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 640px) {
+    .hc-page { padding: 0 1rem 3.5rem; }
+    .hc-hero__title { font-size: 1.75rem; }
+    .hc-hero__deck { font-size: 0.9375rem; }
+    .hc-layers, .hc-cat-grid, .hc-phase-grid, .hc-ship-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hc-btn, .hc-btn__arrow { transition: none; }
+    .hc-btn:hover .hc-btn__arrow { transform: none; }
+  }
+</style>
