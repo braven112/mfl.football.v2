@@ -53,6 +53,11 @@ describe('selectBreakingStory', () => {
     expect(selectBreakingStory(posts, REF, 48, canCast)?.id).toBe('older');
   });
 
+  it('carries the acquiring franchise (franchiseIds[0]) for the roster CTA', () => {
+    expect(selectBreakingStory([post({ franchiseIds: ['0001', '0008'] })], REF)?.franchiseId).toBe('0001');
+    expect(selectBreakingStory([post()], REF)?.franchiseId).toBeUndefined();
+  });
+
   it('does not crash on a non-string body (malformed feed)', () => {
     const s = selectBreakingStory([post({ body: { text: 'x' } as any })], REF);
     expect(s?.summary).toBe('');
