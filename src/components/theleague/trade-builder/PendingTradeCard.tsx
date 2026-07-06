@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import type { PendingTrade, TradeBuilderTeam } from '../../../types/trade-builder';
+import type { PendingTrade, TradeBuilderTeam, TradeBuilderPlayer } from '../../../types/trade-builder';
 import { parseAssets, formatPickCode, formatRelativeTime } from '../../../utils/trade-asset-parsing';
 import { chooseTeamName } from '../../../utils/team-names';
+import TradeCompositeStrip from './TradeCompositeStrip';
 
 interface Props {
   trade: PendingTrade;
@@ -57,13 +58,22 @@ export default function PendingTradeCard({
     }
   };
 
-  const resolvePlayerName = (playerId: string): string => {
+  const resolvePlayer = (playerId: string): TradeBuilderPlayer | undefined => {
     for (const team of allTeams) {
       const player = team.players.find(p => p.id === playerId);
-      if (player) return player.name;
+      if (player) return player;
     }
-    return `Unknown Player (${playerId})`;
+    return undefined;
   };
+
+  const resolvePlayerName = (playerId: string): string =>
+    resolvePlayer(playerId)?.name ?? `Unknown Player (${playerId})`;
+
+  // Headline player per side = the first player asset (mirrors the feed's
+  // received-side-first playerIds convention). The strip skips a side whose
+  // headline is a DEF, a draft pick, or lacks a transparent ESPN cutout.
+  const receiveHeadline = receiveParsed.playerIds.length > 0 ? resolvePlayer(receiveParsed.playerIds[0]) : undefined;
+  const giveHeadline = giveParsed.playerIds.length > 0 ? resolvePlayer(giveParsed.playerIds[0]) : undefined;
 
   const teamDisplayName = counterpartyTeam
     ? chooseTeamName({
@@ -115,6 +125,14 @@ export default function PendingTradeCard({
         </div>
         <span className="ptc-timestamp">{formatRelativeTime(trade.timestamp)}</span>
       </div>
+
+      <TradeCompositeStrip
+        left={receiveHeadline}
+        right={giveHeadline}
+        leftLabel="You receive"
+        rightLabel="You give"
+        size="compact"
+      />
 
       <div className="ptc-assets-grid">
         {renderAssetList(receiveParsed, 'You receive', 'ptc-assets-label--receive')}
