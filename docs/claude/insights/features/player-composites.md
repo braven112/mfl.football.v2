@@ -407,6 +407,41 @@ Three traps, all hit in one session:
    - Rumor-like posts title from the BODY (their headline is boilerplate
      "Schefter speculating…"), shared with the meta tags via
      `schefterPostOgText` in `src/utils/schefter-feed.ts`.
+## Draft-room pick-reveal splash (shipped 2026-07-06)
+
+8. **Pick-reveal splash (live + mock draft room)** —
+   `src/components/theleague/draft-room/PickRevealSplash.tsx`, first REACT
+   composite (the heroes are all Astro): "With the 1.03, the {franchise}
+   select {player}" over a **franchise-brand** gradient (rookies rarely have
+   an NFL team at draft time, so the drafting fantasy franchise tints the
+   moment; NFL colors only as fallback — `resolveSplashColors`). Franchise
+   crest watermark at the site-standard ~0.16 opacity, ghost pick-number
+   wordmark, ESPN cutout bleeding from the bottom. Pure logic
+   (`collectFreshPicks`, `isSplashCutoutEligible`) lives in
+   `src/utils/pick-reveal.ts`, locked by `tests/pick-reveal.test.ts`.
+   - **Trigger = diffing `state.picks`** (DraftRoom.tsx), which catches every
+     path a pick lands: live polling, mock-socket pick events, own submission.
+     Guards: first observation and slot-array-appears (mock session sync) are
+     history not news; >3 fresh picks in one update is a rejoin catch-up —
+     skip. Queue caps at 4 (drop oldest); one splash at a time, tap/Escape
+     dismisses, `prefers-reduced-motion` gets a static card.
+   - **404 cascade stays inside espncdn** — NFL cutout → college cutout →
+     text-only. Never the MFL JPG (this differs from BoardCell's avatar
+     cascade, which MAY fall to the JPG because it's not compositing).
+   - Overlays `.dr-main` only (`position: absolute`), so the clock banner and
+     its controls stay visible and clickable above the splash.
+   - Franchise brand colors ride serialized `DraftRoomTeam.colorPrimary/
+     Secondary` (via `getFranchiseBrand` in both pages) — do NOT import
+     `franchise-brand.ts` into the island; it would ship the whole league
+     config JSON to the client.
+   - Found + fixed in passing: no `.visually-hidden` rule existed anywhere,
+     so the draft room's aria-live pick announcement rendered as visible
+     text whenever a pick landed (now scoped-fixed in draft-room.css; other
+     surfaces flagged separately).
+   - Verified with Playwright fetch-interception against the dev server
+     (empty a pick → refill it, or append a pick 52): the preview-panel
+     screenshot tool ghosts the backdrop-filtered overlay — same artifact
+     as the gray-frame finding above; trust `preview_inspect`/Playwright.
 
 ## Future Directions (mocked, not built)
 
