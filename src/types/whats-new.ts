@@ -54,9 +54,17 @@ export interface WhatsNewEntry {
   description: DescriptionBlock[];
   /** Entry category */
   category: WhatsNewCategory;
-  /** Optional link to the relevant page */
+  /**
+   * Optional link to the relevant page. When omitted, the homepage hero CTA
+   * defaults to the entry's own article (/{league}/whats-new/{id}) — never
+   * set this to the article URL yourself, or the article page renders a
+   * self-referential CTA.
+   */
   link?: string;
-  /** Optional link label (defaults to "Check it out") */
+  /**
+   * Optional link label. Defaults to "Check it out" when `link` is set, or
+   * "Read the full story" when the CTA falls back to the entry's article.
+   */
   linkLabel?: string;
   /** Optional icon ID from sprite.svg (without "icon-" prefix) */
   icon?: string;

@@ -54,7 +54,9 @@ const EVENT_CATEGORY_COLORS: Record<string, string> = {
 };
 
 /** Convert a WhatsNewEntry to HeroContent. Entries without an explicit link
-    CTA into their own What's New article — never the generic listing. */
+    CTA into their own What's New article — never the generic listing.
+    ⚠️ Duplicated in afl-hero-resolver.ts (featureToHero AND its SLOT_VIEW.feature,
+    which is what the AFL hero actually renders) — keep all three in sync. */
 function featureToHero(entry: WhatsNewEntry): HeroContent {
   return {
     source: 'feature',

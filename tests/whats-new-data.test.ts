@@ -113,6 +113,19 @@ describe('whats-new.json data integrity', () => {
     ).toEqual([]);
   });
 
+  it('all heroArt.src files referenced actually exist', () => {
+    // heroArt.src is an absolute public path (e.g. /assets/theleague/history/x.png).
+    // A typo ships a blank hero flank (the component hides the broken img), so
+    // validate the file at build time like screenshot images.
+    const missing = typedEntries
+      .filter((e) => e.heroArt?.src)
+      .filter((e) => !existsSync(resolve(__dirname, '../public', e.heroArt!.src.replace(/^\//, ''))));
+    expect(
+      missing.map((e) => `${e.id} -> ${e.heroArt!.src}`),
+      `Missing heroArt files`,
+    ).toEqual([]);
+  });
+
   it('all inline description images exist', () => {
     const missing: string[] = [];
     for (const entry of typedEntries) {
