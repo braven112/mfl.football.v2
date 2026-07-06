@@ -152,6 +152,77 @@ export function getFranchiseHeadliners(
   return headliners;
 }
 
+/**
+ * Each franchise's best COMPOSITABLE headliner — the highest-projected rostered
+ * player whose ESPN cutout composites (position !== DEF, headshot on espncdn).
+ * Unlike `getFranchiseHeadliners` (the single top player, compositable or not),
+ * this skips down the roster until it finds a face that renders, so playoff/
+ * matchup panels don't come up empty when the #1 projected player is a kicker,
+ * a defense, or lacks a transparent headshot.
+ */
+export function getFranchiseCompositableHeadliners(
+  leagueYear: number,
+): Array<{ playerId: string; franchiseId: string }> {
+  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const franchises = rosterData?.rosters?.franchise;
+  if (!franchises) return [];
+  const projections = getProjectionMap(leagueYear);
+  const players = getUnifiedPlayerMap(leagueYear);
+
+  const out: Array<{ playerId: string; franchiseId: string }> = [];
+  for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
+    const roster = (Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : []
+    )
+      .filter((p: any) => p?.id && (!p.status || p.status === 'ROSTER'))
+      .map((p: any) => ({ id: p.id, score: projections.get(p.id) ?? 0, salary: parseFloat(p.salary || '0') || 0 }))
+      .sort((a: any, b: any) => b.score - a.score || b.salary - a.salary);
+    for (const p of roster) {
+      const pm = players.get(p.id);
+      if (pm && pm.position !== 'DEF' && pm.headshot.includes('espncdn.com')) {
+        out.push({ playerId: p.id, franchiseId: franchise.id });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/** TheLeague fields 9 starters — a team's projected total sums its best 9. */
+const STARTER_COUNT = 9;
+
+/**
+ * Each franchise's projected starting-lineup total — the sum of its top-9
+ * rostered player projections (TheLeague starts 9). An approximation of the
+ * set lineup used to compare playoff opponents in the round heroes; falls to 0
+ * for every team before the season's projections publish.
+ */
+export function getFranchiseProjectedTotals(leagueYear: number): Map<string, number> {
+  const out = new Map<string, number>();
+  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const franchises = rosterData?.rosters?.franchise;
+  if (!franchises) return out;
+  const projections = getProjectionMap(leagueYear);
+
+  for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
+    const players = Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : [];
+    const scores = players
+      .filter((p: any) => p?.id && (!p.status || p.status === 'ROSTER'))
+      .map((p: any) => projections.get(p.id) ?? 0)
+      .sort((a: number, b: number) => b - a);
+    const total = scores.slice(0, STARTER_COUNT).reduce((s: number, v: number) => s + v, 0);
+    out.set(franchise.id, Math.round(total * 10) / 10);
+  }
+  return out;
+}
+
 // ── Kickoff Game (earliest game of the week) ──
 
 export interface KickoffGame {

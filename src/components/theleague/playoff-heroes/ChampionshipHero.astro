@@ -1,0 +1,92 @@
+---
+/**
+ * ChampionshipHero — the title game (Week 17). The 2-up dressed for the moment:
+ * dark-gold spotlight (both themes on purpose), trophy at center, and a full
+ * comparison table under the game (seed · record · points-for · projection).
+ * The two finalists are franchise-branded (crest + team color + headliner).
+ *
+ * Styles: src/styles/playoff-round-hero.css (.pch).
+ */
+import type { PlayoffRoundView } from '../../../utils/hero-data/playoff-round-data';
+
+export interface Props {
+  view: PlayoffRoundView;
+  r: (path: string) => string;
+}
+
+const { view } = Astro.props;
+const game = view.games[0];
+const a = game?.teams[0];
+const b = game?.teams[1];
+
+const rows: Array<{ a: string; l: string; b: string }> = [];
+if (a && b) {
+  if (a.seed != null || b.seed != null) rows.push({ a: `${a.seed ?? '—'}`, l: 'Seed', b: `${b.seed ?? '—'}` });
+  if (a.record || b.record) rows.push({ a: a.record || '—', l: 'Record', b: b.record || '—' });
+  if (a.pointsFor || b.pointsFor) rows.push({ a: a.pointsFor || '—', l: 'Points For', b: b.pointsFor || '—' });
+  if (a.proj > 0 || b.proj > 0) rows.push({ a: a.proj.toFixed(1), l: 'Proj', b: b.proj.toFixed(1) });
+}
+---
+
+{game && a && b && (
+  <section class="pch" aria-label="Playoffs — championship">
+    <span class="pch__ghost" aria-hidden="true">CHAMPIONSHIP</span>
+    <header class="pch__head">
+      <span class="pch__eb">The Title Game · Week {view.week}</span>
+      <h2 class="pch__t">For all the marbles</h2>
+    </header>
+
+    <!-- One continuous side-by-side gradient across the whole stage (team A →
+         black → team B); the center is just where the two colors meet, not a
+         panel with its own fill. -->
+    <div class="pch__stage" style={`--pch-a: ${a.color}; --pch-b: ${b.color};`}>
+      <div class="pch__panel">
+        {a.crest && <img class="pch__crest" src={a.crest} alt="" aria-hidden="true" loading="lazy" />}
+        {a.player && (
+          <img class="pch__model pch__model--flip" src={a.player.headshot} alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.style.display='none'" />
+        )}
+        <div class="pch__id">
+          {a.seed != null && <span class="pch__seedchip">{a.seed} Seed</span>}
+          <strong class="pch__team">{a.medium}</strong>
+          {a.player && <span class="pch__pl">{a.player.name} · {a.player.position} · {a.player.nflTeam}</span>}
+        </div>
+      </div>
+
+      <div class="pch__center">
+        <svg class="pch__trophy" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M14 6h20v9a10 10 0 0 1-20 0V6Z" fill="url(#pch-g)" stroke="#f4c430" stroke-width="1.4" />
+          <path d="M14 9H8a6 6 0 0 0 6 6M34 9h6a6 6 0 0 1-6 6" stroke="#f4c430" stroke-width="1.6" fill="none" />
+          <path d="M20 25h8v5h-8z" fill="url(#pch-g)" />
+          <path d="M16 42h16v-3a4 4 0 0 0-4-4h-8a4 4 0 0 0-4 4v3Z" fill="url(#pch-g)" stroke="#f4c430" stroke-width="1.2" />
+          <defs>
+            <linearGradient id="pch-g" x1="0" y1="0" x2="0" y2="1">
+              <stop stop-color="#ffe9a8" />
+              <stop offset="1" stop-color="#d9a021" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="pch__vs" aria-hidden="true">VS</span>
+      </div>
+
+      <div class="pch__panel pch__panel--r">
+        {b.crest && <img class="pch__crest" src={b.crest} alt="" aria-hidden="true" loading="lazy" />}
+        {b.player && (
+          <img class="pch__model" src={b.player.headshot} alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.style.display='none'" />
+        )}
+        <div class="pch__id pch__id--r">
+          {b.seed != null && <span class="pch__seedchip">{b.seed} Seed</span>}
+          <strong class="pch__team">{b.medium}</strong>
+          {b.player && <span class="pch__pl">{b.player.name} · {b.player.position} · {b.player.nflTeam}</span>}
+        </div>
+      </div>
+    </div>
+
+    {rows.length > 0 && (
+      <div class="prh-mstat">
+        {rows.map((row) => (
+          <div class="prh-mstat__col"><b>{row.a}</b><i>{row.l}</i><b>{row.b}</b></div>
+        ))}
+      </div>
+    )}
+  </section>
+)}

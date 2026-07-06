@@ -1,0 +1,73 @@
+---
+/**
+ * SemifinalHero — playoff round 2 (Week 16). One hero, both semifinal games,
+ * four players. Each game is a franchise-colored pair (crest watermark + team
+ * color + headliner) with its own VS, split by a vertical seam, and a one-row
+ * comparison table (projected total + record) underneath. The signed-in owner's
+ * game gets an accent ring.
+ *
+ * Styles: src/styles/playoff-round-hero.css (.psf).
+ */
+import type { PlayoffRoundView } from '../../../utils/hero-data/playoff-round-data';
+import { franchiseGradient, franchiseGlow } from '../../../utils/franchise-brand';
+
+export interface Props {
+  view: PlayoffRoundView;
+  r: (path: string) => string;
+}
+
+const { view } = Astro.props;
+---
+
+<section class="psf" aria-label="Playoffs — semifinals">
+  <header class="prh-head">
+    <img class="prh-head__lg prh-head__lg--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" />
+    <img class="prh-head__lg prh-head__lg--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" />
+    <div>
+      <h2 class="prh-head__t">{view.label}</h2>
+      <p class="prh-head__sub">Final four. Two spots in the title game.</p>
+    </div>
+  </header>
+
+  <div class="psf__row">
+    {view.games.map((g, gi) => {
+      const [a, b] = g.teams;
+      const hasProj = a.proj > 0 || b.proj > 0;
+      const hasRec = !!a.record || !!b.record;
+      return (
+        <>
+          <div class={`psf__game${g.isUserGame ? ' psf__game--user' : ''}`}>
+            <div class="psf__pair">
+              <div class="psf__panel" style={`background:${franchiseGradient(a.color)};`}>
+                <span class="psf__pglow" style={`background:radial-gradient(circle, ${franchiseGlow(a.color, 0.42)} 0%, transparent 66%);`} aria-hidden="true"></span>
+                {a.crest && <img class="psf__crest" src={a.crest} alt="" aria-hidden="true" loading="lazy" />}
+                <span class="psf__chip">{a.seed != null && <b>{a.seed} </b>}{a.short}</span>
+                {a.player && (
+                  <img class="psf__model psf__model--flip" src={a.player.headshot} alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.style.display='none'" />
+                )}
+                {a.player && <span class="psf__pl"><strong>{a.player.name}</strong><span>{a.player.position} · {a.player.nflTeam}</span></span>}
+              </div>
+              <span class="psf__vs" aria-hidden="true">VS</span>
+              <div class="psf__panel" style={`background:${franchiseGradient(b.color)};`}>
+                <span class="psf__pglow" style={`background:radial-gradient(circle, ${franchiseGlow(b.color, 0.42)} 0%, transparent 66%);`} aria-hidden="true"></span>
+                {b.crest && <img class="psf__crest" src={b.crest} alt="" aria-hidden="true" loading="lazy" />}
+                <span class="psf__chip psf__chip--r">{b.seed != null && <b>{b.seed} </b>}{b.short}</span>
+                {b.player && (
+                  <img class="psf__model" src={b.player.headshot} alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.style.display='none'" />
+                )}
+                {b.player && <span class="psf__pl psf__pl--r"><strong>{b.player.name}</strong><span>{b.player.position} · {b.player.nflTeam}</span></span>}
+              </div>
+            </div>
+            {(hasProj || hasRec) && (
+              <div class="prh-mstat">
+                {hasProj && <div class="prh-mstat__col"><b>{a.proj.toFixed(1)}</b><i>Proj</i><b>{b.proj.toFixed(1)}</b></div>}
+                {hasRec && <div class="prh-mstat__col"><b>{a.record || '—'}</b><i>Record</i><b>{b.record || '—'}</b></div>}
+              </div>
+            )}
+          </div>
+          {gi < view.games.length - 1 && <span class="psf__seam" aria-hidden="true"><span>SEMIS</span></span>}
+        </>
+      );
+    })}
+  </div>
+</section>

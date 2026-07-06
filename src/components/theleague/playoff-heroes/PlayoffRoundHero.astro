@@ -1,0 +1,27 @@
+---
+/**
+ * PlayoffRoundHero — dispatcher for the three round-shaped playoff heroes.
+ * The resolved round view (see buildPlayoffRoundView) already knows which round
+ * is live; this just routes to the matching component. SeasonDailyHero falls
+ * back to the legacy PlayoffBracketHero when no round view is available.
+ */
+import type { PlayoffRoundView } from '../../../utils/hero-data/playoff-round-data';
+import WildCardHero from './WildCardHero.astro';
+import SemifinalHero from './SemifinalHero.astro';
+import ChampionshipHero from './ChampionshipHero.astro';
+
+export interface Props {
+  view: PlayoffRoundView;
+  r: (path: string) => string;
+}
+
+const { view, r } = Astro.props;
+---
+
+{view.kind === 'championship' ? (
+  <ChampionshipHero view={view} r={r} />
+) : view.kind === 'semifinals' ? (
+  <SemifinalHero view={view} r={r} />
+) : (
+  <WildCardHero view={view} r={r} />
+)}

@@ -1,0 +1,78 @@
+---
+/**
+ * WildCardHero — playoff round 1 (Week 15). Every game as a compact card with
+ * each team's projected total, and the round's single highest-projected team's
+ * headliner as the composite, crested with that franchise's badge (the standard
+ * weekly treatment). Guests and owners see the same slate; the featured face is
+ * simply whoever projects highest that week.
+ *
+ * Styles: src/styles/playoff-round-hero.css (.pwc), loaded once by SeasonDailyHero.
+ */
+import type { PlayoffRoundView } from '../../../utils/hero-data/playoff-round-data';
+
+export interface Props {
+  view: PlayoffRoundView;
+  r: (path: string) => string;
+}
+
+const { view, r } = Astro.props;
+const featured = view.featured;
+const accent = featured?.color ?? '#1c497c';
+const teamCount = view.games.length * 2;
+---
+
+<section class="pwc" style={`--pwc-c: ${accent};`} aria-label="Playoffs — wild card round">
+  <span class="pwc__glow" aria-hidden="true"></span>
+  <span class="pwc__ghost" aria-hidden="true">PLAYOFFS</span>
+  {featured?.crest && (
+    <img class="pwc__crest" src={featured.crest} alt="" aria-hidden="true" loading="lazy" />
+  )}
+  {featured?.player && (
+    <img
+      class="pwc__model"
+      src={featured.player.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.pwc').classList.add('pwc--no-model')"
+    />
+  )}
+
+  <div class="pwc__body">
+    <header class="prh-head">
+      <img class="prh-head__lg prh-head__lg--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" />
+      <img class="prh-head__lg prh-head__lg--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" />
+      <div>
+        <h2 class="prh-head__t">{view.label}</h2>
+        <p class="prh-head__sub">{teamCount} teams. {view.games.length} games. Win or go home.</p>
+      </div>
+    </header>
+
+    <div class="pwc__cards">
+      {view.games.map((g) => {
+        const hot = !!featured && g.teams.some((t) => t.franchiseId === featured.franchiseId);
+        return (
+          <a class={`pwc__card${hot ? ' pwc__card--hot' : ''}`} href={r('/theleague/playoffs')}>
+            {g.teams.map((t) => (
+              <div class={`pwc__team${featured && t.franchiseId === featured.franchiseId ? ' pwc__team--hot' : ''}`}>
+                {t.seed != null && <span class="pwc__seed">{t.seed}</span>}
+                {t.icon && <img class="pwc__ic" src={t.icon} alt="" loading="lazy" />}
+                <span class="pwc__nm">{t.short}</span>
+                {t.proj > 0 && <span class="pwc__proj">{t.proj.toFixed(1)}</span>}
+              </div>
+            ))}
+          </a>
+        );
+      })}
+    </div>
+  </div>
+
+  {featured?.player && (
+    <span class="pwc__cap">
+      <span class="pwc__cap-eb">Highest projection{featured.proj > 0 ? ` · ${featured.proj.toFixed(1)} pts` : ''}</span>
+      <strong>{featured.player.name}</strong>
+      <span class="pwc__cap-sub">{featured.player.position} · {featured.player.nflTeam} — {featured.short}</span>
+    </span>
+  )}
+</section>
