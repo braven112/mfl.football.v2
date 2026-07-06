@@ -1,0 +1,312 @@
+---
+/**
+ * BreakingStoryHero — when a trade or auction bomb is under 48h old, the
+ * homepage leads with it. The player at the center of the story (from the
+ * feed post's `playerIds`) models a composite: transparent ESPN cutout, a
+ * glow tinted by his NFL team color, the team nickname as a ghost wordmark,
+ * and a red BREAKING accent. Headline, summary, and CTA come straight from
+ * the Schefter post — this hero resolves entirely from schefter-feed.json +
+ * the player map.
+ *
+ * The router only mounts this when a compositable breaking story exists, so
+ * there is no in-component fallback: no story, no hero.
+ */
+import type { HeroModel } from '../../utils/hero-casting';
+import type { BreakingStory } from '../../utils/offseason-hero-data';
+import { getNflTeamColors, getNflTeamNickname, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+
+interface Props {
+  model: HeroModel;
+  story: BreakingStory;
+  resolveLeaguePath: (path: string) => string;
+  referenceDate?: Date;
+}
+
+const { model, story, resolveLeaguePath: r, referenceDate } = Astro.props;
+
+const teamCode = normalizeTeamCode(model.nflTeam);
+const nickname = getNflTeamNickname(teamCode);
+const { primary } = getNflTeamColors(teamCode);
+const glowDark = hexToRgba(primary, 0.4);
+const glowLight = hexToRgba(primary, 0.22);
+
+// Relative time for the eyebrow ("2 HRS AGO"), from the post timestamp.
+const now = referenceDate ?? new Date();
+const minsAgo = Math.max(0, Math.floor((now.getTime() - story.timestampMs) / 60_000));
+const timeAgo =
+  minsAgo < 60
+    ? `${Math.max(1, minsAgo)} MIN AGO`
+    : minsAgo < 1440
+      ? `${Math.floor(minsAgo / 60)} HR${Math.floor(minsAgo / 60) === 1 ? '' : 'S'} AGO`
+      : `${Math.floor(minsAgo / 1440)} DAY${Math.floor(minsAgo / 1440) === 1 ? '' : 'S'} AGO`;
+
+// Trim the hot take / body to a hero-sized sub-line without cutting a word.
+const summary =
+  story.summary.length > 180
+    ? story.summary.slice(0, 180).replace(/\s+\S*$/, '') + '…'
+    : story.summary;
+
+// Prefer the post's external source URL (ESPN etc.), but only when it's a real
+// http(s) link — never trust a feed-supplied `javascript:`/`data:` scheme.
+// Breaking transactions have no source URL, so fall back to the Schefter feed
+// page (the thread route only renders rumor-mill posts, not transactions).
+const safeExternal =
+  typeof story.link === 'string' && /^https?:\/\//i.test(story.link) ? story.link : null;
+const ctaHref = safeExternal ?? r('/theleague/news');
+const ctaExternal = !!safeExternal;
+---
+
+<section
+  class="bsh"
+  style={`--bsh-glow-dark: ${glowDark}; --bsh-glow-light: ${glowLight};`}
+  aria-label="Breaking story"
+>
+  <span class="bsh__ghost" aria-hidden="true">{nickname}</span>
+  <div class="bsh__glow" aria-hidden="true"></div>
+  <img
+    class="bsh__model"
+    src={model.headshot}
+    alt=""
+    aria-hidden="true"
+    loading="eager"
+    decoding="async"
+    onerror="this.style.display='none'; this.closest('.bsh').classList.add('bsh--no-model')"
+  />
+  <span class="bsh__caption">
+    <strong>{model.name}</strong>
+    <span class="bsh__caption-meta">{model.position} · {teamCode}</span>
+  </span>
+
+  <div class="bsh__content">
+    <p class="bsh__eyebrow">
+      <span class="bsh__tag">Schefter Report · Breaking</span>
+      <time class="bsh__time">{timeAgo}</time>
+    </p>
+    <h2 class="bsh__title">{story.headline}</h2>
+    {summary && <p class="bsh__summary">{summary}</p>}
+    <a
+      class="bsh__cta"
+      href={ctaHref}
+      target={ctaExternal ? '_blank' : undefined}
+      rel={ctaExternal ? 'noopener noreferrer' : undefined}
+    >
+      Read the full story
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+</section>
+
+<style>
+  .bsh {
+    /* Light theme (default); html.dark flips to the deep-charcoal chrome. */
+    --bsh-surface: linear-gradient(115deg, #fdf3f2 0%, #f6e2e0 52%, #ecd0cd 100%);
+    --bsh-ink: var(--color-gray-900, #0f1419);
+    --bsh-body: rgba(22, 32, 44, 0.74);
+    --bsh-ghost: rgba(120, 20, 20, 0.07);
+    --bsh-glow: var(--bsh-glow-light, rgba(220, 38, 38, 0.22));
+    --bsh-shadow: rgba(15, 30, 46, 0.3);
+    --bsh-tag-bg: #dc2626;
+    --bsh-tag-ink: #ffffff;
+    --bsh-cta-bg: var(--color-gray-900, #0f1419);
+    --bsh-cta-ink: #ffffff;
+    --bsh-border: rgba(120, 20, 20, 0.22);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(250px, 25vw, 300px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--bsh-border);
+    background: var(--bsh-surface);
+    color: var(--bsh-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .bsh {
+    --bsh-surface: linear-gradient(115deg, #140b0b 0%, #241111 46%, #3a1414 130%);
+    --bsh-ink: #ffffff;
+    --bsh-body: rgba(255, 255, 255, 0.78);
+    --bsh-ghost: rgba(255, 255, 255, 0.05);
+    --bsh-glow: var(--bsh-glow-dark, rgba(220, 38, 38, 0.4));
+    --bsh-shadow: rgba(0, 0, 0, 0.5);
+    --bsh-tag-bg: #ef4444;
+    --bsh-tag-ink: #ffffff;
+    --bsh-cta-bg: #ffffff;
+    --bsh-cta-ink: #140b0b;
+    --bsh-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .bsh__ghost {
+    position: absolute;
+    left: 40%;
+    top: -1.1rem;
+    font-size: clamp(3.5rem, 8vw, 6.5rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--bsh-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .bsh__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--bsh-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .bsh__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(288px, 38vw, 438px);
+    filter: drop-shadow(0 16px 32px var(--bsh-shadow));
+  }
+
+  .bsh--no-model .bsh__caption {
+    display: none;
+  }
+
+  .bsh__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .bsh__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .bsh__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .bsh__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(34rem, 64%);
+  }
+
+  .bsh__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.7rem;
+  }
+
+  .bsh__tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--bsh-tag-ink);
+    background: var(--bsh-tag-bg);
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+  }
+
+  .bsh__time {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--bsh-body);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bsh__title {
+    color: var(--bsh-ink);
+    font-size: clamp(1.35rem, 2.7vw, 1.8rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.5rem;
+  }
+
+  .bsh__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--bsh-body);
+    max-width: 48ch;
+    margin: 0 0 1rem;
+  }
+
+  .bsh__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bsh-cta-bg);
+    color: var(--bsh-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .bsh__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .bsh__cta:focus-visible {
+    outline: 2px solid var(--bsh-tag-bg);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bsh__cta {
+      transition: none;
+    }
+
+    .bsh__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .bsh {
+      min-height: 260px;
+    }
+
+    .bsh__model {
+      width: 175px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .bsh__caption {
+      display: none;
+    }
+
+    .bsh__content {
+      max-width: 100%;
+    }
+  }
+</style>

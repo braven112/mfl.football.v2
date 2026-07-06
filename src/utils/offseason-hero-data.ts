@@ -362,6 +362,92 @@ export function getTradeBaitCandidates(
 
 // ── Weekly Top Scorers ──
 
+// ── Breaking Story ──
+
+export interface BreakingStory {
+  /** Feed post id — used to link the hero to the post's own thread page */
+  id: string;
+  /** The headline player's MFL id (feed posts order received-side first) */
+  playerIds: string[];
+  headline: string;
+  /** Longer body / Schefter hot take used as the hero sub-line */
+  summary: string;
+  /** External source URL when the post has one (breaking transactions don't) */
+  link?: string;
+  /** Post timestamp in epoch ms — drives the "N hrs ago" eyebrow */
+  timestampMs: number;
+}
+
+/**
+ * The freshest breaking-tier Schefter post with a compositable player,
+ * within `windowHours` (default 48h) of the reference date. Powers the
+ * breaking-story hero: a trade or auction bomb takes the homepage while it's
+ * still news. Returns null when nothing qualifies (the common case — the
+ * hero only exists for genuine breaking moments).
+ *
+ * Auction-win posts never surface here in practice: during the auction their
+ * dates resolve to the auction hero (a higher-priority state), and once the
+ * auction closes they've aged out of the window.
+ */
+export function getBreakingStoryPost(
+  referenceDate: Date,
+  windowHours: number = 48,
+): BreakingStory | null {
+  const feed = readJsonFile('src/data/theleague/schefter-feed.json');
+  return selectBreakingStory(feed?.posts, referenceDate, windowHours);
+}
+
+/**
+ * Pure selection: the freshest qualifying breaking post from a posts array.
+ * Exported so the window/tier/freshness logic is testable with fixtures
+ * (the on-disk feed is cron-regenerated and can't anchor assertions).
+ */
+export function selectBreakingStory(
+  posts: any,
+  referenceDate: Date,
+  windowHours: number = 48,
+  canCast?: (playerIds: string[]) => boolean,
+): BreakingStory | null {
+  if (!Array.isArray(posts)) return null;
+
+  const nowMs = referenceDate.getTime();
+  const windowMs = windowHours * 3_600_000;
+
+  // Collect every qualifying breaking post (right tier, has playerIds, fresh),
+  // MFL ids normalized to strings (feed can send numbers) so the player-map
+  // lookup key always matches.
+  const qualifying: Array<{ post: any; ts: number; playerIds: string[] }> = [];
+  for (const post of posts) {
+    if (post?.tier !== 'breaking') continue;
+    if (!Array.isArray(post.playerIds) || post.playerIds.length === 0) continue;
+    const ts = Date.parse(post.timestamp);
+    if (!Number.isFinite(ts)) continue;
+    // Fresh: strictly within the window, not in the future vs the ref date.
+    if (ts > nowMs || nowMs - ts >= windowMs) continue;
+    qualifying.push({ post, ts, playerIds: post.playerIds.map(String) });
+  }
+
+  // Freshest first, then skip posts whose players won't composite so a newer
+  // uncastable bomb doesn't hide an older castable one (when a predicate is
+  // supplied by the caller that has the player map).
+  qualifying.sort((a, b) => b.ts - a.ts);
+  const chosen = canCast ? qualifying.find((q) => canCast(q.playerIds)) : qualifying[0];
+  if (!chosen) return null;
+
+  const { post, ts, playerIds } = chosen;
+  // The Schefter feed stores the take in `body`; `analysis`/`hotTake` are
+  // defensive fallbacks. Guard against non-string values (malformed feed).
+  const summary = (([post.body, post.analysis, post.hotTake].find((v) => typeof v === 'string') as string) ?? '').trim();
+  return {
+    id: post.id || '',
+    playerIds,
+    headline: typeof post.headline === 'string' && post.headline ? post.headline : 'Breaking news',
+    summary,
+    link: typeof post.link === 'string' ? post.link : undefined,
+    timestampMs: ts,
+  };
+}
+
 /**
  * Scored candidates from the current playerScores feed (the most recent
  * scored week): every ROSTERED player with a positive score, tagged with the

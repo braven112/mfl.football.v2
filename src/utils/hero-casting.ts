@@ -84,6 +84,25 @@ export function dailyPick<T>(pool: T[], referenceDate: Date, seedKey: string, ke
 }
 
 /**
+ * Cast the player at the center of a breaking story.
+ *
+ * Feed posts carry `playerIds` received-side-first, so the first compositable
+ * id is the headline player. Falls through DEF "players" and MFL-only photos
+ * (a gradient with no face reads as broken) to the next id in the list.
+ */
+export function castStoryModel(
+  playerIds: string[],
+  players: Map<string, PlayerIdentity>,
+  descriptor: string = 'Breaking',
+): HeroModel | null {
+  for (const id of playerIds) {
+    const p = players.get(id);
+    if (p && isCompositable(p)) return toModel(p, descriptor);
+  }
+  return null;
+}
+
+/**
  * Cast a rookie model — for What's New / new-feature heroes.
  *
  * Rookie = most recent draft class present in the player pool that is not in

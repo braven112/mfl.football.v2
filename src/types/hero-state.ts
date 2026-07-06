@@ -13,6 +13,7 @@ import type { PlayoffRoundView } from '../utils/hero-data/playoff-round-data';
 /** The 14 season phases that drive hero selection */
 export type SeasonPhase =
   | 'championship'        // Week 17 Thu → Mon night final
+  | 'breaking-story'      // A fresh (<48h) trade/auction bomb from the feed takes the homepage
   | 'champion-crowned'    // Championship decided → +7 days
   | 'tag-window'          // After champion crowned → Feb 14
   | 'tagged-showcase'     // Feb 15 → auction hero start
