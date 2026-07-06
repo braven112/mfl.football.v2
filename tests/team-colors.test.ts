@@ -6,6 +6,7 @@ import {
   getTeamColorTertiary,
   getTeamColorQuaternary,
   getTeamColors,
+  darken,
 } from '../src/utils/team-colors';
 
 describe('team-colors', () => {
@@ -66,6 +67,21 @@ describe('team-colors', () => {
       const sec = getTeamColorSecondary('9999');
       expect(sec).toMatch(/^#[0-9a-f]{6}$/);
       expect(sec).toBe('#40444d');
+    });
+  });
+
+  describe('darken (secondary-fallback linchpin)', () => {
+    it('darkens a valid 6-digit hex toward black', () => {
+      expect(darken('#6b7280')).toBe('#40444d');
+      expect(darken('#ffffff', 0.5)).toBe('#808080');
+    });
+
+    it('always returns a valid 6-digit hex, never the raw input', () => {
+      // Malformed / short / non-hex input must not propagate into a CSS gradient.
+      for (const bad of ['not-a-color', '#abc', '#12345', 'rgb(1,2,3)', '']) {
+        expect(darken(bad)).toMatch(/^#[0-9a-f]{6}$/);
+        expect(darken(bad)).toBe('#6b7280'); // neutral GRAY fallback
+      }
     });
   });
 });

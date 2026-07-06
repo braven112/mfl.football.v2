@@ -57,10 +57,15 @@ function entry(franchiseId: string, league: LeagueSlug): TeamColors {
   return MAPS[league]?.[franchiseId] ?? {};
 }
 
-/** Darken a hex toward black by `amount` (0..1). Used for the secondary fallback. */
-function darken(hex: string, amount = 0.4): string {
+/**
+ * Darken a 6-digit hex toward black by `amount` (0..1). Used for the secondary
+ * fallback. Malformed/short/long input falls back to the neutral GRAY rather
+ * than being echoed back, so a bad `colorPrimary` can never propagate an
+ * invalid string into a CSS gradient downstream.
+ */
+export function darken(hex: string, amount = 0.4): string {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
-  if (!m) return hex;
+  if (!m) return GRAY;
   const n = parseInt(m[1], 16);
   const f = 1 - amount;
   const r = Math.round(((n >> 16) & 255) * f);
