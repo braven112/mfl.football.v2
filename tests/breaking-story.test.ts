@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { selectBreakingStory } from '../src/utils/offseason-hero-data';
+import { castStoryModel } from '../src/utils/hero-casting';
 import { resolveHeroState } from '../src/utils/hero-resolver';
 
 const REF = new Date('2026-07-15T12:00:00-07:00'); // deep offseason, no game
@@ -41,6 +42,30 @@ describe('selectBreakingStory', () => {
   it('returns null for non-array input', () => {
     expect(selectBreakingStory(undefined, REF)).toBeNull();
     expect(selectBreakingStory('', REF)).toBeNull();
+  });
+});
+
+describe('castStoryModel', () => {
+  const P = (o: Record<string, any> = {}): any => ({
+    name: 'X', position: 'QB', nflTeam: 'BAL', espnId: '1',
+    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/1.png', ...o,
+  });
+
+  it('returns null when no id composites (DEF or non-ESPN headshot)', () => {
+    const players = new Map<string, any>([
+      ['1', P({ position: 'DEF' })],
+      ['2', P({ headshot: 'https://mfl.com/photos/2_thumb.jpg' })],
+    ]);
+    expect(castStoryModel(['1', '2'], players)).toBeNull();
+    expect(castStoryModel([], players)).toBeNull();
+  });
+
+  it('casts the first compositable id, skipping non-compositable ones', () => {
+    const players = new Map<string, any>([
+      ['1', P({ position: 'DEF' })],
+      ['2', P({ name: 'Lamar Jackson' })],
+    ]);
+    expect(castStoryModel(['1', '2'], players)?.name).toBe('Lamar Jackson');
   });
 });
 

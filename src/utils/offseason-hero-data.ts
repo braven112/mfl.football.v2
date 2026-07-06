@@ -428,6 +428,8 @@ export function selectBreakingStory(
   const summary = (post.hotTake || post.body || '').trim();
   return {
     id: post.id || '',
+    // MFL ids arrive as strings from the feed but can be numbers in fixtures/
+    // older posts — normalize so the player-map lookup key always matches.
     playerIds: post.playerIds.map(String),
     headline: post.headline || 'Breaking news',
     summary,
