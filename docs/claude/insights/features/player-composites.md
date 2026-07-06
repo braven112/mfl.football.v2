@@ -156,6 +156,52 @@ per player.
    Router requires ≥2 resolvable rookies, else legacy UDFAHero (whose
    `randomHeroPlayer` decoration survives only as that fallback).
 
+6. **AFL homepage hero — full parity (2026-07-05)** — the AFL composites
+   through the EXISTING unified `AflEventHero`, NOT per-phase components like
+   TheLeague. `EventHeroView` gained an optional `model` field; the resolver
+   stays fs-free — the homepage (`src/pages/afl-fantasy/index.astro`) attaches
+   the model post-resolve via `castAflHeroModel`
+   (`src/utils/afl-hero-casting.ts`). Casting map:
+   - keeper deadline → `castRosterModel` over franchise headliners
+     ("Keeper Cornerstone", owner-personalized)
+   - AL/NL draft → `castTopFreeAgentModel` over AFL dynasty ADP
+     ("Best Available" — AFL drafts rookies AND veterans, so best-available
+     is the board's top, not a rookie)
+   - trade window → NEW `getTradeBaitCandidates` ("On the Block"). Gotcha:
+     the synced tradeBait.json is a FLAT ARRAY of player ids; ownership is
+     derived from the rosters feed
+   - season-start + game-day + live slots → `castRandomStarterModel` over
+     `getKickoffGameCandidates` ("Kickoff Starter" / "In Action")
+   - waivers → best available ("Top Target")
+   - recap → NEW `getWeeklyTopScorerCandidates` + `castBestScoredModel`
+     ("Top Scorer" — deterministic, no rotation; the week's top scorer IS
+     the story)
+   - standings slot → the standings leader's headliner ("Leading the Race";
+     leader computed in index.astro from `h2hwlt`)
+   - feature / new-season → `castRookieModel`.
+   Everything falls back to the franchise-headliner pool, then to the legacy
+   webp art (`model: null`). Data plumbing: the `offseason-hero-data.ts`
+   helpers are now league-parameterized via the league registry `dataPath`
+   (`CanonicalLeagueSlug` param, default `'theleague'` so TheLeague call
+   sites are untouched). `getPlayerMap` stays theleague-sourced on purpose —
+   MFL player ids are global.
+   404 handling differs from the TheLeague heroes: `onerror` adds
+   `.afl-event-hero--no-model` on the section, which hides cutout+caption
+   and reveals a theme-paired AFL logo silhouette
+   (`/assets/logos/afl-logo.svg` + `afl-logo-dark.svg`) — the flank never
+   sits empty and the card text is unaffected.
+   Bespoke phases (trade-deadline day, active playoffs, championship) never
+   composite — their components own the visual.
+   **Dead-projections gotcha (found by the verify sweep, fixed):** a league
+   year whose projectedScores feed is empty (post-season Feb–May, before the
+   AFL's June 1 rollover) plus salary-less rosters made
+   `getFranchiseHeadliners`' old score→salary→lowest-id tie-break pick every
+   franchise's team DEF (lowest MFL ids) — all rejected by `isCompositable`,
+   so headliner-cast states silently fell back to the webp. Fix: headliners
+   now EXCLUDE DEF outright and tie-break score→salary→dynasty-ADP-rank→id,
+   so the pick stays a real headliner year-round. Regression-locked by
+   `tests/afl-hero-casting.test.ts` against the frozen AFL 2025 feeds.
+
 ## In-season article hero — casts the graded player (2026-07-05, Brandon)
 
 The Schefter article hero (`season-heroes/ArticleHero.astro`, also the Friday

@@ -24,6 +24,7 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
+import { dailyPick, type HeroModel } from './hero-casting';
 import { entryAppliesToLeague, WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import type { DailySlot, GameWindow } from '../types/hero-state';
@@ -55,6 +56,12 @@ export interface EventHeroView {
   playerAlt?: string;
   countValue?: string | number;
   countLabel?: string;
+  /**
+   * Cast composite model (ESPN cutout over team-color treatment). NOT set by
+   * the resolver — the homepage attaches it post-resolve via castAflHeroModel
+   * (data-wired, fs reads). When present it replaces the `player` webp art.
+   */
+  model?: HeroModel | null;
 }
 
 /** AFL hero state — discriminated by `kind`. */
@@ -959,7 +966,10 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       return age >= 0 && age <= FEATURE_HERO_DAYS;
     });
   if (fresh.length > 0) {
-    const pick = fresh[Math.floor(Math.random() * fresh.length)];
+    // Deterministic per PT day — a per-request random pick makes SSR flip
+    // hero content between same-day requests (and fights the composite
+    // model's own daily-stable casting).
+    const pick = dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
     return {
       kind: 'feature',
       priority: 'P2',

@@ -5,6 +5,43 @@ Insights for the AFL homepage hero system (`src/utils/afl-hero-resolver.ts`,
 
 ---
 
+## 2026-07-05 - Composite player models: view.model attached post-resolve
+
+**Context:** The AFL hero now casts composite player models (transparent ESPN
+cutout over a team-color glow) on every non-bespoke state — same photo
+direction as TheLeague's composite heroes, but through the ONE unified
+`AflEventHero` rather than per-phase components.
+
+**Architecture:**
+- `EventHeroView` gained an optional `model?: HeroModel | null` field. The
+  resolver stays fs-free: `src/pages/afl-fantasy/index.astro` calls
+  `castAflHeroModel(heroState, …)` (`src/utils/afl-hero-casting.ts`) AFTER
+  resolution and attaches the result to `heroState.view.model`. The casting
+  map (keeper → cornerstone, draft → best available, trade window → on the
+  block, recap → week's top scorer, standings → leader's headliner, etc.) is
+  documented in [player-composites.md](player-composites.md) Shipped Use
+  Cases #6. The standings leader is computed in index.astro from `h2hwlt`.
+- The composite panel lives in `AflEventHero.astro`: the model's NFL team
+  primary color drives a radial glow via `getNflTeamColors` + `hexToRgba` —
+  alpha **0.22 light / 0.42 dark** (`--ev-model-glow-light` /
+  `--ev-model-glow-dark`, resolved by `html.dark`).
+- **Gold-border semantics unchanged** — `bordered` still means "there's a
+  clock on this"; the model is orthogonal and appears on bordered and
+  ambient states alike.
+- Headshot 404 → `onerror` adds `.afl-event-hero--no-model`, hiding
+  cutout+caption and revealing a theme-paired AFL logo silhouette
+  (`/assets/logos/afl-logo.svg` + `afl-logo-dark.svg`). The flank never sits
+  empty; card text is unaffected.
+- `randomHeroPlayer` webp art survives ONLY as the casting-failure fallback
+  (`model === null`). Bespoke phases (trade-deadline day, active playoffs,
+  championship) never cast — their components own the visual.
+
+**Testing:** the sweep dates below still apply — composites now appear on
+every non-bespoke state, so each date should show a cast player (or the logo
+silhouette on 404), never an empty flank.
+
+---
+
 ## 2026-06-24 - Unified hero: AflEventHero renders every state; border is a signal
 
 **Context:** Moved the remaining AFL homepage hero states (in-season daily slot
