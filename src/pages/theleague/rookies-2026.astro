@@ -1708,7 +1708,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
   .rcc__stage {
     position: relative;
-    min-height: 190px;
+    min-height: 205px;
     overflow: hidden;
     display: flex;
     align-items: flex-end;
@@ -1787,7 +1787,9 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
   .rcc__cutout {
     position: relative;
     z-index: 1;
-    width: clamp(110px, 74%, 150px);
+    /* Big enough that the face clears the name scrim; stays bottom-anchored
+       so the headshot's hard chest-crop line hides under the scrim. */
+    width: clamp(135px, 94%, 195px);
     filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
   }
 
@@ -1912,8 +1914,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 0.5rem;
     }
-    .rcc__stage { min-height: 165px; }
-    .rcc__cutout { width: clamp(100px, 78%, 130px); }
+    .rcc__stage { min-height: 185px; }
+    .rcc__cutout { width: clamp(125px, 94%, 165px); }
     .rsp-metrics {
       grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem;
