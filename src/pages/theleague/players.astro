@@ -602,7 +602,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
       {topFa && (
         <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite">
-          <span class="hero-spotlight__label" id="hero-spotlight-label">{topFaIsDef && topFaDefStar ? 'Top DEF' : 'Top Free Agent'}</span>
+          <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
           <span class="hero-spotlight__name" id="hero-spotlight-name">{topFaDefStar ? topFaDefStar.name : topFa.name}</span>
           <span class="hero-spotlight__meta" id="hero-spotlight-meta">
             {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
@@ -1275,6 +1275,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // Swap the spotlight headshot + name to a specific defender, replaying the
   // entrance animation. Used for the initial face and every rotation tick.
   function applyDefFace(player) {
+    if (!player) return;
     if (spotlightHeadEl) {
       spotlightHeadEl.onerror = null;
       spotlightHeadEl.setAttribute('onerror', buildOnerror(null, player.espnId));
@@ -1308,6 +1309,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       stopDefRotation();
       spotlightPlayerId = null;
       spotlightEl.setAttribute('data-def', 'false');
+      spotlightEl.setAttribute('data-def-player', 'false');
       if (spotlightLogoEl) spotlightLogoEl.src = '/assets/nfl-logos/NFL.svg';
       if (spotlightCaptionEl) spotlightCaptionEl.style.display = 'none';
       if (spotlightHeadEl) spotlightHeadEl.style.visibility = 'hidden';
@@ -1325,11 +1327,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     // so always refresh it — switching ALL→QB can keep the same #1 player but
     // the label must still flip from "Top Free Agent" to "Top QB".
     if (spotlightLabelEl) {
-      spotlightLabelEl.textContent = hasDefFace
-        ? 'Top DEF'
-        : (activePosition && activePosition !== 'ALL'
-            ? 'Top ' + (activePosition === 'PK' ? 'K' : activePosition)
-            : 'Top Free Agent');
+      // Label tracks the active filter (DEF tab → "Top DEF"), not whether the #1
+      // happens to be a mapped defense — so ALL keeps saying "Top Free Agent".
+      spotlightLabelEl.textContent = activePosition && activePosition !== 'ALL'
+        ? 'Top ' + (activePosition === 'PK' ? 'K' : activePosition)
+        : 'Top Free Agent';
     }
     // For a mapped DEF the rotating defender name is set by applyDefFace(); the
     // meta row below still carries the DEF unit's context (DEF · TEAM · pts).
@@ -1343,7 +1345,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
 
     // Only the image swap (and its entrance animation) is skipped when the #1
-    // player is unchanged — the caption above has already been refreshed.
+    // player is unchanged — the caption above has already been refreshed. For a
+    // DEF, the unit id is the stable anchor while the defender FACE rotates within
+    // it via applyDefFace(), so keeping the running rotation here is correct.
     if (p.id === spotlightPlayerId) return;
     spotlightPlayerId = p.id;
     stopDefRotation();
@@ -2544,6 +2548,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (auctionFreshnessTimer) { clearInterval(auctionFreshnessTimer); auctionFreshnessTimer = null; }
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
     if (auctionTimerInterval) { clearInterval(auctionTimerInterval); auctionTimerInterval = null; }
+    stopDefRotation();
   }, { once: true });
 
   if (document.readyState === 'loading') {

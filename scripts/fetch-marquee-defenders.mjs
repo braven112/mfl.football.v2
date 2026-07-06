@@ -40,8 +40,9 @@ const root = path.resolve(__dirname, '..');
 const OUT_PATH = path.join(root, 'src/data/theleague/def-marquee-defenders.json');
 
 // If a parse returns fewer defenders than this, treat it as a broken scrape and
-// bail (a normal season yields ~25 All-Pro + ~40 Pro Bowl → ~48 unique).
-const MIN_DEFENDERS = 30;
+// bail (a normal season yields ~33 All-Pro + ~40 Pro Bowl → ~48 unique, so 40 is
+// close to normal while still catching one malformed table).
+const MIN_DEFENDERS = 40;
 
 const args = process.argv.slice(2);
 const seasonArg = args.indexOf('--season');
@@ -142,7 +143,11 @@ async function main() {
     names,
   };
 
-  fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2) + '\n');
+  // Atomic write: temp file in the same dir, then rename over the destination so
+  // an interrupted run can't leave a truncated JSON file.
+  const tmp = `${OUT_PATH}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(payload, null, 2) + '\n');
+  fs.renameSync(tmp, OUT_PATH);
   console.log(`\n✓ Wrote ${names.length} marquee defenders (season ${season}) → ${path.relative(root, OUT_PATH)}`);
 }
 

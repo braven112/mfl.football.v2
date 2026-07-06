@@ -145,13 +145,20 @@ async function getJson(url, { retries = 3 } = {}) {
   throw lastErr;
 }
 
-async function headOk(url) {
-  try {
-    const res = await fetch(url, { method: 'HEAD' });
-    return res.ok;
-  } catch {
-    return false;
+async function headOk(url, { retries = 2 } = {}) {
+  // Retry transient CDN failures (timeouts / 429s) so a good headshot isn't
+  // dropped — a one-shot check could silently shrink a team's pool mid-run.
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      if (res.ok) return true;
+      if (res.status === 404) return false; // genuinely missing — no point retrying
+    } catch {
+      /* network hiccup — retry */
+    }
+    if (attempt < retries) await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
   }
+  return false;
 }
 
 // Run tasks with bounded concurrency.
@@ -213,8 +220,12 @@ async function fetchRosterDefenders(espnAbbr) {
   for (const grp of d.athletes ?? []) {
     if (grp.position !== 'defense') continue;
     for (const a of grp.items ?? []) {
-      const statusType = a.status?.type;
-      if (statusType && statusType !== 'active') continue; // skip IR/PUP/retired
+      // ESPN's roster models status.type as the string 'active', but other ESPN
+      // endpoints model status as an object — normalize both so a shape change
+      // can't silently filter out every defender.
+      const st = a.status?.type;
+      const statusType = typeof st === 'string' ? st : (st?.name || st?.state || a.status?.name);
+      if (statusType && String(statusType).toLowerCase() !== 'active') continue; // skip IR/PUP/retired
       defenders.push({
         espnId: String(a.id),
         name: a.displayName,
@@ -364,9 +375,25 @@ async function main() {
     teams: sortedTeams,
   };
 
-  fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2) + '\n');
+  // Guard: never overwrite good committed data with a thin/empty payload. A
+  // scheduled run that hits an ESPN outage (missing teams, mass headshot 404s,
+  // an empty teams list) should FAIL loudly, not silently ship a broken spotlight.
+  const teamsCovered = Object.keys(sortedTeams).length;
+  const minPlayers = EXPECTED_TEAMS.length * (MIN_PER_TEAM - 1);
+  if (teamsCovered < EXPECTED_TEAMS.length || totalPlayers < minPlayers) {
+    throw new Error(
+      `Coverage too low (${teamsCovered}/${EXPECTED_TEAMS.length} teams, ${totalPlayers} players, ` +
+      `need all teams + ≥${minPlayers} players); refusing to overwrite ${path.relative(root, OUT_PATH)}.`
+    );
+  }
+
+  // Atomic write: serialize to a temp file in the same dir, then rename over the
+  // destination so an interrupted run can't leave a truncated JSON file.
+  const tmp = `${OUT_PATH}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(payload, null, 2) + '\n');
+  fs.renameSync(tmp, OUT_PATH);
   console.log(
-    `\n✓ Wrote ${Object.keys(sortedTeams).length} teams / ${totalPlayers} players → ${path.relative(root, OUT_PATH)}`
+    `\n✓ Wrote ${teamsCovered} teams / ${totalPlayers} players → ${path.relative(root, OUT_PATH)}`
   );
 }
 
