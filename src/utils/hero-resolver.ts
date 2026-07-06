@@ -75,6 +75,8 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     heroTheme: entry.heroTheme,
     heroArt: entry.heroArt,
     heroCategory: entry.category,
+    heroPlayerId: entry.heroPlayerId,
+    heroPlayerDescriptor: entry.heroPlayerDescriptor,
   };
 }
 

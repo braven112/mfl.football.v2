@@ -211,11 +211,27 @@ describe('castAflHeroModel', () => {
     }
   });
 
-  it('fresh What’s New casts a rookie (rookies represent "new")', () => {
+  it('fresh What’s New casts NO player unless the entry names one (screenshot is the art)', () => {
     const state = { kind: 'feature', priority: 'P2', content: stubContent, view: stubView } as AflHeroState;
+    expect(castAflHeroModel(state, input())).toBeNull();
+  });
+
+  it('fresh What’s New casts the entry’s featured player when heroPlayerId is set', () => {
+    // Any compositable player from the live map works — the cast must be
+    // exactly him, with the entry's descriptor.
+    const players = getPlayerMap(YEAR);
+    const featured = [...players.values()].find(
+      (p) => p.position !== 'DEF' && p.headshot.includes('espncdn.com'),
+    )!;
+    const state = {
+      kind: 'feature',
+      priority: 'P2',
+      content: { ...stubContent, heroPlayerId: featured.mflId, heroPlayerDescriptor: 'Cover Star' },
+      view: stubView,
+    } as AflHeroState;
     const model = castAflHeroModel(state, input());
-    expect(model).not.toBeNull();
-    expect(['Rookie', 'Headliner']).toContain(model!.descriptor);
+    expect(model?.mflId).toBe(featured.mflId);
+    expect(model?.descriptor).toBe('Cover Star');
   });
 
   it('default state casts a league headliner and is deterministic per day', () => {
@@ -259,5 +275,31 @@ describe('resolveAflHeroState fresh-feature pick', () => {
       const again = resolveAflHeroState({ referenceDate: now, whatsNewEntries: entries });
       expect(again.content.title).toBe(first.content.title);
     }
+  });
+
+  it('carries the entry screenshot and featured player through to the view/content', () => {
+    const now = new Date('2026-04-10T12:00:00-07:00');
+    const entry = {
+      id: 'fresh-shot',
+      date: '2026-04-09',
+      title: 'Entry',
+      summary: 's',
+      description: ['d'],
+      category: 'new-feature',
+      leagues: ['afl'],
+      icon: 'star',
+      image: 'fresh-shot.webp',
+      imageAlt: 'x',
+      heroPlayerId: '12345',
+      heroPlayerDescriptor: 'Cover Star',
+    } as WhatsNewEntry;
+    const state = resolveAflHeroState({ referenceDate: now, whatsNewEntries: [entry] });
+    expect(state.kind).toBe('feature');
+    if (state.kind !== 'feature') return;
+    // The view is what AflEventHero renders — the screenshot must ride it.
+    expect(state.view.screenshot).toBe('fresh-shot.webp');
+    // The content is what castAflHeroModel reads the featured player from.
+    expect(state.content.heroPlayerId).toBe('12345');
+    expect(state.content.heroPlayerDescriptor).toBe('Cover Star');
   });
 });

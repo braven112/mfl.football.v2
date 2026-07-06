@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   castRookieModel,
-  castEnhancementModel,
+  castFeaturedModel,
   castRosterModel,
   castArticleModel,
   heroModelHasCutout,
@@ -103,39 +103,32 @@ describe('castRookieModel', () => {
   });
 });
 
-describe('castEnhancementModel', () => {
-  it('casts only rostered players from the last five draft classes', () => {
+describe('castFeaturedModel', () => {
+  it('casts exactly the named player with the entry descriptor', () => {
+    const players = mapOf(player({ mflId: '7' }), player({ mflId: '8' }));
+    const model = castFeaturedModel('7', players, 'Cover Star');
+    expect(model).toMatchObject({ mflId: '7', descriptor: 'Cover Star' });
+  });
+
+  it('defaults the descriptor to "Featured"', () => {
+    const players = mapOf(player({ mflId: '7' }));
+    expect(castFeaturedModel('7', players)?.descriptor).toBe('Featured');
+  });
+
+  it('returns null when no player is named — the screenshot is the art', () => {
+    const players = mapOf(player({ mflId: '7' }));
+    expect(castFeaturedModel(undefined, players)).toBeNull();
+    expect(castFeaturedModel('', players)).toBeNull();
+  });
+
+  it('returns null for unknown ids and non-compositable players', () => {
     const players = mapOf(
-      player({ mflId: '1', draftYear: '2026' }),
-      player({ mflId: '2', draftYear: '2022' }),
-      player({ mflId: '3', draftYear: '2021' }), // 6th year — out of window
-      player({ mflId: '4', draftYear: '2024' }), // in window but unrostered
+      player({ mflId: '1', position: 'DEF' }),
+      player({ mflId: '2', headshot: MFL('2') }),
     );
-    const picks = new Set(
-      Array.from({ length: 20 }, (_, d) =>
-        castEnhancementModel(
-          players,
-          new Date(`2026-07-${String(4 + d).padStart(2, '0')}T12:00:00-07:00`),
-          new Set(['1', '2', '3']),
-        )?.mflId,
-      ),
-    );
-    expect([...picks].sort()).toEqual(['1', '2']);
-  });
-
-  it('labels the pick with the year descriptor', () => {
-    const players = mapOf(player({ mflId: '2', draftYear: '2024' }), player({ mflId: '9', draftYear: '2026' }));
-    const model = castEnhancementModel(players, JUL_4, new Set(['2']));
-    expect(model).toMatchObject({ mflId: '2', descriptor: '3rd Year' });
-
-    const rookiePick = castEnhancementModel(players, JUL_4, new Set(['9']));
-    expect(rookiePick).toMatchObject({ mflId: '9', descriptor: 'Rookie' });
-  });
-
-  it('returns null when nothing is rostered — no unrostered fallback', () => {
-    const players = mapOf(player({ mflId: '1', draftYear: '2026' }));
-    expect(castEnhancementModel(players, JUL_4, new Set())).toBeNull();
-    expect(castEnhancementModel(players, JUL_4, new Set(['99']))).toBeNull();
+    expect(castFeaturedModel('99', players)).toBeNull();
+    expect(castFeaturedModel('1', players)).toBeNull();
+    expect(castFeaturedModel('2', players)).toBeNull();
   });
 });
 

@@ -2,9 +2,14 @@
  * Capture What's New Screenshots
  *
  * Takes automated screenshots of What's New feature pages using Playwright.
+ * Every entry is captured as a THEME PAIR: the light capture at the entry's
+ * `image` filename, and a dark-mode capture (html.dark toggled before the
+ * shot) at the `-dark` suffix (e.g. trade-builder.webp + trade-builder-dark.webp).
+ * The composite hero swaps between the pair with CSS — never capture only one.
+ *
  * Automatically detects stale screenshots by comparing file timestamps against
  * whats-new.json — so screenshots updated in a cloud session get re-captured
- * on the next local run.
+ * on the next local run. A missing dark capture also counts as stale.
  *
  * Prerequisites:
  *   - Dev server running on localhost:4321 (pnpm dev)
@@ -23,7 +28,7 @@
  */
 import { chromium } from 'playwright';
 import { readFileSync, existsSync, statSync, unlinkSync } from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -84,6 +89,11 @@ const PAGE_HOOKS = {
   },
 };
 
+/** Dark-capture filename for an entry image: foo.webp → foo-dark.webp */
+function darkVariant(image) {
+  return image.replace(/\.(\w+)$/, '-dark.$1');
+}
+
 /**
  * Check if a screenshot is stale by comparing its mtime against whats-new.json.
  * If the JSON was modified more recently than the screenshot, the screenshot
@@ -112,9 +122,12 @@ async function main() {
     // Manual-capture entries only run when explicitly named on the CLI
     if (!hasTargets && MANUAL_CAPTURE_ONLY.has(e.id)) return false;
     if (force) return true;
-    const imagePath = resolve(ASSETS_DIR, e.image);
-    // Capture if missing OR stale (json was updated more recently than the screenshot)
-    return isStale(imagePath, jsonMtime);
+    // Capture if either half of the theme pair is missing OR stale
+    // (json was updated more recently than the screenshot)
+    return (
+      isStale(resolve(ASSETS_DIR, e.image), jsonMtime) ||
+      isStale(resolve(ASSETS_DIR, darkVariant(e.image)), jsonMtime)
+    );
   });
 
   if (hasTargets) {
@@ -159,10 +172,27 @@ async function main() {
     deviceScaleFactor: 1,
   });
 
+  // Playwright doesn't support webp — capture as PNG then convert
+  async function shoot(page, entryId, imageName) {
+    const outputPath = resolve(ASSETS_DIR, imageName);
+    const pngPath = outputPath.replace(/\.webp$/, '.png');
+    const isWebp = outputPath.endsWith('.webp');
+    await page.screenshot({ path: isWebp ? pngPath : outputPath, type: 'png' });
+
+    if (isWebp) {
+      try {
+        execFileSync('cwebp', ['-q', '85', pngPath, '-o', outputPath], { stdio: 'pipe' });
+        unlinkSync(pngPath);
+      } catch {
+        console.warn(`  [${entryId}] cwebp not found, keeping PNG`);
+      }
+    }
+    console.log(`  [${entryId}] saved -> ${imageName}`);
+  }
+
   for (const entry of targets) {
     const page = await context.newPage();
     const url = entry.link ? `${BASE_URL}${entry.link}` : BASE_URL;
-    const outputPath = resolve(ASSETS_DIR, entry.image);
 
     console.log(`  [${entry.id}] navigating to ${url}`);
     try {
@@ -175,20 +205,12 @@ async function main() {
         await PAGE_HOOKS[entry.id](page);
       }
 
-      // Playwright doesn't support webp — capture as PNG then convert
-      const pngPath = outputPath.replace(/\.webp$/, '.png');
-      const isWebp = outputPath.endsWith('.webp');
-      await page.screenshot({ path: isWebp ? pngPath : outputPath, type: 'png' });
-
-      if (isWebp) {
-        try {
-          execSync(`cwebp -q 85 "${pngPath}" -o "${outputPath}"`, { stdio: 'pipe' });
-          unlinkSync(pngPath);
-        } catch {
-          console.warn(`  [${entry.id}] cwebp not found, keeping PNG`);
-        }
-      }
-      console.log(`  [${entry.id}] saved -> ${entry.image}`);
+      // Light capture, then flip html.dark (the theme mechanism — resolved
+      // client-side, never SSR) and capture the dark half of the pair.
+      await shoot(page, entry.id, entry.image);
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      await page.waitForTimeout(400); // let theme transitions settle
+      await shoot(page, entry.id, darkVariant(entry.image));
     } catch (err) {
       console.error(`  [${entry.id}] FAILED: ${err.message}`);
     }

@@ -113,6 +113,19 @@ describe('whats-new.json data integrity', () => {
     ).toEqual([]);
   });
 
+  it('heroPlayerId, when set, is a plausible MFL id (digits only)', () => {
+    // The featured-player cast resolves the id against the player map at
+    // render time; a malformed id silently falls back to the screenshot, so
+    // catch obvious typos (names, empty strings) at build time instead.
+    const bad = typedEntries.filter(
+      (e) => e.heroPlayerId !== undefined && !/^\d+$/.test(e.heroPlayerId),
+    );
+    expect(
+      bad.map((e) => `${e.id} -> ${JSON.stringify(e.heroPlayerId)}`),
+      'Entries with malformed heroPlayerId',
+    ).toEqual([]);
+  });
+
   it('all heroArt.src files referenced actually exist', () => {
     // heroArt.src is an absolute public path (e.g. /assets/theleague/history/x.png).
     // A typo ships a blank hero flank (the component hides the broken img), so

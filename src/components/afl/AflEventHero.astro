@@ -43,6 +43,11 @@ interface Props {
   /** Player cut-out, e.g. /assets/hero-players/josh.webp */
   player?: string;
   playerAlt?: string;
+  /** Feature screenshot filename relative to /assets/whats-new/ — shown in a
+      browser frame (light/dark theme pair via the `-dark` suffix convention).
+      Beats `player`; a cast `model` beats both. Hidden on mobile, where the
+      AFL logo silhouette stands in. */
+  screenshot?: string;
   /** Cast composite model — transparent ESPN cutout over a team-color glow
       with a frosted caption. Takes precedence over `player` when set. */
   model?: HeroModel | null;
@@ -72,6 +77,7 @@ const {
   glow = 'rgba(196,30,58,.6)',
   player,
   playerAlt = '',
+  screenshot,
   model = null,
   countValue,
   countLabel,
@@ -86,6 +92,11 @@ const modelColors = model ? getNflTeamColors(modelTeamCode) : null;
 const modelGlowLight = modelColors ? hexToRgba(modelColors.primary, 0.22) : '';
 const modelGlowDark = modelColors ? hexToRgba(modelColors.primary, 0.42) : '';
 const modelStyle = model ? `--ev-model-glow-light:${modelGlowLight};--ev-model-glow-dark:${modelGlowDark};` : '';
+
+// Feature screenshot theme pair (see capture-whats-new-screenshots.mjs).
+const shotSrc = screenshot ? `/assets/whats-new/${screenshot}` : null;
+const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
+const shotFrameUrl = link ? `afl-fantasy.com${link.replace('/afl-fantasy', '')}` : 'afl-fantasy.com';
 
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
 const hasFooter = hasCount || !!link;
@@ -124,6 +135,36 @@ const countAriaLabel = hasCount
         <strong>{model.name}</strong>
         <span class="afl-event-hero__model-meta">{model.descriptor ? `${model.descriptor} · ` : ''}{model.position} · {modelTeamCode}</span>
       </span>
+    </>
+  ) : shotSrc ? (
+    <>
+      <div class="afl-event-hero__shot" aria-hidden="true">
+        <div class="afl-event-hero__shot-bar">
+          <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--red"></span>
+          <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--yellow"></span>
+          <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--green"></span>
+          <span class="afl-event-hero__shot-url">{shotFrameUrl}</span>
+        </div>
+        <img
+          class="afl-event-hero__shot-img afl-event-hero__shot-img--light"
+          src={shotSrc}
+          alt=""
+          loading="eager"
+          decoding="async"
+          onerror="this.closest('.afl-event-hero').classList.add('afl-event-hero--no-shot')"
+        />
+        <img
+          class="afl-event-hero__shot-img afl-event-hero__shot-img--dark"
+          src={shotDarkSrc}
+          alt=""
+          loading="eager"
+          decoding="async"
+          onerror="this.closest('.afl-event-hero__shot').classList.add('afl-event-hero__shot--no-dark')"
+        />
+      </div>
+      {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
+      <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--light" src="/assets/logos/afl-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+      <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--dark" src="/assets/logos/afl-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
     </>
   ) : player && (
     <div class="afl-event-hero__player" aria-hidden="true">
@@ -370,6 +411,104 @@ const countAriaLabel = hasCount
     letter-spacing: 0.12em;
     color: rgba(255, 255, 255, 0.65);
   }
+
+  /* ── Feature screenshot (browser-framed) ──
+     Fresh What's New art when the entry names no player: the feature itself
+     in a browser frame. Light/dark captures are a theme pair; hidden on
+     mobile (an unreadable thumbnail is decoration), where the AFL logo
+     silhouette stands in. */
+  .afl-event-hero__shot {
+    position: absolute;
+    z-index: 1;
+    right: clamp(1rem, 2.5vw, 2rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-1.5deg);
+    width: clamp(280px, 38%, 420px);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #e5e7eb;
+    box-shadow: 0 12px 32px var(--ev-model-shadow);
+    pointer-events: none;
+  }
+  .afl-event-hero__shot-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e5e7eb;
+  }
+  .afl-event-hero__shot-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .afl-event-hero__shot-dot--red { background: #ff5f57; }
+  .afl-event-hero__shot-dot--yellow { background: #ffbd2e; }
+  .afl-event-hero__shot-dot--green { background: #28c840; }
+  .afl-event-hero__shot-url {
+    flex: 1;
+    margin-left: 6px;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #6b7280;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .afl-event-hero__shot-img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: top;
+  }
+  /* Theme pair: light capture by default, dark capture under html.dark. */
+  .afl-event-hero__shot-img--dark {
+    display: none;
+  }
+  :global(html.dark) .afl-event-hero .afl-event-hero__shot-img--light {
+    display: none;
+  }
+  :global(html.dark) .afl-event-hero .afl-event-hero__shot-img--dark {
+    display: block;
+  }
+  /* Dark capture 404 (entry not re-captured yet) → keep the light capture. */
+  :global(html.dark) .afl-event-hero .afl-event-hero__shot--no-dark .afl-event-hero__shot-img--light {
+    display: block;
+  }
+  :global(html.dark) .afl-event-hero .afl-event-hero__shot--no-dark .afl-event-hero__shot-img--dark {
+    display: none;
+  }
+  /* Light capture 404 → drop the frame, logo silhouette returns. */
+  .afl-event-hero--no-shot .afl-event-hero__shot {
+    display: none;
+  }
+  /* Screenshot's logo stand-in: hidden while the frame is visible. */
+  .afl-event-hero__shot-logo {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 260px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+  .afl-event-hero--no-shot .afl-event-hero__shot-logo--light {
+    display: block;
+  }
+  :global(html.dark) .afl-event-hero--no-shot .afl-event-hero__shot-logo--light {
+    display: none;
+  }
+  :global(html.dark) .afl-event-hero--no-shot .afl-event-hero__shot-logo--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
   /* ── Content ── */
   .afl-event-hero__content {
     position: relative;
@@ -525,6 +664,24 @@ const countAriaLabel = hasCount
     .afl-event-hero__logo-art {
       width: 140px;
       right: -0.75rem;
+    }
+    /* Screenshot off on mobile (unreadable at phone width) — logo stands in. */
+    .afl-event-hero__shot {
+      display: none;
+    }
+    .afl-event-hero__shot-logo {
+      width: 140px;
+      right: -0.75rem;
+    }
+    .afl-event-hero__shot-logo--light {
+      display: block;
+    }
+    :global(html.dark) .afl-event-hero .afl-event-hero__shot-logo--light {
+      display: none;
+    }
+    :global(html.dark) .afl-event-hero .afl-event-hero__shot-logo--dark {
+      display: block;
+      opacity: 0.2;
     }
     .afl-event-hero__fade--left {
       background: linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 75%, transparent) 45%, color-mix(in srgb, var(--ev-surface) 20%, transparent) 100%);

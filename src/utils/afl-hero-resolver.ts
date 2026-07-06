@@ -54,6 +54,13 @@ export interface EventHeroView {
   glow?: string;
   player?: string;
   playerAlt?: string;
+  /**
+   * Feature screenshot filename relative to /assets/whats-new/ — the fresh
+   * What's New hero shows the feature itself in a browser frame. Takes
+   * precedence over the `player` webp; a cast `model` still wins over both
+   * (set only when the entry names a featured player).
+   */
+  screenshot?: string;
   countValue?: string | number;
   countLabel?: string;
   /**
@@ -497,6 +504,9 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
       icon: entry?.icon ?? 'news',
       accent: ACCENT_GOLD,
       glow: GLOW_GOLD,
+      // The feature's own screenshot is the art; the random player webp is
+      // only the fallback for entries that never got a capture.
+      screenshot: entry?.image,
       player: randomHeroPlayer(now),
     };
   },
@@ -701,6 +711,8 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     kicker: WHATS_NEW_CATEGORY_LABELS[entry.category],
     kickerDate: formatKickerDate(new Date(entry.date + 'T00:00:00')),
     heroArt: entry.heroArt,
+    heroPlayerId: entry.heroPlayerId,
+    heroPlayerDescriptor: entry.heroPlayerDescriptor,
   };
 }
 

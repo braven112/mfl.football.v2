@@ -43,9 +43,9 @@ const gallery = [
     pill: 'New this week',
     title: 'Dynamic top-player spotlight on Free Agents',
     summary:
-      'A new feature casts a rookie — because rookies represent “new.” Transparent ESPN cutout over the league-blue gradient, glow tinted by his NFL team, ghost wordmark bled off the top.',
+      'The feature itself is the art — its screenshot in a browser frame. A player appears only when the entry names one (heroPlayerId): transparent ESPN cutout over the league-blue gradient, glow tinted by his NFL team.',
     name: 'Ashton Jeanty',
-    descriptor: 'Rookie',
+    descriptor: 'Featured',
     pos: 'RB',
     code: 'LV',
     espnId: '4890973',
@@ -148,10 +148,10 @@ const slots = [
   ['game-day-preview', 'Saturday, Sunday pre-game'],
 ];
 
-// The eight real casting functions (src/utils/hero-casting.ts).
+// The real casting functions (src/utils/hero-casting.ts).
 const castFns = [
-  ['castRookieModel', 'New feature / What’s New', 'Newest draft class in the pool, rostered-first, daily rotation.'],
-  ['castEnhancementModel', 'Enhancement announcement', 'Rostered player in his first 5 NFL seasons — “same guy, leveled up.” Strictly rostered.'],
+  ['castFeaturedModel', 'What’s New (entry names a player)', 'Exactly the player the entry features — otherwise the hero shows the feature’s own screenshot.'],
+  ['castRookieModel', 'Season reset (AFL new-season)', 'Newest draft class in the pool, rostered-first, daily rotation.'],
   ['castTopFreeAgentModel', 'Auction preview / live', 'Top-5 unrostered free agents by dynasty ADP, rotated daily.'],
   ['castClosingAuctionModel', 'Auction, live bids', 'The player whose bid clock runs out first (oldest anchor + MFL’s 36h rule).'],
   ['castRookiesOnBoard', 'UDFA window', 'Best current-class rookies still unrostered — the board is the board (no rotation).'],
@@ -482,20 +482,20 @@ function dailyPick(pool, date, seedKey, keyOf) {
           <span class="hc-section-num">05</span>
           <div>
             <h2 class="hc-section-title">The Casting Rules, by Category</h2>
-            <p class="hc-section-sub">What's New heroes cast by entry type — the taxonomy Brandon locked in</p>
+            <p class="hc-section-sub">What's New heroes show the feature itself — a player appears only when the entry names one</p>
           </div>
         </div>
 
         <div class="hc-cat-grid">
           <div class="hc-cat">
-            <div class="hc-cat__type">new-page · new-feature</div>
-            <div class="hc-cat__cast">Rookie</div>
-            <div class="hc-cat__desc">Rookies represent “new.” Rostered-first; an unrostered rookie only when no rookie is rostered.</div>
+            <div class="hc-cat__type">entry with screenshot</div>
+            <div class="hc-cat__cast">The feature itself</div>
+            <div class="hc-cat__desc">The entry's screenshot in a browser frame — light/dark capture pair, hidden on mobile where the logo silhouette stands in.</div>
           </div>
           <div class="hc-cat">
-            <div class="hc-cat__type">enhancement</div>
-            <div class="hc-cat__cast">Rostered, first 5 yrs</div>
-            <div class="hc-cat__desc">“Same guy, leveled up.” Strictly a player an owner invested in — caption reads “3rd Year,” etc. No unrostered fallback.</div>
+            <div class="hc-cat__type">entry naming a player</div>
+            <div class="hc-cat__cast">That exact player</div>
+            <div class="hc-cat__desc">heroPlayerId on the entry casts him over the gradient — players show up when they're being talked about, never as stand-ins.</div>
           </div>
           <div class="hc-cat">
             <div class="hc-cat__type">bug-fix</div>
@@ -598,8 +598,8 @@ function dailyPick(pool, date, seedKey, keyOf) {
         <div class="hc-ship-grid">
           <div class="hc-ship">
             <div class="hc-ship__name">FeatureCompositeHero</div>
-            <div class="hc-ship__cast">castRookie/ castEnhancement</div>
-            <p class="hc-ship__desc">The What's New hero. A rookie models a new feature; an enhancement casts a rostered player in his first five years. Can force the dark treatment when the dark card <em>is</em> the story.</p>
+            <div class="hc-ship__cast">screenshot / castFeatured</div>
+            <p class="hc-ship__desc">The What's New hero. The feature's own screenshot in a browser frame; the entry's featured player composites over the gradient when one is named. Can force the dark treatment when the dark card <em>is</em> the story.</p>
           </div>
           <div class="hc-ship">
             <div class="hc-ship__name">AuctionCompositeHero</div>

@@ -6,9 +6,11 @@
  * the keeper cornerstone for the keeper deadline, the draft board's best
  * available for draft week, a player actually on the trade block for the
  * trade window, a starter in the week's earliest game on game days, the top
- * waiver target on waiver day, the week's top scorer for the recap, and a
- * rookie for anything "new". Signed-in owners see THEIR player wherever a
- * roster-action pool includes one; guests get a league-wide pick.
+ * waiver target on waiver day, the week's top scorer for the recap, a rookie
+ * for the new-season reset, and — for fresh What's New features — ONLY the
+ * player the entry names (the feature's screenshot is the art otherwise).
+ * Signed-in owners see THEIR player wherever a roster-action pool includes
+ * one; guests get a league-wide pick.
  *
  * Server-side only — reads AFL MFL feeds from disk via the league-aware
  * helpers in offseason-hero-data.ts. Returns null when no model resolves;
@@ -23,6 +25,7 @@ import type { AflHeroState } from './afl-hero-resolver';
 import type { HeroModel } from './hero-casting';
 import {
   castBestScoredModel,
+  castFeaturedModel,
   castRandomStarterModel,
   castRookieModel,
   castRosterModel,
@@ -169,9 +172,14 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
       }
 
     case 'feature':
-      // New features cast a rookie (rostered-first; unrostered only when no
-      // rookie is rostered anywhere in the league).
-      return castRookieModel(players, referenceDate, rostered()) ?? headliner('Headliner');
+      // The feature's own screenshot is the art (see EventHeroView.screenshot).
+      // A player is cast ONLY when the entry names one — no headliner
+      // fallback, or he'd cover the screenshot.
+      return castFeaturedModel(
+        state.content.heroPlayerId,
+        players,
+        state.content.heroPlayerDescriptor ?? 'Featured',
+      );
 
     case 'event':
     case 'default':

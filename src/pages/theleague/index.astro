@@ -24,7 +24,7 @@ import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
-import { castRookieModel, castEnhancementModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels } from '../../utils/hero-casting';
+import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels } from '../../utils/hero-casting';
 import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
@@ -293,13 +293,10 @@ if (cachedRosterPlayers) {
   }
 }
 
-// Cast the model for the fresh What's New composite hero, by entry category
-// (hero casting rules): new pages/features → rookie (rookies represent
-// "new"); enhancements → rostered player in his first five NFL seasons
-// ("same guy, leveled up"); bug-fix rollups → no player (the component
-// shows the league logo silhouette instead). Rostered players always win —
-// the roster set unions live salary data with the on-disk MFL rosters feed
-// so the preference holds even when the Redis roster cache is unavailable.
+// Cast the model for the fresh What's New composite hero (hero casting
+// rules): a player is cast ONLY when the entry names one (`heroPlayerId`) —
+// otherwise the hero shows the entry's own screenshot in a browser frame,
+// and entries with neither get the league logo silhouette.
 const isFreshFeatureHero =
   heroState.phase === 'offseason-fallback' && heroState.fallbackHero?.source === 'feature';
 const isAuctionPhase = heroState.phase === 'auction-preview' || heroState.phase === 'auction-live';
@@ -323,16 +320,15 @@ let auctionModel = null;
 let cutWatchModel = null;
 // Feature entries with heroArt bring their own artwork, so they skip the
 // feature-model cast below (auction casting is independent of heroArt).
-if ((isFreshFeatureHero && heroState.fallbackHero?.heroCategory !== 'bug-fix' && !heroState.fallbackHero?.heroArt) || isAuctionPhase) {
-  if (isAuctionPhase) {
-    // Auction hero: the highest-ranked available free agent (dynasty ADP).
-    auctionModel = castTopFreeAgentModel(hpPlayerIdentityMap, now, heroRosteredIds(), getAdpRankedIds(leagueYear));
-  } else {
-    featureModel =
-      heroState.fallbackHero?.heroCategory === 'enhancement'
-        ? castEnhancementModel(hpPlayerIdentityMap, now, heroRosteredIds())
-        : castRookieModel(hpPlayerIdentityMap, now, heroRosteredIds());
-  }
+if (isAuctionPhase) {
+  // Auction hero: the highest-ranked available free agent (dynasty ADP).
+  auctionModel = castTopFreeAgentModel(hpPlayerIdentityMap, now, heroRosteredIds(), getAdpRankedIds(leagueYear));
+} else if (isFreshFeatureHero && !heroState.fallbackHero?.heroArt) {
+  featureModel = castFeaturedModel(
+    heroState.fallbackHero?.heroPlayerId,
+    hpPlayerIdentityMap,
+    heroState.fallbackHero?.heroPlayerDescriptor ?? 'Featured',
+  );
 }
 // UDFA window: the best rookies still on the board, four panels side by side.
 // Cast eight — four render, four are spares the component swaps in for any
