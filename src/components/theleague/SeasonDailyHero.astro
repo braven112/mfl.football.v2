@@ -140,6 +140,7 @@ const isFridayArticle = ptWeekday === 'Fri';
   <TradeDeadlineHero
     client:load
     deadlineMidnightPT={state.tradeDeadlineProps.deadlineMidnightPT}
+    referenceNowISO={state.metadata.testMode ? state.metadata.referenceDate.toISOString() : undefined}
   />
 )}
 

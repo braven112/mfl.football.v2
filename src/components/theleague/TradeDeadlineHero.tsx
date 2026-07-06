@@ -10,18 +10,32 @@ import { useState, useEffect, useRef } from 'react';
 
 interface TradeDeadlineHeroProps {
   deadlineMidnightPT: string;
+  /**
+   * Test-mode reference instant — the page's ?testDate= clock. Callers pass
+   * this ONLY when the page was rendered in test mode; when present, the
+   * countdown ticks against this clock instead of Date.now(). Never pass it
+   * in production: the real deadline must be measured on the real clock.
+   */
+  referenceNowISO?: string;
 }
 
-function useCountdown(targetISO: string) {
-  const [remaining, setRemaining] = useState<number>(() => {
-    const diff = new Date(targetISO).getTime() - Date.now();
-    return Math.max(0, diff);
-  });
+/**
+ * Returns ms remaining, or null before mount. The countdown is deliberately
+ * client-only: SSR computes time from the page's reference date while the
+ * client uses Date.now(), so any time-derived text in the server HTML would
+ * intermittently mismatch at hydration (wildly so under ?testDate=).
+ */
+function useCountdown(targetISO: string, referenceNowISO?: string) {
+  const [remaining, setRemaining] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const targetMs = new Date(targetISO).getTime();
+    const refMs = referenceNowISO ? new Date(referenceNowISO).getTime() : NaN;
+    const clockOffset = Number.isFinite(refMs) ? Date.now() - refMs : 0;
+
     const tick = () => {
-      const diff = new Date(targetISO).getTime() - Date.now();
+      const diff = targetMs - (Date.now() - clockOffset);
       setRemaining(Math.max(0, diff));
       if (diff <= 0 && intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -33,12 +47,13 @@ function useCountdown(targetISO: string) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [targetISO]);
+  }, [targetISO, referenceNowISO]);
 
   return remaining;
 }
 
-function formatCountdown(ms: number): { hours: string; minutes: string; seconds: string } {
+function formatCountdown(ms: number | null): { hours: string; minutes: string; seconds: string } {
+  if (ms === null) return { hours: '--', minutes: '--', seconds: '--' };
   const totalSec = Math.floor(ms / 1000);
   const hours = String(Math.floor(totalSec / 3600)).padStart(2, '0');
   const minutes = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
@@ -46,9 +61,11 @@ function formatCountdown(ms: number): { hours: string; minutes: string; seconds:
   return { hours, minutes, seconds };
 }
 
-export default function TradeDeadlineHero({ deadlineMidnightPT }: TradeDeadlineHeroProps) {
-  const remaining = useCountdown(deadlineMidnightPT);
-  const isExpired = remaining <= 0;
+export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO }: TradeDeadlineHeroProps) {
+  const remaining = useCountdown(deadlineMidnightPT, referenceNowISO);
+  // Pre-mount (remaining === null) renders the not-expired layout with
+  // placeholder digits — identical on server and client, so hydration is stable.
+  const isExpired = remaining !== null && remaining <= 0;
   const { hours, minutes, seconds } = formatCountdown(remaining);
 
   // Check for reduced motion preference

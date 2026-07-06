@@ -53,6 +53,7 @@ const conferenceDraft = state.kind === 'calendar-event' ? state.conferenceDraft 
   <TradeDeadlineHero
     client:idle
     deadlineMidnightPT={state.deadlineMidnightPT}
+    referenceNowISO={state.referenceNowISO}
   />
 ) : state.kind === 'playoffs' && config && standings ? (
   <AflPlayoffsHero
