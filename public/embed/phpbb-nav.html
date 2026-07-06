@@ -159,7 +159,13 @@
   background-color: #ffffff;
   border-radius: 1px;
   position: absolute;
-  transition: transform var(--tl-nav-transition), opacity var(--tl-nav-transition);
+  transition: transform var(--tl-nav-transition), opacity var(--tl-nav-transition), background-color var(--tl-nav-transition);
+}
+
+.tl-nav-toggle-btn:hover .tl-nav-toggle-btn__inner,
+.tl-nav-toggle-btn:hover .tl-nav-toggle-btn__inner::before,
+.tl-nav-toggle-btn:hover .tl-nav-toggle-btn__inner::after {
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .tl-nav-toggle-btn__inner::before,
