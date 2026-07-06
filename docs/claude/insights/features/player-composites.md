@@ -434,10 +434,11 @@ Three traps, all hit in one session:
      Secondary` (via `getFranchiseBrand` in both pages) — do NOT import
      `franchise-brand.ts` into the island; it would ship the whole league
      config JSON to the client.
-   - Found + fixed in passing: no `.visually-hidden` rule existed anywhere,
-     so the draft room's aria-live pick announcement rendered as visible
-     text whenever a pick landed (now scoped-fixed in draft-room.css; other
-     surfaces flagged separately).
+   - Found + fixed in passing: `.visually-hidden` has no SHARED utility —
+     each consumer ships its own scoped rule, and DraftRoom didn't, so its
+     aria-live pick announcement rendered as visible text whenever a pick
+     landed (now scoped-fixed in draft-room.css; see the accessibility.md
+     insight for the audit of other consumers).
    - Verified with Playwright fetch-interception against the dev server
      (empty a pick → refill it, or append a pick 52): the preview-panel
      screenshot tool ghosts the backdrop-filtered overlay — same artifact

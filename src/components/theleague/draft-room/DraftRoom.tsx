@@ -320,9 +320,10 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     if (fresh.length === 0) return;
     setSplashQueue((q) => {
       const merged = [...q, ...fresh.map((p) => buildSplashItem(p, teamMap, playerMap))];
-      // If splashes back up behind a fast autopick run, drop the oldest —
+      // If splashes back up behind a fast autopick run, drop the oldest
+      // WAITING items — never merged[0], which is on screen right now —
       // stale reveals lagging the board are worse than missed ones.
-      return merged.length > 4 ? merged.slice(-4) : merged;
+      return merged.length > 4 ? [merged[0], ...merged.slice(-3)] : merged;
     });
   }, [state.picks, teamMap, playerMap]);
 
@@ -638,13 +639,15 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
       </div>
 
       <div className="dr-main">
-        <PickRevealSplash queue={splashQueue} onConsume={handleSplashConsume} />
         <div
           id="dr-panel-board"
           role="tabpanel"
           aria-labelledby="dr-tab-board"
           className="dr-panel-board"
         >
+          {/* Scoped to the board panel: the side panel (pick-submit path) is
+              structurally outside the overlay and can never be covered. */}
+          <PickRevealSplash queue={splashQueue} onConsume={handleSplashConsume} />
           <DraftBoardPanel
             picks={state.picks}
             teams={state.teams}

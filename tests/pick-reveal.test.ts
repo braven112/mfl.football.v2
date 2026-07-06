@@ -66,6 +66,16 @@ describe('isSplashCutoutEligible', () => {
     expect(isSplashCutoutEligible(undefined)).toBe(false);
     expect(isSplashCutoutEligible(player({ headshot: '' }))).toBe(false);
   });
+
+  it('rejects lookalike URLs where espncdn.com is not the actual host', () => {
+    expect(
+      isSplashCutoutEligible(player({ headshot: 'https://evil.com/espncdn.com/x.png' }))
+    ).toBe(false);
+    expect(
+      isSplashCutoutEligible(player({ headshot: 'https://espncdn.com.evil.com/x.png' }))
+    ).toBe(false);
+    expect(isSplashCutoutEligible(player({ headshot: 'not a url espncdn.com' }))).toBe(false);
+  });
 });
 
 describe('resolveSplashColors', () => {
@@ -93,13 +103,22 @@ describe('resolveSplashColors', () => {
 
 describe('collectFreshPicks', () => {
   const scaffold = [pick(1, '16000'), pick(2, ''), pick(3, '')];
+  // pick() stamps made picks with timestamp 1750000000 — treat that as "old"
+  // by evaluating from 10 minutes later, or "recent" from 30 seconds later.
+  const LONG_AFTER_MS = (1750000000 + 600) * 1000;
+  const JUST_AFTER_MS = (1750000000 + 30) * 1000;
 
   it('returns nothing on first observation — the board is history, not news', () => {
     expect(collectFreshPicks(null, 0, scaffold)).toEqual([]);
   });
 
-  it('returns nothing when the slot array itself just appeared (mock session sync)', () => {
-    expect(collectFreshPicks(new Set(), 0, scaffold)).toEqual([]);
+  it('skips stale picks when the slot array itself appears (joining an in-progress mock)', () => {
+    expect(collectFreshPicks(new Set(), 0, scaffold, 3, LONG_AFTER_MS)).toEqual([]);
+  });
+
+  it('still splashes a JUST-made pick arriving with the scaffold (live feed publishing at draft start)', () => {
+    const fresh = collectFreshPicks(new Set(), 0, scaffold, 3, JUST_AFTER_MS);
+    expect(fresh.map((p) => p.overallPickNumber)).toEqual([1]);
   });
 
   it('returns newly-landed picks in draft order', () => {
@@ -133,7 +152,7 @@ describe('buildSplashItem', () => {
     expect(item.player?.name).toBe('Ashton Jeanty');
   });
 
-  it('pads double-digit pick-in-round labels', () => {
+  it('left-pads single-digit pick-in-round values to two digits', () => {
     const item = buildSplashItem(pick(20, '16001'), new Map(), new Map());
     expect(item.pickLabel).toBe('2.03');
   });

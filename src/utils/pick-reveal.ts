@@ -20,6 +20,17 @@ export interface PickSplashItem {
   player?: DraftRoomPlayer;
 }
 
+/** True only for genuine ESPN CDN URLs — host check, not substring, so a
+ * malformed `https://evil.com/espncdn.com/x.png` in the player map can't pass. */
+function isEspnCdnUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'espncdn.com' || host.endsWith('.espncdn.com');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Composites only work over transparent ESPN cutouts — MFL JPGs have baked
  * backgrounds, and DEF "players" are logos, not people. When this returns
@@ -28,7 +39,7 @@ export interface PickSplashItem {
 export function isSplashCutoutEligible(player?: DraftRoomPlayer): boolean {
   if (!player) return false;
   if (player.position?.toUpperCase() === 'DEF') return false;
-  return !!player.headshot && player.headshot.includes('espncdn.com');
+  return !!player.headshot && isEspnCdnUrl(player.headshot);
 }
 
 /**
@@ -51,27 +62,43 @@ export function resolveSplashColors(
   return { primary: '#1c497c', secondary: '#0e2440' };
 }
 
+/** On a slot-array sync, picks older than this are history, not news. */
+const SYNC_NEWS_WINDOW_SECONDS = 120;
+
 /**
  * Diff the current picks against the previously-seen filled set and return
  * the newly-landed picks in draft order.
  *
  * Returns [] (no splashes) when:
  * - `prevFilled` is null — first observation, the board is history not news
- * - the pick-slot array itself just appeared (`prevSlotCount` 0 → N) — a
- *   mock-session sync delivering the whole scaffold, not a live pick
  * - more than `maxBurst` picks landed in one update — a catch-up after a
  *   rejoin/refresh; replaying a backlog of splashes would be noise
+ *
+ * When the pick-slot array itself just appeared (`prevSlotCount` 0 → N —
+ * a mock-session sync, or live mode's feed publishing at draft start),
+ * already-filled picks only count as fresh if their timestamp is recent:
+ * joining an in-progress mock shouldn't replay history, but a first pick
+ * landing in the same update that publishes the scaffold still splashes.
  */
 export function collectFreshPicks(
   prevFilled: ReadonlySet<number> | null,
   prevSlotCount: number,
   picks: DraftRoomPick[],
-  maxBurst = 3
+  maxBurst = 3,
+  nowMs = Date.now()
 ): DraftRoomPick[] {
   if (prevFilled === null) return [];
-  if (prevSlotCount === 0 && picks.length > 0) return [];
+  const isSlotSync = prevSlotCount === 0 && picks.length > 0;
   const fresh = picks
-    .filter((p) => p.playerId && !prevFilled.has(p.overallPickNumber))
+    .filter((p) => {
+      if (!p.playerId || prevFilled.has(p.overallPickNumber)) return false;
+      if (!isSlotSync) return true;
+      const madeAtSec = parseInt(p.timestamp, 10);
+      return (
+        Number.isFinite(madeAtSec) &&
+        nowMs / 1000 - madeAtSec <= SYNC_NEWS_WINDOW_SECONDS
+      );
+    })
     .sort((a, b) => a.overallPickNumber - b.overallPickNumber);
   return fresh.length > maxBurst ? [] : fresh;
 }

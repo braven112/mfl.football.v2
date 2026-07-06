@@ -2306,16 +2306,18 @@ a.dr-submit-pick-btn {
 /* ══ Pick Reveal Splash ═══════════════════════════════════════════════════
  * The broadcast moment when a pick lands: "With the 1.03, the {franchise}
  * select {player}" over a franchise-color gradient with the player's ESPN
- * cutout. Overlays .dr-main only — the timer banner and its controls stay
- * visible and clickable above it. Inherently dark in both themes, like the
- * other composite surfaces. Mobile-first.
+ * cutout. Scoped to the BOARD panel — the timer banner, mobile tab bar, and
+ * side panel (the mock-mode pick-submit path) all live outside the overlay
+ * and can never be covered. Inherently dark in both themes, like the other
+ * composite surfaces. Mobile-first.
  */
-.dr-main {
+.dr-panel-board {
   position: relative;
 }
-/* Screen-reader-only pick announcements. No global .visually-hidden rule
- * exists, so the live region rendered as visible text whenever a pick
- * landed — rarely seen before the splash made picks a live moment. */
+/* Screen-reader-only pick announcements. There's no SHARED .visually-hidden
+ * utility — components that use the class each ship their own scoped rule
+ * (salary.astro, TradeBuilder.tsx, …) and DraftRoom never did, so its live
+ * region rendered as visible text whenever a pick landed. */
 .draft-room .visually-hidden {
   position: absolute;
   width: 1px;
@@ -2337,21 +2339,28 @@ a.dr-submit-pick-btn {
   background: rgba(9, 12, 18, 0.35);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
-  cursor: pointer;
+  /* Backdrop is pointer-transparent — only the card takes pointer events
+   * (tap to dismiss), so board chrome under the dim stays clickable. */
+  pointer-events: none;
   animation: dr-splash-fade-in 0.2s var(--dr-easing-ease);
 }
 .dr-splash-overlay--exit {
   opacity: 0;
   transition: opacity 0.24s var(--dr-easing-ease);
+}
+.dr-splash-overlay--exit .dr-splash {
   pointer-events: none;
 }
 .dr-splash {
   position: relative;
   width: 100%;
   height: clamp(200px, 42vh, 340px);
+  max-height: 100%;
   overflow: hidden;
   display: flex;
   align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
   /* Explicit color — global heading/link rules restyle bare text over composites */
   color: #ffffff;
   background:

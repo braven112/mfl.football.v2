@@ -28,9 +28,11 @@ const EXIT_MS = 240;
  * treatment always carries the card.
  *
  * Overlays only the board area (absolute within .dr-main) so the clock and
- * timer-banner controls stay visible and clickable. Tap or Escape dismisses.
- * The card is aria-hidden: DraftRoom's live region already announces picks,
- * so screen readers aren't told twice.
+ * timer-banner controls stay visible. The backdrop is pointer-transparent —
+ * only the CARD takes pointer events — so the side panel (the pick-submit
+ * path in mock mode) stays clickable under the dim. Tap the card or press
+ * Escape to dismiss. The card is aria-hidden: DraftRoom's live region
+ * already announces picks, so screen readers aren't told twice.
  */
 export function PickRevealSplash({ queue, onConsume }: PickRevealSplashProps) {
   const item = queue.length > 0 ? queue[0] : null;
@@ -87,11 +89,11 @@ function SplashCard({ item, onDone }: { item: PickSplashItem; onDone: (id: strin
   return (
     <div
       className={`dr-splash-overlay${exiting ? ' dr-splash-overlay--exit' : ''}`}
-      onClick={dismiss}
       aria-hidden="true"
     >
       <div
         className="dr-splash"
+        onClick={dismiss}
         style={
           {
             '--dr-splash-primary': colors.primary,
