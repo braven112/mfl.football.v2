@@ -57,6 +57,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'feature-first-heroes': 'both-league entry, no link — auto-capture would shoot the MFL landing page; capture the /theleague homepage hero manually',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
   'mock-draft': 'sign-in gate replaces the draft config UI',
