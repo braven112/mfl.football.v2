@@ -27,6 +27,7 @@ import '../../styles/playoff-round-hero.css';
 import ChampionCrownedHero from './ChampionCrownedHero.astro';
 import TagExtensionHero from './TagExtensionHero.astro';
 import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
+import TaggedShowcaseCompositeHero from './TaggedShowcaseCompositeHero.astro';
 import CutWatchHero from './CutWatchHero.astro';
 import CutWatchCompositeHero from './CutWatchCompositeHero.astro';
 import PreseasonCompositeHero from './PreseasonCompositeHero.astro';
@@ -76,6 +77,9 @@ export interface Props {
   cutWatchModel?: HeroModel | null;
   /** Best rookies on the board for the UDFA panel hero (page-resolved) */
   udfaModels?: HeroModel[];
+  /** Composite panels for the tagged-showcase hero — each a cast model plus its
+      tagging franchise's short name (chip) and crest src (watermark). Page-resolved. */
+  showcasePanels?: Array<{ model: HeroModel; franchiseName: string; franchiseCrest: string }>;
   /** Cast kickoff-game headliner for the preseason composite hero (page-resolved) */
   preseasonModel?: HeroModel | null;
   /** Whether preseasonModel is the signed-in owner's own player */
@@ -87,7 +91,7 @@ export interface Props {
   breakingStory?: BreakingStory | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -216,11 +220,22 @@ const isFridayArticle = ptWeekday === 'Fri';
   />
 )}
 
+{/* Tagged showcase — composite panel board when ≥2 tagged players resolve to a
+    usable cutout; the branded legacy hero (incl. the no-tags empty state) otherwise. */}
 {phase === 'tagged-showcase' && (
-  <TaggedPlayerShowcaseHero
-    taggedShowcaseProps={state.taggedShowcaseProps}
-    resolveLeaguePath={resolveLeaguePath}
-  />
+  showcasePanels.length >= 2 ? (
+    <TaggedShowcaseCompositeHero
+      panels={showcasePanels}
+      taggedCount={state.taggedShowcaseProps?.taggedPlayers.length ?? showcasePanels.length}
+      leagueYear={state.metadata.referenceDate.getFullYear()}
+      resolveLeaguePath={resolveLeaguePath}
+    />
+  ) : (
+    <TaggedPlayerShowcaseHero
+      taggedShowcaseProps={state.taggedShowcaseProps}
+      resolveLeaguePath={resolveLeaguePath}
+    />
+  )
 )}
 
 {phase === 'udfa-window' && (

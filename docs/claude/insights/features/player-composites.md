@@ -249,14 +249,58 @@ Traps hit:
   `mystifying-bun`); the base landed on `main` mid-session via #346, and this
   work was rebased onto `main` after — the engine IS on main now.
 
+## Tagged-showcase panels — the tag board (shipped 2026-07-06)
+
+7. **Tagged-showcase hero (Feb 15 → auction start)** —
+   `src/components/theleague/TaggedShowcaseCompositeHero.astro`: the UDFA board's
+   twin, one team-gradient panel per franchise-tagged player. Same trading-card
+   panels, same eight-cast / four-show spare-swap resilience script, same
+   theme-aware green band (light `--color-surface` band by default, dark
+   `#0b0e12` under `:global(html.dark)`). Router (`SeasonDailyHero`) renders the
+   composite when `showcasePanels.length >= 2`, else the legacy
+   `TaggedPlayerShowcaseHero` (which also owns the no-tags empty state).
+
+   **What's different from UDFA (deliberate):**
+   - **Watermark is the FRANCHISE crest, not the NFL team logo.** A franchise
+     tag is a fantasy-team story, so the tagging team's mark sits behind the
+     player. `franchiseCrest` (the config `icon` src) is passed per panel;
+     `.tsh__crest` renders it `object-fit: contain` at ~0.16 opacity. NFL colors
+     still drive the gradient/glow (`getNflTeamColors(normalizeTeamCode(...))`).
+   - Chip is `{franchiseName} · {position}` (franchise short name via
+     `chooseTeamName(..., 'short')`), not a rank. A green "Tagged" pill sits
+     top-right on every panel.
+
+   **Casting** — `castShowcasePanels(candidates, players, count=8, descriptor='Tagged')`
+   in `hero-casting.ts` returns `PanelModel[]` (`HeroModel` + `franchiseId`).
+   DETERMINISTIC, no daily rotation — the tag list is the tag list, rendered in
+   filed order (every tagged player is the story, not a rotating pick). Drops
+   DEF and MFL-JPG-only players like the other casters.
+
+   **The headshot trap that shaped the whole design:**
+   `taggedShowcaseProps.taggedPlayers[].headshot` is a **Sleeper CDN JPG**
+   (`sleepercdn.com/.../thumb/{id}.jpg`) — a baked-background photo that
+   `isCompositable` rejects. So the panels CANNOT reuse the props' headshot;
+   casting must resolve each player through `getPlayerMap` (ESPN cutout) exactly
+   like every other composite. `index.astro` builds candidates as
+   `{playerId, franchiseId}` from the props, casts through `hpPlayerIdentityMap`,
+   then re-attaches the franchise chip name + crest by looking up `franchiseId`
+   in `teamConfigs` (league config). The tagging franchise metadata lives in the
+   props; the compositable face lives in the player map — join them in the page.
+
+   **Wiring re-integration:** a prior implementation existed on
+   `claude/vigorous-montalcini-ccb1a0` but was based far behind main. Brought the
+   NEW component + `castShowcasePanels` wholesale; re-applied the four wiring
+   edits (import, prop, destructure, route) onto main's current
+   `index.astro`/`SeasonDailyHero.astro`. The old branch's component used the NFL
+   logo watermark and a fixed dark band — updated to the franchise crest + the
+   current theme-aware band. Verified via `?testDate=2026-02-20` seed (six
+   `FRANCHISE_TAG` txns) in light + dark + mobile; seed reverted with
+   `git checkout`.
+
 ## Future Directions (mocked, not built)
 
-Breaking-story hero (48h window, high priority — playerIds plumbing already
-done), cut-watch urgent hero (priciest cut candidate via `castRosterModel`),
-tagged-showcase panels (per-tag team-gradient panels), split matchup card,
-compact spotlight card. Mockups: scratchpad `hero-explorations.html` from the
-2026-07-04 session. This work sits on the dark-mode branch
-(claude/stoic-gauss-85d450 base).
+Split matchup card, compact spotlight card. Mockups: scratchpad
+`hero-explorations.html` from the 2026-07-04 session.
 
 ## heroArt override — when the image IS the story (2026-07-05, Brandon)
 
