@@ -16,7 +16,7 @@ import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
-import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerMap } from '../../utils/player-map';
 import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
@@ -461,12 +461,19 @@ if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0)
         if (scored.source === 'salary') return `$${Math.round(v / 1000)}K`;
         return `${v.toFixed(1)} ${scored.source === 'projected' ? 'proj' : 'pts'}`;
       };
-      const sideFor = (model: NonNullable<typeof awayModel>, cands: typeof scored.away, franchiseId: string): FaceoffSide => ({
-        model,
-        chip: getFranchiseBrand(franchiseId).name || `Franchise ${franchiseId}`,
-        watermark: getNFLTeamLogo(model.nflTeam),
-        stat: statFor(cands, model.mflId),
-      });
+      // The faceoff is about the FANTASY matchup, so each panel wears its
+      // franchise: brand color tint + GroupMe crest watermark (the
+      // RecapCompositeHero convention), not the player's NFL team.
+      const sideFor = (model: NonNullable<typeof awayModel>, cands: typeof scored.away, franchiseId: string): FaceoffSide => {
+        const brand = getFranchiseBrand(franchiseId);
+        return {
+          model,
+          chip: brand.name || `Franchise ${franchiseId}`,
+          color: brand.color,
+          watermark: brand.groupMe,
+          stat: statFor(cands, model.mflId),
+        };
+      };
       lineupFaceoff = {
         away: sideFor(awayModel, scored.away, userIsHome ? opponentFranchiseId : user.franchiseId),
         home: sideFor(homeModel, scored.home, userIsHome ? user.franchiseId : opponentFranchiseId),

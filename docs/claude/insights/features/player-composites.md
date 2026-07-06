@@ -513,8 +513,11 @@ Three surfaces:
    schedule read is dual-source (live `nflSchedule.matchup` first, else
    `fullNflSchedule` indexed by the projections week) like getMarqueeGame.
 2. **lineup.astro** — the week's fantasy matchup above the lineup: your top
-   starter vs the opponent's (chips = franchise names via getFranchiseBrand,
-   panels tinted by each PLAYER's NFL team). Opponent id from a new
+   starter vs the opponent's. Panels are FRANCHISE-branded (Brandon,
+   2026-07-06): brand color tint + GroupMe crest watermark + franchise-name
+   chip via getFranchiseBrand — the RecapCompositeHero convention — because
+   the faceoff is about the fantasy matchup, not the players' NFL teams.
+   Opponent id from a new
    `TYPE=schedule&W=` fetch; their starters from the weeklyResults YTD entry
    for that week, else their full roster (rosters fetch is now league-wide).
    Away/home orientation follows the schedule's `isHome`.

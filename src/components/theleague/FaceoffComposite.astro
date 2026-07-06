@@ -109,11 +109,15 @@ const h = panelOf(home);
     pointer-events: none;
   }
 
+  /* Square contain-box so raster crests (franchise GroupMe avatars) and
+     NFL logo SVGs both center without stretching. */
   .foc__watermark {
     position: absolute;
     top: 44%;
     left: 50%;
     transform: translate(-50%, -50%);
+    aspect-ratio: 1;
+    object-fit: contain;
     opacity: 0.16;
     pointer-events: none;
     user-select: none;
