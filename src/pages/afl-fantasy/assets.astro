@@ -576,7 +576,10 @@ const copyIcons = `
     background: var(--content-bg, #fff);
   }
 
+  /* Match the sibling .team-card raised treatment in dark: drop the light
+     border and use the single-ring shadow so there's no double edge. */
   :global(html.dark) .master-card {
+    border-color: transparent;
     box-shadow: 0 0 0 1px var(--content-border, #555555);
   }
 
@@ -617,6 +620,11 @@ const copyIcons = `
 
   .master-download:hover {
     filter: brightness(0.95);
+  }
+
+  .master-download:focus-visible {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    outline-offset: 2px;
   }
 
   .psd-links {
