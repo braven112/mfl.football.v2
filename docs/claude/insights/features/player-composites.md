@@ -156,6 +156,49 @@ per player.
    Router requires ≥2 resolvable rookies, else legacy UDFAHero (whose
    `randomHeroPlayer` decoration survives only as that fallback).
 
+## In-season article hero — casts the graded player (2026-07-05, Brandon)
+
+The Schefter article hero (`season-heroes/ArticleHero.astro`, also the Friday
+`WeekendPreviewHero` which is a thin wrapper) now features **a player the
+article actually highlights**, not a stock face. Two halves:
+
+1. **Generator plumbing → `heroPlayerId`.** New optional field on
+   `SchefterPost` (`src/types/schefter.ts`). The article generators pick it
+   deterministically from the players they already grade — no AI, no random —
+   via the shared `scripts/article-utils/hero-player.mjs#pickHeroPlayer`:
+   - `waiver-pickups.mjs` → biggest single **bid**.
+   - `weekend-preview.mjs` → highest **projected** rostered player (the marquee).
+   - `pickHeroPlayer(candidates, playerMeta)` prefers non-DEF, then players with
+     an `espn_id` (a real cutout), then highest score, ties → ascending id
+     (stable). Falls through to the top-ranked player even when none are
+     compositable, so `heroPlayerId` always names the genuinely-featured player
+     and the hero degrades to the team logo rather than picking someone else.
+   `buildPost` spreads `{ heroPlayerId, playerIds:[heroPlayerId] }` only when set.
+   (Weekly recap = the sibling session's territory — "recap = week's top
+   scorer" — left untouched here to avoid collision.)
+
+2. **Render → `castArticleModel`.** New caster in `hero-casting.ts`:
+   `castArticleModel(heroPlayerId, players, descriptor)` — **deterministic, no
+   daily rotation** (the post already named its hero). Resolves the id through
+   `getPlayerMap` and returns null (→ classic image/text card) when the id is
+   absent, unknown, or not compositable. ArticleHero renders the FeatureComposite
+   language (team-gradient surface, team-color glow, ESPN cutout bleeding right,
+   frosted `name · descriptor · pos · team` caption) when a model casts, else the
+   original card — so **old posts with no `heroPlayerId` never regress**.
+   Descriptor is derived from the article type (`Top Pickup` / `One to Watch` /
+   `In the Spotlight`).
+
+Traps hit:
+- **404 fallback differs from the offseason heroes.** Those hide the whole
+  banner on image error; the article hero instead swaps the cutout for the
+  **team logo** (`.ahc__model-fallback`, `/assets/nfl-logos/{CODE}.svg`) — the
+  card still carries text, so a missing photo shouldn't blank the flank.
+- **Theme resolves via `html.dark`, not `prefers-color-scheme`** — the preview
+  tool's `colorScheme` emulation does nothing; add the class (or set the cookie)
+  to verify dark. Scoped-`<style>` `:global(html.dark)` is correct here.
+- Worktree branched off `mystifying-bun` (#342 + the sibling's in-season hero
+  infra) since none of the composite engine is on main yet.
+
 ## Future Directions (mocked, not built)
 
 Breaking-story hero (48h window, high priority — playerIds plumbing already

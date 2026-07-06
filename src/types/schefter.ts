@@ -274,6 +274,15 @@ export interface SchefterPost {
   franchiseIds: string[];
   /** Player IDs involved (for linking to player modals) */
   playerIds?: string[];
+  /**
+   * MFL player id of the player this article most prominently features — the
+   * "hero" the composite article hero casts (ESPN cutout over that player's
+   * NFL team gradient). Chosen deterministically by the article generator from
+   * the players named/graded in the body (top scorer, biggest waiver bid,
+   * marquee projection). Optional: heroless posts fall back to the static
+   * image / team logo. See docs/claude/insights/features/player-composites.md.
+   */
+  heroPlayerId?: string;
   /** Link to source page (transaction detail, article, etc.) */
   link?: string;
   /** Link CTA label */
