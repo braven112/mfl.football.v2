@@ -84,7 +84,9 @@ const descriptor = descriptorLabels[articleType] ?? 'In the Spotlight';
 // stands in as the art, because swapping in a different player's face would
 // betray the story the article actually tells.
 const seasonYear = getCurrentSeasonYear(state.metadata.referenceDate);
-const model = article
+// Only load the player map when there's an id to resolve — old posts without
+// a heroPlayerId shouldn't pay the players.json parse on cold starts.
+const model = article?.heroPlayerId
   ? castArticleModel(article.heroPlayerId, getPlayerMap(seasonYear), descriptor)
   : null;
 const hasCutout = model ? heroModelHasCutout(model) : false;
