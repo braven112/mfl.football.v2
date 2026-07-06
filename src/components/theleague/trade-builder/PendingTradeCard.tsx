@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { PendingTrade, TradeBuilderTeam, TradeBuilderPlayer } from '../../../types/trade-builder';
 import { parseAssets, formatPickCode, formatRelativeTime } from '../../../utils/trade-asset-parsing';
 import { chooseTeamName } from '../../../utils/team-names';
@@ -58,13 +58,21 @@ export default function PendingTradeCard({
     }
   };
 
-  const resolvePlayer = (playerId: string): TradeBuilderPlayer | undefined => {
+  // Flat id → player lookup, built once per allTeams change. A player is on
+  // exactly one roster, so first-writer-wins matches the old linear scan while
+  // making every resolvePlayer call O(1) instead of O(teams × players).
+  const playerById = useMemo(() => {
+    const map = new Map<string, TradeBuilderPlayer>();
     for (const team of allTeams) {
-      const player = team.players.find(p => p.id === playerId);
-      if (player) return player;
+      for (const player of team.players) {
+        if (!map.has(player.id)) map.set(player.id, player);
+      }
     }
-    return undefined;
-  };
+    return map;
+  }, [allTeams]);
+
+  const resolvePlayer = (playerId: string): TradeBuilderPlayer | undefined =>
+    playerById.get(playerId);
 
   const resolvePlayerName = (playerId: string): string =>
     resolvePlayer(playerId)?.name ?? `Unknown Player (${playerId})`;
