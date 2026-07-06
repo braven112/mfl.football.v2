@@ -26,18 +26,17 @@ import { getPlayerMap, type PlayerIdentity } from './player-map';
 import { getCurrentLeagueYear } from './league-year';
 import { getNflTeamColors, hexToRgba } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
-import { schefterPostOgText } from './schefter-feed';
+import { isValidSchefterPostId, schefterPostOgText } from './schefter-feed';
 
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
 export type OgLeague = 'theleague' | 'afl-fantasy';
 
-/** Feed post ids are machine-generated (sf_*, espn_*, wire_*, …) — this
- *  charset covers all of them and rejects anything path-traversal-shaped. */
-export function isValidPostId(id: string): boolean {
-  return /^[A-Za-z0-9_.-]{1,120}$/.test(id);
-}
+export const OG_LEAGUES: readonly OgLeague[] = ['theleague', 'afl-fantasy'];
+
+/** @see isValidSchefterPostId — re-exported for the endpoint. */
+export const isValidPostId = isValidSchefterPostId;
 
 // ── Feed lookup ──────────────────────────────────────────────────────────
 
@@ -71,19 +70,26 @@ function getFeedIndex(league: OgLeague): Map<string, SchefterPost> {
     const feed = JSON.parse(readFileSync(filePath, 'utf-8')) as SchefterFeed;
     for (const post of feed.posts ?? []) byId.set(post.id, post);
   } catch {
-    return new Map();
+    // A cron job may be rewriting the file mid-read — serve the last good
+    // index rather than 404ing every known post until the next clean read.
+    return cached ? cached.byId : new Map();
   }
   feedCache.set(league, { mtimeMs, byId });
   return byId;
 }
 
-/** Look a post up by id across both leagues' feeds (ids never collide —
- *  they embed source timestamps/hashes). Returns null for unknown ids so
- *  the endpoint can 404 instead of rendering arbitrary requests. */
+/** Look a post up by id across both leagues' feeds. ESPN wire posts are
+ *  mirrored into BOTH feeds with the same id, so the caller's league (from
+ *  the ?league= hint on the image URL) is checked first — otherwise a
+ *  shared wire post linked from the AFL page would render TheLeague
+ *  branding. Returns null for unknown ids so the endpoint can 404 instead
+ *  of rendering arbitrary requests. */
 export function findSchefterPost(
-  postId: string
+  postId: string,
+  preferredLeague: OgLeague = 'theleague'
 ): { post: SchefterPost; league: OgLeague } | null {
-  for (const league of ['theleague', 'afl-fantasy'] as const) {
+  const order: OgLeague[] = [preferredLeague, ...OG_LEAGUES.filter((l) => l !== preferredLeague)];
+  for (const league of order) {
     const post = getFeedIndex(league).get(postId);
     if (post) return { post, league };
   }
@@ -102,7 +108,9 @@ function resolveFeaturedPlayer(post: SchefterPost): PlayerIdentity | null {
   if (!playerId) return null;
   // Older posts may reference players that dropped out of the current-year
   // feed — try the prior year before giving up. MFL player ids are global,
-  // so theleague's player map resolves AFL posts too.
+  // so theleague's player map resolves AFL posts too; theleague's year is
+  // the right one for both leagues because the player map reads theleague's
+  // data path (the AFL's later June 1 rollover doesn't move that file).
   const year = getCurrentLeagueYear();
   for (const y of [year, year - 1]) {
     const player = getPlayerMap(y).get(playerId);
@@ -195,7 +203,7 @@ interface TierBadge {
 
 function tierBadge(post: SchefterPost): TierBadge {
   const sub = post.transactionSubType ?? '';
-  if (sub === 'rumor_mill' || sub === 'trade_speculation' || post.tier === ('rumor' as string)) {
+  if (sub === 'rumor_mill' || sub === 'trade_speculation' || post.tier === 'rumor') {
     return { label: 'RUMOR MILL', ghost: 'RUMOR', color: '#d97706' };
   }
   if (post.tier === 'breaking') {
@@ -479,4 +487,38 @@ export async function renderSchefterOgPng(post: SchefterPost, league: OgLeague):
     fitTo: { mode: 'width', value: OG_WIDTH },
   });
   return Buffer.from(resvg.render().asPng());
+}
+
+// The satori+resvg render costs real CPU (~1s), and the CDN cache is keyed
+// on the FULL url — `known.png?x=<random>` would re-render per request. An
+// in-process result cache keyed on (league, postId) makes junk-query floods
+// hit memory instead of the renderer, and the in-flight map collapses
+// concurrent requests for the same post into one render.
+const RENDER_CACHE_MAX = 20; // PNGs run 250-600KB; keep the lambda footprint small
+const renderCache = new Map<string, Buffer>();
+const inFlight = new Map<string, Promise<Buffer>>();
+
+/** Cached wrapper around renderSchefterOgPng — the endpoint entrypoint. */
+export function renderSchefterOgPngCached(post: SchefterPost, league: OgLeague): Promise<Buffer> {
+  const key = `${league}:${post.id}`;
+  const cached = renderCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+
+  const promise = renderSchefterOgPng(post, league)
+    .then((png) => {
+      if (renderCache.size >= RENDER_CACHE_MAX) {
+        const oldest = renderCache.keys().next().value;
+        if (oldest) renderCache.delete(oldest);
+      }
+      renderCache.set(key, png);
+      return png;
+    })
+    .finally(() => {
+      inFlight.delete(key);
+    });
+  inFlight.set(key, promise);
+  return promise;
 }

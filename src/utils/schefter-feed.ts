@@ -123,11 +123,20 @@ export function getMilestoneLabel(post: Pick<SchefterPost, 'milestone'>): string
   return `${tierLabel} · ${post.milestone.badgeName}`;
 }
 
+/** Feed post ids are machine-generated (sf_*, espn_*, wire_*, …) — this
+ *  charset covers all of them and rejects anything path-traversal-shaped.
+ *  Shared by the OG endpoint and the news pages' ?post= handling. */
+export function isValidSchefterPostId(id: string): boolean {
+  return /^[A-Za-z0-9_.-]{1,120}$/.test(id);
+}
+
 /** Post bodies carry a small allowlist of tags (<strong>, <em>, …) — strip
  *  them (plus their entities) for plain-text OG meta values. */
 function stripPostHtml(html: string): string {
   return html
-    .replace(/<[^>]+>/g, '')
+    // Tags become a space, not '' — '</p><p>' boundaries must not glue
+    // sentences together; the \s+ collapse below re-normalizes.
+    .replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -163,16 +172,22 @@ export function schefterPostOgText(
  * points at the per-post composite endpoint — /api/og/schefter/<id>.png —
  * which renders a card for ANY known post (player composite when it can,
  * branded text card otherwise), so it's always safe to attach.
+ *
+ * `league` disambiguates ESPN wire posts, which are mirrored into both
+ * feeds under the same id — without the hint the endpoint would brand a
+ * shared post linked from the AFL page as TheLeague.
  */
 export function buildSchefterPostOg(
   post: SchefterPost,
-  pageUrl: URL
+  pageUrl: URL,
+  league: 'theleague' | 'afl-fantasy' = 'theleague'
 ): { title: string; description?: string; image: string; url: string } {
   const { title, description } = schefterPostOgText(post);
+  const leagueQuery = league === 'theleague' ? '' : `?league=${league}`;
   return {
     title,
     ...(description && description !== title ? { description } : {}),
-    image: `${pageUrl.origin}/api/og/schefter/${encodeURIComponent(post.id)}.png`,
+    image: `${pageUrl.origin}/api/og/schefter/${encodeURIComponent(post.id)}.png${leagueQuery}`,
     url: `${pageUrl.origin}${pageUrl.pathname}?post=${encodeURIComponent(post.id)}`,
   };
 }

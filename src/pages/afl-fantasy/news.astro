@@ -8,7 +8,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import { getAuthUser } from '../../utils/auth';
-import { buildSchefterPostOg } from '../../utils/schefter-feed';
+import { buildSchefterPostOg, isValidSchefterPostId } from '../../utils/schefter-feed';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
 
@@ -28,8 +28,10 @@ const isAuthenticated = !!authUser;
 // strip the #post-<id> anchor) still resolve a per-post title + composite
 // image (/api/og/schefter/<id>.png) instead of the generic page card.
 const ogPostId = Astro.url.searchParams.get('post');
-const ogPost = ogPostId ? feed.posts.find(p => p.id === ogPostId) : undefined;
-const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url) : undefined;
+const ogPost = ogPostId && isValidSchefterPostId(ogPostId)
+  ? feed.posts.find(p => p.id === ogPostId)
+  : undefined;
+const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url, 'afl-fantasy') : undefined;
 ---
 
 <TheLeagueLayout title="The Schefter Report" og={og}>
