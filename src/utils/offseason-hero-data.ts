@@ -13,6 +13,7 @@ import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { getCurrentSeasonYear } from './league-year';
 import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
 import { isCutWatchUrgent } from './hero-resolver';
+import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 
 // ── JSON Data Loaders ──
 
@@ -24,6 +25,181 @@ function readJsonFile(relativePath: string): any {
   } catch {
     return null;
   }
+}
+
+// ── Rostered Player IDs ──
+
+/**
+ * All player IDs currently on any franchise roster, from the MFL rosters
+ * feed on disk. Used as the reliable floor for roster-aware hero casting —
+ * the Redis roster cache is fresher but unavailable in local dev, and
+ * salary-file data can lag for recent pickups (rookies especially).
+ */
+export function getRosteredPlayerIds(leagueYear: number): Set<string> {
+  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const ids = new Set<string>();
+  const franchises = rosterData?.rosters?.franchise;
+  if (!franchises) return ids;
+  for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
+    const players = Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : [];
+    for (const p of players) {
+      if (p?.id) ids.add(p.id);
+    }
+  }
+  return ids;
+}
+
+// ── Franchise Headliners ──
+
+/**
+ * Each franchise's headliner — the active rostered player with the highest
+ * projected score (falls back to highest salary when projections are empty,
+ * e.g. before the new season's projections publish). Feeds preseason /
+ * "lock your lineup" hero casting: the signed-in owner sees THEIR headliner.
+ */
+export function getFranchiseHeadliners(
+  leagueYear: number,
+): Array<{ playerId: string; franchiseId: string }> {
+  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const franchises = rosterData?.rosters?.franchise;
+  if (!franchises) return [];
+  const projections = getProjectionMap(leagueYear);
+
+  const headliners: Array<{ playerId: string; franchiseId: string }> = [];
+  for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
+    const players = Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : [];
+    let best: { playerId: string; score: number; salary: number } | null = null;
+    for (const p of players) {
+      if (!p?.id || (p.status && p.status !== 'ROSTER')) continue;
+      const score = projections.get(p.id) ?? 0;
+      const salary = parseFloat(p.salary || '0') || 0;
+      // Score, then salary, then player id — the id tie-break keeps the pick
+      // stable when a franchise has two players with equal projection+salary
+      // (e.g. before projections publish), regardless of roster feed order.
+      if (
+        !best ||
+        score > best.score ||
+        (score === best.score && salary > best.salary) ||
+        (score === best.score && salary === best.salary && p.id < best.playerId)
+      ) {
+        best = { playerId: p.id, score, salary };
+      }
+    }
+    if (best) headliners.push({ playerId: best.playerId, franchiseId: franchise.id });
+  }
+  return headliners;
+}
+
+// ── Kickoff Game (earliest game of the week) ──
+
+export interface KickoffGame {
+  /** Normalized ESPN-format team codes, away first */
+  teamCodes: [string, string];
+  awayName: string;
+  homeName: string;
+}
+
+/**
+ * The earliest game of the current NFL week, from the synced nflSchedule
+ * feed (week 1 during the preseason — the season opener). Drives the
+ * kickoff-headliner hero casting rule: "the best player starting in the
+ * earliest game of the week."
+ */
+export function getKickoffGame(leagueYear: number): KickoffGame | null {
+  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/nflSchedule.json`);
+  const matchups = data?.nflSchedule?.matchup;
+  if (!matchups) return null;
+
+  const games = (Array.isArray(matchups) ? matchups : [matchups]).filter(
+    (m: any) => m?.kickoff && Array.isArray(m.team) && m.team.length === 2,
+  );
+  if (games.length === 0) return null;
+
+  const earliest = games.reduce((a: any, b: any) =>
+    parseInt(a.kickoff, 10) <= parseInt(b.kickoff, 10) ? a : b,
+  );
+  const away = earliest.team.find((t: any) => t.isHome !== '1') ?? earliest.team[0];
+  const home = earliest.team.find((t: any) => t.isHome === '1') ?? earliest.team[1];
+  const awayCode = normalizeTeamCode(away.id || '');
+  const homeCode = normalizeTeamCode(home.id || '');
+  if (!awayCode || !homeCode) return null;
+
+  return {
+    teamCodes: [awayCode, homeCode],
+    awayName: getNFLTeamName(awayCode),
+    homeName: getNFLTeamName(homeCode),
+  };
+}
+
+/**
+ * Scored candidates for the kickoff-game headliner: every fantasy player on
+ * the two teams in the earliest game of the week, scored by projection,
+ * with the league franchise that rosters them (empty string = free agent).
+ */
+export function getKickoffGameCandidates(
+  leagueYear: number,
+): Array<{ playerId: string; franchiseId: string; score: number }> {
+  const game = getKickoffGame(leagueYear);
+  if (!game) return [];
+
+  const projections = getProjectionMap(leagueYear);
+  const playerMap = getUnifiedPlayerMap(leagueYear);
+
+  const ownerByPlayer = new Map<string, string>();
+  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const franchises = rosterData?.rosters?.franchise;
+  for (const franchise of franchises ? (Array.isArray(franchises) ? franchises : [franchises]) : []) {
+    const players = Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : [];
+    for (const p of players) {
+      if (p?.id) ownerByPlayer.set(p.id, franchise.id);
+    }
+  }
+
+  const codes = new Set(game.teamCodes);
+  const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  for (const p of playerMap.values()) {
+    if (p.position === 'DEF' || !codes.has(p.nflTeam)) continue;
+    candidates.push({
+      playerId: p.mflId,
+      franchiseId: ownerByPlayer.get(p.mflId) ?? '',
+      score: projections.get(p.mflId) ?? 0,
+    });
+  }
+  // "Best" means most projected points. If projections haven't published yet
+  // every score is 0 and "best" would be an arbitrary tie-break — return
+  // nothing so the caller's fallback ladder (franchise headliners, which
+  // tie-breaks on salary) takes over instead.
+  if (!candidates.some((c) => c.score > 0)) return [];
+  return candidates;
+}
+
+// ── ADP Rankings ──
+
+/**
+ * Player IDs in dynasty-ADP order (best consensus rank first), from the MFL
+ * ADP feed on disk. Drives "best available free agent" hero casting.
+ */
+export function getAdpRankedIds(leagueYear: number): string[] {
+  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/adp-dynasty.json`);
+  const list = data?.adp?.player;
+  if (!list) return [];
+  const players = Array.isArray(list) ? list : [list];
+  return players
+    .filter((p: any) => p?.id && Number.isFinite(parseFloat(p.averagePick)))
+    .sort((a: any, b: any) => parseFloat(a.averagePick) - parseFloat(b.averagePick))
+    .map((p: any) => p.id);
 }
 
 // ── Championship Result ──

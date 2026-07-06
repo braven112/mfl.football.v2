@@ -211,6 +211,7 @@ describe('player-map', () => {
         nflTeam: 'KC',
         headshot: expect.stringContaining('3139477'),
         espnId: '3139477',
+        draftYear: '2017',
       });
     });
 

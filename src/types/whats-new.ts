@@ -50,6 +50,12 @@ export interface WhatsNewEntry {
   pinToHero?: boolean;
   /** Override: never auto-promote to hero (for minor updates) */
   excludeFromHero?: boolean;
+  /**
+   * Composite-hero appearance override. By default the homepage hero follows
+   * the site theme; 'dark' forces the dark treatment even in light mode — for
+   * entries where the dark card IS the story (e.g. a dark mode announcement).
+   */
+  heroTheme?: 'dark';
   /** Optional screenshot filename relative to /assets/whats-new/ (e.g., "trade-builder.webp") */
   image?: string;
   /** Alt text for the screenshot image (required when image is provided) */
@@ -123,6 +129,10 @@ export interface HeroContent {
   kicker?: string;
   /** Eyebrow date text shown next to the badge (e.g., "Mar 2, 2026") */
   kickerDate?: string;
+  /** Feature-only: forces the dark composite-hero treatment in light mode */
+  heroTheme?: 'dark';
+  /** Feature-only: the source entry's category — drives composite-hero casting */
+  heroCategory?: WhatsNewCategory;
 }
 
 /** Human-readable labels for What's New categories */
