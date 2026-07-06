@@ -488,11 +488,58 @@ a `.tsx` island; the engine imports cleanly client-side because
   auto-opens over the page when pending trades exist — dismiss it before
   clicking. NEVER click "Send Proposal" against real MFL; route-block
   `/api/trades/submit` in the script as a safety net.
+## Player-of-the-game faceoffs — every matchup surface (shipped 2026-07-06)
+
+The "split matchup card" future direction is built. MatchupSplitHero's split
+panel is extracted into the shared **`FaceoffComposite.astro`**
+(`src/components/theleague/`, `hero`/`card` sizes) — purely presentational;
+callers cast both models and pick chip/tint/watermark per context. A 404'd
+cutout goes `visibility: hidden` (the watermark + name plate keep the panel
+honest — MatchupSplitHero's shipped behavior, not the whole-banner hide).
+
+**Selection** — `scoreFaceoffSides` in `hero-casting.ts`: elects ONE stat
+source with signal (>0) on **both** sides — projected → actual → salary
+(recap/past-week contexts flip actual first) — then `castBestScoredModel`
+picks each side (deterministic, compositable-only). One-sided signal never
+elects a source: the starved side would "win" by id tie-break.
+
+Three surfaces:
+1. **MatchupPreviewHero** — every Sunday Ticket game card is a `card`-size
+   faceoff of both NFL teams' top projected players (chips = team codes,
+   NFL-logo watermarks); a game where either side fails to cast keeps the
+   classic logo row. While here, two latent bugs fixed: the data year is now
+   the **no-arg** `getCurrentSeasonYear()` (the arg form is the non-monotonic
+   trap — a Nov `?testDate` resolved the NEXT season's folder), and the
+   schedule read is dual-source (live `nflSchedule.matchup` first, else
+   `fullNflSchedule` indexed by the projections week) like getMarqueeGame.
+2. **lineup.astro** — the week's fantasy matchup above the lineup: your top
+   starter vs the opponent's (chips = franchise names via getFranchiseBrand,
+   panels tinted by each PLAYER's NFL team). Opponent id from a new
+   `TYPE=schedule&W=` fetch; their starters from the weeklyResults YTD entry
+   for that week, else their full roster (rosters fetch is now league-wide).
+   Away/home orientation follows the schedule's `isHome`.
+3. **matchup-data.astro** (debug page) — same treatment off the synced 2025
+   feeds; archived projections are empty so the cascade lands on the
+   completed week's actual points. (Also gained `<meta charset="utf-8">` —
+   the bare page rendered "·" as mojibake.)
+
+Verify gotchas:
+- Auth-gated pages: the dev server mints a RANDOM JWT secret per boot
+  (`process.env.JWT_SECRET` unset locally; `.env` is NOT loaded into
+  process.env), so you cannot forge a session cookie externally. Verified
+  via a TEMPORARY `import.meta.env.DEV`-guarded route calling
+  createSessionToken in-process — deleted before commit. Watch for
+  duplicate `session_token` cookies shadowing the fresh one.
+- MatchupPreviewHero can't render from committed data (live 2026 feed has
+  projections but the grid is MatchupSplitHero's fallback; 2025 archive has
+  no projections). Verified by seeding 2025 projectedScores from the wk-17
+  box score + pointing SeasonDailyHero at the grid, then reverting both.
+  JSON feeds are `await import`ed → seed changes need a server restart.
 
 ## Future Directions (mocked, not built)
 
-Split matchup card, compact spotlight card. Mockups: scratchpad
-`hero-explorations.html` from the 2026-07-04 session.
+Compact spotlight card. Mockups: scratchpad `hero-explorations.html` from
+the 2026-07-04 session.
 
 ## heroArt override — when the image IS the story (2026-07-05, Brandon)
 
