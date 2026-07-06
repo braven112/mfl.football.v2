@@ -639,10 +639,12 @@ function formatKickerDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-/** Entries without an explicit link CTA into their own What's New article —
-    never the generic listing.
-    ⚠️ Duplicated in hero-resolver.ts, and SLOT_VIEW.feature above must apply
-    the same link default — it builds the view AflEventHero actually renders. */
+/**
+ * Entries without an explicit link CTA into their own What's New article —
+ * never the generic listing.
+ * ⚠️ Duplicated in hero-resolver.ts, and SLOT_VIEW.feature above must apply
+ * the same link default — it builds the view AflEventHero actually renders.
+ */
 function featureToHero(entry: WhatsNewEntry): HeroContent {
   return {
     source: 'feature',

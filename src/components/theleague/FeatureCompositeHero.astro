@@ -55,7 +55,7 @@ const forceDark = content.heroTheme === 'dark';
         aria-hidden="true"
         loading="eager"
         decoding="async"
-        onerror="this.style.display='none'; if (this.nextElementSibling?.classList.contains('fch__caption')) this.nextElementSibling.style.display='none'"
+        onerror="this.style.display='none'; var s=this.nextElementSibling; if (s) { if (s.classList.contains('fch__caption')) s.style.display='none'; }"
       />
       {content.heroArt.caption && (
         <span class="fch__caption">
