@@ -327,6 +327,67 @@ soft; `.fch__art` does this and says so in a comment.
 **Recommendation:** Prefer `heroArt` over inventing new player-casting rules
 whenever the announcement's subject is an image or object rather than a
 feature people use.
+
+## In-season daily composites — recap + matchup (shipped 2026-07-06)
+
+The two remaining LEGACY in-season daily slots got composite treatments, each
+self-loading and rendering its legacy hero as its own internal fallback (the
+`RecapHero` / `MatchupPreviewHero` convention — SeasonDailyHero just swaps the
+component; **no index.astro plumbing**, unlike the model-prop heroes):
+
+1. **`season-heroes/RecapCompositeHero.astro`** (Tuesday-AM `recap` slot) —
+   casts the week's top ACTUAL scorer via `getWeeklyTopScorerCandidates(year)` +
+   `castBestScoredModel(..., 'Top Scorer')`. Branded by the **rostering
+   franchise** (crest + `getFranchiseBrand().color`, `.name` for the owner
+   line), not the NFL team — the week's top score belongs to a fantasy team.
+   Week number from the new `getLatestScoredWeek`. Falls back to `RecapHero`.
+
+2. **`season-heroes/MatchupSplitHero.astro`** (Sat/Sun `game-day-preview`) —
+   split panel of the marquee game's two stars via `getMarqueeGameStars(year, league, referenceDate)`
+   + `castBestScoredModel` per side. NFL-team-tinted (`getNflTeamColors` →
+   dark→team gradient), away cutout mirrored (`scaleX(-1)`) toward a center VS,
+   logo watermark behind each. Mirrors the playoff `SemifinalHero` split spine
+   but tints by NFL team, not franchise. Falls back to `MatchupPreviewHero`.
+
+**The data trap that shaped the design (worth the tax):** the DATA year is
+**no-arg `getCurrentSeasonYear()`** (env-pinned to the last completed season, =
+2025 locally), NOT `getCurrentSeasonYear(testDate)` (non-monotonic — see the
+playoff gotcha). But a completed season's feeds are HALF-emptied post-rollover:
+
+| Feed | Live year (2026) | Completed year (2025) |
+|------|------------------|------------------------|
+| `playerScores.json` | week 0, empty (recap dead) | week 17, real (recap works) |
+| `nflSchedule.json` | `nflSchedule.matchup` (current week) | ONLY `fullNflSchedule` (no current-week matchup) |
+| `projectedScores.json` | real (616 players) | EMPTY (`{id:"",score:""}`) |
+
+So neither year satisfies both heroes off one code path. `getMarqueeGameStars`
+is therefore **dual-source and self-healing**, and this is the load-bearing bit:
+- **Schedule:** `getMarqueeGame` reads `nflSchedule.matchup` (live) first; when
+  absent (completed season) it falls back to `fullNflSchedule.nflSchedule`,
+  picking the **latest scored week** (`getLatestScoredWeek`) so recap + preview
+  share one week, then that week's earliest kickoff.
+- **Scoring:** `getGameScoreMap` uses `projectedScores` (a true pre-game
+  preview) when any projection is > 0, else the completed week's ACTUAL box
+  score. So 2025 resolves DAL @ WAS (Dak Prescott vs Croskey-Merritt) from real
+  week-17 points; production (2026 in-season) uses live projections. The
+  fallback branches NEVER fire in production (live feed + live projections both
+  present), so prod behavior is unchanged — the fallbacks are purely for
+  completed-season data (verification + defensive if projections ever lag).
+- `getKickoffGame` was refactored to share a `matchupToKickoffGame(m)` helper
+  with the new `getMarqueeGame`; both AFL + preseason callers unaffected
+  (`normalizeTeamCode` maps WAS→**WSH**, the ESPN code — assert on WSH in tests).
+
+**Verify:** phase machine keys off `?testDate` (recap = **Tue <2pm PT**,
+matchup = **Sat all-day**; see `getDailySlot`), data stays pinned to 2025.
+`?testDate=2025-11-04T09:00` → recap composite; `?testDate=2025-11-08` → matchup
+split. Both verified light/dark + mobile, no h-overflow. Tests in
+`tests/offseason-hero-data.test.ts` (getLatestScoredWeek, getMarqueeGameStars,
+top-scorer cast) against frozen 2025.
+
+**Playoff round models (the task's optional secondary): already done by #352** —
+`SemifinalHero`/`WildCardHero`/`ChampionshipHero` already render player cutouts
+via `getFranchiseCompositableHeadliners` → `playoff-round-data`. No work needed.
+
 ## Playoff round heroes (shipped 2026-07-05)
 
 The playoff standings slot is no longer one static bracket — it's **three

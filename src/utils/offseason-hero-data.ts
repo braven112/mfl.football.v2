@@ -234,11 +234,26 @@ export interface KickoffGame {
   homeName: string;
 }
 
+/** Resolve a raw nflSchedule matchup into a typed KickoffGame (null if malformed). */
+function matchupToKickoffGame(matchup: any): KickoffGame | null {
+  if (!Array.isArray(matchup?.team) || matchup.team.length !== 2) return null;
+  const away = matchup.team.find((t: any) => t.isHome !== '1') ?? matchup.team[0];
+  const home = matchup.team.find((t: any) => t.isHome === '1') ?? matchup.team[1];
+  const awayCode = normalizeTeamCode(away.id || '');
+  const homeCode = normalizeTeamCode(home.id || '');
+  if (!awayCode || !homeCode) return null;
+  return {
+    teamCodes: [awayCode, homeCode],
+    awayName: getNFLTeamName(awayCode),
+    homeName: getNFLTeamName(homeCode),
+  };
+}
+
 /**
- * The earliest game of the current NFL week, from the synced nflSchedule
- * feed (week 1 during the preseason — the season opener). Drives the
- * kickoff-headliner hero casting rule: "the best player starting in the
- * earliest game of the week."
+ * The earliest game of the current NFL week, from the live nflSchedule feed
+ * (`nflSchedule.matchup` — the current week's slate; week 1 during the
+ * preseason). Drives the kickoff-headliner hero casting rule: "the best player
+ * starting in the earliest game of the week."
  *
  * With a `referenceDate`, prefers the earliest game still upcoming or live
  * (kickoff + 4h grace) so a mid-week caller doesn't feature Thursday's
@@ -265,17 +280,7 @@ export function getKickoffGame(
     const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
     earliest = sorted.find((m: any) => parseInt(m.kickoff, 10) >= cutoff) ?? sorted[0];
   }
-  const away = earliest.team.find((t: any) => t.isHome !== '1') ?? earliest.team[0];
-  const home = earliest.team.find((t: any) => t.isHome === '1') ?? earliest.team[1];
-  const awayCode = normalizeTeamCode(away.id || '');
-  const homeCode = normalizeTeamCode(home.id || '');
-  if (!awayCode || !homeCode) return null;
-
-  return {
-    teamCodes: [awayCode, homeCode],
-    awayName: getNFLTeamName(awayCode),
-    homeName: getNFLTeamName(homeCode),
-  };
+  return matchupToKickoffGame(earliest);
 }
 
 /**
@@ -312,6 +317,182 @@ export function getKickoffGameCandidates(
   // tie-breaks on salary) takes over instead.
   if (!candidates.some((c) => c.score > 0)) return [];
   return candidates;
+}
+
+// ── Marquee Game Stars (in-season matchup preview) ──
+
+export interface MarqueeGameStars {
+  awayCode: string;
+  homeCode: string;
+  awayName: string;
+  homeName: string;
+  /** Scored candidates on the away team (highest = the side's star) */
+  awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }>;
+  /** Scored candidates on the home team (highest = the side's star) */
+  homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }>;
+}
+
+/**
+ * The highest week present in the playerScores feed — the just-completed
+ * scored week (the feed carries a single week; 0 out of season). Drives the
+ * recap slot's "Week N" copy and picks the marquee week for a completed
+ * season whose live current-week schedule is gone.
+ */
+export function getLatestScoredWeek(
+  seasonYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): number {
+  const data = readJsonFile(feedPath(league, seasonYear, 'playerScores.json'));
+  const list = data?.playerScores?.playerScore;
+  const scores = Array.isArray(list) ? list : list ? [list] : [];
+  let maxWeek = 0;
+  for (const s of scores) {
+    const w = parseInt(s?.week, 10);
+    if (Number.isFinite(w) && w > maxWeek) maxWeek = w;
+  }
+  return maxWeek;
+}
+
+/** playerId → actual points from the playerScores feed (the completed week). */
+function getActualScoreMap(
+  seasonYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Map<string, number> {
+  const data = readJsonFile(feedPath(league, seasonYear, 'playerScores.json'));
+  const list = data?.playerScores?.playerScore;
+  const scores = Array.isArray(list) ? list : list ? [list] : [];
+  const map = new Map<string, number>();
+  for (const s of scores) {
+    const v = parseFloat(s?.score || '');
+    if (s?.id && Number.isFinite(v)) map.set(s.id, v);
+  }
+  return map;
+}
+
+/**
+ * The score map for the marquee game's stars: projected points (a true
+ * pre-game preview) when projections are published, else the completed
+ * week's actual box score. A season whose projections feed is emptied
+ * post-year (e.g. 2025 after rollover) still resolves its two stars from
+ * real points instead of coming up blank.
+ */
+function getGameScoreMap(
+  seasonYear: number,
+  league: CanonicalLeagueSlug,
+  source: MarqueeSource,
+): Map<string, number> {
+  const projections = getProjectionMap(seasonYear, league);
+  // A LIVE game is a genuine pre-game preview — score by projection ONLY. If the
+  // projection feed is empty/unpublished, the caller must come up empty and fall
+  // back, NEVER borrow last week's box score (that would headline the wrong
+  // players mid-week). Only the completed-season ARCHIVE path, whose projections
+  // are long gone, falls through to the week's actual points.
+  if (source === 'live') return projections;
+  for (const v of projections.values()) {
+    if (v > 0) return projections;
+  }
+  return getActualScoreMap(seasonYear, league);
+}
+
+/** Where a marquee game came from — gates whether actual scores may stand in. */
+type MarqueeSource = 'live' | 'archive';
+
+interface MarqueeGame extends KickoffGame {
+  source: MarqueeSource;
+}
+
+/**
+ * The marquee game of the current NFL week — its earliest kickoff, the same
+ * opener the kickoff hero features. Reads the live current-week feed
+ * (`nflSchedule.matchup`) first (source `'live'`); for a completed/synced
+ * season (only `fullNflSchedule` on disk) it falls back to the latest scored
+ * week's earliest game (source `'archive'`) so the recap and preview share one
+ * week. The source flows to `getGameScoreMap` so only the archive path may
+ * score by actual points.
+ */
+function getMarqueeGame(
+  seasonYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+  referenceDate?: Date,
+): MarqueeGame | null {
+  // Live current-week slate (in-season production path).
+  const live = getKickoffGame(seasonYear, league, referenceDate);
+  if (live) return { ...live, source: 'live' };
+
+  // Completed season: full-schedule feed. Pick the latest scored week (matches
+  // the recap), then its earliest kickoff game. Normalize MFL's single-object
+  // shape (a one-item list can arrive as a bare object).
+  const data = readJsonFile(feedPath(league, seasonYear, 'nflSchedule.json'));
+  const rawWeeks = data?.fullNflSchedule?.nflSchedule;
+  const weeks = Array.isArray(rawWeeks) ? rawWeeks : rawWeeks ? [rawWeeks] : [];
+  if (weeks.length === 0) return null;
+
+  const targetWeek = getLatestScoredWeek(seasonYear, league);
+  const week =
+    weeks.find((w: any) => parseInt(w?.week, 10) === targetWeek) ?? weeks[weeks.length - 1];
+  const games = (Array.isArray(week?.matchup) ? week.matchup : week?.matchup ? [week.matchup] : [])
+    .filter((m: any) => m?.kickoff && Array.isArray(m.team) && m.team.length === 2);
+  if (games.length === 0) return null;
+
+  const earliest = [...games].sort(
+    (a: any, b: any) => parseInt(a.kickoff, 10) - parseInt(b.kickoff, 10),
+  )[0];
+  const resolved = matchupToKickoffGame(earliest);
+  return resolved ? { ...resolved, source: 'archive' } : null;
+}
+
+/**
+ * The marquee game of the current NFL week and each side's fantasy roster,
+ * scored for casting — for the matchup-preview split panel (the game's two
+ * stars). "Marquee" = the earliest game of the week (the same opener the
+ * kickoff hero features), so recap → preview share one data spine. Returns
+ * null when no schedule resolves or either side has no scored player (caller
+ * falls back to the full matchup-preview grid).
+ */
+export function getMarqueeGameStars(
+  seasonYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+  referenceDate?: Date,
+): MarqueeGameStars | null {
+  const game = getMarqueeGame(seasonYear, league, referenceDate);
+  if (!game) return null;
+
+  const [awayCode, homeCode] = game.teamCodes;
+  const playerMap = getUnifiedPlayerMap(seasonYear);
+  const ownerByPlayer = getOwnerByPlayer(seasonYear, league);
+  const scoreOf = getGameScoreMap(seasonYear, league, game.source);
+
+  const awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  for (const p of playerMap.values()) {
+    if (p.position === 'DEF') continue;
+    if (p.nflTeam !== awayCode && p.nflTeam !== homeCode) continue;
+    // Coerce a non-finite score (malformed feed → NaN) to 0 — `?? 0` wouldn't
+    // (NaN isn't null), and castBestScoredModel doesn't filter finite, so a NaN
+    // candidate could otherwise win the pick.
+    const rawScore = scoreOf.get(p.mflId);
+    const candidate = {
+      playerId: p.mflId,
+      franchiseId: ownerByPlayer.get(p.mflId) ?? '',
+      score: Number.isFinite(rawScore) ? (rawScore as number) : 0,
+    };
+    if (p.nflTeam === awayCode) awayCandidates.push(candidate);
+    else homeCandidates.push(candidate);
+  }
+
+  // Need at least one scored star on each side to justify the split panel.
+  if (!awayCandidates.some((c) => c.score > 0) || !homeCandidates.some((c) => c.score > 0)) {
+    return null;
+  }
+
+  return {
+    awayCode,
+    homeCode,
+    awayName: game.awayName,
+    homeName: game.homeName,
+    awayCandidates,
+    homeCandidates,
+  };
 }
 
 // ── ADP Rankings ──
