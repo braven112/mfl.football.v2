@@ -1,0 +1,433 @@
+---
+/**
+ * LeagueEventCompositeHero — the offseason-fallback event hero, composite
+ * edition. The branded LeagueEventHero shows the next upcoming calendar event
+ * (auction opening, draft coming, kickoff soon…); this variant keeps that
+ * event's copy (kicker/title/summary/CTA + per-category accent & countdown)
+ * but adds a semantically relevant ESPN-headshot cutout on the player's NFL
+ * team color, per Brandon's rule that every hero casts a relevant player.
+ *
+ * EVENT → PLAYER (resolved from the event's category, which is encoded in the
+ * view's accent color — see hero-data/league-event-cast):
+ *   free-agency / auction → the top available free agent  (castTopFreeAgentModel)
+ *   draft                 → the #1 rookie prospect          (castRookieModel)
+ *   preseason / kickoff   → the marquee opener's best player (getMarqueeGameStars + castBestScoredModel)
+ *   anything else (regular-season, unknown) → NO player, render the branded
+ *     LeagueEventHero (a wrong/decorative player is worse than none).
+ *
+ * Self-contained: self-loads feeds + casts internally (mirrors the other
+ * composite heroes), theme-aware via --lech-* vars (light default +
+ * html.dark), headshot-404 fallback, reduced-motion guard, tabular-nums.
+ */
+import type { LeagueEventView } from '../../utils/league-event-hero-view';
+import type { HeroModel } from '../../utils/hero-casting';
+import {
+  castTopFreeAgentModel,
+  castRookieModel,
+  castBestScoredModel,
+} from '../../utils/hero-casting';
+import {
+  getPlayerMap,
+} from '../../utils/player-map';
+import {
+  getAdpRankedIds,
+  getRosteredPlayerIds,
+  getMarqueeGameStars,
+} from '../../utils/offseason-hero-data';
+import { castStrategyForAccent } from '../../utils/hero-data/league-event-cast';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import LeagueEventHero from './LeagueEventHero.astro';
+
+export interface Props {
+  eventView: LeagueEventView;
+  bordered?: boolean;
+  resolveLeaguePath: (path: string) => string;
+  referenceDate?: Date;
+  leagueYear?: number;
+}
+
+const {
+  eventView,
+  bordered = false,
+  resolveLeaguePath: r,
+  referenceDate,
+  leagueYear,
+} = Astro.props;
+
+const now = referenceDate ?? new Date();
+const year =
+  leagueYear ??
+  parseInt(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric' }).format(now),
+    10,
+  );
+
+// ── Cast per the event's category (derived from the view's accent color) ─────
+const strategy = castStrategyForAccent(eventView.accent);
+const players = getPlayerMap(year);
+
+let model: HeroModel | null = null;
+
+if (strategy === 'free-agent') {
+  // Top available FA by dynasty ADP, top-5 daily rotation.
+  const rostered = getRosteredPlayerIds(year);
+  const ranked = getAdpRankedIds(year);
+  model = castTopFreeAgentModel(players, now, rostered, ranked, 5);
+} else if (strategy === 'rookie') {
+  // #1 rookie prospect (unrostered-preferred, daily rotation).
+  const rostered = getRosteredPlayerIds(year);
+  model = castRookieModel(players, now, rostered);
+} else if (strategy === 'marquee') {
+  // Best player in the season opener (the earliest game of the week).
+  const marquee = getMarqueeGameStars(year);
+  if (marquee) {
+    const candidates = [...marquee.awayCandidates, ...marquee.homeCandidates];
+    model = castBestScoredModel(candidates, players, undefined, 'Marquee Star');
+  }
+}
+
+// ── Theming: player's NFL team color drives the glow; keep the event accent ──
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = model ? getNflTeamColors(teamCode) : { primary: '#1c497c' };
+const glowDark = hexToRgba(primary, 0.42);
+const glowLight = hexToRgba(primary, 0.22);
+
+// ── Event copy (straight from the resolved view) ─────────────────────────────
+const accent = eventView.accent ?? '#1c497c';
+const pill = eventView.pill;
+const headline = eventView.headline;
+const accentWord = eventView.accentWord ?? '';
+const summary = eventView.summary;
+const link = eventView.link ? r(eventView.link) : undefined;
+const linkLabel = eventView.linkLabel ?? 'Learn more';
+const isExternal = !!eventView.isExternal;
+const countValue = eventView.countValue;
+const countLabel = eventView.countLabel;
+const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
+
+// A short ghost wordmark behind the composite — the pill's leading word reads
+// as the "beat" (e.g. "FREE" from "Free Agency Closing", "NFL" from "NFL Draft").
+const ghost = (pill || '').trim().split(/\s+/)[0]?.toUpperCase() || 'THE LEAGUE';
+---
+
+{model ? (
+  <section
+    class={`lech${bordered ? ' lech--bordered' : ''}`}
+    style={`--lech-glow-dark: ${glowDark}; --lech-glow-light: ${glowLight}; --lech-accent: ${accent};`}
+    aria-label={pill}
+  >
+    <span class="lech__ghost" aria-hidden="true">{ghost}</span>
+    <div class="lech__glow" aria-hidden="true"></div>
+    <img
+      class="lech__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.lech').classList.add('lech--no-model')"
+    />
+    <span class="lech__caption">
+      <strong>{model.name}</strong>
+      <span class="lech__caption-meta">{model.descriptor} · {model.position} · {teamCode}</span>
+    </span>
+
+    <div class="lech__content">
+      <p class="lech__eyebrow"><span class="lech__pill">{pill}</span></p>
+      <h2 class="lech__title">
+        {headline}{accentWord ? ' ' : ''}
+        {accentWord && <span class="lech__title-accent">{accentWord}</span>}
+      </h2>
+      <p class="lech__summary">{summary}</p>
+
+      <div class="lech__footer">
+        {hasCount && (
+          <div class="lech__stat" role="group" aria-label={`${countValue} ${countLabel ?? ''}`.trim()}>
+            <span class="lech__stat-num" aria-hidden="true">{countValue}</span>
+            {countLabel && <span class="lech__stat-label" aria-hidden="true">{countLabel}</span>}
+          </div>
+        )}
+        {hasCount && link && <span class="lech__divider" aria-hidden="true"></span>}
+        {link && (
+          isExternal ? (
+            <a class="lech__cta" href={link} target="_blank" rel="noopener noreferrer" aria-label={`${linkLabel} (opens in new tab)`}>
+              {linkLabel}
+              <span aria-hidden="true">↗</span>
+            </a>
+          ) : (
+            <a class="lech__cta" href={link}>
+              {linkLabel}
+              <span aria-hidden="true">→</span>
+            </a>
+          )
+        )}
+      </div>
+    </div>
+  </section>
+) : (
+  <LeagueEventHero {...eventView} bordered={bordered} regionLabel="Featured league event" />
+)}
+
+<style>
+  .lech {
+    --lech-surface: linear-gradient(115deg, #f6f8fb 0%, #eef2f7 52%, #e4ebf3 100%);
+    --lech-ink: var(--color-gray-900, #0f1419);
+    --lech-body: rgba(22, 32, 44, 0.72);
+    --lech-ghost: rgba(28, 73, 124, 0.06);
+    --lech-glow: var(--lech-glow-light, rgba(28, 73, 124, 0.2));
+    --lech-shadow: rgba(15, 30, 46, 0.3);
+    --lech-accent: #1c497c;
+    --lech-pill-bg: color-mix(in srgb, var(--lech-accent) 12%, transparent);
+    --lech-pill-border: color-mix(in srgb, var(--lech-accent) 40%, transparent);
+    --lech-pill-ink: var(--lech-accent);
+    --lech-cta-bg: var(--lech-accent);
+    --lech-cta-ink: #ffffff;
+    --lech-border: color-mix(in srgb, var(--lech-accent) 22%, transparent);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--lech-border);
+    background: var(--lech-surface);
+    color: var(--lech-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  /* Calendar events get the accent-colored border (matches LeagueEventHero). */
+  .lech--bordered {
+    border-color: var(--lech-accent);
+    box-shadow: 0 0 0 1px var(--lech-accent);
+  }
+
+  :global(html.dark) .lech {
+    --lech-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+    --lech-ink: #ffffff;
+    --lech-body: rgba(255, 255, 255, 0.78);
+    --lech-ghost: rgba(255, 255, 255, 0.045);
+    --lech-glow: var(--lech-glow-dark, rgba(28, 73, 124, 0.4));
+    --lech-shadow: rgba(0, 0, 0, 0.5);
+    --lech-pill-bg: color-mix(in srgb, var(--lech-accent) 24%, transparent);
+    --lech-pill-border: color-mix(in srgb, var(--lech-accent) 55%, transparent);
+    --lech-pill-ink: color-mix(in srgb, var(--lech-accent) 55%, #ffffff);
+    --lech-cta-bg: #ffffff;
+    --lech-cta-ink: #0b1017;
+    --lech-border: rgba(255, 255, 255, 0.1);
+  }
+
+  :global(html.dark) .lech--bordered {
+    border-color: color-mix(in srgb, var(--lech-accent) 60%, #ffffff);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--lech-accent) 60%, #ffffff);
+  }
+
+  .lech__ghost {
+    position: absolute;
+    left: 38%;
+    top: -0.6rem;
+    font-size: clamp(3.5rem, 8vw, 6rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--lech-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .lech__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--lech-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .lech__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--lech-shadow));
+  }
+
+  .lech--no-model .lech__caption {
+    display: none;
+  }
+
+  .lech__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .lech__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .lech__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .lech__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .lech__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .lech__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--lech-pill-ink);
+    background: var(--lech-pill-bg);
+    border: 1px solid var(--lech-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .lech__title {
+    color: var(--lech-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .lech__title-accent {
+    color: var(--lech-accent);
+  }
+
+  :global(html.dark) .lech__title-accent {
+    color: color-mix(in srgb, var(--lech-accent) 55%, #ffffff);
+  }
+
+  .lech__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--lech-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .lech__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex-wrap: wrap;
+  }
+
+  .lech__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .lech__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--lech-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  :global(html.dark) .lech__stat-num {
+    color: color-mix(in srgb, var(--lech-accent) 55%, #ffffff);
+  }
+
+  .lech__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--lech-body);
+  }
+
+  .lech__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--lech-pill-border);
+  }
+
+  .lech__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--lech-cta-bg);
+    color: var(--lech-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .lech__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .lech__cta:focus-visible {
+    outline: 2px solid var(--lech-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lech__cta {
+      transition: none;
+    }
+
+    .lech__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .lech {
+      min-height: 260px;
+    }
+
+    .lech__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .lech__caption {
+      display: none;
+    }
+
+    .lech__content {
+      max-width: 100%;
+    }
+  }
+</style>

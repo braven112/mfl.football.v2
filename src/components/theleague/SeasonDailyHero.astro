@@ -10,22 +10,32 @@ import type { HeroState } from '../../types/hero-state';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import AuctionHero from './AuctionHero.astro';
 import AuctionCompositeHero from './AuctionCompositeHero.astro';
+import BreakingStoryHero from './BreakingStoryHero.astro';
+import type { BreakingStory } from '../../utils/offseason-hero-data';
 import DraftHero from './DraftHero.astro';
+import DraftCompositeHero from './DraftCompositeHero.astro';
 import FeatureCompositeHero from './FeatureCompositeHero.astro';
 import HeroBanner from './HeroBanner.astro';
 import LeagueEventHero from './LeagueEventHero.astro';
+import LeagueEventCompositeHero from './LeagueEventCompositeHero.astro';
 import type { HeroModel } from '../../utils/hero-casting';
 import LiveScoringHero from '../shared/LiveScoringHero';
 import TradeDeadlineHero from './TradeDeadlineHero';
+import TradeDeadlineCompositeHero from './TradeDeadlineCompositeHero.astro';
 import PlayoffBracketHero from './PlayoffBracketHero';
+import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
 import '../../styles/live-scoring-hero.css';
 import '../../styles/trade-deadline-hero.css';
 import '../../styles/playoff-bracket-hero.css';
+import '../../styles/playoff-round-hero.css';
 
 // Off-season hero components (Phase C)
 import ChampionCrownedHero from './ChampionCrownedHero.astro';
+import ChampionCompositeHero from './ChampionCompositeHero.astro';
 import TagExtensionHero from './TagExtensionHero.astro';
+import TagWindowCompositeHero from './TagWindowCompositeHero.astro';
 import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
+import TaggedShowcaseCompositeHero from './TaggedShowcaseCompositeHero.astro';
 import CutWatchHero from './CutWatchHero.astro';
 import CutWatchCompositeHero from './CutWatchCompositeHero.astro';
 import PreseasonCompositeHero from './PreseasonCompositeHero.astro';
@@ -36,11 +46,17 @@ import DraftCountdownHero from './DraftCountdownHero.astro';
 
 // Daily rotation — real components (Phase D)
 import StandingsHero from './season-heroes/StandingsHero.astro';
+import StandingsCompositeHero from './season-heroes/StandingsCompositeHero.astro';
 import RecapHero from './season-heroes/RecapHero.astro';
+import RecapCompositeHero from './season-heroes/RecapCompositeHero.astro';
 import WaiverWireHero from './season-heroes/WaiverWireHero.astro';
+import WaiverCompositeHero from './season-heroes/WaiverCompositeHero.astro';
 import ArticleHero from './season-heroes/ArticleHero.astro';
+import ArticleCompositeHero from './season-heroes/ArticleCompositeHero.astro';
 import WeekendPreviewHero from './season-heroes/WeekendPreviewHero.astro';
+import WeekendPreviewCompositeHero from './season-heroes/WeekendPreviewCompositeHero.astro';
 import MatchupPreviewHero from './season-heroes/MatchupPreviewHero.astro';
+import MatchupSplitHero from './season-heroes/MatchupSplitHero.astro';
 
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
@@ -78,9 +94,19 @@ export interface Props {
   preseasonModelIsOwn?: boolean;
   /** The earliest game of the week (for the opener line in the summary) */
   kickoffGame?: { awayName: string; homeName: string } | null;
+  /** Cast player at the center of a breaking story (page-resolved) */
+  breakingModel?: HeroModel | null;
+  /** The breaking-story feed post the model represents */
+  breakingStory?: BreakingStory | null;
+  /** Tagged-showcase composite panels (page-resolved: model + tagging franchise) */
+  taggedShowcasePanels?: Array<{ model: HeroModel; franchiseName: string }>;
+  /** Total franchise tags this year (may exceed the compositable panel count) */
+  taggedCount?: number;
+  /** League year (for the tagged-showcase band) */
+  leagueYear?: number;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], preseasonModel, preseasonModelIsOwn, kickoffGame } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, taggedShowcasePanels = [], taggedCount = 0, leagueYear } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -123,9 +149,10 @@ const isFridayArticle = ptWeekday === 'Fri';
   )
 )}
 
-{/* P0: Draft hero — delegate to existing component */}
+{/* P0: Draft hero — composite (top rookie prospect / most-recent live pick);
+    the component falls back to the legacy DraftHero internally. */}
 {(phase === 'draft-announced' || phase === 'draft-live') && state.draftProps && (
-  <DraftHero
+  <DraftCompositeHero
     leagueYear={state.draftProps.leagueYear}
     resolveLeaguePath={resolveLeaguePath}
     spriteUrl={spriteUrl}
@@ -135,11 +162,15 @@ const isFridayArticle = ptWeekday === 'Fri';
   />
 )}
 
-{/* P0++: Trade Deadline hero — dedicated countdown component */}
+{/* P0++: Trade Deadline hero — composite with the biggest name on the block;
+    the component keeps a live countdown and falls back to the legacy
+    countdown-only TradeDeadlineHero internally when nobody's shopping. */}
 {phase === 'trade-deadline' && state.tradeDeadlineProps && (
-  <TradeDeadlineHero
-    client:load
+  <TradeDeadlineCompositeHero
     deadlineMidnightPT={state.tradeDeadlineProps.deadlineMidnightPT}
+    leagueYear={leagueYear ?? state.metadata.referenceDate.getFullYear()}
+    resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 
@@ -158,45 +189,75 @@ const isFridayArticle = ptWeekday === 'Fri';
     initialRemaining={liveScoring.initialRemaining}
   />
 )}
-{slot === 'standings' && phase === 'playoffs' && state.playoffProps && (
+{/* Playoff round hero (wild card / semifinals / championship) — the composite
+    round view when resolved, else the legacy bracket list, else standings. */}
+{slot === 'standings' && (phase === 'playoffs' || phase === 'championship') && state.playoffProps?.roundView && (
+  <PlayoffRoundHero view={state.playoffProps.roundView} r={resolveLeaguePath} />
+)}
+{slot === 'standings' && (phase === 'playoffs' || phase === 'championship') && state.playoffProps && !state.playoffProps.roundView && (
   <PlayoffBracketHero
     client:idle
     leagueYear={state.playoffProps.leagueYear}
     userFranchiseId={state.playoffProps.userFranchiseId}
     userIsEliminated={state.playoffProps.userIsEliminated}
     bracketSummary={state.playoffProps.bracketSummary}
+    watchModel={state.playoffProps.watchModel}
   />
 )}
-{slot === 'standings' && (phase !== 'playoffs' || !state.playoffProps) && (
-  <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />
+{slot === 'standings' && ((phase !== 'playoffs' && phase !== 'championship') || !state.playoffProps) && (
+  <StandingsCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />
 )}
-{slot === 'recap' && <RecapHero state={state} />}
-{slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} />}
-{slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
-{slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}
-{slot === 'game-day-preview' && <MatchupPreviewHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
+{slot === 'recap' && <RecapCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
+{slot === 'waiver-wire' && <WaiverCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
+{slot === 'article' && isFridayArticle && <WeekendPreviewCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
+{slot === 'article' && !isFridayArticle && <ArticleCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
+{slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
 
 {/* Off-season heroes: dedicated components */}
 {phase === 'champion-crowned' && state.championProps && (
-  <ChampionCrownedHero
+  <ChampionCompositeHero
     championProps={state.championProps}
     resolveLeaguePath={resolveLeaguePath}
     spriteUrl={spriteUrl}
     userFranchiseId={userFranchiseId}
-  />
-)}
-
-{phase === 'tag-window' && (
-  <TagExtensionHero
-    resolveLeaguePath={resolveLeaguePath}
     referenceDate={state.metadata.referenceDate}
   />
 )}
 
-{phase === 'tagged-showcase' && (
-  <TaggedPlayerShowcaseHero
-    taggedShowcaseProps={state.taggedShowcaseProps}
+{phase === 'tag-window' && (
+  <TagWindowCompositeHero
     resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
+    userFranchiseId={userFranchiseId}
+    leagueYear={leagueYear ?? state.metadata.referenceDate.getFullYear()}
+  />
+)}
+
+{phase === 'tagged-showcase' && (
+  taggedShowcasePanels.length >= 2 ? (
+    <TaggedShowcaseCompositeHero
+      panels={taggedShowcasePanels}
+      taggedCount={taggedCount}
+      leagueYear={leagueYear ?? state.metadata.referenceDate.getFullYear()}
+      resolveLeaguePath={resolveLeaguePath}
+    />
+  ) : (
+    <TaggedPlayerShowcaseHero
+      taggedShowcaseProps={state.taggedShowcaseProps}
+      resolveLeaguePath={resolveLeaguePath}
+    />
+  )
+)}
+
+{/* Breaking story — a fresh (<48h) trade/auction bomb takes the homepage.
+    The resolver only sets this phase when a compositable story exists, so the
+    model is present; the defensive guard keeps the section landmark filled. */}
+{phase === 'breaking-story' && breakingModel && breakingStory && (
+  <BreakingStoryHero
+    model={breakingModel}
+    story={breakingStory}
+    resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
   />
 )}
 
@@ -269,12 +330,14 @@ const isFridayArticle = ptWeekday === 'Fri';
   && !state.championProps && !state.taggedShowcaseProps && !state.cutWatchProps
   && !state.preseasonProps && !state.draftCountdownProps
   && phase !== 'tag-window' && phase !== 'udfa-window' && phase !== 'preseason-countdown'
-  && phase !== 'draft-countdown'
+  && phase !== 'draft-countdown' && phase !== 'breaking-story'
   && (state.eventView ? (
-  <LeagueEventHero
-    {...state.eventView}
+  <LeagueEventCompositeHero
+    eventView={state.eventView}
     bordered={state.eventBordered}
-    regionLabel="Featured league event"
+    resolveLeaguePath={resolveLeaguePath}
+    referenceDate={state.metadata.referenceDate}
+    leagueYear={leagueYear ?? state.metadata.referenceDate.getFullYear()}
   />
 ) : fallback ? (
   <HeroBanner

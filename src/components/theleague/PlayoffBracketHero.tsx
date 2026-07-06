@@ -8,11 +8,22 @@
 
 import type { PlayoffBracketSummaryGame } from '../../types/hero-state';
 
+/** Optional composite accent — the playoff "player to watch" face in the header. */
+export interface PlayoffWatchModel {
+  name: string;
+  position: string;
+  nflTeam: string;
+  headshot: string;
+  teamPrimary: string;
+}
+
 interface PlayoffBracketHeroProps {
   leagueYear: number;
   userFranchiseId?: string;
   userIsEliminated?: boolean;
   bracketSummary: PlayoffBracketSummaryGame[];
+  /** When set, a compact ESPN-headshot "player to watch" accent rides the header. */
+  watchModel?: PlayoffWatchModel | null;
 }
 
 type TeamSlot = PlayoffBracketSummaryGame['home'];
@@ -25,10 +36,10 @@ function TeamSlotRow({ team, isUser, isWinner }: {
   return (
     <div className={`plhero__team-row${isWinner ? ' plhero__team-row--winner' : ''}${isUser ? ' plhero__team-row--user' : ''}`}>
       <div className="plhero__team-info">
+        <span className="plhero__seed">{team.seed ?? '?'}</span>
         {team.icon && (
           <img className="plhero__team-icon" src={team.icon} alt="" loading="lazy" />
         )}
-        <span className="plhero__seed">{team.seed ?? '?'}</span>
         <span className="plhero__team-name">{team.displayName}</span>
         {isUser && <span className="plhero__you-badge" aria-label="Your team">&#9733; You</span>}
       </div>
@@ -65,6 +76,7 @@ export default function PlayoffBracketHero({
   userFranchiseId,
   userIsEliminated,
   bracketSummary,
+  watchModel,
 }: PlayoffBracketHeroProps) {
   // Group games by round week
   const roundMap = new Map<number, PlayoffBracketSummaryGame[]>();
@@ -86,11 +98,38 @@ export default function PlayoffBracketHero({
   }
 
   return (
-    <div className="plhero" aria-label="Playoff bracket">
-      <div className="plhero__header">
-        <h3 className="plhero__title">Playoff Bracket</h3>
+    <div
+      className="plhero"
+      aria-label="Playoff bracket"
+      style={watchModel ? ({ '--plhero-glow': `${watchModel.teamPrimary}55` } as Record<string, string>) : undefined}
+    >
+      <div className="plhero__header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <img className="plhero__lg plhero__lg--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" />
+          <img className="plhero__lg plhero__lg--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" />
+          <h3 className="plhero__title">Playoff Bracket</h3>
+        </div>
         {userIsEliminated && userFranchiseId && (
           <span className="plhero__eliminated-badge">Eliminated</span>
+        )}
+        {watchModel && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginLeft: 'auto' }}>
+            <div style={{ textAlign: 'right', lineHeight: 1.15 }}>
+              <div style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-gray-400, #9ca3af)' }}>Player to Watch</div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '-0.01em' }}>{watchModel.name}</div>
+              <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-gray-400, #9ca3af)', fontVariantNumeric: 'tabular-nums' }}>{watchModel.position} · {watchModel.nflTeam}</div>
+            </div>
+            <div style={{ position: 'relative', width: '54px', height: '54px', flex: 'none' }}>
+              <span aria-hidden="true" style={{ position: 'absolute', inset: '-6px', borderRadius: '50%', background: `radial-gradient(circle at 50% 35%, ${watchModel.teamPrimary}, transparent 68%)`, opacity: 0.85 }} />
+              <img
+                src={watchModel.headshot}
+                alt=""
+                loading="eager"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+                style={{ position: 'relative', width: '54px', height: '54px', borderRadius: '50%', objectFit: 'cover', objectPosition: 'top center', border: `2px solid ${watchModel.teamPrimary}`, background: 'var(--color-gray-100, #f3f4f6)' }}
+              />
+            </div>
+          </div>
         )}
       </div>
 

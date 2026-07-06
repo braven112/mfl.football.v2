@@ -869,6 +869,7 @@ export function resolveHeroState(
   entries?: WhatsNewEntry[],
   timeline?: WhatsNextTimeline,
   draftComplete?: boolean,
+  hasBreakingStory?: boolean,
 ): HeroState {
   const now = referenceDate ?? new Date();
   const week = getCurrentNFLWeek(now) ?? undefined;
@@ -958,6 +959,30 @@ export function resolveHeroState(
         },
       },
     );
+  }
+
+  // --- P0: Breaking Story (fresh trade/auction bomb, <48h) ---
+  // Sits below the "event is happening now" P0 states (trade deadline,
+  // championship, auction, draft) so those windows are protected. It must not
+  // interrupt a live game — but isGameLive is purely a day/time window (Sun /
+  // Mon / Thu evenings) and returns true on OFFSEASON Sundays too, so we only
+  // defer to it when we're actually in a live-scoring phase. Above
+  // regular-season non-live slots, playoffs, and every offseason ambient
+  // state — a genuine bomb leads the homepage while it's still news. The
+  // caller passes hasBreakingStory (feed-derived: a breaking-tier post with a
+  // compositable player within 48h); the resolver stays feed-free.
+  const liveGameInProgress = isGameLive(now) && (isRegularSeason(now) || isPlayoffPeriod(now));
+  if (hasBreakingStory && !liveGameInProgress) {
+    return buildState('breaking-story', 'P0', 'isBreakingStory', now, testMode, {
+      metadata: {
+        week,
+        gameWindow: null,
+        isLive: false,
+        referenceDate: now,
+        testMode,
+        resolvedBy: 'isBreakingStory',
+      },
+    });
   }
 
   // --- P0: Regular Season Daily Rotation ---

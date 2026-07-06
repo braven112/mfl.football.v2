@@ -1015,6 +1015,41 @@ describe('resolveHeroState', () => {
     });
   });
 
+  describe('P0 Breaking story override', () => {
+    it('leads with breaking-story when a fresh bomb exists in an ambient slot', () => {
+      // 2027: Oct 5 = Tuesday (recap slot, not a live game window)
+      const state = resolveHeroState(new Date(2027, 9, 5, 10, 0), true, undefined, undefined, undefined, true);
+      expect(state.phase).toBe('breaking-story');
+      expect(state.priority).toBe('P0');
+      expect(state.metadata.resolvedBy).toBe('isBreakingStory');
+    });
+
+    it('does not fire without a breaking story (normal rotation resumes)', () => {
+      const state = resolveHeroState(new Date(2027, 9, 5, 10, 0), true, undefined, undefined, undefined, false);
+      expect(state.phase).toBe('regular-season');
+      expect(state.slot).toBe('recap');
+    });
+
+    it('never interrupts a live game window', () => {
+      // Sunday 2pm — a game is live; breaking waits its turn
+      const state = resolveHeroState(new Date(2027, 9, 3, 14, 0), true, undefined, undefined, undefined, true);
+      expect(state.phase).toBe('regular-season');
+      expect(state.slot).toBe('live-scoring');
+    });
+
+    it('still leads on an OFFSEASON Sunday (no real game despite the time window)', () => {
+      // July 4 2027 is a Sunday: isGameLive's day/time window trips, but it is
+      // not the season, so the breaking bomb must still lead.
+      const state = resolveHeroState(new Date(2027, 6, 4, 14, 0), true, undefined, undefined, undefined, true);
+      expect(state.phase).toBe('breaking-story');
+    });
+
+    it('does not outrank the live auction hero', () => {
+      const state = resolveHeroState(new Date(2027, 2, 22), true, undefined, undefined, undefined, true);
+      expect(state.phase).toBe('auction-live');
+    });
+  });
+
   describe('P0 Regular season daily rotation', () => {
     it('should return regular-season with live-scoring on Sunday 2pm', () => {
       // 2027: Labor Day = Sep 6, kickoff = Sep 10. Oct 3 = Sunday

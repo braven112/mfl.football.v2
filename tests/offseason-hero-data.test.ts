@@ -5,6 +5,7 @@ import {
   getCutCandidates,
   isDraftComplete,
   areAllDraftPicksFilled,
+  selectBreakingStory,
 } from '../src/utils/offseason-hero-data';
 
 // These tests use real data files from the repo for FROZEN historical years
@@ -84,6 +85,50 @@ describe('isDraftComplete', () => {
 
   it('returns true for 2025 (completed draft, frozen data)', () => {
     expect(isDraftComplete(2025)).toBe(true);
+  });
+});
+
+describe('selectBreakingStory (fixtures)', () => {
+  const at = (iso: string, over: Record<string, unknown> = {}) => ({
+    id: 'sf_x',
+    tier: 'breaking',
+    playerIds: ['15282'],
+    headline: 'Mafia open the vault for DeVonta Smith',
+    hotTake: 'League sources say the room tapped out.',
+    timestamp: iso,
+    ...over,
+  });
+  const REF = new Date('2026-03-25T12:00:00Z');
+
+  it('returns null for junk / non-array input', () => {
+    expect(selectBreakingStory(undefined, REF)).toBeNull();
+    expect(selectBreakingStory([], REF)).toBeNull();
+  });
+
+  it('picks the freshest breaking post within the 48h window', () => {
+    const posts = [
+      at('2026-03-24T21:45:00Z', { headline: 'newest', playerIds: ['1'] }),
+      at('2026-03-24T09:00:00Z', { headline: 'older' }),
+    ];
+    const story = selectBreakingStory(posts, REF);
+    expect(story?.headline).toBe('newest');
+    expect(story?.id).toBe('sf_x');
+    expect(story?.playerIds).toEqual(['1']);
+    expect(story?.summary).toContain('tapped out');
+    expect(story?.timestampMs).toBe(Date.parse('2026-03-24T21:45:00Z'));
+  });
+
+  it('excludes stale, future, non-breaking, and player-less posts', () => {
+    expect(selectBreakingStory([at('2026-03-22T00:00:00Z')], REF)).toBeNull(); // >48h old
+    expect(selectBreakingStory([at('2026-03-26T00:00:00Z')], REF)).toBeNull(); // future
+    expect(selectBreakingStory([at('2026-03-25T00:00:00Z', { tier: 'standard' })], REF)).toBeNull();
+    expect(selectBreakingStory([at('2026-03-25T00:00:00Z', { playerIds: [] })], REF)).toBeNull();
+  });
+
+  it('respects a custom window', () => {
+    const posts = [at('2026-03-24T06:00:00Z')]; // ~30h before REF
+    expect(selectBreakingStory(posts, REF, 24)).toBeNull();
+    expect(selectBreakingStory(posts, REF, 48)).not.toBeNull();
   });
 });
 

@@ -1,0 +1,357 @@
+---
+/**
+ * WeekendPreviewCompositeHero — the Friday article slot, composite edition.
+ *
+ * Where the Saturday/Sunday game-day slot (MatchupSplitHero) splits the
+ * marquee game into its TWO stars, the Friday weekend-preview slot leads with
+ * the SINGLE best projected player across that same marquee game — the one
+ * name to circle before the slate kicks off. Transparent ESPN cutout on his
+ * NFL team's color, his projected total as the stat, and the matchup named in
+ * "Weekend to Watch" framing pointing at the full preview.
+ *
+ * Self-loads from the season's schedule + projection feeds and casts each
+ * side internally, then features whichever side's best projected star wins.
+ * The router falls back to the legacy WeekendPreviewHero (ArticleHero) when
+ * the marquee game or a usable cutout doesn't resolve.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getMarqueeGameStars } from '../../../utils/offseason-hero-data';
+import { castBestScoredModel } from '../../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import WeekendPreviewHero from './WeekendPreviewHero.astro';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+}
+
+const { state, resolveLeaguePath: r } = Astro.props;
+
+const year = getCurrentSeasonYear(state.metadata.referenceDate);
+const players = getPlayerMap(year);
+const stars = getMarqueeGameStars(year);
+
+// Cast the best compositable star on each side of the marquee game, then
+// feature whichever side's star has the higher projection. The winning
+// candidate (found back in the side's candidate list) carries the score.
+const awayStar = stars ? castBestScoredModel(stars.awayCandidates, players, undefined, 'To Watch') : null;
+const homeStar = stars ? castBestScoredModel(stars.homeCandidates, players, undefined, 'To Watch') : null;
+
+function scoreOf(
+  model: { mflId: string } | null,
+  candidates: Array<{ playerId: string; score: number }>,
+): number {
+  if (!model) return -Infinity;
+  return candidates.find((c) => c.playerId === model.mflId)?.score ?? -Infinity;
+}
+
+const awayScore = stars ? scoreOf(awayStar, stars.awayCandidates) : -Infinity;
+const homeScore = stars ? scoreOf(homeStar, stars.homeCandidates) : -Infinity;
+
+// Best of the two sides. Tie-breaks toward the home star, then requires a
+// usable cutout (both awayStar/homeStar are already compositable if non-null).
+const featureAway = awayScore > homeScore;
+const model = featureAway ? awayStar : homeStar;
+const modelScore = featureAway ? awayScore : homeScore;
+
+const resolved = stars && model && Number.isFinite(modelScore) ? { stars, model, modelScore } : null;
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = model ? getNflTeamColors(teamCode) : { primary: '#1c497c' };
+const glowDark = hexToRgba(primary, 0.4);
+const glowLight = hexToRgba(primary, 0.2);
+
+const points = resolved ? resolved.modelScore.toFixed(1) : '';
+const matchup = resolved ? `${resolved.stars.awayName} at ${resolved.stars.homeName}` : '';
+---
+
+{resolved ? (
+  <section
+    class="wph"
+    style={`--wph-glow-dark: ${glowDark}; --wph-glow-light: ${glowLight};`}
+    aria-label={`Weekend to watch — ${matchup}`}
+  >
+    <span class="wph__ghost" aria-hidden="true">FRIDAY</span>
+    <div class="wph__glow" aria-hidden="true"></div>
+    <img
+      class="wph__model"
+      src={resolved.model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.wph').classList.add('wph--no-model')"
+    />
+    <span class="wph__caption">
+      <strong>{resolved.model.name}</strong>
+      <span class="wph__caption-meta">{resolved.model.position} · {teamCode}</span>
+    </span>
+
+    <div class="wph__content">
+      <p class="wph__eyebrow"><span class="wph__pill">Weekend to Watch</span></p>
+      <h2 class="wph__title">{resolved.model.name}{' '}<span class="wph__title-accent">headlines the slate.</span></h2>
+      <p class="wph__summary">The top projection in {matchup}, the game of the weekend. Set your lineup before kickoff.</p>
+
+      <div class="wph__footer">
+        <div class="wph__stat" role="group" aria-label={`${points} projected points`}>
+          <span class="wph__stat-num" aria-hidden="true">{points}</span>
+          <span class="wph__stat-label" aria-hidden="true">Projected Points</span>
+        </div>
+        <span class="wph__divider" aria-hidden="true"></span>
+        <a class="wph__cta" href={r('/theleague/matchups')}>
+          See the full preview
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <WeekendPreviewHero state={state} />
+)}
+
+<style>
+  .wph {
+    --wph-surface: linear-gradient(115deg, #f6f8fb 0%, #eef2f7 52%, #e4ebf3 100%);
+    --wph-ink: var(--color-gray-900, #0f1419);
+    --wph-body: rgba(22, 32, 44, 0.72);
+    --wph-ghost: rgba(28, 73, 124, 0.06);
+    --wph-glow: var(--wph-glow-light, rgba(28, 73, 124, 0.2));
+    --wph-shadow: rgba(15, 30, 46, 0.3);
+    --wph-accent: var(--color-primary, #1c497c);
+    --wph-pill-bg: rgba(28, 73, 124, 0.1);
+    --wph-pill-border: rgba(28, 73, 124, 0.35);
+    --wph-pill-ink: #1c497c;
+    --wph-cta-bg: var(--color-primary, #1c497c);
+    --wph-cta-ink: #ffffff;
+    --wph-border: rgba(28, 73, 124, 0.18);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--wph-border);
+    background: var(--wph-surface);
+    color: var(--wph-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .wph {
+    --wph-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+    --wph-ink: #ffffff;
+    --wph-body: rgba(255, 255, 255, 0.78);
+    --wph-ghost: rgba(255, 255, 255, 0.045);
+    --wph-glow: var(--wph-glow-dark, rgba(28, 73, 124, 0.4));
+    --wph-shadow: rgba(0, 0, 0, 0.5);
+    --wph-accent: #7cb2ff;
+    --wph-pill-bg: rgba(124, 178, 255, 0.16);
+    --wph-pill-border: rgba(124, 178, 255, 0.45);
+    --wph-pill-ink: #a9ccff;
+    --wph-cta-bg: #ffffff;
+    --wph-cta-ink: #0b1017;
+    --wph-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .wph__ghost {
+    position: absolute;
+    left: 40%;
+    top: -0.6rem;
+    font-size: clamp(3.5rem, 8vw, 6rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--wph-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .wph__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--wph-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .wph__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--wph-shadow));
+  }
+
+  .wph--no-model .wph__caption {
+    display: none;
+  }
+
+  .wph__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .wph__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .wph__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .wph__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .wph__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .wph__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--wph-pill-ink);
+    background: var(--wph-pill-bg);
+    border: 1px solid var(--wph-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .wph__title {
+    color: var(--wph-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .wph__title-accent {
+    color: var(--wph-accent);
+  }
+
+  .wph__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--wph-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .wph__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .wph__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .wph__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--wph-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .wph__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--wph-body);
+  }
+
+  .wph__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--wph-pill-border);
+  }
+
+  .wph__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--wph-cta-bg);
+    color: var(--wph-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .wph__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .wph__cta:focus-visible {
+    outline: 2px solid var(--wph-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wph__cta {
+      transition: none;
+    }
+
+    .wph__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .wph {
+      min-height: 260px;
+    }
+
+    .wph__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .wph__caption {
+      display: none;
+    }
+
+    .wph__content {
+      max-width: 100%;
+    }
+  }
+</style>

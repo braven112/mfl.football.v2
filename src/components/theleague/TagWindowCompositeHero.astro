@@ -1,0 +1,454 @@
+---
+/**
+ * TagWindowCompositeHero — the franchise-tag & extension window (champion
+ * crowned → Feb 14), composite edition.
+ *
+ * The face of the window is a TAG-WORTHY expiring-contract star: a rostered
+ * player entering the final year of his deal (`contractYear === '4'`), the
+ * exact guy an owner has to make a tag-or-let-walk call on. Casting follows
+ * the roster-action rule — the SIGNED-IN owner's priciest expiring star when a
+ * userFranchiseId is given ("Your call:"), otherwise the league-wide leader.
+ * Transparent ESPN cutout on his NFL team's color, his current salary as the
+ * stat, and the tag mechanic folded into the summary.
+ *
+ * Self-loads from the rosters feed and casts internally (mirrors the other
+ * composite heroes). Falls back to the legacy TagExtensionHero when nothing
+ * composites — nobody in a final year, or no candidate has a usable cutout.
+ */
+import { getExpiringContractStars } from '../../utils/hero-data/tag-hero-data';
+import { getPlayerMap } from '../../utils/player-map';
+import { castRosterModel } from '../../utils/hero-casting';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getFranchiseBrand, franchiseGlow } from '../../utils/franchise-brand';
+import { formatCompactNumber } from '../../utils/formatters';
+import { chooseTeamName } from '../../utils/team-names';
+import TagExtensionHero from './TagExtensionHero.astro';
+
+export interface Props {
+  resolveLeaguePath: (path: string) => string;
+  referenceDate?: Date;
+  userFranchiseId?: string;
+  leagueYear?: number;
+}
+
+const {
+  resolveLeaguePath: r,
+  referenceDate = new Date(),
+  userFranchiseId,
+  leagueYear,
+} = Astro.props;
+
+const year = leagueYear ?? referenceDate.getFullYear();
+
+// Final-year rostered players, priciest first. Map to roster candidates and
+// let the caster prefer the signed-in owner's guy, then rotate daily.
+const stars = getExpiringContractStars(year);
+const players = getPlayerMap(year);
+const candidates = stars.map((s) => ({ playerId: s.playerId, franchiseId: s.franchiseId }));
+const model = castRosterModel(candidates, players, userFranchiseId, referenceDate, 'Final Year');
+
+// The winning star carries the salary + owning franchise.
+const winner = model ? stars.find((s) => s.playerId === model.mflId) ?? null : null;
+const isOwn = !!(userFranchiseId && winner && winner.franchiseId === userFranchiseId);
+
+// Countdown to the Feb 14 tag deadline (calendar-day diff so it hits 0 on the
+// 14th itself rather than only after it passes).
+const startOfDay = (d: Date) => { const o = new Date(d); o.setHours(0, 0, 0, 0); return o; };
+const deadline = new Date(referenceDate.getFullYear(), 1, 14); // Feb 14
+const daysRemaining = Math.max(
+  0,
+  Math.round((startOfDay(deadline).getTime() - startOfDay(referenceDate).getTime()) / 86_400_000),
+);
+const isDeadlineDay = daysRemaining === 0;
+const deadlineFormatted = deadline.toLocaleDateString('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric',
+});
+
+// Resolve the owning franchise's short name for flavor (config-only, no icons —
+// keeps the component self-contained).
+let ownerShort = '';
+if (winner?.franchiseId) {
+  try {
+    const cfg = await import('../../data/theleague.config.json');
+    const teams = (cfg.default ?? cfg)?.teams ?? [];
+    const team = teams.find((t: any) => t.franchiseId === winner.franchiseId);
+    if (team) {
+      ownerShort = chooseTeamName(
+        { fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev },
+        'short',
+      );
+    }
+  } catch { /* name is optional flavor */ }
+}
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+// The tag call belongs to the OWNING fantasy team — this player is on their
+// roster (not a free agent yet), so brand the background with the franchise
+// crest + team color, not the NFL club.
+const brand = winner ? getFranchiseBrand(winner.franchiseId) : null;
+const franchiseColor = brand?.color ?? '#1c497c';
+const crest = brand?.groupMe ?? '';
+const glowDark = franchiseGlow(franchiseColor, 0.42);
+const glowLight = franchiseGlow(franchiseColor, 0.24);
+
+const salaryLabel = winner ? `$${formatCompactNumber(winner.salary)}` : '';
+
+// Copy: personalized when the model is the signed-in owner's expiring star.
+const firstName = model ? model.name.split(' ')[0] : 'this star';
+const summary = isDeadlineDay
+  ? isOwn
+    ? `Last day to protect ${model!.name} — file a franchise tag or extension before the new league year begins tonight, or let him hit the market.`
+    : `Last day to file franchise tags and extensions. ${model ? `${model.name} is one of the names on the block.` : ''}`
+  : isOwn
+    ? `${model!.name} is in the final year of his deal. Tag him at the higher of 120% of salary or the top-3 positional average, extend him, or roll the dice on re-signing. Deadline ${deadlineFormatted}.`
+    : `Expiring stars like ${model ? model.name : 'these'} force the tag-or-walk call. A tag costs the higher of 120% of salary or the top-3 positional average. Deadline ${deadlineFormatted}.`;
+
+const eyebrow = isDeadlineDay ? 'Tag window · Deadline today' : `Tag window · ${daysRemaining} days left`;
+---
+
+{model ? (
+  <section
+    class="twh"
+    style={`--twh-glow-dark: ${glowDark}; --twh-glow-light: ${glowLight};`}
+    aria-label="Tag window — expiring contracts"
+  >
+    {crest && <img class="twh__crest" src={crest} alt="" aria-hidden="true" loading="lazy" />}
+    <div class="twh__glow" aria-hidden="true"></div>
+    <img
+      class="twh__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.twh').classList.add('twh--no-model')"
+    />
+    <span class="twh__caption">
+      <strong>{model.name}</strong>
+      <span class="twh__caption-meta">{model.descriptor} · {model.position} · {teamCode}</span>
+    </span>
+    <img class="twh__logo-art twh__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+    <img class="twh__logo-art twh__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+
+    <div class="twh__content">
+      <p class="twh__eyebrow"><span class="twh__pill">{eyebrow}</span></p>
+      <h2 class="twh__title">
+        {isOwn ? 'Your call: ' : 'Protect your '}
+        <span class="twh__title-accent">{isOwn ? `tag ${firstName}?` : 'core.'}</span>
+      </h2>
+      <p class="twh__summary">{summary}</p>
+
+      <div class="twh__footer">
+        {salaryLabel && (
+          <div class="twh__stat" role="group" aria-label={`${salaryLabel} current salary`}>
+            <span class="twh__stat-num" aria-hidden="true">{salaryLabel}</span>
+            <span class="twh__stat-label" aria-hidden="true">
+              {isOwn ? 'Your salary at risk' : `${ownerShort || 'Current'} salary`}
+            </span>
+          </div>
+        )}
+        <span class="twh__divider" aria-hidden="true"></span>
+        <a class="twh__cta" href={r('/theleague/rosters')}>
+          {isOwn ? 'Make the call' : 'Manage roster'}
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <TagExtensionHero resolveLeaguePath={r} referenceDate={referenceDate} />
+)}
+
+<style>
+  .twh {
+    /* Light theme (defaults) — preseason planning blue. */
+    --twh-surface: linear-gradient(115deg, #f2f7fc 0%, #e2edf9 52%, #cfe1f4 100%);
+    --twh-ink: var(--color-gray-900, #0f1419);
+    --twh-body: rgba(22, 32, 44, 0.72);
+    --twh-ghost: rgba(28, 73, 124, 0.06);
+    --twh-glow: var(--twh-glow-light, rgba(59, 130, 246, 0.2));
+    --twh-shadow: rgba(15, 30, 46, 0.3);
+    --twh-accent: #1d4ed8;
+    --twh-cta-bg: var(--color-primary, #1c497c);
+    --twh-cta-ink: #ffffff;
+    --twh-pill-bg: rgba(59, 130, 246, 0.1);
+    --twh-pill-border: rgba(29, 78, 216, 0.4);
+    --twh-pill-ink: #1d4ed8;
+    --twh-border: rgba(28, 73, 124, 0.2);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(260px, 26vw, 310px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--twh-border);
+    background: var(--twh-surface);
+    color: var(--twh-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .twh {
+    --twh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%);
+    --twh-ink: #ffffff;
+    --twh-body: rgba(255, 255, 255, 0.78);
+    --twh-ghost: rgba(255, 255, 255, 0.045);
+    --twh-glow: var(--twh-glow-dark, rgba(59, 130, 246, 0.4));
+    --twh-shadow: rgba(0, 0, 0, 0.5);
+    --twh-accent: #93c5fd;
+    --twh-cta-bg: #ffffff;
+    --twh-cta-ink: #0f1e2e;
+    --twh-pill-bg: rgba(147, 197, 253, 0.16);
+    --twh-pill-border: rgba(147, 197, 253, 0.45);
+    --twh-pill-ink: #bfdbfe;
+    --twh-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .twh__ghost {
+    position: absolute;
+    left: 1rem;
+    top: -1.2rem;
+    font-size: clamp(3.75rem, 8vw, 6.25rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--twh-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .twh__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--twh-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .twh__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    /* ~20% larger than the base 230/30vw/350 sizing */
+    width: clamp(288px, 38vw, 438px);
+    filter: drop-shadow(0 16px 32px var(--twh-shadow));
+  }
+
+  /* Owning franchise's GroupMe crest as the background watermark — the tag
+     decision belongs to the fantasy team that rosters this expiring star. */
+  .twh__crest {
+    position: absolute;
+    right: 25%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(180px, 24vw, 300px);
+    aspect-ratio: 1;
+    object-fit: contain;
+    opacity: 0.08;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :global(html.dark) .twh__crest {
+    opacity: 0.12;
+  }
+
+  .twh__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 250px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .twh--no-model .twh__logo-art--light {
+    display: block;
+  }
+
+  :global(html.dark) .twh--no-model .twh__logo-art--light {
+    display: none;
+  }
+
+  :global(html.dark) .twh--no-model .twh__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
+  .twh--no-model .twh__caption {
+    display: none;
+  }
+
+  .twh__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .twh__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .twh__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .twh__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(33rem, 64%);
+  }
+
+  .twh__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .twh__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--twh-pill-ink);
+    background: var(--twh-pill-bg);
+    border: 1px solid var(--twh-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .twh__title {
+    color: var(--twh-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .twh__title-accent {
+    color: var(--twh-accent);
+  }
+
+  .twh__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--twh-body);
+    max-width: 46ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .twh__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .twh__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .twh__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--twh-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .twh__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--twh-body);
+  }
+
+  .twh__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--twh-pill-border);
+  }
+
+  .twh__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--twh-cta-bg);
+    color: var(--twh-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .twh__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .twh__cta:focus-visible {
+    outline: 2px solid var(--twh-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .twh__cta {
+      transition: none;
+    }
+
+    .twh__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .twh {
+      min-height: 280px;
+    }
+
+    .twh__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .twh__caption {
+      display: none;
+    }
+
+    .twh__logo-art {
+      width: 150px;
+      right: -1rem;
+    }
+
+    .twh__content {
+      max-width: 100%;
+    }
+  }
+</style>

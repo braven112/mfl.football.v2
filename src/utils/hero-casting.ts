@@ -259,6 +259,56 @@ export function castBestScoredModel(
   return toModel(players.get(best.playerId)!, descriptor);
 }
 
+/** A composite panel model that remembers which franchise it belongs to. */
+export interface PanelModel extends HeroModel {
+  franchiseId: string;
+}
+
+/**
+ * Cast the panels for a multi-team showcase hero (tagged players).
+ *
+ * Walks the candidate list in order, keeps the ones with a usable ESPN
+ * cutout, and remembers each player's franchise so the panel can chip the
+ * tagging team. Cast MORE than you show (default 8) — the component keeps
+ * the first `visible` panels whose headshot actually loads and swaps in the
+ * rest when a deep player's photo 404s, exactly like the UDFA board.
+ * Deterministic: the tag list is the tag list, rendered in filed order.
+ */
+export function castShowcasePanels(
+  candidates: RosterCastCandidate[],
+  players: Map<string, PlayerIdentity>,
+  count: number = 8,
+  descriptor: string = 'Tagged',
+): PanelModel[] {
+  const panels: PanelModel[] = [];
+  for (const c of candidates) {
+    const p = players.get(c.playerId);
+    if (!p || !isCompositable(p)) continue;
+    panels.push({ ...toModel(p, descriptor), franchiseId: c.franchiseId });
+    if (panels.length >= count) break;
+  }
+  return panels;
+}
+
+/**
+ * Cast the player at the center of a breaking story.
+ *
+ * Feed posts carry `playerIds` received-side-first, so the first compositable
+ * id is the headline player. Falls through DEF "players" and MFL-only photos
+ * (a gradient with no face reads as broken) to the next id in the list.
+ */
+export function castStoryModel(
+  playerIds: string[],
+  players: Map<string, PlayerIdentity>,
+  descriptor: string = 'Breaking',
+): HeroModel | null {
+  for (const id of playerIds) {
+    const p = players.get(id);
+    if (p && isCompositable(p)) return toModel(p, descriptor);
+  }
+  return null;
+}
+
 /** A candidate for a roster-action hero (cut watch, tag window, contracts…). */
 export interface RosterCastCandidate {
   playerId: string;

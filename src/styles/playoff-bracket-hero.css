@@ -71,7 +71,8 @@ html.dark {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(86% 92% at 3% -4%, var(--plhero-glow), transparent 64%);
+  /* Glow sits top-RIGHT, behind the player-to-watch — matches every other hero. */
+  background: radial-gradient(72% 88% at 100% -6%, var(--plhero-glow), transparent 66%);
   pointer-events: none;
   z-index: 0;
 }
@@ -98,6 +99,23 @@ html.dark {
   border-left: 2px solid var(--plhero-accent);
   margin: 0;
   line-height: 1;
+}
+
+/* League logo to the left of the "Playoff Bracket" title (light/dark swap). */
+.plhero__lg {
+  width: 1.35rem;
+  height: 1.35rem;
+  object-fit: contain;
+  flex: none;
+}
+.plhero__lg--dark {
+  display: none;
+}
+html.dark .plhero__lg--light {
+  display: none;
+}
+html.dark .plhero__lg--dark {
+  display: inline-block;
 }
 
 .plhero__eliminated-badge {

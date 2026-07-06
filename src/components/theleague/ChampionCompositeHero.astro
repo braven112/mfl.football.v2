@@ -1,0 +1,424 @@
+---
+/**
+ * ChampionCompositeHero — the champion-crowned slot (7 days after the title
+ * game), composite edition. The player who WON IT for the champion models the
+ * hero: the champion franchise's top scorer in the championship game, as a
+ * transparent ESPN cutout on his NFL team's color, his title-game points as
+ * the stat, and the winning franchise named in the copy.
+ *
+ * Self-loads from the championship result + the title-game box score
+ * (getChampionshipWeekTopScorer) and casts internally — mirroring the other
+ * season composites. The router falls back to the legacy ChampionCrownedHero
+ * when no scorer resolves to a usable cutout.
+ *
+ * Gold/trophy accent throughout (amber var pattern borrowed from
+ * AuctionCompositeHero + ChampionCrownedHero) — a champion hero should read
+ * as celebratory, not the blue recap treatment.
+ */
+import type { HeroState } from '../../types/hero-state';
+import { getPlayerMap } from '../../utils/player-map';
+import { castBestScoredModel } from '../../utils/hero-casting';
+import { getChampionshipWeekTopScorer } from '../../utils/hero-data/champion-hero-data';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import ChampionCrownedHero from './ChampionCrownedHero.astro';
+
+export interface Props {
+  championProps: NonNullable<HeroState['championProps']>;
+  resolveLeaguePath: (path: string) => string;
+  spriteUrl?: string;
+  userFranchiseId?: string;
+  referenceDate?: Date;
+}
+
+const {
+  championProps,
+  resolveLeaguePath: r,
+  spriteUrl,
+  userFranchiseId,
+  referenceDate,
+} = Astro.props;
+
+// Season year: prefer the championProps.leagueYear the enricher stamped;
+// otherwise derive from the reference date's calendar year (Jan → previous
+// season). The helper itself also falls back seasonYear-1, so either input
+// resolves the Dec→Jan boundary.
+let seasonYear = championProps.leagueYear;
+if (!seasonYear) {
+  const d = referenceDate ?? new Date();
+  seasonYear = d.getMonth() <= 1 ? d.getFullYear() - 1 : d.getFullYear();
+}
+
+const scorer = getChampionshipWeekTopScorer(seasonYear);
+
+// Cast the exact scorer as the composite model (best-of-pool over the single
+// winning-franchise candidate keeps the compositable/DEF guards in one place).
+const players = getPlayerMap(seasonYear);
+const model = scorer
+  ? castBestScoredModel(
+      [{ playerId: scorer.playerId, franchiseId: scorer.franchiseId, score: scorer.score }],
+      players,
+      undefined,
+      'Championship MVP',
+    )
+  : null;
+
+const isUserChampion = userFranchiseId === championProps.winnerFranchiseId;
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = model ? getNflTeamColors(teamCode) : { primary: '#f59e0b' };
+const glowDark = hexToRgba(primary, 0.4);
+const glowLight = hexToRgba(primary, 0.2);
+
+const points = scorer ? scorer.score.toFixed(1) : '';
+const winnerName = championProps.winnerName;
+const loserName = championProps.loserName;
+const summary = isUserChampion
+  ? `You did it. ${model?.name ?? 'Your MVP'} led the way when it mattered most — championship secured.`
+  : `${winnerName} rode ${model?.name ?? 'their MVP'} to the title. Here's how it all came together.`;
+---
+
+{model ? (
+  <section
+    class="cch"
+    style={`--cch-glow-dark: ${glowDark}; --cch-glow-light: ${glowLight};`}
+    aria-label="League champion crowned"
+  >
+    <span class="cch__ghost" aria-hidden="true">CHAMPS</span>
+    <div class="cch__glow" aria-hidden="true"></div>
+
+    {championProps.winnerGroupMeIcon && (
+      <img class="cch__bg-logo" src={championProps.winnerGroupMeIcon} alt="" aria-hidden="true" loading="lazy" />
+    )}
+
+    <img
+      class="cch__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.cch').classList.add('cch--no-model')"
+    />
+    <span class="cch__caption">
+      <strong>{model.name}</strong>
+      <span class="cch__caption-meta">{model.position} · {teamCode}</span>
+      <span class="cch__caption-mvp">Title-game MVP · {points} pts</span>
+    </span>
+
+    <div class="cch__content">
+      <p class="cch__eyebrow">
+        {championProps.winnerIcon && (
+          <img class="cch__badge" src={championProps.winnerIcon} alt={`${winnerName} team icon`} />
+        )}
+        <span class="cch__pill">Champion Crowned</span>
+      </p>
+      <h2 class="cch__title">{winnerName}{' '}<span class="cch__title-accent">Champions.</span></h2>
+      <p class="cch__summary">{summary}</p>
+
+      <div class="cch__footer">
+        <div class="cch__stat" role="group" aria-label={`${points} points in the title game`}>
+          <span class="cch__stat-num" aria-hidden="true">{points}</span>
+          <span class="cch__stat-label" aria-hidden="true">{model.name} · Title game</span>
+        </div>
+        <span class="cch__divider" aria-hidden="true"></span>
+        <a class="cch__cta" href={r('/theleague/playoffs')}>
+          Championship recap
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <ChampionCrownedHero
+    championProps={championProps}
+    resolveLeaguePath={r}
+    spriteUrl={spriteUrl}
+    userFranchiseId={userFranchiseId}
+  />
+)}
+
+<style>
+  .cch {
+    /* Light editorial surface by default; html.dark restores the deep-navy
+       champion chrome (matches ChampionCrownedHero's theming). */
+    --cch-surface: linear-gradient(115deg, #fdfaf3 0%, #f6efdd 52%, #efe2c4 100%);
+    --cch-ink: var(--color-gray-900, #0f1419);
+    --cch-body: rgba(22, 32, 44, 0.72);
+    --cch-ghost: rgba(146, 91, 10, 0.06);
+    --cch-glow: var(--cch-glow-light, rgba(217, 119, 6, 0.2));
+    --cch-shadow: rgba(15, 30, 46, 0.3);
+    --cch-accent: #b45309;
+    --cch-pill-bg: var(--color-warning, #f59e0b);
+    --cch-pill-ink: #ffffff;
+    --cch-cta-bg: #0f1e2e;
+    --cch-cta-ink: #ffffff;
+    --cch-border: var(--color-warning, #f59e0b);
+    --cch-logo-opacity: 0.08;
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 2px solid var(--cch-border);
+    background: var(--cch-surface);
+    color: var(--cch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+    isolation: isolate;
+  }
+
+  :global(html.dark) .cch {
+    --cch-surface: linear-gradient(115deg, #10100b 0%, #1c1a10 46%, #3a2f12 130%);
+    --cch-ink: #ffffff;
+    --cch-body: rgba(255, 255, 255, 0.78);
+    --cch-ghost: rgba(255, 255, 255, 0.05);
+    --cch-glow: var(--cch-glow-dark, rgba(217, 119, 6, 0.4));
+    --cch-shadow: rgba(0, 0, 0, 0.5);
+    --cch-accent: var(--color-warning, #f59e0b);
+    --cch-pill-bg: var(--color-warning, #f59e0b);
+    --cch-pill-ink: #1c1408;
+    --cch-cta-bg: #ffffff;
+    --cch-cta-ink: #10100b;
+    --cch-border: var(--color-warning, #f59e0b);
+    --cch-logo-opacity: 0.16;
+  }
+
+  .cch__ghost {
+    position: absolute;
+    left: 40%;
+    top: -0.6rem;
+    font-size: clamp(3.25rem, 7.5vw, 5.5rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--cch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .cch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--cch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  /* Winning-team logo, faint watermark behind the player */
+  .cch__bg-logo {
+    position: absolute;
+    right: clamp(3rem, 14vw, 9rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(150px, 20vw, 240px);
+    height: auto;
+    object-fit: contain;
+    opacity: var(--cch-logo-opacity);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .cch__model {
+    position: absolute;
+    z-index: 1;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--cch-shadow));
+  }
+
+  .cch--no-model .cch__caption {
+    display: none;
+  }
+
+  .cch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .cch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .cch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .cch__caption-mvp {
+    font-size: 0.6875rem;
+    font-weight: 800;
+    color: #fcd34d;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .cch__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.625rem;
+  }
+
+  .cch__badge {
+    height: 34px;
+    width: auto;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+  }
+
+  .cch__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--cch-pill-ink);
+    background: var(--cch-pill-bg);
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+  }
+
+  .cch__title {
+    color: var(--cch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .cch__title-accent {
+    color: var(--cch-accent);
+  }
+
+  .cch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cch-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .cch__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .cch__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .cch__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--cch-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .cch__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--cch-body);
+  }
+
+  .cch__divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(180, 83, 9, 0.35);
+  }
+
+  :global(html.dark) .cch__divider {
+    background: rgba(251, 191, 36, 0.35);
+  }
+
+  .cch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--cch-cta-bg);
+    color: var(--cch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .cch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .cch__cta:focus-visible {
+    outline: 2px solid var(--color-warning, #f59e0b);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cch__cta {
+      transition: none;
+    }
+
+    .cch__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .cch {
+      min-height: 260px;
+    }
+
+    .cch__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .cch__bg-logo {
+      display: none;
+    }
+
+    .cch__caption {
+      display: none;
+    }
+
+    .cch__content {
+      max-width: 100%;
+    }
+  }
+</style>

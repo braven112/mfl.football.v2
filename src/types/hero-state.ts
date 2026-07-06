@@ -8,10 +8,12 @@
 
 import type { HeroContent } from './whats-new';
 import type { LeagueEventView } from '../utils/league-event-hero-view';
+import type { PlayoffRoundView } from '../utils/hero-data/playoff-round-data';
 
 /** The 14 season phases that drive hero selection */
 export type SeasonPhase =
   | 'championship'        // Week 17 Thu → Mon night final
+  | 'breaking-story'      // A fresh (<48h) trade/auction bomb from the feed takes the homepage
   | 'champion-crowned'    // Championship decided → +7 days
   | 'tag-window'          // After champion crowned → Feb 14
   | 'tagged-showcase'     // Feb 15 → auction hero start
@@ -148,6 +150,14 @@ export interface HeroState {
     userFranchiseId?: string;
     userIsEliminated?: boolean;
     bracketSummary: PlayoffBracketSummaryGame[];
+    /** "Player to Watch" accent — the top remaining seed's headliner. */
+    watchModel?: { name: string; position: string; nflTeam: string; headshot: string; teamPrimary: string } | null;
+    /**
+     * The current playoff round resolved to the round-hero shape (wild card /
+     * semifinals / championship). When present, SeasonDailyHero renders the
+     * composite round hero; otherwise it falls back to the legacy bracket list.
+     */
+    roundView?: PlayoffRoundView | null;
   };
   /** Metadata for debugging and display */
   metadata: {

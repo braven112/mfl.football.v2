@@ -1,0 +1,445 @@
+---
+/**
+ * WaiverCompositeHero — the Tuesday PM → Wednesday waiver slot, composite
+ * edition. The player everyone is about to claim models the hero: the highest
+ * dynasty-ADP AVAILABLE free agent (top-5 daily rotation), rendered as a
+ * transparent ESPN cutout on his NFL team's color with a green free-agency
+ * accent and a "top of the wire" framing. Same "best available FA" spine as
+ * the auction hero, pointed at the waiver window instead of the auction.
+ *
+ * Self-loads the ADP + rosters feeds and casts internally (mirrors the other
+ * season heroes). Reuses castTopFreeAgentModel — the same covered helper the
+ * auction hero uses. The router (and this component itself) falls back to the
+ * legacy WaiverWireHero when no available free agent resolves to a usable cutout.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear, getCurrentLeagueYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getAdpRankedIds, getRosteredPlayerIds } from '../../../utils/offseason-hero-data';
+import { castTopFreeAgentModel } from '../../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import WaiverWireHero from './WaiverWireHero.astro';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+}
+
+const { state, resolveLeaguePath: r } = Astro.props;
+
+const refDate = state.metadata.referenceDate;
+
+// Prefer the season year (the wire is a games-played concept), but the FA pool
+// (ADP + rosters) is a roster-management dataset — fall back to the league year
+// so the pool resolves even when the season-year feed hasn't been synced yet.
+let year = getCurrentSeasonYear(refDate);
+let rankedIds = getAdpRankedIds(year);
+if (rankedIds.length === 0) {
+  year = getCurrentLeagueYear(refDate);
+  rankedIds = getAdpRankedIds(year);
+}
+
+const players = getPlayerMap(year);
+const rosteredIds = getRosteredPlayerIds(year);
+const model = castTopFreeAgentModel(players, refDate, rosteredIds, rankedIds, 5);
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = model ? getNflTeamColors(teamCode) : { primary: '#2e8743' };
+const glowDark = hexToRgba(primary, 0.4);
+const glowLight = hexToRgba(primary, 0.2);
+
+// Spare-swap pool: some deep FAs have an espn_id whose headshot PNG still 404s
+// (server-undetectable). Cast an ordered fallback list — the daily pick first,
+// then the next-best available FAs — so a 404 advances to a real face client-
+// side instead of leaving the hero on the logo silhouette. Mirrors the UDFA
+// board's settle logic, adapted to a single slot.
+const candPool: Array<{ name: string; meta: string; headshot: string; glowDark: string; glowLight: string }> = [];
+if (model) {
+  const seen = new Set<string>();
+  const push = (name: string, pos: string, nflTeam: string, headshot: string) => {
+    const tc = normalizeTeamCode(nflTeam);
+    const key = `${name}|${tc}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const { primary: pr } = getNflTeamColors(tc);
+    candPool.push({ name, meta: `${pos} · ${tc}`, headshot, glowDark: hexToRgba(pr, 0.4), glowLight: hexToRgba(pr, 0.2) });
+  };
+  push(model.name, model.position, model.nflTeam, model.headshot); // daily pick first
+  for (const id of rankedIds) {
+    if (candPool.length >= 6) break;
+    if (rosteredIds.has(id)) continue;
+    const p = players.get(id);
+    if (!p || p.position === 'DEF' || !p.headshot.includes('espncdn.com')) continue;
+    push(p.name, p.position, p.nflTeam, p.headshot);
+  }
+}
+
+const summary =
+  'The highest-ranked player still on the wire — before someone else beats you to the claim. See who else is available.';
+---
+
+{model ? (
+  <section
+    class="wch"
+    style={`--wch-glow-dark: ${glowDark}; --wch-glow-light: ${glowLight};`}
+    aria-label="Waiver wire — top available free agent"
+  >
+    <span class="wch__ghost" aria-hidden="true">WAIVERS</span>
+    <div class="wch__glow" aria-hidden="true"></div>
+    <script type="application/json" class="wch__cands" set:html={JSON.stringify(candPool)}></script>
+    <img
+      class="wch__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+    />
+    <span class="wch__caption">
+      <strong data-wch-name>{model.name}</strong>
+      <span class="wch__caption-meta" data-wch-meta>{model.position} · {teamCode}</span>
+    </span>
+
+    <img class="wch__logo-art wch__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+    <img class="wch__logo-art wch__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+
+    <div class="wch__content">
+      <p class="wch__eyebrow"><span class="wch__pill">Waiver Wire</span></p>
+      <h2 class="wch__title"><span data-wch-name>{model.name}</span>{' '}<span class="wch__title-accent">tops the wire.</span></h2>
+      <p class="wch__summary">{summary}</p>
+
+      <div class="wch__footer">
+        <div class="wch__stat" role="group" aria-label={`${model.descriptor} free agent`}>
+          <span class="wch__stat-num" aria-hidden="true">{model.descriptor}</span>
+          <span class="wch__stat-label" aria-hidden="true" data-wch-meta>{model.position} · {teamCode}</span>
+        </div>
+        <span class="wch__divider" aria-hidden="true"></span>
+        <a class="wch__cta" href={r('/theleague/players')}>
+          See all free agents
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <WaiverWireHero state={state} resolveLeaguePath={r} />
+)}
+
+<script>
+  // Spare-swap: if the featured FA's ESPN headshot 404s (server-undetectable),
+  // advance to the next candidate whose photo actually loads — swapping the
+  // cutout, name, position/team, and team-color glow — instead of dropping to
+  // the logo silhouette. Only falls to the silhouette once every candidate 404s.
+  interface WchCand { name: string; meta: string; headshot: string; glowDark: string; glowLight: string; }
+
+  function wireWch(section: HTMLElement) {
+    if (section.dataset.wchWired) return;
+    section.dataset.wchWired = '1';
+    const raw = section.querySelector('.wch__cands');
+    const img = section.querySelector<HTMLImageElement>('.wch__model');
+    if (!raw || !img) return;
+    let cands: WchCand[] = [];
+    try { cands = JSON.parse(raw.textContent || '[]'); } catch { /* leave empty */ }
+    if (cands.length <= 1) return; // nothing to fall back to
+
+    const names = section.querySelectorAll('[data-wch-name]');
+    const metas = section.querySelectorAll('[data-wch-meta]');
+    let i = 0;
+    function apply(idx: number) {
+      const c = cands[idx];
+      section.style.setProperty('--wch-glow-dark', c.glowDark);
+      section.style.setProperty('--wch-glow-light', c.glowLight);
+      names.forEach((e) => { e.textContent = c.name; });
+      metas.forEach((e) => { e.textContent = c.meta; });
+      img!.src = c.headshot;
+    }
+    function onErr() {
+      i += 1;
+      if (i < cands.length) { apply(i); return; }
+      img!.style.display = 'none';
+      const cap = section.querySelector<HTMLElement>('.wch__caption');
+      if (cap) cap.style.display = 'none';
+      section.classList.add('wch--no-model');
+      img!.removeEventListener('error', onErr);
+    }
+    img.addEventListener('error', onErr);
+    // Primary may have already 404'd before hydration — the error event won't refire.
+    if (img.complete && img.naturalWidth === 0) onErr();
+  }
+
+  function runWch() {
+    document.querySelectorAll<HTMLElement>('.wch').forEach(wireWch);
+  }
+  runWch();
+  document.addEventListener('astro:page-load', runWch);
+</script>
+
+<style>
+  .wch {
+    --wch-surface: linear-gradient(115deg, #f4faf5 0%, #eaf4ec 52%, #dfeee3 100%);
+    --wch-ink: var(--color-gray-900, #0f1419);
+    --wch-body: rgba(22, 32, 44, 0.72);
+    --wch-ghost: rgba(46, 135, 67, 0.06);
+    --wch-glow: var(--wch-glow-light, rgba(46, 135, 67, 0.2));
+    --wch-shadow: rgba(15, 30, 46, 0.3);
+    --wch-accent: var(--cat-free-agency, #2e8743);
+    --wch-pill-bg: rgba(46, 135, 67, 0.1);
+    --wch-pill-border: rgba(46, 135, 67, 0.35);
+    --wch-pill-ink: #216a34;
+    --wch-cta-bg: var(--cat-free-agency, #2e8743);
+    --wch-cta-ink: #ffffff;
+    --wch-border: rgba(46, 135, 67, 0.2);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--wch-border);
+    background: var(--wch-surface);
+    color: var(--wch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .wch {
+    --wch-surface: linear-gradient(115deg, #0a120c 0%, #0e1c13 46%, #123322 130%);
+    --wch-ink: #ffffff;
+    --wch-body: rgba(255, 255, 255, 0.78);
+    --wch-ghost: rgba(255, 255, 255, 0.045);
+    --wch-glow: var(--wch-glow-dark, rgba(46, 135, 67, 0.4));
+    --wch-shadow: rgba(0, 0, 0, 0.5);
+    --wch-accent: #5cc47a;
+    --wch-pill-bg: rgba(92, 196, 122, 0.16);
+    --wch-pill-border: rgba(92, 196, 122, 0.45);
+    --wch-pill-ink: #93dda8;
+    --wch-cta-bg: #ffffff;
+    --wch-cta-ink: #0a120c;
+    --wch-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .wch__ghost {
+    position: absolute;
+    left: 40%;
+    top: -0.6rem;
+    font-size: clamp(3.25rem, 7.5vw, 5.5rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--wch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .wch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--wch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .wch__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--wch-shadow));
+  }
+
+  /* Headshot 404 fallback — league logo silhouette (revealed by onerror) */
+  .wch__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 250px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .wch--no-model .wch__logo-art--light {
+    display: block;
+  }
+
+  :global(html.dark) .wch--no-model .wch__logo-art--light {
+    display: none;
+  }
+
+  :global(html.dark) .wch--no-model .wch__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
+  .wch--no-model .wch__caption {
+    display: none;
+  }
+
+  .wch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .wch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .wch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .wch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .wch__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .wch__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--wch-pill-ink);
+    background: var(--wch-pill-bg);
+    border: 1px solid var(--wch-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .wch__title {
+    color: var(--wch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .wch__title-accent {
+    color: var(--wch-accent);
+  }
+
+  .wch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--wch-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .wch__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .wch__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .wch__stat-num {
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--wch-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .wch__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--wch-body);
+  }
+
+  .wch__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--wch-pill-border);
+  }
+
+  .wch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--wch-cta-bg);
+    color: var(--wch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .wch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .wch__cta:focus-visible {
+    outline: 2px solid var(--wch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wch__cta {
+      transition: none;
+    }
+
+    .wch__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .wch {
+      min-height: 260px;
+    }
+
+    .wch__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .wch__caption {
+      display: none;
+    }
+
+    .wch__content {
+      max-width: 100%;
+    }
+  }
+</style>

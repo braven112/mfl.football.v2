@@ -1,0 +1,441 @@
+---
+/**
+ * StandingsCompositeHero — the Monday standings slot, composite edition. The
+ * face of the league leader models the hero: the #1 team's HEADLINER (its top
+ * projected player) on his NFL team's color, with the team's record as the
+ * stat. When a signed-in owner is present the hero personalizes to THEIR
+ * headliner instead — their team's face, their standing.
+ *
+ * Casting rule (Brandon): guests see the #1 team's headliner; signed-in owners
+ * see their own team's headliner. Either way the caption names the team and its
+ * record / rank so the composite reads as a standings snapshot, not decoration.
+ *
+ * Self-loads the standings + roster feeds and casts internally (mirrors the
+ * other season heroes). The router falls back to the table-driven StandingsHero
+ * when nothing composites — e.g. the offseason reset, when the resolved season
+ * has no games played and every headliner is a JPG-only deep roster guy.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getFranchiseHeadliners } from '../../../utils/offseason-hero-data';
+import { getStandingsRanking } from '../../../utils/hero-data/standings-hero-data';
+import { castBestScoredModel } from '../../../utils/hero-casting';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { getFranchiseBrand, franchiseGlow } from '../../../utils/franchise-brand';
+import { chooseTeamName } from '../../../utils/team-names';
+import StandingsHero from './StandingsHero.astro';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+  userFranchiseId?: string;
+}
+
+const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+
+const year = getCurrentSeasonYear(state.metadata.referenceDate);
+const players = getPlayerMap(year);
+const headliners = getFranchiseHeadliners(year);
+const ranking = getStandingsRanking(year);
+
+// Choose the franchise to feature: the signed-in owner's team when known,
+// else the league leader (rank 1). A guest on the offseason reset still gets
+// a deterministic pick (rank 1 tie-breaks on franchise id).
+const rankByFranchise = new Map(ranking.map((row) => [row.franchiseId, row.rank]));
+const leaderId = ranking[0]?.franchiseId ?? '';
+const featuredFranchiseId =
+  userFranchiseId && rankByFranchise.has(userFranchiseId) ? userFranchiseId : leaderId;
+
+// Cast that franchise's headliner. Score the single candidate so we can reuse
+// castBestScoredModel's compositability gate (DEF + ESPN-cutout check).
+const headliner = headliners.find((h) => h.franchiseId === featuredFranchiseId) ?? null;
+const model = headliner
+  ? castBestScoredModel(
+      [{ playerId: headliner.playerId, franchiseId: featuredFranchiseId, score: 1 }],
+      players,
+      undefined,
+      'Team Leader',
+    )
+  : null;
+
+// Resolve the featured franchise's display name + record from the config and
+// standings feed. Kept inline so the component stays self-contained.
+let teamName = '';
+let teamColor = 'var(--color-primary, #1c497c)';
+let record = '';
+let rank = 0;
+if (model) {
+  rank = rankByFranchise.get(featuredFranchiseId) ?? 0;
+
+  try {
+    const cfg = await import('../../../data/theleague.config.json');
+    const teams = (cfg.default ?? cfg)?.teams ?? [];
+    const team = teams.find((t: any) => t.franchiseId === featuredFranchiseId);
+    if (team) {
+      teamName = chooseTeamName(
+        {
+          fullName: team.name,
+          nameMedium: team.nameMedium,
+          nameShort: team.nameShort,
+          abbrev: team.abbrev,
+        },
+        'default',
+      );
+      if (team.color) teamColor = team.color;
+    }
+  } catch { /* name is optional flavor */ }
+
+  try {
+    const standings = await import(`../../../../data/theleague/mfl-feeds/${year}/standings.json`);
+    const raw =
+      (standings as any)?.leagueStandings?.franchise ??
+      (standings as any)?.default?.leagueStandings?.franchise ??
+      [];
+    const franchises = Array.isArray(raw) ? raw : [raw];
+    const f = franchises.find((x: any) => x?.id === featuredFranchiseId);
+    if (f?.h2hwlt) record = f.h2hwlt;
+  } catch { /* record is optional flavor */ }
+}
+
+const isLeader = rank === 1;
+const ordinal = (n: number): string => {
+  const s = n % 10;
+  const t = Math.floor((n % 100) / 10);
+  if (t === 1) return `${n}th`;
+  return `${n}${s === 1 ? 'st' : s === 2 ? 'nd' : s === 3 ? 'rd' : 'th'}`;
+};
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+// Tint by the FRANCHISE (the standings are about the team), not the player's
+// NFL club: franchise color drives the glow, the franchise GroupMe crest is
+// the background watermark — the NFL treatment, one level up.
+const brand = getFranchiseBrand(featuredFranchiseId);
+const franchiseColor = brand.color || teamColor;
+const crest = brand.groupMe;
+const glowDark = franchiseGlow(franchiseColor, 0.42);
+const glowLight = franchiseGlow(franchiseColor, 0.24);
+
+// The stat is the team's record when games are in the book; otherwise its rank
+// (offseason reset shows every team 0-0-0 — rank is the only signal).
+const hasRecord = !!record && record !== '0-0-0';
+const statNum = hasRecord ? record : rank > 0 ? ordinal(rank) : '';
+const statLabel = hasRecord ? 'Record' : 'Standing';
+
+const teamLabel = teamName || 'The league leader';
+const summary = isLeader
+  ? `${teamLabel} ${hasRecord ? `sits ${record} atop the league` : 'leads the pack'}. See how the rest of the standings shake out.`
+  : `${teamLabel} sits ${rank > 0 ? ordinal(rank) : 'in the mix'}${hasRecord ? ` at ${record}` : ''}. See where the whole league stands.`;
+const titleTeam = teamName || 'Your team';
+---
+
+{model ? (
+  <section
+    class="sch"
+    style={`--sch-glow-dark: ${glowDark}; --sch-glow-light: ${glowLight}; --sch-team: ${franchiseColor};`}
+    aria-label="League standings — team leader"
+  >
+    {crest ? (
+      <img class="sch__crest" src={crest} alt="" aria-hidden="true" loading="lazy" />
+    ) : (
+      <span class="sch__ghost" aria-hidden="true">{isLeader ? 'NO. 1' : ordinal(rank || 1).toUpperCase()}</span>
+    )}
+    <div class="sch__glow" aria-hidden="true"></div>
+    <img
+      class="sch__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.sch').classList.add('sch--no-model')"
+    />
+    <span class="sch__caption">
+      <strong>{model.name}</strong>
+      <span class="sch__caption-meta">{teamLabel} · {model.position} · {teamCode}</span>
+    </span>
+
+    <div class="sch__content">
+      <p class="sch__eyebrow"><span class="sch__pill">Standings · Week {state.metadata.week ?? ''}</span></p>
+      <h2 class="sch__title">{titleTeam}{' '}<span class="sch__title-accent">{isLeader ? 'leads the league.' : 'is on the board.'}</span></h2>
+      <p class="sch__summary">{summary}</p>
+
+      <div class="sch__footer">
+        <div class="sch__stat" role="group" aria-label={`${statNum} ${statLabel}`}>
+          <span class="sch__stat-num" aria-hidden="true">{statNum}</span>
+          <span class="sch__stat-label" aria-hidden="true">{statLabel}</span>
+        </div>
+        <span class="sch__divider" aria-hidden="true"></span>
+        <a class="sch__cta" href={r('/theleague/standings')}>
+          View full standings
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <StandingsHero state={state} resolveLeaguePath={r} userFranchiseId={userFranchiseId} />
+)}
+
+<style>
+  .sch {
+    --sch-surface: linear-gradient(115deg, #f6f8fb 0%, #eef2f7 52%, #e4ebf3 100%);
+    --sch-ink: var(--color-gray-900, #0f1419);
+    --sch-body: rgba(22, 32, 44, 0.72);
+    --sch-ghost: rgba(28, 73, 124, 0.06);
+    --sch-glow: var(--sch-glow-light, rgba(28, 73, 124, 0.2));
+    --sch-shadow: rgba(15, 30, 46, 0.3);
+    --sch-accent: var(--color-primary, #1c497c);
+    --sch-pill-bg: rgba(28, 73, 124, 0.1);
+    --sch-pill-border: rgba(28, 73, 124, 0.35);
+    --sch-pill-ink: #1c497c;
+    --sch-cta-bg: var(--color-primary, #1c497c);
+    --sch-cta-ink: #ffffff;
+    --sch-border: rgba(28, 73, 124, 0.18);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--sch-border);
+    background: var(--sch-surface);
+    color: var(--sch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .sch {
+    --sch-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+    --sch-ink: #ffffff;
+    --sch-body: rgba(255, 255, 255, 0.78);
+    --sch-ghost: rgba(255, 255, 255, 0.045);
+    --sch-glow: var(--sch-glow-dark, rgba(28, 73, 124, 0.4));
+    --sch-shadow: rgba(0, 0, 0, 0.5);
+    --sch-accent: #7cb2ff;
+    --sch-pill-bg: rgba(124, 178, 255, 0.16);
+    --sch-pill-border: rgba(124, 178, 255, 0.45);
+    --sch-pill-ink: #a9ccff;
+    --sch-cta-bg: #ffffff;
+    --sch-cta-ink: #0b1017;
+    --sch-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .sch__ghost {
+    position: absolute;
+    left: 38%;
+    top: -0.6rem;
+    font-size: clamp(3.5rem, 8vw, 6rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--sch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  /* Franchise GroupMe crest as the background watermark (the NFL-logo
+     treatment, one level up — the team the standings are about). */
+  .sch__crest {
+    position: absolute;
+    right: 24%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(180px, 24vw, 300px);
+    aspect-ratio: 1;
+    object-fit: contain;
+    opacity: 0.09;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  :global(html.dark) .sch__crest {
+    opacity: 0.12;
+  }
+
+  .sch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--sch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .sch__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--sch-shadow));
+  }
+
+  .sch--no-model .sch__caption {
+    display: none;
+  }
+
+  .sch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .sch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .sch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .sch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .sch__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .sch__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--sch-pill-ink);
+    background: var(--sch-pill-bg);
+    border: 1px solid var(--sch-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .sch__title {
+    color: var(--sch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .sch__title-accent {
+    color: var(--sch-accent);
+  }
+
+  .sch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--sch-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .sch__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .sch__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .sch__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--sch-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .sch__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--sch-body);
+  }
+
+  .sch__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--sch-pill-border);
+  }
+
+  .sch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--sch-cta-bg);
+    color: var(--sch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .sch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .sch__cta:focus-visible {
+    outline: 2px solid var(--sch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sch__cta {
+      transition: none;
+    }
+
+    .sch__cta:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .sch {
+      min-height: 260px;
+    }
+
+    .sch__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .sch__caption {
+      display: none;
+    }
+
+    .sch__content {
+      max-width: 100%;
+    }
+  }
+</style>

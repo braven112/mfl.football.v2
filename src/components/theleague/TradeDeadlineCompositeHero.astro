@@ -1,0 +1,454 @@
+---
+/**
+ * TradeDeadlineCompositeHero — the 24-hour trade-deadline hero, composite
+ * edition (P0++ override: "make your moves before midnight PT").
+ *
+ * The face of the deadline is the BIGGEST NAME ON THE TRADE BLOCK — the
+ * highest-projected player any franchise is actively shopping (hero casting
+ * rule: every hero casts a semantically relevant player). Transparent ESPN
+ * cutout on his NFL team color, urgent-red chrome (mirrors CutWatch's final
+ * tier), a live "Xh Ym left until midnight PT" countdown chip, and a CTA into
+ * the trade builder.
+ *
+ * Self-loads the trade-bait + projection feeds and casts internally. When
+ * nobody on the block composites (empty block, or the top name has no usable
+ * cutout), the router falls back to the legacy React TradeDeadlineHero — which
+ * carries its own live countdown island.
+ */
+import { getTradeBlockStars } from '../../utils/hero-data/trade-block-data';
+import { getPlayerMap } from '../../utils/player-map';
+import { castBestScoredModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import TradeDeadlineHero from './TradeDeadlineHero.tsx';
+
+interface Props {
+  deadlineMidnightPT: string;
+  leagueYear: number;
+  resolveLeaguePath: (path: string) => string;
+  referenceDate?: Date;
+}
+
+const { deadlineMidnightPT, leagueYear, resolveLeaguePath: r, referenceDate } = Astro.props;
+
+const players = getPlayerMap(leagueYear);
+const block = getTradeBlockStars(leagueYear);
+// Cast the biggest name on the block — highest projected, best usable cutout.
+const model = castBestScoredModel(block, players, undefined, 'On the Block');
+
+// Resolve the shopping franchise for a bit of "who's shopping him" flavor.
+let ownerName = '';
+if (model) {
+  const winner = block.find((s) => s.playerId === model.mflId) ?? null;
+  if (winner?.franchiseId) {
+    try {
+      const cfg = await import('../../data/theleague.config.json');
+      const teams = (cfg.default ?? cfg)?.teams ?? [];
+      ownerName =
+        teams.find((t: any) => t.franchiseId === winner.franchiseId)?.name ?? '';
+    } catch { /* name is optional flavor */ }
+  }
+}
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = model ? getNflTeamColors(teamCode) : { primary: '#b91c1c' };
+const glowDark = hexToRgba(primary, 0.38);
+const glowLight = hexToRgba(primary, 0.2);
+
+const summary = ownerName
+  ? `${ownerName} have ${model!.name} on the block — and the window to deal for him closes at midnight PT. After tonight, rosters lock for trades.`
+  : `${model?.name} headlines the trade block, and the window to deal closes at midnight PT. After tonight, rosters lock for trades.`;
+---
+
+{model ? (
+  <section
+    class="tdch"
+    style={`--tdch-glow-dark: ${glowDark}; --tdch-glow-light: ${glowLight};`}
+    aria-label="Trade deadline — make your moves before midnight PT"
+    data-deadline={deadlineMidnightPT}
+  >
+    <span class="tdch__ghost" aria-hidden="true">DEADLINE</span>
+    <div class="tdch__glow" aria-hidden="true"></div>
+    <img
+      class="tdch__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.tdch').classList.add('tdch--no-model')"
+    />
+    <span class="tdch__caption">
+      <strong>{model.name}</strong>
+      <span class="tdch__caption-meta">{model.descriptor} {model.position} · {teamCode}</span>
+    </span>
+    <img class="tdch__logo-art tdch__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
+    <img class="tdch__logo-art tdch__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+
+    <div class="tdch__content">
+      <p class="tdch__eyebrow">
+        <span class="tdch__pill">
+          <span class="tdch__pulse" aria-hidden="true"></span>
+          Trade deadline · Today
+        </span>
+      </p>
+      <h2 class="tdch__title">
+        Make your moves{' '}
+        <span class="tdch__title-accent">before midnight.</span>
+      </h2>
+      <p class="tdch__summary">{summary}</p>
+
+      <div class="tdch__footer">
+        <div
+          class="tdch__count"
+          role="timer"
+          aria-live="off"
+          aria-label="Time left until the trade deadline at midnight Pacific"
+        >
+          <span class="tdch__count-num" data-countdown>—</span>
+          <span class="tdch__count-label" aria-hidden="true">Left · midnight PT</span>
+        </div>
+        <span class="tdch__divider" aria-hidden="true"></span>
+        <a class="tdch__cta" href={r('/theleague/trade-builder')}>
+          Open Trade Builder
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <TradeDeadlineHero client:load deadlineMidnightPT={deadlineMidnightPT} />
+)}
+
+<script>
+  // Live "Xh Ym left until midnight PT" countdown chip. Mirrors the loading
+  // standards: no animation contract here (text updates only), and the pulse
+  // dot is CSS-gated by prefers-reduced-motion. Runs on load + astro:page-load.
+  function initTradeDeadlineCountdown() {
+    const roots = document.querySelectorAll<HTMLElement>('.tdch[data-deadline]');
+    roots.forEach((root) => {
+      if (root.dataset.countdownBound === '1') return;
+      root.dataset.countdownBound = '1';
+
+      const target = new Date(root.dataset.deadline || '').getTime();
+      const out = root.querySelector<HTMLElement>('[data-countdown]');
+      if (!out || !Number.isFinite(target)) return;
+
+      let timer: ReturnType<typeof setInterval> | null = null;
+
+      const render = () => {
+        const diff = target - Date.now();
+        if (diff <= 0) {
+          out.textContent = 'Closed';
+          const label = root.querySelector<HTMLElement>('.tdch__count-label');
+          if (label) label.textContent = 'Trades locked';
+          if (timer) { clearInterval(timer); timer = null; }
+          return;
+        }
+        const totalMin = Math.floor(diff / 60000);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        out.textContent = h > 0 ? `${h}h ${m}m` : `${m}m`;
+      };
+
+      render();
+      // Minute cadence is plenty for an hours-and-minutes chip.
+      timer = setInterval(render, 30000);
+    });
+  }
+
+  initTradeDeadlineCountdown();
+  document.addEventListener('astro:page-load', initTradeDeadlineCountdown);
+</script>
+
+<style>
+  .tdch {
+    /* Urgent red chrome (light default) — the deadline is TODAY. */
+    --tdch-surface: linear-gradient(115deg, #fdf3f3 0%, #fbe3e3 52%, #f6cfcf 100%);
+    --tdch-ink: var(--color-gray-900, #0f1419);
+    --tdch-body: rgba(22, 32, 44, 0.72);
+    --tdch-ghost: rgba(153, 27, 27, 0.06);
+    --tdch-glow: var(--tdch-glow-light, rgba(220, 38, 38, 0.2));
+    --tdch-shadow: rgba(15, 30, 46, 0.3);
+    --tdch-accent: #b91c1c;
+    --tdch-cta-bg: #b91c1c;
+    --tdch-cta-ink: #ffffff;
+    --tdch-pill-bg: rgba(220, 38, 38, 0.1);
+    --tdch-pill-border: rgba(185, 28, 28, 0.45);
+    --tdch-pill-ink: #b91c1c;
+    --tdch-divider: rgba(185, 28, 28, 0.3);
+    --tdch-border: rgba(185, 28, 28, 0.3);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(250px, 25vw, 300px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--tdch-border);
+    background: var(--tdch-surface);
+    color: var(--tdch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .tdch {
+    --tdch-surface: linear-gradient(115deg, #170b0d 0%, #2a1216 46%, #6e1220 130%);
+    --tdch-ink: #ffffff;
+    --tdch-body: rgba(255, 255, 255, 0.78);
+    --tdch-ghost: rgba(255, 255, 255, 0.05);
+    --tdch-glow: var(--tdch-glow-dark, rgba(220, 38, 38, 0.35));
+    --tdch-shadow: rgba(0, 0, 0, 0.5);
+    --tdch-accent: #fca5a5;
+    --tdch-cta-bg: #ffffff;
+    --tdch-cta-ink: #2a0d12;
+    --tdch-pill-bg: rgba(252, 165, 165, 0.14);
+    --tdch-pill-border: rgba(252, 165, 165, 0.45);
+    --tdch-pill-ink: #fecaca;
+    --tdch-divider: rgba(255, 255, 255, 0.2);
+    --tdch-border: rgba(255, 255, 255, 0.12);
+  }
+
+  .tdch__ghost {
+    position: absolute;
+    left: 1rem;
+    top: -1.1rem;
+    font-size: clamp(4rem, 9vw, 7rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--tdch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .tdch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, var(--tdch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .tdch__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(288px, 38vw, 438px);
+    filter: drop-shadow(0 16px 32px var(--tdch-shadow));
+  }
+
+  /* Headshot 404 fallback — league logo silhouette (revealed by onerror). */
+  .tdch__logo-art {
+    display: none;
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: clamp(170px, 22vw, 250px);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .tdch--no-model .tdch__logo-art--light {
+    display: block;
+  }
+
+  :global(html.dark) .tdch--no-model .tdch__logo-art--light {
+    display: none;
+  }
+
+  :global(html.dark) .tdch--no-model .tdch__logo-art--dark {
+    display: block;
+    opacity: 0.2;
+  }
+
+  .tdch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .tdch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .tdch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .tdch--no-model .tdch__caption {
+    display: none;
+  }
+
+  .tdch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .tdch__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .tdch__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--tdch-pill-ink);
+    background: var(--tdch-pill-bg);
+    border: 1px solid var(--tdch-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .tdch__pulse {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--tdch-accent);
+    animation: tdch-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes tdch-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.7); }
+  }
+
+  .tdch__title {
+    color: var(--tdch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .tdch__title-accent {
+    color: var(--tdch-accent);
+  }
+
+  .tdch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--tdch-body);
+    max-width: 46ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .tdch__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .tdch__count {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .tdch__count-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--tdch-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .tdch__count-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--tdch-body);
+  }
+
+  .tdch__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--tdch-divider);
+  }
+
+  .tdch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--tdch-cta-bg);
+    color: var(--tdch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .tdch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .tdch__cta:focus-visible {
+    outline: 2px solid var(--tdch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tdch__cta {
+      transition: none;
+    }
+
+    .tdch__cta:hover {
+      transform: none;
+    }
+
+    .tdch__pulse {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .tdch {
+      min-height: 270px;
+    }
+
+    .tdch__model {
+      width: 175px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .tdch__caption {
+      display: none;
+    }
+
+    .tdch__content {
+      max-width: 100%;
+    }
+  }
+</style>

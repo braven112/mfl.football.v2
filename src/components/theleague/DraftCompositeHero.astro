@@ -1,0 +1,476 @@
+---
+/**
+ * DraftCompositeHero — the rookie-draft slot, composite edition. A single ESPN
+ * cutout on the player's NFL team color, draft-purple chrome, ghost DRAFT
+ * wordmark, and the draft-a-player CTA.
+ *
+ * Casting (every hero features a semantically relevant player):
+ *   - LIVE draft → the MOST-RECENT pick off the board ("Just picked" / on the
+ *     clock framing), via getMostRecentDraftPick.
+ *   - Otherwise (draft announced / countdown scouting lull) → the class
+ *     HEADLINER: the #1 current-class rookie by dynasty ADP (rostered or not —
+ *     the prospect the draft is about), via getAdpRankedIds.
+ *
+ * Self-loads its data and casts internally (mirrors the season heroes). When
+ * nothing composites — no live pick with a usable ESPN cutout AND no ADP
+ * rookie — it renders the legacy branded <DraftHero> with the same props.
+ */
+import { getPlayerMap } from '../../utils/player-map';
+import { getAdpRankedIds } from '../../utils/offseason-hero-data';
+import { getMostRecentDraftPick } from '../../utils/hero-data/draft-hero-data';
+import { castRookieModel } from '../../utils/hero-casting';
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getRookieDraftDate } from '../../utils/league-event-resolver';
+import DraftHero from './DraftHero.astro';
+
+export interface Props {
+  leagueYear: number;
+  live: boolean;
+  draftStartFormatted?: string;
+  resolveLeaguePath: (path: string) => string;
+  spriteUrl?: string;
+  referenceDate?: Date;
+}
+
+const {
+  leagueYear,
+  live,
+  draftStartFormatted = '',
+  resolveLeaguePath: r,
+  spriteUrl = '',
+  referenceDate,
+} = Astro.props;
+
+const now = referenceDate ?? new Date();
+const mflHost = 'www49.myfantasyleague.com';
+const leagueId = '13522';
+const mflBase = `https://${mflHost}/${leagueYear}/options?L=${leagueId}`;
+const draftLink = `${mflBase}&O=52`; // "Draft a player" — same target as DraftHero
+
+const players = getPlayerMap(leagueYear);
+
+// ── Cast ──────────────────────────────────────────────────────────────────
+// Live: the most-recent pick, if it resolves to a compositable cutout.
+// Otherwise: the top ADP rookie prospect (unrostered-preferred via castRookieModel).
+let model: HeroModel | null = null;
+let recentFranchiseId = '';
+
+if (live) {
+  const recent = getMostRecentDraftPick(leagueYear);
+  if (recent) {
+    const p = players.get(recent.playerId);
+    if (p && p.position !== 'DEF' && p.headshot.includes('espncdn.com')) {
+      model = {
+        mflId: p.mflId,
+        name: p.name,
+        position: p.position,
+        nflTeam: p.nflTeam,
+        headshot: p.headshot,
+        descriptor: 'Just Picked',
+      };
+      recentFranchiseId = recent.franchiseId;
+    }
+  }
+}
+
+if (!model) {
+  // Board's best: walk dynasty ADP for the top current-class rookie prospect,
+  // unrostered-preferred. Current class = newest draftYear ≤ the reference
+  // year present in the map (mirrors castRookieModel's Feb-rollover-safe logic).
+  const rankedIds = getAdpRankedIds(leagueYear);
+
+  const ceilingYear = parseInt(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric' }).format(now),
+    10,
+  );
+  let classYear = 0;
+  for (const p of players.values()) {
+    const y = parseInt(p.draftYear, 10);
+    if (Number.isFinite(y) && y <= ceilingYear && y > classYear) classYear = y;
+  }
+
+  // The class HEADLINER: the top current-class rookie by dynasty ADP — the #1
+  // prospect the draft is ABOUT, rostered or not. "Scout the incoming class"
+  // features the best rookie, never the best leftover.
+  for (const id of rankedIds) {
+    const p = players.get(id);
+    if (!p || p.draftYear !== String(classYear)) continue;
+    if (p.position === 'DEF' || !p.headshot.includes('espncdn.com')) continue;
+    model = {
+      mflId: p.mflId, name: p.name, position: p.position,
+      nflTeam: p.nflTeam, headshot: p.headshot, descriptor: 'Top Prospect',
+    };
+    break;
+  }
+
+  // Last resort: castRookieModel's daily-rotation rookie (may be rostered, or
+  // outside ADP) so the hero still casts a rookie before the legacy fallback.
+  if (!model) {
+    const rookieModel = castRookieModel(players, now);
+    if (rookieModel) model = { ...rookieModel, descriptor: 'Top Prospect' };
+  }
+}
+
+// ── Franchise name for the live "just picked" line ──────────────────────────
+let pickerName = '';
+if (model && live && recentFranchiseId) {
+  try {
+    const cfg = await import('../../data/theleague.config.json');
+    const teams = (cfg.default ?? cfg)?.teams ?? [];
+    pickerName = teams.find((t: any) => t.franchiseId === recentFranchiseId)?.name ?? '';
+  } catch { /* name is optional flavor */ }
+}
+
+// ── Countdown (non-live) ────────────────────────────────────────────────────
+const draftDate = getRookieDraftDate(leagueYear);
+const startOfDay = (d: Date) => { const o = new Date(d); o.setHours(0, 0, 0, 0); return o; };
+const daysUntil = Math.max(
+  0,
+  Math.ceil((startOfDay(draftDate).getTime() - startOfDay(now).getTime()) / 86_400_000),
+);
+
+// ── Theming ─────────────────────────────────────────────────────────────────
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const { primary } = model ? getNflTeamColors(teamCode) : { primary: '#7c3aed' };
+const glowDark = hexToRgba(primary, 0.42);
+const glowLight = hexToRgba(primary, 0.22);
+
+// ── Copy ────────────────────────────────────────────────────────────────────
+const pill = live ? 'Draft under way' : 'Draft day is coming';
+const eyebrow = live ? 'Rookie Draft · Live' : 'Rookie Draft';
+const titleAccent = live ? 'is on the board.' : 'leads the class.';
+const summary = live
+  ? pickerName
+    ? `${pickerName} is on the clock — ${model?.name} just came off the board. Who's next?`
+    : `${model?.name} just came off the board. The rookie draft rolls on — make your pick.`
+  : `Three rounds, rookies only, 12-hour pick timer. The draft starts ${draftStartFormatted || draftDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}.`;
+const statNum = live ? 'LIVE' : String(daysUntil);
+const statLabel = live ? 'Drafting now' : daysUntil === 1 ? 'Day to rookie draft' : 'Days to rookie draft';
+const ctaLabel = live ? 'Make your pick' : 'Draft a player';
+---
+
+{model ? (
+  <section
+    class={`dch${live ? ' dch--live' : ''}`}
+    style={`--dch-glow-dark: ${glowDark}; --dch-glow-light: ${glowLight};`}
+    aria-label={live ? 'Rookie draft — live' : 'Rookie draft'}
+  >
+    <span class="dch__ghost" aria-hidden="true">DRAFT</span>
+    <div class="dch__glow" aria-hidden="true"></div>
+    <img
+      class="dch__model"
+      src={model.headshot}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      decoding="async"
+      onerror="this.style.display='none'; this.closest('.dch').classList.add('dch--no-model')"
+    />
+    <span class="dch__caption">
+      <strong>{model.name}</strong>
+      <span class="dch__caption-meta">{model.descriptor} · {model.position} · {teamCode}</span>
+    </span>
+
+    <div class="dch__content">
+      <p class="dch__eyebrow"><span class="dch__pill">{eyebrow}</span></p>
+      <h2 class="dch__title">{model.name}{' '}<span class="dch__title-accent">{titleAccent}</span></h2>
+      <p class="dch__summary">{summary}</p>
+
+      <div class="dch__footer">
+        <div class="dch__stat" role="group" aria-label={live ? 'Draft is live' : `${daysUntil} ${statLabel}`}>
+          <span class="dch__stat-num" aria-hidden="true">{statNum}</span>
+          <span class="dch__stat-label" aria-hidden="true">{statLabel}</span>
+        </div>
+        <span class="dch__divider" aria-hidden="true"></span>
+        <a class="dch__cta" href={draftLink} target="_blank" rel="noopener noreferrer" aria-label={`${ctaLabel} (opens in new tab)`}>
+          {ctaLabel}
+          <span aria-hidden="true">↗</span>
+        </a>
+        <a class="dch__link" href={r('/theleague/draft-room')}>
+          Draft results
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+) : (
+  <DraftHero
+    leagueYear={leagueYear}
+    resolveLeaguePath={r}
+    spriteUrl={spriteUrl}
+    live={live}
+    draftStartFormatted={draftStartFormatted}
+    referenceDate={referenceDate}
+  />
+)}
+
+<style>
+  .dch {
+    --dch-surface: linear-gradient(115deg, #f7f5fc 0%, #f0edf8 52%, #e9e4f3 100%);
+    --dch-ink: var(--color-gray-900, #0f1419);
+    --dch-body: rgba(30, 24, 44, 0.72);
+    --dch-ghost: rgba(124, 58, 237, 0.07);
+    --dch-glow: var(--dch-glow-light, rgba(124, 58, 237, 0.22));
+    --dch-shadow: rgba(30, 15, 46, 0.3);
+    --dch-accent: #7c3aed;
+    --dch-pill-bg: rgba(124, 58, 237, 0.1);
+    --dch-pill-border: rgba(124, 58, 237, 0.35);
+    --dch-pill-ink: #6d28d9;
+    --dch-cta-bg: #7c3aed;
+    --dch-cta-ink: #ffffff;
+    --dch-link-ink: #6d28d9;
+    --dch-border: rgba(124, 58, 237, 0.2);
+
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(240px, 24vw, 290px);
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--dch-border);
+    background: var(--dch-surface);
+    color: var(--dch-ink);
+    display: flex;
+    align-items: center;
+    padding: clamp(1.25rem, 2.5vw, 1.9rem);
+  }
+
+  :global(html.dark) .dch {
+    --dch-surface: linear-gradient(115deg, #100b18 0%, #171026 46%, #201435 130%);
+    --dch-ink: #ffffff;
+    --dch-body: rgba(255, 255, 255, 0.78);
+    --dch-ghost: rgba(255, 255, 255, 0.05);
+    --dch-glow: var(--dch-glow-dark, rgba(124, 58, 237, 0.42));
+    --dch-shadow: rgba(0, 0, 0, 0.5);
+    --dch-accent: #b794f6;
+    --dch-pill-bg: rgba(183, 148, 246, 0.16);
+    --dch-pill-border: rgba(183, 148, 246, 0.45);
+    --dch-pill-ink: #cbb2f7;
+    --dch-cta-bg: #ffffff;
+    --dch-cta-ink: #170f26;
+    --dch-link-ink: #cbb2f7;
+    --dch-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .dch__ghost {
+    position: absolute;
+    left: 38%;
+    top: -0.6rem;
+    font-size: clamp(3.5rem, 8vw, 6rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--dch-ghost);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .dch__glow {
+    position: absolute;
+    right: -70px;
+    top: -100px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--dch-glow) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .dch__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.75rem);
+    bottom: 0;
+    width: clamp(275px, 35vw, 412px);
+    filter: drop-shadow(0 16px 32px var(--dch-shadow));
+  }
+
+  .dch--no-model .dch__caption {
+    display: none;
+  }
+
+  .dch__caption {
+    position: absolute;
+    z-index: 2;
+    right: clamp(0.875rem, 2vw, 1.5rem);
+    bottom: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: right;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.55);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .dch__caption strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .dch__caption-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .dch__content {
+    position: relative;
+    z-index: 2;
+    max-width: min(32rem, 62%);
+  }
+
+  .dch__eyebrow {
+    margin: 0 0 0.625rem;
+  }
+
+  .dch__pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--dch-pill-ink);
+    background: var(--dch-pill-bg);
+    border: 1px solid var(--dch-pill-border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .dch__title {
+    color: var(--dch-ink);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.45rem;
+  }
+
+  .dch__title-accent {
+    color: var(--dch-accent);
+  }
+
+  .dch__summary {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--dch-body);
+    max-width: 44ch;
+    margin: 0 0 0.875rem;
+  }
+
+  .dch__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex-wrap: wrap;
+  }
+
+  .dch__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .dch__stat-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--dch-accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .dch__stat-label {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--dch-body);
+  }
+
+  .dch__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--dch-pill-border);
+  }
+
+  .dch__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--dch-cta-bg);
+    color: var(--dch-cta-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 1.05rem;
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .dch__cta:hover {
+    transform: translateY(-1px);
+  }
+
+  .dch__cta:focus-visible {
+    outline: 2px solid var(--dch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  .dch__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--dch-link-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 120ms ease;
+  }
+
+  .dch__link:hover {
+    transform: translateX(2px);
+  }
+
+  .dch__link:focus-visible {
+    outline: 2px solid var(--dch-pill-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dch__cta,
+    .dch__link {
+      transition: none;
+    }
+
+    .dch__cta:hover,
+    .dch__link:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .dch {
+      min-height: 260px;
+    }
+
+    .dch__model {
+      width: 170px;
+      right: -1.5rem;
+      opacity: 0.4;
+    }
+
+    .dch__caption {
+      display: none;
+    }
+
+    .dch__content {
+      max-width: 100%;
+    }
+  }
+</style>
