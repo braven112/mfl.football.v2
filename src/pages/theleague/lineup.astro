@@ -413,6 +413,41 @@ function faceoffCandidates(franchiseId: string, playerIds: string[], actualById?
   }));
 }
 
+/**
+ * Projected total for the best legal lineup drawable from `playerIds` —
+ * fills the 9 starting slots greedily by projection (position slots first,
+ * then FLEX with the best remaining RB/WR/TE). Used for the opponent's
+ * "current lineup" total when the week isn't locked (their actual set
+ * lineup isn't publicly readable for a future week).
+ */
+function bestLineupProjTotal(playerIds: string[]): number {
+  const cands = playerIds.map((id) => ({
+    id,
+    position: lineupPlayerIdentityMap.get(id)?.position ?? '',
+    proj: projMap.get(id) ?? 0,
+  }));
+  const used = new Set<string>();
+  let total = 0;
+
+  for (const slotPos of SLOT_POSITIONS) {
+    if (slotPos === 'FLEX') continue;
+    const pick = cands
+      .filter((c) => !used.has(c.id) && (SLOT_ELIGIBILITY[slotPos] ?? []).includes(c.position))
+      .sort((a, b) => b.proj - a.proj)[0];
+    if (pick) { used.add(pick.id); total += pick.proj; }
+  }
+
+  const flexSlots = SLOT_POSITIONS.filter((p) => p === 'FLEX').length;
+  const flexPicks = cands
+    .filter((c) => !used.has(c.id) && ['RB', 'WR', 'TE'].includes(c.position))
+    .sort((a, b) => b.proj - a.proj);
+  for (let i = 0; i < flexSlots && i < flexPicks.length; i++) {
+    used.add(flexPicks[i].id);
+    total += flexPicks[i].proj;
+  }
+  return total;
+}
+
 const isPastWeek = week < currentWeek;
 
 // User side: the starters this page renders (falls back to the roster when no
@@ -488,6 +523,27 @@ const faceoffTitle = lineupFaceoff
   : '';
 
 // ---------------------------------------------------------------------------
+// Projected-points scoreboard. Our total sums the starting slots and is
+// live-updated client-side as the lineup changes. Theirs sums their set
+// lineup (recorded starters) or their best lineup by projection otherwise.
+// ---------------------------------------------------------------------------
+const userProjTotal = slots.reduce(
+  (t, s) => t + (s.playerId ? (projMap.get(s.playerId) ?? 0) : 0),
+  0,
+);
+
+const opponentRecorded = opponentFranchiseId ? weekStarters(opponentFranchiseId) : [];
+const opponentProjTotal = opponentRecorded.length > 0
+  ? opponentRecorded.reduce((t, p) => t + (projMap.get(p.id) ?? 0), 0)
+  : bestLineupProjTotal(opponentSideIds);
+
+// Panel order is away/home; the user sits home when the schedule says so.
+const userScoreSide: 'away' | 'home' = userIsHome ? 'home' : 'away';
+const awayProjTotal = userIsHome ? opponentProjTotal : userProjTotal;
+const homeProjTotal = userIsHome ? userProjTotal : opponentProjTotal;
+const hasProjTotals = userProjTotal > 0 || opponentProjTotal > 0;
+
+// ---------------------------------------------------------------------------
 // Serialize payload for client
 // ---------------------------------------------------------------------------
 const lineupPayload = {
@@ -531,8 +587,24 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <section class="lineup-faceoff" aria-label={`Week ${week} matchup — ${faceoffTitle}`}>
         <FaceoffComposite away={lineupFaceoff.away} home={lineupFaceoff.home} size="card" />
         <div class="lineup-faceoff__band">
-          <span class="lineup-faceoff__eyebrow">Week {week} · Players of the game</span>
-          <span class="lineup-faceoff__title">{faceoffTitle}</span>
+          {hasProjTotals ? (
+            <div class="lineup-faceoff__scoreboard" data-user-side={userScoreSide}>
+              <div class="lineup-faceoff__side lineup-faceoff__side--away">
+                <span class="lineup-faceoff__team">{lineupFaceoff.away.chip}</span>
+                <span class="lineup-faceoff__total" data-side="away" data-total={awayProjTotal.toFixed(1)}>{awayProjTotal.toFixed(1)}</span>
+              </div>
+              <span class="lineup-faceoff__sep" aria-hidden="true">Proj</span>
+              <div class="lineup-faceoff__side lineup-faceoff__side--home">
+                <span class="lineup-faceoff__total" data-side="home" data-total={homeProjTotal.toFixed(1)}>{homeProjTotal.toFixed(1)}</span>
+                <span class="lineup-faceoff__team">{lineupFaceoff.home.chip}</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <span class="lineup-faceoff__eyebrow">Week {week} · Players of the game</span>
+              <span class="lineup-faceoff__title">{faceoffTitle}</span>
+            </>
+          )}
         </div>
       </section>
     )}
@@ -845,7 +917,36 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         changesEl.querySelector('strong')!.textContent = String(changes);
       }
 
+      updateFaceoffTotal();
       saveDraft();
+    }
+
+    // ---------------------------------------------------------------------------
+    // Live projected-points total — our side recomputes from the starting slots
+    // whenever the lineup changes. The opponent's total is server-fixed.
+    // ---------------------------------------------------------------------------
+    const faceoffScoreboard = document.querySelector('.lineup-faceoff__scoreboard') as HTMLElement | null;
+
+    function updateFaceoffTotal() {
+      if (!faceoffScoreboard) return;
+      const side = faceoffScoreboard.dataset.userSide; // 'away' | 'home'
+      const totalEl = faceoffScoreboard.querySelector(`.lineup-faceoff__total[data-side="${side}"]`) as HTMLElement | null;
+      if (!totalEl) return;
+
+      let total = 0;
+      for (const s of currentSlots) {
+        const p = s.playerId ? getPlayer(s.playerId) : null;
+        if (p && typeof p.projection === 'number') total += p.projection;
+      }
+      const next = total.toFixed(1);
+      if (totalEl.dataset.total === next) return;
+
+      totalEl.dataset.total = next;
+      totalEl.textContent = next;
+      totalEl.classList.remove('lineup-faceoff__total--bumped');
+      // Reflow so the animation restarts on each change.
+      void totalEl.offsetWidth;
+      totalEl.classList.add('lineup-faceoff__total--bumped');
     }
 
     // ---------------------------------------------------------------------------
@@ -1583,6 +1684,76 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: -0.01em;
+  }
+
+  /* Projected-points scoreboard (fills the band when projections exist). */
+  .lineup-faceoff__scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .lineup-faceoff__side {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lineup-faceoff__side--home {
+    justify-content: flex-end;
+  }
+
+  .lineup-faceoff__team {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lineup-faceoff__total {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  /* Our live total gets the accent so a change reads as "yours moved". */
+  .lineup-faceoff__scoreboard[data-user-side="away"] .lineup-faceoff__side--away .lineup-faceoff__total,
+  .lineup-faceoff__scoreboard[data-user-side="home"] .lineup-faceoff__side--home .lineup-faceoff__total {
+    color: #7cb2ff;
+  }
+
+  .lineup-faceoff__total--bumped {
+    animation: lineup-faceoff-bump 400ms ease;
+  }
+
+  @keyframes lineup-faceoff-bump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.14); }
+    100% { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lineup-faceoff__total--bumped { animation: none; }
+  }
+
+  .lineup-faceoff__sep {
+    flex-shrink: 0;
+    font-size: 0.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.4);
   }
 
   /* Toolbar */
