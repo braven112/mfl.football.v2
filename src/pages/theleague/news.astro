@@ -28,6 +28,7 @@ import type { SchefterPost } from '../../types/schefter';
 import feedData from '../../data/theleague/schefter-feed.json';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig, enrichPostsWithOgPreviews } from '../../utils/groupme-storage';
+import { buildSchefterPostOg } from '../../utils/schefter-feed';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
@@ -166,6 +167,13 @@ const profileAvatar = profileAuthor ? getAuthorAvatar(profileAuthor) : null;
 
 const isGroupMeTab = activeSource === 'groupme';
 
+// Per-post OG meta: GroupMe deep links carry ?post=<id> so unfurlers (which
+// strip the #post-<id> anchor) still resolve a per-post title + composite
+// image (/api/og/schefter/<id>.png) instead of the generic page card.
+const ogPostId = Astro.url.searchParams.get('post');
+const ogPost = ogPostId ? feed.posts.find(p => p.id === ogPostId) : undefined;
+const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url) : undefined;
+
 // Build filter tab URLs
 const basePath = '/theleague/news';
 const tabs = [
@@ -178,7 +186,7 @@ const tabs = [
 ];
 ---
 
-<TheLeagueLayout title="League News">
+<TheLeagueLayout title="League News" og={og}>
   <div class="sf-news-page sf-news-page--with-rail">
     <Breadcrumbs items={[
       { label: 'The League', href: '/theleague' },

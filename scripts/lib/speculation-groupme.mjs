@@ -44,6 +44,12 @@ function normalizeBaseUrl(raw) {
  * because the feed renderer applies `id="post-${post.id}"` to each card
  * (SchefterPostCard.astro), making the anchor stable.
  *
+ * The ?post=<id> query is for link unfurlers (GroupMe etc.), which strip the
+ * #fragment before fetching: the SSR news page reads it and emits per-post
+ * og:title / og:image meta pointing at /api/og/schefter/<id>.png, so every
+ * deep link unfurls with its own composite card. Browsers still scroll to
+ * the #post-<id> anchor.
+ *
  * @param {{ postId: string, publicBaseUrl?: string }} args
  * @returns {string}
  */
@@ -52,7 +58,8 @@ export function buildSpeculationDeepLink({ postId, publicBaseUrl }) {
     throw new Error('buildSpeculationDeepLink: postId is required');
   }
   const base = normalizeBaseUrl(publicBaseUrl) || 'https://theleague.us';
-  return `${base}/news#post-${postId}`;
+  const encodedId = encodeURIComponent(postId);
+  return `${base}/news?post=${encodedId}#post-${postId}`;
 }
 
 /**

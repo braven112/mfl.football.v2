@@ -122,3 +122,57 @@ export function getMilestoneLabel(post: Pick<SchefterPost, 'milestone'>): string
   const tierLabel = MILESTONE_TIER_LABELS[post.milestone.tier] ?? 'Milestone';
   return `${tierLabel} · ${post.milestone.badgeName}`;
 }
+
+/** Post bodies carry a small allowlist of tags (<strong>, <em>, …) — strip
+ *  them (plus their entities) for plain-text OG meta values. */
+function stripPostHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Plain-text title + description for a post — shared by the meta tags and
+ *  the OG image renderer so the card and the unfurl text never drift.
+ *  Rumor-like posts lead with the body: their headline is boilerplate
+ *  ("Schefter speculating…") and the feed cards render only the body too. */
+export function schefterPostOgText(
+  post: Pick<SchefterPost, 'headline' | 'body' | 'type' | 'transactionSubType'>
+): {
+  title: string;
+  description: string;
+} {
+  const headline = stripPostHtml(post.headline ?? '');
+  // Drop the tier-emoji prefix (🟡/🔴/…) rumor bodies carry — it reads as
+  // a broken glyph in satori's fonts and in most unfurl previews.
+  const body = stripPostHtml(post.body ?? '').replace(/^[\p{Extended_Pictographic}️\s]+/u, '');
+  const bodyExcerpt = body.length > 110 ? `${body.slice(0, 107)}…` : body;
+  const title =
+    (isRumorLikePost(post) ? bodyExcerpt : headline || bodyExcerpt) || 'The Schefter Report';
+  const description = body.length > 200 ? `${body.slice(0, 197)}…` : body;
+  return { title, description };
+}
+
+/**
+ * Open Graph meta for a feed post's deep link (?post=<id>). The image URL
+ * points at the per-post composite endpoint — /api/og/schefter/<id>.png —
+ * which renders a card for ANY known post (player composite when it can,
+ * branded text card otherwise), so it's always safe to attach.
+ */
+export function buildSchefterPostOg(
+  post: SchefterPost,
+  pageUrl: URL
+): { title: string; description?: string; image: string; url: string } {
+  const { title, description } = schefterPostOgText(post);
+  return {
+    title,
+    ...(description && description !== title ? { description } : {}),
+    image: `${pageUrl.origin}/api/og/schefter/${encodeURIComponent(post.id)}.png`,
+    url: `${pageUrl.origin}${pageUrl.pathname}?post=${encodeURIComponent(post.id)}`,
+  };
+}
