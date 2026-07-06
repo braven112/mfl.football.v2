@@ -44,11 +44,17 @@ export default function TradeCompositeStrip({
   rightLabel,
   size = 'compact',
 }: Props) {
-  const [hidden, setHidden] = useState(false);
+  // Track headshot 404s PER SIDE, so a single failed cutout degrades to the
+  // one-panel layout (same graceful path as a DEF/pick headline) instead of
+  // nuking the whole strip. Only when BOTH sides fail does the strip vanish.
+  const [leftFailed, setLeftFailed] = useState(false);
+  const [rightFailed, setRightFailed] = useState(false);
 
-  const leftOk = isCompositableTradePlayer(left);
-  const rightOk = isCompositableTradePlayer(right);
-  if (hidden || (!leftOk && !rightOk)) return null;
+  const leftVisible = isCompositableTradePlayer(left) && !leftFailed;
+  const rightVisible = isCompositableTradePlayer(right) && !rightFailed;
+  if (!leftVisible && !rightVisible) return null;
+
+  const bothVisible = leftVisible && rightVisible;
 
   const renderPanel = (player: TradeBuilderPlayer, side: 'left' | 'right', label?: string) => {
     const { primary } = getNflTeamColors(player.nflTeam);
@@ -69,12 +75,12 @@ export default function TradeCompositeStrip({
           {label ?? player.nflTeam}
         </span>
         <img
-          className={`tcs__cutout${side === 'left' && rightOk ? ' tcs__cutout--mirrored' : ''}`}
+          className={`tcs__cutout${side === 'left' && bothVisible ? ' tcs__cutout--mirrored' : ''}`}
           src={player.headshot}
           alt=""
           loading="lazy"
           decoding="async"
-          onError={() => setHidden(true)}
+          onError={() => (side === 'left' ? setLeftFailed(true) : setRightFailed(true))}
         />
         <span className={`tcs__player${side === 'right' ? ' tcs__player--right' : ''}`}>
           <strong>{player.name}</strong>
@@ -86,15 +92,15 @@ export default function TradeCompositeStrip({
 
   return (
     <div className={`tcs tcs--${size}`} aria-hidden="true">
-      {leftOk && renderPanel(left, 'left', leftLabel)}
-      {leftOk && rightOk && (
+      {leftVisible && renderPanel(left, 'left', leftLabel)}
+      {bothVisible && (
         <span className="tcs__swap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 7h13m0 0l-3-3m3 3l-3 3M20 17H7m0 0l3-3m-3 3l3 3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
       )}
-      {rightOk && renderPanel(right, 'right', rightLabel)}
+      {rightVisible && renderPanel(right, 'right', rightLabel)}
 
       <style>{`
         .tcs {

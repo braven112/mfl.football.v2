@@ -298,15 +298,25 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     [data, state.teamB.franchiseId]
   );
 
-  // Get selected players
+  // Get selected players, ordered by when they were added to the trade (not
+  // roster order) — so the confirmation modal's list AND its composite hero
+  // both headline the first asset the user added, mirroring the pending-card
+  // convention (parseAssets order). Roster-order filtering would headline an
+  // arbitrary player in a multi-player package.
   const teamAPlayers = useMemo(
     () =>
-      teamA?.players.filter((p) => state.teamA.playerIds.includes(p.id)) ?? [],
+      state.teamA.playerIds.flatMap((id) => {
+        const p = teamA?.players.find((pl) => pl.id === id);
+        return p ? [p] : [];
+      }),
     [teamA, state.teamA.playerIds]
   );
   const teamBPlayers = useMemo(
     () =>
-      teamB?.players.filter((p) => state.teamB.playerIds.includes(p.id)) ?? [],
+      state.teamB.playerIds.flatMap((id) => {
+        const p = teamB?.players.find((pl) => pl.id === id);
+        return p ? [p] : [];
+      }),
     [teamB, state.teamB.playerIds]
   );
 
