@@ -360,4 +360,52 @@ const visible = rows.slice(0, 6);
     background: color-mix(in srgb, var(--color-error, #dc2626) 6%, transparent);
     text-align: center;
   }
+
+  @media (max-width: 640px) {
+    .afl-conf {
+      padding: 1.25rem;
+    }
+
+    /* Stack the CTA under the heading so the title gets the full width. */
+    .afl-conf__header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    /* Keep the headline on a single line. */
+    :global(.afl-conf__logo) {
+      height: 1.5rem;
+    }
+
+    .afl-conf__title {
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    /* Division is redundant on this compact view — hide the column. */
+    .afl-conf__th--div,
+    .afl-conf__td--div {
+      display: none;
+    }
+
+    /* Tighten cells and truncate long team names so nothing overflows. */
+    .afl-conf__th,
+    .afl-conf__td {
+      padding-left: 0.375rem;
+      padding-right: 0.375rem;
+    }
+
+    .afl-conf__td--team {
+      max-width: 0;
+    }
+
+    .afl-conf__td--team > span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
 </style>
