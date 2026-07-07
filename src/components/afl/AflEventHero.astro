@@ -14,10 +14,10 @@
  */
 import { spriteUrl } from '../../utils/sprite-url';
 import ThemeImage from '../ThemeImage.astro';
+import BrowserFrameShot from '../BrowserFrameShot.astro';
 import type { HeroModel } from '../../utils/hero-casting';
 import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { LEAGUES } from '../../config/leagues';
 
 interface Props {
   /** Pill label, e.g. "2026 Keeper Deadline" */
@@ -94,15 +94,6 @@ const modelGlowLight = modelColors ? hexToRgba(modelColors.primary, 0.22) : '';
 const modelGlowDark = modelColors ? hexToRgba(modelColors.primary, 0.42) : '';
 const modelStyle = model ? `--ev-model-glow-light:${modelGlowLight};--ev-model-glow-dark:${modelGlowDark};` : '';
 
-// Feature screenshot theme pair (see capture-whats-new-screenshots.mjs).
-const shotSrc = screenshot ? `/assets/whats-new/${screenshot}` : null;
-const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
-// Frame chrome URL text from the league registry — never hardcode domains.
-const aflLeague = LEAGUES['afl-fantasy'];
-const shotFrameUrl = link
-  ? `${aflLeague.domains[0]}${link.replace(`/${aflLeague.slug}`, '')}`
-  : aflLeague.domains[0];
-
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
 const hasFooter = hasCount || !!link;
 // Compose an SR-friendly label for the count chip — value + label read as one phrase.
@@ -141,58 +132,8 @@ const countAriaLabel = hasCount
         <span class="afl-event-hero__model-meta">{model.descriptor ? `${model.descriptor} · ` : ''}{model.position} · {modelTeamCode}</span>
       </span>
     </>
-  ) : shotSrc ? (
-    <>
-      <div class="afl-event-hero__shot" aria-hidden="true">
-        <div class="afl-event-hero__shot-bar">
-          <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--red"></span>
-          <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--yellow"></span>
-          <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--green"></span>
-          <span class="afl-event-hero__shot-url">{shotFrameUrl}</span>
-        </div>
-        {/* Both halves ship lazy; the inline script below promotes ONLY the
-            active theme's variant to eager (SSR can never know the resolved
-            theme — the pre-paint html.dark class can). Net: one download,
-            no lazy-load delay on the hero, and mobile (frame display:none)
-            fetches neither. The hidden half never fires onerror, which is
-            fine — its fallback class only matters once it's the shown one,
-            and a theme flip makes it visible → lazy fetch → onerror then. */}
-        <img
-          class="afl-event-hero__shot-img afl-event-hero__shot-img--light"
-          src={shotSrc}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onerror="this.closest('.afl-event-hero').classList.add('afl-event-hero--no-shot')"
-        />
-        <img
-          class="afl-event-hero__shot-img afl-event-hero__shot-img--dark"
-          src={shotDarkSrc}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onerror="this.closest('.afl-event-hero__shot').classList.add('afl-event-hero__shot--no-dark')"
-        />
-        <script is:inline>
-          (function () {
-            var s = document.currentScript;
-            // Mobile hides the whole frame — leave both halves lazy so
-            // neither downloads (eager fetches even inside display:none).
-            // Scoped styles land in <head> before the body parses, so the
-            // computed display is already reliable here.
-            if (getComputedStyle(s.parentElement).display === 'none') return;
-            var dark = document.documentElement.classList.contains('dark');
-            var img = s.parentElement.querySelector(
-              dark ? '.afl-event-hero__shot-img--dark' : '.afl-event-hero__shot-img--light',
-            );
-            if (img) img.loading = 'eager';
-          })();
-        </script>
-      </div>
-      {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
-      <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--light" src="/assets/logos/afl-logo.svg" alt="" aria-hidden="true" loading="lazy" />
-      <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--dark" src="/assets/logos/afl-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
-    </>
+  ) : screenshot ? (
+    <BrowserFrameShot image={screenshot} league="afl-fantasy" link={link} />
   ) : player && (
     <div class="afl-event-hero__player" aria-hidden="true">
       <img src={player} alt={playerAlt} loading="eager" fetchpriority="high" />
@@ -439,101 +380,23 @@ const countAriaLabel = hasCount
     color: rgba(255, 255, 255, 0.65);
   }
 
-  /* ── Feature screenshot (browser-framed) ──
-     Fresh What's New art when the entry names no player: the feature itself
-     in a browser frame. Light/dark captures are a theme pair; hidden on
-     mobile (an unreadable thumbnail is decoration), where the AFL logo
-     silhouette stands in. */
-  .afl-event-hero__shot {
-    position: absolute;
-    z-index: 1;
+  /* ── Feature screenshot (shared BrowserFrameShot partial) ──
+     Fresh What's New art when the entry names no player. The partial owns
+     the frame chrome, theme-pair swap, 404 fallbacks, and the mobile logo
+     stand-in swap — only placement and the hero's own styling hooks live
+     here. */
+  .afl-event-hero {
+    --bfs-shadow: var(--ev-model-shadow);
+    --bfs-logo-opacity: 0.14;
+    --bfs-logo-opacity-dark: 0.2;
+  }
+  .afl-event-hero :global(.bfs__frame) {
     right: clamp(1rem, 2.5vw, 2rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-1.5deg);
     width: clamp(280px, 38%, 420px);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    background: #e5e7eb;
-    box-shadow: 0 12px 32px var(--ev-model-shadow);
-    pointer-events: none;
   }
-  .afl-event-hero__shot-bar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    background: #e5e7eb;
-  }
-  .afl-event-hero__shot-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-  .afl-event-hero__shot-dot--red { background: #ff5f57; }
-  .afl-event-hero__shot-dot--yellow { background: #ffbd2e; }
-  .afl-event-hero__shot-dot--green { background: #28c840; }
-  .afl-event-hero__shot-url {
-    flex: 1;
-    margin-left: 6px;
-    background: #fff;
-    border-radius: 3px;
-    padding: 2px 8px;
-    font-size: 10px;
-    color: #6b7280;
-    font-family: ui-monospace, monospace;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .afl-event-hero__shot-img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    object-position: top;
-  }
-  /* Theme pair: light capture by default, dark capture under html.dark. */
-  .afl-event-hero__shot-img--dark {
-    display: none;
-  }
-  :global(html.dark) .afl-event-hero .afl-event-hero__shot-img--light {
-    display: none;
-  }
-  :global(html.dark) .afl-event-hero .afl-event-hero__shot-img--dark {
-    display: block;
-  }
-  /* Dark capture 404 (entry not re-captured yet) → keep the light capture. */
-  :global(html.dark) .afl-event-hero .afl-event-hero__shot--no-dark .afl-event-hero__shot-img--light {
-    display: block;
-  }
-  :global(html.dark) .afl-event-hero .afl-event-hero__shot--no-dark .afl-event-hero__shot-img--dark {
-    display: none;
-  }
-  /* Light capture 404 → drop the frame, logo silhouette returns. */
-  .afl-event-hero--no-shot .afl-event-hero__shot {
-    display: none;
-  }
-  /* Screenshot's logo stand-in: hidden while the frame is visible. */
-  .afl-event-hero__shot-logo {
-    display: none;
-    position: absolute;
-    z-index: 1;
+  .afl-event-hero :global(.bfs__logo) {
     right: clamp(1rem, 4vw, 3rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-6deg);
     width: clamp(170px, 22vw, 260px);
-    opacity: 0.14;
-    pointer-events: none;
-  }
-  .afl-event-hero--no-shot .afl-event-hero__shot-logo--light {
-    display: block;
-  }
-  :global(html.dark) .afl-event-hero--no-shot .afl-event-hero__shot-logo--light {
-    display: none;
-  }
-  :global(html.dark) .afl-event-hero--no-shot .afl-event-hero__shot-logo--dark {
-    display: block;
-    opacity: 0.2;
   }
 
   /* ── Content ── */
@@ -692,23 +555,11 @@ const countAriaLabel = hasCount
       width: 140px;
       right: -0.75rem;
     }
-    /* Screenshot off on mobile (unreadable at phone width) — logo stands in. */
-    .afl-event-hero__shot {
-      display: none;
-    }
-    .afl-event-hero__shot-logo {
+    /* The partial hides the frame and swaps in the logo stand-in on mobile;
+       only its footprint is ours to size. */
+    .afl-event-hero :global(.bfs__logo) {
       width: 140px;
       right: -0.75rem;
-    }
-    .afl-event-hero__shot-logo--light {
-      display: block;
-    }
-    :global(html.dark) .afl-event-hero .afl-event-hero__shot-logo--light {
-      display: none;
-    }
-    :global(html.dark) .afl-event-hero .afl-event-hero__shot-logo--dark {
-      display: block;
-      opacity: 0.2;
     }
     .afl-event-hero__fade--left {
       background: linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 75%, transparent) 45%, color-mix(in srgb, var(--ev-surface) 20%, transparent) 100%);

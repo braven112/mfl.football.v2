@@ -1,0 +1,249 @@
+---
+/**
+ * BrowserFrameShot — a feature screenshot in macOS-style browser chrome.
+ *
+ * Shared by FeatureCompositeHero (TheLeague) and AflEventHero (AFL) so the
+ * frame treatment can't drift between leagues (precedent: ThemeImage.astro
+ * for theme-pair handling). The wrapper renders display:contents, so the
+ * frame and the logo stand-in lay out as if they were direct children of
+ * the hero. Base placement (right-flank anchor, vertical centering, tilt)
+ * lives here; each parent tunes only `right` and `width` via
+ * `:global(.bfs__frame)` / `:global(.bfs__logo)` rules.
+ *
+ * Behavior owned here:
+ * - Light/dark captures are a theme pair (`foo.webp` + `foo-dark.webp`, the
+ *   capture-whats-new-screenshots.mjs convention), swapped by html.dark —
+ *   or unconditionally when `forceDark` is set (a hero forcing the dark
+ *   treatment in light mode, e.g. heroTheme: 'dark').
+ * - Dark capture 404 (entry not re-captured yet) → keep the light capture
+ *   (`bfs--no-dark`).
+ * - Light capture 404 → drop the frame entirely; the league logo silhouette
+ *   returns (`bfs--no-shot`).
+ * - Mobile (≤640px) hides the frame — a phone-width screenshot thumbnail is
+ *   decoration, not information — and the logo silhouette stands in.
+ *
+ * Parent hooks:
+ * - `right` / `width` on :global(.bfs__frame) and :global(.bfs__logo)
+ * - --bfs-shadow: frame drop-shadow color (set on the hero root)
+ * - --bfs-logo-opacity / --bfs-logo-opacity-dark: logo stand-in opacity
+ */
+import { LEAGUES, type CanonicalLeagueSlug } from '../config/leagues';
+import { formatBrowserFrameUrl } from '../utils/browser-frame-url';
+
+interface Props {
+  /** Screenshot filename relative to /assets/whats-new/ (the light capture;
+      the dark twin lives under the `-dark` suffix convention). */
+  image: string;
+  /** League whose chrome frames the shot — URL pill domain + logo stand-in. */
+  league: CanonicalLeagueSlug;
+  /** League-prefixed in-app path shown in the URL pill (e.g. '/theleague/rosters').
+      Omitted → the pill shows the bare apex domain. */
+  link?: string;
+  /** Show the dark capture even in light site theme (the hero forces the
+      dark treatment, e.g. FeatureCompositeHero's heroTheme: 'dark'). */
+  forceDark?: boolean;
+}
+
+const { image, league: leagueSlug, link, forceDark = false } = Astro.props;
+
+const league = LEAGUES[leagueSlug];
+const src = `/assets/whats-new/${image}`;
+const darkSrc = src.replace(/\.(\w+)$/, '-dark.$1');
+// Frame chrome URL text and the logo stand-in pair both come from the league
+// registry — never hardcode domains or per-league asset paths.
+const frameUrl = formatBrowserFrameUrl(league, link);
+const logo = league.logos;
+---
+
+<div class={`bfs${forceDark ? ' bfs--dark' : ''}`}>
+  <div class="bfs__frame" aria-hidden="true">
+    <div class="bfs__bar">
+      <span class="bfs__dot bfs__dot--red"></span>
+      <span class="bfs__dot bfs__dot--yellow"></span>
+      <span class="bfs__dot bfs__dot--green"></span>
+      <span class="bfs__url">{frameUrl}</span>
+    </div>
+    {/* Both halves ship lazy; the inline script below promotes ONLY the
+        active theme's variant to eager (SSR can never know the resolved
+        theme — the pre-paint html.dark class can). Net: one download,
+        no lazy-load delay on the hero, and mobile (frame display:none)
+        fetches neither. The hidden half never fires onerror, which is
+        fine — its fallback class only matters once it's the shown one,
+        and a theme flip makes it visible → lazy fetch → onerror then. */}
+    <img
+      class="bfs__img bfs__img--light"
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onerror="this.closest('.bfs').classList.add('bfs--no-shot')"
+    />
+    <img
+      class="bfs__img bfs__img--dark"
+      src={darkSrc}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onerror="this.closest('.bfs').classList.add('bfs--no-dark')"
+    />
+    <script is:inline>
+      (function () {
+        var s = document.currentScript;
+        // Mobile hides the whole frame — leave both halves lazy so
+        // neither downloads (eager fetches even inside display:none).
+        // Scoped styles land in <head> before the body parses, so the
+        // computed display is already reliable here.
+        if (getComputedStyle(s.parentElement).display === 'none') return;
+        // Forced-dark heroes show the dark capture even in light site theme
+        // — promote the variant the CSS actually displays, not just the
+        // html.dark one.
+        var scope = s.closest('.bfs');
+        var dark =
+          document.documentElement.classList.contains('dark') ||
+          (scope && scope.classList.contains('bfs--dark'));
+        var img = s.parentElement.querySelector(
+          dark ? '.bfs__img--dark' : '.bfs__img--light',
+        );
+        if (img) img.loading = 'eager';
+      })();
+    </script>
+  </div>
+  {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
+  <img class="bfs__logo bfs__logo--light" src={logo.light} alt="" aria-hidden="true" loading="lazy" />
+  <img class="bfs__logo bfs__logo--dark" src={logo.dark} alt="" aria-hidden="true" loading="lazy" />
+</div>
+
+<style>
+  /* The wrapper exists only to scope the state classes (bfs--dark,
+     bfs--no-shot, bfs--no-dark); display:contents keeps the frame and logos
+     positioning against the hero's own positioned ancestor. */
+  .bfs {
+    display: contents;
+  }
+
+  /* Base placement is shared: both heroes anchor the frame (and the logo
+     stand-in below) on the right flank, vertically centered, with the same
+     tilt. Parents override only `right` and `width`. */
+  .bfs__frame {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    transform: translateY(-50%) rotate(-1.5deg);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #e5e7eb;
+    box-shadow: 0 12px 32px var(--bfs-shadow, rgba(15, 30, 46, 0.3));
+    pointer-events: none;
+  }
+
+  .bfs__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e5e7eb;
+  }
+
+  .bfs__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .bfs__dot--red { background: #ff5f57; }
+  .bfs__dot--yellow { background: #ffbd2e; }
+  .bfs__dot--green { background: #28c840; }
+
+  .bfs__url {
+    flex: 1;
+    margin-left: 6px;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #6b7280;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bfs__img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  /* Theme pair: light capture by default, dark under html.dark / forced
+     dark. The :not(.bfs--no-dark) guard bakes in the dark-404 fallback:
+     when the dark capture is missing, neither swap rule applies and the
+     light capture stays up. */
+  .bfs__img--dark {
+    display: none;
+  }
+
+  .bfs--dark:not(.bfs--no-dark) .bfs__img--light,
+  :global(html.dark) .bfs:not(.bfs--no-dark) .bfs__img--light {
+    display: none;
+  }
+
+  .bfs--dark:not(.bfs--no-dark) .bfs__img--dark,
+  :global(html.dark) .bfs:not(.bfs--no-dark) .bfs__img--dark {
+    display: block;
+  }
+
+  /* Light capture 404 → drop the frame entirely; logo silhouette returns. */
+  .bfs--no-shot .bfs__frame {
+    display: none;
+  }
+
+  /* Logo stand-in: hidden while the frame is visible. */
+  .bfs__logo {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    opacity: var(--bfs-logo-opacity, 0.14);
+    pointer-events: none;
+  }
+
+  .bfs--no-shot .bfs__logo--light {
+    display: block;
+  }
+
+  .bfs--dark.bfs--no-shot .bfs__logo--light,
+  :global(html.dark) .bfs--no-shot .bfs__logo--light {
+    display: none;
+  }
+
+  .bfs--dark.bfs--no-shot .bfs__logo--dark,
+  :global(html.dark) .bfs--no-shot .bfs__logo--dark {
+    display: block;
+    opacity: var(--bfs-logo-opacity-dark, 0.2);
+  }
+
+  /* Mobile: frame off (unreadable at phone width) — logo stands in. */
+  @media (max-width: 640px) {
+    .bfs__frame {
+      display: none;
+    }
+
+    .bfs__logo--light {
+      display: block;
+    }
+
+    .bfs--dark .bfs__logo--light,
+    :global(html.dark) .bfs .bfs__logo--light {
+      display: none;
+    }
+
+    .bfs--dark .bfs__logo--dark,
+    :global(html.dark) .bfs .bfs__logo--dark {
+      display: block;
+      opacity: var(--bfs-logo-opacity-dark, 0.2);
+    }
+  }
+</style>

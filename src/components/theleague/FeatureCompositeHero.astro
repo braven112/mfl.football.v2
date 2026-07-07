@@ -11,15 +11,15 @@
  * docs/claude/insights/features/player-composites.md).
  *
  * Art precedence: heroArt (entry-supplied artwork, e.g. a recovered vintage
- * logo) → cast model → screenshot (light/dark pair, swapped by html.dark;
- * hidden on mobile where the frame would be an unreadable thumbnail — the
- * logo silhouette stands in) → league logo silhouette.
+ * logo) → cast model → screenshot (the shared BrowserFrameShot partial:
+ * light/dark pair, mobile logo stand-in, 404 fallbacks) → league logo
+ * silhouette.
  */
 import type { HeroContent } from '../../types/whats-new';
 import type { HeroModel } from '../../utils/hero-casting';
 import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { LEAGUES } from '../../config/leagues';
+import BrowserFrameShot from '../BrowserFrameShot.astro';
 
 interface Props {
   content: HeroContent;
@@ -40,18 +40,6 @@ const ctaHref = content.link ? resolveLeaguePath(content.link) : resolveLeaguePa
 // The hero follows the site theme, but an entry can force the dark treatment
 // in light mode when the dark card IS the story (e.g. the dark mode launch).
 const forceDark = content.heroTheme === 'dark';
-
-// Feature screenshot (browser-framed). The dark capture lives next to the
-// light one under the `-dark` suffix convention (capture-whats-new-
-// screenshots.mjs writes both); when the dark file 404s the frame falls
-// back to the light capture via the img onerror hook.
-const screenshot = content.image ? `/assets/whats-new/${content.image}` : null;
-const screenshotDark = screenshot ? screenshot.replace(/\.(\w+)$/, '-dark.$1') : null;
-// Frame chrome URL text from the league registry — never hardcode domains.
-const league = LEAGUES.theleague;
-const frameUrl = content.link
-  ? `${league.domains[0]}${content.link.replace(`/${league.slug}`, '')}`
-  : league.domains[0];
 ---
 
 <article
@@ -95,64 +83,8 @@ const frameUrl = content.link
         <span class="fch__caption-meta">{model.descriptor ? `${model.descriptor} ` : ''}{model.position} · {teamCode}</span>
       </span>
     </>
-  ) : screenshot ? (
-    <>
-      <div class="fch__shot" aria-hidden="true">
-        <div class="fch__shot-bar">
-          <span class="fch__shot-dot fch__shot-dot--red"></span>
-          <span class="fch__shot-dot fch__shot-dot--yellow"></span>
-          <span class="fch__shot-dot fch__shot-dot--green"></span>
-          <span class="fch__shot-url">{frameUrl}</span>
-        </div>
-        {/* Both halves ship lazy; the inline script below promotes ONLY the
-            active theme's variant to eager (SSR can never know the resolved
-            theme — the pre-paint html.dark class can). Net: one download,
-            no lazy-load delay on the hero, and mobile (frame display:none)
-            fetches neither. The hidden half never fires onerror, which is
-            fine — its fallback class only matters once it's the shown one,
-            and a theme flip makes it visible → lazy fetch → onerror then. */}
-        <img
-          class="fch__shot-img fch__shot-img--light"
-          src={screenshot}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onerror="this.closest('.fch').classList.add('fch--no-shot')"
-        />
-        <img
-          class="fch__shot-img fch__shot-img--dark"
-          src={screenshotDark}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onerror="this.closest('.fch__shot').classList.add('fch__shot--no-dark')"
-        />
-        <script is:inline>
-          (function () {
-            var s = document.currentScript;
-            // Mobile hides the whole frame — leave both halves lazy so
-            // neither downloads (eager fetches even inside display:none).
-            // Scoped styles land in <head> before the body parses, so the
-            // computed display is already reliable here.
-            if (getComputedStyle(s.parentElement).display === 'none') return;
-            // Forced-dark heroes (.fch--dark from heroTheme) show the dark
-            // capture even in light site theme — promote the variant the
-            // CSS actually displays, not just the html.dark one.
-            var fch = s.closest('.fch');
-            var dark =
-              document.documentElement.classList.contains('dark') ||
-              (fch && fch.classList.contains('fch--dark'));
-            var img = s.parentElement.querySelector(
-              dark ? '.fch__shot-img--dark' : '.fch__shot-img--light',
-            );
-            if (img) img.loading = 'eager';
-          })();
-        </script>
-      </div>
-      {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
-      <img class="fch__shot-logo fch__shot-logo--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
-      <img class="fch__shot-logo fch__shot-logo--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
-    </>
+  ) : content.image ? (
+    <BrowserFrameShot image={content.image} league="theleague" link={content.link} forceDark={forceDark} />
   ) : (
     <>
       <img class="fch__logo-art fch__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="eager" />
@@ -291,121 +223,25 @@ const frameUrl = content.link
     opacity: 0.22;
   }
 
-  /* ── Feature screenshot (browser-framed) ──
-     The default art when the entry names no player. Light/dark captures are
-     a theme pair (same convention as the logo silhouette); the whole frame
-     is hidden on mobile — a phone-width screenshot thumbnail is decoration,
-     not information — where the logo silhouette stands in. */
-  .fch__shot {
-    position: absolute;
-    z-index: 1;
+  /* ── Feature screenshot (shared BrowserFrameShot partial) ──
+     The default art when the entry names no player. The partial owns the
+     frame chrome, theme-pair swap, 404 fallbacks, and the mobile logo
+     stand-in swap — only placement and the hero's own styling hooks live
+     here. Forced dark (.fch--dark) flows in via the forceDark prop. */
+  .fch {
+    --bfs-shadow: var(--fch-shadow);
+    --bfs-logo-opacity: 0.16;
+    --bfs-logo-opacity-dark: 0.22;
+  }
+
+  .fch :global(.bfs__frame) {
     right: clamp(1rem, 2.5vw, 1.9rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-1.5deg);
     width: clamp(260px, 38%, 400px);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    background: #e5e7eb;
-    box-shadow: 0 12px 32px var(--fch-shadow);
-    pointer-events: none;
   }
 
-  .fch__shot-bar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    background: #e5e7eb;
-  }
-
-  .fch__shot-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .fch__shot-dot--red { background: #ff5f57; }
-  .fch__shot-dot--yellow { background: #ffbd2e; }
-  .fch__shot-dot--green { background: #28c840; }
-
-  .fch__shot-url {
-    flex: 1;
-    margin-left: 6px;
-    background: #fff;
-    border-radius: 3px;
-    padding: 2px 8px;
-    font-size: 10px;
-    color: #6b7280;
-    font-family: ui-monospace, monospace;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .fch__shot-img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    object-position: top;
-  }
-
-  /* Theme pair: light capture by default, dark capture under html.dark. */
-  .fch__shot-img--dark {
-    display: none;
-  }
-
-  .fch--dark .fch__shot-img--light,
-  :global(html.dark) .fch .fch__shot-img--light {
-    display: none;
-  }
-
-  .fch--dark .fch__shot-img--dark,
-  :global(html.dark) .fch .fch__shot-img--dark {
-    display: block;
-  }
-
-  /* Dark capture 404 (entry not re-captured yet) → keep the light capture. */
-  .fch--dark .fch__shot--no-dark .fch__shot-img--light,
-  :global(html.dark) .fch .fch__shot--no-dark .fch__shot-img--light {
-    display: block;
-  }
-
-  .fch--dark .fch__shot--no-dark .fch__shot-img--dark,
-  :global(html.dark) .fch .fch__shot--no-dark .fch__shot-img--dark {
-    display: none;
-  }
-
-  /* Light capture 404 → drop the frame entirely, logo silhouette returns. */
-  .fch--no-shot .fch__shot {
-    display: none;
-  }
-
-  /* Screenshot's logo stand-in: hidden while the frame is visible. */
-  .fch__shot-logo {
-    display: none;
-    position: absolute;
+  .fch :global(.bfs__logo) {
     right: clamp(1rem, 4vw, 3rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-6deg);
     width: clamp(180px, 24vw, 280px);
-    opacity: 0.16;
-    pointer-events: none;
-  }
-
-  .fch--no-shot .fch__shot-logo--light {
-    display: block;
-  }
-
-  .fch--dark.fch--no-shot .fch__shot-logo--light,
-  :global(html.dark) .fch--no-shot .fch__shot-logo--light {
-    display: none;
-  }
-
-  .fch--dark.fch--no-shot .fch__shot-logo--dark,
-  :global(html.dark) .fch--no-shot .fch__shot-logo--dark {
-    display: block;
-    opacity: 0.22;
   }
 
   .fch__caption {
@@ -569,29 +405,11 @@ const frameUrl = content.link
       right: -1rem;
     }
 
-    /* Screenshot off on mobile (unreadable at phone width) — logo stands in. */
-    .fch__shot {
-      display: none;
-    }
-
-    .fch__shot-logo {
+    /* The partial hides the frame and swaps in the logo stand-in on mobile;
+       only its footprint is ours to size. */
+    .fch :global(.bfs__logo) {
       width: 150px;
       right: -1rem;
-    }
-
-    .fch__shot-logo--light {
-      display: block;
-    }
-
-    .fch--dark .fch__shot-logo--light,
-    :global(html.dark) .fch .fch__shot-logo--light {
-      display: none;
-    }
-
-    .fch--dark .fch__shot-logo--dark,
-    :global(html.dark) .fch .fch__shot-logo--dark {
-      display: block;
-      opacity: 0.22;
     }
 
     /* The text cap only exists to dodge the opaque bottom-right cutout —

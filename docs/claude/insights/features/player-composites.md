@@ -69,7 +69,8 @@ per player.
   for season-reset heroes only (AFL `afl-new-season-starts`); the enhancement
   caster was removed with the feature-rule revision.
 - Bug-fix rollups and screenshot-less entries → no player, league logo
-  silhouette (`.fch__logo-art` / `.fch__shot-logo`, light/dark asset pair).
+  silhouette (`.fch__logo-art` / BrowserFrameShot's `.bfs__logo`, light/dark
+  asset pair).
 
 ## Shipped Use Cases
 
@@ -719,12 +720,17 @@ browser frame — and casts a player only when the entry is about one.
   rather than rendering a broken composite).
 - Screenshots are a light/dark THEME PAIR: `foo.webp` + `foo-dark.webp`,
   both written by `scripts/capture-whats-new-screenshots.mjs` (html.dark
-  toggled between shots). The components swap them with CSS under
-  `html.dark`; a 404 on the dark half falls back to the light capture via
-  `onerror` (`.fch__shot--no-dark` / `.afl-event-hero__shot--no-dark`).
+  toggled between shots). The frame markup + swap/fallback CSS live in ONE
+  place — `src/components/BrowserFrameShot.astro` — shared by both heroes.
+  It swaps the pair with CSS under `html.dark` (or the `forceDark` prop for
+  heroTheme:'dark' entries); a 404 on the dark half falls back to the light
+  capture via `onerror` (`.bfs--no-dark`), and a 404 on the light half drops
+  the frame for the logo silhouette (`.bfs--no-shot`).
 - Mobile (≤640px) hides the frame entirely — Brandon's call: a phone-width
   screenshot is an unreadable thumbnail — and the league-logo silhouette
-  stands in (`.fch__shot-logo` / `.afl-event-hero__shot-logo` theme pairs).
+  stands in (`.bfs__logo` theme pair). Placement/size stay in each hero via
+  `:global(.bfs__frame)` / `:global(.bfs__logo)`; shadow + logo opacity flow
+  in via `--bfs-shadow` / `--bfs-logo-opacity(-dark)` custom properties.
 - `castEnhancementModel` deleted; `castRookieModel` survives only for the
   AFL new-season reset. AFL feature states carry the screenshot on
   `EventHeroView.screenshot`; the AFL cast deliberately has NO headliner
