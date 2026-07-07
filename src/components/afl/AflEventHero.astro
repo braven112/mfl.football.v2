@@ -17,6 +17,7 @@ import ThemeImage from '../ThemeImage.astro';
 import type { HeroModel } from '../../utils/hero-casting';
 import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { LEAGUES } from '../../config/leagues';
 
 interface Props {
   /** Pill label, e.g. "2026 Keeper Deadline" */
@@ -96,7 +97,11 @@ const modelStyle = model ? `--ev-model-glow-light:${modelGlowLight};--ev-model-g
 // Feature screenshot theme pair (see capture-whats-new-screenshots.mjs).
 const shotSrc = screenshot ? `/assets/whats-new/${screenshot}` : null;
 const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
-const shotFrameUrl = link ? `afl-fantasy.com${link.replace('/afl-fantasy', '')}` : 'afl-fantasy.com';
+// Frame chrome URL text from the league registry — never hardcode domains.
+const aflLeague = LEAGUES['afl-fantasy'];
+const shotFrameUrl = link
+  ? `${aflLeague.domains[0]}${link.replace(`/${aflLeague.slug}`, '')}`
+  : aflLeague.domains[0];
 
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
 const hasFooter = hasCount || !!link;
@@ -145,11 +150,18 @@ const countAriaLabel = hasCount
           <span class="afl-event-hero__shot-dot afl-event-hero__shot-dot--green"></span>
           <span class="afl-event-hero__shot-url">{shotFrameUrl}</span>
         </div>
+        {/* Both halves ship lazy; the inline script below promotes ONLY the
+            active theme's variant to eager (SSR can never know the resolved
+            theme — the pre-paint html.dark class can). Net: one download,
+            no lazy-load delay on the hero, and mobile (frame display:none)
+            fetches neither. The hidden half never fires onerror, which is
+            fine — its fallback class only matters once it's the shown one,
+            and a theme flip makes it visible → lazy fetch → onerror then. */}
         <img
           class="afl-event-hero__shot-img afl-event-hero__shot-img--light"
           src={shotSrc}
           alt=""
-          loading="eager"
+          loading="lazy"
           decoding="async"
           onerror="this.closest('.afl-event-hero').classList.add('afl-event-hero--no-shot')"
         />
@@ -157,10 +169,20 @@ const countAriaLabel = hasCount
           class="afl-event-hero__shot-img afl-event-hero__shot-img--dark"
           src={shotDarkSrc}
           alt=""
-          loading="eager"
+          loading="lazy"
           decoding="async"
           onerror="this.closest('.afl-event-hero__shot').classList.add('afl-event-hero__shot--no-dark')"
         />
+        <script is:inline>
+          (function () {
+            var s = document.currentScript;
+            var dark = document.documentElement.classList.contains('dark');
+            var img = s.parentElement.querySelector(
+              dark ? '.afl-event-hero__shot-img--dark' : '.afl-event-hero__shot-img--light',
+            );
+            if (img) img.loading = 'eager';
+          })();
+        </script>
       </div>
       {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
       <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--light" src="/assets/logos/afl-logo.svg" alt="" aria-hidden="true" loading="lazy" />

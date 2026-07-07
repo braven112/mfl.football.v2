@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  */
 const MANUAL_CAPTURE_ONLY = {
   'feature-first-heroes': 'both-league entry, no link — auto-capture would shoot the MFL landing page; capture the /theleague homepage hero manually',
+  'schefter-og-unfurls': 'hand-made OG card image, not a page screenshot — auto-capture would replace it with the landing page',
+  'trade-composites': 'hand-staged trade-confirmation modal with specific players — auto-capture shoots the bare trade builder',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
   'mock-draft': 'sign-in gate replaces the draft config UI',
@@ -195,7 +197,10 @@ async function main() {
         execFileSync('cwebp', ['-q', '85', pngPath, '-o', outputPath], { stdio: 'pipe' });
         unlinkSync(pngPath);
       } catch {
-        console.warn(`  [${entryId}] cwebp not found, keeping PNG`);
+        // The referenced .webp was NOT written — the entry will render broken
+        // until cwebp is installed and the capture re-run.
+        console.warn(`  [${entryId}] cwebp failed — kept ${pngPath.split('/').pop()}, ${imageName} NOT written`);
+        return;
       }
     }
     console.log(`  [${entryId}] saved -> ${imageName}`);

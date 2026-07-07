@@ -61,6 +61,8 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
     pinToHero: overrides?.pinToHero,
     excludeFromHero: overrides?.excludeFromHero,
     leagues: overrides?.leagues ?? ['theleague'],
+    // Pass through any fields not defaulted above (image, heroPlayerId, …)
+    ...overrides,
   };
 }
 
@@ -294,6 +296,29 @@ describe('resolveHeroContent', () => {
 
       expect(result.source).toBe('feature');
       expect(result.title).toBe('Just Shipped');
+    });
+
+    it('plumbs screenshot + featured-player fields through to HeroContent', () => {
+      // The composite hero reads these off HeroContent — a dropped field here
+      // silently downgrades the hero (no screenshot / no featured player).
+      const entries: WhatsNewEntry[] = [
+        makeEntry({
+          id: 'plumb',
+          title: 'Plumb Test',
+          date: '2026-02-16',
+          image: 'plumb.webp',
+          imageAlt: 'alt text',
+          heroPlayerId: '12345',
+          heroPlayerDescriptor: 'Cover Star',
+        }),
+      ];
+      const result = resolveHeroContent(entries, makeTimeline(), new Date(2026, 1, 16));
+
+      expect(result.source).toBe('feature');
+      expect(result.image).toBe('plumb.webp');
+      expect(result.imageAlt).toBe('alt text');
+      expect(result.heroPlayerId).toBe('12345');
+      expect(result.heroPlayerDescriptor).toBe('Cover Star');
     });
 
     it('should show a feature that is exactly 7 days old', () => {

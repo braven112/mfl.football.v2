@@ -222,7 +222,11 @@ describe('castAflHeroModel', () => {
     const players = getPlayerMap(YEAR);
     const featured = [...players.values()].find(
       (p) => p.position !== 'DEF' && p.headshot.includes('espncdn.com'),
-    )!;
+    );
+    // Guard instead of `!`: a clear failure if the live feed ever loses ESPN
+    // headshots entirely, rather than a TypeError deep in the cast.
+    expect(featured, 'player map has no compositable player to test with').toBeDefined();
+    if (!featured) return;
     const state = {
       kind: 'feature',
       priority: 'P2',

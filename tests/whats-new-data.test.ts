@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import { VALID_LEAGUE_SLUGS } from '../src/types/whats-new';
@@ -123,6 +123,51 @@ describe('whats-new.json data integrity', () => {
     expect(
       bad.map((e) => `${e.id} -> ${JSON.stringify(e.heroPlayerId)}`),
       'Entries with malformed heroPlayerId',
+    ).toEqual([]);
+  });
+
+  // The capture script's skip-list, extracted from source (same sentinel-grep
+  // pattern as the quiet-day GroupMe test — no import, so loading the test
+  // never pulls in playwright or runs the script's top-level main()).
+  const captureScriptSource = readFileSync(
+    resolve(__dirname, '../scripts/capture-whats-new-screenshots.mjs'),
+    'utf-8',
+  );
+  const manualOnlyBlock = captureScriptSource.match(
+    /const MANUAL_CAPTURE_ONLY = \{([\s\S]*?)\n\};/,
+  );
+  const manualOnlyIds = [...(manualOnlyBlock?.[1] ?? '').matchAll(/'([^']+)':/g)].map(
+    (m) => m[1],
+  );
+
+  it('capture-script MANUAL_CAPTURE_ONLY ids all match real entries', () => {
+    // A renamed entry id silently drops its skip-list protection, and the
+    // next plain capture run replaces a hand-staged screenshot with a
+    // sign-in page or dev empty state (the 2026-07-06 backfill incident).
+    expect(manualOnlyIds.length).toBeGreaterThan(0);
+    const known = new Set(typedEntries.map((e) => e.id));
+    const orphaned = manualOnlyIds.filter((id) => !known.has(id));
+    expect(orphaned, 'MANUAL_CAPTURE_ONLY ids with no matching entry').toEqual([]);
+  });
+
+  it('every auto-captured screenshot entry has its dark-mode twin on disk', () => {
+    // The composite hero swaps foo.webp / foo-dark.webp under html.dark. A
+    // missing dark file falls back gracefully at runtime, but for entries the
+    // capture script owns it just means someone forgot to run it — catch that
+    // at build time. MANUAL_CAPTURE_ONLY entries are exempt (their dark
+    // captures require an authenticated/prod session and may lag).
+    const missing = typedEntries
+      .filter((e) => SCREENSHOT_REQUIRED_CATEGORIES.includes(e.category) && e.image)
+      .filter((e) => !manualOnlyIds.includes(e.id))
+      .filter(
+        (e) =>
+          !existsSync(
+            resolve(WHATS_NEW_ASSETS_DIR, e.image!.replace(/\.(\w+)$/, '-dark.$1')),
+          ),
+      );
+    expect(
+      missing.map((e) => `${e.id} -> ${e.image}`),
+      'Entries missing the -dark screenshot twin',
     ).toEqual([]);
   });
 
