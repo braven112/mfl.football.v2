@@ -31,9 +31,17 @@ interface CollegeLogoEntry {
   logoDark?: string | null;
 }
 
-/** Escape a value for use inside a double-quoted CSS string. */
+/**
+ * Escape a value for use inside a double-quoted CSS string. Also neutralizes
+ * `<` (as the CSS hex escape `\3c `) so a stray `</style>` in a data value
+ * can't break out of the raw-text <style> element we render via `set:html`.
+ * Values come from a committed JSON file, so this is defense-in-depth.
+ */
 function cssStringEscape(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/</g, '\\3c ');
 }
 
 /**
@@ -41,13 +49,27 @@ function cssStringEscape(value: string): string {
  * light `logo` and a `logoDark`. Deduped by light src (multiple school-name
  * spellings can share one ESPN logo), so each distinct logo yields one rule.
  * Entries missing either URL produce no rule (nothing to swap).
+ *
+ * The source data is static, so the ~35KB output is stable; it's memoized at
+ * module scope since the SSR roster pages call it on every request.
  */
+let cachedCss: string | null = null;
+
 export function buildCollegeLogoDarkCss(): string {
+  if (cachedCss !== null) return cachedCss;
   const darkByLight = new Map<string, string>();
   for (const entry of Object.values(collegeLogos as Record<string, CollegeLogoEntry>)) {
     const light = entry?.logo;
     const dark = entry?.logoDark;
     if (!light || !dark) continue;
+    const existing = darkByLight.get(light);
+    if (existing && existing !== dark) {
+      // Two schools share a light logo but disagree on the dark variant — the
+      // data is inconsistent. Surface it instead of silently keeping the last.
+      console.warn(
+        `[college-logo-dark-css] conflicting logoDark for ${light}: "${existing}" vs "${dark}"`,
+      );
+    }
     darkByLight.set(light, dark);
   }
   const rules: string[] = [];
@@ -56,5 +78,6 @@ export function buildCollegeLogoDarkCss(): string {
       `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(dark)}"); }`,
     );
   }
-  return rules.join('\n');
+  cachedCss = rules.join('\n');
+  return cachedCss;
 }

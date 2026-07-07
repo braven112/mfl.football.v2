@@ -59,9 +59,13 @@ export const NFL_TEAM_NAMES: Record<string, string> = {
 };
 
 /**
- * Team code mapping from MFL format to ESPN/Standard format
+ * Team code mapping from MFL format to ESPN/Standard format.
+ *
+ * Exported so the dark-mode logo swap can emit a rule for every legacy alias
+ * filename a page might render (e.g. `/assets/nfl-logos/WAS.svg`), not just the
+ * canonical code — some roster builders render non-normalized codes.
  */
-const TEAM_CODE_MAP: Record<string, string> = {
+export const TEAM_CODE_MAP: Record<string, string> = {
   'WAS': 'WSH', // Washington
   'JAC': 'JAX', // Jacksonville
   'GBP': 'GB',  // Green Bay

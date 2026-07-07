@@ -27,34 +27,64 @@
  * shared layout <head>.
  */
 
-import { getAllNFLTeamCodes, getNFLTeamLogo } from './nfl-logo';
-import { getNflLogoUrl } from '../constants/roster-constants';
+import { getAllNFLTeamCodes, getNFLTeamLogo, normalizeTeamCode, TEAM_CODE_MAP } from './nfl-logo';
 
-/** Escape a value for use inside a double-quoted CSS string. */
+/**
+ * Escape a value for use inside a double-quoted CSS string. Also neutralizes
+ * `<` (as the CSS hex escape `\3c `) so a stray `</style>` in a src value can't
+ * break out of the raw-text <style> element we render via `set:html`. Our srcs
+ * are trusted (ESPN URLs / local asset paths), so this is defense-in-depth.
+ */
 function cssStringEscape(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/</g, '\\3c ');
+}
+
+/** One `html.dark` swap rule keyed on an exact img src. */
+function swapRule(lightSrc: string, darkUrl: string): string {
+  return `html.dark img[src="${cssStringEscape(lightSrc)}"] { content: url("${darkUrl}"); }`;
 }
 
 /**
- * Build the dark-mode swap CSS for every canonical NFL team logo.
+ * Build the dark-mode swap CSS for every NFL team logo the site can render.
  *
- * For each of the 32 teams, emits one rule per distinct light src our helpers
- * render (the ESPN `500` PNG and the local `/assets/nfl-logos/{CODE}.svg`),
- * each swapping to the ESPN `500-dark` PNG under `html.dark`. The Sunday Ticket
- * multi-view hardcodes the dark variant, so its `500-dark` srcs are never a
- * key here — no collision.
+ * Two families of light src reach the DOM:
+ *  - ESPN `500` PNGs from `getNFLTeamLogo`, which always normalize to the 32
+ *    canonical codes → one `500` → `500-dark` rule per team.
+ *  - Local `/assets/nfl-logos/{CODE}.svg`. Some roster builders normalize
+ *    (canonical filenames) but others render the raw/legacy code verbatim
+ *    (`WAS.svg`, `LVR.svg`, hardcoded paths), so we emit a rule for every
+ *    canonical code AND every legacy alias in TEAM_CODE_MAP, each pointing at
+ *    the normalized team's `500-dark` PNG. Aliases that resolve to the NFL
+ *    shield (FA/UFA → NFL) are skipped — there's no ESPN dark shield to swap to.
+ *
+ * The Sunday Ticket multi-view hardcodes the dark variant, so its `500-dark`
+ * srcs are never a key here — no collision. Output is static, so it's memoized
+ * at module scope (runs in the shared layout head on every SSR request).
  */
+let cachedCss: string | null = null;
+
 export function buildNflLogoDarkCss(): string {
+  if (cachedCss !== null) return cachedCss;
   const rules: string[] = [];
+
+  // ESPN logos — always canonical.
   for (const code of getAllNFLTeamCodes()) {
-    const darkUrl = cssStringEscape(getNFLTeamLogo(code, 'dark'));
-    // Every light src that maps to this team, from either logo helper.
-    const lightSrcs = new Set<string>([getNFLTeamLogo(code), getNflLogoUrl(code)]);
-    for (const src of lightSrcs) {
-      rules.push(
-        `html.dark img[src="${cssStringEscape(src)}"] { content: url("${darkUrl}"); }`,
-      );
-    }
+    rules.push(swapRule(getNFLTeamLogo(code), cssStringEscape(getNFLTeamLogo(code, 'dark'))));
   }
-  return rules.join('\n');
+
+  // Local SVGs — canonical codes plus every legacy alias filename.
+  const localCodes = new Set<string>([...getAllNFLTeamCodes(), ...Object.keys(TEAM_CODE_MAP)]);
+  for (const code of localCodes) {
+    const canonical = normalizeTeamCode(code);
+    if (!canonical || canonical === 'NFL') continue;
+    rules.push(
+      swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(getNFLTeamLogo(canonical, 'dark'))),
+    );
+  }
+
+  cachedCss = rules.join('\n');
+  return cachedCss;
 }

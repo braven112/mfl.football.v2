@@ -16,7 +16,9 @@ describe('buildCollegeLogoDarkCss', () => {
   const lines = css.split('\n').filter(Boolean);
 
   it('emits a non-empty, html.dark-scoped rule set', () => {
-    expect(lines.length).toBeGreaterThan(100);
+    // Non-empty only — the exact count is locked by the dedupe test below, so
+    // this stays green when college-logos.json gains or loses schools.
+    expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) {
       expect(line.startsWith('html.dark img[src="')).toBe(true);
       expect(line).toContain('/ncaa/500-dark/');
