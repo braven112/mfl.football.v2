@@ -12,9 +12,14 @@
  *
  * Usage:
  *   node scripts/capture-whats-new-screenshots.mjs                              # capture missing + stale
- *   node scripts/capture-whats-new-screenshots.mjs --force                      # re-capture all
+ *   node scripts/capture-whats-new-screenshots.mjs --force                      # re-capture all (except MANUAL_CAPTURE_ONLY entries below)
  *   node scripts/capture-whats-new-screenshots.mjs dead-money-awards pwa-app    # capture specific entries
  *   node scripts/capture-whats-new-screenshots.mjs --force dead-money-awards    # force re-capture specific entry
+ *
+ * Note: entries in MANUAL_CAPTURE_ONLY (below) are always skipped by a bare
+ * `--force` — they require a hand-staged environment (auth, mock data, a
+ * specific scroll position) that a blind capture can't reproduce. Name the
+ * entry explicitly on the CLI to recapture it.
  */
 import { chromium } from 'playwright';
 import { readFileSync, existsSync, statSync, unlinkSync } from 'fs';
@@ -30,6 +35,25 @@ const DATA_PATH = resolve(ROOT, 'src/data/whats-new.json');
 const SCREENSHOT_CATEGORIES = ['new-page', 'new-feature', 'enhancement'];
 const VIEWPORT = { width: 2560, height: 1440 };
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
+
+/**
+ * Entries whose screenshots are staged by hand — a blind capture of the
+ * entry's link shoots a sign-in screen, an unpopulated analytics page, or
+ * the wrong scroll position. Skipped unless named explicitly on the CLI.
+ *
+ * - submit-lineup / tip-schefter-gets-louder / mock-draft: auth-gated pages
+ * - owner-activity / afl-owner-activity: analytics only populate in prod
+ *   (locally, append ?mock=true for a staged capture)
+ * - afl-trophy-wall: needs a franchise profile scrolled to the trophy wall
+ */
+const MANUAL_CAPTURE_ONLY = new Set([
+  'submit-lineup',
+  'tip-schefter-gets-louder',
+  'mock-draft',
+  'owner-activity',
+  'afl-owner-activity',
+  'afl-trophy-wall',
+]);
 
 /**
  * Per-entry page setup hooks.
@@ -72,6 +96,8 @@ async function main() {
     if (!SCREENSHOT_CATEGORIES.includes(e.category)) return false;
     if (!e.image) return false; // must have image field set in JSON
     if (hasTargets && !targetSet.has(e.id)) return false;
+    // Manual-capture entries only run when explicitly named on the CLI
+    if (!hasTargets && MANUAL_CAPTURE_ONLY.has(e.id)) return false;
     if (force) return true;
     const imagePath = resolve(ASSETS_DIR, e.image);
     // Capture if missing OR stale (json was updated more recently than the screenshot)
@@ -82,6 +108,27 @@ async function main() {
     const missing = targetIds.filter((id) => !entries.some((e) => e.id === id));
     if (missing.length > 0) {
       console.warn(`Warning: no matching entries found for: ${missing.join(', ')}`);
+    }
+  }
+
+  // MANUAL_CAPTURE_ONLY entries are excluded from `targets` above regardless
+  // of staleness, so a default run would otherwise report "up to date" even
+  // when one of them is missing its image file entirely — surface that
+  // separately so a broken/deleted manual asset doesn't go unnoticed.
+  if (!hasTargets) {
+    const missingManual = entries.filter(
+      (e) =>
+        MANUAL_CAPTURE_ONLY.has(e.id) &&
+        SCREENSHOT_CATEGORIES.includes(e.category) &&
+        e.image &&
+        !existsSync(resolve(ASSETS_DIR, e.image)),
+    );
+    if (missingManual.length > 0) {
+      console.warn(
+        `Warning: ${missingManual.length} manual-capture screenshot(s) are MISSING and won't ` +
+          `be auto-captured (see MANUAL_CAPTURE_ONLY docs at the top of this script): ` +
+          `${missingManual.map((e) => e.id).join(', ')}`,
+      );
     }
   }
 
