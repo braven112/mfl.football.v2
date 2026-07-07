@@ -111,6 +111,27 @@ async function main() {
     }
   }
 
+  // MANUAL_CAPTURE_ONLY entries are excluded from `targets` above regardless
+  // of staleness, so a default run would otherwise report "up to date" even
+  // when one of them is missing its image file entirely — surface that
+  // separately so a broken/deleted manual asset doesn't go unnoticed.
+  if (!hasTargets) {
+    const missingManual = entries.filter(
+      (e) =>
+        MANUAL_CAPTURE_ONLY.has(e.id) &&
+        SCREENSHOT_CATEGORIES.includes(e.category) &&
+        e.image &&
+        !existsSync(resolve(ASSETS_DIR, e.image)),
+    );
+    if (missingManual.length > 0) {
+      console.warn(
+        `Warning: ${missingManual.length} manual-capture screenshot(s) are MISSING and won't ` +
+          `be auto-captured (see MANUAL_CAPTURE_ONLY docs at the top of this script): ` +
+          `${missingManual.map((e) => e.id).join(', ')}`,
+      );
+    }
+  }
+
   if (targets.length === 0) {
     console.log('All screenshots are up to date.');
     if (!force) console.log('Tip: use --force to re-capture existing screenshots.');
