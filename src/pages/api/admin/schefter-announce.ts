@@ -47,6 +47,7 @@ function dispatchLeaguesValue(leagues: string[]): 'theleague' | 'afl' | 'both' {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+ try {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
     return json({ error: 'forbidden' }, 403);
@@ -148,7 +149,13 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    return json({ error: 'GitHub API error', status: res.status, detail }, 502);
+    // 401/403/404 from the dispatch endpoint almost always means the token,
+    // not the request — surface an actionable hint instead of a raw dump.
+    const hint =
+      res.status === 401 || res.status === 403 || res.status === 404
+        ? 'GH_PAT is likely missing the "actions: write" permission or access to this repo (GitHub returns 404 for both). Check the token in the Vercel env.'
+        : undefined;
+    return json({ error: 'GitHub API error', status: res.status, detail, hint }, 502);
   }
 
   return json({
@@ -159,4 +166,9 @@ export const POST: APIRoute = async ({ request }) => {
     message:
       'Announcement dispatched. The feed post lands after the run commits and the site redeploys (~1–2 min); GroupMe fires during the run.',
   });
+ } catch (err) {
+  // Never leak a bare platform 502 — always return a readable JSON error so the
+  // admin UI can show the cause.
+  return json({ error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 500);
+ }
 };
