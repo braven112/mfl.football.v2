@@ -105,3 +105,89 @@ export function hexToRgba(hex: string, alpha: number): string {
   const b = value & 0xff;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+function parseHexChannels(hex: string): [number, number, number] {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const value = match ? parseInt(match[1], 16) : 0x16202c;
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+}
+
+/**
+ * Linear mix of two #rrggbb colors; t=0 → a, t=1 → b.
+ * Invalid input channels fall back to the neutral dark used by hexToRgba.
+ */
+export function mixHex(a: string, b: string, t: number): string {
+  const ca = parseHexChannels(a);
+  const cb = parseHexChannels(b);
+  const mixed = ca.map((c, i) => Math.round(c + (cb[i] - c) * t));
+  return `#${mixed.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * Drain saturation from a #rrggbb color by mixing each channel toward its
+ * own luminance gray. amount=0 → unchanged, amount=1 → fully gray.
+ * Powers "dead colors" treatments (Dead Money Awards) where team identity
+ * should read washed-out rather than vibrant.
+ */
+export function desaturateHex(hex: string, amount: number): string {
+  const [r, g, b] = parseHexChannels(hex);
+  const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+  const t = Math.min(1, Math.max(0, amount));
+  const channel = (c: number) => Math.round(c + (gray - c) * t);
+  return `#${[channel(r), channel(g), channel(b)].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Perceived luminance (0–255) of a #rrggbb color. */
+function luminance(hex: string): number {
+  const [r, g, b] = parseHexChannels(hex);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+/** Chroma (max−min channel spread, 0–255) — how colorful vs gray a color is. */
+function chroma(hex: string): number {
+  const ch = parseHexChannels(hex);
+  return Math.max(...ch) - Math.min(...ch);
+}
+
+/** A color usable as a gradient hero: colorful enough and not near-black. */
+function isUsableAccent(hex: string): boolean {
+  return chroma(hex) >= 25 && luminance(hex) >= 40;
+}
+
+/**
+ * Pick the brand color from a franchise's primary/secondary pair to use as a
+ * gradient "hero" stop.
+ *
+ * The franchise's chosen **primary is preferred** — it's their identity. But
+ * many franchises run a near-black or gray primary with a vibrant secondary
+ * (a common convention); a black primary makes a flat, identity-less band, so
+ * only then does the secondary take over. When both are near-gray (a true
+ * black/white team) the primary is kept and the band simply reads dark. A very
+ * bright winner (e.g. a yellow primary) is darkened toward a mid tone so a
+ * light cutout and white text still read on top.
+ *
+ * @param primary - franchise colorPrimary (#rrggbb) or undefined
+ * @param secondary - franchise colorSecondary (#rrggbb) or undefined
+ * @param fallback - color when neither input is usable (default league blue)
+ */
+export function pickBrandAccent(
+  primary?: string,
+  secondary?: string,
+  fallback: string = NFL_COLORS_FALLBACK.primary,
+): string {
+  const valid = (c?: string): c is string =>
+    typeof c === 'string' && /^#?[0-9a-f]{6}$/i.test(c.trim());
+  // Store the TRIMMED value — the validator tolerates surrounding whitespace,
+  // so keep the untrimmed input out of the returned CSS color.
+  const p = valid(primary) ? primary.trim() : undefined;
+  const s = valid(secondary) ? secondary.trim() : undefined;
+
+  let hero: string;
+  if (p && isUsableAccent(p)) hero = p;
+  else if (s && isUsableAccent(s)) hero = s;
+  else hero = p ?? s ?? fallback; // both near-gray/dark → keep primary; band reads dark
+
+  // Keep the hero from washing out white text/cutout: pull very light heroes down.
+  if (luminance(hero) > 170) hero = mixHex(hero, '#0b0e13', 0.4);
+  return hero.startsWith('#') ? hero : `#${hero}`;
+}

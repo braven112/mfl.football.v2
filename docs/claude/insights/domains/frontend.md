@@ -604,3 +604,24 @@ Also pair the config swap with `resolvePreferredTeamIdForYear()` for the my-team
 **Evidence:** With `max-width: 0` present, a 390px Playwright shot showed seeds, records, and PF but an empty Team column. Removing that one declaration (keeping `overflow/ellipsis/min-width:0` on the span, and the `.afl-conf__th--div/.afl-conf__td--div { display: none }` mobile rule) restored full names — "Harambe", "Avenging Amish", "Computer Jocks" — all inside the card with no horizontal overflow.
 
 **Recommendation:** Don't reach for `max-width: 0` to force truncation inside a `table-layout: auto` cell — it can zero the whole column. Prefer relieving the width pressure structurally first (drop a column on mobile, tighten padding). If you genuinely need a cell to truncate, give it a real bound (`max-width: 8rem`, a percentage, or switch the table to `table-layout: fixed` with sized columns), not `0`, and verify the column still shows content in a real browser at the target width.
+
+## `::view-transition-old(root)` cross-fade paints a ghost double-image (2026-07-06)
+
+**Context:** The Dead Money page showed a faint, horizontally-offset duplicate
+of its card grid during page navigation. In the DOM there was exactly one grid
+(no overflow, no duplicate nodes) — the ghost only existed *during* the
+`ClientRouter` page transition.
+
+**Cause:** `TheLeagueLayout.astro` animated `::view-transition-old(root)` with a
+`fade-out` while `::view-transition-new(root)` faded in. A cross-fade paints
+BOTH full-page snapshots simultaneously for the animation's duration; any
+layout shift between the two pages (nav-drawer/scrollbar) offsets the old
+snapshot, so you briefly see two copies. It had always happened site-wide but
+was invisible until the cards had saturated color — a gray-on-white ghost over
+a white background reads as nothing.
+
+**Fix:** cut the outgoing page instantly instead of fading it over the incoming
+one — `::view-transition-old(root) { animation: none; }`, keep the `fade-in` on
+new. Removes the overlap window (and thus the ghost) everywhere while keeping
+the entrance fade. Lesson: a root cross-fade is latent-buggy on any tall page
+with per-page layout shift; prefer fade-in-only.
