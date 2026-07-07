@@ -32,6 +32,7 @@
  * ("true"|"false"), ANNOUNCE_DRY_RUN ("true"|"false").
  */
 
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendToFeed } from './article-utils/feed-writer.mjs';
@@ -40,6 +41,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
+
+// GroupMe rejects bot messages over 1000 chars. Headline is a feed card field
+// (~60 chars by design); we cap generously so a runaway paste fails fast on the
+// operator's screen instead of half-landing (feed written, GroupMe truncated).
+const GROUPME_MAX_CHARS = 1000;
+const HEADLINE_MAX_CHARS = 120;
 
 /**
  * Per-league seeding config. Feed paths + bot-id env vars mirror the canonical
@@ -97,12 +104,22 @@ function truthy(v, fallback = false) {
   return /^(1|true|yes|on)$/i.test(String(v).trim());
 }
 
-/** Resolve the list of league target keys from a "theleague|afl|both" value. */
+/**
+ * Resolve the list of league target keys from a "theleague|afl|both" value.
+ * Fails fast on an unrecognized value — this tool broadcasts to a whole league,
+ * so a silent fallback on a typo (e.g. "theleage") could post to the wrong
+ * audience. An empty/absent value defaults to theleague; anything else that
+ * isn't recognized throws.
+ */
 function resolveLeagues(raw) {
-  const v = String(raw || 'theleague').trim().toLowerCase();
+  const v = String(raw ?? '').trim().toLowerCase();
+  if (v === '') return ['theleague'];
   if (v === 'both') return ['theleague', 'afl'];
+  if (v === 'theleague') return ['theleague'];
   if (v === 'afl' || v === 'afl-fantasy') return ['afl'];
-  return ['theleague'];
+  throw new Error(
+    `Unknown --leagues value "${raw}". Expected one of: theleague, afl, both.`,
+  );
 }
 
 function buildDeepLink(target, postId) {
@@ -173,7 +190,25 @@ async function main() {
 
   const headline = String(args.headline || DEFAULT_HEADLINE).trim();
   const body = String(args.body || DEFAULT_BODY).trim();
-  const leagues = resolveLeagues(args.leagues || process.env.ANNOUNCE_LEAGUES);
+  if (!headline || !body) {
+    console.error('ERROR: headline and body must be non-empty.');
+    process.exit(1);
+  }
+  if (headline.length > HEADLINE_MAX_CHARS) {
+    console.error(
+      `ERROR: headline is ${headline.length} chars (max ${HEADLINE_MAX_CHARS}). ` +
+        'Headlines render on a feed card — tighten it.',
+    );
+    process.exit(1);
+  }
+
+  let leagues;
+  try {
+    leagues = resolveLeagues(args.leagues || process.env.ANNOUNCE_LEAGUES);
+  } catch (err) {
+    console.error(`ERROR: ${err.message}`);
+    process.exit(1);
+  }
   const dryRun = truthy(args['dry-run'] ?? process.env.ANNOUNCE_DRY_RUN, false);
   const sendGroupMeFlag = truthy(
     args.groupme ?? process.env.ANNOUNCE_SEND_GROUPME,
@@ -182,6 +217,26 @@ async function main() {
 
   // Single timestamp for the whole run so both leagues share one moment.
   const timestamp = new Date().toISOString();
+
+  // Pre-flight: if we'll send GroupMe, verify the composed text fits GroupMe's
+  // 1000-char cap for EVERY target before writing anything — so we fail fast on
+  // the operator's screen rather than leaving one feed written + one GroupMe
+  // send silently truncated. The post id (hence deep link) is deterministic.
+  if (sendGroupMeFlag) {
+    for (const key of leagues) {
+      const target = LEAGUE_TARGETS[key];
+      if (!target) continue;
+      const postId = `sf_announce_${slug}`;
+      const text = `${body}\n\n${CTA_PREFIX} ${buildDeepLink(target, postId)}`;
+      if (text.length > GROUPME_MAX_CHARS) {
+        console.error(
+          `ERROR: GroupMe message for ${target.navSlug} is ${text.length} chars ` +
+            `(max ${GROUPME_MAX_CHARS}). Shorten the body or run with --groupme false.`,
+        );
+        process.exit(1);
+      }
+    }
+  }
 
   log(`Schefter announcement — slug="${slug}" leagues=[${leagues.join(', ')}] ` +
     `dryRun=${dryRun} groupMe=${sendGroupMeFlag}`);
@@ -202,6 +257,16 @@ async function main() {
       log(`  [dry-run] Would prepend post ${post.id} to ${path.relative(projectRoot, target.feedPath)}`);
       written = true; // treat as "would write" so the GroupMe preview renders
     } else {
+      try {
+        await fs.access(target.feedPath);
+      } catch {
+        console.error(
+          `ERROR: feed file not found for ${target.navSlug}: ` +
+            `${path.relative(projectRoot, target.feedPath)}. ` +
+            'Are you on a checkout with the league data committed?',
+        );
+        process.exit(1);
+      }
       written = await appendToFeed(target.feedPath, post);
       if (written) {
         wroteAny = true;
