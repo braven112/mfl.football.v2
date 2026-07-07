@@ -9,7 +9,14 @@
 import type { HeroState } from '../../../types/hero-state';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { normalizeTeamCode, getNFLTeamLogo } from '../../../utils/nfl-logo';
+import {
+  castBestScoredModel,
+  scoreFaceoffSides,
+  isCompositable,
+  type FaceoffStatCandidate,
+} from '../../../utils/hero-casting';
+import FaceoffComposite, { type FaceoffSide } from '../FaceoffComposite.astro';
 import GameDayPreviewHeroStub from '../hero-stubs/GameDayPreviewHeroStub.astro';
 import broadcastData from '../../../../data/theleague/broadcast-mappings.json';
 
@@ -21,7 +28,11 @@ export interface Props {
 
 const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
 
-const year = getCurrentSeasonYear(state.metadata.referenceDate);
+// No-arg season year (env-pinned, same for every request) — the arg form is
+// non-monotonic across the season boundary and resolves a ?testDate to the
+// wrong feed folder. Matches MatchupSplitHero; identical in production where
+// referenceDate is the real now.
+const year = getCurrentSeasonYear();
 
 let scheduleData: any, projData: any, playersData: any, rostersData: any;
 try {
@@ -35,20 +46,35 @@ try {
   scheduleData = null;
 }
 
-// Get the correct week's games from nflSchedule
+// Get the correct week's games from nflSchedule. A live in-season feed
+// carries only the current week (`nflSchedule.matchup`); a completed/synced
+// season carries only the full-season shape (`fullNflSchedule`). Read the
+// live shape first, else index the archive by the projections week — the
+// same dual-source spine as getMarqueeGame.
+const rawLiveWeek = scheduleData?.nflSchedule?.matchup
+  ?? scheduleData?.default?.nflSchedule?.matchup;
+const liveGames = Array.isArray(rawLiveWeek) ? rawLiveWeek : rawLiveWeek ? [rawLiveWeek] : [];
+
 const rawSchedule = scheduleData?.fullNflSchedule?.nflSchedule
   ?? scheduleData?.default?.fullNflSchedule?.nflSchedule ?? [];
 
-const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
-const hasProjections = Array.isArray(rawScores) && rawScores.length > 0;
+// MFL collapses a one-element list to a bare object; normalize before use.
+const rawScoresRaw = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
+const rawScores = Array.isArray(rawScoresRaw) ? rawScoresRaw : rawScoresRaw ? [rawScoresRaw] : [];
+// The emptied-feed sentinel is a single `{id:"",score:""}` — filter empty ids.
+const scoreRows = rawScores.filter((s: any) => s?.id);
+const hasProjections = scoreRows.length > 0;
 const projWeek = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week;
 
-// Find the upcoming week's schedule (match projectedScores week)
-// nflSchedule is an array indexed by week (0-based: index 0 = week 1)
+// Archive path: nflSchedule is an array indexed by week (0-based: index 0 = week 1).
+// A one-game week can arrive as a bare object — normalize before .map().
 const weekIdx = projWeek ? parseInt(projWeek) - 1 : -1;
-const weekGames = (weekIdx >= 0 && weekIdx < rawSchedule.length)
-  ? (rawSchedule[weekIdx]?.matchup ?? [])
-  : [];
+const rawWeekGames = liveGames.length > 0
+  ? liveGames
+  : (weekIdx >= 0 && weekIdx < rawSchedule.length)
+    ? rawSchedule[weekIdx]?.matchup
+    : [];
+const weekGames = Array.isArray(rawWeekGames) ? rawWeekGames : rawWeekGames ? [rawWeekGames] : [];
 
 // Build player → NFL team lookup (using unified identity map as primary, feed as fallback)
 const heroPlayerIdentityMap = getPlayerMap(year);
@@ -67,10 +93,9 @@ for (const p of allPlayers) {
 
 // Build projection lookup
 const projMap = new Map<string, number>();
-if (hasProjections) {
-  for (const s of rawScores) {
-    projMap.set(s.id, parseFloat(s.score));
-  }
+for (const s of scoreRows) {
+  const v = parseFloat(s.score);
+  if (Number.isFinite(v)) projMap.set(s.id, v);
 }
 
 // Find user's rostered player IDs and their NFL teams
@@ -192,6 +217,61 @@ for (const g of displayGames) {
 
 const hasGames = displayGames.length > 0;
 
+// ---------------------------------------------------------------------------
+// Player-of-the-game faceoffs — each game card features both sides' top
+// projected players as a split composite (ESPN cutouts over team-color
+// gradients). Candidates come from the identity map (compositability is
+// gated by castBestScoredModel: no DEF, no MFL-JPG photos); a game where
+// either side fails to cast keeps the classic logo row instead.
+// ---------------------------------------------------------------------------
+const displayTeamCodes = new Set<string>();
+for (const g of displayGames) {
+  displayTeamCodes.add(normalizeTeamCode(g.awayTeam));
+  displayTeamCodes.add(normalizeTeamCode(g.homeTeam));
+}
+
+// Walk the projection map (a few hundred players) rather than the full
+// identity map, and keep only compositable players on a displayed team — the
+// faceoff is projection-only, and casting a non-compositable (DEF / no ESPN
+// cutout) player would elect a stat source castBestScoredModel can't honor.
+const candidatesByTeam = new Map<string, FaceoffStatCandidate[]>();
+for (const [id, projected] of projMap) {
+  const identity = heroPlayerIdentityMap.get(id);
+  if (!identity || !displayTeamCodes.has(identity.nflTeam) || !isCompositable(identity)) continue;
+  const arr = candidatesByTeam.get(identity.nflTeam) ?? [];
+  arr.push({ playerId: id, franchiseId: '', projected });
+  candidatesByTeam.set(identity.nflTeam, arr);
+}
+
+function faceoffFor(game: GameInfo): { away: FaceoffSide; home: FaceoffSide } | null {
+  const awayCode = normalizeTeamCode(game.awayTeam);
+  const homeCode = normalizeTeamCode(game.homeTeam);
+  const scored = scoreFaceoffSides(
+    candidatesByTeam.get(awayCode) ?? [],
+    candidatesByTeam.get(homeCode) ?? [],
+  );
+  if (!scored.source) return null;
+
+  const awayModel = castBestScoredModel(scored.away, heroPlayerIdentityMap, undefined, 'Player of the Game');
+  const homeModel = castBestScoredModel(scored.home, heroPlayerIdentityMap, undefined, 'Player of the Game');
+  if (!awayModel || !homeModel) return null;
+
+  const statOf = (id: string) => {
+    const proj = projMap.get(id);
+    return proj && proj > 0 ? `${proj.toFixed(1)} proj` : undefined;
+  };
+  return {
+    away: { model: awayModel, chip: awayCode, watermark: getNFLTeamLogo(awayCode), stat: statOf(awayModel.mflId) },
+    home: { model: homeModel, chip: homeCode, watermark: getNFLTeamLogo(homeCode), stat: statOf(homeModel.mflId) },
+  };
+}
+
+const faceoffByGame = new Map<GameInfo, { away: FaceoffSide; home: FaceoffSide }>();
+for (const g of displayGames) {
+  const faceoff = faceoffFor(g);
+  if (faceoff) faceoffByGame.set(g, faceoff);
+}
+
 // US broadcast channels from mappings
 const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
 ---
@@ -220,31 +300,42 @@ const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
             <span class="matchup-hero__slot-label">{slot}</span>
           </div>
           <div class="matchup-hero__games">
-            {slotGames.map((game) => (
-              <div class="matchup-hero__game">
-                <div class="matchup-hero__teams">
-                  <div class="matchup-hero__team">
-                    <img
-                      src={`/assets/nfl-logos/${normalizeTeamCode(game.awayTeam)}.svg`}
-                      alt={game.awayTeam}
-                      class="matchup-hero__team-logo"
-                      width="24"
-                      height="24"
-                    />
-                    <span class="matchup-hero__team-code">{normalizeTeamCode(game.awayTeam)}</span>
+            {slotGames.map((game) => {
+              const faceoff = faceoffByGame.get(game);
+              return (
+              <div class={`matchup-hero__game ${faceoff ? 'matchup-hero__game--faceoff' : ''}`}>
+                {faceoff ? (
+                  <FaceoffComposite
+                    away={faceoff.away}
+                    home={faceoff.home}
+                    size="card"
+                    ariaLabel={`${normalizeTeamCode(game.awayTeam)} at ${normalizeTeamCode(game.homeTeam)} — ${faceoff.away.model.name} vs ${faceoff.home.model.name}`}
+                  />
+                ) : (
+                  <div class="matchup-hero__teams">
+                    <div class="matchup-hero__team">
+                      <img
+                        src={`/assets/nfl-logos/${normalizeTeamCode(game.awayTeam)}.svg`}
+                        alt={game.awayTeam}
+                        class="matchup-hero__team-logo"
+                        width="24"
+                        height="24"
+                      />
+                      <span class="matchup-hero__team-code">{normalizeTeamCode(game.awayTeam)}</span>
+                    </div>
+                    <span class="matchup-hero__at" aria-hidden="true">@</span>
+                    <div class="matchup-hero__team">
+                      <img
+                        src={`/assets/nfl-logos/${normalizeTeamCode(game.homeTeam)}.svg`}
+                        alt={game.homeTeam}
+                        class="matchup-hero__team-logo"
+                        width="24"
+                        height="24"
+                      />
+                      <span class="matchup-hero__team-code">{normalizeTeamCode(game.homeTeam)}</span>
+                    </div>
                   </div>
-                  <span class="matchup-hero__at" aria-hidden="true">@</span>
-                  <div class="matchup-hero__team">
-                    <img
-                      src={`/assets/nfl-logos/${normalizeTeamCode(game.homeTeam)}.svg`}
-                      alt={game.homeTeam}
-                      class="matchup-hero__team-logo"
-                      width="24"
-                      height="24"
-                    />
-                    <span class="matchup-hero__team-code">{normalizeTeamCode(game.homeTeam)}</span>
-                  </div>
-                </div>
+                )}
                 <div class="matchup-hero__game-meta">
                   <span class="matchup-hero__channel">{game.channel}</span>
                   {userFranchiseId && game.userPlayerCount > 0 && (
@@ -252,7 +343,8 @@ const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
@@ -346,7 +438,7 @@ const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
 
   .matchup-hero__games {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 0.5rem;
   }
 
@@ -358,6 +450,17 @@ const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
     background: var(--color-gray-50, #f9fafb);
     border-radius: var(--radius-md, 0.5rem);
     border: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  /* Faceoff cards let the composite bleed edge-to-edge; only the meta row keeps padding. */
+  .matchup-hero__game--faceoff {
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .matchup-hero__game--faceoff .matchup-hero__game-meta {
+    padding: 0.375rem 0.75rem 0.5rem;
   }
 
   .matchup-hero__teams {

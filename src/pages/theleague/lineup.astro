@@ -20,6 +20,15 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerMap } from '../../utils/player-map';
 import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
+import {
+  castBestScoredModel,
+  scoreFaceoffSides,
+  isCompositable,
+  type FaceoffScoreSource,
+  type FaceoffStatCandidate,
+} from '../../utils/hero-casting';
+import { getFranchiseBrand } from '../../utils/franchise-brand';
+import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
 import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
@@ -41,9 +50,11 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 const MFL_LEAGUE_ID = '13522';
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
-// Parallel data fetches (all 8 run concurrently to avoid waterfall)
-const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes] = await Promise.all([
-  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+// Parallel data fetches (all 9 run concurrently to avoid waterfall).
+// Rosters are fetched league-wide (no FRANCHISE filter) so the weekly
+// opponent's roster is available for the faceoff composite.
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes, leagueSchedRes] = await Promise.all([
+  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=fantasyPointsAllowed&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
@@ -51,9 +62,11 @@ const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes
   loadLiveOdds(week),
   fetch(`${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=schedule&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
 const rostersData = rostersRes?.ok ? await rostersRes.json() : null;
+const leagueSchedData = leagueSchedRes?.ok ? await leagueSchedRes.json().catch(() => null) : null;
 const projData = projRes?.ok ? await projRes.json() : null;
 const weeklyData = weeklyRes?.ok ? await weeklyRes.json() : null;
 const fpaData = fpaRes?.ok ? await fpaRes.json() : null;
@@ -324,6 +337,225 @@ for (let w = 1; w <= 22; w++) {
 }
 
 // ---------------------------------------------------------------------------
+// Player-of-the-game faceoff — this week's matchup as a two-player split
+// composite: each side's top starter (ESPN cutout over his NFL team-color
+// gradient). Selection is deterministic (castBestScoredModel: highest score,
+// id tie-break) and gated to compositable players (no DEF, no MFL JPGs);
+// when either side fails to cast, the section simply doesn't render.
+// ---------------------------------------------------------------------------
+
+// Find this week's opponent from the league schedule feed.
+const rawWeeklySched = leagueSchedData?.schedule?.weeklySchedule;
+const schedWeekEntry = Array.isArray(rawWeeklySched)
+  ? rawWeeklySched.find((w: any) => parseInt(w?.week, 10) === week)
+  : rawWeeklySched;
+const schedMatchups = Array.isArray(schedWeekEntry?.matchup)
+  ? schedWeekEntry.matchup
+  : schedWeekEntry?.matchup ? [schedWeekEntry.matchup] : [];
+
+let opponentFranchiseId: string | null = null;
+let userIsHome = false;
+for (const m of schedMatchups) {
+  const sides = Array.isArray(m?.franchise) ? m.franchise : m?.franchise ? [m.franchise] : [];
+  const mine = sides.find((f: any) => f?.id === user.franchiseId);
+  const theirs = sides.find((f: any) => f?.id && f.id !== user.franchiseId);
+  if (mine && theirs) {
+    opponentFranchiseId = theirs.id;
+    userIsHome = mine.isHome === '1';
+    break;
+  }
+}
+
+// This week's weeklyResults entry (from the YTD fetch) — the authoritative
+// record of who actually started, and their actual points.
+const rawWeeklyList = Array.isArray(weeklyUnwrapped)
+  ? weeklyUnwrapped
+  : Array.isArray(weeklyUnwrapped?.weeklyResults)
+    ? weeklyUnwrapped.weeklyResults
+    : weeklyUnwrapped?.weeklyResults ? [weeklyUnwrapped.weeklyResults] : [];
+const resultsWeekEntry = rawWeeklyList
+  .map((item: any) => item?.weeklyResults ?? item)
+  .find((wr: any) => parseInt(wr?.week, 10) === week);
+
+/** Started player ids + actual points for a franchise in this week's results. */
+function weekStarters(franchiseId: string): Array<{ id: string; score: number }> {
+  const matchupsList = Array.isArray(resultsWeekEntry?.matchup)
+    ? resultsWeekEntry.matchup
+    : resultsWeekEntry?.matchup ? [resultsWeekEntry.matchup] : [];
+  for (const m of matchupsList) {
+    const sides = Array.isArray(m?.franchise) ? m.franchise : m?.franchise ? [m.franchise] : [];
+    const side = sides.find((f: any) => f?.id === franchiseId);
+    if (!side) continue;
+    const playerList = Array.isArray(side.player) ? side.player : side.player ? [side.player] : [];
+    return playerList
+      .filter((p: any) => p?.id && p.status === 'starter')
+      .map((p: any) => ({ id: p.id, score: parseFloat(p.score) || 0 }));
+  }
+  return [];
+}
+
+const salaryById = new Map<string, number>();
+const franchiseListForSalary = Array.isArray(allFranchises) ? allFranchises : allFranchises ? [allFranchises] : [];
+for (const f of franchiseListForSalary) {
+  const playerList = Array.isArray(f?.player) ? f.player : f?.player ? [f.player] : [];
+  for (const p of playerList) {
+    const s = parseFloat(p?.salary);
+    if (p?.id && Number.isFinite(s)) salaryById.set(p.id, s);
+  }
+}
+
+function faceoffCandidates(franchiseId: string, playerIds: string[], actualById?: Map<string, number>): FaceoffStatCandidate[] {
+  return playerIds.map((id) => ({
+    playerId: id,
+    franchiseId,
+    projected: projMap.get(id) ?? 0,
+    actual: actualById?.get(id) ?? playerScoresMap.get(id)?.[week] ?? 0,
+    salary: salaryById.get(id) ?? 0,
+  }));
+}
+
+/**
+ * Projected total for the best legal lineup drawable from `playerIds` —
+ * fills the 9 starting slots greedily by projection (position slots first,
+ * then FLEX with the best remaining RB/WR/TE). Used for the opponent's
+ * "current lineup" total when the week isn't locked (their actual set
+ * lineup isn't publicly readable for a future week). Sums only what the
+ * pool can fill — a thin roster yields fewer than 9 starters (and a
+ * smaller total), which is the honest answer.
+ */
+function bestLineupProjTotal(playerIds: string[]): number {
+  const cands = playerIds.map((id) => ({
+    id,
+    position: lineupPlayerIdentityMap.get(id)?.position ?? '',
+    proj: projMap.get(id) ?? 0,
+  }));
+  const used = new Set<string>();
+  let total = 0;
+
+  for (const slotPos of SLOT_POSITIONS) {
+    if (slotPos === 'FLEX') continue;
+    const pick = cands
+      .filter((c) => !used.has(c.id) && (SLOT_ELIGIBILITY[slotPos] ?? []).includes(c.position))
+      .sort((a, b) => b.proj - a.proj)[0];
+    if (pick) { used.add(pick.id); total += pick.proj; }
+  }
+
+  const flexSlots = SLOT_POSITIONS.filter((p) => p === 'FLEX').length;
+  const flexPicks = cands
+    .filter((c) => !used.has(c.id) && ['RB', 'WR', 'TE'].includes(c.position))
+    .sort((a, b) => b.proj - a.proj);
+  for (let i = 0; i < flexSlots && i < flexPicks.length; i++) {
+    used.add(flexPicks[i].id);
+    total += flexPicks[i].proj;
+  }
+  return total;
+}
+
+const isPastWeek = week < currentWeek;
+
+// User side: the starters this page renders (falls back to the roster when no
+// lineup resolves yet). Opponent side: their recorded starters for the week;
+// before they exist (upcoming week), their whole roster — the top projected
+// player is the presumptive starter.
+const userStarterIds = slots.map((s) => s.playerId).filter((id): id is string => !!id);
+const userSideIds = userStarterIds.length > 0 ? userStarterIds : roster.map((p) => p.id);
+
+let opponentSideIds: string[] = [];
+let opponentActualById: Map<string, number> | undefined;
+if (opponentFranchiseId) {
+  const recorded = weekStarters(opponentFranchiseId);
+  if (recorded.length > 0) {
+    opponentSideIds = recorded.map((p) => p.id);
+    opponentActualById = new Map(recorded.map((p) => [p.id, p.score]));
+  } else {
+    const oppFranchise = franchiseListForSalary.find((f: any) => f?.id === opponentFranchiseId);
+    const oppPlayers = Array.isArray(oppFranchise?.player) ? oppFranchise.player : oppFranchise?.player ? [oppFranchise.player] : [];
+    // Only active-roster players are legal starters — TAXI_SQUAD and
+    // INJURED_RESERVE can't start, so excluding them keeps the presumed
+    // lineup (and its projected total) honest.
+    opponentSideIds = oppPlayers.filter((p: any) => p?.id && p.status === 'ROSTER').map((p: any) => p.id);
+  }
+}
+
+// Upcoming week previews by projection; a completed week recaps by actual
+// points. Salary is the last-resort tie to keep the panel honest pre-season.
+const faceoffOrder: FaceoffScoreSource[] = isPastWeek
+  ? ['actual', 'projected', 'salary']
+  : ['projected', 'actual', 'salary'];
+
+let lineupFaceoff: { away: FaceoffSide; home: FaceoffSide; statSource: FaceoffScoreSource } | null = null;
+if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0) {
+  // Cast only from compositable players (ESPN cutout, non-DEF) so the elected
+  // stat source matches who castBestScoredModel can actually feature — a DEF's
+  // projection shouldn't elect a source the cast then can't honor. Team TOTALS
+  // (below) intentionally still count every starter, DEF and PK included.
+  const compositableIds = (ids: string[]) =>
+    ids.filter((id) => { const p = lineupPlayerIdentityMap.get(id); return !!p && isCompositable(p); });
+  const userCands = faceoffCandidates(user.franchiseId, compositableIds(userSideIds));
+  const oppCands = faceoffCandidates(opponentFranchiseId, compositableIds(opponentSideIds), opponentActualById);
+  const scored = scoreFaceoffSides(
+    userIsHome ? oppCands : userCands,
+    userIsHome ? userCands : oppCands,
+    faceoffOrder,
+  );
+  if (scored.source) {
+    const awayModel = castBestScoredModel(scored.away, lineupPlayerIdentityMap, undefined, 'Player of the Game');
+    const homeModel = castBestScoredModel(scored.home, lineupPlayerIdentityMap, undefined, 'Player of the Game');
+    if (awayModel && homeModel) {
+      const scoreOf = (side: typeof scored.away, id: string) => side.find((c) => c.playerId === id)?.score ?? 0;
+      const statFor = (side: typeof scored.away, id: string) => {
+        const v = scoreOf(side, id);
+        if (scored.source === 'salary') return `$${Math.round(v / 1000)}K`;
+        return `${v.toFixed(1)} ${scored.source === 'projected' ? 'proj' : 'pts'}`;
+      };
+      // The faceoff is about the FANTASY matchup, so each panel wears its
+      // franchise: brand color tint + GroupMe crest watermark (the
+      // RecapCompositeHero convention), not the player's NFL team.
+      const sideFor = (model: NonNullable<typeof awayModel>, cands: typeof scored.away, franchiseId: string): FaceoffSide => {
+        const brand = getFranchiseBrand(franchiseId);
+        return {
+          model,
+          chip: brand.name || `Franchise ${franchiseId}`,
+          color: brand.color,
+          watermark: brand.groupMe,
+          stat: statFor(cands, model.mflId),
+        };
+      };
+      lineupFaceoff = {
+        away: sideFor(awayModel, scored.away, userIsHome ? opponentFranchiseId : user.franchiseId),
+        home: sideFor(homeModel, scored.home, userIsHome ? user.franchiseId : opponentFranchiseId),
+        statSource: scored.source,
+      };
+    }
+  }
+}
+
+const faceoffTitle = lineupFaceoff
+  ? `${lineupFaceoff.away.chip} vs ${lineupFaceoff.home.chip}`
+  : '';
+
+// ---------------------------------------------------------------------------
+// Projected-points scoreboard. Our total sums the starting slots and is
+// live-updated client-side as the lineup changes. Theirs sums their set
+// lineup (recorded starters) or their best lineup by projection otherwise.
+// ---------------------------------------------------------------------------
+const userProjTotal = slots.reduce(
+  (t, s) => t + (s.playerId ? (projMap.get(s.playerId) ?? 0) : 0),
+  0,
+);
+
+const opponentRecorded = opponentFranchiseId ? weekStarters(opponentFranchiseId) : [];
+const opponentProjTotal = opponentRecorded.length > 0
+  ? opponentRecorded.reduce((t, p) => t + (projMap.get(p.id) ?? 0), 0)
+  : bestLineupProjTotal(opponentSideIds);
+
+// Panel order is away/home; the user sits home when the schedule says so.
+const userScoreSide: 'away' | 'home' = userIsHome ? 'home' : 'away';
+const awayProjTotal = userIsHome ? opponentProjTotal : userProjTotal;
+const homeProjTotal = userIsHome ? userProjTotal : opponentProjTotal;
+const hasProjTotals = userProjTotal > 0 || opponentProjTotal > 0;
+
+// ---------------------------------------------------------------------------
 // Serialize payload for client
 // ---------------------------------------------------------------------------
 const lineupPayload = {
@@ -362,6 +594,48 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         </svg>
       </div>
     </header>
+
+    {lineupFaceoff && (
+      <section class="lineup-faceoff" aria-label={`Week ${week} matchup — ${faceoffTitle}`}>
+        <FaceoffComposite away={lineupFaceoff.away} home={lineupFaceoff.home} size="card" />
+        <div class="lineup-faceoff__band">
+          {hasProjTotals ? (
+            <div
+              class="lineup-faceoff__scoreboard"
+              data-user-side={userScoreSide}
+              role="status"
+              aria-live="polite"
+              aria-label="Projected points"
+            >
+              <div class="lineup-faceoff__side lineup-faceoff__side--away">
+                <span class="lineup-faceoff__team">{lineupFaceoff.away.chip}</span>
+                <span
+                  class="lineup-faceoff__total"
+                  data-side="away"
+                  data-total={awayProjTotal.toFixed(1)}
+                  aria-label={`${lineupFaceoff.away.chip} projected ${awayProjTotal.toFixed(1)} points`}
+                >{awayProjTotal.toFixed(1)}</span>
+              </div>
+              <span class="lineup-faceoff__sep" aria-hidden="true">Proj</span>
+              <div class="lineup-faceoff__side lineup-faceoff__side--home">
+                <span
+                  class="lineup-faceoff__total"
+                  data-side="home"
+                  data-total={homeProjTotal.toFixed(1)}
+                  aria-label={`${lineupFaceoff.home.chip} projected ${homeProjTotal.toFixed(1)} points`}
+                >{homeProjTotal.toFixed(1)}</span>
+                <span class="lineup-faceoff__team">{lineupFaceoff.home.chip}</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <span class="lineup-faceoff__eyebrow">Week {week} · Players of the game</span>
+              <span class="lineup-faceoff__title">{faceoffTitle}</span>
+            </>
+          )}
+        </div>
+      </section>
+    )}
 
     <!-- Toolbar -->
     <div class="lineup-toolbar">
@@ -671,7 +945,39 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         changesEl.querySelector('strong')!.textContent = String(changes);
       }
 
+      updateFaceoffTotal();
       saveDraft();
+    }
+
+    // ---------------------------------------------------------------------------
+    // Live projected-points total — our side recomputes from the starting slots
+    // whenever the lineup changes. The opponent's total is server-fixed.
+    // ---------------------------------------------------------------------------
+    const faceoffScoreboard = document.querySelector('.lineup-faceoff__scoreboard') as HTMLElement | null;
+
+    function updateFaceoffTotal() {
+      if (!faceoffScoreboard) return;
+      const side = faceoffScoreboard.dataset.userSide; // 'away' | 'home'
+      const totalEl = faceoffScoreboard.querySelector(`.lineup-faceoff__total[data-side="${side}"]`) as HTMLElement | null;
+      if (!totalEl) return;
+
+      let total = 0;
+      for (const s of currentSlots) {
+        const p = s.playerId ? getPlayer(s.playerId) : null;
+        if (p && typeof p.projection === 'number') total += p.projection;
+      }
+      const next = total.toFixed(1);
+      if (totalEl.dataset.total === next) return;
+
+      totalEl.dataset.total = next;
+      totalEl.textContent = next;
+      // Keep the SR label in sync with the live value (aria-live announces it).
+      const prevLabel = totalEl.getAttribute('aria-label');
+      if (prevLabel) totalEl.setAttribute('aria-label', prevLabel.replace(/projected [\d.]+ points/, `projected ${next} points`));
+      totalEl.classList.remove('lineup-faceoff__total--bumped');
+      // Reflow so the animation restarts on each change.
+      void totalEl.offsetWidth;
+      totalEl.classList.add('lineup-faceoff__total--bumped');
     }
 
     // ---------------------------------------------------------------------------
@@ -1371,6 +1677,114 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     right: 0.625rem;
     pointer-events: none;
     color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Player-of-the-game faceoff — the panels are inherently dark (team-color
+     gradients over near-black) in both themes; only the border re-tokenizes. */
+  .lineup-faceoff {
+    overflow: hidden;
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--content-border, #e2e8f0);
+    margin-bottom: 0.875rem;
+  }
+
+  html.dark .lineup-faceoff {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .lineup-faceoff__band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    padding: 0.5rem 0.875rem;
+    background: #0b0e12;
+    color: #ffffff;
+  }
+
+  .lineup-faceoff__eyebrow {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #7cb2ff;
+  }
+
+  .lineup-faceoff__title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  /* Projected-points scoreboard (fills the band when projections exist). */
+  .lineup-faceoff__scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .lineup-faceoff__side {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lineup-faceoff__side--home {
+    justify-content: flex-end;
+  }
+
+  .lineup-faceoff__team {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lineup-faceoff__total {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  /* Our live total gets the accent so a change reads as "yours moved". */
+  .lineup-faceoff__scoreboard[data-user-side="away"] .lineup-faceoff__side--away .lineup-faceoff__total,
+  .lineup-faceoff__scoreboard[data-user-side="home"] .lineup-faceoff__side--home .lineup-faceoff__total {
+    color: #7cb2ff;
+  }
+
+  .lineup-faceoff__total--bumped {
+    animation: lineup-faceoff-bump 400ms ease;
+  }
+
+  @keyframes lineup-faceoff-bump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.14); }
+    100% { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lineup-faceoff__total--bumped { animation: none; }
+  }
+
+  .lineup-faceoff__sep {
+    flex-shrink: 0;
+    font-size: 0.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.4);
   }
 
   /* Toolbar */

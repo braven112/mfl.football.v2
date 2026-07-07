@@ -1,8 +1,18 @@
 ---
 import { getTeamProjection } from '../../utils/projections';
 import { asArray } from '../../utils/mfl-normalize';
+import { getPlayerMap } from '../../utils/player-map';
+import { getNFLTeamLogo } from '../../utils/nfl-logo';
+import {
+  castBestScoredModel,
+  scoreFaceoffSides,
+  isCompositable,
+  type FaceoffStatCandidate,
+} from '../../utils/hero-casting';
+import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
 import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
+import playerScoresData from '../../../data/theleague/mfl-feeds/2025/playerScores.json';
 import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
 import assetsData from '../../../data/theleague/assets.json';
 
@@ -48,6 +58,61 @@ function getTopPlayers(roster: any, count: number) {
 const pigskinTopPlayers = getTopPlayers(pigskinRoster, 5);
 const midwestsideTopPlayers = getTopPlayers(midwestsideRoster, 5);
 
+// ---------------------------------------------------------------------------
+// Player-of-the-game faceoff — each side's top starter as a split composite.
+// 2025's projections feed is emptied post-rollover, so the score cascade
+// (projected → actual → salary) lands on the completed week's actual points;
+// castBestScoredModel keeps the pick deterministic and compositable-only
+// (no DEF, no MFL-JPG photos). Degrades to nothing when either side fails.
+// ---------------------------------------------------------------------------
+const faceoffPlayerMap = getPlayerMap(2025);
+
+const actualMap = new Map<string, number>();
+asArray((playerScoresData as any)?.playerScores?.playerScore).forEach((p: any) => {
+  const v = parseFloat(p?.score);
+  if (p?.id && Number.isFinite(v)) actualMap.set(p.id, v);
+});
+
+function faceoffCandidates(roster: any, franchiseId: string): FaceoffStatCandidate[] {
+  return asArray(roster?.player)
+    // Compositable only, so the elected stat source matches who can be cast
+    // (a DEF's stat shouldn't elect a source castBestScoredModel can't honor).
+    .filter((p: any) => {
+      if (!p?.id || p.status !== 'ROSTER') return false;
+      const identity = faceoffPlayerMap.get(p.id);
+      return !!identity && isCompositable(identity);
+    })
+    .map((p: any) => ({
+      playerId: p.id,
+      franchiseId,
+      projected: projMap.get(p.id) ?? 0,
+      actual: actualMap.get(p.id) ?? 0,
+      salary: parseFloat(p.salary) || 0,
+    }));
+}
+
+const scored = scoreFaceoffSides(
+  faceoffCandidates(pigskinRoster, '0001'),
+  faceoffCandidates(midwestsideRoster, '0011'),
+);
+
+let faceoff: { away: FaceoffSide; home: FaceoffSide } | null = null;
+if (scored.source) {
+  const awayModel = castBestScoredModel(scored.away, faceoffPlayerMap, undefined, 'Player of the Game');
+  const homeModel = castBestScoredModel(scored.home, faceoffPlayerMap, undefined, 'Player of the Game');
+  if (awayModel && homeModel) {
+    const statFor = (side: typeof scored.away, id: string) => {
+      const v = side.find((c) => c.playerId === id)?.score ?? 0;
+      if (scored.source === 'salary') return `$${Math.round(v / 1000)}K`;
+      return `${v.toFixed(1)} ${scored.source === 'projected' ? 'proj' : 'pts'}`;
+    };
+    faceoff = {
+      away: { model: awayModel, chip: 'Pacific Pigskins', watermark: getNFLTeamLogo(awayModel.nflTeam), stat: statFor(scored.away, awayModel.mflId) },
+      home: { model: homeModel, chip: 'Midwestside Connection', watermark: getNFLTeamLogo(homeModel.nflTeam), stat: statFor(scored.home, homeModel.mflId) },
+    };
+  }
+}
+
 const matchupData = {
   week: 15,
   pigskins: {
@@ -65,11 +130,22 @@ const matchupData = {
 
 <html>
 <head>
+  <meta charset="utf-8" />
   <title>Matchup Data</title>
 </head>
 <body>
   <h1>Week 15: Pacific Pigskins vs Midwestside Connection</h1>
-  
+
+  {faceoff && (
+    <div style="max-width: 640px; border-radius: 0.75rem; overflow: hidden; margin: 1rem 0;">
+      <FaceoffComposite
+        away={faceoff.away}
+        home={faceoff.home}
+        ariaLabel={`Players of the game — ${faceoff.away.model.name} vs ${faceoff.home.model.name}`}
+      />
+    </div>
+  )}
+
   <h2>Team Projections</h2>
   <p>Pacific Pigskins: {matchupData.pigskins.projection.toFixed(1)} points</p>
   <p>Midwestside Connection: {matchupData.midwestside.projection.toFixed(1)} points</p>

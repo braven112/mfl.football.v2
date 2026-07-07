@@ -488,11 +488,87 @@ a `.tsx` island; the engine imports cleanly client-side because
   auto-opens over the page when pending trades exist — dismiss it before
   clicking. NEVER click "Send Proposal" against real MFL; route-block
   `/api/trades/submit` in the script as a safety net.
+## Player-of-the-game faceoffs — every matchup surface (shipped 2026-07-06)
+
+The "split matchup card" future direction is built. MatchupSplitHero's split
+panel is extracted into the shared **`FaceoffComposite.astro`**
+(`src/components/theleague/`, `hero`/`card` sizes) — purely presentational;
+callers cast both models and pick chip/tint/watermark per context. A 404'd
+cutout goes `visibility: hidden` (the watermark + name plate keep the panel
+honest — MatchupSplitHero's shipped behavior, not the whole-banner hide).
+
+**Selection** — `scoreFaceoffSides` in `hero-casting.ts`: elects ONE stat
+source with signal (>0) on **both** sides — projected → actual → salary
+(recap/past-week contexts flip actual first) — then `castBestScoredModel`
+picks each side (deterministic, compositable-only). One-sided signal never
+elects a source: the starved side would "win" by id tie-break.
+
+Three surfaces:
+1. **MatchupPreviewHero** — every Sunday Ticket game card is a `card`-size
+   faceoff of both NFL teams' top projected players (chips = team codes,
+   NFL-logo watermarks); a game where either side fails to cast keeps the
+   classic logo row. While here, two latent bugs fixed: the data year is now
+   the **no-arg** `getCurrentSeasonYear()` (the arg form is the non-monotonic
+   trap — a Nov `?testDate` resolved the NEXT season's folder), and the
+   schedule read is dual-source (live `nflSchedule.matchup` first, else
+   `fullNflSchedule` indexed by the projections week) like getMarqueeGame.
+2. **lineup.astro** — the week's fantasy matchup above the lineup: your top
+   starter vs the opponent's. Panels are FRANCHISE-branded (Brandon,
+   2026-07-06): brand color tint + GroupMe crest watermark + franchise-name
+   chip via getFranchiseBrand — the RecapCompositeHero convention — because
+   the faceoff is about the fantasy matchup, not the players' NFL teams.
+   Opponent id from a new
+   `TYPE=schedule&W=` fetch; their starters from the weeklyResults YTD entry
+   for that week, else their full roster (rosters fetch is now league-wide).
+   Away/home orientation follows the schedule's `isHome`.
+3. **matchup-data.astro** (debug page) — same treatment off the synced 2025
+   feeds; archived projections are empty so the cascade lands on the
+   completed week's actual points. (Also gained `<meta charset="utf-8">` —
+   the bare page rendered "·" as mojibake.)
+
+**Watermark gotcha (franchise crests):** the lineup/showcase panels watermark
+the FRANCHISE crest, which is a **raster** GroupMe avatar (often non-square),
+while NFL-game panels watermark a square SVG logo. `FaceoffComposite`'s
+`.foc__watermark` therefore sets `aspect-ratio: 1; object-fit: contain` so a
+tall/wide crest centers in a square box without stretching — a bare `width:`
+alone stretched the raster crest. One rule covers both asset types.
+
+**Live projected-points scoreboard (lineup.astro, shipped 2026-07-06):** the
+faceoff band carries a two-total scoreboard instead of a static title. OUR
+total sums the starting slots and **recomputes client-side** on every mutation
+(`updateFaceoffTotal` is called from `updateSubmitBar`, the one funnel every
+swap/optimal/clear/undo/draft-load already hits) — server and client sum the
+SAME source (`projMap` ↔ `roster[].projection`) so the initial render matches
+and no spurious bump fires. THEIR total is server-fixed: their recorded
+starters' projections when the week is locked, else `bestLineupProjTotal`
+(greedy fill of the 9 lineup slots by projection). Why greedy-optimal and not
+their actual set lineup: **`TYPE=lineups` is auth-gated** (redirects
+api→www→api in a loop for a read), so another franchise's set lineup for a
+future week isn't publicly readable — best-by-projection is the honest proxy.
+The band falls back to the players-of-the-game title when both totals are 0
+(completed season, empty projections). `data-user-side` on the scoreboard tells
+the client which total is ours; the accent color keys off it too.
+
+Verify gotchas:
+- Auth-gated pages: the dev server mints a RANDOM JWT secret per boot
+  (`process.env.JWT_SECRET` unset locally; `.env` is NOT loaded into
+  process.env), so you cannot forge a session cookie externally. Verified
+  via a TEMPORARY `import.meta.env.DEV`-guarded route calling
+  createSessionToken in-process — deleted before commit. Watch for
+  duplicate `session_token` cookies shadowing the fresh one. For a
+  screenshot, launch.json's `env.JWT_SECRET` + a Playwright cookie minted
+  with that same secret works headlessly (the running dev server keeps the
+  secret from its boot env even after you revert launch.json).
+- MatchupPreviewHero can't render from committed data (live 2026 feed has
+  projections but the grid is MatchupSplitHero's fallback; 2025 archive has
+  no projections). Verified by seeding 2025 projectedScores from the wk-17
+  box score + pointing SeasonDailyHero at the grid, then reverting both.
+  JSON feeds are `await import`ed → seed changes need a server restart.
 
 ## Future Directions (mocked, not built)
 
-Split matchup card, compact spotlight card. Mockups: scratchpad
-`hero-explorations.html` from the 2026-07-04 session.
+Compact spotlight card. Mockups: scratchpad `hero-explorations.html` from
+the 2026-07-04 session.
 
 ## heroArt override — when the image IS the story (2026-07-05, Brandon)
 

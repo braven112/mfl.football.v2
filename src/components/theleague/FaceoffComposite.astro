@@ -1,0 +1,294 @@
+---
+/**
+ * FaceoffComposite — the two-player split matchup panel, extracted from
+ * MatchupSplitHero (#361) so every matchup surface can render a "player of
+ * the game" faceoff: each side's star as a transparent ESPN cutout over his
+ * team-color gradient, mirrored toward a center VS.
+ *
+ * Purely presentational — callers cast the two models (castBestScoredModel /
+ * scoreFaceoffSides gate DEF and MFL-JPG photos out) and pick the tint,
+ * chip and watermark per context: NFL code + logo for an NFL game panel,
+ * franchise name for a fantasy matchup side. A 404'd cutout hides itself
+ * (visibility, not display — the watermark + name plate keep the panel
+ * honest, same behavior MatchupSplitHero shipped with).
+ */
+import type { HeroModel } from '../../utils/hero-casting';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+
+export interface FaceoffSide {
+  /** Cast model — name / position / nflTeam / ESPN-cutout headshot. */
+  model: HeroModel;
+  /** Chip text in the panel's top corner (NFL code or franchise name). */
+  chip: string;
+  /** Hex tint for the gradient + glow; defaults to the model's NFL team primary. */
+  color?: string;
+  /** Watermark image behind the cutout (NFL logo or franchise crest). */
+  watermark?: string;
+  /** Optional stat line appended to the player meta (e.g. "24.6 proj"). */
+  stat?: string;
+}
+
+export interface Props {
+  away: FaceoffSide;
+  home: FaceoffSide;
+  /** 'hero' = homepage-hero scale (default); 'card' = compact in-page scale. */
+  size?: 'hero' | 'card';
+  ariaLabel?: string;
+}
+
+const { away, home, size = 'hero', ariaLabel } = Astro.props;
+
+// A `hero` faceoff is above the fold and should paint immediately; a `card`
+// faceoff renders many-to-a-grid (the matchup-preview slate is 6 games × 2
+// cutouts + watermarks), so lazy-load those to avoid a burst of eager ESPN
+// headshot requests on load.
+const imgLoading = size === 'hero' ? 'eager' : 'lazy';
+
+function panelOf(side: FaceoffSide) {
+  const color = side.color ?? getNflTeamColors(side.model.nflTeam).primary;
+  return {
+    ...side,
+    gradient: `linear-gradient(160deg, #0b0e12 0%, ${color} 150%)`,
+    glow: hexToRgba(color, 0.35),
+    meta: [side.model.position, side.model.nflTeam, side.stat].filter(Boolean).join(' · '),
+  };
+}
+
+const a = panelOf(away);
+const h = panelOf(home);
+---
+
+<div class={`foc foc--${size}`} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}>
+  <div class="foc__panel foc__panel--away" style={`background: ${a.gradient};`}>
+    <span class="foc__glow" style={`background: radial-gradient(circle, ${a.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
+    {a.watermark && <img class="foc__watermark" src={a.watermark} alt="" aria-hidden="true" loading={imgLoading} />}
+    <span class="foc__chip" aria-hidden="true">{a.chip}</span>
+    <img class="foc__cutout foc__cutout--away" src={a.model.headshot} alt="" aria-hidden="true" loading={imgLoading} decoding="async" onerror="this.style.visibility='hidden'" />
+    <span class="foc__player">
+      <strong>{a.model.name}</strong>
+      <span class="foc__player-meta">{a.meta}</span>
+    </span>
+  </div>
+
+  <span class="foc__vs" aria-hidden="true">VS</span>
+
+  <div class="foc__panel foc__panel--home" style={`background: ${h.gradient};`}>
+    <span class="foc__glow" style={`background: radial-gradient(circle, ${h.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
+    {h.watermark && <img class="foc__watermark" src={h.watermark} alt="" aria-hidden="true" loading={imgLoading} />}
+    <span class="foc__chip foc__chip--right" aria-hidden="true">{h.chip}</span>
+    <img class="foc__cutout foc__cutout--home" src={h.model.headshot} alt="" aria-hidden="true" loading={imgLoading} decoding="async" onerror="this.style.visibility='hidden'" />
+    <span class="foc__player foc__player--right">
+      <strong>{h.model.name}</strong>
+      <span class="foc__player-meta">{h.meta}</span>
+    </span>
+  </div>
+</div>
+
+<style>
+  /* The panels are intentionally dark in BOTH themes — team-color gradients
+     over near-black with white ink — so these colors are hardcoded rather
+     than tokenized (tokenizing white/near-black here would be a no-op that
+     invites a wrong dark override). The panel has no border of its own; the
+     re-tokenized border + dark flip live on each caller's wrapper (.msh,
+     .lineup-faceoff). Mirrors the MatchupSplitHero donor pattern. */
+  .foc {
+    position: relative;
+    display: flex;
+  }
+
+  .foc__panel {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .foc--hero .foc__panel {
+    min-height: clamp(200px, 20vw, 250px);
+  }
+
+  .foc--card .foc__panel {
+    min-height: clamp(120px, 12vw, 150px);
+  }
+
+  .foc__glow {
+    position: absolute;
+    inset: -40% -30% auto -30%;
+    height: 140%;
+    pointer-events: none;
+  }
+
+  /* Square contain-box so raster crests (franchise GroupMe avatars) and
+     NFL logo SVGs both center without stretching. */
+  .foc__watermark {
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    aspect-ratio: 1;
+    object-fit: contain;
+    opacity: 0.16;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .foc--hero .foc__watermark {
+    width: clamp(130px, 16vw, 200px);
+  }
+
+  .foc--card .foc__watermark {
+    width: clamp(70px, 8vw, 100px);
+  }
+
+  .foc__chip {
+    position: absolute;
+    top: 0.7rem;
+    left: 0.75rem;
+    z-index: 3;
+    max-width: calc(100% - 1.5rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.28rem 0.55rem;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+
+  .foc--card .foc__chip {
+    top: 0.45rem;
+    left: 0.5rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .foc__chip--right {
+    left: auto;
+    right: 0.75rem;
+  }
+
+  .foc--card .foc__chip--right {
+    left: auto;
+    right: 0.5rem;
+  }
+
+  .foc__cutout {
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+  }
+
+  .foc--hero .foc__cutout {
+    width: clamp(150px, 17vw, 210px);
+  }
+
+  .foc--card .foc__cutout {
+    width: clamp(84px, 9vw, 110px);
+  }
+
+  /* Mirror the away star to face the center VS. */
+  .foc__cutout--away {
+    transform: scaleX(-1);
+  }
+
+  .foc__player {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.75rem;
+    color: #fff;
+    background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
+  }
+
+  .foc--card .foc__player {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .foc__player--right {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .foc__player strong {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .foc--card .foc__player strong {
+    font-size: 0.7rem;
+  }
+
+  .foc__player-meta {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .foc--card .foc__player-meta {
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
+  }
+
+  .foc__vs {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    font-size: clamp(1rem, 2.2vw, 1.4rem);
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: rgba(6, 9, 13, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    width: clamp(2.4rem, 5vw, 3rem);
+    height: clamp(2.4rem, 5vw, 3rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    backdrop-filter: blur(2px);
+  }
+
+  .foc--card .foc__vs {
+    font-size: 0.75rem;
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  @media (max-width: 640px) {
+    .foc--hero .foc__panel {
+      min-height: 170px;
+    }
+
+    .foc--hero .foc__cutout {
+      width: 130px;
+    }
+  }
+</style>

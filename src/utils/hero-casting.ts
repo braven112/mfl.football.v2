@@ -24,8 +24,12 @@ export interface HeroModel {
   descriptor: string;
 }
 
-/** Composites need a transparent ESPN cutout — MFL JPGs have baked backgrounds. */
-function isCompositable(player: PlayerIdentity): boolean {
+/** Composites need a transparent ESPN cutout — MFL JPGs have baked backgrounds.
+ *  Exported so faceoff callers can pre-filter candidate pools to compositable
+ *  players BEFORE `scoreFaceoffSides` elects a stat source — otherwise a side
+ *  whose only projected player is a DEF (or MFL-JPG-only) could elect a source
+ *  that `castBestScoredModel` then can't honor, casting a 0-score fallback. */
+export function isCompositable(player: PlayerIdentity): boolean {
   return player.position !== 'DEF' && player.headshot.includes('espncdn.com');
 }
 
@@ -361,6 +365,52 @@ export function castArticleModel(
  *  rendering the team logo as the hero art). Same rule as `isCompositable`. */
 export function heroModelHasCutout(model: HeroModel): boolean {
   return model.position !== 'DEF' && model.headshot.includes('espncdn.com');
+}
+
+/** Raw stat lines for a faceoff candidate — the cascade elects ONE source. */
+export interface FaceoffStatCandidate {
+  playerId: string;
+  /** League franchise that rosters the player; '' = free agent */
+  franchiseId: string;
+  projected?: number | null;
+  actual?: number | null;
+  salary?: number | null;
+}
+
+export type FaceoffScoreSource = 'projected' | 'actual' | 'salary';
+
+function finiteOrZero(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * Score the two sides of a "player of the game" faceoff from ONE stat source.
+ *
+ * Walks `order` (default projected → actual → salary) and elects the first
+ * source with signal (a value > 0) on BOTH sides — a faceoff where one panel
+ * ranks by projection and the other by salary isn't a comparison, and a side
+ * with no signal in a source would "win" its panel by id tie-break. Returns
+ * `source: null` (caller degrades to its non-composite treatment) when no
+ * source qualifies. Candidates missing the elected stat score 0.
+ */
+export function scoreFaceoffSides(
+  away: FaceoffStatCandidate[],
+  home: FaceoffStatCandidate[],
+  order: FaceoffScoreSource[] = ['projected', 'actual', 'salary'],
+): { away: ScoredCastCandidate[]; home: ScoredCastCandidate[]; source: FaceoffScoreSource | null } {
+  for (const source of order) {
+    const hasSignal = (side: FaceoffStatCandidate[]) =>
+      side.some((c) => finiteOrZero(c[source]) > 0);
+    if (!hasSignal(away) || !hasSignal(home)) continue;
+    const score = (side: FaceoffStatCandidate[]): ScoredCastCandidate[] =>
+      side.map((c) => ({
+        playerId: c.playerId,
+        franchiseId: c.franchiseId,
+        score: finiteOrZero(c[source]),
+      }));
+    return { away: score(away), home: score(home), source };
+  }
+  return { away: [], home: [], source: null };
 }
 
 /** A candidate for a roster-action hero (cut watch, tag window, contracts…). */
