@@ -66,20 +66,24 @@ const summary = isUserChampion
   /* Theme surface: light editorial card by default; html.dark restores the
      deep-navy chrome (matches the EventHeroShell theming pattern). */
   .champ-hero {
-    --champ-surface: var(--color-white, #ffffff);
-    --champ-ink: var(--color-gray-900, #111827);
-    --champ-ink-soft: var(--color-gray-600, #4b5563);
-    --champ-ink-faint: var(--color-gray-500, #6b7280);
-    --champ-divider: var(--color-gray-200, #e5e7eb);
-    --champ-cta-bg: #0f1e2e;
-    --champ-cta-ink: #ffffff;
-    --champ-glow-alpha: 0.26;
-    /* Amber for TEXT (accent word, score) — darkened on white for contrast;
+    /* Light mode is a saturated bronze-gold trophy card (white ink), mirroring
+       dark mode's drama — the bright gold pill/accent/border/glow supply the
+       celebratory pop. Deep-navy chrome applied under html.dark. */
+    --champ-surface: linear-gradient(115deg, #7c5510 0%, #5a3d0c 52%, #2f2206 100%);
+    --champ-ink: #ffffff;
+    --champ-ink-soft: rgba(255, 255, 255, 0.78);
+    --champ-ink-faint: rgba(255, 255, 255, 0.6);
+    --champ-divider: rgba(255, 255, 255, 0.18);
+    --champ-cta-bg: #ffffff;
+    --champ-cta-ink: #2f2206;
+    --champ-glow-alpha: 0.4;
+    /* Pale gold for TEXT (accent word, score) — pops on the deep-gold surface;
        the border/pill keep the brighter brand gold in both themes. */
-    --champ-accent-ink: #d97706;
-    /* Watermark logo: much fainter on white so content stays readable. */
-    --champ-logo-opacity: 0.08;
-    --champ-logo-opacity-mobile: 0.06;
+    --champ-accent-ink: #fde68a;
+    /* Surface is dark in both themes now, so the winner-crest watermark uses
+       the same on-dark opacity as dark mode. */
+    --champ-logo-opacity: 0.5;
+    --champ-logo-opacity-mobile: 0.35;
     position: relative;
     overflow: hidden;
     display: flex;

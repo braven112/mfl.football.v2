@@ -107,19 +107,21 @@ const summary = franchiseName
 
 <style>
   .rch {
-    --rch-surface: linear-gradient(115deg, #f6f8fb 0%, #eef2f7 52%, #e4ebf3 100%);
-    --rch-ink: var(--color-gray-900, #0f1419);
-    --rch-body: rgba(22, 32, 44, 0.72);
-    --rch-ghost: rgba(28, 73, 124, 0.06);
-    --rch-glow: var(--rch-glow-light, rgba(28, 73, 124, 0.2));
-    --rch-shadow: rgba(15, 30, 46, 0.3);
-    --rch-accent: var(--color-primary, #1c497c);
-    --rch-pill-bg: rgba(28, 73, 124, 0.1);
-    --rch-pill-border: rgba(28, 73, 124, 0.35);
-    --rch-pill-ink: #1c497c;
-    --rch-cta-bg: var(--color-primary, #1c497c);
-    --rch-cta-ink: #ffffff;
-    --rch-border: rgba(28, 73, 124, 0.18);
+    /* Light mode is a saturated blue card (white ink), mirroring dark mode's
+       drama — matches FeatureCompositeHero. Deeper navy applied by html.dark. */
+    --rch-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+    --rch-ink: #ffffff;
+    --rch-body: rgba(255, 255, 255, 0.82);
+    --rch-ghost: rgba(255, 255, 255, 0.06);
+    --rch-glow: var(--rch-glow-dark, rgba(96, 165, 250, 0.34));
+    --rch-shadow: rgba(9, 21, 38, 0.4);
+    --rch-accent: #a9ccff;
+    --rch-pill-bg: rgba(255, 255, 255, 0.16);
+    --rch-pill-border: rgba(255, 255, 255, 0.4);
+    --rch-pill-ink: #dcebff;
+    --rch-cta-bg: #ffffff;
+    --rch-cta-ink: #12325a;
+    --rch-border: rgba(255, 255, 255, 0.14);
 
     position: relative;
     overflow: hidden;
@@ -174,13 +176,10 @@ const summary = franchiseName
     width: clamp(180px, 24vw, 300px);
     aspect-ratio: 1;
     object-fit: contain;
-    opacity: 0.09;
+    /* Surface is dark in both themes now, so the crest reads the same way. */
+    opacity: 0.12;
     pointer-events: none;
     user-select: none;
-  }
-
-  :global(html.dark) .rch__crest {
-    opacity: 0.12;
   }
 
   .rch__glow {

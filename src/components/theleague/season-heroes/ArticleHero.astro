@@ -217,18 +217,19 @@ const excerpt = article?.body
 <style>
   /* ── Composite variant (article features a player) ─────────────────── */
   .ahc {
-    /* Light theme (default); dark values applied under html.dark. */
-    --ahc-surface: linear-gradient(115deg, #f4f8fc 0%, #e4eef8 52%, #d2e2f2 100%);
-    --ahc-ink: var(--color-gray-900, #0f1419);
-    --ahc-body: rgba(22, 32, 44, 0.72);
-    --ahc-date: rgba(22, 32, 44, 0.55);
-    --ahc-glow: var(--ahc-glow-light, rgba(28, 73, 124, 0.22));
-    --ahc-shadow: rgba(15, 30, 46, 0.3);
-    --ahc-pill-bg: rgba(28, 73, 124, 0.08);
-    --ahc-pill-border: rgba(28, 73, 124, 0.35);
-    --ahc-pill-ink: var(--color-primary, #1c497c);
-    --ahc-border: rgba(28, 73, 124, 0.18);
-    --ahc-cta: var(--color-primary, #1c497c);
+    /* Light mode is a saturated blue card (white ink), mirroring dark mode's
+       drama — matches FeatureCompositeHero. Deeper navy applied under html.dark. */
+    --ahc-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+    --ahc-ink: #ffffff;
+    --ahc-body: rgba(255, 255, 255, 0.8);
+    --ahc-date: rgba(255, 255, 255, 0.55);
+    --ahc-glow: var(--ahc-glow-dark, rgba(96, 165, 250, 0.32));
+    --ahc-shadow: rgba(9, 21, 38, 0.45);
+    --ahc-pill-bg: rgba(96, 165, 250, 0.18);
+    --ahc-pill-border: rgba(96, 165, 250, 0.45);
+    --ahc-pill-ink: #a8cdf8;
+    --ahc-border: rgba(255, 255, 255, 0.12);
+    --ahc-cta: #a8cdf8;
     /* Caption pill is deliberately theme-invariant — a dark frosted chip over
        the artwork in both themes (matches FeatureCompositeHero). */
     --ahc-caption-ink: #ffffff;

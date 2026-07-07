@@ -89,21 +89,24 @@ const glowLight = hexToRgba(primary, 0.2);
 
 <style>
   .psh {
-    /* Light theme (default); html.dark flips to the deep-navy chrome. */
-    --psh-surface: linear-gradient(115deg, #f2f7fc 0%, #e2edf9 52%, #cfe1f4 100%);
-    --psh-ink: var(--color-gray-900, #0f1419);
-    --psh-body: rgba(22, 32, 44, 0.72);
-    --psh-ghost: rgba(28, 73, 124, 0.06);
-    --psh-glow: var(--psh-glow-light, rgba(28, 73, 124, 0.2));
-    --psh-shadow: rgba(15, 30, 46, 0.3);
-    --psh-accent: var(--color-primary, #1c497c);
-    --psh-cta-bg: var(--color-primary, #1c497c);
-    --psh-cta-ink: #ffffff;
-    --psh-pill-bg: rgba(28, 73, 124, 0.08);
-    --psh-pill-border: rgba(28, 73, 124, 0.35);
-    --psh-pill-ink: var(--color-primary, #1c497c);
-    --psh-divider: rgba(22, 32, 44, 0.16);
-    --psh-border: rgba(28, 73, 124, 0.2);
+    /* Light theme (default) is a saturated blue card — white ink over a vivid
+       league-blue gradient, mirroring the dark treatment. html.dark keeps its
+       own deeper-navy surface below. Because both themes now render on a dark
+       surface, the foreground tokens are the dark block's values. */
+    --psh-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+    --psh-ink: #ffffff;
+    --psh-body: rgba(255, 255, 255, 0.78);
+    --psh-ghost: rgba(255, 255, 255, 0.045);
+    --psh-glow: var(--psh-glow-dark, rgba(96, 165, 250, 0.35));
+    --psh-shadow: rgba(0, 0, 0, 0.5);
+    --psh-accent: #a8cdf8;
+    --psh-cta-bg: #ffffff;
+    --psh-cta-ink: #0f1e2e;
+    --psh-pill-bg: rgba(96, 165, 250, 0.18);
+    --psh-pill-border: rgba(96, 165, 250, 0.45);
+    --psh-pill-ink: #a8cdf8;
+    --psh-divider: rgba(255, 255, 255, 0.2);
+    --psh-border: rgba(255, 255, 255, 0.1);
 
     position: relative;
     overflow: hidden;
@@ -178,15 +181,9 @@ const glowLight = hexToRgba(primary, 0.2);
     pointer-events: none;
   }
 
-  .psh--no-model .psh__logo-art--light {
-    display: block;
-  }
-
-  :global(html.dark) .psh--no-model .psh__logo-art--light {
-    display: none;
-  }
-
-  :global(html.dark) .psh--no-model .psh__logo-art--dark {
+  /* Both themes render on a dark surface, so the white logo silhouette is
+     correct in both — the dark-colored (--light) variant stays hidden. */
+  .psh--no-model .psh__logo-art--dark {
     display: block;
     opacity: 0.2;
   }

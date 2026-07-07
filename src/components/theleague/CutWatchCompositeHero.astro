@@ -145,23 +145,26 @@ const glowLight = hexToRgba(primary, 0.2);
 
 <style>
   .cwh {
-    /* Early tier, light theme (defaults) — planning blue. */
-    --cwh-surface: linear-gradient(115deg, #f2f7fc 0%, #e2edf9 52%, #cfe1f4 100%);
-    --cwh-ink: var(--color-gray-900, #0f1419);
-    --cwh-body: rgba(22, 32, 44, 0.72);
-    --cwh-ghost: rgba(28, 73, 124, 0.06);
-    --cwh-glow: var(--cwh-glow-light, rgba(59, 130, 246, 0.2));
-    --cwh-shadow: rgba(15, 30, 46, 0.3);
-    --cwh-accent: #1d4ed8;
-    --cwh-cta-bg: var(--color-primary, #1c497c);
-    --cwh-cta-ink: #ffffff;
-    --cwh-pill-bg: rgba(59, 130, 246, 0.1);
-    --cwh-pill-border: rgba(29, 78, 216, 0.4);
-    --cwh-pill-ink: #1d4ed8;
-    --cwh-chip-bg: rgba(22, 32, 44, 0.05);
-    --cwh-chip-border: rgba(22, 32, 44, 0.16);
-    --cwh-chip-ink: rgba(22, 32, 44, 0.78);
-    --cwh-border: rgba(28, 73, 124, 0.2);
+    /* Early tier, light theme (defaults) — saturated planning blue. White ink
+       over a vivid league-blue gradient, mirroring the dark treatment (the
+       foreground tokens below are copied from the :global(html.dark) .cwh
+       block); only --cwh-surface differs. */
+    --cwh-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+    --cwh-ink: #ffffff;
+    --cwh-body: rgba(255, 255, 255, 0.78);
+    --cwh-ghost: rgba(255, 255, 255, 0.045);
+    --cwh-glow: var(--cwh-glow-dark, rgba(59, 130, 246, 0.35));
+    --cwh-shadow: rgba(0, 0, 0, 0.5);
+    --cwh-accent: #93c5fd;
+    --cwh-cta-bg: #ffffff;
+    --cwh-cta-ink: #0f1e2e;
+    --cwh-pill-bg: rgba(147, 197, 253, 0.16);
+    --cwh-pill-border: rgba(147, 197, 253, 0.45);
+    --cwh-pill-ink: #bfdbfe;
+    --cwh-chip-bg: rgba(255, 255, 255, 0.06);
+    --cwh-chip-border: rgba(255, 255, 255, 0.2);
+    --cwh-chip-ink: rgba(255, 255, 255, 0.8);
+    --cwh-border: rgba(255, 255, 255, 0.1);
 
     position: relative;
     overflow: hidden;
@@ -176,13 +179,17 @@ const glowLight = hexToRgba(primary, 0.2);
   }
 
   .cwh--urgent {
-    --cwh-surface: linear-gradient(115deg, #fdf3f3 0%, #fbe3e3 52%, #f6cfcf 100%);
-    --cwh-ghost: rgba(153, 27, 27, 0.06);
-    --cwh-accent: #b91c1c;
-    --cwh-pill-bg: rgba(220, 38, 38, 0.1);
-    --cwh-pill-border: rgba(185, 28, 28, 0.45);
-    --cwh-pill-ink: #b91c1c;
-    --cwh-border: rgba(185, 28, 28, 0.3);
+    /* Saturated urgency red — white ink over a vivid red gradient, mirroring
+       the :global(html.dark) .cwh--urgent block (foreground tokens copied from
+       there); only --cwh-surface differs. */
+    --cwh-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
+    --cwh-ghost: rgba(255, 255, 255, 0.05);
+    --cwh-accent: #fca5a5;
+    --cwh-pill-bg: rgba(252, 165, 165, 0.14);
+    --cwh-pill-border: rgba(252, 165, 165, 0.45);
+    --cwh-pill-ink: #fecaca;
+    --cwh-cta-ink: #2a0d12;
+    --cwh-border: rgba(255, 255, 255, 0.12);
   }
 
   :global(html.dark) .cwh {
@@ -259,15 +266,10 @@ const glowLight = hexToRgba(primary, 0.2);
     pointer-events: none;
   }
 
-  .cwh--no-model .cwh__logo-art--light {
-    display: block;
-  }
-
-  :global(html.dark) .cwh--no-model .cwh__logo-art--light {
-    display: none;
-  }
-
-  :global(html.dark) .cwh--no-model .cwh__logo-art--dark {
+  /* Both surfaces are now dark in both themes, so the white (--dark) logo
+     silhouette is correct everywhere; the dark-colored --light variant stays
+     hidden. */
+  .cwh--no-model .cwh__logo-art--dark {
     display: block;
     opacity: 0.2;
   }
