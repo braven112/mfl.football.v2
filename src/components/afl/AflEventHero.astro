@@ -176,6 +176,11 @@ const countAriaLabel = hasCount
         <script is:inline>
           (function () {
             var s = document.currentScript;
+            // Mobile hides the whole frame — leave both halves lazy so
+            // neither downloads (eager fetches even inside display:none).
+            // Scoped styles land in <head> before the body parses, so the
+            // computed display is already reliable here.
+            if (getComputedStyle(s.parentElement).display === 'none') return;
             var dark = document.documentElement.classList.contains('dark');
             var img = s.parentElement.querySelector(
               dark ? '.afl-event-hero__shot-img--dark' : '.afl-event-hero__shot-img--light',
