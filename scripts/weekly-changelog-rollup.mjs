@@ -113,7 +113,11 @@ function buildDescription(groups, totalCount) {
   const paragraphs = [intro];
   for (const [area, changes] of groups) {
     const label = AREA_LABELS[area] || area;
-    const summaries = changes.map((c) => c.summary).join('. ');
+    // Strip each summary's own trailing period so the join ('. ') and the
+    // paragraph-final '.' don't produce doubled punctuation ('..'). Staging
+    // summaries are written as full sentences ending in a period by
+    // convention, so normalize here rather than policing every entry.
+    const summaries = changes.map((c) => c.summary.replace(/\.\s*$/, '')).join('. ');
     paragraphs.push(`<strong>${label}</strong> \u2014 ${summaries}.`);
   }
 
