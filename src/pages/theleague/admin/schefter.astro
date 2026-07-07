@@ -1356,10 +1356,10 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       setStatus('Building preview…');
       try {
         const { res, data } = await post('preview');
-        if (!res.ok) {
+        if (!res.ok || data.ok === false) {
           const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || `HTTP ${res.status}`;
           out.hidden = true;
-          setStatus(errs, 'bad');
+          setStatus(errs + (data.detail ? ` — ${data.detail}` : ''), 'bad');
           return;
         }
         const cards = (data.previews || [])
@@ -1398,7 +1398,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       setStatus('Dispatching…');
       try {
         const { res, data } = await post('send');
-        if (!res.ok) {
+        if (!res.ok || data.ok === false) {
           const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || `HTTP ${res.status}`;
           const extra = (data.detail ? ` — ${data.detail}` : '') + (data.hint ? ` (${data.hint})` : '');
           setStatus(errs + extra, 'bad');
