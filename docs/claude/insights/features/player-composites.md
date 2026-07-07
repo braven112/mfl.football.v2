@@ -867,6 +867,22 @@ class-prefixed `:global(.afl-event-hero .…__badge.theme-img--dark){display:blo
 stays theme-matched — it's a self-contained browser frame (gray chrome, white
 URL bar) that reads fine on any surface, so no override needed.
 
-**Unchanged:** the calendar event cards (What's Next, League Calendar) and
+**Whole-family sweep (2026-07-07, Brandon).** The saturated treatment was then
+applied to EVERY remaining composite hero, each mirroring its OWN dark-mode hue
+(not all blue): `RecapCompositeHero`, `ArticleHero`, `CutWatchCompositeHero`
+(blue + a `--urgent` red variant), `PreseasonCompositeHero` → deep league-blue
+(`#2563eb → #1c497c → #0f3057`, same tokens as `.fch`); `AuctionCompositeHero`
+→ amber (`#d97706 → #4a3410`); `BreakingStoryHero` → red (`#dc2626 → #5f1414`);
+`ChampionCrownedHero` → bronze-gold (`#7c5510 → #2f2206`, pale-gold `#fde68a`
+accent); `EventHeroShell` → solid TheLeague blue `#1c497c` (the flat-white ones
+took the AflEventHero treatment — a SOLID `--surface` because the player photo
+color-mixes its fade against it). Every league-logo silhouette / backdrop pair
+was flipped to the white `--dark` variant in both themes; single colorful
+franchise/team crests (Recap's `__crest`, Champion's `__bg-logo`) aren't a
+theme pair — they only needed their watermark opacity bumped to the on-dark
+value (Champion 0.5) so the now-dark surface reads consistently. Every hero's
+own `:global(html.dark)` block was left untouched.
+
+**Still unchanged:** the calendar event cards (What's Next, League Calendar) and
 the bespoke AFL day-of heroes (`AflPlayoffsHero`, `AflChampionshipHero`,
-`TradeDeadlineHero`) were NOT touched — only the two composite heroes above.
+`TradeDeadlineHero`).

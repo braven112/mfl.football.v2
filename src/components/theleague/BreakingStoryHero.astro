@@ -102,18 +102,21 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
 
 <style>
   .bsh {
-    /* Light theme (default); html.dark flips to the deep-charcoal chrome. */
-    --bsh-surface: linear-gradient(115deg, #fdf3f2 0%, #f6e2e0 52%, #ecd0cd 100%);
-    --bsh-ink: var(--color-gray-900, #0f1419);
-    --bsh-body: rgba(22, 32, 44, 0.74);
-    --bsh-ghost: rgba(120, 20, 20, 0.07);
-    --bsh-glow: var(--bsh-glow-light, rgba(220, 38, 38, 0.22));
-    --bsh-shadow: rgba(15, 30, 46, 0.3);
-    --bsh-tag-bg: #dc2626;
+    /* Light theme (default) is a saturated RED card that mirrors dark mode —
+       white-on-dark foreground tokens copied from the html.dark block, only the
+       surface swapped for the red gradient. See player-composites.md:
+       "Saturated light-mode heroes flip the theme-paired assets too". */
+    --bsh-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
+    --bsh-ink: #ffffff;
+    --bsh-body: rgba(255, 255, 255, 0.78);
+    --bsh-ghost: rgba(255, 255, 255, 0.05);
+    --bsh-glow: var(--bsh-glow-dark, rgba(220, 38, 38, 0.4));
+    --bsh-shadow: rgba(0, 0, 0, 0.5);
+    --bsh-tag-bg: #ef4444;
     --bsh-tag-ink: #ffffff;
-    --bsh-cta-bg: var(--color-gray-900, #0f1419);
-    --bsh-cta-ink: #ffffff;
-    --bsh-border: rgba(120, 20, 20, 0.22);
+    --bsh-cta-bg: #ffffff;
+    --bsh-cta-ink: #140b0b;
+    --bsh-border: rgba(255, 255, 255, 0.1);
 
     position: relative;
     overflow: hidden;

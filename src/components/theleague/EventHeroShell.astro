@@ -146,30 +146,30 @@ const countAriaLabel = hasCount
      surface-dependent color routes through these vars so both themes share
      one set of rules. */
   .tl-event-hero {
-    --ev-surface: var(--color-white, #ffffff);
-    --ev-ink: var(--color-gray-900, #111827);
-    --ev-ink-soft: var(--color-gray-600, #4b5563);
-    --ev-ink-faint: var(--color-gray-500, #6b7280);
-    --ev-tile-bg: var(--color-gray-50, #f9fafb);
-    --ev-tile-border: var(--color-gray-200, #e5e7eb);
-    --ev-tile-hover-bg: var(--color-gray-100, #f3f4f6);
-    --ev-tile-hover-border: var(--color-gray-300, #d1d5db);
-    --ev-cta-bg: #0f1e2e;
-    --ev-cta-ink: #ffffff;
-    --ev-divider: var(--color-gray-200, #e5e7eb);
-    /* On white, the per-event glow rgba (~55% alpha) would swamp the card —
-       derive a softer accent wash instead; dark restores the passed --ev-glow. */
-    --ev-glow-resolved: color-mix(in srgb, var(--ev-accent, #1c497c) 22%, transparent);
-    --ev-border-strength: 45%;
-    /* Left feather over the player cut-out. On white the photo contrasts much
-       harder than on navy, so light mode washes wider and stronger — otherwise
-       the fade's end reads as a vertical border. Dark keeps the tighter fade. */
+    /* Light mode is a saturated TheLeague-blue card (white ink), mirroring the
+       deep-navy dark chrome. --ev-surface stays a SOLID color (the player photo
+       color-mixes its left feather against it). Deep navy applied under
+       html.dark; both themes now share the white-on-dark foreground. */
+    --ev-surface: #1c497c;
+    --ev-ink: #ffffff;
+    --ev-ink-soft: rgba(255, 255, 255, 0.72);
+    --ev-ink-faint: rgba(255, 255, 255, 0.6);
+    --ev-tile-bg: rgba(255, 255, 255, 0.06);
+    --ev-tile-border: rgba(255, 255, 255, 0.1);
+    --ev-tile-hover-bg: rgba(255, 255, 255, 0.12);
+    --ev-tile-hover-border: rgba(255, 255, 255, 0.25);
+    --ev-cta-bg: #ffffff;
+    --ev-cta-ink: #0f1e2e;
+    --ev-divider: rgba(255, 255, 255, 0.16);
+    --ev-glow-resolved: var(--ev-glow, rgba(28, 73, 124, 0.55));
+    --ev-border-strength: 55%;
+    /* Photo feathers against the dark surface now — the tighter navy-on-navy
+       fade stops (same as dark) read cleanly. */
     --ev-fade-left: linear-gradient(
       90deg,
       var(--ev-surface) 0%,
-      color-mix(in srgb, var(--ev-surface) 92%, transparent) 22%,
-      color-mix(in srgb, var(--ev-surface) 55%, transparent) 55%,
-      color-mix(in srgb, var(--ev-surface) 18%, transparent) 82%,
+      color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%,
+      color-mix(in srgb, var(--ev-surface) 10%, transparent) 60%,
       transparent 100%
     );
     position: relative;

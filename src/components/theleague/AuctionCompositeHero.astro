@@ -77,7 +77,6 @@ const chips = [
 >
   {live ? (
     <>
-      <img class="ach__backdrop ach__backdrop--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="eager" />
       <img class="ach__backdrop ach__backdrop--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="eager" />
     </>
   ) : (
@@ -103,7 +102,6 @@ const chips = [
     )}
   </span>
 
-  <img class="ach__logo-art ach__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
   <img class="ach__logo-art ach__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
 
   <div class="ach__content">
@@ -143,23 +141,28 @@ const chips = [
 
 <style>
   .ach {
-    /* Light theme (default); html.dark flips to the deep-navy chrome. */
-    --ach-surface: linear-gradient(115deg, #fbf7ef 0%, #f3ead8 52%, #e9dcc0 100%);
-    --ach-ink: var(--color-gray-900, #0f1419);
-    --ach-body: rgba(22, 32, 44, 0.72);
-    --ach-ghost: rgba(146, 91, 10, 0.07);
-    --ach-glow: var(--ach-glow-light, rgba(217, 119, 6, 0.2));
-    --ach-shadow: rgba(15, 30, 46, 0.3);
-    --ach-accent: #b45309;
-    --ach-cta-bg: var(--color-primary, #1c497c);
-    --ach-cta-ink: #ffffff;
-    --ach-pill-bg: rgba(217, 119, 6, 0.12);
-    --ach-pill-border: rgba(180, 83, 9, 0.4);
-    --ach-pill-ink: #92400e;
-    --ach-chip-bg: rgba(22, 32, 44, 0.05);
-    --ach-chip-border: rgba(22, 32, 44, 0.16);
-    --ach-chip-ink: rgba(22, 32, 44, 0.78);
-    --ach-border: rgba(146, 91, 10, 0.25);
+    /* Light theme (default) is a saturated amber/bronze card — white ink over
+       a vivid amber gradient, mirroring the drama of the dark treatment.
+       Because both themes now render on a dark surface, the foreground (ink,
+       body, pill, chip, CTA, accent, logo silhouette) is the white-on-dark
+       variant in both — copied from the html.dark block below. Only
+       --ach-surface differs (its amber endpoint matches the dark block's). */
+    --ach-surface: linear-gradient(115deg, #d97706 0%, #92400e 55%, #4a3410 100%);
+    --ach-ink: #ffffff;
+    --ach-body: rgba(255, 255, 255, 0.78);
+    --ach-ghost: rgba(255, 255, 255, 0.045);
+    --ach-glow: var(--ach-glow-dark, rgba(217, 119, 6, 0.35));
+    --ach-shadow: rgba(0, 0, 0, 0.5);
+    --ach-accent: #fbbf24;
+    --ach-cta-bg: #ffffff;
+    --ach-cta-ink: #1c1408;
+    --ach-pill-bg: rgba(251, 191, 36, 0.16);
+    --ach-pill-border: rgba(251, 191, 36, 0.45);
+    --ach-pill-ink: #fcd34d;
+    --ach-chip-bg: rgba(255, 255, 255, 0.06);
+    --ach-chip-border: rgba(255, 255, 255, 0.2);
+    --ach-chip-ink: rgba(255, 255, 255, 0.8);
+    --ach-border: rgba(255, 255, 255, 0.1);
 
     position: relative;
     overflow: hidden;
@@ -230,15 +233,9 @@ const chips = [
     user-select: none;
   }
 
-  .ach__backdrop--light {
-    display: block;
-  }
-
-  :global(html.dark) .ach__backdrop--light {
-    display: none;
-  }
-
-  :global(html.dark) .ach__backdrop--dark {
+  /* Surface is dark in both themes → the white (--dark) logo backdrop shows in
+     both; the dark-colored (--light) variant is retired. */
+  .ach__backdrop--dark {
     display: block;
     opacity: 0.13;
   }
@@ -263,24 +260,17 @@ const chips = [
     pointer-events: none;
   }
 
-  .ach--no-model .ach__logo-art--light {
+  /* Surface is dark in both themes → the white (--dark) logo silhouette shows
+     when the headshot 404s; the dark-colored (--light) variant is retired. */
+  .ach--no-model .ach__logo-art--dark {
     display: block;
+    opacity: 0.2;
   }
 
   /* Live mode already has the logo backdrop — don't stack a second logo
      when the headshot 404s */
-  .ach--live .ach__logo-art,
-  :global(html.dark) .ach--live .ach__logo-art {
+  .ach--live .ach__logo-art {
     display: none;
-  }
-
-  :global(html.dark) .ach--no-model .ach__logo-art--light {
-    display: none;
-  }
-
-  :global(html.dark) .ach--no-model .ach__logo-art--dark {
-    display: block;
-    opacity: 0.2;
   }
 
   .ach__caption {
