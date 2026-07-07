@@ -23,6 +23,12 @@ export const LEAGUES = {
     dataPath: 'data/theleague',
     /** Apex domains that serve this league (bare + www) */
     domains: ['theleague.us', 'www.theleague.us'],
+    /** Site logo (light/dark theme pair) — the same assets nav, heroes, and
+        OG art render; consume from here instead of hardcoding the paths */
+    logos: {
+      light: '/assets/logos/theleague-logo.svg',
+      dark: '/assets/logos/theleague-logo-dark.svg',
+    },
     features: {
       contracts: true,
       salaryCap: true,
@@ -40,6 +46,10 @@ export const LEAGUES = {
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
+    logos: {
+      light: '/assets/logos/afl-logo.svg',
+      dark: '/assets/logos/afl-logo-dark.svg',
+    },
     /**
      * League-year rollover (month is 1-indexed). AFL flips to the new MFL
      * league year on June 1 — NOT TheLeague's Feb 14 date — because the new

@@ -384,24 +384,18 @@ const countAriaLabel = hasCount
      Fresh What's New art when the entry names no player. The partial owns
      the frame chrome, theme-pair swap, 404 fallbacks, and the mobile logo
      stand-in swap — only placement and the hero's own styling hooks live
-     here. The partial's logo-opacity defaults (0.14 / 0.2) are AFL's values. */
+     here. */
   .afl-event-hero {
     --bfs-shadow: var(--ev-model-shadow);
+    --bfs-logo-opacity: 0.14;
+    --bfs-logo-opacity-dark: 0.2;
   }
   .afl-event-hero :global(.bfs__frame) {
-    position: absolute;
-    z-index: 1;
     right: clamp(1rem, 2.5vw, 2rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-1.5deg);
     width: clamp(280px, 38%, 420px);
   }
   .afl-event-hero :global(.bfs__logo) {
-    position: absolute;
-    z-index: 1;
     right: clamp(1rem, 4vw, 3rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-6deg);
     width: clamp(170px, 22vw, 260px);
   }
 

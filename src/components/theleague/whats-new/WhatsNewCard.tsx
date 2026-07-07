@@ -9,6 +9,7 @@ import type { EnrichedWhatsNewEntry } from '../../../utils/whats-new-helpers';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import type { LeagueSlug } from '../../../types/whats-new';
 import { ALL_LEAGUES, getLeagueByPath } from '../../../config/leagues';
+import { formatBrowserFrameUrl } from '../../../utils/browser-frame-url';
 
 /**
  * Domain + path shown in the thumbnail's browser-frame chrome. League-aware:
@@ -25,8 +26,7 @@ function browserFrameUrl(entry: EnrichedWhatsNewEntry, pageLeague?: LeagueSlug):
   // tests), so the page's own league is the right chrome context for them.
   const fromPage = pageLeague ? ALL_LEAGUES.find((l) => l.navSlug === pageLeague) : undefined;
   const league = tagged ?? fromPage ?? getLeagueByPath(entry.link ?? '/');
-  const path = entry.link ? entry.link.replace(`/${league.slug}`, '') : '';
-  return `${league.domains[0]}${path}`;
+  return formatBrowserFrameUrl(league, entry.link);
 }
 
 interface Props {

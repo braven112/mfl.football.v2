@@ -45,6 +45,8 @@ export interface LeagueDefinition {
   mflHost: string;
   dataPath: string;
   domains: string[];
+  /** Site logo (light/dark theme pair), root-relative asset paths. */
+  logos: { light: string; dark: string };
   /**
    * Optional per-league year-rollover date. Present for leagues whose MFL
    * season is created on a different schedule than TheLeague's Feb 14 default

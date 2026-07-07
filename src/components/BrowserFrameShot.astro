@@ -6,7 +6,8 @@
  * frame treatment can't drift between leagues (precedent: ThemeImage.astro
  * for theme-pair handling). The wrapper renders display:contents, so the
  * frame and the logo stand-in lay out as if they were direct children of
- * the hero — placement, size, and rotation stay in the parent via
+ * the hero. Base placement (right-flank anchor, vertical centering, tilt)
+ * lives here; each parent tunes only `right` and `width` via
  * `:global(.bfs__frame)` / `:global(.bfs__logo)` rules.
  *
  * Behavior owned here:
@@ -21,11 +22,13 @@
  * - Mobile (≤640px) hides the frame — a phone-width screenshot thumbnail is
  *   decoration, not information — and the logo silhouette stands in.
  *
- * Parent hooks (CSS custom properties, set on the hero root):
- * - --bfs-shadow: frame drop-shadow color
+ * Parent hooks:
+ * - `right` / `width` on :global(.bfs__frame) and :global(.bfs__logo)
+ * - --bfs-shadow: frame drop-shadow color (set on the hero root)
  * - --bfs-logo-opacity / --bfs-logo-opacity-dark: logo stand-in opacity
  */
 import { LEAGUES, type CanonicalLeagueSlug } from '../config/leagues';
+import { formatBrowserFrameUrl } from '../utils/browser-frame-url';
 
 interface Props {
   /** Screenshot filename relative to /assets/whats-new/ (the light capture;
@@ -46,23 +49,10 @@ const { image, league: leagueSlug, link, forceDark = false } = Astro.props;
 const league = LEAGUES[leagueSlug];
 const src = `/assets/whats-new/${image}`;
 const darkSrc = src.replace(/\.(\w+)$/, '-dark.$1');
-// Frame chrome URL text from the league registry — never hardcode domains.
-const frameUrl = link
-  ? `${league.domains[0]}${link.replace(`/${league.slug}`, '')}`
-  : league.domains[0];
-
-// Logo stand-in theme pair — the same assets every hero surface uses today.
-const LOGOS: Record<CanonicalLeagueSlug, { light: string; dark: string }> = {
-  theleague: {
-    light: '/assets/logos/theleague-logo.svg',
-    dark: '/assets/logos/theleague-logo-dark.svg',
-  },
-  'afl-fantasy': {
-    light: '/assets/logos/afl-logo.svg',
-    dark: '/assets/logos/afl-logo-dark.svg',
-  },
-};
-const logo = LOGOS[leagueSlug];
+// Frame chrome URL text and the logo stand-in pair both come from the league
+// registry — never hardcode domains or per-league asset paths.
+const frameUrl = formatBrowserFrameUrl(league, link);
+const logo = league.logos;
 ---
 
 <div class={`bfs${forceDark ? ' bfs--dark' : ''}`}>
@@ -131,7 +121,14 @@ const logo = LOGOS[leagueSlug];
     display: contents;
   }
 
+  /* Base placement is shared: both heroes anchor the frame (and the logo
+     stand-in below) on the right flank, vertically centered, with the same
+     tilt. Parents override only `right` and `width`. */
   .bfs__frame {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    transform: translateY(-50%) rotate(-1.5deg);
     border-radius: 0.5rem;
     overflow: hidden;
     background: #e5e7eb;
@@ -205,6 +202,10 @@ const logo = LOGOS[leagueSlug];
   /* Logo stand-in: hidden while the frame is visible. */
   .bfs__logo {
     display: none;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
     opacity: var(--bfs-logo-opacity, 0.14);
     pointer-events: none;
   }
