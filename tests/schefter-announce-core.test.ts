@@ -175,6 +175,18 @@ describe('validateAnnounceInput', () => {
     expect(validateAnnounceInput({ slug: 'x', link: 'ftp://x.example/f' }).errors.join(' ')).toMatch(/http\(s\)/);
   });
 
+  it('normalizes an empty/whitespace link to "" (falls back to the feed deep link)', () => {
+    const r = validateAnnounceInput({ slug: 'x', link: '   ' });
+    expect(r.errors).toEqual([]);
+    expect(r.resolved.link).toBe('');
+    // '' || undefined === undefined at the call sites → deep link, not a broken CTA
+    const text = buildGroupMeText({
+      body: 'B', baseUrl: 'https://theleague.us', newsPath: '/news', postId: 'sf_announce_x',
+      link: r.resolved.link || undefined,
+    });
+    expect(text).toContain('https://theleague.us/news?post=sf_announce_x#post-sf_announce_x');
+  });
+
   it('counts the custom link toward the GroupMe length cap', () => {
     const longLink = 'https://www.theleague.us/whats-new/' + 'a'.repeat(GROUPME_MAX_CHARS);
     const r = validateAnnounceInput({ slug: 'x', body: 'short', link: longLink, sendGroupMe: true });
