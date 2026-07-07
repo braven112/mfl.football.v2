@@ -150,12 +150,10 @@ const frameUrl = content.link
         </script>
       </div>
       {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
-      <img class="fch__shot-logo fch__shot-logo--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="lazy" />
       <img class="fch__shot-logo fch__shot-logo--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
     </>
   ) : (
     <>
-      <img class="fch__logo-art fch__logo-art--light" src="/assets/logos/theleague-logo.svg" alt="" aria-hidden="true" loading="eager" />
       <img class="fch__logo-art fch__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="eager" />
     </>
   )}
@@ -281,11 +279,7 @@ const frameUrl = content.link
   }
 
   /* Both themes render on a dark surface, so the white logo silhouette is
-     correct in both — the dark-colored variant is retired. */
-  .fch__logo-art--light {
-    display: none;
-  }
-
+     correct in both — the dark-colored (--light) variant is retired. */
   .fch__logo-art--dark {
     display: block;
     opacity: 0.18;
