@@ -66,3 +66,31 @@ the catch — a hang leaves no error otherwise, so the breadcrumbs are how you
 learn which `await` stalled. To diagnose live, use the Vercel MCP
 (`get_runtime_logs` / `get_runtime_errors`) filtered to the route; "no logs
 found" is itself the diagnosis (timeout, not throw).
+
+## 2026-07-07 - Return Handled Errors As 200+`{ok:false}` — The Edge Eats Origin 5xx
+
+**Context:** Same admin `POST /api/admin/schefter-announce` send path. After
+bounding the awaits (previous insight), the breadcrumb logs showed the real
+failure: `dispatch response 401` — the GitHub `workflow_dispatch` was rejected
+because `GH_PAT` had expired. The endpoint returned that as HTTP **502** with a
+JSON body + actionable `hint`. But the browser STILL saw a bare `text/html`
+`502 Bad Gateway` (via `Cf-Ray`) — the JSON never arrived.
+
+**Insight:** When the origin sits behind Cloudflare (and/or Vercel), a **5xx**
+status returned by your function can be **replaced by the platform's own HTML
+error page**, discarding your JSON body. So a carefully-crafted `return json({
+error, hint }, 502)` is useless — the client sees the platform's page, not your
+message. This is why a "resilient, always-returns-JSON" handler can still
+present as an opaque 502 in the browser: the status code, not the body, decides
+whether the edge intercepts it.
+
+**Recommendation:** For **operational** failures you want the client to read
+(upstream API rejected you, dependency misconfigured, unhandled catch), return
+**HTTP 200 with `{ ok: false, error, hint, ... }`** instead of a 5xx, and have
+the client branch on `data.ok === false` (not just `res.ok`). Reserve real 4xx
+for client-fixable input (`400` validation, `403` forbidden, `429` rate-limit —
+these pass through the edge fine). Distinguish upstream auth failures in the
+hint: GitHub **401** = the token itself is bad (expired/revoked); **403/404** =
+valid token, missing permission/scope. (Here: `GH_PAT` expired ~2026-03-21 —
+the last successful Vercel-cron→`roster-sync.yml` dispatch — so every
+Vercel→Actions bridge using it had been silently dead for months.)
