@@ -370,7 +370,7 @@ const themePref = getThemePreference(Astro.cookies);
 		/>
 
 		<!-- Trade Alert Modal — global notification for pending received trades -->
-		<TradeAlertModal />
+		<TradeAlertModal hideLeaguePrefix={hideLeaguePrefix} />
 		<script src="../scripts/trade-alert.ts"></script>
 
 		<!-- Navigation progress bar trigger -->

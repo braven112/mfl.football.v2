@@ -56,6 +56,14 @@
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
+    },
+    {
+      "date": "2026-07-07",
+      "type": "bug-fix",
+      "summary": "A handful of AFL links had been sneaking you across the border into The League. Biggest one: tapping \"Set Lineup\" while signed out bounced you to The League's login page instead of AFL's — now it sends you to the AFL sign-in and drops you right back on your lineup. Same treatment for the \"View all\" on the Schefter Report card and the Trade Builder buttons on the trade-offer popup, which had been pointing at The League's versions. And the header search icon, which had no AFL home to go to, steps aside on AFL until an all-pages search lands there.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
     }
   ]
 }

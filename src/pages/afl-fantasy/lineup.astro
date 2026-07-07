@@ -30,7 +30,7 @@ import '../../styles/loading.css';
 // ---------------------------------------------------------------------------
 const user = getAuthUser(Astro.request);
 if (!user?.franchiseId) {
-  return Astro.redirect('/theleague/login?redirect=/afl-fantasy/lineup');
+  return Astro.redirect('/afl-fantasy/login?next=/afl-fantasy/lineup');
 }
 
 // ---------------------------------------------------------------------------

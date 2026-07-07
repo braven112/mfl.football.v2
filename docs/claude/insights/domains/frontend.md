@@ -625,3 +625,35 @@ one — `::view-transition-old(root) { animation: none; }`, keep the `fade-in` o
 new. Removes the overlap window (and thus the ghost) everywhere while keeping
 the entrance fade. Lesson: a root cross-fade is latent-buggy on any tall page
 with per-page layout shift; prefer fade-in-only.
+
+## AFL cross-league link leaks hide in shared components + auth redirects, not nav-config (2026-07-07)
+
+**Context:** "Make all AFL nav icons point to AFL pages." The sidebar
+`nav-config.json` uses `path: "/lineup"` which `NavLinks.astro` correctly
+prefixes per-league (`getLeaguePrefix('afl') → /afl-fantasy`), and the desktop
+header icons already branched on `isAFL`. So the nav config was a red herring —
+every real leak lived elsewhere.
+
+**Insight:** The leaks were hardcoded `/theleague/*` hrefs in components that
+render on BOTH sites via `TheLeagueLayout`:
+- `TradeAlertModal.astro` (global trade popup) — hardcoded `/theleague/trade-builder`.
+- `shared/SchefterFeedCompact.astro` — hardcoded `/theleague/news` "View all".
+- `Header.astro` breadcrumb search — `/theleague/search` (AFL has no search page → hide with `{!isAFL && ...}`).
+Fix pattern: derive league inside the component with
+`getLeagueContext(Astro.url).slug === 'afl-fantasy'` and route through
+`resolveLeaguePath(...)`. To find them all, don't read code — render the pages
+and grep the HTML: `curl <afl-page> | grep -oE 'href="/theleague/[^"]*"'`.
+
+**The subtle one — auth redirects, and AFL login uses a different param.** The
+header "Set Lineup" *link* was correct (`/afl-fantasy/lineup`), but the page's
+logged-out auth gate did `Astro.redirect('/theleague/login?redirect=...')`, so
+clicking it bounced AFL users to TheLeague's login. AFL has its own login at
+`/afl-fantasy/login`, and it reads **`?next=`** (validated with
+`startsWith('/afl-fantasy')`), NOT TheLeague's `?redirect=`. Correct form:
+`/afl-fantasy/login?next=/afl-fantasy/lineup`. A link auditing pass that only
+checks `href`s misses this — you have to follow the 302 (`curl -o /dev/null -w
+'%{redirect_url}'`).
+
+**Evidence:** `src/pages/afl-fantasy/lineup.astro:33`,
+`src/components/theleague/{TradeAlertModal,Header}.astro`,
+`src/components/shared/SchefterFeedCompact.astro`.
