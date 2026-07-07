@@ -570,19 +570,10 @@ const frameUrl = content.link
       right: -1rem;
     }
 
-    .fch__shot-logo--light {
+    /* Dark surface in both themes → the white logo stand-in is always correct. */
+    .fch__shot-logo--dark {
       display: block;
-    }
-
-    .fch--dark .fch__shot-logo--light,
-    :global(html.dark) .fch .fch__shot-logo--light {
-      display: none;
-    }
-
-    .fch--dark .fch__shot-logo--dark,
-    :global(html.dark) .fch .fch__shot-logo--dark {
-      display: block;
-      opacity: 0.22;
+      opacity: 0.18;
     }
 
     /* The text cap only exists to dodge the opaque bottom-right cutout —
