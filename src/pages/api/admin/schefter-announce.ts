@@ -39,12 +39,16 @@ const WORKFLOW_FILE = 'schefter-announce.yml';
 // limit, which try/catch cannot rescue. Bound every await with a hard external
 // timeout so the handler ALWAYS returns a JSON error well under maxDuration.
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
-    ),
-  ]);
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+    p.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
 }
 
 const json = (data: unknown, status = 200) =>
