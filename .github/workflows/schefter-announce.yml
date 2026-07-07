@@ -1,0 +1,84 @@
+name: Schefter Announce
+
+# Manual-only. Seeds ONE hand-authored Schefter announcement (e.g. a new site
+# feature) into the league feed and, unless suppressed, the Schefter GroupMe
+# chat. There is no schedule — nothing fires until someone clicks "Run workflow".
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Kebab-case id for the post (makes re-runs idempotent), e.g. dark-mode-2026-07"
+        required: true
+        type: string
+      leagues:
+        description: "Which league(s) to post to"
+        required: true
+        default: theleague
+        type: choice
+        options:
+          - theleague
+          - afl
+          - both
+      headline:
+        description: "Headline (leave blank to use the script default)"
+        required: false
+        type: string
+      body:
+        description: "Body / GroupMe text (leave blank to use the script default)"
+        required: false
+        type: string
+      send_groupme:
+        description: "Also ping the Schefter GroupMe bot?"
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Preview only — write nothing, send nothing"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: schefter-announce
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Post announcement
+        env:
+          TZ: America/Los_Angeles
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          ANNOUNCE_SLUG: ${{ inputs.slug }}
+          ANNOUNCE_LEAGUES: ${{ inputs.leagues }}
+          ANNOUNCE_HEADLINE: ${{ inputs.headline }}
+          ANNOUNCE_BODY: ${{ inputs.body }}
+          ANNOUNCE_SEND_GROUPME: ${{ inputs.send_groupme }}
+          ANNOUNCE_DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/schefter-announce.mjs
+
+      - name: Commit and push feed update
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: schefter announcement — ${{ inputs.slug }}" \
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json"
