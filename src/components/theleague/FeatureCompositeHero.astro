@@ -176,20 +176,24 @@ const frameUrl = content.link
 
 <style>
   .fch {
-    /* Light theme (default). Dark values applied by html.dark AND .fch--dark. */
-    --fch-surface: linear-gradient(115deg, #f4f8fc 0%, #e4eef8 52%, #d2e2f2 100%);
-    --fch-ink: var(--color-gray-900, #0f1419);
-    --fch-body: rgba(22, 32, 44, 0.72);
-    --fch-date: rgba(22, 32, 44, 0.55);
-    --fch-ghost: rgba(28, 73, 124, 0.06);
-    --fch-glow: var(--fch-glow-light, rgba(28, 73, 124, 0.2));
-    --fch-shadow: rgba(15, 30, 46, 0.3);
-    --fch-cta-bg: var(--color-primary, #1c497c);
-    --fch-cta-ink: #ffffff;
-    --fch-pill-bg: rgba(28, 73, 124, 0.08);
-    --fch-pill-border: rgba(28, 73, 124, 0.35);
-    --fch-pill-ink: var(--color-primary, #1c497c);
-    --fch-border: rgba(28, 73, 124, 0.18);
+    /* Light theme (default) is a saturated blue card — white ink over a vivid
+       league-blue gradient, mirroring what makes the dark treatment land.
+       Deeper navy surface applied by html.dark AND .fch--dark. Because both
+       themes now render on a dark surface, the foreground (ink, pill, CTA,
+       logo silhouette) is the white variant in both. */
+    --fch-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+    --fch-ink: #ffffff;
+    --fch-body: rgba(255, 255, 255, 0.82);
+    --fch-date: rgba(255, 255, 255, 0.6);
+    --fch-ghost: rgba(255, 255, 255, 0.06);
+    --fch-glow: var(--fch-glow-dark, rgba(96, 165, 250, 0.34));
+    --fch-shadow: rgba(9, 21, 38, 0.4);
+    --fch-cta-bg: #ffffff;
+    --fch-cta-ink: #12325a;
+    --fch-pill-bg: rgba(255, 255, 255, 0.16);
+    --fch-pill-border: rgba(255, 255, 255, 0.4);
+    --fch-pill-ink: #dcebff;
+    --fch-border: rgba(255, 255, 255, 0.14);
 
     position: relative;
     overflow: hidden;
@@ -276,19 +280,15 @@ const frameUrl = content.link
     pointer-events: none;
   }
 
+  /* Both themes render on a dark surface, so the white logo silhouette is
+     correct in both — the dark-colored variant is retired. */
+  .fch__logo-art--light {
+    display: none;
+  }
+
   .fch__logo-art--dark {
-    display: none;
-  }
-
-  .fch--dark .fch__logo-art--light,
-  :global(html.dark) .fch__logo-art--light {
-    display: none;
-  }
-
-  .fch--dark .fch__logo-art--dark,
-  :global(html.dark) .fch__logo-art--dark {
     display: block;
-    opacity: 0.22;
+    opacity: 0.18;
   }
 
   /* ── Feature screenshot (browser-framed) ──
@@ -393,19 +393,10 @@ const frameUrl = content.link
     pointer-events: none;
   }
 
-  .fch--no-shot .fch__shot-logo--light {
+  /* Dark surface in both themes → the white logo stand-in is always correct. */
+  .fch--no-shot .fch__shot-logo--dark {
     display: block;
-  }
-
-  .fch--dark.fch--no-shot .fch__shot-logo--light,
-  :global(html.dark) .fch--no-shot .fch__shot-logo--light {
-    display: none;
-  }
-
-  .fch--dark.fch--no-shot .fch__shot-logo--dark,
-  :global(html.dark) .fch--no-shot .fch__shot-logo--dark {
-    display: block;
-    opacity: 0.22;
+    opacity: 0.18;
   }
 
   .fch__caption {
