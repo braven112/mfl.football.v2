@@ -12,9 +12,14 @@
  *
  * Usage:
  *   node scripts/capture-whats-new-screenshots.mjs                              # capture missing + stale
- *   node scripts/capture-whats-new-screenshots.mjs --force                      # re-capture all
+ *   node scripts/capture-whats-new-screenshots.mjs --force                      # re-capture all (except MANUAL_CAPTURE_ONLY entries below)
  *   node scripts/capture-whats-new-screenshots.mjs dead-money-awards pwa-app    # capture specific entries
  *   node scripts/capture-whats-new-screenshots.mjs --force dead-money-awards    # force re-capture specific entry
+ *
+ * Note: entries in MANUAL_CAPTURE_ONLY (below) are always skipped by a bare
+ * `--force` — they require a hand-staged environment (auth, mock data, a
+ * specific scroll position) that a blind capture can't reproduce. Name the
+ * entry explicitly on the CLI to recapture it.
  */
 import { chromium } from 'playwright';
 import { readFileSync, existsSync, statSync, unlinkSync } from 'fs';

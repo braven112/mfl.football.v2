@@ -35,9 +35,12 @@ what's actually needed:
    prod-absolute but point at *our own* assets (e.g.
    `https://mflfootballv2.vercel.app/assets/afl/icons/herd.png` baked into
    `afl.config.json`), proxy them back to the local dev server instead of
-   faking them — `ctx.request.get(BASE + path)` then `route.fulfill()` with
-   the real bytes, so franchise icons etc. render correctly instead of as
-   silhouettes.
+   faking them — `route.fetch({ url: BASE + path })` then
+   `route.fulfill({ response })` with the real bytes, so franchise icons etc.
+   render correctly instead of as silhouettes. (`context.request.get()` also
+   works — it's a valid Playwright API for firing a request outside the
+   page — but `route.fetch()` is the more idiomatic tool for "replay this
+   route against a different URL" and needs no manual header plumbing.)
 
 **Recommendation:** Before assuming a page "can't be captured here," check
 whether it reads from committed JSON (mockable), has a `?mock=` mode
