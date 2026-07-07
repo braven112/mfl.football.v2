@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-07-13",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-07-06",
+      "type": "style-tweak",
+      "summary": "The \"Completed auctions report\" link on the homepage auctions card now stays in one piece. It had been breaking mid-phrase — \"Completed\" clinging to the end of one line while \"auctions report\" dropped to the next — so the whole link now wraps to a fresh line together when it runs out of room.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "theleague"
+    }
+  ]
 }
