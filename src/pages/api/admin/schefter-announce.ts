@@ -67,14 +67,14 @@ export const POST: APIRoute = async ({ request }) => {
  try {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
-    return json({ error: 'forbidden' }, 403);
+    return json({ ok: false, error: 'forbidden' }, 403);
   }
 
   let payload: Record<string, unknown>;
   try {
     payload = (await request.json()) as Record<string, unknown>;
   } catch {
-    return json({ error: 'invalid JSON body' }, 400);
+    return json({ ok: false, error: 'invalid JSON body' }, 400);
   }
 
   const action = payload.action === 'send' ? 'send' : 'preview';
@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request }) => {
     sendGroupMe: payload.sendGroupMe !== false,
   });
   if (errors.length) {
-    return json({ error: 'validation', errors }, 400);
+    return json({ ok: false, error: 'validation', errors }, 400);
   }
 
   const { slug, headline, body, leagues, sendGroupMe, link } = resolved as {
@@ -136,14 +136,17 @@ export const POST: APIRoute = async ({ request }) => {
     console.warn('[announce] rate-limit skipped (fail-open):', err instanceof Error ? err.message : err);
   }
   if (!allowed) {
-    return json({ error: 'rate-limited', message: 'Too many announcements this hour. Try again later.' }, 429);
+    return json({ ok: false, error: 'rate-limited', message: 'Too many announcements this hour. Try again later.' }, 429);
   }
 
   const token = process.env.GH_PAT;
   const owner = process.env.GH_REPO_OWNER ?? 'braven112';
   const repo = process.env.GH_REPO_NAME ?? 'mfl.football.v2';
   if (!token) {
-    return json({ error: 'GH_PAT not configured in the runtime environment.' }, 500);
+    // NB: operational failures return HTTP 200 with { ok: false } on purpose.
+    // Cloudflare/Vercel replace an origin 5xx with their own HTML error page,
+    // which swallowed our JSON detail — so the admin UI only saw a bare 502.
+    return json({ ok: false, error: 'GH_PAT is not configured in the Vercel environment.' }, 200);
   }
 
   console.log('[announce] send: dispatching', WORKFLOW_FILE, { owner, repo, leagues });
@@ -183,19 +186,22 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (err) {
     console.error('[announce] dispatch failed:', err);
-    return json({ error: 'dispatch failed', detail: err instanceof Error ? err.message : String(err) }, 502);
+    return json({ ok: false, error: 'dispatch failed', detail: err instanceof Error ? err.message : String(err) }, 200);
   }
   console.log('[announce] send: dispatch response', res.status);
 
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    // 401/403/404 from the dispatch endpoint almost always means the token,
-    // not the request — surface an actionable hint instead of a raw dump.
+    // Distinguish token problems: 401 = the token itself is bad (invalid /
+    // expired / revoked); 403 or 404 = valid token but missing permission
+    // (actions:write) or repo access. Surface an actionable hint.
     const hint =
-      res.status === 401 || res.status === 403 || res.status === 404
-        ? 'GH_PAT is likely missing the "actions: write" permission or access to this repo (GitHub returns 404 for both). Check the token in the Vercel env.'
-        : undefined;
-    return json({ error: 'GitHub API error', status: res.status, detail, hint }, 502);
+      res.status === 401
+        ? 'GH_PAT is invalid or expired. Regenerate a token (classic: repo + workflow scopes, or fine-grained: Actions read/write on this repo) and update the GH_PAT env var in Vercel.'
+        : res.status === 403 || res.status === 404
+          ? 'GH_PAT is missing the actions:write permission or access to this repo (GitHub returns 403/404 for both). Update the token scopes in Vercel.'
+          : undefined;
+    return json({ ok: false, error: `GitHub rejected the dispatch (HTTP ${res.status})`, status: res.status, detail, hint }, 200);
   }
 
   return json({
@@ -210,6 +216,6 @@ export const POST: APIRoute = async ({ request }) => {
   // Never leak a bare platform 502 — always return a readable JSON error so the
   // admin UI can show the cause (and log it so it lands in the runtime logs).
   console.error('[announce] unhandled error:', err);
-  return json({ error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 500);
+  return json({ ok: false, error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 200);
  }
 };
