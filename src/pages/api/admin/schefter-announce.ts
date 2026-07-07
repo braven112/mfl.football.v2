@@ -67,14 +67,14 @@ export const POST: APIRoute = async ({ request }) => {
  try {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
-    return json({ error: 'forbidden' }, 403);
+    return json({ ok: false, error: 'forbidden' }, 403);
   }
 
   let payload: Record<string, unknown>;
   try {
     payload = (await request.json()) as Record<string, unknown>;
   } catch {
-    return json({ error: 'invalid JSON body' }, 400);
+    return json({ ok: false, error: 'invalid JSON body' }, 400);
   }
 
   const action = payload.action === 'send' ? 'send' : 'preview';
@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request }) => {
     sendGroupMe: payload.sendGroupMe !== false,
   });
   if (errors.length) {
-    return json({ error: 'validation', errors }, 400);
+    return json({ ok: false, error: 'validation', errors }, 400);
   }
 
   const { slug, headline, body, leagues, sendGroupMe, link } = resolved as {
@@ -136,7 +136,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.warn('[announce] rate-limit skipped (fail-open):', err instanceof Error ? err.message : err);
   }
   if (!allowed) {
-    return json({ error: 'rate-limited', message: 'Too many announcements this hour. Try again later.' }, 429);
+    return json({ ok: false, error: 'rate-limited', message: 'Too many announcements this hour. Try again later.' }, 429);
   }
 
   const token = process.env.GH_PAT;

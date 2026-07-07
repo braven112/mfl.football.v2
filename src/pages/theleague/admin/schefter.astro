@@ -1399,7 +1399,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       try {
         const { res, data } = await post('send');
         if (!res.ok || data.ok === false) {
-          const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || `HTTP ${res.status}`;
+          const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.message || data.error || `HTTP ${res.status}`;
           const extra = (data.detail ? ` — ${data.detail}` : '') + (data.hint ? ` (${data.hint})` : '');
           setStatus(errs + extra, 'bad');
           previewBtn.disabled = false;
