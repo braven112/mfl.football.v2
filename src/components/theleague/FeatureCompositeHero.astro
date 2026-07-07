@@ -130,7 +130,13 @@ const frameUrl = content.link
         <script is:inline>
           (function () {
             var s = document.currentScript;
-            var dark = document.documentElement.classList.contains('dark');
+            // Forced-dark heroes (.fch--dark from heroTheme) show the dark
+            // capture even in light site theme — promote the variant the
+            // CSS actually displays, not just the html.dark one.
+            var fch = s.closest('.fch');
+            var dark =
+              document.documentElement.classList.contains('dark') ||
+              (fch && fch.classList.contains('fch--dark'));
             var img = s.parentElement.querySelector(
               dark ? '.fch__shot-img--dark' : '.fch__shot-img--light',
             );

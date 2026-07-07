@@ -376,7 +376,9 @@ describe('resolveHeroContent', () => {
       expect(result.title).toBe('Fresh Feature');
     });
 
-    it('should randomly select among multiple features within 7-day window', () => {
+    it('picks deterministically per day among multiple fresh features, rotating across days', () => {
+      // Deterministic per PT day — a per-request random pick flips the hero
+      // (title, screenshot, cast player) between same-day SSR renders.
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'a', title: 'Feature A', date: '2026-02-14' }),
         makeEntry({ id: 'b', title: 'Feature B', date: '2026-02-15' }),
@@ -385,12 +387,16 @@ describe('resolveHeroContent', () => {
       const timeline = makeTimeline();
       const now = new Date(2026, 1, 16);
 
-      const titles = new Set<string>();
-      for (let i = 0; i < 50; i++) {
-        const result = resolveHeroContent(entries, timeline, now);
-        titles.add(result.title);
+      const first = resolveHeroContent(entries, timeline, now);
+      for (let i = 0; i < 10; i++) {
+        expect(resolveHeroContent(entries, timeline, now).title).toBe(first.title);
       }
-      // With 50 iterations and 3 options, should see at least 2 different titles
+
+      // Across days the pick rotates (all three entries stay ≤7 days fresh).
+      const titles = new Set<string>();
+      for (let d = 16; d <= 21; d++) {
+        titles.add(resolveHeroContent(entries, timeline, new Date(2026, 1, d)).title);
+      }
       expect(titles.size).toBeGreaterThan(1);
     });
 

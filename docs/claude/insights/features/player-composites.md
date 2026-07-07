@@ -516,8 +516,13 @@ artifact), the hero casts the artifact. The chain: JSON entry → both
 independent implementations, keep in sync) → `HeroContent.heroArt` →
 `FeatureCompositeHero` renders `.fch__art` full-opacity where the player
 would stand, caption chip reused for provenance ("Circa 2007 · Recovered").
-`index.astro` skips `castRookieModel`/`castEnhancementModel` when
-`fallbackHero.heroArt` is set — don't burn casting work the component ignores.
+`index.astro` skips the featured-player cast (`castFeaturedModel` since the
+2026-07-06 screenshot-first revision) when `fallbackHero.heroArt` is set —
+don't burn casting work the component ignores.
+**AFL limitation:** `AflEventHero` has no heroArt rendering — an AFL-tagged
+heroArt entry shows its screenshot (or the player webp) instead of the
+artwork. All heroArt entries are theleague-only today; add AFL support
+before tagging one for both leagues.
 
 **Gotcha:** the recovered vintage `*_icon_circle.png` buttons are all 100×100
 (original MFL button size). Cap on-screen width at ~2× (200px) or they go
