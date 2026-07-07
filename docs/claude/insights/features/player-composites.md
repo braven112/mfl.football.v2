@@ -340,6 +340,24 @@ different from every other composite, and why:
 - Injury modal note: the offseason feed has no `injuryStatus` players, so
   the click path can't be exercised live off-season — verify by calling
   `window.openPlayerInjuryModal({...})` with the enriched payload shape.
+- **A team defense gets a FACE, not a bare crest (2026-07-07).** `DEF` is
+  excluded from the generic cutout rule above, but `PlayerDetailsModal`
+  now opts back in for team defenses: after `applyPlayerModalBand()` leaves
+  the band gradient-only, it looks up `getDefSpotlightPlayers(teamCode)`
+  (`src/data/theleague/def-spotlight-players.ts` — the SAME ranked pool the
+  Free Agents hero spotlight rotates) and paints the top-ranked defender's
+  ESPN headshot as the cutout, with his name · position in the sub-line.
+  Static on purpose — Brandon: the modal must NOT rotate faces the way the
+  hero spotlight does; lead with `defPool[0]` and hold it. Re-open still
+  calls `stopDef…`-free code because there's no timer; the offensive path
+  reclaims the cutout via `applyPlayerModalBand` on the next open.
+- **`getDefSpotlightPlayers` key gotcha: Washington is `WAS`, not `WSH`.**
+  The spotlight JSON is keyed by players.astro's `normalizeMflTeam` (GBP→GB,
+  JAC→JAX, but Washington stays `WAS`). Both `nfl-logo.ts#normalizeTeamCode`
+  AND the modal's inline normalizer map `WAS→WSH`, so looking the pool up by
+  the normalized code silently misses Washington. Map `WSH→WAS` right before
+  the lookup (`teamCode === 'WSH' ? 'WAS' : teamCode`). Every other team code
+  matches between the two normalizations.
 
 ## Desktop `AflEventHero` cutout — WIDTH drives the scale, not max-height (2026-07-07)
 
