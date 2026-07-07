@@ -526,13 +526,39 @@ Three surfaces:
    completed week's actual points. (Also gained `<meta charset="utf-8">` —
    the bare page rendered "·" as mojibake.)
 
+**Watermark gotcha (franchise crests):** the lineup/showcase panels watermark
+the FRANCHISE crest, which is a **raster** GroupMe avatar (often non-square),
+while NFL-game panels watermark a square SVG logo. `FaceoffComposite`'s
+`.foc__watermark` therefore sets `aspect-ratio: 1; object-fit: contain` so a
+tall/wide crest centers in a square box without stretching — a bare `width:`
+alone stretched the raster crest. One rule covers both asset types.
+
+**Live projected-points scoreboard (lineup.astro, shipped 2026-07-06):** the
+faceoff band carries a two-total scoreboard instead of a static title. OUR
+total sums the starting slots and **recomputes client-side** on every mutation
+(`updateFaceoffTotal` is called from `updateSubmitBar`, the one funnel every
+swap/optimal/clear/undo/draft-load already hits) — server and client sum the
+SAME source (`projMap` ↔ `roster[].projection`) so the initial render matches
+and no spurious bump fires. THEIR total is server-fixed: their recorded
+starters' projections when the week is locked, else `bestLineupProjTotal`
+(greedy fill of the 9 lineup slots by projection). Why greedy-optimal and not
+their actual set lineup: **`TYPE=lineups` is auth-gated** (redirects
+api→www→api in a loop for a read), so another franchise's set lineup for a
+future week isn't publicly readable — best-by-projection is the honest proxy.
+The band falls back to the players-of-the-game title when both totals are 0
+(completed season, empty projections). `data-user-side` on the scoreboard tells
+the client which total is ours; the accent color keys off it too.
+
 Verify gotchas:
 - Auth-gated pages: the dev server mints a RANDOM JWT secret per boot
   (`process.env.JWT_SECRET` unset locally; `.env` is NOT loaded into
   process.env), so you cannot forge a session cookie externally. Verified
   via a TEMPORARY `import.meta.env.DEV`-guarded route calling
   createSessionToken in-process — deleted before commit. Watch for
-  duplicate `session_token` cookies shadowing the fresh one.
+  duplicate `session_token` cookies shadowing the fresh one. For a
+  screenshot, launch.json's `env.JWT_SECRET` + a Playwright cookie minted
+  with that same secret works headlessly (the running dev server keeps the
+  secret from its boot env even after you revert launch.json).
 - MatchupPreviewHero can't render from committed data (live 2026 feed has
   projections but the grid is MatchupSplitHero's fallback; 2025 archive has
   no projections). Verified by seeding 2025 projectedScores from the wk-17
