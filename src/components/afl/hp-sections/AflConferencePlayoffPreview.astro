@@ -378,12 +378,21 @@ const visible = rows.slice(0, 6);
       height: 1.5rem;
     }
 
+    /* Let the heading's text block shrink so the title can ellipsis rather
+       than push the card wider if a league feeds an unusually long name. */
+    .afl-conf__heading,
+    .afl-conf__section-header {
+      min-width: 0;
+    }
+
     .afl-conf__title {
       /* Shrink a touch on the narrowest phones (~320px) so the single-line
          headline never overflows the card; caps at 0.75rem by ~390px up. */
       font-size: clamp(0.6875rem, 3.1vw, 0.75rem);
       letter-spacing: 0.02em;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Division is redundant on this compact view — hide the column. */
