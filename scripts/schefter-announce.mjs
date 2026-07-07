@@ -218,22 +218,34 @@ async function main() {
   // Single timestamp for the whole run so both leagues share one moment.
   const timestamp = new Date().toISOString();
 
-  // Pre-flight: if we'll send GroupMe, verify the composed text fits GroupMe's
-  // 1000-char cap for EVERY target before writing anything — so we fail fast on
-  // the operator's screen rather than leaving one feed written + one GroupMe
-  // send silently truncated. The post id (hence deep link) is deterministic.
-  if (sendGroupMeFlag) {
+  // Pre-flight: validate EVERY target before writing anything, so a bad second
+  // league can't leave the first one half-published (feed written + GroupMe
+  // pinged) before the run aborts. Checks (non-dry-run): the feed file exists,
+  // and — when sending GroupMe — the composed text fits GroupMe's 1000-char cap.
+  // The post id (hence deep link) is deterministic, so this mirrors the real run.
+  if (!dryRun) {
     for (const key of leagues) {
       const target = LEAGUE_TARGETS[key];
       if (!target) continue;
-      const postId = `sf_announce_${slug}`;
-      const text = `${body}\n\n${CTA_PREFIX} ${buildDeepLink(target, postId)}`;
-      if (text.length > GROUPME_MAX_CHARS) {
+      try {
+        await fs.access(target.feedPath);
+      } catch {
         console.error(
-          `ERROR: GroupMe message for ${target.navSlug} is ${text.length} chars ` +
-            `(max ${GROUPME_MAX_CHARS}). Shorten the body or run with --groupme false.`,
+          `ERROR: feed file not found for ${target.navSlug}: ` +
+            `${path.relative(projectRoot, target.feedPath)}. ` +
+            'Are you on a checkout with the league data committed?',
         );
         process.exit(1);
+      }
+      if (sendGroupMeFlag) {
+        const text = `${body}\n\n${CTA_PREFIX} ${buildDeepLink(target, `sf_announce_${slug}`)}`;
+        if (text.length > GROUPME_MAX_CHARS) {
+          console.error(
+            `ERROR: GroupMe message for ${target.navSlug} is ${text.length} chars ` +
+              `(max ${GROUPME_MAX_CHARS}). Shorten the body or run with --groupme false.`,
+          );
+          process.exit(1);
+        }
       }
     }
   }
@@ -257,16 +269,7 @@ async function main() {
       log(`  [dry-run] Would prepend post ${post.id} to ${path.relative(projectRoot, target.feedPath)}`);
       written = true; // treat as "would write" so the GroupMe preview renders
     } else {
-      try {
-        await fs.access(target.feedPath);
-      } catch {
-        console.error(
-          `ERROR: feed file not found for ${target.navSlug}: ` +
-            `${path.relative(projectRoot, target.feedPath)}. ` +
-            'Are you on a checkout with the league data committed?',
-        );
-        process.exit(1);
-      }
+      // Feed existence already verified in the pre-flight above.
       written = await appendToFeed(target.feedPath, post);
       if (written) {
         wroteAny = true;
