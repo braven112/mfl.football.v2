@@ -341,6 +341,30 @@ different from every other composite, and why:
   the click path can't be exercised live off-season — verify by calling
   `window.openPlayerInjuryModal({...})` with the enriched payload shape.
 
+## Desktop `AflEventHero` cutout — WIDTH drives the scale, not max-height (2026-07-07)
+
+Enlarging the `model` cutout on the AFL event hero ("make the player bigger,
+head above the headline") is a two-line change on `.afl-event-hero__cutout`,
+but which property to touch is non-obvious:
+
+- The cutout is `object-fit: contain; object-position: bottom` over a
+  **landscape** ESPN frame, so the RENDERED size is almost always
+  width-bound: `width: clamp(230px, 34vw, 440px)` at desktop widths fits
+  inside `max-height` with room to spare (measured 435×316 in a 384px-tall
+  card). Bumping `max-height` alone does nothing — grow the **width clamp**
+  to scale the player up.
+- To let the head rise **above the vertically-centered headline**, set
+  `max-height` > 100% (132%) so a taller-than-card cutout can extend past the
+  top edge; the section's `overflow: hidden` trims the overshoot cleanly. The
+  cutout stays `bottom: 0` anchored, so all the extra height goes upward.
+- Push it flush to the right with a negative `right`
+  (`clamp(-1rem, -0.5vw, 0.25rem)`) — the same `overflow: hidden` trims the
+  overhang. Widen the parent `.afl-event-hero__model` box to match so it
+  isn't the constraint.
+- The `@media (max-width: 640px)` block hard-codes its own `width`/`right`,
+  so desktop changes here don't touch mobile — verify the phone viewport
+  separately (it reads the mobile override, not these clamps).
+
 ## Mobile cutout layout — portrait cover-crop, not width/height auto (2026-07-06)
 
 Fixed on `FeatureCompositeHero` + `BreakingStoryHero`; the other composite

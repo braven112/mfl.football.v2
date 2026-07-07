@@ -360,7 +360,7 @@ const countAriaLabel = hasCount
     top: 0;
     right: 0;
     bottom: 0;
-    width: clamp(240px, 38%, 400px);
+    width: clamp(260px, 44%, 480px);
     pointer-events: none;
     z-index: 1;
   }
@@ -374,10 +374,14 @@ const countAriaLabel = hasCount
   }
   .afl-event-hero__cutout {
     position: absolute;
-    right: clamp(0.5rem, 2vw, 1.75rem);
+    right: clamp(-1rem, -0.5vw, 0.25rem);
     bottom: 0;
-    width: clamp(230px, 28vw, 340px);
-    max-height: 96%;
+    /* Sized large enough that the head clears the top of the headline: the
+       cutout is bottom-anchored and taller than the card, so its top (and the
+       player's head) rises above the vertically-centered title. The section's
+       overflow:hidden trims anything past the top edge. */
+    width: clamp(230px, 34vw, 440px);
+    max-height: 132%;
     object-fit: contain;
     object-position: bottom;
     filter: drop-shadow(0 16px 32px var(--ev-model-shadow));
