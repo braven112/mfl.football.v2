@@ -27,6 +27,10 @@ on:
         description: "Body / GroupMe text (leave blank to use the script default)"
         required: false
         type: string
+      link:
+        description: "Optional CTA link, e.g. https://www.theleague.us/whats-new/dark-mode (blank = link to the feed post)"
+        required: false
+        type: string
       send_groupme:
         description: "Also ping the Schefter GroupMe bot?"
         required: true
@@ -69,6 +73,7 @@ jobs:
           ANNOUNCE_LEAGUES: ${{ inputs.leagues }}
           ANNOUNCE_HEADLINE: ${{ inputs.headline }}
           ANNOUNCE_BODY: ${{ inputs.body }}
+          ANNOUNCE_LINK: ${{ inputs.link }}
           ANNOUNCE_SEND_GROUPME: ${{ inputs.send_groupme }}
           ANNOUNCE_DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/schefter-announce.mjs

@@ -89,6 +89,11 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
           <textarea id="ann-body" name="body" rows="4"
             placeholder="📱 SCHEFTER: The site just leveled up…"></textarea>
         </label>
+        <label class="ann-field">
+          <span>Link <small>optional CTA target; blank links to the feed post</small></span>
+          <input id="ann-link" name="link" type="url"
+            placeholder="https://www.theleague.us/whats-new/dark-mode" />
+        </label>
         <label class="ann-check">
           <input id="ann-groupme" name="sendGroupMe" type="checkbox" checked />
           <span>Also ping the Schefter GroupMe</span>
@@ -1232,6 +1237,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     const leaguesEl = document.getElementById('ann-leagues') as HTMLSelectElement;
     const headlineEl = document.getElementById('ann-headline') as HTMLInputElement;
     const bodyEl = document.getElementById('ann-body') as HTMLTextAreaElement;
+    const linkEl = document.getElementById('ann-link') as HTMLInputElement;
     const groupmeEl = document.getElementById('ann-groupme') as HTMLInputElement;
     const previewBtn = document.getElementById('ann-preview') as HTMLButtonElement;
     const sendBtn = document.getElementById('ann-send') as HTMLButtonElement;
@@ -1251,6 +1257,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
         leagues: leaguesEl.value,
         headline: headlineEl.value,
         body: bodyEl.value,
+        link: linkEl.value.trim(),
         sendGroupMe: groupmeEl.checked,
       };
     }
@@ -1261,7 +1268,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     }
 
     // Any edit invalidates a prior preview — force a re-preview before Send.
-    for (const el of [slugEl, leaguesEl, headlineEl, bodyEl, groupmeEl]) {
+    for (const el of [slugEl, leaguesEl, headlineEl, bodyEl, linkEl, groupmeEl]) {
       el.addEventListener('input', () => {
         previewOk = false;
         sendBtn.disabled = true;

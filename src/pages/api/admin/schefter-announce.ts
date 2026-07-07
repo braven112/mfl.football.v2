@@ -66,18 +66,20 @@ export const POST: APIRoute = async ({ request }) => {
     headline: payload.headline as string | undefined,
     body: payload.body as string | undefined,
     leagues: payload.leagues,
+    link: payload.link as string | undefined,
     sendGroupMe: payload.sendGroupMe !== false,
   });
   if (errors.length) {
     return json({ error: 'validation', errors }, 400);
   }
 
-  const { slug, headline, body, leagues, sendGroupMe } = resolved as {
+  const { slug, headline, body, leagues, sendGroupMe, link } = resolved as {
     slug: string;
     headline: string;
     body: string;
     leagues: Array<'theleague' | 'afl'>;
     sendGroupMe: boolean;
+    link: string;
   };
 
   // ── Preview: compute exactly what would ship; dispatch nothing. ──────────
@@ -89,9 +91,12 @@ export const POST: APIRoute = async ({ request }) => {
       return {
         league: key,
         label: target.label,
-        post: buildAnnouncePost({ slug, headline, body, navSlug: target.navSlug, timestamp }),
+        post: buildAnnouncePost({
+          slug, headline, body, navSlug: target.navSlug, timestamp,
+          link: link || undefined,
+        }),
         groupMeText: sendGroupMe
-          ? buildGroupMeText({ body, baseUrl: target.baseUrl, newsPath: target.newsPath, postId })
+          ? buildGroupMeText({ body, baseUrl: target.baseUrl, newsPath: target.newsPath, postId, link: link || undefined })
           : null,
       };
     });
@@ -130,6 +135,7 @@ export const POST: APIRoute = async ({ request }) => {
             leagues: dispatchLeaguesValue(leagues),
             headline,
             body,
+            link,
             send_groupme: String(sendGroupMe),
             dry_run: 'false',
           },

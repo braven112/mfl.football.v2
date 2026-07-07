@@ -137,13 +137,15 @@ async function main() {
     headline: args.headline ?? process.env.ANNOUNCE_HEADLINE,
     body: args.body ?? process.env.ANNOUNCE_BODY,
     leagues: args.leagues ?? process.env.ANNOUNCE_LEAGUES,
+    link: args.link ?? process.env.ANNOUNCE_LINK,
     sendGroupMe: sendGroupMeFlag,
   });
   if (errors.length) {
     for (const e of errors) console.error(`ERROR: ${e}`);
     process.exit(1);
   }
-  const { slug, headline, body, leagues } = resolved;
+  const { slug, headline, body, leagues, link } = resolved;
+  const linkLabel = args['link-label'] ?? process.env.ANNOUNCE_LINK_LABEL;
 
   // Single timestamp for the whole run so both leagues share one moment.
   const timestamp = new Date().toISOString();
@@ -174,7 +176,10 @@ async function main() {
   let wroteAny = false;
   for (const key of leagues) {
     const target = targetFor(key);
-    const post = buildAnnouncePost({ slug, headline, body, navSlug: target.navSlug, timestamp });
+    const post = buildAnnouncePost({
+      slug, headline, body, navSlug: target.navSlug, timestamp,
+      link: link || undefined, linkLabel: linkLabel || undefined,
+    });
 
     let written;
     if (dryRun) {
@@ -199,6 +204,7 @@ async function main() {
         baseUrl: target.baseUrl,
         newsPath: target.newsPath,
         postId: announcePostId(slug),
+        link: link || undefined,
       });
       await sendGroupMe(target, text, { dryRun, log, warn });
     } else if (!sendGroupMeFlag) {
