@@ -47,35 +47,38 @@ per player.
   SSR feed; Playwright against the dev server captured fine (same finding as
   the What's New screenshot workflow in CLAUDE.md).
 
-## Casting Rules (Brandon, 2026-07-04 — binding)
+## Casting Rules (Brandon, 2026-07-04 — binding; feature rule revised 2026-07-06)
 
-- **New features / What's New heroes cast a ROOKIE** — rookies represent "new."
+- **What's New heroes show the FEATURE ITSELF** (Brandon, 2026-07-06,
+  superseding the rookie rule): the entry's screenshot in a browser frame
+  (light/dark capture pair, `-dark` suffix). A player is cast ONLY when the
+  entry names one via `heroPlayerId` (`castFeaturedModel`, descriptor from
+  `heroPlayerDescriptor`, default "Featured") — players show up when they're
+  being talked about, never as stand-ins. Rookies no longer model "new".
+  Art precedence: `heroArt` → featured player → screenshot → league logo
+  silhouette. The screenshot is hidden on mobile (unreadable at phone width
+  = decoration) — the logo silhouette stands in there.
 - **Roster-action heroes (tags, cuts, contracts) cast a player from the
   signed-in owner's team** (the suggested candidate); guests get a relevant
   player from someone's team.
 - **Every hero casts a semantically relevant player** — the actual player in a
   breaking story, never a random star for decoration.
-- All casting goes through `src/utils/hero-casting.ts` (`castRookieModel`,
-  `castEnhancementModel`, `castRosterModel`) — deterministic per PT day
-  (stable SSR, daily rotation). Rookie = newest draft class ≤ the reference
-  year present in the player map (`PlayerIdentity.draftYear`, added for this).
-- **Per What's New category** (Brandon, 2026-07-04): new-page/new-feature →
-  rookie (rostered-first; unrostered only when NO rookie is rostered);
-  enhancement → rostered player in his first 5 NFL seasons (strict, no
-  unrostered fallback; caption "Nth Year"); bug-fix → no player, league logo
-  silhouette (`.fch__logo-art`, light/dark asset pair); league-event →
-  relevant player (event-hero conversions pending). Category rides on
-  `HeroContent.heroCategory`; the roster set unions salary data with
-  `getRosteredPlayerIds()` (MFL rosters feed) so dev matches prod.
+- All casting goes through `src/utils/hero-casting.ts` — rotating casters are
+  deterministic per PT day (stable SSR, daily rotation); `castFeaturedModel`
+  and `castArticleModel` are deterministic by id. `castRookieModel` survives
+  for season-reset heroes only (AFL `afl-new-season-starts`); the enhancement
+  caster was removed with the feature-rule revision.
+- Bug-fix rollups and screenshot-less entries → no player, league logo
+  silhouette (`.fch__logo-art` / `.fch__shot-logo`, light/dark asset pair).
 
 ## Shipped Use Cases
 
 1. **Fresh What's New homepage hero (first shipped)** —
    `src/components/theleague/FeatureCompositeHero.astro`, rendered by
    `SeasonDailyHero` when `phase === 'offseason-fallback'` and
-   `fallbackHero.source === 'feature'` and a rookie model was cast
-   (index.astro passes `featureModel`; casting failure falls back to the
-   branded LeagueEventHero). NOT integrated on the Schefter feed — Brandon
+   `fallbackHero.source === 'feature'` (index.astro passes `featureModel`,
+   cast only from the entry's `heroPlayerId`; without one the hero shows the
+   entry's screenshot). NOT integrated on the Schefter feed — Brandon
    explicitly rejected feed-card composites (built, then reverted).
    Gotcha: set explicit `color` on text over the composite gradient — global
    heading rules (and `html.dark` accent overrides) restyle bare headings.
@@ -178,9 +181,13 @@ per player.
      the story)
    - standings slot → the standings leader's headliner ("Leading the Race";
      leader computed in index.astro from `h2hwlt`)
-   - feature / new-season → `castRookieModel`.
-   Everything falls back to the franchise-headliner pool, then to the legacy
-   webp art (`model: null`). Data plumbing: the `offseason-hero-data.ts`
+   - new-season → `castRookieModel`; feature → `castFeaturedModel` from the
+     entry's `heroPlayerId` ONLY (no headliner fallback — the feature's own
+     screenshot is the art, rendered by `AflEventHero`'s browser frame from
+     `EventHeroView.screenshot`; the random `player` webp remains the last
+     resort for capture-less entries).
+   Everything else falls back to the franchise-headliner pool, then to the
+   legacy webp art (`model: null`). Data plumbing: the `offseason-hero-data.ts`
    helpers are now league-parameterized via the league registry `dataPath`
    (`CanonicalLeagueSlug` param, default `'theleague'` so TheLeague call
    sites are untouched). `getPlayerMap` stays theleague-sourced on purpose —
@@ -585,8 +592,13 @@ artifact), the hero casts the artifact. The chain: JSON entry → both
 independent implementations, keep in sync) → `HeroContent.heroArt` →
 `FeatureCompositeHero` renders `.fch__art` full-opacity where the player
 would stand, caption chip reused for provenance ("Circa 2007 · Recovered").
-`index.astro` skips `castRookieModel`/`castEnhancementModel` when
-`fallbackHero.heroArt` is set — don't burn casting work the component ignores.
+`index.astro` skips the featured-player cast (`castFeaturedModel` since the
+2026-07-06 screenshot-first revision) when `fallbackHero.heroArt` is set —
+don't burn casting work the component ignores.
+**AFL limitation:** `AflEventHero` has no heroArt rendering — an AFL-tagged
+heroArt entry shows its screenshot (or the player webp) instead of the
+artwork. All heroArt entries are theleague-only today; add AFL support
+before tagging one for both leagues.
 
 **Gotcha:** the recovered vintage `*_icon_circle.png` buttons are all 100×100
 (original MFL button size). Cap on-screen width at ~2× (200px) or they go
@@ -767,3 +779,29 @@ face is whoever projects highest that week (guests and owners see the same slate
    plain page frontmatter (no hero, no casting), so it's now exported
    alongside `getRosteredPlayerIds`. No behavior change, just visibility.
 
+## Feature heroes show the feature — screenshot-first (2026-07-06, Brandon)
+
+**Context:** "We currently use rookies for new features and it feels awkward."
+Rookies-as-"new" put an unrelated face on every announcement. Revised rule:
+the What's New hero shows the feature ITSELF — the entry's screenshot in a
+browser frame — and casts a player only when the entry is about one.
+
+**The mechanics:**
+
+- `WhatsNewEntry.heroPlayerId` (+ optional `heroPlayerDescriptor`, default
+  "Featured") names the player an entry is about. Plumbed through BOTH
+  `featureToHero()`s → `HeroContent` → `castFeaturedModel()` (gated on
+  `isCompositable`, so a cutout-less player falls back to the screenshot
+  rather than rendering a broken composite).
+- Screenshots are a light/dark THEME PAIR: `foo.webp` + `foo-dark.webp`,
+  both written by `scripts/capture-whats-new-screenshots.mjs` (html.dark
+  toggled between shots). The components swap them with CSS under
+  `html.dark`; a 404 on the dark half falls back to the light capture via
+  `onerror` (`.fch__shot--no-dark` / `.afl-event-hero__shot--no-dark`).
+- Mobile (≤640px) hides the frame entirely — Brandon's call: a phone-width
+  screenshot is an unreadable thumbnail — and the league-logo silhouette
+  stands in (`.fch__shot-logo` / `.afl-event-hero__shot-logo` theme pairs).
+- `castEnhancementModel` deleted; `castRookieModel` survives only for the
+  AFL new-season reset. AFL feature states carry the screenshot on
+  `EventHeroView.screenshot`; the AFL cast deliberately has NO headliner
+  fallback for features (a fallback face would cover the screenshot).

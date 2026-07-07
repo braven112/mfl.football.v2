@@ -2,7 +2,9 @@
  * Hero Casting — picks the player who "models" a composite hero.
  *
  * Casting rules (see docs/claude/insights/features/player-composites.md):
- *   - New features / What's New heroes cast a ROOKIE (rookies represent "new").
+ *   - What's New heroes show the FEATURE ITSELF (screenshot in a browser
+ *     frame). A player is cast only when the entry names one (`heroPlayerId`)
+ *     — players show up when they're being talked about, never as stand-ins.
  *   - Roster-action heroes (tags, cuts, contracts) cast a player from the
  *     signed-in owner's team; guests get a relevant player from someone's team.
  *   - Every hero casts a semantically relevant player — never decoration.
@@ -36,14 +38,6 @@ export function isCompositable(player: PlayerIdentity): boolean {
 function toModel(player: PlayerIdentity, descriptor: string): HeroModel {
   const { mflId, name, position, nflTeam, headshot } = player;
   return { mflId, name, position, nflTeam, headshot, descriptor };
-}
-
-/** '2026' class in year 2026 → 'Rookie'; '2024' → '3rd Year'. */
-function yearDescriptor(draftYear: string, classYear: number): string {
-  const n = classYear - parseInt(draftYear, 10) + 1;
-  if (n <= 1) return 'Rookie';
-  const suffix = n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
-  return `${n}${suffix} Year`;
 }
 
 /** Newest draft class in the pool that isn't in the future (Feb-rollover safe). */
@@ -107,7 +101,12 @@ export function castStoryModel(
 }
 
 /**
- * Cast a rookie model — for What's New / new-feature heroes.
+ * Cast a rookie model — for season-reset heroes (e.g. the AFL new-season
+ * event), where the newest class embodies the fresh start.
+ *
+ * NOT used for What's New feature heroes anymore — those show the feature's
+ * own screenshot, with `castFeaturedModel` taking over only when the entry
+ * names a specific player.
  *
  * Rookie = most recent draft class present in the player pool that is not in
  * the future (covers the Feb-rollover gap before the next NFL Draft, when the
@@ -136,34 +135,27 @@ export function castRookieModel(
 }
 
 /**
- * Cast an enhancement model — for What's New enhancement heroes.
+ * Cast the player a What's New entry features — for feature composite heroes.
  *
- * "Same guy, leveled up": a league-rostered player in his first five NFL
- * seasons (the current class and the four before it). Strictly rostered —
- * an enhancement to the site is modeled by someone an owner actually
- * invested in; returns null (caller falls back) when none resolve.
+ * DETERMINISTIC by design (same contract as `castArticleModel`): the entry
+ * author names the player the announcement is about via `heroPlayerId`; we
+ * resolve that id to a model. Most entries are about pages, not players —
+ * they leave the id unset and the hero shows the feature's own screenshot.
+ *
+ * Unlike `castArticleModel`, this DOES gate on compositability: the feature
+ * hero composites a transparent cutout over the gradient, and when the named
+ * player has no usable cutout the screenshot is the better art — returning
+ * null hands the hero back to it.
  */
-export function castEnhancementModel(
+export function castFeaturedModel(
+  heroPlayerId: string | undefined,
   players: Map<string, PlayerIdentity>,
-  referenceDate: Date = new Date(),
-  rosteredIds: Set<string>,
+  descriptor: string = 'Featured',
 ): HeroModel | null {
-  const classYear = currentClassYear(players, referenceDate);
-  if (classYear === 0 || rosteredIds.size === 0) return null;
-
-  const pool = [...players.values()].filter((p) => {
-    const year = parseInt(p.draftYear, 10);
-    return (
-      Number.isFinite(year) &&
-      year >= classYear - 4 &&
-      year <= classYear &&
-      rosteredIds.has(p.mflId) &&
-      isCompositable(p)
-    );
-  });
-
-  const pick = dailyPick(pool, referenceDate, 'enhancement', (p) => p.mflId);
-  return pick ? toModel(pick, yearDescriptor(pick.draftYear, classYear)) : null;
+  if (!heroPlayerId) return null;
+  const player = players.get(heroPlayerId);
+  if (!player || !isCompositable(player)) return null;
+  return toModel(player, descriptor);
 }
 
 /**

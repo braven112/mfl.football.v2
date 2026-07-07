@@ -24,6 +24,7 @@ import { formatEventDate, formatEventDateRange, getStatusText } from './event-da
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
 import { getCurrentNFLWeek } from './current-week';
 import { buildLeagueEventView } from './league-event-hero-view';
+import { dailyPick } from './hero-casting';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
 function formatKickerDate(dateStr: string): string {
@@ -75,6 +76,8 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     heroTheme: entry.heroTheme,
     heroArt: entry.heroArt,
     heroCategory: entry.category,
+    heroPlayerId: entry.heroPlayerId,
+    heroPlayerDescriptor: entry.heroPlayerDescriptor,
   };
 }
 
@@ -378,14 +381,18 @@ export function resolveHeroContent(
     (e) => !e.excludeFromHero && entryAppliesToLeague(e, 'theleague'),
   );
 
-  // --- Priority 1: New features (≤7 days old) — random pick if multiple ---
+  // --- Priority 1: New features (≤7 days old) — daily pick if multiple ---
+  // Deterministic per PT day, NOT per-request random: a random pick flips the
+  // hero (title, screenshot, cast player) between same-day SSR renders and
+  // fights the composite model's own daily-stable casting. Same rule as the
+  // AFL resolver's fresh-feature pick.
   const freshFeatures = heroEligible.filter((e) => {
     const age = daysAgo(e.date, now);
     return age >= 0 && age <= FEATURE_HERO_DAYS;
   });
-  if (freshFeatures.length > 0) {
-    const pick = freshFeatures[Math.floor(Math.random() * freshFeatures.length)];
-    return featureToHero(pick);
+  const freshPick = dailyPick(freshFeatures, now, 'theleague-feature', (e) => e.id);
+  if (freshPick) {
+    return featureToHero(freshPick);
   }
 
   // --- Priority 2: Urgent league event ---

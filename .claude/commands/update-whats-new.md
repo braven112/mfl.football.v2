@@ -44,7 +44,8 @@ If no entry exists, write a new one at the TOP of the array following the mandat
 - 2-3 paragraph `description` with opening hook, feature details, and callback close
 - Witty, self-aware, columnist voice — never dry release notes
 - Include a `summary` with personality too
-- `image` and `imageAlt` are required — take a Playwright screenshot if a dev server is running, otherwise note that a screenshot is still needed and set a placeholder filename
+- `image` and `imageAlt` are required — take a Playwright screenshot if a dev server is running, otherwise note that a screenshot is still needed and set a placeholder filename. Screenshots are a light/dark THEME PAIR (`foo.webp` + `foo-dark.webp`) — capture both via `node scripts/capture-whats-new-screenshots.mjs <entry-id>`, which handles the pair automatically. The homepage hero renders this screenshot in a browser frame, so it's the entry's face — make it count.
+- `heroPlayerId` (optional) — set ONLY when the entry is about a specific player (his MFL id); the homepage hero then casts him instead of showing the screenshot. Optional `heroPlayerDescriptor` labels his caption chip (default "Featured"). Never set it just to have a face — the screenshot IS the intended art.
 - `leagues` is required — `["theleague"]`, `["afl"]`, or both (from Step 3). The entry's `link` must point into a league it's visible in; both-league entries need a league-neutral link or no link. If the `title`/`summary` names a league, the entry must be tagged for exactly that league — both-league entries need league-neutral copy.
 
 **If `bug-fix` or `style-tweak`:**

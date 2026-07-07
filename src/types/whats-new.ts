@@ -88,6 +88,15 @@ export interface WhatsNewEntry {
   image?: string;
   /** Alt text for the screenshot image (required when image is provided) */
   imageAlt?: string;
+  /**
+   * Composite-hero featured player. Set ONLY when the entry is about a
+   * specific player (his MFL id) — the hero casts him instead of showing the
+   * screenshot. Most entries are about pages, not players: leave it unset and
+   * the hero shows the entry's screenshot in a browser frame.
+   */
+  heroPlayerId?: string;
+  /** Caption qualifier for the featured player chip (default "Featured"). */
+  heroPlayerDescriptor?: string;
   /** Audience restriction — defaults to "all" if omitted. "admin" hides the entry from non-admin users in both the listing and the detail route. */
   visibility?: 'all' | 'admin';
   /**
@@ -163,6 +172,10 @@ export interface HeroContent {
   heroArt?: HeroArt;
   /** Feature-only: the source entry's category — drives composite-hero casting */
   heroCategory?: WhatsNewCategory;
+  /** Feature-only: MFL id of the player the entry is about — he models the hero */
+  heroPlayerId?: string;
+  /** Feature-only: caption qualifier for the featured player chip */
+  heroPlayerDescriptor?: string;
 }
 
 /** Human-readable labels for What's New categories */

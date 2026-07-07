@@ -2,9 +2,14 @@
  * Capture What's New Screenshots
  *
  * Takes automated screenshots of What's New feature pages using Playwright.
+ * Every entry is captured as a THEME PAIR: the light capture at the entry's
+ * `image` filename, and a dark-mode capture (html.dark toggled before the
+ * shot) at the `-dark` suffix (e.g. trade-builder.webp + trade-builder-dark.webp).
+ * The composite hero swaps between the pair with CSS — never capture only one.
+ *
  * Automatically detects stale screenshots by comparing file timestamps against
  * whats-new.json — so screenshots updated in a cloud session get re-captured
- * on the next local run.
+ * on the next local run. A missing dark capture also counts as stale.
  *
  * Prerequisites:
  *   - Dev server running on localhost:4321 (pnpm dev)
@@ -23,7 +28,7 @@
  */
 import { chromium } from 'playwright';
 import { readFileSync, existsSync, statSync, unlinkSync } from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -39,21 +44,30 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
 /**
  * Entries whose screenshots are staged by hand — a blind capture of the
  * entry's link shoots a sign-in screen, an unpopulated analytics page, or
- * the wrong scroll position. Skipped unless named explicitly on the CLI.
+ * the wrong scroll position (exactly what the 2026-07-06 backfill did
+ * before this list existed). Skipped in bulk runs; naming one explicitly
+ * on the CLI captures it anyway — that's a deliberate act, and the staging
+ * notes below make it reproducible:
  *
- * - submit-lineup / tip-schefter-gets-louder / mock-draft: auth-gated pages
- * - owner-activity / afl-owner-activity: analytics only populate in prod
- *   (locally, append ?mock=true for a staged capture)
- * - afl-trophy-wall: needs a franchise profile scrolled to the trophy wall
+ * - auth-gated pages: mint a session via a temporary DEV-only route
+ * - analytics pages: append ?mock=true locally for a staged capture
+ * - afl-trophy-wall: scroll a franchise profile to the trophy wall
+ *
+ * Values are the per-entry reason, shown when a bulk --force run skips one.
+ * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
-const MANUAL_CAPTURE_ONLY = new Set([
-  'submit-lineup',
-  'tip-schefter-gets-louder',
-  'mock-draft',
-  'owner-activity',
-  'afl-owner-activity',
-  'afl-trophy-wall',
-]);
+const MANUAL_CAPTURE_ONLY = {
+  'feature-first-heroes': 'both-league entry, no link — auto-capture would shoot the MFL landing page; capture the /theleague homepage hero manually',
+  'draft-room-pick-reveal': 'hand-staged pick-reveal splash mid-animation — auto-capture shoots the idle draft board',
+  'schefter-og-unfurls': 'hand-made OG card image, not a page screenshot — auto-capture would replace it with the landing page',
+  'trade-composites': 'hand-staged trade-confirmation modal with specific players — auto-capture shoots the bare trade builder',
+  'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
+  'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
+  'mock-draft': 'sign-in gate replaces the draft config UI',
+  'afl-trophy-wall': 'hand-staged scroll to a franchise trophy wall',
+  'owner-activity': 'analytics only populate in prod — dev shows the empty state',
+  'afl-owner-activity': 'analytics only populate in prod — dev shows the empty state',
+};
 
 /**
  * Per-entry page setup hooks.
@@ -84,6 +98,11 @@ const PAGE_HOOKS = {
   },
 };
 
+/** Dark-capture filename for an entry image: foo.webp → foo-dark.webp */
+function darkVariant(image) {
+  return image.replace(/\.(\w+)$/, '-dark.$1');
+}
+
 /**
  * Check if a screenshot is stale by comparing its mtime against whats-new.json.
  * If the JSON was modified more recently than the screenshot, the screenshot
@@ -110,11 +129,19 @@ async function main() {
     if (!e.image) return false; // must have image field set in JSON
     if (hasTargets && !targetSet.has(e.id)) return false;
     // Manual-capture entries only run when explicitly named on the CLI
-    if (!hasTargets && MANUAL_CAPTURE_ONLY.has(e.id)) return false;
+    if (!hasTargets && MANUAL_CAPTURE_ONLY[e.id]) {
+      if (force) {
+        console.log(`  [${e.id}] SKIPPED (manual capture only): ${MANUAL_CAPTURE_ONLY[e.id]}`);
+      }
+      return false;
+    }
     if (force) return true;
-    const imagePath = resolve(ASSETS_DIR, e.image);
-    // Capture if missing OR stale (json was updated more recently than the screenshot)
-    return isStale(imagePath, jsonMtime);
+    // Capture if either half of the theme pair is missing OR stale
+    // (json was updated more recently than the screenshot)
+    return (
+      isStale(resolve(ASSETS_DIR, e.image), jsonMtime) ||
+      isStale(resolve(ASSETS_DIR, darkVariant(e.image)), jsonMtime)
+    );
   });
 
   if (hasTargets) {
@@ -131,7 +158,7 @@ async function main() {
   if (!hasTargets) {
     const missingManual = entries.filter(
       (e) =>
-        MANUAL_CAPTURE_ONLY.has(e.id) &&
+        MANUAL_CAPTURE_ONLY[e.id] &&
         SCREENSHOT_CATEGORIES.includes(e.category) &&
         e.image &&
         !existsSync(resolve(ASSETS_DIR, e.image)),
@@ -159,10 +186,30 @@ async function main() {
     deviceScaleFactor: 1,
   });
 
+  // Playwright doesn't support webp — capture as PNG then convert
+  async function shoot(page, entryId, imageName) {
+    const outputPath = resolve(ASSETS_DIR, imageName);
+    const pngPath = outputPath.replace(/\.webp$/, '.png');
+    const isWebp = outputPath.endsWith('.webp');
+    await page.screenshot({ path: isWebp ? pngPath : outputPath, type: 'png' });
+
+    if (isWebp) {
+      try {
+        execFileSync('cwebp', ['-q', '85', pngPath, '-o', outputPath], { stdio: 'pipe' });
+        unlinkSync(pngPath);
+      } catch {
+        // The referenced .webp was NOT written — the entry will render broken
+        // until cwebp is installed and the capture re-run.
+        console.warn(`  [${entryId}] cwebp failed — kept ${pngPath.split('/').pop()}, ${imageName} NOT written`);
+        return;
+      }
+    }
+    console.log(`  [${entryId}] saved -> ${imageName}`);
+  }
+
   for (const entry of targets) {
     const page = await context.newPage();
     const url = entry.link ? `${BASE_URL}${entry.link}` : BASE_URL;
-    const outputPath = resolve(ASSETS_DIR, entry.image);
 
     console.log(`  [${entry.id}] navigating to ${url}`);
     try {
@@ -175,20 +222,12 @@ async function main() {
         await PAGE_HOOKS[entry.id](page);
       }
 
-      // Playwright doesn't support webp — capture as PNG then convert
-      const pngPath = outputPath.replace(/\.webp$/, '.png');
-      const isWebp = outputPath.endsWith('.webp');
-      await page.screenshot({ path: isWebp ? pngPath : outputPath, type: 'png' });
-
-      if (isWebp) {
-        try {
-          execSync(`cwebp -q 85 "${pngPath}" -o "${outputPath}"`, { stdio: 'pipe' });
-          unlinkSync(pngPath);
-        } catch {
-          console.warn(`  [${entry.id}] cwebp not found, keeping PNG`);
-        }
-      }
-      console.log(`  [${entry.id}] saved -> ${entry.image}`);
+      // Light capture, then flip html.dark (the theme mechanism — resolved
+      // client-side, never SSR) and capture the dark half of the pair.
+      await shoot(page, entry.id, entry.image);
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      await page.waitForTimeout(400); // let theme transitions settle
+      await shoot(page, entry.id, darkVariant(entry.image));
     } catch (err) {
       console.error(`  [${entry.id}] FAILED: ${err.message}`);
     }
