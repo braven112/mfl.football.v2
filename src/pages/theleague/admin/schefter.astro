@@ -1870,4 +1870,54 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     border-radius: 10px; padding: 0.8rem 0.9rem; font-size: 0.9rem; color: var(--color-text, #0f172a);
   }
   .ann-sent a { color: var(--color-accent, #0ea5e9); font-weight: 600; }
+
+  /* ==============================================
+   * Dark mode
+   * This page's palette is built on local tokens (--color-surface,
+   * --color-text, --color-border, …) that are only ever consumed via
+   * var(--x, <light fallback>) — they are NOT defined globally, so every
+   * surface bakes in a light value. In dark mode the surrounding page
+   * (--page-bg / --page-text) flips but these locals don't, leaving white
+   * cards with the body's light inherited text painted on them.
+   * Re-point each local at the real dark surface ramp (tokens-dark.css) so
+   * cards, borders, and text follow the theme, then fix the few spots that
+   * hardcoded a literal light color instead of going through a token.
+   * ============================================== */
+  :global(html.dark) .ops-page {
+    --color-surface: var(--content-bg, #1e1e1e);
+    --color-surface-alt: var(--content-bg-muted, #181818);
+    --color-text: var(--color-text-primary, #e0e0e0);
+    --color-text-muted: var(--content-text-muted, #8a8a8a);
+    --color-border: var(--color-border-default, #5f6885);
+    --color-accent: var(--color-primary, #3b82f6);
+  }
+
+  /* Code chips + the expanded archive row hardcoded `background: white`,
+     which reads as a light rectangle on the dark card. Lift them to the
+     elevated dark surface so they still stand off their tile. */
+  :global(html.dark) .ops-offer__id,
+  :global(html.dark) .ops-tip__meta code,
+  :global(html.dark) .ops-trade__meta code,
+  :global(html.dark) .ops-bucket__key,
+  :global(html.dark) .ops-archive__row[open] {
+    background: var(--content-bg-accent, #2a2a2a);
+  }
+
+  /* Channel-mix bar track + empty segment used light literals. */
+  :global(html.dark) .ops-chx__bar { background: var(--content-bg-muted, #181818); }
+  :global(html.dark) .ops-chx--empty { --seg-bg: #2a2a2a; --seg-fg: #8a8a8a; }
+
+  /* "Never shipped" amber callout — recolor for a dark surface so the
+     amber text keeps contrast instead of sitting on near-white. */
+  :global(html.dark) .ops-hero__zero-state {
+    background: rgba(217, 119, 6, 0.12);
+    border-left-color: #d97706;
+  }
+  :global(html.dark) .ops-hero__zero-state strong { color: #fcd34d; }
+  :global(html.dark) .ops-chx__never { color: #fcd34d; }
+
+  /* Announcement status text hardcodes dark green/red — too low-contrast on
+     the dark card. Brighten to the dark success/error text tokens. */
+  :global(html.dark) .ann-status[data-kind="ok"] { color: #6ee7b7; }
+  :global(html.dark) .ann-status[data-kind="bad"] { color: #fca5a5; }
 </style>
