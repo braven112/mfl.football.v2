@@ -443,6 +443,14 @@
       "impact": "user",
       "area": "navigation",
       "league": "both"
+    },
+    {
+      "date": "2026-07-06",
+      "type": "bug-fix",
+      "summary": "The Draft Room and Mock Draft no longer flash a stray line of announcer text at the top of the page when a pick comes in. That line was always meant for screen readers only — it narrates every pick for assistive tech — but it was showing up on screen too. It still does its job for screen-reader users; everyone else just sees the board update.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
     }
   ]
 }
