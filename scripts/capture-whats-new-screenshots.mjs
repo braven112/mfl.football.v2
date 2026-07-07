@@ -58,6 +58,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  */
 const MANUAL_CAPTURE_ONLY = {
   'feature-first-heroes': 'both-league entry, no link — auto-capture would shoot the MFL landing page; capture the /theleague homepage hero manually',
+  'draft-room-pick-reveal': 'hand-staged pick-reveal splash mid-animation — auto-capture shoots the idle draft board',
   'schefter-og-unfurls': 'hand-made OG card image, not a page screenshot — auto-capture would replace it with the landing page',
   'trade-composites': 'hand-staged trade-confirmation modal with specific players — auto-capture shoots the bare trade builder',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
