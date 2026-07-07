@@ -1305,13 +1305,19 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       previewOk = false;
       sendBtn.disabled = true;
       const val = articleEl.value;
-      if (val === '' ) {
+      // Leaving article-mode clears the auto-filled fields so a stale headline /
+      // CTA link can't ride along into a placeholder or Custom announcement.
+      if (val === '' || val === '__custom__') {
         slugEl.value = '';
+        headlineEl.value = '';
+        linkEl.value = '';
+      }
+      if (val === '') {
         slugEl.readOnly = true;
+        slugEl.placeholder = 'pick an article above';
         return;
       }
       if (val === '__custom__') {
-        slugEl.value = '';
         slugEl.readOnly = false;
         slugEl.placeholder = 'kebab-case, e.g. dark-mode-2026-07';
         slugEl.focus();
