@@ -35,3 +35,34 @@ instead of assuming the custom domain route is a valid benchmark target.
 **Evidence:** All 30 recent `schefter-scan.yml` runs: `conclusion=failure`, `event=push`, `jobs.total_count=0`. The sibling `groupme-sync.yml` (valid file) showed `event=schedule` with a real failed job whose logs carried the actual runtime error.
 
 **Recommendation:** When a scheduled job "stopped running," first check whether it's a startup failure vs a runtime failure. If runs show 0 jobs and `event=push`, validate the YAML with a **duplicate-key-detecting** parser (Python `yaml.safe_load` silently keeps last-wins and will NOT catch this — add a custom constructor that throws on repeat keys) rather than reading job logs that don't exist.
+
+## 2026-07-07 - A Vercel HTML 502 With No Runtime Error = A Hung `await`, Not A Crash
+
+**Context:** The admin `POST /api/admin/schefter-announce` "send" path returned
+`502 Bad Gateway` with `Content-Type: text/html` (a Cloudflare/Vercel platform
+page, via `Cf-Ray`), while the sibling "preview" action on the same route
+returned `200` fine. The endpoint handler was already fully wrapped in
+`try/catch` returning JSON, so a JS throw was ruled out.
+
+**Insight:** A **platform** 502 (HTML body, not your JSON) with **nothing in the
+Vercel runtime logs** — `get_runtime_logs level=[error,fatal]` empty AND
+`get_runtime_errors` empty — is the signature of a **hung `await` that runs into
+the function `maxDuration`**, not an exception. `try/catch` cannot rescue it
+because nothing ever throws; the platform kills the process and substitutes its
+own error page. The tell is differential: the request variant that hangs is the
+one doing an unbounded network `await` the working variant doesn't.
+- Here, `preview` did pure computation; `send` added `checkRateLimit` (an
+  Upstash Redis call with **no timeout**) and a GitHub `fetch` guarded only by
+  `AbortSignal.timeout`. `AbortSignal` aborts the *request* but does not always
+  interrupt a socket stuck in connect/TLS, so a hang can still outlive it.
+
+**Recommendation:** For any serverless handler that makes outbound calls, bound
+**every** `await` with a hard external race (`Promise.race([p, timeout])`), not
+just `AbortSignal` — cap each well under `maxDuration` (astro.config's Vercel
+adapter sets it to 30s globally) so the handler always returns a JSON error
+instead of a platform 502. Make non-critical calls (rate-limit) fail open on
+timeout. Add breadcrumb `console.log`s around each step and `console.error` in
+the catch — a hang leaves no error otherwise, so the breadcrumbs are how you
+learn which `await` stalled. To diagnose live, use the Vercel MCP
+(`get_runtime_logs` / `get_runtime_errors`) filtered to the route; "no logs
+found" is itself the diagnosis (timeout, not throw).

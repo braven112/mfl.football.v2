@@ -34,6 +34,23 @@ export const prerender = false;
 
 const WORKFLOW_FILE = 'schefter-announce.yml';
 
+// The send path was producing a platform 502 (HTML, no application error in the
+// logs) — the signature of a hung await running into the function duration
+// limit, which try/catch cannot rescue. Bound every await with a hard external
+// timeout so the handler ALWAYS returns a JSON error well under maxDuration.
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+    p.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -105,7 +122,19 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // ── Send: rate-limit, then dispatch the workflow. ───────────────────────
-  const { allowed } = await checkRateLimit('schefter-announce', user.franchiseId, 10, 3600);
+  // Rate limit is best-effort (fails open) — a slow/hung Redis must never hang
+  // the whole request, so cap it hard and continue if it doesn't answer.
+  console.log('[announce] send: rate-limit check');
+  let allowed = true;
+  try {
+    ({ allowed } = await withTimeout(
+      checkRateLimit('schefter-announce', user.franchiseId, 10, 3600),
+      3000,
+      'rate-limit',
+    ));
+  } catch (err) {
+    console.warn('[announce] rate-limit skipped (fail-open):', err instanceof Error ? err.message : err);
+  }
   if (!allowed) {
     return json({ error: 'rate-limited', message: 'Too many announcements this hour. Try again later.' }, 429);
   }
@@ -117,35 +146,46 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'GH_PAT not configured in the runtime environment.' }, 500);
   }
 
+  console.log('[announce] send: dispatching', WORKFLOW_FILE, { owner, repo, leagues });
   let res: Response;
   try {
-    res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-        signal: AbortSignal.timeout(10_000),
-        body: JSON.stringify({
-          ref: 'main',
-          inputs: {
-            slug,
-            leagues: dispatchLeaguesValue(leagues),
-            headline,
-            body,
-            link,
-            send_groupme: String(sendGroupMe),
-            dry_run: 'false',
+    // Belt-and-suspenders: AbortSignal aborts the request; withTimeout guards
+    // against the abort itself not firing (hung TLS/socket → the platform 502
+    // we were seeing). The outer race wins a second after the abort should.
+    res = await withTimeout(
+      fetch(
+        `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'mfl.football.v2-schefter-announce',
           },
-        }),
-      },
+          signal: AbortSignal.timeout(8000),
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: {
+              slug,
+              leagues: dispatchLeaguesValue(leagues),
+              headline,
+              body,
+              link,
+              send_groupme: String(sendGroupMe),
+              dry_run: 'false',
+            },
+          }),
+        },
+      ),
+      9000,
+      'github-dispatch',
     );
   } catch (err) {
+    console.error('[announce] dispatch failed:', err);
     return json({ error: 'dispatch failed', detail: err instanceof Error ? err.message : String(err) }, 502);
   }
+  console.log('[announce] send: dispatch response', res.status);
 
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
@@ -168,7 +208,8 @@ export const POST: APIRoute = async ({ request }) => {
   });
  } catch (err) {
   // Never leak a bare platform 502 — always return a readable JSON error so the
-  // admin UI can show the cause.
+  // admin UI can show the cause (and log it so it lands in the runtime logs).
+  console.error('[announce] unhandled error:', err);
   return json({ error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 500);
  }
 };
