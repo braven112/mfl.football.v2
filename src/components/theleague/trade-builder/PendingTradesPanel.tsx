@@ -16,8 +16,8 @@ interface Props {
   onLoadIntoBuilder: (trade: PendingTrade, mode: 'counter' | 'view') => void;
   drafts: DraftTrade[];
   onLoadDraft: (draft: DraftTrade) => void;
-  onDeleteDraft: (draftId: string) => void;
-  onRenameDraft: (draftId: string, name: string) => void;
+  onDeleteDraft: (draftId: string) => void | Promise<void>;
+  onRenameDraft: (draftId: string, name: string) => void | Promise<void>;
   onCopyDraftLink: (draft: DraftTrade) => void;
 }
 
@@ -84,6 +84,7 @@ export default function PendingTradesPanel({
   const [editDraftName, setEditDraftName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [copiedDraftId, setCopiedDraftId] = useState<string | null>(null);
+  const [draftActionError, setDraftActionError] = useState<string | null>(null);
 
   const fetchTrades = useCallback(async () => {
     setLoadingState('loading');
@@ -193,19 +194,29 @@ export default function PendingTradesPanel({
 
   const handleCommitDraftRename = () => {
     if (editingDraftId && editDraftName.trim()) {
-      onRenameDraft(editingDraftId, editDraftName.trim());
+      const id = editingDraftId;
+      const name = editDraftName.trim();
+      setDraftActionError(null);
+      // Defer the call into .then so a synchronous throw from a non-async
+      // handler still becomes a rejection the .catch surfaces.
+      Promise.resolve()
+        .then(() => onRenameDraft(id, name))
+        .catch((err: unknown) => {
+          setDraftActionError(err instanceof Error ? err.message : 'Failed to rename draft');
+        });
     }
     setEditingDraftId(null);
     setEditDraftName('');
   };
 
-  const handleDeleteDraft = (id: string) => {
-    if (confirmDeleteId === id) {
-      onDeleteDraft(id);
-      setConfirmDeleteId(null);
-    } else {
-      setConfirmDeleteId(id);
-    }
+  const handleConfirmDeleteDraft = (id: string) => {
+    setDraftActionError(null);
+    setConfirmDeleteId(null);
+    Promise.resolve()
+      .then(() => onDeleteDraft(id))
+      .catch((err: unknown) => {
+        setDraftActionError(err instanceof Error ? err.message : 'Failed to delete draft');
+      });
   };
 
   if (!isOpen) return null;
@@ -315,12 +326,24 @@ export default function PendingTradesPanel({
             </>
           )}
 
-          {/* Draft Trades — always shown, sourced from localStorage */}
+          {/* Draft Trades — always shown, server-persisted via /api/trades/drafts (passed in as `drafts` prop) */}
           <div className="ptp-section ptp-drafts-section">
             <div className="ptp-section-header">
               <h3 className="ptp-section-title">Drafts</h3>
               <p className="ptp-section-sub">Saved trade templates</p>
             </div>
+            {draftActionError && (
+              <div className="ptp-draft-error" role="alert">
+                {draftActionError}
+                <button
+                  className="ptp-draft-error-dismiss"
+                  onClick={() => setDraftActionError(null)}
+                  aria-label="Dismiss error"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
             {drafts.length > 0 ? (
               <div className="ptp-card-list">
                 {[...drafts].sort((a, b) => b.updatedAt - a.updatedAt).map(draft => {
@@ -385,7 +408,7 @@ export default function PendingTradesPanel({
                             <span className="ptp-draft-delete-prompt">Delete this draft?</span>
                             <button
                               className="ptp-draft-link ptp-draft-link--danger"
-                              onClick={() => { onDeleteDraft(draft.id); setConfirmDeleteId(null); }}
+                              onClick={() => handleConfirmDeleteDraft(draft.id)}
                             >
                               Yes, delete
                             </button>
@@ -718,6 +741,37 @@ export default function PendingTradesPanel({
         .ptp-draft-link:hover { color: var(--color-gray-600, #4b5563); }
         .ptp-draft-link--danger { color: var(--color-error, #dc2626); font-weight: 600; }
         .ptp-draft-link--danger:hover { color: var(--color-error-dark, #b91c1c); }
+        .ptp-draft-error {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          font-size: 0.75rem;
+          color: var(--color-error, #dc2626);
+          background: var(--color-error-light, #fee2e2);
+          border: 1px solid var(--color-error-border, #fecaca);
+          border-radius: var(--radius-sm, 0.25rem);
+          padding: 0.375rem 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .ptp-draft-error-dismiss {
+          background: none;
+          border: none;
+          color: var(--color-error, #dc2626);
+          cursor: pointer;
+          font-size: 1.25rem;
+          line-height: 1;
+          padding: 0.25rem;
+          margin-left: auto;
+          min-width: 2rem;
+          min-height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .ptp-draft-error-dismiss:focus-visible {
+          outline: 2px solid var(--color-error, #dc2626);
+          outline-offset: 2px;
+        }
         .ptp-draft-link:focus-visible {
           outline: 2px solid var(--color-primary, #1c497c);
           outline-offset: 2px;

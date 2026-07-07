@@ -62,3 +62,11 @@ Node.js undici strips Cookie headers on cross-origin 302 redirects. MFL's `api.m
 ## Franchise Validation in TradeConfirmationModal
 
 The confirmation modal now validates that the authenticated user's franchise is part of the trade before allowing submission. Shows a "Proposing as [Team Name]" indicator and blocks submission with "Not Your Trade" if the user isn't a participant. The error message is placed in the footer (not the body) so it remains visible near the disabled button on mobile viewports.
+
+## Draft Handlers: Presence-Check Was Silently Swallowing Failures (2026-07-06)
+
+The draft handlers in `TradeBuilder.tsx` (`handleSaveDraft`/`handleDeleteDraft`/`handleRenameDraft`) followed the shape `const json = await res.json(); if (json.drafts) setDrafts(json.drafts);` inside a `try { ... } catch { /* silent */ }`. On any non-OK response from `/api/trades/drafts` (503 `Storage not configured` when Redis is unconfigured, 500 `Write failed`) the body has no `drafts` field, so the guard just no-ops and the UI never changes. Combined with the silent catch, a failed Save Draft looked identical to a success — users clicked repeatedly thinking the app was broken (hit in practice when a stale `.env.local` pointed KV at a dead host).
+
+**Lesson:** `if (json.successField)` is not error handling — it silently drops the failure path. Branch explicitly on `res.ok && json.success`, and surface `json.error` (the drafts API already returns `{ success: false, error }`). For save, `TradeBuilder` shows a transient inline `.trade-builder__draft-error` banner plus `Saving…`/`Saved ✓` button states; for delete/rename, the handlers now `throw new Error(json.error)` so `PendingTradesPanel` catches and renders `.ptp-draft-error` in the Drafts section — the same parent-throws/child-catches contract already used for the accept/reject/revoke actions above. Error styling reuses the `.ptc-error`/`.tcm-error` token set (`--color-error`, `--color-error-light`, `--color-error-border`).
+
+**Keep it non-blocking:** drafts are a convenience. Errors auto-clear (2s for `Saved ✓`, 6s for the error banner) and never disable the builder or block trade submission.

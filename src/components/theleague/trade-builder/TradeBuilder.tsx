@@ -487,6 +487,28 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
   // ---------------------------------------------------------------------------
   const [drafts, setDrafts] = useState<DraftTrade[]>([]);
 
+  // Save Draft feedback: drafts are a convenience, so failures must be visible
+  // but never blocking — a transient inline error plus button-state changes.
+  type DraftSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+  const [draftSaveStatus, setDraftSaveStatus] = useState<DraftSaveStatus>('idle');
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const draftStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearDraftStatusTimer = useCallback(() => {
+    if (draftStatusTimerRef.current) {
+      clearTimeout(draftStatusTimerRef.current);
+      draftStatusTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => clearDraftStatusTimer, [clearDraftStatusTimer]);
+
+  const resetDraftStatusAfter = useCallback((ms: number) => {
+    clearDraftStatusTimer();
+    draftStatusTimerRef.current = setTimeout(() => {
+      setDraftSaveStatus('idle');
+      setDraftError(null);
+    }, ms);
+  }, [clearDraftStatusTimer]);
+
   // Fetch drafts from server when panel opens or auth changes
   const fetchDrafts = useCallback(async () => {
     if (!authUser) { setDrafts([]); return; }
@@ -517,6 +539,9 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
       teamA: { ...state.teamA },
       teamB: { ...state.teamB },
     };
+    clearDraftStatusTimer();
+    setDraftSaveStatus('saving');
+    setDraftError(null);
     try {
       const res = await fetch('/api/trades/drafts', {
         method: 'POST',
@@ -525,27 +550,48 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
         body: JSON.stringify(draft),
       });
       const json = await res.json();
-      if (json.drafts) setDrafts(json.drafts);
-    } catch { /* silent */ }
-  }, [authUser, state.teamA, state.teamB, data.teams]);
+      if (res.ok && json.success && json.drafts) {
+        setDrafts(json.drafts);
+        setDraftSaveStatus('saved');
+        resetDraftStatusAfter(2000);
+      } else {
+        setDraftSaveStatus('error');
+        setDraftError(json.error || 'Failed to save draft');
+        resetDraftStatusAfter(6000);
+      }
+    } catch {
+      setDraftSaveStatus('error');
+      setDraftError('Network error. Please try again.');
+      resetDraftStatusAfter(6000);
+    }
+  }, [authUser, state.teamA, state.teamB, data.teams, resetDraftStatusAfter, clearDraftStatusTimer]);
 
   const handleLoadDraft = useCallback((draft: DraftTrade) => {
     setSubmissionStatus({ status: 'idle', errorMessage: null });
     dispatch({ type: 'LOAD_DRAFT', teamA: draft.teamA, teamB: draft.teamB });
   }, []);
 
+  // Delete/rename reject with a user-facing message on failure so the
+  // drafts panel can surface it (PendingTradesPanel catches and displays).
   const handleDeleteDraft = useCallback(async (draftId: string) => {
+    let json: { success?: boolean; drafts?: DraftTrade[]; error?: string };
     try {
       const res = await fetch(`/api/trades/drafts?id=${encodeURIComponent(draftId)}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-      const json = await res.json();
-      if (json.drafts) setDrafts(json.drafts);
-    } catch { /* silent */ }
+      json = await res.json();
+    } catch {
+      throw new Error('Network error. Please try again.');
+    }
+    if (!json.success || !json.drafts) {
+      throw new Error(json.error || 'Failed to delete draft');
+    }
+    setDrafts(json.drafts);
   }, []);
 
   const handleRenameDraft = useCallback(async (draftId: string, name: string) => {
+    let json: { success?: boolean; drafts?: DraftTrade[]; error?: string };
     try {
       const res = await fetch('/api/trades/drafts', {
         method: 'PATCH',
@@ -553,9 +599,14 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: draftId, name }),
       });
-      const json = await res.json();
-      if (json.drafts) setDrafts(json.drafts);
-    } catch { /* silent */ }
+      json = await res.json();
+    } catch {
+      throw new Error('Network error. Please try again.');
+    }
+    if (!json.success || !json.drafts) {
+      throw new Error(json.error || 'Failed to rename draft');
+    }
+    setDrafts(json.drafts);
   }, []);
 
   // Load a pending trade into the builder
@@ -605,10 +656,13 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           </button>
           {hasTrade && (
             <button
-              className="btn btn--secondary"
+              className={`btn btn--secondary${draftSaveStatus === 'saved' ? ' trade-builder__save-draft--saved' : ''}`}
               onClick={handleSaveDraft}
+              disabled={draftSaveStatus === 'saving'}
             >
-              Save Draft
+              {draftSaveStatus === 'saving' && 'Saving…'}
+              {draftSaveStatus === 'saved' && 'Saved ✓'}
+              {(draftSaveStatus === 'idle' || draftSaveStatus === 'error') && 'Save Draft'}
             </button>
           )}
           {authUser && (
@@ -630,6 +684,23 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           )}
         </div>
       </div>
+
+      {draftError && (
+        <div className="trade-builder__draft-error" role="alert">
+          Couldn't save draft: {draftError}
+          <button
+            className="trade-builder__draft-error-dismiss"
+            onClick={() => {
+              clearDraftStatusTimer();
+              setDraftError(null);
+              setDraftSaveStatus('idle');
+            }}
+            aria-label="Dismiss error"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       <div className="trade-builder__panels">
         <TeamPanel
@@ -802,6 +873,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
       <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
         {submissionStatus.status === 'success' && 'Trade proposal sent'}
         {submissionStatus.status === 'error' && `Trade submission failed: ${submissionStatus.errorMessage}`}
+        {draftSaveStatus === 'saved' && 'Draft saved'}
       </div>
 
       <style>{`
@@ -827,6 +899,41 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           display: flex;
           gap: 0.5rem;
           flex-wrap: wrap;
+        }
+        .trade-builder__save-draft--saved {
+          color: var(--color-success, #16a34a);
+          border-color: var(--color-success, #16a34a);
+        }
+        .trade-builder__draft-error {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          font-size: 0.8125rem;
+          color: var(--color-error, #dc2626);
+          background: var(--color-error-light, #fee2e2);
+          border: 1px solid var(--color-error-border, #fecaca);
+          border-radius: var(--radius-sm, 0.25rem);
+          padding: 0.375rem 0.5rem;
+          margin: -0.75rem 0 1rem;
+        }
+        .trade-builder__draft-error-dismiss {
+          background: none;
+          border: none;
+          color: var(--color-error, #dc2626);
+          cursor: pointer;
+          font-size: 1.25rem;
+          line-height: 1;
+          padding: 0.25rem;
+          margin-left: auto;
+          min-width: 2rem;
+          min-height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .trade-builder__draft-error-dismiss:focus-visible {
+          outline: 2px solid var(--color-error, #dc2626);
+          outline-offset: 2px;
         }
         .btn {
           padding: 0.5rem 1rem;
