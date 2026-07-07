@@ -498,11 +498,12 @@ const promoRegTeams = [
     justify-content: center;
   }
 
-  /* On narrow screens, let the hero columns stretch full-width so the view
-     selector can lay its tabs out across the row without wrapping. */
+  /* On narrow screens the hero is a single column (the two-column rule is
+     min-width: 600px). Make that column full-width so the view selector can
+     lay its tabs out across the row without wrapping the last one below. */
   @media (max-width: 599px) {
     .standings-hero {
-      justify-content: stretch;
+      grid-template-columns: 1fr;
     }
 
     .standings-hero__actions {
