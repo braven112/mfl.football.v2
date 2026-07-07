@@ -7,6 +7,14 @@
     {
       "date": "2026-07-06",
       "type": "bug-fix",
+      "summary": "Saving a trade draft now tells you what happened. The Save Draft button flashes \"Saving…\" then \"Saved ✓\", and if the save actually fails — storage hiccup, dropped connection — a plain-English error slides in right under the button instead of the click quietly going nowhere. Same for deleting and renaming drafts from the My Trades panel. Previously every failure was swallowed silently, so a broken save looked identical to a working one and you'd just keep clicking. Drafts are still a convenience, never a blocker.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-06",
+      "type": "bug-fix",
       "summary": "On phones, the homepage heroes — the What's New announcement and the red Breaking News banner — no longer type their headlines directly across the featured player's face. The text now keeps to its own column on the left, and the player gets the respect he deserves: anchored to the bottom-right corner, standing nearly the full height of the card, with his left edge fading softly into the gradient instead of ending in a hard rectangle behind the shoulders. Even on the narrowest screens, the two stay out of each other's way.",
       "impact": "user",
       "area": "homepage",
