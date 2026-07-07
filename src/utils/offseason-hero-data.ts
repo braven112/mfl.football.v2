@@ -67,7 +67,7 @@ export function getRosteredPlayerIds(
 }
 
 /** Map of rostered playerId → owning franchiseId, from the rosters feed. */
-function getOwnerByPlayer(
+export function getOwnerByPlayer(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
 ): Map<string, string> {

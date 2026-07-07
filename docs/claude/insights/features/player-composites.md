@@ -647,3 +647,47 @@ face is whoever projects highest that week (guests and owners see the same slate
    (the map key is numeric; `ref.seed` is `toNumber`'d — a string key silently
    misses).
 
+## Rookie showcase composite cards (shipped 2026-07-06)
+
+8. **Top 50 rookie rankings card wall** —
+   `src/pages/theleague/rookies-2026.astro` (Top 50 panel): the first
+   composite use case that's a **retrofit onto an existing static/SSG data
+   table**, not a hero. Every one of the 50 prospects gets a card
+   (team-gradient stage, ESPN cutout, rank + DoT chip, name scrim, stat
+   strip) — no rotation/casting-limit logic needed since the whole class
+   ships at once. The original sortable table survives behind a
+   Cards/Table toggle (`#view-cards`/`#view-table`, plain hidden-attribute
+   swap); noscript shows the table only, same convention as every other
+   composite page's no-JS fallback.
+
+   **Drafted vs. undrafted is a data problem, not a display problem.**
+   RSP source data is name-keyed, not MFL-ID-keyed, so the page builds a
+   `normalizedName → PlayerIdentity` lookup from `getPlayerMap(year)`
+   **filtered to `draftYear === String(year)`** before matching — without
+   that filter a same-named veteran a few draft classes back can silently
+   steal a rookie's card (team, colors, headshot all wrong). Even with an
+   identity match, "drafted" is NOT `!!identity.nflTeam` — MFL's team code
+   for an unsigned rookie is `'FA'`/`''`, which is falsy-adjacent but not
+   guaranteed falsy, and normalizeTeamCode can return values that aren't
+   real teams. The reliable gate is `normalizeTeamCode(team) in
+   NFL_TEAM_COLORS` — if it's not a real key in the 32-team map, treat the
+   player as undrafted and use the neutral gradient, full stop.
+
+   **Headshot fallback here is NOT `buildHeadshotOnerror`.** That helper's
+   cascade ends at the MFL JPG, which has a baked-in background and would
+   silently break the "only composite transparent espncdn.com PNGs" rule
+   from this doc's own Insights section. Built a narrower cascade instead:
+   NFL espncdn URL → college espncdn URL (via a `data-fallback` attribute
+   consumed once by `onerror`, so it doesn't loop) → an intentional
+   initials-disc "no cutout" card state (`.rcc--no-cutout`) rather than any
+   raster fallback. On the frozen 2026 pre-draft class this state hit 3 of
+   50 prospects (no ESPN id at all, NFL or college) — expect a similar
+   ~5-6% miss rate on future rookie classes before the college-ID backfill
+   catches up.
+
+   **`getOwnerByPlayer` had to be exported.** It existed in
+   `offseason-hero-data.ts` as a module-private helper for hero casting;
+   this page needed the same rostered-playerId → franchiseId map from a
+   plain page frontmatter (no hero, no casting), so it's now exported
+   alongside `getRosteredPlayerIds`. No behavior change, just visibility.
+

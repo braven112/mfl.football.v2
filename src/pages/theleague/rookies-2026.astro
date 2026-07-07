@@ -7,6 +7,17 @@
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import { getPlayerMap, type PlayerIdentity } from '../../utils/player-map';
+import {
+  NFL_TEAM_COLORS,
+  NFL_COLORS_FALLBACK,
+  getNflTeamColors,
+  hexToRgba,
+} from '../../utils/nfl-team-colors';
+import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { getCollegeHeadshot as espnCollegeUrl } from '../../constants/roster-constants';
+import { getOwnerByPlayer } from '../../utils/offseason-hero-data';
+import { getFranchiseBrand } from '../../utils/franchise-brand';
 import rspData from '../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json';
 import rsp2025 from '../../../data/fantasy-expert/sources/rsp/2025-post-draft.json';
 import rsp2024 from '../../../data/fantasy-expert/sources/rsp/2024-post-draft.json';
@@ -250,6 +261,105 @@ for (const p of allRspPlayers) {
   combinedRows.push({ type: 'player', overallRank, ...p });
 }
 
+// ─── Composite showcase cards (Top 50) ─────────────────────────────
+// Each card is a player-composite: transparent ESPN cutout over a color
+// gradient — NFL team colors once the prospect is drafted, league-neutral
+// blue while he's still on the college board. Rookies rostered in TheLeague
+// get a franchise chip from the live MFL rosters feed.
+const LEAGUE_YEAR = 2026;
+
+// Match RSP names against the MFL player map, restricted to the 2026 draft
+// class so a veteran with the same name can't hijack a rookie's card.
+function normalizePlayerName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+(jr\.?|sr\.?|ii|iii|iv|v)$/i, '')
+    .replace(/[.,'’-]/g, '')
+    .trim();
+}
+const rookieByName = new Map<string, PlayerIdentity>();
+for (const identity of getPlayerMap(LEAGUE_YEAR).values()) {
+  if (identity.draftYear !== String(LEAGUE_YEAR)) continue;
+  if (identity.position === 'DEF') continue;
+  rookieByName.set(normalizePlayerName(identity.name), identity);
+}
+const ownerByPlayer = getOwnerByPlayer(LEAGUE_YEAR);
+
+type ShowcaseCard = {
+  rank: number;
+  name: string;
+  initials: string;
+  position: string;
+  school?: string;
+  dot: string;
+  tier: string;
+  grade: string;
+  fbgRank?: number;
+  drafted: boolean;
+  teamCode?: string;
+  teamLogo?: string;
+  gradient: string;
+  glow: string;
+  /** Primary cutout URL — always espncdn.com; never the MFL JPG fallback. */
+  headshot?: string;
+  /** Secondary espncdn URL (college variant) for drafted rookies whose NFL
+      headshot hasn't been published yet. */
+  headshotFallback?: string;
+  rosteredBy?: { name: string; icon: string };
+};
+
+const showcaseCards: ShowcaseCard[] = top50.map((p, i) => {
+  const identity = rookieByName.get(normalizePlayerName(p.name));
+  const teamCode = identity ? normalizeTeamCode(identity.nflTeam) : '';
+  const drafted = !!identity && Object.hasOwn(NFL_TEAM_COLORS, teamCode);
+  const colors = drafted ? getNflTeamColors(teamCode) : NFL_COLORS_FALLBACK;
+
+  // Only espncdn.com URLs are compositable (transparent PNG). A missing ID
+  // means no cutout at all — the card renders its intentional no-photo state.
+  // `identity.espnId` is a safe college-ID fallback here specifically because
+  // player-map.ts's resolveEspnId only returns a value from the college-ID
+  // map when there's no NFL espn_id — for a genuinely undrafted rookie that's
+  // virtually always the case, and it's matched by MFL id rather than name,
+  // catching prospects this page's own name-based lookup misses (accents,
+  // suffixes). It's only ever wrong-shape if `drafted` is true, in which case
+  // `nflUrl` below takes priority and this value is never used as `headshot`.
+  const collegeId = espnCollegeByName.get(p.name.toLowerCase()) ?? identity?.espnId ?? undefined;
+  const collegeUrl = collegeId ? espnCollegeUrl(collegeId) : undefined;
+  const nflUrl = drafted && identity?.espnId
+    ? `https://a.espncdn.com/i/headshots/nfl/players/full/${identity.espnId}.png`
+    : undefined;
+  const headshot = drafted ? (nflUrl ?? collegeUrl) : collegeUrl;
+  const headshotFallback = drafted && nflUrl && collegeUrl && collegeUrl !== nflUrl ? collegeUrl : undefined;
+
+  const ownerId = identity ? ownerByPlayer.get(identity.mflId) : undefined;
+  const brand = ownerId ? getFranchiseBrand(ownerId) : undefined;
+
+  const nameParts = p.name.replace(/\s+(jr\.?|sr\.?|ii|iii|iv|v)$/i, '').trim().split(/\s+/);
+  const initials = (nameParts[0]?.[0] ?? '') + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '');
+
+  return {
+    rank: i + 1,
+    name: p.name,
+    initials: initials.toUpperCase(),
+    position: p.position,
+    school: p.school ?? undefined,
+    dot: p.preDraftScore.toFixed(1),
+    tier: GRADE_TO_TIER[p.preDraftGrade] ?? 'E',
+    grade: p.preDraftGrade,
+    fbgRank: p.fbgRank,
+    drafted,
+    teamCode: drafted ? teamCode : undefined,
+    teamLogo: drafted ? getNFLTeamLogo(teamCode) : undefined,
+    gradient: `linear-gradient(160deg, #0b0e12 0%, ${colors.primary} 150%)`,
+    glow: hexToRgba(colors.primary, 0.35),
+    headshot,
+    headshotFallback,
+    rosteredBy: brand?.name ? { name: brand.name, icon: brand.icon } : undefined,
+  };
+});
+const draftedCount = showcaseCards.filter(c => c.drafted).length;
+const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
+
 ---
 
 <TheLeagueLayout title="2026 Rookie Rankings">
@@ -320,9 +430,55 @@ for (const p of allRspPlayers) {
     <section role="tabpanel" id="panel-rankings" aria-labelledby="tab-rankings" tabindex="0" class="rsp-panel">
       <div class="rsp-table-section-header">
         <h2 class="rsp-section-title">Top 50 — Integrated Rankings</h2>
-        <p class="rsp-section-sub">Waldman's DoT score with FBG dynasty rookie ranks merged. Click a column header to re-sort.</p>
+        <p class="rsp-section-sub">Waldman's DoT score with FBG dynasty rookie ranks merged. Cards wear NFL team colors once a prospect is drafted — {draftedCount} of 50 have a team, {rosteredCount} are already rostered in TheLeague.</p>
       </div>
-      <div class="rsp-table-scroll">
+      <div class="top50-sort-bar" role="group" aria-label="Rankings view">
+        <span class="sort-label">View:</span>
+        <button class="sort-btn sort-btn--active" id="view-cards" aria-pressed="true">Cards</button>
+        <button class="sort-btn" id="view-table" aria-pressed="false">Table</button>
+      </div>
+      <div class="rookie-showcase" id="rookie-showcase">
+        {showcaseCards.map(card => (
+          <article class:list={['rcc', !card.headshot && 'rcc--no-cutout']}>
+            <div class="rcc__stage" style={`background: ${card.gradient};`}>
+              <span class="rcc__glow" style={`background: radial-gradient(circle, ${card.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
+              {card.drafted && card.teamLogo
+                ? <img class="rcc__logo" src={card.teamLogo} alt="" aria-hidden="true" loading="lazy" />
+                : <span class="rcc__ghost" aria-hidden="true">{card.school ?? card.position}</span>}
+              <span class="rcc__rank" aria-hidden="true">No. {card.rank}</span>
+              <span class="rcc__dot" title={`DoT score ${card.dot}`}>{card.dot}</span>
+              {card.headshot && (
+                <img
+                  class="rcc__cutout"
+                  src={card.headshot}
+                  data-fallback={card.headshotFallback}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                  onerror="var fb=this.dataset.fallback;if(fb){delete this.dataset.fallback;this.src=fb;}else{this.closest('.rcc').classList.add('rcc--no-cutout');}"
+                />
+              )}
+              <span class="rcc__silhouette" aria-hidden="true">{card.initials}</span>
+              <span class="rcc__scrim">
+                <strong class="rcc__name">{card.name}</strong>
+                <span class="rcc__meta">{card.position} · {card.drafted ? card.teamCode : (card.school ?? 'Undrafted')}</span>
+              </span>
+            </div>
+            <div class="rcc__strip">
+              <span class={`tier-badge tier-badge--${card.tier.toLowerCase()}`} title={card.grade}>{card.tier}</span>
+              {card.fbgRank && <span class="rcc__fbg">FBG {card.fbgRank}</span>}
+              {card.rosteredBy ? (
+                <span class="rcc__owner" title={`Rostered by ${card.rosteredBy.name}`}>
+                  {card.rosteredBy.icon && <img src={card.rosteredBy.icon} alt="" class="rcc__owner-icon" loading="lazy" decoding="async" />}
+                  <span class="rcc__owner-name">{card.rosteredBy.name}</span>
+                </span>
+              ) : <span class="rcc__avail">Available</span>}
+            </div>
+          </article>
+        ))}
+      </div>
+      <div class="rsp-table-scroll" id="top50-table-scroll" hidden>
         <table class="rsp-table" id="top50-table">
           <thead>
             <tr>
@@ -591,6 +747,8 @@ for (const p of allRspPlayers) {
       <style>
         .rsp-tabs { display: none !important; }
         .rsp-panel[hidden] { display: block !important; }
+        #top50-table-scroll[hidden] { display: block !important; }
+        .top50-sort-bar[role="group"] { display: none !important; }
       </style>
     </noscript>
 
@@ -765,6 +923,25 @@ for (const p of allRspPlayers) {
   rspSortBtns.forEach(btn => {
     btn.addEventListener('click', () => sortRsp(btn.dataset.sort as 'rsp' | 'fbg'));
   });
+
+  // ── Top 50: cards ↔ table view toggle ─────────────────────────────
+  const showcaseEl = document.getElementById('rookie-showcase');
+  const tableScrollEl = document.getElementById('top50-table-scroll');
+  const viewCardsBtn = document.getElementById('view-cards');
+  const viewTableBtn = document.getElementById('view-table');
+
+  function setView(view: 'cards' | 'table') {
+    if (!showcaseEl || !tableScrollEl || !viewCardsBtn || !viewTableBtn) return;
+    showcaseEl.hidden = view !== 'cards';
+    tableScrollEl.hidden = view !== 'table';
+    viewCardsBtn.classList.toggle('sort-btn--active', view === 'cards');
+    viewTableBtn.classList.toggle('sort-btn--active', view === 'table');
+    viewCardsBtn.setAttribute('aria-pressed', String(view === 'cards'));
+    viewTableBtn.setAttribute('aria-pressed', String(view === 'table'));
+  }
+
+  viewCardsBtn?.addEventListener('click', () => setView('cards'));
+  viewTableBtn?.addEventListener('click', () => setView('table'));
 </script>
 
 <style>
@@ -1515,8 +1692,237 @@ for (const p of allRspPlayers) {
     color: var(--color-gray-600, #a0a0a0);
   }
 
+  /* ─── Rookie composite showcase (Top 50 card view) ────────────
+     Trading-card composites in the UDFA-panel visual language: dark
+     team-gradient stage, ESPN cutout, watermark behind the player.
+     The stage is inherently dark in both themes; only the stat strip
+     follows the theme tokens. */
+  .rookie-showcase {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 0.75rem;
+  }
+  .rookie-showcase[hidden] { display: none; }
+
+  .rcc {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--content-bg, #fff);
+  }
+
+  .rcc__stage {
+    position: relative;
+    min-height: 205px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .rcc__glow {
+    position: absolute;
+    inset: -40% -30% auto -30%;
+    height: 140%;
+    pointer-events: none;
+  }
+
+  /* Drafted: permanent NFL-team-logo watermark behind the player */
+  .rcc__logo {
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: clamp(100px, 60%, 140px);
+    opacity: 0.16;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Undrafted: ghost school wordmark instead of a team logo */
+  .rcc__ghost {
+    position: absolute;
+    inset: 0.5rem 0.375rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+    font-weight: 900;
+    line-height: 0.95;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .rcc__rank {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 3;
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.25rem 0.45rem;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+
+  .rcc__dot {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 3;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.25rem 0.45rem;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+
+  .rcc__cutout {
+    position: relative;
+    z-index: 1;
+    /* Big enough that the face clears the name scrim; stays bottom-anchored
+       so the headshot's hard chest-crop line hides under the scrim. */
+    width: clamp(135px, 94%, 195px);
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+  }
+
+  /* Intentional no-photo state: hide the cutout, show an initials disc so
+     the card still reads as designed (many college ESPN IDs are missing). */
+  .rcc__silhouette {
+    display: none;
+    position: relative;
+    z-index: 1;
+    width: 76px;
+    height: 76px;
+    margin-bottom: 2.9rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+  .rcc--no-cutout .rcc__cutout { display: none; }
+  .rcc--no-cutout .rcc__silhouette { display: flex; }
+  .rcc--no-cutout .rcc__stage { justify-content: center; }
+
+  .rcc__scrim {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.45rem 0.55rem;
+    color: #fff;
+    background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
+  }
+  .rcc__name {
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rcc__meta {
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rcc__strip {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.45rem 0.55rem;
+    background: var(--content-bg, #fff);
+    min-height: 2.1rem;
+  }
+  .rcc__strip .tier-badge {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 0.6875rem;
+    flex-shrink: 0;
+  }
+  .rcc__fbg {
+    font-size: 0.625rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-500, #6b7280);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .rcc__owner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+    min-width: 0;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #15803d;
+  }
+  .rcc__owner-icon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .rcc__owner-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rcc__avail {
+    margin-left: auto;
+    font-size: 0.625rem;
+    font-style: italic;
+    color: var(--color-gray-400, #9ca3af);
+    white-space: nowrap;
+  }
+
+  :global(html.dark) .rcc__owner {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+  }
+
   /* ─── Mobile: table → stacked cards ─────────────────────────── */
   @media (max-width: 640px) {
+    .rookie-showcase {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.5rem;
+    }
+    .rcc__stage { min-height: 185px; }
+    .rcc__cutout { width: clamp(125px, 94%, 165px); }
     .rsp-metrics {
       grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem;
