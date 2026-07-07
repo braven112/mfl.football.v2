@@ -1,8 +1,38 @@
 # Schefter Announcement Seeder Insights
 
 Domain knowledge for `scripts/schefter-announce.mjs` + `.github/workflows/schefter-announce.yml`
-— the manual path for posting a one-off, hand-authored Schefter announcement
-(e.g. "the site now has dark mode") to the league feed and GroupMe.
++ the admin compose card (`/theleague/admin/schefter`) + endpoint
+(`src/pages/api/admin/schefter-announce.ts`) — the manual path for posting a
+one-off, hand-authored Schefter announcement (e.g. "the site now has dark
+mode") to the league feed and GroupMe.
+
+---
+
+## 2026-07-07 - Admin "send from the site" Must Dispatch The Workflow, Not Write The Feed
+
+**Context:** Wanted the commish to send announcements from the logged-in admin
+page instead of GitHub Actions.
+
+**Insight:** A Vercel-runtime route CANNOT make a visible feed post directly:
+`schefter-feed.json` is a **build-time artifact** (`news.astro` uses a static
+`import` even though it's `prerender = false`), so a post only appears after the
+committed JSON changes and Vercel redeploys. And `GROUPME_SCHEFTER_BOT_ID` is an
+Actions-only secret — not in the web runtime. So the admin endpoint **dispatches
+`schefter-announce.yml` via `workflow_dispatch`** (feed commit + GroupMe happen
+in the Action), exactly the bridge `src/pages/api/cron/roster-sync.ts` uses with
+`GH_PAT` (needs `actions:write`). A Redis-write-at-request-time design would
+split-brain (GroupMe instant, feed invisible until a separate cron commits) and
+still need a new consumer — strictly worse.
+
+**Pattern:**
+- Gate every admin route with `getAuthUser` + `isCommissionerOrAdmin` (403 JSON /
+  page redirect) — `src/utils/auth.ts:69`.
+- Keep pure compose logic in `src/utils/schefter-announce-core.mjs` so the
+  endpoint's `preview` action renders byte-identical output to what the workflow
+  ships. `.mjs` in `src/utils` is importable by BOTH the node CLI script and the
+  TS route (same trick as `leagues-data.mjs`).
+- The `send` action requires `GH_PAT` in the Vercel env; without it the endpoint
+  returns a clear 500 rather than silently no-op'ing.
 
 ---
 

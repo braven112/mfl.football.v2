@@ -52,6 +52,58 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       </div>
     </header>
 
+    <section class="ann" aria-labelledby="ann-title">
+      <header class="ann__head">
+        <h2 id="ann-title" class="ops-card__title">Broadcast an announcement</h2>
+        <p class="ops-card__hint">
+          Ship a hand-written Schefter post to the news feed and (optionally) the GroupMe.
+          <strong>Preview</strong> renders exactly what will post; <strong>Send</strong> dispatches
+          the publish workflow — the feed post appears once it commits and the site redeploys
+          (~1–2 min), and GroupMe fires during the run.
+        </p>
+      </header>
+
+      <form id="ann-form" class="ann-form" autocomplete="off">
+        <div class="ann-grid">
+          <label class="ann-field">
+            <span>Slug <small>kebab-case; identifies the post so re-runs don't double-post</small></span>
+            <input id="ann-slug" name="slug" type="text" required pattern="[a-z0-9][a-z0-9-]*"
+              placeholder="dark-mode-2026-07" />
+          </label>
+          <label class="ann-field ann-field--narrow">
+            <span>Leagues</span>
+            <select id="ann-leagues" name="leagues">
+              <option value="theleague">The League</option>
+              <option value="afl">AFL</option>
+              <option value="both">Both</option>
+            </select>
+          </label>
+        </div>
+        <label class="ann-field">
+          <span>Headline <small>max 120 chars; blank uses the default</small></span>
+          <input id="ann-headline" name="headline" type="text" maxlength="120"
+            placeholder="The site just got a facelift: dark mode + fresh player images" />
+        </label>
+        <label class="ann-field">
+          <span>Body <small>the GroupMe text; blank uses the default</small></span>
+          <textarea id="ann-body" name="body" rows="4"
+            placeholder="📱 SCHEFTER: The site just leveled up…"></textarea>
+        </label>
+        <label class="ann-check">
+          <input id="ann-groupme" name="sendGroupMe" type="checkbox" checked />
+          <span>Also ping the Schefter GroupMe</span>
+        </label>
+
+        <div class="ann-actions">
+          <button id="ann-preview" class="ops-btn ops-btn--ghost" type="submit">Preview</button>
+          <button id="ann-send" class="ops-btn" type="button" disabled>Send</button>
+          <span id="ann-status" class="ann-status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <div id="ann-preview-out" class="ann-preview" hidden></div>
+    </section>
+
     <section class="ops-hero" aria-labelledby="hero-channel-mix">
       <header class="ops-hero__head">
         <h2 id="hero-channel-mix" class="ops-card__title">Channel Mix</h2>
@@ -1169,6 +1221,130 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
   }, 60_000);
 </script>
 
+<script>
+  // Announcement compose card — Preview (renders exactly what will ship) then
+  // Send (dispatches schefter-announce.yml). Self-contained; talks only to
+  // /api/admin/schefter-announce, which is commissioner-gated server-side.
+  (() => {
+    const form = document.getElementById('ann-form') as HTMLFormElement | null;
+    if (!form) return;
+    const slugEl = document.getElementById('ann-slug') as HTMLInputElement;
+    const leaguesEl = document.getElementById('ann-leagues') as HTMLSelectElement;
+    const headlineEl = document.getElementById('ann-headline') as HTMLInputElement;
+    const bodyEl = document.getElementById('ann-body') as HTMLTextAreaElement;
+    const groupmeEl = document.getElementById('ann-groupme') as HTMLInputElement;
+    const previewBtn = document.getElementById('ann-preview') as HTMLButtonElement;
+    const sendBtn = document.getElementById('ann-send') as HTMLButtonElement;
+    const statusEl = document.getElementById('ann-status') as HTMLSpanElement;
+    const out = document.getElementById('ann-preview-out') as HTMLDivElement;
+
+    const ENDPOINT = '/api/admin/schefter-announce';
+    let previewOk = false;
+
+    const esc = (s: unknown) =>
+      String(s ?? '').replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+    function collect() {
+      return {
+        slug: slugEl.value.trim(),
+        leagues: leaguesEl.value,
+        headline: headlineEl.value,
+        body: bodyEl.value,
+        sendGroupMe: groupmeEl.checked,
+      };
+    }
+
+    function setStatus(msg: string, kind: 'ok' | 'bad' | 'muted' = 'muted') {
+      statusEl.textContent = msg;
+      statusEl.dataset.kind = kind;
+    }
+
+    // Any edit invalidates a prior preview — force a re-preview before Send.
+    for (const el of [slugEl, leaguesEl, headlineEl, bodyEl, groupmeEl]) {
+      el.addEventListener('input', () => {
+        previewOk = false;
+        sendBtn.disabled = true;
+      });
+    }
+
+    async function post(action: 'preview' | 'send') {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...collect() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { res, data } as { res: Response; data: any };
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      previewBtn.disabled = true;
+      setStatus('Building preview…');
+      try {
+        const { res, data } = await post('preview');
+        if (!res.ok) {
+          const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || `HTTP ${res.status}`;
+          out.hidden = true;
+          setStatus(errs, 'bad');
+          return;
+        }
+        const cards = (data.previews || [])
+          .map((p: any) => {
+            const gm = p.groupMeText
+              ? `<div class="ann-prev__gm"><span class="ann-prev__k">GroupMe</span><pre>${esc(p.groupMeText)}</pre></div>`
+              : `<div class="ann-prev__gm ann-prev__gm--off">GroupMe: off (feed only)</div>`;
+            return `<article class="ann-prev">
+              <div class="ann-prev__league">${esc(p.label)}</div>
+              <div class="ann-prev__hl">${esc(p.post.headline)}</div>
+              <div class="ann-prev__body">${esc(p.post.body)}</div>
+              ${gm}
+              <div class="ann-prev__id">id: ${esc(p.post.id)}</div>
+            </article>`;
+          })
+          .join('');
+        out.innerHTML = cards;
+        out.hidden = false;
+        previewOk = true;
+        sendBtn.disabled = false;
+        setStatus('Preview ready — review, then Send.', 'ok');
+      } catch (err) {
+        setStatus('Preview failed: ' + (err instanceof Error ? err.message : String(err)), 'bad');
+      } finally {
+        previewBtn.disabled = false;
+      }
+    });
+
+    sendBtn.addEventListener('click', async () => {
+      if (!previewOk) return;
+      const where = leaguesEl.options[leaguesEl.selectedIndex].text;
+      const ping = groupmeEl.checked ? ' and ping GroupMe' : '';
+      if (!confirm(`Publish this Schefter announcement to ${where}${ping}? This posts to the live feed.`)) return;
+      sendBtn.disabled = true;
+      previewBtn.disabled = true;
+      setStatus('Dispatching…');
+      try {
+        const { res, data } = await post('send');
+        if (!res.ok) {
+          const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || `HTTP ${res.status}`;
+          setStatus(errs + (data.detail ? ` — ${data.detail}` : ''), 'bad');
+          previewBtn.disabled = false;
+          return;
+        }
+        const link = data.runsUrl ? ` <a href="${esc(data.runsUrl)}" target="_blank" rel="noopener">View run →</a>` : '';
+        out.innerHTML = `<div class="ann-sent">${esc(data.message || 'Announcement dispatched.')}${link}</div>`;
+        out.hidden = false;
+        setStatus('Sent ✓', 'ok');
+        previewOk = false; // require a fresh preview before another send
+      } catch (err) {
+        setStatus('Send failed: ' + (err instanceof Error ? err.message : String(err)), 'bad');
+        previewBtn.disabled = false;
+      }
+    });
+  })();
+</script>
+
 <style>
   .ops-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
 
@@ -1543,4 +1719,65 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
   @media (max-width: 560px) {
     .ops-gm-msg__when { margin-left: 0; flex-basis: 100%; }
   }
+
+  /* Announcement compose card */
+  .ann {
+    background: var(--color-surface, #f8fafc); border: 1px solid var(--color-border, #e2e8f0);
+    border-left: 4px solid var(--color-accent, #0ea5e9);
+    border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 1.5rem;
+  }
+  .ann__head { margin-bottom: 0.9rem; }
+  .ann-form { display: flex; flex-direction: column; gap: 0.8rem; }
+  .ann-grid { display: grid; grid-template-columns: 1fr 200px; gap: 0.8rem; }
+  @media (max-width: 620px) { .ann-grid { grid-template-columns: 1fr; } }
+  .ann-field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .ann-field > span { font-size: 0.8rem; font-weight: 700; color: var(--color-text, #0f172a); }
+  .ann-field small { display: block; font-weight: 400; font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
+  .ann-field input, .ann-field select, .ann-field textarea {
+    font: inherit; padding: 0.5rem 0.6rem; border-radius: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    background: var(--color-surface-alt, #fff); color: var(--color-text, #0f172a);
+  }
+  .ann-field textarea { resize: vertical; min-height: 5rem; }
+  .ann-field input:focus, .ann-field select:focus, .ann-field textarea:focus {
+    outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 1px;
+  }
+  .ann-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--color-text, #0f172a); }
+  .ann-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.2rem; }
+  .ops-btn--ghost {
+    background: transparent; color: var(--color-accent, #0ea5e9);
+    box-shadow: inset 0 0 0 1px var(--color-accent, #0ea5e9);
+  }
+  .ops-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+  .ann-status { font-size: 0.8rem; color: var(--color-text-muted, #64748b); }
+  .ann-status[data-kind="ok"] { color: #166534; }
+  .ann-status[data-kind="bad"] { color: #991b1b; }
+  .ann-preview { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; }
+  .ann-prev {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 10px;
+    padding: 0.8rem 0.9rem; background: var(--color-surface-alt, #fff);
+  }
+  .ann-prev__league {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--color-accent, #0ea5e9); margin-bottom: 0.35rem;
+  }
+  .ann-prev__hl { font-weight: 700; color: var(--color-text, #0f172a); margin-bottom: 0.3rem; }
+  .ann-prev__body { font-size: 0.9rem; color: var(--color-text, #0f172a); white-space: pre-wrap; }
+  .ann-prev__gm { margin-top: 0.6rem; }
+  .ann-prev__gm--off { font-size: 0.78rem; color: var(--color-text-muted, #64748b); }
+  .ann-prev__k {
+    display: inline-block; font-size: 0.66rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--color-text-muted, #64748b); margin-bottom: 0.25rem;
+  }
+  .ann-prev__gm pre {
+    margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.82rem;
+    background: var(--color-surface, #f1f5f9); padding: 0.5rem 0.6rem; border-radius: 6px;
+    color: var(--color-text, #0f172a);
+  }
+  .ann-prev__id { margin-top: 0.5rem; font-size: 0.7rem; color: var(--color-text-muted, #64748b); font-variant-numeric: tabular-nums; }
+  .ann-sent {
+    border: 1px solid var(--color-border, #e2e8f0); border-left: 4px solid #16a34a;
+    border-radius: 10px; padding: 0.8rem 0.9rem; font-size: 0.9rem; color: var(--color-text, #0f172a);
+  }
+  .ann-sent a { color: var(--color-accent, #0ea5e9); font-weight: 600; }
 </style>
