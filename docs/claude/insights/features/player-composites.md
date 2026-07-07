@@ -918,3 +918,16 @@ award card (`DeadMoneyPlayerCard.astro`) and both shame banners
   white text/cutout stay legible. Do NOT just pick "most chromatic" — that
   wrongly overrides a perfectly good dark-navy primary with a flashier
   secondary (Cowboy Up navy vs its red).
+
+**The `/theleague/showcase` gallery is a hand-built facsimile, not the real
+components.** `src/pages/theleague/showcase.astro` reproduces every composite
+hero with its OWN markup and CSS (`.hcx__*` classes — e.g. `.hcx__model` for
+the player cutout) rather than importing `*CompositeHero.astro`. So a styling
+change to a real hero (the `.cwh__model` width clamp on `CutWatchCompositeHero`,
+etc.) does NOT show up in the showcase, and vice-versa — the two drift silently.
+When you resize/restyle a hero element, update the matching `.hcx__*` rule in
+showcase.astro too, or the design gallery misrepresents the shipped component.
+Also note the showcase casts its own demo players (Cut Watch → Bijan Robinson),
+so it can't reproduce the live-data hero (Cut Watch on `index.astro` only
+renders with real over-limit rosters) — verify the real component's computed
+values, and use the showcase only as a proxy for the shared sizing math.
