@@ -257,8 +257,20 @@ const divisionBadges: Record<string, string> = {
   }
 
   .standings-hero__actions {
-    display: grid;
+    display: flex;
     justify-content: center;
+  }
+
+  /* On narrow screens, let the hero columns stretch full-width so the view
+     selector can lay its tabs out across the row without wrapping. */
+  @media (max-width: 599px) {
+    .standings-hero {
+      justify-content: stretch;
+    }
+
+    .standings-hero__actions {
+      width: 100%;
+    }
   }
 
   .standings-filters {
