@@ -6,6 +6,7 @@ import { getNFLTeamLogo } from '../../utils/nfl-logo';
 import {
   castBestScoredModel,
   scoreFaceoffSides,
+  isCompositable,
   type FaceoffStatCandidate,
 } from '../../utils/hero-casting';
 import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
@@ -74,7 +75,13 @@ asArray((playerScoresData as any)?.playerScores?.playerScore).forEach((p: any) =
 
 function faceoffCandidates(roster: any, franchiseId: string): FaceoffStatCandidate[] {
   return asArray(roster?.player)
-    .filter((p: any) => p?.id && p.status === 'ROSTER')
+    // Compositable only, so the elected stat source matches who can be cast
+    // (a DEF's stat shouldn't elect a source castBestScoredModel can't honor).
+    .filter((p: any) => {
+      if (!p?.id || p.status !== 'ROSTER') return false;
+      const identity = faceoffPlayerMap.get(p.id);
+      return !!identity && isCompositable(identity);
+    })
     .map((p: any) => ({
       playerId: p.id,
       franchiseId,

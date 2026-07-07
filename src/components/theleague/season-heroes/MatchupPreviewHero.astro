@@ -13,6 +13,7 @@ import { normalizeTeamCode, getNFLTeamLogo } from '../../../utils/nfl-logo';
 import {
   castBestScoredModel,
   scoreFaceoffSides,
+  isCompositable,
   type FaceoffStatCandidate,
 } from '../../../utils/hero-casting';
 import FaceoffComposite, { type FaceoffSide } from '../FaceoffComposite.astro';
@@ -57,17 +58,23 @@ const liveGames = Array.isArray(rawLiveWeek) ? rawLiveWeek : rawLiveWeek ? [rawL
 const rawSchedule = scheduleData?.fullNflSchedule?.nflSchedule
   ?? scheduleData?.default?.fullNflSchedule?.nflSchedule ?? [];
 
-const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
-const hasProjections = Array.isArray(rawScores) && rawScores.length > 0;
+// MFL collapses a one-element list to a bare object; normalize before use.
+const rawScoresRaw = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
+const rawScores = Array.isArray(rawScoresRaw) ? rawScoresRaw : rawScoresRaw ? [rawScoresRaw] : [];
+// The emptied-feed sentinel is a single `{id:"",score:""}` — filter empty ids.
+const scoreRows = rawScores.filter((s: any) => s?.id);
+const hasProjections = scoreRows.length > 0;
 const projWeek = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week;
 
-// Archive path: nflSchedule is an array indexed by week (0-based: index 0 = week 1)
+// Archive path: nflSchedule is an array indexed by week (0-based: index 0 = week 1).
+// A one-game week can arrive as a bare object — normalize before .map().
 const weekIdx = projWeek ? parseInt(projWeek) - 1 : -1;
-const weekGames = liveGames.length > 0
+const rawWeekGames = liveGames.length > 0
   ? liveGames
   : (weekIdx >= 0 && weekIdx < rawSchedule.length)
-    ? (rawSchedule[weekIdx]?.matchup ?? [])
+    ? rawSchedule[weekIdx]?.matchup
     : [];
+const weekGames = Array.isArray(rawWeekGames) ? rawWeekGames : rawWeekGames ? [rawWeekGames] : [];
 
 // Build player → NFL team lookup (using unified identity map as primary, feed as fallback)
 const heroPlayerIdentityMap = getPlayerMap(year);
@@ -86,10 +93,9 @@ for (const p of allPlayers) {
 
 // Build projection lookup
 const projMap = new Map<string, number>();
-if (hasProjections) {
-  for (const s of rawScores) {
-    projMap.set(s.id, parseFloat(s.score));
-  }
+for (const s of scoreRows) {
+  const v = parseFloat(s.score);
+  if (Number.isFinite(v)) projMap.set(s.id, v);
 }
 
 // Find user's rostered player IDs and their NFL teams
@@ -224,11 +230,16 @@ for (const g of displayGames) {
   displayTeamCodes.add(normalizeTeamCode(g.homeTeam));
 }
 
+// Walk the projection map (a few hundred players) rather than the full
+// identity map, and keep only compositable players on a displayed team — the
+// faceoff is projection-only, and casting a non-compositable (DEF / no ESPN
+// cutout) player would elect a stat source castBestScoredModel can't honor.
 const candidatesByTeam = new Map<string, FaceoffStatCandidate[]>();
-for (const [id, identity] of heroPlayerIdentityMap) {
-  if (!displayTeamCodes.has(identity.nflTeam)) continue;
+for (const [id, projected] of projMap) {
+  const identity = heroPlayerIdentityMap.get(id);
+  if (!identity || !displayTeamCodes.has(identity.nflTeam) || !isCompositable(identity)) continue;
   const arr = candidatesByTeam.get(identity.nflTeam) ?? [];
-  arr.push({ playerId: id, franchiseId: '', projected: projMap.get(id) ?? 0 });
+  arr.push({ playerId: id, franchiseId: '', projected });
   candidatesByTeam.set(identity.nflTeam, arr);
 }
 

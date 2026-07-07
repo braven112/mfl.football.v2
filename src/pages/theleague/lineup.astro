@@ -23,6 +23,7 @@ import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStr
 import {
   castBestScoredModel,
   scoreFaceoffSides,
+  isCompositable,
   type FaceoffScoreSource,
   type FaceoffStatCandidate,
 } from '../../utils/hero-casting';
@@ -418,7 +419,9 @@ function faceoffCandidates(franchiseId: string, playerIds: string[], actualById?
  * fills the 9 starting slots greedily by projection (position slots first,
  * then FLEX with the best remaining RB/WR/TE). Used for the opponent's
  * "current lineup" total when the week isn't locked (their actual set
- * lineup isn't publicly readable for a future week).
+ * lineup isn't publicly readable for a future week). Sums only what the
+ * pool can fill — a thin roster yields fewer than 9 starters (and a
+ * smaller total), which is the honest answer.
  */
 function bestLineupProjTotal(playerIds: string[]): number {
   const cands = playerIds.map((id) => ({
@@ -467,7 +470,10 @@ if (opponentFranchiseId) {
   } else {
     const oppFranchise = franchiseListForSalary.find((f: any) => f?.id === opponentFranchiseId);
     const oppPlayers = Array.isArray(oppFranchise?.player) ? oppFranchise.player : oppFranchise?.player ? [oppFranchise.player] : [];
-    opponentSideIds = oppPlayers.filter((p: any) => p?.id && p.status !== 'INJURED_RESERVE').map((p: any) => p.id);
+    // Only active-roster players are legal starters — TAXI_SQUAD and
+    // INJURED_RESERVE can't start, so excluding them keeps the presumed
+    // lineup (and its projected total) honest.
+    opponentSideIds = oppPlayers.filter((p: any) => p?.id && p.status === 'ROSTER').map((p: any) => p.id);
   }
 }
 
@@ -479,8 +485,14 @@ const faceoffOrder: FaceoffScoreSource[] = isPastWeek
 
 let lineupFaceoff: { away: FaceoffSide; home: FaceoffSide; statSource: FaceoffScoreSource } | null = null;
 if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0) {
-  const userCands = faceoffCandidates(user.franchiseId, userSideIds);
-  const oppCands = faceoffCandidates(opponentFranchiseId, opponentSideIds, opponentActualById);
+  // Cast only from compositable players (ESPN cutout, non-DEF) so the elected
+  // stat source matches who castBestScoredModel can actually feature — a DEF's
+  // projection shouldn't elect a source the cast then can't honor. Team TOTALS
+  // (below) intentionally still count every starter, DEF and PK included.
+  const compositableIds = (ids: string[]) =>
+    ids.filter((id) => { const p = lineupPlayerIdentityMap.get(id); return !!p && isCompositable(p); });
+  const userCands = faceoffCandidates(user.franchiseId, compositableIds(userSideIds));
+  const oppCands = faceoffCandidates(opponentFranchiseId, compositableIds(opponentSideIds), opponentActualById);
   const scored = scoreFaceoffSides(
     userIsHome ? oppCands : userCands,
     userIsHome ? userCands : oppCands,
@@ -588,14 +600,30 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         <FaceoffComposite away={lineupFaceoff.away} home={lineupFaceoff.home} size="card" />
         <div class="lineup-faceoff__band">
           {hasProjTotals ? (
-            <div class="lineup-faceoff__scoreboard" data-user-side={userScoreSide}>
+            <div
+              class="lineup-faceoff__scoreboard"
+              data-user-side={userScoreSide}
+              role="status"
+              aria-live="polite"
+              aria-label="Projected points"
+            >
               <div class="lineup-faceoff__side lineup-faceoff__side--away">
                 <span class="lineup-faceoff__team">{lineupFaceoff.away.chip}</span>
-                <span class="lineup-faceoff__total" data-side="away" data-total={awayProjTotal.toFixed(1)}>{awayProjTotal.toFixed(1)}</span>
+                <span
+                  class="lineup-faceoff__total"
+                  data-side="away"
+                  data-total={awayProjTotal.toFixed(1)}
+                  aria-label={`${lineupFaceoff.away.chip} projected ${awayProjTotal.toFixed(1)} points`}
+                >{awayProjTotal.toFixed(1)}</span>
               </div>
               <span class="lineup-faceoff__sep" aria-hidden="true">Proj</span>
               <div class="lineup-faceoff__side lineup-faceoff__side--home">
-                <span class="lineup-faceoff__total" data-side="home" data-total={homeProjTotal.toFixed(1)}>{homeProjTotal.toFixed(1)}</span>
+                <span
+                  class="lineup-faceoff__total"
+                  data-side="home"
+                  data-total={homeProjTotal.toFixed(1)}
+                  aria-label={`${lineupFaceoff.home.chip} projected ${homeProjTotal.toFixed(1)} points`}
+                >{homeProjTotal.toFixed(1)}</span>
                 <span class="lineup-faceoff__team">{lineupFaceoff.home.chip}</span>
               </div>
             </div>
@@ -943,6 +971,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
       totalEl.dataset.total = next;
       totalEl.textContent = next;
+      // Keep the SR label in sync with the live value (aria-live announces it).
+      const prevLabel = totalEl.getAttribute('aria-label');
+      if (prevLabel) totalEl.setAttribute('aria-label', prevLabel.replace(/projected [\d.]+ points/, `projected ${next} points`));
       totalEl.classList.remove('lineup-faceoff__total--bumped');
       // Reflow so the animation restarts on each change.
       void totalEl.offsetWidth;

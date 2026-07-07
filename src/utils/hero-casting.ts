@@ -24,8 +24,12 @@ export interface HeroModel {
   descriptor: string;
 }
 
-/** Composites need a transparent ESPN cutout — MFL JPGs have baked backgrounds. */
-function isCompositable(player: PlayerIdentity): boolean {
+/** Composites need a transparent ESPN cutout — MFL JPGs have baked backgrounds.
+ *  Exported so faceoff callers can pre-filter candidate pools to compositable
+ *  players BEFORE `scoreFaceoffSides` elects a stat source — otherwise a side
+ *  whose only projected player is a DEF (or MFL-JPG-only) could elect a source
+ *  that `castBestScoredModel` then can't honor, casting a 0-score fallback. */
+export function isCompositable(player: PlayerIdentity): boolean {
   return player.position !== 'DEF' && player.headshot.includes('espncdn.com');
 }
 
