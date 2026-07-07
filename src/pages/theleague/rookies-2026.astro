@@ -311,11 +311,18 @@ type ShowcaseCard = {
 const showcaseCards: ShowcaseCard[] = top50.map((p, i) => {
   const identity = rookieByName.get(normalizePlayerName(p.name));
   const teamCode = identity ? normalizeTeamCode(identity.nflTeam) : '';
-  const drafted = !!identity && teamCode in NFL_TEAM_COLORS;
+  const drafted = !!identity && Object.hasOwn(NFL_TEAM_COLORS, teamCode);
   const colors = drafted ? getNflTeamColors(teamCode) : NFL_COLORS_FALLBACK;
 
   // Only espncdn.com URLs are compositable (transparent PNG). A missing ID
   // means no cutout at all — the card renders its intentional no-photo state.
+  // `identity.espnId` is a safe college-ID fallback here specifically because
+  // player-map.ts's resolveEspnId only returns a value from the college-ID
+  // map when there's no NFL espn_id — for a genuinely undrafted rookie that's
+  // virtually always the case, and it's matched by MFL id rather than name,
+  // catching prospects this page's own name-based lookup misses (accents,
+  // suffixes). It's only ever wrong-shape if `drafted` is true, in which case
+  // `nflUrl` below takes priority and this value is never used as `headshot`.
   const collegeId = espnCollegeByName.get(p.name.toLowerCase()) ?? identity?.espnId ?? undefined;
   const collegeUrl = collegeId ? espnCollegeUrl(collegeId) : undefined;
   const nflUrl = drafted && identity?.espnId
