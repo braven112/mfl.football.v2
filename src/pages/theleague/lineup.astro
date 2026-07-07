@@ -2481,21 +2481,6 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     }
   }
 
-  /* ===================================================================
-     Visually hidden (a11y)
-     =================================================================== */
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
   /* Player cell tweaks inside lineup cards */
   .lineup-slot__player :global(.player-cell) { gap: 0.375rem; }
   .lineup-slot__player :global(.player-cell__name) {

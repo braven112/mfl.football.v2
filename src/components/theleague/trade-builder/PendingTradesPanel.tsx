@@ -582,17 +582,6 @@ export default function PendingTradesPanel({
           outline: 2px solid var(--color-primary, #1c497c);
           outline-offset: 2px;
         }
-        .visually-hidden {
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          padding: 0;
-          margin: -1px;
-          overflow: hidden;
-          clip: rect(0, 0, 0, 0);
-          white-space: nowrap;
-          border-width: 0;
-        }
         /* Draft trades section */
         .ptp-drafts-section {
           border-top: 1px solid var(--content-border, #e2e8f0);

@@ -214,6 +214,58 @@ specific to the scanner flow):
   `ANTHROPIC_API_KEY` is unset, so dry-runs still produce recognizable
   output.
 
+## Year rollover — two independent clocks
+
+Two dates drive year transitions and they are **not the same clock**:
+
+| Date | Event | Function |
+|------|-------|----------|
+| Feb 14 @ 8:45 PT | New MFL league created | `getCurrentLeagueYear()` |
+| Labor Day | NFL season starts | `getCurrentSeasonYear()` |
+
+Use `getCurrentLeagueYear()` (from `src/utils/league-year.ts`) for anything
+roster-management-shaped: rosters, contracts, salary cap, auctions, trade
+analysis. Use `getCurrentSeasonYear()` for anything results-shaped:
+standings, playoffs, MVP tracking, draft order. Picking the wrong one for a
+new page silently shows last/next year's data for ~6 months of the calendar
+(the gap between the two rollover dates). Test date-dependent features with
+the `?testDate=YYYY-MM-DD` URL param rather than changing the system clock.
+
+## Page directory registry — required for every new page
+
+Adding a page to the site without adding it to
+`src/data/page-directory.json` makes it invisible to site search. Each
+entry needs `id`, `title`, `description`, `path`, `icon`, `category`
+(`popular | my-team | reports | tools | info`), `visibility`
+(`all | admin`), `popularity` (0-100), and **10+ tags** — write tags
+generously (synonyms, data types shown, actions available, casual/slang
+terms a user might type). `tests/page-directory-data.test.ts` enforces the
+10-tag minimum and validates the other fields, but nothing tells you to add
+the entry in the first place — you have to remember.
+
+## What's New changelog — required after user-facing work
+
+Completing a new page, new user-facing feature, or an enhancement that
+changes how something works requires an entry in `src/data/whats-new.json`
+(new entry at the **top** of the array). Skip it for style tweaks, data
+syncs, refactors, docs-only changes, and admin-only/unreleased features.
+
+Every entry MUST be written in the league's editorial voice — conversational,
+witty sports-columnist tone, never dry corporate release notes. `new-page`,
+`new-feature`, and `enhancement` entries require a screenshot
+(`image`/`imageAlt` fields, webp in `public/assets/whats-new/`) —
+`tests/whats-new-data.test.ts` fails the build without one. `bug-fix` and
+`league-event` categories are exempt from the screenshot requirement.
+
+Smaller fixes that don't earn their own entry still get logged: append to
+`src/data/weekly-changelog-staging.json` (`date`, `type`: `bug-fix |
+style-tweak`, user-facing `summary`, `impact`: `user | admin`, `area`).
+`scripts/weekly-changelog-rollup.mjs` compiles staging entries into one
+What's New rollup every Monday 8pm PT via GitHub Actions, and that rollup
+also needs one `featuredImage` picked from the week's most visually
+interesting change — set it on the staging file's top-level
+`featuredImage`/`featuredImageAlt` before the rollup runs.
+
 ## Schefter recurrence ledger v2 (Phase 8 — feature 10)
 
 `data/schefter/topic-recurrence.json` bumped to v2. Each fingerprint

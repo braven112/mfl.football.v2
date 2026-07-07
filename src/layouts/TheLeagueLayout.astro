@@ -17,6 +17,9 @@
 
 import { ClientRouter } from 'astro:transitions';
 import { Font } from 'astro:assets';
+// Global utility classes (.visually-hidden, etc.) — frontmatter import so the
+// CSS ships unscoped; @import inside the <style> block below would get scoped.
+import '../styles/utilities.css';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';

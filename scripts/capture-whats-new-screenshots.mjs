@@ -63,6 +63,7 @@ const MANUAL_CAPTURE_ONLY = {
   'trade-composites': 'hand-staged trade-confirmation modal with specific players — auto-capture shoots the bare trade builder',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
+  'lineup-faceoff-scoreboard': 'auth-gated page — blind capture shoots the sign-in redirect',
   'mock-draft': 'sign-in gate replaces the draft config UI',
   'afl-trophy-wall': 'hand-staged scroll to a franchise trophy wall',
   'owner-activity': 'analytics only populate in prod — dev shows the empty state',
