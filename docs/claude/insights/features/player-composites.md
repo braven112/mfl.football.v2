@@ -540,6 +540,18 @@ while NFL-game panels watermark a square SVG logo. `FaceoffComposite`'s
 tall/wide crest centers in a square box without stretching — a bare `width:`
 alone stretched the raster crest. One rule covers both asset types.
 
+**Cutout sizing — height, not width, controls where the head lands (Brandon,
+2026-07-07):** the `.foc__cutout` is `align-items: flex-end` (bottom-anchored),
+so if you size it by `width:` the rendered height — and therefore how high the
+head reaches — floats with each ESPN cutout's aspect ratio (some are portrait,
+some near-square). To make "top of head clears the center VS badge" hold for
+every player, the `card` variant sizes by `height:` with `width: auto`; the
+panel `min-height` is kept just above the cutout height so the head sits near
+the panel top (≈ above the vertically-centered VS). The final card values
+Brandon tuned: cutout `clamp(115px, 13vw, 130px)`, panel `clamp(120px, 13vw,
+160px)`. The `hero` variant is still width-sized (above the fold, single
+instance, aspect ratio isn't a problem there).
+
 **Live projected-points scoreboard (lineup.astro, shipped 2026-07-06):** the
 faceoff band carries a two-total scoreboard instead of a static title. OUR
 total sums the starting slots and **recomputes client-side** on every mutation

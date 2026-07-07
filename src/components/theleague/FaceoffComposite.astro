@@ -111,7 +111,7 @@ const h = panelOf(home);
   }
 
   .foc--card .foc__panel {
-    min-height: clamp(120px, 12vw, 150px);
+    min-height: clamp(120px, 13vw, 160px);
   }
 
   .foc__glow {
@@ -191,8 +191,12 @@ const h = panelOf(home);
     width: clamp(150px, 17vw, 210px);
   }
 
+  /* Size the card cutout by height (not width) so it fills nearly the whole
+     panel and the top of the head clears the centered VS circle, regardless
+     of each ESPN cutout's aspect ratio. */
   .foc--card .foc__cutout {
-    width: clamp(84px, 9vw, 110px);
+    width: auto;
+    height: clamp(115px, 13vw, 130px);
   }
 
   /* Mirror the away star to face the center VS. */
