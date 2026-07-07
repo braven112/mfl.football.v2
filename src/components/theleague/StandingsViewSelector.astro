@@ -127,6 +127,19 @@ function viewHref(view: string): string {
   }
 
   @media (max-width: 640px) {
+    /* Keep all tabs on a single row on narrow screens — let them share the
+       available width and shrink instead of wrapping the last tab below. */
+    .view-selector {
+      flex-wrap: nowrap;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .view-tab {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.5rem 0.35rem;
+    }
 
     .view-tab__label {
       position: static;

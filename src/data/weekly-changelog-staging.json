@@ -443,6 +443,14 @@
       "impact": "user",
       "area": "navigation",
       "league": "both"
+    },
+    {
+      "date": "2026-07-07",
+      "type": "bug-fix",
+      "summary": "On phones, the Division / Playoff / All-Play switcher at the top of the Standings page no longer wraps its last button onto a second row. The three tabs now share the width and sit shoulder-to-shoulder on a single line, even on the narrowest screens or when your phone's text is scaled up. Both The League and the AFL standings pages get the fix.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
     }
   ]
 }
