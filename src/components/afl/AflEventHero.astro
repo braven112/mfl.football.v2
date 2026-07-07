@@ -249,27 +249,26 @@ const countAriaLabel = hasCount
 </section>
 
 <style>
-  /* Theme surface: light editorial card by default; html.dark restores the
-     deep-navy AFL brand chrome (matches the EventHeroShell theming pattern).
-     AFL nuance: accent (gold) and glow (red) are different hues, so the light
-     glow scales the passed --ev-glow's alpha instead of deriving from accent,
-     and accent-colored TEXT darkens via --ev-accent-ink for contrast on white. */
+  /* Saturated navy card in BOTH themes: light mode mirrors the deep AFL brand
+     chrome instead of a flat-white card, so it lands as hard as dark mode.
+     --ev-surface stays a solid color (the player photo fades color-mix against
+     it), and the bright gold accent / red glow read correctly on navy in both
+     themes — so these values are now shared, not theme-split. */
   .afl-event-hero {
-    --ev-surface: var(--color-white, #ffffff);
-    --ev-ink: var(--color-gray-900, #111827);
-    --ev-ink-soft: var(--color-gray-600, #4b5563);
-    --ev-ink-faint: var(--color-gray-500, #6b7280);
-    --ev-divider: var(--color-gray-200, #e5e7eb);
-    --ev-glow-resolved: color-mix(in srgb, var(--ev-glow, rgba(196, 30, 58, 0.6)) 38%, transparent);
-    --ev-accent-ink: color-mix(in srgb, var(--ev-accent, #c9a94e) 78%, #000);
-    /* Light needs a wider/stronger photo wash than navy-on-navy — the photo
-       contrasts far harder on white (same stops as EventHeroShell). */
+    --ev-surface: #002244;
+    --ev-ink: #ffffff;
+    --ev-ink-soft: rgba(255, 255, 255, 0.72);
+    --ev-ink-faint: rgba(255, 255, 255, 0.6);
+    --ev-divider: rgba(255, 255, 255, 0.16);
+    --ev-glow-resolved: var(--ev-glow, rgba(196, 30, 58, 0.6));
+    --ev-accent-ink: var(--ev-accent, #c9a94e);
+    /* Navy-on-navy photo wash: the cut-out contrasts softly, so a narrower
+       fade than the old on-white version reads cleanly. */
     --ev-fade-left: linear-gradient(
       90deg,
       var(--ev-surface) 0%,
-      color-mix(in srgb, var(--ev-surface) 92%, transparent) 22%,
-      color-mix(in srgb, var(--ev-surface) 55%, transparent) 55%,
-      color-mix(in srgb, var(--ev-surface) 18%, transparent) 82%,
+      color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%,
+      color-mix(in srgb, var(--ev-surface) 10%, transparent) 60%,
       transparent 100%
     );
     position: relative;
@@ -281,23 +280,6 @@ const countAriaLabel = hasCount
     color: var(--ev-ink);
     box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(0, 34, 68, 0.18));
     isolation: isolate;
-  }
-
-  :global(html.dark) .afl-event-hero {
-    --ev-surface: #002244;
-    --ev-ink: #ffffff;
-    --ev-ink-soft: rgba(255, 255, 255, 0.72);
-    --ev-ink-faint: rgba(255, 255, 255, 0.6);
-    --ev-divider: rgba(255, 255, 255, 0.16);
-    --ev-glow-resolved: var(--ev-glow, rgba(196, 30, 58, 0.6));
-    --ev-accent-ink: var(--ev-accent, #c9a94e);
-    --ev-fade-left: linear-gradient(
-      90deg,
-      var(--ev-surface) 0%,
-      color-mix(in srgb, var(--ev-surface) 60%, transparent) 26%,
-      color-mix(in srgb, var(--ev-surface) 10%, transparent) 60%,
-      transparent 100%
-    );
   }
 
   .afl-event-hero--bordered {
@@ -347,11 +329,8 @@ const countAriaLabel = hasCount
   /* ── Composite model panel (cast player) ── */
   /* Transparent ESPN cutout over a team-color glow — no fades needed (fades
      exist to blend rectangular photos; the cutout has no background). */
+  /* Dark surface in both themes → the dark-tuned model glow + deeper shadow. */
   .afl-event-hero {
-    --ev-model-glow: var(--ev-model-glow-light, transparent);
-    --ev-model-shadow: rgba(15, 30, 46, 0.3);
-  }
-  :global(html.dark) .afl-event-hero {
     --ev-model-glow: var(--ev-model-glow-dark, transparent);
     --ev-model-shadow: rgba(0, 0, 0, 0.5);
   }
@@ -360,7 +339,7 @@ const countAriaLabel = hasCount
     top: 0;
     right: 0;
     bottom: 0;
-    width: clamp(260px, 44%, 480px);
+    width: clamp(300px, 52%, 580px);
     pointer-events: none;
     z-index: 1;
   }
@@ -374,13 +353,15 @@ const countAriaLabel = hasCount
   }
   .afl-event-hero__cutout {
     position: absolute;
-    right: clamp(-1rem, -0.5vw, 0.25rem);
+    right: clamp(-6rem, -4.5vw, 0.25rem);
     bottom: 0;
     /* Sized large enough that the head clears the top of the headline: the
        cutout is bottom-anchored and taller than the card, so its top (and the
        player's head) rises above the vertically-centered title. The section's
-       overflow:hidden trims anything past the top edge. */
-    width: clamp(230px, 34vw, 440px);
+       overflow:hidden trims anything past the top edge. The negative `right`
+       bleeds the cutout off the card's right edge so the (horizontally centered)
+       player shifts right and reads larger; overflow:hidden clips the spill. */
+    width: clamp(230px, 50vw, 480px);
     max-height: 132%;
     object-fit: contain;
     object-position: bottom;
@@ -403,13 +384,8 @@ const countAriaLabel = hasCount
   .afl-event-hero--no-model .afl-event-hero__model-caption {
     display: none;
   }
-  .afl-event-hero--no-model .afl-event-hero__logo-art--light {
-    display: block;
-  }
-  :global(html.dark) .afl-event-hero--no-model .afl-event-hero__logo-art--light {
-    display: none;
-  }
-  :global(html.dark) .afl-event-hero--no-model .afl-event-hero__logo-art--dark {
+  /* Navy surface in both themes → the white logo silhouette is always correct. */
+  .afl-event-hero--no-model .afl-event-hero__logo-art--dark {
     display: block;
     opacity: 0.2;
   }
@@ -529,13 +505,7 @@ const countAriaLabel = hasCount
     opacity: 0.14;
     pointer-events: none;
   }
-  .afl-event-hero--no-shot .afl-event-hero__shot-logo--light {
-    display: block;
-  }
-  :global(html.dark) .afl-event-hero--no-shot .afl-event-hero__shot-logo--light {
-    display: none;
-  }
-  :global(html.dark) .afl-event-hero--no-shot .afl-event-hero__shot-logo--dark {
+  .afl-event-hero--no-shot .afl-event-hero__shot-logo--dark {
     display: block;
     opacity: 0.2;
   }
@@ -561,6 +531,15 @@ const countAriaLabel = hasCount
     height: 46px;
     width: auto;
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+  }
+  /* Navy surface in both themes → always the dark-variant badge (the light
+     badge is authored for a white card). Class-prefixed to outrank the shared
+     theme-image.css html.dark rules. */
+  :global(.afl-event-hero .afl-event-hero__badge.theme-img--light) {
+    display: none;
+  }
+  :global(.afl-event-hero .afl-event-hero__badge.theme-img--dark) {
+    display: block;
   }
   .afl-event-hero__chip {
     display: grid;
@@ -704,13 +683,7 @@ const countAriaLabel = hasCount
       width: 140px;
       right: -0.75rem;
     }
-    .afl-event-hero__shot-logo--light {
-      display: block;
-    }
-    :global(html.dark) .afl-event-hero .afl-event-hero__shot-logo--light {
-      display: none;
-    }
-    :global(html.dark) .afl-event-hero .afl-event-hero__shot-logo--dark {
+    .afl-event-hero__shot-logo--dark {
       display: block;
       opacity: 0.2;
     }

@@ -841,3 +841,32 @@ browser frame — and casts a player only when the entry is about one.
   AFL new-season reset. AFL feature states carry the screenshot on
   `EventHeroView.screenshot`; the AFL cast deliberately has NO headliner
   fallback for features (a fallback face would cover the screenshot).
+
+## Saturated light-mode heroes flip the theme-paired assets too (2026-07-06, Brandon)
+
+**Context:** the pale light-mode hero surfaces ("super light blue/green")
+"didn't hit the same" as dark mode. Fix: light mode becomes a bold saturated
+card that mirrors dark mode's drama — `FeatureCompositeHero` light
+`--fch-surface` → `linear-gradient(115deg,#2563eb,#1c497c,#0f3057)` white ink;
+`AflEventHero` light `--ev-surface` → solid navy `#002244` (= its own dark
+mode), bright gold accent, red glow. See [[feedback_hero_light_mode_saturated]].
+
+**The non-obvious gotcha:** these heroes carry theme-PAIRED foreground assets
+authored for the OLD light-on-white surface — the logo silhouette
+(`*__logo-art--light/--dark`, `*__shot-logo--light/--dark`) and the AFL
+`ThemeImage` badge (`badge`/`badgeDark`). Their `--light` (dark-colored)
+variant goes invisible once the light surface is dark. When you darken a
+light surface, you MUST also point every paired asset at its `--dark` (white)
+variant in BOTH themes — the html.dark-scoped display rules collapse to a
+single always-dark rule, and the `--light` variant is retired. For the
+`ThemeImage` badge, override `theme-image.css` from the component with a
+class-prefixed `:global(.afl-event-hero .…__badge.theme-img--dark){display:block}`
+(the hero-class prefix outranks `html.dark .theme-img--light`).
+
+**Screenshots are the exception:** the `*__shot-img` light/dark capture pair
+stays theme-matched — it's a self-contained browser frame (gray chrome, white
+URL bar) that reads fine on any surface, so no override needed.
+
+**Unchanged:** the calendar event cards (What's Next, League Calendar) and
+the bespoke AFL day-of heroes (`AflPlayoffsHero`, `AflChampionshipHero`,
+`TradeDeadlineHero`) were NOT touched — only the two composite heroes above.
