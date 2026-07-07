@@ -729,4 +729,3 @@ browser frame — and casts a player only when the entry is about one.
   AFL new-season reset. AFL feature states carry the screenshot on
   `EventHeroView.screenshot`; the AFL cast deliberately has NO headliner
   fallback for features (a fallback face would cover the screenshot).
->>>>>>> 959002fc7b (feat(heroes): What's New heroes show the feature's screenshot — players only when named)
