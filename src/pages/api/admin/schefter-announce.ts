@@ -47,6 +47,7 @@ function dispatchLeaguesValue(leagues: string[]): 'theleague' | 'afl' | 'both' {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+ try {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
     return json({ error: 'forbidden' }, 403);
@@ -66,18 +67,20 @@ export const POST: APIRoute = async ({ request }) => {
     headline: payload.headline as string | undefined,
     body: payload.body as string | undefined,
     leagues: payload.leagues,
+    link: payload.link as string | undefined,
     sendGroupMe: payload.sendGroupMe !== false,
   });
   if (errors.length) {
     return json({ error: 'validation', errors }, 400);
   }
 
-  const { slug, headline, body, leagues, sendGroupMe } = resolved as {
+  const { slug, headline, body, leagues, sendGroupMe, link } = resolved as {
     slug: string;
     headline: string;
     body: string;
     leagues: Array<'theleague' | 'afl'>;
     sendGroupMe: boolean;
+    link: string;
   };
 
   // ── Preview: compute exactly what would ship; dispatch nothing. ──────────
@@ -89,9 +92,12 @@ export const POST: APIRoute = async ({ request }) => {
       return {
         league: key,
         label: target.label,
-        post: buildAnnouncePost({ slug, headline, body, navSlug: target.navSlug, timestamp }),
+        post: buildAnnouncePost({
+          slug, headline, body, navSlug: target.navSlug, timestamp,
+          link: link || undefined,
+        }),
         groupMeText: sendGroupMe
-          ? buildGroupMeText({ body, baseUrl: target.baseUrl, newsPath: target.newsPath, postId })
+          ? buildGroupMeText({ body, baseUrl: target.baseUrl, newsPath: target.newsPath, postId, link: link || undefined })
           : null,
       };
     });
@@ -130,6 +136,7 @@ export const POST: APIRoute = async ({ request }) => {
             leagues: dispatchLeaguesValue(leagues),
             headline,
             body,
+            link,
             send_groupme: String(sendGroupMe),
             dry_run: 'false',
           },
@@ -142,7 +149,13 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    return json({ error: 'GitHub API error', status: res.status, detail }, 502);
+    // 401/403/404 from the dispatch endpoint almost always means the token,
+    // not the request — surface an actionable hint instead of a raw dump.
+    const hint =
+      res.status === 401 || res.status === 403 || res.status === 404
+        ? 'GH_PAT is likely missing the "actions: write" permission or access to this repo (GitHub returns 404 for both). Check the token in the Vercel env.'
+        : undefined;
+    return json({ error: 'GitHub API error', status: res.status, detail, hint }, 502);
   }
 
   return json({
@@ -153,4 +166,9 @@ export const POST: APIRoute = async ({ request }) => {
     message:
       'Announcement dispatched. The feed post lands after the run commits and the site redeploys (~1–2 min); GroupMe fires during the run.',
   });
+ } catch (err) {
+  // Never leak a bare platform 502 — always return a readable JSON error so the
+  // admin UI can show the cause.
+  return json({ error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 500);
+ }
 };

@@ -13,6 +13,25 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { OFFER_POST_PROBABILITY } from '../../../../scripts/lib/redact-trade-offer.mjs';
+import whatsNew from '../../../data/whats-new.json';
+
+// Existing What's New articles, one option per (article × league), for the
+// announcement compose dropdown. Selecting one auto-fills slug/headline/link so
+// the commish never hand-types a slug. Canonical public URL is the apex host
+// (theleague.us / afl-fantasy.com serve the de-prefixed /whats-new/<id> path).
+const ARTICLE_BASE = { theleague: 'https://www.theleague.us', afl: 'https://www.afl-fantasy.com' };
+const announceArticles = (Array.isArray(whatsNew) ? whatsNew : [])
+  .flatMap((e) =>
+    (Array.isArray(e.leagues) ? e.leagues : [])
+      .filter((lg) => lg === 'theleague' || lg === 'afl')
+      .map((lg) => ({
+        id: e.id,
+        title: e.title,
+        league: lg,
+        url: `${ARTICLE_BASE[lg]}/whats-new/${e.id}`,
+      })),
+  )
+  .filter((a) => a.id && a.title && /^[a-z0-9][a-z0-9-]*$/.test(a.id));
 
 export const prerender = false;
 
@@ -64,11 +83,23 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       </header>
 
       <form id="ann-form" class="ann-form" autocomplete="off">
+        <label class="ann-field">
+          <span>Article <small>pick an existing What's New post — fills the headline, link &amp; slug</small></span>
+          <select id="ann-article" name="article">
+            <option value="">— Pick an article —</option>
+            <option value="__custom__">✎ Custom announcement (no article)</option>
+            {announceArticles.map((a) => (
+              <option value={a.id} data-title={a.title} data-league={a.league} data-url={a.url}>
+                {a.league === 'afl' ? 'AFL' : 'The League'} — {a.title}
+              </option>
+            ))}
+          </select>
+        </label>
         <div class="ann-grid">
           <label class="ann-field">
-            <span>Slug <small>kebab-case; identifies the post so re-runs don't double-post</small></span>
+            <span>Slug <small>from the article; identifies the post so re-runs don't double-post</small></span>
             <input id="ann-slug" name="slug" type="text" required pattern="[a-z0-9][a-z0-9-]*"
-              placeholder="dark-mode-2026-07" />
+              placeholder="pick an article above" readonly />
           </label>
           <label class="ann-field ann-field--narrow">
             <span>Leagues</span>
@@ -88,6 +119,11 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
           <span>Body <small>the GroupMe text; blank uses the default</small></span>
           <textarea id="ann-body" name="body" rows="4"
             placeholder="📱 SCHEFTER: The site just leveled up…"></textarea>
+        </label>
+        <label class="ann-field">
+          <span>Link <small>optional CTA target; blank links to the feed post</small></span>
+          <input id="ann-link" name="link" type="url"
+            placeholder="https://www.theleague.us/whats-new/dark-mode" />
         </label>
         <label class="ann-check">
           <input id="ann-groupme" name="sendGroupMe" type="checkbox" checked />
@@ -1228,10 +1264,12 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
   (() => {
     const form = document.getElementById('ann-form') as HTMLFormElement | null;
     if (!form) return;
+    const articleEl = document.getElementById('ann-article') as HTMLSelectElement;
     const slugEl = document.getElementById('ann-slug') as HTMLInputElement;
     const leaguesEl = document.getElementById('ann-leagues') as HTMLSelectElement;
     const headlineEl = document.getElementById('ann-headline') as HTMLInputElement;
     const bodyEl = document.getElementById('ann-body') as HTMLTextAreaElement;
+    const linkEl = document.getElementById('ann-link') as HTMLInputElement;
     const groupmeEl = document.getElementById('ann-groupme') as HTMLInputElement;
     const previewBtn = document.getElementById('ann-preview') as HTMLButtonElement;
     const sendBtn = document.getElementById('ann-send') as HTMLButtonElement;
@@ -1251,6 +1289,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
         leagues: leaguesEl.value,
         headline: headlineEl.value,
         body: bodyEl.value,
+        link: linkEl.value.trim(),
         sendGroupMe: groupmeEl.checked,
       };
     }
@@ -1260,8 +1299,41 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
       statusEl.dataset.kind = kind;
     }
 
+    // Picking an article fills slug/headline/link/league and locks the slug
+    // (it's the article id). "Custom" frees the slug for a hand-typed value.
+    articleEl.addEventListener('change', () => {
+      previewOk = false;
+      sendBtn.disabled = true;
+      const val = articleEl.value;
+      // Leaving article-mode clears the auto-filled fields so a stale headline /
+      // CTA link can't ride along into a placeholder or Custom announcement.
+      if (val === '' || val === '__custom__') {
+        slugEl.value = '';
+        headlineEl.value = '';
+        linkEl.value = '';
+      }
+      if (val === '') {
+        slugEl.readOnly = true;
+        slugEl.placeholder = 'pick an article above';
+        return;
+      }
+      if (val === '__custom__') {
+        slugEl.readOnly = false;
+        slugEl.placeholder = 'kebab-case, e.g. dark-mode-2026-07';
+        slugEl.focus();
+        return;
+      }
+      const opt = articleEl.selectedOptions[0];
+      slugEl.readOnly = true;
+      slugEl.value = val;
+      headlineEl.value = opt.dataset.title || '';
+      linkEl.value = opt.dataset.url || '';
+      const lg = opt.dataset.league;
+      if (lg === 'afl' || lg === 'theleague') leaguesEl.value = lg;
+    });
+
     // Any edit invalidates a prior preview — force a re-preview before Send.
-    for (const el of [slugEl, leaguesEl, headlineEl, bodyEl, groupmeEl]) {
+    for (const el of [articleEl, slugEl, leaguesEl, headlineEl, bodyEl, linkEl, groupmeEl]) {
       el.addEventListener('input', () => {
         previewOk = false;
         sendBtn.disabled = true;
@@ -1328,7 +1400,8 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
         const { res, data } = await post('send');
         if (!res.ok) {
           const errs = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || `HTTP ${res.status}`;
-          setStatus(errs + (data.detail ? ` — ${data.detail}` : ''), 'bad');
+          const extra = (data.detail ? ` — ${data.detail}` : '') + (data.hint ? ` (${data.hint})` : '');
+          setStatus(errs + extra, 'bad');
           previewBtn.disabled = false;
           return;
         }
@@ -1347,6 +1420,22 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
 
 <style>
   .ops-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+
+  /* Dark mode. This page (and its compose card) was built against legacy
+     --color-* token names that tokens-dark.css never overrides — so it fell
+     back to light hexes in every theme. Remap those legacy names to the dark
+     palette here; because they're set on .ops-page, every var(--color-*) use
+     below (cards, inputs, borders, text) inherits the dark value. */
+  html.dark .ops-page {
+    --color-surface: var(--color-surface-2, #1e1e1e);
+    --color-surface-alt: var(--color-surface-3, #2a2a2a);
+    --color-border: var(--color-border-default, #3a4056);
+    --color-text: var(--color-text-primary, #e0e0e0);
+    --color-text-muted: var(--color-text-secondary, #8a8a8a);
+  }
+  /* Status/pill accents that were hardcoded light-on-light — lift for dark. */
+  html.dark .ops-page .ann-status[data-kind="ok"] { color: #4ade80; }
+  html.dark .ops-page .ann-status[data-kind="bad"] { color: #f87171; }
 
   .ops-header {
     display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
@@ -1739,6 +1828,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     background: var(--color-surface-alt, #fff); color: var(--color-text, #0f172a);
   }
   .ann-field textarea { resize: vertical; min-height: 5rem; }
+  .ann-field input[readonly] { opacity: 0.65; cursor: default; }
   .ann-field input:focus, .ann-field select:focus, .ann-field textarea:focus {
     outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 1px;
   }

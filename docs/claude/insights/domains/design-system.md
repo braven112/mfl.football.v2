@@ -1451,6 +1451,29 @@ Restore the visitor's real theme on `astro:before-swap` (soft nav) and
 `pagehide` (hard nav / tab close) by calling `window.__applyTheme()` with no
 argument, which re-resolves from the cookie.
 
+**Another dead-var family — the Schefter Ops page (`admin/schefter.astro`):** the
+same "renders light in every theme" bug recurs here with a *different*, also-never-
+defined token set: `--color-surface`, `--color-surface-alt`, `--color-border`,
+`--color-text`, `--color-text-muted` (the un-suffixed legacy names; `tokens-dark.css`
+only defines the *suffixed* `--color-surface-1/2/3`, `--color-text-primary/secondary`,
+`--color-border-default/subtle`). `--color-accent` *is* defined, so only that one
+themed. Fix technique — when a whole page/subtree shares one dead-var family, prefer
+a **scoped remap** over rewriting every `var()` call site: define the legacy names on
+the page container under `html.dark`, pointed at the real dark tokens —
+```css
+html.dark .ops-page {
+  --color-surface: var(--color-surface-2, #1e1e1e);
+  --color-surface-alt: var(--color-surface-3, #2a2a2a);
+  --color-border: var(--color-border-default, #3a4056);
+  --color-text: var(--color-text-primary, #e0e0e0);
+  --color-text-muted: var(--color-text-secondary, #8a8a8a);
+}
+```
+Custom properties set on a closer ancestor win for all descendants, so one block
+darkens the entire page (every `var(--color-surface, …)` inherits it) without
+touching the individual rules — light mode still uses the fallback hexes. Watch for
+small hardcoded-hex accents left over (status text, pills) and lift those separately.
+
 ---
 
 ## 2026-07-04 - Dark Mode Migration Playbook

@@ -86,11 +86,13 @@ export function buildDeepLink({ baseUrl, newsPath, postId }) {
 /**
  * Build the SchefterPost object prepended to the feed. Classified as an
  * `article` (renders under Articles, not as a fake transaction). Matches the
- * `SchefterPost` contract in src/types/schefter.ts.
- * @param {{ slug: string, headline: string, body: string, navSlug: 'theleague'|'afl', timestamp: string }} args
+ * `SchefterPost` contract in src/types/schefter.ts. When `link` is supplied the
+ * post points the reader at that URL (e.g. a What's New article) instead of
+ * defaulting to itself.
+ * @param {{ slug: string, headline: string, body: string, navSlug: 'theleague'|'afl', timestamp: string, link?: string, linkLabel?: string }} args
  */
-export function buildAnnouncePost({ slug, headline, body, navSlug, timestamp }) {
-  return {
+export function buildAnnouncePost({ slug, headline, body, navSlug, timestamp, link, linkLabel }) {
+  const post = {
     id: announcePostId(slug),
     timestamp,
     type: 'article',
@@ -102,22 +104,30 @@ export function buildAnnouncePost({ slug, headline, body, navSlug, timestamp }) 
     league: navSlug,
     authorId: 'claude',
   };
+  if (link) {
+    post.link = link;
+    post.linkLabel = linkLabel || 'See what’s new';
+  }
+  return post;
 }
 
 /**
- * Compose the exact GroupMe message bytes (body + CTA + deep link).
- * @param {{ body: string, baseUrl: string, newsPath: string, postId: string }} args
+ * Compose the exact GroupMe message bytes (body + CTA + link). When `link` is
+ * given, the CTA points there (e.g. a What's New article); otherwise it falls
+ * back to a deep link to the feed post itself.
+ * @param {{ body: string, baseUrl: string, newsPath: string, postId: string, link?: string }} args
  */
-export function buildGroupMeText({ body, baseUrl, newsPath, postId }) {
-  return `${body}\n\n${CTA_PREFIX} ${buildDeepLink({ baseUrl, newsPath, postId })}`;
+export function buildGroupMeText({ body, baseUrl, newsPath, postId, link }) {
+  const url = link || buildDeepLink({ baseUrl, newsPath, postId });
+  return `${body}\n\n${CTA_PREFIX} ${url}`;
 }
 
 /**
  * Central validation + normalization for an announcement, shared by the CLI and
  * the endpoint so both enforce identical rules. Never throws — collects errors.
  *
- * @param {{ slug?: string, headline?: string, body?: string, leagues?: unknown, sendGroupMe?: boolean }} input
- * @returns {{ errors: string[], resolved: { slug: string, headline: string, body: string, leagues: Array<'theleague'|'afl'>, sendGroupMe: boolean } }}
+ * @param {{ slug?: string, headline?: string, body?: string, leagues?: unknown, sendGroupMe?: boolean, link?: string }} input
+ * @returns {{ errors: string[], resolved: { slug: string, headline: string, body: string, leagues: Array<'theleague'|'afl'>, sendGroupMe: boolean, link: string } }}
  */
 export function validateAnnounceInput(input = {}) {
   const errors = [];
@@ -134,6 +144,22 @@ export function validateAnnounceInput(input = {}) {
     errors.push(`headline is ${headline.length} chars (max ${HEADLINE_MAX_CHARS}).`);
   }
   if (!body) errors.push('body must be non-empty.');
+
+  // Optional custom CTA link (e.g. a What's New article). Must be an absolute
+  // http(s) URL — it is embedded in the GroupMe message and the feed post, not
+  // fetched server-side, so format validation is the only guard needed.
+  const link = String(input.link ?? '').trim();
+  if (link) {
+    let u;
+    try {
+      u = new URL(link);
+    } catch {
+      errors.push('link must be a valid absolute URL (e.g. https://www.theleague.us/whats-new/dark-mode).');
+    }
+    if (u && u.protocol !== 'http:' && u.protocol !== 'https:') {
+      errors.push('link must be an http(s) URL.');
+    }
+  }
 
   let leagues = ['theleague'];
   try {
@@ -154,6 +180,7 @@ export function validateAnnounceInput(input = {}) {
         baseUrl: target.baseUrl,
         newsPath: target.newsPath,
         postId,
+        link: link || undefined,
       });
       if (text.length > GROUPME_MAX_CHARS) {
         errors.push(
@@ -163,5 +190,5 @@ export function validateAnnounceInput(input = {}) {
     }
   }
 
-  return { errors, resolved: { slug, headline, body, leagues, sendGroupMe } };
+  return { errors, resolved: { slug, headline, body, leagues, sendGroupMe, link } };
 }

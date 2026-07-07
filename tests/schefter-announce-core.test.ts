@@ -90,6 +90,35 @@ describe('buildGroupMeText', () => {
     expect(text).toContain(CTA_PREFIX);
     expect(text).toContain('https://theleague.us/news?post=sf_announce_x#post-sf_announce_x');
   });
+
+  it('uses a custom link for the CTA when provided (overrides the feed deep link)', () => {
+    const text = buildGroupMeText({
+      body: 'Hello',
+      baseUrl: 'https://theleague.us',
+      newsPath: '/news',
+      postId: 'sf_announce_x',
+      link: 'https://www.theleague.us/whats-new/dark-mode',
+    });
+    expect(text).toContain('https://www.theleague.us/whats-new/dark-mode');
+    expect(text).not.toContain('?post=sf_announce_x'); // feed deep link suppressed
+  });
+});
+
+describe('buildAnnouncePost with a custom link', () => {
+  it('sets post.link and a default linkLabel', () => {
+    const post = buildAnnouncePost({
+      slug: 'x', headline: 'H', body: 'B', navSlug: 'theleague',
+      timestamp: '2026-07-07T00:00:00.000Z',
+      link: 'https://www.theleague.us/whats-new/dark-mode',
+    });
+    expect(post.link).toBe('https://www.theleague.us/whats-new/dark-mode');
+    expect(post.linkLabel).toBe('See what’s new');
+  });
+  it('omits link fields when no link is given', () => {
+    const post = buildAnnouncePost({ slug: 'x', headline: 'H', body: 'B', navSlug: 'theleague', timestamp: 't' });
+    expect(post.link).toBeUndefined();
+    expect(post.linkLabel).toBeUndefined();
+  });
 });
 
 describe('validateAnnounceInput', () => {
@@ -135,6 +164,33 @@ describe('validateAnnounceInput', () => {
     expect(validateAnnounceInput({ slug: 'x', headline: long }).errors.join(' ')).toMatch(
       /headline is \d+ chars/,
     );
+  });
+
+  it('accepts a valid custom link and rejects a malformed one', () => {
+    const ok = validateAnnounceInput({ slug: 'x', link: 'https://www.theleague.us/whats-new/dark-mode' });
+    expect(ok.errors).toEqual([]);
+    expect(ok.resolved.link).toBe('https://www.theleague.us/whats-new/dark-mode');
+
+    expect(validateAnnounceInput({ slug: 'x', link: 'not a url' }).errors.join(' ')).toMatch(/valid absolute URL/);
+    expect(validateAnnounceInput({ slug: 'x', link: 'ftp://x.example/f' }).errors.join(' ')).toMatch(/http\(s\)/);
+  });
+
+  it('normalizes an empty/whitespace link to "" (falls back to the feed deep link)', () => {
+    const r = validateAnnounceInput({ slug: 'x', link: '   ' });
+    expect(r.errors).toEqual([]);
+    expect(r.resolved.link).toBe('');
+    // '' || undefined === undefined at the call sites → deep link, not a broken CTA
+    const text = buildGroupMeText({
+      body: 'B', baseUrl: 'https://theleague.us', newsPath: '/news', postId: 'sf_announce_x',
+      link: r.resolved.link || undefined,
+    });
+    expect(text).toContain('https://theleague.us/news?post=sf_announce_x#post-sf_announce_x');
+  });
+
+  it('counts the custom link toward the GroupMe length cap', () => {
+    const longLink = 'https://www.theleague.us/whats-new/' + 'a'.repeat(GROUPME_MAX_CHARS);
+    const r = validateAnnounceInput({ slug: 'x', body: 'short', link: longLink, sendGroupMe: true });
+    expect(r.errors.join(' ')).toMatch(/GroupMe message for theleague is \d+ chars/);
   });
 
   it('flags an over-long GroupMe message only when sending GroupMe', () => {
