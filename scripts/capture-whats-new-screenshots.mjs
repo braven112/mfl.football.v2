@@ -45,6 +45,19 @@ const PAGE_HOOKS = {
     });
     await page.waitForTimeout(500); // let drawer animation finish
   },
+  'rookie-showcase-composite-cards': async (page) => {
+    // Force lazy cutouts to load, then frame the card wall (not the page top)
+    await page.evaluate(() => {
+      document.querySelectorAll('.rcc__cutout').forEach((img) => { img.loading = 'eager'; });
+    });
+    await page.waitForTimeout(1200);
+    await page.evaluate(() => {
+      const el = document.querySelector('.rookie-showcase');
+      if (el) el.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -140);
+    });
+    await page.waitForTimeout(300);
+  },
 };
 
 /**
