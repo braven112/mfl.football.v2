@@ -17,7 +17,7 @@
  * ```
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { normalizeTeamCode } from './nfl-logo';
 import {
@@ -159,12 +159,53 @@ export function getPlayer(year: number, mflId: string): PlayerIdentity | undefin
   return getPlayerMap(year).get(mflId);
 }
 
+/** Module-level cache for the unioned all-years map */
+let globalMapCache: Map<string, PlayerIdentity> | null = null;
+
+/**
+ * Union of every season's player map into one lookup, keyed by MFL ID.
+ *
+ * MFL player IDs are global and stable across seasons, so a player who is
+ * missing from one season's feed (e.g. pre-2011 years have no `players.json`
+ * at all) can still be resolved from a later season in which he appears.
+ * The most recent season a player appears in wins, so his `espnId`/`headshot`
+ * reflect the freshest feed data. This is the resolver historical pages
+ * (Dead Money Awards, records) need to attach ESPN headshots to legacy
+ * players whose own season predates the feed archive.
+ *
+ * @returns Map of MFL player ID → PlayerIdentity (most-recent-season wins)
+ */
+export function getGlobalPlayerMap(): Map<string, PlayerIdentity> {
+  if (globalMapCache) return globalMapCache;
+
+  const merged = new Map<string, PlayerIdentity>();
+  let years: number[] = [];
+  try {
+    years = readdirSync(join(process.cwd(), 'data/theleague/mfl-feeds'))
+      .filter((name) => /^\d{4}$/.test(name))
+      .map(Number)
+      .sort((a, b) => a - b); // ascending → later years overwrite earlier
+  } catch {
+    // feeds dir missing — return an empty map
+  }
+
+  for (const year of years) {
+    for (const [id, identity] of getPlayerMap(year)) {
+      merged.set(id, identity);
+    }
+  }
+
+  globalMapCache = merged;
+  return merged;
+}
+
 /**
  * Clear the player map cache. Useful for testing or when feed files are updated.
  */
 export function clearPlayerMapCache(): void {
   cache.clear();
   collegeIdMap = null;
+  globalMapCache = null;
 }
 
 // Vite HMR support — clear cache when module is hot-replaced in dev
@@ -172,5 +213,6 @@ if ((import.meta as any).hot) {
   (import.meta as any).hot.dispose(() => {
     cache.clear();
     collegeIdMap = null;
+    globalMapCache = null;
   });
 }

@@ -22,7 +22,7 @@
  * ```
  */
 
-import { getNflTeamColors, getNflTeamNickname, hexToRgba } from './nfl-team-colors';
+import { getNflTeamColors, getNflTeamNickname, hexToRgba, mixHex } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
 
 export interface BandPlayer {
@@ -38,19 +38,6 @@ export interface BandOptions {
   accent?: string;
   /** Override the ghost wordmark (defaults to "POS NICKNAME") */
   ghost?: string;
-}
-
-/** Linear mix of two #rrggbb colors; t=0 → a, t=1 → b */
-function mixHex(a: string, b: string, t: number): string {
-  const parse = (hex: string) => {
-    const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-    const v = m ? parseInt(m[1], 16) : 0x16202c;
-    return [(v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];
-  };
-  const ca = parse(a);
-  const cb = parse(b);
-  const mix = ca.map((c, i) => Math.round(c + (cb[i] - c) * t));
-  return `#${mix.map(c => c.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /** True only when the URL's actual hostname is ESPN's CDN (or a subdomain) */

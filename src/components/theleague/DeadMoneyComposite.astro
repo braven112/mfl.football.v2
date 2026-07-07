@@ -1,0 +1,326 @@
+---
+/**
+ * DeadMoneyComposite — the shame banner for the Dead Money Awards.
+ *
+ * Same composite grammar as the season heroes (team gradient + ghost
+ * wordmark + glow + transparent ESPN cutout), but with the colors drained:
+ * the team gradient is desaturated, the cutout renders in near-grayscale,
+ * and the glow is a faint dead-cap red. Team identity reads washed-out on
+ * purpose — this is the award nobody wants.
+ *
+ * Composite rules (docs/claude/insights/features/player-composites.md):
+ * cutout only when the resolved URL is a transparent ESPN source (caller
+ * gates via resolveCutoutUrl), never for DEF, and the banner degrades to
+ * gradient + franchise icon when no cutout exists (pre-2011 seasons have
+ * no player feed, so historical winners often render gradient-only).
+ */
+import { getNflTeamColors, hexToRgba, mixHex, desaturateHex, pickBrandAccent } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+
+interface Stat {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}
+
+interface Props {
+  /** Pill text, e.g. "2025 · Brock Osweiler Award" */
+  eyebrow: string;
+  /** Headline; the last word gets the red accent */
+  title: string;
+  summary: string;
+  stats: Stat[];
+  /** Featured player (cutout + colors); omit for gradient-only banners */
+  playerName?: string;
+  position?: string;
+  nflTeam?: string;
+  /** Transparent ESPN cutout URL — caller resolves + gates; null → no cutout */
+  cutoutUrl?: string | null;
+  /** Fantasy franchise identity (Jerry Jones angle) */
+  franchiseName?: string;
+  franchiseIcon?: string;
+  /** Fantasy franchise colors — the banner's (drained) gradient source */
+  franchiseColorPrimary?: string;
+  franchiseColorSecondary?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  summary,
+  stats,
+  playerName,
+  position,
+  nflTeam,
+  cutoutUrl,
+  franchiseName,
+  franchiseIcon,
+  franchiseColorPrimary,
+  franchiseColorSecondary,
+} = Astro.props;
+
+const teamCode = nflTeam ? normalizeTeamCode(nflTeam) : '';
+// The award is the franchise's shame — wear the fantasy team's brand color
+// (most chromatic of its pair), falling back to the featured player's NFL team.
+const primary = franchiseColorPrimary
+  ? pickBrandAccent(franchiseColorPrimary, franchiseColorSecondary, getNflTeamColors(teamCode).primary)
+  : getNflTeamColors(teamCode).primary;
+
+// Dead colors: drain the franchise primary most of the way to gray before
+// building the usual deep-ink gradient, then glow dead-cap red, not team.
+const drained = desaturateHex(primary, 0.68);
+const g1 = mixHex(drained, '#0b0e13', 0.66);
+const g2 = mixHex(drained, '#0b0e13', 0.18);
+const glow = hexToRgba('#dc2626', 0.22);
+
+const titleWords = title.split(' ');
+const titleAccent = titleWords.pop();
+const titleLead = titleWords.join(' ');
+---
+
+<aside class="dmc" style={`--dmc-g1: ${g1}; --dmc-g2: ${g2}; --dmc-glow: ${glow};`} aria-label={eyebrow}>
+  <span class="dmc__ghost" aria-hidden="true">DEAD&nbsp;MONEY</span>
+  <div class="dmc__glow" aria-hidden="true"></div>
+  {cutoutUrl ? (
+    <img
+      class="dmc__model"
+      src={cutoutUrl}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      decoding="async"
+      onerror="this.style.display='none'; const c = this.closest('.dmc'); c.classList.add('dmc--no-model'); const cap = c.querySelector('.dmc__caption'); if (cap) cap.style.display='none';"
+    />
+  ) : franchiseIcon && (
+    <img class="dmc__logo-art" src={franchiseIcon} alt="" aria-hidden="true" loading="lazy" />
+  )}
+  {cutoutUrl && playerName && (
+    <span class="dmc__caption">
+      <strong>{playerName}</strong>
+      <span class="dmc__caption-meta">
+        {[position, teamCode].filter(Boolean).join(' · ')}
+      </span>
+    </span>
+  )}
+
+  <div class="dmc__content">
+    <p class="dmc__eyebrow"><span class="dmc__pill">{eyebrow}</span></p>
+    <h3 class="dmc__title">
+      {titleLead} <span class="dmc__title-accent">{titleAccent}</span>
+    </h3>
+    <p class="dmc__summary">
+      {franchiseIcon && franchiseName && cutoutUrl && (
+        <img class="dmc__franchise-chip" src={franchiseIcon} alt={franchiseName} loading="lazy" />
+      )}
+      {summary}
+    </p>
+    <div class="dmc__metrics" role="group" aria-label="Award numbers">
+      {stats.map((stat) => (
+        <div class:list={['dmc__metric', { 'dmc__metric--highlight': stat.highlight }]}>
+          <b>{stat.value}</b>
+          <span>{stat.label}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</aside>
+
+<style>
+  .dmc {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg, 0.75rem);
+    background: linear-gradient(115deg, var(--dmc-g1) 0%, var(--dmc-g2) 100%);
+    padding: 1.25rem 1.5rem;
+    min-height: 190px;
+    display: flex;
+    align-items: center;
+    isolation: isolate;
+  }
+
+  .dmc__ghost {
+    position: absolute;
+    left: 0.875rem;
+    top: -1rem;
+    font-size: clamp(3.5rem, 7.5vw, 5.75rem);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    z-index: 0;
+  }
+
+  .dmc__glow {
+    position: absolute;
+    right: -60px;
+    top: -90px;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, var(--dmc-glow) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dmc__model {
+    position: absolute;
+    right: clamp(0.25rem, 2vw, 1.5rem);
+    bottom: 0;
+    width: clamp(170px, 22vw, 250px);
+    /* Dead colors: the player renders drained too */
+    filter: grayscale(0.88) contrast(1.04) brightness(0.92)
+      drop-shadow(0 14px 28px rgba(0, 0, 0, 0.45));
+    z-index: 1;
+  }
+
+  .dmc__logo-art {
+    position: absolute;
+    right: 1rem;
+    bottom: -18px;
+    width: 160px;
+    opacity: 0.16;
+    filter: grayscale(1);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dmc__caption {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.625rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.0625rem;
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    z-index: 2;
+  }
+
+  .dmc__caption strong {
+    font-weight: 700;
+  }
+
+  .dmc__caption-meta {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .dmc__content {
+    position: relative;
+    z-index: 2;
+    max-width: 62%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dmc__eyebrow {
+    margin: 0;
+  }
+
+  .dmc__pill {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    background: linear-gradient(135deg, var(--color-error, #dc2626) 0%, var(--color-error-dark, #b91c1c) 100%);
+    color: var(--color-white, #fff);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-full, 9999px);
+  }
+
+  .dmc__title {
+    margin: 0;
+    font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+    font-weight: 800;
+    line-height: 1.15;
+    color: #fff;
+  }
+
+  .dmc__title-accent {
+    color: #f87171;
+  }
+
+  .dmc__summary {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .dmc__franchise-chip {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm, 0.25rem);
+    object-fit: contain;
+    vertical-align: -0.25em;
+    margin-right: 0.25rem;
+  }
+
+  .dmc__metrics {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 0.125rem;
+    flex-wrap: wrap;
+  }
+
+  .dmc__metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.0625rem;
+  }
+
+  .dmc__metric b {
+    font-size: 1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+
+  .dmc__metric span {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .dmc__metric--highlight b {
+    color: #f87171;
+  }
+
+  @media (max-width: 640px) {
+    .dmc {
+      padding: 1rem 1.125rem;
+      min-height: 0;
+    }
+
+    .dmc__content {
+      max-width: 100%;
+    }
+
+    .dmc__model {
+      width: 140px;
+      right: -1.75rem;
+      opacity: 0.32;
+    }
+
+    .dmc__caption {
+      display: none;
+    }
+
+    .dmc__logo-art {
+      width: 120px;
+      right: -0.75rem;
+    }
+
+    .dmc__metrics {
+      gap: 0.875rem;
+    }
+  }
+</style>

@@ -5,6 +5,9 @@ import {
   getNflTeamColors,
   getNflTeamNickname,
   hexToRgba,
+  mixHex,
+  desaturateHex,
+  pickBrandAccent,
 } from '../src/utils/nfl-team-colors';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
 
@@ -62,5 +65,87 @@ describe('hexToRgba', () => {
   it('falls back safely on invalid input', () => {
     expect(hexToRgba('#fff', 0.3)).toBe('rgba(22, 32, 44, 0.3)');
     expect(hexToRgba('not-a-color', 0.3)).toBe('rgba(22, 32, 44, 0.3)');
+  });
+});
+
+describe('mixHex', () => {
+  it('returns the endpoints at t=0 and t=1', () => {
+    expect(mixHex('#fb4f14', '#000000', 0)).toBe('#fb4f14');
+    expect(mixHex('#fb4f14', '#000000', 1)).toBe('#000000');
+  });
+
+  it('mixes linearly per channel', () => {
+    expect(mixHex('#000000', '#ffffff', 0.5)).toBe('#808080');
+    expect(mixHex('#ff0000', '#0000ff', 0.5)).toBe('#800080');
+  });
+
+  it('falls back to the neutral dark for invalid input', () => {
+    expect(mixHex('nope', '#000000', 0)).toBe('#16202c');
+  });
+});
+
+describe('desaturateHex', () => {
+  it('leaves the color unchanged at amount=0', () => {
+    expect(desaturateHex('#fb4f14', 0)).toBe('#fb4f14');
+  });
+
+  it('collapses to the luminance gray at amount=1', () => {
+    const fullGray = desaturateHex('#fb4f14', 1);
+    const [, r, g, b] = /^#(..)(..)(..)$/.exec(fullGray)!;
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+  });
+
+  it('keeps grays untouched at any amount', () => {
+    expect(desaturateHex('#808080', 0.5)).toBe('#808080');
+  });
+
+  it('clamps out-of-range amounts', () => {
+    expect(desaturateHex('#fb4f14', -1)).toBe('#fb4f14');
+    expect(desaturateHex('#fb4f14', 2)).toBe(desaturateHex('#fb4f14', 1));
+  });
+});
+
+describe('pickBrandAccent', () => {
+  it('keeps a colorful primary', () => {
+    // Pigskins: vibrant red primary, near-black secondary
+    expect(pickBrandAccent('#bd1f2b', '#181818')).toBe('#bd1f2b');
+  });
+
+  it('keeps a usable dark-navy primary over a more chromatic secondary', () => {
+    // Cowboy Up: navy primary (their identity) beats the flashier red secondary
+    expect(pickBrandAccent('#153366', '#d32a3e')).toBe('#153366');
+    // Music City: navy primary kept over red secondary
+    expect(pickBrandAccent('#113469', '#c8102e')).toBe('#113469');
+  });
+
+  it('prefers a vibrant secondary over a near-black primary', () => {
+    // Mavericks: black primary, gold secondary → gold wins
+    expect(pickBrandAccent('#181818', '#b5884a')).toBe('#b5884a');
+    // Ninjas: black primary, green secondary → green wins
+    expect(pickBrandAccent('#181818', '#2f8b59')).toBe('#2f8b59');
+  });
+
+  it('keeps the primary when both colors are near-gray (black/white team)', () => {
+    // Bring The Pain: black primary, near-white secondary → stay dark, don't invent color
+    expect(pickBrandAccent('#181818', '#e9e9e9')).toBe('#181818');
+  });
+
+  it('darkens a too-bright hero so white text stays legible', () => {
+    // Midwest: bright yellow primary → pulled down from luminance > 170
+    const accent = pickBrandAccent('#ffcd00', '#181818');
+    expect(accent).not.toBe('#ffcd00');
+    expect(accent.toLowerCase()).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it('falls back when no usable color is provided', () => {
+    expect(pickBrandAccent(undefined, undefined)).toBe(NFL_COLORS_FALLBACK.primary);
+    expect(pickBrandAccent(undefined, undefined, '#123456')).toBe('#123456');
+    expect(pickBrandAccent('not-a-hex', undefined, '#123456')).toBe('#123456');
+  });
+
+  it('trims surrounding whitespace so the returned color is a clean hex', () => {
+    expect(pickBrandAccent('  #bd1f2b  ')).toBe('#bd1f2b');
+    expect(pickBrandAccent(' #181818 ', ' #2f8b59 ')).toBe('#2f8b59');
   });
 });

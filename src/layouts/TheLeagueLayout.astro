@@ -608,22 +608,24 @@ const themePref = getThemePreference(Astro.cookies);
 	 * VIEW TRANSITIONS - Subtle page transitions
 	 * ============================================== */
 
-	/* Default animation for page content - subtle fade */
+	/* Default animation for page content - subtle fade.
+	 * The outgoing page is hidden instantly rather than fading OUT over the
+	 * incoming one: cross-fading two full-page snapshots paints both at once,
+	 * and any layout shift between them (nav-drawer/scrollbar) shows as an
+	 * offset "double image" ghost for the animation's duration — very visible
+	 * on tall, colorful pages (e.g. Dead Money Awards). Removing the old
+	 * layer's fade-out is not enough: with `animation: none` the snapshot
+	 * stays painted at full opacity for the new page's animation duration, so
+	 * the ghost persists. Force `opacity: 0` so the old layer is truly gone,
+	 * leaving only the new page to fade in — the pleasant entrance without the
+	 * overlap. */
 	::view-transition-old(root) {
-		animation: fade-out 150ms ease-out;
+		animation: none;
+		opacity: 0;
 	}
 
 	::view-transition-new(root) {
 		animation: fade-in 150ms ease-in;
-	}
-
-	@keyframes fade-out {
-		from {
-			opacity: 1;
-		}
-		to {
-			opacity: 0;
-		}
 	}
 
 	@keyframes fade-in {

@@ -886,3 +886,35 @@ own `:global(html.dark)` block was left untouched.
 **Still unchanged:** the calendar event cards (What's Next, League Calendar) and
 the bespoke AFL day-of heroes (`AflPlayoffsHero`, `AflChampionshipHero`,
 `TradeDeadlineHero`).
+
+## Dead Money Awards — franchise colors + legacy-player recovery (2026-07-06)
+
+The Dead Money page (`src/pages/theleague/dead-money.astro`) composites every
+award card (`DeadMoneyPlayerCard.astro`) and both shame banners
+(`DeadMoneyComposite.astro`), not just the banner. Three learnings:
+
+- **Legacy players resolve through a GLOBAL union map, not the season feed.**
+  `getGlobalPlayerMap()` (src/utils/player-map.ts) unions every
+  `data/theleague/mfl-feeds/<year>/players.json` into one MFL-id→identity
+  lookup (later year wins). MFL ids are stable across seasons, so a 2009
+  winner whose own year predates the feed archive (pre-2011 has no
+  `players.json`) still gets an ESPN headshot from a later season he appears
+  in. Measured recovery: ~0% (per-season) → 88% (union) across all cards.
+  Any historical page (records, awards) that needs headshots for old players
+  should use this, not `getPlayerMap(year)`.
+
+- **The band wears the FANTASY franchise's colors, not the player's NFL team**
+  (Brandon, 2026-07-06) — it's the owner's shame. Colors come from
+  `theleague.config.json` `colorPrimary`/`colorSecondary` via
+  `getFranchiseForYear`. History entries carry no per-era colors, so a
+  rebranded franchise shows its CURRENT colors on old cards (accepted).
+
+- **`pickBrandAccent(primary, secondary, fallback)`** (nfl-team-colors.ts)
+  chooses the gradient hero. Many franchises run a near-black primary
+  (`#181818`) with a vibrant secondary — a naive dark→primary gradient makes a
+  flat black band. Rule: keep the primary when it's usable (chroma ≥ 25 AND
+  luminance ≥ 40), else fall to the secondary, else keep primary (true
+  black/white teams read dark). Over-bright heroes (yellow) are darkened so
+  white text/cutout stay legible. Do NOT just pick "most chromatic" — that
+  wrongly overrides a perfectly good dark-navy primary with a flashier
+  secondary (Cowboy Up navy vs its red).

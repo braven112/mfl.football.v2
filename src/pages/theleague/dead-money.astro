@@ -1,12 +1,17 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import DeadMoneyComposite from '../../components/theleague/DeadMoneyComposite.astro';
+import DeadMoneyPlayerCard from '../../components/theleague/DeadMoneyPlayerCard.astro';
 import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getGlobalPlayerMap } from '../../utils/player-map';
+import { resolveCutoutUrl } from '../../utils/player-modal-band';
+import { getNflTeamColors } from '../../utils/nfl-team-colors';
 
 // Minimum salary to qualify for individual Brock Osweiler / Position Worst awards.
 // Filters out minimum-contract players — we want big-money busts, not dart throws.
@@ -37,7 +42,9 @@ const positionLabelMap = new Map(
   positionLabels.map(({ key, label }) => [key, label])
 );
 
-// Year-aware franchise lookup — resolves historical names/icons per season
+// Year-aware franchise lookup — resolves historical names/icons per season.
+// Colors come from the franchise's current identity (history entries carry no
+// per-era colors), so a rebranded team wears its present colors on old cards.
 function getFranchiseForYear(franchiseId: string, season: string) {
   const team = leagueConfig.teams.find(t => t.franchiseId === franchiseId);
   if (!team) return null;
@@ -45,6 +52,8 @@ function getFranchiseForYear(franchiseId: string, season: string) {
   return {
     name: chooseTeamName({ fullName: identity.name, nameMedium: identity.nameMedium }),
     icon: identity.icon,
+    colorPrimary: (team as any).colorPrimary as string | undefined,
+    colorSecondary: (team as any).colorSecondary as string | undefined,
   };
 }
 
@@ -188,6 +197,8 @@ for (const [path, mod] of Object.entries(playerModules)) {
         franchiseId,
         name: franchise?.name ?? franchiseId,
         icon: franchise?.icon,
+        colorPrimary: franchise?.colorPrimary,
+        colorSecondary: franchise?.colorSecondary,
         totalSalary: lineupSalary,
         totalPoints: lineupPoints,
         costPerPoint: lineupSalary / lineupPoints,
@@ -253,6 +264,102 @@ const formatCostPerPoint = (costPerPoint: number) => {
   if (costPerPoint >= 1_000) return formatCurrency(costPerPoint / 1_000) + 'K / pt';
   return formatCurrency(costPerPoint) + ' / pt';
 };
+
+// --- Composite cutout resolution ---
+// Salary-file headshots are all MFL JPGs (baked backgrounds — never
+// compositable). ESPN cutouts resolve through the GLOBAL player map: MFL ids
+// are stable across seasons, so a legacy player whose own season predates the
+// feed archive (pre-2011 has no players.json) is still recovered from a later
+// season he appears in. Players with no ESPN source anywhere fall back to a
+// gradient-only, franchise-branded card — never a broken image.
+const globalPlayers = getGlobalPlayerMap();
+
+const flipMflName = (name: string) => {
+  const commaIndex = (name ?? '').indexOf(',');
+  if (commaIndex === -1) return name;
+  return `${name.slice(commaIndex + 1).trim()} ${name.slice(0, commaIndex).trim()}`;
+};
+
+function resolveCutout(playerId: string): string | null {
+  const identity = globalPlayers.get(playerId);
+  return identity ? resolveCutoutUrl(identity) : null;
+}
+
+// Safely embed a (feed-derived) URL as a single-quoted JS string literal for
+// an inline onerror handler — escapes backslashes and quotes so a stray
+// character in the URL can't break out of the handler string.
+const jsStr = (value: string) => `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+
+function resolveWinnerCutout(_season: string, player: { id: string; name: string; team: string }) {
+  const identity = globalPlayers.get(player.id);
+  return {
+    cutoutUrl: identity ? resolveCutoutUrl(identity) : null,
+    displayName: identity?.name ?? flipMflName(player.name),
+    nflTeam: identity?.nflTeam || player.team,
+  };
+}
+
+// Reigning Brock Osweiler winner (overallWorst is sorted newest-first)
+const osweilerBanner = (() => {
+  const winner = overallWorst[0];
+  if (!winner) return null;
+  const { cutoutUrl, displayName, nflTeam } = resolveWinnerCutout(winner.season, winner);
+  const franchise = winner.franchiseId ? getFranchiseForYear(winner.franchiseId, winner.season) : null;
+  return {
+    eyebrow: `${winner.season} · Brock Osweiler Award`,
+    title: 'The reigning cap casualty.',
+    summary: `${displayName} was handed ${formatContract(winner.salary, winner.contractYears)} and returned ${formatPoints(winner.points)} points — the worst value contract in the league in ${winner.season}.`,
+    stats: [
+      { label: 'Points', value: formatPoints(winner.points) },
+      { label: 'Contract', value: formatContract(winner.salary, winner.contractYears) },
+      { label: 'Cost / Point', value: formatCostPerPoint(1 / winner.efficiency), highlight: true },
+    ],
+    playerName: displayName,
+    position: winner.position,
+    nflTeam,
+    cutoutUrl,
+    franchiseName: franchise?.name,
+    franchiseIcon: franchise?.icon,
+    franchiseColorPrimary: franchise?.colorPrimary,
+    franchiseColorSecondary: franchise?.colorSecondary,
+  };
+})();
+
+// Jerry Jones poster boy per season: the worst-value starter in the winning
+// lineup that has a transparent cutout; falls back to gradient + franchise
+// icon when nobody composites (DEF-heavy or pre-feed seasons).
+const jerryJonesBanners = new Map();
+for (const [season, rankings] of jerryJonesStartersBySeason) {
+  const winner = rankings[0];
+  if (!winner?.lineup?.length) continue;
+  const candidates = winner.lineup
+    .filter(p => p.points > 0 && p.slot !== 'DEF')
+    .sort((a, b) => b.salary / b.points - a.salary / a.points)
+    .map(p => ({ ...p, ...resolveWinnerCutout(season, p) }));
+  const posterBoy = candidates.find(p => p.cutoutUrl) ?? candidates[0] ?? null;
+  const stats = [
+    { label: 'Lineup Salary', value: formatCurrency(winner.totalSalary) },
+    { label: 'Points', value: formatPoints(winner.totalPoints) },
+    { label: 'Cost / Point', value: formatCostPerPoint(winner.costPerPoint), highlight: true },
+  ];
+  if (winner.deadMoney > 0) {
+    stats.push({ label: 'Dead Money', value: formatCurrency(winner.deadMoney) });
+  }
+  jerryJonesBanners.set(season, {
+    eyebrow: `${season} · Jerry Jones Award`,
+    title: 'Spent the most for the least.',
+    summary: `${winner.name} fielded ${formatCurrency(winner.totalSalary)} of best-case lineup and got ${formatPoints(winner.totalPoints)} points back${posterBoy ? ` — ${posterBoy.displayName}'s ${formatCurrency(posterBoy.salary)} led the burn` : ''}.`,
+    stats,
+    playerName: posterBoy?.displayName,
+    position: posterBoy?.position,
+    nflTeam: posterBoy?.nflTeam,
+    cutoutUrl: posterBoy?.cutoutUrl,
+    franchiseName: winner.name,
+    franchiseIcon: winner.icon,
+    franchiseColorPrimary: winner.colorPrimary,
+    franchiseColorSecondary: winner.colorSecondary,
+  });
+}
 ---
 
 <TheLeagueLayout title="Dead Money Awards">
@@ -314,6 +421,11 @@ const formatCostPerPoint = (costPerPoint: number) => {
         return (
           <div class="season-rankings" data-year={year} style={year.toString() === mostRecentYear ? '' : 'display: none;'}>
             <h2 class="section-title"><img src="/assets/theleague/awards/jerry-jones.jpg" alt="" class="section-avatar" /> {year} Jerry Jones Award <span class="title-sub">Starting Lineup</span></h2>
+            {jerryJonesBanners.has(year.toString()) && (
+              <div class="award-banner">
+                <DeadMoneyComposite {...jerryJonesBanners.get(year.toString())} />
+              </div>
+            )}
             <div class="team-rankings">
               {rankings.map((team, idx) => {
                 const isWinner = idx === 0;
@@ -427,48 +539,40 @@ const formatCostPerPoint = (costPerPoint: number) => {
     <!-- All-Time Brock Osweiler Awards -->
     <section id="brock-osweiler-view" style="display: none;" aria-labelledby="brock-osweiler-heading">
       <h2 id="brock-osweiler-heading" class="section-title"><img src="/assets/theleague/awards/brock-osweiler.jpg" alt="" class="section-avatar" /> All-Time Brock Osweiler Awards</h2>
+      {osweilerBanner && (
+        <div class="award-banner">
+          <DeadMoneyComposite {...osweilerBanner} />
+        </div>
+      )}
       <div class="mvp-grid" id="brock-osweiler-grid">
         {overallWorst.length ? (
           overallWorst.map((player) => {
             const franchise = player.franchiseId
               ? getFranchiseForYear(player.franchiseId, player.season)
               : null;
-            const nflLogo = player.team ? getNflLogo(player.team) : null;
             return (
-              <article class="dm-card" data-year={player.season} data-position={player.position}>
-                <header>
-                  <div class="card-header-top">
-                    <div class="season-badge-row">
-                      <p class="dm-season">{player.season}</p>
-                      <span class="dead-money-badge">Brock Osweiler Award</span>
-                    </div>
-                    {franchise?.icon && (
-                      <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
-                    )}
-                  </div>
-                  <div class="player-info">
-                    <img
-                      src={player.headshot ?? DEFAULT_HEADSHOT_URL}
-                      alt={`${player.name} headshot`}
-                      class="player-headshot"
-                      loading="lazy"
-                      onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
-                    />
-                    <div>
-                      <h3 class="dm-card-name">{player.name}</h3>
-                      <p class="dm-meta">
-                        {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
-                        <span>{player.position}</span>
-                      </p>
-                    </div>
-                  </div>
-                </header>
-                <dl>
-                  <div><dt>Points</dt><dd>{formatPoints(player.points)}</dd></div>
-                  <div><dt>Contract</dt><dd>{formatContract(player.salary, player.contractYears)}</dd></div>
-                  <div><dt>Cost / Point</dt><dd class="cost-highlight">{formatCostPerPoint(1 / player.efficiency)}</dd></div>
-                </dl>
-              </article>
+              <DeadMoneyPlayerCard
+                name={player.name}
+                position={player.position}
+                season={player.season}
+                salary={player.salary}
+                points={player.points}
+                efficiency={player.efficiency}
+                contractYears={player.contractYears}
+                team={player.team}
+                cutoutUrl={resolveCutout(player.id)}
+                franchiseName={franchise?.name}
+                franchiseIcon={franchise?.icon}
+                franchiseColorPrimary={franchise?.colorPrimary}
+                franchiseColorSecondary={franchise?.colorSecondary}
+                isOverallWorst
+                headingLevel={3}
+                formatCurrency={formatCurrency}
+                formatPoints={formatPoints}
+                formatContract={formatContract}
+                formatCostPerPoint={formatCostPerPoint}
+                getNflLogo={getNflLogo}
+              />
             );
           })
         ) : (
@@ -491,43 +595,30 @@ const formatCostPerPoint = (costPerPoint: number) => {
                   const franchise = player.franchiseId
                     ? getFranchiseForYear(player.franchiseId, player.season)
                     : null;
-                  const nflLogo = player.team ? getNflLogo(player.team) : null;
                   const isOverallWorst = overallWorstIds.has(`${player.id}-${player.season}`);
                   return (
-                    <article class="dm-card" data-year={player.season} data-position={player.position}>
-                      <header>
-                        <div class="card-header-top">
-                          <div class="season-badge-row">
-                            <p class="dm-season">{player.season}</p>
-                            {isOverallWorst && <span class="dead-money-badge">Brock Osweiler Award</span>}
-                          </div>
-                          {franchise?.icon && (
-                            <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
-                          )}
-                        </div>
-                        <div class="player-info">
-                          <img
-                            src={player.headshot ?? DEFAULT_HEADSHOT_URL}
-                            alt={`${player.name} headshot`}
-                            class="player-headshot"
-                            loading="lazy"
-                            onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
-                          />
-                          <div>
-                            <h4 class="dm-card-name">{player.name}</h4>
-                            <p class="dm-meta">
-                              {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
-                              <span>{player.position}</span>
-                            </p>
-                          </div>
-                        </div>
-                      </header>
-                      <dl>
-                        <div><dt>Points</dt><dd>{formatPoints(player.points)}</dd></div>
-                        <div><dt>Contract</dt><dd>{formatContract(player.salary, player.contractYears)}</dd></div>
-                        <div><dt>Cost / Point</dt><dd class="cost-highlight">{formatCostPerPoint(1 / player.efficiency)}</dd></div>
-                      </dl>
-                    </article>
+                    <DeadMoneyPlayerCard
+                      name={player.name}
+                      position={player.position}
+                      season={player.season}
+                      salary={player.salary}
+                      points={player.points}
+                      efficiency={player.efficiency}
+                      contractYears={player.contractYears}
+                      team={player.team}
+                      cutoutUrl={resolveCutout(player.id)}
+                      franchiseName={franchise?.name}
+                      franchiseIcon={franchise?.icon}
+                      franchiseColorPrimary={franchise?.colorPrimary}
+                      franchiseColorSecondary={franchise?.colorSecondary}
+                      isOverallWorst={isOverallWorst}
+                      headingLevel={4}
+                      formatCurrency={formatCurrency}
+                      formatPoints={formatPoints}
+                      formatContract={formatContract}
+                      formatCostPerPoint={formatCostPerPoint}
+                      getNflLogo={getNflLogo}
+                    />
                   );
                 })
               ) : (
@@ -557,15 +648,21 @@ const formatCostPerPoint = (costPerPoint: number) => {
               {zeroes.map(player => {
                 const franchise = getFranchiseForYear(player.franchiseId, player.season);
                 const nflLogo = player.team ? getNflLogo(player.team) : null;
+                const identity = globalPlayers.get(player.id);
+                const espnShot = identity?.headshot?.includes('espncdn.com') ? identity.headshot : null;
+                // Fantasy franchise accent (the owner's shame), NFL color fallback
+                const accent = franchise?.colorPrimary ?? getNflTeamColors(player.team ?? '').primary;
                 return (
-                  <div class="shame-card">
+                  <div class="shame-card" style={`--shame-accent: ${accent};`}>
                     <div class="shame-player-info">
                       <img
-                        src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                        src={espnShot ?? player.headshot ?? DEFAULT_HEADSHOT_URL}
                         alt={player.name}
                         class="shame-headshot"
                         loading="lazy"
-                        onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                        onerror={espnShot
+                          ? `this.onerror=function(){this.onerror=null;this.src=${jsStr(DEFAULT_HEADSHOT_URL)};};this.src=${jsStr(player.headshot ?? DEFAULT_HEADSHOT_URL)};`
+                          : `this.onerror=null;this.src=${jsStr(DEFAULT_HEADSHOT_URL)};`}
                       />
                       <div>
                         <span class="shame-name">{player.name}</span>
@@ -741,6 +838,11 @@ const formatCostPerPoint = (costPerPoint: number) => {
   .title-sub {
     font-weight: 400;
     color: var(--color-gray-500, #6b7280);
+  }
+
+  /* ──── Award Composite Banner ──── */
+  .award-banner {
+    margin-bottom: 1rem;
   }
 
   /* ──── Dead Money Badge ──── */
@@ -932,129 +1034,11 @@ const formatCostPerPoint = (costPerPoint: number) => {
   }
 
   /* ──── Player Cards (Brock Osweiler & Position Worst) ──── */
+  /* Card internals live in DeadMoneyPlayerCard.astro (scoped). */
   .mvp-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1rem;
-  }
-
-  .dm-card {
-    background: var(--content-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: var(--radius-md, 0.5rem);
-    padding: 1rem;
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .dm-card header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .card-header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-
-  .season-badge-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .player-info {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    width: 100%;
-  }
-
-  .player-headshot {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-full, 9999px);
-    object-fit: cover;
-    background: var(--color-gray-100, #f3f4f6);
-    flex-shrink: 0;
-  }
-
-  .dm-season {
-    margin: 0;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--color-gray-500, #6b7280);
-  }
-
-  .dm-card-name {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--color-gray-900, #111827);
-    margin: 0;
-  }
-
-  .dm-meta {
-    margin: 0;
-    font-size: 0.75rem;
-    color: var(--color-gray-500, #6b7280);
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .nfl-icon {
-    width: 16px;
-    height: 16px;
-    object-fit: contain;
-  }
-
-  .dm-card .franchise-icon {
-    width: var(--team-icon-sm, 32px);
-    height: var(--team-icon-sm, 32px);
-  }
-
-  /* ──── DL Metrics (Editorial Key Metrics Pattern) ──── */
-  dl {
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
-  }
-
-  dl > div {
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: var(--radius-md, 0.5rem);
-    padding: 0.375rem 0.5rem;
-    text-align: center;
-  }
-
-  dt {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-gray-500, #6b7280);
-    margin-bottom: 0.125rem;
-  }
-
-  dd {
-    margin: 0;
-    font-size: 0.875rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--color-gray-700, #374151);
-  }
-
-  .cost-highlight {
-    color: var(--color-error, #dc2626);
   }
 
   /* ──── Position Groups ──── */
@@ -1144,7 +1128,7 @@ const formatCostPerPoint = (costPerPoint: number) => {
     align-items: center;
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
-    border-left: 2px solid var(--color-error, #dc2626);
+    border-left: 3px solid var(--shame-accent, var(--color-error, #dc2626));
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.5rem 0.75rem;
     gap: 0.5rem;
@@ -1228,17 +1212,8 @@ const formatCostPerPoint = (costPerPoint: number) => {
       grid-template-columns: 1fr;
     }
 
-    .player-headshot {
-      width: 40px;
-      height: 40px;
-    }
-
     .mvp-grid {
       grid-template-columns: 1fr;
-    }
-
-    dl {
-      gap: 0.375rem;
     }
   }
 

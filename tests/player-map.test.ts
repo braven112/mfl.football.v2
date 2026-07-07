@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
-// Mock fs.readFileSync before importing the module
+// Mock fs before importing the module
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
+  readdirSync: vi.fn(),
 }));
 
 const mockReadFileSync = vi.mocked(readFileSync);
+const mockReaddirSync = vi.mocked(readdirSync);
 
 // Sample MFL feed data
 const mockFeedData = {
@@ -91,6 +93,7 @@ const mockCollegeIds = {
 describe('player-map', () => {
   let getPlayerMap: typeof import('../src/utils/player-map').getPlayerMap;
   let getPlayer: typeof import('../src/utils/player-map').getPlayer;
+  let getGlobalPlayerMap: typeof import('../src/utils/player-map').getGlobalPlayerMap;
   let clearPlayerMapCache: typeof import('../src/utils/player-map').clearPlayerMapCache;
 
   beforeEach(async () => {
@@ -106,10 +109,12 @@ describe('player-map', () => {
       }
       throw new Error(`File not found: ${path}`);
     });
+    mockReaddirSync.mockReturnValue(['2024', '2025', '2026', 'roster-history'] as any);
 
     const mod = await import('../src/utils/player-map');
     getPlayerMap = mod.getPlayerMap;
     getPlayer = mod.getPlayer;
+    getGlobalPlayerMap = mod.getGlobalPlayerMap;
     clearPlayerMapCache = mod.clearPlayerMapCache;
     clearPlayerMapCache();
   });
@@ -198,6 +203,28 @@ describe('player-map', () => {
       clearPlayerMapCache();
       const map = getPlayerMap(2099);
       expect(map.size).toBe(0);
+    });
+  });
+
+  describe('getGlobalPlayerMap', () => {
+    it('unions every feed year into one lookup (only year-named dirs)', () => {
+      const map = getGlobalPlayerMap();
+      // reads year directories (2024/2025/2026), skips non-year names
+      expect(mockReaddirSync).toHaveBeenCalled();
+      expect(map.has('13116')).toBe(true); // Mahomes present across years
+      expect(map.get('13116')!.name).toBe('Patrick Mahomes');
+    });
+
+    it('caches the unioned map — same instance on repeated calls', () => {
+      expect(getGlobalPlayerMap()).toBe(getGlobalPlayerMap());
+    });
+
+    it('returns an empty map when the feeds dir is unreadable', () => {
+      mockReaddirSync.mockImplementation(() => {
+        throw new Error('ENOENT');
+      });
+      clearPlayerMapCache();
+      expect(getGlobalPlayerMap().size).toBe(0);
     });
   });
 

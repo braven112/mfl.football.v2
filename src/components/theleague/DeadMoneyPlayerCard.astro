@@ -1,0 +1,307 @@
+---
+/**
+ * DeadMoneyPlayerCard — an individual award card (Brock Osweiler overall +
+ * Position Worst) with a composite header band.
+ *
+ * The header is a FANTASY-franchise-color gradient (this is the owner's
+ * shame, so the band wears the fantasy team's colors, not the player's NFL
+ * team) carrying the player's transparent ESPN cutout, his NFL logo +
+ * position, and the franchise icon as a top-right overlay; the metrics
+ * (points / contract / cost-per-point) sit below in the key-metrics grid.
+ * Falls back to the player's NFL team colors when a franchise color is
+ * missing.
+ *
+ * Composite rules (docs/claude/insights/features/player-composites.md): the
+ * cutout renders only when `cutoutUrl` is a transparent ESPN source (the
+ * caller resolves + gates it via resolveCutoutUrl against the global player
+ * map), never for DEF, and hides itself on a 404. Without a cutout the band
+ * stays gradient-only with the franchise icon — legacy players whose season
+ * predates the ESPN-headshot era still get a branded card, never a broken
+ * image or the background-baked MFL JPG.
+ */
+import { getNflTeamColors, hexToRgba, mixHex, pickBrandAccent } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+
+interface Props {
+  name: string;
+  position: string;
+  season: string;
+  salary: number;
+  points: number;
+  efficiency: number;
+  contractYears: number;
+  team?: string;
+  /** Transparent ESPN cutout URL, or null for a gradient-only band */
+  cutoutUrl?: string | null;
+  franchiseName?: string;
+  franchiseIcon?: string;
+  /** Fantasy franchise colors — the band's gradient source */
+  franchiseColorPrimary?: string;
+  franchiseColorSecondary?: string;
+  isOverallWorst?: boolean;
+  /** h3 (Brock Osweiler section) vs h4 (Position Worst) for heading level */
+  headingLevel?: 3 | 4;
+  formatCurrency: (v: number) => string;
+  formatPoints: (v: number) => string;
+  formatContract: (salary: number, years: number) => string;
+  formatCostPerPoint: (v: number) => string;
+  getNflLogo: (team: string) => string | null;
+}
+
+const {
+  name,
+  position,
+  season,
+  salary,
+  points,
+  efficiency,
+  contractYears,
+  team = '',
+  cutoutUrl,
+  franchiseName,
+  franchiseIcon,
+  franchiseColorPrimary,
+  franchiseColorSecondary,
+  isOverallWorst,
+  headingLevel = 3,
+  formatCurrency,
+  formatPoints,
+  formatContract,
+  formatCostPerPoint,
+  getNflLogo,
+} = Astro.props;
+
+const teamCode = team ? normalizeTeamCode(team) : '';
+const nfl = getNflTeamColors(teamCode);
+// Fantasy franchise colors win; fall back to the player's NFL team. Many
+// franchises run a near-black primary with a vibrant secondary, so pick the
+// recognizable (most chromatic) brand color as the gradient hero.
+const hero = franchiseColorPrimary
+  ? pickBrandAccent(franchiseColorPrimary, franchiseColorSecondary, nfl.primary)
+  : nfl.primary;
+// Dark text anchor (left) → brand hero (right, under the cutout); 115°.
+const g1 = mixHex(hero, '#0b0e13', 0.72);
+const g2 = hero;
+const glow = hexToRgba(hero, 0.42);
+
+const nflLogo = team ? getNflLogo(team) : null;
+const HeadingTag = `h${headingLevel}` as 'h3' | 'h4';
+---
+
+<article class="dm-card" data-year={season} data-position={position}>
+  <header
+    class:list={['dmpc__band', { 'dmpc__band--no-cutout': !cutoutUrl }]}
+    style={`--dmpc-g1: ${g1}; --dmpc-g2: ${g2}; --dmpc-glow: ${glow};`}
+  >
+    <div class="dmpc__glow" aria-hidden="true"></div>
+    <div class="dmpc__band-top">
+      <div class="season-badge-row">
+        <p class="dm-season">{season}</p>
+        {isOverallWorst && <span class="dead-money-badge">Brock Osweiler Award</span>}
+      </div>
+      {franchiseIcon && (
+        <img
+          src={franchiseIcon}
+          alt={franchiseName ?? 'Franchise'}
+          class="dmpc__franchise-overlay"
+          loading="lazy"
+        />
+      )}
+    </div>
+    <div class="dmpc__identity">
+      <HeadingTag class="dm-card-name">{name}</HeadingTag>
+      <p class="dm-meta">
+        {nflLogo && <img src={nflLogo} alt={`${team || 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+        <span>{position}</span>
+      </p>
+    </div>
+    {cutoutUrl && (
+      <img
+        class="dmpc__cutout"
+        src={cutoutUrl}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        onerror="this.style.display='none'; this.closest('.dmpc__band').classList.add('dmpc__band--no-cutout')"
+      />
+    )}
+  </header>
+  <dl>
+    <div><dt>Points</dt><dd>{formatPoints(points)}</dd></div>
+    <div><dt>Contract</dt><dd>{formatContract(salary, contractYears)}</dd></div>
+    <div><dt>Cost / Point</dt><dd class="cost-highlight">{formatCostPerPoint(1 / efficiency)}</dd></div>
+  </dl>
+</article>
+
+<style>
+  .dm-card {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: hidden;
+  }
+
+  /* ──── Composite Header Band ──── */
+  .dmpc__band {
+    position: relative;
+    overflow: hidden;
+    padding: 0.75rem 0.875rem 0.875rem;
+    min-height: 96px;
+    background: linear-gradient(115deg, var(--dmpc-g1) 0%, var(--dmpc-g2) 100%);
+    isolation: isolate;
+  }
+
+  .dmpc__glow {
+    position: absolute;
+    right: -50px;
+    top: -60px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, var(--dmpc-glow) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dmpc__band-top {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .season-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .dm-season {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.75);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dead-money-badge {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    background: linear-gradient(135deg, var(--color-error, #dc2626) 0%, var(--color-error-dark, #b91c1c) 100%);
+    color: var(--color-white, #fff);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-radius: var(--radius-sm, 0.25rem);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+
+  .dmpc__franchise-overlay {
+    width: var(--team-icon-sm, 32px);
+    height: var(--team-icon-sm, 32px);
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  }
+
+  .dmpc__identity {
+    position: relative;
+    z-index: 2;
+    margin-top: 0.5rem;
+    /* Keep text clear of the cutout on the right */
+    max-width: 62%;
+  }
+
+  .dmpc__band--no-cutout .dmpc__identity {
+    max-width: 100%;
+  }
+
+  .dm-card-name {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    line-height: 1.15;
+  }
+
+  .dm-meta {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .nfl-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+
+  .dmpc__cutout {
+    position: absolute;
+    right: -0.25rem;
+    bottom: 0;
+    height: 108%;
+    width: auto;
+    max-width: 48%;
+    object-fit: contain;
+    object-position: bottom right;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+    z-index: 1;
+  }
+
+  /* ──── Metrics ──── */
+  dl {
+    margin: 0;
+    padding: 0 0.875rem 0.875rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  dl > div {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.375rem 0.5rem;
+    text-align: center;
+  }
+
+  dt {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+    margin-bottom: 0.125rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .cost-highlight {
+    color: var(--color-error, #dc2626);
+  }
+
+  @media (max-width: 640px) {
+    dl {
+      gap: 0.375rem;
+    }
+  }
+</style>

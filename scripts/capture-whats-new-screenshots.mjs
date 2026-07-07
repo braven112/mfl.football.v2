@@ -97,6 +97,22 @@ const PAGE_HOOKS = {
     });
     await page.waitForTimeout(300);
   },
+  'dead-money-shame-banners': async (page) => {
+    // Switch to the Brock Osweiler view so the banner AND the franchise-color
+    // player-card grid are both in frame, then force lazy cutouts to load.
+    await page.evaluate(() => {
+      const vf = document.getElementById('view-filter');
+      if (vf) { vf.value = 'brock_osweiler'; vf.dispatchEvent(new Event('change')); }
+      document.querySelectorAll('.dmc__model, .dmpc__cutout').forEach((img) => { img.loading = 'eager'; });
+    });
+    await page.waitForTimeout(1400);
+    await page.evaluate(() => {
+      const el = document.getElementById('brock-osweiler-heading') || document.querySelector('.award-banner');
+      if (el) el.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -90);
+    });
+    await page.waitForTimeout(400);
+  },
 };
 
 /** Dark-capture filename for an entry image: foo.webp → foo-dark.webp */
