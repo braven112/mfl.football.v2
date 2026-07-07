@@ -5,6 +5,14 @@
   "featuredImageLeague": "theleague",
   "changes": [
     {
+      "date": "2026-07-07",
+      "type": "style-tweak",
+      "summary": "Team logos now dress for the dark. Marks with black outlines — the Raiders shield, the Steelers hypocycloids, the Jets, North Carolina's navy interlock — used to all but vanish against a dark background, a smudge where a logo should be. In dark mode every NFL logo across the site (matchup heroes, the composite banners, roster player rows) now swaps to its dark-optimized cut, outline flipped to white so the crest actually reads, and the college logos in the Free Agents and roster player tables get the same treatment. Light mode is untouched, and the switch follows your theme toggle in real time.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
       "date": "2026-07-06",
       "type": "bug-fix",
       "summary": "On phones, the homepage heroes — the What's New announcement and the red Breaking News banner — no longer type their headlines directly across the featured player's face. The text now keeps to its own column on the left, and the player gets the respect he deserves: anchored to the bottom-right corner, standing nearly the full height of the card, with his left edge fading softly into the gradient instead of ending in a hard rectangle behind the shoulders. Even on the narrowest screens, the two stay out of each other's way.",

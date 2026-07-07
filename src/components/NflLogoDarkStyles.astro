@@ -1,0 +1,19 @@
+---
+/**
+ * Global dark-mode NFL logo swap styles.
+ *
+ * Included once in the shared layout <head>, right beside TeamIconDarkStyles.
+ * Emits a CSS rule for every canonical NFL team logo that swaps the rendered
+ * <img> to ESPN's `500-dark` variant under `html.dark`, so NFL marks with dark
+ * outlines stay legible on dark backgrounds.
+ *
+ * Intentionally CSS-only: with theme preference 'auto' the server cannot know
+ * the resolved theme, so a server-side src pick would be wrong (see
+ * src/utils/nfl-logo-dark-css.ts for the full rationale).
+ */
+import { buildNflLogoDarkCss } from '../utils/nfl-logo-dark-css';
+
+const css = buildNflLogoDarkCss();
+---
+
+{css && <style is:inline set:html={css} />}

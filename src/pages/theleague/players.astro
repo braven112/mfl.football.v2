@@ -8,6 +8,7 @@
  * Data is loaded at build time from MFL feed JSON files.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { positionOrder } from '../../constants/roster-constants';
@@ -590,6 +591,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Free Agents | TheLeague">
+  <CollegeLogoDarkStyles />
   <div class="players-page">
     <!-- Dark Gradient Hero -->
     <div class="players-hero">
