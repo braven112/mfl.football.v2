@@ -23,6 +23,7 @@ import '../../styles/player-cell.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
 // Build franchise ID → short name map for auction high-bidder display
@@ -61,6 +62,12 @@ function normalizeMflTeam(code: string): string {
 
 // Load player data
 const currentYear = getCurrentLeagueYear();
+
+// MFL host/id from the league registry — never hardcode these (CLAUDE.md).
+// Used to build the per-player "Bid" and generic "Add" deep-links on each row.
+const theLeagueDef = getLeagueBySlug('theleague');
+const mflHost = theLeagueDef?.mflHost ?? 'www49.myfantasyleague.com';
+const mflLeagueId = theLeagueDef?.id ?? '13522';
 const playerModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/players.json',
   { eager: true }
@@ -905,6 +912,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-num col-contract" data-sort="salary" style="display: none;">
               <div class="th-content">Sal/Bid</div>
             </th>
+            <!-- Acquisition action (default/rankings views): Add during in-season/FCFS, Bid during auction -->
+            <th class="col-fa-action" aria-label="Add or bid on this player">
+              <div class="th-content"></div>
+            </th>
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
@@ -936,7 +947,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, franchiseNamesJson, franchiseBannersJson, defSpotlightJson }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1866,7 +1877,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       // Place Bid button (Value view only — links to MFL's Place Bid page with player pre-selected)
       {
-        const bidUrl = `https://www49.myfantasyleague.com/${currentYear}/options?L=13522&O=43&P=${p.id}`;
+        const bidUrl = `https://${mflHost}/${currentYear}/options?L=${mflLeagueId}&O=43&P=${p.id}`;
         html += `<td class="col-group--value col-value-money col-place-bid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
       }
 
@@ -1923,7 +1934,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         }
 
         // Place Bid (auction view)
-        const bidUrl = `https://www49.myfantasyleague.com/${currentYear}/options?L=13522&O=43&P=${p.id}`;
+        const bidUrl = `https://${mflHost}/${currentYear}/options?L=${mflLeagueId}&O=43&P=${p.id}`;
         if (p.auctionStatus === 'won') {
           html += `<td class="col-group--auction col-auction-placebid"></td>`;
         } else {
@@ -1945,6 +1956,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num col-contract col-value-bid ${tierCls}${changedCls}" title="${titleText}">${bidFmt}</td>`;
       } else {
         html += `<td class="cell-num col-contract"><span class="na">-</span></td>`;
+      }
+
+      // Acquisition action cell — free agents only. During the offseason auction
+      // we deep-link to MFL's per-player Place Bid page; the rest of the year we
+      // deep-link to MFL's add/drop page, which itself auto-presents blind-bid
+      // (waiver) vs FCFS based on MFL's own in-season schedule. MFL is the final
+      // gatekeeper on timing/cap/roster, so no phase math is needed here.
+      if (!p.rostered) {
+        const acqUrl = isAuctionSeason
+          ? `https://${mflHost}/${currentYear}/options?L=${mflLeagueId}&O=43&P=${p.id}`
+          : `https://${mflHost}/${currentYear}/add_drop?L=${mflLeagueId}`;
+        const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
+        html += `<td class="col-fa-action"><a href="${acqUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="${acqLabel} ${escapeAttr(p.name)} on MyFantasyLeague (opens in new tab)">${acqLabel} &#8599;</a></td>`;
+      } else {
+        html += `<td class="col-fa-action"></td>`;
       }
 
       html += `</tr>`;
@@ -3622,6 +3648,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.col-place-bid) {
     min-width: 60px;
     text-align: center;
+  }
+  :global(.col-fa-action) {
+    min-width: 60px;
+    text-align: center;
+    padding: 0.25rem 0.375rem;
+    width: 1%;
   }
 
   /* Rostered row — dashed left border instead of full opacity dim */
