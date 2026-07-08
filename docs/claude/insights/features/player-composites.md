@@ -343,14 +343,15 @@ different from every other composite, and why:
 - **A team defense gets a FACE, not a bare crest (2026-07-07).** `DEF` is
   excluded from the generic cutout rule above, but `PlayerDetailsModal`
   now opts back in for team defenses: after `applyPlayerModalBand()` leaves
-  the band gradient-only, it looks up `getDefSpotlightPlayers(teamCode)`
-  (`src/data/theleague/def-spotlight-players.ts` — the SAME ranked pool the
-  Free Agents hero spotlight rotates) and paints the top-ranked defender's
-  ESPN headshot as the cutout, with his name · position in the sub-line.
-  Static on purpose — Brandon: the modal must NOT rotate faces the way the
-  hero spotlight does; lead with `defPool[0]` and hold it. Re-open still
-  calls `stopDef…`-free code because there's no timer; the offensive path
-  reclaims the cutout via `applyPlayerModalBand` on the next open.
+  the band gradient-only, it looks up `getDefSpotlightPlayer(teamCode)`
+  (`src/data/theleague/def-spotlight-players.ts` — the top of the SAME ranked
+  pool the Free Agents hero spotlight uses) and paints that defender's ESPN
+  headshot as the cutout, with his name · position in the sub-line. Static on
+  purpose — Brandon: the modal must NOT rotate faces the way the hero
+  spotlight does; lead with the top defender and hold it. There's no timer to
+  clear; the offensive path reclaims the cutout via `applyPlayerModalBand` on
+  the next open. The cutout stays `aria-hidden` + `alt=""` (decorative) — the
+  defender's name rides the sub-line as real text for screen readers.
 - **`getDefSpotlightPlayers` key gotcha: Washington is `WAS`, not `WSH`.**
   The spotlight JSON is keyed by players.astro's `normalizeMflTeam` (GBP→GB,
   JAC→JAX, but Washington stays `WAS`). Both `nfl-logo.ts#normalizeTeamCode`

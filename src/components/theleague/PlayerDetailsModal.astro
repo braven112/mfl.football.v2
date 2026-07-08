@@ -679,7 +679,7 @@ const { class: className, hideContract = false } = Astro.props;
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
-  import { getDefSpotlightPlayers } from '../../data/theleague/def-spotlight-players';
+  import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
   // ── DEF band face ──
   // A team defense has no headshot of its own, so — mirroring the Free Agents
@@ -695,7 +695,9 @@ const { class: className, hideContract = false } = Astro.props;
     if (!player || !player.espnId) return;
     band.classList.remove('pmb--no-cutout');
     cutout.style.display = '';
-    cutout.alt = player.name || '';
+    // Decorative: the cutout is aria-hidden and the defender's name is carried
+    // as real text in the sub-line below, so keep alt empty (no mixed signals).
+    cutout.alt = '';
     cutout.onerror = () => {
       cutout.style.display = 'none';
       band.classList.add('pmb--no-cutout');
@@ -876,11 +878,11 @@ const { class: className, hideContract = false } = Astro.props;
       if (isDefense) {
         // The spotlight pool keys Washington as WAS; our normalizer yields WSH.
         var defKey = teamCode === 'WSH' ? 'WAS' : teamCode;
-        var defPool = getDefSpotlightPlayers(defKey);
+        var topDefender = getDefSpotlightPlayer(defKey);
         var bandEl = document.getElementById('pdm-band');
         var bandCutout = bandEl ? bandEl.querySelector<HTMLImageElement>('.pmb__cutout') : null;
-        if (defPool.length > 0 && bandEl && bandCutout) {
-          applyDefBandFace(bandEl, bandCutout, defPool[0]);
+        if (topDefender && bandEl && bandCutout) {
+          applyDefBandFace(bandEl, bandCutout, topDefender);
         }
       }
 
