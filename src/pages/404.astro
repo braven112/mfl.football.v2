@@ -86,9 +86,13 @@ const tickerLines = [
 </TheLeagueLayout>
 
 <style>
-  /* Local breaking-news red — reads well on both light and dark surfaces. */
+  /* Local breaking-news palette. --bn-red reads well on both light and dark
+     surfaces; --bn-ink/--bn-paper keep the chyron ticker a constant dark bar
+     in both themes (a real news ticker never flips to a bright band). */
   .error-404 {
     --bn-red: #d50a0a;
+    --bn-ink: #14181f;
+    --bn-paper: #eef1f5;
 
     display: flex;
     align-items: center;
@@ -234,25 +238,13 @@ const tickerLines = [
     transform: translateY(-2px);
   }
 
-  .btn--secondary {
-    background: transparent;
-    color: var(--primary-color);
-    border-color: var(--primary-color);
-  }
-
-  .btn--secondary:hover {
-    background: var(--primary-color);
-    color: #fff;
-    transform: translateY(-2px);
-  }
-
-  /* --- chyron ticker --- */
+  /* --- chyron ticker (constant dark bar in both themes) --- */
   .bn-ticker {
     display: flex;
     align-items: stretch;
-    border-top: 1px solid var(--card-border, var(--color-gray-200));
-    background: var(--color-gray-900);
-    color: var(--content-bg);
+    border-top: 1px solid var(--bn-ink);
+    background: var(--bn-ink);
+    color: var(--bn-paper);
   }
 
   .bn-ticker__label {
