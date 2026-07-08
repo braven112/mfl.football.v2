@@ -30,6 +30,7 @@ export const LEAGUES = {
       powerRankings: true,
       liveLineups: true,
       schefterFeed: true,
+      liveScoring: true,
     },
   },
   'afl-fantasy': {
@@ -56,6 +57,7 @@ export const LEAGUES = {
       powerRankings: false,
       liveLineups: false,
       schefterFeed: true,
+      liveScoring: false,
     },
   },
 };

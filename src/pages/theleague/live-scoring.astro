@@ -1,0 +1,81 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueContext } from '../../utils/league-context';
+import { leagueHasFeature } from '../../config/leagues';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentNFLWeek } from '../../utils/current-week';
+import { getDailySlot } from '../../utils/hero-resolver';
+import { assembleLiveScoringData, type ConfigTeam } from '../../utils/live-scoring-data';
+import LiveScoreboard from '../../components/shared/LiveScoreboard';
+import type { LiveScoringPageProps } from '../../types/live-scoring';
+import '../../styles/live-scoring.css';
+
+// Live-fetch on every request — scores must never be cached.
+export const prerender = false;
+
+const league = getLeagueContext(Astro.url);
+
+// Gate on the registry feature flag.
+if (!leagueHasFeature(league.slug, 'liveScoring')) {
+  return Astro.redirect('/theleague');
+}
+
+const now = new Date();
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const week = weekParam ? parseInt(weekParam, 10) : (getCurrentNFLWeek(now) ?? 1);
+
+// Reuse the homepage hero's game-day clock: Thu/Sun/Mon windows drive whether
+// the island polls for live updates and which game-window label to show.
+const daily = getDailySlot(now);
+const isLive = daily.slot === 'live-scoring';
+
+const authUser = getAuthUser(Astro.request);
+const userFranchiseId = authUser?.franchiseId;
+const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+const data = await assembleLiveScoringData({
+  siteUrl: Astro.url,
+  week,
+  year,
+  leagueId: league.leagueId,
+  host: league.host,
+  dataPath: league.dataPath,
+  configTeams,
+  userFranchiseId,
+});
+
+const islandProps: LiveScoringPageProps = {
+  week,
+  year,
+  leagueId: league.leagueId,
+  host: league.host,
+  slug: league.slug,
+  isLive,
+  gameWindow: daily.gameWindow,
+  userFranchiseId,
+  matchups: data.matchups,
+  teams: data.teams,
+  playerMeta: data.playerMeta,
+  initialScores: data.scores,
+  initialRemaining: data.remaining,
+  initialPlayers: data.players,
+  initialYetToPlay: data.playersYetToPlay,
+};
+---
+
+<TheLeagueLayout title="Live Scoring">
+  <div class="ls-page">
+    <LiveScoreboard client:load {...islandProps} />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .ls-page {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+  }
+</style>

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import type { MatchupPairing } from '../../types/live-scoring';
+import type { LivePlayerRow, MatchupPairing } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 
 export const prerender = false;
@@ -23,7 +23,9 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     // Fetch both live scoring AND playoff brackets to get all scores
     const [liveScoreResponse, playoffBracketsResponse] = await Promise.all([
-      fetch(`${host}/${year}/export?TYPE=liveScoring&L=${leagueId}&W=${week}&JSON=1`, {
+      // DETAILS=1 so each franchise carries its per-player breakdown
+      // (players.player[] with id, score, gameSecondsRemaining, status).
+      fetch(`${host}/${year}/export?TYPE=liveScoring&L=${leagueId}&W=${week}&DETAILS=1&JSON=1`, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
       }),
       fetch(`${host}/${year}/export?TYPE=playoffBrackets&L=${leagueId}&JSON=1`, {
@@ -34,6 +36,8 @@ export const GET: APIRoute = async ({ url }) => {
     const scores: Record<string, number> = {};
     const remaining: Record<string, number> = {};
     const matchups: MatchupPairing[] = [];
+    const players: Record<string, LivePlayerRow[]> = {};
+    const playersYetToPlay: Record<string, number> = {};
 
     // Process live scoring data (regular matchups)
     if (liveScoreResponse.ok) {
@@ -65,9 +69,27 @@ export const GET: APIRoute = async ({ url }) => {
       }
 
       franchises.forEach((team: any) => {
-        if (team?.id) {
-          scores[String(team.id)] = Number(team.score) || 0;
-          remaining[String(team.id)] = Number(team.gameSecondsRemaining) || 0;
+        if (!team?.id) return;
+        const fid = String(team.id);
+        scores[fid] = Number(team.score) || 0;
+        remaining[fid] = Number(team.gameSecondsRemaining) || 0;
+        if (team.playersYetToPlay != null) {
+          playersYetToPlay[fid] = Number(team.playersYetToPlay) || 0;
+        }
+
+        // Per-player breakdown (present when DETAILS=1). Keep starters only —
+        // bench players don't count toward the matchup and just bloat the poll.
+        const rawPlayers = team?.players?.player;
+        if (rawPlayers) {
+          const list = Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers];
+          players[fid] = list
+            .filter((p: any) => p?.id && p.status !== 'nonstarter')
+            .map((p: any) => ({
+              id: String(p.id),
+              live: Number(p.score) || 0,
+              secondsRemaining: Number(p.gameSecondsRemaining) || 0,
+              status: String(p.status || 'starter'),
+            }));
         }
       });
     }
@@ -134,6 +156,8 @@ export const GET: APIRoute = async ({ url }) => {
         scores,
         remaining,
         matchups,
+        players,
+        playersYetToPlay,
       }),
       {
         status: 200,

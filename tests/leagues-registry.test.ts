@@ -56,6 +56,8 @@ describe('league registry', () => {
     expect(leagueHasFeature('theleague', 'contracts')).toBe(true);
     expect(leagueHasFeature('afl-fantasy', 'contracts')).toBe(false);
     expect(leagueHasFeature('afl-fantasy', 'keepers')).toBe(true);
+    expect(leagueHasFeature('theleague', 'liveScoring')).toBe(true);
+    expect(leagueHasFeature('afl-fantasy', 'liveScoring')).toBe(false);
     expect(leagueHasFeature('nope', 'contracts')).toBe(false);
   });
 });
