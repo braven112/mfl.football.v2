@@ -28,7 +28,6 @@ import {
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
-import NflGamesStrip from './NflGamesStrip';
 
 const POLL_LIVE = 60_000;
 const POLL_STALE = 300_000;
@@ -188,11 +187,13 @@ function WinProbBar({ home, mini, homeLabel, awayLabel }: {
 
 // ── scoreboard card ──
 
-function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
+function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYours, onOpen }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
   calc: { home: TeamCalc; away: TeamCalc; homeWinProb: number; isFinal: boolean };
   featured: boolean;
+  /** 'row' = single-game full-width row; 'faceoff' = stacked column (doubleheader). */
+  variant?: 'row' | 'faceoff';
   isYours: boolean;
   onOpen: () => void;
 }) {
@@ -218,7 +219,44 @@ function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
     </div>
   );
 
-  // Featured (your) matchup: horizontal faceoff, away on the left, home on the right.
+  const foot = (
+    <div className="ls-card-foot">
+      <span>Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
+      <span className="ls-open">Open matchup →</span>
+    </div>
+  );
+
+  // Single game (your matchup, one game this week): full-width horizontal row.
+  if (featured && variant === 'row') {
+    const teamBlock = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean, sideCls: string) => (
+      <div className={`ls-fr-team ${sideCls}${lead ? ' lead' : ''}`}>
+        <span className="ls-fr-id">
+          <span className="ls-fr-crest">{team?.icon && <img src={team.icon} alt="" loading="lazy" />}</span>
+          <span className="ls-fr-name">{team?.nameShort ?? team?.name ?? 'TBD'}</span>
+        </span>
+        <span className="ls-fr-nums">
+          <span className="ls-fr-score">{fmt(c.live)}</span>
+          <span className="ls-fr-proj">Proj {fmt(c.projectedFinal)}</span>
+        </span>
+      </div>
+    );
+    return (
+      <button className="ls-card feat row" style={cardStyle} onClick={onOpen}
+              aria-label={`Open ${A?.name} at ${H?.name}`}>
+        {head}
+        <div className="ls-faceoff-row">
+          {teamBlock(A, calc.away, !homeLead, 'away')}
+          <span className="ls-fr-vs">@</span>
+          {teamBlock(H, calc.home, homeLead, 'home')}
+        </div>
+        {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
+        {foot}
+      </button>
+    );
+  }
+
+  // Featured faceoff (used side-by-side for doubleheaders): stacked columns,
+  // away on the left, home on the right.
   if (featured) {
     const foTeam = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean, sideCls: string) => (
       <div className={`ls-fo-team ${sideCls}${lead ? ' lead' : ''}`}>
@@ -238,10 +276,7 @@ function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
           {foTeam(H, calc.home, homeLead, 'home')}
         </div>
         {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
-        <div className="ls-card-foot">
-          <span>Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
-          <span className="ls-open">Open matchup →</span>
-        </div>
+        {foot}
       </button>
     );
   }
@@ -499,16 +534,27 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
         </div>
       </div>
 
-      <NflGamesStrip week={week} year={props.year} isLive={props.isLive} demo={props.demo} initialGames={props.initialNflGames} />
-
       {matchups.length === 0 ? (
         <div className="ls-card"><div className="ls-empty">Scores will appear here when games begin.</div></div>
       ) : (
         <div className="ls-board" aria-live="polite">
-          {ordered.featured.map((m, i) => (
-            <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
-                       featured isYours={i === 0 && !!userFranchiseId} onOpen={() => setSelected(m)} />
-          ))}
+          {/* Doubleheader (2 games): side by side in the faceoff format.
+              Single game: one full-width row. */}
+          {ordered.featured.length > 1 ? (
+            <div className="ls-dh">
+              {ordered.featured.map((m, i) => (
+                <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
+                           featured variant="faceoff" isYours={i === 0 && !!userFranchiseId}
+                           onOpen={() => setSelected(m)} />
+              ))}
+            </div>
+          ) : (
+            ordered.featured.map((m) => (
+              <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
+                         featured variant="row" isYours={!!userFranchiseId}
+                         onOpen={() => setSelected(m)} />
+            ))
+          )}
           {ordered.rest.map((m) => (
             <ScoreCard key={`${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
                        featured={false} isYours={false} onOpen={() => setSelected(m)} />

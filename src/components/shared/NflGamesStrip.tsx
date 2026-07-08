@@ -1,9 +1,16 @@
 /**
- * NflGamesStrip — the real-world context rail above the fantasy scoreboard.
+ * NflGamesStrip — a self-contained, reusable rail of live NFL games.
  *
- * Shows every NFL game this week with score, quarter/clock, and possession,
- * from /api/nfl-scoreboard (ESPN). Fetches on mount and polls on the same
- * cadence as the fantasy scores while games are live.
+ * Shows every NFL game for a week with score, quarter/clock, and possession,
+ * from /api/nfl-scoreboard (ESPN). Fetches on mount and polls while games are
+ * live. Fully namespaced (.nfl-strip__*) with its own stylesheet
+ * (src/styles/nfl-games-strip.css) so it can be dropped on any page — just
+ * render the island and import the stylesheet.
+ *
+ * @example
+ *   import NflGamesStrip from '../../components/shared/NflGamesStrip';
+ *   import '../../styles/nfl-games-strip.css';
+ *   <NflGamesStrip client:visible week={week} year={year} isLive={isLive} />
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,6 +21,18 @@ const POLL_LIVE = 60_000;
 
 const nflLogoUrl = (code: string) => (code ? `/assets/nfl-logos/${normalizeTeamCode(code)}.svg` : '');
 
+export interface NflGamesStripProps {
+  week: number;
+  year: number;
+  /** Poll for updates while true (games in progress). */
+  isLive?: boolean;
+  /** Optional heading; pass null to hide it. */
+  label?: string | null;
+  /** Demo mode: render initialGames and skip the live fetch. */
+  demo?: boolean;
+  initialGames?: NflGame[];
+}
+
 function GameCard({ game }: { game: NflGame }) {
   const live = game.state === 'in';
   const pre = game.state === 'pre';
@@ -22,33 +41,31 @@ function GameCard({ game }: { game: NflGame }) {
     const t = game[side];
     const hasPoss = live && game.possession && game.possession === t.code;
     return (
-      <div className="ls-gteam">
-        {t.code && <img className="ls-glogo" src={nflLogoUrl(t.code)} alt="" loading="lazy" />}
-        <span className="ls-gcode">{t.code || 'TBD'}</span>
-        {hasPoss && <span className="ls-gposs" aria-label="has possession">●</span>}
-        <span className="ls-gscore">{pre ? '' : t.score}</span>
+      <div className="nfl-game__team">
+        {t.code && <img className="nfl-game__logo" src={nflLogoUrl(t.code)} alt="" loading="lazy" />}
+        <span className="nfl-game__code">{t.code || 'TBD'}</span>
+        {hasPoss && <span className="nfl-game__poss" aria-label="has possession">●</span>}
+        <span className="nfl-game__score">{pre ? '' : t.score}</span>
       </div>
     );
   };
 
   return (
-    <article className={`ls-gcard ${game.state}`}>
+    <article className={`nfl-game ${game.state}`}>
       {teamLine('away')}
       {teamLine('home')}
-      <footer className="ls-gfoot">
+      <footer className="nfl-game__foot">
         {live ? (
-          <span className="ls-glive"><span className="ls-dot live" />{game.shortDetail || `Q${game.period} ${game.clock}`}</span>
+          <span className="nfl-game__live"><span className="nfl-dot" />{game.shortDetail || `Q${game.period} ${game.clock}`}</span>
         ) : (
-          <span className="ls-gpre">{game.state === 'post' ? 'Final' : game.shortDetail}</span>
+          <span className="nfl-game__pre">{game.state === 'post' ? 'Final' : game.shortDetail}</span>
         )}
       </footer>
     </article>
   );
 }
 
-export default function NflGamesStrip({ week, year, isLive, demo, initialGames }: {
-  week: number; year: number; isLive: boolean; demo?: boolean; initialGames?: NflGame[];
-}) {
+export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games', demo, initialGames }: NflGamesStripProps) {
   const [games, setGames] = useState<NflGame[]>(initialGames ?? []);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -81,9 +98,9 @@ export default function NflGamesStrip({ week, year, isLive, demo, initialGames }
   const sorted = [...games].sort((a, b) => order[a.state] - order[b.state]);
 
   return (
-    <section className="ls-nfl-strip" aria-label="NFL games">
-      <span className="ls-strip-label">NFL Games</span>
-      <div className="ls-strip-rail">
+    <section className="nfl-strip" aria-label={label ?? 'NFL games'}>
+      {label && <span className="nfl-strip__label">{label}</span>}
+      <div className="nfl-strip__rail">
         {sorted.map((g) => <GameCard key={g.id} game={g} />)}
       </div>
     </section>

@@ -80,7 +80,7 @@ const game = (
   possession, date: '',
 });
 
-export function getLiveScoringSample(): LiveScoringSample {
+export function getLiveScoringSample(opts: { doubleheader?: boolean } = {}): LiveScoringSample {
   const players: Record<string, LivePlayerRow[]> = {};
   const playerMeta: Record<string, PlayerMeta> = {};
   const scores: Record<string, number> = {};
@@ -105,13 +105,22 @@ export function getLiveScoringSample(): LiveScoringSample {
     playersYetToPlay[fid] = rows.filter((r) => r.secondsRemaining >= 3600).length;
   }
 
+  // Doubleheader demo: franchise 0001 plays two games this week.
+  const matchups = opts.doubleheader
+    ? [
+        { home: '0001', away: '0015' },
+        { home: '0001', away: '0006' },
+        { home: '0004', away: '0012' },
+      ]
+    : [
+        { home: '0001', away: '0015' },
+        { home: '0006', away: '0011' },
+        { home: '0004', away: '0012' },
+      ];
+
   return {
     week: 15,
-    matchups: [
-      { home: '0001', away: '0015' },
-      { home: '0006', away: '0011' },
-      { home: '0004', away: '0012' },
-    ],
+    matchups,
     scores,
     remaining,
     players,

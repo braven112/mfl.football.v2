@@ -10,8 +10,10 @@ import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
 import { getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
-import type { LiveScoringPageProps } from '../../types/live-scoring';
+import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
+import '../../styles/nfl-games-strip.css';
 
 // Live-fetch on every request — scores must never be cached.
 export const prerender = false;
@@ -41,11 +43,14 @@ const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as 
 // validated in the offseason when the live feed is empty. Real usage never
 // hits this branch.
 const demo = Astro.url.searchParams.get('demo') === '1';
+const demoDoubleheader = Astro.url.searchParams.get('dh') === '1';
 
 let islandProps: LiveScoringPageProps;
+let nflGames: NflGame[] | undefined;
 
 if (demo) {
-  const sample = getLiveScoringSample();
+  const sample = getLiveScoringSample({ doubleheader: demoDoubleheader });
+  nflGames = sample.nflGames;
   islandProps = {
     week: sample.week,
     year,
@@ -101,6 +106,10 @@ if (demo) {
 <TheLeagueLayout title="Live Scoring">
   <div class="ls-page">
     <LiveScoreboard client:load {...islandProps} />
+    <div class="ls-page-strip">
+      <NflGamesStrip client:visible week={islandProps.week} year={year}
+                     isLive={demo ? false : isLive} demo={demo} initialGames={nflGames} />
+    </div>
   </div>
 </TheLeagueLayout>
 
@@ -109,5 +118,8 @@ if (demo) {
     max-width: var(--container-max-width);
     margin: 0 auto;
     padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+  }
+  .ls-page-strip {
+    margin-top: var(--spacing-2xl);
   }
 </style>
