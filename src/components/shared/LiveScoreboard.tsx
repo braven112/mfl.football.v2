@@ -27,7 +27,7 @@ import {
   winProbability,
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import { getNflTeamColors, pickBrandAccent, mixHex } from '../../utils/nfl-team-colors';
 import NflGamesStrip from './NflGamesStrip';
 
 const POLL_LIVE = 60_000;
@@ -125,6 +125,26 @@ const teamColor = (team: string) => getNflTeamColors(team).primary;
 
 const fmt = (n: number) => n.toFixed(1);
 
+/** Perceived luminance (0–255) of a #rrggbb color. */
+function luminance(hex: string): number {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+  const v = m ? parseInt(m[1], 16) : 0x1c497c;
+  return 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255);
+}
+
+/**
+ * A team color darkened just enough to carry white text as a solid/gradient
+ * fill (the light-mode "saturated hero" treatment). Reuses pickBrandAccent —
+ * which already pulls very light brand colors down — then keeps nudging toward
+ * a deep base until white text is comfortably legible.
+ */
+function saturatedBg(color: string): string {
+  let c = pickBrandAccent(color);
+  let guard = 0;
+  while (luminance(c) > 150 && guard++ < 6) c = mixHex(c, '#0b1220', 0.18);
+  return c;
+}
+
 interface TeamCalc {
   live: number;
   projectedFinal: number;
@@ -212,7 +232,8 @@ function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
   );
 
   return (
-    <button className={`ls-card${featured ? ' feat' : ''}`} style={{ ['--th' as any]: th, ['--ta' as any]: ta }}
+    <button className={`ls-card${featured ? ' feat' : ''}`}
+            style={{ ['--th' as any]: th, ['--ta' as any]: ta, ['--th-solid' as any]: saturatedBg(th), ['--ta-solid' as any]: saturatedBg(ta) }}
             onClick={onOpen} aria-label={`Open ${H?.name} vs ${A?.name}`}>
       <div className="ls-card-head">
         {calc.isFinal
@@ -308,7 +329,7 @@ function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }:
   const matchupMoments = moments.filter((m) => m.fid === matchup.home || m.fid === matchup.away).slice(0, 8);
 
   return (
-    <div className="ls-detail" style={{ ['--th' as any]: th, ['--ta' as any]: ta }}>
+    <div className="ls-detail" style={{ ['--th' as any]: th, ['--ta' as any]: ta, ['--th-solid' as any]: saturatedBg(th), ['--ta-solid' as any]: saturatedBg(ta) }}>
       <button className="ls-back" onClick={onBack}>← All matchups</button>
       <div className="ls-scorehead">
         <div className="ls-mx-team home">

@@ -340,6 +340,54 @@
 .ls-m-txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
 .ls-m-pts { font-family: var(--font-display); font-weight: var(--font-weight-bold); color: var(--ls-boom); font-variant-numeric: tabular-nums; }
 
+/* ══════════════════════════════════════════════════════════════
+   LIGHT MODE — saturated team-color cards with white text, mirroring
+   the light-mode composite heroes. Team colors are darkened to
+   --th-solid / --ta-solid in the island (via pickBrandAccent) so white
+   text stays legible even on light franchise colors. Dark mode keeps
+   its subtle wash on --card-surface (defined above).
+   ══════════════════════════════════════════════════════════════ */
+html:not(.dark) .ls-card {
+  background: linear-gradient(100deg,
+    var(--th-solid, var(--th)) 0%, var(--th-solid, var(--th)) 42%,
+    var(--ta-solid, var(--ta)) 58%, var(--ta-solid, var(--ta)) 100%);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+html:not(.dark) .ls-card:hover { border-color: rgba(255, 255, 255, 0.42); }
+html:not(.dark) .ls-card .ls-tname,
+html:not(.dark) .ls-card .ls-score { color: rgba(255, 255, 255, 0.82); }
+html:not(.dark) .ls-card .ls-team.lead .ls-tname,
+html:not(.dark) .ls-card .ls-team.lead .ls-score { color: #fff; }
+html:not(.dark) .ls-card .ls-proj { color: rgba(255, 255, 255, 0.7); }
+html:not(.dark) .ls-card .ls-rem { color: rgba(255, 255, 255, 0.8); }
+html:not(.dark) .ls-card .ls-your { color: #fff; }
+html:not(.dark) .ls-card .ls-badge.live { color: #fff; background: rgba(255, 255, 255, 0.2); }
+html:not(.dark) .ls-card .ls-badge.final { color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.18); }
+html:not(.dark) .ls-card .ls-card-foot { color: rgba(255, 255, 255, 0.8); border-top-color: rgba(255, 255, 255, 0.22); }
+html:not(.dark) .ls-card .ls-open { color: #fff; }
+/* win-prob reads as white (home) vs shadow (away) on any saturated color */
+html:not(.dark) .ls-card .ls-wp-track { background: rgba(255, 255, 255, 0.24); }
+html:not(.dark) .ls-card .ls-wp-home { background: #fff; }
+html:not(.dark) .ls-card .ls-wp-away { background: rgba(0, 0, 0, 0.34); }
+html:not(.dark) .ls-card .ls-wp-mid { background: rgba(255, 255, 255, 0.85); }
+html:not(.dark) .ls-card .ls-wp-l,
+html:not(.dark) .ls-card .ls-wp-r { color: #fff; }
+html:not(.dark) .ls-card .ls-wp-tag { color: rgba(255, 255, 255, 0.72); }
+
+/* detail header band — same saturated treatment */
+html:not(.dark) .ls-scorehead {
+  background: linear-gradient(100deg,
+    var(--th-solid, var(--th)) 0%, var(--th-solid, var(--th)) 40%,
+    var(--ta-solid, var(--ta)) 60%, var(--ta-solid, var(--ta)) 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+html:not(.dark) .ls-scorehead .ls-mx-tn b,
+html:not(.dark) .ls-scorehead .ls-mx-total { color: #fff; }
+html:not(.dark) .ls-scorehead .ls-mx-tn em,
+html:not(.dark) .ls-scorehead .ls-mx-projline { color: rgba(255, 255, 255, 0.82); }
+html:not(.dark) .ls-scorehead .ls-mx-live { color: #fff; }
+
 @media (max-width: 760px) {
   .ls-scorehead { gap: 0.5rem; padding: 0.8rem; }
   .ls-mx-total { font-size: 1.9rem; }
