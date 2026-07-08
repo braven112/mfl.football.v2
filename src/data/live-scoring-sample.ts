@@ -80,6 +80,58 @@ const game = (
   possession, date: '',
 });
 
+// Player pool for the 10 franchises without a hand-authored roster, so a full
+// slate has realistic team totals + win probabilities. (Demo data — names need
+// not match each franchise's real roster; wrong ESPN ids fall back to the
+// team-color gradient.)
+const POOL: Array<[string, string, string, string]> = [
+  ['Patrick Mahomes', 'QB', 'KC', '3139477'],
+  ['Tyreek Hill', 'WR', 'MIA', '3116406'],
+  ['Saquon Barkley', 'RB', 'PHI', '3929630'],
+  ['A.J. Brown', 'WR', 'PHI', '4047646'],
+  ['Jahmyr Gibbs', 'RB', 'DET', '4429795'],
+  ['Jared Goff', 'QB', 'DET', '3046779'],
+  ['Josh Jacobs', 'RB', 'GB', '4047365'],
+  ['Jaylen Waddle', 'WR', 'MIA', '4372016'],
+  ['Derrick Henry', 'RB', 'BAL', '3043078'],
+  ['Travis Kelce', 'TE', 'KC', '15847'],
+  ['CeeDee Lamb', 'WR', 'DAL', '4241389'],
+  ['Bijan Robinson', 'RB', 'ATL', '4430807'],
+  ["Ja'Marr Chase", 'WR', 'CIN', '4362628'],
+  ['Puka Nacua', 'WR', 'LAR', '4426515'],
+  ['Amon-Ra St. Brown', 'WR', 'DET', '4374302'],
+  ['Christian McCaffrey', 'RB', 'SF', '3117251'],
+  ['Justin Jefferson', 'WR', 'MIN', '4262921'],
+  ['Lamar Jackson', 'QB', 'BAL', '3916387'],
+  ['Josh Allen', 'QB', 'BUF', '3918298'],
+  ['Jalen Hurts', 'QB', 'PHI', '4040715'],
+  ['Nico Collins', 'WR', 'HOU', '4258173'],
+];
+const EXTRA_TEAMS = ['0002', '0003', '0005', '0007', '0008', '0009', '0010', '0013', '0014', '0016'];
+
+// Full weekly slate (16 teams). Single game: round A (8 matchups). Doubleheader:
+// round A + round B (16 matchups) — every team, including yours, plays twice.
+const ROUND_A = [
+  { away: '0015', home: '0001' },
+  { away: '0002', home: '0003' },
+  { away: '0004', home: '0005' },
+  { away: '0006', home: '0007' },
+  { away: '0008', home: '0009' },
+  { away: '0010', home: '0011' },
+  { away: '0012', home: '0013' },
+  { away: '0014', home: '0016' },
+];
+const ROUND_B = [
+  { away: '0006', home: '0001' },
+  { away: '0003', home: '0004' },
+  { away: '0005', home: '0002' },
+  { away: '0007', home: '0008' },
+  { away: '0009', home: '0010' },
+  { away: '0011', home: '0012' },
+  { away: '0013', home: '0014' },
+  { away: '0016', home: '0015' },
+];
+
 export function getLiveScoringSample(opts: { doubleheader?: boolean } = {}): LiveScoringSample {
   const players: Record<string, LivePlayerRow[]> = {};
   const playerMeta: Record<string, PlayerMeta> = {};
@@ -88,7 +140,7 @@ export function getLiveScoringSample(opts: { doubleheader?: boolean } = {}): Liv
   const playersYetToPlay: Record<string, number> = {};
 
   let n = 0;
-  for (const [fid, name, pos, team, espnId, live, projected, sec] of ROSTERS) {
+  const addStarter = (fid: string, name: string, pos: string, team: string, espnId: string, live: number, projected: number, sec: number) => {
     const id = `demo${++n}`;
     playerMeta[id] = {
       id, name, position: pos, nflTeam: team,
@@ -97,7 +149,22 @@ export function getLiveScoringSample(opts: { doubleheader?: boolean } = {}): Liv
       projected,
     };
     (players[fid] ??= []).push({ id, live, secondsRemaining: sec, status: 'starter' });
+  };
+
+  for (const [fid, name, pos, team, espnId, live, projected, sec] of ROSTERS) {
+    addStarter(fid, name, pos, team, espnId, live, projected, sec);
   }
+
+  // Lightweight 3-man rosters for the remaining franchises (deterministic).
+  EXTRA_TEAMS.forEach((fid, t) => {
+    for (let i = 0; i < 3; i++) {
+      const p = POOL[(t * 3 + i) % POOL.length];
+      const live = 6 + ((t * 5 + i * 9) % 24);
+      const projected = live + 3 + ((t + i * 2) % 12);
+      const sec = [0, 1800, 3600][(t + i) % 3];
+      addStarter(fid, p[0], p[1], p[2], p[3], live, projected, sec);
+    }
+  });
 
   for (const [fid, rows] of Object.entries(players)) {
     scores[fid] = Number(rows.reduce((s, r) => s + r.live, 0).toFixed(1));
@@ -105,18 +172,7 @@ export function getLiveScoringSample(opts: { doubleheader?: boolean } = {}): Liv
     playersYetToPlay[fid] = rows.filter((r) => r.secondsRemaining >= 3600).length;
   }
 
-  // Doubleheader demo: franchise 0001 plays two games this week.
-  const matchups = opts.doubleheader
-    ? [
-        { home: '0001', away: '0015' },
-        { home: '0001', away: '0006' },
-        { home: '0004', away: '0012' },
-      ]
-    : [
-        { home: '0001', away: '0015' },
-        { home: '0006', away: '0011' },
-        { home: '0004', away: '0012' },
-      ];
+  const matchups = opts.doubleheader ? [...ROUND_A, ...ROUND_B] : ROUND_A;
 
   return {
     week: 15,
