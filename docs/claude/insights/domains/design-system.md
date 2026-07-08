@@ -1422,6 +1422,27 @@ Any raw `--afl-navy`/`--afl-gold`-style brand constant used as *text* (not a
 background/border/accent) should be double-checked against dark mode — these
 brand hexes are fixed, not part of the inverted token ramp.
 
+**Same family, TheLeague side (2026-07-08):** the Schefter Ops admin dashboard
+(`src/pages/theleague/admin/schefter.astro`) had the identical bug — its whole palette
+runs on `--color-surface`, `--color-surface-alt`, `--color-text`,
+`--color-text-muted`, `--color-border`, `--color-accent`, none of which are
+defined in `tokens.css`/`tokens-dark.css`, so every card baked in a light
+fallback and stayed white in dark mode while the body's inherited `--page-text`
+went light on top (light-on-white, unreadable). **Fix technique — container
+remap, not call-site rewrite:** when a page consistently reads *one family* of
+undefined local tokens (dozens of `var()` sites), you don't have to touch each
+site. Define those locals once at the page-root under
+`:global(html.dark) .page-root { --color-surface: var(--content-bg); … }` —
+custom properties inherit, so every descendant `var(--color-surface, …)`
+resolves the dark value and light mode is untouched (the block is
+`html.dark`-scoped, so the fallback still fires there). Only the handful of
+spots that hardcoded a literal (`background: white` code chips, `#f1f5f9` bar
+track, an amber-50 callout) still need their own `:global(html.dark)` override.
+Local→real mapping used: `--color-surface`→`--content-bg`,
+`--color-surface-alt`→`--content-bg-muted`, `--color-text`→`--color-text-primary`,
+`--color-text-muted`→`--content-text-muted`, `--color-border`→`--color-border-default`,
+`--color-accent`→`--color-primary`.
+
 **Third pattern:** hardcoded per-button hex trios like
 `background:#fff; color:#c41e3a; border:1px solid #c41e3a;` with a hover that
 hardcodes a hand-picked darker shade (`#a01830`, `#a31a31`) — convert the base
