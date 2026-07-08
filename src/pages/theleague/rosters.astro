@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
 import { getActiveTeams, getCurrentIconPath, getCurrentBannerPath } from '../../utils/league-assets';
@@ -2158,6 +2159,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 ---
 
 <TheLeagueLayout title="Team Rosters">
+  <CollegeLogoDarkStyles />
   <section class="roster-page">
     <!-- Team Header Card (separate from content) -->
       <div class="team-card" data-team-identity>

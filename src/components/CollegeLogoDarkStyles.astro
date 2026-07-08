@@ -1,0 +1,21 @@
+---
+/**
+ * Dark-mode college logo swap styles.
+ *
+ * Rendered on the pages that show college logos (players, rosters) — NOT in
+ * the shared layout, because the rule set is large (~236 schools) and college
+ * logos appear on only those pages. A <style> tag applies document-wide
+ * wherever it sits, so dropping this inside the page body swaps every college
+ * <img> (server-rendered or built client-side) to ESPN's 500-dark cut under
+ * `html.dark`.
+ *
+ * Intentionally CSS-only: with theme preference 'auto' the server cannot know
+ * the resolved theme (see src/utils/college-logo-dark-css.ts for the full
+ * rationale).
+ */
+import { buildCollegeLogoDarkCss } from '../utils/college-logo-dark-css';
+
+const css = buildCollegeLogoDarkCss();
+---
+
+{css && <style is:inline set:html={css} />}

@@ -2,6 +2,14 @@
   "weekOf": "2026-07-13",
   "changes": [
     {
+      "date": "2026-07-07",
+      "type": "style-tweak",
+      "summary": "Team logos now dress for the dark. Marks with black outlines — the Raiders shield, the Steelers hypocycloids, the Jets, North Carolina's navy interlock — used to all but vanish against a dark background, a smudge where a logo should be. In dark mode every NFL logo across the site (matchup heroes, the composite banners, roster player rows) now swaps to its dark-optimized cut, outline flipped to white so the crest actually reads, and the college logos in the Free Agents and roster player tables get the same treatment. Light mode is untouched, and the switch follows your theme toggle in real time.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
       "date": "2026-07-06",
       "type": "style-tweak",
       "summary": "The \"Completed auctions report\" link on the homepage auctions card now stays in one piece. It had been breaking mid-phrase — \"Completed\" clinging to the end of one line while \"auctions report\" dropped to the next — so the whole link now wraps to a fresh line together when it runs out of room.",

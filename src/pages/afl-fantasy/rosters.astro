@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
@@ -645,6 +646,7 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
+  <CollegeLogoDarkStyles />
   <section class="roster-page" data-initial-view={initialView}>
     <!-- Team Header Card -->
     <div class="team-card" data-team-identity>

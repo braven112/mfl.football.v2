@@ -52,6 +52,50 @@ copied for future bot use, not referenced by config yet.
 and validates every `iconDark` in either config points at a real file under
 `public/` next to a real light icon.
 
+---
+
+## 2026-07-07 - Same swap extended to external ESPN NFL + college logos
+
+**Context:** NFL team logos (Raiders, Steelers, Jets, etc.) and NCAA college
+logos have dark outlines that vanish on dark backgrounds. ESPN publishes a
+dark-optimized cut of every logo at the same CDN path with `500-dark` swapped
+for `500` (`.../teamlogos/nfl/500-dark/{CODE}.png`,
+`.../teamlogos/ncaa/500-dark/{id}.png`).
+
+**Reused the exact team-icon pattern** — `html.dark img[src="<light>"] { content:
+url("<dark>") }`, one generated stylesheet, zero call-site changes:
+- `src/utils/nfl-logo-dark-css.ts` + `NflLogoDarkStyles.astro` — 32 teams × 2
+  srcs (ESPN `500` PNG from `getNFLTeamLogo`, and the local
+  `/assets/nfl-logos/{CODE}.svg` from `getNflLogoUrl`), both → ESPN `500-dark`.
+- `src/utils/college-logo-dark-css.ts` + `CollegeLogoDarkStyles.astro` — reads
+  the `logo`/`logoDark` pair already in `src/data/college-logos.json`, deduped
+  by light src (name-spelling variants share one ESPN logo → ~236 distinct).
+
+**Scope decision — global vs per-page:** NFL logos appear in heroes across the
+whole site → `NflLogoDarkStyles` goes in `TheLeagueLayout` head like the team
+icons (~8.6 KB). College logos appear on only 3 pages (players + both rosters)
+and the rule set is ~35 KB → `CollegeLogoDarkStyles` is rendered in those
+pages' bodies instead (a `<style>` applies document-wide wherever it sits, so
+page-scoping costs no coverage). Rule of thumb: global only if the asset
+renders sitewide; otherwise page-scope to avoid inlining a big block everywhere.
+
+**Works for client-built markup too:** the players table injects college
+`<img>` via template strings client-side; the attribute selector still matches,
+because it's a global stylesheet, not tied to SSR output.
+
+**Gotcha (not the swap — the dev server):** verifying this cost ~1hr because a
+stale Astro cache made new components render empty and new routes 404. Clearing
+`node_modules/.vite` is NOT enough — you must also clear `.astro/` and
+`node_modules/.astro/` (`rm -rf` is permission-denied here; use
+`find <dir> -mindepth 1 -delete`). The `preview_start`-managed server kept
+serving a stale build regardless; a directly-launched `pnpm exec astro dev
+--port <uniq>` + `curl` was the only reliable verification. See the
+`dev-stale-css-gotchas` memory.
+
+**Tests:** `tests/nfl-logo-dark-css.test.ts`, `tests/college-logo-dark-css.test.ts`.
+
+---
+
 **Branch prereq gotcha:** the committed `claude/stoic-gauss-85d450` Header
 imports `utils/theme-preference` and `components/ThemeToggle.astro`, which
 were UNCOMMITTED in that worktree — the branch alone didn't build. This branch
