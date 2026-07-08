@@ -443,7 +443,15 @@ if (userRow) {
       padding-right: 0.375rem;
     }
 
-    /* Safety net: truncate a team name if it ever can't fit its column. */
+    /* Latent truncation guard. Note this only actually clips if the cell is
+       ever given a definite width: in the current `table-layout: auto` table
+       the `max-width: 100%` resolves against a content-derived width and is a
+       no-op, so long names would widen the column rather than ellipsize. Kept
+       for parity with the sibling card (whose span rule is likewise a no-op —
+       see the 2026-07-07 frontend insight); Premier League names are short so
+       there's no overflow today. If overflow ever appears, switch this table
+       to `table-layout: fixed` with sized columns or give the cell a concrete
+       cap — do NOT rely on this rule as-is. */
     .afl-tiers__td--team > span:first-child {
       display: inline-block;
       max-width: 100%;
