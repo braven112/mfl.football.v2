@@ -7,7 +7,8 @@ import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
-import { assembleLiveScoringData, type ConfigTeam } from '../../utils/live-scoring-data';
+import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
+import { getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import type { LiveScoringPageProps } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
@@ -36,34 +37,65 @@ const authUser = getAuthUser(Astro.request);
 const userFranchiseId = authUser?.franchiseId;
 const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
 
-const data = await assembleLiveScoringData({
-  siteUrl: Astro.url,
-  week,
-  year,
-  leagueId: league.leagueId,
-  host: league.host,
-  dataPath: league.dataPath,
-  configTeams,
-  userFranchiseId,
-});
+// Demo/sample mode (?demo=1): render a bundled snapshot so the page can be
+// validated in the offseason when the live feed is empty. Real usage never
+// hits this branch.
+const demo = Astro.url.searchParams.get('demo') === '1';
 
-const islandProps: LiveScoringPageProps = {
-  week,
-  year,
-  leagueId: league.leagueId,
-  host: league.host,
-  slug: league.slug,
-  isLive,
-  gameWindow: daily.gameWindow,
-  userFranchiseId,
-  matchups: data.matchups,
-  teams: data.teams,
-  playerMeta: data.playerMeta,
-  initialScores: data.scores,
-  initialRemaining: data.remaining,
-  initialPlayers: data.players,
-  initialYetToPlay: data.playersYetToPlay,
-};
+let islandProps: LiveScoringPageProps;
+
+if (demo) {
+  const sample = getLiveScoringSample();
+  islandProps = {
+    week: sample.week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    slug: league.slug,
+    isLive: false, // don't poll — the live feed would overwrite the sample
+    gameWindow: daily.gameWindow,
+    userFranchiseId: userFranchiseId ?? '0001',
+    matchups: sample.matchups,
+    teams: buildTeamsMap(configTeams),
+    playerMeta: sample.playerMeta,
+    initialScores: sample.scores,
+    initialRemaining: sample.remaining,
+    initialPlayers: sample.players,
+    initialYetToPlay: sample.playersYetToPlay,
+    demo: true,
+    initialNflGames: sample.nflGames,
+    initialMoments: sample.moments,
+  };
+} else {
+  const data = await assembleLiveScoringData({
+    siteUrl: Astro.url,
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    dataPath: league.dataPath,
+    configTeams,
+    userFranchiseId,
+  });
+
+  islandProps = {
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    slug: league.slug,
+    isLive,
+    gameWindow: daily.gameWindow,
+    userFranchiseId,
+    matchups: data.matchups,
+    teams: data.teams,
+    playerMeta: data.playerMeta,
+    initialScores: data.scores,
+    initialRemaining: data.remaining,
+    initialPlayers: data.players,
+    initialYetToPlay: data.playersYetToPlay,
+  };
+}
 ---
 
 <TheLeagueLayout title="Live Scoring">

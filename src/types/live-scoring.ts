@@ -129,4 +129,20 @@ export interface LiveScoringPageProps {
   initialRemaining?: Record<string, number>;
   initialPlayers?: Record<string, LivePlayerRow[]>;
   initialYetToPlay?: Record<string, number>;
+  /** Demo/sample mode (?demo=1): render bundled sample data, no polling. */
+  demo?: boolean;
+  /** Sample NFL games for the strip in demo mode (skips the live fetch). */
+  initialNflGames?: NflGame[];
+  /** Seed scoring-moments in demo mode. */
+  initialMoments?: LiveMomentSeed[];
+}
+
+/** A pre-baked scoring moment (demo mode); mirrors the island's live Moment. */
+export interface LiveMomentSeed {
+  key: string;
+  fid: string;
+  name: string;
+  team: string;
+  delta: number;
+  clock: string;
 }

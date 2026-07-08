@@ -46,8 +46,10 @@ function GameCard({ game }: { game: NflGame }) {
   );
 }
 
-export default function NflGamesStrip({ week, year, isLive }: { week: number; year: number; isLive: boolean }) {
-  const [games, setGames] = useState<NflGame[]>([]);
+export default function NflGamesStrip({ week, year, isLive, demo, initialGames }: {
+  week: number; year: number; isLive: boolean; demo?: boolean; initialGames?: NflGame[];
+}) {
+  const [games, setGames] = useState<NflGame[]>(initialGames ?? []);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -65,11 +67,12 @@ export default function NflGamesStrip({ week, year, isLive }: { week: number; ye
   }, [week, year]);
 
   useEffect(() => {
+    if (demo) return; // sample data provided; don't hit the live feed
     load();
     if (!isLive) return;
     intervalRef.current = setInterval(load, POLL_LIVE);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [load, isLive]);
+  }, [load, isLive, demo]);
 
   if (games.length === 0) return null;
 

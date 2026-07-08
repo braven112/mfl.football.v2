@@ -382,9 +382,10 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   const [selected, setSelected] = useState<MatchupPairing | null>(null);
 
   // Scoring moments: diff each starter's live points across polls and surface
-  // notable jumps. Self-contained — no play-by-play feed needed.
+  // notable jumps. Self-contained — no play-by-play feed needed. In demo mode
+  // they're seeded from the sample so the feed is visible without polling.
   const prevLives = useRef<Record<string, number>>({});
-  const [moments, setMoments] = useState<Moment[]>([]);
+  const [moments, setMoments] = useState<Moment[]>(props.initialMoments ?? []);
   useEffect(() => {
     const prev = prevLives.current;
     const fresh: Moment[] = [];
@@ -448,7 +449,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   return (
     <div className="ls-root">
       <div className="ls-head">
-        <h1>Live Scoring</h1>
+        <h1>Live Scoring{props.demo && <span className="ls-sample-badge">Sample data</span>}</h1>
         <div className="ls-head-right">
           <label className="ls-weeksel">
             <span className="ls-weeksel-lbl">Week</span>
@@ -458,11 +459,11 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
               ))}
             </select>
           </label>
-          {anyLive && <span className="ls-status live"><span className="ls-dot live" />Live</span>}
+          {(anyLive || props.demo) && <span className="ls-status live"><span className="ls-dot live" />Live</span>}
         </div>
       </div>
 
-      <NflGamesStrip week={week} year={props.year} isLive={props.isLive} />
+      <NflGamesStrip week={week} year={props.year} isLive={props.isLive} demo={props.demo} initialGames={props.initialNflGames} />
 
       {matchups.length === 0 ? (
         <div className="ls-card"><div className="ls-empty">Scores will appear here when games begin.</div></div>
