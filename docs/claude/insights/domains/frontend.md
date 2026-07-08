@@ -709,3 +709,37 @@ heads/tails deterministically — the four coin-flip cases live in
 tell *which* What's New entry is currently in the hero, so a homepage "What's
 New" list (`WhatsNewRow` with `excludeId`) can skip it and avoid showing the
 same story twice on one screen.
+
+---
+
+## The 404 page can tell which league's domain was hit — via the path, not the host (2026-07-08)
+
+**Context:** Making `src/pages/404.astro` route its "get me home" CTA to the
+homepage of whichever domain 404'd (afl-fantasy.com → AFL, theleague.us → The
+League), and be dark-mode correct.
+
+**Insight:** A visitor to `afl-fantasy.com/badpage` never reaches a route named
+`/badpage`. `src/middleware.ts` runs first: for a league apex host it calls
+`resolveLeagueRewrite(hostname, pathname)` which prefixes the slug
+(`/badpage` → `/afl-fantasy/badpage`) via `context.rewrite()`. Only then does
+Astro fail to match and fall through to `404.astro`. So inside the 404 page,
+`Astro.url.pathname` already carries the league slug, and
+`getLeagueByPath(Astro.url.pathname)` (the same resolver `getLeagueContext`
+uses — it's **path-only**, never reads the host) resolves the right league on
+apex hosts *and* on localhost `/afl-fantasy/*` deep links, defaulting to The
+League for unprefixed paths. `HOST_TO_SLUG[Astro.url.hostname]` is an optional
+belt-and-suspenders primary check, but the middleware rewrite makes path-based
+resolution sufficient on its own. For the CTA href, route through
+`resolveLeaguePath('/' + slug, Astro.locals.hideLeaguePrefix)` — on the apex
+host `hideLeaguePrefix` is true (middleware sets it) so `/afl-fantasy` collapses
+to the clean `/` homepage; off-apex it stays `/afl-fantasy`. `output: 'server'`
+means 404.astro renders at request time, so `Astro.url`/`Astro.locals` are live.
+
+**Gotcha (the original bug):** the old 404 hard-coded `color: #333`/`#666` on
+its `<h2>`/`<p>`. The gray-scale tokens (`--color-gray-500/600/900`) invert
+between light and dark, so binding text to them is the fix — hard-coded hex on
+any page silently breaks in dark mode.
+
+**Evidence:** `src/pages/404.astro`, `src/middleware.ts`,
+`src/utils/league-host-map.ts#resolveLeagueRewrite`,
+`src/utils/league-context.ts#getLeagueContext`, `src/utils/nav-utils.ts#resolveLeaguePath`.
