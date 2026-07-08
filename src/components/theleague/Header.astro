@@ -52,7 +52,12 @@ const year = (Astro.props.year || envYear).toString();
 // This ensures the correct host and leagueId are always used.
 const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
 const submitLineupUrl = isAFL ? '/afl-fantasy/lineup' : '/theleague/lineup';
-const addDropUrl = `https://${league.host}/${year}/add_drop?L=${league.leagueId}`;
+// TheLeague promotes the internal Free Agents page as the primary way to add a
+// player. AFL has no internal free-agent page yet, so it keeps the MFL add/drop
+// link until that page ships.
+const addDropUrl = isAFL
+  ? `https://${league.host}/${year}/add_drop?L=${league.leagueId}`
+  : resolveLeaguePath("/theleague/players", hideLeaguePrefix);
 const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 ---
 
@@ -157,11 +162,11 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
             </svg>
             <span class="nav-label">Set Lineup</span>
           </a>
-          <a href={addDropUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Add/drop">
+          <a href={addDropUrl} class="nav-icon-link" {...(isAFL ? { target: "_blank", rel: "noopener noreferrer" } : {})} title="Free Agents">
             <svg class="nav-icon" aria-hidden="true">
               <use href={`${spriteUrl}#icon-plus`}></use>
             </svg>
-            <span class="nav-label">Add/drop</span>
+            <span class="nav-label">Free Agents</span>
           </a>
           <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/standings" : "/theleague/standings", hideLeaguePrefix)} class="nav-icon-link" title="Standings">
             <svg class="nav-icon" aria-hidden="true">
