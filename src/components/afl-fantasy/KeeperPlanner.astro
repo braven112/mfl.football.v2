@@ -1320,6 +1320,206 @@ const roundLabel = (round: string) => {
     gap: 0.5rem;
   }
 
+  /* ──────────────────────────────────────────────────────────────
+     Dark mode
+     Everything above is light-only (hardcoded hex). These overrides
+     re-skin every surface for html.dark. Structural surfaces pull the
+     themed tokens (AFL resolves them to its navy ramp); the green
+     "keep" / red "cut" semantics get explicit dark tints since no
+     single token carries them. Plain `html.dark` — NOT :global() —
+     because this whole block is already `is:global`, where :global()
+     ships as dead literal CSS.
+     ────────────────────────────────────────────────────────────── */
+  html.dark .kp-intro,
+  html.dark .kp-zone,
+  html.dark .kp-statusbar,
+  html.dark .kp-picks {
+    background: var(--card-bg, #1e1e1e);
+    box-shadow: 0 0 0 1px var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-intro__title {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-intro__copy,
+  html.dark .kp-status,
+  html.dark .kp-counter,
+  html.dark .kp-picks__count {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-zone__title,
+  html.dark .kp-picks__title {
+    color: var(--color-gray-700, #c0c0c0);
+  }
+
+  html.dark .kp-counter__sep {
+    color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-zone.is-drop-target {
+    outline-color: var(--league-accent, #ef5350);
+  }
+
+  /* Keeper zone at capacity — soft green wash, not the light mint. */
+  html.dark .kp-zone--full {
+    background: color-mix(in srgb, var(--color-success, #34d399) 12%, var(--card-surface, #16283c));
+  }
+
+  html.dark .kp-zone__icon--keep {
+    background: color-mix(in srgb, var(--color-success, #34d399) 20%, transparent);
+    color: var(--color-success-dark, #6ee7b7);
+  }
+
+  html.dark .kp-zone__icon--cut {
+    background: color-mix(in srgb, var(--color-error, #f87171) 20%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+  }
+
+  /* Slots */
+  html.dark .kp-slot {
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-slot--empty .kp-slot__hint {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-slot__num {
+    background: var(--content-bg-muted, #181818);
+    color: var(--content-text-muted, #8a8a8a);
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-slot--filled {
+    background: color-mix(in srgb, var(--color-success, #34d399) 14%, var(--card-surface, #16283c));
+    border-color: color-mix(in srgb, var(--color-success, #34d399) 45%, transparent);
+  }
+
+  html.dark .kp-slot--filled .kp-slot__num {
+    background: var(--color-secondary, #10b981);
+    color: #06281c;
+    border-color: var(--color-secondary, #10b981);
+  }
+
+  html.dark .kp-slot__name {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-slot__pos,
+  html.dark .kp-card__age {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  /* Status kinds */
+  html.dark .kp-status[data-kind="work"] {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-status[data-kind="ok"] {
+    color: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-status[data-kind="err"] {
+    color: var(--color-error, #f87171);
+  }
+
+  /* Action buttons */
+  html.dark .kp-btn--ghost {
+    color: var(--content-text-muted, #8a8a8a);
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-btn--ghost:hover:not(:disabled) {
+    background: var(--content-bg-accent, #2a2a2a);
+  }
+
+  html.dark .kp-btn--primary {
+    background: var(--color-secondary, #10b981);
+    color: #06281c;
+  }
+
+  html.dark .kp-btn--primary:hover:not(:disabled) {
+    background: var(--color-secondary-light, #34d399);
+  }
+
+  html.dark .kp-btn--danger {
+    background: var(--color-error, #f87171);
+    color: #2a0808;
+  }
+
+  html.dark .kp-btn--danger:hover:not(:disabled) {
+    background: var(--color-error-dark, #fca5a5);
+  }
+
+  /* Cut-pool cards */
+  html.dark .kp-card {
+    background: var(--card-surface, #16283c);
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-card:hover {
+    border-color: var(--league-accent, #ef5350);
+  }
+
+  html.dark .kp-card__ir-pill {
+    background: color-mix(in srgb, var(--color-error, #f87171) 20%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+  }
+
+  /* Draft-pick tiles */
+  html.dark .kp-picks__pick {
+    background: var(--content-bg-muted, #181818);
+    color: var(--color-gray-800, #d8d8d8);
+  }
+
+  html.dark .kp-picks__via {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  /* Finalize modal */
+  html.dark .kp-finalize__content {
+    background: var(--card-surface, #16283c);
+    box-shadow: 0 0 0 1px var(--content-border, #5f6885), 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  html.dark .kp-finalize__title {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-finalize__copy,
+  html.dark .kp-finalize__col h4,
+  html.dark .kp-finalize__progress-label {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-finalize__col ul {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-finalize__close {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-finalize__close:hover {
+    background: var(--content-bg-accent, #2a2a2a);
+  }
+
+  html.dark .kp-finalize__bar {
+    background: var(--content-bg-muted, #181818);
+  }
+
+  html.dark .kp-finalize__bar span {
+    background: var(--color-secondary, #10b981);
+  }
+
+  html.dark .kp-finalize__error {
+    background: color-mix(in srgb, var(--color-error, #f87171) 12%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 35%, transparent);
+  }
+
   @media (max-width: 720px) {
     .kp-slots {
       grid-template-columns: 1fr;
