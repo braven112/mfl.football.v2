@@ -14,7 +14,8 @@ import { getLeagueContext } from '../../utils/league-context';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 
 interface Props {
-  /** Strip /theleague prefix from links (true on theleague.us domain) */
+  /** Strip the active league's path prefix from links — true on either
+   *  league apex domain (theleague.us / afl-fantasy.com). */
   hideLeaguePrefix?: boolean;
 }
 
