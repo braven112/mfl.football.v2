@@ -4,6 +4,14 @@
     {
       "date": "2026-07-08",
       "type": "style-tweak",
+      "summary": "Wander off the map and you no longer hit a broken-looking dead end. The old 404 page had two lines of text hard-coded to near-black, so in dark mode \"Page Not Found\" all but disappeared into the void. The whole page got rebuilt as a Claude Schefter breaking-news alert instead: a red BREAKING banner, Schefter's mugshot on the byline, a giant 404, the headline \"Sources say this page doesn't exist,\" and a LIVE ticker scrolling league-flavored bulletins along the bottom (\"Developing: URL reportedly entered the transfer portal\"). Reads perfectly in both light and dark now, and instead of making you pick a league, one \"get me home\" button sends you straight back to the homepage of whichever site you wandered off of — lose your way on afl-fantasy.com and it points at AFL, on theleague.us it points at The League.",
+      "impact": "user",
+      "area": "site",
+      "league": "both"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "style-tweak",
       "summary": "The Premier League standings card on the AFL homepage stopped crowding its own headline on phones. Its \"Full standings\" link had been wedged into the top-right corner, sharing a cramped line with the title, while the American League playoff card right above it politely dropped its \"Full bracket\" link onto its own row on mobile. Now the two cards match: on phones the Premier League link tucks under the heading the same way, giving the title room to breathe.",
       "impact": "user",
       "area": "standings",

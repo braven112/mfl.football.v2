@@ -1,28 +1,95 @@
 ---
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug, getLeagueByPath } from '../config/leagues';
+import { HOST_TO_SLUG } from '../utils/league-host-map';
+import { resolveLeaguePath } from '../utils/nav-utils';
+
+// Route the "get me home" CTA to the homepage of whichever league's domain
+// the visitor 404'd on. The apex host is authoritative (afl-fantasy.com →
+// AFL); off-apex (localhost, previews) we fall back to the path prefix the
+// middleware rewrites in (/afl-fantasy/… → AFL). getLeagueByPath defaults to
+// The League for unprefixed paths.
+const hostSlug = HOST_TO_SLUG[Astro.url.hostname];
+const league =
+  (hostSlug && getLeagueBySlug(hostSlug)) || getLeagueByPath(Astro.url.pathname);
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const homeHref = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix);
+const homeLabel = `Back to ${league.name}`;
+
+// Chyron ticker lines — Schefter breaking-news voice. Duplicated in the
+// markup below so the marquee loops seamlessly.
+const tickerLines = [
+  '404: PAGE NOT FOUND',
+  'Sources: link fumbled at the goal line',
+  'Developing: URL reportedly entered the transfer portal',
+  'Per league sources, this page never made final cuts',
+  'BREAKING: nobody submitted this page into their starting lineup',
+];
 ---
 
 <TheLeagueLayout title="Page Not Found - 404">
   <section class="error-404">
-    <div class="error-404__content">
-      <h1>404</h1>
-      <h2>Page Not Found</h2>
-      <p>Sorry, you haven't submitted this page into your starting lineup.</p>
+    <article class="bn-card" aria-labelledby="bn-headline">
+      <!-- Alert strip -->
+      <header class="bn-card__strip">
+        <span class="bn-badge">
+          <span class="bn-badge__dot" aria-hidden="true"></span>
+          BREAKING
+        </span>
+        <span class="bn-card__slug">SCHEFTER REPORT</span>
+      </header>
 
-      <div class="error-404__links">
-        <a href="/theleague" class="btn btn--primary">
-          Go to The League
-        </a>
-        <a href="/afl-fantasy" class="btn btn--secondary">
-          Go to AFL
-        </a>
+      <div class="bn-card__body">
+        <!-- Byline -->
+        <div class="bn-byline">
+          <img
+            class="bn-byline__avatar"
+            src="/assets/claude-schefter-avatar.webp"
+            alt="Claude Schefter"
+            width="48"
+            height="48"
+            loading="eager"
+          />
+          <div class="bn-byline__meta">
+            <span class="bn-byline__name">Claude Schefter</span>
+            <span class="bn-byline__role">Senior League Insider · moments ago</span>
+          </div>
+        </div>
+
+        <p class="bn-code">404</p>
+        <h1 id="bn-headline" class="bn-headline">
+          Sources say this page doesn&rsquo;t exist.
+        </h1>
+        <p class="bn-lede">
+          Per multiple sources, the link you followed was waived, traded, or
+          never made the final roster. I&rsquo;ll update the second I hear
+          more &mdash; for now, get back in the game below.
+        </p>
+
+        <div class="bn-links">
+          <a href={homeHref} class="btn btn--primary">{homeLabel}</a>
+        </div>
       </div>
-    </div>
+
+      <!-- Chyron ticker -->
+      <div class="bn-ticker" aria-hidden="true">
+        <div class="bn-ticker__label">LIVE</div>
+        <div class="bn-ticker__viewport">
+          <div class="bn-ticker__track">
+            {tickerLines.map((line) => <span class="bn-ticker__item">{line}</span>)}
+            {tickerLines.map((line) => <span class="bn-ticker__item">{line}</span>)}
+          </div>
+        </div>
+      </div>
+    </article>
   </section>
 </TheLeagueLayout>
 
 <style>
+  /* Local breaking-news red — reads well on both light and dark surfaces. */
   .error-404 {
+    --bn-red: #d50a0a;
+
     display: flex;
     align-items: center;
     justify-content: center;
@@ -30,34 +97,116 @@ import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
     padding: 2rem;
   }
 
-  .error-404__content {
-    text-align: center;
-    max-width: 600px;
+  .bn-card {
+    width: 100%;
+    max-width: 620px;
+    background: var(--content-bg);
+    border: 1px solid var(--card-border, var(--color-gray-200));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
   }
 
-  .error-404__content h1 {
-    font-size: clamp(4rem, 12vw, 8rem);
+  /* --- alert strip --- */
+  .bn-card__strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--bn-red);
+    color: #fff;
+  }
+
+  .bn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+
+  .bn-badge__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: var(--radius-full);
+    background: #fff;
+    animation: bn-pulse 1.4s ease-in-out infinite;
+  }
+
+  .bn-card__slug {
+    font-size: 0.72rem;
     font-weight: 700;
+    letter-spacing: 0.18em;
+    opacity: 0.85;
+  }
+
+  /* --- body --- */
+  .bn-card__body {
+    padding: 1.5rem 1.75rem 2rem;
+    text-align: center;
+  }
+
+  .bn-byline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .bn-byline__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--bn-red);
+    object-fit: cover;
+    background: var(--content-bg-muted);
+  }
+
+  .bn-byline__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.25;
+  }
+
+  .bn-byline__name {
+    font-weight: 700;
+    color: var(--color-gray-900);
+  }
+
+  .bn-byline__role {
+    font-size: 0.8rem;
+    color: var(--color-gray-500);
+  }
+
+  .bn-code {
+    font-size: clamp(3.5rem, 11vw, 6.5rem);
+    font-weight: 800;
     color: var(--primary-color);
     margin: 0;
     line-height: 1;
+    letter-spacing: -0.02em;
   }
 
-  .error-404__content h2 {
-    font-size: clamp(1.5rem, 4vw, 2.5rem);
-    font-weight: 600;
-    margin: 1rem 0;
-    color: #333;
+  .bn-headline {
+    font-size: clamp(1.4rem, 4vw, 2.1rem);
+    font-weight: 700;
+    margin: 0.5rem 0 0;
+    color: var(--color-gray-900);
   }
 
-  .error-404__content p {
-    font-size: 1.1rem;
-    color: #666;
-    margin: 1.5rem 0 2.5rem;
+  .bn-lede {
+    font-size: 1.05rem;
+    color: var(--color-gray-600);
+    margin: 1rem auto 2rem;
     line-height: 1.6;
+    max-width: 46ch;
   }
 
-  .error-404__links {
+  .bn-links {
     display: flex;
     gap: 1rem;
     justify-content: center;
@@ -66,18 +215,18 @@ import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 
   .btn {
     display: inline-block;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1.25rem;
     font-size: 1rem;
     font-weight: 600;
     text-decoration: none;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     transition: all 0.2s ease;
     border: 2px solid transparent;
   }
 
   .btn--primary {
     background: var(--primary-color);
-    color: white;
+    color: #fff;
   }
 
   .btn--primary:hover {
@@ -86,20 +235,108 @@ import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
   }
 
   .btn--secondary {
-    background: white;
+    background: transparent;
     color: var(--primary-color);
     border-color: var(--primary-color);
   }
 
   .btn--secondary:hover {
     background: var(--primary-color);
-    color: white;
+    color: #fff;
     transform: translateY(-2px);
   }
 
+  /* --- chyron ticker --- */
+  .bn-ticker {
+    display: flex;
+    align-items: stretch;
+    border-top: 1px solid var(--card-border, var(--color-gray-200));
+    background: var(--color-gray-900);
+    color: var(--content-bg);
+  }
+
+  .bn-ticker__label {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 0 0.85rem;
+    background: var(--bn-red);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+  }
+
+  .bn-ticker__viewport {
+    flex: 1 1 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bn-ticker__track {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0.55rem 0;
+    animation: bn-scroll 26s linear infinite;
+    will-change: transform;
+  }
+
+  .bn-ticker__item {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0 1.25rem;
+    position: relative;
+  }
+
+  .bn-ticker__item::before {
+    content: '•';
+    position: absolute;
+    left: -0.15rem;
+    color: var(--bn-red);
+  }
+
+  @keyframes bn-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.7);
+    }
+  }
+
+  @keyframes bn-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      /* Track holds two identical copies of the list; shifting by half
+         loops seamlessly. */
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bn-badge__dot {
+      animation: none;
+    }
+    .bn-ticker__track {
+      animation: none;
+    }
+  }
+
   @media (max-width: 640px) {
-    .error-404__links {
+    .error-404 {
+      padding: 1rem;
+    }
+    .bn-links {
       flex-direction: column;
+    }
+    .btn {
       width: 100%;
     }
   }
