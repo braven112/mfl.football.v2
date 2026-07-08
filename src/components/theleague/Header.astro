@@ -55,7 +55,7 @@ const submitLineupUrl = isAFL ? '/afl-fantasy/lineup' : '/theleague/lineup';
 // TheLeague promotes the internal Free Agents page as the primary way to add a
 // player. AFL has no internal free-agent page yet, so it keeps the MFL add/drop
 // link until that page ships.
-const addDropUrl = isAFL
+const freeAgentsUrl = isAFL
   ? `https://${league.host}/${year}/add_drop?L=${league.leagueId}`
   : resolveLeaguePath("/theleague/players", hideLeaguePrefix);
 const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
@@ -162,7 +162,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
             </svg>
             <span class="nav-label">Set Lineup</span>
           </a>
-          <a href={addDropUrl} class="nav-icon-link" {...(isAFL ? { target: "_blank", rel: "noopener noreferrer" } : {})} title="Free Agents">
+          <a href={freeAgentsUrl} class="nav-icon-link" {...(isAFL ? { target: "_blank", rel: "noopener noreferrer" } : {})} title="Free Agents">
             <svg class="nav-icon" aria-hidden="true">
               <use href={`${spriteUrl}#icon-plus`}></use>
             </svg>
