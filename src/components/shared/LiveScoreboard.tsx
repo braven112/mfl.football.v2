@@ -152,7 +152,11 @@ function computeTeam(
     live,
     projectedFinal: live + remainingPoints,
     remainingPoints,
-    yetToPlay: ytp[fid] ?? notStarted,
+    // Prefer the count we derive from each starter's game clock — it uses the
+    // same gameSecondsRemaining the scores do and doesn't depend on MFL's
+    // franchise-level `playersYetToPlay` attribute (name unverified). Fall back
+    // to the feed value only when we have no per-player rows to count.
+    yetToPlay: rows.length ? notStarted : (ytp[fid] ?? 0),
   };
 }
 

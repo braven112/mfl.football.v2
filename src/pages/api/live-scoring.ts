@@ -77,9 +77,12 @@ export const GET: APIRoute = async ({ url }) => {
           playersYetToPlay[fid] = Number(team.playersYetToPlay) || 0;
         }
 
-        // Per-player breakdown (present when DETAILS=1). Keep starters only —
-        // bench players don't count toward the matchup and just bloat the poll.
-        const rawPlayers = team?.players?.player;
+        // Per-player breakdown (present when DETAILS=1). MFL nests this as
+        // franchise.players.player[] in liveScoring but flat franchise.player[]
+        // in weeklyResults — accept either. Keep starters only (status is the
+        // confirmed 'starter'/'nonstarter' field): bench players don't count
+        // toward the matchup and just bloat the poll.
+        const rawPlayers = team?.players?.player ?? team?.player;
         if (rawPlayers) {
           const list = Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers];
           players[fid] = list
