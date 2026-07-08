@@ -4,6 +4,14 @@ Domain knowledge about UI/UX patterns, component architecture, and frontend deve
 
 ---
 
+## 2026-07-08 - AFL Homepage Standings Cards Are Paired Siblings — Keep Their Mobile Headers in Sync
+
+**Context:** The AFL homepage stacks two visually-matched standings cards: `AflConferencePlayoffPreview.astro` (AL/NL "Playoff Standings") and `AflStandingsCompact.astro` (Premier League "Standings"). Both use the same header shape — logo + left-bordered `__section-header` title/subtitle on the left, an accent-colored "Full bracket"/"Full standings" CTA on the right. But the mobile treatment lived only in the playoff card: its `@media (max-width: 640px)` block flips `.afl-conf__header` to `flex-direction: column` so the CTA drops onto its own row under the heading. The Premier card had no such block, so on phones its "Full standings" link stayed crammed top-right, sharing a cramped line with the title.
+
+**Insight:** These two components are deliberate visual twins but share **no CSS** — each has its own scoped `<style>` with a parallel-but-duplicated class tree (`afl-conf__*` vs `afl-tiers__*`). A mobile fix applied to one does not propagate. When touching the mobile header layout of either, mirror the change into the other or they visibly diverge stacked on the same screen. One structural difference to be aware of: `.afl-tiers__td--team` is a plain `<td>` (not `display: flex` like `.afl-conf__td--team`). Both cards carry a name-truncation "safety net" on the inner span, but in **both** cards it's a latent no-op under `table-layout: auto` — the conf card's `min-width: 0` and the tiers card's `inline-block; max-width: 100%` only actually clip once the cell has a definite width (the 2026-07-07 conf-card insight already notes its span rule is "a harmless no-op once the cell is allowed to size to content"). Do not treat either as real overflow protection: names are short so nothing overflows today, and a genuine cap needs `table-layout: fixed` with sized columns or a concrete `max-width`. Just don't use `max-width: 0` — that one zeroes the whole auto-layout column (also per the 2026-07-07 insight).
+
+**Recommendation:** Treat `AflConferencePlayoffPreview` and `AflStandingsCompact` as a pair for any header/CTA/mobile work — grep both when editing either. The shared mobile-header recipe is: `.<ns>__header { flex-direction: column; align-items: stretch; gap: 0.75rem }` + shrink the logo to `1.5rem` + `min-width: 0` on the heading/section-header + a single-line clamped/ellipsized title. Longer term this duplication is a candidate for extraction into a shared standings-card header partial.
+
 ## 2026-03-01 - ESPN Headshot URL Patterns and College Fallback
 
 **Context:** Adding college headshots as a fallback for rookies without NFL photos.
