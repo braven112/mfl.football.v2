@@ -654,6 +654,20 @@ clicking it bounced AFL users to TheLeague's login. AFL has its own login at
 checks `href`s misses this — you have to follow the 302 (`curl -o /dev/null -w
 '%{redirect_url}'`).
 
-**Evidence:** `src/pages/afl-fantasy/lineup.astro:33`,
+**Two more traps a static-href audit misses:**
+- **Client JS re-writes the href.** `TradeAlertModal.astro`'s builder link is
+  static in the shell but `src/scripts/trade-alert.ts` overwrites it
+  (`tamBuildTradeBuilderUrl`) when a trade opens — so fixing the `.astro` href
+  alone still shipped `/theleague/trade-builder` on AFL. Client scripts can't
+  call `getLeagueContext(Astro.url)`; read the league from `<html data-league>`
+  (the layout stamps `'afl'`/`'theleague'` there), which is domain-agnostic.
+- **Auth-gate uses franchiseId as a proxy for "logged in".** A TheLeague JWT
+  also carries a `franchiseId`, so `if (!user?.franchiseId)` lets a TheLeague
+  session through an AFL page, which then fires that id at AFL's league id.
+  Gate on `user.leagueId === getLeagueBySlug('afl-fantasy').id`, not just
+  franchiseId presence. (MFL still enforces the *write*, so it's a wrong-roster
+  display bug rather than a write bypass — but still wrong.)
+
+**Evidence:** `src/pages/afl-fantasy/lineup.astro:31`,
 `src/components/theleague/{TradeAlertModal,Header}.astro`,
-`src/components/shared/SchefterFeedCompact.astro`.
+`src/components/shared/SchefterFeedCompact.astro`, `src/scripts/trade-alert.ts`.

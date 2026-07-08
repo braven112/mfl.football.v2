@@ -120,7 +120,12 @@ function tamBuildTradeBuilderUrl(trade: any): string {
   const teamBPicks = formatPicks(teamBAssets.picks);
   if (teamBPicks) params.set('bd', teamBPicks);
 
-  return `/theleague/trade-builder?${params.toString()}`;
+  // Keep the deep link inside the current league — the layout stamps the active
+  // league on <html data-league> ('afl' | 'theleague'), which is domain-agnostic.
+  const base = document.documentElement.dataset.league === 'afl'
+    ? '/afl-fantasy/trade-builder'
+    : '/theleague/trade-builder';
+  return `${base}?${params.toString()}`;
 }
 
 // ---- DOM refs ----

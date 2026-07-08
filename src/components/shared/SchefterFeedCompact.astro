@@ -9,6 +9,7 @@ import type { SchefterPost } from '../../types/schefter';
 import type { SchefterReactionResponse } from '../../types/schefter';
 import { getBatchReactions } from '../../utils/schefter-reactions';
 import { getLeagueContext } from '../../utils/league-context';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import SchefterPostCardCompact from './SchefterPostCardCompact.astro';
 
 interface Props {
@@ -29,10 +30,12 @@ const {
   initialLimit = 10,
 } = Astro.props;
 
-// Keep the "View all" link inside the current league's news page.
-const newsHref = getLeagueContext(Astro.url).slug === 'afl-fantasy'
-  ? '/afl-fantasy/news'
-  : '/theleague/news';
+// Keep the "View all" link inside the current league's news page, honoring
+// clean-domain prefix stripping (e.g. /theleague/news → /news on theleague.us).
+const newsHref = resolveLeaguePath(
+  getLeagueContext(Astro.url).slug === 'afl-fantasy' ? '/afl-fantasy/news' : '/theleague/news',
+  Astro.locals.hideLeaguePrefix ?? false
+);
 
 const now = new Date();
 
