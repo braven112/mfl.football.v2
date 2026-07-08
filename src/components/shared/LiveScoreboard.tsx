@@ -27,7 +27,7 @@ import {
   winProbability,
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getNflTeamColors, pickBrandAccent, mixHex } from '../../utils/nfl-team-colors';
+import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import NflGamesStrip from './NflGamesStrip';
 
 const POLL_LIVE = 60_000;
@@ -125,26 +125,6 @@ const teamColor = (team: string) => getNflTeamColors(team).primary;
 
 const fmt = (n: number) => n.toFixed(1);
 
-/** Perceived luminance (0–255) of a #rrggbb color. */
-function luminance(hex: string): number {
-  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
-  const v = m ? parseInt(m[1], 16) : 0x1c497c;
-  return 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255);
-}
-
-/**
- * A team color darkened just enough to carry white text as a solid/gradient
- * fill (the light-mode "saturated hero" treatment). Reuses pickBrandAccent —
- * which already pulls very light brand colors down — then keeps nudging toward
- * a deep base until white text is comfortably legible.
- */
-function saturatedBg(color: string): string {
-  let c = pickBrandAccent(color);
-  let guard = 0;
-  while (luminance(c) > 150 && guard++ < 6) c = mixHex(c, '#0b1220', 0.18);
-  return c;
-}
-
 interface TeamCalc {
   live: number;
   projectedFinal: number;
@@ -191,15 +171,15 @@ function WinProbBar({ home, mini, homeLabel, awayLabel }: {
     <div className={`ls-wp${mini ? ' mini' : ''}`} role="img"
          aria-label={`Win probability: ${homeLabel ?? 'home'} ${homePct}%, ${awayLabel ?? 'away'} ${awayPct}%`}>
       <div className="ls-wp-track">
-        <div className="ls-wp-home" style={{ width: `${homePct}%` }} />
         <div className="ls-wp-away" style={{ width: `${awayPct}%` }} />
+        <div className="ls-wp-home" style={{ width: `${homePct}%` }} />
         <span className="ls-wp-mid" />
       </div>
       {!mini && (
         <div className="ls-wp-labels">
-          <span className="ls-wp-l">{homePct}%</span>
+          <span className="ls-wp-l">{awayPct}%</span>
           <span className="ls-wp-tag">WIN PROBABILITY</span>
-          <span className="ls-wp-r">{awayPct}%</span>
+          <span className="ls-wp-r">{homePct}%</span>
         </div>
       )}
     </div>
@@ -219,9 +199,54 @@ function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
   const H = teams[matchup.home];
   const A = teams[matchup.away];
   const homeLead = calc.home.live >= calc.away.live;
-  const th = H?.color ?? '#1c497c';
-  const ta = A?.color ?? '#8a94a0';
+  const th = H?.color ?? '#1c497c'; // home → right / win-prob right
+  const ta = A?.color ?? '#8a94a0'; // away → left / win-prob left
+  // Top border + win-prob bar split at the away team's win share (measured
+  // from the left, which is the away side).
+  const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
+  const cardStyle = { ['--th' as any]: th, ['--ta' as any]: ta, ['--wp-split' as any]: awaySplit };
 
+  const head = (
+    <div className="ls-card-head">
+      {calc.isFinal
+        ? <span className="ls-badge final">Final</span>
+        : <span className="ls-badge live"><span className="ls-dot live" />Live</span>}
+      {!calc.isFinal && (calc.home.yetToPlay + calc.away.yetToPlay > 0) && (
+        <span className="ls-rem">{calc.home.yetToPlay + calc.away.yetToPlay} yet to play</span>
+      )}
+      {isYours && <span className="ls-your">YOUR MATCHUP</span>}
+    </div>
+  );
+
+  // Featured (your) matchup: horizontal faceoff, away on the left, home on the right.
+  if (featured) {
+    const foTeam = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean, sideCls: string) => (
+      <div className={`ls-fo-team ${sideCls}${lead ? ' lead' : ''}`}>
+        <span className="ls-fo-crest">{team?.icon && <img src={team.icon} alt="" loading="lazy" />}</span>
+        <span className="ls-fo-name">{team?.nameShort ?? team?.name ?? 'TBD'}</span>
+        <span className="ls-fo-score">{fmt(c.live)}</span>
+        <span className="ls-fo-proj">Proj {fmt(c.projectedFinal)}</span>
+      </div>
+    );
+    return (
+      <button className="ls-card feat" style={cardStyle} onClick={onOpen}
+              aria-label={`Open ${A?.name} at ${H?.name}`}>
+        {head}
+        <div className="ls-faceoff">
+          {foTeam(A, calc.away, !homeLead, 'away')}
+          <span className="ls-fo-vs">@</span>
+          {foTeam(H, calc.home, homeLead, 'home')}
+        </div>
+        {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
+        <div className="ls-card-foot">
+          <span>Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
+          <span className="ls-open">Open matchup →</span>
+        </div>
+      </button>
+    );
+  }
+
+  // Other matchups: compact stacked rows (away on top, home below).
   const row = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean) => (
     <div className={`ls-team${lead ? ' lead' : ''}`}>
       <span className="ls-crest">{team?.icon && <img src={team.icon} alt="" loading="lazy" />}</span>
@@ -230,28 +255,17 @@ function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
       <span className="ls-score">{fmt(c.live)}</span>
     </div>
   );
-
   return (
-    <button className={`ls-card${featured ? ' feat' : ''}`}
-            style={{ ['--th' as any]: th, ['--ta' as any]: ta, ['--th-solid' as any]: saturatedBg(th), ['--ta-solid' as any]: saturatedBg(ta) }}
-            onClick={onOpen} aria-label={`Open ${H?.name} vs ${A?.name}`}>
-      <div className="ls-card-head">
-        {calc.isFinal
-          ? <span className="ls-badge final">Final</span>
-          : <span className="ls-badge live"><span className="ls-dot live" />Live</span>}
-        {!calc.isFinal && (calc.home.yetToPlay + calc.away.yetToPlay > 0) && (
-          <span className="ls-rem">{calc.home.yetToPlay + calc.away.yetToPlay} yet to play</span>
-        )}
-        {isYours && <span className="ls-your">YOUR MATCHUP</span>}
-      </div>
+    <button className="ls-card" style={cardStyle} onClick={onOpen}
+            aria-label={`Open ${A?.name} at ${H?.name}`}>
+      {head}
       <div className="ls-teams">
-        {row(H, calc.home, homeLead)}
         {row(A, calc.away, !homeLead)}
+        {row(H, calc.home, homeLead)}
       </div>
       {!calc.isFinal && <WinProbBar home={calc.homeWinProb} mini homeLabel={H?.name} awayLabel={A?.name} />}
       <div className="ls-card-foot">
-        <span>Proj {fmt(calc.home.projectedFinal)} – {fmt(calc.away.projectedFinal)}</span>
-        {featured && <span className="ls-open">Open matchup →</span>}
+        <span>Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
       </div>
     </button>
   );
@@ -259,7 +273,7 @@ function ScoreCard({ matchup, teams, calc, featured, isYours, onOpen }: {
 
 // ── player row ──
 
-function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta; side: 'home' | 'away' }) {
+function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta; side: 'left' | 'right' }) {
   const pos = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
   const state = nflGameState(row.secondsRemaining);
@@ -303,9 +317,9 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
 
   const posChip = <span className="ls-ppos" style={{ ['--posc' as any]: posColor(pos) }}>{pos || '—'}</span>;
 
-  return side === 'home'
+  return side === 'left'
     ? <div className="ls-prow">{posChip}{face}{id}{score}</div>
-    : <div className="ls-prow away">{score}{id}{face}{posChip}</div>;
+    : <div className="ls-prow right">{score}{id}{face}{posChip}</div>;
 }
 
 // ── matchup detail ──
@@ -328,32 +342,33 @@ function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }:
   const rowCount = Math.max(homeRows.length, awayRows.length);
   const matchupMoments = moments.filter((m) => m.fid === matchup.home || m.fid === matchup.away).slice(0, 8);
 
+  const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   return (
-    <div className="ls-detail" style={{ ['--th' as any]: th, ['--ta' as any]: ta, ['--th-solid' as any]: saturatedBg(th), ['--ta-solid' as any]: saturatedBg(ta) }}>
+    <div className="ls-detail" style={{ ['--th' as any]: th, ['--ta' as any]: ta, ['--wp-split' as any]: awaySplit }}>
       <button className="ls-back" onClick={onBack}>← All matchups</button>
       <div className="ls-scorehead">
-        <div className="ls-mx-team home">
-          <span className="ls-mx-crest">{H?.icon && <img src={H.icon} alt="" />}</span>
-          <span className="ls-mx-tn"><b>{H?.nameShort ?? H?.name}</b><em>{fmt(calc.home.projectedFinal)} proj</em></span>
-          <span className="ls-mx-total">{fmt(calc.home.live)}</span>
+        <div className="ls-mx-team away">
+          <span className="ls-mx-crest">{A?.icon && <img src={A.icon} alt="" />}</span>
+          <span className="ls-mx-tn"><b>{A?.nameShort ?? A?.name}</b><em>{fmt(calc.away.projectedFinal)} proj</em></span>
+          <span className="ls-mx-total">{fmt(calc.away.live)}</span>
         </div>
         <div className="ls-mx-center">
           <span className="ls-mx-live">
             {!calc.isFinal && <span className="ls-dot live" />}{calc.isFinal ? 'FINAL' : 'LIVE'}
           </span>
-          <span className="ls-mx-projline">Proj {fmt(calc.home.projectedFinal)} – {fmt(calc.away.projectedFinal)}</span>
+          <span className="ls-mx-projline">Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
         </div>
-        <div className="ls-mx-team away">
-          <span className="ls-mx-total">{fmt(calc.away.live)}</span>
-          <span className="ls-mx-tn"><b>{A?.nameShort ?? A?.name}</b><em>{fmt(calc.away.projectedFinal)} proj</em></span>
-          <span className="ls-mx-crest">{A?.icon && <img src={A.icon} alt="" />}</span>
+        <div className="ls-mx-team home">
+          <span className="ls-mx-total">{fmt(calc.home.live)}</span>
+          <span className="ls-mx-tn"><b>{H?.nameShort ?? H?.name}</b><em>{fmt(calc.home.projectedFinal)} proj</em></span>
+          <span className="ls-mx-crest">{H?.icon && <img src={H.icon} alt="" />}</span>
         </div>
       </div>
 
       {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
       <div className="ls-ytp">
-        <span>{calc.home.yetToPlay} yet to play</span>
         <span>{calc.away.yetToPlay} yet to play</span>
+        <span>{calc.home.yetToPlay} yet to play</span>
       </div>
 
       <div className="ls-mx-body">
@@ -361,12 +376,12 @@ function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }:
         {Array.from({ length: rowCount }).map((_, i) => {
           const h = homeRows[i];
           const a = awayRows[i];
-          const pos = (h && meta[h.id]?.position) || (a && meta[a.id]?.position) || '';
+          const pos = (a && meta[a.id]?.position) || (h && meta[h.id]?.position) || '';
           return (
             <div className="ls-mx-row" key={i}>
-              <div>{h && <PlayerRow row={h} meta={meta[h.id]} side="home" />}</div>
+              <div>{a && <PlayerRow row={a} meta={meta[a.id]} side="left" />}</div>
               <div className="ls-mx-pos">{pos}</div>
-              <div>{a && <PlayerRow row={a} meta={meta[a.id]} side="away" />}</div>
+              <div>{h && <PlayerRow row={h} meta={meta[h.id]} side="right" />}</div>
             </div>
           );
         })}
