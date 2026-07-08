@@ -60,6 +60,13 @@
   height: 100%;
   object-fit: cover;
   object-position: top;
+  /* ESPN headshot cutouts carry transparent padding around the subject. Scale
+     the image up so the player fills the circle (as it visually did on the old
+     flat-gray chip) instead of floating small inside the team-color backdrop,
+     which now reveals that padding. 1.18 ≈ 40/34, restoring the original fill.
+     DEF logos opt out below — they must show in full. */
+  transform: scale(1.18);
+  transform-origin: top center;
 }
 
 .player-cell__avatar.player-cell__avatar--def {
@@ -73,6 +80,8 @@
   width: 100%;
   object-fit: contain;
   object-position: center;
+  /* Team logos already fill their frame — don't zoom/crop them. */
+  transform: none;
 }
 
 
