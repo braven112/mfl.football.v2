@@ -679,3 +679,33 @@ checks `href`s misses this — you have to follow the 302 (`curl -o /dev/null -w
 **Evidence:** `src/pages/afl-fantasy/lineup.astro:31`,
 `src/components/theleague/{TradeAlertModal,Header}.astro`,
 `src/components/shared/SchefterFeedCompact.astro`, `src/scripts/trade-alert.ts`.
+
+---
+
+## 2026-07-08 - Hero resolver: one `deferToFeature` boolean gates ALL ambient phases
+
+**Context:** Biasing the homepage hero toward the roster-deadline (Cut Watch)
+phase on ~50% of visits after July 1, without disturbing the other offseason
+phases.
+
+**Insight:** In `resolveHeroState` (`src/utils/hero-resolver.ts`), a single
+`deferToFeature` boolean decides whether *every* ambient P3 phase (tag window,
+tagged showcase, draft countdown, UDFA, early Cut Watch, preseason) yields to a
+fresh (≤7-day) What's New feature. To make one phase win more often, DON'T add a
+competing branch above the block — conditionally *suppress* `deferToFeature`
+(`hasFreshFeature && !coinFlip`). On a suppression the block falls through to
+its own phase checks, and since only one ambient phase matches on a given date,
+the right one renders. The urgent Cut Watch tier is a separate P1 branch *above*
+this and already beats features unconditionally — scope any "deadline bias" to
+the early/ambient tier so you don't double-cover it.
+
+**Per-visit randomness stays testable:** `resolveHeroState` runs per request
+(`prerender = false`), so a `Math.random()` coin flip genuinely varies by visit.
+Thread an injectable `rng: () => number = Math.random` last param so tests force
+heads/tails deterministically — the four coin-flip cases live in
+`tests/hero-resolver.test.ts`.
+
+**Dedupe hook:** `HeroContent.heroEntryId` (set in `featureToHero`) lets a page
+tell *which* What's New entry is currently in the hero, so a homepage "What's
+New" list (`WhatsNewRow` with `excludeId`) can skip it and avoid showing the
+same story twice on one screen.

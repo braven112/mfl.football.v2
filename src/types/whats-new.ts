@@ -172,6 +172,12 @@ export interface HeroContent {
   heroArt?: HeroArt;
   /** Feature-only: the source entry's category — drives composite-hero casting */
   heroCategory?: WhatsNewCategory;
+  /**
+   * Feature-only: the source What's New entry's id. Lets the homepage dedupe —
+   * the left-column "What's New" section skips whatever article is currently
+   * headlining the hero so the same story doesn't appear twice on one screen.
+   */
+  heroEntryId?: string;
   /** Feature-only: MFL id of the player the entry is about — he models the hero */
   heroPlayerId?: string;
   /** Feature-only: caption qualifier for the featured player chip */

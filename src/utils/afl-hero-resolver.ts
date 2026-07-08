@@ -713,6 +713,7 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     heroArt: entry.heroArt,
     heroPlayerId: entry.heroPlayerId,
     heroPlayerDescriptor: entry.heroPlayerDescriptor,
+    heroEntryId: entry.id,
   };
 }
 

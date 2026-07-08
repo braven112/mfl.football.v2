@@ -76,6 +76,15 @@ const MANUAL_CAPTURE_ONLY = {
  * after navigation + initial wait, right before the screenshot is taken.
  */
 const PAGE_HOOKS = {
+  'homepage-whats-new-section': async (page) => {
+    // The What's New panel sits at the bottom of the homepage's left column —
+    // a top-of-page shot would frame the hero instead, so scroll it into view.
+    await page.evaluate(() => {
+      const el = document.querySelector('.whats-new-row');
+      if (el) el.scrollIntoView({ block: 'center' });
+    });
+    await page.waitForTimeout(500);
+  },
   'nav-drawer-redesign': async (page) => {
     // Open the navigation drawer so it's visible in the screenshot
     await page.evaluate(() => {

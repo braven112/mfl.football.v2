@@ -1,12 +1,14 @@
 ---
 /**
- * WhatsNewRow - Displays the 3 newest What's New articles in a card row.
+ * WhatsNewRow - Displays the newest What's New articles in a card row.
  *
  * Server-rendered Astro component that mirrors the WhatsNext layout pattern:
- * a section header ("What's New" + "All releases →") above a 3-column card grid.
+ * a section header ("What's New" + "All releases →") above a responsive
+ * (auto-fit) card grid. `count` controls how many cards show (default 3);
+ * `excludeId` omits one entry (e.g. the article currently in the hero).
  *
- * Used on the homepage below the AuctionHero (and optionally below HeroBanner)
- * to surface recent feature announcements.
+ * Used on the TheLeague homepage's left column (count=2) to surface recent
+ * feature announcements, and on the legacy old-hp prototype (count=3).
  */
 import type { WhatsNewEntry } from '../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../types/whats-new';
@@ -25,6 +27,11 @@ interface Props {
   spriteUrl?: string;
   /** Last visit date for "NEW" badges (from cookie) */
   lastVisitDate?: string | null;
+  /**
+   * Entry id to omit — used on the homepage to skip whatever article is
+   * currently headlining the hero, so the same story isn't shown twice.
+   */
+  excludeId?: string;
 }
 
 const {
@@ -34,11 +41,13 @@ const {
   allReleasesLink = `${basePath}/whats-new`,
   spriteUrl: sprite = '/assets/icons/sprite.svg',
   lastVisitDate = null,
+  excludeId,
 } = Astro.props;
 
 const MULTICOLOR_ICONS = ['nfl'];
 
-const sorted = sortEntriesNewestFirst(entries);
+const pool = excludeId ? entries.filter((e) => e.id !== excludeId) : entries;
+const sorted = sortEntriesNewestFirst(pool);
 const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 ---
 
@@ -160,7 +169,9 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 
   .whats-new-row__grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Responsive: fills as many equal columns as fit (3 on the old-HP row, 2 in
+       the homepage left column with count=2), collapsing to 1 when narrow. */
+    grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
     gap: 1.5rem;
   }
 

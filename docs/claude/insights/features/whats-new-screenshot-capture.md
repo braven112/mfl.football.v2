@@ -144,3 +144,33 @@ default runs and only recaptured when named explicitly on the CLI. Document
 *why* each entry is on the list right next to the set definition — the reason
 (auth-gated vs prod-only vs staged-scroll) determines what a future recapture
 needs to do differently from a normal run.
+
+---
+
+## 2026-07-08 - Cloud-session capture: pinned-browser mismatch, no `cwebp`, and self-referential shots
+
+**Context:** Capturing the `homepage-whats-new-section` pair from a fresh cloud
+clone (no `.env`, project pins a newer Playwright than the image ships).
+
+**Insights, in the order they bit:**
+
+1. **Browser build mismatch.** `chromium.launch()` failed looking for
+   `chromium_headless_shell-1200` while `/opt/pw-browsers` only had `-1194`.
+   Do NOT `npx playwright install` (the env blocks the download). Launch with
+   `executablePath: '/opt/pw-browsers/chromium'` (a symlink to the full
+   `chrome` binary) — matches the environment note and works headless.
+2. **`cwebp` is absent** but `sharp` is a dependency. The committed batch
+   script shells out to `cwebp` and silently leaves the `.webp` unwritten if
+   it's missing (build then fails the on-disk image check). For a one-off,
+   screenshot to PNG in Playwright and convert with
+   `sharp(png).webp({ quality: 85 }).toFile(out)` — no `cwebp` needed.
+3. **A one-off script must live inside the repo**, not the scratchpad — Node
+   resolves `node_modules` by walking up from the script's dir, so a
+   `/tmp/...` script can't import `playwright`/`sharp`. Write it to repo root,
+   run, delete before committing.
+4. **Self-referential entries need two capture passes.** The section's shot
+   contains the entry's own What's New card, whose thumbnail is *this very
+   image*. On the first pass the file doesn't exist yet, so that card renders
+   its `imageAlt` as broken-image text. Re-run once after the file is written
+   and the card shows a real (one-level-nested) thumbnail. Always eyeball the
+   result — a broken-alt card is the tell you only ran it once.

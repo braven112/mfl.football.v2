@@ -257,6 +257,18 @@ witty sports-columnist tone, never dry corporate release notes. `new-page`,
 `tests/whats-new-data.test.ts` fails the build without one. `bug-fix` and
 `league-event` categories are exempt from the screenshot requirement.
 
+**Hero eligibility — the homepage hero is for marquee launches only.** Only
+*major* new pages and features should headline the homepage hero; enhancements
+and smaller updates that still earn a What's New article should NOT. The gate
+is the existing `excludeFromHero: true` flag, which `resolveHeroState`
+(`src/utils/hero-resolver.ts`) honors. When authoring an entry: set
+`excludeFromHero: true` for every `enhancement`, and for `new-page` /
+`new-feature` **ask the user** whether it's a major launch worth the hero —
+if not, set the flag. `/update-whats-new` (and therefore `/live`) prompts for
+this; don't decide silently. (Related: after July 1 the resolver already gives
+the roster-deadline Cut Watch hero ~50% of visits even when a fresh feature is
+eligible, so the hero leans toward the deadline as the season nears.)
+
 Smaller fixes that don't earn their own entry still get logged: append to
 `src/data/weekly-changelog-staging.json` (`date`, `type`: `bug-fix |
 style-tweak`, user-facing `summary`, `impact`: `user | admin`, `area`).

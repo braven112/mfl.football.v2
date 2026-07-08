@@ -1168,6 +1168,62 @@ describe('resolveHeroState', () => {
     });
   });
 
+  describe('Roster-deadline coin flip (≥50% of July visits show Cut Watch)', () => {
+    // 2027: early Cut Watch = Jun 1 → Jul 15 (faClose = Aug 15, urgent Jul 16+).
+    const julyEarlyCutWatch = new Date(2027, 6, 8, 12, 0, 0); // Jul 8, early tier
+    const freshDate = julyEarlyCutWatch.toISOString().slice(0, 10);
+
+    const freshFeatureEntries = (): WhatsNewEntry[] => [
+      makeEntry({ id: 'fresh', title: 'Fresh Feature', date: freshDate, leagues: ['theleague'] }),
+    ];
+
+    it('shows Cut Watch when the flip lands heads (<0.5), even against a fresh feature', () => {
+      const state = resolveHeroState(
+        julyEarlyCutWatch, true, freshFeatureEntries(), makeTimeline(), false, false,
+        () => 0.0,
+      );
+      expect(state.phase).toBe('cut-watch');
+      expect(state.metadata.resolvedBy).toBe('isCutWatchEarly');
+    });
+
+    it('shows the fresh feature when the flip lands tails (>=0.5)', () => {
+      const state = resolveHeroState(
+        julyEarlyCutWatch, true, freshFeatureEntries(), makeTimeline(), false, false,
+        () => 0.9,
+      );
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.fallbackHero?.title).toBe('Fresh Feature');
+    });
+
+    it('treats exactly 0.5 as tails (rng() < 0.5 boundary) — feature wins', () => {
+      const state = resolveHeroState(
+        julyEarlyCutWatch, true, freshFeatureEntries(), makeTimeline(), false, false,
+        () => 0.5,
+      );
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.fallbackHero?.title).toBe('Fresh Feature');
+    });
+
+    it('does NOT flip before July 1 — June early Cut Watch still yields to a fresh feature', () => {
+      const juneRef = new Date(2027, 5, 24, 12, 0, 0); // Jun 24
+      const juneFresh = juneRef.toISOString().slice(0, 10);
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: juneFresh, leagues: ['theleague'] }),
+      ];
+      // Even forcing heads, the July-1 rule hasn't kicked in, so the feature wins.
+      const state = resolveHeroState(juneRef, true, entries, makeTimeline(), false, false, () => 0.0);
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.fallbackHero?.title).toBe('Fresh Feature');
+    });
+
+    it('shows Cut Watch on 100% of July visits when no fresh feature competes (floor holds)', () => {
+      // Forcing tails proves the flip only matters when a feature is competing.
+      const state = resolveHeroState(julyEarlyCutWatch, true, [], makeTimeline(), false, false, () => 0.9);
+      expect(state.phase).toBe('cut-watch');
+      expect(state.metadata.resolvedBy).toBe('isCutWatchEarly');
+    });
+  });
+
   describe('P5 Fallback', () => {
     it('should return offseason-fallback when no seasonal phase matches', () => {
       // Use a date that falls between phases (e.g., early June)
