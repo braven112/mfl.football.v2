@@ -61,25 +61,28 @@ function getLaborDay(year: number): Date {
  */
 export function getTestDateFromUrl(): Date | null {
   if (typeof window === 'undefined') return null;
+  return getTestDateFromSearchParams(new URLSearchParams(window.location.search));
+}
 
-  const params = new URLSearchParams(window.location.search);
+/**
+ * Server-safe variant of {@link getTestDateFromUrl}: parse a `?testDate=` value
+ * from an already-resolved URLSearchParams (e.g. `Astro.url.searchParams` in an
+ * SSR frontmatter, where `window` doesn't exist). Same normalization rules.
+ *
+ * @returns Date object if a valid `testDate` param exists, null otherwise
+ */
+export function getTestDateFromSearchParams(params: URLSearchParams): Date | null {
   const testDate = params.get('testDate');
+  if (!testDate) return null;
 
-  if (testDate) {
-    // Date-only strings (YYYY-MM-DD) parse as UTC midnight, which is the
-    // previous evening in PT — that lands on the wrong side of PT-anchored
-    // rollover cutoffs (e.g. ?testDate=2026-06-01 would read as May 31 5pm PT,
-    // before AFL's June 1 flip). Normalize to local midday so the intended
-    // calendar day is unambiguous in any timezone. Date+time inputs pass through.
-    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(testDate);
-    const parsed = new Date(isDateOnly ? `${testDate}T12:00:00` : testDate);
-    // Validate date
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-
-  return null;
+  // Date-only strings (YYYY-MM-DD) parse as UTC midnight, which is the
+  // previous evening in PT — that lands on the wrong side of PT-anchored
+  // rollover cutoffs (e.g. ?testDate=2026-06-01 would read as May 31 5pm PT,
+  // before AFL's June 1 flip). Normalize to local midday so the intended
+  // calendar day is unambiguous in any timezone. Date+time inputs pass through.
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(testDate);
+  const parsed = new Date(isDateOnly ? `${testDate}T12:00:00` : testDate);
+  return isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /**
