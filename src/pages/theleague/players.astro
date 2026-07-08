@@ -65,9 +65,12 @@ const currentYear = getCurrentLeagueYear();
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used to build the per-player "Bid" and generic "Add" deep-links on each row.
+// 'theleague' is a static registry entry, so a miss is a programming error —
+// fail fast rather than silently falling back to a hardcoded league.
 const theLeagueDef = getLeagueBySlug('theleague');
-const mflHost = theLeagueDef?.mflHost ?? 'www49.myfantasyleague.com';
-const mflLeagueId = theLeagueDef?.id ?? '13522';
+if (!theLeagueDef) throw new Error('League registry is missing the "theleague" entry');
+const mflHost = theLeagueDef.mflHost;
+const mflLeagueId = theLeagueDef.id;
 const playerModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/players.json',
   { eager: true }
@@ -363,6 +366,10 @@ const auctionStart = getNthDayOfMonth(auctionWindowYear, 2, 4, 3); // 3rd Thursd
 const auctionEnd = getNthDayOfMonth(auctionWindowYear, 7, 0, 3);   // 3rd Sunday of August (month 7 = August)
 auctionEnd.setHours(20, 45, 0, 0); // 8:45 PM PT close
 const isAuctionSeason = nowRef.getTime() >= auctionStart.getTime() && nowRef.getTime() < auctionEnd.getTime();
+// MFL deep-links use the same league year that drives the Bid/Add state, so a
+// cross-year ?testDate can't show one year's auction while linking another.
+// For real requests (no testDate) this equals currentYear.
+const mflActionYear = auctionWindowYear;
 
 // Player salary by each of the last 3 completed league years.
 const salaryYear1 = currentYear - 1;
@@ -954,7 +961,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, franchiseNamesJson, franchiseBannersJson, defSpotlightJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1884,8 +1891,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       // Place Bid button (Value view only — links to MFL's Place Bid page with player pre-selected)
       {
-        const bidUrl = `https://${mflHost}/${currentYear}/options?L=${mflLeagueId}&O=43&P=${p.id}`;
-        html += `<td class="col-group--value col-value-money col-place-bid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
+        const bidUrl = `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`;
+        html += `<td class="col-group--value col-value-money col-place-bid"><a href="${escapeAttr(bidUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
       }
 
       // ── Auction view cells ──
@@ -1941,11 +1948,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         }
 
         // Place Bid (auction view)
-        const bidUrl = `https://${mflHost}/${currentYear}/options?L=${mflLeagueId}&O=43&P=${p.id}`;
+        const bidUrl = `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`;
         if (p.auctionStatus === 'won') {
           html += `<td class="col-group--auction col-auction-placebid"></td>`;
         } else {
-          html += `<td class="col-group--auction col-auction-placebid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
+          html += `<td class="col-group--auction col-auction-placebid"><a href="${escapeAttr(bidUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
         }
       }
 
@@ -1965,17 +1972,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num col-contract"><span class="na">-</span></td>`;
       }
 
-      // Acquisition action cell — free agents only. During the offseason auction
-      // we deep-link to MFL's per-player Place Bid page; the rest of the year we
-      // deep-link to MFL's add/drop page, which itself auto-presents blind-bid
-      // (waiver) vs FCFS based on MFL's own in-season schedule. MFL is the final
-      // gatekeeper on timing/cap/roster, so no phase math is needed here.
-      if (!p.rostered) {
+      // Acquisition action cell — free agents only, and not an already-won
+      // auction player (mirrors the auction-view Bid cell). During the offseason
+      // auction we deep-link to MFL's per-player Place Bid page; the rest of the
+      // year we deep-link to MFL's add/drop page, which itself auto-presents
+      // blind-bid (waiver) vs FCFS based on MFL's own in-season schedule. MFL is
+      // the final gatekeeper on timing/cap/roster, so no phase math is needed.
+      if (!p.rostered && !(isAuctionSeason && p.auctionStatus === 'won')) {
         const acqUrl = isAuctionSeason
-          ? `https://${mflHost}/${currentYear}/options?L=${mflLeagueId}&O=43&P=${p.id}`
-          : `https://${mflHost}/${currentYear}/add_drop?L=${mflLeagueId}`;
+          ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`
+          : `https://${mflHost}/${mflActionYear}/add_drop?L=${mflLeagueId}`;
         const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
-        html += `<td class="col-fa-action"><a href="${acqUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="${acqLabel} ${escapeAttr(p.name)} on MyFantasyLeague (opens in new tab)">${acqLabel} &#8599;</a></td>`;
+        html += `<td class="col-fa-action"><a href="${escapeAttr(acqUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="${acqLabel} ${escapeAttr(p.name)} on MyFantasyLeague (opens in new tab)">${acqLabel} &#8599;</a></td>`;
       } else {
         html += `<td class="col-fa-action"></td>`;
       }
