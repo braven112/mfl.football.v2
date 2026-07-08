@@ -88,6 +88,22 @@
       "impact": "user",
       "area": "rosters",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "style-tweak",
+      "summary": "The AFL Free Agents hero gave its defenses a face. Land on the DEF tab and instead of a lonely team crest, the spotlight now leads with that unit's marquee defender — his ESPN headshot front and center, the team logo faded behind as a watermark — exactly like the offensive players already get. Each defense carries a rotating cast of its top defenders, so it opens on a different face each visit and cycles through the rest while you browse. It's the same broadcast treatment The League's board has run for weeks, now brought home to AFL.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "bug-fix",
+      "summary": "The Free Agents hero stopped reaching for the shoebox photo. When the spotlighted player had no ESPN headshot, the panel used to fall back to a tiny, grainy MyFantasyLeague mugshot (or a gray \"no photo\" placeholder) — a blurry face is worse than none up in the hero. Now it simply hides the cutout and lets the team logo carry the panel, so the spotlight only ever shows a crisp headshot or a clean crest. Both The League and AFL boards get the fix.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
     }
   ]
 }
