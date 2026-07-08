@@ -28,9 +28,22 @@ import {
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import NflGamesStrip from './NflGamesStrip';
 
 const POLL_LIVE = 60_000;
 const POLL_STALE = 300_000;
+/** Weeks offered in the week selector (regular season 1–18). */
+const MAX_WEEK = 18;
+
+/** A scoring update derived from a player's live-point jump between polls. */
+interface Moment {
+  key: string;
+  fid: string;
+  name: string;
+  team: string;
+  delta: number;
+  clock: string;
+}
 
 // ── polling ──
 
@@ -272,12 +285,13 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
 
 // ── matchup detail ──
 
-function MatchupDetail({ matchup, teams, players, meta, calc, onBack }: {
+function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
   players: Record<string, LivePlayerRow[]>;
   meta: Record<string, PlayerMeta>;
   calc: { home: TeamCalc; away: TeamCalc; homeWinProb: number; isFinal: boolean };
+  moments: Moment[];
   onBack: () => void;
 }) {
   const H = teams[matchup.home];
@@ -287,6 +301,7 @@ function MatchupDetail({ matchup, teams, players, meta, calc, onBack }: {
   const homeRows = players[matchup.home] ?? [];
   const awayRows = players[matchup.away] ?? [];
   const rowCount = Math.max(homeRows.length, awayRows.length);
+  const matchupMoments = moments.filter((m) => m.fid === matchup.home || m.fid === matchup.away).slice(0, 8);
 
   return (
     <div className="ls-detail" style={{ ['--th' as any]: th, ['--ta' as any]: ta }}>
@@ -331,16 +346,63 @@ function MatchupDetail({ matchup, teams, players, meta, calc, onBack }: {
           );
         })}
       </div>
+
+      {matchupMoments.length > 0 && (
+        <div className="ls-moments">
+          <h3>Scoring updates</h3>
+          {matchupMoments.map((m) => (
+            <div className="ls-moment" key={m.key}>
+              <span className="ls-m-clock">{m.clock}</span>
+              {m.team && <img className="ls-m-nfl" src={nflLogoUrl(m.team)} alt="" loading="lazy" />}
+              <span className="ls-m-txt">{m.name}</span>
+              <span className="ls-m-pts">+{fmt(m.delta)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── main ──
 
+function goToWeek(w: number) {
+  const u = new URL(window.location.href);
+  u.searchParams.set('week', String(w));
+  window.location.href = u.toString();
+}
+
 export default function LiveScoreboard(props: LiveScoringPageProps) {
   const { teams, playerMeta, userFranchiseId, week } = props;
   const { scores, remaining, matchups, players, ytp } = useLiveScoring(props);
   const [selected, setSelected] = useState<MatchupPairing | null>(null);
+
+  // Scoring moments: diff each starter's live points across polls and surface
+  // notable jumps. Self-contained — no play-by-play feed needed.
+  const prevLives = useRef<Record<string, number>>({});
+  const [moments, setMoments] = useState<Moment[]>([]);
+  useEffect(() => {
+    const prev = prevLives.current;
+    const fresh: Moment[] = [];
+    for (const [fid, rows] of Object.entries(players)) {
+      for (const r of rows) {
+        const before = prev[r.id];
+        if (before !== undefined && r.live - before >= 1.5) {
+          const m = playerMeta[r.id];
+          fresh.push({
+            key: `${r.id}-${r.live.toFixed(1)}`,
+            fid,
+            name: m?.name ?? 'Player',
+            team: m?.nflTeam ?? '',
+            delta: r.live - before,
+            clock: clockLabel(nflGameState(r.secondsRemaining), r.secondsRemaining),
+          });
+        }
+        prev[r.id] = r.live;
+      }
+    }
+    if (fresh.length) setMoments((cur) => [...fresh, ...cur].slice(0, 24));
+  }, [players, playerMeta]);
 
   const calcFor = useCallback((m: MatchupPairing) => {
     const home = computeTeam(m.home, scores, players, ytp, playerMeta);
@@ -371,7 +433,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
       <div className="ls-root">
         <MatchupDetail
           matchup={selected} teams={teams} players={players}
-          meta={playerMeta} calc={calcFor(selected)} onBack={() => setSelected(null)}
+          meta={playerMeta} calc={calcFor(selected)} moments={moments} onBack={() => setSelected(null)}
         />
       </div>
     );
@@ -383,10 +445,20 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     <div className="ls-root">
       <div className="ls-head">
         <h1>Live Scoring</h1>
-        <span className={`ls-status${anyLive ? ' live' : ''}`}>
-          {matchups.length > 0 && (anyLive ? <><span className="ls-dot live" />Live</> : <span className="ls-week-tab">Week {week}</span>)}
-        </span>
+        <div className="ls-head-right">
+          <label className="ls-weeksel">
+            <span className="ls-weeksel-lbl">Week</span>
+            <select value={week} onChange={(e) => goToWeek(Number(e.target.value))} aria-label="Select week">
+              {Array.from({ length: MAX_WEEK }, (_, i) => i + 1).map((w) => (
+                <option key={w} value={w}>Week {w}</option>
+              ))}
+            </select>
+          </label>
+          {anyLive && <span className="ls-status live"><span className="ls-dot live" />Live</span>}
+        </div>
       </div>
+
+      <NflGamesStrip week={week} year={props.year} isLive={props.isLive} />
 
       {matchups.length === 0 ? (
         <div className="ls-card"><div className="ls-empty">Scores will appear here when games begin.</div></div>

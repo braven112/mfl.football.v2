@@ -72,6 +72,28 @@ export interface LiveScoringHeroProps {
   initialRemaining?: Record<string, number>;
 }
 
+/** A real NFL game from the ESPN scoreboard (powers the NFL games strip). */
+export interface NflGame {
+  id: string;
+  /** 'pre' (not started), 'in' (live), 'post' (final). */
+  state: 'pre' | 'in' | 'post';
+  /** ESPN short detail, e.g. "8:12 - 3rd", "Final", "Sun 1:00 PM ET". */
+  shortDetail: string;
+  period: number;
+  clock: string;
+  home: { code: string; score: number };
+  away: { code: string; score: number };
+  /** Team code with possession during a live game, else null. */
+  possession: string | null;
+  date: string;
+}
+
+/** API response from /api/nfl-scoreboard. */
+export interface NflScoreboardResponse {
+  week: number;
+  games: NflGame[];
+}
+
 /** API response from /api/live-scoring (enhanced with matchup pairings) */
 export interface LiveScoringResponse {
   week: number;

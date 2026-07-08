@@ -279,6 +279,52 @@
 
 .ls-empty { padding: 2rem 1rem; text-align: center; color: var(--content-text-muted); }
 
+/* ── header right: week selector + live pill ── */
+.ls-head-right { display: flex; align-items: center; gap: var(--spacing-md); }
+.ls-weeksel { display: inline-flex; align-items: center; gap: 0.4rem; }
+.ls-weeksel-lbl { font-size: 0.66rem; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: 0.08em; color: var(--content-text-muted); }
+.ls-weeksel select {
+  font: inherit; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+  color: var(--page-text); background: var(--card-surface);
+  border: 1px solid var(--card-border); border-radius: var(--radius-md);
+  padding: 0.3rem 0.6rem; cursor: pointer;
+}
+.ls-weeksel select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* ── NFL games strip ── */
+.ls-nfl-strip { display: flex; flex-direction: column; gap: 0.4rem; }
+.ls-strip-label {
+  font-family: var(--font-display); font-size: 0.72rem; font-weight: var(--font-weight-bold);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--content-text-muted);
+}
+.ls-strip-rail { display: flex; gap: 0.7rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: thin; }
+.ls-gcard {
+  flex: none; width: 172px; background: var(--card-surface); border: 1px solid var(--card-border);
+  border-radius: var(--radius-md); padding: 0.6rem 0.8rem; box-shadow: var(--shadow-card);
+  display: flex; flex-direction: column; gap: 0.35rem;
+}
+.ls-gteam { display: flex; align-items: center; gap: 0.5rem; }
+.ls-glogo { width: 24px; height: 24px; object-fit: contain; }
+.ls-gcode { font-weight: var(--font-weight-bold); font-size: 0.88rem; color: var(--page-text); }
+.ls-gposs { color: var(--ls-live); font-size: 0.5rem; margin-left: 0.1rem; }
+.ls-gscore { margin-left: auto; font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 1.3rem; color: var(--page-text); font-variant-numeric: tabular-nums; }
+.ls-gfoot { border-top: 1px solid var(--content-border); padding-top: 0.35rem; font-size: 0.72rem; }
+.ls-glive { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ls-live); font-weight: var(--font-weight-semibold); }
+.ls-gpre { color: var(--content-text-muted); }
+
+/* ── scoring moments feed ── */
+.ls-moments { padding: 1rem 1.2rem 1.3rem; background: var(--content-bg-muted); border-top: 1px solid var(--content-border); }
+.ls-moments h3 {
+  font-family: var(--font-display); font-size: 0.9rem; font-weight: var(--font-weight-bold);
+  margin: 0 0 0.6rem; color: var(--content-text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.ls-moment { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px dashed var(--content-border); }
+.ls-moment:last-child { border-bottom: 0; }
+.ls-m-clock { font-size: 0.7rem; color: var(--content-text-muted); min-width: 4.6rem; font-variant-numeric: tabular-nums; }
+.ls-m-nfl { width: 17px; height: 17px; object-fit: contain; }
+.ls-m-txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
+.ls-m-pts { font-family: var(--font-display); font-weight: var(--font-weight-bold); color: var(--ls-boom); font-variant-numeric: tabular-nums; }
+
 @media (max-width: 760px) {
   .ls-scorehead { gap: 0.5rem; padding: 0.8rem; }
   .ls-mx-total { font-size: 1.9rem; }
