@@ -1569,7 +1569,10 @@ const pageConfig = {
     }
 
     .view-tab[data-active="true"] {
-      background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+      /* Mix with --content-bg (not hardcoded white) so the active tile tints
+         the card surface — a near-white pill reads as out-of-place on the
+         navy dark card. Mirrors TheLeague's roster view-tabs. */
+      background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
       border-color: var(--color-primary, #1c497c);
     }
 
@@ -1841,6 +1844,14 @@ const pageConfig = {
     .rank-tier-3 { background: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }
     .rank-tier-2 { background: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }
     .rank-tier-1 { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    /* Dark mode: the light pastel pills glare against the navy table. Swap to
+       translucent semantic washes + badge text tokens, matching TheLeague's
+       roster Opp # column so both leagues read identically in dark. */
+    :global(html.dark) .rank-tier-4 { background: var(--badge-success-bg, rgba(16, 185, 129, 0.15)); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.35); }
+    :global(html.dark) .rank-tier-3 { background: rgba(16, 185, 129, 0.09); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.25); }
+    :global(html.dark) .rank-tier-2 { background: rgba(220, 38, 38, 0.10); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.25); }
+    :global(html.dark) .rank-tier-1 { background: var(--badge-error-bg, rgba(220, 38, 38, 0.15)); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.4); }
 
     .opp-empty {
       color: var(--color-gray-400, #9ca3af);

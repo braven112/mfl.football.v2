@@ -80,6 +80,14 @@
       "impact": "admin",
       "area": "design-system",
       "league": "theleague"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "bug-fix",
+      "summary": "The AFL Keeper Planner finally read the room. Flip on dark mode and the drag-the-line tool had stayed stubbornly, blindingly white — every keeper card, the above/below-the-line zones, the status bar and the finalize modal glowing like a lightbox on the navy page. Now the whole planner dresses in the AFL night palette: navy cards, slate borders, a green wash on the keepers you're protecting and red on the cuts. While we were in there, the Roster/Analytics/Planner toggle stopped rendering its active tab as a stark white chip, and the roster table's \"Opp #\" matchup badges swapped their bright pastel pills for the same muted greens and reds every other page uses after dark.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
     }
   ]
 }
