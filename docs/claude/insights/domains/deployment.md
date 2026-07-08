@@ -94,3 +94,39 @@ hint: GitHub **401** = the token itself is bad (expired/revoked); **403/404** =
 valid token, missing permission/scope. (Here: `GH_PAT` expired ~2026-03-21 —
 the last successful Vercel-cron→`roster-sync.yml` dispatch — so every
 Vercel→Actions bridge using it had been silently dead for months.)
+
+## 2026-07-08 - SSR Pages That `import.meta.glob(..., {eager:true})` Bloat The 250MB Function
+
+**Context:** New `/afl-fantasy/players.astro` shipped as SSR
+(`prerender = false`, mirroring the other AFL pages) and eager-globbed every
+year of AFL feeds — `data/afl-fantasy/mfl-feeds/*/players.json` (~24MB across
+24 years) plus `weekly-results-raw.json` (~38MB). The build **succeeded** but
+the Vercel deploy **errored** with: *The Vercel Function "_render" is 256.09mb
+uncompressed which exceeds the maximum uncompressed size limit of 250mb.* This
+is easy to miss — the build log says `Complete!`; only the post-build "Deploying
+outputs" step fails, and the deployment sits in state `ERROR` while the branch's
+old server keeps serving (looks like a stale/caching issue, but it's a failed
+deploy).
+
+**Insight:** With `output: 'server'`, a page is on-demand (SSR) unless it exports
+`prerender = true`. Everything an SSR page imports — including all files matched
+by an eager `import.meta.glob` — is bundled into the single shared `_render`
+serverless function. Historical data feeds multiply fast (per-year JSON × 24
+years) and the whole repo already runs near the 250MB ceiling, so one new SSR
+page that globs multi-year feeds can tip it over. `du -sh
+.vercel/output/functions/_render.func` after `pnpm build:apps` reproduces the
+size locally (local measured ~7MB higher than Vercel's number, so leave margin).
+Note dynamic `fs`/`readFileSync` paths (e.g. draft-predictor reading
+`weekly-results-raw.json` by year) get traced in for **all** years too, since
+nft can't resolve the dynamic segment.
+
+**Recommendation:** If a page has no per-request logic (no `getAuthUser`, cookies,
+or `Astro.url.searchParams`), make it `prerender = true`. Prerendered pages run
+their globs at **build time** and their data never enters the function — the page
+becomes a static snapshot that refreshes on every deploy (this repo redeploys
+hourly on cron data-sync commits, so freshness is fine for browse/research
+pages). This is why `/theleague/players` stays SSR (it gates admin columns on
+`getAuthUser`) but the cap-free AFL sibling can prerender. Caveat: apex-domain
+league-prefix routing is middleware-based (`context.rewrite`), which doesn't run
+for statically-served routes the same way — verify apex behavior when
+prerendering a league-prefixed page.

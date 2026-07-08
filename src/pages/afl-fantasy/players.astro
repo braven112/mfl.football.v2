@@ -1,0 +1,1743 @@
+---
+/**
+ * AFL Free Agents Page — player research tool focused on available players.
+ *
+ * A leaner sibling of TheLeague's /theleague/players. AFL has no salary cap,
+ * contracts, auction, or surplus value (see leagues-data.mjs → afl-fantasy
+ * features: contracts:false, salaryCap:false), so this page deliberately drops
+ * every cap/contract/salary/auction/surplus/DEF-spotlight column that page
+ * carries and shows only browse-relevant columns: identity, age, experience,
+ * draft, physicals, dynasty ADP, last-season points, and projected points.
+ *
+ * Data is loaded at build time from the AFL MFL feed JSON (data/afl-fantasy).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
+import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getLeagueBySlug } from '../../config/leagues';
+import { positionOrder } from '../../constants/roster-constants';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import '../../styles/player-cell.css';
+import collegeLogos from '../../data/college-logos.json';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+
+// Prerendered (SSG): this page has no per-request logic — no auth, cookies, or
+// query params — it just renders a build-time snapshot of the AFL free-agent
+// pool that the client script sorts/filters. Prerendering keeps its data
+// (esp. the ~38MB of historical weekly-results feeds it eager-globs) OUT of the
+// serverless _render function, which otherwise exceeds Vercel's 250MB limit.
+// The snapshot refreshes on every deploy (cron data-sync commits redeploy).
+export const prerender = true;
+
+// MFL player-photo CDN host — sourced from the league registry, never
+// hardcoded (CLAUDE.md: never hardcode league constants like the MFL host).
+const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
+
+// ── College logo lookup (case-insensitive) ──
+const collegeLogosNormalized = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
+);
+function getCollegeLogo(collegeName: string | null): string | null {
+  if (!collegeName) return null;
+  const entry = collegeLogosNormalized[collegeName.toLowerCase()];
+  return (entry as any)?.logo ?? null;
+}
+
+// MFL team code → local SVG filename normalization
+const MFL_TEAM_CODE_MAP: Record<string, string> = {
+  GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO',
+  SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
+  BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
+};
+function normalizeMflTeam(code: string): string {
+  if (!code) return 'FA';
+  return MFL_TEAM_CODE_MAP[code] || code;
+}
+
+// ── Load AFL feed data ──
+const playerModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/*/players.json',
+  { eager: true }
+);
+const rostersModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/*/rosters.json',
+  { eager: true }
+);
+const projectedScoresModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/*/projectedScores.json',
+  { eager: true }
+);
+const adpDynastyModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json',
+  { eager: true }
+);
+const weeklyResultsModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/*/weekly-results-raw.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const findForYear = (modules: Record<string, any>, yr: number) => {
+  const key = Object.keys(modules).find(k => k.includes(`/${yr}/`));
+  return key ? getModuleData(modules[key]) : null;
+};
+
+// Resolve the AFL league year the same way the roster page does: the most
+// recent season whose rosters feed actually carries franchises (skips the
+// empty/errored placeholder years that MFL leaves before a season is built).
+const availableYears = Object.entries(rostersModules)
+  .map(([path, mod]) => {
+    const match = path.match(/\/(\d{4})\/rosters\.json$/);
+    if (!match) return null;
+    const data = getModuleData(mod) as any;
+    if (!data?.rosters?.franchise) return null;
+    return parseInt(match[1], 10);
+  })
+  .filter((year): year is number => year !== null)
+  .sort((a, b) => b - a);
+const currentYear = availableYears[0] ?? getCurrentSeasonYear();
+
+const playersData = findForYear(playerModules, currentYear);
+const rostersData = findForYear(rostersModules, currentYear);
+const projectedScoresData = findForYear(projectedScoresModules, currentYear);
+
+// Dynasty ADP (current year only)
+const adpDynMap = new Map<string, number>();
+{
+  const data = findForYear(adpDynastyModules, currentYear);
+  const players = data?.adp?.player
+    ? (Array.isArray(data.adp.player) ? data.adp.player : [data.adp.player])
+    : [];
+  for (const p of players) {
+    if (p?.id && p?.averagePick) {
+      const pick = parseFloat(p.averagePick);
+      if (pick > 0) adpDynMap.set(p.id, pick);
+    }
+  }
+}
+
+// Projected points
+const projectedMap = new Map<string, number>();
+if (projectedScoresData?.projectedScores?.playerScore) {
+  const scores = Array.isArray(projectedScoresData.projectedScores.playerScore)
+    ? projectedScoresData.projectedScores.playerScore
+    : [projectedScoresData.projectedScores.playerScore];
+  for (const s of scores) {
+    if (s?.id && s?.score) {
+      const score = parseFloat(s.score);
+      if (score > 0) projectedMap.set(s.id, score);
+    }
+  }
+}
+
+// Last completed season's total points + games played (from weekly results)
+const lastSeasonYear = getCurrentSeasonYear();
+const lastYearData = findForYear(weeklyResultsModules, lastSeasonYear);
+const lastYrPtsMap = new Map<string, number>();
+const lastYrGamesMap = new Map<string, number>();
+if (Array.isArray(lastYearData)) {
+  for (const weekPayload of lastYearData) {
+    const matchups = weekPayload?.weeklyResults?.matchup;
+    if (!matchups) continue;
+    const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
+    for (const m of matchupArr) {
+      const franchises = m?.franchise ? (Array.isArray(m.franchise) ? m.franchise : [m.franchise]) : [];
+      for (const f of franchises) {
+        const players = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
+        for (const p of players) {
+          if (!p?.id || !p?.score) continue;
+          const score = parseFloat(p.score);
+          if (!isNaN(score) && score > 0) {
+            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
+            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Rostered player set (AFL has no salaries/contracts — membership only)
+const rosteredIds = new Set<string>();
+if (rostersData?.rosters?.franchise) {
+  const franchises = Array.isArray(rostersData.rosters.franchise)
+    ? rostersData.rosters.franchise
+    : [rostersData.rosters.franchise];
+  for (const franchise of franchises) {
+    const rosterPlayers = franchise?.player
+      ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
+      : [];
+    for (const p of rosterPlayers) {
+      if (p?.id) rosteredIds.add(p.id);
+    }
+  }
+}
+
+// Fantasy-relevant positions (AFL is offense + K + team DEF, no IDP)
+const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
+
+interface PlayerRow {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  age: number | null;
+  espnId: string | null;
+  projected: number | null;
+  rostered: boolean;
+  exp: number | null;
+  draftRd: number | null;
+  college: string | null;
+  collegeLogo: string | null;
+  height: number | null;
+  weight: number | null;
+  adpDyn: number | null;
+  lastYrPts: number | null;
+  ppg: number | null;
+  games: number | null;
+  rookie: boolean;
+  birthdate: number | null;
+  jersey: string | null;
+  draftYear: number | null;
+  draftTeam: string | null;
+  draftPick: number | null;
+}
+
+const allPlayers = playersData?.players?.player;
+const playerList: PlayerRow[] = [];
+
+if (Array.isArray(allPlayers)) {
+  const now = Date.now() / 1000;
+  for (const p of allPlayers) {
+    if (!p?.id || !p?.name || !p?.position) continue;
+    if (!fantasyPositions.has(p.position)) continue;
+
+    const pos = p.position === 'Def' ? 'DEF' : p.position;
+
+    // MFL name format "Last, First" → "First Last" (DEF "Bills, Buffalo" → "Buffalo Bills")
+    const nameParts = p.name.split(', ');
+    const displayName = nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : p.name;
+
+    let age: number | null = null;
+    if (p.birthdate) {
+      const birthTimestamp = parseInt(p.birthdate, 10);
+      if (birthTimestamp > 0) {
+        age = Math.floor((now - birthTimestamp) / (365.25 * 24 * 60 * 60));
+      }
+    }
+
+    const draftYr = p.draft_year ? parseInt(p.draft_year, 10) : null;
+    const exp = draftYr && draftYr > 0 ? currentYear - draftYr : null;
+    const draftRd = p.draft_round ? parseInt(p.draft_round, 10) : null;
+
+    let heightInches: number | null = null;
+    let weightLbs: number | null = null;
+    if (p.height) {
+      const inches = parseInt(p.height, 10);
+      if (inches > 0) heightInches = inches;
+    }
+    if (p.weight) weightLbs = parseInt(p.weight, 10) || null;
+
+    const pts = lastYrPtsMap.get(p.id);
+    const gp = lastYrGamesMap.get(p.id);
+
+    playerList.push({
+      id: p.id,
+      name: displayName,
+      position: pos,
+      team: normalizeMflTeam(p.team || ''),
+      // Team defenses have no birthdate/draft year; give them neutral
+      // placeholder age/experience so age- and exp-range filters don't drop
+      // every DEF (mirrors the sibling theleague/players page).
+      age: pos === 'DEF' ? 25 : age,
+      espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
+      projected: projectedMap.get(p.id) ?? null,
+      rostered: rosteredIds.has(p.id),
+      exp: pos === 'DEF' ? 5 : exp,
+      draftRd: (draftRd && draftRd > 0) ? draftRd : null,
+      college: p.college || null,
+      collegeLogo: getCollegeLogo(p.college),
+      height: heightInches,
+      weight: weightLbs,
+      adpDyn: adpDynMap.get(p.id) ?? null,
+      lastYrPts: pts != null ? Math.round(pts * 10) / 10 : null,
+      games: gp ?? null,
+      ppg: (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null,
+      rookie: p.status === 'R',
+      birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
+      jersey: p.jersey || null,
+      draftYear: draftYr,
+      draftTeam: p.draft_team || null,
+      draftPick: p.draft_pick ? parseInt(p.draft_pick, 10) : null,
+    });
+  }
+}
+
+const hasProjected = projectedMap.size > 0;
+const hasLastYrPts = lastYrPtsMap.size > 0;
+const hasAdp = adpDynMap.size > 0;
+
+// Default sort: projected points when available, else dynasty ADP, else last-year pts.
+const defaultSort = hasProjected ? 'projected' : (hasAdp ? 'adpDyn' : 'lastYrPts');
+const defaultDir = defaultSort === 'adpDyn' ? 'asc' : 'desc';
+playerList.sort((a, b) => {
+  if (defaultSort === 'adpDyn') {
+    const aVal = a.adpDyn ?? Infinity;
+    const bVal = b.adpDyn ?? Infinity;
+    return aVal - bVal;
+  }
+  const aVal = (a as any)[defaultSort] ?? -1;
+  const bVal = (b as any)[defaultSort] ?? -1;
+  return bVal - aVal;
+});
+
+// Count free agents by position for the category pills
+const freeAgents = playerList.filter(p => !p.rostered);
+const faCounts: Record<string, number> = { ALL: freeAgents.length };
+for (const p of freeAgents) {
+  faCounts[p.position] = (faCounts[p.position] || 0) + 1;
+}
+
+// Initial hero spotlight: top free agent by the default sort.
+const topFa = freeAgents[0] ?? null;
+const topFaIsDef = topFa?.position === 'DEF';
+const topFaLogo = topFa && topFa.team && topFa.team !== 'FA'
+  ? `/assets/nfl-logos/${topFa.team}.svg`
+  : '/assets/nfl-logos/NFL.svg';
+const topFaHead = topFa
+  ? (topFaIsDef
+      ? topFaLogo
+      : (topFa.espnId
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${topFa.espnId}.png`
+          : `https://${mflHost}/player_photos_big_2014/${topFa.id}_thumb.jpg`))
+  : topFaLogo;
+
+// Unique NFL teams for the team filter dropdown
+const nflTeamsSet = new Set<string>();
+for (const p of playerList) {
+  if (p.team && p.team !== 'FA') nflTeamsSet.add(p.team);
+}
+const nflTeamsList = [...nflTeamsSet].sort();
+
+const playerDataJson = JSON.stringify(playerList);
+const faCountsJson = JSON.stringify(faCounts);
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+---
+
+<TheLeagueLayout title="Free Agents | AFL">
+  <CollegeLogoDarkStyles />
+  <div class="players-page">
+    <!-- Hero -->
+    <div class="players-hero">
+      <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'}>
+        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" />
+        <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" />
+      </div>
+      {topFa && (
+        <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite">
+          <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
+          <span class="hero-spotlight__name" id="hero-spotlight-name">{topFa.name}</span>
+          <span class="hero-spotlight__meta" id="hero-spotlight-meta">
+            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
+          </span>
+        </div>
+      )}
+      <div class="hero-top">
+        <div class="hero-title-group">
+          <h1 class="hero-title">Free Agents</h1>
+          <span class="hero-count">{freeAgents.length} available players</span>
+        </div>
+        <a href={r('/afl-fantasy/rosters')} class="hero-cross-link">
+          View rosters
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Search -->
+      <div class="hero-search">
+        <svg class="hero-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="search"
+          id="player-search"
+          class="hero-search__input"
+          placeholder="Search by player name or NFL team..."
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Position pills -->
+      <nav class="hero-positions" id="category-tabs">
+        <button class="pos-pill active" data-pos="ALL">
+          All
+          <span class="pos-pill__count" id="count-ALL">{faCounts.ALL || 0}</span>
+        </button>
+        {positionOrder.map(pos => (
+          <button class="pos-pill" data-pos={pos}>
+            {pos === 'PK' ? 'K' : pos}
+            <span class="pos-pill__count" id={`count-${pos}`}>{faCounts[pos] || 0}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="players-toolbar">
+      <div class="toolbar-left">
+        <h2 class="players-section-title">Available Players</h2>
+        <span class="showing-count" aria-live="polite">
+          <strong id="showing-count">50</strong> of <strong id="total-players">0</strong>
+        </span>
+      </div>
+      <div class="toolbar-right">
+        <button class="filter-toggle-btn" id="filter-toggle-btn" type="button">
+          <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+          </svg>
+          Filters
+          <span class="filter-badge" id="filter-badge" style="display: none;">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters panel -->
+    <div class="filters-panel" id="filters-panel">
+      <div class="filters-panel__inner">
+        <h3 class="filters-panel-title">Filters</h3>
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label class="filter-label" for="filter-team">NFL Team</label>
+            <select id="filter-team" class="filter-select">
+              <option value="">All Teams</option>
+              {nflTeamsList.map(team => (
+                <option value={team}>{team}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="filter-group filter-group--age">
+            <label class="filter-label">Age Range</label>
+            <div class="filter-range">
+              <input type="number" id="filter-age-min" class="filter-input-num" placeholder="Min" min="18" max="50" />
+              <span class="filter-range__sep">&ndash;</span>
+              <input type="number" id="filter-age-max" class="filter-input-num" placeholder="Max" min="18" max="50" />
+            </div>
+          </div>
+
+          <div class="filter-group filter-group--ht">
+            <label class="filter-label">Height (in)</label>
+            <div class="filter-range">
+              <input type="number" id="filter-ht-min" class="filter-input-num" placeholder="Min" min="60" max="84" />
+              <span class="filter-range__sep">&ndash;</span>
+              <input type="number" id="filter-ht-max" class="filter-input-num" placeholder="Max" min="60" max="84" />
+            </div>
+          </div>
+
+          <div class="filter-group filter-group--wt">
+            <label class="filter-label">Weight (lbs)</label>
+            <div class="filter-range">
+              <input type="number" id="filter-wt-min" class="filter-input-num" placeholder="Min" min="150" max="400" />
+              <span class="filter-range__sep">&ndash;</span>
+              <input type="number" id="filter-wt-max" class="filter-input-num" placeholder="Max" min="150" max="400" />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-exp">Experience</label>
+            <select id="filter-exp" class="filter-select">
+              <option value="">All</option>
+              <option value="rookie">Rookie</option>
+              <option value="1-2">1–2 years</option>
+              <option value="3-5">3–5 years</option>
+              <option value="6-10">6–10 years</option>
+              <option value="10+">10+ years</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-draft">Draft Round</label>
+            <select id="filter-draft" class="filter-select">
+              <option value="">All</option>
+              <option value="1">Round 1</option>
+              <option value="2">Round 2</option>
+              <option value="3">Round 3</option>
+              <option value="4+">Round 4+</option>
+              <option value="udfa">Undrafted</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filters-row-bottom">
+          <label class="filter-checkbox">
+            <input type="checkbox" id="show-rostered" />
+            <span>Include rostered</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="show-rookies" />
+            <span>Include rookies</span>
+          </label>
+          <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+      <table class="players-table" id="players-table">
+        <thead>
+          <tr>
+            <th class="sortable col-rank" data-sort="rank"><div class="th-content">#</div></th>
+            <th class="sortable col-player" data-sort="name"><div class="th-content">Player</div></th>
+            <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
+            <th class="sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
+            <th class="sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
+            <th class="sortable col-text col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
+            <th class="sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
+            <th class="sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
+            {hasAdp && (
+              <th class="sortable col-num" data-sort="adpDyn"><div class="th-content">ADP</div></th>
+            )}
+            {hasLastYrPts && (
+              <th class="sortable col-num" data-sort="lastYrPts"><div class="th-content">Last Yr</div></th>
+            )}
+            {hasProjected && (
+              <th class="sortable col-num col-projected" data-sort="projected"><div class="th-content">Proj</div></th>
+            )}
+          </tr>
+        </thead>
+        <tbody id="player-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Show more -->
+    <div class="show-more-wrapper" id="show-more-wrapper">
+      <button class="show-more-btn" id="show-more-btn">
+        Load More Players
+        <svg class="show-more-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- No data -->
+    <div class="no-data" id="no-data" style="display: none;">
+      <p>No player data available yet.</p>
+    </div>
+  </div>
+  <PlayerDetailsModal hideContract={true} />
+</TheLeagueLayout>
+
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost }}>
+  const players = JSON.parse(playerDataJson);
+
+  // State
+  let filteredPlayers = [];
+  let currentSort = defaultSort;
+  let sortDirection = defaultDir;
+  let visibleCount = 50;
+  let activePosition = 'ALL';
+  let searchQuery = '';
+  let showRostered = false;
+  let showRookies = false;
+  const BATCH_SIZE = 50;
+
+  // Advanced filter state
+  let filterTeam = '';
+  let filterAgeMin = null;
+  let filterAgeMax = null;
+  let filterExp = '';
+  let filterDraft = '';
+  let filterHtMin = null;
+  let filterHtMax = null;
+  let filterWtMin = null;
+  let filterWtMax = null;
+  let filtersOpen = false;
+
+  // ── Helpers ──
+  function getHeadshotUrl(playerId, espnId) {
+    if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+    return `https://${mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`;
+  }
+  function getNflLogo(team) {
+    if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
+    return `/assets/nfl-logos/${team}.svg`;
+  }
+  const defaultHeadshot = `https://${mflHost}/player_photos_2010/no_photo_available.jpg`;
+  function buildOnerror(mflId, espnId) {
+    const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
+    const mfl = mflId ? `https://${mflHost}/player_photos_big_2014/${mflId}_thumb.jpg` : null;
+    if (college && mfl) {
+      return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${mfl}'};this.src='${college}'`;
+    }
+    if (college) {
+      return `this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${college}'`;
+    }
+    return `this.onerror=null;this.src='${defaultHeadshot}'`;
+  }
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ── Hero spotlight (top player of the current filter/sort) ──
+  const spotlightEl = document.getElementById('hero-spotlight');
+  const spotlightLogoEl = document.getElementById('hero-spotlight-logo');
+  const spotlightHeadEl = document.getElementById('hero-spotlight-head');
+  const spotlightCaptionEl = document.getElementById('hero-spotlight-caption');
+  const spotlightLabelEl = document.getElementById('hero-spotlight-label');
+  const spotlightNameEl = document.getElementById('hero-spotlight-name');
+  const spotlightMetaEl = document.getElementById('hero-spotlight-meta');
+  let spotlightPlayerId = null;
+
+  function updateSpotlight(p) {
+    if (!spotlightEl) return;
+    if (!p) {
+      spotlightPlayerId = null;
+      spotlightEl.setAttribute('data-def', 'false');
+      if (spotlightLogoEl) spotlightLogoEl.src = '/assets/nfl-logos/NFL.svg';
+      if (spotlightCaptionEl) spotlightCaptionEl.style.display = 'none';
+      if (spotlightHeadEl) spotlightHeadEl.style.visibility = 'hidden';
+      return;
+    }
+    if (spotlightCaptionEl) spotlightCaptionEl.style.display = '';
+    if (spotlightHeadEl) spotlightHeadEl.style.visibility = '';
+    const isDef = p.position === 'DEF';
+    spotlightEl.setAttribute('data-def', isDef ? 'true' : 'false');
+
+    if (spotlightLabelEl) {
+      spotlightLabelEl.textContent = activePosition && activePosition !== 'ALL'
+        ? 'Top ' + (activePosition === 'PK' ? 'K' : activePosition)
+        : 'Top Free Agent';
+    }
+    if (spotlightNameEl) spotlightNameEl.textContent = p.name;
+    if (spotlightMetaEl) {
+      const pos = p.position === 'PK' ? 'K' : p.position;
+      const teamPart = p.team && p.team !== 'FA' ? ` · ${p.team}` : '';
+      const projPart = p.projected != null ? ` · ${p.projected.toFixed(1)} pts` : '';
+      spotlightMetaEl.textContent = `${pos}${teamPart}${projPart}`;
+    }
+
+    if (p.id === spotlightPlayerId) return;
+    spotlightPlayerId = p.id;
+
+    const logo = getNflLogo(p.team);
+    if (spotlightLogoEl) spotlightLogoEl.src = logo;
+    if (spotlightHeadEl) {
+      if (isDef) {
+        spotlightHeadEl.style.visibility = 'hidden';
+      } else {
+        spotlightHeadEl.style.visibility = '';
+        spotlightHeadEl.onerror = null;
+        spotlightHeadEl.setAttribute('onerror', buildOnerror(p.id, p.espnId));
+        spotlightHeadEl.src = getHeadshotUrl(p.id, p.espnId);
+        spotlightHeadEl.style.animation = 'none';
+        // eslint-disable-next-line no-unused-expressions
+        spotlightHeadEl.offsetHeight; // force reflow to restart animation
+        spotlightHeadEl.style.animation = '';
+      }
+    }
+  }
+
+  // ── Sorting ──
+  function sortPlayers() {
+    filteredPlayers.sort((a, b) => {
+      let aVal, bVal;
+      switch (currentSort) {
+        case 'name':
+          return sortDirection === 'asc'
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name);
+        case 'college': {
+          const aC = a.college || '';
+          const bC = b.college || '';
+          return sortDirection === 'asc' ? aC.localeCompare(bC) : bC.localeCompare(aC);
+        }
+        case 'age':      aVal = a.age ?? 999; bVal = b.age ?? 999; break;
+        case 'exp':      aVal = a.exp ?? -1; bVal = b.exp ?? -1; break;
+        case 'draftRd':  aVal = a.draftRd ?? 999; bVal = b.draftRd ?? 999; break;
+        case 'height':   aVal = a.height ?? -1; bVal = b.height ?? -1; break;
+        case 'weight':   aVal = a.weight ?? -1; bVal = b.weight ?? -1; break;
+        case 'adpDyn':   aVal = a.adpDyn ?? 9999; bVal = b.adpDyn ?? 9999; break;
+        case 'lastYrPts': aVal = a.lastYrPts ?? -1; bVal = b.lastYrPts ?? -1; break;
+        case 'projected': aVal = a.projected ?? -1; bVal = b.projected ?? -1; break;
+        default:         aVal = a.projected ?? -1; bVal = b.projected ?? -1;
+      }
+      const diff = aVal - bVal;
+      return sortDirection === 'desc' ? -diff : diff;
+    });
+  }
+
+  // ── Filtering ──
+  function passesAdvancedFilters(p) {
+    if (filterTeam && p.team !== filterTeam) return false;
+    if (filterAgeMin != null && (p.age == null || p.age < filterAgeMin)) return false;
+    if (filterAgeMax != null && (p.age == null || p.age > filterAgeMax)) return false;
+    if (filterExp) {
+      const exp = p.exp;
+      switch (filterExp) {
+        case 'rookie': if (!p.rookie) return false; break;
+        case '1-2': if (exp == null || exp < 1 || exp > 2) return false; break;
+        case '3-5': if (exp == null || exp < 3 || exp > 5) return false; break;
+        case '6-10': if (exp == null || exp < 6 || exp > 10) return false; break;
+        case '10+': if (exp == null || exp < 10) return false; break;
+      }
+    }
+    if (filterDraft) {
+      switch (filterDraft) {
+        case '1': if (p.draftRd !== 1) return false; break;
+        case '2': if (p.draftRd !== 2) return false; break;
+        case '3': if (p.draftRd !== 3) return false; break;
+        case '4+': if (p.draftRd == null || p.draftRd < 4) return false; break;
+        case 'udfa': if (p.draftRd != null) return false; break;
+      }
+    }
+    if (filterHtMin != null && (p.height == null || p.height < filterHtMin)) return false;
+    if (filterHtMax != null && (p.height == null || p.height > filterHtMax)) return false;
+    if (filterWtMin != null && (p.weight == null || p.weight < filterWtMin)) return false;
+    if (filterWtMax != null && (p.weight == null || p.weight > filterWtMax)) return false;
+    return true;
+  }
+
+  function countActiveFilters() {
+    let count = 0;
+    if (filterTeam) count++;
+    if (filterAgeMin != null || filterAgeMax != null) count++;
+    if (filterHtMin != null || filterHtMax != null) count++;
+    if (filterWtMin != null || filterWtMax != null) count++;
+    if (filterExp) count++;
+    if (filterDraft) count++;
+    if (showRostered) count++;
+    if (showRookies) count++;
+    return count;
+  }
+
+  function updateFilterBadge() {
+    const badge = document.getElementById('filter-badge');
+    const count = countActiveFilters();
+    if (badge) {
+      badge.textContent = String(count);
+      badge.style.display = count > 0 ? '' : 'none';
+    }
+    const btn = document.getElementById('filter-toggle-btn');
+    if (btn) btn.classList.toggle('has-filters', count > 0);
+  }
+
+  function matchesBaseFilters(p, query) {
+    if (!showRostered && p.rostered) return false;
+    if (!showRookies && p.rookie) return false;
+    if (!passesAdvancedFilters(p)) return false;
+    if (query) {
+      return p.name.toLowerCase().includes(query) || p.team.toLowerCase().includes(query);
+    }
+    return true;
+  }
+
+  function filterPlayers() {
+    const query = searchQuery.toLowerCase();
+    filteredPlayers = players.filter(p => {
+      if (activePosition !== 'ALL' && p.position !== activePosition) return false;
+      return matchesBaseFilters(p, query);
+    });
+
+    // Update pill counts (ignore the active position filter)
+    const pool = players.filter(p => matchesBaseFilters(p, query));
+    const counts = { ALL: pool.length };
+    for (const p of pool) counts[p.position] = (counts[p.position] || 0) + 1;
+    for (const pos of ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF']) {
+      const el = document.getElementById(`count-${pos}`);
+      if (el) el.textContent = String(counts[pos] || 0);
+    }
+
+    updateFilterBadge();
+    sortPlayers();
+    visibleCount = BATCH_SIZE;
+    render();
+  }
+
+  function render() {
+    const tbody = document.getElementById('player-table-body');
+    if (!tbody) return;
+
+    const total = filteredPlayers.length;
+    const end = Math.min(visibleCount, total);
+    const pageData = filteredPlayers.slice(0, end);
+
+    const showingCountEl = document.getElementById('showing-count');
+    const totalEl = document.getElementById('total-players');
+    const showMoreWrapper = document.getElementById('show-more-wrapper');
+    if (showingCountEl) showingCountEl.textContent = String(end);
+    if (totalEl) totalEl.textContent = String(total);
+    if (showMoreWrapper) showMoreWrapper.style.display = end < total ? '' : 'none';
+
+    let html = '';
+    for (let i = 0; i < pageData.length; i++) {
+      const p = pageData[i];
+      const rank = i + 1;
+      const isDef = p.position === 'DEF';
+      const headshot = isDef ? getNflLogo(p.team) : getHeadshotUrl(p.id, p.espnId);
+      const logo = getNflLogo(p.team);
+      const posLabel = p.position === 'PK' ? 'K' : p.position;
+      const rosteredClass = p.rostered ? ' row--rostered' : '';
+
+      const modalJson = escapeAttr(JSON.stringify({
+        id: p.id, espnId: p.espnId || null, name: p.name,
+        position: p.position, nflTeam: p.team,
+        college: p.college || null, height: p.height || null,
+        weight: p.weight || null, number: p.jersey || null,
+        birthdate: p.birthdate || null, experience: p.exp != null ? p.exp : null,
+        draftYear: p.draftYear || null, draftTeam: p.draftTeam || null,
+        draftRound: p.draftRd || null, draftPick: p.draftPick || null,
+        points: p.projected != null ? p.projected : (p.lastYrPts != null ? p.lastYrPts : null),
+      }));
+      const rosteredDot = p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : '';
+
+      const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
+      const wtDisplay = p.weight ? p.weight + '' : '-';
+
+      html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
+        <td class="cell-rank">${rank}</td>
+        <td class="cell-player">
+          <div class="player-cell">
+            <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}">
+              <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
+            </div>
+            <div class="player-cell__info">
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}</strong>
+              <div class="player-meta">
+                ${isDef ? '' : `<img src="${logo}" alt="${escapeAttr(p.team)}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td class="cell-age">${p.age ?? '-'}</td>
+        <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
+        <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="cell-college">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" />` : (p.college ? escapeAttr(p.college) : '<span class="na">-</span>')}</td>
+        <td class="cell-sm">${htDisplay}</td>
+        <td class="cell-sm">${wtDisplay}</td>`;
+
+      if (hasAdp) {
+        html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+      if (hasLastYrPts) {
+        html += `<td class="cell-num">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+      if (hasProjected) {
+        html += `<td class="cell-num cell-pts col-projected">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+      html += `</tr>`;
+    }
+
+    tbody.innerHTML = html;
+
+    // Sort indicators
+    document.querySelectorAll('.players-table th.sortable').forEach(th => {
+      const content = th.querySelector('.th-content');
+      const existingArrow = th.querySelector('.sort-arrow');
+      const sortKey = th.getAttribute('data-sort');
+      if (sortKey === currentSort) {
+        th.classList.add('sorted');
+        if (!existingArrow && content) {
+          const arrow = document.createElement('span');
+          arrow.className = 'sort-arrow';
+          arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+          content.appendChild(arrow);
+        } else if (existingArrow) {
+          existingArrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+        }
+      } else {
+        th.classList.remove('sorted');
+        if (existingArrow) existingArrow.remove();
+      }
+    });
+
+    const noDataEl = document.getElementById('no-data');
+    if (noDataEl) noDataEl.style.display = players.length === 0 ? 'block' : 'none';
+
+    updateSpotlight(filteredPlayers[0] || null);
+  }
+
+  // Columns that default to descending on first click
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts']);
+  // Columns that default to ascending (lower = better)
+  const ascDefaults = new Set(['adpDyn', 'draftRd', 'age']);
+
+  function init() {
+    const table = document.getElementById('players-table');
+    if (!table || table.dataset.init) return;
+    table.dataset.init = 'true';
+
+    // Position pills
+    const tabsEl = document.getElementById('category-tabs');
+    if (tabsEl) {
+      tabsEl.addEventListener('click', (e) => {
+        const tab = e.target.closest('.pos-pill');
+        if (!tab) return;
+        activePosition = tab.getAttribute('data-pos');
+        tabsEl.querySelectorAll('.pos-pill').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        filterPlayers();
+      });
+    }
+
+    // Search
+    const searchInput = document.getElementById('player-search');
+    if (searchInput) {
+      let debounceTimer;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          searchQuery = e.target.value.trim();
+          filterPlayers();
+        }, 150);
+      });
+    }
+
+    // Sort headers
+    document.querySelectorAll('.players-table th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.getAttribute('data-sort');
+        if (key === 'rank') return;
+        if (currentSort === key) {
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort = key;
+          if (key === 'name' || key === 'college') sortDirection = 'asc';
+          else if (ascDefaults.has(key)) sortDirection = 'asc';
+          else sortDirection = 'desc';
+        }
+        sortPlayers();
+        visibleCount = BATCH_SIZE;
+        render();
+      });
+    });
+
+    // Filter toggle
+    const filterToggle = document.getElementById('filter-toggle-btn');
+    const filtersPanel = document.getElementById('filters-panel');
+    if (filterToggle && filtersPanel) {
+      filterToggle.addEventListener('click', () => {
+        filtersOpen = !filtersOpen;
+        filtersPanel.classList.toggle('open', filtersOpen);
+        filterToggle.classList.toggle('active', filtersOpen);
+      });
+    }
+
+    // Advanced filter inputs
+    const numOrNull = (v) => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    };
+    const bind = (id, handler, evt = 'input') => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(evt, handler);
+    };
+    bind('filter-team', (e) => { filterTeam = e.target.value; filterPlayers(); }, 'change');
+    bind('filter-age-min', (e) => { filterAgeMin = numOrNull(e.target.value); filterPlayers(); });
+    bind('filter-age-max', (e) => { filterAgeMax = numOrNull(e.target.value); filterPlayers(); });
+    bind('filter-ht-min', (e) => { filterHtMin = numOrNull(e.target.value); filterPlayers(); });
+    bind('filter-ht-max', (e) => { filterHtMax = numOrNull(e.target.value); filterPlayers(); });
+    bind('filter-wt-min', (e) => { filterWtMin = numOrNull(e.target.value); filterPlayers(); });
+    bind('filter-wt-max', (e) => { filterWtMax = numOrNull(e.target.value); filterPlayers(); });
+    bind('filter-exp', (e) => { filterExp = e.target.value; filterPlayers(); }, 'change');
+    bind('filter-draft', (e) => { filterDraft = e.target.value; filterPlayers(); }, 'change');
+    bind('show-rostered', (e) => { showRostered = e.target.checked; filterPlayers(); }, 'change');
+    bind('show-rookies', (e) => { showRookies = e.target.checked; filterPlayers(); }, 'change');
+
+    // Clear filters
+    const clearBtn = document.getElementById('filter-clear-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        filterTeam = ''; filterAgeMin = null; filterAgeMax = null;
+        filterHtMin = null; filterHtMax = null; filterWtMin = null; filterWtMax = null;
+        filterExp = ''; filterDraft = ''; showRostered = false; showRookies = false;
+        ['filter-team', 'filter-age-min', 'filter-age-max', 'filter-ht-min', 'filter-ht-max',
+         'filter-wt-min', 'filter-wt-max', 'filter-exp', 'filter-draft'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        ['show-rostered', 'show-rookies'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.checked = false;
+        });
+        filterPlayers();
+      });
+    }
+
+    // Show more
+    const showMoreBtn = document.getElementById('show-more-btn');
+    if (showMoreBtn) {
+      showMoreBtn.addEventListener('click', () => {
+        visibleCount += BATCH_SIZE;
+        render();
+      });
+    }
+
+    filterPlayers();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  // Astro view transitions
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<!-- Player modal trigger (delegated, survives re-renders) -->
+<script>
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  function initModalTrigger() {
+    const tbody = document.getElementById('player-table-body');
+    if (tbody && !tbody.dataset.modalInit) {
+      tbody.dataset.modalInit = 'true';
+      initPlayerModalTrigger(tbody);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModalTrigger);
+  } else {
+    initModalTrigger();
+  }
+  document.addEventListener('astro:page-load', initModalTrigger);
+</script>
+
+<style>
+  /* =============================================
+     AFL FREE AGENTS PAGE
+     Lean sibling of /theleague/players — shared visual system,
+     no cap / contract / auction / value columns.
+     ============================================= */
+
+  .players-page {
+    max-width: 100%;
+    padding-bottom: 3rem;
+  }
+
+  /* Remove gap between nav header and hero */
+  :global(.container-header) {
+    margin-bottom: 0 !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* ── Hero ── */
+  .players-hero {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-900, #111827);
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: var(--radius-lg, 1rem);
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  /* Hero spotlight (broadcast diagonal cut: top-FA headshot + team logo) */
+  .hero-spotlight {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 50%;
+    overflow: hidden;
+    pointer-events: none;
+    clip-path: polygon(20% 0, 110% 0, 90% 100%, 0% 100%);
+    background:
+      radial-gradient(120% 120% at 80% 20%, rgba(196, 30, 58, 0.12) 0%, transparent 60%),
+      #eef1f6;
+  }
+  :global(html.dark) .hero-spotlight {
+    background:
+      radial-gradient(120% 120% at 80% 20%, rgba(196, 30, 58, 0.5) 0%, transparent 60%),
+      #111827;
+  }
+  .hero-spotlight::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 100%;
+    z-index: 3;
+    background: linear-gradient(to bottom, var(--league-accent, #c41e3a) 0%, rgba(196, 30, 58, 0.6) 100%);
+    clip-path: polygon(20% 0, 22.5% 0, 2.5% 100%, 0% 100%);
+    pointer-events: none;
+  }
+  .hero-spotlight::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 100%;
+    z-index: 3;
+    background: linear-gradient(to bottom, rgba(196, 30, 58, 0.6) 0%, var(--league-accent, #c41e3a) 100%);
+    clip-path: polygon(110% 0, 107.5% 0, 87.5% 100%, 90% 100%);
+    pointer-events: none;
+  }
+  .hero-spotlight__logo {
+    position: absolute;
+    top: 50%;
+    left: 58%;
+    transform: translate(-50%, -50%);
+    width: 78%;
+    height: auto;
+    max-height: 150%;
+    object-fit: contain;
+    opacity: 0.16;
+    filter: grayscale(0.1);
+    z-index: 1;
+    transition: opacity 0.35s ease;
+  }
+  .hero-spotlight__head {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: 60% 100%;
+    padding: 0.5rem 0 0;
+    filter: brightness(1.02) contrast(1.05) saturate(1.1) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+    z-index: 2;
+    opacity: 0;
+    animation: spotlightIn 0.45s ease forwards;
+  }
+  /* Team defense has no headshot — make the crest the hero */
+  .hero-spotlight[data-def='true'] .hero-spotlight__head {
+    display: none;
+  }
+  .hero-spotlight[data-def='true'] .hero-spotlight__logo {
+    opacity: 0.92;
+    filter: none;
+    width: 62%;
+    left: 60%;
+  }
+  @keyframes spotlightIn {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .hero-spotlight-caption {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.85rem;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.05rem;
+    max-width: 60%;
+    text-align: right;
+    pointer-events: none;
+    padding: 0.35rem 0.6rem 0.4rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+  :global(html.dark) .hero-spotlight-caption {
+    padding: 0.4rem 0.65rem 0.45rem 1.75rem;
+    border-radius: 0;
+    background: radial-gradient(130% 150% at 100% 100%, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.3) 48%, transparent 78%);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
+  }
+  .hero-spotlight__label {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #6b7280;
+  }
+  :global(html.dark) .hero-spotlight__label { color: rgba(255, 255, 255, 0.75); }
+  .hero-spotlight__name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #111827;
+    letter-spacing: -0.01em;
+  }
+  :global(html.dark) .hero-spotlight__name { color: #fff; }
+  .hero-spotlight__meta {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #4b5563;
+    font-variant-numeric: tabular-nums;
+  }
+  :global(html.dark) .hero-spotlight__meta { color: rgba(255, 255, 255, 0.85); }
+
+  .hero-top {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .hero-cross-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--league-accent, #c41e3a);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-full, 999px);
+    text-decoration: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    transition: gap 0.15s ease, filter 0.15s ease, transform 0.15s ease;
+    white-space: nowrap;
+  }
+  .hero-cross-link:hover {
+    gap: 0.5rem;
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  .hero-title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #c41e3a);
+  }
+  .hero-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+  .hero-count {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-gray-400, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Hero search ── */
+  .hero-search {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 1.25rem;
+    max-width: 520px;
+  }
+  .hero-search__icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--color-gray-400, #9ca3af);
+    pointer-events: none;
+    transition: color 0.15s;
+  }
+  .hero-search__input {
+    width: 100%;
+    padding: 0.7rem 0.875rem 0.7rem 2.5rem;
+    border: 1px solid var(--input-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--input-bg, #fff);
+    color: var(--input-text, #111827);
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .hero-search__input::placeholder { color: var(--input-placeholder, #9ca3af); }
+  .hero-search__input:focus {
+    outline: none;
+    border-color: var(--league-accent, #c41e3a);
+    box-shadow: 0 0 0 2px rgba(196, 30, 58, 0.12);
+  }
+  .hero-search:has(.hero-search__input:focus) .hero-search__icon {
+    color: var(--league-accent, #c41e3a);
+  }
+
+  /* ── Position pills ── */
+  .hero-positions {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+  .pos-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--content-border, #d1d5db) 70%, transparent);
+    border-radius: var(--radius-md, 0.5rem);
+    background: color-mix(in srgb, var(--content-bg, #fff) 55%, transparent);
+    -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    backdrop-filter: blur(8px) saturate(1.4);
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pos-pill:hover {
+    border-color: var(--league-accent, #c41e3a);
+    color: var(--league-accent, #c41e3a);
+    background: color-mix(in srgb, var(--content-bg, #fff) 72%, transparent);
+  }
+  .pos-pill.active {
+    background: var(--league-accent, #c41e3a);
+    border-color: var(--league-accent, #c41e3a);
+    color: white;
+  }
+  .pos-pill__count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.05rem 0.35rem;
+    border-radius: 10px;
+    background: var(--color-gray-100, #f3f4f6);
+    min-width: 1.25rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .pos-pill.active .pos-pill__count { background: rgba(255, 255, 255, 0.25); }
+
+  /* ── Toolbar ── */
+  .players-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    flex-wrap: wrap;
+  }
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .players-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #c41e3a);
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .showing-count {
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .showing-count strong {
+    color: var(--color-gray-700, #374151);
+    font-weight: 600;
+  }
+
+  /* ── Filter toggle ── */
+  .filter-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .filter-toggle-btn__icon { width: 15px; height: 15px; }
+  .filter-toggle-btn:hover,
+  .filter-toggle-btn.active,
+  .filter-toggle-btn.has-filters {
+    border-color: var(--league-accent, #c41e3a);
+    color: var(--league-accent, #c41e3a);
+  }
+  .filter-toggle-btn.active,
+  .filter-toggle-btn.has-filters {
+    background: color-mix(in srgb, var(--league-accent, #c41e3a) 10%, var(--content-bg, white));
+  }
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--league-accent, #c41e3a);
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* ── Filters panel ── */
+  .filters-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .filters-panel.open { max-height: 300px; }
+  .filters-panel__inner {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1.25rem 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .filters-panel-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #c41e3a);
+    margin: 0 0 0.875rem;
+    line-height: 1.2;
+  }
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.875rem;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .filter-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    color: var(--input-text, #374151);
+    background: var(--input-bg, #fff);
+  }
+  .filter-select:focus,
+  .filter-input-num:focus {
+    outline: none;
+    border-color: var(--league-accent, #c41e3a);
+    box-shadow: 0 0 0 2px rgba(196, 30, 58, 0.12);
+  }
+  .filter-range {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .filter-range__sep {
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.875rem;
+  }
+  .filter-input-num {
+    width: 70px;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    color: var(--input-text, #374151);
+    text-align: center;
+    background: var(--input-bg, #fff);
+  }
+  .filters-row-bottom {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+  .filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    user-select: none;
+  }
+  .filter-checkbox input { accent-color: var(--league-accent, #c41e3a); }
+  .filter-clear-btn {
+    margin-left: auto;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--content-bg, #fff);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-clear-btn:hover {
+    border-color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-700, #374151);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  /* ── Show more ── */
+  .show-more-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 1.25rem 0 0;
+  }
+  .show-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 2rem;
+    border: 1px solid var(--content-border, #dee2e6);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    color: var(--league-accent, #c41e3a);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .show-more-btn__icon { width: 16px; height: 16px; }
+  .show-more-btn:hover {
+    border-color: var(--league-accent, #c41e3a);
+    background: var(--league-accent, #c41e3a);
+    color: white;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ── Table ── */
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    box-shadow: var(--shadow-sm);
+    margin-top: 0.5rem;
+  }
+  :global(html.dark) .table-wrapper {
+    box-shadow: 0 0 0 1px var(--content-border, #555555), var(--shadow-lg);
+  }
+  .players-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .players-table thead {
+    background: var(--color-gray-50, #f9fafb);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .players-table thead tr {
+    border-left: 3px solid var(--color-gray-100, #f3f4f6);
+  }
+  .players-table th {
+    padding: 0.5rem 0.375rem;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+  }
+  .players-table th:first-child { padding-left: 0.75rem; }
+  .players-table th:last-child { padding-right: 0.75rem; }
+  .players-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .players-table th.sortable:hover {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+  }
+  .players-table th.sorted {
+    background: rgba(196, 30, 58, 0.06);
+    color: var(--league-accent, #c41e3a);
+  }
+  .th-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+  .sort-arrow {
+    font-size: 0.55rem;
+    opacity: 0.8;
+  }
+
+  /* Columns */
+  .col-rank { width: min-content; text-align: center; }
+  .col-player { min-width: 200px; }
+  .col-player .th-content { justify-content: flex-start; }
+  .col-age { width: 42px; text-align: center; }
+  .col-sm { width: 48px; text-align: center; }
+  .col-num { width: 72px; text-align: right; }
+  .col-num .th-content { justify-content: flex-end; }
+  .col-text { text-align: left; }
+
+  /* ── Cells ── */
+  :global(.players-table td) {
+    padding: 0.45rem 0.375rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--table-border, #f1f5f9);
+  }
+  :global(.players-table td:first-child) { padding-left: 0.75rem; }
+  :global(.players-table td:last-child) { padding-right: 0.75rem; }
+  :global(.players-table tbody tr:nth-child(even)) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+  :global(.players-table tbody tr:hover) {
+    background: rgba(196, 30, 58, 0.04);
+  }
+
+  /* Position-colored left accent bars */
+  :global(.players-table tbody tr) {
+    border-left: 3px solid transparent;
+  }
+  :global(.players-table tbody tr[data-pos="qb"]) { border-left-color: #dc2626; }
+  :global(.players-table tbody tr[data-pos="rb"]) { border-left-color: #16a34a; }
+  :global(.players-table tbody tr[data-pos="wr"]) { border-left-color: #2563eb; }
+  :global(.players-table tbody tr[data-pos="te"]) { border-left-color: #d97706; }
+  :global(.players-table tbody tr[data-pos="pk"]) { border-left-color: #7c3aed; }
+  :global(.players-table tbody tr[data-pos="def"]) { border-left-color: #854d0e; }
+
+  :global(.college-logo) {
+    height: 1em;
+    width: auto;
+    vertical-align: middle;
+    object-fit: contain;
+  }
+  :global(.cell-college) { text-align: center; }
+  :global(.cell-rank) {
+    text-align: center;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  :global(.cell-age) {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    font-weight: 500;
+  }
+  :global(.cell-num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+  }
+  :global(.cell-pts) {
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+  }
+  :global(.na) { color: var(--color-gray-300, #d1d5db); }
+  :global(.cell-sm) {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #64748b);
+  }
+
+  /* Rostered row */
+  :global(.row--rostered) { opacity: 0.5; }
+  :global(.row--rostered:hover) { opacity: 0.8; }
+  :global(.rostered-dot) {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex-shrink: 0;
+  }
+
+  /* No data */
+  .no-data {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 767px) {
+    .players-hero {
+      padding: 1.25rem 1rem 1.25rem;
+      margin: 0.75rem 0 0 0;
+    }
+    .hero-spotlight,
+    .hero-spotlight-caption { display: none; }
+    .hero-title { font-size: 1.15rem; }
+    .hero-positions {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 2px;
+    }
+    .hero-positions::-webkit-scrollbar { display: none; }
+    .players-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+    .toolbar-left { order: 2; flex-wrap: wrap; gap: 0.5rem; }
+    .toolbar-right { order: 3; justify-content: flex-end; }
+    .filters-grid { grid-template-columns: 1fr 1fr; }
+    .filters-row-bottom {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .filter-clear-btn { margin-left: 0; }
+  }
+
+  @media (max-width: 480px) {
+    .filters-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-spotlight__head {
+      animation: none;
+      opacity: 1;
+    }
+  }
+</style>
