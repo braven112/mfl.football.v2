@@ -950,3 +950,30 @@ Also note the showcase casts its own demo players (Cut Watch → Bijan Robinson)
 so it can't reproduce the live-data hero (Cut Watch on `index.astro` only
 renders with real over-limit rosters) — verify the real component's computed
 values, and use the showcase only as a proxy for the shared sizing math.
+
+## Reusable player-avatar team-color backdrop (2026-07-08)
+
+The small circular player headshots in the player-cell lockup wear the **same
+NFL-team gradient as the player modal band** — a deep-ink→team-primary
+`linear-gradient(115deg, …)`. Single source of truth is
+`getPlayerAvatarBackground(teamCode)` in `nfl-team-colors.ts` (mirrors the
+base, no-accent stops from `applyPlayerModalBand`). Free agents / unknown codes
+fall back to the league-neutral blue.
+
+- **Distribution is a CSS custom property, not per-renderer color math.**
+  `player-cell.css` reads `background: var(--player-avatar-bg, …gray)`. Each of
+  the four avatar renderers just sets that one property from the shared helper:
+  `PlayerCell.tsx`, `PlayerCell.astro`, `buildPlayerCellHTML()`
+  (`player-cell-html.ts`), and the `players.astro` free-agent list. Adding a
+  new touch point = set `--player-avatar-bg`, nothing else.
+- **`players.astro` can't import at runtime** — its list renderer is an inline
+  `define:vars` script. Pattern: precompute the full `{ code → gradient }` map
+  in frontmatter (loop `NFL_TEAM_COLORS` keys through `getPlayerAvatarBackground`),
+  pass it + a fallback via `define:vars`, and the client does a plain lookup. No
+  `mixHex` duplicated in the browser.
+- **DEF stays transparent.** DEF "players" render a team logo on a transparent
+  chip (`.player-cell__avatar--def`), so the renderers skip setting the property
+  for DEF — the `--def` rule's `background: transparent` wins anyway, but not
+  setting it keeps intent clear.
+- MFL-JPG headshots have baked backgrounds and cover the gradient (same as the
+  modal); the color only shows through transparent ESPN cutouts. Accepted.

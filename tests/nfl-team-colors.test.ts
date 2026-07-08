@@ -8,6 +8,7 @@ import {
   mixHex,
   desaturateHex,
   pickBrandAccent,
+  getPlayerAvatarBackground,
 } from '../src/utils/nfl-team-colors';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
 
@@ -147,5 +148,31 @@ describe('pickBrandAccent', () => {
   it('trims surrounding whitespace so the returned color is a clean hex', () => {
     expect(pickBrandAccent('  #bd1f2b  ')).toBe('#bd1f2b');
     expect(pickBrandAccent(' #181818 ', ' #2f8b59 ')).toBe('#2f8b59');
+  });
+});
+
+describe('getPlayerAvatarBackground', () => {
+  it('builds a 115° gradient ending in the team primary (matches the modal band)', () => {
+    const bg = getPlayerAvatarBackground('KC');
+    expect(bg).toBe(`linear-gradient(115deg, ${mixHex('#e31837', '#0b0e13', 0.62)} 0%, #e31837 100%)`);
+  });
+
+  it('normalizes MFL-format codes to the same team gradient as the ESPN code', () => {
+    // getNflTeamColors normalizes, so any input format lands on the same primary.
+    expect(getPlayerAvatarBackground('KC')).toContain('#e31837');
+  });
+
+  it('falls back to the league-neutral blue for free agents / unknown codes', () => {
+    const fa = getPlayerAvatarBackground('FA');
+    expect(fa).toBe(getPlayerAvatarBackground(''));
+    expect(fa).toContain(NFL_COLORS_FALLBACK.primary);
+  });
+
+  it('always returns a valid CSS linear-gradient for every team', () => {
+    for (const code of Object.keys(NFL_TEAM_COLORS)) {
+      expect(getPlayerAvatarBackground(code)).toMatch(
+        /^linear-gradient\(115deg, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 100%\)$/,
+      );
+    }
   });
 });

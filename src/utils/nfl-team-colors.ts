@@ -82,6 +82,26 @@ export function getNflTeamColors(teamCode: string): NflTeamColors {
 }
 
 /**
+ * CSS `background` for a circular player avatar chip — the same deep-ink →
+ * team-primary gradient the player modal band uses (see `applyPlayerModalBand`
+ * in `player-modal-band.ts`), scaled down to the avatar. This is the single
+ * source of truth for the colored headshot backdrop across every player-cell
+ * renderer (PlayerCell.tsx / PlayerCell.astro / buildPlayerCellHTML, plus the
+ * players.astro free-agent list), so the treatment stays identical everywhere.
+ * Free agents / unknown codes fall back to the league-neutral blue.
+ *
+ * @example
+ * ```typescript
+ * getPlayerAvatarBackground('KC'); // 'linear-gradient(115deg, #380c0e 0%, #e31837 100%)'
+ * ```
+ */
+export function getPlayerAvatarBackground(teamCode: string): string {
+  const { primary } = getNflTeamColors(teamCode);
+  // Mirror the modal band's base stops: deep-ink-mixed primary → primary, 115°.
+  return `linear-gradient(115deg, ${mixHex(primary, '#0b0e13', 0.62)} 0%, ${primary} 100%)`;
+}
+
+/**
  * Get a team's nickname (e.g. 'CIN' → 'Bengals') for wordmark treatments.
  * Falls back to the normalized code when the team is unknown.
  */

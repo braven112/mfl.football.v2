@@ -21,6 +21,7 @@
 import type { PlayerModalData } from './player-modal-trigger';
 import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
+import { getPlayerAvatarBackground } from './nfl-team-colors';
 
 export interface PlayerCellOptions {
   name: string;
@@ -82,6 +83,8 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
 
   const sizeClass = size === 'compact' ? ' player-cell--compact' : '';
   const defClass = isDef ? ' player-cell__avatar--def' : '';
+  // Team-color backdrop behind the headshot (DEF logos keep transparent).
+  const avatarStyle = isDef ? '' : ` style="--player-avatar-bg: ${getPlayerAvatarBackground(nflTeam ?? '')}"`;
 
   // Name element — clickable if playerData provided
   let nameHtml: string;
@@ -106,7 +109,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   }
 
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
-  <div class="player-cell__avatar${defClass}">
+  <div class="player-cell__avatar${defClass}"${avatarStyle}>
     <img src="${esc(avatarSrc)}" alt="${isDef ? esc(`${nflTeam || 'DEF'} logo`) : esc(`${name} headshot`)}" loading="lazy" decoding="async" onerror="${esc(buildHeadshotOnerror(resolvedMflId, resolvedEspnId))}" />
   </div>
   <div class="player-cell__info">
