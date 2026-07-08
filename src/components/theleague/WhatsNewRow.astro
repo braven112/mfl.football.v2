@@ -1,12 +1,14 @@
 ---
 /**
- * WhatsNewRow - Displays the 3 newest What's New articles in a card row.
+ * WhatsNewRow - Displays the newest What's New articles in a card row.
  *
  * Server-rendered Astro component that mirrors the WhatsNext layout pattern:
- * a section header ("What's New" + "All releases →") above a 3-column card grid.
+ * a section header ("What's New" + "All releases →") above a responsive
+ * (auto-fit) card grid. `count` controls how many cards show (default 3);
+ * `excludeId` omits one entry (e.g. the article currently in the hero).
  *
- * Used on the homepage below the AuctionHero (and optionally below HeroBanner)
- * to surface recent feature announcements.
+ * Used on the TheLeague homepage's left column (count=2) to surface recent
+ * feature announcements, and on the legacy old-hp prototype (count=3).
  */
 import type { WhatsNewEntry } from '../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../types/whats-new';

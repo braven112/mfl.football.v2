@@ -1195,6 +1195,15 @@ describe('resolveHeroState', () => {
       expect(state.fallbackHero?.title).toBe('Fresh Feature');
     });
 
+    it('treats exactly 0.5 as tails (rng() < 0.5 boundary) — feature wins', () => {
+      const state = resolveHeroState(
+        julyEarlyCutWatch, true, freshFeatureEntries(), makeTimeline(), false, false,
+        () => 0.5,
+      );
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.fallbackHero?.title).toBe('Fresh Feature');
+    });
+
     it('does NOT flip before July 1 — June early Cut Watch still yields to a fresh feature', () => {
       const juneRef = new Date(2027, 5, 24, 12, 0, 0); // Jun 24
       const juneFresh = juneRef.toISOString().slice(0, 10);
