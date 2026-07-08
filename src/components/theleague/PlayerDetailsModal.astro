@@ -679,6 +679,38 @@ const { class: className, hideContract = false } = Astro.props;
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
+  import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
+
+  // ── DEF band face ──
+  // A team defense has no headshot of its own, so — mirroring the Free Agents
+  // hero spotlight — we surface a marquee defender's ESPN headshot as the band
+  // cutout. The pool is ranked best-first; we lead with the top defender and
+  // hold it (no rotation). A defender with no ESPN cutout hides itself and the
+  // band falls back to gradient-only — same contract as applyPlayerModalBand.
+  function applyDefBandFace(
+    band: HTMLElement,
+    cutout: HTMLImageElement,
+    player: { name: string; espnId: string; position?: string }
+  ) {
+    if (!player || !player.espnId) return;
+    band.classList.remove('pmb--no-cutout');
+    cutout.style.display = '';
+    // Decorative: the cutout is aria-hidden and the defender's name is carried
+    // as real text in the sub-line below, so keep alt empty (no mixed signals).
+    cutout.alt = '';
+    cutout.onerror = () => {
+      cutout.style.display = 'none';
+      band.classList.add('pmb--no-cutout');
+    };
+    cutout.src = 'https://a.espncdn.com/i/headshots/nfl/players/full/' + player.espnId + '.png';
+
+    const subEl = document.getElementById('detail-sub-text');
+    if (subEl) {
+      subEl.textContent = [player.name, (player.position || '').toUpperCase()]
+        .filter(Boolean)
+        .join(' · ');
+    }
+  }
 
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
@@ -836,6 +868,23 @@ const { class: className, hideContract = false } = Astro.props;
         if (draftStr !== 'Undrafted' || !playerData.college) subParts.push(draftStr);
       }
       setText('detail-sub-text', subParts.join(' \u00B7 '));
+
+      // \u2500\u2500 Hero: DEF \u2192 represent the team with its top defender's headshot \u2500\u2500
+      // Team defenses have no headshot; surface the team's top defender (same
+      // pool as the Free Agents hero spotlight) so the crest is represented by a
+      // real face. applyPlayerModalBand() left the band gradient-only for DEF,
+      // so we opt back into a cutout here. Static \u2014 the top-ranked defender,
+      // held without rotation.
+      if (isDefense) {
+        // The spotlight pool keys Washington as WAS; our normalizer yields WSH.
+        var defKey = teamCode === 'WSH' ? 'WAS' : teamCode;
+        var topDefender = getDefSpotlightPlayer(defKey);
+        var bandEl = document.getElementById('pdm-band');
+        var bandCutout = bandEl ? bandEl.querySelector<HTMLImageElement>('.pmb__cutout') : null;
+        if (topDefender && bandEl && bandCutout) {
+          applyDefBandFace(bandEl, bandCutout, topDefender);
+        }
+      }
 
       // ── Hero: Age pill ──
 
