@@ -26,5 +26,16 @@ headshots over the team-logo watermark instead of a bare crest.
 - Name matching against ESPN rosters must be diacritic/suffix-insensitive: normalize by NFD-stripping combining marks, dropping suffix tokens (jr/sr/ii/iii/iv/v), lowercasing, and removing non-alphanumerics — so `T.J. Watt` === `T. J. Watt` and `Kevin Byard III` === `Kevin Byard`.
 - The fetch **fails loud** (non-zero exit) if it parses < 30 defenders, so a Wikipedia format change never silently overwrites a good list with garbage.
 
+## Two free-agent hero pages — keep them in sync
+
+There are **two independent Free Agents pages** with **separately-copied** hero-spotlight code — they do NOT share a component:
+- `src/pages/theleague/players.astro` (full-featured: cap/contract/auction/surplus)
+- `src/pages/afl-fantasy/players.astro` (leaner sibling — AFL has no cap/contracts/auction)
+
+Any hero-spotlight change (DEF rotation, headshot logic, caption behavior) must be applied to **both files**. They drifted once already: the AFL page shipped deliberately *without* the DEF-spotlight machinery ("drops all … DEF-spotlight machinery"), then had it re-added for parity in a later change. If you touch one, grep the other.
+
+- **AFL is team-DEF only (no IDP)**, same as TheLeague, so it imports the *theleague-sourced* `../../data/theleague/def-spotlight-players` directly — the data is keyed by **NFL team code**, so it works cross-league with zero AFL-specific data. No separate `data/afl-fantasy/def-spotlight-players.json` exists or is needed.
+- **Hero shows ESPN images only.** Both pages hide the foreground headshot (`visibility:hidden`) when there's no ESPN image rather than falling back to the low-res MFL `player_photos` mugshot or the `no_photo_available` placeholder. A dedicated hero-only `buildHeroOnerror(espnId)` (distinct from the table rows' `buildOnerror`) tries the ESPN *college* headshot, then hides — it never falls back to MFL. Server render seeds this with a `topFaHasHeadshot` flag + inline `style={... 'visibility:hidden'}`.
+
 ## Related
 - Weekly + yearly sync are separate workflows on purpose — marquee data changes once a year, so scraping Wikipedia weekly would be wasteful and a Wikipedia break shouldn't take down the weekly roster refresh.

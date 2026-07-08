@@ -579,8 +579,16 @@ const topFaDefStar = topFaIsDef ? getDefSpotlightPlayer(topFa?.team) : null;
 const topFaLogo = topFa && topFa.team && topFa.team !== 'FA'
   ? `/assets/nfl-logos/${topFa.team}.svg`
   : '/assets/nfl-logos/NFL.svg';
+// The hero headshot shows ESPN images only. When there's no ESPN image
+// (offensive player with no espnId, or an unmapped DEF) we hide the foreground
+// headshot rather than falling back to an MFL photo, so the spotlight never
+// shows a low-res/placeholder face. See topFaHasHeadshot below.
 // Falls back to the (NFL) logo rather than an empty string so we never emit
-// <img src=""> (which re-requests the document) when there are no free agents.
+// <img src=""> (which re-requests the document) when there are no free agents
+// or when the headshot is hidden.
+const topFaHasHeadshot = topFa
+  ? (topFaIsDef ? !!topFaDefStar?.espnId : !!topFa.espnId)
+  : false;
 const topFaHead = topFa
   ? (topFaIsDef
       ? (topFaDefStar
@@ -588,7 +596,7 @@ const topFaHead = topFa
           : topFaLogo)
       : (topFa.espnId
           ? `https://a.espncdn.com/i/headshots/nfl/players/full/${topFa.espnId}.png`
-          : `https://www49.myfantasyleague.com/player_photos_big_2014/${topFa.id}_thumb.jpg`))
+          : topFaLogo))
   : topFaLogo;
 
 // Build unique NFL teams list for team filter dropdown
@@ -621,7 +629,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
            client-side by updateSpotlight() whenever the list re-renders. -->
       <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'} data-def-player={topFaIsDef && topFaDefStar ? 'true' : 'false'}>
         <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" />
-        <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" />
+        <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} />
       </div>
       {topFa && (
         <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite">
@@ -1269,6 +1277,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return `this.onerror=null;this.src='${defaultHeadshot}'`;
   }
 
+  // Hero-only onerror: the spotlight shows ESPN images exclusively. If the NFL
+  // headshot 404s we try the ESPN college headshot (still an ESPN image), then
+  // HIDE the foreground rather than falling back to the MFL photo / "no photo"
+  // placeholder the table rows use.
+  function buildHeroOnerror(espnId) {
+    const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
+    if (college) {
+      return `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='${college}'`;
+    }
+    return `this.onerror=null;this.style.visibility='hidden'`;
+  }
+
   function escapeAttr(s) {
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -1305,7 +1325,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (!player) return;
     if (spotlightHeadEl) {
       spotlightHeadEl.onerror = null;
-      spotlightHeadEl.setAttribute('onerror', buildOnerror(null, player.espnId));
+      spotlightHeadEl.style.visibility = '';
+      spotlightHeadEl.setAttribute('onerror', buildHeroOnerror(player.espnId));
       spotlightHeadEl.src = getHeadshotUrl(null, player.espnId);
       spotlightHeadEl.style.animation = 'none';
       // eslint-disable-next-line no-unused-expressions
@@ -1343,7 +1364,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       return;
     }
     if (spotlightCaptionEl) spotlightCaptionEl.style.display = '';
-    if (spotlightHeadEl) spotlightHeadEl.style.visibility = '';
+    // Only un-hide the foreground headshot when we actually have an ESPN image
+    // to show (DEF units are handled below by CSS / the mapped-defender path).
+    // An offensive player with no espnId stays hidden — no MFL/placeholder face.
+    if (spotlightHeadEl) {
+      spotlightHeadEl.style.visibility =
+        (p.position !== 'DEF' && !p.espnId) ? 'hidden' : '';
+    }
     // Team defense → its rotating pool of marquee defenders (used both by the
     // caption below and the image swap further down).
     const isDef = p.position === 'DEF';
@@ -1390,16 +1417,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // startDefRotation()/applyDefFace() set the head src/onerror + rotating name.
       startDefRotation(defPlayers);
     } else if (spotlightHeadEl) {
-      // Offensive player → own headshot; unmapped DEF → logo (kept hidden by CSS,
-      // logo becomes the hero).
-      const head = isDef ? logo : getHeadshotUrl(p.id, p.espnId);
       spotlightHeadEl.onerror = null;
       if (isDef) {
+        // Unmapped DEF → logo becomes the hero (head kept hidden by CSS).
         spotlightHeadEl.removeAttribute('onerror');
+        spotlightHeadEl.src = logo;
+      } else if (p.espnId) {
+        // Offensive player with an ESPN headshot → show it (hero-only onerror
+        // hides the foreground if the ESPN image 404s, never falls back to MFL).
+        spotlightHeadEl.style.visibility = '';
+        spotlightHeadEl.setAttribute('onerror', buildHeroOnerror(p.espnId));
+        spotlightHeadEl.src = `https://a.espncdn.com/i/headshots/nfl/players/full/${p.espnId}.png`;
       } else {
-        spotlightHeadEl.setAttribute('onerror', buildOnerror(p.id, p.espnId));
+        // No ESPN image → keep the spotlight headshot hidden (no MFL/placeholder).
+        spotlightHeadEl.removeAttribute('onerror');
+        spotlightHeadEl.style.visibility = 'hidden';
+        return;
       }
-      spotlightHeadEl.src = head;
       // Restart the entrance animation for the new headshot.
       spotlightHeadEl.style.animation = 'none';
       // eslint-disable-next-line no-unused-expressions
