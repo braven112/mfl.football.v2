@@ -2,6 +2,14 @@
   "weekOf": "2026-07-13",
   "changes": [
     {
+      "date": "2026-07-08",
+      "type": "style-tweak",
+      "summary": "The Premier League standings card on the AFL homepage stopped crowding its own headline on phones. Its \"Full standings\" link had been wedged into the top-right corner, sharing a cramped line with the title, while the American League playoff card right above it politely dropped its \"Full bracket\" link onto its own row on mobile. Now the two cards match: on phones the Premier League link tucks under the heading the same way, giving the title room to breathe.",
+      "impact": "user",
+      "area": "standings",
+      "league": "afl"
+    },
+    {
       "date": "2026-07-07",
       "type": "style-tweak",
       "summary": "Team logos now dress for the dark. Marks with black outlines — the Raiders shield, the Steelers hypocycloids, the Jets, North Carolina's navy interlock — used to all but vanish against a dark background, a smudge where a logo should be. In dark mode every NFL logo across the site (matchup heroes, the composite banners, roster player rows) now swaps to its dark-optimized cut, outline flipped to white so the crest actually reads, and the college logos in the Free Agents and roster player tables get the same treatment. Light mode is untouched, and the switch follows your theme toggle in real time.",
