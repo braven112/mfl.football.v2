@@ -15,6 +15,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getLeagueBySlug } from '../../config/leagues';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import '../../styles/player-cell.css';
@@ -28,6 +29,10 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 // serverless _render function, which otherwise exceeds Vercel's 250MB limit.
 // The snapshot refreshes on every deploy (cron data-sync commits redeploy).
 export const prerender = true;
+
+// MFL player-photo CDN host — sourced from the league registry, never
+// hardcoded (CLAUDE.md: never hardcode league constants like the MFL host).
+const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
 
 // ── College logo lookup (case-insensitive) ──
 const collegeLogosNormalized = Object.fromEntries(
@@ -244,6 +249,9 @@ if (Array.isArray(allPlayers)) {
       name: displayName,
       position: pos,
       team: normalizeMflTeam(p.team || ''),
+      // Team defenses have no birthdate/draft year; give them neutral
+      // placeholder age/experience so age- and exp-range filters don't drop
+      // every DEF (mirrors the sibling theleague/players page).
       age: pos === 'DEF' ? 25 : age,
       espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
       projected: projectedMap.get(p.id) ?? null,
@@ -304,7 +312,7 @@ const topFaHead = topFa
       ? topFaLogo
       : (topFa.espnId
           ? `https://a.espncdn.com/i/headshots/nfl/players/full/${topFa.espnId}.png`
-          : `https://www44.myfantasyleague.com/player_photos_big_2014/${topFa.id}_thumb.jpg`))
+          : `https://${mflHost}/player_photos_big_2014/${topFa.id}_thumb.jpg`))
   : topFaLogo;
 
 // Unique NFL teams for the team filter dropdown
@@ -527,7 +535,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost }}>
   const players = JSON.parse(playerDataJson);
 
   // State
@@ -556,16 +564,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // ── Helpers ──
   function getHeadshotUrl(playerId, espnId) {
     if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
-    return `https://www44.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+    return `https://${mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`;
   }
   function getNflLogo(team) {
     if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${team}.svg`;
   }
-  const defaultHeadshot = 'https://www44.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  const defaultHeadshot = `https://${mflHost}/player_photos_2010/no_photo_available.jpg`;
   function buildOnerror(mflId, espnId) {
     const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
-    const mfl = mflId ? `https://www44.myfantasyleague.com/player_photos_big_2014/${mflId}_thumb.jpg` : null;
+    const mfl = mflId ? `https://${mflHost}/player_photos_big_2014/${mflId}_thumb.jpg` : null;
     if (college && mfl) {
       return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${mfl}'};this.src='${college}'`;
     }
@@ -801,9 +809,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}</strong>
               <div class="player-meta">
-                ${isDef ? '' : `<img src="${logo}" alt="${p.team}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>
+                ${isDef ? '' : `<img src="${logo}" alt="${escapeAttr(p.team)}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>
             </div>
           </div>
@@ -811,7 +819,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
         <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" />` : (p.college ? p.college : '<span class="na">-</span>')}</td>
+        <td class="cell-college">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" />` : (p.college ? escapeAttr(p.college) : '<span class="na">-</span>')}</td>
         <td class="cell-sm">${htDisplay}</td>
         <td class="cell-sm">${wtDisplay}</td>`;
 
