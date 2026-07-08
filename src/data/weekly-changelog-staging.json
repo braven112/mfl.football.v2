@@ -64,6 +64,14 @@
       "impact": "user",
       "area": "navigation",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "bug-fix",
+      "summary": "The Schefter Ops dashboard finally turned the lights off. In dark mode the commissioner's rumor-mill control room had been stranded in daylight — every card stayed stark white while the page around it went dark, and the text painted on top all but vanished into the glare. Wired the whole page into the real dark theme so cards, borders, code chips and status text all dim down properly. Commish-only, so nobody else ever saw the flashbang.",
+      "impact": "admin",
+      "area": "design-system",
+      "league": "theleague"
     }
   ]
 }
