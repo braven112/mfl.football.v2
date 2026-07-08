@@ -10,6 +10,23 @@
  * Follows the CDM (ContractDeclarationModal) editorial design pattern.
  * Static Astro shell populated entirely by client-side JS.
  */
+import { getLeagueContext } from '../../utils/league-context';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+
+interface Props {
+  /** Strip the active league's path prefix from links — true on either
+   *  league apex domain (theleague.us / afl-fantasy.com). */
+  hideLeaguePrefix?: boolean;
+}
+
+const { hideLeaguePrefix = false } = Astro.props;
+
+// Keep the "Trade Builder" links inside the current league.
+const isAFL = getLeagueContext(Astro.url).slug === 'afl-fantasy';
+const tradeBuilderHref = resolveLeaguePath(
+  isAFL ? '/afl-fantasy/trade-builder' : '/theleague/trade-builder',
+  hideLeaguePrefix
+);
 ---
 
 <div class="trade-alert-modal" id="trade-alert-modal" role="dialog" aria-modal="true" aria-label="Trade offers">
@@ -111,7 +128,7 @@
           <button class="tam-btn tam-btn--reject" id="tam-reject">Reject</button>
           <button class="tam-btn tam-btn--dismiss" id="tam-dismiss">Dismiss</button>
         </div>
-        <a class="tam-builder-link" id="tam-builder-link" href="/theleague/trade-builder">
+        <a class="tam-builder-link" id="tam-builder-link" href={tradeBuilderHref}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
           </svg>
@@ -132,7 +149,7 @@
         </div>
         <h3 class="tam-empty__title">No Pending Trades</h3>
         <p class="tam-empty__text">You don't have any open trade offers right now. Head to the Trade Builder to start one.</p>
-        <a class="tam-empty__cta" id="tam-empty-cta" href="/theleague/trade-builder">
+        <a class="tam-empty__cta" id="tam-empty-cta" href={tradeBuilderHref}>
           Open Trade Builder
         </a>
       </div>

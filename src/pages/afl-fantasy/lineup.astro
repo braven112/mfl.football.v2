@@ -17,6 +17,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
@@ -26,11 +27,17 @@ import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStr
 import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
-// Auth gate
+// Auth gate — require an AFL-scoped session, not just any logged-in owner.
+// A TheLeague JWT also carries a franchiseId, and that id would otherwise be
+// fired at AFL's league (wrong roster, and a franchise the user doesn't own).
+// Send anyone who isn't AFL-authenticated to the AFL login, preserving the
+// requested path + query (e.g. ?week=12) so they land back where they aimed.
 // ---------------------------------------------------------------------------
+const MFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const user = getAuthUser(Astro.request);
-if (!user?.franchiseId) {
-  return Astro.redirect('/theleague/login?redirect=/afl-fantasy/lineup');
+if (!user?.franchiseId || user.leagueId !== MFL_LEAGUE_ID) {
+  const next = encodeURIComponent(Astro.url.pathname + Astro.url.search);
+  return Astro.redirect(`/afl-fantasy/login?next=${next}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -42,7 +49,6 @@ const currentWeek = getCurrentWeekForYear(leagueYear);
 const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || currentWeek;
 const week = Math.max(1, Math.min(22, requestedWeek));
 
-const MFL_LEAGUE_ID = '19621';
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
 // Parallel data fetches (all 8 run concurrently to avoid waterfall)

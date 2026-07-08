@@ -74,11 +74,13 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         </svg>
         <span class="breadcrumb-bell__badge" id="nav-trade-bell-badge" style="display: none;">0</span>
       </button>
-      <a href={resolveLeaguePath("/theleague/search", hideLeaguePrefix)} class="breadcrumb-search-link" aria-label="Search all pages">
-        <svg viewBox="0 0 512 512" aria-hidden="true">
-          <use href={`${spriteUrl}#icon-search`}></use>
-        </svg>
-      </a>
+      {!isAFL && (
+        <a href={resolveLeaguePath("/theleague/search", hideLeaguePrefix)} class="breadcrumb-search-link" aria-label="Search all pages">
+          <svg viewBox="0 0 512 512" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-search`}></use>
+          </svg>
+        </a>
+      )}
       <!-- Hamburger Menu Toggle (triggers NavDrawer in layout) -->
       <NavToggleButton
         ariaLabel="Toggle navigation menu"
