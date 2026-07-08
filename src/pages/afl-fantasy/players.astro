@@ -331,6 +331,16 @@ const topFaHead = topFa
           ? `https://a.espncdn.com/i/headshots/nfl/players/full/${topFa.espnId}.png`
           : topFaLogo))
   : topFaLogo;
+// Initial (pre-hydration) error handler for the eager hero headshot: the image
+// starts fetching before client JS attaches its handler, so mirror the client's
+// hero-only fallback here — try the ESPN college headshot, then hide — so an ESPN
+// 404 never flashes a broken image in the first viewport. Only emitted when we're
+// showing an ESPN headshot (topFaHasHeadshot). espnId is a numeric MFL/ESPN id.
+const topFaHeadEspnIdRaw = topFaHasHeadshot ? (topFaIsDef ? topFaDefStar?.espnId : topFa?.espnId) : null;
+const topFaHeadEspnId = topFaHeadEspnIdRaw && /^\d+$/.test(String(topFaHeadEspnIdRaw)) ? String(topFaHeadEspnIdRaw) : null;
+const topFaHeadOnerror = topFaHeadEspnId
+  ? `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='https://a.espncdn.com/i/headshots/college-football/players/full/${topFaHeadEspnId}.png'`
+  : undefined;
 
 // Unique NFL teams for the team filter dropdown
 const nflTeamsSet = new Set<string>();
@@ -354,7 +364,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     <div class="players-hero">
       <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'} data-def-player={topFaIsDef && topFaDefStar ? 'true' : 'false'}>
         <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" />
-        <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} />
+        <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} onerror={topFaHeadOnerror} />
       </div>
       {topFa && (
         <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite">
@@ -605,7 +615,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // HIDE the foreground rather than falling back to the MFL photo / "no photo"
   // placeholder the table rows use.
   function buildHeroOnerror(espnId) {
-    const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
+    // espnId is a numeric MFL/ESPN id; enforce that before splicing it into the
+    // inline handler string so nothing unexpected can break out of the literal.
+    const safe = /^\d+$/.test(String(espnId)) ? String(espnId) : null;
+    const college = safe ? `https://a.espncdn.com/i/headshots/college-football/players/full/${safe}.png` : null;
     if (college) {
       return `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='${college}'`;
     }
@@ -646,7 +659,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // Swap the spotlight headshot + name to a specific defender, replaying the
   // entrance animation. Used for the initial face and every rotation tick.
   function applyDefFace(player) {
-    if (!player) return;
+    // Every mapped defender carries an espnId; bail if one somehow doesn't rather
+    // than build a `.../null.png` headshot URL.
+    if (!player || !player.espnId) return;
     if (spotlightHeadEl) {
       spotlightHeadEl.onerror = null;
       spotlightHeadEl.style.visibility = '';
@@ -690,13 +705,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const isDef = p.position === 'DEF';
     const defPlayers = isDef ? (DEF_SPOTLIGHT[p.team] || []) : [];
     const hasDefFace = defPlayers.length > 0;
-    // Only un-hide the foreground headshot when we actually have an ESPN image to
-    // show. An offensive player with no espnId (and an unmapped DEF) stays hidden —
-    // no MFL/placeholder face. Mapped DEF faces are un-hidden by applyDefFace().
-    if (spotlightHeadEl) {
-      spotlightHeadEl.style.visibility =
-        (!isDef && !p.espnId) ? 'hidden' : '';
-    }
+    // NB: headshot visibility is set inside the image-swap branches below, NOT
+    // here — doing it before the same-player early-return would re-reveal a
+    // headshot we'd hidden because its ESPN image 404'd (same #1 player across a
+    // re-sort), flashing the broken image back in.
     spotlightEl.setAttribute('data-def', isDef ? 'true' : 'false');
     spotlightEl.setAttribute('data-def-player', hasDefFace ? 'true' : 'false');
 
@@ -733,6 +745,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (isDef) {
         // Unmapped DEF → logo becomes the hero (head kept hidden by CSS).
         spotlightHeadEl.removeAttribute('onerror');
+        spotlightHeadEl.style.visibility = '';
         spotlightHeadEl.src = logo;
       } else if (p.espnId) {
         // Offensive player with an ESPN headshot → show it (hero-only onerror
@@ -1097,6 +1110,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   } else {
     init();
   }
+  // Cleanup on navigation (View Transitions) — stop the DEF rotation timer so it
+  // can't keep mutating detached hero nodes or stack a second interval on return.
+  document.addEventListener('astro:before-swap', function () {
+    stopDefRotation();
+  }, { once: true });
   // Astro view transitions
   document.addEventListener('astro:page-load', init);
 </script>
