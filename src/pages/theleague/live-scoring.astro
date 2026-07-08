@@ -28,7 +28,10 @@ if (!leagueHasFeature(league.slug, 'liveScoring')) {
 const now = new Date();
 const year = getCurrentSeasonYear();
 const weekParam = Astro.url.searchParams.get('week');
-const week = weekParam ? parseInt(weekParam, 10) : (getCurrentNFLWeek(now) ?? 1);
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+  ? parsedWeek
+  : (getCurrentNFLWeek(now) ?? 1);
 
 // Reuse the homepage hero's game-day clock: Thu/Sun/Mon windows drive whether
 // the island polls for live updates and which game-window label to show.

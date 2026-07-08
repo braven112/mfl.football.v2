@@ -106,19 +106,16 @@ function nflGameState(secondsRemaining: number): NflGameState {
 function clockLabel(state: NflGameState, sec: number): string {
   if (state === 'final') return 'Final';
   if (state === 'not-started') return 'Yet to play';
-  const quartersLeftFull = Math.floor(sec / 900);
-  const quarter = Math.min(4, Math.max(1, 4 - quartersLeftFull));
-  const inQuarter = sec % 900;
-  const mm = Math.floor(inQuarter / 60);
-  const ss = inQuarter % 60;
+  // Map seconds-remaining to quarter + clock via elapsed time so a quarter
+  // boundary reads as the START of the next quarter (1800s left → Q3 15:00,
+  // not Q2 0:00). Each quarter is 900s of a 3600s game.
+  const elapsed = Math.max(0, NFL_GAME_SECONDS - sec);
+  const quarter = Math.min(4, Math.floor(elapsed / 900) + 1);
+  const remInQuarter = 900 - (elapsed % 900);
+  const mm = Math.floor(remInQuarter / 60);
+  const ss = remInQuarter % 60;
   return `Q${quarter} ${mm}:${String(ss).padStart(2, '0')}`;
 }
-
-const POS_COLORS: Record<string, string> = {
-  QB: '#e0517a', RB: '#3fb98a', WR: '#4aa3e0', TE: '#e08a3f',
-  PK: '#9b7fd0', K: '#9b7fd0', DEF: '#7a8694', FLEX: '#c0a04a',
-};
-const posColor = (pos: string) => POS_COLORS[pos] ?? '#7a8694';
 
 const nflLogoUrl = (team: string) => (team ? `/assets/nfl-logos/${normalizeTeamCode(team)}.svg` : '');
 const teamColor = (team: string) => getNflTeamColors(team).primary;
@@ -346,8 +343,7 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
         <img src={meta.headshot} alt="" loading="lazy"
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}
-      {isDef && team && <img src={nflLogoUrl(team)} alt="" loading="lazy"
-             style={{ position: 'absolute', inset: '18%', width: '64%', height: '64%', objectFit: 'contain' }} />}
+      {isDef && team && <img className="ls-def-logo" src={nflLogoUrl(team)} alt="" loading="lazy" />}
     </span>
   );
 
@@ -372,7 +368,7 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
     </span>
   );
 
-  const posChip = <span className="ls-ppos" style={{ ['--posc' as any]: posColor(pos) }}>{pos || '—'}</span>;
+  const posChip = <span className="ls-ppos" data-pos={pos || undefined}>{pos || '—'}</span>;
 
   return side === 'left'
     ? <div className="ls-prow">{posChip}{face}{id}{score}</div>
@@ -476,6 +472,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   // notable jumps. Self-contained — no play-by-play feed needed. In demo mode
   // they're seeded from the sample so the feed is visible without polling.
   const prevLives = useRef<Record<string, number>>({});
+  const momentSeq = useRef(0);
   const [moments, setMoments] = useState<Moment[]>(props.initialMoments ?? []);
   useEffect(() => {
     const prev = prevLives.current;
@@ -486,7 +483,9 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
         if (before !== undefined && r.live - before >= 1.5) {
           const m = playerMeta[r.id];
           fresh.push({
-            key: `${r.id}-${r.live.toFixed(1)}`,
+            // Monotonic seq (not the live total) so a stat correction that
+            // returns a player to a prior total can't collide React keys.
+            key: `${r.id}-${momentSeq.current++}`,
             fid,
             name: m?.name ?? 'Player',
             team: m?.nflTeam ?? '',
@@ -521,7 +520,9 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     // No user matchup → promote the closest game to featured.
     const featured = yours.length ? yours : others.slice(0, 1);
     const rest = yours.length ? others : others.slice(1);
-    return { featured, rest };
+    // Only the user's own matchup earns the "YOUR MATCHUP" badge — a promoted
+    // closest-game filler must not claim it.
+    return { featured, rest, hasYours: yours.length > 0 };
   }, [matchups, scores, userFranchiseId]);
 
   if (selected) {
@@ -564,14 +565,14 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
             <div className="ls-dh">
               {ordered.featured.map((m, i) => (
                 <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
-                           featured variant="faceoff" isYours={i === 0 && !!userFranchiseId}
+                           featured variant="faceoff" isYours={i === 0 && ordered.hasYours}
                            onOpen={() => setSelected(m)} />
               ))}
             </div>
           ) : (
             ordered.featured.map((m) => (
               <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
-                         featured variant="row" isYours={!!userFranchiseId}
+                         featured variant="row" isYours={ordered.hasYours}
                          onOpen={() => setSelected(m)} />
             ))
           )}

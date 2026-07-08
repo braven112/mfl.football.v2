@@ -127,7 +127,11 @@ export function pickContrastingColor(
   forceAdjust = false,
 ): string {
   const valid = candidates.filter(isHex).map((c) => c.trim());
-  if (valid.length === 0) return AWAY_FALLBACK;
+  if (valid.length === 0) {
+    // No usable brand color — honor forceAdjust so a caller that omits
+    // `background` still gets a guaranteed-distinct away color, not raw grey.
+    return forceAdjust ? forceContrast(base, AWAY_FALLBACK, min) : AWAY_FALLBACK;
+  }
 
   let best = valid[0], bestD = -1;
   for (const c of valid) {

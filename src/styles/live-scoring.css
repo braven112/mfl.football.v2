@@ -342,6 +342,14 @@ html.dark .ls-detail {
   color: #fff; background: var(--posc, #7a8694); width: 2.4rem; text-align: center;
   padding: 0.18rem 0; border-radius: 4px; flex: none; letter-spacing: 0.02em;
 }
+/* Position accent colors (theme-independent) — keyed off data-pos. */
+.ls-ppos[data-pos="QB"] { --posc: #e0517a; }
+.ls-ppos[data-pos="RB"] { --posc: #3fb98a; }
+.ls-ppos[data-pos="WR"] { --posc: #4aa3e0; }
+.ls-ppos[data-pos="TE"] { --posc: #e08a3f; }
+.ls-ppos[data-pos="PK"], .ls-ppos[data-pos="K"] { --posc: #9b7fd0; }
+.ls-ppos[data-pos="DEF"] { --posc: #7a8694; }
+.ls-ppos[data-pos="FLEX"] { --posc: #c0a04a; }
 .ls-headshot {
   position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
   background: radial-gradient(120% 120% at 50% 15%,
@@ -350,6 +358,8 @@ html.dark .ls-detail {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--team, #1c497c) 40%, transparent);
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Defense "headshot" is the NFL logo centered in the team-color disc. */
+.ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }
 .ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

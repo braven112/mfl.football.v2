@@ -12,14 +12,17 @@ export const prerender = false;
  * clock, and possession. no-store: scores must never be cached.
  */
 export const GET: APIRoute = async ({ url }) => {
-  const weekParam = url.searchParams.get('week');
-  const week = weekParam ? parseInt(weekParam, 10) : 1;
+  const parsedWeek = parseInt(url.searchParams.get('week') ?? '', 10);
+  const week = Number.isFinite(parsedWeek) && parsedWeek > 0 ? parsedWeek : 1;
 
   // ESPN numbers playoffs as seasontype=3, week 1-4 (not 19-22).
   const isPlayoffs = week > 18;
   const seasonType = isPlayoffs ? 3 : 2;
   const espnWeek = isPlayoffs ? week - 18 : week;
-  const year = url.searchParams.get('year') || getCurrentSeasonYear().toString();
+  const yearNum = parseInt(url.searchParams.get('year') ?? '', 10);
+  const year = Number.isInteger(yearNum) && yearNum >= 2000 && yearNum <= 2100
+    ? String(yearNum)
+    : getCurrentSeasonYear().toString();
   const espnUrl =
     `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
     `?week=${espnWeek}&seasontype=${seasonType}&dates=${year}`;
@@ -72,7 +75,8 @@ export const GET: APIRoute = async ({ url }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
-  } catch {
+  } catch (error) {
+    console.error('Error fetching NFL scoreboard:', error);
     return empty();
   }
 };
