@@ -21,7 +21,13 @@ import '../../styles/player-cell.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
-export const prerender = false;
+// Prerendered (SSG): this page has no per-request logic — no auth, cookies, or
+// query params — it just renders a build-time snapshot of the AFL free-agent
+// pool that the client script sorts/filters. Prerendering keeps its data
+// (esp. the ~38MB of historical weekly-results feeds it eager-globs) OUT of the
+// serverless _render function, which otherwise exceeds Vercel's 250MB limit.
+// The snapshot refreshes on every deploy (cron data-sync commits redeploy).
+export const prerender = true;
 
 // ── College logo lookup (case-insensitive) ──
 const collegeLogosNormalized = Object.fromEntries(
