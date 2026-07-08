@@ -319,6 +319,11 @@ const tickerLines = [
     .bn-ticker__track {
       animation: none;
     }
+    /* With the scroll animation off, let the reader reach the clipped
+       bulletins by scrolling instead of leaving them cut off. */
+    .bn-ticker__viewport {
+      overflow-x: auto;
+    }
   }
 
   @media (max-width: 640px) {
