@@ -1,6 +1,7 @@
 import React from 'react';
 import '../../styles/player-cell.css';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getPlayerAvatarBackground } from '../../utils/nfl-team-colors';
 import {
   DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
@@ -53,6 +54,11 @@ export function PlayerCell({
     headshot || (espnId ? getPlayerHeadshot(mflId, espnId) : DEFAULT_HEADSHOT_URL);
   const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
   const nflLogoUrl = isDef ? '' : (explicitNflLogo ?? teamLogoUrl);
+  // Team-color backdrop behind the headshot (DEF logos keep their transparent
+  // treatment). Same gradient as the player modal band.
+  const avatarStyle = isDef
+    ? undefined
+    : ({ '--player-avatar-bg': getPlayerAvatarBackground(nflTeam ?? '') } as React.CSSProperties);
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -87,7 +93,10 @@ export function PlayerCell({
 
   return (
     <div className={classes}>
-      <div className={`player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}`}>
+      <div
+        className={`player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}`}
+        style={avatarStyle}
+      >
         <img
           src={avatarSrc}
           alt={isDef ? `${nflTeam ?? 'DEF'} logo` : `${name} headshot`}

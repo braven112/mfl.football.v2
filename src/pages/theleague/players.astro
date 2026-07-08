@@ -24,6 +24,7 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
+import { NFL_TEAM_COLORS, getPlayerAvatarBackground } from '../../utils/nfl-team-colors';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
 // Build franchise ID → short name map for auction high-bidder display
@@ -603,6 +604,17 @@ const faCountsJson = JSON.stringify(faCounts);
 const nflTeamsJson = JSON.stringify(nflTeamsList);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
+// NFL-team gradient backdrops for player avatars (same treatment as the modal
+// band). Precomputed here so the client-side list renderer just does a lookup —
+// no color math duplicated in the browser. Keyed by ESPN team code (matches
+// p.team); FA/unknown falls back to the league-neutral blue.
+const nflAvatarBg: Record<string, string> = {};
+for (const code of Object.keys(NFL_TEAM_COLORS)) {
+  nflAvatarBg[code] = getPlayerAvatarBackground(code);
+}
+const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
+const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
+
 // Admin gate: Value view is only visible to admin franchises (same auth as nav sidebar)
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
@@ -961,7 +973,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1253,6 +1265,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   function getNflLogo(team) {
     if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${team}.svg`;
+  }
+
+  // Team-color gradient backdrop behind a headshot avatar (same treatment as
+  // the player modal band). Precomputed server-side; FA/unknown → neutral blue.
+  // p.team is already the normalized ESPN code here — it's the same value that
+  // feeds getNflLogo() above, so it lines up with the ESPN-keyed gradient map by
+  // construction (a mismatch would break the team logo first).
+  const nflAvatarBg = JSON.parse(nflAvatarBgJson);
+  function getAvatarBg(team) {
+    return nflAvatarBg[team] || nflAvatarBgFallback;
   }
 
   const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
@@ -1791,7 +1813,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <td class="cell-rank">${rank}</td>
         <td class="cell-player">
           <div class="player-cell">
-            <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}">
+            <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}"${isDef ? '' : ` style="--player-avatar-bg: ${getAvatarBg(p.team)}"`}>
               <img src="${headshot}" alt="" loading="lazy" decoding="async"
                 onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
