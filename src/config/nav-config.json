@@ -107,6 +107,15 @@
           "description": "Browse available free agents with ADP and points data"
         },
         {
+          "id": "afl-players",
+          "label": "Free Agents",
+          "icon": "binoculars",
+          "path": "/players",
+          "external": false,
+          "leagueOnly": "afl",
+          "description": "Browse available AFL free agents with ADP and projected points"
+        },
+        {
           "id": "add-drop",
           "label": "Add/Drop",
           "icon": "plus",
