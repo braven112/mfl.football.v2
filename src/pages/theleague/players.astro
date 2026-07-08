@@ -1269,6 +1269,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   // Team-color gradient backdrop behind a headshot avatar (same treatment as
   // the player modal band). Precomputed server-side; FA/unknown → neutral blue.
+  // p.team is already the normalized ESPN code here — it's the same value that
+  // feeds getNflLogo() above, so it lines up with the ESPN-keyed gradient map by
+  // construction (a mismatch would break the team logo first).
   const nflAvatarBg = JSON.parse(nflAvatarBgJson);
   function getAvatarBg(team) {
     return nflAvatarBg[team] || nflAvatarBgFallback;

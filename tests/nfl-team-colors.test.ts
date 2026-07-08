@@ -158,8 +158,10 @@ describe('getPlayerAvatarBackground', () => {
   });
 
   it('normalizes MFL-format codes to the same team gradient as the ESPN code', () => {
-    // getNflTeamColors normalizes, so any input format lands on the same primary.
-    expect(getPlayerAvatarBackground('KC')).toContain('#e31837');
+    // MFL uses 'KCC' for Kansas City; it must normalize to the same gradient as
+    // the ESPN 'KC' code (guards against a regression in normalizeTeamCode).
+    expect(getPlayerAvatarBackground('KCC')).toBe(getPlayerAvatarBackground('KC'));
+    expect(getPlayerAvatarBackground('KCC')).toContain('#e31837');
   });
 
   it('falls back to the league-neutral blue for free agents / unknown codes', () => {

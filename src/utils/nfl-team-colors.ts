@@ -92,7 +92,7 @@ export function getNflTeamColors(teamCode: string): NflTeamColors {
  *
  * @example
  * ```typescript
- * getPlayerAvatarBackground('KC'); // 'linear-gradient(115deg, #380c0e 0%, #e31837 100%)'
+ * getPlayerAvatarBackground('KC'); // 'linear-gradient(115deg, #5d1221 0%, #e31837 100%)'
  * ```
  */
 export function getPlayerAvatarBackground(teamCode: string): string {
