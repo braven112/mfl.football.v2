@@ -1421,22 +1421,6 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
 <style>
   .ops-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
 
-  /* Dark mode. This page (and its compose card) was built against legacy
-     --color-* token names that tokens-dark.css never overrides — so it fell
-     back to light hexes in every theme. Remap those legacy names to the dark
-     palette here; because they're set on .ops-page, every var(--color-*) use
-     below (cards, inputs, borders, text) inherits the dark value. */
-  html.dark .ops-page {
-    --color-surface: var(--color-surface-2, #1e1e1e);
-    --color-surface-alt: var(--color-surface-3, #2a2a2a);
-    --color-border: var(--color-border-default, #3a4056);
-    --color-text: var(--color-text-primary, #e0e0e0);
-    --color-text-muted: var(--color-text-secondary, #8a8a8a);
-  }
-  /* Status/pill accents that were hardcoded light-on-light — lift for dark. */
-  html.dark .ops-page .ann-status[data-kind="ok"] { color: #4ade80; }
-  html.dark .ops-page .ann-status[data-kind="bad"] { color: #f87171; }
-
   .ops-header {
     display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
     flex-wrap: wrap; margin-bottom: 1.5rem;
@@ -1905,7 +1889,7 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
 
   /* Channel-mix bar track + empty segment used light literals. */
   :global(html.dark) .ops-chx__bar { background: var(--content-bg-muted, #181818); }
-  :global(html.dark) .ops-chx--empty { --seg-bg: #2a2a2a; --seg-fg: #8a8a8a; }
+  :global(html.dark) .ops-chx--empty { --seg-bg: var(--content-bg-accent, #2a2a2a); --seg-fg: var(--content-text-muted, #8a8a8a); }
 
   /* "Never shipped" amber callout — recolor for a dark surface so the
      amber text keeps contrast instead of sitting on near-white. */
@@ -1913,11 +1897,11 @@ const offerCum48h = fmtPct(cumulativeAfter(48));
     background: rgba(217, 119, 6, 0.12);
     border-left-color: #d97706;
   }
-  :global(html.dark) .ops-hero__zero-state strong { color: #fcd34d; }
-  :global(html.dark) .ops-chx__never { color: #fcd34d; }
+  :global(html.dark) .ops-hero__zero-state strong { color: var(--color-warning-dark, #fcd34d); }
+  :global(html.dark) .ops-chx__never { color: var(--color-warning-dark, #fcd34d); }
 
   /* Announcement status text hardcodes dark green/red — too low-contrast on
      the dark card. Brighten to the dark success/error text tokens. */
-  :global(html.dark) .ann-status[data-kind="ok"] { color: #6ee7b7; }
-  :global(html.dark) .ann-status[data-kind="bad"] { color: #fca5a5; }
+  :global(html.dark) .ann-status[data-kind="ok"] { color: var(--color-success-dark, #6ee7b7); }
+  :global(html.dark) .ann-status[data-kind="bad"] { color: var(--color-error-dark, #fca5a5); }
 </style>

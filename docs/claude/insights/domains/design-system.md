@@ -1423,7 +1423,7 @@ background/border/accent) should be double-checked against dark mode — these
 brand hexes are fixed, not part of the inverted token ramp.
 
 **Same family, TheLeague side (2026-07-08):** the Schefter Ops admin dashboard
-(`theleague/admin/schefter.astro`) had the identical bug — its whole palette
+(`src/pages/theleague/admin/schefter.astro`) had the identical bug — its whole palette
 runs on `--color-surface`, `--color-surface-alt`, `--color-text`,
 `--color-text-muted`, `--color-border`, `--color-accent`, none of which are
 defined in `tokens.css`/`tokens-dark.css`, so every card baked in a light
