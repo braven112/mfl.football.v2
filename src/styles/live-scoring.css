@@ -95,6 +95,20 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--spacing-md);
 }
+/* Predictor-chart colors resolve per theme from the four inline vars set by
+   the island (teamColorVars): --th/--ta follow the card surface's theme so
+   both colors stay legible + distinct (fallbacks A–C). Light is the default;
+   html.dark swaps to the dark-surface pair. */
+.ls-card,
+.ls-detail {
+  --th: var(--th-light, #1c497c);
+  --ta: var(--ta-light, #8a94a0);
+}
+html.dark .ls-card,
+html.dark .ls-detail {
+  --th: var(--th-dark, #1c497c);
+  --ta: var(--ta-dark, #8a94a0);
+}
 .ls-card {
   position: relative;
   overflow: hidden;
@@ -124,8 +138,12 @@
   inset: 0 0 auto 0;
   height: 4px;
   z-index: 1;
+  /* Fallback D: a hairline seam (card surface) at the split guarantees the two
+     colors read as two even when they land close in hue. */
   background: linear-gradient(90deg,
-    var(--ta) 0 var(--wp-split, 50%), var(--th) var(--wp-split, 50%) 100%);
+    var(--ta) 0 calc(var(--wp-split, 50%) - 1px),
+    var(--card-surface) calc(var(--wp-split, 50%) - 1px) calc(var(--wp-split, 50%) + 1px),
+    var(--th) calc(var(--wp-split, 50%) + 1px) 100%);
 }
 .ls-card.feat {
   grid-column: 1 / -1;
@@ -238,9 +256,11 @@
 }
 .ls-wp-home { background: var(--th); }
 .ls-wp-away { background: var(--ta); }
+/* Fallback D: seam sits at the win-prob split, not a fixed 50%, so the two
+   fills always read as two even when the colors land close. */
 .ls-wp-mid {
-  position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px;
-  background: var(--card-surface); opacity: 0.7; transform: translateX(-50%);
+  position: absolute; left: var(--wp-split, 50%); top: -2px; bottom: -2px; width: 2px;
+  background: var(--card-surface); opacity: 0.85; transform: translateX(-50%);
 }
 .ls-wp-labels {
   display: flex; justify-content: space-between; align-items: center;
@@ -279,8 +299,11 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 4px;
+  /* Fallback D: hairline seam at the split (see .ls-card::before). */
   background: linear-gradient(90deg,
-    var(--ta) 0 var(--wp-split, 50%), var(--th) var(--wp-split, 50%) 100%);
+    var(--ta) 0 calc(var(--wp-split, 50%) - 1px),
+    var(--content-bg) calc(var(--wp-split, 50%) - 1px) calc(var(--wp-split, 50%) + 1px),
+    var(--th) calc(var(--wp-split, 50%) + 1px) 100%);
 }
 .ls-mx-team { display: flex; align-items: center; gap: 0.6rem; }
 .ls-mx-team.home { justify-content: flex-end; }
@@ -327,10 +350,6 @@
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--team, #1c497c) 40%, transparent);
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.ls-headshot .ls-nflchip {
-  position: absolute; right: -3px; bottom: -3px; width: 17px; height: 17px; object-fit: contain;
-  background: var(--card-surface); border-radius: 50%; padding: 1.5px; box-shadow: 0 0 0 1.5px var(--card-surface);
-}
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }
 .ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

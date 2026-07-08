@@ -28,6 +28,7 @@ import {
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import { resolveTeamColorPair } from '../../utils/team-color-contrast';
 
 const POLL_LIVE = 60_000;
 const POLL_STALE = 300_000;
@@ -124,6 +125,28 @@ const teamColor = (team: string) => getNflTeamColors(team).primary;
 
 const fmt = (n: number) => n.toFixed(1);
 
+/**
+ * Predictor-chart colors for a home/away pair, resolved once per theme so the
+ * win-probability bar + dynamic top border always read as two distinct,
+ * legible colors. Home keeps its brand primary; away steps primary → secondary
+ * → chart color for contrast (see team-color-contrast). Fallbacks A–C are all
+ * on: A pins both colors legible against the card surface for the theme; B
+ * force-adjusts a shade when no brand color clears the bar; C lets a home team
+ * whose primary vanishes on the surface fall to a visible brand color. The CSS
+ * derives --th/--ta from the theme-matched pair; D (the seam) lives in CSS.
+ */
+const LS_LIGHT_BG = '#ffffff'; // --card-surface (light)
+const LS_DARK_BG = '#262626'; // --card-surface (dark)
+function teamColorVars(home?: TeamInfo, away?: TeamInfo): Record<string, string> {
+  const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
+  const light = resolveTeamColorPair(home, away, { ...opts, background: LS_LIGHT_BG });
+  const dark = resolveTeamColorPair(home, away, { ...opts, background: LS_DARK_BG });
+  return {
+    '--th-light': light.home, '--ta-light': light.away,
+    '--th-dark': dark.home, '--ta-dark': dark.away,
+  };
+}
+
 interface TeamCalc {
   live: number;
   projectedFinal: number;
@@ -200,12 +223,12 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   const H = teams[matchup.home];
   const A = teams[matchup.away];
   const homeLead = calc.home.live >= calc.away.live;
-  const th = H?.color ?? '#1c497c'; // home → right / win-prob right
-  const ta = A?.color ?? '#8a94a0'; // away → left / win-prob left
+  // Theme-aware, contrast-guaranteed predictor colors (home primary / away
+  // adjusted). CSS derives --th/--ta from these per theme.
   // Top border + win-prob bar split at the away team's win share (measured
   // from the left, which is the away side).
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
-  const cardStyle = { ['--th' as any]: th, ['--ta' as any]: ta, ['--wp-split' as any]: awaySplit };
+  const cardStyle = { ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit };
 
   const head = (
     <div className="ls-card-head">
@@ -323,7 +346,6 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
         <img src={meta.headshot} alt="" loading="lazy"
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}
-      {team && !isDef && <img className="ls-nflchip" src={nflLogoUrl(team)} alt="" loading="lazy" />}
       {isDef && team && <img src={nflLogoUrl(team)} alt="" loading="lazy"
              style={{ position: 'absolute', inset: '18%', width: '64%', height: '64%', objectFit: 'contain' }} />}
     </span>
@@ -370,8 +392,6 @@ function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }:
 }) {
   const H = teams[matchup.home];
   const A = teams[matchup.away];
-  const th = H?.color ?? '#1c497c';
-  const ta = A?.color ?? '#8a94a0';
   const homeRows = players[matchup.home] ?? [];
   const awayRows = players[matchup.away] ?? [];
   const rowCount = Math.max(homeRows.length, awayRows.length);
@@ -379,7 +399,7 @@ function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }:
 
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   return (
-    <div className="ls-detail" style={{ ['--th' as any]: th, ['--ta' as any]: ta, ['--wp-split' as any]: awaySplit }}>
+    <div className="ls-detail" style={{ ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit }}>
       <button className="ls-back" onClick={onBack}>← All matchups</button>
       <div className="ls-scorehead">
         <div className="ls-mx-team away">

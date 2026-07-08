@@ -19,7 +19,12 @@ export interface TeamInfo {
   nameMedium?: string;
   nameShort?: string;
   abbrev?: string;
+  /** Vibrant chart color (3rd-choice fallback for the predictor chart). */
   color: string;
+  /** Brand primary — the predictor chart's home color / away 1st choice. */
+  colorPrimary?: string;
+  /** Brand secondary — the predictor chart's away 2nd choice. */
+  colorSecondary?: string;
   icon?: string;
 }
 
