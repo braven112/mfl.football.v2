@@ -12,6 +12,7 @@
  */
 
 import { getLeagueContext } from '../../utils/league-context';
+import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
@@ -59,7 +60,12 @@ const freeAgentsUrl = resolveLeaguePath(
   isAFL ? "/afl-fantasy/players" : "/theleague/players",
   hideLeaguePrefix
 );
-const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
+// Self-hosted live scoring when the league has it enabled; otherwise fall back
+// to the MFL-hosted "live scoring summary" page (the surface we're replacing).
+const hasLiveScoring = leagueHasFeature(league.slug, 'liveScoring');
+const liveScoringUrl = hasLiveScoring
+  ? resolveLeaguePath(isAFL ? '/afl-fantasy/live-scoring' : '/theleague/live-scoring', hideLeaguePrefix)
+  : `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 ---
 
 <div class="breadcrumb-bar">
@@ -177,7 +183,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
             </svg>
             <span class="nav-label">Standings</span>
           </a>
-          <a href={liveScoringUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Live scoring">
+          <a href={liveScoringUrl} class="nav-icon-link" title="Live scoring" target={hasLiveScoring ? undefined : "_blank"} rel={hasLiveScoring ? undefined : "noopener noreferrer"}>
             <svg class="nav-icon" aria-hidden="true">
               <use href={`${spriteUrl}#icon-goals`}></use>
             </svg>

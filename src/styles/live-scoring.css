@@ -1,0 +1,418 @@
+/**
+ * Live Scoring — Direction C (Editorial).
+ *
+ * Styles the standalone live-scoring page + island. Built entirely on the
+ * design tokens in tokens.css / tokens-dark.css, so light/dark and the AFL
+ * per-league theme (html[data-league="afl"]) all resolve automatically —
+ * franchise team-color washes come from inline --th/--ta/--team vars set per
+ * element. Locked art direction: art-direction gallery, direction C.
+ */
+
+.ls-root {
+  --ls-live: var(--color-success);
+  --ls-final: var(--content-text-muted);
+  --ls-pre: var(--color-warning);
+  --ls-boom: var(--color-success);
+  --ls-boom-bg: color-mix(in srgb, var(--color-success) 16%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* ── header ── */
+.ls-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+.ls-head h1 {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+  color: var(--page-text);
+  text-wrap: balance;
+}
+.ls-sample-badge {
+  display: inline-block;
+  margin-left: 0.6rem;
+  font-family: var(--font-family-base);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-warning-dark);
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-full);
+  padding: 0.15rem 0.55rem;
+  vertical-align: middle;
+}
+.ls-head h1::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 1.15rem;
+  background: var(--league-accent);
+  border-radius: 2px;
+  margin-right: 0.55rem;
+  vertical-align: -1px;
+}
+.ls-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.ls-status.live { color: var(--ls-live); }
+.ls-week-tab {
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── shared: live-state dot ── */
+.ls-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; display: inline-block; flex: none; }
+.ls-dot.live {
+  background: var(--ls-live);
+  animation: ls-pulse 1.8s infinite;
+}
+.ls-dot.final { background: var(--ls-final); }
+.ls-dot.pre { background: transparent; border: 1.5px solid var(--ls-pre); }
+@keyframes ls-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ls-live) 55%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .ls-dot.live { animation: none; } }
+
+/* ── scoreboard grid ── */
+.ls-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-md);
+}
+/* Predictor-chart colors resolve per theme from the four inline vars set by
+   the island (teamColorVars): --th/--ta follow the card surface's theme so
+   both colors stay legible + distinct (fallbacks A–C). Light is the default;
+   html.dark swaps to the dark-surface pair. */
+.ls-card,
+.ls-detail {
+  --th: var(--th-light, #1c497c);
+  --ta: var(--ta-light, #8a94a0);
+}
+html.dark .ls-card,
+html.dark .ls-detail {
+  --th: var(--th-dark, #1c497c);
+  --ta: var(--ta-dark, #8a94a0);
+}
+.ls-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--card-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  font: inherit;
+  color: inherit;
+}
+.ls-card:hover { border-color: var(--league-accent); box-shadow: var(--shadow-lg); }
+.ls-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+/* Dynamic top border — a two-color split at the win-probability point,
+   away color on the left, home color on the right (matches the win-prob bar
+   and the away-left/home-right layout). --wp-split is the away win share. */
+.ls-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  z-index: 1;
+  /* Fallback D: a hairline seam (card surface) at the split guarantees the two
+     colors read as two even when they land close in hue. */
+  background: linear-gradient(90deg,
+    var(--ta) 0 calc(var(--wp-split, 50%) - 1px),
+    var(--card-surface) calc(var(--wp-split, 50%) - 1px) calc(var(--wp-split, 50%) + 1px),
+    var(--th) calc(var(--wp-split, 50%) + 1px) 100%);
+}
+.ls-card.feat {
+  grid-column: 1 / -1;
+  box-shadow: var(--shadow-lg);
+}
+/* featured (your) matchup — horizontal faceoff, away left / home right */
+.ls-faceoff {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 0.4rem 0.2rem 0.2rem;
+}
+.ls-fo-team { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; text-align: center; min-width: 0; }
+.ls-fo-crest { width: 3rem; height: 3rem; }
+.ls-fo-crest img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)); }
+.ls-fo-name {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 1rem; color: var(--content-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.ls-fo-team.lead .ls-fo-name { color: var(--page-text); }
+.ls-fo-score {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 2.4rem; line-height: 1; color: var(--content-text-muted); font-variant-numeric: tabular-nums;
+}
+.ls-fo-team.lead .ls-fo-score { color: var(--page-text); }
+.ls-fo-proj { font-size: 0.68rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
+.ls-fo-vs { font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.8rem; letter-spacing: 0.08em; color: var(--content-text-muted); }
+
+/* single-game full-width ROW: away crest·name … score·proj  @  proj·score … name·crest home */
+.ls-faceoff-row { display: flex; align-items: center; gap: var(--spacing-lg); padding: 0.5rem 0.4rem 0.3rem; }
+.ls-fr-team { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 0.9rem; min-width: 0; }
+.ls-fr-team.home { flex-direction: row-reverse; }
+.ls-fr-id { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.ls-fr-team.home .ls-fr-id { flex-direction: row-reverse; }
+.ls-fr-crest { width: 2.6rem; height: 2.6rem; flex: none; }
+.ls-fr-crest img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)); }
+.ls-fr-name {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 1.05rem;
+  color: var(--content-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ls-fr-team.lead .ls-fr-name { color: var(--page-text); }
+.ls-fr-nums { display: flex; align-items: baseline; gap: 0.5rem; flex: none; }
+.ls-fr-team.home .ls-fr-nums { flex-direction: row-reverse; }
+.ls-fr-score {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 2.4rem; line-height: 1;
+  color: var(--content-text-muted); font-variant-numeric: tabular-nums;
+}
+.ls-fr-team.lead .ls-fr-score { color: var(--page-text); }
+.ls-fr-proj { font-size: 0.7rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ls-fr-vs { font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.9rem; color: var(--content-text-muted); flex: none; }
+
+/* doubleheader: two faceoff cards side by side */
+.ls-dh { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+.ls-dh .ls-card.feat { grid-column: auto; }
+@media (max-width: 640px) { .ls-dh { grid-template-columns: 1fr; } }
+.ls-card-head { display: flex; align-items: center; gap: 0.5rem; }
+.ls-badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.66rem; font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.16rem 0.45rem; border-radius: 4px;
+}
+.ls-badge.live { color: var(--ls-live); background: color-mix(in srgb, var(--ls-live) 15%, transparent); }
+.ls-badge.final { color: var(--content-text-muted); background: var(--content-bg-muted); }
+.ls-rem { font-size: 0.72rem; color: var(--content-text-muted); }
+.ls-your {
+  margin-left: auto; font-size: 0.62rem; font-weight: var(--font-weight-bold);
+  letter-spacing: 0.1em; color: var(--league-accent);
+}
+
+.ls-teams { display: flex; flex-direction: column; gap: 0.15rem; }
+.ls-team {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.1rem;
+}
+.ls-crest { width: 2.35rem; height: 2.35rem; flex: none; display: flex; align-items: center; justify-content: center; }
+.ls-crest img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35)); }
+.ls-tname {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 1rem; color: var(--content-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.01em;
+}
+.ls-team.lead .ls-tname { color: var(--page-text); }
+.ls-proj { font-size: 0.7rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
+.ls-score {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 1.7rem; color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums; min-width: 3.6rem; text-align: right;
+}
+.ls-team.lead .ls-score { color: var(--page-text); }
+.ls-card.feat .ls-score { font-size: 2.1rem; }
+
+.ls-card-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.72rem; color: var(--content-text-muted);
+  padding-top: 0.3rem; border-top: 1px solid var(--content-border);
+}
+.ls-open { color: var(--league-accent); font-weight: var(--font-weight-semibold); }
+
+/* ── win-probability bar ── */
+.ls-wp { margin: 0.3rem 0; }
+.ls-wp-track {
+  position: relative; display: flex; height: 12px;
+  border-radius: var(--radius-sm); overflow: hidden; background: var(--content-bg-muted);
+}
+.ls-wp-home { background: var(--th); }
+.ls-wp-away { background: var(--ta); }
+/* Fallback D: seam sits at the win-prob split, not a fixed 50%, so the two
+   fills always read as two even when the colors land close. */
+.ls-wp-mid {
+  position: absolute; left: var(--wp-split, 50%); top: -2px; bottom: -2px; width: 2px;
+  background: var(--card-surface); opacity: 0.85; transform: translateX(-50%);
+}
+.ls-wp-labels {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 0.3rem; font-size: 0.72rem; font-weight: var(--font-weight-semibold);
+}
+.ls-wp-l { color: var(--ta); }
+.ls-wp-r { color: var(--th); }
+.ls-wp-tag { font-size: 0.6rem; letter-spacing: 0.12em; color: var(--content-text-muted); font-weight: var(--font-weight-bold); }
+.ls-wp.mini { margin: 0.4rem 0 0; }
+.ls-wp.mini .ls-wp-track { height: 7px; }
+
+/* ══ matchup detail ══ */
+.ls-detail {
+  background: var(--card-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+.ls-back {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: none; border: 0; font: inherit; cursor: pointer;
+  color: var(--league-accent); font-weight: var(--font-weight-semibold);
+  padding: 0.7rem 1rem 0; font-size: var(--font-size-sm);
+}
+.ls-scorehead {
+  position: sticky; top: 0; z-index: 5;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--spacing-md);
+  padding: 1rem 1.2rem;
+  background: var(--content-bg);
+  border-bottom: 1px solid var(--content-border);
+}
+/* dynamic top border matching the win-prob split (away left / home right) */
+.ls-scorehead::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  /* Fallback D: hairline seam at the split (see .ls-card::before). */
+  background: linear-gradient(90deg,
+    var(--ta) 0 calc(var(--wp-split, 50%) - 1px),
+    var(--content-bg) calc(var(--wp-split, 50%) - 1px) calc(var(--wp-split, 50%) + 1px),
+    var(--th) calc(var(--wp-split, 50%) + 1px) 100%);
+}
+.ls-mx-team { display: flex; align-items: center; gap: 0.6rem; }
+.ls-mx-team.home { justify-content: flex-end; }
+.ls-mx-crest { width: 3rem; height: 3rem; flex: none; }
+.ls-mx-crest img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
+.ls-mx-tn { display: flex; flex-direction: column; line-height: 1.1; }
+.ls-mx-team.home .ls-mx-tn { text-align: right; }
+.ls-mx-tn b { font-family: var(--font-display); font-size: 1.2rem; color: var(--page-text); font-weight: var(--font-weight-bold); }
+.ls-mx-tn em { font-style: normal; font-size: 0.72rem; color: var(--content-text-muted); }
+.ls-mx-total {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 2.7rem; color: var(--page-text); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.ls-mx-center { text-align: center; display: flex; flex-direction: column; gap: 0.25rem; }
+.ls-mx-live {
+  font-size: 0.66rem; font-weight: var(--font-weight-bold); letter-spacing: 0.08em; color: var(--ls-live);
+  display: inline-flex; gap: 0.3rem; align-items: center; justify-content: center;
+}
+.ls-mx-projline { font-size: 0.72rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ls-detail .ls-wp { padding: 0.7rem 1.2rem 0; }
+.ls-ytp { display: flex; justify-content: space-between; padding: 0.2rem 1.2rem 0.6rem; font-size: 0.7rem; color: var(--ls-pre); }
+
+.ls-mx-body { padding: 0.4rem 0.7rem 0.8rem; }
+.ls-mx-row {
+  display: grid; grid-template-columns: 1fr 2.2rem 1fr; align-items: center; gap: 0.3rem;
+  border-bottom: 1px solid var(--content-border);
+}
+.ls-mx-row:last-child { border-bottom: 0; }
+.ls-mx-pos { text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem; color: var(--content-text-muted); }
+
+/* ── player row ── */
+.ls-prow { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; }
+.ls-prow.right { flex-direction: row; }
+.ls-ppos {
+  font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem;
+  color: #fff; background: var(--posc, #7a8694); width: 2.4rem; text-align: center;
+  padding: 0.18rem 0; border-radius: 4px; flex: none; letter-spacing: 0.02em;
+}
+/* Position accent colors (theme-independent) — keyed off data-pos. */
+.ls-ppos[data-pos="QB"] { --posc: #e0517a; }
+.ls-ppos[data-pos="RB"] { --posc: #3fb98a; }
+.ls-ppos[data-pos="WR"] { --posc: #4aa3e0; }
+.ls-ppos[data-pos="TE"] { --posc: #e08a3f; }
+.ls-ppos[data-pos="PK"], .ls-ppos[data-pos="K"] { --posc: #9b7fd0; }
+.ls-ppos[data-pos="DEF"] { --posc: #7a8694; }
+.ls-ppos[data-pos="FLEX"] { --posc: #c0a04a; }
+.ls-headshot {
+  position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 15%,
+    color-mix(in srgb, var(--team, #1c497c) 78%, #000 4%),
+    color-mix(in srgb, var(--team, #1c497c) 55%, #000 34%));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--team, #1c497c) 40%, transparent);
+}
+.ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Defense "headshot" is the NFL logo centered in the team-color disc. */
+.ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
+.ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+.ls-prow.right .ls-pid { align-items: flex-end; }
+.ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ls-pmeta { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--content-text-muted); }
+.ls-prow.right .ls-pmeta { flex-direction: row-reverse; }
+.ls-pmeta img { width: 15px; height: 15px; object-fit: contain; }
+.ls-pclock { display: flex; align-items: center; gap: 0.25rem; padding-left: 0.4rem; margin-left: 0.15rem; border-left: 1px solid var(--content-border); }
+.ls-prow.right .ls-pclock { border-left: 0; border-right: 1px solid var(--content-border); padding-left: 0; padding-right: 0.4rem; margin-left: 0; margin-right: 0.15rem; flex-direction: row-reverse; }
+.ls-pclock.live { color: var(--ls-live); }
+.ls-pclock.pre { color: var(--ls-pre); }
+.ls-pscore { display: flex; flex-direction: column; align-items: flex-end; flex: none; min-width: 3.4rem; }
+.ls-prow.right .ls-pscore { align-items: flex-start; }
+.ls-plive { font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 1.15rem; color: var(--page-text); font-variant-numeric: tabular-nums; line-height: 1; }
+.ls-pscore.pre .ls-plive { color: var(--content-text-muted); }
+.ls-pscore.boom { background: var(--ls-boom-bg); border-radius: 5px; padding: 0.1rem 0.3rem; margin: -0.1rem -0.3rem; }
+.ls-pscore.boom .ls-plive { color: var(--ls-boom); }
+.ls-pproj { font-size: 0.66rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
+
+.ls-empty { padding: 2rem 1rem; text-align: center; color: var(--content-text-muted); }
+
+/* ── header right: week selector + live pill ── */
+.ls-head-right { display: flex; align-items: center; gap: var(--spacing-md); }
+.ls-weeksel { display: inline-flex; align-items: center; gap: 0.4rem; }
+.ls-weeksel-lbl { font-size: 0.66rem; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: 0.08em; color: var(--content-text-muted); }
+.ls-weeksel select {
+  font: inherit; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+  color: var(--page-text); background: var(--card-surface);
+  border: 1px solid var(--card-border); border-radius: var(--radius-md);
+  padding: 0.3rem 0.6rem; cursor: pointer;
+}
+.ls-weeksel select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* NFL games strip styles moved to src/styles/nfl-games-strip.css (now a
+   self-contained reusable component). */
+
+/* ── scoring moments feed ── */
+.ls-moments { padding: 1rem 1.2rem 1.3rem; background: var(--content-bg-muted); border-top: 1px solid var(--content-border); }
+.ls-moments h3 {
+  font-family: var(--font-display); font-size: 0.9rem; font-weight: var(--font-weight-bold);
+  margin: 0 0 0.6rem; color: var(--content-text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.ls-moment { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px dashed var(--content-border); }
+.ls-moment:last-child { border-bottom: 0; }
+.ls-m-clock { font-size: 0.7rem; color: var(--content-text-muted); min-width: 4.6rem; font-variant-numeric: tabular-nums; }
+.ls-m-nfl { width: 17px; height: 17px; object-fit: contain; }
+.ls-m-txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
+.ls-m-pts { font-family: var(--font-display); font-weight: var(--font-weight-bold); color: var(--ls-boom); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 760px) {
+  .ls-scorehead { gap: 0.5rem; padding: 0.8rem; }
+  .ls-mx-total { font-size: 1.9rem; }
+  .ls-mx-tn b { font-size: 0.9rem; }
+  .ls-mx-crest { width: 2.2rem; height: 2.2rem; }
+  .ls-mx-row { grid-template-columns: 1fr 1.6rem 1fr; }
+  .ls-pproj, .ls-pmeta { display: none; }
+}

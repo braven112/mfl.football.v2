@@ -26,6 +26,7 @@ export interface LeagueFeatures {
   powerRankings: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
+  liveScoring: boolean;
 }
 
 /** Date (month is 1-indexed) on which a league flips to the new MFL league year. */

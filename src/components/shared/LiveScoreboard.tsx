@@ -1,0 +1,587 @@
+/**
+ * LiveScoreboard — progressive live-scoring island (Direction C / Editorial).
+ *
+ * Scoreboard of every matchup (closest first, your matchup pinned), each with
+ * team totals, projected finals, and a win-probability bar. Tap a matchup to
+ * open the head-to-head detail: starter-by-starter rows with live points,
+ * projected finals, NFL logo + live game state, and "yet to play" counts.
+ *
+ * Static identity/projection arrives as props (PlayerMeta); the live numbers
+ * are polled from /api/live-scoring and merged by player id.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type {
+  LivePlayerRow,
+  LiveScoringPageProps,
+  LiveScoringResponse,
+  MatchupPairing,
+  PlayerMeta,
+  TeamInfo,
+  NflGameState,
+} from '../../types/live-scoring';
+import {
+  NFL_GAME_SECONDS,
+  projectPlayerFinal,
+  projectPlayerRemaining,
+  winProbability,
+} from '../../utils/live-win-probability';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import { resolveTeamColorPair } from '../../utils/team-color-contrast';
+
+const POLL_LIVE = 60_000;
+const POLL_STALE = 300_000;
+/** Weeks offered in the week selector (regular season 1–18). */
+const MAX_WEEK = 18;
+
+/** A scoring update derived from a player's live-point jump between polls. */
+interface Moment {
+  key: string;
+  fid: string;
+  name: string;
+  team: string;
+  delta: number;
+  clock: string;
+}
+
+// ── polling ──
+
+function useLiveScoring(props: LiveScoringPageProps) {
+  const { week, year, leagueId, host, isLive } = props;
+  const [scores, setScores] = useState<Record<string, number>>(props.initialScores ?? {});
+  const [remaining, setRemaining] = useState<Record<string, number>>(props.initialRemaining ?? {});
+  const [matchups, setMatchups] = useState<MatchupPairing[]>(props.matchups ?? []);
+  const [players, setPlayers] = useState<Record<string, LivePlayerRow[]>>(props.initialPlayers ?? {});
+  const [ytp, setYtp] = useState<Record<string, number>>(props.initialYetToPlay ?? {});
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const poll = useCallback(async () => {
+    try {
+      const url = new URL('/api/live-scoring', window.location.origin);
+      url.searchParams.set('week', String(week));
+      url.searchParams.set('year', String(year));
+      url.searchParams.set('L', leagueId);
+      url.searchParams.set('host', `https://${host}`);
+      const res = await fetch(url.toString());
+      if (!res.ok) return;
+      const data: LiveScoringResponse = await res.json();
+      setScores(data.scores ?? {});
+      setRemaining(data.remaining ?? {});
+      if (data.matchups?.length) setMatchups(data.matchups);
+      if (data.players) setPlayers(data.players);
+      if (data.playersYetToPlay) setYtp(data.playersYetToPlay);
+    } catch {
+      /* retry next tick */
+    }
+  }, [week, year, leagueId, host]);
+
+  useEffect(() => {
+    if (!isLive) return;
+    poll();
+    intervalRef.current = setInterval(poll, POLL_LIVE);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isLive, poll]);
+
+  useEffect(() => {
+    if (!isLive) return;
+    const allDone = Object.keys(remaining).length > 0 && Object.values(remaining).every((r) => r === 0);
+    if (allDone && intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(poll, POLL_STALE);
+    }
+  }, [remaining, isLive, poll]);
+
+  return { scores, remaining, matchups, players, ytp };
+}
+
+// ── helpers ──
+
+function nflGameState(secondsRemaining: number): NflGameState {
+  if (secondsRemaining <= 0) return 'final';
+  if (secondsRemaining >= NFL_GAME_SECONDS) return 'not-started';
+  return 'in-progress';
+}
+
+function clockLabel(state: NflGameState, sec: number): string {
+  if (state === 'final') return 'Final';
+  if (state === 'not-started') return 'Yet to play';
+  // Map seconds-remaining to quarter + clock via elapsed time so a quarter
+  // boundary reads as the START of the next quarter (1800s left → Q3 15:00,
+  // not Q2 0:00). Each quarter is 900s of a 3600s game.
+  const elapsed = Math.max(0, NFL_GAME_SECONDS - sec);
+  const quarter = Math.min(4, Math.floor(elapsed / 900) + 1);
+  const remInQuarter = 900 - (elapsed % 900);
+  const mm = Math.floor(remInQuarter / 60);
+  const ss = remInQuarter % 60;
+  return `Q${quarter} ${mm}:${String(ss).padStart(2, '0')}`;
+}
+
+const nflLogoUrl = (team: string) => (team ? `/assets/nfl-logos/${normalizeTeamCode(team)}.svg` : '');
+const teamColor = (team: string) => getNflTeamColors(team).primary;
+
+const fmt = (n: number) => n.toFixed(1);
+
+/**
+ * Predictor-chart colors for a home/away pair, resolved once per theme so the
+ * win-probability bar + dynamic top border always read as two distinct,
+ * legible colors. Home keeps its brand primary; away steps primary → secondary
+ * → chart color for contrast (see team-color-contrast). Fallbacks A–C are all
+ * on: A pins both colors legible against the card surface for the theme; B
+ * force-adjusts a shade when no brand color clears the bar; C lets a home team
+ * whose primary vanishes on the surface fall to a visible brand color. The CSS
+ * derives --th/--ta from the theme-matched pair; D (the seam) lives in CSS.
+ */
+const LS_LIGHT_BG = '#ffffff'; // --card-surface (light)
+const LS_DARK_BG = '#262626'; // --card-surface (dark)
+function teamColorVars(home?: TeamInfo, away?: TeamInfo): Record<string, string> {
+  const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
+  const light = resolveTeamColorPair(home, away, { ...opts, background: LS_LIGHT_BG });
+  const dark = resolveTeamColorPair(home, away, { ...opts, background: LS_DARK_BG });
+  return {
+    '--th-light': light.home, '--ta-light': light.away,
+    '--th-dark': dark.home, '--ta-dark': dark.away,
+  };
+}
+
+interface TeamCalc {
+  live: number;
+  projectedFinal: number;
+  remainingPoints: number;
+  yetToPlay: number;
+}
+
+function computeTeam(
+  fid: string,
+  scores: Record<string, number>,
+  players: Record<string, LivePlayerRow[]>,
+  ytp: Record<string, number>,
+  meta: Record<string, PlayerMeta>,
+): TeamCalc {
+  const rows = players[fid] ?? [];
+  const live = scores[fid] ?? rows.reduce((s, r) => s + r.live, 0);
+  let remainingPoints = 0;
+  let notStarted = 0;
+  for (const r of rows) {
+    const projected = meta[r.id]?.projected ?? 0;
+    remainingPoints += projectPlayerRemaining({ live: r.live, projected, secondsRemaining: r.secondsRemaining });
+    if (nflGameState(r.secondsRemaining) === 'not-started') notStarted += 1;
+  }
+  return {
+    live,
+    projectedFinal: live + remainingPoints,
+    remainingPoints,
+    // Prefer the count we derive from each starter's game clock — it uses the
+    // same gameSecondsRemaining the scores do and doesn't depend on MFL's
+    // franchise-level `playersYetToPlay` attribute (name unverified). Fall back
+    // to the feed value only when we have no per-player rows to count.
+    yetToPlay: rows.length ? notStarted : (ytp[fid] ?? 0),
+  };
+}
+
+// ── win-probability bar ──
+
+function WinProbBar({ home, mini, homeLabel, awayLabel }: {
+  home: number; mini?: boolean; homeLabel?: string; awayLabel?: string;
+}) {
+  const homePct = Math.round(home * 100);
+  const awayPct = 100 - homePct;
+  return (
+    <div className={`ls-wp${mini ? ' mini' : ''}`} role="img"
+         aria-label={`Win probability: ${homeLabel ?? 'home'} ${homePct}%, ${awayLabel ?? 'away'} ${awayPct}%`}>
+      <div className="ls-wp-track">
+        <div className="ls-wp-away" style={{ width: `${awayPct}%` }} />
+        <div className="ls-wp-home" style={{ width: `${homePct}%` }} />
+        <span className="ls-wp-mid" />
+      </div>
+      {!mini && (
+        <div className="ls-wp-labels">
+          <span className="ls-wp-l">{awayPct}%</span>
+          <span className="ls-wp-tag">WIN PROBABILITY</span>
+          <span className="ls-wp-r">{homePct}%</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── scoreboard card ──
+
+function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYours, onOpen }: {
+  matchup: MatchupPairing;
+  teams: Record<string, TeamInfo>;
+  calc: { home: TeamCalc; away: TeamCalc; homeWinProb: number; isFinal: boolean };
+  featured: boolean;
+  /** 'row' = single-game full-width row; 'faceoff' = stacked column (doubleheader). */
+  variant?: 'row' | 'faceoff';
+  isYours: boolean;
+  onOpen: () => void;
+}) {
+  const H = teams[matchup.home];
+  const A = teams[matchup.away];
+  const homeLead = calc.home.live >= calc.away.live;
+  // Theme-aware, contrast-guaranteed predictor colors (home primary / away
+  // adjusted). CSS derives --th/--ta from these per theme.
+  // Top border + win-prob bar split at the away team's win share (measured
+  // from the left, which is the away side).
+  const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
+  const cardStyle = { ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit };
+
+  const head = (
+    <div className="ls-card-head">
+      {calc.isFinal
+        ? <span className="ls-badge final">Final</span>
+        : <span className="ls-badge live"><span className="ls-dot live" />Live</span>}
+      {!calc.isFinal && (calc.home.yetToPlay + calc.away.yetToPlay > 0) && (
+        <span className="ls-rem">{calc.home.yetToPlay + calc.away.yetToPlay} yet to play</span>
+      )}
+      {isYours && <span className="ls-your">YOUR MATCHUP</span>}
+    </div>
+  );
+
+  const foot = (
+    <div className="ls-card-foot">
+      <span>Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
+      <span className="ls-open">Open matchup →</span>
+    </div>
+  );
+
+  // Single game (your matchup, one game this week): full-width horizontal row.
+  if (featured && variant === 'row') {
+    const teamBlock = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean, sideCls: string) => (
+      <div className={`ls-fr-team ${sideCls}${lead ? ' lead' : ''}`}>
+        <span className="ls-fr-id">
+          <span className="ls-fr-crest">{team?.icon && <img src={team.icon} alt="" loading="lazy" />}</span>
+          <span className="ls-fr-name">{team?.nameShort ?? team?.name ?? 'TBD'}</span>
+        </span>
+        <span className="ls-fr-nums">
+          <span className="ls-fr-score">{fmt(c.live)}</span>
+          <span className="ls-fr-proj">Proj {fmt(c.projectedFinal)}</span>
+        </span>
+      </div>
+    );
+    return (
+      <button className="ls-card feat row" style={cardStyle} onClick={onOpen}
+              aria-label={`Open ${A?.name} at ${H?.name}`}>
+        {head}
+        <div className="ls-faceoff-row">
+          {teamBlock(A, calc.away, !homeLead, 'away')}
+          <span className="ls-fr-vs">@</span>
+          {teamBlock(H, calc.home, homeLead, 'home')}
+        </div>
+        {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
+        {foot}
+      </button>
+    );
+  }
+
+  // Featured faceoff (used side-by-side for doubleheaders): stacked columns,
+  // away on the left, home on the right.
+  if (featured) {
+    const foTeam = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean, sideCls: string) => (
+      <div className={`ls-fo-team ${sideCls}${lead ? ' lead' : ''}`}>
+        <span className="ls-fo-crest">{team?.icon && <img src={team.icon} alt="" loading="lazy" />}</span>
+        <span className="ls-fo-name">{team?.nameShort ?? team?.name ?? 'TBD'}</span>
+        <span className="ls-fo-score">{fmt(c.live)}</span>
+        <span className="ls-fo-proj">Proj {fmt(c.projectedFinal)}</span>
+      </div>
+    );
+    return (
+      <button className="ls-card feat" style={cardStyle} onClick={onOpen}
+              aria-label={`Open ${A?.name} at ${H?.name}`}>
+        {head}
+        <div className="ls-faceoff">
+          {foTeam(A, calc.away, !homeLead, 'away')}
+          <span className="ls-fo-vs">@</span>
+          {foTeam(H, calc.home, homeLead, 'home')}
+        </div>
+        {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
+        {foot}
+      </button>
+    );
+  }
+
+  // Other matchups: compact stacked rows (away on top, home below).
+  const row = (team: TeamInfo | undefined, c: TeamCalc, lead: boolean) => (
+    <div className={`ls-team${lead ? ' lead' : ''}`}>
+      <span className="ls-crest">{team?.icon && <img src={team.icon} alt="" loading="lazy" />}</span>
+      <span className="ls-tname">{team?.nameShort ?? team?.name ?? 'TBD'}</span>
+      <span className="ls-proj">{fmt(c.projectedFinal)}</span>
+      <span className="ls-score">{fmt(c.live)}</span>
+    </div>
+  );
+  return (
+    <button className="ls-card" style={cardStyle} onClick={onOpen}
+            aria-label={`Open ${A?.name} at ${H?.name}`}>
+      {head}
+      <div className="ls-teams">
+        {row(A, calc.away, !homeLead)}
+        {row(H, calc.home, homeLead)}
+      </div>
+      {!calc.isFinal && <WinProbBar home={calc.homeWinProb} mini homeLabel={H?.name} awayLabel={A?.name} />}
+      <div className="ls-card-foot">
+        <span>Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
+      </div>
+    </button>
+  );
+}
+
+// ── player row ──
+
+function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta; side: 'left' | 'right' }) {
+  const pos = meta?.position ?? '';
+  const team = meta?.nflTeam ?? '';
+  const state = nflGameState(row.secondsRemaining);
+  const projected = meta?.projected ?? 0;
+  const projFinal = projectPlayerFinal({ live: row.live, projected, secondsRemaining: row.secondsRemaining });
+  const boom = state !== 'not-started' && projected > 0 && row.live >= projected;
+  const isDef = pos === 'DEF';
+
+  const face = (
+    <span className="ls-headshot" style={{ ['--team' as any]: teamColor(team) }}>
+      {meta?.headshot && !isDef && (
+        <img src={meta.headshot} alt="" loading="lazy"
+             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      )}
+      {isDef && team && <img className="ls-def-logo" src={nflLogoUrl(team)} alt="" loading="lazy" />}
+    </span>
+  );
+
+  const id = (
+    <span className="ls-pid">
+      <span className="ls-pname">{meta?.name ?? 'Player'}</span>
+      <span className="ls-pmeta">
+        {team && <img src={nflLogoUrl(team)} alt="" loading="lazy" />}
+        <span>{team}</span>
+        <span className={`ls-pclock ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : ''}`}>
+          <span className={`ls-dot ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : 'final'}`} />
+          {clockLabel(state, row.secondsRemaining)}
+        </span>
+      </span>
+    </span>
+  );
+
+  const score = (
+    <span className={`ls-pscore${state === 'not-started' ? ' pre' : ''}${boom ? ' boom' : ''}`}>
+      <span className="ls-plive">{fmt(row.live)}</span>
+      <span className="ls-pproj">proj {fmt(projFinal)}</span>
+    </span>
+  );
+
+  const posChip = <span className="ls-ppos" data-pos={pos || undefined}>{pos || '—'}</span>;
+
+  return side === 'left'
+    ? <div className="ls-prow">{posChip}{face}{id}{score}</div>
+    : <div className="ls-prow right">{score}{id}{face}{posChip}</div>;
+}
+
+// ── matchup detail ──
+
+function MatchupDetail({ matchup, teams, players, meta, calc, moments, onBack }: {
+  matchup: MatchupPairing;
+  teams: Record<string, TeamInfo>;
+  players: Record<string, LivePlayerRow[]>;
+  meta: Record<string, PlayerMeta>;
+  calc: { home: TeamCalc; away: TeamCalc; homeWinProb: number; isFinal: boolean };
+  moments: Moment[];
+  onBack: () => void;
+}) {
+  const H = teams[matchup.home];
+  const A = teams[matchup.away];
+  const homeRows = players[matchup.home] ?? [];
+  const awayRows = players[matchup.away] ?? [];
+  const rowCount = Math.max(homeRows.length, awayRows.length);
+  const matchupMoments = moments.filter((m) => m.fid === matchup.home || m.fid === matchup.away).slice(0, 8);
+
+  const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
+  return (
+    <div className="ls-detail" style={{ ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit }}>
+      <button className="ls-back" onClick={onBack}>← All matchups</button>
+      <div className="ls-scorehead">
+        <div className="ls-mx-team away">
+          <span className="ls-mx-crest">{A?.icon && <img src={A.icon} alt="" />}</span>
+          <span className="ls-mx-tn"><b>{A?.nameShort ?? A?.name}</b><em>{fmt(calc.away.projectedFinal)} proj</em></span>
+          <span className="ls-mx-total">{fmt(calc.away.live)}</span>
+        </div>
+        <div className="ls-mx-center">
+          <span className="ls-mx-live">
+            {!calc.isFinal && <span className="ls-dot live" />}{calc.isFinal ? 'FINAL' : 'LIVE'}
+          </span>
+          <span className="ls-mx-projline">Proj {fmt(calc.away.projectedFinal)} – {fmt(calc.home.projectedFinal)}</span>
+        </div>
+        <div className="ls-mx-team home">
+          <span className="ls-mx-total">{fmt(calc.home.live)}</span>
+          <span className="ls-mx-tn"><b>{H?.nameShort ?? H?.name}</b><em>{fmt(calc.home.projectedFinal)} proj</em></span>
+          <span className="ls-mx-crest">{H?.icon && <img src={H.icon} alt="" />}</span>
+        </div>
+      </div>
+
+      {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
+      <div className="ls-ytp">
+        <span>{calc.away.yetToPlay} yet to play</span>
+        <span>{calc.home.yetToPlay} yet to play</span>
+      </div>
+
+      <div className="ls-mx-body">
+        {rowCount === 0 && <div className="ls-empty">Player breakdown appears once lineups lock and games begin.</div>}
+        {Array.from({ length: rowCount }).map((_, i) => {
+          const h = homeRows[i];
+          const a = awayRows[i];
+          const pos = (a && meta[a.id]?.position) || (h && meta[h.id]?.position) || '';
+          return (
+            <div className="ls-mx-row" key={i}>
+              <div>{a && <PlayerRow row={a} meta={meta[a.id]} side="left" />}</div>
+              <div className="ls-mx-pos">{pos}</div>
+              <div>{h && <PlayerRow row={h} meta={meta[h.id]} side="right" />}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {matchupMoments.length > 0 && (
+        <div className="ls-moments">
+          <h3>Scoring updates</h3>
+          {matchupMoments.map((m) => (
+            <div className="ls-moment" key={m.key}>
+              <span className="ls-m-clock">{m.clock}</span>
+              {m.team && <img className="ls-m-nfl" src={nflLogoUrl(m.team)} alt="" loading="lazy" />}
+              <span className="ls-m-txt">{m.name}</span>
+              <span className="ls-m-pts">+{fmt(m.delta)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── main ──
+
+function goToWeek(w: number) {
+  const u = new URL(window.location.href);
+  u.searchParams.set('week', String(w));
+  window.location.href = u.toString();
+}
+
+export default function LiveScoreboard(props: LiveScoringPageProps) {
+  const { teams, playerMeta, userFranchiseId, week } = props;
+  const { scores, remaining, matchups, players, ytp } = useLiveScoring(props);
+  const [selected, setSelected] = useState<MatchupPairing | null>(null);
+
+  // Scoring moments: diff each starter's live points across polls and surface
+  // notable jumps. Self-contained — no play-by-play feed needed. In demo mode
+  // they're seeded from the sample so the feed is visible without polling.
+  const prevLives = useRef<Record<string, number>>({});
+  const momentSeq = useRef(0);
+  const [moments, setMoments] = useState<Moment[]>(props.initialMoments ?? []);
+  useEffect(() => {
+    const prev = prevLives.current;
+    const fresh: Moment[] = [];
+    for (const [fid, rows] of Object.entries(players)) {
+      for (const r of rows) {
+        const before = prev[r.id];
+        if (before !== undefined && r.live - before >= 1.5) {
+          const m = playerMeta[r.id];
+          fresh.push({
+            // Monotonic seq (not the live total) so a stat correction that
+            // returns a player to a prior total can't collide React keys.
+            key: `${r.id}-${momentSeq.current++}`,
+            fid,
+            name: m?.name ?? 'Player',
+            team: m?.nflTeam ?? '',
+            delta: r.live - before,
+            clock: clockLabel(nflGameState(r.secondsRemaining), r.secondsRemaining),
+          });
+        }
+        prev[r.id] = r.live;
+      }
+    }
+    if (fresh.length) setMoments((cur) => [...fresh, ...cur].slice(0, 24));
+  }, [players, playerMeta]);
+
+  const calcFor = useCallback((m: MatchupPairing) => {
+    const home = computeTeam(m.home, scores, players, ytp, playerMeta);
+    const away = computeTeam(m.away, scores, players, ytp, playerMeta);
+    const homeWinProb = winProbability(home.projectedFinal, away.projectedFinal, home.remainingPoints + away.remainingPoints);
+    const isFinal = home.remainingPoints + away.remainingPoints <= 0
+      && (remaining[m.home] ?? 0) <= 0 && (remaining[m.away] ?? 0) <= 0;
+    return { home, away, homeWinProb, isFinal };
+  }, [scores, players, ytp, playerMeta, remaining]);
+
+  const ordered = useMemo(() => {
+    const yours = matchups.filter((m) => m.home === userFranchiseId || m.away === userFranchiseId);
+    const others = matchups
+      .filter((m) => !yours.includes(m))
+      .sort((a, b) => {
+        const ma = Math.abs((scores[a.home] ?? 0) - (scores[a.away] ?? 0));
+        const mb = Math.abs((scores[b.home] ?? 0) - (scores[b.away] ?? 0));
+        return ma - mb;
+      });
+    // No user matchup → promote the closest game to featured.
+    const featured = yours.length ? yours : others.slice(0, 1);
+    const rest = yours.length ? others : others.slice(1);
+    // Only the user's own matchup earns the "YOUR MATCHUP" badge — a promoted
+    // closest-game filler must not claim it.
+    return { featured, rest, hasYours: yours.length > 0 };
+  }, [matchups, scores, userFranchiseId]);
+
+  if (selected) {
+    return (
+      <div className="ls-root">
+        <MatchupDetail
+          matchup={selected} teams={teams} players={players}
+          meta={playerMeta} calc={calcFor(selected)} moments={moments} onBack={() => setSelected(null)}
+        />
+      </div>
+    );
+  }
+
+  const anyLive = Object.values(remaining).some((r) => r > 0);
+
+  return (
+    <div className="ls-root">
+      <div className="ls-head">
+        <h1>Live Scoring{props.demo && <span className="ls-sample-badge">Sample data</span>}</h1>
+        <div className="ls-head-right">
+          <label className="ls-weeksel">
+            <span className="ls-weeksel-lbl">Week</span>
+            <select value={week} onChange={(e) => goToWeek(Number(e.target.value))} aria-label="Select week">
+              {Array.from({ length: MAX_WEEK }, (_, i) => i + 1).map((w) => (
+                <option key={w} value={w}>Week {w}</option>
+              ))}
+            </select>
+          </label>
+          {(anyLive || props.demo) && <span className="ls-status live"><span className="ls-dot live" />Live</span>}
+        </div>
+      </div>
+
+      {matchups.length === 0 ? (
+        <div className="ls-card"><div className="ls-empty">Scores will appear here when games begin.</div></div>
+      ) : (
+        <div className="ls-board" aria-live="polite">
+          {/* Doubleheader (2 games): side by side in the faceoff format.
+              Single game: one full-width row. */}
+          {ordered.featured.length > 1 ? (
+            <div className="ls-dh">
+              {ordered.featured.map((m, i) => (
+                <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
+                           featured variant="faceoff" isYours={i === 0 && ordered.hasYours}
+                           onOpen={() => setSelected(m)} />
+              ))}
+            </div>
+          ) : (
+            ordered.featured.map((m) => (
+              <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
+                         featured variant="row" isYours={ordered.hasYours}
+                         onOpen={() => setSelected(m)} />
+            ))
+          )}
+          {ordered.rest.map((m) => (
+            <ScoreCard key={`${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
+                       featured={false} isYours={false} onOpen={() => setSelected(m)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

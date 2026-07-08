@@ -1,0 +1,60 @@
+/**
+ * NflGamesStrip — self-contained styles for the reusable NFL games rail.
+ *
+ * Namespaced under .nfl-strip / .nfl-game so it can be dropped on any page
+ * without colliding. Uses the global design tokens (tokens.css) for color,
+ * radius, and type, so it themes light/dark automatically. Import this
+ * wherever <NflGamesStrip /> is used.
+ */
+
+.nfl-strip { display: flex; flex-direction: column; gap: 0.4rem; }
+.nfl-strip__label {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--content-text-muted);
+}
+.nfl-strip__rail { display: flex; gap: 0.7rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: thin; }
+
+.nfl-game {
+  flex: none;
+  width: 172px;
+  background: var(--card-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.8rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.nfl-game__team { display: flex; align-items: center; gap: 0.5rem; }
+.nfl-game__logo { width: 24px; height: 24px; object-fit: contain; }
+.nfl-game__code { font-weight: var(--font-weight-bold); font-size: 0.88rem; color: var(--page-text); }
+.nfl-game__poss { color: var(--color-success); font-size: 0.5rem; margin-left: 0.1rem; }
+.nfl-game__score {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 1.3rem;
+  color: var(--page-text);
+  font-variant-numeric: tabular-nums;
+}
+.nfl-game__foot { border-top: 1px solid var(--content-border); padding-top: 0.35rem; font-size: 0.72rem; }
+.nfl-game__live { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--color-success); font-weight: var(--font-weight-semibold); }
+.nfl-game__pre { color: var(--content-text-muted); }
+
+/* live pulse dot (self-contained — no dependency on live-scoring.css) */
+.nfl-dot {
+  width: 0.5rem; height: 0.5rem; border-radius: 50%; display: inline-block; flex: none;
+  background: var(--color-success);
+  animation: nfl-pulse 1.8s infinite;
+}
+@keyframes nfl-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 55%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .nfl-dot { animation: none; } }

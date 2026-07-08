@@ -68,9 +68,10 @@
           "id": "live-scoring",
           "label": "Live Scoring",
           "icon": "goals",
-          "urlTemplate": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE6",
-          "external": true,
-          "description": "Real-time scoring on MFL"
+          "path": "/live-scoring",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Real-time scores, projections & win probability"
         },
         {
           "id": "standings",

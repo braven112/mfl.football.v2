@@ -1,0 +1,128 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueContext } from '../../utils/league-context';
+import { leagueHasFeature } from '../../config/leagues';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentNFLWeek } from '../../utils/current-week';
+import { getDailySlot } from '../../utils/hero-resolver';
+import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
+import { getLiveScoringSample } from '../../data/live-scoring-sample';
+import LiveScoreboard from '../../components/shared/LiveScoreboard';
+import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
+import '../../styles/live-scoring.css';
+import '../../styles/nfl-games-strip.css';
+
+// Live-fetch on every request — scores must never be cached.
+export const prerender = false;
+
+const league = getLeagueContext(Astro.url);
+
+// Gate on the registry feature flag.
+if (!leagueHasFeature(league.slug, 'liveScoring')) {
+  return Astro.redirect('/theleague');
+}
+
+const now = new Date();
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+  ? parsedWeek
+  : (getCurrentNFLWeek(now) ?? 1);
+
+// Reuse the homepage hero's game-day clock: Thu/Sun/Mon windows drive whether
+// the island polls for live updates and which game-window label to show.
+const daily = getDailySlot(now);
+const isLive = daily.slot === 'live-scoring';
+
+const authUser = getAuthUser(Astro.request);
+const userFranchiseId = authUser?.franchiseId;
+const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+// Demo/sample mode (?demo=1): render a bundled snapshot so the page can be
+// validated in the offseason when the live feed is empty. Real usage never
+// hits this branch.
+const demo = Astro.url.searchParams.get('demo') === '1';
+const demoDoubleheader = Astro.url.searchParams.get('dh') === '1';
+
+let islandProps: LiveScoringPageProps;
+let nflGames: NflGame[] | undefined;
+
+if (demo) {
+  const sample = getLiveScoringSample({ doubleheader: demoDoubleheader });
+  nflGames = sample.nflGames;
+  islandProps = {
+    week: sample.week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    slug: league.slug,
+    isLive: false, // don't poll — the live feed would overwrite the sample
+    gameWindow: daily.gameWindow,
+    userFranchiseId: userFranchiseId ?? '0001',
+    matchups: sample.matchups,
+    teams: buildTeamsMap(configTeams),
+    playerMeta: sample.playerMeta,
+    initialScores: sample.scores,
+    initialRemaining: sample.remaining,
+    initialPlayers: sample.players,
+    initialYetToPlay: sample.playersYetToPlay,
+    demo: true,
+    initialNflGames: sample.nflGames,
+    initialMoments: sample.moments,
+  };
+} else {
+  const data = await assembleLiveScoringData({
+    siteUrl: Astro.url,
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    dataPath: league.dataPath,
+    configTeams,
+    userFranchiseId,
+  });
+
+  islandProps = {
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    slug: league.slug,
+    isLive,
+    gameWindow: daily.gameWindow,
+    userFranchiseId,
+    matchups: data.matchups,
+    teams: data.teams,
+    playerMeta: data.playerMeta,
+    initialScores: data.scores,
+    initialRemaining: data.remaining,
+    initialPlayers: data.players,
+    initialYetToPlay: data.playersYetToPlay,
+  };
+}
+---
+
+<TheLeagueLayout title="Live Scoring">
+  <div class="ls-page">
+    <LiveScoreboard client:load {...islandProps} />
+    <div class="ls-page-strip">
+      <NflGamesStrip client:visible week={islandProps.week} year={year}
+                     isLive={demo ? false : isLive} demo={demo} initialGames={nflGames} />
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .ls-page {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+  }
+  .ls-page-strip {
+    margin-top: var(--spacing-2xl);
+  }
+</style>
