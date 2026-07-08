@@ -78,6 +78,7 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     heroCategory: entry.category,
     heroPlayerId: entry.heroPlayerId,
     heroPlayerDescriptor: entry.heroPlayerDescriptor,
+    heroEntryId: entry.id,
   };
 }
 
@@ -875,6 +876,8 @@ function buildState(
  * @param testMode - Whether ?testDate was used
  * @param entries - Optional What's New entries for fallback resolution
  * @param timeline - Optional WhatsNext timeline for fallback resolution
+ * @param rng - Injectable random source (0..1) for the roster-deadline coin
+ *   flip; defaults to Math.random. Override in tests for deterministic results.
  */
 export function resolveHeroState(
   referenceDate?: Date,
@@ -883,6 +886,7 @@ export function resolveHeroState(
   timeline?: WhatsNextTimeline,
   draftComplete?: boolean,
   hasBreakingStory: boolean = false,
+  rng: () => number = Math.random,
 ): HeroState {
   const now = referenceDate ?? new Date();
   const week = getCurrentNFLWeek(now) ?? undefined;
@@ -1091,7 +1095,24 @@ export function resolveHeroState(
   // feature gets to lead instead — so we step aside when one is competing and
   // let it surface as P2 in the fallback below. (When no timeline is supplied,
   // there's nowhere to render the feature, so we don't defer.)
-  const deferToFeature = !!timeline && hasFreshFeatureEntry(entries, now);
+  const hasFreshFeature = !!timeline && hasFreshFeatureEntry(entries, now);
+
+  // After July 1, the roster deadline claims at least half the homepage: even
+  // when a fresh feature is competing, early Cut Watch wins the hero on ~50% of
+  // visits (a per-visit coin flip). This narrows the window in which a What's New
+  // article can headline the hero as the deadline approaches. Notes:
+  //  - Before July 1, features still lead early Cut Watch (no flip).
+  //  - The final-30-day *urgent* Cut Watch tier already outranks features (P1
+  //    above), so this only affects the early/ambient tier (~Jul 1 → faClose−30d).
+  //  - With no fresh feature, early Cut Watch shows 100% anyway, so the "at least
+  //    50%" floor always holds.
+  //  - Per-visit randomness is intentional (the hero may differ between
+  //    refreshes); `rng` is injectable so tests stay deterministic.
+  const { month: ptMonth } = getPTComponents(now);
+  const rosterDeadlineWinsCoinFlip =
+    hasFreshFeature && isCutWatchEarly(now) && ptMonth >= 7 && rng() < 0.5;
+
+  const deferToFeature = hasFreshFeature && !rosterDeadlineWinsCoinFlip;
   if (!deferToFeature) {
     // --- P3: Tag & Extension Window ---
     if (isTagWindow(now)) {

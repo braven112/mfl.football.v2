@@ -25,6 +25,11 @@ interface Props {
   spriteUrl?: string;
   /** Last visit date for "NEW" badges (from cookie) */
   lastVisitDate?: string | null;
+  /**
+   * Entry id to omit — used on the homepage to skip whatever article is
+   * currently headlining the hero, so the same story isn't shown twice.
+   */
+  excludeId?: string;
 }
 
 const {
@@ -34,11 +39,13 @@ const {
   allReleasesLink = `${basePath}/whats-new`,
   spriteUrl: sprite = '/assets/icons/sprite.svg',
   lastVisitDate = null,
+  excludeId,
 } = Astro.props;
 
 const MULTICOLOR_ICONS = ['nfl'];
 
-const sorted = sortEntriesNewestFirst(entries);
+const pool = excludeId ? entries.filter((e) => e.id !== excludeId) : entries;
+const sorted = sortEntriesNewestFirst(pool);
 const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 ---
 
@@ -160,7 +167,9 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 
   .whats-new-row__grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Responsive: fills as many equal columns as fit (3 on the old-HP row, 2 in
+       the homepage left column with count=2), collapsing to 1 when narrow. */
+    grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
     gap: 1.5rem;
   }
 

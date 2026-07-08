@@ -32,6 +32,22 @@ Decide which league(s) the change affects — look at the changed file paths and
 
 This is MANDATORY. Display code fails closed (an untagged entry shows nowhere), and `tests/whats-new-data.test.ts` fails the build on a missing or invalid tag. The only valid slugs are `theleague` and `afl` (never `afl-fantasy`).
 
+## Step 3b: Determine hero eligibility (new-page / new-feature / enhancement only)
+
+The homepage hero is reserved for **major** launches. Only a big new page or
+feature should headline it; enhancements and smaller updates that still deserve
+a What's New article should not. The gate is the `excludeFromHero: true` flag,
+which the hero resolver (`src/utils/hero-resolver.ts`) honors.
+
+- **`enhancement`** → set `"excludeFromHero": true` on the entry. Enhancements
+  never take the hero.
+- **`new-page` / `new-feature`** → use `AskUserQuestion` to ask whether this is
+  a marquee launch worth the homepage hero. If **yes**, leave `excludeFromHero`
+  unset (eligible). If **no**, set `"excludeFromHero": true`.
+
+Ask this explicitly — don't decide silently. (When run via `/live`, this is the
+point at which the user gets to make the call.)
+
 ## Step 4: Route to the right file
 
 **If `new-page`, `new-feature`, or `enhancement`:**
@@ -47,6 +63,7 @@ If no entry exists, write a new one at the TOP of the array following the mandat
 - `image` and `imageAlt` are required — take a Playwright screenshot if a dev server is running, otherwise note that a screenshot is still needed and set a placeholder filename. Screenshots are a light/dark THEME PAIR (`foo.webp` + `foo-dark.webp`) — capture both via `node scripts/capture-whats-new-screenshots.mjs <entry-id>`, which handles the pair automatically. The homepage hero renders this screenshot in a browser frame, so it's the entry's face — make it count.
 - `heroPlayerId` (optional) — set ONLY when the entry is about a specific player (his MFL id); the homepage hero then casts him instead of showing the screenshot. Optional `heroPlayerDescriptor` labels his caption chip (default "Featured"). Never set it just to have a face — the screenshot IS the intended art.
 - `leagues` is required — `["theleague"]`, `["afl"]`, or both (from Step 3). The entry's `link` must point into a league it's visible in; both-league entries need a league-neutral link or no link. If the `title`/`summary` names a league, the entry must be tagged for exactly that league — both-league entries need league-neutral copy.
+- `excludeFromHero` — set from Step 3b: `true` for enhancements and for any feature/page the user said isn't a marquee hero launch; omit it when the entry is hero-eligible.
 
 **If `bug-fix` or `style-tweak`:**
 

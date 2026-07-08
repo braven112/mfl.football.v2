@@ -16,6 +16,7 @@ import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandin
 import HpUnsignedFaCard from '../../components/theleague/hp-sections/HpUnsignedFaCard.astro';
 import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCard.astro';
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
+import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod } from '../../utils/hero-resolver';
@@ -103,8 +104,17 @@ const breakingModel = breakingStory
   : null;
 const hasBreakingStory = !!(breakingStory && breakingModel);
 
-const rawHeroState = resolveHeroState(effectiveDate, testMode, getWhatsNewEntriesForLeague('theleague'), timeline, draftComplete, hasBreakingStory);
+const whatsNewEntries = getWhatsNewEntriesForLeague('theleague');
+const rawHeroState = resolveHeroState(effectiveDate, testMode, whatsNewEntries, timeline, draftComplete, hasBreakingStory);
 const heroState = await enrichHeroState(rawHeroState);
+
+// "NEW since last visit" badges for the What's New section (same cookie the
+// full listing page uses).
+const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
+// When the hero itself is a What's New feature, skip that article in the
+// left-column section below so the same story isn't shown twice on one screen.
+const heroFeatureId =
+  heroState.fallbackHero?.source === 'feature' ? heroState.fallbackHero.heroEntryId : undefined;
 
 // Auctions card: replaces the legacy compact `AuctionStrip` on the homepage.
 // Same visibility rules as the strip — show after the full auction hero ends,
@@ -632,6 +642,16 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
       />
 
       <HpQuickLinks isAuthenticated={isAuthenticated} />
+
+      <WhatsNewRow
+        entries={whatsNewEntries}
+        count={2}
+        basePath={hideLeaguePrefix ? '' : '/theleague'}
+        allReleasesLink={r('/theleague/whats-new')}
+        spriteUrl={spriteUrl}
+        lastVisitDate={lastVisitDate}
+        excludeId={heroFeatureId}
+      />
 
       {testMode && (
         <div class="hp2__debug" id="demo-nav">
