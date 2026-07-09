@@ -124,3 +124,43 @@ only "works" in one theme, add an explicit `*Dark` color rather than leaning on
 the auto-nudge — the nudge guarantees legibility, not brand fidelity. The fields
 live in config so other surfaces (heroes, matchup headers) can adopt the same
 dark colors later without re-deriving them.
+
+## 2026-07-09 - Offseason demo replays a REAL historical scoreboard
+
+**Context:** The `?demo=1` sample (`src/data/live-scoring-sample.ts`) used to be
+a hand-authored synthetic slate. Goal: seed it from the last completed regular
+season's final week so totals, per-player points, winners, and margins are all
+true history — no invented numbers.
+
+**Insight — three non-obvious data facts drove the rewrite:**
+- **`weekly-results-raw.json` is the single best source**, not the
+  `data/theleague/live-starting-lineups-week-NN.json` files. The lineup files
+  only covered 12–14 franchises last season and carry no points. Each franchise
+  entry in `weeklyResults.matchup[].franchise` carries a `starters` CSV (exact
+  lineup + order), a `player[]` array with per-player `score`, an `isHome` flag,
+  and the franchise `score` total — full, real, all 16 teams, every week.
+- **The final regular-season week is `league.json → lastRegularSeasonWeek`**
+  (14 for TheLeague), NOT the NFL 18 or the fantasy playoff weeks (15–17 have
+  fewer matchups as teams are eliminated). Don't assume week 17/18 — read it
+  from config.
+- **"Last completed season" needs a played-check.** The upcoming season's
+  `weekly-results-raw.json` already exists before kickoff as a schedule stub
+  (`score: null`, empty `player[]`). Scan feed years newest-first and require
+  the `lastRegularSeasonWeek` matchups to actually have starters+scores before
+  accepting a year; otherwise you'll pick an empty future season.
+
+Bonus: `nflSchedule.json` for that week carries real final NFL scores
+(`team[].score`, `gameSecondsRemaining: "0"`) — use them for the NFL strip so
+even the decorative games are real. Set every starter's `secondsRemaining: 0`
+(final) and `projected` = actual points; the island then reads every card as
+`Final` with true totals.
+
+**Evidence:** `src/data/live-scoring-sample.ts`
+(`resolveFinalRegularSeasonWeek`, `buildNflGames`), joins identity via
+`getPlayer(year, id)` from `player-map.ts`.
+
+**Recommendation:** For any historical-replay feature, prefer
+`weekly-results-raw.json` (starters + scores + isHome, all franchises) over the
+partial `live-starting-lineups-*` snapshots, and always resolve season/week
+boundaries from `league.json` with a played-check rather than hardcoding or
+assuming NFL week counts.
