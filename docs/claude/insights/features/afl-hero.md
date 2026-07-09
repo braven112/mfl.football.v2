@@ -186,16 +186,49 @@ Regression suite: `tests/afl-conference-draft-pills.test.ts` (sweeps Aug 26/29/3
 The AFL homepage accepts `?testDate=YYYY-MM-DD`. Sweep these to cover every state:
 - `2026-04-10` offseason (default, no border)
 - `2026-07-01` keeper lead (calendar-event, bordered)
-- `2026-08-26`/`08-29`/`08-30` draft lead / AL day / NL day
+- `2026-07-18` draft lead (countdown owns the keeper→draft window) ·
+  `2026-08-29`/`08-30` AL day (12:30 PM) / NL day (9 AM)
 - `2026-09-04` kickoff lead · `2026-09-10` kickoff day
 - in-season slot rotation: `2026-09-19` game-day, `09-20` Sunday live, `09-21`
   Monday standings, `09-22` Tuesday recap, `09-23` Wednesday waivers
 - `2026-11-12` trade lead · `2026-11-18` trade DAY (bespoke TradeDeadlineHero)
 - `2026-12-05` playoffs lead · `2026-12-12` playoffs phase (bespoke bracket)
-- `2026-12-26` championship phase (bespoke matchup) · `2027-01-02` champion crowned
-- `2027-02-10` new-season lead
+- `2026-12-31` championship phase (bespoke matchup, Week 17) · `2027-01-08` champion crowned
+- `2027-05-25` new-season lead (rollover is June 1)
 
 The page footer renders `<code>Hero: KIND · priority P · ref ISO</code>` — grep
 it to assert the resolved kind. Calendar events carry `afl-event-hero--bordered`
 on the `<section>`; everything else doesn't. `class="hero-banner"` must never
 appear on the AFL homepage.
+
+---
+
+## 2026-07-08 - Draft countdown owns the keeper→draft window; calendar times corrected to MFL
+
+**Draft-countdown window.** The conference-draft hero now leads the whole
+keeper-deadline → draft stretch instead of the generic offseason hero.
+Mechanism (both in `afl-hero-resolver.ts`):
+- `URGENCY_OVERRIDES` gives `afl-al-draft` / `afl-nl-draft` a **50-day** lead-up
+  window (drafts land Aug 23–30, so 50 days always reaches back past Jul 15).
+  The keeper hero still leads until its deadline because `pickLeadCalendarEvent`
+  sorts candidates by date and keeper is earlier — the draft only surfaces once
+  keeper is `isPast`.
+- **Conference-aware lead:** the AL (Sat) and NL (Sun) windows open together, so
+  the earlier-dated AL draft would lead for *everyone*. `pickLeadCalendarEvent`
+  now swaps the lead to the viewer's own conference draft (`userConferenceId`
+  `00`→AL, `01`→NL); guests keep AL. Both drafts are still surfaced in What's
+  Next (homepage passes `excludeEventId={heroIsDraft ? undefined : heroEventId}`
+  so the hero's own draft isn't filtered out during the draft window).
+- The old `AflHero.astro` `afl-draft-pills` under the hero and the
+  `AflConferenceDraftPreview` section were both removed — draft details live in
+  What's Next only now.
+
+**Calendar times corrected to match MFL** (`league-events.json` +
+`league-event-resolver.ts`), verified against MFL's Existing Events calendar:
+- **AL draft 12:30 PM** (was 9 AM), NL draft 9 AM — sourced from historical
+  first-pick timestamps (see mfl-api.md 2026-07-08).
+- **Championship = NFL Week 17** (`16*7` after kickoff → Thu Dec 31 2026), was
+  Week 16 (`15*7` → Dec 24) — a week early. `afl-championship-week` rule fixed.
+- **Keeper deadline 8:45 PM** (was 8:00), still July 15 (constitution date).
+- **New-season rollover June 1** (was Feb 15), matching the AFL league-year
+  rollover in `leagues-data.mjs`.

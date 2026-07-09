@@ -176,10 +176,10 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       accentWord: 'core.',
       summary:
         days === 0
-          ? 'Today is the day — declare your 7 keepers before 8pm PT or the league picks for you.'
+          ? 'Today is the day — declare your 7 keepers before 8:45pm PT or the league picks for you.'
           : days === 1
-            ? 'Tomorrow at 8pm PT — declare your 7 keepers. Anyone left undeclared hits the draft pool.'
-            : `${days} days until the keeper deadline. Lock in your 7 protected players before July 15 @ 8pm PT.`,
+            ? 'Tomorrow at 8:45pm PT — declare your 7 keepers. Anyone left undeclared hits the draft pool.'
+            : `${days} days until the keeper deadline. Lock in your 7 protected players before July 15 @ 8:45pm PT.`,
       link: '/afl-fantasy/rosters?view=planner',
       linkLabel: 'Manage Keepers',
       accent: ACCENT_GOLD,
@@ -189,7 +189,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       badgeDark: dleague ? '/assets/afl/dleague-dark.svg' : '/assets/afl/premier-dark.svg',
       badgeAlt: dleague ? 'D-League' : 'Premier League',
       countValue: days,
-      countLabel: days === 0 ? 'Lock by 8PM PT — today' : 'Days to lock · Jul 15 · 8PM PT',
+      countLabel: days === 0 ? 'Lock by 8:45PM PT — today' : 'Days to lock · Jul 15 · 8:45PM PT',
     };
   },
 
@@ -204,7 +204,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       summary: isUserAl
         ? live
           ? 'The American League live draft is happening right now. Make your picks before the timer expires.'
-          : `Your live draft is ${dayPhrase(days)} — Saturday at 9am PT. Scout the board and finalize your queue.`
+          : `Your live draft is ${dayPhrase(days)} — Saturday at 12:30pm PT. Scout the board and finalize your queue.`
         : event.definition.description,
       link: '/afl-fantasy/draft-predictor',
       linkLabel: live ? 'Enter Draft Room' : 'Open Draft Predictor',
@@ -213,7 +213,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       glow: 'rgba(59,107,154,.55)',
       player: randomHeroPlayer(now),
       countValue: live ? 'LIVE' : days,
-      countLabel: live ? 'Drafting now' : 'Days to AL draft · Sat 9AM PT',
+      countLabel: live ? 'Drafting now' : 'Days to AL draft · Sat 12:30PM PT',
     };
   },
 
@@ -567,6 +567,13 @@ const URGENCY_OVERRIDES: Record<string, number> = {
   'afl-keeper-deadline': 30,
   'afl-season-start': 7,
   'afl-new-season-starts': 14,
+  // The conference-draft countdown owns the whole keeper-deadline → draft
+  // stretch instead of the generic offseason hero. The drafts land Aug 23–30
+  // (Sat/Sun before Labor Day weekend), so 50 days always reaches back past the
+  // July 15 keeper deadline. The keeper hero still leads June 15 → Jul 15 (it
+  // sorts earlier), so the draft only surfaces once the keeper deadline passes.
+  'afl-al-draft': 50,
+  'afl-nl-draft': 50,
 };
 
 /**
@@ -608,8 +615,25 @@ function pickLeadCalendarEvent(
     })
     .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
-  const lead = candidates[0];
+  let lead = candidates[0];
   if (!lead) return null;
+
+  // Conference-aware draft: the AL (Sat) and NL (Sun) draft windows open together,
+  // so the earlier-dated AL draft would lead for everyone through the whole
+  // keeper→draft stretch — an NL owner would stare at a generic "AL · Live Draft"
+  // card for ~6 weeks. When the lead is a draft, prefer the viewer's OWN
+  // conference draft so AL owners get the AL countdown and NL owners the NL one.
+  // Guests (no conference) keep the earliest draft as the lead.
+  if (lead.definition.id === 'afl-al-draft' || lead.definition.id === 'afl-nl-draft') {
+    const ownDraftId =
+      ctx.userConferenceId === '01' ? 'afl-nl-draft'
+      : ctx.userConferenceId === '00' ? 'afl-al-draft'
+      : null;
+    if (ownDraftId) {
+      const own = candidates.find((e) => e.definition.id === ownDraftId);
+      if (own) lead = own;
+    }
+  }
 
   const view = EVENT_VIEW[lead.definition.id](lead, ctx);
   const priority: 'P0' | 'P1' = lead.isActive ? 'P0' : 'P1';

@@ -102,13 +102,15 @@ function resolveComputedDate(rule: string, year: number): Date {
     }
 
     case 'afl-championship-week': {
-      // AFL World Championship is NFL Week 16 (Thursday, 15 weeks after kickoff)
+      // AFL World Championship (MFL "AFL Super Bowl") is NFL Week 17
+      // (Thursday, 16 weeks after kickoff). Verified against MFL's calendar:
+      // 2026 → Thu Dec 31. Was Week 16 (Dec 24) — a week early.
       const laborDay = getLaborDayForYear(year);
       const kickoff = new Date(laborDay);
       kickoff.setDate(kickoff.getDate() + 3);
-      const week16 = new Date(kickoff);
-      week16.setDate(week16.getDate() + 15 * 7);
-      return week16;
+      const week17 = new Date(kickoff);
+      week17.setDate(week17.getDate() + 16 * 7);
+      return week17;
     }
 
     case 'nfl-kickoff': {

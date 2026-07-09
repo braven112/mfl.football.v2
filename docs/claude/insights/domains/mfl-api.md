@@ -1332,3 +1332,22 @@ weeks of the affected year, not just week 1.
 **Evidence:** `src/utils/mfl-normalize.ts` now exports the shared `asArray()`; it's applied in `projections.ts`, `mfl-matchup-api.ts#getProjectedScores` (the live-API twin of this bug, previously masked by a caller's try/catch), `lineup-data-builder.ts`, and `matchup-data.astro`, and it replaces the former private copies in `afl-structure.ts` / `afl-player-scoring.ts`. Regression suite: `tests/projections.test.ts` — includes the exact off-season fixture.
 
 **Recommendation:** When consuming raw MFL feed shapes in TypeScript, import `asArray` from `src/utils/mfl-normalize.ts` (node scripts: `scripts/lib/normalize-weekly-results.mjs#toArray`) and widen the input types to `T[] | T`. Filter empties by field presence (`if (player.id && player.score)`) since the empty-object sentinel survives `asArray`. Do not reuse `asArray` for scalar lists — it drops falsy values by design.
+
+---
+
+## 2026-07-08 - MFL Never Exposes the *Scheduled* Draft/Calendar Time; Derive It From Completed Drafts
+
+**Context:** Our AFL calendar (`src/data/afl-fantasy/league-events.json`) hard-coded both conference drafts at 9:00 AM. The commish reported the American League draft time was wrong, and MFL is the source of truth.
+
+**Insight:** There is **no unauthenticated MFL export that returns a scheduled draft or calendar time.**
+- `TYPE=calendar&L=<id>&JSON=1` → `error: "API requires logged in user"` (needs the commish `MFL_USER_ID` cookie or an `APIKEY`; our stored commish creds are scoped to contract writes only, so we don't use them here).
+- `TYPE=draftResults` on a **not-yet-held** draft returns picks with **empty `timestamp` fields**, and the static-XML root `timestamp` is the **file-generation time** (when the draft order was set), *not* the scheduled start — the two conference units were 169 s apart, which gave it away.
+- The live-draft start time lives only in the commissioner web UI (Setup → Live Draft) + the League Calendar; neither is writable via the import API.
+
+**How to get the real time:** pull a **completed** past season's `draftResults` and read the **first pick's `timestamp`** per `draftUnit`. Across 2023–2025 the AFL first picks clustered tightly:
+- **`CONFERENCE00` (American League, live draft)** → first pick ~12:31 / 12:59 / 12:38 PM PT → scheduled **12:30 PM PT Saturday**.
+- **`CONFERENCE01` (National League, email/slow draft)** → first picks 9:50 / 11:32 / 10:38 AM → consistent with a **9:00 AM PT Sunday** start (picks trickle after).
+
+AFL is one MFL league (`19621`) with two draft units keyed `CONFERENCE00` (franchises 0001–0012) and `CONFERENCE01` (0013–0024).
+
+**Also — a calendar window-close date is NOT necessarily the official rule deadline.** MFL "Select Keepers" closed **Jul 20**, but the AFL constitution's keeper deadline is **Jul 15** (Jul 20 was a soft buffer; the commish later moved MFL to Jul 15 @ 8:45 PM to match). When MFL and the constitution disagree on a *deadline*, confirm with the commish — MFL is authoritative for *official data* (rosters, scores), not necessarily for commish-configured buffer windows.

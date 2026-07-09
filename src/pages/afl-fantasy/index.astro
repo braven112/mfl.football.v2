@@ -22,7 +22,6 @@ import AflHero from '../../components/afl/AflHero.astro';
 import AflTeamSnapshot from '../../components/afl/hp-sections/AflTeamSnapshot.astro';
 import AflStandingsCompact from '../../components/afl/hp-sections/AflStandingsCompact.astro';
 import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflConferencePlayoffPreview.astro';
-import AflConferenceDraftPreview from '../../components/afl/hp-sections/AflConferenceDraftPreview.astro';
 import AflWhatsNext from '../../components/afl/hp-sections/AflWhatsNext.astro';
 import AflQuickLinks from '../../components/afl/hp-sections/AflQuickLinks.astro';
 import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
@@ -36,7 +35,7 @@ import { parseTestDate } from '../../utils/hero-resolver';
 import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
 import { castAflHeroModel } from '../../utils/afl-hero-casting';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
-import { getAflLeagueYear, getCurrentSeasonYear, getLaborDayForYear } from '../../utils/league-year';
+import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import {
   getAFLPreference,
   setAFLPreference,
@@ -174,26 +173,12 @@ if ('view' in heroState) {
 const feed = feedData as FeedType;
 const compactPosts = feed.posts.slice(0, 30);
 
-// ── Conference draft preview visibility ─────────────────────────────────────
-// AL/NL drafts: Saturday and Sunday a full week BEFORE Labor Day weekend
-// (matches the 'saturday-before-labor-day-weekend' rule in league-event-resolver.ts).
-const labor = getLaborDayForYear(effectiveDate.getFullYear());
-const alDate = new Date(labor);
-alDate.setDate(alDate.getDate() - 9);
-alDate.setHours(9, 0, 0, 0);
-const nlDate = new Date(labor);
-nlDate.setDate(nlDate.getDate() - 8);
-nlDate.setHours(9, 0, 0, 0);
-
-const draftPreviewStart = new Date(alDate);
-draftPreviewStart.setDate(draftPreviewStart.getDate() - 14); // show 2 weeks before AL draft
-const draftPreviewEnd = new Date(nlDate);
-draftPreviewEnd.setDate(draftPreviewEnd.getDate() + 7); // keep visible 1 week after NL draft
-
-const showDraftPreview = effectiveDate >= draftPreviewStart && effectiveDate <= draftPreviewEnd;
-
-// Hide the What's Next card that the hero already promotes
+// Hide the What's Next card that the hero already promotes — EXCEPT when the
+// hero is a conference draft. In the keeper→draft window the hero counts down
+// the viewer's own draft, and What's Next lists BOTH the AL and NL drafts, so
+// we deliberately don't exclude the hero's draft there (it's one of the two).
 const heroEventId = heroState.content.heroEventId;
+const heroIsDraft = heroEventId === 'afl-al-draft' || heroEventId === 'afl-nl-draft';
 
 // What's New row: skip whatever article the hero is already featuring, and read
 // the last-visit cookie so "NEW" badges light up for unseen entries.
@@ -223,16 +208,11 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
         variant={inSeasonVariant ? 'in-season' : 'offseason'}
       />
 
-      {showDraftPreview && (
-        <AflConferenceDraftPreview
-          alDate={alDate}
-          nlDate={nlDate}
-          referenceDate={effectiveDate}
-          userConferenceId={userConferenceId}
-        />
-      )}
-
-      <AflWhatsNext demoDate={effectiveDate} maxCards={2} excludeEventId={heroEventId} />
+      <AflWhatsNext
+        demoDate={effectiveDate}
+        maxCards={2}
+        excludeEventId={heroIsDraft ? undefined : heroEventId}
+      />
 
       {standingsFranchises.length > 0 && (
         <AflConferencePlayoffPreview
