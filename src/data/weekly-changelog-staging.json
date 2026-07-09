@@ -120,6 +120,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "theleague"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "bug-fix",
+      "summary": "The AFL Free Agents page stopped sending you to the wrong stadium. Type afl-fantasy.com/players and instead of the free-agent board you'd land on a 404 wearing The League's colors — the page had been built to render ahead of time, which quietly broke the behind-the-scenes routing that maps the clean AFL web address to the right page. Rewired it to render on request, the same way its League counterpart already does, so the AFL Free Agents board now loads exactly where it should.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
     }
   ]
 }
