@@ -192,7 +192,7 @@ The AFL homepage accepts `?testDate=YYYY-MM-DD`. Sweep these to cover every stat
 - in-season slot rotation: `2026-09-19` game-day, `09-20` Sunday live, `09-21`
   Monday standings, `09-22` Tuesday recap, `09-23` Wednesday waivers
 - `2026-11-12` trade lead · `2026-11-18` trade DAY (bespoke TradeDeadlineHero)
-- `2026-12-05` playoffs lead · `2026-12-12` playoffs phase (bespoke bracket)
+- `2026-12-12` playoffs lead · `2026-12-19` playoffs phase (Week 15 QF, bespoke bracket)
 - `2026-12-31` championship phase (bespoke matchup, Week 17) · `2027-01-08` champion crowned
 - `2027-05-25` new-season lead (rollover is June 1)
 

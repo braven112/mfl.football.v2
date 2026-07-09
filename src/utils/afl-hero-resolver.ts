@@ -312,7 +312,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       glow: 'rgba(196,30,58,.55)',
       player: randomHeroPlayer(now),
       countValue: days,
-      countLabel: 'Days to Week 14 tipoff',
+      countLabel: 'Days to Week 15 tipoff',
     };
   },
 

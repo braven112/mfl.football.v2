@@ -92,13 +92,15 @@ function resolveComputedDate(rule: string, year: number): Date {
     }
 
     case 'afl-playoffs-start': {
-      // AFL playoffs begin NFL Week 14 (Thursday, 13 weeks after kickoff)
+      // AFL playoffs begin NFL Week 15 (Thursday, 14 weeks after kickoff).
+      // The bracket shifted +1 with the 2021 move to a 17-game / 18-week NFL
+      // season: QF Week 15, SF Week 16, World Championship Week 17.
       const laborDay = getLaborDayForYear(year);
       const kickoff = new Date(laborDay);
       kickoff.setDate(kickoff.getDate() + 3);
-      const week14 = new Date(kickoff);
-      week14.setDate(week14.getDate() + 13 * 7);
-      return week14;
+      const week15 = new Date(kickoff);
+      week15.setDate(week15.getDate() + 14 * 7);
+      return week15;
     }
 
     case 'afl-championship-week': {
