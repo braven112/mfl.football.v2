@@ -32,6 +32,8 @@ export interface ConfigTeam {
   color?: string;
   colorPrimary?: string;
   colorSecondary?: string;
+  colorPrimaryDark?: string;
+  colorSecondaryDark?: string;
   icon?: string;
 }
 
@@ -72,6 +74,8 @@ export function buildTeamsMap(configTeams: ConfigTeam[]): Record<string, TeamInf
       color: t.color ?? t.colorPrimary ?? '#1c497c',
       colorPrimary: t.colorPrimary,
       colorSecondary: t.colorSecondary,
+      colorPrimaryDark: t.colorPrimaryDark,
+      colorSecondaryDark: t.colorSecondaryDark,
       icon: t.icon,
     };
   }

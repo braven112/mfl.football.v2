@@ -39,6 +39,7 @@ const AREA_LABELS = {
   'league-summary': 'League Summary',
   'calendar': 'Calendar',
   'standings': 'Standings',
+  'live-scoring': 'Live Scoring',
   'playoffs': 'Playoffs',
   'mvp': 'MVPs',
   'rules': 'Rules',

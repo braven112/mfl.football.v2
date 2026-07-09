@@ -134,10 +134,28 @@ const fmt = (n: number) => n.toFixed(1);
  */
 const LS_LIGHT_BG = '#ffffff'; // --card-surface (light)
 const LS_DARK_BG = '#262626'; // --card-surface (dark)
+/**
+ * Map a team to the color set for a theme. Dark mode prefers the explicit
+ * `colorPrimaryDark`/`colorSecondaryDark` brand colors (config) so teams whose
+ * light primary is a near-black or dark navy — invisible on the dark card —
+ * light up with a hand-picked vivid hue instead of an auto-nudged mud. Each
+ * dark field falls back to its light counterpart when a team hasn't defined one.
+ */
+function themeColors(t: TeamInfo | undefined, dark: boolean) {
+  if (!t) return undefined;
+  if (!dark) return t;
+  return {
+    ...t,
+    colorPrimary: t.colorPrimaryDark ?? t.colorPrimary,
+    colorSecondary: t.colorSecondaryDark ?? t.colorSecondary,
+  };
+}
 function teamColorVars(home?: TeamInfo, away?: TeamInfo): Record<string, string> {
   const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
   const light = resolveTeamColorPair(home, away, { ...opts, background: LS_LIGHT_BG });
-  const dark = resolveTeamColorPair(home, away, { ...opts, background: LS_DARK_BG });
+  const dark = resolveTeamColorPair(
+    themeColors(home, true), themeColors(away, true), { ...opts, background: LS_DARK_BG },
+  );
   return {
     '--th-light': light.home, '--ta-light': light.away,
     '--th-dark': dark.home, '--ta-dark': dark.away,

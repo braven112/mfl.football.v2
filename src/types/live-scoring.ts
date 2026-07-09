@@ -25,6 +25,10 @@ export interface TeamInfo {
   colorPrimary?: string;
   /** Brand secondary — the predictor chart's away 2nd choice. */
   colorSecondary?: string;
+  /** Dark-mode brand primary — used in place of `colorPrimary` on dark surfaces. */
+  colorPrimaryDark?: string;
+  /** Dark-mode brand secondary — used in place of `colorSecondary` on dark surfaces. */
+  colorSecondaryDark?: string;
   icon?: string;
 }
 

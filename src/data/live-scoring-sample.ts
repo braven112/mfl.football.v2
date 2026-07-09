@@ -66,8 +66,12 @@ const ROSTERS: Row[] = [
   ['0011', 'Jaylen Waddle', 'WR', 'MIA', '4372016', 12.0, 14.0, 900],
   // Dead Cap (0004)
   ['0004', 'Josh Jacobs', 'RB', 'GB', '4047365', 24.0, 22.0, 0],
+  ['0004', 'Patrick Mahomes', 'QB', 'KC', '3139477', 16.5, 24.0, 1800],
+  ['0004', 'Amon-Ra St. Brown', 'WR', 'DET', '4374302', 12.0, 15.0, 900],
   // Vitside (0012)
-  ['0012', 'Nico Collins', 'WR', 'HOU', '4258173', 0.0, 14.0, 3600],
+  ['0012', 'Nico Collins', 'WR', 'HOU', '4258173', 17.2, 20.0, 900],
+  ['0012', 'Tyreek Hill', 'WR', 'MIA', '3116406', 19.5, 22.0, 1800],
+  ['0012', 'Bijan Robinson', 'RB', 'ATL', '4430807', 16.0, 18.0, 900],
 ];
 
 const game = (
