@@ -4,6 +4,14 @@
     {
       "date": "2026-07-08",
       "type": "style-tweak",
+      "summary": "What's New finally moved into the AFL homepage. The League has had that little row of recent-update cards on its front page for a while; now AFL owners get the same feed on afl-fantasy.com, browser-frame screenshots and all, pointed at the right domain. While we were in there the whole card treatment got a glow-up on both sites: the category accent colors — the little stripe and pill on each card — were a muddy, muted set that barely registered, so they got brightened to punchier greens, blues, violets and reds, and they now light up even bolder in dark mode instead of sulking. The cards themselves stopped floating shapeless against the page and picked up the same proper border and drop-shadow depth every other card on the site already wears, in both light and dark.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "style-tweak",
       "summary": "Wander off the map and you no longer hit a broken-looking dead end. The old 404 page had two lines of text hard-coded to near-black, so in dark mode \"Page Not Found\" all but disappeared into the void. The whole page got rebuilt as a Claude Schefter breaking-news alert instead: a red BREAKING banner, Schefter's mugshot on the byline, a giant 404, the headline \"Sources say this page doesn't exist,\" and a LIVE ticker scrolling league-flavored bulletins along the bottom (\"Developing: URL reportedly entered the transfer portal\"). Reads perfectly in both light and dark now, and instead of making you pick a league, a single button — labeled \"Back to AFL\" on afl-fantasy.com and \"Back to The League\" on theleague.us — drops you on the homepage of whichever site you wandered off of.",
       "impact": "user",
       "area": "site",

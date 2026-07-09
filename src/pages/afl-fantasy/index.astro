@@ -25,6 +25,7 @@ import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflCon
 import AflConferenceDraftPreview from '../../components/afl/hp-sections/AflConferenceDraftPreview.astro';
 import AflWhatsNext from '../../components/afl/hp-sections/AflWhatsNext.astro';
 import AflQuickLinks from '../../components/afl/hp-sections/AflQuickLinks.astro';
+import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import feedData from '../../../data/afl-fantasy/schefter-feed.json';
@@ -43,6 +44,7 @@ import {
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
+import { spriteUrl } from '../../utils/sprite-url';
 
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
@@ -192,6 +194,11 @@ const showDraftPreview = effectiveDate >= draftPreviewStart && effectiveDate <= 
 
 // Hide the What's Next card that the hero already promotes
 const heroEventId = heroState.content.heroEventId;
+
+// What's New row: skip whatever article the hero is already featuring, and read
+// the last-visit cookie so "NEW" badges light up for unseen entries.
+const heroWhatsNewId = heroState.content.heroEntryId;
+const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
 ---
 
 <TheLeagueLayout title="AFL — American Football League">
@@ -247,6 +254,17 @@ const heroEventId = heroState.content.heroEventId;
       )}
 
       <AflQuickLinks />
+
+      <WhatsNewRow
+        entries={aflWhatsNew}
+        count={2}
+        basePath="/afl-fantasy"
+        allReleasesLink="/afl-fantasy/whats-new"
+        spriteUrl={spriteUrl}
+        lastVisitDate={lastVisitDate}
+        urlHost="afl-fantasy.com"
+        excludeId={heroWhatsNewId}
+      />
 
       {testMode && (
         <div class="afl-hp__debug" id="afl-demo-nav">
