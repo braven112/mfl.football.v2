@@ -362,7 +362,10 @@ html.dark .ls-detail {
 .ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }
-.ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* max-width caps the shrink-wrapped name box on the right (flex-end) side so
+   text-overflow can actually clip it — without it a long home-team name grows
+   to content width and overlaps the score. */
+.ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .ls-pmeta { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--content-text-muted); }
 .ls-prow.right .ls-pmeta { flex-direction: row-reverse; }
 .ls-pmeta img { width: 15px; height: 15px; object-fit: contain; }
@@ -425,6 +428,26 @@ html.dark .ls-detail {
   .ls-mx-crest { width: 2.2rem; height: 2.2rem; }
   .ls-mx-center { min-width: 0; }
   .ls-mx-projline { white-space: normal; }
-  .ls-mx-row { grid-template-columns: 1fr 1.6rem 1fr; }
+
+  /* ── Both-teams-visible player rows ──
+     A phone can't fit the full desktop head-to-head, which pushed the home team
+     off-screen. We drop the CENTER position label — it can only show one of the
+     two paired positions (the away player's), so it mislabels the home player
+     whenever the teams run different lineup shapes (a FLEX row can pair an RB
+     against a WR). Instead each side keeps its OWN colored position chip,
+     shrunk, so every player is labeled with its real position + color. Headshot
+     and score shrink, and the two side tracks use minmax(0) so names truncate
+     instead of the row overflowing. `.ls-mx-pos` is display:none, so the row's
+     three DOM children collapse to the two side columns. */
+  .ls-mx-body { padding: 0.4rem 0.35rem 0.8rem; }
+  .ls-mx-pos { display: none; }
+  .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.4rem; }
+  .ls-mx-row > div { min-width: 0; }
+  .ls-prow { gap: 0.35rem; padding: 0.4rem 0.1rem; min-width: 0; }
+  .ls-mx-body .ls-ppos { width: 1.55rem; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
+  .ls-headshot { width: 32px; height: 32px; }
+  .ls-pname { font-size: 0.82rem; }
+  .ls-pscore { min-width: 2.3rem; }
+  .ls-plive { font-size: 1.02rem; }
   .ls-pproj, .ls-pmeta { display: none; }
 }
