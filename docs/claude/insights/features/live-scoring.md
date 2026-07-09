@@ -69,3 +69,28 @@ attribute. Fall back to the feed value only when there are no per-player rows.
 **Recommendation:** For live/offseason-variable MFL feeds, prefer deriving
 aggregates from the per-player rows you already parse over trusting
 franchise-level summary attributes.
+
+## 2026-07-08 - Matchup-detail scorehead must stack vertically on mobile
+
+**Context:** `.ls-scorehead` (the matchup-detail score header) is a
+`grid-template-columns: 1fr auto 1fr` grid where each `.ls-mx-team` is a
+*horizontal* flex row: crest + name column + a 2.7rem `.ls-mx-total`. On a
+375px phone the two side columns (each ~180px once the name wraps) plus the
+center proj column blow past the viewport, forcing a horizontal scroll that
+hides the home team's score off the right edge.
+
+**Insight:** Fix it by stacking each team vertically under `@media (max-width:
+760px)` — `.ls-mx-team { flex-direction: column }` so the column width collapses
+to `max(crest, name, score)` instead of their sum. Keep the two sides
+symmetric (crest-on-top, score-below for both) by giving the home side
+`flex-direction: column-reverse` — its DOM order is score→name→crest, so
+reversing renders it crest→name→score to mirror the away side. Also reset
+`.ls-mx-team.home .ls-mx-tn { text-align: center }` (base rule right-aligns it)
+and add `min-width: 0` so a long name can't force the grid track wider than the
+screen.
+
+**Evidence:** `src/styles/live-scoring.css` (`@media (max-width: 760px)` block).
+
+**Recommendation:** Any two-team header that renders each side as a horizontal
+crest+name+score row will overflow narrow screens — stack vertically on mobile,
+and use `column-reverse` on the mirrored side rather than reordering the JSX.
