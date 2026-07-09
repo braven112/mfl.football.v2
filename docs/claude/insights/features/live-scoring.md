@@ -167,3 +167,72 @@ every positive scorer, which is meaningless for a completed game.
 partial `live-starting-lineups-*` snapshots, and always resolve season/week
 boundaries from `league.json` with a played-check rather than hardcoding or
 assuming NFL week counts.
+
+## 2026-07-09 - Offseason: page auto-falls back to the sample on an empty feed
+
+**Context:** The nav "Live Scoring" link points at `/theleague/live-scoring`
+with no params. In the offseason MFL turns its `liveScoring` feed off, so that
+bare URL used to render the island's empty "scores will appear when games begin"
+state. We wanted the sample (below) to show automatically out of season, but
+flip to real data the instant the season starts — no special link, no manual
+toggle.
+
+**Insight:** `assembleLiveScoringData` returns `matchups: []` precisely when the
+feed is off (the MFL `liveScoring` export is empty pre/post-season; in-season it
+returns the week's matchups even pre-kickoff). So `data.matchups.length === 0`
+is a reliable "feed is dark" signal. `live-scoring.astro` now fetches real data
+first and, when it comes back with no matchups, renders `getLiveScoringSample()`
+instead. `?demo=1` forces the sample year-round (validation); `?demo=0` forces
+the live path even when empty (debugging the offseason empty state). The island
+already shows a "Sample data" badge whenever `demo` is set.
+
+**Evidence:** `src/pages/theleague/live-scoring.astro` (the `useDemo` decision),
+`assembleLiveScoringData` in `src/utils/live-scoring-data.ts`.
+
+**Recommendation:** Gate offseason fallbacks on the *feed's own emptiness*
+(`matchups.length === 0`), not a season-phase date calc — it's self-correcting
+and needs no calendar. Keep `?demo=1`/`?demo=0` overrides for QA.
+
+## 2026-07-09 - Demo is presented MID-PLAY, not all-Final (supersedes above)
+
+**Context:** The all-Final replay (2026-07-09 entry above) is accurate but dead:
+the win-probability bar, live clocks, projected finals, and boom cue only render
+for non-final games, so a finished slate showcases none of the page's marquee
+live features. The demo now plays the same real week out *mid-Sunday*.
+
+**Insight — the rendering rules that dictate the model:**
+- **Win-prob bar shows only when `remainingPoints > 0`** — i.e. some starter has
+  `secondsRemaining > 0` AND `projected > 0` (`projectPlayerRemaining` needs a
+  non-zero projection). So an in-progress player must carry `projected = his real
+  final` (not 0). Then `projectPlayerFinal = live + projected·fractionLeft`
+  converges back to the true result: set `live = F·progress`,
+  `secondsRemaining = (1−progress)·3600`, `projected = F`.
+- **Matchup-level mix must be forced.** Fantasy starters spread across ~every NFL
+  team, so with ~45% of games in-progress essentially every matchup has a live
+  player and reads "Live". To get a real Final/Live board mix, mark ~half the
+  *matchups* complete (hash of the pairing) and force their starters final;
+  don't rely on per-NFL-game phases alone.
+- **The green `.boom` cell needs `live >= projected` (raw projected), not
+  `>= projFinal`.** With `projected = F` an in-progress player never booms
+  (`F·progress < F`). To light a few, make ~1-in-5 in-progress players "hot":
+  `projected = live·0.85`. A booming player then correctly shows a *projected
+  final above his live total* (the model keeps projecting more) — matches the
+  real feed. Final players keep `projected = 0` so boom stays a live-only cue.
+- **Assign phase per NFL game, keyed by `normalizeTeamCode`**, so both teams in a
+  game share state and the strip (`buildGamePhases`) matches the player rows.
+
+**Gotcha (cost an hour):** the deterministic phase hash is a `>>> 0` **unsigned**
+32-bit FNV-1a. Indexing a table with `hash >> 5` (signed shift) goes *negative*
+when the high bit is set → `arr[-n]` is `undefined` → `NaN` clocks/scores on the
+strip for exactly the games whose hash exceeds 2³¹. Use `>>> ` for any shift on
+an unsigned hash used as an array index.
+
+**Evidence:** `src/data/live-scoring-sample.ts` (`buildGamePhases`, the
+per-starter `phase`/`hot` logic), `projectPlayerRemaining`/`projectPlayerFinal`
+in `src/utils/live-win-probability.ts`, boom in `LiveScoreboard.tsx#PlayerRow`.
+
+**Recommendation:** When faking a "live" state from finished data, drive it off
+the projection model the UI already uses (real final = projection, partial live
+from a game clock) so projected-finals stay truthful; force the coarse
+(matchup-level) mix explicitly rather than hoping fine-grained randomness
+clusters; and reach for `>>>` on any hash-indexed lookup.
