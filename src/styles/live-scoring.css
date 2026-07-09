@@ -450,4 +450,18 @@ html.dark .ls-detail {
   .ls-pscore { min-width: 2.3rem; }
   .ls-plive { font-size: 1.02rem; }
   .ls-pproj, .ls-pmeta { display: none; }
+
+  /* ── Featured "YOUR MATCHUP" row card ──
+     Desktop sits the two big scores either side of a center "@", which collides
+     and clips on a phone (the away score gets cut off, the "Proj" labels overlap
+     the numbers). Stack the two teams vertically instead — away row over home
+     row, each a full-width `crest · name … score` line — and drop the "@". */
+  .ls-faceoff-row { flex-direction: column; align-items: stretch; gap: 0.35rem; padding: 0.5rem 0.2rem 0.2rem; }
+  .ls-fr-vs { display: none; }
+  .ls-fr-team, .ls-fr-team.home { flex-direction: row; gap: 0.6rem; }
+  .ls-fr-team .ls-fr-id, .ls-fr-team.home .ls-fr-id { flex-direction: row; }
+  .ls-fr-team .ls-fr-nums, .ls-fr-team.home .ls-fr-nums { flex-direction: row; }
+  .ls-fr-crest { width: 2rem; height: 2rem; }
+  .ls-fr-name { font-size: 0.95rem; }
+  .ls-fr-score { font-size: 1.9rem; }
 }
