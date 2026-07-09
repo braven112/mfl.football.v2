@@ -330,7 +330,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       glow: GLOW_GOLD,
       player: randomHeroPlayer(now),
       countValue: days,
-      countLabel: 'Days to Week 16 title game',
+      countLabel: 'Days to Week 17 title game',
     };
   },
 
@@ -690,7 +690,7 @@ function isInPlayoffsPhase(events: ResolvedLeagueEvent[], now: Date): boolean {
   return false;
 }
 
-/** Championship phase = AFL Week 16 (afl-championship-week → +7 days). */
+/** Championship phase = AFL Week 17 (afl-championship-week → +7 days). */
 function isInChampionshipPhase(events: ResolvedLeagueEvent[], now: Date): boolean {
   for (const c of events.filter((e) => e.definition.id === 'afl-championship-week')) {
     const end = new Date(c.startDate);
@@ -913,7 +913,7 @@ function buildDefaultHero(entries: WhatsNewEntry[]): HeroContent {
 }
 
 // ── Champion crowned: post-championship celebration window (kept manual, the
-// calendar doesn't model "the week after Week 16") ─────────────────────────────
+// calendar doesn't model "the week after Week 17") ─────────────────────────────
 
 function isChampionCrownedWindow(events: ResolvedLeagueEvent[], now: Date): boolean {
   for (const c of events.filter((e) => e.definition.id === 'afl-championship-week')) {

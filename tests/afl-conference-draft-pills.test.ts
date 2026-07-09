@@ -122,3 +122,37 @@ describe('calendar-day countdown (daysUntilStartCalendar)', () => {
     expect(e.daysUntilStartCalendar).toBe(0);
   });
 });
+
+describe('conference-aware draft lead', () => {
+  // Both AL (Sat) and NL (Sun) draft windows open together, so the earlier-dated
+  // AL draft would lead for everyone. The lead must swap to the viewer's OWN
+  // conference draft; guests keep the earliest (AL).
+  const leadFor = (referenceDate: Date, userConferenceId?: '00' | '01') => {
+    const state = resolveAflHeroState({ referenceDate, whatsNewEntries: [], userConferenceId });
+    if (state.kind !== 'calendar-event') {
+      throw new Error(`expected calendar-event state, got ${state.kind}`);
+    }
+    return state.eventId;
+  };
+
+  // Wed Aug 26 — inside both drafts' lead-up window, neither live yet.
+  const leadUp = new Date(2026, 7, 26, 12, 0);
+
+  it('NL owner leads with the NL draft, not the earlier AL draft', () => {
+    expect(leadFor(leadUp, '01')).toBe('afl-nl-draft');
+  });
+
+  it('AL owner leads with the AL draft', () => {
+    expect(leadFor(leadUp, '00')).toBe('afl-al-draft');
+  });
+
+  it('guest (no conference) leads with the earliest draft (AL)', () => {
+    expect(leadFor(leadUp)).toBe('afl-al-draft');
+  });
+
+  it('mid-July (post-keeper) NL owner already sees the NL draft countdown', () => {
+    // Draft urgency window reaches back past the keeper deadline; once keeper is
+    // past, the viewer's own conference draft leads.
+    expect(leadFor(new Date(2026, 6, 20, 12, 0), '01')).toBe('afl-nl-draft');
+  });
+});
