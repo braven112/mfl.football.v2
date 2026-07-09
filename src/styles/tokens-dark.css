@@ -420,11 +420,13 @@ html.dark {
   --nav-scrollbar-thumb-hover: #5a5a5a;
 
   /* Breadcrumb "Back to MFL" strip — deep-blue glow rising from the accent
-     edge, fading to transparent (near-black page) toward the top. GRADIENT:
-     only valid in `background:` shorthand. Without this pin it would fall
-     back to --color-primary (bright blue bar glaring against #121212).
-     AFL re-asserts navy below (this html.dark rule loads after the light AFL
-     block and would otherwise win the cascade). */
+     edge, fading to a translucent tint (not fully transparent) toward the
+     top so it blends into the near-black page instead of cutting off in a
+     visible seam. GRADIENT: only valid in `background:` shorthand. Without
+     this pin it would fall back to --color-primary (bright blue bar glaring
+     against #121212). Also feeds the dark-mode footer bg (Footer.astro) —
+     AFL re-asserts navy below (this html.dark rule loads after the light
+     AFL block and would otherwise win the cascade). */
   --breadcrumb-bar-bg: linear-gradient(0deg, #122e5b 10%, #122e5bad 80%);
   /* Brand accent edge under the near-black strip. */
   --breadcrumb-bar-border: var(--color-primary, #3b82f6);
