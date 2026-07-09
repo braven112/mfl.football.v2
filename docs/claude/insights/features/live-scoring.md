@@ -236,3 +236,14 @@ the projection model the UI already uses (real final = projection, partial live
 from a game clock) so projected-finals stay truthful; force the coarse
 (matchup-level) mix explicitly rather than hoping fine-grained randomness
 clusters; and reach for `>>>` on any hash-indexed lookup.
+
+**Accepted trade-off (don't re-litigate):** forcing whole fantasy matchups final
+decouples a starter's Final/Live from his NFL game, so a forced-final starter can
+sit on a team another (live) matchup keeps playing → that team reads live on the
+NFL strip while the row reads Final (~24/144 rows). Reviewers flag this twice; it
+is INTENTIONAL. The strip is built post-hoc from real player liveness
+(`buildStrip` + `liveTeams`) to kill the *reverse* case (strip live with no live
+starter), but the cross-cutting residual is unfixable without deleting the
+Final/Live board mix (matchups span too many NFL teams to finish together). The
+product owner chose the mix over strip consistency for this offseason-only,
+badged sample. See the big comment at the `doneFids` block.

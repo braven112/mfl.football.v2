@@ -411,6 +411,17 @@ export function getLiveScoringSample(
   // and inherit the per-NFL-game phases (win-probability bar, live clocks).
   // Doubleheader shares a franchise across two matchups, so skip the override
   // there and let everyone run on real per-game phases.
+  //
+  // KNOWN, INTENTIONAL TRADE-OFF: a fantasy matchup and an NFL game are
+  // cross-cutting, so a forced-final starter can sit on an NFL team that another
+  // (live) matchup's starter is still playing — that team then reads live on the
+  // decorative NFL strip while this row reads Final. Making them perfectly agree
+  // would require a starter's Final/Live to equal his NFL game's, which makes a
+  // whole-matchup "Final" essentially impossible (matchups span too many teams)
+  // and collapses the board to all-Live. The mix is the product ask; the strip
+  // cross-reference mismatch is accepted for this offseason-only sample. Don't
+  // "fix" it by tying starter state back to the game phase without re-reading
+  // this — you'll silently delete the Final/Live board mix.
   const doneFids = new Set<string>();
   if (!opts.doubleheader) {
     for (const m of final.matchups) {
