@@ -1,15 +1,32 @@
 /**
  * Sample live-scoring dataset for `/theleague/live-scoring?demo=1`.
  *
- * The real MFL `liveScoring` feed is empty in the offseason, so this bundled
- * snapshot lets us validate the deployed page (layout, theming, headshots, NFL
- * strip, moments) without a live game. It is only used when ?demo=1 is present
- * and the page renders a "SAMPLE DATA" badge; real usage never touches it.
+ * The real MFL `liveScoring` feed is empty in the offseason, so this snapshot
+ * lets us validate the deployed page (layout, theming, headshots, NFL strip,
+ * moments) without a live game. It is only used when ?demo=1 is present and the
+ * page renders a "SAMPLE DATA" badge; real usage never touches it.
  *
- * Player headshots use real ESPN ids so the deployed preview shows real photos
- * (a wrong/missing id degrades to the team-color gradient via the row onError).
+ * Rather than synthesize scores, the demo replays a REAL historical scoreboard:
+ * the last game of the last completed regular season — the league's final
+ * regular-season week (`lastRegularSeasonWeek` from league.json). For that week
+ * we read each franchise's actual starting lineup and the actual fantasy points
+ * every starter scored (`weekly-results-raw.json`), join player identity + ESPN
+ * ids for headshots (`players.json` via getPlayer), and pull the week's real
+ * final NFL scores for the strip (`nflSchedule.json`). Every game is `Final`
+ * (secondsRemaining 0), so the totals, per-player points, winners, and margins
+ * all match the true historical results.
+ *
+ * If a franchise's real lineup is missing/incomplete for that week, that one
+ * team falls back to a roster-based lineup built from the salary snapshot so the
+ * full slate still renders. Player headshots use real ESPN ids so the deployed
+ * preview shows real photos (a wrong/missing id degrades to the MFL photo, then
+ * the team-color gradient via the row onError).
  */
 
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { getPlayer } from '../utils/player-map';
+import { DEFAULT_LEAGUE_SLUG, getLeagueBySlug } from '../config/leagues';
 import type { LivePlayerRow, MatchupPairing, NflGame, PlayerMeta } from '../types/live-scoring';
 
 /** Serializable moment seed (mirrors the island's Moment shape). */
@@ -34,46 +51,26 @@ export interface LiveScoringSample {
   moments: MomentSeed[];
 }
 
-const ESPN = (id: string) => `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png`;
+/** Row order the island renders top-to-bottom (QB → RB → WR → TE → PK → DEF). */
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+const posRank = (pos: string | undefined): number => {
+  const i = POSITION_ORDER.indexOf((pos ?? '').toUpperCase());
+  return i === -1 ? POSITION_ORDER.length : i;
+};
 
-// [fid, name, pos, nflTeam, espnId, live, projected, secondsRemaining]
-type Row = [string, string, string, string, string, number, number, number];
+const readJson = (path: string): any => {
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'));
+  } catch {
+    return null;
+  }
+};
 
-const ROSTERS: Row[] = [
-  // Pacific Pigskins (0001)
-  ['0001', 'Josh Allen', 'QB', 'BUF', '3918298', 24.6, 28.4, 1800],
-  ['0001', 'Bijan Robinson', 'RB', 'ATL', '4430807', 18.2, 21.0, 900],
-  ['0001', 'Saquon Barkley', 'RB', 'PHI', '3929630', 22.1, 22.1, 0],
-  ['0001', "Ja'Marr Chase", 'WR', 'CIN', '4362628', 9.4, 19.8, 1800],
-  ['0001', 'Puka Nacua', 'WR', 'LAR', '4426515', 0.0, 14.2, 3600],
-  ['0001', 'Travis Kelce', 'TE', 'KC', '15847', 6.1, 11.0, 300],
-  ['0001', 'Jahmyr Gibbs', 'RB', 'DET', '4429795', 15.7, 16.5, 700],
-  ['0001', 'Ravens D/ST', 'DEF', 'BAL', '', 6.0, 7.5, 1200],
-  // The Magicians (0015)
-  ['0015', 'Lamar Jackson', 'QB', 'BAL', '3916387', 21.3, 26.0, 1200],
-  ['0015', 'Christian McCaffrey', 'RB', 'SF', '3117251', 12.0, 20.4, 2400],
-  ['0015', 'Derrick Henry', 'RB', 'BAL', '3043078', 19.8, 18.0, 1200],
-  ['0015', 'Justin Jefferson', 'WR', 'MIN', '4262921', 27.5, 24.0, 0],
-  ['0015', 'CeeDee Lamb', 'WR', 'DAL', '4241389', 4.2, 16.6, 600],
-  ['0015', 'Sam LaPorta', 'TE', 'DET', '4430027', 8.9, 10.5, 700],
-  ['0015', 'Amon-Ra St. Brown', 'WR', 'DET', '4374302', 11.1, 15.0, 700],
-  ['0015', '49ers D/ST', 'DEF', 'SF', '', 3.0, 7.0, 2400],
-  // Music City (0006)
-  ['0006', 'Jalen Hurts', 'QB', 'PHI', '4040715', 22.0, 24.0, 900],
-  ['0006', 'A.J. Brown', 'WR', 'PHI', '4047646', 14.0, 16.0, 900],
-  // Midwest (0011)
-  ['0011', 'Jared Goff', 'QB', 'DET', '3046779', 18.0, 19.0, 900],
-  ['0011', 'Jaylen Waddle', 'WR', 'MIA', '4372016', 12.0, 14.0, 900],
-  // Dead Cap (0004) — Jacobs' game is final (MIN@GB); the other two are mid-game
-  // on in-progress sample games (see nflGames) so the scoreboard and NFL strip agree.
-  ['0004', 'Josh Jacobs', 'RB', 'GB', '4047365', 24.0, 22.0, 0],
-  ['0004', 'George Kittle', 'TE', 'SF', '3040151', 16.5, 24.0, 1800],
-  ['0004', 'Cooper Kupp', 'WR', 'LAR', '2977187', 12.0, 15.0, 900],
-  // Vitside (0012) — starters on in-progress sample games (see nflGames)
-  ['0012', 'Deebo Samuel', 'WR', 'SF', '3126486', 17.2, 20.0, 900],
-  ['0012', 'James Cook', 'RB', 'BUF', '4379399', 19.5, 22.0, 1800],
-  ['0012', 'DeVonta Smith', 'WR', 'PHI', '4241478', 16.0, 18.0, 900],
-];
+/** MFL feeds often return a lone object where a list is possible. */
+const asArray = <T>(x: T | T[] | undefined | null): T[] =>
+  Array.isArray(x) ? x : x == null ? [] : [x];
+
+const round2 = (n: number): number => Number(n.toFixed(2));
 
 const game = (
   away: string, aScore: number, home: string, hScore: number,
@@ -85,121 +82,290 @@ const game = (
   possession, date: '',
 });
 
-// Player pool for the 10 franchises without a hand-authored roster, so a full
-// slate has realistic team totals + win probabilities. (Demo data — names need
-// not match each franchise's real roster; wrong ESPN ids fall back to the
-// team-color gradient.)
-const POOL: Array<[string, string, string, string]> = [
-  ['Patrick Mahomes', 'QB', 'KC', '3139477'],
-  ['Tyreek Hill', 'WR', 'MIA', '3116406'],
-  ['Saquon Barkley', 'RB', 'PHI', '3929630'],
-  ['A.J. Brown', 'WR', 'PHI', '4047646'],
-  ['Jahmyr Gibbs', 'RB', 'DET', '4429795'],
-  ['Jared Goff', 'QB', 'DET', '3046779'],
-  ['Josh Jacobs', 'RB', 'GB', '4047365'],
-  ['Jaylen Waddle', 'WR', 'MIA', '4372016'],
-  ['Derrick Henry', 'RB', 'BAL', '3043078'],
-  ['Travis Kelce', 'TE', 'KC', '15847'],
-  ['CeeDee Lamb', 'WR', 'DAL', '4241389'],
-  ['Bijan Robinson', 'RB', 'ATL', '4430807'],
-  ["Ja'Marr Chase", 'WR', 'CIN', '4362628'],
-  ['Puka Nacua', 'WR', 'LAR', '4426515'],
-  ['Amon-Ra St. Brown', 'WR', 'DET', '4374302'],
-  ['Christian McCaffrey', 'RB', 'SF', '3117251'],
-  ['Justin Jefferson', 'WR', 'MIN', '4262921'],
-  ['Lamar Jackson', 'QB', 'BAL', '3916387'],
-  ['Josh Allen', 'QB', 'BUF', '3918298'],
-  ['Jalen Hurts', 'QB', 'PHI', '4040715'],
-  ['Nico Collins', 'WR', 'HOU', '4258173'],
-];
-const EXTRA_TEAMS = ['0002', '0003', '0005', '0007', '0008', '0009', '0010', '0013', '0014', '0016'];
+/** One franchise's real starter for the resolved week: MFL id + points scored. */
+interface StarterSeed {
+  id: string;
+  live: number;
+}
 
-// Full weekly slate (16 teams). Single game: round A (8 matchups). Doubleheader:
-// round A + round B (16 matchups) — every team, including yours, plays twice.
-const ROUND_A = [
-  { away: '0015', home: '0001' },
-  { away: '0002', home: '0003' },
-  { away: '0004', home: '0005' },
-  { away: '0006', home: '0007' },
-  { away: '0008', home: '0009' },
-  { away: '0010', home: '0011' },
-  { away: '0012', home: '0013' },
-  { away: '0014', home: '0016' },
-];
-const ROUND_B = [
-  { away: '0006', home: '0001' },
-  { away: '0003', home: '0004' },
-  { away: '0005', home: '0002' },
-  { away: '0007', home: '0008' },
-  { away: '0009', home: '0010' },
-  { away: '0011', home: '0012' },
-  { away: '0013', home: '0014' },
-  { away: '0016', home: '0015' },
-];
+interface FinalWeek {
+  year: number;
+  week: number;
+  matchups: MatchupPairing[];
+  /** franchiseId → real starters (may be empty if the feed didn't cover a team). */
+  lineups: Record<string, StarterSeed[]>;
+}
 
-export function getLiveScoringSample(opts: { doubleheader?: boolean } = {}): LiveScoringSample {
+/**
+ * Find the last completed regular season and its final week. Scans the feed
+ * archive newest-first, reading each year's `lastRegularSeasonWeek` from
+ * league.json, and returns the first year whose final regular-season week is
+ * actually played (starters + scores present for every matchup). This naturally
+ * skips a not-yet-started upcoming season whose weekly-results are still stubs.
+ */
+function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
+  const feedsDir = join(process.cwd(), dataPath, 'mfl-feeds');
+  let years: number[] = [];
+  try {
+    years = readdirSync(feedsDir)
+      .filter((name) => /^\d{4}$/.test(name))
+      .map(Number)
+      .sort((a, b) => b - a); // newest first
+  } catch {
+    return null;
+  }
+
+  for (const year of years) {
+    const yearDir = join(feedsDir, String(year));
+    const league = readJson(join(yearDir, 'league.json'))?.league;
+    const raw = readJson(join(yearDir, 'weekly-results-raw.json'));
+    if (!league || !Array.isArray(raw)) continue;
+
+    const week = parseInt(league.lastRegularSeasonWeek, 10);
+    if (!Number.isFinite(week) || week < 1) continue;
+
+    const payload = raw.find(
+      (el: any) => parseInt(el?.weeklyResults?.week, 10) === week,
+    );
+    const matchupsRaw = asArray(payload?.weeklyResults?.matchup);
+    if (matchupsRaw.length === 0) continue;
+
+    const matchups: MatchupPairing[] = [];
+    const lineups: Record<string, StarterSeed[]> = {};
+    let wellFormed = true;
+    let totalFranchises = 0;
+    let scoredFranchises = 0;
+
+    for (const m of matchupsRaw) {
+      const franchises = asArray<any>(m.franchise);
+      if (franchises.length !== 2) {
+        wellFormed = false;
+        break;
+      }
+
+      // Default away/home by array order; override from the isHome flag.
+      let away = franchises[0].id as string;
+      let home = franchises[1].id as string;
+
+      for (const f of franchises) {
+        totalFranchises += 1;
+        const starterIds = String(f.starters ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const scoreById = new Map<string, number>();
+        for (const p of asArray<any>(f.player)) {
+          scoreById.set(String(p.id), Number(p.score) || 0);
+        }
+        // A franchise is "scored" only when it has real per-player results, not
+        // just a locked lineup — a pre-kickoff stub can carry starters with no
+        // player scores, which must NOT count as played.
+        if (starterIds.length > 0 && scoreById.size > 0) scoredFranchises += 1;
+        lineups[f.id] = starterIds.map((id) => ({ id, live: scoreById.get(id) ?? 0 }));
+        if (String(f.isHome) === '1') home = f.id;
+        else if (String(f.isHome) === '0') away = f.id;
+      }
+
+      matchups.push({ home, away });
+    }
+
+    // Accept the season only when the final week is genuinely played: reject
+    // pre-kickoff stubs (0 scored) and in-progress weeks, but tolerate a small
+    // export gap (≤2 missing franchises) since the per-team fallback fills those.
+    if (!wellFormed || scoredFranchises === 0 || scoredFranchises < totalFranchises - 2) {
+      continue;
+    }
+    return { year, week, matchups, lineups };
+  }
+
+  return null;
+}
+
+/**
+ * Roster-based fallback for a franchise whose real lineup is missing/incomplete
+ * for the resolved week. Reads the salary snapshot, takes that franchise's
+ * highest-scoring rostered players by position, and approximates a weekly total
+ * by dividing season points across the weeks played to that point. Real data
+ * covers every team, so this is defensive only.
+ */
+function buildFallbackLineup(year: number, fid: string, week: number): StarterSeed[] {
+  const salaries = readJson(join(process.cwd(), 'src/data', `mfl-player-salaries-${year}.json`));
+  const list = asArray<any>(salaries?.players).filter(
+    (p) => p?.franchiseId === fid && posRank(p.position) < POSITION_ORDER.length,
+  );
+  if (list.length === 0) return [];
+
+  list.sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0));
+
+  // 1 QB / 2 RB / 3 WR / 1 TE / 1 PK / 1 DEF, then backfill to 9.
+  const template: Array<[string, number]> = [
+    ['QB', 1], ['RB', 2], ['WR', 3], ['TE', 1], ['PK', 1], ['DEF', 1],
+  ];
+  const picked: any[] = [];
+  const used = new Set<string>();
+  for (const [pos, count] of template) {
+    const atPos = list.filter((p) => (p.position ?? '').toUpperCase() === pos && !used.has(p.id));
+    for (const p of atPos.slice(0, count)) {
+      picked.push(p);
+      used.add(p.id);
+    }
+  }
+  for (const p of list) {
+    if (picked.length >= 9) break;
+    if (!used.has(p.id)) {
+      picked.push(p);
+      used.add(p.id);
+    }
+  }
+
+  // Approximate a weekly figure from the season total across the weeks played.
+  const weeksPlayed = Math.max(1, week);
+  return picked.slice(0, 9).map((p) => ({
+    id: String(p.id),
+    live: round2((Number(p.points) || 0) / weeksPlayed),
+  }));
+}
+
+/** Real final NFL scores for the strip, straight from the week's schedule feed. */
+function buildNflGames(dataPath: string, year: number, week: number): NflGame[] {
+  const data = readJson(join(process.cwd(), dataPath, 'mfl-feeds', String(year), 'nflSchedule.json'));
+  const wk = asArray<any>(data?.fullNflSchedule?.nflSchedule).find(
+    (w) => parseInt(w.week, 10) === week,
+  );
+  const games: NflGame[] = [];
+  for (const m of asArray<any>(wk?.matchup)) {
+    const teams = asArray<any>(m.team);
+    if (teams.length !== 2) continue;
+    const away = teams.find((t) => String(t.isHome) === '0') ?? teams[0];
+    const home = teams.find((t) => String(t.isHome) === '1') ?? teams[1];
+    games.push(game(
+      away.id, Number(away.score) || 0,
+      home.id, Number(home.score) || 0,
+      'post', 'Final', 4, '0:00', null,
+    ));
+  }
+  return games;
+}
+
+/**
+ * Doubleheader round B: give every team a second game against a fresh opponent
+ * by re-pairing round A (each away team hosts the next matchup's home team). All
+ * 16 franchises appear exactly once, so the user's team plays twice.
+ */
+function buildRoundB(roundA: MatchupPairing[]): MatchupPairing[] {
+  const homes = roundA.map((m) => m.home);
+  const aways = roundA.map((m) => m.away);
+  const n = roundA.length;
+  return roundA.map((_, i) => ({ home: aways[i], away: homes[(i + 1) % n] }));
+}
+
+export function getLiveScoringSample(
+  opts: { doubleheader?: boolean; slug?: string } = {},
+): LiveScoringSample {
+  const league = getLeagueBySlug(opts.slug ?? DEFAULT_LEAGUE_SLUG);
+  const final = league ? resolveFinalRegularSeasonWeek(league.dataPath) : null;
+
+  // Feeds unavailable — return an empty-but-valid snapshot (island shows its
+  // "scores will appear" state) rather than throwing on the page.
+  if (!final) {
+    return {
+      week: 1, matchups: [], scores: {}, remaining: {}, players: {},
+      playersYetToPlay: {}, playerMeta: {}, nflGames: [], moments: [],
+    };
+  }
+
+  const { year, week } = final;
   const players: Record<string, LivePlayerRow[]> = {};
   const playerMeta: Record<string, PlayerMeta> = {};
   const scores: Record<string, number> = {};
   const remaining: Record<string, number> = {};
   const playersYetToPlay: Record<string, number> = {};
+  const moments: MomentSeed[] = [];
 
-  let n = 0;
-  const addStarter = (fid: string, name: string, pos: string, team: string, espnId: string, live: number, projected: number, sec: number) => {
-    const id = `demo${++n}`;
-    playerMeta[id] = {
-      id, name, position: pos, nflTeam: team,
-      headshot: espnId ? ESPN(espnId) : '',
-      espnId: espnId || null,
-      projected,
-    };
-    (players[fid] ??= []).push({ id, live, secondsRemaining: sec, status: 'starter' });
-  };
-
-  for (const [fid, name, pos, team, espnId, live, projected, sec] of ROSTERS) {
-    addStarter(fid, name, pos, team, espnId, live, projected, sec);
+  const franchiseIds = new Set<string>();
+  for (const m of final.matchups) {
+    franchiseIds.add(m.home);
+    franchiseIds.add(m.away);
   }
 
-  // Lightweight 3-man rosters for the remaining franchises (deterministic).
-  EXTRA_TEAMS.forEach((fid, t) => {
-    for (let i = 0; i < 3; i++) {
-      const p = POOL[(t * 3 + i) % POOL.length];
-      const live = 6 + ((t * 5 + i * 9) % 24);
-      const projected = live + 3 + ((t + i * 2) % 12);
-      const sec = [0, 1800, 3600][(t + i) % 3];
-      addStarter(fid, p[0], p[1], p[2], p[3], live, projected, sec);
+  for (const fid of franchiseIds) {
+    let seeds = final.lineups[fid] ?? [];
+    // Top up from the roster-based fallback whenever the real lineup is missing
+    // or short, so every team keeps the valid-9 invariant. De-dup by id so a
+    // fallback pick can't repeat a real starter.
+    if (seeds.length < 9) {
+      const have = new Set(seeds.map((s) => s.id));
+      const fill = buildFallbackLineup(year, fid, week).filter((s) => !have.has(s.id));
+      seeds = [...seeds, ...fill].slice(0, 9);
     }
-  });
 
-  for (const [fid, rows] of Object.entries(players)) {
-    scores[fid] = Number(rows.reduce((s, r) => s + r.live, 0).toFixed(1));
-    remaining[fid] = rows.reduce((s, r) => s + r.secondsRemaining, 0);
-    playersYetToPlay[fid] = rows.filter((r) => r.secondsRemaining >= 3600).length;
+    // Resolve identity, order by position, keep the valid 9.
+    const resolved = seeds
+      .map((s) => ({ ...s, meta: getPlayer(year, s.id) }))
+      .sort((a, b) => posRank(a.meta?.position) - posRank(b.meta?.position))
+      .slice(0, 9);
+
+    const rows: LivePlayerRow[] = [];
+    let topStarter: { name: string; team: string; live: number } | null = null;
+
+    for (const r of resolved) {
+      const m = r.meta;
+      const live = round2(r.live);
+      playerMeta[r.id] = {
+        id: r.id,
+        name: m?.name ?? 'Unknown Player',
+        position: m?.position ?? '',
+        nflTeam: m?.nflTeam ?? '',
+        headshot: m?.headshot ?? '',
+        espnId: m?.espnId ?? null,
+        // Game is final: leave projection at 0 so the island's per-row "proj"
+        // shows the actual final (projectPlayerFinal returns live when the clock
+        // is 0) without lighting the "boom" (beat-projection) cue on every
+        // positive scorer.
+        projected: 0,
+      };
+      rows.push({ id: r.id, live, secondsRemaining: 0, status: 'starter' });
+      if (!topStarter || live > topStarter.live) {
+        topStarter = { name: m?.name ?? 'Unknown Player', team: m?.nflTeam ?? '', live };
+      }
+    }
+
+    players[fid] = rows;
+    scores[fid] = round2(rows.reduce((s, r) => s + r.live, 0));
+    remaining[fid] = 0; // completed game
+    playersYetToPlay[fid] = 0;
+
+    // One moment per team (its top starter) so any opened matchup shows both
+    // sides' standout; the detail view slices these to the first handful.
+    if (topStarter && topStarter.live > 0) {
+      moments.push({
+        key: `m-${fid}`,
+        fid,
+        name: topStarter.name,
+        team: topStarter.team,
+        delta: topStarter.live,
+        clock: 'Final',
+      });
+    }
   }
 
-  const matchups = opts.doubleheader ? [...ROUND_A, ...ROUND_B] : ROUND_A;
+  // Surface the biggest performances first.
+  moments.sort((a, b) => b.delta - a.delta);
+
+  const matchups = opts.doubleheader
+    ? [...final.matchups, ...buildRoundB(final.matchups)]
+    : final.matchups;
 
   return {
-    week: 15,
+    week,
     matchups,
     scores,
     remaining,
     players,
     playersYetToPlay,
     playerMeta,
-    nflGames: [
-      game('CIN', 20, 'BUF', 17, 'in', '8:12 - 3rd', 3, '8:12', 'BUF'),
-      game('SF', 10, 'LAR', 13, 'in', '2:40 - 2nd', 2, '2:40', 'SF'),
-      game('DAL', 24, 'PHI', 27, 'in', '5:00 - 4th', 4, '5:00', 'PHI'),
-      game('MIN', 27, 'GB', 24, 'post', 'Final', 4, '0:00', null),
-      game('KC', 0, 'LAC', 0, 'pre', 'Sun 8:20 PM', 0, '', null),
-      game('HOU', 0, 'TEN', 0, 'pre', 'Mon 8:15 PM', 0, '', null),
-    ],
-    moments: [
-      { key: 'm1', fid: '0015', name: 'Justin Jefferson', team: 'MIN', delta: 8.8, clock: 'Final' },
-      { key: 'm2', fid: '0001', name: 'Josh Allen', team: 'BUF', delta: 6.4, clock: 'Q2 0:00' },
-      { key: 'm3', fid: '0001', name: 'Bijan Robinson', team: 'ATL', delta: 2.2, clock: 'Q3 1:40' },
-      { key: 'm4', fid: '0015', name: 'Derrick Henry', team: 'BAL', delta: 7.2, clock: 'Q3 5:20' },
-    ],
+    // `final` is non-null here, so `league` was resolved too.
+    nflGames: buildNflGames(league!.dataPath, year, week),
+    moments,
   };
 }
