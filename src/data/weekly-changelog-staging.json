@@ -176,6 +176,14 @@
       "impact": "user",
       "area": "calendar",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-09",
+      "type": "style-tweak",
+      "summary": "The \"Back to MFL\" strip up top got a smoother fade in dark mode. That deep-blue glow band was cutting off to fully transparent partway up, leaving a visible seam where it met the near-black page. Tuned the gradient to fade out at a soft trailing tint instead of hard zero, so the strip blends into the page instead of stopping short.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "theleague"
     }
   ]
 }
