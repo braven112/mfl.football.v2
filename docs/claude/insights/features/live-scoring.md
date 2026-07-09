@@ -94,3 +94,33 @@ screen.
 **Recommendation:** Any two-team header that renders each side as a horizontal
 crest+name+score row will overflow narrow screens — stack vertically on mobile,
 and use `column-reverse` on the mirrored side rather than reordering the JSX.
+
+## 2026-07-08 - Explicit per-team dark brand colors override the auto-nudge
+
+**Context:** The algorithmic dark-pair resolution (`ensureLegibleOn` nudging a
+near-black/dark-navy primary lighter, "Fallback A" above) keeps colors *legible*
+but not *on-brand*: dark-navy teams like Music City (`#113469`) and the
+Magicians/DMoC (`#06386a`) came out as a muddy auto-lightened navy instead of
+their real identity color (Titans sky-blue, Dark-Magician purple).
+
+**Insight:** Give every franchise explicit `colorPrimaryDark` /
+`colorSecondaryDark` fields in `src/data/theleague.config.json`, and resolve the
+*dark* pair from those (falling back to the light `colorPrimary`/`colorSecondary`
+per-field when absent). The light pair still resolves from the plain
+`colorPrimary`/`colorSecondary`. Wiring: `ConfigTeam` + `buildTeamsMap`
+(`live-scoring-data.ts`) → `TeamInfo` (`types/live-scoring.ts`) →
+`teamColorVars`'s new `themeColors(team, dark)` helper swaps in the `*Dark`
+values before calling `resolveTeamColorPair` for `LS_DARK_BG`. The contrast math
+still runs on top, so the explicit colors are a *better starting point*, not a
+bypass — two same-hue teams (e.g. Dead Cap green vs Ninjas green) still get
+separated by the ΔE step, and the light-mode path is untouched.
+
+**Evidence:** `src/data/theleague.config.json` (16 teams × `colorPrimaryDark`/
+`colorSecondaryDark`), `LiveScoreboard.tsx#themeColors`/`teamColorVars`,
+`live-scoring-data.ts#buildTeamsMap`.
+
+**Recommendation:** When a team's brand primary is near-black or a deep hue that
+only "works" in one theme, add an explicit `*Dark` color rather than leaning on
+the auto-nudge — the nudge guarantees legibility, not brand fidelity. The fields
+live in config so other surfaces (heroes, matchup headers) can adopt the same
+dark colors later without re-deriving them.
