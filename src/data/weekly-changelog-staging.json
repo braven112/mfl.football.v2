@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-07-08",
+      "type": "bug-fix",
+      "summary": "The Live Scoring scoreboard stopped running out of bounds on phones. Tap into a matchup on your phone and the big score-header — two teams, their crests, and those jumbo live totals — had been spilling off the right edge, shoving the home team's score clean off-screen behind a phantom horizontal scroll. Reworked it so each side stacks tidily (crest and name up top, the giant number underneath) and the whole card now fits the screen with everyone visible. While we were in there, the \"← All matchups\" back button got a little breathing room above the scorecard instead of sitting right on top of it.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-08",
       "type": "style-tweak",
       "summary": "What's New finally moved into the AFL homepage. The League has had that little row of recent-update cards on its front page for a while; now AFL owners get the same feed on afl-fantasy.com, browser-frame screenshots and all, pointed at the right domain. While we were in there the whole card treatment got a glow-up on both sites: the category accent colors — the little stripe and pill on each card — were a muddy, muted set that barely registered, so they got brightened to punchier greens, blues, violets and reds, and they now light up even bolder in dark mode instead of sulking. The cards themselves stopped floating shapeless against the page and picked up the same proper border and drop-shadow depth every other card on the site already wears, in both light and dark.",
       "impact": "user",

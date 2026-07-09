@@ -284,7 +284,7 @@ html.dark .ls-detail {
   display: inline-flex; align-items: center; gap: 0.35rem;
   background: none; border: 0; font: inherit; cursor: pointer;
   color: var(--league-accent); font-weight: var(--font-weight-semibold);
-  padding: 0.7rem 1rem 0; font-size: var(--font-size-sm);
+  padding: 0.7rem 1rem 0.7rem; font-size: var(--font-size-sm);
 }
 .ls-scorehead {
   position: sticky; top: 0; z-index: 5;
@@ -413,10 +413,18 @@ html.dark .ls-detail {
 .ls-m-pts { font-family: var(--font-display); font-weight: var(--font-weight-bold); color: var(--ls-boom); font-variant-numeric: tabular-nums; }
 
 @media (max-width: 760px) {
-  .ls-scorehead { gap: 0.5rem; padding: 0.8rem; }
+  /* Stack each team vertically (crest + name above the big score) so the
+     three columns stay narrow enough to fit a phone without overflowing. */
+  .ls-scorehead { gap: 0.4rem; padding: 0.8rem 0.6rem; align-items: center; }
+  .ls-mx-team { flex-direction: column; align-items: center; gap: 0.2rem; text-align: center; min-width: 0; }
+  .ls-mx-team.home { flex-direction: column-reverse; justify-content: flex-start; }
+  .ls-mx-tn { align-items: center; }
+  .ls-mx-team.home .ls-mx-tn { text-align: center; }
+  .ls-mx-tn b { font-size: 0.9rem; overflow-wrap: anywhere; }
   .ls-mx-total { font-size: 1.9rem; }
-  .ls-mx-tn b { font-size: 0.9rem; }
   .ls-mx-crest { width: 2.2rem; height: 2.2rem; }
+  .ls-mx-center { min-width: 0; }
+  .ls-mx-projline { white-space: normal; }
   .ls-mx-row { grid-template-columns: 1fr 1.6rem 1fr; }
   .ls-pproj, .ls-pmeta { display: none; }
 }
