@@ -677,7 +677,7 @@ function isRegularSeasonActive(events: ResolvedLeagueEvent[], now: Date): boolea
   return false;
 }
 
-/** Playoffs phase = AFL Weeks 14–15 (afl-conference-playoffs → afl-championship-week). */
+/** Playoffs phase = AFL Weeks 15–16 (afl-conference-playoffs → afl-championship-week). */
 function isInPlayoffsPhase(events: ResolvedLeagueEvent[], now: Date): boolean {
   // Scan ALL year occurrences — the 2026 championship event is `isPast` on
   // Dec 26 so the deduped list may have already swapped it for the 2027 one.
@@ -995,7 +995,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     }
   }
 
-  // P0: Conference Playoffs phase (Weeks 14–15) — bespoke bracket hero.
+  // P0: Conference Playoffs phase (Weeks 15–16) — bespoke bracket hero.
   if (isInPlayoffsPhase(rawEvents, now)) {
     return { kind: 'playoffs', priority: 'P0', content: buildPlayoffsHero() };
   }
