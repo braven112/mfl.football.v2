@@ -1,0 +1,68 @@
+name: Apply Pending Contracts
+
+# Owners submit contract declarations via the site (/theleague/contracts),
+# which lands as a `status: 'pending'` record in Redis but does not touch
+# MFL. This workflow applies every pending declaration to MFL automatically
+# — no commissioner click required. If an owner edits a declaration while
+# it's still pending, the edit overwrites the same record in place, so the
+# next run picks up the latest requested years/salary.
+#
+# Runs every 30 min. Manual triggering (workflow_dispatch) is available for
+# testing or off-cycle runs:
+#   GitHub UI → Actions → Apply Pending Contracts → Run workflow
+#   - dry_run: leave checked to PRINT the would-be writes without touching
+#              MFL. Uncheck to actually write.
+#
+# Note: does not invalidate the roster page's MFL cache (unlike the
+# session-triggered /api/contracts/approve route) — the cache self-heals on
+# its normal TTL, so an applied contract may take a few minutes to show up
+# on the rosters page.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 min
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only (print, do not write to MFL)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: apply-pending-contracts
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Apply pending contract declarations
+        env:
+          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
+          MFL_HOST: ${{ vars.MFL_HOST }}
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          # Scheduled runs have no inputs, so inputs.dry_run is empty.
+          # Treat anything other than the literal string "true" as live.
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "::notice::Running in DRY-RUN mode (no MFL writes)"
+            node ./scripts/apply-pending-contracts.mjs --dry-run
+          else
+            echo "::warning::LIVE MFL WRITE MODE — will apply all pending contract declarations"
+            node ./scripts/apply-pending-contracts.mjs
+          fi
