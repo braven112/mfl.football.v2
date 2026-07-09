@@ -34,11 +34,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
+
+// Mirror astro.config.ts: hydrate process.env from .env / .env.local so this
+// standalone Node script resolves PUBLIC_BASE_YEAR / PUBLIC_MFL_YEAR exactly the
+// way the app does via import.meta.env (real environment variables always win).
+// On Vercel those vars are already in process.env; this only matters for local
+// .env-file-driven runs, so the derived snapshot picks the same season year the
+// page would have.
+const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', ROOT, '');
+for (const [k, v] of Object.entries(fileEnv)) process.env[k] ??= v;
 
 const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
 const OUTPUT_DIR = path.join(ROOT, 'data/afl-fantasy/derived');
@@ -117,7 +127,10 @@ function resolveCurrentYear() {
     const rosters = readFeed(yr, 'rosters.json');
     if (rosters?.rosters?.franchise) return yr;
   }
-  return years[0] ?? getCurrentSeasonYear();
+  // No season has a populated rosters feed — fall back to the season year
+  // (matches the old page: `availableYears[0] ?? getCurrentSeasonYear()`, where
+  // availableYears only counted years whose rosters feed carried franchises).
+  return getCurrentSeasonYear();
 }
 
 const currentYear = resolveCurrentYear();
