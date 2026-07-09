@@ -17,297 +17,59 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug } from '../../config/leagues';
 import { positionOrder } from '../../constants/roster-constants';
-import { getCurrentSeasonYear } from '../../utils/league-year';
 import '../../styles/player-cell.css';
-import collegeLogos from '../../data/college-logos.json';
-import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+// Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
+// row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
+// this page imports only the finished ~400KB result. See the SSR note below.
+import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
 // by NFL team code, so the shared theleague-sourced file works directly here.
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
-// Prerendered (SSG): this page has no per-request logic — no auth, cookies, or
-// query params — it just renders a build-time snapshot of the AFL free-agent
-// pool that the client script sorts/filters. Prerendering keeps its data
-// (esp. the ~38MB of historical weekly-results feeds it eager-globs) OUT of the
-// serverless _render function, which otherwise exceeds Vercel's 250MB limit.
-// The snapshot refreshes on every deploy (cron data-sync commits redeploy).
-export const prerender = true;
+// SSR (server-rendered) — NOT prerendered. Two constraints pull in opposite
+// directions and the derived-snapshot import above is how we satisfy both:
+//
+//  1. Apex routing needs SSR. The middleware (src/middleware.ts) rewrites
+//     www.afl-fantasy.com/players → /afl-fantasy/players via context.rewrite(),
+//     which only resolves to routes registered in the SSR function. A
+//     `prerender = true` target is a static CDN file with no SSR route, so the
+//     rewrite 404s and falls back to the default (TheLeague) 404 page — that was
+//     the original apex bug.
+//  2. The serverless function is near Vercel's 250MB limit. If this SSR page
+//     eager-globbed every year of AFL feeds (~50MB of players/weekly-results),
+//     it would bundle all of it into the shared _render function and tip it over
+//     (see docs/claude/insights/domains/deployment.md).
+//
+// Resolution: the multi-year read happens at BUILD TIME in
+// scripts/compute-afl-free-agents.mjs (node fs reads are not traced into the
+// function), which emits data/afl-fantasy/derived/free-agents.json. This page
+// imports only that small snapshot, so it renders on-demand (routing works) while
+// contributing ~0.4MB, not ~15MB, to the function. Refreshes every deploy.
 
 // MFL player-photo CDN host — sourced from the league registry, never
 // hardcoded (CLAUDE.md: never hardcode league constants like the MFL host).
 const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
 
-// ── College logo lookup (case-insensitive) ──
-const collegeLogosNormalized = Object.fromEntries(
-  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
-);
-function getCollegeLogo(collegeName: string | null): string | null {
-  if (!collegeName) return null;
-  const entry = collegeLogosNormalized[collegeName.toLowerCase()];
-  return (entry as any)?.logo ?? null;
-}
+// ── Derived free-agent snapshot ──
+// Year resolution, per-year feed parsing, row assembly, the default sort, and the
+// position counts all used to run right here off eager import.meta.glob() over 24
+// years of AFL feeds. That work now happens at build time in
+// scripts/compute-afl-free-agents.mjs; this page consumes only the finished
+// result, keeping the SSR bundle small (see the SSR note above).
+const players = freeAgentsData.players;
+const faCounts = freeAgentsData.faCounts as Record<string, number>;
+const nflTeamsList = freeAgentsData.nflTeamsList as string[];
+const hasProjected = freeAgentsData.hasProjected;
+const hasLastYrPts = freeAgentsData.hasLastYrPts;
+const hasAdp = freeAgentsData.hasAdp;
+const defaultSort = freeAgentsData.defaultSort;
+const defaultDir = freeAgentsData.defaultDir;
+const freeAgentsCount = faCounts.ALL ?? 0;
 
-// MFL team code → local SVG filename normalization
-const MFL_TEAM_CODE_MAP: Record<string, string> = {
-  GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO',
-  SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
-  BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
-};
-function normalizeMflTeam(code: string): string {
-  if (!code) return 'FA';
-  return MFL_TEAM_CODE_MAP[code] || code;
-}
-
-// ── Load AFL feed data ──
-const playerModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/*/players.json',
-  { eager: true }
-);
-const rostersModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/*/rosters.json',
-  { eager: true }
-);
-const projectedScoresModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/*/projectedScores.json',
-  { eager: true }
-);
-const adpDynastyModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json',
-  { eager: true }
-);
-const weeklyResultsModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/*/weekly-results-raw.json',
-  { eager: true }
-);
-
-const getModuleData = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-
-const findForYear = (modules: Record<string, any>, yr: number) => {
-  const key = Object.keys(modules).find(k => k.includes(`/${yr}/`));
-  return key ? getModuleData(modules[key]) : null;
-};
-
-// Resolve the AFL league year the same way the roster page does: the most
-// recent season whose rosters feed actually carries franchises (skips the
-// empty/errored placeholder years that MFL leaves before a season is built).
-const availableYears = Object.entries(rostersModules)
-  .map(([path, mod]) => {
-    const match = path.match(/\/(\d{4})\/rosters\.json$/);
-    if (!match) return null;
-    const data = getModuleData(mod) as any;
-    if (!data?.rosters?.franchise) return null;
-    return parseInt(match[1], 10);
-  })
-  .filter((year): year is number => year !== null)
-  .sort((a, b) => b - a);
-const currentYear = availableYears[0] ?? getCurrentSeasonYear();
-
-const playersData = findForYear(playerModules, currentYear);
-const rostersData = findForYear(rostersModules, currentYear);
-const projectedScoresData = findForYear(projectedScoresModules, currentYear);
-
-// Dynasty ADP (current year only)
-const adpDynMap = new Map<string, number>();
-{
-  const data = findForYear(adpDynastyModules, currentYear);
-  const players = data?.adp?.player
-    ? (Array.isArray(data.adp.player) ? data.adp.player : [data.adp.player])
-    : [];
-  for (const p of players) {
-    if (p?.id && p?.averagePick) {
-      const pick = parseFloat(p.averagePick);
-      if (pick > 0) adpDynMap.set(p.id, pick);
-    }
-  }
-}
-
-// Projected points
-const projectedMap = new Map<string, number>();
-if (projectedScoresData?.projectedScores?.playerScore) {
-  const scores = Array.isArray(projectedScoresData.projectedScores.playerScore)
-    ? projectedScoresData.projectedScores.playerScore
-    : [projectedScoresData.projectedScores.playerScore];
-  for (const s of scores) {
-    if (s?.id && s?.score) {
-      const score = parseFloat(s.score);
-      if (score > 0) projectedMap.set(s.id, score);
-    }
-  }
-}
-
-// Last completed season's total points + games played (from weekly results)
-const lastSeasonYear = getCurrentSeasonYear();
-const lastYearData = findForYear(weeklyResultsModules, lastSeasonYear);
-const lastYrPtsMap = new Map<string, number>();
-const lastYrGamesMap = new Map<string, number>();
-if (Array.isArray(lastYearData)) {
-  for (const weekPayload of lastYearData) {
-    const matchups = weekPayload?.weeklyResults?.matchup;
-    if (!matchups) continue;
-    const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
-    for (const m of matchupArr) {
-      const franchises = m?.franchise ? (Array.isArray(m.franchise) ? m.franchise : [m.franchise]) : [];
-      for (const f of franchises) {
-        const players = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
-        for (const p of players) {
-          if (!p?.id || !p?.score) continue;
-          const score = parseFloat(p.score);
-          if (!isNaN(score) && score > 0) {
-            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
-            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
-          }
-        }
-      }
-    }
-  }
-}
-
-// Rostered player set (AFL has no salaries/contracts — membership only)
-const rosteredIds = new Set<string>();
-if (rostersData?.rosters?.franchise) {
-  const franchises = Array.isArray(rostersData.rosters.franchise)
-    ? rostersData.rosters.franchise
-    : [rostersData.rosters.franchise];
-  for (const franchise of franchises) {
-    const rosterPlayers = franchise?.player
-      ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
-      : [];
-    for (const p of rosterPlayers) {
-      if (p?.id) rosteredIds.add(p.id);
-    }
-  }
-}
-
-// Fantasy-relevant positions (AFL is offense + K + team DEF, no IDP)
-const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
-
-interface PlayerRow {
-  id: string;
-  name: string;
-  position: string;
-  team: string;
-  age: number | null;
-  espnId: string | null;
-  projected: number | null;
-  rostered: boolean;
-  exp: number | null;
-  draftRd: number | null;
-  college: string | null;
-  collegeLogo: string | null;
-  height: number | null;
-  weight: number | null;
-  adpDyn: number | null;
-  lastYrPts: number | null;
-  ppg: number | null;
-  games: number | null;
-  rookie: boolean;
-  birthdate: number | null;
-  jersey: string | null;
-  draftYear: number | null;
-  draftTeam: string | null;
-  draftPick: number | null;
-}
-
-const allPlayers = playersData?.players?.player;
-const playerList: PlayerRow[] = [];
-
-if (Array.isArray(allPlayers)) {
-  const now = Date.now() / 1000;
-  for (const p of allPlayers) {
-    if (!p?.id || !p?.name || !p?.position) continue;
-    if (!fantasyPositions.has(p.position)) continue;
-
-    const pos = p.position === 'Def' ? 'DEF' : p.position;
-
-    // MFL name format "Last, First" → "First Last" (DEF "Bills, Buffalo" → "Buffalo Bills")
-    const nameParts = p.name.split(', ');
-    const displayName = nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : p.name;
-
-    let age: number | null = null;
-    if (p.birthdate) {
-      const birthTimestamp = parseInt(p.birthdate, 10);
-      if (birthTimestamp > 0) {
-        age = Math.floor((now - birthTimestamp) / (365.25 * 24 * 60 * 60));
-      }
-    }
-
-    const draftYr = p.draft_year ? parseInt(p.draft_year, 10) : null;
-    const exp = draftYr && draftYr > 0 ? currentYear - draftYr : null;
-    const draftRd = p.draft_round ? parseInt(p.draft_round, 10) : null;
-
-    let heightInches: number | null = null;
-    let weightLbs: number | null = null;
-    if (p.height) {
-      const inches = parseInt(p.height, 10);
-      if (inches > 0) heightInches = inches;
-    }
-    if (p.weight) weightLbs = parseInt(p.weight, 10) || null;
-
-    const pts = lastYrPtsMap.get(p.id);
-    const gp = lastYrGamesMap.get(p.id);
-
-    playerList.push({
-      id: p.id,
-      name: displayName,
-      position: pos,
-      team: normalizeMflTeam(p.team || ''),
-      // Team defenses have no birthdate/draft year; give them neutral
-      // placeholder age/experience so age- and exp-range filters don't drop
-      // every DEF (mirrors the sibling theleague/players page).
-      age: pos === 'DEF' ? 25 : age,
-      espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
-      projected: projectedMap.get(p.id) ?? null,
-      rostered: rosteredIds.has(p.id),
-      exp: pos === 'DEF' ? 5 : exp,
-      draftRd: (draftRd && draftRd > 0) ? draftRd : null,
-      college: p.college || null,
-      collegeLogo: getCollegeLogo(p.college),
-      height: heightInches,
-      weight: weightLbs,
-      adpDyn: adpDynMap.get(p.id) ?? null,
-      lastYrPts: pts != null ? Math.round(pts * 10) / 10 : null,
-      games: gp ?? null,
-      ppg: (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null,
-      rookie: p.status === 'R',
-      birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
-      jersey: p.jersey || null,
-      draftYear: draftYr,
-      draftTeam: p.draft_team || null,
-      draftPick: p.draft_pick ? parseInt(p.draft_pick, 10) : null,
-    });
-  }
-}
-
-const hasProjected = projectedMap.size > 0;
-const hasLastYrPts = lastYrPtsMap.size > 0;
-const hasAdp = adpDynMap.size > 0;
-
-// Default sort: projected points when available, else dynasty ADP, else last-year pts.
-const defaultSort = hasProjected ? 'projected' : (hasAdp ? 'adpDyn' : 'lastYrPts');
-const defaultDir = defaultSort === 'adpDyn' ? 'asc' : 'desc';
-playerList.sort((a, b) => {
-  if (defaultSort === 'adpDyn') {
-    const aVal = a.adpDyn ?? Infinity;
-    const bVal = b.adpDyn ?? Infinity;
-    return aVal - bVal;
-  }
-  const aVal = (a as any)[defaultSort] ?? -1;
-  const bVal = (b as any)[defaultSort] ?? -1;
-  return bVal - aVal;
-});
-
-// Count free agents by position for the category pills
-const freeAgents = playerList.filter(p => !p.rostered);
-const faCounts: Record<string, number> = { ALL: freeAgents.length };
-for (const p of freeAgents) {
-  faCounts[p.position] = (faCounts[p.position] || 0) + 1;
-}
-
-// Initial hero spotlight: top free agent by the default sort.
-const topFa = freeAgents[0] ?? null;
+// Initial hero spotlight: top free agent by the default sort (from the snapshot).
+const topFa = freeAgentsData.topFa;
 const topFaIsDef = topFa?.position === 'DEF';
 // For a team defense, spotlight the team's marquee defender (if mapped) so the
 // hero shows a face over the logo watermark instead of a bare crest.
@@ -342,14 +104,7 @@ const topFaHeadOnerror = topFaHeadEspnId
   ? `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='https://a.espncdn.com/i/headshots/college-football/players/full/${topFaHeadEspnId}.png'`
   : undefined;
 
-// Unique NFL teams for the team filter dropdown
-const nflTeamsSet = new Set<string>();
-for (const p of playerList) {
-  if (p.team && p.team !== 'FA') nflTeamsSet.add(p.team);
-}
-const nflTeamsList = [...nflTeamsSet].sort();
-
-const playerDataJson = JSON.stringify(playerList);
+const playerDataJson = JSON.stringify(players);
 const faCountsJson = JSON.stringify(faCounts);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
@@ -378,7 +133,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       <div class="hero-top">
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
-          <span class="hero-count">{freeAgents.length} available players</span>
+          <span class="hero-count">{freeAgentsCount} available players</span>
         </div>
         <a href={r('/afl-fantasy/rosters')} class="hero-cross-link">
           View rosters

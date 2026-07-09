@@ -21,6 +21,7 @@ const SEQUENTIAL = [
   { name: 'build:bookmarklets', cmd: 'pnpm run build:bookmarklets' },
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history' },
+  { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents' },
 ];
 
 const PARALLEL = [

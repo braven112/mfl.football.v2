@@ -120,13 +120,34 @@ Note dynamic `fs`/`readFileSync` paths (e.g. draft-predictor reading
 `weekly-results-raw.json` by year) get traced in for **all** years too, since
 nft can't resolve the dynamic segment.
 
-**Recommendation:** If a page has no per-request logic (no `getAuthUser`, cookies,
-or `Astro.url.searchParams`), make it `prerender = true`. Prerendered pages run
-their globs at **build time** and their data never enters the function — the page
-becomes a static snapshot that refreshes on every deploy (this repo redeploys
-hourly on cron data-sync commits, so freshness is fine for browse/research
-pages). This is why `/theleague/players` stays SSR (it gates admin columns on
-`getAuthUser`) but the cap-free AFL sibling can prerender. Caveat: apex-domain
-league-prefix routing is middleware-based (`context.rewrite`), which doesn't run
-for statically-served routes the same way — verify apex behavior when
-prerendering a league-prefixed page.
+**Recommendation:** Do NOT reflexively reach for `prerender = true` on a
+league-prefixed page — it trades a size problem for a routing outage. Prerendered
+pages run their globs at build time (data never enters the function), BUT a
+prerendered page under a league prefix is emitted as a static CDN file with no
+SSR route, so the apex-domain middleware rewrite (`context.rewrite`,
+`www.afl-fantasy.com/players` → `/afl-fantasy/players`) can't resolve to it and
+404s to the default (TheLeague) 404 page. That is exactly what happened: the AFL
+Free Agents page was prerendered to dodge the 256MB deploy, which silently broke
+`afl-fantasy.com/players` on the apex domain (2026-07-08).
+
+The durable fix for a browse page that globs multi-year feeds is **keep it SSR
+and move the multi-year read into a build-time compute script** that emits ONE
+small derived JSON, which the page imports. Node `fs` reads inside a
+`scripts/compute-*.mjs` run at build are NOT traced into the serverless function,
+so 24 years of feeds stay out of `_render` while the page stays server-rendered
+(apex routing works). Pattern: `scripts/compute-afl-free-agents.mjs` →
+`data/afl-fantasy/derived/free-agents.json`, imported by
+`src/pages/afl-fantasy/players.astro`; wired into `scripts/prebuild.mjs` +
+`package.json` `compute:afl-free-agents`, regenerated every deploy. Measured
+impact: the page contributes ~0.4MB (the derived file) to `_render` instead of
+~15MB of eager globs — so the SSR fix is deploy-neutral (315MB vs the 314MB
+prerendered baseline) rather than the +15MB a naive SSR revert would add.
+
+Note the shared `_render` function is already ~314MB locally (near the ceiling)
+before this page, driven by OTHER pages' dynamic `fs.readFileSync(join(cwd, …,
+year, …))` reads that nft can't resolve and so traces for all 24 years (e.g.
+`afl-fantasy/draft-predictor.astro` reading `weekly-results-raw.json`). Local
+`du` runs a touch higher than Vercel's measured number, but if you need real
+headroom, the highest-leverage cut is converting those dynamic per-year `fs`
+reads to build-time derived snapshots too. `/theleague/players` stays SSR anyway
+because it gates admin columns on `getAuthUser`.
