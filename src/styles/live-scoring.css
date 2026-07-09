@@ -461,6 +461,9 @@ html.dark .ls-detail {
   .ls-fr-team, .ls-fr-team.home { flex-direction: row; gap: 0.6rem; }
   .ls-fr-team .ls-fr-id, .ls-fr-team.home .ls-fr-id { flex-direction: row; }
   .ls-fr-team .ls-fr-nums, .ls-fr-team.home .ls-fr-nums { flex-direction: row; }
+  /* Projection to the LEFT of the score, matching the non-featured cards
+     (muted proj number, then the big score anchored at the right edge). */
+  .ls-fr-proj { order: -1; }
   .ls-fr-crest { width: 2rem; height: 2rem; }
   .ls-fr-name { font-size: 0.95rem; }
   .ls-fr-score { font-size: 1.9rem; }
