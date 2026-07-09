@@ -426,6 +426,13 @@ export function getLiveScoringSample(
       // shows the actual final without lighting "boom" on every positive scorer.
       const live = isDone ? finalPts : round2(finalPts * phase.progress);
       const sec = isDone ? 0 : phase.sec;
+      // Projection: final players get 0 (no boom, per-row "proj" shows the real
+      // final). In-progress players target their real final — EXCEPT a
+      // deterministic ~1-in-5 "hot" players already outscoring their projection,
+      // which lights the green boom cell (live >= projected). A live floor keeps
+      // bench-level scorers from booming.
+      const hot = !isDone && live > 5 && hashStr(`${r.id}:hot`) % 5 === 0;
+      const projected = isDone ? 0 : hot ? round2(live * 0.85) : finalPts;
       playerMeta[r.id] = {
         id: r.id,
         name: m?.name ?? 'Unknown Player',
@@ -433,7 +440,7 @@ export function getLiveScoringSample(
         nflTeam,
         headshot: m?.headshot ?? '',
         espnId: m?.espnId ?? null,
-        projected: isDone ? 0 : finalPts,
+        projected,
       };
       rows.push({ id: r.id, live, secondsRemaining: sec, status: 'starter' });
       if (!topStarter || live > topStarter.live) {
