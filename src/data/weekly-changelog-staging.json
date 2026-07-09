@@ -4,6 +4,14 @@
     {
       "date": "2026-07-08",
       "type": "bug-fix",
+      "summary": "Live Scoring's matchup detail finally shows both rosters on a phone. Tap into a matchup and scroll to the player-by-player breakdown: your lineup sat on the left, the numbers ran across the middle, and the opponent's entire starting nine spilled clean off the right edge — you couldn't see the team you were playing without a sideways swipe. Rebuilt the row for small screens so both sides fit at once, mirrored around the center position label: your player and score on the left, theirs on the right, real headshots on both. Long names now tuck to an ellipsis instead of bulldozing the score beside them, and nothing runs past the screen. The desktop layout — full names, team and game clock, projections — is untouched.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "bug-fix",
       "summary": "The Live Scoring scoreboard stopped running out of bounds on phones. Tap into a matchup on your phone and the big score-header — two teams, their crests, and those jumbo live totals — had been spilling off the right edge, shoving the home team's score clean off-screen behind a phantom horizontal scroll. Reworked it so each side stacks tidily (crest and name up top, the giant number underneath) and the whole card now fits the screen with everyone visible. While we were in there, the \"← All matchups\" back button got a little breathing room above the scorecard instead of sitting right on top of it.",
       "impact": "user",
       "area": "other",

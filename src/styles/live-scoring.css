@@ -362,7 +362,10 @@ html.dark .ls-detail {
 .ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }
-.ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* max-width caps the shrink-wrapped name box on the right (flex-end) side so
+   text-overflow can actually clip it — without it a long home-team name grows
+   to content width and overlaps the score. */
+.ls-pname { font-weight: var(--font-weight-semibold); font-size: 0.92rem; color: var(--page-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .ls-pmeta { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--content-text-muted); }
 .ls-prow.right .ls-pmeta { flex-direction: row-reverse; }
 .ls-pmeta img { width: 15px; height: 15px; object-fit: contain; }
@@ -425,6 +428,23 @@ html.dark .ls-detail {
   .ls-mx-crest { width: 2.2rem; height: 2.2rem; }
   .ls-mx-center { min-width: 0; }
   .ls-mx-projline { white-space: normal; }
-  .ls-mx-row { grid-template-columns: 1fr 1.6rem 1fr; }
+
+  /* ── Both-teams-visible player rows ──
+     Desktop fits a full head-to-head (pos chip + headshot + name + score) on
+     each side. A phone can't — that pushed the home team off-screen. On mobile
+     we drop the per-row position chip (the center column already labels the
+     position), shrink the headshot/score, and let the two side tracks shrink
+     (minmax 0) so the NAME truncates instead of the row overflowing. Result:
+     both rosters stay on screen, mirrored around the center position label. */
+  .ls-mx-body { padding: 0.4rem 0.35rem 0.8rem; }
+  .ls-mx-row { grid-template-columns: minmax(0, 1fr) 1.5rem minmax(0, 1fr); gap: 0.25rem; }
+  .ls-mx-row > div { min-width: 0; }
+  .ls-mx-pos { font-size: 0.68rem; }
+  .ls-prow { gap: 0.4rem; padding: 0.4rem 0.1rem; min-width: 0; }
+  .ls-mx-body .ls-ppos { display: none; }
+  .ls-headshot { width: 34px; height: 34px; }
+  .ls-pname { font-size: 0.82rem; }
+  .ls-pscore { min-width: 2.4rem; }
+  .ls-plive { font-size: 1.05rem; }
   .ls-pproj, .ls-pmeta { display: none; }
 }
