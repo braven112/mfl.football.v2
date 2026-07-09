@@ -7,7 +7,7 @@
       "description": "AFL league year rolls over and rosters lock for the new season.",
       "category": "preseason",
       "icon": "star",
-      "startDate": { "type": "fixed", "month": 2, "day": 15 },
+      "startDate": { "type": "fixed", "month": 6, "day": 1 },
       "sortOrder": 1
     },
     {
@@ -16,7 +16,7 @@
       "description": "Final day to declare your 7 keepers. Anyone not protected enters the draft pool.",
       "category": "preseason",
       "icon": "bookmark",
-      "startDate": { "type": "fixed", "month": 7, "day": 15, "time": "20:00" },
+      "startDate": { "type": "fixed", "month": 7, "day": 15, "time": "20:45" },
       "actionLinks": [
         { "label": "Manage Keepers", "url": "/afl-fantasy/rosters?view=planner", "external": false }
       ],
@@ -29,7 +29,7 @@
       "description": "AL teams meet live for the conference draft — veterans and rookies on the same board.",
       "category": "draft",
       "icon": "draft-podium",
-      "startDate": { "type": "computed", "rule": "saturday-before-labor-day-weekend", "time": "09:00" },
+      "startDate": { "type": "computed", "rule": "saturday-before-labor-day-weekend", "time": "12:30" },
       "urgencyDays": 7,
       "sortOrder": 4
     },
@@ -75,7 +75,7 @@
     {
       "id": "afl-conference-playoffs",
       "name": "Conference Playoffs",
-      "description": "Week 14 — conference seeds 1-4 begin head-to-head playoffs.",
+      "description": "Week 15 — conference seeds 1-4 begin head-to-head playoffs.",
       "category": "regular-season",
       "icon": "playoff",
       "startDate": { "type": "computed", "rule": "afl-playoffs-start" },
@@ -85,7 +85,7 @@
     {
       "id": "afl-championship-week",
       "name": "World Championship",
-      "description": "Week 16 — AL champion vs. NL champion in the World Championship.",
+      "description": "Week 17 — AL champion vs. NL champion in the World Championship.",
       "category": "regular-season",
       "icon": "champ",
       "startDate": { "type": "computed", "rule": "afl-championship-week" },

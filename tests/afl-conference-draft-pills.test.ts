@@ -15,10 +15,12 @@ import { resolveDateForYear, getAllResolvedAflEvents } from '../src/utils/league
  *    date against the raw (pre-dedup) list.
  *
  * 2. `resolveDateForYear` dropped the `time` field on `computed` date rules,
- *    so both drafts (defined with `"time": "09:00"`) resolved to midnight and
- *    the pills rendered "12:00 AM" for events the hero copy says start 9 AM PT.
+ *    so both drafts (each defined with an explicit `time`) resolved to midnight
+ *    and the pills rendered "12:00 AM" for events with real start times
+ *    (AL live draft 12:30 PM PT, NL email draft 9 AM PT).
  *
- * 2026 anchors: Labor Day is Mon Sep 7 → AL draft Sat Aug 29, NL draft Sun Aug 30.
+ * 2026 anchors: Labor Day is Mon Sep 7 → AL draft Sat Aug 29 12:30 PM PT
+ * (live conference draft), NL draft Sun Aug 30 9:00 AM PT (email draft).
  */
 
 function draftState(referenceDate: Date) {
@@ -32,14 +34,14 @@ function draftState(referenceDate: Date) {
 const ymd = (d: Date) => [d.getFullYear(), d.getMonth() + 1, d.getDate()].join('-');
 
 describe('computed date rules honor the time field', () => {
-  it('AL draft rule resolves to 9:00 AM, not midnight', () => {
+  it('AL draft rule resolves to 12:30 PM, not midnight', () => {
     const date = resolveDateForYear(
-      { type: 'computed', rule: 'saturday-before-labor-day-weekend', time: '09:00' },
+      { type: 'computed', rule: 'saturday-before-labor-day-weekend', time: '12:30' },
       2026,
     );
     expect(ymd(date)).toBe('2026-8-29');
-    expect(date.getHours()).toBe(9);
-    expect(date.getMinutes()).toBe(0);
+    expect(date.getHours()).toBe(12);
+    expect(date.getMinutes()).toBe(30);
   });
 
   it('computed rule without a time stays at midnight', () => {
@@ -52,20 +54,21 @@ describe('computed date rules honor the time field', () => {
 });
 
 describe('AFL conference-draft pills', () => {
-  it('lead-up week: both pills show this year, 9 AM start', () => {
+  it('lead-up week: both pills show this year — AL 12:30 PM, NL 9 AM', () => {
     const state = draftState(new Date(2026, 7, 26, 12, 0)); // Wed Aug 26
     expect(state.eventId).toBe('afl-al-draft');
     const cd = state.conferenceDraft!;
     expect(ymd(cd.al.date)).toBe('2026-8-29');
     expect(ymd(cd.nl.date)).toBe('2026-8-30');
-    expect(cd.al.date.getHours()).toBe(9);
+    expect(cd.al.date.getHours()).toBe(12);
+    expect(cd.al.date.getMinutes()).toBe(30);
     expect(cd.nl.date.getHours()).toBe(9);
     expect(cd.al.live).toBe(false);
     expect(cd.nl.live).toBe(false);
   });
 
   it('AL draft day: AL pill is live, both dates are this year', () => {
-    const state = draftState(new Date(2026, 7, 29, 12, 0)); // Sat Aug 29
+    const state = draftState(new Date(2026, 7, 29, 13, 0)); // Sat Aug 29, 1 PM (after 12:30 start)
     expect(state.eventId).toBe('afl-al-draft');
     const cd = state.conferenceDraft!;
     expect(ymd(cd.al.date)).toBe('2026-8-29');
@@ -86,10 +89,10 @@ describe('AFL conference-draft pills', () => {
     expect(cd.nl.live).toBe(true);
   });
 
-  it('draft-day live boundaries: not live at 8:59 AM, live 9:00 AM through 8:45 PM, over at 8:46 PM', () => {
+  it('draft-day live boundaries: not live at 12:29 PM, live 12:30 PM through 8:45 PM, over at 8:46 PM', () => {
     const at = (h: number, m: number) => draftState(new Date(2026, 7, 29, h, m)).conferenceDraft!;
-    expect(at(8, 59).al.live).toBe(false);
-    expect(at(9, 0).al.live).toBe(true);
+    expect(at(12, 29).al.live).toBe(false);
+    expect(at(12, 30).al.live).toBe(true);
     expect(at(20, 45).al.live).toBe(true);
     // 8:46 PM: AL is over; the lead flips to the NL draft but the AL pill
     // must still show THIS year's date.
@@ -117,5 +120,39 @@ describe('calendar-day countdown (daysUntilStartCalendar)', () => {
     const e = nlDraft(new Date(2026, 7, 30, 8, 0));
     expect(e.daysUntilStart).toBe(1);
     expect(e.daysUntilStartCalendar).toBe(0);
+  });
+});
+
+describe('conference-aware draft lead', () => {
+  // Both AL (Sat) and NL (Sun) draft windows open together, so the earlier-dated
+  // AL draft would lead for everyone. The lead must swap to the viewer's OWN
+  // conference draft; guests keep the earliest (AL).
+  const leadFor = (referenceDate: Date, userConferenceId?: '00' | '01') => {
+    const state = resolveAflHeroState({ referenceDate, whatsNewEntries: [], userConferenceId });
+    if (state.kind !== 'calendar-event') {
+      throw new Error(`expected calendar-event state, got ${state.kind}`);
+    }
+    return state.eventId;
+  };
+
+  // Wed Aug 26 — inside both drafts' lead-up window, neither live yet.
+  const leadUp = new Date(2026, 7, 26, 12, 0);
+
+  it('NL owner leads with the NL draft, not the earlier AL draft', () => {
+    expect(leadFor(leadUp, '01')).toBe('afl-nl-draft');
+  });
+
+  it('AL owner leads with the AL draft', () => {
+    expect(leadFor(leadUp, '00')).toBe('afl-al-draft');
+  });
+
+  it('guest (no conference) leads with the earliest draft (AL)', () => {
+    expect(leadFor(leadUp)).toBe('afl-al-draft');
+  });
+
+  it('mid-July (post-keeper) NL owner already sees the NL draft countdown', () => {
+    // Draft urgency window reaches back past the keeper deadline; once keeper is
+    // past, the viewer's own conference draft leads.
+    expect(leadFor(new Date(2026, 6, 20, 12, 0), '01')).toBe('afl-nl-draft');
   });
 });

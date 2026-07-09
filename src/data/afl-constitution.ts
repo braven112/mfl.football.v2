@@ -131,9 +131,9 @@ STANDINGS TIEBREAKERS (ties broken within divisions first)
 PLAYOFF STRUCTURE
 League Championships:
 - Each conference sends 4 teams: 2 division winners (seeds 1–2) + 2 wild cards (seeds 3–4). Wild cards = 2 best remaining W-L records in the conference.
-- Week 14: AL 1v4, AL 2v3, NL 1v4, NL 2v3
-- Week 15: AL conference semifinal winners face off; NL conference semifinal winners face off.
-- Week 16: AL Champion vs NL Champion — World Championship.
+- Week 15: AL 1v4, AL 2v3, NL 1v4, NL 2v3
+- Week 16: AL conference semifinal winners face off; NL conference semifinal winners face off.
+- Week 17: AL Champion vs NL Champion — World Championship.
 
 NIT Tournament:
 - The remaining 16 teams play a consolation bracket.

@@ -21,7 +21,6 @@ import AflPlayoffsHero from './AflPlayoffsHero.astro';
 import AflChampionshipHero from './AflChampionshipHero.astro';
 import AflEventHero from './AflEventHero.astro';
 import '../../styles/trade-deadline-hero.css';
-import { formatEventDate } from '../../utils/event-date-formatter';
 import type { AflHeroState } from '../../utils/afl-hero-resolver';
 
 /** Region label per state — gives screen-reader users a meaningful landmark cue. */
@@ -43,15 +42,6 @@ interface Props {
 }
 
 const { state, config, standings, userFranchiseId } = Astro.props;
-
-// formatEventDate builds "Sat, Aug 29, 9:00 AM PT" from the Date's LOCAL
-// fields with a fixed PT label — league times are defined in PT, and local
-// fields reproduce the configured values in any runtime. Never format these
-// with toLocaleString + timeZoneName: on a UTC server that renders the
-// server's zone ("9:00 AM UTC"), mislabeling the draft time.
-const fmtTime = (d: Date) => formatEventDate(d);
-
-const conferenceDraft = state.kind === 'calendar-event' ? state.conferenceDraft : undefined;
 ---
 
 {state.kind === 'trade-deadline' ? (
@@ -81,80 +71,3 @@ const conferenceDraft = state.kind === 'calendar-event' ? state.conferenceDraft 
     regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
   />
 )}
-
-{conferenceDraft && (
-  <div class="afl-draft-pills" aria-label="Conference draft details">
-    <div class:list={['afl-draft-pill', { 'afl-draft-pill--live': conferenceDraft.al.live, 'afl-draft-pill--mine': conferenceDraft.userConference === '00' }]}>
-      <span class="afl-draft-pill__label">American League</span>
-      <span class="afl-draft-pill__date">{fmtTime(conferenceDraft.al.date)}</span>
-      <span class="afl-draft-pill__status">{conferenceDraft.al.live ? 'Live now' : 'Live draft'}</span>
-    </div>
-    <div class:list={['afl-draft-pill', { 'afl-draft-pill--live': conferenceDraft.nl.live, 'afl-draft-pill--mine': conferenceDraft.userConference === '01' }]}>
-      <span class="afl-draft-pill__label">National League</span>
-      <span class="afl-draft-pill__date">{fmtTime(conferenceDraft.nl.date)}</span>
-      <span class="afl-draft-pill__status">{conferenceDraft.nl.live ? 'Live now' : 'Email draft'}</span>
-    </div>
-  </div>
-)}
-
-<style>
-  .afl-draft-pills {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-  }
-
-  .afl-draft-pill {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    padding: 0.875rem 1rem;
-    background: var(--content-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-left: 3px solid var(--cat-draft, #7c3aed);
-    border-radius: var(--radius-md, 0.5rem);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .afl-draft-pill--mine {
-    border-left-color: var(--league-accent, #c41e3a);
-    background: color-mix(in srgb, var(--league-accent, #c41e3a) 4%, var(--content-bg, #fff));
-  }
-
-  .afl-draft-pill--live {
-    border-left-color: var(--color-error, #dc2626);
-    box-shadow: 0 0 0 1px var(--color-error, #dc2626);
-  }
-
-  .afl-draft-pill__label {
-    font-size: 0.625rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-gray-400, #9ca3af);
-  }
-
-  .afl-draft-pill__date {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-gray-800, #1f2937);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .afl-draft-pill__status {
-    font-size: 0.75rem;
-    color: var(--color-gray-500, #6b7280);
-  }
-
-  .afl-draft-pill--live .afl-draft-pill__status {
-    color: var(--color-error, #dc2626);
-    font-weight: 600;
-  }
-
-  @media (max-width: 640px) {
-    .afl-draft-pills {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
