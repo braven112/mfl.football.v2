@@ -152,8 +152,11 @@ true history — no invented numbers.
 Bonus: `nflSchedule.json` for that week carries real final NFL scores
 (`team[].score`, `gameSecondsRemaining: "0"`) — use them for the NFL strip so
 even the decorative games are real. Set every starter's `secondsRemaining: 0`
-(final) and `projected` = actual points; the island then reads every card as
-`Final` with true totals.
+(final); the island then reads every card as `Final` with true totals. Leave
+`projected: 0` for a final game — `projectPlayerFinal` returns `live` once the
+clock is 0 so the per-row "proj" still shows the real final, but setting
+`projected = live` instead would light the `.boom` (beat-projection) cue on
+every positive scorer, which is meaningless for a completed game.
 
 **Evidence:** `src/data/live-scoring-sample.ts`
 (`resolveFinalRegularSeasonWeek`, `buildNflGames`), joins identity via

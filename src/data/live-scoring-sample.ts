@@ -26,7 +26,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlayer } from '../utils/player-map';
-import { getLeagueBySlug } from '../config/leagues';
+import { DEFAULT_LEAGUE_SLUG, getLeagueBySlug } from '../config/leagues';
 import type { LivePlayerRow, MatchupPairing, NflGame, PlayerMeta } from '../types/live-scoring';
 
 /** Serializable moment seed (mirrors the island's Moment shape). */
@@ -132,12 +132,14 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
 
     const matchups: MatchupPairing[] = [];
     const lineups: Record<string, StarterSeed[]> = {};
-    let played = true;
+    let wellFormed = true;
+    let totalFranchises = 0;
+    let scoredFranchises = 0;
 
     for (const m of matchupsRaw) {
       const franchises = asArray<any>(m.franchise);
       if (franchises.length !== 2) {
-        played = false;
+        wellFormed = false;
         break;
       }
 
@@ -146,6 +148,7 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
       let home = franchises[1].id as string;
 
       for (const f of franchises) {
+        totalFranchises += 1;
         const starterIds = String(f.starters ?? '')
           .split(',')
           .map((s) => s.trim())
@@ -154,7 +157,10 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
         for (const p of asArray<any>(f.player)) {
           scoreById.set(String(p.id), Number(p.score) || 0);
         }
-        if (starterIds.length === 0) played = false;
+        // A franchise is "scored" only when it has real per-player results, not
+        // just a locked lineup — a pre-kickoff stub can carry starters with no
+        // player scores, which must NOT count as played.
+        if (starterIds.length > 0 && scoreById.size > 0) scoredFranchises += 1;
         lineups[f.id] = starterIds.map((id) => ({ id, live: scoreById.get(id) ?? 0 }));
         if (String(f.isHome) === '1') home = f.id;
         else if (String(f.isHome) === '0') away = f.id;
@@ -163,7 +169,12 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
       matchups.push({ home, away });
     }
 
-    if (!played) continue;
+    // Accept the season only when the final week is genuinely played: reject
+    // pre-kickoff stubs (0 scored) and in-progress weeks, but tolerate a small
+    // export gap (≤2 missing franchises) since the per-team fallback fills those.
+    if (!wellFormed || scoredFranchises === 0 || scoredFranchises < totalFranchises - 2) {
+      continue;
+    }
     return { year, week, matchups, lineups };
   }
 
@@ -174,9 +185,10 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
  * Roster-based fallback for a franchise whose real lineup is missing/incomplete
  * for the resolved week. Reads the salary snapshot, takes that franchise's
  * highest-scoring rostered players by position, and approximates a weekly total
- * from season points. Real data covers every team, so this is defensive only.
+ * by dividing season points across the weeks played to that point. Real data
+ * covers every team, so this is defensive only.
  */
-function buildFallbackLineup(year: number, fid: string): StarterSeed[] {
+function buildFallbackLineup(year: number, fid: string, week: number): StarterSeed[] {
   const salaries = readJson(join(process.cwd(), 'src/data', `mfl-player-salaries-${year}.json`));
   const list = asArray<any>(salaries?.players).filter(
     (p) => p?.franchiseId === fid && posRank(p.position) < POSITION_ORDER.length,
@@ -206,10 +218,11 @@ function buildFallbackLineup(year: number, fid: string): StarterSeed[] {
     }
   }
 
-  // Approximate a weekly figure from the season total (18 max weeks).
+  // Approximate a weekly figure from the season total across the weeks played.
+  const weeksPlayed = Math.max(1, week);
   return picked.slice(0, 9).map((p) => ({
     id: String(p.id),
-    live: round2((Number(p.points) || 0) / 18),
+    live: round2((Number(p.points) || 0) / weeksPlayed),
   }));
 }
 
@@ -249,8 +262,8 @@ function buildRoundB(roundA: MatchupPairing[]): MatchupPairing[] {
 export function getLiveScoringSample(
   opts: { doubleheader?: boolean; slug?: string } = {},
 ): LiveScoringSample {
-  const dataPath = getLeagueBySlug(opts.slug ?? 'theleague')?.dataPath ?? 'data/theleague';
-  const final = resolveFinalRegularSeasonWeek(dataPath);
+  const league = getLeagueBySlug(opts.slug ?? DEFAULT_LEAGUE_SLUG);
+  const final = league ? resolveFinalRegularSeasonWeek(league.dataPath) : null;
 
   // Feeds unavailable — return an empty-but-valid snapshot (island shows its
   // "scores will appear" state) rather than throwing on the page.
@@ -276,8 +289,15 @@ export function getLiveScoringSample(
   }
 
   for (const fid of franchiseIds) {
-    let seeds = final.lineups[fid];
-    if (!seeds || seeds.length === 0) seeds = buildFallbackLineup(year, fid);
+    let seeds = final.lineups[fid] ?? [];
+    // Top up from the roster-based fallback whenever the real lineup is missing
+    // or short, so every team keeps the valid-9 invariant. De-dup by id so a
+    // fallback pick can't repeat a real starter.
+    if (seeds.length < 9) {
+      const have = new Set(seeds.map((s) => s.id));
+      const fill = buildFallbackLineup(year, fid, week).filter((s) => !have.has(s.id));
+      seeds = [...seeds, ...fill].slice(0, 9);
+    }
 
     // Resolve identity, order by position, keep the valid 9.
     const resolved = seeds
@@ -298,8 +318,11 @@ export function getLiveScoringSample(
         nflTeam: m?.nflTeam ?? '',
         headshot: m?.headshot ?? '',
         espnId: m?.espnId ?? null,
-        // Game is final, so the "projection" is the actual final total.
-        projected: live,
+        // Game is final: leave projection at 0 so the island's per-row "proj"
+        // shows the actual final (projectPlayerFinal returns live when the clock
+        // is 0) without lighting the "boom" (beat-projection) cue on every
+        // positive scorer.
+        projected: 0,
       };
       rows.push({ id: r.id, live, secondsRemaining: 0, status: 'starter' });
       if (!topStarter || live > topStarter.live) {
@@ -341,7 +364,8 @@ export function getLiveScoringSample(
     players,
     playersYetToPlay,
     playerMeta,
-    nflGames: buildNflGames(dataPath, year, week),
+    // `final` is non-null here, so `league` was resolved too.
+    nflGames: buildNflGames(league!.dataPath, year, week),
     moments,
   };
 }
