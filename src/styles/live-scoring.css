@@ -377,6 +377,10 @@ html.dark .ls-detail {
 .ls-pscore.boom { background: var(--ls-boom-bg); border-radius: 5px; padding: 0.1rem 0.3rem; margin: -0.1rem -0.3rem; }
 .ls-pscore.boom .ls-plive { color: var(--ls-boom); }
 .ls-pproj { font-size: 0.66rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
+/* The muted proj line drops below readable contrast on the green boom wash
+   (worst in dark mode). Tint it with the boom green blended toward page-text
+   so it stays legible on the wash in both themes and reads as intentional. */
+.ls-pscore.boom .ls-pproj { color: color-mix(in srgb, var(--ls-boom) 55%, var(--page-text)); }
 
 .ls-empty { padding: 2rem 1rem; text-align: center; color: var(--content-text-muted); }
 
