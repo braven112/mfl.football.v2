@@ -64,14 +64,15 @@ const ROSTERS: Row[] = [
   // Midwest (0011)
   ['0011', 'Jared Goff', 'QB', 'DET', '3046779', 18.0, 19.0, 900],
   ['0011', 'Jaylen Waddle', 'WR', 'MIA', '4372016', 12.0, 14.0, 900],
-  // Dead Cap (0004)
+  // Dead Cap (0004) — Jacobs' game is final (MIN@GB); the other two are mid-game
+  // on in-progress sample games (see nflGames) so the scoreboard and NFL strip agree.
   ['0004', 'Josh Jacobs', 'RB', 'GB', '4047365', 24.0, 22.0, 0],
-  ['0004', 'Patrick Mahomes', 'QB', 'KC', '3139477', 16.5, 24.0, 1800],
-  ['0004', 'Amon-Ra St. Brown', 'WR', 'DET', '4374302', 12.0, 15.0, 900],
-  // Vitside (0012)
-  ['0012', 'Nico Collins', 'WR', 'HOU', '4258173', 17.2, 20.0, 900],
-  ['0012', 'Tyreek Hill', 'WR', 'MIA', '3116406', 19.5, 22.0, 1800],
-  ['0012', 'Bijan Robinson', 'RB', 'ATL', '4430807', 16.0, 18.0, 900],
+  ['0004', 'George Kittle', 'TE', 'SF', '3040151', 16.5, 24.0, 1800],
+  ['0004', 'Cooper Kupp', 'WR', 'LAR', '2977187', 12.0, 15.0, 900],
+  // Vitside (0012) — starters on in-progress sample games (see nflGames)
+  ['0012', 'Deebo Samuel', 'WR', 'SF', '3126486', 17.2, 20.0, 900],
+  ['0012', 'James Cook', 'RB', 'BUF', '4379399', 19.5, 22.0, 1800],
+  ['0012', 'DeVonta Smith', 'WR', 'PHI', '4241478', 16.0, 18.0, 900],
 ];
 
 const game = (
