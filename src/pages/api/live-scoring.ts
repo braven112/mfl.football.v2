@@ -188,6 +188,11 @@ export const GET: APIRoute = async ({ url }) => {
 
     return new Response(
       JSON.stringify({
+        // Whether the upstream MFL liveScoring request itself succeeded. An
+        // offseason feed is a healthy 200 with empty collections (ok:true);
+        // an upstream outage is skipped above but must not read as "no games"
+        // — callers (the offseason auto-demo) use this to tell the two apart.
+        ok: liveScoreResponse.ok,
         week: Number(week),
         scores,
         remaining,

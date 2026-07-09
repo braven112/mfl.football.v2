@@ -274,7 +274,7 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
         </span>
         <span className="ls-fr-nums">
           <span className="ls-fr-score">{fmt(c.live)}</span>
-          <span className="ls-fr-proj">Proj {fmt(c.projectedFinal)}</span>
+          <span className="ls-fr-proj"><span className="ls-fr-lbl">Proj </span>{fmt(c.projectedFinal)}</span>
         </span>
       </div>
     );

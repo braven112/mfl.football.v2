@@ -42,16 +42,44 @@ const authUser = getAuthUser(Astro.request);
 const userFranchiseId = authUser?.franchiseId;
 const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
 
-// Demo/sample mode (?demo=1): render a bundled snapshot so the page can be
-// validated in the offseason when the live feed is empty. Real usage never
-// hits this branch.
-const demo = Astro.url.searchParams.get('demo') === '1';
+// Demo/sample mode. During the offseason MFL turns off the liveScoring feed, so
+// the real fetch comes back with no matchups — in that case the page auto-falls
+// back to a bundled replay of last season's final week (see live-scoring-sample.ts,
+// flagged with a "Sample data" badge). This is what the nav link shows out of
+// season; once the season starts and the feed returns matchups, real data wins.
+// Overrides: ?demo=1 forces the sample year-round (validation), ?demo=0 forces
+// the live path even when the feed is empty (debugging the offseason empty state).
+const demoParam = Astro.url.searchParams.get('demo');
 const demoDoubleheader = Astro.url.searchParams.get('dh') === '1';
+
+let useDemo = demoParam === '1';
+let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
+
+if (!useDemo) {
+  data = await assembleLiveScoringData({
+    siteUrl: Astro.url,
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    dataPath: league.dataPath,
+    configTeams,
+    userFranchiseId,
+  });
+  // Empty feed (no matchups) = offseason / feed off → show the sample replay,
+  // unless the caller explicitly forced the live path with ?demo=0. Require the
+  // fetch to have SUCCEEDED (`ok`): a failed live request also yields no
+  // matchups, and we must not paper over an in-season outage with last season's
+  // sample — that case falls through to the island's empty/error state.
+  if (demoParam !== '0' && data.ok && data.matchups.length === 0) {
+    useDemo = true;
+  }
+}
 
 let islandProps: LiveScoringPageProps;
 let nflGames: NflGame[] | undefined;
 
-if (demo) {
+if (useDemo) {
   const sample = getLiveScoringSample({ doubleheader: demoDoubleheader });
   nflGames = sample.nflGames;
   islandProps = {
@@ -75,17 +103,8 @@ if (demo) {
     initialMoments: sample.moments,
   };
 } else {
-  const data = await assembleLiveScoringData({
-    siteUrl: Astro.url,
-    week,
-    year,
-    leagueId: league.leagueId,
-    host: league.host,
-    dataPath: league.dataPath,
-    configTeams,
-    userFranchiseId,
-  });
-
+  // data is always assigned in the non-demo branch above.
+  const liveData = data!;
   islandProps = {
     week,
     year,
@@ -95,13 +114,13 @@ if (demo) {
     isLive,
     gameWindow: daily.gameWindow,
     userFranchiseId,
-    matchups: data.matchups,
-    teams: data.teams,
-    playerMeta: data.playerMeta,
-    initialScores: data.scores,
-    initialRemaining: data.remaining,
-    initialPlayers: data.players,
-    initialYetToPlay: data.playersYetToPlay,
+    matchups: liveData.matchups,
+    teams: liveData.teams,
+    playerMeta: liveData.playerMeta,
+    initialScores: liveData.scores,
+    initialRemaining: liveData.remaining,
+    initialPlayers: liveData.players,
+    initialYetToPlay: liveData.playersYetToPlay,
   };
 }
 ---
@@ -111,7 +130,7 @@ if (demo) {
     <LiveScoreboard client:load {...islandProps} />
     <div class="ls-page-strip">
       <NflGamesStrip client:visible week={islandProps.week} year={year}
-                     isLive={demo ? false : isLive} demo={demo} initialGames={nflGames} />
+                     isLive={useDemo ? false : isLive} demo={useDemo} initialGames={nflGames} />
     </div>
   </div>
 </TheLeagueLayout>
