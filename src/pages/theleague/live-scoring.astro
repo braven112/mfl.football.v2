@@ -67,8 +67,11 @@ if (!useDemo) {
     userFranchiseId,
   });
   // Empty feed (no matchups) = offseason / feed off → show the sample replay,
-  // unless the caller explicitly forced the live path with ?demo=0.
-  if (demoParam !== '0' && data.matchups.length === 0) {
+  // unless the caller explicitly forced the live path with ?demo=0. Require the
+  // fetch to have SUCCEEDED (`ok`): a failed live request also yields no
+  // matchups, and we must not paper over an in-season outage with last season's
+  // sample — that case falls through to the island's empty/error state.
+  if (demoParam !== '0' && data.ok && data.matchups.length === 0) {
     useDemo = true;
   }
 }

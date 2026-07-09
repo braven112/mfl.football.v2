@@ -38,6 +38,15 @@ export interface ConfigTeam {
 }
 
 export interface LiveScoringData {
+  /**
+   * Whether the live snapshot fetch actually succeeded. Distinguishes an
+   * empty-but-healthy feed (offseason: HTTP 200, no matchups) from a failed
+   * fetch (the internal API errors resolve to the same empty collections). The
+   * page only auto-falls back to the sample when `ok` AND there are no matchups,
+   * so an in-season outage surfaces the empty/error state instead of silently
+   * masquerading as offseason "Sample data".
+   */
+  ok: boolean;
   teams: Record<string, TeamInfo>;
   matchups: MatchupPairing[];
   playerMeta: Record<string, PlayerMeta>;
@@ -144,8 +153,10 @@ export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveS
   const projections = loadProjections(opts.dataPath, opts.year);
 
   let snapshot: any = {};
+  let ok = false;
   try {
     snapshot = await fetchInitialSnapshot(opts);
+    ok = true;
   } catch {
     snapshot = {};
   }
@@ -158,6 +169,7 @@ export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveS
   const playerMeta = buildPlayerMeta(opts.year, ids, projections);
 
   return {
+    ok,
     teams,
     matchups: snapshot.matchups ?? [],
     playerMeta,

@@ -114,6 +114,17 @@ interface GamePhase {
 }
 const FINAL_PHASE: GamePhase = { state: 'post', progress: 1, sec: 0 };
 
+/** A week's NFL game with its real final scores + assigned phase (pre-strip). */
+interface RawGame {
+  aCode: string;
+  hCode: string;
+  aFinal: number;
+  hFinal: number;
+  phase: GamePhase;
+  /** Retained for deterministic possession assignment. */
+  hash: number;
+}
+
 const game = (
   away: string, aScore: number, home: string, hScore: number,
   state: 'pre' | 'in' | 'post', shortDetail: string, period: number, clock: string,
@@ -270,18 +281,19 @@ function buildFallbackLineup(year: number, fid: string, week: number): StarterSe
 
 /**
  * Assign every NFL game in the week a deterministic phase — ~55% Final, ~45%
- * still in-progress — so the demo shows a live-Sunday mix. Returns both a
- * `byTeam` map (each starter inherits their team's game state) and the strip's
- * `NflGame[]` rendered to match: Final games carry the real final score, live
- * games a partial score + clock + possession. Keyed by `normalizeTeamCode` so
- * the strip and the player rows agree regardless of feed code quirks.
+ * still in-progress — so the demo shows a live-Sunday mix. Returns a `byTeam`
+ * map (each starter inherits their team's game state) plus the raw games with
+ * their real final scores. Keyed by `normalizeTeamCode` so the strip and the
+ * player rows agree regardless of feed code quirks. The strip itself is built
+ * later (`buildStrip`) from actual player liveness, so a game only ever renders
+ * "live" when a starter on it is genuinely still playing.
  */
 function buildGamePhases(dataPath: string, year: number, week: number): {
   byTeam: Map<string, GamePhase>;
-  games: NflGame[];
+  rawGames: RawGame[];
 } {
   const byTeam = new Map<string, GamePhase>();
-  const games: NflGame[] = [];
+  const rawGames: RawGame[] = [];
   const data = readJson(join(process.cwd(), dataPath, 'mfl-feeds', String(year), 'nflSchedule.json'));
   const wk = asArray<any>(data?.fullNflSchedule?.nflSchedule).find(
     (w) => parseInt(w.week, 10) === week,
@@ -296,37 +308,54 @@ function buildGamePhases(dataPath: string, year: number, week: number): {
     const home = teams.find((t) => String(t.isHome) === '1') ?? teams[1];
     const aCode = normalizeTeamCode(String(away.id));
     const hCode = normalizeTeamCode(String(home.id));
-    const aScore = Number(away.score) || 0;
-    const hScore = Number(home.score) || 0;
+    const aFinal = Number(away.score) || 0;
+    const hFinal = Number(home.score) || 0;
 
     const h = hashStr(`${aCode}@${hCode}`);
     const inProgress = h % 20 >= 11; // ~45% of games still being played
 
+    let phase: GamePhase;
     if (!inProgress) {
-      byTeam.set(aCode, FINAL_PHASE);
-      byTeam.set(hCode, FINAL_PHASE);
-      games.push(game(aCode, aScore, hCode, hScore, 'post', 'Final', 4, '0:00', null));
+      phase = FINAL_PHASE;
     } else {
       // Unsigned shift: h can exceed 2^31, and a signed `>>` would go negative
       // → negative index → undefined progress → NaN clock/scores.
       const progress = PROGRESS[(h >>> 5) % PROGRESS.length];
       const sec = Math.round(((1 - progress) * NFL_GAME_SECONDS) / 60) * 60;
-      const phase: GamePhase = { state: 'in', progress, sec };
-      byTeam.set(aCode, phase);
-      byTeam.set(hCode, phase);
-      const elapsed = NFL_GAME_SECONDS - sec;
-      const quarter = Math.min(4, Math.floor(elapsed / 900) + 1);
-      const remInQ = 900 - (elapsed % 900);
-      const clock = `${Math.floor(remInQ / 60)}:${String(remInQ % 60).padStart(2, '0')}`;
-      const poss = h % 2 === 0 ? aCode : hCode;
-      games.push(game(
-        aCode, Math.round(aScore * progress),
-        hCode, Math.round(hScore * progress),
-        'in', `${clock} - ${ordinal(quarter)}`, quarter, clock, poss,
-      ));
+      phase = { state: 'in', progress, sec };
     }
+    byTeam.set(aCode, phase);
+    byTeam.set(hCode, phase);
+    rawGames.push({ aCode, hCode, aFinal, hFinal, phase, hash: h });
   }
-  return { byTeam, games };
+  return { byTeam, rawGames };
+}
+
+/**
+ * Render the NFL strip from the assigned phases, but downgrade any phased-live
+ * game to Final unless a starter on it is actually still playing (`liveTeams`).
+ * This keeps the strip a faithful mirror of the player rows: it never shows a
+ * game live for a matchup whose starters have all been marked final (the
+ * matchup-level "done" override decouples a starter's state from its NFL game).
+ */
+function buildStrip(rawGames: RawGame[], liveTeams: Set<string>): NflGame[] {
+  return rawGames.map((g) => {
+    const live = g.phase.state === 'in' && (liveTeams.has(g.aCode) || liveTeams.has(g.hCode));
+    if (!live) {
+      return game(g.aCode, g.aFinal, g.hCode, g.hFinal, 'post', 'Final', 4, '0:00', null);
+    }
+    const { progress, sec } = g.phase;
+    const elapsed = NFL_GAME_SECONDS - sec;
+    const quarter = Math.min(4, Math.floor(elapsed / 900) + 1);
+    const remInQ = 900 - (elapsed % 900);
+    const clock = `${Math.floor(remInQ / 60)}:${String(remInQ % 60).padStart(2, '0')}`;
+    const poss = g.hash % 2 === 0 ? g.aCode : g.hCode;
+    return game(
+      g.aCode, Math.round(g.aFinal * progress),
+      g.hCode, Math.round(g.hFinal * progress),
+      'in', `${clock} - ${ordinal(quarter)}`, quarter, clock, poss,
+    );
+  });
 }
 
 /**
@@ -364,8 +393,10 @@ export function getLiveScoringSample(
   const playersYetToPlay: Record<string, number> = {};
   const moments: MomentSeed[] = [];
 
-  // Per-NFL-game phases (some Final, some in-progress) + the matching strip.
-  const { byTeam, games: nflGames } = buildGamePhases(league!.dataPath, year, week);
+  // Per-NFL-game phases (some Final, some in-progress). The strip is rendered
+  // afterward from the teams that actually have a live starter (`liveTeams`).
+  const { byTeam, rawGames } = buildGamePhases(league!.dataPath, year, week);
+  const liveTeams = new Set<string>();
 
   const franchiseIds = new Set<string>();
   for (const m of final.matchups) {
@@ -443,6 +474,7 @@ export function getLiveScoringSample(
         projected,
       };
       rows.push({ id: r.id, live, secondsRemaining: sec, status: 'starter' });
+      if (sec > 0 && nflTeam) liveTeams.add(normalizeTeamCode(nflTeam));
       if (!topStarter || live > topStarter.live) {
         topStarter = { name: m?.name ?? 'Unknown Player', team: nflTeam, live, sec };
       }
@@ -469,6 +501,10 @@ export function getLiveScoringSample(
 
   // Surface the biggest performances first.
   moments.sort((a, b) => b.delta - a.delta);
+
+  // Build the NFL strip now that we know which teams actually have a live
+  // starter, so a phased-live game reads Final unless a starter is still on it.
+  const nflGames = buildStrip(rawGames, liveTeams);
 
   const matchups = opts.doubleheader
     ? [...final.matchups, ...buildRoundB(final.matchups)]
