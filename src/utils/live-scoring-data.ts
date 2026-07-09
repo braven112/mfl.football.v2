@@ -156,7 +156,10 @@ export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveS
   let ok = false;
   try {
     snapshot = await fetchInitialSnapshot(opts);
-    ok = true;
+    // Trust the fetch only when BOTH the internal API responded (no throw, res.ok)
+    // AND its payload's `ok` isn't explicitly false (which the API sets when the
+    // upstream MFL liveScoring request failed — the internal route still 200s).
+    ok = snapshot?.ok !== false;
   } catch {
     snapshot = {};
   }

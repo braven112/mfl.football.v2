@@ -105,6 +105,8 @@ export interface NflScoreboardResponse {
 
 /** API response from /api/live-scoring (enhanced with matchup pairings) */
 export interface LiveScoringResponse {
+  /** False when the upstream MFL liveScoring request failed (route still 200s). */
+  ok?: boolean;
   week: number;
   scores: Record<string, number>;
   remaining: Record<string, number>;
