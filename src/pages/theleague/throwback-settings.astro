@@ -1,0 +1,187 @@
+---
+/**
+ * Throwback Week settings — /theleague/throwback-settings
+ *
+ * Owner-facing picker: choose which legacy era your team throws back to
+ * during a designated Throwback Week. Auth-required, own-franchise only.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
+import { getThrowbackPreference } from '../../utils/throwback-store';
+import leagueConfig from '../../data/theleague.config.json';
+
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId) {
+  return Astro.redirect('/theleague/login?redirect=/theleague/throwback-settings');
+}
+
+const team = leagueConfig.teams.find((t) => t.franchiseId === user.franchiseId);
+if (!team) {
+  return Astro.redirect('/theleague');
+}
+
+const eligibleEras = getEligibleThrowbackEras(team);
+const preference = await getThrowbackPreference(user.franchiseId);
+const selectedYearStart = preference?.yearStart ?? null;
+---
+
+<TheLeagueLayout title="Throwback Week Settings | The League">
+  <main class="tbw-page">
+    <header class="tbw-header">
+      <h1>Throwback Week</h1>
+      <p>
+        Pick which era of {team.name} shows up on live scoring, matchups, and
+        your lineup during a designated Throwback Week. Your choice is saved
+        automatically and stays put until you change it.
+      </p>
+    </header>
+
+    {eligibleEras.length === 0 ? (
+      <p class="tbw-empty">
+        {team.name} doesn't have any eligible legacy eras yet — check back
+        once more vintage art is recovered.
+      </p>
+    ) : (
+      <form id="tbw-form" class="tbw-grid" data-selected={selectedYearStart ?? ''}>
+        {eligibleEras.map((era) => (
+          <label class="tbw-card" data-year-start={era.yearStart}>
+            <input
+              type="radio"
+              name="yearStart"
+              value={era.yearStart}
+              checked={era.yearStart === selectedYearStart}
+            />
+            <img class="tbw-card__banner" src={era.banner} alt={`${era.name} banner`} loading="lazy" />
+            <div class="tbw-card__body">
+              <img class="tbw-card__icon" src={era.icon} alt="" loading="lazy" />
+              <div>
+                <div class="tbw-card__name">{era.name}</div>
+                <div class="tbw-card__years">{era.yearStart}–{era.yearEnd}</div>
+              </div>
+            </div>
+          </label>
+        ))}
+      </form>
+    )}
+
+    <p id="tbw-status" class="tbw-status" role="status" aria-live="polite"></p>
+  </main>
+</TheLeagueLayout>
+
+<script>
+  const form = document.getElementById('tbw-form') as HTMLFormElement | null;
+  const status = document.getElementById('tbw-status');
+
+  form?.addEventListener('change', async (event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.name !== 'yearStart') return;
+
+    const yearStart = Number(target.value);
+    if (status) status.textContent = 'Saving…';
+
+    try {
+      const res = await fetch('/api/throwback-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yearStart }),
+      });
+      const data = await res.json();
+      if (status) status.textContent = data.success ? 'Saved.' : (data.error || 'Failed to save.');
+    } catch {
+      if (status) status.textContent = 'Failed to save — check your connection.';
+    }
+  });
+</script>
+
+<style>
+  .tbw-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  .tbw-header h1 {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-2xl);
+  }
+
+  .tbw-header p {
+    color: var(--content-text-muted);
+    max-width: 60ch;
+  }
+
+  .tbw-empty {
+    color: var(--content-text-muted);
+  }
+
+  .tbw-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .tbw-card {
+    position: relative;
+    display: block;
+    border: 2px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--card-surface);
+    transition: border-color 0.15s ease;
+  }
+
+  .tbw-card:has(input:checked) {
+    border-color: var(--color-accent);
+  }
+
+  .tbw-card input {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 20px;
+    height: 20px;
+  }
+
+  .tbw-card__banner {
+    display: block;
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    background: var(--content-border);
+  }
+
+  .tbw-card__body {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .tbw-card__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .tbw-card__name {
+    font-weight: 600;
+  }
+
+  .tbw-card__years {
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  .tbw-status {
+    margin-top: 1rem;
+    min-height: 1.2em;
+    color: var(--content-text-muted);
+  }
+</style>

@@ -30,6 +30,7 @@ export interface TeamInfo {
   /** Dark-mode brand secondary — used in place of `colorSecondary` on dark surfaces. */
   colorSecondaryDark?: string;
   icon?: string;
+  banner?: string;
 }
 
 /** A player's live NFL game state, derived from remaining game-seconds. */

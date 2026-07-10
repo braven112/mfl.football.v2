@@ -27,7 +27,9 @@ import {
   type FaceoffScoreSource,
   type FaceoffStatCandidate,
 } from '../../utils/hero-casting';
-import { getFranchiseBrand } from '../../utils/franchise-brand';
+import { getThrowbackFranchiseBrand } from '../../utils/franchise-brand';
+import { isThrowbackWeek } from '../../data/theleague/throwback-config';
+import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
 import '../../styles/loading.css';
 
@@ -510,9 +512,15 @@ if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0)
       };
       // The faceoff is about the FANTASY matchup, so each panel wears its
       // franchise: brand color tint + GroupMe crest watermark (the
-      // RecapCompositeHero convention), not the player's NFL team.
+      // RecapCompositeHero convention), not the player's NFL team. During a
+      // Throwback Week, the chip name swaps to the franchise's resolved
+      // legacy identity (colors/watermark are unaffected — see plan).
+      const throwbackActive = isThrowbackWeek(week);
+      const throwbackOverrides = throwbackActive
+        ? await getAllThrowbackPreferences([user.franchiseId, opponentFranchiseId].filter(Boolean) as string[])
+        : {};
       const sideFor = (model: NonNullable<typeof awayModel>, cands: typeof scored.away, franchiseId: string): FaceoffSide => {
-        const brand = getFranchiseBrand(franchiseId);
+        const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId]);
         return {
           model,
           chip: brand.name || `Franchise ${franchiseId}`,

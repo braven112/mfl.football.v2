@@ -7,7 +7,9 @@ import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
-import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
+import { assembleLiveScoringData, buildTeamsMap, applyThrowbackOverrides, type ConfigTeam } from '../../utils/live-scoring-data';
+import { isThrowbackWeek } from '../../data/theleague/throwback-config';
+import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import { getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
@@ -40,7 +42,16 @@ const isLive = daily.slot === 'live-scoring';
 
 const authUser = getAuthUser(Astro.request);
 const userFranchiseId = authUser?.franchiseId;
-const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+let configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+// Throwback Week: swap every team's name/icon/banner to its resolved legacy
+// identity before any downstream data assembly touches configTeams — both
+// the live path (via assembleLiveScoringData -> buildTeamsMap) and the demo
+// path below pick this up for free.
+if (isThrowbackWeek(week)) {
+  const ownerOverrides = await getAllThrowbackPreferences(configTeams.map((t) => t.franchiseId));
+  configTeams = applyThrowbackOverrides(configTeams, true, ownerOverrides);
+}
 
 // Demo/sample mode. During the offseason MFL turns off the liveScoring feed, so
 // the real fetch comes back with no matchups — in that case the page auto-falls

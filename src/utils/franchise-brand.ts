@@ -26,6 +26,7 @@ import {
   getTeamColorTertiary,
   getTeamColorQuaternary,
 } from './team-colors';
+import { resolveThrowbackIdentity } from './throwback-identity';
 
 export interface FranchiseBrand {
   franchiseId: string;
@@ -49,6 +50,8 @@ export interface FranchiseBrand {
   groupMe: string;
   /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future dark-mode watermark swap. */
   groupMeDark?: string;
+  /** Franchise banner. Optional — not every consumer has needed this until Throwback Week. */
+  banner?: string;
 }
 
 /** League-neutral fallback (TheLeague blue) for unknown franchises. */
@@ -77,12 +80,39 @@ for (const t of ((leagueConfig as any).teams ?? []) as any[]) {
     // Prefer the explicit groupMe path; fall back to the per-id avatar.
     groupMe: t.groupMe ?? (t.franchiseId ? `/assets/theleague/group-me/${t.franchiseId}.png` : ''),
     groupMeDark: t.groupMeDark,
+    banner: t.banner,
   });
 }
 
 /** Brand for a franchise id, or the league-neutral fallback when unknown. */
 export function getFranchiseBrand(franchiseId: string): FranchiseBrand {
   return BRANDS.get(franchiseId) ?? { franchiseId, ...FRANCHISE_BRAND_FALLBACK };
+}
+
+/**
+ * Throwback Week-aware variant of `getFranchiseBrand`. When `isActive`,
+ * overlays the franchise's resolved legacy name/icon/banner (owner override
+ * -> commissioner default -> earliest eligible era) onto the current brand;
+ * colors are left untouched. No-op otherwise.
+ */
+export function getThrowbackFranchiseBrand(
+  franchiseId: string,
+  isActive: boolean,
+  ownerOverrideYearStart?: number
+): FranchiseBrand {
+  const brand = getFranchiseBrand(franchiseId);
+  if (!isActive) return brand;
+
+  const team = ((leagueConfig as any).teams ?? []).find((t: any) => t.franchiseId === franchiseId);
+  if (!team) return brand;
+
+  const identity = resolveThrowbackIdentity(team, ownerOverrideYearStart);
+  return {
+    ...brand,
+    name: identity.name,
+    icon: identity.icon ?? brand.icon,
+    banner: identity.banner ?? brand.banner,
+  };
 }
 
 /** A dark → franchise-color gradient (mirrors the NFL panel treatment). */
