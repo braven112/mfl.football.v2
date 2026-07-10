@@ -151,8 +151,16 @@ const selectedYearStart = preference?.yearStart ?? null;
     display: block;
     width: 100%;
     height: 90px;
-    object-fit: cover;
+    /* Fit the whole banner (letterboxed) so wordmarks are never clipped —
+       legacy banners vary wildly in aspect ratio. */
+    object-fit: contain;
     background: var(--content-border);
+  }
+
+  /* Placeholder banners (no recovered art) are a generic svg — hide the
+     letterbox artifact and just show the muted fill. */
+  .tbw-card__banner[src$='.svg'] {
+    object-fit: cover;
   }
 
   .tbw-card__body {
