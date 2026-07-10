@@ -140,4 +140,95 @@ describe('resolveUnsignedFaAlerts', () => {
       urgent: false,
     });
   });
+
+  it('stays visible with declaration metadata when the owner already declared years', () => {
+    const now = offseasonDate();
+    const currentYear = now.getFullYear();
+    const rosterPlayers: RosterPlayer[] = [
+      {
+        id: '14867',
+        salary: '1000000.00',
+        contractYear: '1',
+        contractInfo: '',
+        status: 'ROSTER',
+      },
+    ];
+
+    const oneHourAgo = Math.floor(now.getTime() / 1000) - 3600;
+    const rawTransactions: MFLRawTransaction[] = [
+      {
+        type: 'FREE_AGENT',
+        franchise: '0009',
+        timestamp: String(oneHourAgo),
+        transaction: '14867|,',
+      },
+    ];
+
+    const playersMap = new Map<string, MFLPlayerInfo>([
+      ['14867', { id: '14867', name: 'Test Pickup', position: 'WR', team: 'DAL' }],
+    ]);
+
+    const alerts = resolveUnsignedFaAlerts({
+      franchiseId: '0009',
+      rosterPlayers,
+      rawTransactions,
+      playersMap,
+      currentYear,
+      referenceDate: now,
+      declarationsByPlayer: new Map([
+        ['14867', { requestedYears: 3, status: 'pending' }],
+      ]),
+    });
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({
+      playerId: '14867',
+      declaredYears: 3,
+      declarationStatus: 'pending',
+    });
+  });
+
+  it('omits declaration metadata when the player has no matching declaration', () => {
+    const now = offseasonDate();
+    const currentYear = now.getFullYear();
+    const rosterPlayers: RosterPlayer[] = [
+      {
+        id: '14867',
+        salary: '1000000.00',
+        contractYear: '1',
+        contractInfo: '',
+        status: 'ROSTER',
+      },
+    ];
+
+    const oneHourAgo = Math.floor(now.getTime() / 1000) - 3600;
+    const rawTransactions: MFLRawTransaction[] = [
+      {
+        type: 'FREE_AGENT',
+        franchise: '0009',
+        timestamp: String(oneHourAgo),
+        transaction: '14867|,',
+      },
+    ];
+
+    const playersMap = new Map<string, MFLPlayerInfo>([
+      ['14867', { id: '14867', name: 'Test Pickup', position: 'WR', team: 'DAL' }],
+    ]);
+
+    const alerts = resolveUnsignedFaAlerts({
+      franchiseId: '0009',
+      rosterPlayers,
+      rawTransactions,
+      playersMap,
+      currentYear,
+      referenceDate: now,
+      declarationsByPlayer: new Map([
+        ['99999', { requestedYears: 2, status: 'approved' }],
+      ]),
+    });
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].declaredYears).toBeUndefined();
+    expect(alerts[0].declarationStatus).toBeUndefined();
+  });
 });

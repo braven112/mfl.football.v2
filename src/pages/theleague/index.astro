@@ -37,7 +37,8 @@ import { SALARY_YEARS } from '../../utils/salary-calculations';
 import { computeLeagueSummary, type SalaryPlayer, type TeamConfig } from '../../utils/league-summary-utils';
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { parseNumber } from '../../utils/formatters';
-import { resolveUnsignedFaAlerts, type DashboardPlayerContext } from '../../utils/homepage-dashboard';
+import { resolveUnsignedFaAlerts, type DashboardPlayerContext, type DeclaredYearsInfo } from '../../utils/homepage-dashboard';
+import { getDeclarationsByFranchise } from '../../utils/contract-storage';
 import { loadActiveAuctions, type MflPlayerExtras } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
@@ -425,6 +426,22 @@ const userRosterPlayers: RosterPlayer[] = userFranchiseId
       status: player.status,
     }))
   : [];
+const declarationsByPlayer = new Map<string, DeclaredYearsInfo>();
+if (userFranchiseId) {
+  const franchiseDeclarations = await getDeclarationsByFranchise(userFranchiseId);
+  const latestSubmittedAtByPlayer = new Map<string, string>();
+  for (const decl of franchiseDeclarations) {
+    if (decl.status !== 'pending' && decl.status !== 'approved') continue;
+    // A player can accumulate more than one pending/approved record across
+    // acquisitions over time — always keep the most recently submitted one,
+    // not whichever happens to be last in storage order.
+    const latestSoFar = latestSubmittedAtByPlayer.get(decl.playerId);
+    if (latestSoFar && latestSoFar >= decl.submittedAt) continue;
+    latestSubmittedAtByPlayer.set(decl.playerId, decl.submittedAt);
+    declarationsByPlayer.set(decl.playerId, { requestedYears: decl.requestedYears, status: decl.status });
+  }
+}
+
 const unsignedFaAlerts = resolveUnsignedFaAlerts({
   franchiseId: userFranchiseId,
   rosterPlayers: userRosterPlayers,
@@ -433,6 +450,7 @@ const unsignedFaAlerts = resolveUnsignedFaAlerts({
   playerContextById: playerDisplayById,
   currentYear: parseInt(currentSalaryYear, 10),
   referenceDate: now,
+  declarationsByPlayer,
 });
 
 // Active auctions card — only fetch when the card is eligible to show OR the
@@ -629,6 +647,8 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
       <HpUnsignedFaCard
         isAuthenticated={isAuthenticated}
         userFranchiseId={userFranchiseId}
+        leagueId={mflLeagueId}
+        franchiseName={userTeamName}
         alerts={unsignedFaAlerts}
         referenceDate={now}
       />

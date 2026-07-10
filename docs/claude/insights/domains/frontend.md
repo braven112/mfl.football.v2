@@ -753,3 +753,44 @@ any page silently breaks in dark mode.
 **Evidence:** `src/pages/404.astro`, `src/middleware.ts`,
 `src/utils/league-host-map.ts#resolveLeagueRewrite`,
 `src/utils/league-context.ts#getLeagueContext`, `src/utils/nav-utils.ts#resolveLeaguePath`.
+
+---
+
+## Current-year salary snapshot has two copies, only one gets synced (2026-07-09)
+
+**Context:** Debugging why a real, confirmed MFL auction win (`AUCTION_WON`
+transaction, current week) wasn't showing up in the homepage's "Unsigned FA
+Adds" card even though the eligibility logic was correct.
+
+**Insight:** There are two files holding the same current-year salary/roster
+snapshot: `src/data/mfl-player-salaries-{year}.json` (root — the flat,
+one-file-per-year historical archive going back to 2007) and
+`src/data/theleague/mfl-player-salaries-{year}.json` (nested — written every 5
+minutes by the `roster-sync` GitHub Action via `scripts/update-salary-averages.mjs`,
+whose `outputRaw` path is hardcoded to the nested location). Every page that
+globs current-season roster data — `index.astro`, `rosters.astro`,
+`calculator.astro`, `dead-money.astro`, `mvp.astro`, `league-summary.astro`,
+`players.astro`, `league-comparison.astro` — reads the **root** path via
+`import.meta.glob('../../data/mfl-player-salaries-*.json')`. For the current
+year, the root file only gets written once, at the Feb rollover commit, and
+never again — so it silently drifts stale for the rest of the season while the
+nested copy stays fresh. Past-season files happen to closely match between the
+two locations (they freeze once the season ends), which is why this wasn't
+caught before — it only bites the live, active year.
+
+**Gotcha:** `git log --oneline -- src/data/mfl-player-salaries-2026.json`
+shows exactly one commit ever (the year-rollover feature); the same command
+against `src/data/theleague/mfl-player-salaries-2026.json` shows dozens of
+`chore: sync rosters and playoff data` commits. `scripts/update-salary-averages.mjs`
+around line 46: `outputRaw = path.join(dataDir, leagueKey, ...)` always nests
+under `leagueKey` (`theleague`/`afl`), never writes to `dataDir` root.
+
+**Recommendation:** Not yet fixed — flagged to the user, who deferred the real
+pipeline fix in favor of a one-time manual copy
+(`cp src/data/theleague/mfl-player-salaries-2026.json src/data/mfl-player-salaries-2026.json`)
+to unblock testing. The real fix is either (a) point `update-salary-averages.mjs`'s
+`outputRaw` at the root path for the *current* season only (leave history years
+nested), or (b) repoint all the consuming globs at the nested path. Don't
+assume the root file is fresh for the current year without checking — diff it
+against the nested `theleague/`/`afl/` copy first if a "why isn't this player
+showing up" bug surfaces on any homepage/roster/salary page.
