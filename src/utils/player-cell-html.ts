@@ -21,7 +21,7 @@
 import type { PlayerModalData } from './player-modal-trigger';
 import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
-import { getPlayerAvatarBackground } from './nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder } from './nfl-team-colors';
 
 export interface PlayerCellOptions {
   name: string;
@@ -41,6 +41,13 @@ export interface PlayerCellOptions {
   afterName?: string;
   /** Additional CSS class on the root element */
   className?: string;
+  /**
+   * The avatar image is a team/franchise logo rather than a player headshot
+   * (e.g. a dead-money "team total" row with no specific player). Reuses the
+   * DEF avatar treatment — full-bleed `object-fit: contain`, no crop/scale,
+   * transparent chip — so the logo isn't cropped by the headshot circle.
+   */
+  isLogoAvatar?: boolean;
 }
 
 function esc(str: string): string {
@@ -64,6 +71,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     contractStatus,
     afterName = '',
     className = '',
+    isLogoAvatar = false,
   } = opts;
 
   // Resolve IDs for headshot fallback chain (explicit props take priority over playerData)
@@ -71,6 +79,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 
   const isDef = position?.toUpperCase() === 'DEF';
+  const isLogo = isDef || isLogoAvatar;
   const normalized = nflTeam ? normalizeTeamCode(nflTeam) : '';
   const teamLogo = normalized ? getNflLogoUrl(normalized) : '';
 
@@ -82,9 +91,11 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const nflLogoUrl = isDef ? '' : (teamLogo || '/assets/nfl-logos/NFL.svg');
 
   const sizeClass = size === 'compact' ? ' player-cell--compact' : '';
-  const defClass = isDef ? ' player-cell__avatar--def' : '';
-  // Team-color backdrop behind the headshot (DEF logos keep transparent).
-  const avatarStyle = isDef ? '' : ` style="--player-avatar-bg: ${getPlayerAvatarBackground(nflTeam ?? '')}"`;
+  const defClass = isLogo ? ' player-cell__avatar--def' : '';
+  // Team-color backdrop behind the headshot (logo chips keep transparent).
+  const avatarStyle = isLogo
+    ? ''
+    : ` style="--player-avatar-bg: ${getPlayerAvatarBackground(nflTeam ?? '')}; --player-avatar-border: ${getPlayerAvatarBorder(nflTeam ?? '')}"`;
 
   // Name element — clickable if playerData provided
   let nameHtml: string;
@@ -108,9 +119,14 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     metaHtml = `<div class="player-meta">${logoPart}${posPart}</div>`;
   }
 
+  const avatarAlt = isDef ? `${nflTeam || 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`;
+  // Logo avatars are static site assets, not headshots — don't chain into the
+  // college/MFL headshot fallback cascade if one 404s, just drop the src.
+  const avatarOnerror = isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId);
+
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}"${avatarStyle}>
-    <img src="${esc(avatarSrc)}" alt="${isDef ? esc(`${nflTeam || 'DEF'} logo`) : esc(`${name} headshot`)}" loading="lazy" decoding="async" onerror="${esc(buildHeadshotOnerror(resolvedMflId, resolvedEspnId))}" />
+    <img src="${esc(avatarSrc)}" alt="${esc(avatarAlt)}" loading="lazy" decoding="async" onerror="${esc(avatarOnerror)}" />
   </div>
   <div class="player-cell__info">
     ${nameHtml}

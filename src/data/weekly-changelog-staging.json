@@ -2,6 +2,30 @@
   "weekOf": "2026-07-13",
   "changes": [
     {
+      "date": "2026-07-10",
+      "type": "style-tweak",
+      "summary": "Player avatars in light mode got a lot less gloomy. The little circular headshots on the Free Agents list (and everywhere else the player lockup shows up) used to sit on a dark team-color gradient no matter the theme — heavy and hard to read against a bright white page. Light mode now uses a soft gray chip with a thin team-color ring instead; dark mode keeps its original moody gradient look untouched.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-10",
+      "type": "bug-fix",
+      "summary": "Fixed a cropped team logo on the Rosters page's Cap Hits / Dead Money table. The \"[Year] Dead Money\" total row shows a franchise crest instead of a player photo, but it was getting squeezed and cropped by the same circular-cutout treatment built for headshots — top of the logo clipped off. It now renders full and uncropped, just like the DEF logo chips elsewhere on the site.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-07-10",
+      "type": "style-tweak",
+      "summary": "AFL player avatars sized up to match TheLeague. Rosters, the NFL/College analytics grids, the trade builder, and the keeper planner were all quietly running smaller headshot circles than TheLeague's equivalents — now they're the same 40px size across both sites.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
+    },
+    {
       "date": "2026-07-09",
       "type": "style-tweak",
       "summary": "The Pacific Pigskins and Vitside Mafia crests finally got dark-mode variants. Both teams' logos used to stay stuck in their light-theme colors when you had dark mode on, standing out (in a bad way) against every other team's icon smoothly swapping over — now they blend in like everyone else, on both TheLeague and AFL sites.",

@@ -6767,12 +6767,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           const enrichedHeadshot = adj.headshot;
 
           let headshot = DEFAULT_HEADSHOT_URL;
+          let isTeamIcon = false;
           if (enrichedHeadshot) {
             headshot = enrichedHeadshot;
           } else if (enrichedId) {
             headshot = getPlayerImageUrl(enrichedId);
           } else if (!enrichedId && config.teams[franchiseId]?.icon) {
             headshot = config.teams[franchiseId].icon;
+            isTeamIcon = true;
           }
           const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
           const playerCellHtml = buildPlayerCellHTML({
@@ -6782,6 +6784,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             nflTeam: adj.nflTeam || undefined,
             mflId: enrichedId || undefined,
             espnId: enrichedEspnId || undefined,
+            isLogoAvatar: isTeamIcon,
           });
           return `<tr class="${rowClasses.join(' ').trim()}">
             <td data-column="player" class="deadmoney-player-cell">

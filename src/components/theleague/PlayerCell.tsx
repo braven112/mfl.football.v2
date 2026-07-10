@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/player-cell.css';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
 import {
   DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
@@ -58,7 +58,10 @@ export function PlayerCell({
   // treatment). Same gradient as the player modal band.
   const avatarStyle = isDef
     ? undefined
-    : ({ '--player-avatar-bg': getPlayerAvatarBackground(nflTeam ?? '') } as React.CSSProperties);
+    : ({
+        '--player-avatar-bg': getPlayerAvatarBackground(nflTeam ?? ''),
+        '--player-avatar-border': getPlayerAvatarBorder(nflTeam ?? ''),
+      } as React.CSSProperties);
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;

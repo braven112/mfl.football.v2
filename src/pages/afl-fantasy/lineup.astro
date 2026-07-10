@@ -433,6 +433,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                       position={slot.position}
                       nflTeam=""
                       size="default"
+                      isLogoAvatar={true}
                     />
                   </div>
                 )}
@@ -750,6 +751,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           position: slot.position,
           nflTeam: '',
           size: 'default',
+          isLogoAvatar: true,
         });
         btn.innerHTML = `<div class="lineup-slot__player lineup-slot__player--empty">${emptyCell}</div>`;
         return;
