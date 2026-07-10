@@ -977,3 +977,30 @@ fall back to the league-neutral blue.
   setting it keeps intent clear.
 - MFL-JPG headshots have baked backgrounds and cover the gradient (same as the
   modal); the color only shows through transparent ESPN cutouts. Accepted.
+
+## Player-avatar backdrop goes light-mode-aware + a logo-fit escape hatch (2026-07-09)
+
+Two follow-ups to the avatar gradient above, both found by Brandon eyeballing
+light mode:
+
+- **The dark gradient reads too heavy on a white page.** Light mode now shows
+  a light-gray chip (`var(--content-bg-muted)`) with a **team-color ring**
+  instead — same identity, lighter weight; dark mode is unchanged. This needed
+  a SECOND custom property, `--player-avatar-border` (new
+  `getPlayerAvatarBorder(teamCode)`, just the team's `primary` hex — no
+  gradient math), set alongside `--player-avatar-bg` at all four touch points.
+  `player-cell.css` now defines the light (default) rule with the gray+border
+  look and an `html.dark .player-cell__avatar:not(.player-cell__avatar--def)`
+  override that restores the old gradient — **must** exclude `--def` or the
+  dark-mode rule fights the transparent-logo rule at equal specificity.
+- **A franchise/team ICON is not a player headshot — reusing the plain avatar
+  crops it.** The dead-money table's "team total" row (no specific player)
+  falls back to the franchise icon as the `headshot`, but feeding that through
+  the normal (non-DEF) avatar path applies the headshot circle's `cover` +
+  `scale(1.18)` crop meant for a face — it clips the top of the logo. Added
+  `isLogoAvatar` to `PlayerCellOptions` (`player-cell-html.ts` only — the only
+  renderer with a non-headshot fallback case): when true it reuses the
+  `player-cell__avatar--def` class (full-bleed `object-fit: contain`, no crop,
+  transparent chip) even though `position` isn't literally `'DEF'`. Any future
+  "team icon standing in for a player" row should set this flag rather than
+  inventing a new avatar variant.
