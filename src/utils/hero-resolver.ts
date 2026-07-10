@@ -35,6 +35,21 @@ function formatKickerDate(dateStr: string): string {
 /** How many days a new feature stays in the hero as top priority */
 const FEATURE_HERO_DAYS = 7;
 
+/** Per-entry fresh window: an explicit `heroRotationDays` overrides the 7-day default. */
+function heroWindowDays(entry: WhatsNewEntry): number {
+  return entry.heroRotationDays ?? FEATURE_HERO_DAYS;
+}
+
+/**
+ * Whether an entry is inside its hero freshness window. Exported so pages can
+ * cheaply gate per-visitor targeting work (e.g. the homepage only reads the
+ * throwback-preference KV while the Throwback Week promo is still rotating).
+ */
+export function isEntryInHeroWindow(entry: WhatsNewEntry, referenceDate: Date): boolean {
+  const age = daysAgo(entry.date, referenceDate);
+  return age >= 0 && age <= heroWindowDays(entry);
+}
+
 /**
  * How many days a feature stays eligible as the default-fallback hero (3 weeks).
  * Past this, a feature reads like stale news in the hero, so we fall through to
@@ -347,8 +362,22 @@ function hasFreshFeatureEntry(entries: WhatsNewEntry[] | undefined, now: Date): 
   if (!entries) return false;
   return entries.some((e) => {
     if (e.excludeFromHero || !entryAppliesToLeague(e, 'theleague')) return false;
-    const age = daysAgo(e.date, now);
-    return age >= 0 && age <= FEATURE_HERO_DAYS;
+    return isEntryInHeroWindow(e, now);
+  });
+}
+
+/**
+ * Whether an extended-rotation feature (explicit `heroRotationDays`) is still
+ * in window. Only these entries stay in the coin-flip rotation against the
+ * urgent Cut Watch tier — ordinary 7-day features remain locked out there
+ * (P1 beats P2, as always).
+ */
+function hasExtendedRotationEntry(entries: WhatsNewEntry[] | undefined, now: Date): boolean {
+  if (!entries) return false;
+  return entries.some((e) => {
+    if (e.heroRotationDays === undefined) return false;
+    if (e.excludeFromHero || !entryAppliesToLeague(e, 'theleague')) return false;
+    return isEntryInHeroWindow(e, now);
   });
 }
 
@@ -387,11 +416,17 @@ export function resolveHeroContent(
   // hero (title, screenshot, cast player) between same-day SSR renders and
   // fights the composite model's own daily-stable casting. Same rule as the
   // AFL resolver's fresh-feature pick.
-  const freshFeatures = heroEligible.filter((e) => {
-    const age = daysAgo(e.date, now);
-    return age >= 0 && age <= FEATURE_HERO_DAYS;
-  });
-  const freshPick = dailyPick(freshFeatures, now, 'theleague-feature', (e) => e.id);
+  const freshFeatures = heroEligible.filter((e) => isEntryInHeroWindow(e, now));
+  // A targeted campaign promo (explicit heroRotationDays) outranks routine
+  // fresh launches for the daily pick while its window runs — it exists to
+  // convert, not to share days. Visitors it no longer targets get it filtered
+  // out upstream (see the homepage's throwback targeting), so routine entries
+  // resume for them automatically.
+  const extendedFresh = freshFeatures.filter((e) => e.heroRotationDays !== undefined);
+  const freshPick = dailyPick(
+    extendedFresh.length > 0 ? extendedFresh : freshFeatures,
+    now, 'theleague-feature', (e) => e.id,
+  );
   if (freshPick) {
     return featureToHero(freshPick);
   }
@@ -1073,20 +1108,33 @@ export function resolveHeroState(
   // --- P1: Cut Watch — final 30 days (imminent roster deadline) ---
   // The only ambient offseason state that outranks a fresh feature: the deadline
   // is close enough that it must lead regardless of what just shipped.
+  //
+  // Exception: an extended-rotation entry (explicit `heroRotationDays`, e.g. the
+  // Throwback Week era-picker campaign) stays in rotation through the urgent
+  // tier — Cut Watch and the promo split visits 50/50 via the same coin-flip
+  // contract as the July flip below (rng() < 0.5 = deadline wins). Ordinary
+  // 7-day features are still locked out here.
   if (isCutWatchUrgent(now)) {
-    return buildState('cut-watch', 'P1', 'isCutWatchUrgent', now, testMode, {
-      fallbackHero: {
-        source: 'event',
-        title: 'Cut Watch — Roster Deadline',
-        summary: 'Teams must cut to 22 active players. Who\'s on the bubble?',
-        link: '/theleague/rosters',
-        linkLabel: 'View Full Rosters',
-        icon: 'scissors',
-        accentColor: 'var(--color-error, #dc2626)',
-        kicker: 'Cut Watch',
-        isUrgent: true,
-      },
-    });
+    const extendedPromoCompeting = !!timeline && hasExtendedRotationEntry(entries, now);
+    const promoWinsFlip = extendedPromoCompeting && rng() >= 0.5;
+    if (!promoWinsFlip) {
+      return buildState('cut-watch', 'P1', 'isCutWatchUrgent', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: 'Cut Watch — Roster Deadline',
+          summary: 'Teams must cut to 22 active players. Who\'s on the bubble?',
+          link: '/theleague/rosters',
+          linkLabel: 'View Full Rosters',
+          icon: 'scissors',
+          accentColor: 'var(--color-error, #dc2626)',
+          kicker: 'Cut Watch',
+          isUrgent: true,
+        },
+      });
+    }
+    // Promo won the flip — fall through: isCutWatchEarly is false during the
+    // urgent tier, so the ambient P3 block below defers and the P2 fallback
+    // resolves the fresh feature.
   }
 
   // --- P3: Ambient offseason phases ---
@@ -1103,7 +1151,8 @@ export function resolveHeroState(
   // article can headline the hero as the deadline approaches. Notes:
   //  - Before July 1, features still lead early Cut Watch (no flip).
   //  - The final-30-day *urgent* Cut Watch tier already outranks features (P1
-  //    above), so this only affects the early/ambient tier (~Jul 1 → faClose−30d).
+  //    above — with its own flip for extended-rotation promos), so this only
+  //    affects the early/ambient tier (~Jul 1 → faClose−30d).
   //  - With no fresh feature, early Cut Watch shows 100% anyway, so the "at least
   //    50%" floor always holds.
   //  - Per-visit randomness is intentional (the hero may differ between
