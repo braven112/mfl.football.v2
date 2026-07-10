@@ -19,18 +19,17 @@ export const THROWBACK_WEEKS: number[] = [4];
  * {franchiseId, yearStart} pairs whose history entry's icon/banner asset is
  * also claimed by another franchise's entry (see plan's "Data problems"
  * section). Excluded from throwback eligibility until each gets distinct
- * recovered art:
+ * recovered art.
  *
- * - Da Dangsters (0002) "Sabertooths" (2007) — asset belongs to Gridiron
- *   Geeks' 2009 "Sabertooths" era instead.
- *
- * Computer Jocks (0010) "Midwestside Connection" (2011) was in this list
- * for the same reason but got distinct recovered art (icon) plus the
- * generic placeholder banner — no longer excluded.
+ * Both former conflicts are resolved:
+ * - Da Dangsters (0002) "Sabertooths" (2007) shares its icon/banner with
+ *   Gridiron Geeks' 2009 "Sabertooths" era on purpose — same intentional
+ *   shared art, not a data bug. No longer excluded.
+ * - Computer Jocks (0010) "Midwestside Connection" (2011) got distinct
+ *   recovered art (icon) plus the generic placeholder banner — no longer
+ *   excluded.
  */
-export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number }[] = [
-  { franchiseId: '0002', yearStart: 2007 },
-];
+export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number }[] = [];
 
 /**
  * Commissioner-picked starting default per franchise (`franchiseId` ->
@@ -41,7 +40,7 @@ export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number
  */
 export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0001': 2007, // Pacific Pigskins
-  '0002': 2008, // Degenerates
+  '0002': 2007, // Sabertooths
   '0003': 2007, // Mistakes Were Made
   '0004': 2007, // Las Vegas Elite
   '0005': 2007, // The Executioners
