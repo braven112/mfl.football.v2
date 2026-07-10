@@ -998,9 +998,40 @@ light mode:
   falls back to the franchise icon as the `headshot`, but feeding that through
   the normal (non-DEF) avatar path applies the headshot circle's `cover` +
   `scale(1.18)` crop meant for a face — it clips the top of the logo. Added
-  `isLogoAvatar` to `PlayerCellOptions` (`player-cell-html.ts` only — the only
-  renderer with a non-headshot fallback case): when true it reuses the
+  `isLogoAvatar` to `PlayerCellOptions` (`player-cell-html.ts`) AND `Props`
+  (`PlayerCell.astro` — ported after Codex's review caught the empty-lineup-slot
+  NFL-logo placeholder hitting the same crop): when true it reuses the
   `player-cell__avatar--def` class (full-bleed `object-fit: contain`, no crop,
-  transparent chip) even though `position` isn't literally `'DEF'`. Any future
-  "team icon standing in for a player" row should set this flag rather than
-  inventing a new avatar variant.
+  transparent chip) even though `position` isn't literally `'DEF'`. It also
+  fixes the `alt` text (was hardcoded to "... headshot") and swaps the `onerror`
+  to a plain no-op instead of chaining into the college/MFL headshot cascade —
+  a static logo asset shouldn't fall back to a player-photo placeholder. Any
+  future "team icon standing in for a player" row should set this flag rather
+  than inventing a new avatar variant. `PlayerCell.tsx` doesn't have the flag
+  yet — no call site currently misuses it there, add it if one shows up.
+- **Dark-mode CSS override must exclude every special-treatment avatar class,
+  not just `--def`.** The `html.dark .player-cell__avatar:not(.player-cell__avatar--def)`
+  rule has HIGHER specificity than `.player-cell__avatar--eligible`'s
+  border-color (element+class+class vs. one class), so in dark mode it was
+  silently overriding the blue demo-eligible ring's border color via the
+  `border` shorthand. Fixed by adding `:not(.player-cell__avatar--eligible)`
+  too. Lesson: a themed override on a shared class needs to `:not()` out every
+  other modifier class on that element, not just the one you were thinking
+  about when you wrote it — found by Codex's independent review, not caught
+  in manual browser verification.
+
+## AFL player-cell avatars sized down from TheLeague — now matched (2026-07-10)
+
+AFL's roster table, NFL/College analytics grids, trade builder pickers, and
+`KeeperPlanner` all passed `size="compact"` (32px) to `PlayerCell`, while every
+TheLeague equivalent (roster table, trade builder) uses the 40px default —
+an unintentional drift, not a deliberate density choice. Fix was a straight
+prop removal (`size="compact"` → default) at 9 call sites across
+`rosters.astro`, `trade-builder.astro`, `lineup.astro`, and `KeeperPlanner.astro`.
+**Not every AFL `compact` usage was wrong** — lineup bench rows and the CDM
+(bottom-sheet) modal already matched TheLeague's own bench/CDM (both compact
+on both sides) and were left untouched; check the TheLeague equivalent
+call site before assuming a `compact` is drift vs. intentional. None of the
+surrounding containers (`.kp-card__player`, `.tb-picker__cell`,
+`.players-team__player`) hardcode a pixel width tied to the avatar size — they
+use `flex`/`min-width: 0`, so the size bump needed no layout changes.
