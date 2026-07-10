@@ -429,10 +429,16 @@ const userRosterPlayers: RosterPlayer[] = userFranchiseId
 const declarationsByPlayer = new Map<string, DeclaredYearsInfo>();
 if (userFranchiseId) {
   const franchiseDeclarations = await getDeclarationsByFranchise(userFranchiseId);
+  const latestSubmittedAtByPlayer = new Map<string, string>();
   for (const decl of franchiseDeclarations) {
-    if (decl.status === 'pending' || decl.status === 'approved') {
-      declarationsByPlayer.set(decl.playerId, { requestedYears: decl.requestedYears, status: decl.status });
-    }
+    if (decl.status !== 'pending' && decl.status !== 'approved') continue;
+    // A player can accumulate more than one pending/approved record across
+    // acquisitions over time — always keep the most recently submitted one,
+    // not whichever happens to be last in storage order.
+    const latestSoFar = latestSubmittedAtByPlayer.get(decl.playerId);
+    if (latestSoFar && latestSoFar >= decl.submittedAt) continue;
+    latestSubmittedAtByPlayer.set(decl.playerId, decl.submittedAt);
+    declarationsByPlayer.set(decl.playerId, { requestedYears: decl.requestedYears, status: decl.status });
   }
 }
 

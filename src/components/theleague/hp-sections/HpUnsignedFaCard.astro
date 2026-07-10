@@ -171,7 +171,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
             </p>
             <ul class="hp-fa__list" role="list">
               {visibleDeclared.map((alert) => (
-                <li class="hp-fa__item hp-fa__item--declared">
+                <li class:list={['hp-fa__item', 'hp-fa__item--declared', { 'hp-fa__item--urgent': alert.urgent }]}>
                   <div class="hp-fa__player">
                     <PlayerCell
                       name={alert.name}
@@ -566,17 +566,10 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   // contractInfo (see resolveUnsignedFaAlerts), so this is a deliberately
   // trimmed clone of the year-select branch of rosters.astro's CDM wiring —
   // no action-select, franchise-tag, extension, or cut flows apply here.
+  import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../../utils/nfl';
+
   const DEFAULT_HEADSHOT_URL =
     'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
-  const NFL_TEAM_CITIES: Record<string, string> = {
-    ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo', CAR: 'Carolina',
-    CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland', DAL: 'Dallas', DEN: 'Denver',
-    DET: 'Detroit', GB: 'Green Bay', HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville',
-    KC: 'Kansas City', LAC: 'LA Chargers', LAR: 'LA Rams', LV: 'Las Vegas', MIA: 'Miami',
-    MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'NY Giants', NYJ: 'NY Jets',
-    PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle', SF: 'San Francisco',
-    TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
-  };
   const YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
   function formatSalaryCompact(val: number): string {
@@ -664,9 +657,10 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       }
       const nameEl = document.getElementById('cdm-player-name');
       if (nameEl) nameEl.textContent = data.name;
+      const normalizedTeam = data.nflTeam ? normalizeTeamCode(data.nflTeam) : '';
       const logoEl = document.getElementById('cdm-nfl-logo') as HTMLImageElement | null;
-      if (logoEl) logoEl.src = data.nflTeam ? `/assets/nfl-logos/${data.nflTeam}.svg` : '/assets/nfl-logos/NFL.svg';
-      const teamCity = data.nflTeam ? (NFL_TEAM_CITIES[data.nflTeam] || data.nflTeam) : 'Free Agent';
+      if (logoEl) logoEl.src = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '/assets/nfl-logos/NFL.svg';
+      const teamCity = normalizedTeam ? (NFL_TEAM_CITIES[normalizedTeam] || normalizedTeam) : 'Free Agent';
       const metaText = document.getElementById('cdm-meta-text');
       if (metaText) metaText.textContent = [teamCity, data.position].filter(Boolean).join(' · ');
       const ageEl = document.getElementById('cdm-age-pill');
