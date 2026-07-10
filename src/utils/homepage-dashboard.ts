@@ -30,6 +30,14 @@ export interface UnsignedFaAlert {
   bidAmount?: number;
   hoursRemaining: number;
   urgent: boolean;
+  /** Set when the owner has already submitted a declaration for this player (pending or approved). */
+  declaredYears?: number;
+  declarationStatus?: 'pending' | 'approved';
+}
+
+export interface DeclaredYearsInfo {
+  requestedYears: number;
+  status: 'pending' | 'approved';
 }
 
 interface ResolveUnsignedFaAlertsParams {
@@ -40,6 +48,8 @@ interface ResolveUnsignedFaAlertsParams {
   playerContextById?: Map<string, DashboardPlayerContext>;
   currentYear: number;
   referenceDate?: Date;
+  /** Existing pending/approved declarations for this franchise, keyed by playerId. */
+  declarationsByPlayer?: Map<string, DeclaredYearsInfo>;
 }
 
 export interface ContextualRowsResult<T> {
@@ -92,6 +102,7 @@ export function resolveUnsignedFaAlerts({
   playerContextById = new Map<string, DashboardPlayerContext>(),
   currentYear,
   referenceDate = new Date(),
+  declarationsByPlayer = new Map<string, DeclaredYearsInfo>(),
 }: ResolveUnsignedFaAlertsParams): UnsignedFaAlert[] {
   if (!franchiseId || rosterPlayers.length === 0 || rawTransactions.length === 0) {
     return [];
@@ -124,6 +135,7 @@ export function resolveUnsignedFaAlerts({
 
       const displayContext = playerContextById.get(player.playerId);
       const playerInfo = playersMap.get(player.playerId);
+      const declared = declarationsByPlayer.get(player.playerId);
 
       return {
         playerId: player.playerId,
@@ -138,6 +150,8 @@ export function resolveUnsignedFaAlerts({
         bidAmount: acquisition.bbidAmount,
         hoursRemaining: msRemaining / (60 * 60 * 1000),
         urgent: msRemaining <= 12 * 60 * 60 * 1000,
+        declaredYears: declared?.requestedYears,
+        declarationStatus: declared?.status,
       };
     })
     .filter((alert): alert is UnsignedFaAlert => alert !== null)

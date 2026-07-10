@@ -4,6 +4,7 @@
  * that are still on the default 1-year contract.
  */
 import PlayerCell from '../PlayerCell.astro';
+import ContractDeclarationModal from '../ContractDeclarationModal.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { getContractWindow } from '../../../utils/contract-validation';
@@ -12,6 +13,8 @@ import type { UnsignedFaAlert } from '../../../utils/homepage-dashboard';
 interface Props {
   isAuthenticated: boolean;
   userFranchiseId?: string;
+  leagueId?: string;
+  franchiseName?: string;
   alerts?: UnsignedFaAlert[];
   referenceDate?: Date;
 }
@@ -19,6 +22,8 @@ interface Props {
 const {
   isAuthenticated,
   userFranchiseId,
+  leagueId = '13522',
+  franchiseName = '',
   alerts = [],
   referenceDate = new Date(),
 } = Astro.props;
@@ -26,8 +31,13 @@ const {
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
-const visibleAlerts = alerts.slice(0, 4);
-const hiddenCount = Math.max(0, alerts.length - visibleAlerts.length);
+const needsActionAlerts = alerts.filter((a) => !a.declarationStatus);
+const declaredAlerts = alerts.filter((a) => !!a.declarationStatus);
+
+const visibleAlerts = needsActionAlerts.slice(0, 4);
+const hiddenCount = Math.max(0, needsActionAlerts.length - visibleAlerts.length);
+const visibleDeclared = declaredAlerts.slice(0, 4);
+const hiddenDeclaredCount = Math.max(0, declaredAlerts.length - visibleDeclared.length);
 const contractWindow = getContractWindow(referenceDate);
 const windowLabel = contractWindow.windowType === 'in-season'
   ? '24-hour in-season window'
@@ -71,7 +81,13 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
 ---
 
 {isAuthenticated && userFranchiseId ? (
-  <section class="hp-fa" aria-label="Unsigned free agent adds">
+  <section
+    class="hp-fa"
+    aria-label="Unsigned free agent adds"
+    data-hp-fa-league-id={leagueId}
+    data-hp-fa-franchise-id={userFranchiseId}
+    data-hp-fa-franchise-name={franchiseName}
+  >
     <div class="hp-fa__header">
       <div class="hp-fa__section-header">
         <h3 class="hp-fa__title">Unsigned FA Adds</h3>
@@ -85,48 +101,122 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       </a>
     </div>
 
-    {visibleAlerts.length > 0 ? (
+    {visibleAlerts.length > 0 || visibleDeclared.length > 0 ? (
       <>
-        <p class="hp-fa__summary">
-          {alerts.length === 1
-            ? '1 pickup can still be moved off the default 1-year contract.'
-            : `${alerts.length} pickups can still be moved off the default 1-year contract.`}
-        </p>
-        <ul class="hp-fa__list" role="list">
-          {visibleAlerts.map((alert) => (
-            <li class:list={['hp-fa__item', { 'hp-fa__item--urgent': alert.urgent }]}>
-              <div class="hp-fa__player">
-                <PlayerCell
-                  name={alert.name}
-                  headshot={alert.headshot}
-                  position={alert.position}
-                  nflTeam={alert.nflTeam}
-                  size="compact"
-                />
-              </div>
-              <div class="hp-fa__details">
-                <div class="hp-fa__meta-top">
-                  <span class:list={['hp-fa__type', `hp-fa__type--${alert.acquisitionType.toLowerCase()}`]}>
-                    {getPickupLabel(alert.acquisitionType)}
-                  </span>
-                  <span class="hp-fa__amount">
-                    {formatAmount(alert.bidAmount ?? alert.salary)}
-                  </span>
-                </div>
-                <p class="hp-fa__meta-line">
-                  Default 1yr until {formatDeadline(alert.deadlineTimestamp)}
-                </p>
-                <p class:list={['hp-fa__meta-line', 'hp-fa__meta-line--deadline', { 'hp-fa__meta-line--urgent': alert.urgent }]}>
-                  {formatTimeLeft(alert.hoursRemaining)}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {hiddenCount > 0 && (
-          <p class="hp-fa__more">
-            {hiddenCount} more pending in Manage contracts.
-          </p>
+        {visibleAlerts.length > 0 && (
+          <>
+            <p class="hp-fa__summary">
+              {needsActionAlerts.length === 1
+                ? '1 pickup can still be moved off the default 1-year contract.'
+                : `${needsActionAlerts.length} pickups can still be moved off the default 1-year contract.`}
+            </p>
+            <ul class="hp-fa__list" role="list">
+              {visibleAlerts.map((alert) => (
+                <li class:list={['hp-fa__item', { 'hp-fa__item--urgent': alert.urgent }]}>
+                  <div class="hp-fa__player">
+                    <PlayerCell
+                      name={alert.name}
+                      headshot={alert.headshot}
+                      position={alert.position}
+                      nflTeam={alert.nflTeam}
+                      size="compact"
+                    />
+                  </div>
+                  <div class="hp-fa__details">
+                    <div class="hp-fa__meta-top">
+                      <span class:list={['hp-fa__type', `hp-fa__type--${alert.acquisitionType.toLowerCase()}`]}>
+                        {getPickupLabel(alert.acquisitionType)}
+                      </span>
+                      <span class="hp-fa__amount">
+                        {formatAmount(alert.bidAmount ?? alert.salary)}
+                      </span>
+                    </div>
+                    <p class="hp-fa__meta-line">
+                      Default 1yr until {formatDeadline(alert.deadlineTimestamp)}
+                    </p>
+                    <p class:list={['hp-fa__meta-line', 'hp-fa__meta-line--deadline', { 'hp-fa__meta-line--urgent': alert.urgent }]}>
+                      {formatTimeLeft(alert.hoursRemaining)}
+                    </p>
+                    <button
+                      type="button"
+                      class="hp-fa__set-years"
+                      data-hp-fa-set-years
+                      data-player-id={alert.playerId}
+                      data-name={alert.name}
+                      data-headshot={alert.headshot ?? ''}
+                      data-position={alert.position}
+                      data-nfl-team={alert.nflTeam ?? ''}
+                      data-salary={alert.salary}
+                      data-deadline-timestamp={alert.deadlineTimestamp}
+                      data-acquisition-timestamp={alert.acquisitionTimestamp}
+                    >
+                      Set years
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {hiddenCount > 0 && (
+              <p class="hp-fa__more">
+                {hiddenCount} more pending in Manage contracts.
+              </p>
+            )}
+          </>
+        )}
+
+        {visibleDeclared.length > 0 && (
+          <div class="hp-fa__declared">
+            <p class="hp-fa__declared-label">
+              {contractWindow.windowType === 'in-season' ? 'Declared — within 24h window' : 'Declared — within 48h window'}
+            </p>
+            <ul class="hp-fa__list" role="list">
+              {visibleDeclared.map((alert) => (
+                <li class="hp-fa__item hp-fa__item--declared">
+                  <div class="hp-fa__player">
+                    <PlayerCell
+                      name={alert.name}
+                      headshot={alert.headshot}
+                      position={alert.position}
+                      nflTeam={alert.nflTeam}
+                      size="compact"
+                    />
+                  </div>
+                  <div class="hp-fa__details">
+                    <div class="hp-fa__meta-top">
+                      <span class:list={['hp-fa__status-pill', `hp-fa__status-pill--${alert.declarationStatus}`]}>
+                        {alert.declarationStatus === 'approved' ? 'Approved' : 'Pending review'}
+                      </span>
+                      <span class="hp-fa__amount">{alert.declaredYears} yr{alert.declaredYears === 1 ? '' : 's'}</span>
+                    </div>
+                    <p class="hp-fa__meta-line">
+                      Declared until {formatDeadline(alert.deadlineTimestamp)}
+                    </p>
+                    <button
+                      type="button"
+                      class="hp-fa__set-years hp-fa__set-years--secondary"
+                      data-hp-fa-set-years
+                      data-player-id={alert.playerId}
+                      data-name={alert.name}
+                      data-headshot={alert.headshot ?? ''}
+                      data-position={alert.position}
+                      data-nfl-team={alert.nflTeam ?? ''}
+                      data-salary={alert.salary}
+                      data-deadline-timestamp={alert.deadlineTimestamp}
+                      data-acquisition-timestamp={alert.acquisitionTimestamp}
+                      data-declared-years={alert.declaredYears}
+                    >
+                      Change years
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {hiddenDeclaredCount > 0 && (
+              <p class="hp-fa__more">
+                {hiddenDeclaredCount} more declared in Manage contracts.
+              </p>
+            )}
+          </div>
         )}
       </>
     ) : (
@@ -146,6 +236,8 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     <a href={r('/theleague/login')} class="hp-fa__guest-btn">Log in</a>
   </section>
 )}
+
+{isAuthenticated && userFranchiseId && <ContractDeclarationModal />}
 
 <style>
   .hp-fa {
@@ -342,8 +434,87 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     color: var(--color-red-600, #dc2626);
   }
 
+  .hp-fa__set-years {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--btn-primary-text, #fff);
+    background: var(--btn-primary-bg, var(--dh-accent));
+    border: 1px solid var(--btn-primary-border, var(--dh-accent));
+    border-radius: var(--radius-sm, 0.25rem);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .hp-fa__set-years:hover {
+    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
+    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
+  }
+
+  .hp-fa__set-years:focus-visible {
+    outline: 2px solid var(--dh-accent);
+    outline-offset: 2px;
+  }
+
   .hp-fa__more {
     margin-top: 0.875rem;
+  }
+
+  .hp-fa__declared {
+    margin-top: 1.25rem;
+    padding-top: 1.125rem;
+    border-top: 1px dashed var(--content-border, #e2e8f0);
+  }
+
+  .hp-fa__declared-label {
+    margin: 0 0 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .hp-fa__item--declared {
+    opacity: 0.9;
+  }
+
+  .hp-fa__status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.4rem;
+    border-radius: 999px;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .hp-fa__status-pill--approved {
+    background: color-mix(in srgb, var(--color-secondary, #2e8743) 12%, white);
+    color: var(--color-secondary, #2e8743);
+  }
+
+  .hp-fa__status-pill--pending {
+    background: color-mix(in srgb, var(--color-amber-500, #d97706) 14%, white);
+    color: var(--color-amber-700, #b45309);
+  }
+
+  .hp-fa__set-years--secondary {
+    color: var(--dh-accent);
+    background: transparent;
+    border-color: var(--content-border, #e2e8f0);
+  }
+
+  .hp-fa__set-years--secondary:hover {
+    background: var(--color-gray-50, #f9fafb);
+    border-color: var(--dh-accent);
+    color: var(--dh-accent);
   }
 
   .hp-fa--guest {
@@ -388,3 +559,279 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     }
   }
 </style>
+
+<script>
+  // Drives the shared ContractDeclarationModal for the homepage "Unsigned FA
+  // Adds" card. Every alert here is guaranteed new-acquisition / 1yr / no
+  // contractInfo (see resolveUnsignedFaAlerts), so this is a deliberately
+  // trimmed clone of the year-select branch of rosters.astro's CDM wiring —
+  // no action-select, franchise-tag, extension, or cut flows apply here.
+  const DEFAULT_HEADSHOT_URL =
+    'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  const NFL_TEAM_CITIES: Record<string, string> = {
+    ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo', CAR: 'Carolina',
+    CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland', DAL: 'Dallas', DEN: 'Denver',
+    DET: 'Detroit', GB: 'Green Bay', HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville',
+    KC: 'Kansas City', LAC: 'LA Chargers', LAR: 'LA Rams', LV: 'Las Vegas', MIA: 'Miami',
+    MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'NY Giants', NYJ: 'NY Jets',
+    PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle', SF: 'San Francisco',
+    TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
+  };
+  const YEAR_OPTIONS = [1, 2, 3, 4, 5];
+
+  function formatSalaryCompact(val: number): string {
+    const n = Number(val);
+    if (!Number.isFinite(n) || n === 0) return '$0';
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+    if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+    return `$${n}`;
+  }
+
+  function initHpUnsignedFaModal() {
+    const section = document.querySelector<HTMLElement>('.hp-fa[data-hp-fa-league-id]');
+    const modal = document.getElementById('contract-declaration-modal');
+    if (!section || !modal) return;
+
+    const leagueId = section.dataset.hpFaLeagueId || '13522';
+    const franchiseId = section.dataset.hpFaFranchiseId || '';
+    const franchiseName = section.dataset.hpFaFranchiseName || franchiseId;
+
+    const overlay = modal.querySelector<HTMLElement>('.cdm-overlay');
+    const closeBtn = modal.querySelector<HTMLElement>('.cdm-close');
+    const submitBtn = document.getElementById('cdm-submit') as HTMLButtonElement | null;
+    const errorEl = document.getElementById('cdm-error');
+    const successEl = document.getElementById('cdm-success');
+    const yearContainer = document.getElementById('cdm-year-options');
+    const yearSection = document.getElementById('cdm-year-section');
+    if (!submitBtn || !errorEl || !successEl || !yearContainer || !yearSection) return;
+
+    let current: { playerId: string; salary: number; deadlineTimestamp: number; acquisitionTimestamp: number } | null = null;
+    let selectedYears: number | null = null;
+    let deadlineInterval: ReturnType<typeof setInterval> | null = null;
+
+    const hideSection = (id: string) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    };
+
+    const closeModal = () => {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      if (deadlineInterval) clearInterval(deadlineInterval);
+      current = null;
+    };
+
+    const openModal = (data: {
+      playerId: string; name: string; headshot: string; position: string;
+      nflTeam: string; salary: number; deadlineTimestamp: number; acquisitionTimestamp: number;
+      preSelectedYears?: number;
+    }) => {
+      current = {
+        playerId: data.playerId,
+        salary: data.salary,
+        deadlineTimestamp: data.deadlineTimestamp,
+        acquisitionTimestamp: data.acquisitionTimestamp,
+      };
+      selectedYears = null;
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.classList.remove('is-loading');
+      submitBtn.removeAttribute('aria-busy');
+      submitBtn.style.display = '';
+      submitBtn.textContent = data.preSelectedYears ? 'Update Declaration' : 'Declare Contract';
+
+      // Reset flow-specific sections that don't apply to new-acquisition.
+      ['cdm-stepper', 'cdm-action-section', 'cdm-tag-section', 'cdm-extension-section',
+        'cdm-cut-section', 'cdm-formula-section', 'cdm-projection-section', 'cdm-cap-impact-section',
+      ].forEach(hideSection);
+      const backBtn = document.getElementById('cdm-back-btn');
+      if (backBtn) backBtn.style.display = 'none';
+      const metricsEl = document.getElementById('cdm-metrics');
+      if (metricsEl) metricsEl.style.display = '';
+      const typeBadgeEl = document.getElementById('cdm-type-badge');
+      if (typeBadgeEl) typeBadgeEl.style.display = '';
+
+      // Hero
+      const headshotImg = document.getElementById('cdm-headshot') as HTMLImageElement | null;
+      if (headshotImg) {
+        headshotImg.onerror = null;
+        headshotImg.src = data.headshot || DEFAULT_HEADSHOT_URL;
+        headshotImg.onerror = function () {
+          (this as HTMLImageElement).onerror = null;
+          (this as HTMLImageElement).src = DEFAULT_HEADSHOT_URL;
+        };
+      }
+      const nameEl = document.getElementById('cdm-player-name');
+      if (nameEl) nameEl.textContent = data.name;
+      const logoEl = document.getElementById('cdm-nfl-logo') as HTMLImageElement | null;
+      if (logoEl) logoEl.src = data.nflTeam ? `/assets/nfl-logos/${data.nflTeam}.svg` : '/assets/nfl-logos/NFL.svg';
+      const teamCity = data.nflTeam ? (NFL_TEAM_CITIES[data.nflTeam] || data.nflTeam) : 'Free Agent';
+      const metaText = document.getElementById('cdm-meta-text');
+      if (metaText) metaText.textContent = [teamCity, data.position].filter(Boolean).join(' · ');
+      const ageEl = document.getElementById('cdm-age-pill');
+      if (ageEl) ageEl.hidden = true;
+      const subEl = document.getElementById('cdm-sub-text');
+      if (subEl) subEl.hidden = true;
+
+      // Type badge — always "New Acquisition" for homepage unsigned FA adds.
+      if (typeBadgeEl) typeBadgeEl.dataset.type = 'new-acquisition';
+      const typeLabel = document.getElementById('cdm-type-label');
+      if (typeLabel) typeLabel.textContent = 'New Acquisition';
+
+      // Metrics
+      const salaryEl = document.getElementById('cdm-current-salary');
+      if (salaryEl) salaryEl.textContent = formatSalaryCompact(data.salary);
+      const yearsEl = document.getElementById('cdm-current-years');
+      if (yearsEl) yearsEl.textContent = '1';
+      const designationEl = document.getElementById('cdm-current-designation');
+      if (designationEl) designationEl.textContent = 'Standard';
+
+      // Deadline countdown
+      const deadlineEl = document.getElementById('cdm-deadline');
+      const deadlineTextEl = document.getElementById('cdm-deadline-text');
+      if (deadlineInterval) clearInterval(deadlineInterval);
+      if (deadlineEl && deadlineTextEl && data.deadlineTimestamp) {
+        deadlineEl.style.display = 'flex';
+        const update = () => {
+          const remaining = data.deadlineTimestamp * 1000 - Date.now();
+          if (remaining <= 0) {
+            deadlineTextEl.textContent = 'Deadline passed';
+            deadlineEl.className = 'cdm-deadline cdm-deadline--critical';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Deadline Passed';
+            if (deadlineInterval) clearInterval(deadlineInterval);
+            return;
+          }
+          const hours = Math.floor(remaining / (1000 * 60 * 60));
+          const days = Math.floor(hours / 24);
+          const remHours = hours % 24;
+          const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+          deadlineTextEl.textContent = days > 0
+            ? `Deadline in ${days}d ${remHours}h`
+            : `Deadline in ${hours}h ${minutes}m`;
+          deadlineEl.className = 'cdm-deadline' + (hours < 4 ? ' cdm-deadline--critical' : hours < 12 ? ' cdm-deadline--urgent' : '');
+        };
+        update();
+        deadlineInterval = setInterval(update, 60000);
+      } else if (deadlineEl) {
+        deadlineEl.style.display = 'none';
+      }
+
+      // Year selector
+      yearSection.style.display = '';
+      yearContainer.replaceChildren();
+      YEAR_OPTIONS.forEach((yr) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cdm-year-btn';
+        btn.dataset.years = String(yr);
+        const num = document.createElement('span');
+        num.className = 'cdm-year-btn__number';
+        num.textContent = String(yr);
+        const label = document.createElement('span');
+        label.className = 'cdm-year-btn__label';
+        label.textContent = yr === 1 ? 'YEAR' : 'YEARS';
+        btn.append(num, label);
+        btn.addEventListener('click', () => {
+          yearContainer.querySelectorAll('.cdm-year-btn').forEach((b) => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedYears = yr;
+          submitBtn.disabled = false;
+          submitBtn.textContent = data.preSelectedYears ? 'Update Declaration' : 'Declare Contract';
+        });
+        yearContainer.appendChild(btn);
+      });
+
+      if (data.preSelectedYears) {
+        const matchBtn = yearContainer.querySelector<HTMLElement>(`[data-years="${data.preSelectedYears}"]`);
+        if (matchBtn) {
+          matchBtn.classList.add('selected');
+          selectedYears = data.preSelectedYears;
+          submitBtn.disabled = false;
+        }
+      }
+
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    };
+
+    section.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-hp-fa-set-years]');
+      if (!btn) return;
+      const declaredYears = btn.dataset.declaredYears ? Number(btn.dataset.declaredYears) : undefined;
+      openModal({
+        playerId: btn.dataset.playerId || '',
+        name: btn.dataset.name || '',
+        headshot: btn.dataset.headshot || '',
+        position: btn.dataset.position || '',
+        nflTeam: btn.dataset.nflTeam || '',
+        salary: Number(btn.dataset.salary) || 0,
+        deadlineTimestamp: Number(btn.dataset.deadlineTimestamp) || 0,
+        acquisitionTimestamp: Number(btn.dataset.acquisitionTimestamp) || 0,
+        preSelectedYears: declaredYears,
+      });
+    });
+
+    overlay?.addEventListener('click', closeModal);
+    closeBtn?.addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      if (!current || selectedYears === null) return;
+      const origText = submitBtn.textContent;
+      submitBtn.classList.add('is-loading');
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
+      submitBtn.textContent = 'Submitting...';
+      errorEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/contracts/declare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leagueId,
+            playerId: current.playerId,
+            playerName: document.getElementById('cdm-player-name')?.textContent || '',
+            franchiseId,
+            franchiseName,
+            type: 'new-acquisition',
+            currentYears: 1,
+            currentSalary: current.salary,
+            currentContractInfo: '',
+            requestedYears: selectedYears,
+            deadlineAt: current.deadlineTimestamp
+              ? new Date(current.deadlineTimestamp * 1000).toISOString()
+              : undefined,
+            acquisitionTimestamp: current.acquisitionTimestamp,
+          }),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Declaration failed');
+
+        submitBtn.classList.remove('is-loading');
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.style.display = 'none';
+        successEl.style.display = 'flex';
+        setTimeout(() => window.location.reload(), 1200);
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Network error. Please try again.';
+        errorEl.style.display = '';
+        submitBtn.classList.remove('is-loading');
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.textContent = origText;
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHpUnsignedFaModal);
+  } else {
+    initHpUnsignedFaModal();
+  }
+</script>
