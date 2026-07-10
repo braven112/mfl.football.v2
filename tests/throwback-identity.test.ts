@@ -11,11 +11,16 @@ const findTeam = (franchiseId: string) => {
 };
 
 describe('throwback-identity', () => {
-  it('resolves a normal team (Pacific Pigskins) to its default era', () => {
+  it('resolves Pacific Pigskins to its default era (2013 middle look)', () => {
     const identity = resolveThrowbackIdentity(findTeam('0001'));
     expect(identity.isHistorical).toBe(true);
     expect(identity.name).toBe('Pacific Pigskins');
-    expect(identity.icon).toBe('/assets/theleague/history/pigskins_2007_icon_circle.png');
+    expect(identity.icon).toBe('/assets/theleague/history/pigskins_2013_icon_circle.png');
+  });
+
+  it('Pigskins has both its 2007 black and 2013 middle eras eligible', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0001'));
+    expect(eligible.map((e) => e.yearStart)).toEqual([2007, 2013]);
   });
 
   it('lets Da Dangsters keep its 2007 "Sabertooths" entry — intentionally shared art, not a conflict', () => {

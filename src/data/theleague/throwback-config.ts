@@ -42,7 +42,7 @@ export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number
  * /theleague/throwback-settings.
  */
 export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
-  '0001': 2007, // Pacific Pigskins (2007 razorback — never rebranded)
+  '0001': 2013, // Pacific Pigskins (2013 razorback-head — most recent old look; 2007 black is the alt)
   '0002': 2015, // Da Dangsters (vintage 2015-2024 icon)
   '0003': 2015, // Poker in the Rear
   '0004': 2020, // Heavy Chevy
