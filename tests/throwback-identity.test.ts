@@ -18,15 +18,14 @@ describe('throwback-identity', () => {
     expect(identity.icon).toBe('/assets/theleague/history/pigskins_2007_icon_circle.png');
   });
 
-  it('excludes Da Dangsters\' 2007 "Sabertooths" entry (asset conflict — Geeks owns it)', () => {
+  it('lets Da Dangsters keep its 2007 "Sabertooths" entry — intentionally shared art, not a conflict', () => {
     const eligible = getEligibleThrowbackEras(findTeam('0002'));
-    expect(eligible.some((e) => e.yearStart === 2007)).toBe(false);
     // 2015-2024 "Da Dangsters" now has its own recovered icon (distinct from
-    // the current identity), so it's eligible alongside Degenerates.
-    expect(eligible.map((e) => e.name)).toEqual(['Degenerates', 'Da Dangsters']);
+    // the current identity), so all three eras are eligible.
+    expect(eligible.map((e) => e.name)).toEqual(['Sabertooths', 'Degenerates', 'Da Dangsters']);
   });
 
-  it('lets Gridiron Geeks keep the Sabertooths entry it was assigned', () => {
+  it('lets Gridiron Geeks also use the shared Sabertooths entry', () => {
     const eligible = getEligibleThrowbackEras(findTeam('0013'));
     expect(eligible.some((e) => e.name === 'Sabertooths' && e.yearStart === 2009)).toBe(true);
   });
