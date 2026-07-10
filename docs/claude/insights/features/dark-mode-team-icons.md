@@ -45,12 +45,43 @@ dark copy of the numbered file — both rules point at the same dark asset.
 
 **Asset conventions:** icons are 100×100 PNG in `public/assets/theleague/icons/`,
 dark variant named `{name}_dark.png` next to the light one. GroupMe avatar
-variants (400×400) live in `public/assets/theleague/group-me/{name}_dark.png` —
-copied for future bot use, not referenced by config yet.
+variants (400×400) live in `public/assets/theleague/group-me/{name}_dark.png`.
 
 **Tests:** `tests/team-icon-dark-styles.test.ts` locks the generator contract
 and validates every `iconDark` in either config points at a real file under
 `public/` next to a real light icon.
+
+---
+
+## 2026-07-09 - AFL's absolute-URL icon fields break `iconDark` unless you go relative
+
+**Context:** Adding `iconDark` for an AFL team (Vitside Mafia, several
+others) whose `icon`/`banner` in `afl.config.json` are hardcoded absolute
+URLs to production (`https://mflfootballv2.vercel.app/assets/afl/icons/...`)
+— an existing quirk unrelated to dark mode, present on many AFL entries.
+
+**Gotcha:** `buildTeamIconDarkCss` selects on the exact `icon` string
+(`img[src="<icon>"]`), so the selector still matches correctly with an
+absolute `icon`. But if you set `iconDark` to match that same absolute-URL
+style, the generated `content: url(...)` also points at production — so on
+any branch/preview/dev environment the swapped-in dark image 404s against
+the *live* site (which doesn't have the new file yet), and the icon
+silently keeps rendering the light version. It looks identical to "the
+config entry didn't take."
+
+**Fix:** always set `iconDark` (and `groupMeDark`) to a **relative** path
+(`/assets/afl/icons/{name}_dark.png`), even when the corresponding `icon`
+field is absolute. The selector match doesn't care that `icon` and `iconDark`
+use different URL styles, and a relative dark path resolves against
+whatever origin is actually loaded — dev, preview, or prod — so it works
+immediately without waiting for a production deploy.
+
+**Also added:** `groupMeDark` field (mirrors `groupMe`) on `TeamConfig`,
+`FranchiseHistoryEntry` (`src/utils/team-names.ts`), and `FranchiseBrand`
+(`src/utils/franchise-brand.ts`). No CSS-swap consumer exists yet — the
+GroupMe crest watermark (`brand.groupMe` in `lineup.astro`,
+`RecapCompositeHero.astro`, etc.) still always renders the light version
+regardless of theme. Populating the field is prep work only.
 
 ---
 
