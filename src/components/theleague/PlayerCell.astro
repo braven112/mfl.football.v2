@@ -57,6 +57,13 @@ export interface Props {
   contractStatus?: string;
   /** Additional CSS classes */
   class?: string;
+  /**
+   * The avatar image is a logo (team/franchise/placeholder) rather than a
+   * player headshot. Reuses the DEF avatar treatment — full-bleed
+   * `object-fit: contain`, no crop/scale, transparent chip — so the logo
+   * isn't cropped by the headshot circle.
+   */
+  isLogoAvatar?: boolean;
 }
 
 const {
@@ -71,6 +78,7 @@ const {
   espnId: explicitEspnId,
   contractStatus,
   class: className,
+  isLogoAvatar = false,
 } = Astro.props;
 
 // Resolve IDs for headshot fallback chain (explicit props take priority over playerData)
@@ -79,6 +87,7 @@ const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 
 // --- DEF handling ---
 const isDef = position?.toUpperCase() === 'DEF';
+const isLogo = isDef || isLogoAvatar;
 const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
@@ -102,9 +111,9 @@ const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
 const nflLogoUrl = isDef ? '' : (explicitNflLogo || teamLogoUrl || '/assets/nfl-logos/NFL.svg');
 const showNflLogo = !!nflLogoUrl;
 
-// Team-color backdrop behind the headshot (DEF logos keep transparent).
-const avatarBg = isDef ? undefined : getPlayerAvatarBackground(nflTeam ?? '');
-const avatarBorder = isDef ? undefined : getPlayerAvatarBorder(nflTeam ?? '');
+// Team-color backdrop behind the headshot (logo chips keep transparent).
+const avatarBg = isLogo ? undefined : getPlayerAvatarBackground(nflTeam ?? '');
+const avatarBorder = isLogo ? undefined : getPlayerAvatarBorder(nflTeam ?? '');
 
 const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
 const avatarStyle = avatarBg
@@ -113,13 +122,13 @@ const avatarStyle = avatarBg
 ---
 
 <div class:list={['player-cell', sizeClass, className]}>
-  <div class:list={['player-cell__avatar', isDef && 'player-cell__avatar--def']} style={avatarStyle}>
+  <div class:list={['player-cell__avatar', isLogo && 'player-cell__avatar--def']} style={avatarStyle}>
     <img
       src={avatarSrc}
-      alt={isDef ? `${nflTeam ?? 'DEF'} logo` : `${name} headshot`}
+      alt={isDef ? `${nflTeam ?? 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`}
       loading="lazy"
       decoding="async"
-      onerror={buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
+      onerror={isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
     />
   </div>
   <div class="player-cell__info">

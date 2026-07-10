@@ -119,9 +119,14 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     metaHtml = `<div class="player-meta">${logoPart}${posPart}</div>`;
   }
 
+  const avatarAlt = isDef ? `${nflTeam || 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`;
+  // Logo avatars are static site assets, not headshots — don't chain into the
+  // college/MFL headshot fallback cascade if one 404s, just drop the src.
+  const avatarOnerror = isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId);
+
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}"${avatarStyle}>
-    <img src="${esc(avatarSrc)}" alt="${isDef ? esc(`${nflTeam || 'DEF'} logo`) : esc(`${name} headshot`)}" loading="lazy" decoding="async" onerror="${esc(buildHeadshotOnerror(resolvedMflId, resolvedEspnId))}" />
+    <img src="${esc(avatarSrc)}" alt="${esc(avatarAlt)}" loading="lazy" decoding="async" onerror="${esc(avatarOnerror)}" />
   </div>
   <div class="player-cell__info">
     ${nameHtml}
