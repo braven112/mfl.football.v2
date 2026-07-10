@@ -33,28 +33,33 @@ export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number
 
 /**
  * Commissioner-picked starting default per franchise (`franchiseId` ->
- * history entry `yearStart`). Seeded to each team's earliest eligible era
- * (excluding conflict entries and entries identical to the team's current
- * identity) — hand-edit any of these to change the default. Owners can
- * still self-service override on top of this via /theleague/throwback-settings.
+ * history entry `yearStart`). Seeded to each team's MOST RECENT era with a
+ * distinct icon from today's — so teams throw back to their last old
+ * identity (Heavy Chevy, Poker in the Rear, Sabertooths, …) rather than
+ * everyone snapping to the 2007 original. Teams that never rebranded (their
+ * only prior era IS 2007) naturally fall back to that origin. Hand-edit any
+ * of these; owners can still self-service override via
+ * /theleague/throwback-settings.
  */
 export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
-  '0001': 2007, // Pacific Pigskins
-  '0002': 2007, // Sabertooths
-  '0003': 2007, // Mistakes Were Made
-  '0004': 2007, // Las Vegas Elite
-  '0005': 2007, // The Executioners
-  '0006': 2007, // LBer-DeCleaters
-  '0007': 2007, // Acer FC Edge
-  '0008': 2007, // Bring The Pain
-  '0009': 2007, // Rolling Rockers
-  '0010': 2007, // Witch City Warlocks
-  '0011': 2007, // Amish Rakefighters
-  '0012': 2007, // BOYZ II MEN
-  '0013': 2007, // DangerZone
-  '0014': 2007, // Devil Dogs
-  '0015': 2007, // Dark Magicians of Chaos
-  '0016': 2007, // Silver Bullets
+  '0001': 2007, // Pacific Pigskins (2007 razorback — never rebranded)
+  '0002': 2015, // Da Dangsters (vintage 2015-2024 icon)
+  '0003': 2015, // Poker in the Rear
+  '0004': 2020, // Heavy Chevy
+  '0005': 2007, // The Executioners (only prior era)
+  '0006': 2007, // LBer-DeCleaters (only prior era)
+  '0007': 2007, // Acer FC Edge (only prior era)
+  '0008': 2007, // Bring The Pain (2007 look — never rebranded)
+  '0009': 2007, // Rolling Rockers (only prior era)
+  '0010': 2007, // Witch City Warlocks (Computer Jocks' oldest — avoids a name
+                //   clash with the current Midwestside Connection franchise,
+                //   which 0010 used to be named before that identity moved to 0011)
+  '0011': 2019, // Midwestside Connection (older icon variant)
+  '0012': 2007, // BOYZ II MEN (only prior era)
+  '0013': 2009, // Sabertooths
+  '0014': 2007, // Devil Dogs (only prior era)
+  '0015': 2015, // Dark Magicians of Chaos (2015-2024 icon)
+  '0016': 2011, // Treasure Coast Swamp Bandits
 };
 
 export function isThrowbackWeek(week: number): boolean {
