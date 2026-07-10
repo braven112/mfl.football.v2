@@ -47,6 +47,8 @@ export interface FranchiseBrand {
   icon: string;
   /** GroupMe-sized franchise avatar/crest — used as a hero background watermark */
   groupMe: string;
+  /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future dark-mode watermark swap. */
+  groupMeDark?: string;
 }
 
 /** League-neutral fallback (TheLeague blue) for unknown franchises. */
@@ -74,6 +76,7 @@ for (const t of ((leagueConfig as any).teams ?? []) as any[]) {
     icon: t.icon ?? '',
     // Prefer the explicit groupMe path; fall back to the per-id avatar.
     groupMe: t.groupMe ?? (t.franchiseId ? `/assets/theleague/group-me/${t.franchiseId}.png` : ''),
+    groupMeDark: t.groupMeDark,
   });
 }
 

@@ -133,6 +133,8 @@ export interface FranchiseHistoryEntry {
   icon?: string;
   banner?: string;
   groupMe?: string;
+  /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future GroupMe-crest dark swap, mirroring `iconDark`. */
+  groupMeDark?: string;
   /** Conference code (AFL) the team played in during this era, when it differs from today. */
   conference?: string;
   yearStart: number;
@@ -174,6 +176,8 @@ export interface TeamConfig {
   iconDark?: string;
   banner?: string;
   groupMe?: string;
+  /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future GroupMe-crest dark swap, mirroring `iconDark`. */
+  groupMeDark?: string;
   history?: FranchiseHistoryEntry[];
   ownerHistory?: OwnerHistoryEntry[];
   /** Set when the CURRENT (non-historical) name is itself a punitive last-place rename. */
@@ -195,6 +199,7 @@ export interface TeamIdentity {
   icon?: string;
   banner?: string;
   groupMe?: string;
+  groupMeDark?: string;
   /** Conference code (AFL) for the era; falls back to the team's current conference. */
   conference?: string;
   isHistorical: boolean;
@@ -248,6 +253,7 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
           icon: normalizeHistoricalAssetUrl(entry.icon, HISTORICAL_TEAM_ICON_FALLBACK),
           banner: normalizeHistoricalAssetUrl(entry.banner, HISTORICAL_TEAM_BANNER_FALLBACK),
           groupMe: entry.groupMe,
+          groupMeDark: entry.groupMeDark,
           conference: entry.conference ?? team.conference,
           isHistorical: true,
           rebrand: entry.rebrand,
@@ -265,6 +271,7 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
     icon: team.icon,
     banner: team.banner,
     groupMe: team.groupMe,
+    groupMeDark: team.groupMeDark,
     conference: team.conference,
     isHistorical: false,
     rebrand: team.currentRebrand,
