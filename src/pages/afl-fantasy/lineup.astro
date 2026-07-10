@@ -492,6 +492,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                 headshot={player.headshot}
                 position={player.position}
                 nflTeam={player.nflTeam}
+                size="compact"
               />
             </div>
             {player.isBye ? (
@@ -814,6 +815,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           nflTeam: currentPlayer.nflTeam,
           mflId: currentPlayer.id,
           espnId: currentPlayer.espnId,
+          size: 'compact',
         });
         cdmCurrent.innerHTML = `
           <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
@@ -884,6 +886,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           nflTeam: p.nflTeam,
           mflId: p.id,
           espnId: p.espnId,
+          size: 'compact',
         });
 
         const isHome = game ? p.nflTeam === game.home : false;
