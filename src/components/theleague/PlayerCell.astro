@@ -31,7 +31,7 @@
 import '../../styles/player-cell.css';
 import { buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
 
 export interface Props {
@@ -104,12 +104,16 @@ const showNflLogo = !!nflLogoUrl;
 
 // Team-color backdrop behind the headshot (DEF logos keep transparent).
 const avatarBg = isDef ? undefined : getPlayerAvatarBackground(nflTeam ?? '');
+const avatarBorder = isDef ? undefined : getPlayerAvatarBorder(nflTeam ?? '');
 
 const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
+const avatarStyle = avatarBg
+  ? `--player-avatar-bg: ${avatarBg}; --player-avatar-border: ${avatarBorder}`
+  : undefined;
 ---
 
 <div class:list={['player-cell', sizeClass, className]}>
-  <div class:list={['player-cell__avatar', isDef && 'player-cell__avatar--def']} style={avatarBg ? `--player-avatar-bg: ${avatarBg}` : undefined}>
+  <div class:list={['player-cell__avatar', isDef && 'player-cell__avatar--def']} style={avatarStyle}>
     <img
       src={avatarSrc}
       alt={isDef ? `${nflTeam ?? 'DEF'} logo` : `${name} headshot`}

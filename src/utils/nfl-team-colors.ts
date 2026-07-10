@@ -102,6 +102,16 @@ export function getPlayerAvatarBackground(teamCode: string): string {
 }
 
 /**
+ * Team-primary hex for the avatar ring in light mode. Light mode swaps the
+ * dark gradient backdrop (too heavy against a white page) for a light-gray
+ * chip with this color as the border — same team identity, lighter weight.
+ * See `--player-avatar-border` in player-cell.css.
+ */
+export function getPlayerAvatarBorder(teamCode: string): string {
+  return getNflTeamColors(teamCode).primary;
+}
+
+/**
  * Get a team's nickname (e.g. 'CIN' → 'Bengals') for wordmark treatments.
  * Falls back to the normalized code when the team is unknown.
  */
