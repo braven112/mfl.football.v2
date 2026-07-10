@@ -40,10 +40,18 @@ describe('throwback-identity', () => {
   });
 
   it('a team with only one history entry still resolves to it', () => {
-    const identity = resolveThrowbackIdentity(findTeam('0008')); // Bring The Pain
+    const identity = resolveThrowbackIdentity(findTeam('0007')); // Fire Ready Aim -> Acer FC Edge
     expect(identity.isHistorical).toBe(true);
-    expect(identity.name).toBe('Bring The Pain');
-    expect(identity.icon).toBe('/assets/theleague/history/bring_the_pain_2007_icon_circle.png');
+    expect(identity.name).toBe('Acer FC Edge');
+    expect(identity.icon).toBe('/assets/theleague/history/acer_fc_edge_icon_circle.png');
+  });
+
+  it('Bring The Pain has both its skull (2007) and red-graffiti (2023) eras eligible', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0008'));
+    expect(eligible.map((e) => e.yearStart)).toEqual([2007, 2023]);
+    // Default is the most recent old look (2023 red-graffiti).
+    const identity = resolveThrowbackIdentity(findTeam('0008'));
+    expect(identity.icon).toBe('/assets/theleague/history/bring_the_pain_2023_icon_circle.png');
   });
 
   it('owner override takes precedence over the commissioner default', () => {

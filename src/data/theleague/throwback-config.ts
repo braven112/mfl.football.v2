@@ -49,7 +49,7 @@ export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0005': 2007, // The Executioners (only prior era)
   '0006': 2007, // LBer-DeCleaters (only prior era)
   '0007': 2007, // Acer FC Edge (only prior era)
-  '0008': 2007, // Bring The Pain (2007 look — never rebranded)
+  '0008': 2023, // Bring The Pain (2023 red-graffiti — most recent old look; 2007 skull is the alt)
   '0009': 2007, // Rolling Rockers (only prior era)
   '0010': 2007, // Witch City Warlocks (Computer Jocks' oldest — avoids a name
                 //   clash with the current Midwestside Connection franchise,
