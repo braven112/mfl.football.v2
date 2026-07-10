@@ -349,6 +349,7 @@ export function resolveConfigForYear<T extends { teams: TeamConfig[] }>(config: 
         icon: identity.icon,
         banner: identity.banner,
         groupMe: identity.groupMe,
+        groupMeDark: identity.groupMeDark,
         conference: identity.conference,
       };
     }),

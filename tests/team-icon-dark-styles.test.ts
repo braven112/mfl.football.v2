@@ -109,6 +109,19 @@ describe.each([
       }
     }
   });
+
+  it('every groupMeDark sits next to a light groupMe and exists under public/', () => {
+    const withGroupMeDark = teams.filter((t) => typeof t.groupMeDark === 'string');
+    for (const team of withGroupMeDark) {
+      expect(typeof team.groupMe, `${team.name} has groupMeDark but no groupMe`).toBe('string');
+      for (const field of ['groupMe', 'groupMeDark'] as const) {
+        const abs = publicPath(team[field] as string);
+        if (abs) {
+          expect(existsSync(abs), `${team.name} ${field} missing: ${team[field]}`).toBe(true);
+        }
+      }
+    }
+  });
 });
 
 describe('theleague config dark icon rollout', () => {
