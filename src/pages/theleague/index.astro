@@ -109,21 +109,19 @@ const hasBreakingStory = !!(breakingStory && breakingModel);
 const whatsNewEntries = getWhatsNewEntriesForLeague('theleague');
 
 // Throwback Week hero targeting: the promo exists to drive owners who haven't
-// picked a legacy era to the picker, so once THIS visitor's franchise has a
-// stored pick the entry stops competing for their hero (it stays in the
-// What's New section below). Unauthenticated visitors still see it — they may
-// be a signed-out owner, and the CTA routes through sign-in anyway. Gated on
-// the rotation window so the homepage stops paying the KV read once the
-// campaign expires. Fails open: no KV / no stored pick → promo stays in.
+// picked a legacy era to the picker, so it only competes for the hero when
+// THIS visitor is a signed-in owner with no stored pick. Signed-out visitors
+// and owners who already picked get the normal rotation instead (the article
+// stays reachable in the What's New section below). Gated on the rotation
+// window so the homepage stops paying the KV read once the campaign expires.
+// KV unavailable reads as "no pick yet" (fail open for the target audience).
 let heroEntries = whatsNewEntries;
 const throwbackPromo = whatsNewEntries.find((e) => e.id === 'throwback-week');
-if (
-  userFranchiseId &&
-  throwbackPromo &&
-  isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new Date())
-) {
-  const throwbackPick = await getThrowbackPreference(userFranchiseId);
-  if (throwbackPick) {
+if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new Date())) {
+  const needsThrowbackPick = userFranchiseId
+    ? !(await getThrowbackPreference(userFranchiseId))
+    : false;
+  if (!needsThrowbackPick) {
     heroEntries = whatsNewEntries.filter((e) => e.id !== 'throwback-week');
   }
 }
