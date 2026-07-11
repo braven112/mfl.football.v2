@@ -16,20 +16,23 @@
 export const THROWBACK_WEEKS: number[] = [4];
 
 /**
- * {franchiseId, yearStart} pairs whose history entry's icon/banner asset is
- * also claimed by another franchise's entry (see plan's "Data problems"
- * section). Excluded from throwback eligibility until each gets distinct
- * recovered art.
+ * {franchiseId, yearStart} pairs excluded from throwback eligibility —
+ * either because the era's icon/banner asset is claimed by another
+ * franchise's entry (see plan's "Data problems" section) or because the
+ * identity itself is reserved for one franchise.
  *
- * Both former conflicts are resolved:
- * - Da Dangsters (0002) "Sabertooths" (2007) shares its icon/banner with
- *   Gridiron Geeks' 2009 "Sabertooths" era on purpose — same intentional
- *   shared art, not a data bug. No longer excluded.
+ * - Da Dangsters (0002) "Sabertooths" (2007) shares its name AND art with
+ *   Gridiron Geeks' 2009 "Sabertooths" era. Only ONE franchise gets to be
+ *   the Sabertooths on a Throwback Week scoreboard — the Geeks, whose
+ *   seeded default it is — so the Dangsters' copy is excluded from the
+ *   picker (commissioner call, July 2026).
  * - Computer Jocks (0010) "Midwestside Connection" (2011) got distinct
  *   recovered art (icon) plus the generic placeholder banner — no longer
  *   excluded.
  */
-export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number }[] = [];
+export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number }[] = [
+  { franchiseId: '0002', yearStart: 2007 }, // Sabertooths — exclusive to Gridiron Geeks (0013)
+];
 
 /**
  * Commissioner-picked starting default per franchise (`franchiseId` ->

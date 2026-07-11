@@ -23,14 +23,15 @@ describe('throwback-identity', () => {
     expect(eligible.map((e) => e.yearStart)).toEqual([2007, 2013]);
   });
 
-  it('lets Da Dangsters keep its 2007 "Sabertooths" entry — intentionally shared art, not a conflict', () => {
+  it('excludes Da Dangsters\' 2007 "Sabertooths" — the identity is exclusive to Gridiron Geeks', () => {
     const eligible = getEligibleThrowbackEras(findTeam('0002'));
-    // 2015-2024 "Da Dangsters" now has its own recovered icon (distinct from
-    // the current identity), so all three eras are eligible.
-    expect(eligible.map((e) => e.name)).toEqual(['Sabertooths', 'Degenerates', 'Da Dangsters']);
+    // Only one franchise gets to be the Sabertooths on the scoreboard (the
+    // Geeks, whose seeded default it is). The Dangsters keep their other
+    // recovered eras.
+    expect(eligible.map((e) => e.name)).toEqual(['Degenerates', 'Da Dangsters']);
   });
 
-  it('lets Gridiron Geeks also use the shared Sabertooths entry', () => {
+  it('keeps the Sabertooths entry eligible for Gridiron Geeks', () => {
     const eligible = getEligibleThrowbackEras(findTeam('0013'));
     expect(eligible.some((e) => e.name === 'Sabertooths' && e.yearStart === 2009)).toBe(true);
   });
