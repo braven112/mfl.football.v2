@@ -89,12 +89,17 @@ describe('throwback-identity', () => {
   });
 
   it('missing banner art falls back to the placeholder, not a broken icon path', () => {
-    // DMOC's 2015 "blue sorceress" era is the last entry with recovered icon
-    // art but no recoverable banner — it carries the shared placeholder.
-    // (Previous fixtures here — LBer-DeCleaters, Devil Dogs, Da Dangsters
-    // 2015 — all got real banners in July 2026.)
-    const dmoc = resolveThrowbackIdentity(findTeam('0015'), 2015);
-    expect(dmoc.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+    // Every real config entry now carries a banner (all recovered July 2026),
+    // so the fallback contract is locked with a synthetic history entry.
+    const fauxTeam = {
+      franchiseId: '9999',
+      name: 'No Banner FC',
+      icon: '/assets/theleague/icons/none.png',
+      banner: '/assets/theleague/banners/none.png',
+      history: [{ name: 'Bannerless Era', yearStart: 2010, yearEnd: 2012 }],
+    } as unknown as Parameters<typeof resolveThrowbackIdentity>[0];
+    const identity = resolveThrowbackIdentity(fauxTeam, 2010);
+    expect(identity.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
   });
 
   it('recovered era banners are wired in (LBer-DeCleaters, Devil Dogs, Da Dangsters 2015)', () => {
@@ -106,5 +111,13 @@ describe('throwback-identity', () => {
 
     const dang = resolveThrowbackIdentity(findTeam('0002'), 2015);
     expect(dang.banner).toBe('/assets/theleague/history/da_dangsters_2015_banner.png');
+  });
+
+  it('DMOC 2015 era borrows the 2007 banner until the real one is recreated', () => {
+    // Interim: the 2015 "blue sorceress" banner was unrecoverable; the owner
+    // is recreating it in Photoshop. Icon stays era-correct.
+    const dmoc = resolveThrowbackIdentity(findTeam('0015'), 2015);
+    expect(dmoc.icon).toBe('/assets/theleague/history/dark_magicians_2015_icon_circle.png');
+    expect(dmoc.banner).toBe('/assets/theleague/history/dark_magicians_2007_banner.png');
   });
 });
