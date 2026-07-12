@@ -117,6 +117,15 @@ if (isAdmin) {
                   {era.eraLabel && <span class="tbw-card__era-label">· {era.eraLabel}</span>}
                 </div>
               </div>
+              {/* Interactive content inside a label doesn't activate the radio,
+                  so following this link neither selects nor saves the era. */}
+              <a
+                class="tbw-card__preview"
+                href={`/theleague/live-scoring?week=4&demo=1&previewEra=${era.yearStart}`}
+                aria-label={`Preview ${era.name} (${era.yearStart}) on the scoreboard without saving`}
+              >
+                Preview →
+              </a>
             </div>
           </label>
         ))}
@@ -280,6 +289,21 @@ if (isAdmin) {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
+  }
+
+  .tbw-card__preview {
+    margin-left: auto;
+    flex: none;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .tbw-card__preview:hover,
+  .tbw-card__preview:focus-visible {
+    text-decoration: underline;
   }
 
   .tbw-card__icon {

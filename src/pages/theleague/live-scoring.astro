@@ -50,6 +50,18 @@ let configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as Co
 // path below pick this up for free.
 if (isThrowbackWeek(week)) {
   const ownerOverrides = await getAllThrowbackPreferences(configTeams.map((t) => t.franchiseId));
+
+  // Try-before-save: ?previewEra={yearStart} lets a signed-in owner see an era
+  // on THEIR OWN team without persisting it (the picker's per-card Preview
+  // links use this). Applies only to the viewer's franchise; an ineligible
+  // year is ignored by the resolver's eligibility check, so no validation is
+  // needed here beyond parsing.
+  const previewEraParam = Astro.url.searchParams.get('previewEra');
+  const previewEra = previewEraParam ? parseInt(previewEraParam, 10) : NaN;
+  if (Number.isFinite(previewEra) && userFranchiseId) {
+    ownerOverrides[userFranchiseId] = previewEra;
+  }
+
   configTeams = applyThrowbackOverrides(configTeams, true, ownerOverrides);
 }
 
