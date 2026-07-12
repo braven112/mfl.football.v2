@@ -9,6 +9,7 @@ import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleLiveScoringData, buildTeamsMap, applyThrowbackOverrides, type ConfigTeam } from '../../utils/live-scoring-data';
 import { isThrowbackWeek } from '../../data/theleague/throwback-config';
+import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import { getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
@@ -48,18 +49,30 @@ let configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as Co
 // identity before any downstream data assembly touches configTeams — both
 // the live path (via assembleLiveScoringData -> buildTeamsMap) and the demo
 // path below pick this up for free.
+// Try-before-save preview state — set when ?previewEra applies below; drives
+// the "Save this era" bar above the scoreboard.
+let throwbackPreview: { yearStart: number; eraName: string } | null = null;
+
 if (isThrowbackWeek(week)) {
   const ownerOverrides = await getAllThrowbackPreferences(configTeams.map((t) => t.franchiseId));
 
   // Try-before-save: ?previewEra={yearStart} lets a signed-in owner see an era
   // on THEIR OWN team without persisting it (the picker's per-card Preview
-  // links use this). Applies only to the viewer's franchise; an ineligible
-  // year is ignored by the resolver's eligibility check, so no validation is
-  // needed here beyond parsing.
+  // links use this). Applies only to the viewer's franchise, and only for an
+  // era the picker would actually offer them.
   const previewEraParam = Astro.url.searchParams.get('previewEra');
   const previewEra = previewEraParam ? parseInt(previewEraParam, 10) : NaN;
   if (Number.isFinite(previewEra) && userFranchiseId) {
-    ownerOverrides[userFranchiseId] = previewEra;
+    const myTeam = configTeams.find((t) => t.franchiseId === userFranchiseId);
+    const chosen = myTeam
+      ? getEligibleThrowbackEras(myTeam as Parameters<typeof getEligibleThrowbackEras>[0]).find(
+          (e) => e.yearStart === previewEra,
+        )
+      : undefined;
+    if (chosen) {
+      ownerOverrides[userFranchiseId] = previewEra;
+      throwbackPreview = { yearStart: previewEra, eraName: chosen.name };
+    }
   }
 
   configTeams = applyThrowbackOverrides(configTeams, true, ownerOverrides);
@@ -150,6 +163,19 @@ if (useDemo) {
 
 <TheLeagueLayout title="Live Scoring">
   <div class="ls-page">
+    {throwbackPreview && (
+      <div class="ls-tb-preview" id="tb-preview-bar" data-year-start={throwbackPreview.yearStart}>
+        <span class="ls-tb-preview__text">
+          Previewing <strong>{throwbackPreview.eraName} ({throwbackPreview.yearStart})</strong> —
+          this is how your team looks on Throwback Week. Nothing is saved yet.
+        </span>
+        <span class="ls-tb-preview__actions">
+          <button class="ls-tb-preview__save" id="tb-preview-save" type="button">Save this era</button>
+          <a class="ls-tb-preview__back" href="/theleague/throwback-settings">Back to eras</a>
+        </span>
+        <span class="ls-tb-preview__status" id="tb-preview-status" role="status" aria-live="polite"></span>
+      </div>
+    )}
     <LiveScoreboard client:load {...islandProps} />
     <div class="ls-page-strip">
       <NflGamesStrip client:visible week={islandProps.week} year={year}
@@ -157,6 +183,43 @@ if (useDemo) {
     </div>
   </div>
 </TheLeagueLayout>
+
+<script>
+  // Bound on astro:page-load (not module top-level) so the button still works
+  // when the page is reached via a ClientRouter view transition — same lesson
+  // as the throwback-settings picker.
+  function initTbPreviewSave() {
+    const bar = document.getElementById('tb-preview-bar');
+    const btn = document.getElementById('tb-preview-save') as HTMLButtonElement | null;
+    const status = document.getElementById('tb-preview-status');
+    if (!bar || !btn || bar.dataset.tbwBound === '1') return;
+    bar.dataset.tbwBound = '1';
+
+    btn.addEventListener('click', async () => {
+      const yearStart = Number(bar.dataset.yearStart);
+      btn.disabled = true;
+      if (status) status.textContent = 'Saving…';
+      try {
+        const res = await fetch('/api/throwback-preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yearStart }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (status) status.textContent = 'Saved — this is your Throwback Week look.';
+        } else {
+          btn.disabled = false;
+          if (status) status.textContent = data.error || 'Failed to save.';
+        }
+      } catch {
+        btn.disabled = false;
+        if (status) status.textContent = 'Failed to save — check your connection.';
+      }
+    });
+  }
+  document.addEventListener('astro:page-load', initTbPreviewSave);
+</script>
 
 <style>
   .ls-page {
@@ -166,5 +229,57 @@ if (useDemo) {
   }
   .ls-page-strip {
     margin-top: var(--spacing-2xl);
+  }
+  .ls-tb-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md, 8px);
+    background: var(--content-bg);
+  }
+  .ls-tb-preview__text {
+    flex: 1 1 260px;
+    font-size: var(--font-size-sm);
+  }
+  .ls-tb-preview__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+  .ls-tb-preview__save {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .ls-tb-preview__save:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .ls-tb-preview__back {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  .ls-tb-preview__back:hover,
+  .ls-tb-preview__back:focus-visible {
+    text-decoration: underline;
+  }
+  .ls-tb-preview__status {
+    flex-basis: 100%;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary, inherit);
+  }
+  .ls-tb-preview__status:empty {
+    display: none;
   }
 </style>
