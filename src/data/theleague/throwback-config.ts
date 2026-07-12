@@ -50,7 +50,7 @@ export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0001': 2013, // Pacific Pigskins (2013 razorback-head — most recent old look; 2007 black is the alt)
   '0002': 2015, // Da Dangsters (vintage 2015-2024 icon)
   '0003': 2015, // Poker in the Rear
-  '0004': 2020, // Heavy Chevy
+  '0004': 2019, // Drunk Indians (commissioner pick, July 2026 — over the more recent Heavy Chevy)
   '0005': 2007, // The Executioners (only prior era)
   '0006': 2007, // LBer-DeCleaters (only prior era)
   '0007': 2007, // Acer FC Edge (only prior era)

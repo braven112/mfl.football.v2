@@ -58,9 +58,9 @@ describe('throwback-identity', () => {
   });
 
   it('owner override takes precedence over the commissioner default', () => {
-    const team = findTeam('0004'); // Dead Cap Walking — 4 eligible eras, default is 2007
+    const team = findTeam('0004'); // Dead Cap Walking — 4 eligible eras, default is 2019
     const eligible = getEligibleThrowbackEras(team);
-    const nonDefault = eligible.find((e) => e.yearStart !== 2007);
+    const nonDefault = eligible.find((e) => e.yearStart !== 2019);
     expect(nonDefault).toBeTruthy();
 
     const withOverride = resolveThrowbackIdentity(team, nonDefault!.yearStart);
@@ -68,6 +68,12 @@ describe('throwback-identity', () => {
 
     const withoutOverride = resolveThrowbackIdentity(team);
     expect(withoutOverride.name).not.toBe(nonDefault!.name);
+  });
+
+  it('Dead Cap Walking defaults to Drunk Indians (2019) — commissioner pick over the more recent Heavy Chevy', () => {
+    const identity = resolveThrowbackIdentity(findTeam('0004'));
+    expect(identity.name).toBe('Drunk Indians');
+    expect(identity.isHistorical).toBe(true);
   });
 
   it('an invalid owner override falls through to the default instead of erroring', () => {
