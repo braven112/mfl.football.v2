@@ -8,9 +8,10 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
-import { getThrowbackPreference } from '../../utils/throwback-store';
+import { getThrowbackPreference, getAllThrowbackPreferences, getRedis } from '../../utils/throwback-store';
+import { DEFAULT_THROWBACK_ERA } from '../../data/theleague/throwback-config';
 import leagueConfig from '../../data/theleague.config.json';
 
 const user = getAuthUser(Astro.request);
@@ -26,6 +27,55 @@ if (!team) {
 const eligibleEras = getEligibleThrowbackEras(team);
 const preference = await getThrowbackPreference(user.franchiseId);
 const selectedYearStart = preference?.yearStart ?? null;
+
+// Commissioner-only adoption panel: which franchises have picked, which are
+// riding the seeded default. Server-rendered and gated — regular owners never
+// see other teams' data.
+const isAdmin = isCommissionerOrAdmin(user);
+
+interface AdoptionRow {
+  teamName: string;
+  icon: string | undefined;
+  hasPick: boolean;
+  eraName: string | null;
+  eraYear: number | null;
+}
+
+let adoptionRows: AdoptionRow[] = [];
+let storageAvailable = true;
+if (isAdmin) {
+  // getAllThrowbackPreferences already degrades to {} without KV, but we
+  // check availability explicitly so the panel can say so instead of
+  // silently reporting "everyone is on the default".
+  storageAvailable = (await getRedis()) !== null;
+  const allIds = leagueConfig.teams.map((t) => t.franchiseId);
+  const picks = storageAvailable ? await getAllThrowbackPreferences(allIds) : {};
+
+  adoptionRows = leagueConfig.teams.map((t) => {
+    const eligible = getEligibleThrowbackEras(t);
+    const storedYear = picks[t.franchiseId];
+    const pickedEra =
+      storedYear !== undefined ? eligible.find((e) => e.yearStart === storedYear) : undefined;
+
+    // Mirror resolveThrowbackIdentity's default chain: commissioner default,
+    // then earliest eligible era. (A stored pick that's no longer eligible
+    // also lands here — same as what the scoreboard would render.)
+    const defaultYear = DEFAULT_THROWBACK_ERA[t.franchiseId];
+    const defaultEra =
+      eligible.find((e) => e.yearStart === defaultYear) ??
+      [...eligible].sort((a, b) => a.yearStart - b.yearStart)[0] ??
+      null;
+
+    const era = pickedEra ?? defaultEra;
+    return {
+      teamName: t.name,
+      icon: t.icon,
+      hasPick: Boolean(pickedEra),
+      eraName: era?.name ?? null,
+      eraYear: era?.yearStart ?? null,
+    };
+  });
+}
 ---
 
 <TheLeagueLayout title="Throwback Week Settings | The League">
@@ -37,6 +87,9 @@ const selectedYearStart = preference?.yearStart ?? null;
         your lineup during a designated Throwback Week. Your choice is saved
         automatically and stays put until you change it.
       </p>
+      <a class="tbw-preview-link" href="/theleague/live-scoring?week=4&demo=1">
+        Preview it on the scoreboard &rarr;
+      </a>
     </header>
 
     {eligibleEras.length === 0 ? (
@@ -59,7 +112,10 @@ const selectedYearStart = preference?.yearStart ?? null;
               <img class="tbw-card__icon" src={era.icon} alt="" loading="lazy" />
               <div>
                 <div class="tbw-card__name">{era.name}</div>
-                <div class="tbw-card__years">{era.yearStart}–{era.yearEnd}</div>
+                <div class="tbw-card__years">
+                  {era.yearStart}–{era.yearEnd}
+                  {era.eraLabel && <span class="tbw-card__era-label">· {era.eraLabel}</span>}
+                </div>
               </div>
             </div>
           </label>
@@ -68,6 +124,40 @@ const selectedYearStart = preference?.yearStart ?? null;
     )}
 
     <p id="tbw-status" class="tbw-status" role="status" aria-live="polite"></p>
+
+    {isAdmin && (
+      <section class="tbw-admin" aria-labelledby="tbw-admin-title">
+        <h2 id="tbw-admin-title">Commissioner: picks so far</h2>
+        {!storageAvailable && (
+          <p class="tbw-admin__warning">
+            Preference storage is unavailable right now — showing every team on
+            its default era.
+          </p>
+        )}
+        <ul class="tbw-admin__list">
+          {adoptionRows.map((row) => (
+            <li class="tbw-admin__row">
+              <img class="tbw-admin__icon" src={row.icon} alt="" loading="lazy" />
+              <span class="tbw-admin__team">{row.teamName}</span>
+              <span class="tbw-admin__era">
+                {row.eraName === null ? (
+                  <span class="tbw-admin__default">no eligible eras</span>
+                ) : row.hasPick ? (
+                  <>
+                    <span class="tbw-admin__badge">picked</span>
+                    {row.eraName} ({row.eraYear})
+                  </>
+                ) : (
+                  <span class="tbw-admin__default">
+                    riding the default — {row.eraName} ({row.eraYear})
+                  </span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
   </main>
 </TheLeagueLayout>
 
@@ -111,6 +201,19 @@ const selectedYearStart = preference?.yearStart ?? null;
   .tbw-header p {
     color: var(--content-text-muted);
     max-width: 60ch;
+  }
+
+  .tbw-preview-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .tbw-preview-link:hover,
+  .tbw-preview-link:focus-visible {
+    text-decoration: underline;
   }
 
   .tbw-empty {
@@ -190,6 +293,81 @@ const selectedYearStart = preference?.yearStart ?? null;
   .tbw-status {
     margin-top: 1rem;
     min-height: 1.2em;
+    color: var(--content-text-muted);
+  }
+
+  .tbw-card__era-label {
+    font-style: italic;
+  }
+
+  .tbw-admin {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .tbw-admin h2 {
+    margin: 0 0 0.75rem;
+    font-size: var(--font-size-lg);
+  }
+
+  .tbw-admin__warning {
+    color: var(--content-text-muted);
+    font-style: italic;
+  }
+
+  .tbw-admin__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .tbw-admin__row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .tbw-admin__row:last-child {
+    border-bottom: none;
+  }
+
+  .tbw-admin__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .tbw-admin__team {
+    font-weight: 600;
+    min-width: 0;
+    flex: 1 1 40%;
+  }
+
+  .tbw-admin__era {
+    flex: 1 1 60%;
+    text-align: right;
+    font-size: var(--font-size-sm);
+  }
+
+  .tbw-admin__badge {
+    display: inline-block;
+    margin-right: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast, #fff);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .tbw-admin__default {
     color: var(--content-text-muted);
   }
 </style>
