@@ -162,28 +162,37 @@ if (isAdmin) {
 </TheLeagueLayout>
 
 <script>
-  const form = document.getElementById('tbw-form') as HTMLFormElement | null;
-  const status = document.getElementById('tbw-status');
+  // Bind on astro:page-load (fires on initial load AND after every ClientRouter
+  // navigation) — a top-level bind runs once per module and leaves the form
+  // dead when the user navigates away and returns via a view transition.
+  function initThrowbackPicker() {
+    const form = document.getElementById('tbw-form') as HTMLFormElement | null;
+    const status = document.getElementById('tbw-status');
+    if (!form || form.dataset.tbwBound === '1') return;
+    form.dataset.tbwBound = '1';
 
-  form?.addEventListener('change', async (event) => {
-    const target = event.target as HTMLInputElement;
-    if (target.name !== 'yearStart') return;
+    form.addEventListener('change', async (event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.name !== 'yearStart') return;
 
-    const yearStart = Number(target.value);
-    if (status) status.textContent = 'Saving…';
+      const yearStart = Number(target.value);
+      if (status) status.textContent = 'Saving…';
 
-    try {
-      const res = await fetch('/api/throwback-preference', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yearStart }),
-      });
-      const data = await res.json();
-      if (status) status.textContent = data.success ? 'Saved.' : (data.error || 'Failed to save.');
-    } catch {
-      if (status) status.textContent = 'Failed to save — check your connection.';
-    }
-  });
+      try {
+        const res = await fetch('/api/throwback-preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yearStart }),
+        });
+        const data = await res.json();
+        if (status) status.textContent = data.success ? 'Saved.' : (data.error || 'Failed to save.');
+      } catch {
+        if (status) status.textContent = 'Failed to save — check your connection.';
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initThrowbackPicker);
 </script>
 
 <style>
