@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-12T23:36:40.166Z",
+  "generatedAt": "2026-07-12T23:49:40.955Z",
   "teams": [
     {
       "key": "history_acer_fc_edge",
@@ -1653,6 +1653,12 @@
         "banners": [
           {
             "type": "banners",
+            "filename": "wabbits_2012_banner.png",
+            "relativePath": "/assets/theleague/history/wabbits_2012_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
             "filename": "wabbits.png",
             "relativePath": "/assets/theleague/banners/wabbits.png",
             "extension": ".png"
@@ -1674,7 +1680,14 @@
             "extension": ".png"
           }
         ]
-      }
+      },
+      "eras": [
+        {
+          "yearStart": 2012,
+          "yearEnd": 2024,
+          "franchiseId": "0009"
+        }
+      ]
     },
     {
       "key": "history_witch_city_warlocks",
