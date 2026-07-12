@@ -33,15 +33,29 @@ const selectedYearStart = preference?.yearStart ?? null;
 // see other teams' data.
 const isAdmin = isCommissionerOrAdmin(user);
 
-interface AdoptionRow {
+interface CommishEra {
+  yearStart: number;
+  yearEnd: number | undefined;
+  name: string;
+  eraLabel: string | undefined;
+  icon: string | undefined;
+  banner: string | undefined;
+  isDefault: boolean;
+  isPicked: boolean;
+}
+
+interface CommishTeamRow {
+  franchiseId: string;
   teamName: string;
   icon: string | undefined;
   hasPick: boolean;
-  eraName: string | null;
-  eraYear: number | null;
+  /** What this team wears at Week 4 as of right now (pick, else default chain). */
+  wearsName: string | null;
+  wearsYear: number | null;
+  eras: CommishEra[];
 }
 
-let adoptionRows: AdoptionRow[] = [];
+let commishRows: CommishTeamRow[] = [];
 let storageAvailable = true;
 if (isAdmin) {
   // getAllThrowbackPreferences already degrades to {} without KV, but we
@@ -51,7 +65,7 @@ if (isAdmin) {
   const allIds = leagueConfig.teams.map((t) => t.franchiseId);
   const picks = storageAvailable ? await getAllThrowbackPreferences(allIds) : {};
 
-  adoptionRows = leagueConfig.teams.map((t) => {
+  commishRows = leagueConfig.teams.map((t) => {
     const eligible = getEligibleThrowbackEras(t);
     const storedYear = picks[t.franchiseId];
     const pickedEra =
@@ -66,13 +80,24 @@ if (isAdmin) {
       [...eligible].sort((a, b) => a.yearStart - b.yearStart)[0] ??
       null;
 
-    const era = pickedEra ?? defaultEra;
+    const wears = pickedEra ?? defaultEra;
     return {
+      franchiseId: t.franchiseId,
       teamName: t.name,
       icon: t.icon,
       hasPick: Boolean(pickedEra),
-      eraName: era?.name ?? null,
-      eraYear: era?.yearStart ?? null,
+      wearsName: wears?.name ?? null,
+      wearsYear: wears?.yearStart ?? null,
+      eras: eligible.map((e) => ({
+        yearStart: e.yearStart,
+        yearEnd: e.yearEnd,
+        name: e.name,
+        eraLabel: (e as { eraLabel?: string }).eraLabel,
+        icon: e.icon,
+        banner: e.banner,
+        isDefault: defaultEra?.yearStart === e.yearStart,
+        isPicked: pickedEra?.yearStart === e.yearStart,
+      })),
     };
   });
 }
@@ -136,35 +161,66 @@ if (isAdmin) {
 
     {isAdmin && (
       <section class="tbw-admin" aria-labelledby="tbw-admin-title">
-        <h2 id="tbw-admin-title">Commissioner: picks so far</h2>
+        <h2 id="tbw-admin-title">Commissioner: every team's eras</h2>
+        <p class="tbw-admin__intro">
+          Each franchise's eligible eras, what they'll wear at Week 4 as of
+          right now, and a scoreboard preview for any era on any team.
+          Previews never save anything — only each owner can save their pick.
+        </p>
         {!storageAvailable && (
           <p class="tbw-admin__warning">
             Preference storage is unavailable right now — showing every team on
             its default era.
           </p>
         )}
-        <ul class="tbw-admin__list">
-          {adoptionRows.map((row) => (
-            <li class="tbw-admin__row">
-              <img class="tbw-admin__icon" src={row.icon} alt="" loading="lazy" />
-              <span class="tbw-admin__team">{row.teamName}</span>
-              <span class="tbw-admin__era">
-                {row.eraName === null ? (
-                  <span class="tbw-admin__default">no eligible eras</span>
-                ) : row.hasPick ? (
-                  <>
-                    <span class="tbw-admin__badge">picked</span>
-                    {row.eraName} ({row.eraYear})
-                  </>
+        {commishRows.map((row) => (
+          <article class="tbw-cg" aria-label={row.teamName}>
+            <header class="tbw-cg__head">
+              <img class="tbw-cg__team-icon" src={row.icon} alt="" loading="lazy" />
+              <span class="tbw-cg__team-name">{row.teamName}</span>
+              <span class="tbw-cg__wears">
+                {row.wearsName === null ? (
+                  'no eligible eras — stays current'
                 ) : (
-                  <span class="tbw-admin__default">
-                    riding the default — {row.eraName} ({row.eraYear})
-                  </span>
+                  <>
+                    {row.hasPick ? (
+                      <span class="tbw-cg__badge tbw-cg__badge--picked">picked</span>
+                    ) : (
+                      <span class="tbw-cg__badge">default</span>
+                    )}
+                    wears {row.wearsName} ({row.wearsYear})
+                  </>
                 )}
               </span>
-            </li>
-          ))}
-        </ul>
+            </header>
+            {row.eras.length > 0 && (
+              <div class="tbw-cg__eras">
+                {row.eras.map((era) => (
+                  <div class={`tbw-cg__era${era.isPicked ? ' tbw-cg__era--picked' : era.isDefault ? ' tbw-cg__era--default' : ''}`}>
+                    <img class="tbw-cg__banner" src={era.banner} alt={`${era.name} banner`} loading="lazy" />
+                    <div class="tbw-cg__era-body">
+                      <img class="tbw-cg__era-icon" src={era.icon} alt="" loading="lazy" />
+                      <div class="tbw-cg__era-meta">
+                        <span class="tbw-cg__era-name">{era.name}</span>
+                        <span class="tbw-cg__era-years">
+                          {era.yearStart}{era.yearEnd ? `–${era.yearEnd}` : ''}
+                          {era.eraLabel && ` · ${era.eraLabel}`}
+                        </span>
+                      </div>
+                      <a
+                        class="tbw-cg__preview"
+                        href={`/theleague/live-scoring?week=4&demo=1&previewFranchise=${row.franchiseId}&previewEra=${era.yearStart}`}
+                        aria-label={`Preview ${row.teamName} as ${era.name} (${era.yearStart}) on the scoreboard`}
+                      >
+                        Preview →
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
       </section>
     )}
   </main>
@@ -349,50 +405,54 @@ if (isAdmin) {
     font-style: italic;
   }
 
-  .tbw-admin__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+  .tbw-admin__intro {
+    margin: 0 0 1rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    max-width: 62ch;
   }
 
-  .tbw-admin__row {
+  .tbw-cg {
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .tbw-cg__head {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.4rem 0;
+    padding: 0.6rem 0.9rem;
     border-bottom: 1px solid var(--card-border);
   }
 
-  .tbw-admin__row:last-child {
-    border-bottom: none;
-  }
-
-  .tbw-admin__icon {
-    width: 24px;
-    height: 24px;
+  .tbw-cg__team-icon {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
   }
 
-  .tbw-admin__team {
-    font-weight: 600;
+  .tbw-cg__team-name {
+    font-weight: 700;
     min-width: 0;
-    flex: 1 1 40%;
   }
 
-  .tbw-admin__era {
-    flex: 1 1 60%;
-    text-align: right;
+  .tbw-cg__wears {
+    margin-left: auto;
     font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+    text-align: right;
   }
 
-  .tbw-admin__badge {
+  .tbw-cg__badge {
     display: inline-block;
     margin-right: 0.4rem;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
-    background: var(--color-accent);
+    background: var(--content-text-muted);
     color: var(--color-accent-contrast, #fff);
     font-size: var(--font-size-xs);
     font-weight: 700;
@@ -400,7 +460,83 @@ if (isAdmin) {
     letter-spacing: 0.03em;
   }
 
-  .tbw-admin__default {
+  .tbw-cg__badge--picked {
+    background: var(--color-accent);
+  }
+
+  .tbw-cg__eras {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem 0.9rem;
+  }
+
+  .tbw-cg__era {
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .tbw-cg__era--default {
+    border-color: var(--content-text-muted);
+  }
+
+  .tbw-cg__era--picked {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 1px var(--color-accent);
+  }
+
+  .tbw-cg__banner {
+    display: block;
+    width: 100%;
+    height: 56px;
+    object-fit: contain;
+    background: var(--content-border);
+  }
+
+  .tbw-cg__era-body {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .tbw-cg__era-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .tbw-cg__era-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .tbw-cg__era-name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+  }
+
+  .tbw-cg__era-years {
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted);
+  }
+
+  .tbw-cg__preview {
+    margin-left: auto;
+    flex: none;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .tbw-cg__preview:hover,
+  .tbw-cg__preview:focus-visible {
+    text-decoration: underline;
   }
 </style>

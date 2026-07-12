@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueConfig from '../../data/theleague.config.json';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentSeasonYear } from '../../utils/league-year';
@@ -50,28 +50,41 @@ let configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as Co
 // the live path (via assembleLiveScoringData -> buildTeamsMap) and the demo
 // path below pick this up for free.
 // Try-before-save preview state — set when ?previewEra applies below; drives
-// the "Save this era" bar above the scoreboard.
-let throwbackPreview: { yearStart: number; eraName: string } | null = null;
+// the "Save this era" bar above the scoreboard. `ownSave` is false when a
+// commissioner is previewing another franchise (view-only — no save button;
+// the preference API is deliberately owner-scoped).
+let throwbackPreview: { yearStart: number; eraName: string; teamName: string; ownSave: boolean } | null = null;
 
 if (isThrowbackWeek(week)) {
   const ownerOverrides = await getAllThrowbackPreferences(configTeams.map((t) => t.franchiseId));
 
   // Try-before-save: ?previewEra={yearStart} lets a signed-in owner see an era
   // on THEIR OWN team without persisting it (the picker's per-card Preview
-  // links use this). Applies only to the viewer's franchise, and only for an
-  // era the picker would actually offer them.
+  // links use this), and only for an era the picker would actually offer.
+  // Commissioners may add ?previewFranchise={id} to dress ANY team for
+  // validation — still view-only; non-admins get the param ignored.
   const previewEraParam = Astro.url.searchParams.get('previewEra');
   const previewEra = previewEraParam ? parseInt(previewEraParam, 10) : NaN;
   if (Number.isFinite(previewEra) && userFranchiseId) {
-    const myTeam = configTeams.find((t) => t.franchiseId === userFranchiseId);
-    const chosen = myTeam
-      ? getEligibleThrowbackEras(myTeam as Parameters<typeof getEligibleThrowbackEras>[0]).find(
+    const previewFranchiseParam = Astro.url.searchParams.get('previewFranchise');
+    const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
+    const targetFranchiseId =
+      previewFranchiseParam && isAdmin ? previewFranchiseParam : userFranchiseId;
+
+    const targetTeam = configTeams.find((t) => t.franchiseId === targetFranchiseId);
+    const chosen = targetTeam
+      ? getEligibleThrowbackEras(targetTeam as Parameters<typeof getEligibleThrowbackEras>[0]).find(
           (e) => e.yearStart === previewEra,
         )
       : undefined;
-    if (chosen) {
-      ownerOverrides[userFranchiseId] = previewEra;
-      throwbackPreview = { yearStart: previewEra, eraName: chosen.name };
+    if (chosen && targetTeam) {
+      ownerOverrides[targetFranchiseId] = previewEra;
+      throwbackPreview = {
+        yearStart: previewEra,
+        eraName: chosen.name,
+        teamName: targetTeam.name,
+        ownSave: targetFranchiseId === userFranchiseId,
+      };
     }
   }
 
@@ -166,11 +179,23 @@ if (useDemo) {
     {throwbackPreview && (
       <div class="ls-tb-preview" id="tb-preview-bar" data-year-start={throwbackPreview.yearStart}>
         <span class="ls-tb-preview__text">
-          Previewing <strong>{throwbackPreview.eraName} ({throwbackPreview.yearStart})</strong> —
-          this is how your team looks on Throwback Week. Nothing is saved yet.
+          {throwbackPreview.ownSave ? (
+            <>
+              Previewing <strong>{throwbackPreview.eraName} ({throwbackPreview.yearStart})</strong> —
+              this is how your team looks on Throwback Week. Nothing is saved yet.
+            </>
+          ) : (
+            <>
+              Commissioner preview: <strong>{throwbackPreview.teamName}</strong> as{' '}
+              <strong>{throwbackPreview.eraName} ({throwbackPreview.yearStart})</strong>.
+              View-only — only that team's owner can save a pick.
+            </>
+          )}
         </span>
         <span class="ls-tb-preview__actions">
-          <button class="ls-tb-preview__save" id="tb-preview-save" type="button">Save this era</button>
+          {throwbackPreview.ownSave && (
+            <button class="ls-tb-preview__save" id="tb-preview-save" type="button">Save this era</button>
+          )}
           <a class="ls-tb-preview__back" href="/theleague/throwback-settings">Back to eras</a>
         </span>
         <span class="ls-tb-preview__status" id="tb-preview-status" role="status" aria-live="polite"></span>
