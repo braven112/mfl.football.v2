@@ -198,8 +198,15 @@ const adminFranchiseIds = getAdminFranchiseIds();
 const isCommissioner = !!layoutAuthUser && isCommissionerOrAdmin(layoutAuthUser);
 const isCommishMode = isCommissioner && Astro.cookies.get('commish-mode')?.value === 'true';
 
-// Get visible navigation sections
-const sections = getVisibleSections(league, myteam, adminFranchiseIds);
+// Get visible navigation sections. Identity for nav gating: the signed JWT
+// session wins when present (a signed-in commissioner sees admin sections
+// even without the myteam preference cookie); the preference cookie/param
+// keeps working for browse-as personalization.
+const navFranchiseId =
+	(layoutAuthUser?.leagueId === (league === 'afl' ? aflMflId : theLeagueMflId)
+		? layoutAuthUser?.franchiseId
+		: null) || myteam;
+const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds);
 
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
