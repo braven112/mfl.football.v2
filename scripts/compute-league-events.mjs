@@ -13,6 +13,12 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
+import {
+  getNflWeekStart,
+  parseThrowbackWeeks,
+  throwbackEventId,
+  DEFAULT_THROWBACK_WEEKS,
+} from './lib/throwback-reminder.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
@@ -94,6 +100,35 @@ const EVENTS = [
   { id: 'league-championship', name: 'League Championship', startRule: { type: 'computed', rule: 'championship-week' }, tier: 'major' },
 ];
 
+// ── Throwback Week events (TheLeague only) ──
+// The week number lives in src/data/theleague/throwback-config.ts
+// (THROWBACK_WEEKS) — single source of truth. We parse it out of the TS
+// source rather than duplicating the number here; if the parse ever fails we
+// warn and fall back to DEFAULT_THROWBACK_WEEKS. The DATE is computed, never
+// hardcoded: NFL Week N starts kickoff Thursday + (N-1)*7 days (see
+// scripts/lib/throwback-reminder.mjs). tier: major → full 14d/7d/2d/day-of
+// Roger touch schedule.
+
+async function loadThrowbackEvents() {
+  const configPath = path.join(projectRoot, 'src', 'data', 'theleague', 'throwback-config.ts');
+  let weeks = null;
+  try {
+    weeks = parseThrowbackWeeks(await fs.readFile(configPath, 'utf8'));
+  } catch (err) {
+    console.warn(`Could not read throwback-config.ts (${err.message})`);
+  }
+  if (!weeks) {
+    console.warn(`THROWBACK_WEEKS parse failed — falling back to [${DEFAULT_THROWBACK_WEEKS}]`);
+    weeks = DEFAULT_THROWBACK_WEEKS;
+  }
+  return weeks.map(week => ({
+    id: throwbackEventId(week),
+    name: `Throwback Week (NFL Week ${week})`,
+    startRule: { type: 'computed', rule: 'nfl-week-start', week },
+    tier: 'major',
+  }));
+}
+
 // ── AFL Fantasy event definitions ──
 // Sourced from docs/claude/afl-rules.md "Important Dates" + src/data/afl-fantasy/league-events.json.
 // Tier policy mirrors TheLeague: major = 14d/7d/2d/day-of touches, standard = 7d/day-of, minor = day-of only.
@@ -126,6 +161,10 @@ function resolveEvents(year, eventList = EVENTS) {
         const dayOfWeek = nflDraftDate.getDay();
         const daysUntilNextSaturday = (6 - dayOfWeek + 7) % 7 + 7;
         startDate = new Date(nflDraftDate.getFullYear(), nflDraftDate.getMonth(), nflDraftDate.getDate() + daysUntilNextSaturday);
+      } else if (event.startRule.rule === 'nfl-week-start') {
+        // Computed NFL week start (e.g. Throwback Week): kickoff Thursday
+        // + (week-1)*7 — never a hardcoded calendar date.
+        startDate = getNflWeekStart(year, event.startRule.week);
       } else {
         startDate = resolveDate(event.startRule.rule, year);
       }
@@ -150,7 +189,8 @@ function resolveEvents(year, eventList = EVENTS) {
 const now = new Date();
 const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
 
-const resolved = resolveEvents(year);
+const throwbackEvents = await loadThrowbackEvents();
+const resolved = resolveEvents(year, [...EVENTS, ...throwbackEvents]);
 const output = {
   computedAt: now.toISOString(),
   leagueYear: year,
