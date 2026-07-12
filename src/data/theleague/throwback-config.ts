@@ -26,12 +26,14 @@ export const THROWBACK_WEEKS: number[] = [4];
  *   the Sabertooths on a Throwback Week scoreboard — the Geeks, whose
  *   seeded default it is — so the Dangsters' copy is excluded from the
  *   picker (commissioner call, July 2026).
- * - Computer Jocks (0010) "Midwestside Connection" (2011) got distinct
- *   recovered art (icon) plus the generic placeholder banner — no longer
- *   excluded.
+ * - Computer Jocks (0010) "Midwestside Connection" (2011): the identity
+ *   belongs to the current Midwestside Connection franchise (0011) — the
+ *   Jocks don't get to resurrect it (commissioner call, July 2026). They
+ *   throw back as the Witch City Warlocks, their seeded default.
  */
 export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number }[] = [
   { franchiseId: '0002', yearStart: 2007 }, // Sabertooths — exclusive to Gridiron Geeks (0013)
+  { franchiseId: '0010', yearStart: 2011 }, // Midwestside Connection — belongs to franchise 0011
 ];
 
 /**

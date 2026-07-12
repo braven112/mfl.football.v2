@@ -36,13 +36,10 @@ describe('throwback-identity', () => {
     expect(eligible.some((e) => e.name === 'Sabertooths' && e.yearStart === 2009)).toBe(true);
   });
 
-  it('includes Computer Jocks\' 2011 "Midwestside Connection" entry now that it has distinct art', () => {
+  it('excludes Computer Jocks\' 2011 "Midwestside Connection" — the identity belongs to franchise 0011', () => {
     const eligible = getEligibleThrowbackEras(findTeam('0010'));
-    expect(eligible.some((e) => e.yearStart === 2011)).toBe(true);
-    expect(eligible.map((e) => e.name)).toEqual([
-      'Witch City Warlocks',
-      'Midwestside Connection',
-    ]);
+    expect(eligible.some((e) => e.yearStart === 2011)).toBe(false);
+    expect(eligible.map((e) => e.name)).toEqual(['Witch City Warlocks']);
   });
 
   it('a team with only one history entry still resolves to it', () => {
