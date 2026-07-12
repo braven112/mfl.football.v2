@@ -89,18 +89,22 @@ describe('throwback-identity', () => {
   });
 
   it('missing banner art falls back to the placeholder, not a broken icon path', () => {
-    // Da Dangsters' vintage 2015 era has recovered icon art but no banner —
-    // the entry carries the shared placeholder. (LBer-DeCleaters and Devil
-    // Dogs, the previous fixtures here, got real banners in July 2026.)
-    const dang = resolveThrowbackIdentity(findTeam('0002'), 2015);
-    expect(dang.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+    // DMOC's 2015 "blue sorceress" era is the last entry with recovered icon
+    // art but no recoverable banner — it carries the shared placeholder.
+    // (Previous fixtures here — LBer-DeCleaters, Devil Dogs, Da Dangsters
+    // 2015 — all got real banners in July 2026.)
+    const dmoc = resolveThrowbackIdentity(findTeam('0015'), 2015);
+    expect(dmoc.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
   });
 
-  it('LBer-DeCleaters and Devil Dogs use their recovered banner art', () => {
+  it('recovered era banners are wired in (LBer-DeCleaters, Devil Dogs, Da Dangsters 2015)', () => {
     const music = resolveThrowbackIdentity(findTeam('0006'), 2007);
     expect(music.banner).toBe('/assets/theleague/history/lb_decleaters_banner.png');
 
     const cboy = resolveThrowbackIdentity(findTeam('0014'), 2007);
     expect(cboy.banner).toBe('/assets/theleague/history/devil_dogs_banner.png');
+
+    const dang = resolveThrowbackIdentity(findTeam('0002'), 2015);
+    expect(dang.banner).toBe('/assets/theleague/history/da_dangsters_2015_banner.png');
   });
 });
