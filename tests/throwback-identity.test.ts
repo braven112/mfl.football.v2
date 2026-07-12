@@ -89,10 +89,18 @@ describe('throwback-identity', () => {
   });
 
   it('missing banner art falls back to the placeholder, not a broken icon path', () => {
-    const music = resolveThrowbackIdentity(findTeam('0006'), 2007); // LBer-DeCleaters
-    expect(music.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+    // Da Dangsters' vintage 2015 era has recovered icon art but no banner —
+    // the entry carries the shared placeholder. (LBer-DeCleaters and Devil
+    // Dogs, the previous fixtures here, got real banners in July 2026.)
+    const dang = resolveThrowbackIdentity(findTeam('0002'), 2015);
+    expect(dang.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+  });
 
-    const cboy = resolveThrowbackIdentity(findTeam('0014'), 2007); // Devil Dogs
-    expect(cboy.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+  it('LBer-DeCleaters and Devil Dogs use their recovered banner art', () => {
+    const music = resolveThrowbackIdentity(findTeam('0006'), 2007);
+    expect(music.banner).toBe('/assets/theleague/history/lb_decleaters_banner.png');
+
+    const cboy = resolveThrowbackIdentity(findTeam('0014'), 2007);
+    expect(cboy.banner).toBe('/assets/theleague/history/devil_dogs_banner.png');
   });
 });
