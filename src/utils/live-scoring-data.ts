@@ -61,6 +61,12 @@ export function applyThrowbackOverrides(
     // re-show the current identity's short name next to a legacy icon.
     // Downstream render calls (e.g. LiveScoreboard's `nameShort ?? name`)
     // fall back to `name` correctly once these are cleared.
+    //
+    // Era colors: when the era defines its own palette, matchup washes and
+    // win-probability bars tint in the legacy colors too. The *Dark variants
+    // are cleared alongside — they belong to the CURRENT palette, and
+    // downstream already falls back to the light colors when they're absent.
+    const hasEraColors = identity.isHistorical && !!identity.colorPrimary;
     return {
       ...t,
       name: identity.name,
@@ -69,6 +75,15 @@ export function applyThrowbackOverrides(
       abbrev: identity.isHistorical ? identity.abbrev : t.abbrev,
       icon: identity.icon ?? t.icon,
       banner: identity.banner ?? t.banner,
+      ...(hasEraColors
+        ? {
+            color: identity.colorPrimary,
+            colorPrimary: identity.colorPrimary,
+            colorSecondary: identity.colorSecondary ?? identity.colorPrimary,
+            colorPrimaryDark: undefined,
+            colorSecondaryDark: undefined,
+          }
+        : {}),
     };
   });
 }

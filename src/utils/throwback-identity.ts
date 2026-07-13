@@ -49,6 +49,8 @@ function toIdentity(entry: FranchiseHistoryEntry): TeamIdentity {
     banner: entry.banner ?? HISTORICAL_TEAM_BANNER_FALLBACK,
     groupMe: entry.groupMe,
     conference: entry.conference ?? undefined,
+    colorPrimary: entry.colorPrimary,
+    colorSecondary: entry.colorSecondary,
     isHistorical: true,
     rebrand: entry.rebrand,
   };

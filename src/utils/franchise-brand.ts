@@ -112,6 +112,16 @@ export function getThrowbackFranchiseBrand(
     name: identity.name,
     icon: identity.icon ?? brand.icon,
     banner: identity.banner ?? brand.banner,
+    // Era palette when defined — legacy hues on the lineup hero, too.
+    ...(identity.isHistorical && identity.colorPrimary
+      ? {
+          color: identity.colorPrimary,
+          colorPrimary: identity.colorPrimary,
+          colorSecondary: identity.colorSecondary ?? identity.colorPrimary,
+          colorTertiary: undefined,
+          colorQuaternary: undefined,
+        }
+      : {}),
   };
 }
 

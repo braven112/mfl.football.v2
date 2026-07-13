@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import leagueConfig from '../src/data/theleague.config.json';
 import { getEligibleThrowbackEras, resolveThrowbackIdentity } from '../src/utils/throwback-identity';
+import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scoring-data';
 import type { TeamConfig } from '../src/utils/team-names';
 
 const teams = leagueConfig.teams as unknown as TeamConfig[];
@@ -106,6 +107,29 @@ describe('throwback-identity', () => {
     } as unknown as Parameters<typeof resolveThrowbackIdentity>[0];
     const identity = resolveThrowbackIdentity(fauxTeam, 2010);
     expect(identity.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+  });
+
+  it('era colors ride the throwback overlay — Week 4 washes tint in the legacy palette', () => {
+    // Every eligible era now carries a derived colorPrimary.
+    for (const t of teams) {
+      for (const era of getEligibleThrowbackEras(t)) {
+        expect(era.colorPrimary, `${t.franchiseId} ${era.yearStart} ${era.name}`).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    }
+
+    // applyThrowbackOverrides swaps the palette and clears the current-brand
+    // dark variants (they belong to the CURRENT palette, not the era's).
+    const overridden = applyThrowbackOverrides(teams as unknown as ConfigTeam[], true);
+    const dangsters = overridden.find((t) => t.franchiseId === '0002')!;
+    const eras = getEligibleThrowbackEras(findTeam('0002'));
+    const defaultEra = eras.find((e) => e.yearStart === 2015)!; // seeded default
+    expect(dangsters.colorPrimary).toBe(defaultEra.colorPrimary);
+    expect(dangsters.color).toBe(defaultEra.colorPrimary);
+    expect(dangsters.colorPrimaryDark).toBeUndefined();
+
+    // Inactive week: palette untouched.
+    const untouched = applyThrowbackOverrides(teams as unknown as ConfigTeam[], false);
+    expect(untouched.find((t) => t.franchiseId === '0002')!.colorPrimary).toBe('#1b435f');
   });
 
   it('recovered era banners are wired in (LBer-DeCleaters, Devil Dogs, Da Dangsters 2015)', () => {
