@@ -28,6 +28,15 @@ const eligibleEras = getEligibleThrowbackEras(team);
 const preference = await getThrowbackPreference(user.franchiseId);
 const selectedYearStart = preference?.yearStart ?? null;
 
+// With no saved pick, Week 4 still dresses the team in its resolved default —
+// surface that on the matching card so the picker never looks like "nothing
+// will happen". (Mirrors resolveThrowbackIdentity's default chain.)
+const ownDefaultYearStart = (() => {
+  const dflt = DEFAULT_THROWBACK_ERA[user.franchiseId];
+  if (eligibleEras.some((e) => e.yearStart === dflt)) return dflt;
+  return [...eligibleEras].sort((a, b) => a.yearStart - b.yearStart)[0]?.yearStart ?? null;
+})();
+
 // Commissioner-only adoption panel: which franchises have picked, which are
 // riding the seeded default. Server-rendered and gated — regular owners never
 // see other teams' data.
@@ -136,7 +145,12 @@ if (isAdmin) {
             <div class="tbw-card__body">
               <img class="tbw-card__icon" src={era.icon} alt="" loading="lazy" />
               <div>
-                <div class="tbw-card__name">{era.name}</div>
+                <div class="tbw-card__name">
+                  {era.name}
+                  {selectedYearStart === null && era.yearStart === ownDefaultYearStart && (
+                    <span class="tbw-card__default-chip">Your Week 4 default</span>
+                  )}
+                </div>
                 <div class="tbw-card__years">
                   {era.yearStart}–{era.yearEnd}
                   {era.eraLabel && <span class="tbw-card__era-label">· {era.eraLabel}</span>}
@@ -372,6 +386,20 @@ if (isAdmin) {
 
   .tbw-card__name {
     font-weight: 600;
+  }
+
+  .tbw-card__default-chip {
+    display: inline-block;
+    margin-left: 0.45rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast, #fff);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
   }
 
   .tbw-card__years {

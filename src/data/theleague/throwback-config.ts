@@ -1,10 +1,9 @@
 /**
  * Throwback Week: designated weeks where teams display a legacy identity
- * (name/icon/banner from theleague.config.json's per-team `history[]`)
+ * (name/icon/banner/colors from theleague.config.json's per-team `history[]`)
  * instead of their current one, on live scoring / matchups / submit lineup.
  *
- * See /Users/brandon.shields@alaskaair.com/.claude/plans/unified-sleeping-hearth.md
- * for the full feature plan.
+ * Feature learnings live in docs/claude/insights/features/throwback-week.md.
  */
 
 /**

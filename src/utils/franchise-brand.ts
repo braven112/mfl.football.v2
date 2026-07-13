@@ -91,9 +91,10 @@ export function getFranchiseBrand(franchiseId: string): FranchiseBrand {
 
 /**
  * Throwback Week-aware variant of `getFranchiseBrand`. When `isActive`,
- * overlays the franchise's resolved legacy name/icon/banner (owner override
- * -> commissioner default -> earliest eligible era) onto the current brand;
- * colors are left untouched. No-op otherwise.
+ * overlays the franchise's resolved legacy identity (owner override ->
+ * commissioner default -> earliest-eligible last resort; see
+ * `resolveThrowbackIdentity`) onto the current brand — name, icon, banner,
+ * and era colors when the era defines them. No-op otherwise.
  */
 export function getThrowbackFranchiseBrand(
   franchiseId: string,

@@ -61,6 +61,12 @@ function toIdentity(entry: FranchiseHistoryEntry): TeamIdentity {
  * default -> earliest eligible era -> current identity (if no eligible eras
  * exist at all).
  *
+ * Note on the fallback: the "each team throws back to its most recent old
+ * identity" policy is implemented by the SEEDED `DEFAULT_THROWBACK_ERA` map
+ * (hand-tuned per franchise, with commissioner exceptions), not here. The
+ * earliest-eligible-era branch below is a last resort that only fires when a
+ * franchise has eligible eras but no (or an invalid) seeded default.
+ *
  * @param ownerOverrideYearStart - `yearStart` of the era the owner picked
  *   via /theleague/throwback-settings, if any.
  */
