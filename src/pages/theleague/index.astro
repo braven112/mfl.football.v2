@@ -19,6 +19,7 @@ import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.as
 import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
 import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
@@ -118,9 +119,14 @@ const whatsNewEntries = getWhatsNewEntriesForLeague('theleague');
 let heroEntries = whatsNewEntries;
 const throwbackPromo = whatsNewEntries.find((e) => e.id === 'throwback-week');
 if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new Date())) {
-  const needsThrowbackPick = userFranchiseId
-    ? !(await getThrowbackPreference(userFranchiseId))
-    : false;
+  // League scoping: AFL franchiseIds overlap TheLeague's — only a TheLeague
+  // session counts as "an owner who could pick an era".
+  const isTheLeagueSession =
+    !!authUser && authUser.leagueId === getLeagueBySlug('theleague')?.id;
+  const needsThrowbackPick =
+    isTheLeagueSession && userFranchiseId
+      ? !(await getThrowbackPreference(userFranchiseId))
+      : false;
   if (!needsThrowbackPick) {
     heroEntries = whatsNewEntries.filter((e) => e.id !== 'throwback-week');
   }

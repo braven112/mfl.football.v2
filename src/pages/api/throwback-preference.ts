@@ -11,16 +11,28 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, type AuthUser } from '../../utils/auth';
 import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
 import { getThrowbackPreference, setThrowbackPreference } from '../../utils/throwback-store';
+import { getLeagueBySlug } from '../../config/leagues';
 import leagueConfig from '../../data/theleague.config.json';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+const THELEAGUE_ID = getLeagueBySlug('theleague')?.id;
+
+/**
+ * League scoping: AFL sessions are real JWTs whose franchiseIds fully overlap
+ * TheLeague's (both start at 0001), so a franchise-only check would let an
+ * AFL owner read/write a TheLeague team's pick. Same pattern as
+ * api/afl-keepers.ts.
+ */
+function isTheLeagueSession(user: AuthUser | null): user is AuthUser {
+  return !!user && !!user.franchiseId && user.leagueId === THELEAGUE_ID;
+}
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !user.franchiseId) {
+  if (!isTheLeagueSession(user)) {
     return new Response(JSON.stringify({ error: 'Authentication required' }), {
       status: 401,
       headers: JSON_HEADERS,
@@ -36,7 +48,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !user.franchiseId) {
+  if (!isTheLeagueSession(user)) {
     return new Response(JSON.stringify({ error: 'Authentication required' }), {
       status: 401,
       headers: JSON_HEADERS,

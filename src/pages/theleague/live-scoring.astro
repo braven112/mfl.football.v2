@@ -65,9 +65,12 @@ if (isThrowbackWeek(week)) {
   // validation — still view-only; non-admins get the param ignored.
   const previewEraParam = Astro.url.searchParams.get('previewEra');
   const previewEra = previewEraParam ? parseInt(previewEraParam, 10) : NaN;
-  if (Number.isFinite(previewEra) && userFranchiseId) {
+  // League scoping: AFL franchiseIds overlap TheLeague's, so only a session
+  // for THIS league may dress a team here (or pass the admin gate).
+  const isLeagueSession = !!authUser && authUser.leagueId === league.leagueId;
+  if (Number.isFinite(previewEra) && userFranchiseId && isLeagueSession) {
     const previewFranchiseParam = Astro.url.searchParams.get('previewFranchise');
-    const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
+    const isAdmin = isCommissionerOrAdmin(authUser);
     const targetFranchiseId =
       previewFranchiseParam && isAdmin ? previewFranchiseParam : userFranchiseId;
 

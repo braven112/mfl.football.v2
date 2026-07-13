@@ -11,7 +11,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
 import { getThrowbackPreference, getAllThrowbackPreferences, getRedis } from '../../utils/throwback-store';
-import { DEFAULT_THROWBACK_ERA } from '../../data/theleague/throwback-config';
+import { DEFAULT_THROWBACK_ERA, THROWBACK_WEEKS } from '../../data/theleague/throwback-config';
+import { getLeagueBySlug } from '../../config/leagues';
 import leagueConfig from '../../data/theleague.config.json';
 
 const user = getAuthUser(Astro.request);
@@ -19,10 +20,20 @@ if (!user?.franchiseId) {
   return Astro.redirect('/theleague/login?redirect=/theleague/throwback-settings');
 }
 
+// League scoping: AFL franchiseIds fully overlap TheLeague's, so a session
+// from the other league must not resolve to a TheLeague team (or, for AFL
+// franchise 0001, pass the admin-franchise fallback into the commish panel).
+if (user.leagueId !== getLeagueBySlug('theleague')?.id) {
+  return Astro.redirect('/theleague');
+}
+
 const team = leagueConfig.teams.find((t) => t.franchiseId === user.franchiseId);
 if (!team) {
   return Astro.redirect('/theleague');
 }
+
+// Preview links must follow the configured throwback week, not a baked-in 4.
+const previewWeek = THROWBACK_WEEKS[0] ?? 4;
 
 const eligibleEras = getEligibleThrowbackEras(team);
 const preference = await getThrowbackPreference(user.franchiseId);
@@ -121,7 +132,7 @@ if (isAdmin) {
         your lineup during a designated Throwback Week. Your choice is saved
         automatically and stays put until you change it.
       </p>
-      <a class="tbw-preview-link" href="/theleague/live-scoring?week=4&demo=1">
+      <a class="tbw-preview-link" href={`/theleague/live-scoring?week=${previewWeek}&demo=1`}>
         Preview it on the scoreboard &rarr;
       </a>
     </header>
@@ -160,7 +171,7 @@ if (isAdmin) {
                   so following this link neither selects nor saves the era. */}
               <a
                 class="tbw-card__preview"
-                href={`/theleague/live-scoring?week=4&demo=1&previewEra=${era.yearStart}`}
+                href={`/theleague/live-scoring?week=${previewWeek}&demo=1&previewEra=${era.yearStart}`}
                 aria-label={`Preview ${era.name} (${era.yearStart}) on the scoreboard without saving`}
               >
                 Preview →
@@ -223,7 +234,7 @@ if (isAdmin) {
                       </div>
                       <a
                         class="tbw-cg__preview"
-                        href={`/theleague/live-scoring?week=4&demo=1&previewFranchise=${row.franchiseId}&previewEra=${era.yearStart}`}
+                        href={`/theleague/live-scoring?week=${previewWeek}&demo=1&previewFranchise=${row.franchiseId}&previewEra=${era.yearStart}`}
                         aria-label={`Preview ${row.teamName} as ${era.name} (${era.yearStart}) on the scoreboard`}
                       >
                         Preview →
