@@ -51,11 +51,11 @@ export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0002': 2015, // Da Dangsters (vintage 2015-2024 icon)
   '0003': 2015, // Poker in the Rear
   '0004': 2019, // Drunk Indians (commissioner pick, July 2026 — over the more recent Heavy Chevy)
-  '0005': 2007, // The Executioners (only prior era)
+  '0005': 2007, // The Executioners (full rebrand beats the 2016 round-badge Ninjas look)
   '0006': 2007, // LBer-DeCleaters (only prior era)
-  '0007': 2007, // Acer FC Edge (only prior era)
+  '0007': 2007, // Acer FC Edge (full rebrand beats the 2010 Barney-Fife-button look)
   '0008': 2023, // Bring The Pain (2023 red-graffiti — most recent old look; 2007 skull is the alt)
-  '0009': 2007, // Rolling Rockers (only prior era)
+  '0009': 2007, // Rolling Rockers (full rebrand beats the 2012 skull-wabbit look)
   '0010': 2007, // Witch City Warlocks (Computer Jocks' oldest — avoids a name
                 //   clash with the current Midwestside Connection franchise,
                 //   which 0010 used to be named before that identity moved to 0011)

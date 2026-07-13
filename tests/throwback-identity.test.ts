@@ -119,11 +119,19 @@ describe('throwback-identity', () => {
     expect(dang.banner).toBe('/assets/theleague/history/da_dangsters_2015_banner.png');
   });
 
-  it('DMOC 2015 era borrows the 2007 banner until the real one is recreated', () => {
-    // Interim: the 2015 "blue sorceress" banner was unrecoverable; the owner
-    // is recreating it in Photoshop. Icon stays era-correct.
+  it('DMOC 2015 era wears its recovered blue-sorceress banner', () => {
     const dmoc = resolveThrowbackIdentity(findTeam('0015'), 2015);
     expect(dmoc.icon).toBe('/assets/theleague/history/dark_magicians_2015_icon_circle.png');
-    expect(dmoc.banner).toBe('/assets/theleague/history/dark_magicians_2007_banner.png');
+    expect(dmoc.banner).toBe('/assets/theleague/history/dark_magicians_2015_banner.png');
+  });
+
+  it('vintage same-name eras are eligible now that their art is recovered (Wabbits 2012, Ninjas 2016, FRA 2010)', () => {
+    const wab = getEligibleThrowbackEras(findTeam('0009'));
+    expect(wab.map((e) => e.yearStart)).toEqual([2007, 2012]);
+    const nin = getEligibleThrowbackEras(findTeam('0005'));
+    expect(nin.map((e) => e.yearStart)).toEqual([2007, 2016]);
+    // FRA's banner never changed — the era differs by icon alone (Barney Fife button).
+    const fra = getEligibleThrowbackEras(findTeam('0007'));
+    expect(fra.map((e) => e.yearStart)).toEqual([2007, 2010]);
   });
 });
