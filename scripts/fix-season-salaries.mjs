@@ -1,7 +1,19 @@
 import fs from 'fs';
-import path from 'path';
 
-// Correct 2020 salaries from Google Doc
+// One-shot historical fixer: applies the salary-correction table below (from
+// the Google Doc) to a season's committed mfl-feeds rosters. Replaces the
+// former fix-2020-salaries.mjs / fix-2021-salaries.mjs twins, which were
+// identical except for the target year.
+//
+// Usage: node scripts/fix-season-salaries.mjs --year=2020
+
+const yearArg = process.argv.find((arg) => arg.startsWith('--year='));
+const year = yearArg?.split('=')[1];
+if (!/^\d{4}$/.test(year ?? '')) {
+  console.error('Usage: node scripts/fix-season-salaries.mjs --year=YYYY');
+  process.exit(1);
+}
+
 const correctSalaries = {
   // QBs
   'Rodgers, Aaron': 7837500,
@@ -203,8 +215,8 @@ const correctSalaries = {
 };
 
 // Read the players.json to get player IDs and names
-const playersFile = 'data/theleague/mfl-feeds/2020/players.json';
-const rostersFile = 'data/theleague/mfl-feeds/2020/rosters.json';
+const playersFile = `data/theleague/mfl-feeds/${year}/players.json`;
+const rostersFile = `data/theleague/mfl-feeds/${year}/rosters.json`;
 
 console.log('Loading player data...');
 const playersData = JSON.parse(fs.readFileSync(playersFile, 'utf8'));

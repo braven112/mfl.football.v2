@@ -80,12 +80,12 @@ teamProjections.forEach((team, index) => {
 
 console.log('\n');
 
-// Also print specific matchup example (Team 0013 vs 0015 from matchup-preview-example)
+// Also print specific matchup example (Team 0013 vs 0015)
 const team0013 = teamProjections.find(t => t.franchiseId === '0013');
 const team0015 = teamProjections.find(t => t.franchiseId === '0015');
 
 if (team0013 && team0015) {
-  console.log('=== Example Matchup (from matchup-preview-example.astro) ===');
+  console.log('=== Example Matchup (Team 0013 vs 0015) ===');
   console.log(`${team0013.teamName}: ${team0013.projection.toFixed(1)} pts (was hardcoded as 98.0)`);
   console.log(`${team0015.teamName}: ${team0015.projection.toFixed(1)} pts (was hardcoded as 113.0)`);
   console.log('');

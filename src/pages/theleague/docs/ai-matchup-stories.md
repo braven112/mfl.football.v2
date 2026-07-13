@@ -141,7 +141,7 @@ Rankings are by position (lower = tougher defense):
 
 ### Implementation Files
 - **[test-matchup-story-nfl.mjs](scripts/test-matchup-story-nfl.mjs)** - Enhanced generator with NFL analysis
-- **[matchup-preview-example.astro](src/pages/theleague/matchup-preview-example.astro)** - Visual component with NFL matchups section
+- **matchup-preview-example.astro** (prototype page, since removed — see git history) - Visual component with NFL matchups section
 
 ## Technical Implementation
 
@@ -1000,7 +1000,7 @@ const userStory = stories[franchiseId];
 1. **Anthropic API Setup** - API key configured in `.env`
 2. **Test Script** - [test-matchup-story-nfl.mjs](scripts/test-matchup-story-nfl.mjs) generates NFL-enhanced stories
 3. **NFL Matchup Analysis** - Player vs defense analysis with rankings
-4. **Visual Component** - [matchup-preview-example.astro](src/pages/theleague/matchup-preview-example.astro) with scoreboard and matchup cards
+4. **Visual Component** - matchup-preview-example.astro (prototype page, since removed — see git history) with scoreboard and matchup cards
 5. **Tone Refinement** - 80-120 word limit, Adam Schefter style, championship focus
 6. **Data Integration** - Rosters, players, standings, weekly results
 7. **Cost Optimization** - Using Claude 3.5 Haiku (~$0.002 per story)
