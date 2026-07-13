@@ -1,0 +1,161 @@
+import { describe, it, expect } from 'vitest';
+import leagueConfig from '../src/data/theleague.config.json';
+import { getEligibleThrowbackEras, resolveThrowbackIdentity } from '../src/utils/throwback-identity';
+import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scoring-data';
+import type { TeamConfig } from '../src/utils/team-names';
+
+const teams = leagueConfig.teams as unknown as TeamConfig[];
+const findTeam = (franchiseId: string) => {
+  const t = teams.find((t) => t.franchiseId === franchiseId);
+  if (!t) throw new Error(`fixture team ${franchiseId} not found`);
+  return t;
+};
+
+describe('throwback-identity', () => {
+  it('resolves Pacific Pigskins to its default era (2013 middle look)', () => {
+    const identity = resolveThrowbackIdentity(findTeam('0001'));
+    expect(identity.isHistorical).toBe(true);
+    expect(identity.name).toBe('Pacific Pigskins');
+    expect(identity.icon).toBe('/assets/theleague/history/pigskins_2013_icon_circle.png');
+  });
+
+  it('Pigskins has both its 2007 black and 2013 middle eras eligible', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0001'));
+    expect(eligible.map((e) => e.yearStart)).toEqual([2007, 2013]);
+  });
+
+  it('excludes Da Dangsters\' 2007 "Sabertooths" — the identity is exclusive to Gridiron Geeks', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0002'));
+    // Only one franchise gets to be the Sabertooths on the scoreboard (the
+    // Geeks, whose seeded default it is). The Dangsters keep their other
+    // recovered eras.
+    expect(eligible.map((e) => e.name)).toEqual(['Degenerates', 'Da Dangsters']);
+  });
+
+  it('keeps the Sabertooths entry eligible for Gridiron Geeks', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0013'));
+    expect(eligible.some((e) => e.name === 'Sabertooths' && e.yearStart === 2009)).toBe(true);
+  });
+
+  it('excludes Computer Jocks\' 2011 "Midwestside Connection" — the identity belongs to franchise 0011', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0010'));
+    expect(eligible.some((e) => e.yearStart === 2011)).toBe(false);
+    expect(eligible.map((e) => e.name)).toEqual(['Witch City Warlocks']);
+  });
+
+  it('a team with only one history entry still resolves to it', () => {
+    const identity = resolveThrowbackIdentity(findTeam('0007')); // Fire Ready Aim -> Acer FC Edge
+    expect(identity.isHistorical).toBe(true);
+    expect(identity.name).toBe('Acer FC Edge');
+    expect(identity.icon).toBe('/assets/theleague/history/acer_fc_edge_icon_circle.png');
+  });
+
+  it('Bring The Pain has both its skull (2007) and red-graffiti (2023) eras eligible', () => {
+    const eligible = getEligibleThrowbackEras(findTeam('0008'));
+    expect(eligible.map((e) => e.yearStart)).toEqual([2007, 2023]);
+    // Default is the most recent old look (2023 red-graffiti).
+    const identity = resolveThrowbackIdentity(findTeam('0008'));
+    expect(identity.icon).toBe('/assets/theleague/history/bring_the_pain_2023_icon_circle.png');
+  });
+
+  it('owner override takes precedence over the commissioner default', () => {
+    const team = findTeam('0004'); // Dead Cap Walking — 4 eligible eras, default is 2019
+    const eligible = getEligibleThrowbackEras(team);
+    const nonDefault = eligible.find((e) => e.yearStart !== 2019);
+    expect(nonDefault).toBeTruthy();
+
+    const withOverride = resolveThrowbackIdentity(team, nonDefault!.yearStart);
+    expect(withOverride.name).toBe(nonDefault!.name);
+
+    const withoutOverride = resolveThrowbackIdentity(team);
+    expect(withoutOverride.name).not.toBe(nonDefault!.name);
+  });
+
+  it('Dead Cap Walking defaults to Drunk Indians (2019) — commissioner pick over the more recent Heavy Chevy', () => {
+    const identity = resolveThrowbackIdentity(findTeam('0004'));
+    expect(identity.name).toBe('Drunk Indians');
+    expect(identity.isHistorical).toBe(true);
+  });
+
+  it('an invalid owner override falls through to the default instead of erroring', () => {
+    const team = findTeam('0001');
+    const identity = resolveThrowbackIdentity(team, 1999); // no such era
+    expect(identity.name).toBe('Pacific Pigskins');
+  });
+
+  it('falls back to current identity when a team has no eligible eras', () => {
+    const fauxTeam: TeamConfig = {
+      franchiseId: '9999',
+      name: 'No History FC',
+      icon: '/assets/theleague/icons/placeholder.png',
+      banner: '/assets/theleague/banners/placeholder.png',
+    };
+    const identity = resolveThrowbackIdentity(fauxTeam);
+    expect(identity.isHistorical).toBe(false);
+    expect(identity.name).toBe('No History FC');
+  });
+
+  it('missing banner art falls back to the placeholder, not a broken icon path', () => {
+    // Every real config entry now carries a banner (all recovered July 2026),
+    // so the fallback contract is locked with a synthetic history entry.
+    const fauxTeam = {
+      franchiseId: '9999',
+      name: 'No Banner FC',
+      icon: '/assets/theleague/icons/none.png',
+      banner: '/assets/theleague/banners/none.png',
+      history: [{ name: 'Bannerless Era', yearStart: 2010, yearEnd: 2012 }],
+    } as unknown as Parameters<typeof resolveThrowbackIdentity>[0];
+    const identity = resolveThrowbackIdentity(fauxTeam, 2010);
+    expect(identity.banner).toBe('/assets/theleague/history/historical-team-banner-placeholder.svg');
+  });
+
+  it('era colors ride the throwback overlay — Week 4 washes tint in the legacy palette', () => {
+    // Every eligible era now carries a derived colorPrimary.
+    for (const t of teams) {
+      for (const era of getEligibleThrowbackEras(t)) {
+        expect(era.colorPrimary, `${t.franchiseId} ${era.yearStart} ${era.name}`).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    }
+
+    // applyThrowbackOverrides swaps the palette and clears the current-brand
+    // dark variants (they belong to the CURRENT palette, not the era's).
+    const overridden = applyThrowbackOverrides(teams as unknown as ConfigTeam[], true);
+    const dangsters = overridden.find((t) => t.franchiseId === '0002')!;
+    const eras = getEligibleThrowbackEras(findTeam('0002'));
+    const defaultEra = eras.find((e) => e.yearStart === 2015)!; // seeded default
+    expect(dangsters.colorPrimary).toBe(defaultEra.colorPrimary);
+    expect(dangsters.color).toBe(defaultEra.colorPrimary);
+    expect(dangsters.colorPrimaryDark).toBeUndefined();
+
+    // Inactive week: palette untouched.
+    const untouched = applyThrowbackOverrides(teams as unknown as ConfigTeam[], false);
+    expect(untouched.find((t) => t.franchiseId === '0002')!.colorPrimary).toBe('#1b435f');
+  });
+
+  it('recovered era banners are wired in (LBer-DeCleaters, Devil Dogs, Da Dangsters 2015)', () => {
+    const music = resolveThrowbackIdentity(findTeam('0006'), 2007);
+    expect(music.banner).toBe('/assets/theleague/history/lb_decleaters_banner.png');
+
+    const cboy = resolveThrowbackIdentity(findTeam('0014'), 2007);
+    expect(cboy.banner).toBe('/assets/theleague/history/devil_dogs_banner.png');
+
+    const dang = resolveThrowbackIdentity(findTeam('0002'), 2015);
+    expect(dang.banner).toBe('/assets/theleague/history/da_dangsters_2015_banner.png');
+  });
+
+  it('DMOC 2015 era wears its recovered blue-sorceress banner', () => {
+    const dmoc = resolveThrowbackIdentity(findTeam('0015'), 2015);
+    expect(dmoc.icon).toBe('/assets/theleague/history/dark_magicians_2015_icon_circle.png');
+    expect(dmoc.banner).toBe('/assets/theleague/history/dark_magicians_2015_banner.png');
+  });
+
+  it('vintage same-name eras are eligible now that their art is recovered (Wabbits 2012, Ninjas 2016, FRA 2010)', () => {
+    const wab = getEligibleThrowbackEras(findTeam('0009'));
+    expect(wab.map((e) => e.yearStart)).toEqual([2007, 2012]);
+    const nin = getEligibleThrowbackEras(findTeam('0005'));
+    expect(nin.map((e) => e.yearStart)).toEqual([2007, 2016]);
+    // FRA's banner never changed — the era differs by icon alone (Barney Fife button).
+    const fra = getEligibleThrowbackEras(findTeam('0007'));
+    expect(fra.map((e) => e.yearStart)).toEqual([2007, 2010]);
+  });
+});

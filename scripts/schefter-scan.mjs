@@ -24,6 +24,11 @@ import {
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
 import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
+import {
+  buildThrowbackReminder,
+  isThrowbackEventId,
+  throwbackWeekFromEventId,
+} from './lib/throwback-reminder.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { parseRosterMove } from './lib/roster-move-parse.mjs';
@@ -66,6 +71,7 @@ function buildSchefterLeague(registrySlug, overrides) {
     slug: reg.navSlug,
     leagueId: reg.id,
     playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
+    baseUrl: `https://${reg.domains[0]}`,
     calendarUrl: `https://${reg.domains[0]}/calendar`,
     ...overrides,
   };
@@ -1844,6 +1850,36 @@ function pickRogerTemplate(touchId, eventId) {
   return pool[hash % pool.length];
 }
 
+/**
+ * Throwback Week: count how many franchises are still on the commissioner's
+ * default era (no `throwback:{franchiseId}` key in Redis — the same keys
+ * src/utils/throwback-store.ts writes). Best-effort flavor for the pre-event
+ * nudges: any failure (no creds, network, bad payload) returns null and the
+ * copy degrades to the generic no-count version.
+ */
+async function countThrowbackDefaults(league) {
+  try {
+    const redis = await getRedis();
+    if (!redis) return null;
+    const teams = await loadTeams(league.configPath);
+    const franchiseIds = [...teams.keys()];
+    if (franchiseIds.length === 0) return null;
+    const values = await redis.mget(...franchiseIds.map(id => `throwback:${id}`));
+    let count = 0;
+    for (const value of values) {
+      let pref = value;
+      if (typeof pref === 'string') {
+        try { pref = JSON.parse(pref); } catch { pref = null; }
+      }
+      if (!(pref && typeof pref.yearStart === 'number')) count++;
+    }
+    return count;
+  } catch (err) {
+    console.warn(`  [throwback] default-count lookup failed: ${err.message} — using generic copy`);
+    return null;
+  }
+}
+
 async function scanEventReminders(league) {
   console.log(`\n=== Scanning event reminders for ${league.slug} ===`);
 
@@ -1865,6 +1901,13 @@ async function scanEventReminders(league) {
   const feed = await loadFeed(league.feedPath);
   const now = new Date();
   const newPosts = [];
+  // Per-post GroupMe link overrides (postId → URL). Throwback posts point at
+  // the era picker / live scoring instead of the calendar; kept out of the
+  // feed post object so the feed schema stays unchanged.
+  const groupMeUrlOverrides = new Map();
+  // Lazily fetched at most once per league scan, and only when a throwback
+  // pre-event touch is actually firing (undefined = not fetched yet).
+  let throwbackDefaultCount;
 
   for (const event of eventsData.events) {
     if (event.isPast) continue;
@@ -1880,10 +1923,36 @@ async function scanEventReminders(league) {
       // Dedup: skip if already posted
       if (feed.posts.some(p => p.id === postId)) continue;
 
-      const template = pickRogerTemplate(touch.id, event.id);
-      const days = String(event.daysUntil);
-      const headline = template.h.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
-      const body = template.b.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
+      let headline, body, link, linkLabel;
+      if (isThrowbackEventId(event.id)) {
+        // Throwback Week — custom copy: pre-event touches nudge owners to
+        // pick their era; day-of announces the legacy identities are live.
+        if (touch.id !== 'dayof' && throwbackDefaultCount === undefined) {
+          throwbackDefaultCount = await countThrowbackDefaults(league);
+        }
+        const built = buildThrowbackReminder(touch.id, {
+          week: throwbackWeekFromEventId(event.id),
+          days: event.daysUntil,
+          defaultCount: touch.id === 'dayof' ? null : throwbackDefaultCount,
+        });
+        if (!built) continue;
+        ({ headline, body } = built);
+        if (touch.id === 'dayof') {
+          link = '/theleague/live-scoring';
+          linkLabel = 'See the throwbacks';
+        } else {
+          link = '/theleague/throwback-settings';
+          linkLabel = 'Pick your era';
+        }
+        groupMeUrlOverrides.set(postId, `${league.baseUrl}${link}`);
+      } else {
+        const template = pickRogerTemplate(touch.id, event.id);
+        const days = String(event.daysUntil);
+        headline = template.h.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
+        body = template.b.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
+        link = league.slug === 'afl' ? '/afl-fantasy/calendar' : '/theleague/calendar';
+        linkLabel = 'View calendar';
+      }
 
       newPosts.push({
         id: postId,
@@ -1892,8 +1961,8 @@ async function scanEventReminders(league) {
         tier: touch.postTier,
         headline,
         body,
-        link: league.slug === 'afl' ? '/afl-fantasy/calendar' : '/theleague/calendar',
-        linkLabel: 'View calendar',
+        link,
+        linkLabel,
         authorId: 'roger',
         franchiseIds: [],
         league: league.slug,
@@ -1918,7 +1987,8 @@ async function scanEventReminders(league) {
     console.warn(`  [GroupMe] Roger bot id not set — skipping Roger GroupMe sends for ${league.slug}`);
   } else {
     for (const post of newPosts) {
-      const text = `${post.headline}\n\n${post.body}\n\n${league.calendarUrl}`;
+      const url = groupMeUrlOverrides.get(post.id) ?? league.calendarUrl;
+      const text = `${post.headline}\n\n${post.body}\n\n${url}`;
       await postToGroupMe(text, { botIdOverride: rogerBotId });
     }
   }

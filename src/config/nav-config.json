@@ -324,6 +324,36 @@
           "description": "About this league"
         }
       ]
+    },
+    {
+      "id": "commissioner",
+      "label": "Commissioner",
+      "phaseOrder": { "inSeason": 7, "offSeason": 7 },
+      "defaultOpen": "never",
+      "visibility": "admin",
+      "leagueOnly": "theleague",
+      "links": [
+        {
+          "id": "admin-hub",
+          "label": "Admin Hub",
+          "icon": "gavel",
+          "path": "/admin",
+          "external": false,
+          "visibility": "admin",
+          "leagueOnly": "theleague",
+          "description": "Every commissioner tool and admin-aware page in one place"
+        },
+        {
+          "id": "throwback-settings-admin",
+          "label": "Throwback Week",
+          "icon": "history",
+          "path": "/throwback-settings",
+          "external": false,
+          "visibility": "admin",
+          "leagueOnly": "theleague",
+          "description": "Era picker plus the commissioner view of every team's Throwback Week pick"
+        }
+      ]
     }
   ],
   "adminFranchiseIds": ["0001", "0000"],

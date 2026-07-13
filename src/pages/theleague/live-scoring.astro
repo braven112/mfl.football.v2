@@ -1,13 +1,16 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueConfig from '../../data/theleague.config.json';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
-import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
+import { assembleLiveScoringData, buildTeamsMap, applyThrowbackOverrides, type ConfigTeam } from '../../utils/live-scoring-data';
+import { isThrowbackWeek } from '../../data/theleague/throwback-config';
+import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
+import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import { getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
@@ -40,7 +43,56 @@ const isLive = daily.slot === 'live-scoring';
 
 const authUser = getAuthUser(Astro.request);
 const userFranchiseId = authUser?.franchiseId;
-const configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+let configTeams = ((leagueConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+// Throwback Week: swap every team's name/icon/banner to its resolved legacy
+// identity before any downstream data assembly touches configTeams — both
+// the live path (via assembleLiveScoringData -> buildTeamsMap) and the demo
+// path below pick this up for free.
+// Try-before-save preview state — set when ?previewEra applies below; drives
+// the "Save this era" bar above the scoreboard. `ownSave` is false when a
+// commissioner is previewing another franchise (view-only — no save button;
+// the preference API is deliberately owner-scoped).
+let throwbackPreview: { yearStart: number; eraName: string; teamName: string; ownSave: boolean } | null = null;
+
+if (isThrowbackWeek(week)) {
+  const ownerOverrides = await getAllThrowbackPreferences(configTeams.map((t) => t.franchiseId));
+
+  // Try-before-save: ?previewEra={yearStart} lets a signed-in owner see an era
+  // on THEIR OWN team without persisting it (the picker's per-card Preview
+  // links use this), and only for an era the picker would actually offer.
+  // Commissioners may add ?previewFranchise={id} to dress ANY team for
+  // validation — still view-only; non-admins get the param ignored.
+  const previewEraParam = Astro.url.searchParams.get('previewEra');
+  const previewEra = previewEraParam ? parseInt(previewEraParam, 10) : NaN;
+  // League scoping: AFL franchiseIds overlap TheLeague's, so only a session
+  // for THIS league may dress a team here (or pass the admin gate).
+  const isLeagueSession = !!authUser && authUser.leagueId === league.leagueId;
+  if (Number.isFinite(previewEra) && userFranchiseId && isLeagueSession) {
+    const previewFranchiseParam = Astro.url.searchParams.get('previewFranchise');
+    const isAdmin = isCommissionerOrAdmin(authUser);
+    const targetFranchiseId =
+      previewFranchiseParam && isAdmin ? previewFranchiseParam : userFranchiseId;
+
+    const targetTeam = configTeams.find((t) => t.franchiseId === targetFranchiseId);
+    const chosen = targetTeam
+      ? getEligibleThrowbackEras(targetTeam as Parameters<typeof getEligibleThrowbackEras>[0]).find(
+          (e) => e.yearStart === previewEra,
+        )
+      : undefined;
+    if (chosen && targetTeam) {
+      ownerOverrides[targetFranchiseId] = previewEra;
+      throwbackPreview = {
+        yearStart: previewEra,
+        eraName: chosen.name,
+        teamName: targetTeam.name,
+        ownSave: targetFranchiseId === userFranchiseId,
+      };
+    }
+  }
+
+  configTeams = applyThrowbackOverrides(configTeams, true, ownerOverrides);
+}
 
 // Demo/sample mode. During the offseason MFL turns off the liveScoring feed, so
 // the real fetch comes back with no matchups — in that case the page auto-falls
@@ -127,6 +179,31 @@ if (useDemo) {
 
 <TheLeagueLayout title="Live Scoring">
   <div class="ls-page">
+    {throwbackPreview && (
+      <div class="ls-tb-preview" id="tb-preview-bar" data-year-start={throwbackPreview.yearStart}>
+        <span class="ls-tb-preview__text">
+          {throwbackPreview.ownSave ? (
+            <>
+              Previewing <strong>{throwbackPreview.eraName} ({throwbackPreview.yearStart})</strong> —
+              this is how your team looks on Throwback Week. Nothing is saved yet.
+            </>
+          ) : (
+            <>
+              Commissioner preview: <strong>{throwbackPreview.teamName}</strong> as{' '}
+              <strong>{throwbackPreview.eraName} ({throwbackPreview.yearStart})</strong>.
+              View-only — only that team's owner can save a pick.
+            </>
+          )}
+        </span>
+        <span class="ls-tb-preview__actions">
+          {throwbackPreview.ownSave && (
+            <button class="ls-tb-preview__save" id="tb-preview-save" type="button">Save this era</button>
+          )}
+          <a class="ls-tb-preview__back" href="/theleague/throwback-settings">Back to eras</a>
+        </span>
+        <span class="ls-tb-preview__status" id="tb-preview-status" role="status" aria-live="polite"></span>
+      </div>
+    )}
     <LiveScoreboard client:load {...islandProps} />
     <div class="ls-page-strip">
       <NflGamesStrip client:visible week={islandProps.week} year={year}
@@ -134,6 +211,43 @@ if (useDemo) {
     </div>
   </div>
 </TheLeagueLayout>
+
+<script>
+  // Bound on astro:page-load (not module top-level) so the button still works
+  // when the page is reached via a ClientRouter view transition — same lesson
+  // as the throwback-settings picker.
+  function initTbPreviewSave() {
+    const bar = document.getElementById('tb-preview-bar');
+    const btn = document.getElementById('tb-preview-save') as HTMLButtonElement | null;
+    const status = document.getElementById('tb-preview-status');
+    if (!bar || !btn || bar.dataset.tbwBound === '1') return;
+    bar.dataset.tbwBound = '1';
+
+    btn.addEventListener('click', async () => {
+      const yearStart = Number(bar.dataset.yearStart);
+      btn.disabled = true;
+      if (status) status.textContent = 'Saving…';
+      try {
+        const res = await fetch('/api/throwback-preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yearStart }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (status) status.textContent = 'Saved — this is your Throwback Week look.';
+        } else {
+          btn.disabled = false;
+          if (status) status.textContent = data.error || 'Failed to save.';
+        }
+      } catch {
+        btn.disabled = false;
+        if (status) status.textContent = 'Failed to save — check your connection.';
+      }
+    });
+  }
+  document.addEventListener('astro:page-load', initTbPreviewSave);
+</script>
 
 <style>
   .ls-page {
@@ -143,5 +257,57 @@ if (useDemo) {
   }
   .ls-page-strip {
     margin-top: var(--spacing-2xl);
+  }
+  .ls-tb-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md, 8px);
+    background: var(--content-bg);
+  }
+  .ls-tb-preview__text {
+    flex: 1 1 260px;
+    font-size: var(--font-size-sm);
+  }
+  .ls-tb-preview__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+  .ls-tb-preview__save {
+    padding: var(--spacing-xs, 0.4rem) var(--spacing-sm, 0.9rem);
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-accent);
+    color: var(--color-accent-contrast, #fff);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .ls-tb-preview__save:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .ls-tb-preview__back {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  .ls-tb-preview__back:hover,
+  .ls-tb-preview__back:focus-visible {
+    text-decoration: underline;
+  }
+  .ls-tb-preview__status {
+    flex-basis: 100%;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary, inherit);
+  }
+  .ls-tb-preview__status:empty {
+    display: none;
   }
 </style>

@@ -1224,6 +1224,76 @@ describe('resolveHeroState', () => {
     });
   });
 
+  describe('Extended-rotation entries (heroRotationDays)', () => {
+    // 2027: FA close = 3rd Sun of Aug = Aug 15; urgent Cut Watch = Jul 16+.
+    const urgentRef = new Date(2027, 6, 20, 12, 0, 0); // Jul 20, urgent tier
+
+    const promoEntries = (date: string): WhatsNewEntry[] => [
+      makeEntry({
+        id: 'campaign-promo', title: 'Campaign Promo', date,
+        heroRotationDays: 14, leagues: ['theleague'],
+      }),
+    ];
+
+    it('stays hero-fresh past the 7-day default while inside its window', () => {
+      // Jun 24 ref, entry 10 days old — an ordinary entry would be stale.
+      const ref = new Date(2027, 5, 24, 12, 0, 0);
+      const state = resolveHeroState(ref, true, promoEntries('2027-06-14'), makeTimeline());
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.priority).toBe('P2');
+      expect(state.fallbackHero?.title).toBe('Campaign Promo');
+    });
+
+    it('splits the URGENT cut-watch tier 50/50 — deadline wins on heads (<0.5)', () => {
+      const state = resolveHeroState(
+        urgentRef, true, promoEntries('2027-07-12'), makeTimeline(), false, false, () => 0.4,
+      );
+      expect(state.phase).toBe('cut-watch');
+      expect(state.priority).toBe('P1');
+      expect(state.metadata.resolvedBy).toBe('isCutWatchUrgent');
+    });
+
+    it('splits the URGENT cut-watch tier 50/50 — promo wins on tails (>=0.5)', () => {
+      const state = resolveHeroState(
+        urgentRef, true, promoEntries('2027-07-12'), makeTimeline(), false, false, () => 0.5,
+      );
+      expect(state.phase).toBe('offseason-fallback');
+      expect(state.priority).toBe('P2');
+      expect(state.fallbackHero?.title).toBe('Campaign Promo');
+    });
+
+    it('keeps ordinary fresh features locked out of the urgent tier (no flip for them)', () => {
+      const ordinary = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: '2027-07-19', leagues: ['theleague'] }),
+      ];
+      // Forcing tails: without heroRotationDays there is no flip to win.
+      const state = resolveHeroState(urgentRef, true, ordinary, makeTimeline(), false, false, () => 0.9);
+      expect(state.phase).toBe('cut-watch');
+      expect(state.priority).toBe('P1');
+    });
+
+    it('outranks routine fresh features for the daily pick while in window', () => {
+      // Jun 24 ref (pre-July, no flip): a 0-day-old routine feature would
+      // normally rotate into the pick; the campaign promo takes it outright.
+      const ref = new Date(2027, 5, 24, 12, 0, 0);
+      const entries = [
+        ...promoEntries('2027-06-20'),
+        makeEntry({ id: 'routine', title: 'Routine Feature', date: '2027-06-24', leagues: ['theleague'] }),
+      ];
+      const state = resolveHeroState(ref, true, entries, makeTimeline());
+      expect(state.fallbackHero?.title).toBe('Campaign Promo');
+    });
+
+    it('drops out of the urgent-tier rotation once the window expires', () => {
+      // Entry 15 days old with a 14-day window — campaign over, deadline owns the hero.
+      const state = resolveHeroState(
+        urgentRef, true, promoEntries('2027-07-05'), makeTimeline(), false, false, () => 0.9,
+      );
+      expect(state.phase).toBe('cut-watch');
+      expect(state.priority).toBe('P1');
+    });
+  });
+
   describe('P5 Fallback', () => {
     it('should return offseason-fallback when no seasonal phase matches', () => {
       // Use a date that falls between phases (e.g., early June)

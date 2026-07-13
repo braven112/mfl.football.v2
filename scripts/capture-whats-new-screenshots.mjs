@@ -68,6 +68,8 @@ const MANUAL_CAPTURE_ONLY = {
   'afl-trophy-wall': 'hand-staged scroll to a franchise trophy wall',
   'owner-activity': 'analytics only populate in prod — dev shows the empty state',
   'afl-owner-activity': 'analytics only populate in prod — dev shows the empty state',
+  'throwback-week':
+    'entry links to the auth-gated settings page; capture /theleague/live-scoring?week=4&demo=1 instead (week=4 activates throwback identities, demo=1 forces the sample replay so matchups render offseason)',
 };
 
 /**

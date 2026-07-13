@@ -15,6 +15,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlayer } from './player-map';
+import { resolveThrowbackIdentity } from './throwback-identity';
+import type { FranchiseHistoryEntry } from './team-names';
 import type {
   LivePlayerRow,
   MatchupPairing,
@@ -35,6 +37,55 @@ export interface ConfigTeam {
   colorPrimaryDark?: string;
   colorSecondaryDark?: string;
   icon?: string;
+  banner?: string;
+  history?: FranchiseHistoryEntry[];
+}
+
+/**
+ * Swap each team's name/icon/banner for its resolved Throwback Week identity
+ * when active. No-op (returns `configTeams` unchanged) otherwise. Applied
+ * before `buildTeamsMap()` so the teams map, matchup pairings, and the live
+ * scoring hero all pick up the swap without any changes downstream.
+ */
+export function applyThrowbackOverrides(
+  configTeams: ConfigTeam[],
+  isThrowbackActive: boolean,
+  ownerOverrides: Record<string, number> = {}
+): ConfigTeam[] {
+  if (!isThrowbackActive) return configTeams;
+
+  return configTeams.map((t) => {
+    const identity = resolveThrowbackIdentity(t, ownerOverrides[t.franchiseId]);
+    // Don't fall back to the CURRENT team's nameMedium/nameShort/abbrev when
+    // the legacy era entry doesn't define its own — that would silently
+    // re-show the current identity's short name next to a legacy icon.
+    // Downstream render calls (e.g. LiveScoreboard's `nameShort ?? name`)
+    // fall back to `name` correctly once these are cleared.
+    //
+    // Era colors: when the era defines its own palette, matchup washes and
+    // win-probability bars tint in the legacy colors too. The *Dark variants
+    // are cleared alongside — they belong to the CURRENT palette, and
+    // downstream already falls back to the light colors when they're absent.
+    const hasEraColors = identity.isHistorical && !!identity.colorPrimary;
+    return {
+      ...t,
+      name: identity.name,
+      nameMedium: identity.isHistorical ? identity.nameMedium : t.nameMedium,
+      nameShort: identity.isHistorical ? identity.nameShort : t.nameShort,
+      abbrev: identity.isHistorical ? identity.abbrev : t.abbrev,
+      icon: identity.icon ?? t.icon,
+      banner: identity.banner ?? t.banner,
+      ...(hasEraColors
+        ? {
+            color: identity.colorPrimary,
+            colorPrimary: identity.colorPrimary,
+            colorSecondary: identity.colorSecondary ?? identity.colorPrimary,
+            colorPrimaryDark: undefined,
+            colorSecondaryDark: undefined,
+          }
+        : {}),
+    };
+  });
 }
 
 export interface LiveScoringData {
@@ -86,6 +137,7 @@ export function buildTeamsMap(configTeams: ConfigTeam[]): Record<string, TeamInf
       colorPrimaryDark: t.colorPrimaryDark,
       colorSecondaryDark: t.colorSecondaryDark,
       icon: t.icon,
+      banner: t.banner,
     };
   }
   return map;

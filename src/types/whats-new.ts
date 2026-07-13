@@ -73,6 +73,14 @@ export interface WhatsNewEntry {
   /** Override: never auto-promote to hero (for minor updates) */
   excludeFromHero?: boolean;
   /**
+   * Extended hero rotation window, in days from `date`. Overrides the default
+   * 7-day fresh-feature window, AND keeps the entry in the 50/50 coin-flip
+   * rotation against the urgent Cut Watch tier (which locks out ordinary
+   * features) for the whole window. For targeted campaign promos — e.g. the
+   * Throwback Week era-picker push — not routine launches.
+   */
+  heroRotationDays?: number;
+  /**
    * Composite-hero appearance override. By default the homepage hero follows
    * the site theme; 'dark' forces the dark treatment even in light mode — for
    * entries where the dark card IS the story (e.g. a dark mode announcement).

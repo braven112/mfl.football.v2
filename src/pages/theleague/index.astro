@@ -19,7 +19,9 @@ import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.as
 import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
-import { resolveHeroState, parseTestDate, isAuctionStripPeriod } from '../../utils/hero-resolver';
+import { getLeagueBySlug } from '../../config/leagues';
+import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
+import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
@@ -106,7 +108,31 @@ const breakingModel = breakingStory
 const hasBreakingStory = !!(breakingStory && breakingModel);
 
 const whatsNewEntries = getWhatsNewEntriesForLeague('theleague');
-const rawHeroState = resolveHeroState(effectiveDate, testMode, whatsNewEntries, timeline, draftComplete, hasBreakingStory);
+
+// Throwback Week hero targeting: the promo exists to drive owners who haven't
+// picked a legacy era to the picker, so it only competes for the hero when
+// THIS visitor is a signed-in owner with no stored pick. Signed-out visitors
+// and owners who already picked get the normal rotation instead (the article
+// stays reachable in the What's New section below). Gated on the rotation
+// window so the homepage stops paying the KV read once the campaign expires.
+// KV unavailable reads as "no pick yet" (fail open for the target audience).
+let heroEntries = whatsNewEntries;
+const throwbackPromo = whatsNewEntries.find((e) => e.id === 'throwback-week');
+if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new Date())) {
+  // League scoping: AFL franchiseIds overlap TheLeague's — only a TheLeague
+  // session counts as "an owner who could pick an era".
+  const isTheLeagueSession =
+    !!authUser && authUser.leagueId === getLeagueBySlug('theleague')?.id;
+  const needsThrowbackPick =
+    isTheLeagueSession && userFranchiseId
+      ? !(await getThrowbackPreference(userFranchiseId))
+      : false;
+  if (!needsThrowbackPick) {
+    heroEntries = whatsNewEntries.filter((e) => e.id !== 'throwback-week');
+  }
+}
+
+const rawHeroState = resolveHeroState(effectiveDate, testMode, heroEntries, timeline, draftComplete, hasBreakingStory);
 const heroState = await enrichHeroState(rawHeroState);
 
 // "NEW since last visit" badges for the What's New section (same cookie the

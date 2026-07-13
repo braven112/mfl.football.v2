@@ -141,6 +141,21 @@ export interface FranchiseHistoryEntry {
   yearEnd: number;
   /** Set when this era's name was a punitive last-place rename. */
   rebrand?: RebrandTag;
+  /**
+   * Optional short display descriptor ("The razorback", "The skull") used to
+   * tell apart eras whose `name` matches another era of the same franchise
+   * (or the current name) and only differ by art — e.g. the Throwback Week
+   * picker. Purely cosmetic; never used for matching or stat attribution.
+   */
+  eraLabel?: string;
+  /**
+   * Era brand colors (hex), derived from the era's own art. Consumed by the
+   * Throwback Week overlays (live-scoring teams map, lineup franchise brand)
+   * so Week 4 surfaces tint in the legacy palette, not the current one.
+   * Optional — eras without colors keep the franchise's current palette.
+   */
+  colorPrimary?: string;
+  colorSecondary?: string;
 }
 
 /**
@@ -202,6 +217,9 @@ export interface TeamIdentity {
   groupMeDark?: string;
   /** Conference code (AFL) for the era; falls back to the team's current conference. */
   conference?: string;
+  /** Era brand colors (hex) when the era defines them — see FranchiseHistoryEntry. */
+  colorPrimary?: string;
+  colorSecondary?: string;
   isHistorical: boolean;
   rebrand?: RebrandTag;
 }
