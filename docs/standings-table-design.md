@@ -76,7 +76,7 @@ fields they render, how they seed/tier, and how they render the team cell.
 - Columns by view:
   - `division`: Seed(PlayoffBadge) · Team · Overall(h2hwlt) · PCT(h2hpct) · **GB(computed)** · **Strk** · Div(divwlt) · PF · PA
   - `all_play`: Seed(PlayoffBadge) · Team · Record(all_play_wlt/derived) · PCT(all_play_pct) · PF · PA · PWR · VP
-  - `league`: seed badge · Team · Record · PCT · PF · PA · PWR · VP
+  - `league`: gray seed pill · Team · Record · PCT · PF · PA · PWR · VP
 - Two header styles: branded compass-badge header (`divisionBadge` set) and plain division header (conference logo + name). Defending-champion sub-line.
 - `deriveAllPlayWLT()` reconstructs record from pct (240 games ≤2020, 255 ≥2021).
 - **League styling hooks:** `:global(html.dark[data-league="afl"])` overrides at
@@ -88,7 +88,9 @@ fields they render, how they seed/tier, and how they render the team cell.
 
 **LeagueStandingsTable.astro** — TheLeague 16-team seeded table.
 - Props: `teams, year?, preferredTeamId?, rosterBaseUrl?, franchiseBaseUrl?`.
-- Columns: Seed(#) · Team(banner) · Overall · PCT · Div · Div PCT · All Play · PF · PWR · VP · PA.
+- Columns: Seed(plain bold #) · Team(banner, **no text fallback** — blank cell when banner missing) · Overall · PCT · Div · Div PCT · All Play · PF · PWR · VP · PA.
+- **Gotcha:** its `deriveAllPlayWLT` (line 28) lacks the `percentage <= 0`
+  guard the other three copies have — see §2.3.1 and open question 8.
 - Tiering by `seed`: `getRowColor` → division-winners(≤4) / wild-cards(≤7) / play-in(≤9) / toilet-bowl(≥10), with tier-boundary bottom borders. Fixed pastel bands, dark-mode translucent washes. Blue accent glow card.
 
 **ConferenceLeagueStandingsTable.astro** — AFL per-conference full table.
@@ -99,6 +101,9 @@ fields they render, how they seed/tier, and how they render the team cell.
 **TierAllPlayStandingsTable.astro** — AFL all-play, grouped by tier.
 - Props: `tierName, teams, year?, rosterBaseUrl?, promotionCutoff?`.
 - Team cell: **icon** (not banner). Columns: Rank(circle badge) · Team · All-Play Record · **Prize**.
+- **Formatter quirk:** its record cell suppresses the tie segment when ties
+  are zero — `12-3`, not `12-3-0` (line 157). The other three tables always
+  render `W-L-T`. Captured as `omitZeroTies` in the column schema (§3.1).
 - Heavy rank-specific styling: gold/silver/bronze/playoff/relegation row classes, promotion/relegation arrows (⬆/⬇), prize map per tier, `promotionCutoff` for the 2017 "Founders Table". Red card glow.
 
 **ConferenceStandingsTable.astro** — **DEAD.** Playoff-seeding layout (two
@@ -113,9 +118,21 @@ Seed·Team·Record·PF·PA). Not imported anywhere (verified `grep` across `.ast
 
 ### 2.3 What they share (the seam to exploit)
 
-1. Identical `parseWLT` + `deriveAllPlayWLT` + `safeParseFloat`/`safeParseInt`
+1. `parseWLT` + `deriveAllPlayWLT` + `safeParseFloat`/`safeParseInt`
    helpers copy-pasted across StandingsTable / LeagueStandingsTable /
-   ConferenceLeagueStandingsTable / TierAllPlayStandingsTable. **Extract once.**
+   ConferenceLeagueStandingsTable / TierAllPlayStandingsTable. **Extract once —
+   but note they are NOT byte-identical.** One real divergence:
+   `LeagueStandingsTable.astro:28` guards only `isNaN(percentage)`, while the
+   other three (`StandingsTable.astro:58`, `ConferenceLeagueStandingsTable.astro:55`,
+   `TierAllPlayStandingsTable.astro:49`) also guard `|| percentage <= 0`.
+   Consequence today: a team with `all_play_pct === "0"` and no `all_play_wlt`
+   (pre-all-play-era feeds) renders **`0-240-0` / `0-255-0` in TL Playoff
+   Standings** but **`N/A` everywhere else**. The shared helper adopts the
+   guarded (`<= 0 → null → 'N/A'`) version — the unguarded one fabricates a
+   season from missing data (the guarded files' own comments call this out).
+   This is a deliberate, visible behavior change on TL `?view=league` for
+   pre-2017 years and needs owner sign-off — see open question 8. Verification
+   must exercise a zero-pct historical season explicitly (§5 matrix).
 2. Identical preferred-team highlight CSS (green light / accent-glass dark),
    identical dark-card glow recipe, identical table/thead/td base styling,
    identical team-banner-link markup. **One stylesheet, tokenized.**
@@ -142,7 +159,15 @@ import type { TeamStanding } from '../../../types/standings';
 /** Which prebuilt column a config references. Formatter/alignment live here,
  *  not at the call site. */
 export type StandingsColumnKey =
-  | 'seedBadge'      // '#{seed}' plain badge (LeagueStandingsTable style)
+  // The seed cell has THREE distinct renderings in the current code — one key
+  // per rendering, because the `accent` prop cannot drive this and the two
+  // seeded presets need different results:
+  | 'seedPill'       // gray pill '#{seed}' (StandingsTable.astro:676-684 —
+                     //   only the unused league-view branch; dies with open q.1)
+  | 'seedPlain'      // plain bold '#{seed}' (LeagueStandingsTable.astro:421-425)
+  | 'seedAccent'     // conference-colored '#{conferenceSeed}', AL red / NL blue
+                     //   via --division-accent (ConferenceLeagueStandingsTable
+                     //   .astro:372,376-380)
   | 'playoffBadge'   // <PlayoffBadge> (division/all-play StandingsTable style)
   | 'rankCircle'     // circular rank badge (tier table style)
   | 'team'           // team cell — render mode set by `teamCell` below
@@ -150,7 +175,7 @@ export type StandingsColumnKey =
   | 'overallPct'     // h2hpct (3dp)
   | 'divRecord'      // divwlt
   | 'divPct'         // divpct (3dp)
-  | 'allPlayRecord'  // all_play_wlt or derived
+  | 'allPlayRecord'  // all_play_wlt or derived — see `omitZeroTies` below
   | 'allPlayPct'     // all_play_pct (3dp)
   | 'gamesBack'      // computed within-group GB (division only)
   | 'streak'         // strk
@@ -165,13 +190,30 @@ export interface StandingsColumn {
    *  not inline media queries, so the CSS stays static. */
   hideBelow?: 'sm';
   widthCh?: number;                       // optional fixed width hint
+  /** allPlayRecord only. The tier table renders '12-3' when ties are zero
+   *  (TierAllPlayStandingsTable.astro:157); the other three always render
+   *  '12-3-0'. Set true in the tierAllPlay preset; default false. */
+  omitZeroTies?: boolean;
 }
 
 export type TeamCellMode =
-  | 'banner'   // <img class=team-banner> + text fallback (TL/AFL full tables)
+  | 'banner'   // <img class=team-banner> — missing-banner behavior is set by
+               //   `teamCellFallback`, NOT baked into the mode (see below)
   | 'icon'     // square icon + name (tier table)
-  | 'iconMeta' // icon + name + division sub-label (was ConferenceStandingsTable)
-  | 'chip';    // color chip + name (hero/compact)
+  | 'chip';    // color chip + name (hero/compact, stretch only)
+// NOTE: no 'iconMeta' mode — it existed only in the dead
+// ConferenceStandingsTable, which step 1 deletes. Don't port it.
+
+/** What the 'banner' team cell renders when the banner is missing or is the
+ *  HISTORICAL_TEAM_BANNER_FALLBACK placeholder. This is THREE-into-two
+ *  current behaviors made explicit:
+ *  - 'name'  → text-fallback span, always rendered alongside/instead of the
+ *              banner (StandingsTable.astro:185,237)
+ *  - 'blank' → banner only; empty cell when missing
+ *              (LeagueStandingsTable.astro:104-130,
+ *               ConferenceLeagueStandingsTable.astro:139-165)
+ *  Preserve each call site's current value (see §4 mapping) — do NOT unify. */
+export type TeamCellFallback = 'name' | 'blank';
 
 /** Seed field + tier thresholds. Drives row band + boundary borders. */
 export interface StandingsTiering {
@@ -183,19 +225,42 @@ export interface StandingsTiering {
                  upTo?: number; boundary?: boolean }>;
 }
 
+/** Defending-champion line. The two leagues render this in mutually exclusive
+ *  ways today, so the schema must carry both:
+ *  - TL brandedDivision: champion as a LOGO image on a white circle, no text
+ *    (StandingsTable.astro:110-115) → set `logoSrc` (+ `name` for alt/title).
+ *  - AFL plain division header: champion as TEXT — "{year} Division
+ *    Champions: {name}" (StandingsTable.astro:135-137; the AFL call site
+ *    passes no logo) → set `name` + `year`, leave `logoSrc` unset.
+ *  Rendering rule: `logoSrc` present → logo treatment; otherwise text line. */
+export interface DefendingChampion {
+  name: string;
+  year?: number;
+  logoSrc?: string;
+}
+
 export interface StandingsHeader {
   kind: 'none' | 'division' | 'brandedDivision' | 'conference' | 'tier';
   title?: string;
   logoSrc?: string; logoDarkSrc?: string;   // ThemeImage pair
-  badgeSrc?: string;                          // compass badge (brandedDivision)
+  /** Compass badge (brandedDivision). If `kind: 'brandedDivision'` but
+   *  badgeSrc is undefined (historical division name missing from the
+   *  divisionBadges map), the component MUST fall back to the plain
+   *  'division' rendering — this preserves the current `hasBrandedHeader`
+   *  guard (StandingsTable.astro:40,120), which already degrades exactly
+   *  this way. Never render a broken <img>. */
+  badgeSrc?: string;
   accentColor?: string; accentColorDark?: string; // conference title hue
-  subtitle?: string;                          // e.g. defending champion line
+  defendingChampion?: DefendingChampion;
+  subtitle?: string;                          // generic extra line (rarely needed)
 }
 
 export interface StandingsTableProps {
   teams: TeamStanding[];
   columns: StandingsColumn[];
   teamCell: TeamCellMode;
+  /** Required when teamCell === 'banner'; see TeamCellFallback. */
+  teamCellFallback?: TeamCellFallback;
   tiering?: StandingsTiering;         // omit → no bands
   header?: StandingsHeader;           // omit → bare table
   year?: number;                      // for all-play derivation
@@ -224,13 +289,15 @@ To keep call sites terse, export named presets from the config module:
 export const COLUMNS = {
   division: [ /* playoffBadge, team, overallRecord, overallPct, gamesBack,
                  streak, divRecord, pf, pa */ ],
-  leagueSeeded: [ /* seedBadge, team, overallRecord, overallPct, divRecord,
+  leagueSeeded: [ /* seedPlain, team, overallRecord, overallPct, divRecord,
                     divPct, allPlayRecord, pf, pwr, vp, pa */ ],
-  conferenceSeeded: [ /* seedBadge(conferenceSeed), team, overallRecord,
-                        overallPct, divRecord, divPct, allPlayRecord,
-                        pf, pwr, vp, pa */ ],
+  conferenceSeeded: [ /* seedAccent (reads conferenceSeed), team, overallRecord,
+                        overallPct, divRecord, divPct(hideBelow:'sm'),
+                        allPlayRecord, pf, pwr(hideBelow:'sm'), vp,
+                        pa(hideBelow:'sm') — mobile hiding per
+                        ConferenceLeagueStandingsTable.astro:524-529 */ ],
   allPlay: [ /* playoffBadge, team, allPlayRecord, allPlayPct, pf, pa, pwr, vp */ ],
-  tierAllPlay: [ /* rankCircle, team, allPlayRecord, prize */ ],
+  tierAllPlay: [ /* rankCircle, team, allPlayRecord{omitZeroTies:true}, prize */ ],
 } satisfies Record<string, StandingsColumn[]>;
 
 export const TIERING = {
@@ -252,15 +319,20 @@ export const TIERING = {
 
 | # | Current call site | New config |
 |---|---|---|
-| 1 | TL `standings.astro` division `<StandingsTable view="division">` | `columns=COLUMNS.division, teamCell='banner', header={brandedDivision…}, accent='league-blue', franchiseBaseUrl` |
-| 2 | TL `standings.astro` league `<LeagueStandingsTable>` | `columns=COLUMNS.leagueSeeded, teamCell='banner', tiering=TIERING.leagueSeed, accent='league-blue'` |
-| 3 | TL `standings.astro` all-play `<StandingsTable view="all_play">` | `columns=COLUMNS.allPlay, teamCell='banner', accent='league-blue'` |
-| 4 | AFL `standings.astro` division `<StandingsTable view="division">` | `columns=COLUMNS.division, teamCell='banner', header={division+confLogo}, accent='conference-blue'\|'afl-red', rosterBaseUrl` |
-| 5 | AFL `standings.astro` league `<ConferenceLeagueStandingsTable>` ×2 | `columns=COLUMNS.conferenceSeeded, teamCell='banner', tiering=TIERING.conferenceSeed(dw), header={conference}, accent per conf` |
+| 1 | TL `standings.astro` division `<StandingsTable view="division">` | `columns=COLUMNS.division, teamCell='banner', teamCellFallback='name', header={brandedDivision, badgeSrc, defendingChampion:{name, logoSrc}}, accent='league-blue', franchiseBaseUrl` |
+| 2 | TL `standings.astro` league `<LeagueStandingsTable>` | `columns=COLUMNS.leagueSeeded, teamCell='banner', teamCellFallback='blank', tiering=TIERING.leagueSeed, accent='league-blue'` |
+| 3 | TL `standings.astro` all-play `<StandingsTable view="all_play">` | `columns=COLUMNS.allPlay, teamCell='banner', teamCellFallback='name', accent='league-blue'` |
+| 4 | AFL `standings.astro` division `<StandingsTable view="division">` | `columns=COLUMNS.division, teamCell='banner', teamCellFallback='name', header={division, confLogo pair, defendingChampion:{name, year}}, accent='conference-blue'\|'afl-red', rosterBaseUrl` |
+| 5 | AFL `standings.astro` league `<ConferenceLeagueStandingsTable>` ×2 | `columns=COLUMNS.conferenceSeeded, teamCell='banner', teamCellFallback='blank', tiering=TIERING.conferenceSeed(dw), header={conference}, accent per conf` |
 | 6 | AFL `standings.astro` all-play tiers `<TierAllPlayStandingsTable>` | `columns=COLUMNS.tierAllPlay, teamCell='icon', header={tier}, tierName, accent='afl-red'` |
 | 7 | AFL `standings.astro` combined all-play `<TierAllPlayStandingsTable promotionCutoff>` | same as #6 + `promotionCutoff` |
 | — | (dead) `ConferenceStandingsTable` | delete |
 | 8a-c | `StandingsHero` / `HpStandingsCompact` / `AflStandingsCompact` | stretch: `columns` presets `heroTop`, `compactCap`, `tierWindow`; add `chip` teamCell + compact density flag. Their feed-loading/windowing logic stays in the component or a small helper. |
+
+`teamCellFallback` values above are load-bearing: usages 1/3/4 keep the
+text-fallback span today; usages 2/5 render banner-only with a blank cell.
+Converting 2/5 with `'name'` would newly show team-name text on historical
+rows — a silent visual diff the snapshot gate (§5) must catch.
 
 ### 4.1 Before / after examples
 
@@ -277,11 +349,15 @@ export const TIERING = {
 
 <!-- after -->
 <StandingsTable teams={division.teams} columns={COLUMNS.division} teamCell="banner"
-  accent="league-blue" year={selectedYear} preferredTeamId={yearPreferredTeamId}
-  franchiseBaseUrl="/theleague/franchises"
+  teamCellFallback="name" accent="league-blue" year={selectedYear}
+  preferredTeamId={yearPreferredTeamId} franchiseBaseUrl="/theleague/franchises"
   header={{ kind: 'brandedDivision', title: division.name,
             badgeSrc: divisionBadges[division.name],
-            subtitle: defendingChampionLine(defendingChampions[division.name], previousYear) }} />
+            defendingChampion: defendingChampions[division.name] && {
+              name: defendingChampions[division.name].name,
+              year: previousYear,
+              logoSrc: defendingChampions[division.name].icon, // logo treatment (TL)
+            } }} />
 ```
 
 **B. TheLeague league view (usage #2) — collapses a whole component**
@@ -290,8 +366,8 @@ export const TIERING = {
 <!-- before --> <LeagueStandingsTable teams={leagueStandings} year={selectedYear}
   preferredTeamId={yearPreferredTeamId} franchiseBaseUrl="/theleague/franchises" />
 <!-- after -->  <StandingsTable teams={leagueStandings} columns={COLUMNS.leagueSeeded}
-  teamCell="banner" tiering={TIERING.leagueSeed} accent="league-blue"
-  year={selectedYear} preferredTeamId={yearPreferredTeamId}
+  teamCell="banner" teamCellFallback="blank" tiering={TIERING.leagueSeed}
+  accent="league-blue" year={selectedYear} preferredTeamId={yearPreferredTeamId}
   franchiseBaseUrl="/theleague/franchises" />
 ```
 
@@ -304,8 +380,9 @@ export const TIERING = {
   rosterBaseUrl={`${baseUrl}/rosters`} divisionWinnerCount={confA.conference.divisions.length} />
 <!-- after -->
 <StandingsTable teams={confA.allTeams} columns={COLUMNS.conferenceSeeded} teamCell="banner"
-  tiering={TIERING.conferenceSeed(confA.conference.divisions.length)} accent="afl-red"
-  year={selectedYear} preferredTeamId={yearPreferredTeamId} rosterBaseUrl={`${baseUrl}/rosters`}
+  teamCellFallback="blank" tiering={TIERING.conferenceSeed(confA.conference.divisions.length)}
+  accent="afl-red" year={selectedYear} preferredTeamId={yearPreferredTeamId}
+  rosterBaseUrl={`${baseUrl}/rosters`}
   header={{ kind: 'conference', title: confA.conference.name, logoSrc: confALogo,
             logoDarkSrc: confALogoDark, accentColor: '#c41e3a', accentColorDark: '#f47a8f' }} />
 ```
@@ -318,11 +395,21 @@ Convert one call site per PR-sized step; verify each before moving on. Both
 leagues share the component, so **every step verifies both `/standings` pages**
 even when only one league's call site changed.
 
-0. **Scaffold, no call-site change.** Add `standings/` folder: shared
-   `standings-cells.ts` (extracted helpers) + `standings-table-config.ts`
+0. **Scaffold + baseline, no call-site change.** Add `standings/` folder:
+   shared `standings-cells.ts` (extracted helpers) + `standings-table-config.ts`
    (types + presets) + new `StandingsTable.astro`. Unit-test the cell helpers
-   (record parse, all-play derivation at 240/255, GB math) — lift existing
-   behavior verbatim. Nothing renders it yet.
+   (record parse, all-play derivation at 240/255, **the zero-pct guard from
+   §2.3.1 — including a `pct === "0"` case locking in `null`/`'N/A'`**, GB
+   math). Helpers are lifted from the guarded variants; the one divergence is
+   resolved per open question 8, not "verbatim" (there is no single verbatim).
+   **Also capture the visual-regression baseline now, from unmodified
+   `origin/main`:** Playwright screenshot snapshots across the matrix
+   {TL, AFL} × {division, league, all_play} × {light, dark} × {desktop,
+   ≤767px} × representative years {current, 2010 (AFL 6-division era),
+   2016 (pre-all-play → exercises the zero-pct path), 2017 (Founders Table),
+   2021 (255-game all-play)}. Every later step diffs against this baseline —
+   manual side-by-side alone cannot catch the silent per-season diffs in
+   findings §2.3.1 / teamCellFallback / omitZeroTies.
 1. **Delete `ConferenceStandingsTable.astro`** (dead). Grep confirms zero
    importers. Zero visual risk.
 2. **all-play views (usages #3, #6, #7)** — visually simplest, fewest columns.
@@ -336,19 +423,24 @@ even when only one league's call site changed.
    AFL `?view=league` (both conferences, AL red / NL blue, division-winner
    counts for a 3-division historical season).
 4. **division views (usages #1, #4)** — most header complexity (branded compass
-   badge, defending champion, conference logo). Convert last. Verify: TL
-   division (branded header, GB/Strk columns, champion line); AFL division
-   (conference-logo header, NL blue glow, mobile column hiding).
+   badge, defending champion logo-vs-text, conference logo). Convert last.
+   Verify: TL division (branded header, champion **logo**, GB/Strk columns);
+   AFL division (conference-logo header, champion **text** line, NL blue glow,
+   mobile font-shrink — note the division view does NOT hide columns on
+   mobile; `StandingsTable.astro:720-747` only shrinks fonts/padding. Column
+   hiding exists only in the conference league view, verified in step 3).
 5. **Delete the five old detail components** once no call site imports them.
    `grep` gate in CI/pre-push.
 6. **(Stretch) hero + compact.** Only after the detail family is stable and
    Phase 4's compact merge has landed. Add `chip` teamCell + density flag +
    hero/compact column presets; keep feed-loading/windowing in the components.
 
-**Verification per step:** load each named page in light **and** dark mode,
-desktop + ≤767px width, with and without a `?myteam=`/preferred team set (the
-highlight path), and spot-check a historical year via `YearSelector`. Compare
-against the current `origin/main` render side-by-side.
+**Verification per step:** run the step-0 snapshot suite against the baseline
+(this is the gate — a pixel diff on any matrix cell blocks the step), then
+manually load each named page in light **and** dark mode, desktop + ≤767px,
+with and without a `?myteam=`/preferred team set (the highlight path). The
+only *expected* diffs are the ones §7 pre-authorizes (open question 8's
+zero-pct change, if approved); anything else is a regression.
 
 ---
 
@@ -395,4 +487,14 @@ against the current `origin/main` render side-by-side.
    (pre-2017 all-play derivation, 2003-2012 AFL 6-division/3-per-conference
    layout, 2017 Founders Table). These are the paths least exercised day-to-day.
    Confirm which specific historical years you want signed off before we delete
-   the old components (step 5).
+   the old components (step 5). The step-0 snapshot matrix proposes {current,
+   2010, 2016, 2017, 2021} — veto/extend that list.
+8. **`deriveAllPlayWLT` unification is a real behavior change (see §2.3.1).**
+   `LeagueStandingsTable.astro:28` lacks the `percentage <= 0` guard the other
+   three copies have, so TL Playoff Standings currently shows `0-240-0` for
+   zero-pct historical teams where every other view shows `N/A`. The design
+   adopts the guarded version everywhere (`N/A`), treating the unguarded copy
+   as the bug — the guarded files' comments explicitly say deriving a record
+   from a zero pct "would fabricate a season". **Sign off on this change**, or
+   direct us to preserve the old TL-league-view behavior behind a config flag
+   (not recommended; it perpetuates the fork the refactor exists to kill).
