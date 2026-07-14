@@ -44,7 +44,10 @@ export interface StandingsColumn {
   omitZeroTies?: boolean;
 }
 
-export type TeamCellMode = 'banner' | 'icon' | 'chip';
+// 'chip' (color-chip + name, hero/compact) is a planned mode for the
+// out-of-scope hero/compact follow-up; the renderer implements only the two
+// shipped modes today. Add 'chip' back alongside its renderer, not before.
+export type TeamCellMode = 'banner' | 'icon';
 
 /** What the 'banner' team cell renders when the banner is missing or is the
  *  HISTORICAL placeholder:
@@ -68,8 +71,8 @@ export interface DefendingChampion {
 }
 
 export interface StandingsHeader {
-  kind: 'none' | 'division' | 'brandedDivision' | 'conference' | 'tier';
-  title?: string;
+  kind: 'division' | 'brandedDivision' | 'conference' | 'tier';
+  title: string;
   logoSrc?: string;
   logoDarkSrc?: string;
   /** Compass badge (brandedDivision). Undefined → fall back to plain 'division'

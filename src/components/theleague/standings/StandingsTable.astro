@@ -47,14 +47,17 @@ const {
   promotionCutoff,
 } = Astro.props as StandingsTableProps;
 
-const variant: 'std' | 'league' | 'conf' | 'tier' =
-  teamCell === 'icon'
-    ? 'tier'
-    : tiering?.seedField === 'conferenceSeed'
-      ? 'conf'
-      : tiering?.seedField === 'seed'
-        ? 'league'
-        : 'std';
+// The tier variant is defined by its column set (rank circle + prize), not by
+// the team-cell mode — deriving it from the columns keeps layout/skin selection
+// decoupled from the presentational team-cell choice.
+const isTierColumns = columns.some((c) => c.key === 'rankCircle' || c.key === 'prize');
+const variant: 'std' | 'league' | 'conf' | 'tier' = isTierColumns
+  ? 'tier'
+  : tiering?.seedField === 'conferenceSeed'
+    ? 'conf'
+    : tiering?.seedField === 'seed'
+      ? 'league'
+      : 'std';
 
 const isBranded = header?.kind === 'brandedDivision' && !!header.badgeSrc;
 const showPlainDivision =
