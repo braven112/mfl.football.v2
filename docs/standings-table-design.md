@@ -458,8 +458,9 @@ zero-pct change, if approved); anything else is a regression.
 
 ## 7. Risks & open questions (for Brandon at review)
 
-> **Review outcome (2026-07-14):** Brandon answered at review. Decisions are
-> recorded inline below. Q8 remains **open** pending his sign-off.
+> **Review outcome (2026-07-14):** Brandon answered at review. All eight
+> questions are resolved — decisions recorded inline below. The design is
+> cleared for implementation.
 
 1. **`StandingsTable`'s `league` view branch appears unused.** TheLeague routes
    its league view through `LeagueStandingsTable` and AFL through
@@ -509,7 +510,8 @@ zero-pct change, if approved); anything else is a regression.
    zero-pct historical teams where every other view shows `N/A`. The design
    adopts the guarded version everywhere (`N/A`), treating the unguarded copy
    as the bug — the guarded files' comments explicitly say deriving a record
-   from a zero pct "would fabricate a season". **⏳ OPEN — awaiting Brandon's
-   sign-off** (context link provided at review), or direct us to preserve the
-   old TL-league-view behavior behind a config flag (not recommended; it
-   perpetuates the fork the refactor exists to kill).
+   from a zero pct "would fabricate a season".
+   **✅ APPROVED (Brandon, 2026-07-14):** unify on the guarded version — `N/A`
+   everywhere. TL Playoff Standings changes for zero-pct historical rows; the
+   step-0 snapshot suite locks the new behavior with an explicit
+   `pct === "0"` case.
