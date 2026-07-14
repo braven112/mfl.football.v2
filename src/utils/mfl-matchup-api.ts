@@ -271,7 +271,9 @@ export class MFLMatchupApiClient {
     const list: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
     for (const item of list) {
       if (!isFranchise(item)) continue;
-      rosters[item.id] = item.player?.map((p) => p.id) || [];
+      // asArray: MFL collapses single-element arrays to a bare object, so a
+      // one-player franchise anywhere in the league would otherwise throw.
+      rosters[item.id] = asArray(item.player).map((p) => p.id);
     }
 
     return rosters;

@@ -576,6 +576,13 @@ const roundLabel = (round: string) => {
         window.location.reload();
         return;
       }
+      // Opening the modal starts a fresh confirm session against the CURRENT
+      // keeper selection. A retry subset from an earlier partial failure must
+      // not survive — the user may have moved a failed player into keepers
+      // since, and cutting from the stale list would be irreversible.
+      // (The in-modal "Retry failed cuts" click doesn't come through here,
+      // so retry-only-failures still works within a session.)
+      retryIds = null;
       const keepList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-keep');
       const cutList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-cut');
       const copy = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
@@ -656,7 +663,9 @@ const roundLabel = (round: string) => {
       for (const id of cardData.keys()) {
         if (!keeperIds.includes(id)) allCutIds.push(id);
       }
-      const cutIds = retryIds ?? allCutIds;
+      // Defensive intersect: never cut anything that isn't in the current
+      // cut list, even if a stale retry subset somehow survives.
+      const cutIds = (retryIds ?? allCutIds).filter((id) => allCutIds.includes(id));
 
       if (cutIds.length === 0) {
         finalizeClose();

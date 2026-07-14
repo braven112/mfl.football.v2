@@ -140,10 +140,12 @@ export async function invalidateRosterCache(season: string, leagueId: string): P
   const key = cacheKey(leagueId, season);
   console.log(`[mfl-roster-cache] Invalidating cache: ${key}`);
 
-  // Delete the stale cache, then immediately re-fetch from MFL. The bust
+  // Delete the stale caches (both shapes, so no consumer serves pre-write
+  // data as fresh), then immediately re-fetch the player map. The bust
   // epoch stops any in-flight pre-write fetch from re-caching stale data;
   // our own re-fetch below starts after the stamp, so it caches normally.
   await redis.del(key);
+  await redis.del(franchiseCacheKey(leagueId, season));
   await redis.set(bustEpochKey(leagueId, season), Date.now(), { ex: 600 });
 
   // Fetch fresh data right now (not in background — we want it ready for the next page load)
@@ -248,6 +250,10 @@ function bustEpochKey(leagueId: string, season: string): string {
   return `mfl:rosters-busted:${leagueId}:${season}`;
 }
 
+// Known residual races: the GET here and the caller's subsequent SET are not
+// atomic, and the two timestamps come from different instances' wall clocks.
+// Both windows are ~one RTT and any bad write self-heals within STALE_TTL_MS
+// (2 min) — accepted rather than paying for a Lua/INCR epoch scheme.
 async function wasBustedSince(redis: RedisClient, leagueId: string, season: string, fetchStartedAt: number): Promise<boolean> {
   try {
     const bustedAt = await redis.get<number>(bustEpochKey(leagueId, season));
