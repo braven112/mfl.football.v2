@@ -408,9 +408,8 @@ const bannerLabelFor = (name: string) =>
   .table-wrapper {
     overflow-x: auto;
   }
-  .hide-sm {
-    /* utility; only hides at the sm breakpoint (see conf responsive block) */
-  }
+  /* `.hide-sm` (from a column's hideBelow: 'sm') hides at the sm breakpoint;
+     the rule lives in the conf responsive block, the only variant using it. */
 
   /* ===================================================================== */
   /* VARIANT: std  (TheLeague/AFL division + TheLeague all-play)            */

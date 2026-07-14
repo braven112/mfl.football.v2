@@ -237,9 +237,6 @@ const combinedTierName = isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play
 // Conference-view presentation: AL glows league red, NL glows conference blue.
 // Title hue matches each conference logo (raw brand hex + a brightened dark
 // variant). Replaces the old data-league / conferenceId :global selectors.
-function conferenceAccent(confId: '00' | '01') {
-  return confId === '01' ? ('conference-blue' as const) : ('afl-red' as const);
-}
 function conferenceHeader(confId: '00' | '01', name: string) {
   const isNL = confId === '01';
   return {
@@ -346,7 +343,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             teamCell="banner"
             teamCellFallback="blank"
             tiering={TIERING.conferenceSeed(conferenceAStandings.conference.divisions.length)}
-            accent={conferenceAccent('00')}
+            accent={aflAccent('00')}
             header={conferenceHeader('00', conferenceAStandings.conference.name)}
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
@@ -358,7 +355,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             teamCell="banner"
             teamCellFallback="blank"
             tiering={TIERING.conferenceSeed(conferenceBStandings.conference.divisions.length)}
-            accent={conferenceAccent('01')}
+            accent={aflAccent('01')}
             header={conferenceHeader('01', conferenceBStandings.conference.name)}
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
