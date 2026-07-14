@@ -12,6 +12,12 @@
  */
 import { getLeagueContext } from '../../utils/league-context';
 import { resolveLeaguePath } from '../../utils/nav-utils';
+// Player lockup styles for the JS-rendered asset lists. Must be a frontmatter
+// import (global): an @import inside the scoped <style> below gets the
+// component's scope attribute appended to every selector when Vite inlines it,
+// so the .player-cell markup injected by trade-alert.ts never matches and the
+// headshot <img> renders unconstrained.
+import '../../styles/player-cell.css';
 
 interface Props {
   /** Strip the active league's path prefix from links — true on either
@@ -158,8 +164,6 @@ const tradeBuilderHref = resolveLeaguePath(
 </div>
 
 <style>
-  /* Import shared player lockup styles for JS-rendered player cells */
-  @import '../../styles/player-cell.css';
   /* ================================================================
      Modal Shell — matches CDM pattern
      ================================================================ */

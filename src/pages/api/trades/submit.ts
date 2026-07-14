@@ -17,7 +17,8 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForMflId } from '../../../utils/league-year';
+import { LEAGUES } from '../../../config/leagues';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../../utils/mfl-matchup-api';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
@@ -59,8 +60,11 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const year = getCurrentLeagueYear();
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || LEAGUES.theleague.id;
+    // Per-league rollover clock (AFL June 1, TheLeague Feb 14) — must match
+    // the year pending.ts reads with, or the roster check and import target
+    // the wrong MFL season between the two rollover dates.
+    const year = getLeagueYearForMflId(leagueId);
 
     // SECURITY: Verify the user owns every player they're offering
     // willGiveUp is a comma-separated string of player IDs (and possibly draft pick tokens)
@@ -153,7 +157,7 @@ export const POST: APIRoute = async ({ request }) => {
         const raw = pending?.pendingTrade ?? pending?.trade;
         if (!raw) return;
         const rows = Array.isArray(raw) ? raw : [raw];
-        await reportOwnerTrades(user.franchiseId!, rows);
+        await reportOwnerTrades(user.franchiseId!, rows, leagueId);
       } catch {
         // swallow — capture is best-effort
       }
