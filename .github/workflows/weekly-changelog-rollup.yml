@@ -18,32 +18,16 @@ jobs:
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.24.0
-
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
 
       - name: Run weekly changelog rollup
         run: node ./scripts/weekly-changelog-rollup.mjs
 
       - name: Commit and push updates
-        run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No changelog changes to commit."
-            exit 0
-          fi
-
-          git config user.name "Changelog Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add src/data/whats-new.json src/data/weekly-changelog-staging.json
-          git commit -m "chore: weekly changelog rollup"
-          git push
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: 'src/data/whats-new.json src/data/weekly-changelog-staging.json'
+          commit-message: 'chore: weekly changelog rollup'
+          no-changes-message: 'No changelog changes to commit.'
+          git-user-name: 'Changelog Bot'
