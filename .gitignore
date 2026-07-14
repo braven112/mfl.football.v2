@@ -36,6 +36,9 @@ data/*/contract-declarations.json
 # AFL keeper plans: local-dev-only filesystem fallback. Production reads
 # from Upstash Redis. See src/utils/afl-keepers-storage.ts.
 data/*/keeper-plans.json
+# Owner MFL-cookie snapshots for the keeper auto-finalize job. NEVER commit —
+# these are session credentials. See src/utils/afl-keepers-storage.ts.
+data/*/keeper-credentials.json
 
 # Salary history - only keep summary-week-*.json files
 src/data/salary-history/**/raw-*.json

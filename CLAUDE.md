@@ -214,6 +214,32 @@ specific to the scanner flow):
   `ANTHROPIC_API_KEY` is unset, so dry-runs still produce recognizable
   output.
 
+## AFL keeper auto-finalize — owner-cookie snapshots, lockout gotcha
+
+Un-finalized Keeper Planner plans are executed automatically after the AFL
+keeper deadline (July 15 8:45 PM PT) by
+`.github/workflows/afl-auto-finalize-keepers.yml` →
+`scripts/afl-auto-finalize-keepers.mjs`. Three things to know before touching
+this flow:
+
+- **MFL commissioner impersonation does NOT work in AFL** — `lockout: "Yes"`
+  makes MFL reject `FRANCHISE_ID` writes ("Can not impersonate another
+  franchise when LOCKOUT is on", same failure that killed auto-taxi in
+  PR #173). That's why `POST /api/afl-keepers` snapshots the owner's MFL
+  session cookie into the `afl-keepers:credentials` Redis hash on every plan
+  save: the cron replays the cuts owner-mode with it. Commissioner-mode
+  `fcfsWaiver` is only a fallback for plans saved before the snapshot
+  shipped, and requires manually disabling the lockout.
+- **The credential hash holds live MFL session cookies.** It stays in its own
+  Redis hash (and its own gitignored dev file) so plan reads can't leak it.
+  Never return it from an API response, and always delete it together with
+  the plan (reset / finalize / auto-finalize all do).
+- **Safety semantics live in `scripts/lib/afl-keeper-finalize.mjs`** and are
+  locked by `tests/afl-keeper-finalize.test.ts`: never fire before the
+  deadline, never execute a partial (<7 keeper) or stale (keeper no longer
+  rostered) plan, and stay idempotent so the second scheduled pass is a free
+  retry.
+
 ## Year rollover — two independent clocks
 
 Two dates drive year transitions and they are **not the same clock**:

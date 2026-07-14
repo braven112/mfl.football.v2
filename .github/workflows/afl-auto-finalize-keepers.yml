@@ -1,0 +1,82 @@
+name: AFL Auto-Finalize Keepers
+
+# Deadline backstop for the AFL Keeper Planner. Owners' planner boards
+# auto-save to Redis, but cuts only hit MFL when they click "Finalize
+# keepers". Any plan still un-finalized when the keeper deadline passes
+# (July 15, 8:45 PM PT) is executed on the owner's behalf by
+# scripts/afl-auto-finalize-keepers.mjs — cut everyone outside the 7
+# keepers, then delete the plan.
+#
+# Two scheduled passes right after the deadline: the second is a free
+# retry (the script is idempotent — it only cuts players still rostered
+# and skips plans that already finalized). The script itself refuses to
+# run outside the deadline → +5 days window, so the cron firing on the
+# right calendar day is not load-bearing for safety.
+#
+# Manual runs (workflow_dispatch) are for testing or retrying a failure:
+#   GitHub UI → Actions → AFL Auto-Finalize Keepers → Run workflow
+#   - dry_run: leave checked to PRINT the would-be cuts without touching
+#              MFL. Uncheck to actually write.
+#   - force: run even outside the deadline window (pair with dry_run to
+#            preview plans any time).
+#
+# If a run fails with "Can not impersonate another franchise when LOCKOUT
+# is on": that plan predates owner-cookie snapshotting, and the
+# commissioner fallback needs MFL's Commissioner Lockout turned off in
+# league setup for the duration of a manual re-run.
+
+on:
+  schedule:
+    - cron: "50 3 16 7 *"   # Jul 15 8:50 PM PT (deadline + 5 min)
+    - cron: "50 4 16 7 *"   # Jul 15 9:50 PM PT (idempotent retry pass)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only (print, do not write to MFL)'
+        type: boolean
+        default: true
+      force:
+        description: 'Run even outside the deadline window'
+        type: boolean
+        default: false
+
+concurrency:
+  group: afl-auto-finalize-keepers
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Auto-finalize un-finalized keeper plans
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          # Scheduled runs have no inputs, so inputs.* are empty strings.
+          # Treat anything other than the literal "true" as live/no-force.
+          FLAGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "::notice::Running in DRY-RUN mode (no MFL writes)"
+            FLAGS="$FLAGS --dry-run"
+          else
+            echo "::warning::LIVE MFL WRITE MODE — will cut non-keepers for every un-finalized plan"
+          fi
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FLAGS="$FLAGS --force"
+          fi
+          node ./scripts/afl-auto-finalize-keepers.mjs $FLAGS

@@ -30,6 +30,20 @@ export interface KeeperPlan {
 
 const REDIS_KEY = 'afl-keepers';
 
+/**
+ * Owner MFL-cookie snapshots, keyed like the plans. Written on every plan
+ * save so the deadline auto-finalize job (scripts/afl-auto-finalize-keepers.mjs)
+ * can execute the owner's cuts in owner-mode — commissioner impersonation is
+ * blocked in AFL by MFL's `lockout: "Yes"` setting, so the owner's own cookie
+ * is the only reliable write path.
+ *
+ * SECURITY: this hash holds MFL session cookies. It lives in a separate
+ * Redis hash (and a separate gitignored dev file) so plan reads can never
+ * accidentally leak it. Never return these values from any API response.
+ * Deleted alongside the plan (reset, finalize, or auto-finalize).
+ */
+const CREDENTIALS_REDIS_KEY = 'afl-keepers:credentials';
+
 type RedisClient = {
   hget: <T>(key: string, field: string) => Promise<T | null>;
   hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
@@ -74,9 +88,20 @@ const DEV_PATH = join(
   'data/afl-fantasy/keeper-plans.json'
 );
 
+// Separate gitignored file so credentials never ride along with plan data.
+const DEV_CREDENTIALS_PATH = join(
+  process.cwd(),
+  'data/afl-fantasy/keeper-credentials.json'
+);
+
 interface DevFile {
   version: 1;
   plans: Record<string, KeeperPlan>;
+}
+
+interface DevCredentialsFile {
+  version: 1;
+  credentials: Record<string, string>;
 }
 
 function readDevFile(): DevFile {
@@ -91,6 +116,20 @@ function writeDevFile(file: DevFile): void {
   const dir = dirname(DEV_PATH);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(DEV_PATH, JSON.stringify(file, null, 2), 'utf-8');
+}
+
+function readDevCredentialsFile(): DevCredentialsFile {
+  try {
+    return JSON.parse(readFileSync(DEV_CREDENTIALS_PATH, 'utf-8'));
+  } catch {
+    return { version: 1, credentials: {} };
+  }
+}
+
+function writeDevCredentialsFile(file: DevCredentialsFile): void {
+  const dir = dirname(DEV_CREDENTIALS_PATH);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(DEV_CREDENTIALS_PATH, JSON.stringify(file, null, 2), 'utf-8');
 }
 
 function useRedis(): boolean {
@@ -186,4 +225,58 @@ export async function deleteKeeperPlan(
   const file = readDevFile();
   delete file.plans[key];
   writeDevFile(file);
+}
+
+/**
+ * Snapshot the owner's MFL session cookie alongside their plan so the
+ * deadline auto-finalize job can perform owner-mode cuts on their behalf.
+ * Best-effort: a failure here must never block the plan save itself.
+ */
+export async function saveKeeperCredential(
+  leagueId: string,
+  year: number,
+  franchiseId: string,
+  mflUserCookie: string
+): Promise<void> {
+  if (!mflUserCookie) return;
+  const key = planKey(leagueId, year, franchiseId);
+
+  if (useRedis()) {
+    const redis = await getRedis();
+    if (!redis) return;
+    try {
+      await redis.hset(CREDENTIALS_REDIS_KEY, { [key]: mflUserCookie });
+    } catch (err) {
+      console.error('[afl-keepers] credential snapshot write error:', err);
+    }
+    return;
+  }
+
+  const file = readDevCredentialsFile();
+  file.credentials[key] = mflUserCookie;
+  writeDevCredentialsFile(file);
+}
+
+/** Delete the credential snapshot (plan reset/finalize). */
+export async function deleteKeeperCredential(
+  leagueId: string,
+  year: number,
+  franchiseId: string
+): Promise<void> {
+  const key = planKey(leagueId, year, franchiseId);
+
+  if (useRedis()) {
+    const redis = await getRedis();
+    if (!redis) return;
+    try {
+      await redis.hdel(CREDENTIALS_REDIS_KEY, key);
+    } catch (err) {
+      console.error('[afl-keepers] credential snapshot delete error:', err);
+    }
+    return;
+  }
+
+  const file = readDevCredentialsFile();
+  delete file.credentials[key];
+  writeDevCredentialsFile(file);
 }

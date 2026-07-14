@@ -21,6 +21,8 @@ import {
   getKeeperPlan,
   saveKeeperPlan,
   deleteKeeperPlan,
+  saveKeeperCredential,
+  deleteKeeperCredential,
   sanitizeKeeperIds,
 } from '../../utils/afl-keepers-storage';
 
@@ -107,6 +109,17 @@ export const POST: APIRoute = async ({ request }) => {
   const keepers = sanitizeKeeperIds(body?.keepers);
   const plan = await saveKeeperPlan(AFL_LEAGUE_ID, year, franchiseId, keepers);
 
+  // Snapshot the owner's MFL cookie so the deadline auto-finalize job can
+  // execute this plan owner-mode if they never click Finalize themselves.
+  // Best-effort — never blocks the save, and never appears in any response.
+  if (user.id) {
+    try {
+      await saveKeeperCredential(AFL_LEAGUE_ID, year, franchiseId, user.id);
+    } catch (err) {
+      console.error('[afl-keepers] credential snapshot failed:', err);
+    }
+  }
+
   return new Response(JSON.stringify({ success: true, plan, limit: KEEPER_LIMIT }), {
     status: 200,
     headers: JSON_HEADERS,
@@ -132,6 +145,7 @@ export const DELETE: APIRoute = async ({ request, url }) => {
   }
 
   await deleteKeeperPlan(AFL_LEAGUE_ID, year, franchiseId);
+  await deleteKeeperCredential(AFL_LEAGUE_ID, year, franchiseId);
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
     headers: JSON_HEADERS,
