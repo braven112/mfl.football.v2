@@ -98,12 +98,23 @@ export type RedisClient = {
 };
 
 let _redis: RedisClient | null | undefined;
+let _warnedImportFailure = false;
 
 /**
  * Resolve the shared Upstash Redis client, memoized after first resolution.
  * Returns null (never throws) when credentials are absent or the
  * '@upstash/redis' import fails, so callers can treat "no Redis" as a
  * degraded-storage case rather than a hard error.
+ *
+ * Memoization notes (this client is shared by ~25 consumers, so a cached
+ * result affects all of them):
+ * - a successful client is cached for the process lifetime;
+ * - missing credentials cache null (matching the majority of the inline
+ *   copies this replaced — env vars don't appear mid-process in practice);
+ * - a FAILED '@upstash/redis' import does NOT cache null, so a transient
+ *   cold-start failure is retried on the next call instead of locking the
+ *   whole process into redis-less mode. The warn is once-per-process to
+ *   avoid log spam if the failure is persistent.
  */
 export async function getRedis(): Promise<RedisClient | null> {
   if (_redis !== undefined) return _redis;
@@ -126,8 +137,10 @@ export async function getRedis(): Promise<RedisClient | null> {
     _redis = new Redis({ url, token }) as unknown as RedisClient;
     return _redis;
   } catch (err) {
-    console.warn('[redis-client] Redis unavailable:', err);
-    _redis = null;
+    if (!_warnedImportFailure) {
+      _warnedImportFailure = true;
+      console.warn('[redis-client] Redis unavailable:', err);
+    }
     return null;
   }
 }

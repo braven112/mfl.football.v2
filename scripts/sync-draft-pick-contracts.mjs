@@ -62,7 +62,7 @@ import {
   getRookieSlotSalary,
   overallPickFromRoundPick,
 } from './lib/rookie-salary-slots.mjs';
-import { getRedisConfig, redisCommand } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
 import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -215,13 +215,22 @@ async function writeAuditDeclarations(declarations, leagueSlug) {
   if (redis) {
     const body = [REDIS_KEY];
     for (const d of declarations) body.push(d.id, JSON.stringify(d));
-    // Same net effect as the previous `${redis.url}/hset` REST-path call
-    // (an HSET of REDIS_KEY with these field/value pairs), now issued via
-    // the shared command-array form used elsewhere in the codebase.
-    try {
-      await redisCommand(redis, ['HSET', ...body]);
-    } catch (err) {
-      console.warn(`[draft-pick-sync] audit write to Redis failed: ${err.message}`);
+    // Kept as the original `${redis.url}/hset` REST-path POST verbatim —
+    // NOT routed through the shared redisCommand (command-array to the base
+    // URL). Upstash's path-form endpoints treat a POST body as the final
+    // parameter, so the two invocation forms are not documented equivalents,
+    // and switching could silently change what this cron writes. Revisit
+    // only with a live verification against the real store.
+    const res = await fetch(`${redis.url}/hset`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${redis.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.warn(`[draft-pick-sync] audit write to Redis failed: ${res.status} ${await res.text()}`);
     }
     return;
   }

@@ -262,7 +262,7 @@ async function fetchAndCacheFranchiseRosters(
   leagueId: string
 ): Promise<CachedFranchiseRoster[]> {
   const fetchStartedAt = Date.now();
-  const url = `https://api.myfantasyleague.com/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
+  const url = buildMflExportUrl({ type: 'rosters', leagueId, year: season });
   const response = await fetch(url, {
     headers: { 'User-Agent': 'MFLFootball/2.0' },
     signal: AbortSignal.timeout(10_000),

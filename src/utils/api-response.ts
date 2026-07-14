@@ -58,6 +58,12 @@ export function unauthorized(
  *
  *   const user = await requireAuth(request);
  *   if (user instanceof Response) return user;
+ *
+ * NAMING NOTE: src/utils/auth.ts also exports a `requireAuth` — a
+ * synchronous type-guard `(user: AuthUser | null) => user is AuthUser`.
+ * They are different helpers: this one takes the Request and produces the
+ * 401 for you; auth.ts's narrows an already-fetched user. Double-check
+ * which module an auto-import picked.
  */
 export async function requireAuth(request: Request): Promise<AuthUser | Response> {
   const user = getAuthUser(request);

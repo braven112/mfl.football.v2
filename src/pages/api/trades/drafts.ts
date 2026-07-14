@@ -15,18 +15,12 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import type { DraftTrade } from '../../../types/trade-builder';
 import { getRedis } from '../../../utils/redis-client';
+import { json as jsonResponse } from '../../../utils/api-response';
 
 const MAX_DRAFTS = 20;
 
 function makeKey(franchiseId: string): string {
   return `dt:${franchiseId}`;
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
 
 export const GET: APIRoute = async ({ request }) => {

@@ -10,7 +10,7 @@
 
 import { SCHEFTER_REACTIONS, SCHEFTER_RUMOR_REACTIONS } from '../types/schefter';
 import type { SchefterReactionMap, SchefterReactionResponse } from '../types/schefter';
-import { getRedis, type RedisPipelineClient } from './redis-client';
+import { getRedis } from './redis-client';
 
 const KEY_PREFIX = 'schefter:reactions:';
 /**
@@ -104,7 +104,7 @@ export async function getBatchReactions(
 
   try {
     // Use pipeline to batch all hgetall calls into one round-trip
-    const pipeline = (redis as unknown as { pipeline: () => RedisPipelineClient }).pipeline();
+    const pipeline = redis.pipeline();
     for (const postId of postIds) {
       pipeline.hgetall(KEY_PREFIX + postId);
     }
@@ -275,7 +275,7 @@ export async function getBatchAnonymousReactions(
   }
 
   try {
-    const pipeline = (redis as unknown as { pipeline: () => RedisPipelineClient }).pipeline();
+    const pipeline = redis.pipeline();
     for (const postId of postIds) {
       pipeline.hgetall(ANON_KEY_PREFIX + postId);
     }

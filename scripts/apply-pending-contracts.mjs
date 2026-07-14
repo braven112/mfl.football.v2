@@ -36,7 +36,6 @@ import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
 
 const REDIS_KEY = 'contract-declarations';
-const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
 
 async function getAllDeclarations(redis) {

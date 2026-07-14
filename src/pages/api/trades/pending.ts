@@ -188,7 +188,9 @@ async function fetchMflTrades(
     type: 'pendingTrades',
     leagueId,
     year,
-    params: { FRANCHISE_ID: franchiseId },
+    // `|| undefined` preserves the original falsy guard (`if (franchiseId)`):
+    // an empty string omits the param entirely rather than sending FRANCHISE_ID=.
+    params: { FRANCHISE_ID: franchiseId || undefined },
   });
 
   const res = await mflFetch({ url, method: 'GET', mflUserCookie: mflCookie });
