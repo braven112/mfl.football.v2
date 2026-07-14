@@ -4,6 +4,20 @@ Domain knowledge about MyFantasyLeague API integration.
 
 ---
 
+## 2026-07-14 - AFL Is a Duplicate-Player League — "On Another Roster" Means Nothing
+
+**Context:** An AFL owner's keeper finalize appeared to fail 10/10 with "You can only cut players from your own roster" — but the cuts had already landed on MFL. The retry was validating against rosters where the *other conference's copy* of each player still existed.
+
+**Insight:** The AFL MFL league (19621) runs **24 franchises as two duplicate-player conferences** — the same NFL player is legitimately rostered by two franchises at once (e.g. franchise 0002 and 0018 both hold Trevor Lawrence). Any logic that infers ownership or state from "this player appears on some other franchise's roster" is invalid for AFL. TheLeague (13522) is a normal unique-player league, so code written against it tends to bake in the uniqueness assumption.
+
+**Pattern:**
+- The registry flag is `leagues-data.mjs → afl-fantasy.duplicatePlayers: true`. Gate any cross-roster inference on it (see the cut-player preflight).
+- A **player-keyed** roster map (`playerId → franchiseId`, as in `getCachedRosters`) silently collapses duplicate-player leagues — one franchise's copy overwrites the other. Use the **franchise-shaped** cache (`getCachedRosterFranchises`) for AFL.
+- Roster freshness architecture: the git-committed `mfl-feeds/*/rosters.json` snapshot lands roughly **hourly** (GitHub throttles the `*/5` cron heavily), so pages that render only from the feed show stale rosters for up to an hour+ after a write. The Redis SWR cache (2-min TTL, `src/utils/mfl-roster-cache.ts`) is the live path; write endpoints should call `bustRosterCaches()` (cheap delete-only) after MFL writes so the next page load re-fetches.
+- Write endpoints that verify success by re-reading rosters should scope the check to the **user's own franchise only** — never "anywhere in the league".
+
+---
+
 ## 2026-06-27 - AFL Rolls Over June 1, NOT Feb 14 — Use getAflLeagueYear()
 
 **Context:** AFL Set Lineup (and keepers/calendar/login) were pointing at the wrong MFL league year.
