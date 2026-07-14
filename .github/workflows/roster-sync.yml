@@ -58,7 +58,15 @@ jobs:
 
             if [ "$HAS_SALARY_SYNC" = "true" ]; then
               echo "::group::Update salary averages ($SLUG)"
-              MFL_LEAGUE_ID="$ID" MFL_LEAGUE_SLUG="$SLUG" node ./scripts/update-salary-averages.mjs
+              # The pre-loop "Update salary averages" step passed ONLY
+              # MFL_LEAGUE_ID + MFL_LEAGUE_SLUG — no host or credentials —
+              # so the script's MFL export requests went out unauthenticated
+              # (update-salary-averages.mjs appends USERNAME/PASSWORD/APIKEY
+              # query params whenever those env vars are set). Unset the
+              # step-level credential vars here to preserve that behavior
+              # exactly rather than silently switching to authed requests.
+              env -u MFL_HOST -u MFL_USERNAME -u MFL_PASSWORD -u MFL_API_KEY \
+                MFL_LEAGUE_ID="$ID" MFL_LEAGUE_SLUG="$SLUG" node ./scripts/update-salary-averages.mjs
               echo "::endgroup::"
             fi
           done
