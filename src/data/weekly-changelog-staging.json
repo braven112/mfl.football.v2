@@ -2,6 +2,14 @@
   "weekOf": "2026-07-13",
   "changes": [
     {
+      "date": "2026-07-14",
+      "type": "bug-fix",
+      "summary": "Finalizing keepers no longer gaslights you into thinking it failed. The cuts were landing on MFL just fine, but the page reloaded from a roster snapshot that syncs about once an hour — so your just-cut players were still staring back at you, and re-running finalize spat out a wall of scary (and wrong) errors like \"You can only cut players from your own roster.\" Now the finalize screen tells you straight that your keepers are locked in on MFL and the site roster will catch up within the hour, and a re-run recognizes already-cut players as done instead of calling them failures.",
+      "impact": "user",
+      "area": "keeper-planner",
+      "league": "afl"
+    },
+    {
       "date": "2026-07-10",
       "type": "style-tweak",
       "summary": "Player avatars in light mode got a lot less gloomy. The little circular headshots on the Free Agents list (and everywhere else the player lockup shows up) used to sit on a dark team-color gradient no matter the theme — heavy and hard to read against a bright white page. Light mode now uses a soft gray chip with a thin team-color ring instead; dark mode keeps its original moody gradient look untouched.",

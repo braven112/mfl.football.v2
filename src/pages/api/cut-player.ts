@@ -27,7 +27,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getAflLeagueYear } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById } from '../../config/leagues';
@@ -68,8 +68,13 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
+    const league = getLeagueById(leagueId);
+    // Leagues roll to the new MFL year on different clocks: TheLeague flips
+    // Feb 14, AFL flips June 1 (registry leagueYearRollover). Using TheLeague's
+    // clock for AFL would target a not-yet-created MFL league between Feb 14
+    // and June 1.
+    const year = league?.leagueYearRollover ? getAflLeagueYear() : getCurrentLeagueYear();
 
     // SECURITY: Verify the player belongs to the user's roster
     const mflClient = createMFLApiClient({
@@ -85,7 +90,12 @@ export const POST: APIRoute = async ({ request }) => {
       // can show players that were already dropped from the live MFL roster.
       // Distinguish "already gone" (stale page) from "never yours" so the user
       // isn't told they're cutting someone else's player when they're not.
-      const onAnyRoster = Object.values(rosters).some((r) => r.includes(String(playerId)));
+      // In duplicate-player leagues (AFL's two-conference format) another
+      // franchise legitimately holds a copy of every player, so "on another
+      // roster" proves nothing — always report the stale-page case there.
+      const onAnyRoster = league?.duplicatePlayers
+        ? false
+        : Object.values(rosters).some((r) => r.includes(String(playerId)));
       const message = onAnyRoster
         ? 'You can only cut players from your own roster.'
         : 'This player is no longer on your roster — they may have already been dropped. Refresh the page to see your current roster.';
@@ -100,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
     // path lets an owner reduce an over-limit roster, which is the whole point
     // during offseason cutdown. We POST to the league's own MFL web host (the
     // `api.` gateway is for the API, not page handlers).
-    const host = getLeagueById(leagueId)?.mflHost || 'www44.myfantasyleague.com';
+    const host = league?.mflHost || 'www44.myfantasyleague.com';
     const addDropUrl = `https://${host}/${year}/add_drop`;
     const params = new URLSearchParams({
       L: leagueId,

@@ -53,6 +53,13 @@ export interface LeagueDefinition {
    * src/utils/league-year.ts.
    */
   leagueYearRollover?: LeagueYearRollover;
+  /**
+   * True for leagues where the same NFL player can be rostered by more than
+   * one franchise at once (AFL's 24-team duplicate-player conferences).
+   * Logic that infers anything from "player is on another franchise's
+   * roster" must be skipped for these leagues.
+   */
+  duplicatePlayers?: boolean;
   features: LeagueFeatures;
 }
 

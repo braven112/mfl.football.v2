@@ -50,6 +50,14 @@ export const LEAGUES = {
      * exists yet, so the new league must be created on MFL by June 1.
      */
     leagueYearRollover: { month: 6, day: 1 },
+    /**
+     * AFL runs 24 franchises as duplicate-player conferences — the same NFL
+     * player can be rostered by two franchises at once. Any logic that treats
+     * "player is on some other roster" as meaningful (e.g. the cut-player
+     * ownership preflight) must not draw conclusions from other franchises'
+     * rosters in this league.
+     */
+    duplicatePlayers: true,
     features: {
       contracts: false,
       salaryCap: false,

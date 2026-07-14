@@ -626,8 +626,13 @@ const roundLabel = (round: string) => {
     }
 
     const confirmBtn = finalizeModal?.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
+    let finalized = false;
     confirmBtn?.addEventListener('click', async () => {
       if (!finalizeModal) return;
+      if (finalized) {
+        window.location.reload();
+        return;
+      }
       const progress = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress');
       const bar = finalizeModal.querySelector<HTMLElement>('#kp-finalize-bar-fill');
       const label = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress-label');
@@ -658,7 +663,11 @@ const roundLabel = (round: string) => {
             body: JSON.stringify({ playerId: id }),
           });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.success) {
+          // 409 = player is already off the roster on MFL (e.g. a previous
+          // finalize pass landed but this page was rendered from a stale
+          // feed). The desired end state is already true — count it as done
+          // so retries converge instead of re-failing forever.
+          if (res.status !== 409 && (!res.ok || !data?.success)) {
             failures.push({
               id,
               name: cardData.get(id)?.name || id,
@@ -678,12 +687,23 @@ const roundLabel = (round: string) => {
       }
 
       if (failures.length === 0) {
-        if (label) label.textContent = `Cut ${done} of ${cutIds.length}. Reloading roster…`;
         // Clear the saved plan since cuts are now permanent.
         try {
           await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE' });
         } catch {}
-        setTimeout(() => window.location.reload(), 800);
+        // Don't silently reload: the roster page renders from a feed that
+        // syncs from MFL periodically, so a reload right now would still
+        // show the players that were just cut — which reads as "it didn't
+        // work" and invites a re-finalize. Say so instead.
+        finalized = true;
+        if (label) label.textContent = `All ${cutIds.length} cuts processed on MFL.`;
+        const copyEl = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
+        if (copyEl) {
+          copyEl.textContent =
+            'Done — your keepers are locked in on MFL. Heads up: rosters on this site sync from MFL about once an hour, so this page may show the old roster a little longer. Your MFL roster is already correct.';
+        }
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Done';
       } else {
         if (error) {
           error.hidden = false;
