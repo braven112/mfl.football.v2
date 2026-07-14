@@ -145,6 +145,171 @@ export async function invalidateRosterCache(season: string, leagueId: string): P
   await fetchAndCacheRosters(season, leagueId);
 }
 
+// ── Franchise-shaped variant ────────────────────────────────────────────────
+//
+// The player-keyed map above collapses each player to a single franchiseId,
+// which is wrong for duplicate-player leagues (AFL's 24-franchise two-
+// conference format rosters the same player on two teams at once — one copy
+// would silently overwrite the other). These functions cache the raw
+// franchise → players[] array in the same shape as the rosters.json feed, so
+// pages that render per-franchise rosters can swap the feed for live data.
+//
+// Redis key: mfl:rosters-franchise:{leagueId}:{season} (same 2-min SWR TTL).
+
+export interface CachedFranchiseRoster {
+  id: string;
+  player: Array<{ id: string; status: string; salary?: string; contractYear?: string }>;
+}
+
+interface CachedFranchisePayload {
+  franchises: CachedFranchiseRoster[];
+  fetchedAt: number;
+}
+
+function franchiseCacheKey(leagueId: string, season: string): string {
+  return `mfl:rosters-franchise:${leagueId}:${season}`;
+}
+
+const refreshingFranchise = new Map<string, Promise<CachedFranchiseRoster[] | null>>();
+
+/**
+ * Get the franchise-shaped roster list from Redis cache (fresh < 2 min),
+ * refreshing synchronously from MFL when stale or missing.
+ * Returns null when Redis is unavailable (caller falls back to static feed).
+ */
+export async function getCachedRosterFranchises(
+  season: string,
+  leagueId: string
+): Promise<CachedFranchiseRoster[] | null> {
+  const redis = await getRedis();
+  if (!redis) return null;
+
+  try {
+    const key = franchiseCacheKey(leagueId, season);
+    const cached = await redis.get<CachedFranchisePayload>(key);
+
+    if (!cached?.franchises) {
+      console.log(`[mfl-roster-cache] Cache miss for ${key}, fetching synchronously`);
+      return await deduplicatedFranchiseFetch(season, leagueId);
+    }
+
+    const age = Date.now() - cached.fetchedAt;
+    if (age > STALE_TTL_MS) {
+      console.log(`[mfl-roster-cache] Stale data for ${key} (age: ${Math.round(age / 1000)}s), refreshing synchronously`);
+      const fresh = await deduplicatedFranchiseFetch(season, leagueId);
+      return fresh ?? cached.franchises;
+    }
+
+    return cached.franchises;
+  } catch (error) {
+    console.warn('[mfl-roster-cache] Redis read failed:', error);
+    return null;
+  }
+}
+
+async function deduplicatedFranchiseFetch(
+  season: string,
+  leagueId: string
+): Promise<CachedFranchiseRoster[] | null> {
+  const key = franchiseCacheKey(leagueId, season);
+
+  const existing = refreshingFranchise.get(key);
+  if (existing) return existing;
+
+  const promise = fetchAndCacheFranchiseRosters(season, leagueId)
+    .then((franchises) => franchises)
+    .catch((err) => {
+      console.warn('[mfl-roster-cache] Franchise fetch failed:', err);
+      return null;
+    })
+    .finally(() => refreshingFranchise.delete(key));
+
+  refreshingFranchise.set(key, promise);
+  return promise;
+}
+
+/**
+ * Invalidate the franchise-shaped roster cache and immediately re-fetch.
+ * Call after a roster write to MFL (e.g. a player cut) so the next page
+ * load reflects the change.
+ */
+export async function invalidateFranchiseRosterCache(
+  season: string,
+  leagueId: string
+): Promise<void> {
+  const redis = await getRedis();
+  if (!redis) return;
+
+  const key = franchiseCacheKey(leagueId, season);
+  console.log(`[mfl-roster-cache] Invalidating cache: ${key}`);
+  await redis.del(key);
+  await fetchAndCacheFranchiseRosters(season, leagueId);
+}
+
+/**
+ * Delete both roster cache keys WITHOUT re-fetching. Cheap enough to call
+ * once per write in a burst (e.g. keeper finalize fires 10 sequential cuts);
+ * the next page load repopulates via the cache-miss path. Use
+ * invalidate*RosterCache when you want the fresh data pre-warmed instead.
+ */
+export async function bustRosterCaches(season: string, leagueId: string): Promise<void> {
+  const redis = await getRedis();
+  if (!redis) return;
+  await Promise.allSettled([
+    redis.del(cacheKey(leagueId, season)),
+    redis.del(franchiseCacheKey(leagueId, season)),
+  ]);
+}
+
+async function fetchAndCacheFranchiseRosters(
+  season: string,
+  leagueId: string
+): Promise<CachedFranchiseRoster[]> {
+  const url = `https://api.myfantasyleague.com/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'MFLFootball/2.0' },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`MFL rosters API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const rawFranchises = data?.rosters?.franchise;
+  if (!Array.isArray(rawFranchises)) {
+    throw new Error('Unexpected MFL rosters response shape');
+  }
+
+  const franchises: CachedFranchiseRoster[] = [];
+  for (const franchise of rawFranchises) {
+    if (!franchise?.id) continue;
+    const rosterPlayers = Array.isArray(franchise.player)
+      ? franchise.player
+      : [franchise.player].filter(Boolean);
+    franchises.push({
+      id: franchise.id,
+      player: rosterPlayers
+        .filter((p: any) => p?.id)
+        .map((p: any) => ({
+          id: p.id,
+          status: p.status,
+          salary: p.salary,
+          contractYear: p.contractYear,
+        })),
+    });
+  }
+
+  const redis = await getRedis();
+  if (!redis) return franchises;
+
+  const payload: CachedFranchisePayload = { franchises, fetchedAt: Date.now() };
+  await redis.set(franchiseCacheKey(leagueId, season), payload, { ex: 3600 });
+  console.log(`[mfl-roster-cache] Cached ${franchises.length} franchises for ${leagueId}/${season}`);
+
+  return franchises;
+}
+
 async function fetchAndCacheRosters(
   season: string,
   leagueId: string

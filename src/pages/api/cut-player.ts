@@ -31,6 +31,7 @@ import { getCurrentLeagueYear, getAflLeagueYear } from '../../utils/league-year'
 import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById } from '../../config/leagues';
+import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -171,6 +172,13 @@ export const POST: APIRoute = async ({ request }) => {
         { status: 502, headers: JSON_HEADERS }
       );
     }
+
+    // Bust the Redis roster caches so the next roster-page load re-fetches
+    // from MFL and shows the cut immediately, instead of waiting out the
+    // 2-min TTL (or, worse, the hourly feed sync). Delete-only on purpose:
+    // keeper finalize fires 10 of these back-to-back, so pre-warming here
+    // would add a full MFL fetch per cut. Non-fatal — caches self-heal.
+    await bustRosterCaches(String(year), leagueId).catch(() => {});
 
     return new Response(
       JSON.stringify({ success: true, message: 'Player successfully cut' }),

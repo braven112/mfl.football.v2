@@ -691,19 +691,20 @@ const roundLabel = (round: string) => {
         try {
           await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE' });
         } catch {}
-        // Don't silently reload: the roster page renders from a feed that
-        // syncs from MFL periodically, so a reload right now would still
-        // show the players that were just cut — which reads as "it didn't
-        // work" and invites a re-finalize. Say so instead.
+        // Land on an explicit success state instead of silently reloading —
+        // a keeper cutdown is a big, irreversible action and deserves clear
+        // confirmation. The reload behind the "Show my new roster" button
+        // renders live data (the cut API busts the Redis roster cache), so
+        // the updated roster is what the owner actually sees.
         finalized = true;
         if (label) label.textContent = `All ${cutIds.length} cuts processed on MFL.`;
         const copyEl = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
         if (copyEl) {
           copyEl.textContent =
-            'Done — your keepers are locked in on MFL. Heads up: rosters on this site sync from MFL about once an hour, so this page may show the old roster a little longer. Your MFL roster is already correct.';
+            'Done — your keepers are locked in and the cuts went through on MFL.';
         }
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Done';
+        confirmBtn.textContent = 'Show my new roster';
       } else {
         if (error) {
           error.hidden = false;
