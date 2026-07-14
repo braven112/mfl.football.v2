@@ -138,7 +138,9 @@ if (!manualYear && yearConfig.yearsToFetch.length > 1) {
 const week = getNonEmpty(process.env.MFL_WEEK) || null;
 const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.com';
 const mflUserId = getNonEmpty(process.env.MFL_USER_ID);
-const mflApiKey = getNonEmpty(process.env.MFL_APIKEY);
+// Accept both spellings — the roster-sync workflow exports MFL_API_KEY while
+// this script historically read MFL_APIKEY, so the key silently never applied.
+const mflApiKey = getNonEmpty(process.env.MFL_APIKEY) || getNonEmpty(process.env.MFL_API_KEY);
 
 const outDir = path.join('data', leagueName, 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });
@@ -412,7 +414,11 @@ const endpoints = [
   },
   {
     key: 'tradeBait',
-    url: `${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`,
+    // withAuth: MFL's tradeBait export is owner-gated for private leagues
+    // (AFL) — unauthenticated requests get 200 with an empty payload, which
+    // is why AFL's tradeBait.json synced as [] while owners had players
+    // flagged. Public leagues (TheLeague) ignore the extra param.
+    url: withAuth(`${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`),
     parser: (t) => {
       try {
         const data = JSON.parse(t);

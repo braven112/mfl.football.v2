@@ -20,6 +20,8 @@
  * committed feed files)
  */
 
+import { mflFetch } from './mfl-fetch';
+
 const STALE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 type RedisClient = {
@@ -179,11 +181,24 @@ async function fetchAndCacheTradeBait(
   leagueId: string
 ): Promise<TradeBaitFranchiseMap> {
   const fetchStartedAt = Date.now();
-  const url = `https://api.myfantasyleague.com/${season}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
-  const response = await fetch(url, {
-    headers: { 'User-Agent': 'MFLFootball/2.0' },
-    signal: AbortSignal.timeout(10_000),
-  });
+
+  // Unlike the rosters export, MFL's tradeBait export is owner-gated for
+  // private leagues (AFL): an unauthenticated request returns 200 with an
+  // EMPTY payload, not an error. Authenticate with whatever the server has —
+  // the league APIKEY travels as a URL param (survives redirects), and the
+  // server MFL_USER_ID cookie goes through mflFetch, which re-attaches the
+  // Cookie header across MFL's api→www## redirect (plain fetch drops it).
+  const apiKey = process.env.MFL_APIKEY || process.env.MFL_API_KEY;
+  let url = `https://api.myfantasyleague.com/${season}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
+  if (apiKey) url += `&APIKEY=${encodeURIComponent(apiKey)}`;
+
+  const serverCookie = process.env.MFL_USER_ID;
+  const response = serverCookie
+    ? await mflFetch({ url, method: 'GET', mflUserCookie: serverCookie })
+    : await fetch(url, {
+        headers: { 'User-Agent': 'MFLFootball/2.0' },
+        signal: AbortSignal.timeout(10_000),
+      });
 
   if (!response.ok) {
     throw new Error(`MFL tradeBait API returned ${response.status}`);
@@ -191,6 +206,14 @@ async function fetchAndCacheTradeBait(
 
   const data = await response.json();
   const franchises = parseRawExport(data);
+  if (Object.keys(franchises).length === 0) {
+    // Keep the raw payload visible in logs — "empty" can mean nobody has
+    // flagged anyone, but it can also mean MFL answered the unauthenticated
+    // shape. The snippet makes the two distinguishable after the fact.
+    console.log(
+      `[mfl-trade-bait-cache] Export returned no franchises (${leagueId}/${season}, auth: ${serverCookie ? 'cookie' : apiKey ? 'apikey' : 'none'}) — raw: ${JSON.stringify(data).slice(0, 300)}`
+    );
+  }
 
   const redis = await getRedis();
   if (!redis) return franchises;

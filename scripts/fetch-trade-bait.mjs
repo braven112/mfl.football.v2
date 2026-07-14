@@ -105,7 +105,12 @@ const parseTradeBait = (data) => {
   return { flat: Array.from(playerIds), byFranchise };
 };
 
-const url = `${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
+// APIKEY authenticates the request — MFL's tradeBait export is owner-gated
+// for private leagues (AFL returns an empty payload without it). Public
+// leagues (TheLeague) ignore the extra param.
+const apiKey = getNonEmpty(process.env.MFL_APIKEY) || getNonEmpty(process.env.MFL_API_KEY);
+const url = `${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1` +
+  (apiKey ? `&APIKEY=${encodeURIComponent(apiKey)}` : '');
 console.log(`Fetching trade bait for ${leagueName} ${year} from ${url}`);
 
 try {
