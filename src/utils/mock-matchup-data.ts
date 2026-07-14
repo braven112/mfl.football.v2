@@ -1,7 +1,7 @@
 /**
  * Mock matchup data generator
  * Provides sample data for testing the matchup navigation system
- * Based on the existing data structure from matchup-preview-example.astro
+ * Based on the data structure of the (since-removed) matchup-preview-example page
  */
 
 import type { Matchup, FantasyTeam, NFLGame, FantasyPlayer } from '../types/matchup-previews';

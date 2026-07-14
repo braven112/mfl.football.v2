@@ -1,7 +1,7 @@
 # Player Status Integration Summary
 
 ## Issue Resolved
-The PlayerStatusIndicator components were implemented in Task 6 but were not integrated into the main matchup-preview-example page. Users couldn't see the injury status and lineup optimization indicators in the actual matchup preview.
+(Historical note: the matchup-preview-example prototype page was removed in July 2026.) The PlayerStatusIndicator components were implemented in Task 6 but were not integrated into the main matchup-preview-example page. Users couldn't see the injury status and lineup optimization indicators in the actual matchup preview.
 
 ## Integration Implementation
 

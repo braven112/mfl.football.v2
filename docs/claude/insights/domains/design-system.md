@@ -1325,7 +1325,7 @@ A site-wide loading standard exists, adapted from the Alaska + Hawaiian guest-ap
 
 The repo had **no shared loading infrastructure** before this — 5 distinct spinners, 1 real skeleton, ~18 ad-hoc text mutations, inconsistent reduced-motion coverage (`PendingTradesPanel` guards its pulse; the playoffs shimmer doesn't). New loaders follow the `PlayerCell` dual Astro + JS pattern and a mandatory `@media (prefers-reduced-motion: reduce)` guard.
 
-**Status:** Phase 1 — primitives, the prototype (`/theleague/loading-prototype`), and the branded roster loader are built; migration of existing pages not yet started. Docs: [loading-standards.md](../../loading-standards.md), [loading-inventory.md](../../loading-inventory.md), [loading-roadmap.md](../../loading-roadmap.md), [loading-prd.md](../../loading-prd.md).
+**Status:** Phase 1 — primitives, the prototype (`/theleague/loading-prototype`, since removed), and the branded roster loader are built; migration of existing pages not yet started. Docs: [loading-standards.md](../../loading-standards.md), [loading-inventory.md](../../loading-inventory.md), [loading-roadmap.md](../../loading-roadmap.md), [loading-prd.md](../../loading-prd.md).
 
 ---
 

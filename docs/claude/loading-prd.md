@@ -212,7 +212,7 @@ This two-league app has the same essential shape as the primary surface — **on
 - Tokenized stylesheet: [src/styles/loading.css](../../src/styles/loading.css)
 - Primitives: [Spinner](../../src/components/shared/loading/Spinner.astro) · [Skeleton](../../src/components/shared/loading/Skeleton.astro) · [ThinkingDots](../../src/components/shared/loading/ThinkingDots.astro) · [BrandedLoader](../../src/components/shared/loading/BrandedLoader.astro)
 - Engine + JS builders: [loading-tier.ts](../../src/utils/loading-tier.ts) · [loading-html.ts](../../src/utils/loading-html.ts)
-- **Clickable prototype:** [loading-prototype.astro](../../src/pages/theleague/loading-prototype.astro) — every tier under both skins side by side, plus a duration-escalation simulator.
+- **Clickable prototype:** `loading-prototype.astro` (removed July 2026 — recover from git history if needed) — every tier under both skins side by side, plus a duration-escalation simulator.
 
 **What it proves for the primary surface:** the duration ladder + `f(elapsed, context)` rule work in practice; **structure/skin holds with zero code branching** (the same components reskin per brand through one token — verified: spinner border resolves blue under TheLeague, red under AFL); the token / reduced-motion / ARIA contracts are implementable and testable; and stakeholders get a real artifact to react to before native investment.
 
@@ -258,6 +258,6 @@ In this repo specifically, the LLM-backed endpoints (Schefter generation, Ask Ro
 
 **Glossary** — *Tier*: a rung of the ladder. *Context*: `content` vs `discreteAction`. *Structure/Skin*: behavior+ARIA (shared) vs accent+artwork (per brand). *Branded moment*: the single 10s+ skinned tier.
 
-**Repo links** — [loading-standards.md](loading-standards.md) · [loading-inventory.md](loading-inventory.md) · [loading-roadmap.md](loading-roadmap.md) · prototype: `/theleague/loading-prototype`
+**Repo links** — [loading-standards.md](loading-standards.md) · [loading-inventory.md](loading-inventory.md) · [loading-roadmap.md](loading-roadmap.md) · prototype: `/theleague/loading-prototype` (removed July 2026)
 
 **Source of truth** — `~/code/product-ops/product-exploration/loading-indicators/PRD.md` and its sibling research docs.
