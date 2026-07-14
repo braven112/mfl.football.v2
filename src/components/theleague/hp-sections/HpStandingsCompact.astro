@@ -5,7 +5,7 @@
  */
 import { chooseTeamName } from '../../../utils/team-names';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import { formatCompactNumber } from '../../../utils/formatters';
+import { formatCompactNumber, formatPoints } from '../../../utils/formatters';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getContextualRows } from '../../../utils/homepage-dashboard';
 import { getLeagueStandings } from '../../../utils/standings';
@@ -205,7 +205,7 @@ const formatCap = (v: number) => {
               <td class="hp-standings__td hp-standings__td--record">{row.record}</td>
             )}
             {hasGamesPlayed && (
-              <td class="hp-standings__td hp-standings__td--pf">{row.pf.toLocaleString('en-US', { maximumFractionDigits: 1 })}</td>
+              <td class="hp-standings__td hp-standings__td--pf">{formatPoints(row.pf, 1)}</td>
             )}
             <td class:list={[
               'hp-standings__td',

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import { getNonEmpty } from './lib/env.mjs';
+import { ALL_LEAGUES, getLeagueById } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
@@ -33,6 +34,16 @@ const season =
 const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
 const LEAGUE_SLUG_DEFAULTS = { '13522': 'theleague', '19621': 'afl' };
 const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? LEAGUE_SLUG_DEFAULTS[leagueId] ?? leagueId;
+
+// Canonical registry slug ('theleague' | 'afl-fantasy') used to key the shared
+// season-state file. leagueKey is the short nav slug ('theleague' | 'afl') or,
+// as a fallback, a raw id — resolve both to the canonical slug via the registry.
+const resolveCanonicalSlug = (key, id) => {
+  const byNav = ALL_LEAGUES.find((l) => l.navSlug === key || l.slug === key);
+  if (byNav) return byNav.slug;
+  return getLeagueById(id)?.slug ?? key;
+};
+const seasonStateKey = resolveCanonicalSlug(leagueKey, leagueId);
 const apiBase = getNonEmpty(env.MFL_API_BASE) ?? 'https://api.myfantasyleague.com';
 const configuredWeek = getNonEmpty(env.MFL_WEEK);
 const username = getNonEmpty(env.MFL_USERNAME);
@@ -44,7 +55,9 @@ const outputSummary = path.join(dataDir, leagueKey, `mfl-salary-averages-${seaso
 // Also write summary to root data dir where the salary page reads from
 const outputSummaryRoot = path.join(dataDir, `mfl-salary-averages-${season}.json`);
 const historyDir = path.join(dataDir, 'salary-history', leagueKey, season);
-const seasonStateFile = path.join(dataDir, `mfl-season-state-${leagueKey}.json`);
+// Single shared season-state file, keyed by canonical registry slug (collapsed
+// from the former per-league / per-id files).
+const seasonStateFile = path.join(dataDir, 'mfl-season-state.json');
 const feedsCacheDir = path.join(projectRoot, 'data', leagueKey, 'mfl-feeds', season);
 const cachedRostersFile = path.join(feedsCacheDir, 'rosters.json');
 const cachedPlayersFile = path.join(feedsCacheDir, 'players.json');
@@ -703,7 +716,8 @@ const stampFile = path.join(cacheDir, 'last-fetch.json');
 const readSeasonState = async () => {
   try {
     const raw = await fs.readFile(seasonStateFile, 'utf8');
-    return JSON.parse(raw);
+    const all = JSON.parse(raw);
+    return all?.[seasonStateKey] ?? null;
   } catch {
     return null;
   }
@@ -711,7 +725,18 @@ const readSeasonState = async () => {
 
 const writeSeasonState = async (state) => {
   await fs.mkdir(path.dirname(seasonStateFile), { recursive: true });
-  await fs.writeFile(seasonStateFile, JSON.stringify(state, null, 2));
+  // Read-modify-write so the other league's entry in the shared file is
+  // preserved. (These cron jobs run per-league and rarely overlap; a shared
+  // file trades a tiny concurrent-write window for one source of truth.)
+  let all = {};
+  try {
+    const parsed = JSON.parse(await fs.readFile(seasonStateFile, 'utf8'));
+    if (parsed && typeof parsed === 'object') all = parsed;
+  } catch {
+    all = {};
+  }
+  all[seasonStateKey] = state;
+  await fs.writeFile(seasonStateFile, JSON.stringify(all, null, 2));
 };
 
 const detectLatestWeek = (weeklyPayload) => {

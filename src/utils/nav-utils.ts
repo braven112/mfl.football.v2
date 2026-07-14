@@ -16,7 +16,7 @@
  * ```
  */
 
-import type { NavLink, NavSection, LeagueSlug } from '../types/nav';
+import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { navConfig, getRouteEquivalence } from '../config/nav-config';
 
@@ -106,6 +106,44 @@ export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
     if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
   }
   return path;
+}
+
+/**
+ * Build the nav footer's "logged-in" team chip info from a franchise id and a
+ * league's team roster.
+ *
+ * Extracted from TheLeagueLayout, where the AFL and TheLeague branches built
+ * this identically apart from their config source and league label. Returns
+ * null when there is no signed-in franchise. When the id isn't found in the
+ * roster it falls back to a generic "Team {id}" label with no icon.
+ *
+ * @param navTeamId - Signed-in franchise id (from the JWT session), or null
+ * @param teams - The league's teams array (from its config JSON)
+ * @param league - League slug to stamp on the returned info
+ */
+export function buildNavTeamInfo(
+  navTeamId: string | null,
+  teams: ReadonlyArray<{ franchiseId: string; name?: string; icon?: string }>,
+  league: LeagueSlug
+): NavTeamInfo | null {
+  if (!navTeamId) return null;
+  const teamData = teams.find((t) => t.franchiseId === navTeamId);
+  if (teamData) {
+    return {
+      franchiseId: navTeamId,
+      teamName: teamData.name,
+      iconUrl: teamData.icon || null,
+      ownerName: null,
+      league,
+    } as NavTeamInfo;
+  }
+  return {
+    franchiseId: navTeamId,
+    teamName: `Team ${navTeamId}`,
+    iconUrl: null,
+    ownerName: null,
+    league,
+  };
 }
 
 /**

@@ -1,7 +1,16 @@
 ---
+/**
+ * SplashLayout — chrome-free shell for the league-neutral root landing page
+ * (src/pages/index.astro, the "Two Leagues. One Home." chooser).
+ *
+ * Replaces the former Layout.astro, which only ever served this page in its
+ * `splash` mode (header/footer hidden) plus two /theleague/ doc pages that now
+ * use TheLeagueLayout. This layout is deliberately NOT TheLeagueLayout: the
+ * root page must not carry a single league's header/nav/footer. The marketing
+ * token scheme + base element styles below are carried over verbatim so the
+ * splash renders identically to the pre-refactor page.
+ */
 import { Font } from 'astro:assets';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import ThemeScript from '../components/ThemeScript.astro';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
@@ -10,11 +19,9 @@ import '../styles/utilities.css';
 
 export interface Props {
 	title: string;
-	/** Splash mode: hide the site header and footer (root landing page) */
-	splash?: boolean;
 }
 
-const { title, splash = false } = Astro.props as Props;
+const { title } = Astro.props as Props;
 
 // Resolve theme preference (server-side). 'auto' renders no class — the
 // pre-paint ThemeScript resolves it against prefers-color-scheme.
@@ -34,11 +41,9 @@ const themePref = getThemePreference(Astro.cookies);
 		<title>{title}</title>
 	</head>
 	<body>
-		{!splash && <Header />}
 		<main>
 			<slot />
 		</main>
-		{!splash && <Footer />}
 	</body>
 </html>
 <style>
@@ -110,7 +115,7 @@ const themePref = getThemePreference(Astro.cookies);
 		--secondary-btn-default-border-color: #111111;
 		--secondary-btn-hover-border-color: #555555;
 		--secondary-btn-focus-border-color: #555555;
-		
+
 		--secondary-btn-detault-text-color: #ffffff;
 		--secondary-btn-hover-text-color: #ffffff;
 		--secondary-btn-focus-text-color: #b22222;
@@ -118,14 +123,14 @@ const themePref = getThemePreference(Astro.cookies);
 		--inverse-btn-default-bg-color: #dddddd;
 		--inverse-btn-hover-bg-color: #b22222;
 		--inverse-btn-focus-bg-color: #b22222;
-		
-		
+
+
 
 		--inverse-btn-detault-text-color: #ffffff;
 		--inverse-btn-hover-text-color: #b22222;
 		--inverse-btn-focus-text-color: #b22222;
 
-		
+
 	}
 
 	html {

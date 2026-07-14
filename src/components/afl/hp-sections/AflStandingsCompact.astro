@@ -12,6 +12,7 @@
  */
 import { chooseTeamName } from '../../../utils/team-names';
 import { getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
+import { formatPoints } from '../../../utils/formatters';
 import ThemeImage from '../../ThemeImage.astro';
 
 interface Team {
@@ -216,7 +217,7 @@ if (userRow) {
                 <span class="afl-tiers__ap-pct">{(row.allPlayPct * 100).toFixed(1)}%</span>
               </td>
             )}
-            <td class="afl-tiers__td afl-tiers__td--pf">{row.pf.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+            <td class="afl-tiers__td afl-tiers__td--pf">{formatPoints(row.pf, 0)}</td>
           </tr>
         </>
       ))}

@@ -70,6 +70,24 @@ export const formatNumber = (value: number): string => {
 };
 
 /**
+ * Format a points-for / fantasy-points value with grouping separators and a
+ * fixed maximum number of fraction digits.
+ *
+ * Byte-identical to an inline `value.toLocaleString('en-US', {
+ * maximumFractionDigits })` — `Number.prototype.toLocaleString` delegates to
+ * `Intl.NumberFormat` with the same options, so migrating call sites to this
+ * helper changes no rendered output. Extracted to DRY up the standings tables
+ * that all format `pf` the same way.
+ *
+ * @param value - Points value to format
+ * @param maximumFractionDigits - Max decimal places (standings use 1; AFL tiers use 0)
+ * @returns Grouped points string (e.g. "1,234.5" or "1,235")
+ */
+export const formatPoints = (value: number, maximumFractionDigits = 1): string => {
+  return value.toLocaleString('en-US', { maximumFractionDigits });
+};
+
+/**
  * Compact number formatter for large values
  * - 1,500,000 → "1.5M"
  * - 25,000 → "25K"
