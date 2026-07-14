@@ -3,7 +3,7 @@
  *
  * Deliberately JSON-free: the tier→logo mapping and the tier-name type/constants
  * live here, separate from the tier-history readers in afl-tier.ts, so logo-only
- * consumers (e.g. TierAllPlayStandingsTable, AflStandingsCompact) don't pull
+ * consumers (e.g. the standings tier tables, AflStandingsCompact) don't pull
  * data/afl-fantasy/tier-history.json into their module graph. Mirrors
  * getConferenceLogo in afl-conference.ts.
  */
