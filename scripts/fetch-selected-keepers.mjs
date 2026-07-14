@@ -149,8 +149,10 @@ async function main() {
   console.log('[selected-keepers] Raw response:');
   console.log(JSON.stringify(data, null, 2));
 
-  // Shape: { selectedKeepers: { franchise: [{ id, player: [{id,...}] | {id} }] } }
-  let franchises = data.selectedKeepers?.franchise ?? [];
+  // Observed shape (2026-07-14, owner auth): { selectedKeepers: { franchises:
+  // { id: '0001' } } } — key is "franchises", players absent when none selected.
+  let franchises =
+    data.selectedKeepers?.franchises ?? data.selectedKeepers?.franchise ?? [];
   if (!Array.isArray(franchises)) franchises = [franchises];
 
   const { franchiseNames, playerNames } = buildNameMaps(league);
