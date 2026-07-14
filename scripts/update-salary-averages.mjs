@@ -32,8 +32,8 @@ const season =
   getNonEmpty(env.MFL_YEAR) ??
   String(calculateCurrentLeagueYear());
 const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
-const LEAGUE_SLUG_DEFAULTS = { '13522': 'theleague', '19621': 'afl' };
-const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? LEAGUE_SLUG_DEFAULTS[leagueId] ?? leagueId;
+// Default the short nav slug from the registry (never hardcode id→slug maps).
+const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? getLeagueById(leagueId)?.navSlug ?? leagueId;
 
 // Canonical registry slug ('theleague' | 'afl-fantasy') used to key the shared
 // season-state file. leagueKey is the short nav slug ('theleague' | 'afl') or,
@@ -726,17 +726,32 @@ const readSeasonState = async () => {
 const writeSeasonState = async (state) => {
   await fs.mkdir(path.dirname(seasonStateFile), { recursive: true });
   // Read-modify-write so the other league's entry in the shared file is
-  // preserved. (These cron jobs run per-league and rarely overlap; a shared
-  // file trades a tiny concurrent-write window for one source of truth.)
+  // preserved. Re-read at write time (rather than reusing readSeasonState's
+  // snapshot) to shrink the lost-update window if the two per-league cron
+  // jobs ever overlap, and write via tmp-file + rename so a concurrent
+  // reader never sees a truncated file.
   let all = {};
   try {
     const parsed = JSON.parse(await fs.readFile(seasonStateFile, 'utf8'));
-    if (parsed && typeof parsed === 'object') all = parsed;
-  } catch {
-    all = {};
+    // Guard against non-plain-object corruption (e.g. an array): named keys
+    // on arrays are dropped by JSON.stringify, silently losing state.
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) all = parsed;
+  } catch (err) {
+    // Missing file = first run → start fresh. Anything else (unreadable /
+    // corrupt JSON) must fail loudly: silently writing `{}` here would wipe
+    // the OTHER league's entry in the shared file — a cross-league blast
+    // radius the old per-league files didn't have.
+    if (err?.code !== 'ENOENT') {
+      throw new Error(
+        `Refusing to overwrite ${seasonStateFile}: existing file is unreadable or corrupt (${err.message}). ` +
+          'Fix or delete the file, then re-run.'
+      );
+    }
   }
   all[seasonStateKey] = state;
-  await fs.writeFile(seasonStateFile, JSON.stringify(all, null, 2));
+  const tmpFile = `${seasonStateFile}.tmp`;
+  await fs.writeFile(tmpFile, JSON.stringify(all, null, 2));
+  await fs.rename(tmpFile, seasonStateFile);
 };
 
 const detectLatestWeek = (weeklyPayload) => {

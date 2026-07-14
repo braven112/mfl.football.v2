@@ -173,11 +173,11 @@ export interface NavTeamInfo {
   /** Team display name */
   teamName: string;
 
-  /** Owner display name */
-  ownerName: string;
+  /** Owner display name (null when the signed-in session carries no owner) */
+  ownerName: string | null;
 
-  /** URL to team icon/logo */
-  iconUrl?: string;
+  /** URL to team icon/logo (null when the team has no icon) */
+  iconUrl?: string | null;
 
   /** Which league this team belongs to */
   league: LeagueSlug;

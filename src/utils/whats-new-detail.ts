@@ -9,20 +9,17 @@
  */
 import type { AstroGlobal } from 'astro';
 import type { WhatsNewEntry } from '../types/whats-new';
-import { getWhatsNewEntriesForLeague } from './whats-new-entries';
-import { sortEntriesNewestFirst, getAdjacentEntries } from './whats-new-helpers';
-import { getAuthUser, isCommissionerOrAdmin } from './auth';
+import { getVisibleWhatsNewEntries } from './whats-new-entries';
+import { getAdjacentEntries } from './whats-new-helpers';
 import { resolveLeaguePath } from './nav-utils';
 import { getLeagueBySlug } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 
-export interface WhatsNewDetailResult {
-  /** Present when the id is unknown — the wrapper should redirect here. */
-  redirectTo?: string;
-  entry?: WhatsNewEntry;
-  prev?: WhatsNewEntry | null;
-  next?: WhatsNewEntry | null;
-}
+export type WhatsNewDetailResult =
+  /** Unknown id — the wrapper must `return Astro.redirect(redirectTo)`. */
+  | { redirectTo: string; entry?: undefined }
+  /** Resolved entry with prev/next adjacency. */
+  | { redirectTo?: undefined; entry: WhatsNewEntry; prev: WhatsNewEntry | null; next: WhatsNewEntry | null };
 
 export function resolveWhatsNewDetail(
   Astro: AstroGlobal,
@@ -31,13 +28,7 @@ export function resolveWhatsNewDetail(
   const league = getLeagueBySlug(leagueSlug)!;
   const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
-  const user = getAuthUser(Astro.request);
-  const isAdmin = !!user && isCommissionerOrAdmin(user);
-
-  const visible = getWhatsNewEntriesForLeague(league.navSlug).filter(
-    (e) => e.visibility !== 'admin' || isAdmin
-  );
-  const sorted = sortEntriesNewestFirst(visible);
+  const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
   const id = Astro.params.id;
   const entry = sorted.find((e) => e.id === id);
 

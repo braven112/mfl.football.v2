@@ -116,13 +116,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   const rawAssets = Object.fromEntries(
     Object.entries(team.assets || {}).map(([folder, entries]) => [
       folder,
-      (entries ?? []).map(entry => ({
-        ...entry,
-        absoluteUrl: assetDomain
-          ? `${assetDomain}${entry.relativePath}`
-          : entry.relativePath,
-        extension: entry.extension
-      }))
+      (entries ?? []).map(withAbsolute),
     ])
   );
   const psdAssets = PSD_FOLDERS.flatMap(folder => (rawAssets[folder] as AssetEntry[] || []).map(entry => ({

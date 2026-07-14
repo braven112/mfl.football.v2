@@ -23,28 +23,24 @@ import SchefterWidget from '../SchefterWidget.astro';
 import type { SchefterFeed as FeedType } from '../../../types/schefter';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
-import theleagueSchefterFeed from '../../../data/theleague/schefter-feed.json';
-import aflSchefterFeed from '../../../../data/afl-fantasy/schefter-feed.json';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
   entry: WhatsNewEntry;
   prev: WhatsNewEntry | null;
   next: WhatsNewEntry | null;
+  /**
+   * This league's schefter feed posts — imported by the route wrapper, not
+   * here, because static import specifiers can't be runtime variables and
+   * importing both leagues' feeds would ship ~1.2MB of JSON to every render.
+   */
+  schefterPosts: FeedType['posts'];
 }
 
-const { leagueSlug, entry, prev, next } = Astro.props as Props;
-
-// Static import map — the schefter feed path can't be a runtime variable, so
-// both feeds are imported and selected by canonical slug.
-const SCHEFTER_FEEDS: Record<CanonicalLeagueSlug, unknown> = {
-  theleague: theleagueSchefterFeed,
-  'afl-fantasy': aflSchefterFeed,
-};
+const { leagueSlug, entry, prev, next, schefterPosts } = Astro.props as Props;
 
 const league = getLeagueBySlug(leagueSlug)!;
 const apexDomain = league.domains[0];
-const schefterFeedData = SCHEFTER_FEEDS[leagueSlug] as FeedType;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
@@ -227,10 +223,10 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
           </div>
 
           <!-- League News widget -->
-          {schefterFeedData.posts.length > 0 && (
+          {schefterPosts.length > 0 && (
             <div class="wn-detail__release-card">
               <SchefterWidget
-                posts={schefterFeedData.posts.slice(0, 4)}
+                posts={schefterPosts.slice(0, 4)}
                 league={league.navSlug}
                 allNewsLink={r(`/${league.slug}/news`)}
               />

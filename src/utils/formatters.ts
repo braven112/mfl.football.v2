@@ -79,6 +79,12 @@ export const formatNumber = (value: number): string => {
  * helper changes no rendered output. Extracted to DRY up the standings tables
  * that all format `pf` the same way.
  *
+ * NOT the same as `formatPointsFor` (src/utils/hero-data/playoff-round-data.ts),
+ * which rounds to an integer, returns '' for <= 0 / non-finite, and accepts
+ * strings. This helper takes a NUMBER — MFL feeds deliver `pf` as a string,
+ * so parse first (`parseFloat` / `parseNumber`); a string passed through an
+ * `any` silently hits String#toLocaleString, which ignores the options.
+ *
  * @param value - Points value to format
  * @param maximumFractionDigits - Max decimal places (standings use 1; AFL tiers use 0)
  * @returns Grouped points string (e.g. "1,234.5" or "1,235")

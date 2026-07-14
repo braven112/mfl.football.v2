@@ -32,10 +32,12 @@ Learnings from the 2026-07 root landing-page redesign (league split hero + cross
 
 **Recommendation:** Default to explicit column counts for content cards; reserve auto-fill for uniform tiles. Stretch via flex on the wrapper, not percentage heights.
 
-## 2026-07-04 - Layout.astro `splash` prop hides site chrome
+## 2026-07-04 - Layout.astro `splash` prop hides site chrome (superseded 2026-07-14)
 
 **Context:** The root page should be a standalone splash with no header/footer.
 
-**Insight:** `src/layouts/Layout.astro` (the generic non-league layout, used only by index + templates + css-customization) now takes an optional `splash` boolean that suppresses `<Header/>` and `<Footer/>`. Other pages are unaffected.
+**Insight:** `src/layouts/Layout.astro` (the generic non-league layout, used only by index + templates + css-customization) took an optional `splash` boolean that suppressed `<Header/>` and `<Footer/>`. Other pages were unaffected.
 
-**Recommendation:** Reuse `splash` for any future chrome-less page on the generic layout instead of forking the layout.
+**Superseded (Phase 4 refactor, 2026-07-14):** `Layout.astro` and the root `Header.astro` were deleted. templates + css-customization now use `TheLeagueLayout`; the root splash uses the dedicated chrome-less `src/layouts/SplashLayout.astro` (same marketing token scheme, no header/footer, no `splash` prop needed).
+
+**Recommendation:** For a future chrome-less page, use `SplashLayout`. Do not re-create a generic `Layout.astro`.

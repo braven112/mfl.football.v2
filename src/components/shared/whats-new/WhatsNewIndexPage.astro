@@ -15,14 +15,12 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import WhatsNewListing from '../../theleague/whats-new/WhatsNewListing';
 import { spriteUrl } from '../../../utils/sprite-url';
-import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
+import { getVisibleWhatsNewEntries } from '../../../utils/whats-new-entries';
 import {
-  sortEntriesNewestFirst,
   enrichEntries,
   groupByMonth,
   getCategoryCounts,
 } from '../../../utils/whats-new-helpers';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 
@@ -48,12 +46,7 @@ const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const basePath = hideLeaguePrefix ? '' : `/${league.slug}`;
 
-const user = getAuthUser(Astro.request);
-const isAdmin = !!user && isCommissionerOrAdmin(user);
-
-const visible = getWhatsNewEntriesForLeague(league.navSlug)
-  .filter((e) => e.visibility !== 'admin' || isAdmin);
-const sorted = sortEntriesNewestFirst(visible);
+const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
 
 // Read the last-visit cookie for "NEW" badge computation
 const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');

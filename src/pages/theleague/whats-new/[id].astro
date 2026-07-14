@@ -2,19 +2,25 @@
 /**
  * What's New detail (The League) — thin route wrapper.
  * Shared implementation lives in components/shared/whats-new/WhatsNewDetailPage.
+ * The league's own schefter feed is imported here (static import specifiers
+ * can't be runtime variables, and importing both leagues' feeds in the shared
+ * component would ship ~1.2MB of JSON to every render of either route).
  */
 import WhatsNewDetailPage from '../../../components/shared/whats-new/WhatsNewDetailPage.astro';
 import { resolveWhatsNewDetail } from '../../../utils/whats-new-detail';
+import type { SchefterFeed } from '../../../types/schefter';
+import schefterFeedData from '../../../data/theleague/schefter-feed.json';
 
 export const prerender = false;
 
 const result = resolveWhatsNewDetail(Astro, 'theleague');
-if (result.redirectTo) return Astro.redirect(result.redirectTo);
+if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
 ---
 
 <WhatsNewDetailPage
   leagueSlug="theleague"
-  entry={result.entry!}
-  prev={result.prev ?? null}
-  next={result.next ?? null}
+  entry={result.entry}
+  prev={result.prev}
+  next={result.next}
+  schefterPosts={(schefterFeedData as SchefterFeed).posts}
 />

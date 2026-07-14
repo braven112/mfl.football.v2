@@ -131,11 +131,11 @@ export function buildNavTeamInfo(
   if (teamData) {
     return {
       franchiseId: navTeamId,
-      teamName: teamData.name,
+      teamName: teamData.name ?? `Team ${navTeamId}`,
       iconUrl: teamData.icon || null,
       ownerName: null,
       league,
-    } as NavTeamInfo;
+    };
   }
   return {
     franchiseId: navTeamId,
