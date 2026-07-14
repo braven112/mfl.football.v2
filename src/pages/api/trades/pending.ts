@@ -8,11 +8,13 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getCurrentLeagueYear, getAflLeagueYear } from '../../../utils/league-year';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import type { PendingTrade } from '../../../types/trade-builder';
-import leagueConfig from '../../../data/theleague.config.json';
+import { LEAGUES } from '../../../config/leagues';
+import theleagueConfig from '../../../data/theleague.config.json';
+import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getPlayerMap } from '../../../utils/player-map';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
 
@@ -84,25 +86,46 @@ function resolveAssets(
   return resolved;
 }
 
-// Build team name → franchiseId lookup for description parsing (module-level for reuse)
-const teamNameMap = new Map<string, string>();
-const teamLookup = new Map<string, { name: string; abbrev: string; nameShort: string; icon: string }>();
-for (const team of (leagueConfig as any).teams ?? []) {
-  if (team.name && team.franchiseId) {
-    teamNameMap.set(team.name.toLowerCase(), team.franchiseId);
+// Team lookups are per-league — franchise IDs overlap between leagues
+// (AFL 0003 is Team Minty Fresh; TheLeague 0003 is Maverick), so resolving
+// against the wrong league's config shows the wrong team on the other site.
+interface TeamMaps {
+  /** team name (lowercased) → franchiseId, for description parsing */
+  teamNameMap: Map<string, string>;
+  teamLookup: Map<string, { name: string; abbrev: string; nameShort: string; icon: string }>;
+}
+
+function buildTeamMaps(teams: any[]): TeamMaps {
+  const teamNameMap = new Map<string, string>();
+  const teamLookup = new Map<string, { name: string; abbrev: string; nameShort: string; icon: string }>();
+  for (const team of teams) {
+    if (team.name && team.franchiseId) {
+      teamNameMap.set(team.name.toLowerCase(), team.franchiseId);
+    }
+    if (team.franchiseId) {
+      teamLookup.set(team.franchiseId, {
+        name: team.name || '',
+        abbrev: team.abbrev || '',
+        nameShort: team.nameShort || '',
+        icon: team.icon || '',
+      });
+    }
   }
-  if (team.franchiseId) {
-    teamLookup.set(team.franchiseId, {
-      name: team.name || '',
-      abbrev: team.abbrev || '',
-      nameShort: team.nameShort || '',
-      icon: team.icon || '',
-    });
-  }
+  return { teamNameMap, teamLookup };
+}
+
+const TEAM_MAPS_BY_LEAGUE: Record<string, TeamMaps> = {
+  [LEAGUES.theleague.id]: buildTeamMaps((theleagueConfig as any).teams ?? []),
+  [LEAGUES['afl-fantasy'].id]: buildTeamMaps((aflConfig as any).teams ?? []),
+};
+
+/** Exported for tests — resolves the team maps for an MFL league id. */
+export function getTeamMaps(leagueId: string): TeamMaps {
+  return TEAM_MAPS_BY_LEAGUE[leagueId] ?? TEAM_MAPS_BY_LEAGUE[LEAGUES.theleague.id];
 }
 
 /** Extract proposing franchise from MFL description like "Pacific Pigskins proposed a trade to ..." */
-function resolveProposer(t: any, userFranchiseId: string): string {
+function resolveProposer(t: any, userFranchiseId: string, teamNameMap: Map<string, string>): string {
   const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
   if (offeredTo !== userFranchiseId) return userFranchiseId;
   const desc: string = t.description || '';
@@ -119,9 +142,10 @@ function processTrades(
   tradeArray: any[],
   userFranchiseId: string,
   playerMap: Map<string, { name: string; position: string; team: string; espnId: string }>,
+  { teamNameMap, teamLookup }: TeamMaps,
 ) {
   return tradeArray.map((t: any) => {
-    const offeredBy = resolveProposer(t, userFranchiseId);
+    const offeredBy = resolveProposer(t, userFranchiseId, teamNameMap);
     const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
     const willGiveUp = (t.will_give_up || t.franchise1_gave_up || '').replace(/,\s*$/, '');
     const willReceive = (t.will_receive || t.franchise2_gave_up || '').replace(/,\s*$/, '');
@@ -196,10 +220,13 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const year = getCurrentLeagueYear();
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || LEAGUES.theleague.id;
+    const isAfl = leagueId === LEAGUES['afl-fantasy'].id;
+    // AFL's MFL league year rolls over June 1, not TheLeague's Feb 14.
+    const year = isAfl ? getAflLeagueYear() : getCurrentLeagueYear();
     const mflCookie = user.id;
     const playerMap = loadPlayerMap(year);
+    const teamMaps = getTeamMaps(leagueId);
 
     // Fetch user's pending trades
     const result = await fetchMflTrades(year, leagueId, mflCookie);
@@ -213,13 +240,16 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     const trades = result.trades?.length
-      ? processTrades(result.trades, user.franchiseId, playerMap)
+      ? processTrades(result.trades, user.franchiseId, playerMap, teamMaps)
       : [];
 
     // Silent capture: seed the Schefter rumor mill with whatever this owner
     // can legitimately see. The scanner applies the cumulative-probability
     // leak model and codename framing before anything ever publishes.
-    if (result.trades?.length) {
+    // TheLeague only — the rumor scanner (scripts/schefter-rumor-scan.mjs)
+    // resolves franchises against TheLeague's config, so AFL rows in the
+    // shared hash would surface as the wrong teams in TheLeague's feed.
+    if (!isAfl && result.trades?.length) {
       void reportOwnerTrades(user.franchiseId, result.trades).catch(() => {});
     }
 
@@ -232,7 +262,7 @@ export const GET: APIRoute = async ({ request }) => {
       const commishResult = await fetchMflTrades(year, leagueId, mflCookie, '0000');
       if (commishResult.trades?.length) {
         // For commissioner trades, resolve proposer from description (not relative to user)
-        const allLeague = processTrades(commishResult.trades, user.franchiseId, playerMap);
+        const allLeague = processTrades(commishResult.trades, user.franchiseId, playerMap, teamMaps);
         // Filter out trades that involve the user's franchise (already in personal trades)
         commishTrades = allLeague.filter(
           (t: any) => t.offeredBy !== user.franchiseId && t.offeredTo !== user.franchiseId
