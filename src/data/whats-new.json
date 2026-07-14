@@ -1,5 +1,26 @@
 [
   {
+    "id": "afl-trade-block-in-builder",
+    "date": "2026-07-14",
+    "title": "The Trade Block Comes to the AFL Trade Builder",
+    "summary": "Players flagged on the trade block now show up right inside the AFL Trade Builder — see who is shopping, then start the trade in one click.",
+    "description": [
+      "The AFL Trade Builder knew your roster, knew their roster, and knew exactly how lopsided your offer was. What it didn't know was who actually wanted to make a deal — you were cold-calling every roster in the conference like a telemarketer with a draft-pick script. That changes today: every player an owner has flagged on the trade block now headlines the Trade Builder in a new On the Trade Block panel, grouped by team, ranked by ADP.",
+      "See a player you like? Click him. If he plays for a conference rival, the builder loads that team and drops him straight into the 'They give' column — you're one counter-offer away from a done deal. Your own flagged players get the same treatment on your side of the ledger, and the little 🏷️ tag follows flagged players into the roster pickers and the team dropdown, so availability is visible everywhere you build. Teams from the other conference still show up on the block, but they're politely grayed out — cross-conference trades remain illegal, no matter how nicely you ask.",
+      "And yes, the block is now properly attributed: with both conferences drafting from the same NFL player pool, the old data couldn't tell WHICH team had flagged a player. Now it can. Flag a player from the Rosters page (the ⋯ menu next to any player) and the whole league knows you're open for business — the right you, on the right team."
+    ],
+    "category": "enhancement",
+    "link": "/afl-fantasy/trade-builder",
+    "linkLabel": "Open Trade Builder",
+    "icon": "transactions-2",
+    "image": "afl-trade-block-builder.webp",
+    "imageAlt": "AFL Trade Builder showing the On the Trade Block panel with flagged players grouped by team",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "weekly-rollup-2026-07-13",
     "date": "2026-07-13",
     "title": "Weekly Fixes & Polish (Jul 6-10)",

@@ -465,7 +465,12 @@ export class MFLMatchupApiClient {
     playerId: string,
     action: 'add' | 'remove',
     franchiseId: string
-  ): Promise<{ success: boolean; error?: string; allPlayerIds?: string[] }> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    allPlayerIds?: string[];
+    byFranchise?: Record<string, { playerIds: string[]; willGiveUpComment: string; willTakeComment: string }>;
+  }> {
     if (!this.config.mflUserId) {
       return { success: false, error: 'Authentication required for trade bait updates' };
     }
@@ -543,21 +548,38 @@ export class MFLMatchupApiClient {
       }
 
       // Build the complete list of all trade bait player IDs across ALL franchises
-      // (matches the format of tradeBait.json used for local caching)
+      // (matches the format of tradeBait.json used for local caching), plus the
+      // franchise-attributed shape (matches tradeBait-by-franchise.json).
       const allPlayerIds = new Set<string>();
+      const byFranchise: Record<string, { playerIds: string[]; willGiveUpComment: string; willTakeComment: string }> = {};
       for (const entry of tradeBaitEntries) {
-        if (entry.franchise_id === franchiseId) continue; // Skip — we'll use our updated list
-        if (entry.willGiveUp) {
-          const ids = typeof entry.willGiveUp === 'string'
-            ? entry.willGiveUp.split(',').map((id: string) => id.trim()).filter(Boolean)
-            : [String(entry.willGiveUp)];
-          ids.forEach(id => allPlayerIds.add(id));
+        const entryFranchiseId = String(entry.franchise_id ?? '').trim();
+        if (entryFranchiseId === franchiseId) continue; // Skip — we'll use our updated list
+        const ids: string[] = entry.willGiveUp
+          ? (typeof entry.willGiveUp === 'string'
+              ? entry.willGiveUp.split(',').map((id: string) => id.trim()).filter(Boolean)
+              : [String(entry.willGiveUp)])
+          : [];
+        ids.forEach(id => allPlayerIds.add(id));
+        if (entryFranchiseId) {
+          byFranchise[entryFranchiseId] = {
+            playerIds: ids,
+            willGiveUpComment: typeof entry.willGiveUpComments === 'string' ? entry.willGiveUpComments.trim() : '',
+            willTakeComment: typeof entry.willTakeComments === 'string' ? entry.willTakeComments.trim() : '',
+          };
         }
       }
       // Add the updated list for the current franchise
       currentPlayerIds.forEach(id => allPlayerIds.add(id));
+      if (currentPlayerIds.length > 0) {
+        byFranchise[franchiseId] = {
+          playerIds: [...currentPlayerIds],
+          willGiveUpComment: typeof franchiseEntry?.willGiveUpComments === 'string' ? franchiseEntry.willGiveUpComments.trim() : '',
+          willTakeComment: typeof franchiseEntry?.willTakeComments === 'string' ? franchiseEntry.willTakeComments.trim() : '',
+        };
+      }
 
-      return { success: true, allPlayerIds: Array.from(allPlayerIds) };
+      return { success: true, allPlayerIds: Array.from(allPlayerIds), byFranchise };
     } catch (error) {
       console.error('Failed to update trade bait:', error);
       return {

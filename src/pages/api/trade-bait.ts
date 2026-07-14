@@ -119,6 +119,25 @@ export const POST: APIRoute = async ({ request }) => {
         }
       }
 
+      // Also refresh the franchise-attributed cache — UIs prefer it because the
+      // flat list can't say WHO flagged a player (both AFL conferences roster
+      // the same NFL player pool, so a bare id matches two teams).
+      if (result.byFranchise) {
+        try {
+          const byFranchisePath = path.resolve(
+            process.cwd(),
+            `data/${cacheLeagueDir}/mfl-feeds/${leagueYear}/tradeBait-by-franchise.json`,
+          );
+          fs.writeFileSync(
+            byFranchisePath,
+            JSON.stringify({ fetchedAt: Date.now(), franchises: result.byFranchise }, null, 2),
+            'utf8',
+          );
+        } catch (cacheErr) {
+          console.warn('Failed to update local tradeBait-by-franchise.json cache:', cacheErr);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,

@@ -257,6 +257,52 @@ const parseTradeBait = (data) => {
   return Array.from(playerIds);
 };
 
+// Per-franchise trade bait, same shape scripts/fetch-trade-bait.mjs writes.
+// The flat tradeBait.json can't attribute a flag to a franchise, which
+// matters in AFL where both conferences roster the same NFL player pool —
+// a flat id set would show the player as "on the block" for two teams when
+// only one flagged him.
+const parseTradeBaitByFranchise = (data) => {
+  const byFranchise = {};
+  let tradeBaitArray = data?.tradeBaits?.tradeBait;
+  if (tradeBaitArray && !Array.isArray(tradeBaitArray)) {
+    tradeBaitArray = [tradeBaitArray];
+  }
+  if (!Array.isArray(tradeBaitArray)) return byFranchise;
+
+  for (const item of tradeBaitArray) {
+    const franchiseId = String(
+      item?.franchise_id ?? item?.franchiseId ?? item?.franchise ?? '',
+    ).trim();
+    if (!franchiseId) continue;
+
+    const rawIds = typeof item?.willGiveUp === 'string'
+      ? item.willGiveUp.split(',').map((id) => id.trim())
+      : item?.willGiveUp != null ? [String(item.willGiveUp)] : [];
+
+    byFranchise[franchiseId] = {
+      playerIds: rawIds.filter((id) => /^\d{4,}$/.test(id)),
+      willGiveUpComment: typeof item?.willGiveUpComments === 'string'
+        ? item.willGiveUpComments.trim()
+        : '',
+      willTakeComment: typeof item?.willTakeComments === 'string'
+        ? item.willTakeComments.trim()
+        : '',
+    };
+  }
+  return byFranchise;
+};
+
+const writeTradeBaitByFranchise = (data) => {
+  const file = path.join(outDir, 'tradeBait-by-franchise.json');
+  const payload = {
+    fetchedAt: Date.now(),
+    franchises: parseTradeBaitByFranchise(data),
+  };
+  fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf8');
+  console.log(`Saved tradeBait-by-franchise -> ${file}`);
+};
+
 // Mirrors normalizeInjuryStatus in scripts/fetch-live-lineups.mjs and
 // the TypeScript client at src/utils/mfl-matchup-api.ts. Keep these in
 // sync if you change one.
@@ -369,7 +415,12 @@ const endpoints = [
     url: `${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`,
     parser: (t) => {
       try {
-        return parseTradeBait(JSON.parse(t));
+        const data = JSON.parse(t);
+        // Side effect: persist the franchise-attributed shape alongside the
+        // flat list, so UIs can show WHO flagged a player (see
+        // parseTradeBaitByFranchise above for why the flat list isn't enough).
+        writeTradeBaitByFranchise(data);
+        return parseTradeBait(data);
       } catch (err) {
         console.error('Failed to parse tradeBait JSON:', err.message);
         return [];
