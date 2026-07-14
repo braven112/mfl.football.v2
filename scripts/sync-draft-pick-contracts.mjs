@@ -62,6 +62,8 @@ import {
   getRookieSlotSalary,
   overallPickFromRoundPick,
 } from './lib/rookie-salary-slots.mjs';
+import { getRedisConfig, redisCommand } from './lib/redis.mjs';
+import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const REDIS_KEY = 'contract-declarations';
@@ -152,126 +154,7 @@ export function buildDraftPickWrites({ draftResults, playerIndex, mflSalaries, y
   return writes;
 }
 
-// ── MFL auth + fetch (mirrors src/utils/mfl-login.ts + mfl-fetch.ts) ──
-
-/**
- * Manual-redirect fetch that re-attaches the Cookie header on every hop.
- * Required because Node.js undici strips Cookie on cross-origin 302s, and
- * MFL's api.* host always redirects to www49.* for authenticated calls.
- */
-async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs = 10_000 }) {
-  let currentUrl = url;
-  let currentMethod = method;
-  let currentBody = body;
-  const cookieHeader = Object.entries(cookies)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}=${v}`)
-    .join('; ');
-
-  for (let hop = 0; hop <= 3; hop++) {
-    const headers = { Cookie: cookieHeader };
-    if (currentMethod === 'POST' && currentBody) {
-      headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    }
-    const res = await fetch(currentUrl, {
-      method: currentMethod,
-      headers,
-      body: currentMethod === 'POST' ? currentBody : undefined,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (res.status < 300 || res.status >= 400) return res;
-    const location = res.headers.get('location');
-    if (!location) return res;
-    currentUrl = location.startsWith('http')
-      ? location
-      : new URL(location, currentUrl).href;
-    if (res.status === 302 || res.status === 303) {
-      if (currentMethod === 'POST' && currentBody) {
-        const sep = currentUrl.includes('?') ? '&' : '?';
-        currentUrl = `${currentUrl}${sep}${currentBody}`;
-      }
-      currentMethod = 'GET';
-      currentBody = undefined;
-    }
-  }
-  throw new Error(`mflFetch exceeded redirect limit for ${url}`);
-}
-
-/**
- * Log into MFL with username/password and return MFL_USER_ID + (optional)
- * MFL_IS_COMMISH cookies. Mirrors src/utils/mfl-login.ts but stripped to
- * just the cookie acquisition (no franchise-resolution step).
- */
-async function loginToMFL(username, password) {
-  const year = new Date().getFullYear();
-  const loginUrl = `https://api.myfantasyleague.com/${year}/login`;
-  const params = new URLSearchParams({ USERNAME: username, PASSWORD: password, XML: '1' });
-
-  const allSetCookies = [];
-  let url = loginUrl;
-  let method = 'POST';
-  let body = params.toString();
-  let finalText = '';
-
-  for (let hop = 0; hop <= 3; hop++) {
-    const headers = method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {};
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: method === 'POST' ? body : undefined,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(8000),
-    });
-    const hopCookies = res.headers.getSetCookie?.() ?? [];
-    allSetCookies.push(...hopCookies);
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) {
-        finalText = await res.text();
-        break;
-      }
-      url = location.startsWith('http') ? location : new URL(location, url).href;
-      if (res.status === 302 || res.status === 303) {
-        if (method === 'POST' && body) {
-          const sep = url.includes('?') ? '&' : '?';
-          url = `${url}${sep}${body}`;
-        }
-        method = 'GET';
-        body = undefined;
-      }
-      continue;
-    }
-    finalText = await res.text();
-    break;
-  }
-
-  // Fall back to GET-with-params if POST returned empty
-  if (!finalText.trim()) {
-    const fallbackUrl = `${loginUrl}?${params.toString()}`;
-    const res = await fetch(fallbackUrl, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
-    finalText = await res.text();
-    const hopCookies = res.headers.getSetCookie?.() ?? [];
-    allSetCookies.push(...hopCookies);
-  }
-
-  const errorMatch = finalText.match(/<error[^>]*>(.*?)<\/error>/s);
-  if (errorMatch) throw new Error(`MFL login failed: ${errorMatch[1].trim()}`);
-
-  const cookieMatch = finalText.match(/MFL_USER_ID="([^"]+)"/);
-  if (!cookieMatch) throw new Error(`MFL login: no MFL_USER_ID in response: ${finalText.slice(0, 200)}`);
-
-  let commishCookie;
-  for (const cookieStr of allSetCookies) {
-    const m = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
-    if (m) {
-      commishCookie = m[1];
-      break;
-    }
-  }
-
-  return { mflUserId: cookieMatch[1], mflIsCommish: commishCookie };
-}
+// ── MFL auth + fetch (mflFetch + loginToMFL now shared — see scripts/lib/mfl-api.mjs) ──
 
 async function fetchCurrentMFLSalaries({ leagueId, year, cookies }) {
   const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${leagueId}&JSON=1`;
@@ -323,19 +206,7 @@ async function writeContractsToMFL({ leagueId, year, cookies, writes }) {
 }
 
 // ── Audit-trail declaration storage (best-effort) ──────────────────────
-
-function getRedisConfig() {
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) return null;
-  return { url, token };
-}
+// getRedisConfig now shared — see scripts/lib/redis.mjs.
 
 async function writeAuditDeclarations(declarations, leagueSlug) {
   if (declarations.length === 0) return;
@@ -344,16 +215,13 @@ async function writeAuditDeclarations(declarations, leagueSlug) {
   if (redis) {
     const body = [REDIS_KEY];
     for (const d of declarations) body.push(d.id, JSON.stringify(d));
-    const res = await fetch(`${redis.url}/hset`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${redis.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      console.warn(`[draft-pick-sync] audit write to Redis failed: ${res.status} ${await res.text()}`);
+    // Same net effect as the previous `${redis.url}/hset` REST-path call
+    // (an HSET of REDIS_KEY with these field/value pairs), now issued via
+    // the shared command-array form used elsewhere in the codebase.
+    try {
+      await redisCommand(redis, ['HSET', ...body]);
+    } catch (err) {
+      console.warn(`[draft-pick-sync] audit write to Redis failed: ${err.message}`);
     }
     return;
   }
