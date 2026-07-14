@@ -60,7 +60,7 @@ Dallas @ AT&T Stadium:
 
 ### Modified Files
 - ✅ `package.json` - Added npm scripts
-- ✅ `src/pages/theleague/matchup-preview-example.astro` - Display logic
+- ✅ `src/pages/theleague/matchup-preview-example.astro` - Display logic (page removed July 2026; see git history)
 
 ## 🚀 How to Use
 

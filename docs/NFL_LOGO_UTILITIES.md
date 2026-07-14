@@ -378,7 +378,7 @@ The NFL logo utilities are currently used in:
    - Game matchup displays
    - Dark variant for TV-style layout
 
-3. **Matchup Preview** (`src/pages/theleague/matchup-preview-example.astro`)
+3. **Matchup Preview** (`src/pages/theleague/matchup-preview-example.astro` — page removed July 2026)
    - NFL game cards
    - Team comparison views
 
