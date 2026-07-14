@@ -1,10 +1,10 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import StandingsTable from '../../components/theleague/StandingsTable.astro';
-import ConferenceLeagueStandingsTable from '../../components/theleague/ConferenceLeagueStandingsTable.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import { getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
@@ -234,6 +234,24 @@ function tierHeader(name: string) {
   };
 }
 const combinedTierName = isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play';
+
+// Conference-view presentation: AL glows league red, NL glows conference blue.
+// Title hue matches each conference logo (raw brand hex + a brightened dark
+// variant). Replaces the old data-league / conferenceId :global selectors.
+function conferenceAccent(confId: '00' | '01') {
+  return confId === '01' ? ('conference-blue' as const) : ('afl-red' as const);
+}
+function conferenceHeader(confId: '00' | '01', name: string) {
+  const isNL = confId === '01';
+  return {
+    kind: 'conference' as const,
+    title: name,
+    logoSrc: getConferenceLogo(confId),
+    logoDarkSrc: getConferenceLogoDark(confId),
+    accentColor: isNL ? '#1d4f91' : '#c41e3a',
+    accentColorDark: isNL ? '#5b9bd5' : '#f47a8f',
+  };
+}
 ---
 
 <TheLeagueLayout title="AFL Standings" year={selectedYear}>
@@ -305,23 +323,29 @@ const combinedTierName = isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play
 
       {view === 'league' && (
         <div class="league-view">
-          <ConferenceLeagueStandingsTable
-            conferenceName={conferenceAStandings.conference.name}
-            conferenceId="00"
+          <UnifiedStandingsTable
             teams={conferenceAStandings.allTeams}
+            columns={COLUMNS.conferenceSeeded}
+            teamCell="banner"
+            teamCellFallback="blank"
+            tiering={TIERING.conferenceSeed(conferenceAStandings.conference.divisions.length)}
+            accent={conferenceAccent('00')}
+            header={conferenceHeader('00', conferenceAStandings.conference.name)}
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            divisionWinnerCount={conferenceAStandings.conference.divisions.length}
           />
-          <ConferenceLeagueStandingsTable
-            conferenceName={conferenceBStandings.conference.name}
-            conferenceId="01"
+          <UnifiedStandingsTable
             teams={conferenceBStandings.allTeams}
+            columns={COLUMNS.conferenceSeeded}
+            teamCell="banner"
+            teamCellFallback="blank"
+            tiering={TIERING.conferenceSeed(conferenceBStandings.conference.divisions.length)}
+            accent={conferenceAccent('01')}
+            header={conferenceHeader('01', conferenceBStandings.conference.name)}
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            divisionWinnerCount={conferenceBStandings.conference.divisions.length}
           />
 
           {nitTeams.length > 0 && (

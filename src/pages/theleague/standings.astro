@@ -1,7 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import StandingsTable from '../../components/theleague/StandingsTable.astro';
-import LeagueStandingsTable from '../../components/theleague/LeagueStandingsTable.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
@@ -206,7 +205,17 @@ const divisionBadges: Record<string, string> = {
 
       {view === 'league' && (
         <div class="league-view">
-          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} preferredTeamId={yearPreferredTeamId} franchiseBaseUrl="/theleague/franchises" />
+          <UnifiedStandingsTable
+            teams={leagueStandings}
+            columns={COLUMNS.leagueSeeded}
+            teamCell="banner"
+            teamCellFallback="blank"
+            tiering={TIERING.leagueSeed}
+            accent="league-blue"
+            year={selectedYear}
+            preferredTeamId={yearPreferredTeamId}
+            franchiseBaseUrl="/theleague/franchises"
+          />
         </div>
       )}
 
