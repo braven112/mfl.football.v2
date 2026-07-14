@@ -151,3 +151,65 @@ year, …))` reads that nft can't resolve and so traces for all 24 years (e.g.
 headroom, the highest-leverage cut is converting those dynamic per-year `fs`
 reads to build-time derived snapshots too. `/theleague/players` stays SSR anyway
 because it gates admin columns on `getAuthUser`.
+
+## 2026-07-13 - `actionlint` Binary Downloads Are Blocked By The Session Proxy For Unregistered Repos
+
+**Context:** Phase 5 workflow refactor (extracting composite actions under
+`.github/actions/`) needed to validate 20 edited workflow YAML files. The task
+called for `actionlint` first, falling back to YAML-parse + manual diff review
+if unavailable.
+
+**Insight:** `pnpm dlx actionlint` fails (`ERR_PNPM_DLX_NO_BIN` — there's no
+npm package, only the Go module/binary). The official
+`download-actionlint.bash` script and a direct `curl` of the GitHub Releases
+asset (`github.com/rhysd/actionlint/releases/download/...`) both fail too —
+not a network error, but a `403` JSON body: `"GitHub access to this repository
+is not enabled for this session. Use add_repo to request access."` The agent
+proxy's GitHub allowlist is scoped to repos explicitly added to the session
+(`add_repo`), and applies even to anonymous public-release-asset downloads,
+not just git clones/API calls against private repos.
+
+**Recommendation:** Don't burn time retrying `curl`/`wget` variants against
+`github.com` for a tool that isn't part of the working repo's own remotes —
+it's a session-scope block, not a transient network issue. Either
+`add_repo(owner, repo)` for the tool's repo first (if it's worth the session
+overhead) or go straight to the documented fallback: `python3 -c
+"import yaml; yaml.safe_load(open(f))"` (or `js-yaml` in Node) over every
+changed workflow/action file, **plus** a manual line-by-line diff read —
+`yaml.safe_load` won't catch GitHub Actions-specific mistakes (e.g. a step
+missing a required composite-action input, `uses:` typos, duplicate keys
+under `permissive` PyYAML defaults) so pair it with an explicit check that
+every `uses: ./.github/actions/foo` call supplies that action's `required:
+true` inputs (cross-reference against the action's own `action.yml`).
+
+## 2026-07-13 - Composite Actions Can't Contain `actions/checkout`; Some Workflows Skip `pnpm install` On Purpose
+
+**Context:** Same Phase 5 refactor — consolidating the pnpm/Node/install
+preamble duplicated across ~20 workflow files into one composite action.
+
+**Insight:** Two things worth knowing before doing this refactor again:
+1. `actions/checkout` cannot run from inside a `uses: composite` action (it
+   needs to operate on the runner's checkout of the *calling* workflow before
+   the composite's steps execute) — so checkout has to stay a normal step in
+   every caller, immediately before `uses: ./.github/actions/setup`. This
+   isn't a soft convention, it's a hard limitation of composite actions.
+2. Not every workflow that runs `node scripts/*.mjs` actually installs
+   dependencies first. `apply-pending-contracts.yml`, `schefter-announce.yml`,
+   `schefter-articles.yml`, and `schefter-scan.yml` call `actions/setup-node`
+   with **no** `pnpm/action-setup` and **no** install step at all — those
+   scripts apparently only touch built-in Node modules. Separately,
+   `schefter-rumor-scan.yml` and `schefter-trade-speculation.yml` install via
+   `npm ci --omit=dev --ignore-scripts || npm install --omit=dev
+   --ignore-scripts` instead of pnpm. Both are genuine, deliberate deviations
+   from the "standard" preamble, not copy-paste drift — folding them into a
+   pnpm-flavored composite action would add an install step (or swap package
+   managers) that wasn't there before and could change behavior/CI minutes
+   for reasons unrelated to the refactor.
+
+**Recommendation:** Before consolidating a CI preamble across many workflows,
+diff the *exact* step sequence per file rather than assuming they're all the
+same because the job names match — grep for `actions/setup-node` across
+`.github/workflows/*.yml` and check what precedes/follows each hit. Files
+missing `pnpm/action-setup` or using `npm` instead are signals of intentional
+divergence; leave them out of the composite and note why, rather than
+"fixing" them to match the majority pattern.
