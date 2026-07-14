@@ -39,6 +39,8 @@ import {
 } from './lib/schefter-groupme-budget.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
