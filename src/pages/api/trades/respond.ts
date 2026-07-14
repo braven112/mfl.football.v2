@@ -17,7 +17,8 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForMflId } from '../../../utils/league-year';
+import { LEAGUES } from '../../../config/leagues';
 import { mflFetch } from '../../../utils/mfl-fetch';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
@@ -66,8 +67,11 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const year = getCurrentLeagueYear();
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || LEAGUES.theleague.id;
+    // Per-league rollover clock (AFL June 1, TheLeague Feb 14) — must match
+    // the year pending.ts reads with, or the TRADE_ID targets a season that
+    // doesn't contain it between the two rollover dates.
+    const year = getLeagueYearForMflId(leagueId);
 
     const params = new URLSearchParams({
       TYPE: 'tradeResponse',

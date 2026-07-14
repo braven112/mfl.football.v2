@@ -1371,13 +1371,20 @@ select per-league config with it (compare against `LEAGUES[...].id` from the
 registry, never a literal id). Three sub-gotchas fixed together:
 - **Year clock:** AFL's MFL league year rolls over June 1 (`getAflLeagueYear()`),
   not TheLeague's Feb 14 (`getCurrentLeagueYear()`) — an AFL API route using the
-  TheLeague clock queries the wrong MFL year from Feb 14 to June 1.
+  TheLeague clock queries the wrong MFL year from Feb 14 to June 1. Worse, the
+  read path and write path must agree: pending.ts on the AFL clock while
+  respond.ts/submit.ts stayed on TheLeague's would show trades whose
+  accept/reject POSTs a `TRADE_ID` into a season that doesn't contain it. Use
+  `getLeagueYearForMflId(user.leagueId)` (`src/utils/league-year.ts`) in every
+  trade route so all three share one clock.
 - **Schefter rumor intake is TheLeague-only:** `reportOwnerTrades()` writes to
   the shared `schefter:trade_offers:owner_reports` hash keyed only by MFL
   `trade_id`, and the scanner (`scripts/schefter-rumor-scan.mjs`,
   `LEAGUE_ID='13522'`) resolves franchises against TheLeague's config. Feeding
-  it AFL rows would surface AFL trades as the wrong TheLeague teams. Gate the
-  call on the session's league.
+  it AFL rows would surface AFL trades as the wrong TheLeague teams. The gate
+  lives INSIDE `reportOwnerTrades` (required `leagueId` param, no-op unless
+  TheLeague) so call sites can't forget it — the first fix gated only
+  pending.ts and a reviewer caught submit.ts still leaking.
 - The global player map (`getPlayerMap`) is fine to share — MFL player IDs are
   global across leagues; only *franchise* lookups need league scoping.
 
@@ -1386,5 +1393,5 @@ names/icons or writes to league-scoped storage, grep it for
 `theleague.config.json` and a hardcoded `'13522'` fallback — both are the
 league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`.
 
-**Evidence:** `src/pages/api/trades/pending.ts` (fixed 2026-07-14),
-`src/utils/owner-trade-reports.ts`, `src/config/leagues-data.mjs`.
+**Evidence:** `src/pages/api/trades/{pending,respond,submit}.ts` (fixed
+2026-07-14), `src/utils/owner-trade-reports.ts`, `src/config/leagues-data.mjs`.

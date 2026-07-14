@@ -238,3 +238,21 @@ export function getAflLeagueYear(referenceDate?: Date): number {
 
   return date >= cutoff ? calendarYear : calendarYear - 1;
 }
+
+/**
+ * Get the current MFL league year for a league identified by its MFL id.
+ *
+ * API routes have no league path segment — their league identity comes from
+ * the session JWT's leagueId — and each league runs its own rollover clock
+ * (AFL June 1, TheLeague Feb 14). Every MFL read/write in an API route must
+ * use this so the display path and the import path agree on the year; mixing
+ * clocks makes trades visible-but-unactionable between Feb 14 and June 1.
+ *
+ * @param leagueId - MFL numeric league id (e.g. from user.leagueId)
+ * @param referenceDate - Optional date for testing
+ */
+export function getLeagueYearForMflId(leagueId: string, referenceDate?: Date): number {
+  return leagueId === getLeagueBySlug('afl-fantasy')?.id
+    ? getAflLeagueYear(referenceDate)
+    : getCurrentLeagueYear(referenceDate);
+}

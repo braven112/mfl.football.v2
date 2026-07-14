@@ -20,6 +20,7 @@
  */
 
 import leagueConfig from '../data/theleague.config.json';
+import { LEAGUES } from '../config/leagues';
 
 const HASH_KEY = 'schefter:trade_offers:owner_reports';
 const TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -152,11 +153,20 @@ function normalizeRaw(
  * from MFL. Upserts each offer into the hash — if we've seen it before,
  * refresh `lastSeenAt` and append the reporter; if it's new, stamp
  * `firstSeenAt`. Never throws — log-and-continue on any Redis failure.
+ *
+ * TheLeague only — the gate lives HERE (not at call sites) so no future
+ * caller can forget it. The rumor scanner (scripts/schefter-rumor-scan.mjs)
+ * resolves franchise IDs against TheLeague's config, and this module's own
+ * `teamNameToFid` is TheLeague-only, so rows from any other league would
+ * surface as the wrong TheLeague teams in the feed. Callers must pass the
+ * session's leagueId; anything but TheLeague's id is a silent no-op.
  */
 export async function reportOwnerTrades(
   franchiseId: string,
   rawTrades: Array<Record<string, unknown>>,
+  leagueId: string,
 ): Promise<void> {
+  if (leagueId !== LEAGUES.theleague.id) return;
   if (!franchiseId || !rawTrades || rawTrades.length === 0) return;
 
   const redis = await getRedis();

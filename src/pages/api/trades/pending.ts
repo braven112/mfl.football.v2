@@ -8,7 +8,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import { getCurrentLeagueYear, getAflLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import type { PendingTrade } from '../../../types/trade-builder';
@@ -221,9 +221,8 @@ export const GET: APIRoute = async ({ request }) => {
 
   try {
     const leagueId = user.leagueId || LEAGUES.theleague.id;
-    const isAfl = leagueId === LEAGUES['afl-fantasy'].id;
-    // AFL's MFL league year rolls over June 1, not TheLeague's Feb 14.
-    const year = isAfl ? getAflLeagueYear() : getCurrentLeagueYear();
+    // Per-league rollover clock (AFL June 1, TheLeague Feb 14).
+    const year = getLeagueYearForMflId(leagueId);
     const mflCookie = user.id;
     const playerMap = loadPlayerMap(year);
     const teamMaps = getTeamMaps(leagueId);
@@ -246,11 +245,9 @@ export const GET: APIRoute = async ({ request }) => {
     // Silent capture: seed the Schefter rumor mill with whatever this owner
     // can legitimately see. The scanner applies the cumulative-probability
     // leak model and codename framing before anything ever publishes.
-    // TheLeague only — the rumor scanner (scripts/schefter-rumor-scan.mjs)
-    // resolves franchises against TheLeague's config, so AFL rows in the
-    // shared hash would surface as the wrong teams in TheLeague's feed.
-    if (!isAfl && result.trades?.length) {
-      void reportOwnerTrades(user.franchiseId, result.trades).catch(() => {});
+    // reportOwnerTrades gates on leagueId internally — TheLeague only.
+    if (result.trades?.length) {
+      void reportOwnerTrades(user.franchiseId, result.trades, leagueId).catch(() => {});
     }
 
     // Commissioner mode: also fetch ALL league trades for approval
