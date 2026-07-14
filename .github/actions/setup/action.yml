@@ -1,0 +1,38 @@
+name: 'Setup pnpm + Node + install'
+description: >
+  Shared CI preamble used by (almost) every workflow in this repo: installs
+  pnpm, sets up Node with pnpm's dependency cache, then runs
+  `pnpm install --frozen-lockfile`. actions/checkout cannot run inside a
+  composite action, so callers must check out the repo themselves in the
+  step immediately before this one.
+inputs:
+  node-version:
+    description: 'Node.js version to install'
+    required: false
+    default: '22'
+  pnpm-version:
+    description: 'pnpm version to install (keep in sync with the version used to generate pnpm-lock.yaml)'
+    required: false
+    default: '10.24.0'
+  install:
+    description: 'Whether to run `pnpm install --frozen-lockfile` after setup. Set to "false" for callers that only need the pnpm/Node toolchain.'
+    required: false
+    default: 'true'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v5
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Use Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      if: ${{ inputs.install == 'true' }}
+      shell: bash
+      run: pnpm install --frozen-lockfile
