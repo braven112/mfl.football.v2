@@ -1,0 +1,1544 @@
+---
+/**
+ * Unified standings table (Phase 6).
+ *
+ * One config-driven, server-rendered component replacing StandingsTable,
+ * LeagueStandingsTable, ConferenceLeagueStandingsTable and
+ * TierAllPlayStandingsTable. Column set, team-cell mode, tiering, header and
+ * accent glow are all data (see standings-table-config.ts). Zero client JS.
+ *
+ * The internal `variant` (std / league / conf / tier) selects the row model,
+ * container chrome and the visual band it renders under. CSS is namespaced by
+ * variant root class so each legacy table's exact look is preserved pixel-for-
+ * pixel; the `accent` prop replaces the old `data-league` / `conferenceId`
+ * selectors. See docs/standings-table-design.md.
+ */
+import PlayoffBadge from '../PlayoffBadge.astro';
+import ThemeImage from '../../ThemeImage.astro';
+import { HISTORICAL_TEAM_BANNER_FALLBACK } from '../../../utils/team-names';
+import {
+  parseWLT,
+  safeParseFloat,
+  safeParseInt,
+  formatRecord,
+  resolveAllPlayRecord,
+  calculateGamesBack,
+  formatGamesBack,
+} from './standings-cells';
+import {
+  resolveBand,
+  type StandingsColumn,
+  type StandingsTableProps,
+} from './standings-table-config';
+
+const {
+  teams,
+  columns,
+  teamCell,
+  teamCellFallback = 'name',
+  tiering,
+  header,
+  year = new Date().getFullYear(),
+  preferredTeamId,
+  rosterBaseUrl,
+  franchiseBaseUrl,
+  accent = 'league-blue',
+  tierName = '',
+  promotionCutoff,
+} = Astro.props as StandingsTableProps;
+
+const variant: 'std' | 'league' | 'conf' | 'tier' =
+  teamCell === 'icon'
+    ? 'tier'
+    : tiering?.seedField === 'conferenceSeed'
+      ? 'conf'
+      : tiering?.seedField === 'seed'
+        ? 'league'
+        : 'std';
+
+const isBranded = header?.kind === 'brandedDivision' && !!header.badgeSrc;
+const showPlainDivision =
+  !!header && (header.kind === 'division' || (header.kind === 'brandedDivision' && !header.badgeSrc));
+const showConference = header?.kind === 'conference';
+const showTier = header?.kind === 'tier';
+const champ = header?.defendingChampion;
+
+const containerClass = ['st-card', `v-${variant}`, `acc-${accent}`, isBranded ? 'branded' : '']
+  .filter(Boolean)
+  .join(' ');
+// NL (conference-blue) drives the card glow + seed + your-team highlight to
+// conference blue; AL / TheLeague fall through the CSS var chain.
+const inlineStyle = accent === 'conference-blue' ? '--division-accent: #5b9bd5;' : undefined;
+
+function colClass(col: StandingsColumn): string {
+  switch (col.key) {
+    case 'playoffBadge':
+      return 'col-badge';
+    case 'seedPlain':
+    case 'seedAccent':
+    case 'seedPill':
+      return 'col-seed';
+    case 'rankCircle':
+      return 'col-rank';
+    case 'team':
+      return 'col-team';
+    case 'overallRecord':
+      return 'col-overall-record';
+    case 'overallPct':
+      return 'col-overall-pct';
+    case 'divRecord':
+      return 'col-div-record';
+    case 'divPct':
+      return 'col-div-pct';
+    case 'allPlayRecord':
+      return variant === 'league' || variant === 'conf' ? 'col-allplay' : 'col-record';
+    case 'allPlayPct':
+      return 'col-pct';
+    case 'gamesBack':
+      return 'col-gb';
+    case 'streak':
+      return 'col-streak';
+    case 'pf':
+      return 'col-pf';
+    case 'pa':
+      return 'col-pa';
+    case 'pwr':
+      return 'col-pwr';
+    case 'vp':
+      return 'col-vp';
+    case 'prize':
+      return 'col-prize';
+    default:
+      return '';
+  }
+}
+const cellClass = (col: StandingsColumn) => `${colClass(col)}${col.hideBelow === 'sm' ? ' hide-sm' : ''}`;
+
+function getPlayoffStatus(seed: number | undefined): 'division_winner' | 'wild_card' | null {
+  if (seed && seed <= 4) return 'division_winner';
+  if (seed && seed >= 5 && seed <= 7) return 'wild_card';
+  return null;
+}
+
+// Text content for the simple (non-markup) column keys.
+function cellText(col: StandingsColumn, team: (typeof teams)[number]): string {
+  switch (col.key) {
+    case 'overallRecord': {
+      const r = parseWLT(team.h2hwlt);
+      return `${r.w}-${r.l}-${r.t}`;
+    }
+    case 'overallPct':
+      return safeParseFloat(team.h2hpct, 3);
+    case 'divRecord': {
+      const r = parseWLT(team.divwlt);
+      return `${r.w}-${r.l}-${r.t}`;
+    }
+    case 'divPct':
+      return safeParseFloat(team.divpct, 3);
+    case 'allPlayRecord':
+      return formatRecord(resolveAllPlayRecord(team, year), col.omitZeroTies);
+    case 'allPlayPct':
+      return safeParseFloat(team.all_play_pct, 3);
+    case 'gamesBack':
+      return formatGamesBack(calculateGamesBack(team, teams));
+    case 'streak':
+      return team.strk ?? '';
+    case 'pf':
+      return safeParseFloat(team.pf, 1);
+    case 'pa':
+      return safeParseFloat(team.pa, 1);
+    case 'pwr':
+      return safeParseFloat(team.pwr, 1);
+    case 'vp':
+      return safeParseInt(team.vp);
+    default:
+      return '';
+  }
+}
+
+// --- Tier-table (AFL) row/border/prize logic (gated on the tier variant) -----
+const TIER_PRIZES: Record<string, string[]> = {
+  'Premier League': ['$225', '$150', '$100', '$50', '', '', '', '', '', '', '', ''],
+  'D-League': ['$50', '', '', '', '', '', '', '', '', '', '', ''],
+};
+function tierRowClass(rank: number): string {
+  if (tierName === 'Premier League') {
+    if (rank === 1) return 'gold-tier';
+    if (rank === 2) return 'silver-tier';
+    if (rank === 3) return 'bronze-tier';
+    if (rank === 4) return 'playoff-tier';
+    if (rank === 9 || rank === 10) return 'relegation-danger';
+    if (rank === 11 || rank === 12) return 'relegated';
+  } else if (tierName === 'D-League') {
+    if (rank === 1) return 'gold-tier';
+    if (rank === 2) return 'second-place';
+    if (rank === 3 || rank === 4) return 'dleague-playoff-tier';
+    if (rank === 12) return 'last-place';
+  }
+  return '';
+}
+function tierBorderClass(rank: number): string {
+  if (tierName === 'Premier League') {
+    if (rank === 8) return 'border-below';
+    if (rank === 10) return 'border-below-relegation';
+  } else if (tierName === 'D-League') {
+    if (rank === 2) return 'border-below-green';
+    if (rank === 4) return 'border-below-playoff';
+  }
+  if (
+    promotionCutoff !== undefined &&
+    tierName !== 'Premier League' &&
+    tierName !== 'D-League' &&
+    rank === promotionCutoff
+  ) {
+    return 'border-below';
+  }
+  return '';
+}
+
+function bannerHrefFor(id: string): string | null {
+  return franchiseBaseUrl ? `${franchiseBaseUrl}/${id}` : rosterBaseUrl ? `${rosterBaseUrl}?franchise=${id}` : null;
+}
+const bannerLabelFor = (name: string) =>
+  franchiseBaseUrl ? `View ${name} franchise page` : `View ${name} roster`;
+---
+
+<div class={containerClass} style={inlineStyle}>
+  {
+    isBranded && (
+      <div class="stand-head">
+        <span class="sh-badge">
+          <img src={header!.badgeSrc} alt={`${header!.title} division`} width="52" height="52" loading="lazy" decoding="async" />
+        </span>
+        <div class="sh-text">
+          <h3 class:list={['sh-div', { 'sh-div--solo': !(champ && champ.logoSrc) }]}>{header!.title}</h3>
+          {champ && champ.logoSrc && (
+            <span class="sh-row">
+              <span class="lbl">Defending Champion</span>
+              <img class="sh-logo" src={champ.logoSrc} alt={champ.name} title={champ.name} loading="lazy" decoding="async" />
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  {
+    showPlainDivision && (
+      <div class="division-header-section">
+        <div class="division-header-row">
+          {header!.logoSrc && header!.logoDarkSrc && (
+            <ThemeImage
+              src={header!.logoSrc}
+              darkSrc={header!.logoDarkSrc}
+              alt={`${header!.title} logo`}
+              class="division-conf-logo"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          <h3 class="division-header">{header!.title}</h3>
+        </div>
+        {champ && champ.name && (
+          <p class="champion-subtitle">
+            {champ.year} Division Champions: <strong>{champ.name}</strong>
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  {
+    showConference && (
+      <h2 class="conference-title">
+        {header!.logoSrc && header!.logoDarkSrc && (
+          <ThemeImage
+            src={header!.logoSrc}
+            darkSrc={header!.logoDarkSrc}
+            alt={`${header!.title} logo`}
+            class="conference-logo"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        <span
+          class="conference-title__name"
+          style={`--conference-color: ${header!.accentColor}; --conference-color-dark: ${header!.accentColorDark};`}
+        >
+          {header!.title}
+        </span>
+      </h2>
+    )
+  }
+
+  {
+    showTier && (
+      <div class="tier-header-section">
+        {header!.logoSrc && header!.logoDarkSrc && (
+          <ThemeImage src={header!.logoSrc} darkSrc={header!.logoDarkSrc} alt={`${header!.title} Logo`} class="tier-logo" />
+        )}
+        <h3 class="tier-header">{header!.title}</h3>
+      </div>
+    )
+  }
+
+  <div class="table-wrapper">
+    <table class="st-table">
+      <thead>
+        <tr>
+          {columns.map((col) => <th scope="col" class={cellClass(col)}>{col.header}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          teams.map((team, index) => {
+            const rank = index + 1;
+            const seedVal = tiering?.seedField === 'conferenceSeed' ? team.conferenceSeed : team.seed;
+            const band = tiering ? resolveBand(seedVal, tiering) : '';
+            const nextTeam = teams[index + 1];
+            const nextSeedVal = nextTeam
+              ? tiering?.seedField === 'conferenceSeed'
+                ? nextTeam.conferenceSeed
+                : nextTeam.seed
+              : undefined;
+            const nextBand = tiering && nextTeam ? resolveBand(nextSeedVal, tiering) : '';
+            const isBoundary = Boolean(tiering && band !== nextBand && nextTeam);
+            const isPreferred = Boolean(preferredTeamId && team.id === preferredTeamId);
+
+            let rowClass = '';
+            if (variant === 'std') {
+              rowClass = `row-${index % 2 === 0 ? 'even' : 'odd'}${isPreferred ? ' preferred-team' : ''}`;
+            } else if (variant === 'league' || variant === 'conf') {
+              rowClass = `${band ? `tier-${band}` : ''} ${isBoundary ? 'tier-boundary' : ''}${isPreferred ? ' preferred-team' : ''}`.trim();
+            } else {
+              rowClass = `${tierRowClass(rank)} ${tierBorderClass(rank)}`.trim();
+            }
+            // Legacy std/league rows carried these data hooks; conf/tier did not.
+            const withData = variant === 'std' || variant === 'league';
+
+            const showBanner =
+              teamCell === 'banner' &&
+              (teamCellFallback === 'name'
+                ? Boolean(team.teamBanner) && team.teamBanner !== HISTORICAL_TEAM_BANNER_FALLBACK
+                : Boolean(team.teamBanner));
+            const href = bannerHrefFor(team.id);
+
+            return (
+              <tr
+                class={rowClass}
+                data-preferred={withData && isPreferred ? 'true' : undefined}
+                data-team-id={withData ? team.id : undefined}
+              >
+                {columns.map((col) => (
+                  <td class={cellClass(col)}>
+                    {col.key === 'playoffBadge' && (
+                      <PlayoffBadge status={getPlayoffStatus(team.seed)} seed={team.seed} />
+                    )}
+                    {col.key === 'seedPlain' && <span class="seed-number">#{team.seed}</span>}
+                    {col.key === 'seedAccent' && <span class="seed-number">#{team.conferenceSeed}</span>}
+                    {col.key === 'seedPill' && <span class="seed-badge">#{team.seed}</span>}
+                    {col.key === 'rankCircle' && <span class="rank-number">{rank}</span>}
+
+                    {col.key === 'team' && teamCell === 'banner' && (
+                      <div class="team-info">
+                        {showBanner &&
+                          (href ? (
+                            <a href={href} class="team-banner-link" aria-label={bannerLabelFor(team.teamName)}>
+                              <img src={team.teamBanner} alt={team.teamName} class="team-banner" title={team.teamName} />
+                            </a>
+                          ) : (
+                            <img src={team.teamBanner} alt={team.teamName} class="team-banner" title={team.teamName} />
+                          ))}
+                        {teamCellFallback === 'name' && (
+                          <span class={showBanner ? 'team-name' : 'team-name team-name--fallback'}>{team.teamName}</span>
+                        )}
+                      </div>
+                    )}
+                    {col.key === 'team' && teamCell === 'icon' &&
+                      (rosterBaseUrl ? (
+                        <a
+                          href={`${rosterBaseUrl}?franchise=${team.id}`}
+                          class="team-info team-info-link"
+                          aria-label={`View ${team.teamName} roster`}
+                        >
+                          {team.teamIcon && <img src={team.teamIcon} alt={team.teamName} class="team-icon" loading="lazy" />}
+                          <span class="team-name">{team.teamName}</span>
+                        </a>
+                      ) : (
+                        <div class="team-info">
+                          {team.teamIcon && <img src={team.teamIcon} alt={team.teamName} class="team-icon" loading="lazy" />}
+                          <span class="team-name">{team.teamName}</span>
+                        </div>
+                      ))}
+
+                    {col.key === 'prize' && (
+                      <>
+                        {TIER_PRIZES[tierName]?.[index] && <span class="prize-amount">{TIER_PRIZES[tierName][index]}</span>}
+                        {tierName === 'D-League' && rank === 2 && <span class="promo-arrow rank-2">⬆</span>}
+                        {tierName === 'D-League' && rank === 3 && <span class="promo-arrow rank-3">⬆</span>}
+                        {tierName === 'D-League' && rank === 4 && <span class="promo-arrow rank-4">⬆</span>}
+                        {tierName === 'Premier League' && rank === 9 && <span class="promo-arrow pl-rank-9">⬇</span>}
+                        {tierName === 'Premier League' && rank === 10 && <span class="promo-arrow pl-rank-10">⬇</span>}
+                        {tierName === 'Premier League' && rank === 11 && <span class="promo-arrow pl-rank-11">⬇</span>}
+                        {tierName === 'Premier League' && rank === 12 && <span class="promo-arrow pl-rank-12">⬇</span>}
+                        {promotionCutoff !== undefined && rank <= promotionCutoff && (
+                          <span class="promo-arrow founders-promoted">⬆</span>
+                        )}
+                      </>
+                    )}
+
+                    {!['playoffBadge', 'seedPlain', 'seedAccent', 'seedPill', 'rankCircle', 'team', 'prize'].includes(
+                      col.key
+                    ) && cellText(col, team)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  /* ===================================================================== */
+  /* Shared: table wrapper                                                  */
+  /* ===================================================================== */
+  .table-wrapper {
+    overflow-x: auto;
+  }
+  .hide-sm {
+    /* utility; only hides at the sm breakpoint (see conf responsive block) */
+  }
+
+  /* ===================================================================== */
+  /* VARIANT: std  (TheLeague/AFL division + TheLeague all-play)            */
+  /* Source of truth: legacy StandingsTable.astro                          */
+  /* ===================================================================== */
+  .v-std {
+    margin-bottom: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 8px;
+    box-shadow: var(--shadow-card);
+    padding-block: var(--padding-md);
+    overflow-x: auto;
+  }
+  :global(html.dark) .v-std {
+    box-shadow: 0 0 0 1px var(--content-border, #555555), var(--shadow-lg);
+  }
+  .v-std.branded {
+    padding-top: 0;
+  }
+  .v-std .stand-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 1rem;
+    background: linear-gradient(135deg, var(--color-primary, #1c497c) 0%, #13365d 100%);
+    border-radius: 8px 8px 0 0;
+    padding: 22px 26px;
+  }
+  /* TL branded division dark glow (league-blue) */
+  :global(html.dark) .v-std.branded {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 0.16) 22%, var(--card-surface, #262626) 52%);
+  }
+  /* AFL division dark glow (red / NL blue) — replaces html.dark[data-league=afl] */
+  :global(html.dark) .v-std.acc-afl-red,
+  :global(html.dark) .v-std.acc-conference-blue {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 50%, transparent) 0%,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) 22%,
+      var(--card-surface, #16283c) 52%);
+  }
+  :global(html.dark) .v-std .stand-head {
+    background: transparent;
+  }
+  .v-std .stand-head .sh-badge {
+    flex-shrink: 0;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
+    display: flex;
+  }
+  .v-std .stand-head .sh-badge img {
+    display: block;
+    width: 52px;
+    height: 52px;
+  }
+  .v-std .stand-head .sh-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  .v-std .stand-head .sh-div {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 0.92;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: #fff;
+    white-space: nowrap;
+    margin: 0 0 -36px;
+  }
+  .v-std .stand-head .sh-div--solo {
+    margin: 0;
+  }
+  .v-std .stand-head .sh-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .v-std .stand-head .sh-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: #fff;
+    padding: 4px;
+    flex-shrink: 0;
+    margin-bottom: -6px;
+  }
+  .v-std .stand-head .lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    white-space: nowrap;
+  }
+  .v-std .division-header-section {
+    margin-bottom: 1.5rem;
+    padding-inline: 1.5rem;
+  }
+  .v-std .division-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  :global(.division-conf-logo) {
+    height: 1.75rem;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .v-std .division-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0rem;
+    color: var(--page-text, #1a1a1a);
+    padding: 0;
+  }
+  .v-std .champion-subtitle {
+    font-size: 0.95rem;
+    color: var(--color-secondary, #2e8743);
+    font-weight: 500;
+    margin: 0;
+    margin-top: 0.25rem;
+  }
+  /* AFL dark: champions read in trophy gold on the red/blue-glass card. */
+  :global(html.dark) .v-std.acc-afl-red .champion-subtitle,
+  :global(html.dark) .v-std.acc-conference-blue .champion-subtitle {
+    color: var(--afl-trophy-gold, #c9a44c);
+  }
+  .v-std .st-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--table-row-bg-alt, #f5f5f5);
+    color: var(--page-text, #1a1a1a);
+  }
+  .v-std thead {
+    background-color: var(--table-header-bg, #fff);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .v-std th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--table-header-text, #94a3b8);
+    border-bottom: 2px solid var(--table-border, #d0d0d0);
+  }
+  .v-std td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--table-border, #e0e0e0);
+    font-size: var(--table-cell-font-size, 0.75rem);
+    color: var(--page-text, #1a1a1a);
+  }
+  .v-std tbody tr {
+    background-color: var(--table-row-bg, #fff);
+    transition: background-color 0.2s ease;
+  }
+  .v-std tbody tr:hover {
+    background-color: var(--table-row-bg-hover, #f9f9f9);
+  }
+  .v-std tbody tr.row-odd {
+    background-color: var(--table-row-bg-alt, #f5f5f5);
+  }
+  .v-std tbody tr.row-odd:hover {
+    background-color: var(--table-row-bg-hover, #efefef);
+  }
+  :global(html.dark) .v-std .st-table {
+    background-color: transparent;
+  }
+  :global(html.dark) .v-std td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  :global(html.dark) .v-std th {
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+  :global(html.dark) .v-std thead {
+    background-color: transparent;
+  }
+  :global(html.dark) .v-std tbody tr {
+    background-color: rgba(255, 255, 255, 0.025);
+  }
+  :global(html.dark) .v-std tbody tr.row-odd {
+    background-color: rgba(255, 255, 255, 0.055);
+  }
+  :global(html.dark) .v-std tbody tr:hover,
+  :global(html.dark) .v-std tbody tr.row-odd:hover {
+    background-color: rgba(0, 0, 0, 0.22);
+  }
+  .v-std .col-seed {
+    width: 70px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .v-std .col-badge {
+    width: 100px;
+    text-align: center;
+    padding: 0.75rem 0.5rem;
+  }
+  .v-std .col-team {
+    width: auto;
+    min-width: 200px;
+  }
+  .v-std .col-record {
+    width: 100px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-std .col-pct {
+    width: 90px;
+    text-align: center;
+  }
+  .v-std .col-pf,
+  .v-std .col-pa {
+    width: 100px;
+    text-align: center;
+  }
+  .v-std .col-pwr,
+  .v-std .col-vp {
+    width: 90px;
+    text-align: center;
+  }
+  .v-std .col-overall-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-std .col-overall-pct {
+    width: 90px;
+    text-align: center;
+  }
+  .v-std .col-div-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-std .col-gb {
+    width: 80px;
+    text-align: center;
+  }
+  .v-std .col-streak {
+    width: 100px;
+    text-align: center;
+  }
+  .v-std .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .v-std .team-banner {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: contain;
+  }
+  .v-std .team-banner-link {
+    display: inline-block;
+    line-height: 0;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .v-std .team-banner-link:hover,
+  .v-std .team-banner-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+  .v-std .team-banner-link:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 2px;
+  }
+  .v-std .team-name {
+    display: none;
+  }
+  .v-std .team-name--fallback {
+    display: inline-block;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .v-std .seed-badge {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--page-text, #1a1a1a);
+    background-color: var(--content-bg-muted, #e8e8e8);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .v-std tr.preferred-team {
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 12%, var(--table-row-bg, #fff)) !important;
+    border-left: 3px solid var(--color-secondary, #2e743d);
+    font-weight: 600;
+  }
+  .v-std tr.preferred-team:hover {
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 22%, var(--table-row-bg, #fff)) !important;
+  }
+  .v-std tr.preferred-team .team-name {
+    color: var(--color-secondary, #2e743d);
+  }
+  :global(html.dark) .v-std tr.preferred-team {
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #3b82f6)) 16%, transparent) !important;
+    border-left-color: var(--division-accent, var(--league-accent, #3b82f6));
+  }
+  :global(html.dark) .v-std tr.preferred-team:hover {
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #3b82f6)) 26%, transparent) !important;
+  }
+  :global(html.dark) .v-std tr.preferred-team .team-name {
+    color: var(--color-primary-light, #60a5fa);
+  }
+  @media (max-width: 767px) {
+    .v-std .col-team {
+      min-width: 100px;
+    }
+    .v-std .col-pwr,
+    .v-std .col-vp,
+    .v-std .col-pct,
+    .v-std .col-gb,
+    .v-std .col-streak {
+      font-size: 0.8rem;
+      padding: 0.5rem;
+    }
+    .v-std th {
+      font-size: 0.75rem;
+      padding: 0.5rem;
+    }
+    .v-std .team-banner {
+      max-width: 100px;
+    }
+    .v-std .team-name {
+      font-size: 0.9rem;
+    }
+  }
+
+  /* ===================================================================== */
+  /* VARIANT: league  (TheLeague seeded playoff standings)                 */
+  /* Source of truth: legacy LeagueStandingsTable.astro                    */
+  /* ===================================================================== */
+  .v-league {
+    margin-bottom: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding-block: var(--padding-md);
+    overflow-x: auto;
+  }
+  :global(html.dark) .v-league {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 0.16) 22%, var(--card-surface, #262626) 52%);
+    box-shadow: 0 0 0 1px var(--content-border, #555555), 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  .v-league .st-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--table-row-bg-alt, #f5f5f5);
+  }
+  :global(html.dark) .v-league .st-table {
+    background-color: transparent;
+  }
+  .v-league thead {
+    background-color: var(--table-header-bg, #fff);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  :global(html.dark) .v-league thead {
+    background-color: transparent;
+  }
+  .v-league th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--table-header-text, #94a3b8);
+    border-bottom: 2px solid var(--table-border, #d0d0d0);
+  }
+  :global(html.dark) .v-league th {
+    color: #ffffff;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+  .v-league td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--table-border, #e0e0e0);
+    font-size: var(--table-cell-font-size, 0.75rem);
+    color: var(--page-text, #1a1a1a);
+  }
+  :global(html.dark) .v-league td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  .v-league tbody tr {
+    transition: opacity 0.2s ease;
+  }
+  .v-league tbody tr:hover {
+    opacity: 0.85;
+  }
+  .v-league .tier-division-winners {
+    background-color: #fef8e7;
+    color: #1a1a1a;
+  }
+  .v-league .tier-wild-cards {
+    background-color: #f3f3f3;
+    color: #1a1a1a;
+  }
+  .v-league .tier-play-in {
+    background-color: var(--table-row-bg, #fff);
+  }
+  .v-league .tier-toilet-bowl {
+    background-color: #f5e6d3;
+    color: #1a1a1a;
+  }
+  :global(html.dark) .v-league .tier-division-winners {
+    background-color: rgba(212, 168, 86, 0.13);
+    color: #ededed;
+  }
+  :global(html.dark) .v-league .tier-wild-cards {
+    background-color: rgba(255, 255, 255, 0.055);
+    color: #ededed;
+  }
+  :global(html.dark) .v-league .tier-play-in {
+    background-color: transparent;
+    color: #ededed;
+  }
+  :global(html.dark) .v-league .tier-toilet-bowl {
+    background-color: rgba(181, 119, 58, 0.11);
+    color: #ededed;
+  }
+  .v-league .tier-division-winners.tier-boundary {
+    border-bottom: 4px solid #d4a856 !important;
+  }
+  .v-league .tier-wild-cards.tier-boundary {
+    border-bottom: 4px solid #d8d8d8 !important;
+  }
+  .v-league .tier-play-in.tier-boundary {
+    border-bottom: 4px solid var(--table-border, #dad8d5) !important;
+  }
+  .v-league .tier-toilet-bowl.tier-boundary {
+    border-bottom: 4px solid #dad8d5 !important;
+  }
+  :global(html.dark) .v-league .tier-division-winners.tier-boundary {
+    border-bottom-color: rgba(212, 168, 86, 0.55) !important;
+  }
+  :global(html.dark) .v-league .tier-wild-cards.tier-boundary {
+    border-bottom-color: rgba(255, 255, 255, 0.28) !important;
+  }
+  :global(html.dark) .v-league .tier-play-in.tier-boundary {
+    border-bottom-color: rgba(255, 255, 255, 0.2) !important;
+  }
+  :global(html.dark) .v-league .tier-toilet-bowl.tier-boundary {
+    border-bottom-color: rgba(181, 119, 58, 0.5) !important;
+  }
+  .v-league .col-seed {
+    width: 80px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .v-league .col-team {
+    width: auto;
+    min-width: 250px;
+  }
+  .v-league .col-overall-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-league .col-overall-pct {
+    width: 90px;
+    text-align: center;
+  }
+  .v-league .col-div-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-league .col-div-pct {
+    width: 90px;
+    text-align: center;
+  }
+  .v-league .col-allplay {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-league .col-pf,
+  .v-league .col-pa {
+    width: 110px;
+    text-align: center;
+  }
+  .v-league .col-pwr {
+    width: 100px;
+    text-align: center;
+  }
+  .v-league .col-vp {
+    width: 90px;
+    text-align: center;
+  }
+  .v-league .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .v-league .team-banner {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: contain;
+  }
+  .v-league .team-banner-link {
+    display: inline-block;
+    line-height: 0;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .v-league .team-banner-link:hover,
+  .v-league .team-banner-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+  .v-league .team-banner-link:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 2px;
+  }
+  .v-league .seed-number {
+    font-weight: 700;
+    font-size: 1rem;
+    display: inline-block;
+  }
+  .v-league tr.preferred-team {
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 12%, var(--table-row-bg, #fff)) !important;
+    border-left: 3px solid var(--color-secondary, #2e743d);
+    font-weight: 600;
+  }
+  :global(html.dark) .v-league tr.preferred-team {
+    background-color: rgba(59, 130, 246, 0.18) !important;
+    border-left-color: var(--color-primary, #3b82f6);
+  }
+  :global(html.dark) .v-league tr.preferred-team:hover {
+    background-color: rgba(59, 130, 246, 0.28) !important;
+    opacity: 1;
+  }
+  .v-league tr.preferred-team:hover {
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 22%, var(--table-row-bg, #fff)) !important;
+  }
+  .v-league tr.preferred-team .team-name {
+    color: var(--color-secondary, #2e743d);
+  }
+  @media (max-width: 767px) {
+    .v-league .col-team {
+      min-width: 100px;
+    }
+    .v-league .col-pf,
+    .v-league .col-pa,
+    .v-league .col-pwr {
+      font-size: 0.8rem;
+      padding: 0.5rem;
+    }
+    .v-league th {
+      font-size: 0.75rem;
+      padding: 0.5rem;
+    }
+    .v-league td {
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .v-league .team-banner {
+      max-width: 200px;
+    }
+    .v-league .seed-number {
+      font-size: 0.9rem;
+    }
+  }
+
+  /* ===================================================================== */
+  /* VARIANT: conf  (AFL per-conference seeded standings)                  */
+  /* Source of truth: legacy ConferenceLeagueStandingsTable.astro          */
+  /* ===================================================================== */
+  .v-conf {
+    margin-bottom: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+  }
+  :global(html.dark) .v-conf {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 50%, transparent) 0%,
+      color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) 22%,
+      var(--card-surface, #16283c) 52%);
+    box-shadow: 0 0 0 1px var(--content-border, #555555), 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+  :global(html.dark) .v-conf .conference-title {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+  :global(html.dark) .v-conf thead {
+    background-color: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+  :global(html.dark) .v-conf th {
+    color: #ffffff;
+  }
+  :global(html.dark) .v-conf td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  :global(html.dark) .v-conf tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.22);
+  }
+  .v-conf .conference-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    padding: 1.5rem 2rem;
+    margin: 0;
+    background: var(--card-bg, #fff);
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  :global(.conference-logo) {
+    height: 2.25rem;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
+  }
+  .v-conf .conference-title__name {
+    color: var(--conference-color);
+  }
+  :global(html.dark) .v-conf .conference-title__name {
+    color: var(--conference-color-dark);
+  }
+  .v-conf .table-wrapper {
+    overflow-x: auto;
+    padding: 1.5rem 2rem;
+  }
+  .v-conf .st-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .v-conf thead {
+    background-color: var(--table-header-bg, #f8fafc);
+    border-bottom: 2px solid var(--table-border, #e2e8f0);
+  }
+  .v-conf th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--table-header-text, #475569);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .v-conf td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+    font-size: 0.875rem;
+    color: var(--page-text, #1e293b);
+  }
+  .v-conf tbody tr {
+    transition: background-color 0.2s ease;
+  }
+  .v-conf tbody tr:hover {
+    background-color: var(--table-row-bg-hover, #f8fafc);
+  }
+  .v-conf .tier-division-winners {
+    background-color: #fef8e7;
+    color: #1a1a1a;
+  }
+  .v-conf .tier-wild-cards {
+    background-color: #f3f3f3;
+    color: #1a1a1a;
+  }
+  .v-conf .tier-eliminated {
+    background-color: var(--table-row-bg, #fff);
+  }
+  :global(html.dark) .v-conf .tier-division-winners {
+    background-color: rgba(212, 168, 86, 0.13);
+    color: #ededed;
+  }
+  :global(html.dark) .v-conf .tier-wild-cards {
+    background-color: rgba(255, 255, 255, 0.055);
+    color: #ededed;
+  }
+  :global(html.dark) .v-conf .tier-eliminated {
+    background-color: transparent;
+  }
+  .v-conf .tier-division-winners.tier-boundary {
+    border-bottom: 3px solid #d4a856 !important;
+  }
+  .v-conf .tier-wild-cards.tier-boundary {
+    border-bottom: 3px solid #cbd5e1 !important;
+  }
+  :global(html.dark) .v-conf .tier-division-winners.tier-boundary {
+    border-bottom-color: rgba(212, 168, 86, 0.55) !important;
+  }
+  :global(html.dark) .v-conf .tier-wild-cards.tier-boundary {
+    border-bottom-color: rgba(255, 255, 255, 0.28) !important;
+  }
+  .v-conf .col-seed {
+    width: 80px;
+    text-align: center;
+    font-weight: 700;
+    color: #c41e3a;
+    font-size: 1.125rem;
+  }
+  :global(html.dark) .v-conf .col-seed {
+    color: var(--division-accent, #f47a8f);
+  }
+  .v-conf .col-team {
+    width: auto;
+    min-width: 250px;
+  }
+  .v-conf .col-overall-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .v-conf .col-overall-pct {
+    width: 90px;
+    text-align: center;
+  }
+  .v-conf .col-div-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-conf .col-div-pct {
+    width: 90px;
+    text-align: center;
+  }
+  .v-conf .col-allplay {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .v-conf .col-pf,
+  .v-conf .col-pa {
+    width: 110px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .v-conf .col-pwr {
+    width: 100px;
+    text-align: center;
+  }
+  .v-conf .col-vp {
+    width: 90px;
+    text-align: center;
+  }
+  .v-conf .team-info {
+    display: flex;
+    align-items: center;
+  }
+  .v-conf .team-banner {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: contain;
+  }
+  .v-conf .team-banner-link {
+    display: inline-block;
+    line-height: 0;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .v-conf .team-banner-link:hover,
+  .v-conf .team-banner-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+  .v-conf .team-banner-link:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 2px;
+  }
+  .v-conf .seed-number {
+    font-weight: 700;
+    font-size: 1rem;
+    display: inline-block;
+  }
+  .v-conf tbody tr.preferred-team {
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 12%, var(--table-row-bg, #fff)) !important;
+    border-left: 3px solid var(--color-secondary, #2e743d);
+  }
+  .v-conf tbody tr.preferred-team:hover {
+    background-color: color-mix(in srgb, var(--color-secondary, #2e743d) 22%, var(--table-row-bg, #fff)) !important;
+  }
+  :global(html.dark) .v-conf tbody tr.preferred-team {
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) !important;
+    border-left-color: var(--division-accent, var(--league-accent, #ef5350));
+  }
+  :global(html.dark) .v-conf tbody tr.preferred-team:hover {
+    background-color: color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 26%, transparent) !important;
+  }
+  @media (max-width: 767px) {
+    .v-conf .conference-title {
+      font-size: 1.5rem;
+      padding: 1rem 1.5rem;
+    }
+    :global(.conference-logo) {
+      height: 1.75rem;
+    }
+    .v-conf .table-wrapper {
+      padding: 1rem 1.5rem;
+    }
+    .v-conf .col-team {
+      min-width: 100px;
+    }
+    .v-conf th,
+    .v-conf td {
+      padding: 0.5rem;
+      font-size: 0.75rem;
+    }
+    .v-conf .team-banner {
+      max-width: 200px;
+    }
+    .v-conf .seed-number {
+      font-size: 0.9rem;
+    }
+    .v-conf .hide-sm {
+      display: none;
+    }
+  }
+
+  /* ===================================================================== */
+  /* VARIANT: tier  (AFL all-play tier tables)                             */
+  /* Source of truth: legacy TierAllPlayStandingsTable.astro               */
+  /* ===================================================================== */
+  .v-tier {
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+  :global(html.dark) .v-tier {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
+      color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
+      var(--card-surface, #16283c) 52%);
+    box-shadow: 0 0 0 1px var(--content-border, #555555), var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+  :global(html.dark) .v-tier .tier-header-section {
+    background: transparent;
+  }
+  :global(html.dark) .v-tier thead {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+  :global(html.dark) .v-tier th {
+    color: #ffffff;
+  }
+  :global(html.dark) .v-tier tbody tr {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  :global(html.dark) .v-tier tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.22);
+  }
+  .v-tier .tier-header-section {
+    padding: 1.5rem 2rem;
+    background: var(--card-bg, #fff);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  :global(.tier-logo) {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+  }
+  .v-tier .tier-header {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--page-text, #002244);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .v-tier .st-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .v-tier thead {
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #dee2e6);
+  }
+  .v-tier th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--table-header-text, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+  .v-tier .col-rank {
+    width: 60px;
+    text-align: center;
+  }
+  .v-tier .col-team {
+    min-width: 200px;
+  }
+  .v-tier .col-record {
+    width: 120px;
+    text-align: center;
+  }
+  .v-tier .col-prize {
+    width: 100px;
+    text-align: center;
+  }
+  .v-tier tbody tr {
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
+    transition: background-color 0.15s ease;
+  }
+  .v-tier tbody tr:hover {
+    background-color: var(--table-row-bg-hover, #f9fafb);
+  }
+  .v-tier tbody tr:last-child {
+    border-bottom: none;
+  }
+  .v-tier td {
+    padding: 1rem;
+  }
+  .v-tier .rank-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #9ca3af;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+  .v-tier tbody tr.gold-tier .rank-number {
+    background: #ffd700;
+    color: #000;
+  }
+  .v-tier tbody tr.silver-tier .rank-number {
+    background: #c0c0c0;
+    color: #000;
+  }
+  .v-tier tbody tr.bronze-tier .rank-number {
+    background: #cd7f32;
+    color: #fff;
+  }
+  .v-tier tbody tr.playoff-tier .rank-number {
+    background: #22c55e;
+    color: #fff;
+  }
+  .v-tier tbody tr.relegation-danger .rank-number {
+    background: #ef4444;
+    color: #fff;
+  }
+  .v-tier tbody tr.relegated .rank-number {
+    background: #dc2626;
+    color: #fff;
+  }
+  .v-tier tbody tr.second-place .rank-number {
+    background: #16a34a;
+    color: #fff;
+  }
+  .v-tier .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .v-tier a.team-info-link {
+    color: inherit;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .v-tier a.team-info-link:hover,
+  .v-tier a.team-info-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+  .v-tier a.team-info-link:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 2px;
+  }
+  .v-tier .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .v-tier .team-name {
+    font-weight: 600;
+    color: var(--page-text, #111827);
+  }
+  .v-tier .prize-amount {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #000;
+    font-weight: 700;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .v-tier tbody tr.gold-tier {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 223, 0, 0.1) 100%);
+    border-bottom: 4px solid #ffd700;
+  }
+  .v-tier tbody tr.silver-tier {
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.15) 0%, rgba(192, 192, 192, 0.1) 100%);
+    border-bottom: 4px solid #c0c0c0;
+  }
+  .v-tier tbody tr.bronze-tier {
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.1) 100%);
+    border-bottom: 4px solid #cd7f32;
+  }
+  .v-tier tbody tr.playoff-tier {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.08) 100%);
+    border-bottom: 4px solid #22c55e;
+  }
+  .v-tier tbody tr.relegation-danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.05) 100%);
+  }
+  .v-tier tbody tr.relegated {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
+  }
+  .v-tier tbody tr.border-below {
+    border-bottom: 3px solid #ef4444;
+  }
+  .v-tier tbody tr.border-below-relegation {
+    border-bottom: 3px solid #dc2626;
+  }
+  .v-tier tbody tr.second-place {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.18) 100%);
+    color: #000;
+  }
+  .v-tier tbody tr.second-place .team-name,
+  .v-tier tbody tr.second-place .col-record,
+  .v-tier tbody tr.second-place .col-prize {
+    color: #000;
+  }
+  :global(html.dark) .v-tier tbody tr.second-place,
+  :global(html.dark) .v-tier tbody tr.second-place .team-name,
+  :global(html.dark) .v-tier tbody tr.second-place .col-record,
+  :global(html.dark) .v-tier tbody tr.second-place .col-prize {
+    color: var(--page-text, #ededed);
+  }
+  .v-tier tbody tr.last-place {
+    background: linear-gradient(135deg, #7c4a2e 0%, #6b4423 100%);
+    color: #fff;
+  }
+  .v-tier tbody tr.last-place .team-name,
+  .v-tier tbody tr.last-place .col-record,
+  .v-tier tbody tr.last-place .col-prize,
+  .v-tier tbody tr.last-place .prize-amount {
+    color: #fff;
+  }
+  .v-tier tbody tr.last-place .rank-number {
+    background: #5a3620;
+    color: #fff;
+  }
+  .v-tier tbody tr.border-below-green {
+    border-bottom: 4px solid #22c55e;
+  }
+  .v-tier tbody tr.border-below-playoff {
+    border-bottom: 4px solid #16a34a;
+  }
+  .v-tier tbody tr.dleague-playoff-tier {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.08) 100%);
+  }
+  .v-tier tbody tr.dleague-playoff-tier .rank-number {
+    background: #22c55e;
+    color: #fff;
+  }
+  .v-tier .promo-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-left: 0.5rem;
+  }
+  .v-tier .promo-arrow.rank-2 {
+    color: #22c55e;
+  }
+  .v-tier .promo-arrow.rank-3,
+  .v-tier .promo-arrow.rank-4 {
+    color: #fff;
+    filter: drop-shadow(0 0 1px #22c55e);
+  }
+  .v-tier .promo-arrow.pl-rank-2 {
+    color: #22c55e;
+  }
+  .v-tier .promo-arrow.pl-rank-9,
+  .v-tier .promo-arrow.pl-rank-10 {
+    color: #fff;
+    filter: drop-shadow(0 0 1px #ef4444);
+  }
+  .v-tier .promo-arrow.pl-rank-11,
+  .v-tier .promo-arrow.pl-rank-12 {
+    color: #ef4444;
+  }
+  .v-tier .promo-arrow.founders-promoted {
+    color: #22c55e;
+  }
+  @media (max-width: 767px) {
+    :global(.tier-logo) {
+      height: 35px;
+    }
+    .v-tier .tier-header {
+      font-size: 1.25rem;
+    }
+    .v-tier .st-table {
+      font-size: 0.8rem;
+    }
+    .v-tier th {
+      padding: 0.5rem;
+      font-size: 0.7rem;
+    }
+    .v-tier td {
+      padding: 0.75rem 0.5rem;
+    }
+    .v-tier .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+    .v-tier .rank-number {
+      width: 28px;
+      height: 28px;
+      font-size: 0.75rem;
+    }
+  }
+</style>
