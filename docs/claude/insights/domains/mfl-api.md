@@ -1351,3 +1351,40 @@ weeks of the affected year, not just week 1.
 AFL is one MFL league (`19621`) with two draft units keyed `CONFERENCE00` (franchises 0001–0012) and `CONFERENCE01` (0013–0024).
 
 **Also — a calendar window-close date is NOT necessarily the official rule deadline.** MFL "Select Keepers" closed **Jul 20**, but the AFL constitution's keeper deadline is **Jul 15** (Jul 20 was a soft buffer; the commish later moved MFL to Jul 15 @ 8:45 PM to match). When MFL and the constitution disagree on a *deadline*, confirm with the commish — MFL is authoritative for *official data* (rosters, scores), not necessarily for commish-configured buffer windows.
+
+---
+
+## 2026-07-14 - API Routes Are League-Blind Unless They Resolve Per-League Config From the Session's `leagueId` — Franchise IDs Collide Across Leagues
+
+**Context:** `/api/trades/pending` resolved franchise names/icons (and draft-pick
+"via" abbrevs) from a module-level map built from `theleague.config.json`. On the
+AFL site an offer to Team Minty Fresh (AFL `0003`) displayed as "Maverick"
+(TheLeague `0003`) in the trade alert modal.
+
+**Insight:** Franchise IDs are per-league sequence numbers (`0001`, `0002`, …)
+that collide across leagues, so any ID→team lookup keyed on a single league's
+config is silently wrong on the other site. Server API routes can't use
+`getLeagueContext(Astro.url)` — `/api/...` paths carry no league segment, and
+`getLeagueByPath` falls back to the default league (TheLeague). The league
+identity for an API request lives in the **session JWT** (`user.leagueId`);
+select per-league config with it (compare against `LEAGUES[...].id` from the
+registry, never a literal id). Three sub-gotchas fixed together:
+- **Year clock:** AFL's MFL league year rolls over June 1 (`getAflLeagueYear()`),
+  not TheLeague's Feb 14 (`getCurrentLeagueYear()`) — an AFL API route using the
+  TheLeague clock queries the wrong MFL year from Feb 14 to June 1.
+- **Schefter rumor intake is TheLeague-only:** `reportOwnerTrades()` writes to
+  the shared `schefter:trade_offers:owner_reports` hash keyed only by MFL
+  `trade_id`, and the scanner (`scripts/schefter-rumor-scan.mjs`,
+  `LEAGUE_ID='13522'`) resolves franchises against TheLeague's config. Feeding
+  it AFL rows would surface AFL trades as the wrong TheLeague teams. Gate the
+  call on the session's league.
+- The global player map (`getPlayerMap`) is fine to share — MFL player IDs are
+  global across leagues; only *franchise* lookups need league scoping.
+
+**Recommendation:** When touching any `src/pages/api/` route that renders team
+names/icons or writes to league-scoped storage, grep it for
+`theleague.config.json` and a hardcoded `'13522'` fallback — both are the
+league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`.
+
+**Evidence:** `src/pages/api/trades/pending.ts` (fixed 2026-07-14),
+`src/utils/owner-trade-reports.ts`, `src/config/leagues-data.mjs`.

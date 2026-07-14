@@ -230,7 +230,7 @@
       "type": "bug-fix",
       "summary": "The AFL trade alert was having an identity crisis. Send an offer to Team Minty Fresh and the popup would proudly announce a trade with... Maverick? That's a TheLeague team. The modal was reading franchise numbers off the wrong league's roster sheet — AFL team #3 and TheLeague team #3 are very different people. Trade offers on the AFL side now name (and badge) the actual AFL teams involved. Bonus fix: the player headshots inside the offer had lost their styling on AFL pages and were rendering as glorious full-screen portraits. They're back to sensible thumbnail size.",
       "impact": "user",
-      "area": "trades",
+      "area": "trade-builder",
       "league": "afl"
     }
   ]

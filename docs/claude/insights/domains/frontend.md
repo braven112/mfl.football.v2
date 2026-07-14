@@ -794,3 +794,35 @@ nested), or (b) repoint all the consuming globs at the nested path. Don't
 assume the root file is fresh for the current year without checking — diff it
 against the nested `theleague/`/`afl/` copy first if a "why isn't this player
 showing up" bug surfaces on any homepage/roster/salary page.
+
+---
+
+## 2026-07-14 - `@import` Inside a Scoped `<style>` Gets Scope Attributes Appended When Vite Inlines It — JS-Injected Markup Never Matches
+
+**Context:** The trade alert modal's asset lists are built client-side by
+`trade-alert.ts` using `buildPlayerCellHTML()` (`.player-cell` markup). The
+component pulled the shared styles in with `@import '../../styles/player-cell.css'`
+as the first line of its scoped `<style>`. On AFL pages the player headshots
+rendered at natural image size — hundreds of pixels — blowing the modal apart.
+
+**Insight:** The Astro *compiler* leaves the `@import` statement untouched
+(compiling the component in isolation shows `@import"...player-cell.css"` ahead
+of the scoped rules, which looks safe). But when Vite/postcss later resolves the
+import it inlines the file *into the scoped stylesheet*, and every imported
+selector gets the component's scope attribute appended:
+`.player-cell__avatar[data-astro-cid-pzbcwenv] img { ... }`. DOM injected by
+client JS never carries `data-astro-cid-*`, so none of the imported rules match
+— silently. It "worked" on pages that also loaded `player-cell.css` globally via
+some other component's frontmatter import (most TheLeague pages render a
+`PlayerCell`), which is why the breakage only surfaced on AFL pages.
+
+**Recommendation:** CSS consumed by JS-injected markup must be imported in the
+component's **frontmatter** (`import '../../styles/player-cell.css'`) — that's
+a genuinely global Vite CSS import, the same pattern `PlayerCell.astro` uses.
+Never `@import` a shared stylesheet inside a scoped `<style>` block. To verify
+which mode you're in, curl the dev-server page and look for the scope attribute
+on the imported selectors (`grep 'player-cell__avatar\[data-astro-cid'`) vs a
+standalone `data-vite-dev-id=".../player-cell.css"` style tag.
+
+**Evidence:** `src/components/theleague/TradeAlertModal.astro` (fixed 2026-07-14),
+`src/styles/player-cell.css`, `src/utils/player-cell-html.ts`.
