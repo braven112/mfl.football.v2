@@ -37,13 +37,14 @@ const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? getLeagueById(leagueId)?.n
 
 // Canonical registry slug ('theleague' | 'afl-fantasy') used to key the shared
 // season-state file. leagueKey is the short nav slug ('theleague' | 'afl') or,
-// as a fallback, a raw id — resolve both to the canonical slug via the registry.
-const resolveCanonicalSlug = (key, id) => {
-  const byNav = ALL_LEAGUES.find((l) => l.navSlug === key || l.slug === key);
-  if (byNav) return byNav.slug;
-  return getLeagueById(id)?.slug ?? key;
+// as a fallback, a raw id. An UNKNOWN key (e.g. MFL_LEAGUE_SLUG=sandbox) stays
+// its own isolated entry — never fall back to a real league's key, or a test
+// run would read/overwrite production freeze state.
+const resolveCanonicalSlug = (key) => {
+  const known = ALL_LEAGUES.find((l) => l.navSlug === key || l.slug === key);
+  return known ? known.slug : key;
 };
-const seasonStateKey = resolveCanonicalSlug(leagueKey, leagueId);
+const seasonStateKey = resolveCanonicalSlug(leagueKey);
 const apiBase = getNonEmpty(env.MFL_API_BASE) ?? 'https://api.myfantasyleague.com';
 const configuredWeek = getNonEmpty(env.MFL_WEEK);
 const username = getNonEmpty(env.MFL_USERNAME);
@@ -723,35 +724,70 @@ const readSeasonState = async () => {
   }
 };
 
-const writeSeasonState = async (state) => {
-  await fs.mkdir(path.dirname(seasonStateFile), { recursive: true });
-  // Read-modify-write so the other league's entry in the shared file is
-  // preserved. Re-read at write time (rather than reusing readSeasonState's
-  // snapshot) to shrink the lost-update window if the two per-league cron
-  // jobs ever overlap, and write via tmp-file + rename so a concurrent
-  // reader never sees a truncated file.
-  let all = {};
-  try {
-    const parsed = JSON.parse(await fs.readFile(seasonStateFile, 'utf8'));
-    // Guard against non-plain-object corruption (e.g. an array): named keys
-    // on arrays are dropped by JSON.stringify, silently losing state.
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) all = parsed;
-  } catch (err) {
-    // Missing file = first run → start fresh. Anything else (unreadable /
-    // corrupt JSON) must fail loudly: silently writing `{}` here would wipe
-    // the OTHER league's entry in the shared file — a cross-league blast
-    // radius the old per-league files didn't have.
-    if (err?.code !== 'ENOENT') {
-      throw new Error(
-        `Refusing to overwrite ${seasonStateFile}: existing file is unreadable or corrupt (${err.message}). ` +
-          'Fix or delete the file, then re-run.'
-      );
+// Exclusive lock around the shared season-state read-modify-write. The two
+// per-league runs share one file now, so an unguarded RMW could silently
+// revert the other league's just-written entry if the jobs ever overlap.
+const SEASON_STATE_LOCK_STALE_MS = 60_000;
+const acquireSeasonStateLock = async (lockFile) => {
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    try {
+      const handle = await fs.open(lockFile, 'wx');
+      await handle.close();
+      return;
+    } catch (err) {
+      if (err?.code !== 'EEXIST') throw err;
+      // Break stale locks from a crashed run.
+      try {
+        const stat = await fs.stat(lockFile);
+        if (Date.now() - stat.mtimeMs > SEASON_STATE_LOCK_STALE_MS) {
+          await fs.unlink(lockFile).catch(() => {});
+          continue;
+        }
+      } catch {
+        continue; // lock vanished between open and stat — retry immediately
+      }
+      if (Date.now() > deadline) {
+        throw new Error(`Timed out waiting for season-state lock ${lockFile}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
-  all[seasonStateKey] = state;
-  const tmpFile = `${seasonStateFile}.tmp`;
-  await fs.writeFile(tmpFile, JSON.stringify(all, null, 2));
-  await fs.rename(tmpFile, seasonStateFile);
+};
+
+const writeSeasonState = async (state) => {
+  await fs.mkdir(path.dirname(seasonStateFile), { recursive: true });
+  const lockFile = `${seasonStateFile}.lock`;
+  await acquireSeasonStateLock(lockFile);
+  try {
+    // Read-modify-write (under the lock) so the other league's entry in the
+    // shared file is preserved, and write via tmp-file + rename so a
+    // concurrent reader never sees a truncated file.
+    let all = {};
+    try {
+      const parsed = JSON.parse(await fs.readFile(seasonStateFile, 'utf8'));
+      // Guard against non-plain-object corruption (e.g. an array): named keys
+      // on arrays are dropped by JSON.stringify, silently losing state.
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) all = parsed;
+    } catch (err) {
+      // Missing file = first run → start fresh. Anything else (unreadable /
+      // corrupt JSON) must fail loudly: silently writing `{}` here would wipe
+      // the OTHER league's entry in the shared file — a cross-league blast
+      // radius the old per-league files didn't have.
+      if (err?.code !== 'ENOENT') {
+        throw new Error(
+          `Refusing to overwrite ${seasonStateFile}: existing file is unreadable or corrupt (${err.message}). ` +
+            'Fix or delete the file, then re-run.'
+        );
+      }
+    }
+    all[seasonStateKey] = state;
+    const tmpFile = `${seasonStateFile}.tmp`;
+    await fs.writeFile(tmpFile, JSON.stringify(all, null, 2));
+    await fs.rename(tmpFile, seasonStateFile);
+  } finally {
+    await fs.unlink(lockFile).catch(() => {});
+  }
 };
 
 const detectLatestWeek = (weeklyPayload) => {
