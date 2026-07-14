@@ -4,6 +4,21 @@ Domain knowledge about MyFantasyLeague API integration.
 
 ---
 
+## 2026-07-14 - AFL Is a Duplicate-Player League — "On Another Roster" Means Nothing
+
+**Context:** An AFL owner's keeper finalize appeared to fail 10/10 with "You can only cut players from your own roster" — but the cuts had already landed on MFL. The retry was validating against rosters where the *other conference's copy* of each player still existed.
+
+**Insight:** The AFL MFL league (19621) runs **24 franchises as two duplicate-player conferences** — the same NFL player is legitimately rostered by two franchises at once (e.g. franchise 0002 and 0018 both hold Trevor Lawrence). Any logic that infers ownership or state from "this player appears on some other franchise's roster" is invalid for AFL. TheLeague (13522) is a normal unique-player league, so code written against it tends to bake in the uniqueness assumption.
+
+**Pattern:**
+- The registry flag is `leagues-data.mjs → afl-fantasy.duplicatePlayers: true`. Gate any cross-roster inference on it (see the cut-player preflight).
+- A **player-keyed** roster map (`playerId → franchiseId`, as in `getCachedRosters`) silently collapses duplicate-player leagues — one franchise's copy overwrites the other. Use the **franchise-shaped** cache (`getCachedRosterFranchises`) for AFL.
+- Roster freshness architecture: the git-committed `mfl-feeds/*/rosters.json` snapshot lands roughly **hourly** (GitHub throttles the `*/5` cron heavily), so pages that render only from the feed show stale rosters for up to an hour+ after a write. The Redis cache (`src/utils/mfl-roster-cache.ts`, blocking re-fetch when older than 2 min) is the live path; write endpoints should call `bustRosterCaches()` (cheap delete-only, also stamps a bust epoch that stops in-flight pre-write fetches from re-caching stale data) after MFL writes so the next page load re-fetches.
+- MFL can return HTTP 200 with a degraded body (maintenance page, throttle, `{"error": ...}`) that parses to an empty roster set. Any endpoint that branches on "player not on roster" MUST first check the user's franchise key exists in the parsed rosters — otherwise a degraded read looks like "everything already dropped".
+- Write endpoints that verify success by re-reading rosters should scope the check to the **user's own franchise only** — never "anywhere in the league".
+
+---
+
 ## 2026-06-27 - AFL Rolls Over June 1, NOT Feb 14 — Use getAflLeagueYear()
 
 **Context:** AFL Set Lineup (and keepers/calendar/login) were pointing at the wrong MFL league year.

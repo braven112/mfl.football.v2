@@ -441,7 +441,16 @@
       try {
         let result: { ok: boolean; data: any };
         if (action === 'cut') {
-          result = await postJson('/api/cut-player', { playerId });
+          // Send the page's league year so the server can reject cuts when
+          // this page renders a different year than cuts would apply to
+          // (June-1 rollover skew) — same guard the keeper planner uses.
+          const pageYear = Number(
+            document.getElementById('year-select')?.dataset.currentYear || '0'
+          );
+          result = await postJson('/api/cut-player', {
+            playerId,
+            ...(pageYear > 0 ? { year: pageYear } : {}),
+          });
         } else if (action === 'ir-to') {
           result = await postJson('/api/move-to-ir', { playerId, direction: 'to' });
         } else if (action === 'ir-from') {

@@ -560,8 +560,29 @@ const roundLabel = (round: string) => {
 
     // ── Finalize ──
     const finalizeModal = document.getElementById('kp-finalize') as HTMLDivElement | null;
+    // Set once the cuts have all gone through on MFL — from then on the
+    // modal is a success screen and its button just reloads the page.
+    let finalized = false;
+    // After a partial failure, the next confirm click retries ONLY the
+    // failed players (each already-done player would cost a full MFL roster
+    // fetch server-side just to produce its 409).
+    let retryIds: string[] | null = null;
+
     const finalizeOpen = () => {
       if (!finalizeModal) return;
+      if (finalized) {
+        // Cuts already happened and the saved plan is gone — reopening the
+        // confirm flow would be lying. Show the fresh roster instead.
+        window.location.reload();
+        return;
+      }
+      // Opening the modal starts a fresh confirm session against the CURRENT
+      // keeper selection. A retry subset from an earlier partial failure must
+      // not survive — the user may have moved a failed player into keepers
+      // since, and cutting from the stale list would be irreversible.
+      // (The in-modal "Retry failed cuts" click doesn't come through here,
+      // so retry-only-failures still works within a session.)
+      retryIds = null;
       const keepList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-keep');
       const cutList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-cut');
       const copy = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
@@ -628,16 +649,23 @@ const roundLabel = (round: string) => {
     const confirmBtn = finalizeModal?.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
     confirmBtn?.addEventListener('click', async () => {
       if (!finalizeModal) return;
+      if (finalized) {
+        window.location.reload();
+        return;
+      }
       const progress = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress');
       const bar = finalizeModal.querySelector<HTMLElement>('#kp-finalize-bar-fill');
       const label = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress-label');
       const error = finalizeModal.querySelector<HTMLElement>('#kp-finalize-error');
       if (error) error.hidden = true;
 
-      const cutIds: string[] = [];
+      const allCutIds: string[] = [];
       for (const id of cardData.keys()) {
-        if (!keeperIds.includes(id)) cutIds.push(id);
+        if (!keeperIds.includes(id)) allCutIds.push(id);
       }
+      // Defensive intersect: never cut anything that isn't in the current
+      // cut list, even if a stale retry subset somehow survives.
+      const cutIds = (retryIds ?? allCutIds).filter((id) => allCutIds.includes(id));
 
       if (cutIds.length === 0) {
         finalizeClose();
@@ -655,10 +683,18 @@ const roundLabel = (round: string) => {
           const res = await fetch('/api/cut-player', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerId: id }),
+            // year lets the server reject cuts when this page was rendered
+            // for a different league year than the one cuts would hit.
+            // (undefined is dropped by JSON.stringify, so a missing
+            // data-year attr degrades to the old no-check behavior.)
+            body: JSON.stringify({ playerId: id, year: year > 0 ? year : undefined }),
           });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.success) {
+          // 409 = player is already off the roster on MFL (e.g. a previous
+          // finalize pass landed but this page was rendered from a stale
+          // feed). The desired end state is already true — count it as done
+          // so retries converge instead of re-failing forever.
+          if (res.status !== 409 && (!res.ok || !data?.success)) {
             failures.push({
               id,
               name: cardData.get(id)?.name || id,
@@ -678,22 +714,36 @@ const roundLabel = (round: string) => {
       }
 
       if (failures.length === 0) {
-        if (label) label.textContent = `Cut ${done} of ${cutIds.length}. Reloading roster…`;
+        retryIds = null;
         // Clear the saved plan since cuts are now permanent.
         try {
           await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE' });
         } catch {}
-        setTimeout(() => window.location.reload(), 800);
+        // Land on an explicit success state instead of silently reloading —
+        // a keeper cutdown is a big, irreversible action and deserves clear
+        // confirmation. The reload behind the "Show my new roster" button
+        // renders live data (the cut API busts the Redis roster cache), so
+        // the updated roster is what the owner actually sees.
+        finalized = true;
+        if (label) label.textContent = `All ${cutIds.length} cuts processed on MFL.`;
+        const copyEl = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
+        if (copyEl) {
+          copyEl.textContent =
+            'Done — your keepers are locked in and the cuts went through on MFL.';
+        }
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Show my new roster';
       } else {
+        retryIds = failures.map((f) => f.id);
         if (error) {
           error.hidden = false;
           error.innerHTML =
             `<strong>${failures.length} of ${cutIds.length} cuts failed.</strong><br/>` +
             failures.map((f) => `${f.name}: ${f.message}`).join('<br/>') +
-            '<br/><br/>The successful cuts went through. Reload the page and try the failures individually.';
+            '<br/><br/>Any successful cuts went through. Retry runs only the failed players.';
         }
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Retry remaining';
+        confirmBtn.textContent = 'Retry failed cuts';
       }
     });
 
