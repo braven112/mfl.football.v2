@@ -41,7 +41,7 @@ export type RedisClient = {
 
   // Hashes
   hget: <T = unknown>(key: string, field: string) => Promise<T | null>;
-  hgetall: <T = unknown>(key: string) => Promise<Record<string, T> | T | null>;
+  hgetall: <T = unknown>(key: string) => Promise<Record<string, T> | null>;
   hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
   hdel: (key: string, ...fields: string[]) => Promise<number>;
   hincrby: (key: string, field: string, increment: number) => Promise<number>;

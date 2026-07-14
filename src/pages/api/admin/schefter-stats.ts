@@ -380,12 +380,12 @@ async function readRedisStats(redis: RedisClient) {
     redis.zcard(`schefter:tipster:leaderboard:${seasonYear}`).catch(() => 0),
     redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
-    redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_FIRST_SEEN_KEY).catch(() => null),
     redis.smembers<string>(OFFER_POSTED_KEY).catch(() => [] as string[]),
-    redis.hgetall<Record<string, string>>(OFFER_ARCHIVE_KEY).catch(() => null),
-    redis.hgetall<Record<string, string>>(OFFER_ROLLS_KEY).catch(() => null),
-    redis.hgetall<Record<string, string>>(OFFER_EXPOSURE_KEY).catch(() => null),
-    redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_ARCHIVE_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_ROLLS_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_EXPOSURE_KEY).catch(() => null),
+    redis.hgetall<unknown>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
     // Pull the actual queue contents (not just LLEN) so the admin page can
     // render a "what's next to post" list. Cap at 50 — the queue rarely
     // grows past a handful, and 50 is a safe upper bound for payload size.

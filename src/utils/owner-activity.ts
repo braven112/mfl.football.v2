@@ -90,7 +90,7 @@ export async function getAllActivity(leagueId: string): Promise<Record<string, n
 	const redis = await getRedis();
 	if (!redis) return {};
 
-	const raw = await redis.hgetall<Record<string, string>>(redisKey(leagueId));
+	const raw = await redis.hgetall<string>(redisKey(leagueId));
 	if (!raw) return {};
 
 	const result: Record<string, number> = {};
@@ -188,7 +188,7 @@ export async function getDailyPageViews(
 	}
 
 	const results = await Promise.all(
-		dates.map((d) => redis.hgetall<Record<string, string>>(pageviewKey(leagueId, d))),
+		dates.map((d) => redis.hgetall<string>(pageviewKey(leagueId, d))),
 	);
 
 	const data: Record<string, Record<string, number>> = {};
@@ -222,8 +222,8 @@ export async function getGlobalPagePopularity(
 ): Promise<{ page: string; count: number }[]> {
 	const redis = await getRedis();
 	if (!redis) return [];
-	const raw = await redis.hgetall<Record<string, string>>(globalPageKey(leagueId));
-	return parsePageCounts(raw as Record<string, string> | null);
+	const raw = await redis.hgetall<string>(globalPageKey(leagueId));
+	return parsePageCounts(raw);
 }
 
 /** Get a single owner's page popularity (sorted by most visited) */
@@ -233,8 +233,8 @@ export async function getOwnerPagePopularity(
 ): Promise<{ page: string; count: number }[]> {
 	const redis = await getRedis();
 	if (!redis) return [];
-	const raw = await redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, franchiseId));
-	return parsePageCounts(raw as Record<string, string> | null);
+	const raw = await redis.hgetall<string>(ownerPageKey(leagueId, franchiseId));
+	return parsePageCounts(raw);
 }
 
 /** Get page popularity for ALL owners at once */
@@ -245,11 +245,11 @@ export async function getAllOwnerPagePopularity(
 	const redis = await getRedis();
 	if (!redis) return {};
 	const results = await Promise.all(
-		franchiseIds.map((id) => redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, id))),
+		franchiseIds.map((id) => redis.hgetall<string>(ownerPageKey(leagueId, id))),
 	);
 	const out: Record<string, { page: string; count: number }[]> = {};
 	for (let i = 0; i < franchiseIds.length; i++) {
-		out[franchiseIds[i]] = parsePageCounts(results[i] as Record<string, string> | null);
+		out[franchiseIds[i]] = parsePageCounts(results[i]);
 	}
 	return out;
 }
