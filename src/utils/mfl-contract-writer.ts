@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlink
 import { join, basename } from 'node:path';
 import { mflFetch } from './mfl-fetch';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
+import { buildMflExportUrl } from './mfl-url';
 
 // Reads use api.myfantasyleague.com; writes MUST use www49 (commissioner writes fail on the api subdomain)
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
@@ -78,7 +79,7 @@ export async function createPreWriteBackup(): Promise<string | null> {
 
   try {
     const year = getYear();
-    const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
+    const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_READ_HOST });
 
     const response = await fetch(url, {
       headers: {
@@ -150,7 +151,7 @@ export function pruneOldBackups(): number {
 export async function fetchMFLSalaries(): Promise<Record<string, { salary: string; contractYear: string; contractInfo: string }> | null> {
   try {
     const year = getYear();
-    const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
+    const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_READ_HOST });
 
     const response = await fetch(url, {
       headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},

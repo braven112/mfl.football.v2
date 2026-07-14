@@ -13,6 +13,7 @@ import type { APIRoute } from 'astro';
 import { parseTradeFromComment } from '../../../utils/draft-utils';
 import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-room';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { buildMflExportUrl } from '../../../utils/mfl-url';
 
 export const prerender = false;
 
@@ -61,7 +62,7 @@ export const GET: APIRoute = async ({ url }) => {
   const leagueId = url.searchParams.get('league') || url.searchParams.get('L') || DEFAULT_LEAGUE_ID;
   const host = url.searchParams.get('host') || DEFAULT_HOST;
 
-  const mflUrl = `https://${host}/${year}/export?TYPE=draftResults&L=${leagueId}&JSON=1`;
+  const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
 
   try {
     const res = await fetch(mflUrl, {

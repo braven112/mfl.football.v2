@@ -10,6 +10,7 @@
  */
 import { getCurrentLeagueYear } from './league-year';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
+import { buildMflExportUrl } from './mfl-url';
 
 const DEFAULT_HOST = 'https://api.myfantasyleague.com';
 const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
@@ -54,10 +55,10 @@ export async function fetchLiveAuctions(opts: FetchAuctionOpts = {}): Promise<Li
 
   try {
     const [resultsResponse, txnResponse] = await Promise.all([
-      fetchImpl(`${host}/${year}/export?TYPE=auctionResults&L=${leagueId}&JSON=1`, {
+      fetchImpl(buildMflExportUrl({ type: 'auctionResults', leagueId, year, host }), {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
       }),
-      fetchImpl(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`, {
+      fetchImpl(buildMflExportUrl({ type: 'transactions', leagueId, year, host }), {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
       }),
     ]);

@@ -17,6 +17,8 @@ import theleagueConfig from '../../../data/theleague.config.json';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getPlayerMap } from '../../../utils/player-map';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
+import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 /** Resolved asset for the trade alert modal (avoids needing full player data on client) */
 interface ResolvedAsset {
@@ -182,8 +184,12 @@ async function fetchMflTrades(
   mflCookie: string,
   franchiseId?: string,
 ): Promise<{ trades: any[] | null; error?: string }> {
-  let url = `https://api.myfantasyleague.com/${year}/export?TYPE=pendingTrades&L=${leagueId}&JSON=1`;
-  if (franchiseId) url += `&FRANCHISE_ID=${franchiseId}`;
+  const url = buildMflExportUrl({
+    type: 'pendingTrades',
+    leagueId,
+    year,
+    params: { FRANCHISE_ID: franchiseId },
+  });
 
   const res = await mflFetch({ url, method: 'GET', mflUserCookie: mflCookie });
   if (!res.ok) return { trades: null, error: `MFL HTTP ${res.status}` };
@@ -199,8 +205,6 @@ async function fetchMflTrades(
 
   return { trades: Array.isArray(raw) ? raw : [raw] };
 }
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);

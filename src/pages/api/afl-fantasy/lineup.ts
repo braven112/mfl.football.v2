@@ -13,6 +13,7 @@ import { getAuthUser } from '../../../utils/auth';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { getCurrentWeekForYear } from '../../../utils/current-week';
 import { getAflLeagueYear } from '../../../utils/league-year';
+import { buildMflExportUrl } from '../../../utils/mfl-url';
 
 const MFL_LEAGUE_ID = '19621';
 
@@ -109,7 +110,12 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Fetch rosters from MFL to get current starters
-    const rostersUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`;
+    const rostersUrl = buildMflExportUrl({
+      type: 'rosters',
+      leagueId: MFL_LEAGUE_ID,
+      year,
+      params: { FRANCHISE: user.franchiseId },
+    });
     const rostersRes = await mflFetch({
       url: rostersUrl,
       method: 'GET',

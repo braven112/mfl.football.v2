@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import type { LivePlayerRow, MatchupPairing } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { ALL_LEAGUES, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+import { buildMflExportUrl } from '../../utils/mfl-url';
 
 export const prerender = false;
 
@@ -58,10 +59,10 @@ export const GET: APIRoute = async ({ url }) => {
     const [liveScoreResponse, playoffBracketsResponse] = await Promise.all([
       // DETAILS=1 so each franchise carries its per-player breakdown
       // (players.player[] with id, score, gameSecondsRemaining, status).
-      fetch(`${host}/${year}/export?TYPE=liveScoring&L=${leagueId}&W=${week}&DETAILS=1&JSON=1`, {
+      fetch(buildMflExportUrl({ type: 'liveScoring', leagueId, year, params: { W: week, DETAILS: 1 }, host }), {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
       }),
-      fetch(`${host}/${year}/export?TYPE=playoffBrackets&L=${leagueId}&JSON=1`, {
+      fetch(buildMflExportUrl({ type: 'playoffBrackets', leagueId, year, host }), {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
       }),
     ]);
@@ -140,9 +141,10 @@ export const GET: APIRoute = async ({ url }) => {
 
         // Fetch each bracket's detailed data
         const bracketPromises = brackets.map((bracket: any) =>
-          fetch(`${host}/${year}/export?TYPE=playoffBracket&L=${leagueId}&BRACKET_ID=${bracket.id}&JSON=1`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-          })
+          fetch(
+            buildMflExportUrl({ type: 'playoffBracket', leagueId, year, params: { BRACKET_ID: bracket.id }, host }),
+            { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' } }
+          )
         );
 
         const bracketResponses = await Promise.all(bracketPromises);
