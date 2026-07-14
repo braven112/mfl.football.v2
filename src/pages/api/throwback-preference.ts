@@ -16,8 +16,8 @@ import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
 import { getThrowbackPreference, setThrowbackPreference } from '../../utils/throwback-store';
 import { getLeagueBySlug } from '../../config/leagues';
 import leagueConfig from '../../data/theleague.config.json';
+import { JSON_HEADERS, unauthorized } from '../../utils/api-response';
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const THELEAGUE_ID = getLeagueBySlug('theleague')?.id;
 
 /**
@@ -33,10 +33,7 @@ function isTheLeagueSession(user: AuthUser | null): user is AuthUser {
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!isTheLeagueSession(user)) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), {
-      status: 401,
-      headers: JSON_HEADERS,
-    });
+    return unauthorized();
   }
 
   const data = await getThrowbackPreference(user.franchiseId);
@@ -49,10 +46,7 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!isTheLeagueSession(user)) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), {
-      status: 401,
-      headers: JSON_HEADERS,
-    });
+    return unauthorized();
   }
 
   const team = leagueConfig.teams.find((t) => t.franchiseId === user.franchiseId);

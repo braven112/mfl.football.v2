@@ -435,9 +435,14 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
     expect(src).toMatch(/const\s+FRIDAY_WEEKDAY_INDEX\s*=\s*5/);
   });
 
-  it('exports an isFridayPt helper keyed to America/Los_Angeles', () => {
-    expect(src).toMatch(/function\s+isFridayPt\(/);
-    expect(src).toMatch(/timeZone:\s*['"]America\/Los_Angeles['"]/);
+  it('uses an isFridayPt helper keyed to America/Los_Angeles (shared pt-date module)', () => {
+    // isFridayPt moved to the shared PT time helpers so other scripts can
+    // reuse it; the scanner imports it from there. Pin both the import and
+    // the shared implementation's timezone.
+    expect(src).toMatch(/isFridayPt[\s\S]*?from\s+'\.\/lib\/pt-date\.mjs'/);
+    const ptDateSrc = read('scripts/lib/pt-date.mjs');
+    expect(ptDateSrc).toMatch(/function\s+isFridayPt\(/);
+    expect(ptDateSrc).toMatch(/timeZone:\s*['"]America\/Los_Angeles['"]/);
   });
 
   it('main() runs the mailbag at most once per Friday PT (short-circuits on stored date)', () => {

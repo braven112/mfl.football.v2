@@ -13,8 +13,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getPendingDeclarations, updateDeclaration } from '../../../utils/contract-storage';
 import { fetchMFLSalaries } from '../../../utils/mfl-contract-writer';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
+import { JSON_HEADERS } from '../../../utils/api-response';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);

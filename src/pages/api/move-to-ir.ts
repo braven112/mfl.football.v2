@@ -15,8 +15,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);

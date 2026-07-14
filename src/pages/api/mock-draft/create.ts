@@ -21,6 +21,7 @@ import {
   formatMflName,
 } from '../../../utils/player-name-matching';
 import { isDraftablePosition } from '../../../utils/build-draft-players';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
@@ -31,8 +32,6 @@ const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'random',
 ];
 const RANKING_SOURCE_SET = new Set<MockRankingSource>(ALL_RANKING_SOURCES);
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 /** Generate a short unique ID (no external deps) */
 function generateId(): string {

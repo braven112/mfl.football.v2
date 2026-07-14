@@ -8,34 +8,7 @@
  */
 
 import { validatePublicUrl } from './url-guard';
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown, opts?: { ex?: number }) => Promise<string>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[og-preview] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
+import { getRedis } from './redis-client';
 
 export interface OgPreview {
   url: string;

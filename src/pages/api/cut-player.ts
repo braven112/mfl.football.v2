@@ -32,8 +32,7 @@ import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);

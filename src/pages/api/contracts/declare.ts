@@ -19,8 +19,7 @@ import {
 } from '../../../utils/contract-storage';
 import type { ContractDeclaration } from '../../../types/contracts';
 import type { DeclarationType } from '../../../types/contract-eligibility';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
+import { JSON_HEADERS } from '../../../utils/api-response';
 
 interface DeclareRequestBody {
   leagueId: string;

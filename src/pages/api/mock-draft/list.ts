@@ -7,8 +7,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);

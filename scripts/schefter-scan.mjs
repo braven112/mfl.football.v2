@@ -595,17 +595,12 @@ function recordGroupMeSuppression(entry) {
 
 async function postToGroupMe(text, { botIdOverride } = {}) {
   const botId = botIdOverride || process.env.GROUPME_ROGER_BOT_ID;
-  if (!botId) return;
-  try {
-    await fetch('https://api.groupme.com/v3/bots/post', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bot_id: botId, text }),
-    });
-    console.log('  [GroupMe] Posted');
-  } catch (err) {
-    console.log(`  [GroupMe] Failed: ${err.message}`);
-  }
+  await sharedPostToGroupMe({
+    botId,
+    text,
+    onPosted: () => console.log('  [GroupMe] Posted'),
+    onFetchError: (err) => console.log(`  [GroupMe] Failed: ${err.message}`),
+  });
 }
 
 // ── MFL API ──
@@ -1456,20 +1451,15 @@ function parseTradeBaitByFranchise(data) {
  * Minimal Upstash Redis adapter — mirrors the pattern in
  * schefter-rumor-scan.mjs so both scripts can share the tips queue and the
  * daily GroupMe post budget. Returns null when credentials are missing.
+ * getRedisConfig/createUpstashClient now shared — see scripts/lib/redis.mjs.
+ * (Deliberately not memoized, matching the original — this adapter always
+ * re-resolves credentials and re-imports on every call.)
  */
 async function getRedis() {
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) return null;
+  const config = getRedisConfig();
+  if (!config) return null;
   try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token });
+    return await createUpstashClient(config);
   } catch (err) {
     console.warn(`  [trade-bait] Redis import failed: ${err.message}`);
     return null;

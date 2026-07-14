@@ -23,8 +23,7 @@ import {
   deleteKeeperPlan,
   sanitizeKeeperIds,
 } from '../../utils/afl-keepers-storage';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 
 const AFL_LEAGUE_ID = '19621';
 

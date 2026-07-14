@@ -14,31 +14,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import type { DraftTrade } from '../../../types/trade-builder';
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown) => Promise<unknown>;
-  del: (key: string) => Promise<unknown>;
-};
-
-let loggedMissingRedisModule = false;
-
-async function getRedis(): Promise<RedisClient | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token });
-  } catch (error) {
-    if (!loggedMissingRedisModule) {
-      loggedMissingRedisModule = true;
-      console.warn('Draft trades KV unavailable: @upstash/redis is not installed.', error);
-    }
-    return null;
-  }
-}
+import { getRedis } from '../../../utils/redis-client';
 
 const MAX_DRAFTS = 20;
 

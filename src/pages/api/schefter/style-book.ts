@@ -31,10 +31,11 @@
 import type { APIRoute } from 'astro';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getCodename } from '../../../utils/schefter-codenames';
+import { getRedis, type RedisClient } from '../../../utils/redis-client';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
 
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const LEADERBOARD_LIMIT = 25;
 const CACHE_TTL_MS = 30_000;
 
@@ -47,20 +48,6 @@ const NAMED_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
 const ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
 const ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
 const ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown, opts?: { nx?: boolean; ex?: number }) => Promise<unknown>;
-  sadd: (key: string, ...members: string[]) => Promise<number>;
-  srem: (key: string, ...members: string[]) => Promise<number>;
-  zrange: (
-    key: string,
-    start: number,
-    stop: number,
-    opts?: { rev?: boolean; withScores?: boolean },
-  ) => Promise<unknown>;
-  zcard: (key: string) => Promise<number>;
-};
 
 type NamedEntry = {
   author: string;
@@ -88,33 +75,7 @@ type StyleBookResponse = {
   };
 };
 
-let _redis: RedisClient | null | undefined;
 let _cache: { data: StyleBookResponse; expiresAt: number } | null = null;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[style-book] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });

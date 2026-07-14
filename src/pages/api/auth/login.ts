@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, getAFLTeamData } from '../../../utils/team-preferences';
+import { json } from '../../../utils/api-response';
 
 const AFL_LEAGUE_ID = '19621';
 
@@ -12,10 +13,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Validate inputs
     if (!username || !password) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'Username and password are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ success: false, message: 'Username and password are required' }, 400);
     }
 
     // Authenticate with MFL — year override lets AFL pass 2025 because
@@ -24,12 +22,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const mflResponse = await authenticateWithMFL(username, password, leagueId, seasonYear);
 
     if (!mflResponse.success) {
-      return new Response(
-        JSON.stringify({
+      return json(
+        {
           success: false,
           message: mflResponse.error || 'Authentication failed',
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        },
+        401,
       );
     }
 
@@ -37,14 +35,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       // Forward the more specific error from the MFL resolver so the user
       // gets a useful message ("not a member of league X", "no leagues
       // found", etc.) instead of a generic "contact the commissioner".
-      return new Response(
-        JSON.stringify({
+      return json(
+        {
           success: false,
           message:
             mflResponse.error ||
             'Login succeeded but your franchise could not be determined. Contact the commissioner.',
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        },
+        401,
       );
     }
 

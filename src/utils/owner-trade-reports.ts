@@ -21,6 +21,7 @@
 
 import leagueConfig from '../data/theleague.config.json';
 import { LEAGUES } from '../config/leagues';
+import { getRedis } from './redis-client';
 
 const HASH_KEY = 'schefter:trade_offers:owner_reports';
 const TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -30,35 +31,6 @@ export interface OwnerTradeReport {
   firstSeenAt: number;
   lastSeenAt: number;
   reportedBy: string[];
-}
-
-type RedisClient = {
-  hget: <T>(key: string, field: string) => Promise<T | null>;
-  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<unknown>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[owner-trade-reports] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
 }
 
 function offerIdOf(raw: Record<string, unknown>): string | null {

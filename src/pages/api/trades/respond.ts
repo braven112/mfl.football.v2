@@ -20,8 +20,7 @@ import { getAuthUser } from '../../../utils/auth';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { LEAGUES } from '../../../config/leagues';
 import { mflFetch } from '../../../utils/mfl-fetch';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 const VALID_RESPONSES = ['accept', 'reject', 'revoke'] as const;
 type TradeResponse = (typeof VALID_RESPONSES)[number];
 

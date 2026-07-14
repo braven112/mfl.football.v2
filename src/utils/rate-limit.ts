@@ -7,29 +7,7 @@
  * not data integrity, and the endpoints already require authentication.
  */
 
-type RedisClient = {
-  incr: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<number>;
-};
-
-let loggedMissingRedis = false;
-
-async function getRedis(): Promise<RedisClient | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token }) as unknown as RedisClient;
-  } catch (error) {
-    if (!loggedMissingRedis) {
-      loggedMissingRedis = true;
-      console.warn('[rate-limit] Redis unavailable:', error);
-    }
-    return null;
-  }
-}
+import { getRedis } from './redis-client';
 
 export interface RateLimitResult {
   allowed: boolean;

@@ -8,14 +8,12 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getAllActivity } from '../../utils/owner-activity';
+import { unauthorized } from '../../utils/api-response';
 
 export const GET: APIRoute = async ({ request }) => {
 	const user = getAuthUser(request);
 	if (!user?.leagueId) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-			status: 401,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return unauthorized({ error: 'Unauthorized' });
 	}
 
 	const data = await getAllActivity(user.leagueId);

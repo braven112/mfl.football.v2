@@ -7,38 +7,9 @@
  * Reusable across: activity page, roster headers, trade builder, league summary.
  */
 
+import { getRedis } from './redis-client';
+
 export type ActivityLevel = 'active' | 'idle' | 'dormant' | 'unknown';
-
-type RedisClient = {
-	hgetall: <T = Record<string, string>>(key: string) => Promise<T | null>;
-	hset: (key: string, data: Record<string, unknown>) => Promise<unknown>;
-	hincrby: (key: string, field: string, increment: number) => Promise<number>;
-	expire: (key: string, seconds: number) => Promise<unknown>;
-	eval: <T = unknown>(script: string, keys: string[], args: (string | number)[]) => Promise<T>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-export async function getRedis(): Promise<RedisClient | null> {
-	if (_redis !== undefined) return _redis;
-
-	const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-	const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-	if (!url || !token) {
-		_redis = null;
-		return null;
-	}
-
-	try {
-		const { Redis } = await import('@upstash/redis');
-		_redis = new Redis({ url, token }) as unknown as RedisClient;
-		return _redis;
-	} catch (err) {
-		console.warn('[owner-activity] Redis unavailable:', err);
-		_redis = null;
-		return null;
-	}
-}
 
 function redisKey(leagueId: string): string {
 	return `activity:${leagueId}`;
@@ -252,7 +223,7 @@ export async function getGlobalPagePopularity(
 	const redis = await getRedis();
 	if (!redis) return [];
 	const raw = await redis.hgetall<Record<string, string>>(globalPageKey(leagueId));
-	return parsePageCounts(raw);
+	return parsePageCounts(raw as Record<string, string> | null);
 }
 
 /** Get a single owner's page popularity (sorted by most visited) */
@@ -263,7 +234,7 @@ export async function getOwnerPagePopularity(
 	const redis = await getRedis();
 	if (!redis) return [];
 	const raw = await redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, franchiseId));
-	return parsePageCounts(raw);
+	return parsePageCounts(raw as Record<string, string> | null);
 }
 
 /** Get page popularity for ALL owners at once */
@@ -278,7 +249,7 @@ export async function getAllOwnerPagePopularity(
 	);
 	const out: Record<string, { page: string; count: number }[]> = {};
 	for (let i = 0; i < franchiseIds.length; i++) {
-		out[franchiseIds[i]] = parsePageCounts(results[i]);
+		out[franchiseIds[i]] = parsePageCounts(results[i] as Record<string, string> | null);
 	}
 	return out;
 }

@@ -38,8 +38,8 @@ import {
 } from '../../../types/schefter-tips';
 import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed } from '../../../types/schefter';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { getRedis } from '../../../utils/redis-client';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 const TIPS_QUEUE_KEY = 'schefter:tips:queue';
 const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
@@ -68,50 +68,6 @@ const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard
 const OFF_TOPIC_TIMELINE_PREFIX = 'schefter:off_topic:timeline:';
 const OFF_TOPIC_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const OFF_TOPIC_TIMELINE_TTL_SEC = 90 * 24 * 60 * 60;   // 90d belt-and-suspenders TTL
-
-type RedisClient = {
-  lpush: (key: string, ...values: unknown[]) => Promise<number>;
-  incr: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<unknown>;
-  set: (key: string, value: unknown, opts?: { nx?: boolean; ex?: number }) => Promise<unknown>;
-  llen: (key: string) => Promise<number>;
-  get: <T>(key: string) => Promise<T | null>;
-  zadd: (key: string, entry: { score: number; member: string }) => Promise<unknown>;
-  zincrby: (key: string, increment: number, member: string) => Promise<number | string>;
-  zremrangebyscore: (key: string, min: number | string, max: number | string) => Promise<unknown>;
-  zcard: (key: string) => Promise<number>;
-  sadd: (key: string, ...members: string[]) => Promise<number>;
-  srem: (key: string, ...members: string[]) => Promise<number>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[schefter/tip] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(JSON.stringify({ error: message, code }), {

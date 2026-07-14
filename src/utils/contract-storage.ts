@@ -9,40 +9,9 @@
  */
 
 import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
+import { getRedis } from './redis-client';
 
 const REDIS_KEY = 'contract-declarations';
-
-// --- Redis helpers ---
-
-type RedisClient = {
-  hget: <T>(key: string, field: string) => Promise<T | null>;
-  hgetall: <T>(key: string) => Promise<Record<string, T> | null>;
-  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
-  hdel: (key: string, ...fields: string[]) => Promise<number>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[contract-storage] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 /** Read all declarations from Redis hash, sorted newest first */
 async function readFromRedis(): Promise<ContractDeclaration[]> {

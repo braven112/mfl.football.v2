@@ -15,13 +15,7 @@ import {
 } from './auth';
 import { findBestMatch } from './rules-qa-matching';
 import type { RulesQA, AskQuestionRequest } from '../types/rules-qa';
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown) => Promise<unknown>;
-  incr: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<unknown>;
-};
+import { getRedis, type RedisClient } from './redis-client';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW = 3600;
@@ -45,24 +39,6 @@ export interface RulesQAConfig {
   dateBlockSuffix?: string;
   /** Resolve a display team name for a franchiseId */
   resolveTeamName: (franchiseId: string) => Promise<string | null>;
-}
-
-let loggedMissingRedisModule = false;
-
-async function getRedis(logTag: string): Promise<RedisClient | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-  try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token }) as unknown as RedisClient;
-  } catch (error) {
-    if (!loggedMissingRedisModule) {
-      loggedMissingRedisModule = true;
-      console.warn(`[${logTag}] Redis unavailable:`, error);
-    }
-    return null;
-  }
 }
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -157,7 +133,7 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
     const auth = requireLeagueAuth(request, config.leagueId);
     if (auth instanceof Response) return auth;
 
-    const redis = await getRedis(config.logTag);
+    const redis = await getRedis();
     const items = await getAllQAs(redis, config.redisKey, config.seedData);
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return jsonResponse({ items });
@@ -186,7 +162,7 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
       return jsonResponse({ error: 'Question must be under 500 characters' }, 400);
     }
 
-    const redis = await getRedis(config.logTag);
+    const redis = await getRedis();
 
     if (redis) {
       try {
@@ -258,7 +234,7 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
     const id = body.id?.trim();
     if (!id) return jsonResponse({ error: 'Missing Q&A id' }, 400);
 
-    const redis = await getRedis(config.logTag);
+    const redis = await getRedis();
     if (!redis) return jsonResponse({ error: 'Storage unavailable' }, 503);
 
     try {
