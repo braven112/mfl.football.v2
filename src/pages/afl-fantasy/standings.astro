@@ -1,6 +1,5 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import StandingsTable from '../../components/theleague/StandingsTable.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
@@ -252,6 +251,25 @@ function conferenceHeader(confId: '00' | '01', name: string) {
     accentColorDark: isNL ? '#5b9bd5' : '#f47a8f',
   };
 }
+
+// Division view: NL divisions glow conference blue, everything else league red.
+// The conference logo heads each division card; the defending champion (name
+// only for AFL) reads as a text line.
+const divisionToConf = seasonConfig.divisionToConference as Record<string, '00' | '01'>;
+function aflAccent(confId?: '00' | '01') {
+  return confId === '01' ? ('conference-blue' as const) : ('afl-red' as const);
+}
+function divisionHeader(name: string, confId?: '00' | '01') {
+  return {
+    kind: 'division' as const,
+    title: name,
+    logoSrc: confId ? getConferenceLogo(confId) : undefined,
+    logoDarkSrc: confId ? getConferenceLogoDark(confId) : undefined,
+    defendingChampion: defendingChampions[name]
+      ? { name: defendingChampions[name], year: previousYear }
+      : undefined,
+  };
+}
 ---
 
 <TheLeagueLayout title="AFL Standings" year={selectedYear}>
@@ -305,17 +323,16 @@ function conferenceHeader(confId: '00' | '01', name: string) {
       {view === 'division' && (
         <div class="division-view">
           {divisionStandings.map(division => (
-            <StandingsTable
+            <UnifiedStandingsTable
               teams={division.teams}
-              view="division"
-              showDivisionHeader={true}
-              divisionName={division.name}
-              conferenceId={(seasonConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
-              defendingChampion={defendingChampions[division.name]}
-              defendingChampionYear={previousYear}
+              columns={COLUMNS.division}
+              teamCell="banner"
+              teamCellFallback="name"
+              accent={aflAccent(divisionToConf[division.name])}
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              header={divisionHeader(division.name, divisionToConf[division.name])}
             />
           ))}
         </div>

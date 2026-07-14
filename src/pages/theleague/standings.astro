@@ -1,6 +1,5 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import StandingsTable from '../../components/theleague/StandingsTable.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
@@ -186,18 +185,27 @@ const divisionBadges: Record<string, string> = {
       {view === 'division' && (
         <div class="division-view">
           {divisionStandings.map(division => (
-            <StandingsTable
+            <UnifiedStandingsTable
               teams={division.teams}
-              view="division"
-              showDivisionHeader={true}
-              divisionName={division.name}
-              divisionBadge={divisionBadges[division.name]}
-              defendingChampion={defendingChampions[division.name]?.name}
-              defendingChampionLogo={defendingChampions[division.name]?.icon}
-              defendingChampionYear={previousYear}
+              columns={COLUMNS.division}
+              teamCell="banner"
+              teamCellFallback="name"
+              accent="league-blue"
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               franchiseBaseUrl="/theleague/franchises"
+              header={{
+                kind: 'brandedDivision',
+                title: division.name,
+                badgeSrc: divisionBadges[division.name],
+                defendingChampion: defendingChampions[division.name]
+                  ? {
+                      name: defendingChampions[division.name].name,
+                      year: previousYear,
+                      logoSrc: defendingChampions[division.name].icon,
+                    }
+                  : undefined,
+              }}
             />
           ))}
         </div>
