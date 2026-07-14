@@ -2,7 +2,9 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import StandingsTable from '../../components/theleague/StandingsTable.astro';
 import ConferenceLeagueStandingsTable from '../../components/theleague/ConferenceLeagueStandingsTable.astro';
-import TierAllPlayStandingsTable from '../../components/theleague/TierAllPlayStandingsTable.astro';
+import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
@@ -219,6 +221,19 @@ const promoRegTeams = [
   const bPct = parseFloat(b.all_play_pct || '0');
   return bPct - aPct;
 });
+
+// Tier-table header config. Only the branded Premier League / D-League tiers
+// carry a logo; the combined "Founders Table" / "All-Play" tables do not.
+function tierHeader(name: string) {
+  const hasLogo = name === PREMIER_LEAGUE || name === D_LEAGUE;
+  return {
+    kind: 'tier' as const,
+    title: name,
+    logoSrc: hasLogo ? getTierLogo(name) : undefined,
+    logoDarkSrc: hasLogo ? getTierLogoDark(name) : undefined,
+  };
+}
+const combinedTierName = isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play';
 ---
 
 <TheLeagueLayout title="AFL Standings" year={selectedYear}>
@@ -377,9 +392,13 @@ const promoRegTeams = [
       {view === 'all_play' && hasTierRecord && (
         <div class="all-play-view tier-grid">
           {tierAllPlayStandings.map(tierGroup => (
-            <TierAllPlayStandingsTable
-              tierName={tierGroup.tier}
+            <UnifiedStandingsTable
               teams={tierGroup.teams}
+              columns={COLUMNS.tierAllPlay}
+              teamCell="icon"
+              accent="afl-red"
+              tierName={tierGroup.tier}
+              header={tierHeader(tierGroup.tier)}
               year={selectedYear}
               rosterBaseUrl={`${baseUrl}/rosters`}
             />
@@ -389,12 +408,16 @@ const promoRegTeams = [
 
       {view === 'all_play' && !hasTierRecord && (
         <div class="all-play-view">
-          <TierAllPlayStandingsTable
-            tierName={isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play'}
+          <UnifiedStandingsTable
             teams={combinedAllPlayStandings}
+            columns={COLUMNS.tierAllPlay}
+            teamCell="icon"
+            accent="afl-red"
+            tierName={combinedTierName}
+            header={tierHeader(combinedTierName)}
+            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
             year={selectedYear}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
           />
         </div>
       )}

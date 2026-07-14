@@ -2,6 +2,8 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import StandingsTable from '../../components/theleague/StandingsTable.astro';
 import LeagueStandingsTable from '../../components/theleague/LeagueStandingsTable.astro';
+import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import {
@@ -210,7 +212,16 @@ const divisionBadges: Record<string, string> = {
 
       {view === 'all_play' && (
         <div class="all-play-view">
-          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} preferredTeamId={yearPreferredTeamId} franchiseBaseUrl="/theleague/franchises" />
+          <UnifiedStandingsTable
+            teams={allPlayStandings}
+            columns={COLUMNS.allPlay}
+            teamCell="banner"
+            teamCellFallback="name"
+            accent="league-blue"
+            year={selectedYear}
+            preferredTeamId={yearPreferredTeamId}
+            franchiseBaseUrl="/theleague/franchises"
+          />
         </div>
       )}
 
