@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { formatTimePT } from './lib/pt-date.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,20 +97,7 @@ function getDayOfWeek(dateString) {
   return days[date.getDay()];
 }
 
-/**
- * Format time to PT
- */
-function formatTimePT(dateString) {
-  const date = new Date(dateString);
-  const timeString = date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'America/Los_Angeles'
-  });
-
-  return `${timeString} PST`;
-}
+// formatTimePT now shared — see scripts/lib/pt-date.mjs.
 
 /**
  * Fetch schedule from ESPN

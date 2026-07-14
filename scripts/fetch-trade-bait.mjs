@@ -14,12 +14,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-
-const getNonEmpty = (value) => {
-  if (value === undefined || value === null) return undefined;
-  const trimmed = String(value).trim();
-  return trimmed.length ? trimmed : undefined;
-};
+import { getNonEmpty } from './lib/env.mjs';
 
 const getLaborDay = (year) => {
   const septemberFirst = new Date(year, 8, 1);

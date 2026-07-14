@@ -33,6 +33,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchWithRetry } from './lib/fetch-retry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,20 +131,17 @@ function normalizeName(name) {
 const MARQUEE_SET = new Set(MARQUEE_DEFENDER_NAMES.map(normalizeName));
 
 // --- HTTP helpers -----------------------------------------------------------
-async function getJson(url, { retries = 3 } = {}) {
-  let lastErr;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, { headers: { 'User-Agent': 'mfl-football/def-spotlight-sync' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      lastErr = err;
-      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-    }
-  }
-  throw lastErr;
-}
+// getJson delegates to the shared retry helper: same attempt count
+// (retries + 1 total), same 400ms-linear backoff between attempts, same
+// silent retries. (The original also slept once more after the final
+// failure before throwing — a no-op wait the shared helper drops.)
+const getJson = (url, { retries = 3 } = {}) =>
+  fetchWithRetry(url, {
+    attempts: retries + 1,
+    baseDelayMs: 400,
+    parse: 'json',
+    fetchOptions: { headers: { 'User-Agent': 'mfl-football/def-spotlight-sync' } },
+  });
 
 async function headOk(url, { retries = 2 } = {}) {
   // Retry transient CDN failures (timeouts / 429s) so a good headshot isn't

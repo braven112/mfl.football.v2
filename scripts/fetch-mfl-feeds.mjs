@@ -21,12 +21,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
-
-const getNonEmpty = (value) => {
-  if (value === undefined || value === null) return undefined;
-  const trimmed = String(value).trim();
-  return trimmed.length ? trimmed : undefined;
-};
+import { fetchWithRetry } from './lib/fetch-retry.mjs';
+import { getNonEmpty } from './lib/env.mjs';
 
 /**
  * Calculate Labor Day for a given year (first Monday in September)
@@ -439,18 +435,14 @@ const fetchText = async (url) => {
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-const fetchTextWithRetry = async (url, retries = 3, baseDelayMs = 1500) => {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      return await fetchText(url);
-    } catch (err) {
-      if (attempt === retries - 1) throw err;
-      const wait = baseDelayMs * (attempt + 1);
-      console.warn(`Retrying ${url} in ${wait}ms (${err.message})`);
-      await delay(wait);
-    }
-  }
-};
+const fetchTextWithRetry = (url, retries = 3, baseDelayMs = 1500) =>
+  fetchWithRetry(url, {
+    attempts: retries,
+    baseDelayMs,
+    parse: 'text',
+    formatHttpError: (res, u) => `Fetch failed ${res.status} ${u}`,
+    onRetry: (err, attempt, wait) => console.warn(`Retrying ${url} in ${wait}ms (${err.message})`),
+  });
 
 const writeOut = (key, data) => {
   const file = path.join(outDir, `${key}.json`);

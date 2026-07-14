@@ -2,16 +2,12 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
+import { getNonEmpty } from './lib/env.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
 
 const env = process.env;
-const getNonEmpty = (value) => {
-  if (value === undefined || value === null) return undefined;
-  const trimmed = String(value).trim();
-  return trimmed.length ? trimmed : undefined;
-};
 
 /**
  * Port of getCurrentLeagueYear from src/utils/league-year.ts

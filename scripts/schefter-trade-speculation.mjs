@@ -67,6 +67,7 @@ import {
   RUMOR_LAST_POST_TS_KEY,
 } from './lib/speculation-budget.mjs';
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
+import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -141,15 +142,8 @@ function secondsUntilPtMidnight(now = new Date()) {
 let _redis;
 async function getRedis({ required }) {
   if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
+  const config = getRedisConfig();
+  if (!config) {
     if (required) {
       throw new Error(
         '[speculation] Redis credentials missing (UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN). ' +
@@ -161,8 +155,7 @@ async function getRedis({ required }) {
     return null;
   }
   try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token });
+    _redis = await createUpstashClient(config);
     return _redis;
   } catch (err) {
     if (required) {

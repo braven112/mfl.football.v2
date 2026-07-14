@@ -12,6 +12,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fetchWithRetry } from './lib/fetch-retry.mjs';
 
 const host = 'https://api.myfantasyleague.com';
 
@@ -35,22 +36,14 @@ const currentYear = now >= febCutoff ? baseYear + 1 : baseYear;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const fetchJson = async (url, retries = 3) => {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return JSON.parse(await res.text());
-    } catch (err) {
-      if (attempt === retries - 1) throw err;
-      const wait = 1500 * (attempt + 1);
-      console.warn(`  Retry ${attempt + 1} for ${url} in ${wait}ms (${err.message})`);
-      await delay(wait);
-    }
-  }
-};
+const fetchJson = (url, retries = 3) =>
+  fetchWithRetry(url, {
+    attempts: retries,
+    baseDelayMs: 1500,
+    parse: 'json',
+    onRetry: (err, attempt, wait) =>
+      console.warn(`  Retry ${attempt + 1} for ${url} in ${wait}ms (${err.message})`),
+  });
 
 const writeJson = (filePath, data) => {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

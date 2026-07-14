@@ -48,6 +48,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
 
 import {
   PREMIER,
@@ -124,18 +125,15 @@ async function isGenuineAfl(cfg, leagueJson) {
 
 // --- Online fetch (only when local cache is contaminated/missing) --------------
 
-const UA = {
-  'User-Agent': 'mfl.football.v2 tier-movement (+https://github.com/braven112/mfl.football.v2)',
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const UA = 'mfl.football.v2 tier-movement (+https://github.com/braven112/mfl.football.v2)';
 
-async function fetchExport(year, type, extra = '') {
-  const url = `https://${HOST}.myfantasyleague.com/${year}/export?TYPE=${type}&L=${LEAGUE_ID}&JSON=1${extra}`;
-  await sleep(600); // politeness — MFL rate-limits rapid bursts
-  const res = await fetch(url, { headers: UA });
-  if (!res.ok) throw new Error(`${url} → ${res.status}`);
-  return res.json();
-}
+// 600ms politeness sleep before the (single) attempt — MFL rate-limits rapid
+// bursts. retries: 0 preserves the original no-retry behavior.
+const fetchExport = (year, type, extra = '') =>
+  sharedFetchExport(
+    { host: HOST, leagueId: LEAGUE_ID, year, type, extra },
+    { userAgent: UA, retries: 0, sleepMs: 600 },
+  );
 
 // Build compact weekly results ({ weeks: [{ week, scores }] }) from MFL's
 // matchup-shaped weeklyResults export, for weeks 1..cutoff.
