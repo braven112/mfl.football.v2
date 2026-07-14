@@ -12,6 +12,8 @@ import {
 } from '../../utils/afl-conference';
 import { getLeagueBySlug } from '../../config/leagues';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
+import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
+import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -52,7 +54,23 @@ const tradeBaitByFranchiseData = getModuleData(
 // franchise-attributed shape: AFL's two conferences roster the same NFL player
 // pool, so a flat id set would flag the player on BOTH teams that roster him
 // when only one owner actually put him on the block.
-const tradeBlockByFranchise = parseTradeBaitByFranchise(tradeBaitByFranchiseData);
+//
+// Source priority for the current league year:
+//   1. Live Redis cache (re-fetched from MFL when older than 2 min, updated
+//      in place by /api/trade-bait) — committed feeds only refresh on the
+//      next data-sync commit + redeploy, so without this a flag added on
+//      MFL (or through our own rosters page) wouldn't appear until then.
+//   2. Committed tradeBait-by-franchise.json
+//   3. Committed flat tradeBait.json (no attribution — pre-migration data)
+const aflLeague = getLeagueBySlug('afl-fantasy');
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
+const liveTradeBait =
+  aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
+    ? await getCachedTradeBait(String(selectedYear), aflLeague.id)
+    : null;
+const tradeBlockByFranchise = liveTradeBait
+  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
+  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
 const tradeBlockIds = parseTradeBaitPlayerIds(tradeBaitData);
 const isOnBlockFor = (franchiseId: string, playerId: string): boolean =>
   tradeBlockByFranchise

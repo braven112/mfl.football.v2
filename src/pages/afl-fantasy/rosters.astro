@@ -41,6 +41,7 @@ import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/leagu
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
+import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 
 export const prerender = false;
 
@@ -171,15 +172,24 @@ for (const p of playersData.players.player as any[]) {
   });
 }
 
-// Trade bait for badges. Prefer the franchise-attributed cache — the flat
+// Trade bait for badges. Prefer the franchise-attributed shape — the flat
 // list can't say WHO flagged a player, and both AFL conferences roster the
-// same NFL player pool, so a bare id matches two teams' rosters. The flat
-// fallback goes through the shared parser, which handles both the flat-array
-// cache shape (written by /api/trade-bait and the fetch scripts) and the raw
-// MFL export shape; the inline raw-only parse this replaces silently dropped
-// badges on reload once the flat cache was written. Resolved into a per-team
-// set below, once selectedFranchiseId is known.
-const tradeBaitByFranchise = parseTradeBaitByFranchise(tradeBaitByFranchiseData);
+// same NFL player pool, so a bare id matches two teams' rosters. For the
+// current league year, the live Redis cache wins (same freshness model as
+// the roster cache above; updated in place by /api/trade-bait so a flag
+// added through this page survives reload). Then the committed
+// tradeBait-by-franchise.json, then the flat tradeBait.json via the shared
+// parser (which handles both the flat-array cache shape and the raw MFL
+// export shape; the inline raw-only parse this replaces silently dropped
+// badges on reload once the flat cache was written). Resolved into a
+// per-team set below, once selectedFranchiseId is known.
+const liveTradeBait =
+  aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
+    ? await getCachedTradeBait(String(selectedYear), aflLeague.id)
+    : null;
+const tradeBaitByFranchise = liveTradeBait
+  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
+  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
 const flatTradeBaitIds = parseTradeBaitPlayerIds(tradeBaitData);
 
 // Auth + selected franchise resolution: query param > cookie > authUser > first AL team

@@ -17,8 +17,9 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+import { overwriteTradeBaitCache } from '../../utils/mfl-trade-bait-cache';
 import fs from 'node:fs';
 import path from 'node:path';
 import { JSON_HEADERS } from '../../utils/api-response';
@@ -72,8 +73,15 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 3. Create MFL API client with the USER's cookie (not the server env var)
-    const leagueYear = getCurrentLeagueYear();
+    // League year comes from the league's own rollover clock when the
+    // registry declares one (AFL rolls June 1, not TheLeague's Feb 14) —
+    // between the two dates the clocks disagree and the wrong one targets
+    // an MFL league year that doesn't exist yet.
     const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
+    const league = getLeagueById(leagueId);
+    const leagueYear = league?.leagueYearRollover
+      ? getRolloverLeagueYear(league.leagueYearRollover)
+      : getCurrentLeagueYear();
     const mflClient = createMFLApiClient({
       leagueId,
       year: String(leagueYear),
@@ -117,6 +125,15 @@ export const POST: APIRoute = async ({ request }) => {
           // Cache update is best-effort — don't fail the request
           console.warn('Failed to update local tradeBait.json cache:', cacheErr);
         }
+      }
+
+      // Refresh the live Redis cache with the post-write state so the very
+      // next page load shows the change. The file writes below are dev-only
+      // conveniences — on Vercel the deployed filesystem is read-only and
+      // pages bundle feed JSON at build time, so Redis is the only path
+      // that makes a flag visible before the next data-sync deploy.
+      if (result.byFranchise) {
+        await overwriteTradeBaitCache(String(leagueYear), leagueId, result.byFranchise);
       }
 
       // Also refresh the franchise-attributed cache — UIs prefer it because the
