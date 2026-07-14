@@ -458,43 +458,58 @@ zero-pct change, if approved); anything else is a regression.
 
 ## 7. Risks & open questions (for Brandon at review)
 
+> **Review outcome (2026-07-14):** Brandon answered at review. Decisions are
+> recorded inline below. Q8 remains **open** pending his sign-off.
+
 1. **`StandingsTable`'s `league` view branch appears unused.** TheLeague routes
    its league view through `LeagueStandingsTable` and AFL through
    `ConferenceLeagueStandingsTable`. Confirm no season/edge path still renders
-   `StandingsTable view="league"`. If truly dead, we drop that column set and
-   simplify. **Decision needed: is `view="league"` dead?**
+   `StandingsTable view="league"`.
+   **✅ RESOLVED (by verification, 2026-07-14):** Brandon deferred to evidence.
+   Repo-wide grep shows exactly three `<StandingsTable>` call sites
+   (`theleague/standings.astro:188,213`, `afl-fantasy/standings.astro:275`),
+   all `view="division"` or `view="all_play"`, none passing a dynamic view
+   variable (AFL's `?view=` query param falls back to division). `view="league"`
+   is dead — drop that column set.
 2. **Banner vs icon team cell.** Full tables use `teamBanner` (wide art); the
-   tier table uses square `teamIcon`. The unified `teamCell` mode preserves both
-   — but do you want the AFL tier table to *also* move to banners for
-   consistency, or keep icons? (Design keeps icons = no visual change.)
+   tier table uses square `teamIcon`.
+   **✅ DECIDED: keep icons** in the AFL tier table — no visual change.
 3. **`accent` model.** Today the AFL glow is driven by `data-league="afl"`
    `:global` selectors (StandingsTable:345) plus inline `--division-accent` for
    NL blue. Proposal replaces this with an explicit `accent` prop +
-   `--division-accent` set by the component. Confirm you're fine dropping the
-   `data-league` attribute dependency for these tables (it stays elsewhere).
+   `--division-accent` set by the component (`data-league` stays elsewhere).
+   **✅ APPROVED.**
 4. **Prize/promotion styling is very rank-specific** (gold/silver/bronze,
-   ⬆/⬇ arrows, hard-coded prize dollar amounts per tier). This is the least
-   "config-shaped" surface. Plan: keep it as tier-table-only logic gated behind
-   the `prize`/`rankCircle` columns, not forced into the generic schema. OK?
+   ⬆/⬇ arrows, hard-coded prize dollar amounts per tier). Plan: keep it as
+   tier-table-only logic gated behind the `prize`/`rankCircle` columns, not
+   forced into the generic schema.
+   **✅ APPROVED.**
 5. **Compact/hero convergence.** Should the stretch goal (§5.6) be in *this*
    effort at all, or a separate follow-up once Phase 4's compact merge lands?
-   They self-load feeds and have bespoke windowing — folding them in risks
-   scope creep. **Recommend: separate follow-up.**
-6. **Component location/name.** New `standings/StandingsTable.astro` reuses the
-   old name in a new folder. Acceptable, or prefer a distinct name
-   (e.g. `StandingsGrid.astro`) to avoid churn confusion during migration?
+   **✅ DECIDED: separate follow-up.** §5.6 is out of scope for the
+   implementation phase.
+6. **Component location/name.**
+   **✅ DECIDED:** Brandon only cares about the final state. Final component is
+   `standings/StandingsTable.astro`; the implementer may use any temporary
+   name during migration as long as that's where it ends up.
 7. **Historical-season correctness.** The riskiest verification is old years
    (pre-2017 all-play derivation, 2003-2012 AFL 6-division/3-per-conference
-   layout, 2017 Founders Table). These are the paths least exercised day-to-day.
-   Confirm which specific historical years you want signed off before we delete
-   the old components (step 5). The step-0 snapshot matrix proposes {current,
-   2010, 2016, 2017, 2021} — veto/extend that list.
+   layout, 2017 Founders Table).
+   **✅ DECIDED: maximum conservatism on historical rendering.** To be explicit
+   (this confused at review): **no historical data, pages, or seasons are ever
+   deleted** — step 5 deletes only the old *component files* once nothing
+   imports them. Per Brandon's "don't delete older years stuff": the snapshot
+   matrix is extended to cover every distinct historical era —
+   {current, 2003, 2010, 2016, 2017, 2021} for both leagues — and step 5 (old
+   component deletion) is gated on the full matrix passing with zero diffs.
+   Any historical year that renders differently blocks deletion until resolved.
 8. **`deriveAllPlayWLT` unification is a real behavior change (see §2.3.1).**
    `LeagueStandingsTable.astro:28` lacks the `percentage <= 0` guard the other
    three copies have, so TL Playoff Standings currently shows `0-240-0` for
    zero-pct historical teams where every other view shows `N/A`. The design
    adopts the guarded version everywhere (`N/A`), treating the unguarded copy
    as the bug — the guarded files' comments explicitly say deriving a record
-   from a zero pct "would fabricate a season". **Sign off on this change**, or
-   direct us to preserve the old TL-league-view behavior behind a config flag
-   (not recommended; it perpetuates the fork the refactor exists to kill).
+   from a zero pct "would fabricate a season". **⏳ OPEN — awaiting Brandon's
+   sign-off** (context link provided at review), or direct us to preserve the
+   old TL-league-view behavior behind a config flag (not recommended; it
+   perpetuates the fork the refactor exists to kill).
