@@ -227,13 +227,28 @@ export function getLaborDayForYear(year: number): Date {
  * @returns AFL league year (e.g. 2025 until June 1 2026, then 2026)
  */
 export function getAflLeagueYear(referenceDate?: Date): number {
-  const date = referenceDate || getTestDateFromUrl() || new Date();
-
   const rollover = getLeagueBySlug('afl-fantasy')?.leagueYearRollover ?? { month: 6, day: 1 };
+  return getRolloverLeagueYear(rollover, referenceDate);
+}
+
+/**
+ * Generic form of {@link getAflLeagueYear}: compute the league year for any
+ * registry-declared rollover date, so callers holding a LeagueDefinition can
+ * use `league.leagueYearRollover` directly instead of assuming which league
+ * it belongs to.
+ *
+ * @param rollover - 1-indexed month/day the league flips to the new MFL year
+ * @param referenceDate - Optional date for testing
+ */
+export function getRolloverLeagueYear(
+  rollover: { month: number; day: number },
+  referenceDate?: Date
+): number {
+  const date = referenceDate || getTestDateFromUrl() || new Date();
   const calendarYear = date.getFullYear();
 
-  // Midnight PT on the rollover date. The AFL rollover (June 1) is always PDT
-  // (UTC-7), so 00:00 PT = 07:00 UTC.
+  // Midnight PT on the rollover date. Assumes the rollover falls in PDT
+  // (UTC-7) — true for any spring/summer date like AFL's June 1.
   const cutoff = new Date(Date.UTC(calendarYear, rollover.month - 1, rollover.day, 7, 0, 0, 0));
 
   return date >= cutoff ? calendarYear : calendarYear - 1;

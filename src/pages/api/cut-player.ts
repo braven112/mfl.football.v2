@@ -27,7 +27,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { getCurrentLeagueYear, getAflLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById } from '../../config/leagues';
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const { playerId } = await request.json();
+    const { playerId, year: clientYear } = await request.json();
 
     if (!playerId || !/^\d+$/.test(String(playerId))) {
       return new Response(
@@ -75,7 +75,24 @@ export const POST: APIRoute = async ({ request }) => {
     // Feb 14, AFL flips June 1 (registry leagueYearRollover). Using TheLeague's
     // clock for AFL would target a not-yet-created MFL league between Feb 14
     // and June 1.
-    const year = league?.leagueYearRollover ? getAflLeagueYear() : getCurrentLeagueYear();
+    const year = league?.leagueYearRollover
+      ? getRolloverLeagueYear(league.leagueYearRollover)
+      : getCurrentLeagueYear();
+
+    // If the caller says which league year its page was rendered for, reject
+    // a mismatch instead of cutting into a different year's league. Around a
+    // rollover (e.g. AFL's June 1) the roster page can still be serving last
+    // year's feed while cuts would hit the new year's league — every "player
+    // not found" from that skew must be a loud error, not a silent no-op.
+    if (clientYear !== undefined && Number(clientYear) !== year) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `This page is showing the ${clientYear} roster, but cuts would apply to the ${year} league year. Reload the page to get the current roster.`,
+        }),
+        { status: 400, headers: JSON_HEADERS }
+      );
+    }
 
     // SECURITY: Verify the player belongs to the user's roster
     const mflClient = createMFLApiClient({
@@ -84,6 +101,23 @@ export const POST: APIRoute = async ({ request }) => {
       mflUserId: user.id,
     });
     const rosters = await mflClient.getRosters();
+
+    // Guard against degraded MFL responses (maintenance page, throttling,
+    // `{"error": ...}` bodies) that parse to an empty roster set. Without
+    // this, every player would look "already dropped" (409), which the
+    // keeper-finalize client counts as success — converting a total failure
+    // into a false "your cuts went through". No roster for the user's
+    // franchise ⇒ we can't verify anything ⇒ refuse to proceed.
+    if (!(user.franchiseId in rosters)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Could not verify your current roster with MFL. No cut was made — please try again in a moment.',
+        }),
+        { status: 502, headers: JSON_HEADERS }
+      );
+    }
+
     const userRoster = rosters[user.franchiseId] || [];
 
     if (!userRoster.includes(String(playerId))) {
@@ -165,6 +199,18 @@ export const POST: APIRoute = async ({ request }) => {
     // the roster. Drops reflect quickly outside the season-end→Feb-14 pre-
     // rollover window (we're well outside it here).
     const afterRosters = await mflClient.getRosters();
+    // Same degraded-response guard as the preflight: an empty roster set
+    // can't confirm the drop landed, and reporting success on unverified
+    // state is exactly the failure mode this endpoint must never have.
+    if (!(user.franchiseId in afterRosters)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'The cut was submitted but MFL did not confirm it. Refresh and check your roster before retrying.',
+        }),
+        { status: 502, headers: JSON_HEADERS }
+      );
+    }
     const stillRostered = (afterRosters[user.franchiseId] || []).includes(String(playerId));
     if (stillRostered) {
       return new Response(

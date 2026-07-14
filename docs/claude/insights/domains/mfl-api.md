@@ -13,7 +13,8 @@ Domain knowledge about MyFantasyLeague API integration.
 **Pattern:**
 - The registry flag is `leagues-data.mjs → afl-fantasy.duplicatePlayers: true`. Gate any cross-roster inference on it (see the cut-player preflight).
 - A **player-keyed** roster map (`playerId → franchiseId`, as in `getCachedRosters`) silently collapses duplicate-player leagues — one franchise's copy overwrites the other. Use the **franchise-shaped** cache (`getCachedRosterFranchises`) for AFL.
-- Roster freshness architecture: the git-committed `mfl-feeds/*/rosters.json` snapshot lands roughly **hourly** (GitHub throttles the `*/5` cron heavily), so pages that render only from the feed show stale rosters for up to an hour+ after a write. The Redis SWR cache (2-min TTL, `src/utils/mfl-roster-cache.ts`) is the live path; write endpoints should call `bustRosterCaches()` (cheap delete-only) after MFL writes so the next page load re-fetches.
+- Roster freshness architecture: the git-committed `mfl-feeds/*/rosters.json` snapshot lands roughly **hourly** (GitHub throttles the `*/5` cron heavily), so pages that render only from the feed show stale rosters for up to an hour+ after a write. The Redis cache (`src/utils/mfl-roster-cache.ts`, blocking re-fetch when older than 2 min) is the live path; write endpoints should call `bustRosterCaches()` (cheap delete-only, also stamps a bust epoch that stops in-flight pre-write fetches from re-caching stale data) after MFL writes so the next page load re-fetches.
+- MFL can return HTTP 200 with a degraded body (maintenance page, throttle, `{"error": ...}`) that parses to an empty roster set. Any endpoint that branches on "player not on roster" MUST first check the user's franchise key exists in the parsed rosters — otherwise a degraded read looks like "everything already dropped".
 - Write endpoints that verify success by re-reading rosters should scope the check to the **user's own franchise only** — never "anywhere in the league".
 
 ---

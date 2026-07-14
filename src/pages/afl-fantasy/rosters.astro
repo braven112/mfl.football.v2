@@ -110,14 +110,15 @@ if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
 }
 
 // For the current AFL league year, prefer the live Redis roster cache
-// (2-min stale-while-revalidate, invalidated by /api/cut-player) over the
-// git-committed feed snapshot — otherwise keeper cuts and add/drops keep
-// showing the old roster until the hourly Roster Sync commit + redeploy.
-// Historical years and Redis-unavailable environments fall back to the feed.
-const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')?.id ?? '19621';
+// (re-fetched from MFL when older than 2 min, busted by /api/cut-player)
+// over the git-committed feed snapshot — otherwise keeper cuts and
+// add/drops keep showing the old roster until the hourly Roster Sync
+// commit + redeploy. Historical years and Redis-unavailable environments
+// fall back to the feed.
+const aflLeague = getLeagueBySlug('afl-fantasy');
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
-if (selectedYear === getAflLeagueYear(testDate ?? undefined)) {
-  const liveFranchises = await getCachedRosterFranchises(String(selectedYear), AFL_LEAGUE_ID);
+if (aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)) {
+  const liveFranchises = await getCachedRosterFranchises(String(selectedYear), aflLeague.id);
   if (liveFranchises && liveFranchises.length > 0) {
     rostersData = { ...rostersData, rosters: { franchise: liveFranchises } };
   }
