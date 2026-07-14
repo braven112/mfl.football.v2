@@ -53,7 +53,9 @@ type RawTeam = {
   tier?: string;
   eras?: TeamEra[];
   aliases?: string[];
-  assets?: Record<string, RawAssetEntry[]>;
+  // Values may be undefined: TS infers optional keys (e.g. "group-me"?) on
+  // teams that lack a folder present elsewhere in the aggregated JSON.
+  assets?: Record<string, RawAssetEntry[] | undefined>;
 };
 
 type MasterAsset = {
@@ -73,7 +75,9 @@ interface LeagueConfigLike {
 
 interface AggregatedAssetsLike {
   teams?: RawTeam[];
-  extras?: Record<string, AssetEntry[]>;
+  // Raw entries (absoluteUrl derived below); values may be undefined for the
+  // same optional-key inference reason as RawTeam.assets.
+  extras?: Record<string, RawAssetEntry[] | undefined>;
 }
 
 interface Props {
@@ -103,7 +107,7 @@ const formatBucketLabel = (bucket: string) =>
 
 const PSD_FOLDERS = ['psd', 'psds'];
 
-const withAbsolute = (entry: AssetEntry): AssetEntry => ({
+const withAbsolute = (entry: RawAssetEntry): AssetEntry => ({
   ...entry,
   absoluteUrl: assetDomain ? `${assetDomain}${entry.relativePath}` : entry.relativePath,
 });
@@ -112,7 +116,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   const rawAssets = Object.fromEntries(
     Object.entries(team.assets || {}).map(([folder, entries]) => [
       folder,
-      entries.map(entry => ({
+      (entries ?? []).map(entry => ({
         ...entry,
         absoluteUrl: assetDomain
           ? `${assetDomain}${entry.relativePath}`
