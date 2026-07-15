@@ -380,6 +380,10 @@ const divisionBadges: Record<string, string> = {
 
   .standings-content {
     margin-bottom: 3rem;
+    /* Grid item of the `.standings-page` grid — let it shrink so a table wider
+       than the viewport scrolls inside its own wrapper instead of stretching
+       the page (mirrors the AFL standings fix). */
+    min-width: 0;
   }
 
   .section-title {

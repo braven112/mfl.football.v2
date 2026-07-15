@@ -1,6 +1,17 @@
 {
   "weekOf": "2026-07-20",
+  "featuredImage": "standings-mobile-no-sideways-scroll.webp",
+  "featuredImageAlt": "The AFL Premier League standings on a phone, with rank, team, all-play record, and prize columns all fitting the screen — no sideways scrolling",
+  "featuredImageLeague": "afl",
   "changes": [
+    {
+      "date": "2026-07-15",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "standings",
+      "summary": "Standings finally sit still on your phone — the Premier League tables (and every other standings view) used to shove the whole page sideways, so you had to swipe left and right just to read a record. Now the columns that matter — rank, team, and record — fit the screen, the rest tuck away until you've got the width for them, and the desktop layout is untouched."
+    },
     {
       "date": "2026-07-15",
       "type": "bug-fix",
