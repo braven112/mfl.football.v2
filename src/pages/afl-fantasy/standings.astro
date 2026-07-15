@@ -662,6 +662,11 @@ function divisionHeader(name: string, confId?: '00' | '01') {
 
   .standings-content {
     margin-bottom: 3rem;
+    /* Grid item of the `.standings-page` grid. Without this, its min-content
+       floor is the widest table (the AFL Premier League tier table), which
+       stretched the whole page and forced horizontal scroll on phones. Letting
+       it shrink lets each table's own `overflow-x` wrapper contain the width. */
+    min-width: 0;
   }
 
   .section-title {

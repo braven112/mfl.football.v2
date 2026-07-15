@@ -36,7 +36,15 @@ export interface StandingsColumn {
   key: StandingsColumnKey;
   header: string;
   align?: 'left' | 'center' | 'right';
-  /** Hide below ~767px. Maps to a utility class, not inline media queries. */
+  /**
+   * Mobile column priority. `hideBelow: 'sm'` drops the column below 768px
+   * (the `.hide-sm` utility, shared across every variant), collapsing each
+   * table to its primary columns — rank/seed, team, primary record — so phones
+   * never scroll sideways. Everything ≥768px renders exactly as before.
+   * Secondary stats (PCT, division splits, PF/PA, PWR, VP, GB, streak) are the
+   * columns that carry this flag; the tier table keeps all four columns (they
+   * are all primary) and tightens widths instead. See standings-table CSS
+   * `.hide-sm` block and docs/standings-table-design.md §3. */
   hideBelow?: 'sm';
   widthCh?: number;
   /** allPlayRecord only. Render '12-3' when ties are zero (tier table) instead
@@ -109,53 +117,58 @@ export interface StandingsTableProps {
 // Column presets — keep call sites terse.
 // ---------------------------------------------------------------------------
 
+// Mobile column priority (`hideBelow: 'sm'`): on phones (<768px) every table
+// collapses to its primary columns — rank/seed, team, and the primary record —
+// so the page never scrolls sideways. Secondary stats stay flagged and reappear
+// unchanged at ≥768px. The tier table is the exception: all four of its columns
+// are primary, so it keeps them and tightens widths in CSS instead.
 export const COLUMNS = {
   division: [
     { key: 'playoffBadge', header: 'Seed' },
     { key: 'team', header: 'Team' },
     { key: 'overallRecord', header: 'Overall' },
-    { key: 'overallPct', header: 'PCT' },
-    { key: 'gamesBack', header: 'GB' },
-    { key: 'streak', header: 'Strk' },
-    { key: 'divRecord', header: 'Div' },
-    { key: 'pf', header: 'PF' },
-    { key: 'pa', header: 'PA' },
+    { key: 'overallPct', header: 'PCT', hideBelow: 'sm' },
+    { key: 'gamesBack', header: 'GB', hideBelow: 'sm' },
+    { key: 'streak', header: 'Strk', hideBelow: 'sm' },
+    { key: 'divRecord', header: 'Div', hideBelow: 'sm' },
+    { key: 'pf', header: 'PF', hideBelow: 'sm' },
+    { key: 'pa', header: 'PA', hideBelow: 'sm' },
   ],
   leagueSeeded: [
     { key: 'seedPlain', header: 'Seed' },
     { key: 'team', header: 'Team' },
     { key: 'overallRecord', header: 'Overall' },
-    { key: 'overallPct', header: 'PCT' },
-    { key: 'divRecord', header: 'Div' },
-    { key: 'divPct', header: 'PCT' },
-    { key: 'allPlayRecord', header: 'All Play' },
-    { key: 'pf', header: 'PF' },
-    { key: 'pwr', header: 'PWR' },
-    { key: 'vp', header: 'VP' },
-    { key: 'pa', header: 'PA' },
+    { key: 'overallPct', header: 'PCT', hideBelow: 'sm' },
+    { key: 'divRecord', header: 'Div', hideBelow: 'sm' },
+    { key: 'divPct', header: 'PCT', hideBelow: 'sm' },
+    { key: 'allPlayRecord', header: 'All Play', hideBelow: 'sm' },
+    { key: 'pf', header: 'PF', hideBelow: 'sm' },
+    { key: 'pwr', header: 'PWR', hideBelow: 'sm' },
+    { key: 'vp', header: 'VP', hideBelow: 'sm' },
+    { key: 'pa', header: 'PA', hideBelow: 'sm' },
   ],
   conferenceSeeded: [
     { key: 'seedAccent', header: 'Seed' },
     { key: 'team', header: 'Team' },
     { key: 'overallRecord', header: 'Overall' },
-    { key: 'overallPct', header: 'PCT' },
-    { key: 'divRecord', header: 'Div' },
+    { key: 'overallPct', header: 'PCT', hideBelow: 'sm' },
+    { key: 'divRecord', header: 'Div', hideBelow: 'sm' },
     { key: 'divPct', header: 'PCT', hideBelow: 'sm' },
-    { key: 'allPlayRecord', header: 'All Play' },
-    { key: 'pf', header: 'PF' },
+    { key: 'allPlayRecord', header: 'All Play', hideBelow: 'sm' },
+    { key: 'pf', header: 'PF', hideBelow: 'sm' },
     { key: 'pwr', header: 'PWR', hideBelow: 'sm' },
-    { key: 'vp', header: 'VP' },
+    { key: 'vp', header: 'VP', hideBelow: 'sm' },
     { key: 'pa', header: 'PA', hideBelow: 'sm' },
   ],
   allPlay: [
     { key: 'playoffBadge', header: 'Seed' },
     { key: 'team', header: 'Team' },
     { key: 'allPlayRecord', header: 'Record' },
-    { key: 'allPlayPct', header: 'PCT' },
-    { key: 'pf', header: 'PF' },
-    { key: 'pa', header: 'PA' },
-    { key: 'pwr', header: 'PWR' },
-    { key: 'vp', header: 'VP' },
+    { key: 'allPlayPct', header: 'PCT', hideBelow: 'sm' },
+    { key: 'pf', header: 'PF', hideBelow: 'sm' },
+    { key: 'pa', header: 'PA', hideBelow: 'sm' },
+    { key: 'pwr', header: 'PWR', hideBelow: 'sm' },
+    { key: 'vp', header: 'VP', hideBelow: 'sm' },
   ],
   tierAllPlay: [
     { key: 'rankCircle', header: 'Rank' },

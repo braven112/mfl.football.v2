@@ -406,13 +406,33 @@ const bannerLabelFor = (name: string) =>
 
 <style>
   /* ===================================================================== */
-  /* Shared: table wrapper                                                  */
+  /* Shared: card containment + table wrapper                              */
   /* ===================================================================== */
+  /* The card is frequently a grid/flex item (division/league/all-play grids,
+     and AFL's two-up `.tier-grid`). Grid/flex items default to `min-width:auto`,
+     whose content-based floor is the table's min-content — which, when a table
+     is wider than a phone, propagates up and stretches the whole PAGE instead of
+     scrolling inside the wrapper. `min-width: 0` lets the card shrink so the
+     wrapper's `overflow-x: auto` engages; `max-width: 100%` is the belt to the
+     suspenders. This is what stops horizontal PAGE scroll at every width; the
+     per-column `.hide-sm` priorities below then keep phones from needing even
+     the wrapper's scroll for the common tables. (See docs/standings-table-design.md.) */
+  .st-card {
+    min-width: 0;
+    max-width: 100%;
+  }
   .table-wrapper {
     overflow-x: auto;
   }
-  /* `.hide-sm` (from a column's hideBelow: 'sm') hides at the sm breakpoint;
-     the rule lives in the conf responsive block, the only variant using it. */
+  /* `.hide-sm` (from a column's `hideBelow: 'sm'`) drops secondary columns below
+     768px across EVERY variant, collapsing each table to rank/seed + team +
+     primary record so phones show the hierarchy without sideways scroll. ≥768px
+     is untouched — desktop renders exactly as before. */
+  @media (max-width: 767px) {
+    .hide-sm {
+      display: none;
+    }
+  }
 
   /* ===================================================================== */
   /* VARIANT: std  (TheLeague/AFL division + TheLeague all-play)            */
@@ -1232,9 +1252,6 @@ const bannerLabelFor = (name: string) =>
     .v-conf .seed-number {
       font-size: 0.9rem;
     }
-    .v-conf .hide-sm {
-      display: none;
-    }
   }
 
   /* ===================================================================== */
@@ -1523,24 +1540,62 @@ const bannerLabelFor = (name: string) =>
     .v-tier .tier-header {
       font-size: 1.25rem;
     }
+    /* Tighten the header padding so the branded band doesn't set a wide floor. */
+    .v-tier .tier-header-section {
+      padding: 1rem 1rem;
+      gap: 0.75rem;
+    }
     .v-tier .st-table {
       font-size: 0.8rem;
     }
     .v-tier th {
-      padding: 0.5rem;
+      padding: 0.5rem 0.4rem;
       font-size: 0.7rem;
     }
     .v-tier td {
-      padding: 0.75rem 0.5rem;
+      padding: 0.6rem 0.4rem;
+    }
+    /* All four tier columns are primary (rank / team / record / prize), so we
+       keep them all and shrink instead of hiding — team flexes down, the fixed
+       columns tighten — so Premier League / D-League fit a 320px phone with no
+       sideways scroll. Team gets a min-width small enough to fit but still legible;
+       long names wrap. */
+    .v-tier .col-team {
+      min-width: 0;
+    }
+    .v-tier .col-rank {
+      width: 40px;
+    }
+    .v-tier .col-record {
+      width: 74px;
+      white-space: normal;
+    }
+    .v-tier .col-prize {
+      width: 62px;
+    }
+    .v-tier .team-info {
+      gap: 0.4rem;
+    }
+    .v-tier .team-name {
+      font-size: 0.8rem;
+      line-height: 1.15;
     }
     .v-tier .team-icon {
-      width: 32px;
-      height: 32px;
-    }
-    .v-tier .rank-number {
       width: 28px;
       height: 28px;
+    }
+    .v-tier .prize-amount {
+      padding: 0.2rem 0.4rem;
       font-size: 0.75rem;
+    }
+    .v-tier .rank-number {
+      width: 26px;
+      height: 26px;
+      font-size: 0.72rem;
+    }
+    .v-tier .promo-arrow {
+      font-size: 1rem;
+      margin-left: 0.25rem;
     }
   }
 </style>
