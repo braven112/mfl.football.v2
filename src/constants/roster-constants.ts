@@ -4,6 +4,7 @@
  */
 
 import { normalizeTeamCode } from '../utils/nfl-logo';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 /**
  * Standard position order for sorting players
@@ -29,19 +30,39 @@ export const POSITION_COLORS: Record<string, string> = {
 export const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'] as const;
 
 /**
- * Default player headshot URL when player image is unavailable
+ * Default player headshot URL when player image is unavailable.
+ *
+ * Host verification (Phase 2 registry sweep): live requests to
+ * www49/www44.myfantasyleague.com to compare player-photo bytes across MFL
+ * hosts were blocked by this environment's egress policy (myfantasyleague.com
+ * is not allow-listed for the sandbox — see the proxy status endpoint), so
+ * host-agnosticism could not be empirically confirmed here. Chose the
+ * conservative assumption (per-league host) rather than asserting
+ * host-agnostic without proof. This constant covers the overwhelming
+ * majority of call sites, which are all TheLeague-only pages/components, so
+ * it stays pinned to TheLeague's registry host — behavior-preserving for
+ * those. AFL call sites must use {@link getPlayerImageUrl} /
+ * {@link getPlayerHeadshot} with `leagueSlug: 'afl-fantasy'` instead of this
+ * constant. A future session with MFL host access should confirm
+ * host-agnosticism and simplify back to one shared host if true.
  */
 export const DEFAULT_HEADSHOT_URL =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  `https://${getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost}/player_photos_2010/no_photo_available.jpg`;
 
 /**
- * Get player headshot URL by player ID
+ * Get player headshot URL by player ID.
+ *
  * @param playerId - MFL player ID
+ * @param leagueSlug - Canonical league slug whose MFL host serves the photo
+ *   (defaults to the default league — TheLeague — preserving prior
+ *   behavior for the ~20 TheLeague-only call sites). AFL call sites should
+ *   pass 'afl-fantasy' explicitly.
  * @returns URL to player headshot image
  */
-export function getPlayerImageUrl(playerId?: string): string {
+export function getPlayerImageUrl(playerId?: string, leagueSlug: string = DEFAULT_LEAGUE_SLUG): string {
+  const host = getLeagueBySlug(leagueSlug)?.mflHost ?? getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
   return playerId
-    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
+    ? `https://${host}/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
 }
 
@@ -93,13 +114,15 @@ export function resolveEspnId(
  *
  * @param mflId - MFL player ID
  * @param espnId - Optional ESPN player ID for higher quality headshots
+ * @param leagueSlug - Canonical league slug for the MFL-photo fallback (see
+ *   {@link getPlayerImageUrl}); irrelevant when espnId is present.
  * @returns URL to player headshot image
  */
-export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
+export function getPlayerHeadshot(mflId?: string, espnId?: string, leagueSlug: string = DEFAULT_LEAGUE_SLUG): string {
   if (espnId) {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
-  return getPlayerImageUrl(mflId);
+  return getPlayerImageUrl(mflId, leagueSlug);
 }
 
 /**

@@ -23,6 +23,7 @@ import {
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
+import { getLeagueBySlug } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -49,9 +50,14 @@ const preferredTeamId = resolveAFLTeamSelection({
   defaultTeam: undefined,
 }) || undefined;
 
+// BUG FIX (Phase 2): this previously fell back to TheLeague's www49 host on
+// an AFL page when PUBLIC_MFL_HOST wasn't set — AFL live-scoring/options
+// links would point at the wrong MFL league. Fall back to AFL's own
+// registry host/id instead.
+const AFL_LEAGUE = getLeagueBySlug('afl-fantasy')!;
 const envHost =
-  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';
-const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '19621';
+  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || `https://${AFL_LEAGUE.mflHost}`;
+const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || AFL_LEAGUE.id;
 
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
   eager: true,

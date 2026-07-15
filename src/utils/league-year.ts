@@ -271,3 +271,22 @@ export function getLeagueYearForMflId(leagueId: string, referenceDate?: Date): n
     ? getAflLeagueYear(referenceDate)
     : getCurrentLeagueYear(referenceDate);
 }
+
+/**
+ * Get the current MFL league year for a league identified by its canonical
+ * registry slug (e.g. 'theleague' | 'afl-fantasy'). Slug-keyed sibling of
+ * {@link getLeagueYearForMflId} for callers that already have the slug
+ * (route merges resolving league from `user.leagueId` via the registry, thin
+ * per-league wrapper routes, etc.) instead of the raw MFL id. Every league's
+ * rollover clock is read from `leagues-data.mjs` — a league without a
+ * `leagueYearRollover` entry uses TheLeague's Feb 14 clock.
+ *
+ * @param slug - Canonical league slug
+ * @param referenceDate - Optional date for testing
+ */
+export function getLeagueYearForSlug(slug: string, referenceDate?: Date): number {
+  const league = getLeagueBySlug(slug);
+  return league?.leagueYearRollover
+    ? getRolloverLeagueYear(league.leagueYearRollover, referenceDate)
+    : getCurrentLeagueYear(referenceDate);
+}

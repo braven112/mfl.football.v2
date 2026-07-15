@@ -30,7 +30,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-import { getLeagueById } from '../../config/leagues';
+import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 
@@ -68,7 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
     const league = getLeagueById(leagueId);
     // Leagues roll to the new MFL year on different clocks: TheLeague flips
     // Feb 14, AFL flips June 1 (registry leagueYearRollover). Using TheLeague's
@@ -144,7 +144,12 @@ export const POST: APIRoute = async ({ request }) => {
     // path lets an owner reduce an over-limit roster, which is the whole point
     // during offseason cutdown. We POST to the league's own MFL web host (the
     // `api.` gateway is for the API, not page handlers).
-    const host = league?.mflHost || 'www44.myfantasyleague.com';
+    // BUG FIX (Phase 2): this previously fell back to AFL's www44 host
+    // regardless of which league the cut was for — an unresolvable `league`
+    // lookup for a TheLeague cut would have POSTed to the wrong MFL host.
+    // Fall back to the *default* league's host instead, matching the
+    // `leagueId` default above.
+    const host = league?.mflHost || getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
     const addDropUrl = `https://${host}/${year}/add_drop`;
     const params = new URLSearchParams({
       L: leagueId,

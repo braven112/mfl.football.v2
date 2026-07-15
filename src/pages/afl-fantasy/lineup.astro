@@ -220,7 +220,8 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   const nflTeam = identity?.nflTeam ?? normalizeTeamCode(pd?.team || '');
   const position = identity?.position ?? (pd?.position || 'N/A').replace(/^Def$/i, 'DEF').replace(/^K$/i, 'PK');
   const espnId = identity?.espnId ?? null;
-  const headshot = identity?.headshot ?? getPlayerHeadshot(rp.id, espnId);
+  // AFL-context fallback: use AFL's registry MFL host, not TheLeague's default.
+  const headshot = identity?.headshot ?? getPlayerHeadshot(rp.id, espnId, 'afl-fantasy');
   const proj = projMap.get(rp.id) ?? null;
   const isBye = nflByeWeeks[nflTeam] === week;
 

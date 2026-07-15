@@ -74,6 +74,9 @@ export const DEFAULT_LEAGUE_SLUG = 'theleague';
 
 export const ALL_LEAGUES = Object.values(LEAGUES);
 
+/** MFL numeric id of the default league. Use instead of hardcoding '13522'. */
+export const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
+
 /** @param {string} slug Canonical slug ('theleague' | 'afl-fantasy') */
 export function getLeagueBySlug(slug) {
   return LEAGUES[slug] ?? null;
