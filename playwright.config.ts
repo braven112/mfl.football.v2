@@ -11,6 +11,12 @@ export default defineConfig({
     baseURL: 'http://localhost:4321',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Allow pointing at a preinstalled Chromium when the pinned browser build
+    // isn't downloaded (e.g. sandboxed CI runners with a shared browser cache).
+    // No-op unless PW_EXECUTABLE_PATH is set.
+    ...(process.env.PW_EXECUTABLE_PATH
+      ? { launchOptions: { executablePath: process.env.PW_EXECUTABLE_PATH } }
+      : {}),
   },
   projects: [
     {
