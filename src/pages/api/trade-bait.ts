@@ -17,7 +17,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
+import { getLeagueYearForMflId } from '../../utils/league-year';
 import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { overwriteTradeBaitCache } from '../../utils/mfl-trade-bait-cache';
 import fs from 'node:fs';
@@ -73,15 +73,13 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 3. Create MFL API client with the USER's cookie (not the server env var)
-    // League year comes from the league's own rollover clock when the
-    // registry declares one (AFL rolls June 1, not TheLeague's Feb 14) —
-    // between the two dates the clocks disagree and the wrong one targets
-    // an MFL league year that doesn't exist yet.
+    // League year comes from the league's own rollover clock (AFL rolls
+    // June 1, not TheLeague's Feb 14) — between the two dates the clocks
+    // disagree and the wrong one targets an MFL league year that doesn't
+    // exist yet. Shared helper keeps this route on the same clock as the
+    // trade routes and the pages that read the caches this route writes.
     const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
-    const league = getLeagueById(leagueId);
-    const leagueYear = league?.leagueYearRollover
-      ? getRolloverLeagueYear(league.leagueYearRollover)
-      : getCurrentLeagueYear();
+    const leagueYear = getLeagueYearForMflId(leagueId);
     const mflClient = createMFLApiClient({
       leagueId,
       year: String(leagueYear),
@@ -143,7 +141,7 @@ export const POST: APIRoute = async ({ request }) => {
         try {
           const byFranchisePath = path.resolve(
             process.cwd(),
-            `data/${cacheLeagueDir}/mfl-feeds/${leagueYear}/tradeBait-by-franchise.json`,
+            `${cacheLeague.dataPath}/mfl-feeds/${leagueYear}/tradeBait-by-franchise.json`,
           );
           fs.writeFileSync(
             byFranchisePath,

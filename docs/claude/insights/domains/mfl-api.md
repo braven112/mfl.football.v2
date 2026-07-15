@@ -4,6 +4,47 @@ Domain knowledge about MyFantasyLeague API integration.
 
 ---
 
+## 2026-07-15 - tradeBait Export Is Owner-Gated for Private Leagues — Empty ≠ Error
+
+**Context:** The AFL trade builder's live trade-block fetch parsed 0 franchises
+from MFL's 2026 tradeBait export minutes after a successful tradeBait import
+(200, no `<error>`) — and AFL's synced `tradeBait.json` had been `[]` forever
+while owners actually had players flagged.
+
+**Insight:** MFL's `TYPE=tradeBait` export requires owner auth for **private
+leagues** — but an unauthenticated request doesn't fail. It returns HTTP 200
+with `{"tradeBaits":{},"encoding":"utf-8","version":"1.0"}`, indistinguishable
+from "nobody has flagged anyone" unless you know to suspect it. TheLeague
+(13522) is public, so its unauthenticated tradeBait fetches genuinely work;
+AFL (19621) is private, so every unauthenticated fetch silently came back
+empty. Per-league privacy settings mean **"this export works without auth"
+proven on one league proves nothing about the other.**
+
+**Pattern:**
+- Server-side (Vercel) has **no server-level MFL creds** — `MFL_USER_ID` /
+  `MFL_APIKEY` are not in the project env (runtime log showed `auth: none`).
+  For league-visible data, authenticate reads with the **viewer's own MFL
+  cookie** (`authUser.id`, same cookie `/api/trade-bait` writes with) — every
+  AFL page viewer behind the owner gate has one. Caching a member-fetched
+  result globally is fine for league-visible data.
+- Never cache an unauthenticated fetch of an owner-gated export: the "empty
+  success" would overwrite real data. `mfl-trade-bait-cache.ts` refuses to
+  fetch with no auth source and logs a raw-payload snippet whenever a fetch
+  parses zero franchises, so "genuinely empty" vs "auth ignored" is
+  distinguishable in Vercel logs after the fact.
+- GitHub Actions feed syncs: the roster-sync workflow exports `MFL_API_KEY`
+  but `fetch-mfl-feeds.mjs` read `MFL_APIKEY` — the key never applied. The
+  script now accepts both; check both spellings when wiring a new script.
+- Cookie-authenticated GETs must go through `mflFetch()` (the api→www##
+  redirect strips Cookie in plain fetch); `APIKEY=` as a URL param survives
+  redirects on its own.
+
+**Evidence:** `src/utils/mfl-trade-bait-cache.ts`, `scripts/fetch-mfl-feeds.mjs`,
+`scripts/fetch-trade-bait.mjs`, Vercel runtime logs on
+`claude/trade-builder-player-display-9tpggb` (2026-07-15).
+
+---
+
 ## 2026-07-14 - AFL Is a Duplicate-Player League — "On Another Roster" Means Nothing
 
 **Context:** An AFL owner's keeper finalize appeared to fail 10/10 with "You can only cut players from your own roster" — but the cuts had already landed on MFL. The retry was validating against rosters where the *other conference's copy* of each player still existed.
