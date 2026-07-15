@@ -6,7 +6,12 @@ description: >
   scoping exactly (some workflows only ever care about specific output
   files; others treat the whole tree as fair game). Assumes a prior step
   already ran `actions/checkout` and, if commits need to be pushed with
-  write access, passed `ssh-key: ${{ secrets.DEPLOY_KEY }}` to it.
+  write access, passed the DEPLOY_KEY secret as its `ssh-key` input.
+  (NOTE: never write a literal dollar-double-brace expression in this file's
+  prose — the runner template-validates action.yml including descriptions,
+  and the `secrets` context doesn't exist in composite actions, so it fails
+  to load at runtime while passing yaml.safe_load in local validation.
+  This exact bug broke the first post-merge roster-sync run.)
 inputs:
   check-paths:
     description: >
