@@ -151,7 +151,18 @@ for (const a of (adpData?.adp?.player ?? []) as any[]) {
 }
 
 // Get rosters
+// Memoized — the trade-block panel calls this once per team on top of the
+// from/to pickers, and the find+map+sort would otherwise repeat per call.
+const rosterCache = new Map<string, PlayerLite[]>();
 function rosterFor(franchiseId: string): PlayerLite[] {
+  const cached = rosterCache.get(franchiseId);
+  if (cached) return cached;
+  const roster = buildRosterFor(franchiseId);
+  rosterCache.set(franchiseId, roster);
+  return roster;
+}
+
+function buildRosterFor(franchiseId: string): PlayerLite[] {
   const f = (rostersData?.rosters?.franchise as any[] | undefined)?.find((fr) => fr.id === franchiseId);
   if (!f?.player) return [];
   const arr = Array.isArray(f.player) ? f.player : [f.player];

@@ -15,7 +15,12 @@
  * ran last (this bit the AFL rosters page, whose badges vanished on reload).
  */
 
-/** Valid MFL player IDs are 4+ digits (rejects formatting artifacts like "0522"). */
+/**
+ * Valid MFL player IDs are 4+ digits — this rejects short numeric junk
+ * (split/trim artifacts, empty strings), matching the filter the fetch
+ * scripts apply. Note it does NOT reject 4-digit ids with leading zeros:
+ * those are real MFL ids (team defenses like "0532").
+ */
 const PLAYER_ID_RE = /^\d{4,}$/;
 
 export function parseTradeBaitPlayerIds(data: unknown): Set<string> {

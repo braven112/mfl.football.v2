@@ -230,7 +230,7 @@ const liveTradeBait =
     ? await getCachedTradeBait(
         String(selectedYear),
         aflLeague.id,
-        authUser?.leagueId === '19621' && authUser.id ? authUser.id : undefined
+        authUser?.leagueId === AFL_LEAGUE_ID && authUser.id ? authUser.id : undefined
       )
     : null;
 const tradeBaitByFranchise = liveTradeBait

@@ -2,11 +2,12 @@
  * MFL Trade Bait Cache — cache-with-TTL via Upstash Redis
  *
  * Serves trade bait (trade block) data from Redis cache when fresh
- * (< 2 min old). When stale or missing, fetches live data from the public
- * MFL tradeBait export synchronously and updates the cache before
- * returning. Mirrors src/utils/mfl-roster-cache.ts — see that module for
- * the reasoning behind the inline (awaited) refresh and the bust-epoch
- * race guard.
+ * (< 2 min old). When stale or missing, fetches live data from MFL's
+ * tradeBait export synchronously and updates the cache before returning.
+ * The export is owner-gated for private leagues (AFL), so the fetch
+ * authenticates — see fetchAndCacheTradeBait. Mirrors
+ * src/utils/mfl-roster-cache.ts — see that module for the reasoning
+ * behind the inline (awaited) refresh and the bust-epoch race guard.
  *
  * Why this exists: pages read trade bait from committed feed JSON bundled
  * at build time, and /api/trade-bait's write-through file cache can't
