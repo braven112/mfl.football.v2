@@ -1,8 +1,9 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import StandingsTable from '../../components/theleague/StandingsTable.astro';
-import ConferenceLeagueStandingsTable from '../../components/theleague/ConferenceLeagueStandingsTable.astro';
-import TierAllPlayStandingsTable from '../../components/theleague/TierAllPlayStandingsTable.astro';
+import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import { getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
@@ -219,6 +220,53 @@ const promoRegTeams = [
   const bPct = parseFloat(b.all_play_pct || '0');
   return bPct - aPct;
 });
+
+// Tier-table header config. Only the branded Premier League / D-League tiers
+// carry a logo; the combined "Founders Table" / "All-Play" tables do not.
+function tierHeader(name: string) {
+  const hasLogo = name === PREMIER_LEAGUE || name === D_LEAGUE;
+  return {
+    kind: 'tier' as const,
+    title: name,
+    logoSrc: hasLogo ? getTierLogo(name) : undefined,
+    logoDarkSrc: hasLogo ? getTierLogoDark(name) : undefined,
+  };
+}
+const combinedTierName = isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play';
+
+// Conference-view presentation: AL glows league red, NL glows conference blue.
+// Title hue matches each conference logo (raw brand hex + a brightened dark
+// variant). Replaces the old data-league / conferenceId :global selectors.
+function conferenceHeader(confId: '00' | '01', name: string) {
+  const isNL = confId === '01';
+  return {
+    kind: 'conference' as const,
+    title: name,
+    logoSrc: getConferenceLogo(confId),
+    logoDarkSrc: getConferenceLogoDark(confId),
+    accentColor: isNL ? '#1d4f91' : '#c41e3a',
+    accentColorDark: isNL ? '#5b9bd5' : '#f47a8f',
+  };
+}
+
+// Division view: NL divisions glow conference blue, everything else league red.
+// The conference logo heads each division card; the defending champion (name
+// only for AFL) reads as a text line.
+const divisionToConf = seasonConfig.divisionToConference as Record<string, '00' | '01'>;
+function aflAccent(confId?: '00' | '01') {
+  return confId === '01' ? ('conference-blue' as const) : ('afl-red' as const);
+}
+function divisionHeader(name: string, confId?: '00' | '01') {
+  return {
+    kind: 'division' as const,
+    title: name,
+    logoSrc: confId ? getConferenceLogo(confId) : undefined,
+    logoDarkSrc: confId ? getConferenceLogoDark(confId) : undefined,
+    defendingChampion: defendingChampions[name]
+      ? { name: defendingChampions[name], year: previousYear }
+      : undefined,
+  };
+}
 ---
 
 <TheLeagueLayout title="AFL Standings" year={selectedYear}>
@@ -272,17 +320,16 @@ const promoRegTeams = [
       {view === 'division' && (
         <div class="division-view">
           {divisionStandings.map(division => (
-            <StandingsTable
+            <UnifiedStandingsTable
               teams={division.teams}
-              view="division"
-              showDivisionHeader={true}
-              divisionName={division.name}
-              conferenceId={(seasonConfig.divisionToConference as Record<string, '00' | '01'>)[division.name]}
-              defendingChampion={defendingChampions[division.name]}
-              defendingChampionYear={previousYear}
+              columns={COLUMNS.division}
+              teamCell="banner"
+              teamCellFallback="name"
+              accent={aflAccent(divisionToConf[division.name])}
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              header={divisionHeader(division.name, divisionToConf[division.name])}
             />
           ))}
         </div>
@@ -290,23 +337,29 @@ const promoRegTeams = [
 
       {view === 'league' && (
         <div class="league-view">
-          <ConferenceLeagueStandingsTable
-            conferenceName={conferenceAStandings.conference.name}
-            conferenceId="00"
+          <UnifiedStandingsTable
             teams={conferenceAStandings.allTeams}
+            columns={COLUMNS.conferenceSeeded}
+            teamCell="banner"
+            teamCellFallback="blank"
+            tiering={TIERING.conferenceSeed(conferenceAStandings.conference.divisions.length)}
+            accent={aflAccent('00')}
+            header={conferenceHeader('00', conferenceAStandings.conference.name)}
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            divisionWinnerCount={conferenceAStandings.conference.divisions.length}
           />
-          <ConferenceLeagueStandingsTable
-            conferenceName={conferenceBStandings.conference.name}
-            conferenceId="01"
+          <UnifiedStandingsTable
             teams={conferenceBStandings.allTeams}
+            columns={COLUMNS.conferenceSeeded}
+            teamCell="banner"
+            teamCellFallback="blank"
+            tiering={TIERING.conferenceSeed(conferenceBStandings.conference.divisions.length)}
+            accent={aflAccent('01')}
+            header={conferenceHeader('01', conferenceBStandings.conference.name)}
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            divisionWinnerCount={conferenceBStandings.conference.divisions.length}
           />
 
           {nitTeams.length > 0 && (
@@ -377,9 +430,13 @@ const promoRegTeams = [
       {view === 'all_play' && hasTierRecord && (
         <div class="all-play-view tier-grid">
           {tierAllPlayStandings.map(tierGroup => (
-            <TierAllPlayStandingsTable
-              tierName={tierGroup.tier}
+            <UnifiedStandingsTable
               teams={tierGroup.teams}
+              columns={COLUMNS.tierAllPlay}
+              teamCell="icon"
+              accent="afl-red"
+              tierName={tierGroup.tier}
+              header={tierHeader(tierGroup.tier)}
               year={selectedYear}
               rosterBaseUrl={`${baseUrl}/rosters`}
             />
@@ -389,12 +446,16 @@ const promoRegTeams = [
 
       {view === 'all_play' && !hasTierRecord && (
         <div class="all-play-view">
-          <TierAllPlayStandingsTable
-            tierName={isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play'}
+          <UnifiedStandingsTable
             teams={combinedAllPlayStandings}
+            columns={COLUMNS.tierAllPlay}
+            teamCell="icon"
+            accent="afl-red"
+            tierName={combinedTierName}
+            header={tierHeader(combinedTierName)}
+            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
             year={selectedYear}
             rosterBaseUrl={`${baseUrl}/rosters`}
-            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
           />
         </div>
       )}
