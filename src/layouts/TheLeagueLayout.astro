@@ -32,7 +32,7 @@ import RosterLoader from '../components/theleague/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getCurrentLeagueYear } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
-import { getVisibleSections, parseMyTeamFromUrl } from '../utils/nav-utils';
+import { getVisibleSections, parseMyTeamFromUrl, buildNavTeamInfo } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference } from '../utils/team-preferences';
@@ -123,27 +123,7 @@ if (league === 'afl') {
 	if (navTeamId) {
 		// Dynamic import AFL config only when needed
 		const aflConfigData = await import('../../data/afl-fantasy/afl.config.json');
-		const teamData = aflConfigData.teams.find(
-			(t: { franchiseId: string }) => t.franchiseId === navTeamId
-		);
-
-		if (teamData) {
-			teamInfo = {
-				franchiseId: navTeamId,
-				teamName: teamData.name,
-				iconUrl: teamData.icon || null,
-				ownerName: null,
-				league: 'afl' as LeagueSlug,
-			};
-		} else {
-			teamInfo = {
-				franchiseId: navTeamId,
-				teamName: `Team ${navTeamId}`,
-				iconUrl: null,
-				ownerName: null,
-				league: 'afl' as LeagueSlug,
-			};
-		}
+		teamInfo = buildNavTeamInfo(navTeamId, aflConfigData.teams, 'afl' as LeagueSlug);
 	}
 } else {
 	// TheLeague: Check TheLeague preference cookie first, then fall back to generic myteam
@@ -161,27 +141,7 @@ if (league === 'afl') {
 	const navTeamId = theLeagueJwtFranchiseId || null;
 
 	if (navTeamId) {
-		const teamData = leagueConfigData.teams.find(
-			(t: { franchiseId: string }) => t.franchiseId === navTeamId
-		);
-
-		if (teamData) {
-			teamInfo = {
-				franchiseId: navTeamId,
-				teamName: teamData.name,
-				iconUrl: teamData.icon || null,
-				ownerName: null,
-				league: 'theleague' as LeagueSlug,
-			};
-		} else {
-			teamInfo = {
-				franchiseId: navTeamId,
-				teamName: `Team ${navTeamId}`,
-				iconUrl: null,
-				ownerName: null,
-				league: 'theleague' as LeagueSlug,
-			};
-		}
+		teamInfo = buildNavTeamInfo(navTeamId, leagueConfigData.teams, 'theleague' as LeagueSlug);
 	}
 }
 

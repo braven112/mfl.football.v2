@@ -826,3 +826,36 @@ standalone `data-vite-dev-id=".../player-cell.css"` style tag.
 
 **Evidence:** `src/components/theleague/TradeAlertModal.astro` (fixed 2026-07-14),
 `src/styles/player-cell.css`, `src/utils/player-cell-html.ts`.
+
+## 2026-07-14 - Verifying "Pixel-Identical" Page Refactors by Curl-Diffing Dev Servers — Watch for the Randomized Hero
+
+**Context:** Phase 4 of the dedup refactor collapsed the per-league page pairs
+(whats-new, assets, hp-sections QuickLinks) into shared components behind thin
+route wrappers, with a hard "rendered output stays identical" requirement.
+
+**Insight:** The reliable check is two dev servers — the branch worktree and a
+throwaway `git worktree add <tmp> origin/main` baseline (pnpm install in it is
+~5s from the store) — then curl each touched route from both, strip
+`<script>`/`<style>` blocks and tags, collapse whitespace, and diff the text.
+Two traps: (1) `/theleague` will falsely "differ" because `resolveHeroState`
+randomizes the homepage hero per request (~50% Cut Watch near the roster
+deadline) — before blaming the refactor, diff the SAME server against itself
+twice; if main-vs-main also differs, it's the hero lottery, not your change.
+(2) Raw HTML can't be diffed at all across a component move: `astro-cid-*`
+scope hashes and dev-mode module paths legitimately change, so text extraction
+is the signal. Also: `astro check` on this repo OOMs node's default heap —
+run it with `NODE_OPTIONS="--max-old-space-size=13000"` and expect ~500
+pre-existing diagnostics; filter output to your touched files (strip ANSI
+codes first — `grep "^\[96m..."` silently misses everything because the ESC
+byte precedes the color code).
+
+**Recommendation:** For any behavior-preserving page consolidation: baseline
+worktree + dual dev servers + tag-stripped text diff per route, sampling the
+homepage twice from the same server to calibrate hero noise. Confirm layout
+migrations by finding where the diff starts — body content should match to
+the byte until the surrounding chrome.
+
+**Evidence:** Phase 4 refactor branch `claude/refactor-phase-4-pages-components`
+(2026-07-14): 8/11 routes byte-identical text; homepage diff proven to be hero
+randomization; templates/css-customization diverged only at the footer chrome
+(intended TheLeagueLayout migration).

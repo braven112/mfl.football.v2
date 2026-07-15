@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
 // Read the variables file at build time so the copy-to-clipboard prompt stays in sync
 import fs from 'fs';
@@ -285,8 +285,9 @@ for (const group of groups) {
 }
 ---
 
-<Layout title="MFL.football - CSS Customization Guide">
-  <main class="guide-page">
+<TheLeagueLayout title="MFL.football - CSS Customization Guide">
+  <!-- TheLeagueLayout already renders the page's single <main> landmark -->
+  <div class="guide-page">
     <section class="intro">
       <h1>CSS Customization Guide</h1>
       <p>
@@ -786,8 +787,8 @@ git push -u origin add-icon-my-icon-name</code></pre>
         </ul>
       </aside>
     </div>
-  </main>
-</Layout>
+  </div>
+</TheLeagueLayout>
 
 <style>
   :root {

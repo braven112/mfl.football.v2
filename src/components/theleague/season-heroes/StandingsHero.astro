@@ -10,6 +10,7 @@ import type { HeroState } from '../../../types/hero-state';
 import { chooseTeamName } from '../../../utils/team-names';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import StandingsHeroStub from '../hero-stubs/StandingsHeroStub.astro';
+import { formatPoints } from '../../../utils/formatters';
 import config from '../../../data/theleague.config.json';
 
 export interface Props {
@@ -54,7 +55,7 @@ const rows: StandingRow[] = franchises
     const team = teamMap.get(f.id);
     const record = f.h2hwlt ?? '0-0-0';
     const [w] = record.split('-').map(Number);
-    const pf = parseFloat(f.pf || '0').toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const pf = formatPoints(parseFloat(f.pf || '0'), 1);
     const displayName = team
       ? chooseTeamName({
           fullName: team.name,
@@ -86,7 +87,7 @@ if (userFranchiseId && !userInTop) {
     const team = teamMap.get(f.id);
     const record = f.h2hwlt ?? '0-0-0';
     const [w] = record.split('-').map(Number);
-    const pf = parseFloat(f.pf || '0').toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const pf = formatPoints(parseFloat(f.pf || '0'), 1);
     const displayName = team
       ? chooseTeamName({
           fullName: team.name,

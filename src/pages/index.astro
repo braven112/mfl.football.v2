@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import SplashLayout from '../layouts/SplashLayout.astro';
 import { ALL_LEAGUES } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import { getLatestWhatsNewAcrossLeagues } from '../utils/whats-new-cross-league';
@@ -36,7 +36,7 @@ const CHIP_LABELS: Record<string, string> = {
 const entries = getLatestWhatsNewAcrossLeagues(6);
 ---
 
-<Layout title="MFL Fantasy Football" splash>
+<SplashLayout title="MFL Fantasy Football">
   <section class="masthead">
     <p class="eyebrow">MFL Fantasy Football</p>
     <h1>Two Leagues. One Home.</h1>
@@ -79,7 +79,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
       ))}
     </ul>
   </section>
-</Layout>
+</SplashLayout>
 
 <style>
   .masthead {

@@ -15,6 +15,8 @@
 import rawEntries from '../data/whats-new.json';
 import type { LeagueSlug, WhatsNewEntry } from '../types/whats-new';
 import { entryAppliesToLeague } from '../types/whats-new';
+import { sortEntriesNewestFirst } from './whats-new-helpers';
+import { getAuthUser, isCommissionerOrAdmin } from './auth';
 
 const allEntries = rawEntries as WhatsNewEntry[];
 
@@ -28,4 +30,23 @@ export function getWhatsNewEntriesForLeague(league: LeagueSlug): WhatsNewEntry[]
     byLeague.set(league, entries);
   }
   return entries;
+}
+
+/**
+ * The league's entries as a page should see them: admin-only entries filtered
+ * by the requester's session, sorted newest-first. The single implementation
+ * of the visibility rule — the index page and the detail resolver both use
+ * this, so an admin-only entry can never be visible on one surface and hidden
+ * on the other.
+ */
+export function getVisibleWhatsNewEntries(
+  request: Request,
+  league: LeagueSlug
+): WhatsNewEntry[] {
+  const user = getAuthUser(request);
+  const isAdmin = !!user && isCommissionerOrAdmin(user);
+  const visible = getWhatsNewEntriesForLeague(league).filter(
+    (e) => e.visibility !== 'admin' || isAdmin
+  );
+  return sortEntriesNewestFirst(visible);
 }

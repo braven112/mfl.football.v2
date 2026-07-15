@@ -1,0 +1,951 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+
+type AssetEntry = {
+  type: string;
+  filename: string;
+  relativePath: string;
+  absoluteUrl: string;
+  extension?: string;
+};
+
+// Raw asset entries as they arrive from the aggregated-assets JSON: absoluteUrl
+// is derived below, so it may be absent on the source data.
+type RawAssetEntry = {
+  type: string;
+  filename: string;
+  relativePath: string;
+  absoluteUrl?: string;
+  extension?: string;
+};
+
+type TeamEra = {
+  yearStart: number;
+  yearEnd: number;
+  franchiseId: string;
+  conference?: string;
+};
+
+type TeamEntry = {
+  key: string;
+  slug: string;
+  id?: string;
+  name: string;
+  category?: string;
+  conference?: string;
+  division?: string;
+  tier?: string;
+  eras?: TeamEra[];
+  aliases?: string[];
+  psdAssets?: AssetEntry[];
+  assets: Record<string, AssetEntry[]>;
+};
+
+type RawTeam = {
+  key: string;
+  slug: string;
+  id?: string;
+  name: string;
+  category?: string;
+  conference?: string;
+  division?: string;
+  tier?: string;
+  eras?: TeamEra[];
+  aliases?: string[];
+  // Values may be undefined: TS infers optional keys (e.g. "group-me"?) on
+  // teams that lack a folder present elsewhere in the aggregated JSON.
+  assets?: Record<string, RawAssetEntry[] | undefined>;
+};
+
+type MasterAsset = {
+  label: string;
+  description?: string;
+  filename: string;
+  relativePath: string;
+};
+
+interface LeagueConfigLike {
+  assetDomain?: string;
+  blobDomain?: string;
+  teams: unknown[];
+  conferences?: Array<{ code: string; name: string }>;
+  masterAssets?: MasterAsset[];
+}
+
+interface AggregatedAssetsLike {
+  teams?: RawTeam[];
+  // Raw entries (absoluteUrl derived below); values may be undefined for the
+  // same optional-key inference reason as RawTeam.assets.
+  extras?: Record<string, RawAssetEntry[] | undefined>;
+}
+
+interface Props {
+  slug: CanonicalLeagueSlug;
+  leagueConfig: LeagueConfigLike;
+  aggregatedAssets: AggregatedAssetsLike;
+}
+
+const { slug, leagueConfig, aggregatedAssets } = Astro.props;
+
+const league = getLeagueBySlug(slug);
+if (!league) throw new Error(`Unknown league slug: ${slug}`);
+
+const isAfl = slug === 'afl-fantasy';
+const title = `${league.name} Asset Library`;
+
+const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
+const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
+const blobDomain = normalizeDomain(leagueConfig.blobDomain || '');
+
+const formatBucketLabel = (bucket: string) =>
+  bucket === 'group-me'
+    ? 'Group Me'
+    : bucket
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, char => char.toUpperCase());
+
+const PSD_FOLDERS = ['psd', 'psds'];
+
+const withAbsolute = (entry: RawAssetEntry): AssetEntry => ({
+  ...entry,
+  absoluteUrl: assetDomain ? `${assetDomain}${entry.relativePath}` : entry.relativePath,
+});
+
+const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
+  const rawAssets = Object.fromEntries(
+    Object.entries(team.assets || {}).map(([folder, entries]) => [
+      folder,
+      (entries ?? []).map(withAbsolute),
+    ])
+  );
+  const psdAssets = PSD_FOLDERS.flatMap(folder => (rawAssets[folder] as AssetEntry[] || []).map(entry => ({
+    ...entry,
+    absoluteUrl: blobDomain ? `${blobDomain}${entry.relativePath}` : entry.absoluteUrl,
+  })));
+  PSD_FOLDERS.forEach(folder => {
+    if (rawAssets[folder]) {
+      delete rawAssets[folder];
+    }
+  });
+  const assets = rawAssets as Record<string, AssetEntry[]>;
+  return {
+    key: team.key,
+    slug: team.slug,
+    id: team.id,
+    name: team.name,
+    category: team.category,
+    conference: team.conference,
+    division: team.division,
+    tier: team.tier,
+    eras: team.eras,
+    aliases: team.aliases,
+    psdAssets,
+    assets,
+  };
+});
+
+// TheLeague: "2007 (slot 0002)". AFL: "2016 · National League (slot 0016)".
+// Conference is only present on AFL eras, so the conf clause is a no-op for
+// TheLeague and the output stays identical to the pre-consolidation formatter.
+const formatEra = (era: TeamEra) => {
+  const years = era.yearStart === era.yearEnd ? `${era.yearStart}` : `${era.yearStart}–${era.yearEnd}`;
+  const conf = era.conference ? ` · ${getConferenceName(era.conference)}` : '';
+  return `${years}${conf} (slot ${era.franchiseId})`;
+};
+
+const masterAssets: Array<MasterAsset & { url: string }> = (
+  leagueConfig.masterAssets ?? []
+).map((asset) => ({
+  ...asset,
+  url: blobDomain ? `${blobDomain}${asset.relativePath}` : asset.relativePath,
+}));
+
+const rawExtras = aggregatedAssets.extras ?? {};
+const extras = Object.fromEntries(
+  Object.entries(rawExtras).map(([bucket, entries]) => [bucket, (entries ?? []).map(withAbsolute)])
+);
+
+const teamSections: Array<[string, TeamEntry[]]> = [
+  ['Active Teams', teamList.filter((t) => t.category !== 'former')],
+  ['Former Teams', teamList.filter((t) => t.category === 'former')],
+];
+const extraSections: Array<[string, AssetEntry[]]> = [
+  ['Championship Art', extras.championship ?? []],
+  ['League Logos', extras.league ?? []],
+  ['Conferences', extras.conference ?? []],
+  ['Divisions', extras.division ?? []],
+];
+
+// Resolve a conference code to its display name (AFL only; TheLeague has no
+// conferences, so this is never reached for it).
+const getConferenceName = (code: string) => {
+  const conf = (leagueConfig.conferences ?? []).find(c => c.code === code);
+  return conf?.name || code;
+};
+
+const searchPlaceholder = isAfl
+  ? 'Search by name, ID, conference, tier, or division'
+  : 'Search by name, ID, or division';
+
+const copyIcons = `
+  <svg class="icon icon--copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  <svg class="icon icon--check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+`;
+---
+
+<TheLeagueLayout title={title}>
+  <div class={`league-gallery league-gallery--${league.navSlug}`}>
+    <header class="gallery-header">
+      <h1>{title}</h1>
+      {isAfl && (
+        <p>Team logos, banners, and graphics for all {leagueConfig.teams.length} teams</p>
+      )}
+    </header>
+    <div class="visually-hidden" role="status" id="copy-status"></div>
+    {masterAssets.length > 0 && (
+    <section class="library-section">
+      <h2 class="library-section__title">Master Files</h2>
+      <div class="master-list">
+        {masterAssets.map((asset) => (
+          <article class="master-card">
+            <div class="master-card__info">
+              <p class="master-card__label">{asset.label}</p>
+              {asset.description && <p class="master-card__desc">{asset.description}</p>}
+              <p class="filename" title={asset.filename}>{asset.filename}</p>
+            </div>
+            <div class="master-card__actions asset-meta">
+              <a class="master-download" href={asset.url} download={asset.filename}>Download PSD</a>
+              <label class="url-field">
+                <span class="url-field__label">URL</span>
+                <div class="copy-row">
+                  <input type="text" value={asset.url} readonly />
+                  <button type="button" class="copy-btn" data-copy={asset.url} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
+                </div>
+              </label>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+    )}
+    {teamList.length === 0 ? (
+      <p class="empty-state">No team assets found. Drop images into <code>public/assets/{league.navSlug}</code> to populate this page.</p>
+    ) : (
+      <>
+        <div class="gallery-controls">
+          <label>
+            <span>Search teams</span>
+            <input
+              id="team-filter"
+              type="search"
+              placeholder={searchPlaceholder}
+              autocomplete="off"
+            />
+          </label>
+        </div>
+        {teamSections.map(([sectionTitle, sectionTeams]) => sectionTeams.length > 0 && (
+        <section class="library-section library-section--teams">
+          <h2 class="library-section__title">{sectionTitle}</h2>
+          <div class="team-grid">
+          {sectionTeams.map((team) => (
+            <section
+              class="team-card"
+              id={team.slug}
+              data-name={team.name}
+              data-franchise-id={team.id || ''}
+              data-conference={isAfl ? (team.conference || '') : undefined}
+              data-division={team.division || ''}
+              data-tier={isAfl ? (team.tier || '') : undefined}
+              data-aliases={(team.aliases || []).join(' ')}
+            >
+              <div class="team-card__header">
+                <div class="team-card__info">
+                  <h3 class="team-card__name">{team.name}</h3>
+                  {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
+                  {team.eras && team.eras.length > 0 && (
+                    <p class="team-eras">
+                      {team.category === 'active' ? 'Formerly: ' : ''}{team.eras.map(formatEra).join(' → ')}
+                    </p>
+                  )}
+
+                  {isAfl ? (
+                    <div class="team-meta">
+                      {team.tier && <span class="team-tier">{team.tier}</span>}
+                      {team.conference && (
+                        <span class="team-conference">
+                          {getConferenceName(team.conference)}
+                          {team.division && ` • ${team.division}`}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    team.division && <p class="team-division">{team.division} Division</p>
+                  )}
+
+                  {team.psdAssets?.length ? (
+                    <div class="psd-links">
+                      {team.psdAssets.map(asset => (
+                        <a href={asset.absoluteUrl} target="_blank" rel="noopener noreferrer">
+                          {team.psdAssets!.length > 1 ? `Download PSD (${asset.filename})` : 'Download PSD'}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div class="asset-groups">
+                {Object.entries(team.assets).map(([folder, entries]) => (
+                  <div class="asset-group">
+                    <h3>{formatBucketLabel(folder)}</h3>
+                    <div class="asset-list">
+                      {(entries as AssetEntry[]).map((asset) => (
+                        <article class={`asset-card asset-card--${folder}`}>
+                          <img src={asset.relativePath} alt={`${team.name} ${folder}`} loading="lazy" />
+                          <div class="asset-meta">
+                            <div class="copy-row">
+                              <p class="filename" title={asset.filename}>{asset.filename}</p>
+                              <button type="button" class="copy-btn" data-copy={asset.filename} aria-label="Copy file name" title="Copy file name" set:html={copyIcons} />
+                            </div>
+                            <p class="asset-dimensions">Loading size…</p>
+                            <label class="url-field">
+                              <span class="url-field__label">URL</span>
+                              <div class="copy-row">
+                                <input type="text" value={asset.absoluteUrl} readonly />
+                                <button type="button" class="copy-btn" data-copy={asset.absoluteUrl} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
+                              </div>
+                            </label>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+          </div>
+        </section>
+        ))}
+
+        {extraSections.map(([sectionTitle, entries]) => entries.length > 0 && (
+        <section class="library-section">
+          <h2 class="library-section__title">{sectionTitle}</h2>
+          <div class="asset-list asset-list--extras">
+            {entries.map((asset) => (
+              <article class={`asset-card asset-card--${asset.type}`}>
+                <img src={asset.relativePath} alt={asset.filename} loading="lazy" />
+                <div class="asset-meta">
+                  <div class="copy-row">
+                    <p class="filename" title={asset.filename}>{asset.filename}</p>
+                    <button type="button" class="copy-btn" data-copy={asset.filename} aria-label="Copy file name" title="Copy file name" set:html={copyIcons} />
+                  </div>
+                  <p class="asset-dimensions">Loading size…</p>
+                  <label class="url-field">
+                    <span class="url-field__label">URL</span>
+                    <div class="copy-row">
+                      <input type="text" value={asset.absoluteUrl} readonly />
+                      <button type="button" class="copy-btn" data-copy={asset.absoluteUrl} aria-label="Copy full URL" title="Copy full URL" set:html={copyIcons} />
+                    </div>
+                  </label>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+        ))}
+      </>
+    )}
+  </div>
+
+  {teamList.length > 0 && (
+    <script is:inline>
+      (() => {
+        const input = document.querySelector('#team-filter');
+        const cards = Array.from(document.querySelectorAll('.team-grid .team-card'));
+        if (!input || cards.length === 0) return;
+
+        const filterCards = (query) => {
+          const needle = query.trim().toLowerCase();
+          cards.forEach(card => {
+            const haystack = [
+              card.dataset.name,
+              card.dataset.franchiseId,
+              card.dataset.conference,
+              card.dataset.division,
+              card.dataset.tier,
+              card.dataset.aliases,
+              card.id,
+            ].join(' ').toLowerCase();
+            const match = needle === '' || haystack.includes(needle);
+            card.style.display = match ? '' : 'none';
+          });
+          // Hide a team section header when the filter empties its grid
+          document.querySelectorAll('.library-section--teams').forEach(section => {
+            const anyVisible = [...section.querySelectorAll('.team-card')]
+              .some(card => card.style.display !== 'none');
+            section.style.display = anyVisible ? '' : 'none';
+          });
+        };
+
+        const updateDimensions = (img) => {
+          const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+          if (!meta) return;
+          if (img.naturalWidth && img.naturalHeight) {
+            meta.textContent = `${img.naturalWidth} × ${img.naturalHeight}px`;
+          } else {
+            meta.textContent = 'Size unavailable';
+          }
+        };
+
+        const initDimensions = () => {
+          document.querySelectorAll('.asset-card img').forEach((img) => {
+            if (img.complete && img.naturalWidth) {
+              updateDimensions(img);
+            } else {
+              img.addEventListener('load', () => updateDimensions(img), { once: true });
+              img.addEventListener('error', () => {
+                const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+                if (meta) meta.textContent = 'Failed to load';
+              }, { once: true });
+            }
+          });
+        };
+
+        filterCards(input.value);
+        input.addEventListener('input', (event) => filterCards(event.target.value));
+        initDimensions();
+
+        const copyText = async (text) => {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return;
+          }
+          // http:// dev fallback — clipboard API requires a secure context
+          const scratch = document.createElement('textarea');
+          scratch.value = text;
+          scratch.style.position = 'fixed';
+          scratch.style.opacity = '0';
+          document.body.appendChild(scratch);
+          scratch.select();
+          document.execCommand('copy');
+          scratch.remove();
+        };
+
+        // ClientRouter re-runs this inline script on soft navigation back to
+        // this page — element listeners re-bind to swapped-in elements, but
+        // document-level delegation must register exactly once.
+        if (!window.__assetCopyDelegation) {
+          window.__assetCopyDelegation = true;
+
+          document.addEventListener('click', async (event) => {
+            const btn = event.target.closest('.copy-btn');
+            if (!btn || !btn.dataset.copy) return;
+            try {
+              await copyText(btn.dataset.copy);
+              btn.classList.add('copied');
+              clearTimeout(btn._copiedTimer);
+              btn._copiedTimer = setTimeout(() => btn.classList.remove('copied'), 1500);
+              const status = document.getElementById('copy-status');
+              if (status) {
+                status.textContent = (btn.getAttribute('aria-label') || 'Copy').replace('Copy', 'Copied');
+              }
+            } catch { /* clipboard denied — input remains selectable by hand */ }
+          });
+
+          document.addEventListener('focusin', (event) => {
+            if (event.target.matches('.asset-meta input[type="text"]')) {
+              event.target.select();
+            }
+          });
+        }
+      })();
+    </script>
+  )}
+</TheLeagueLayout>
+
+<style>
+.league-gallery {
+  margin-top: 1rem;
+}
+.league-gallery {
+  display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 3rem;
+  }
+
+  /* .gallery-header diverges per league: TheLeague uses a dark banner with an
+     inverted h1; AFL uses a light card with a dark-mode ring shadow. */
+  .league-gallery--theleague .gallery-header {
+    background: var(--color-gray-800, #1f2937);
+    color: var(--color-gray-50, #f9fafb);
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* The layout's global h1 color rule beats inherited color — must target the element */
+  .league-gallery--theleague .gallery-header h1 {
+    color: var(--color-gray-50, #f9fafb);
+  }
+
+  .league-gallery--theleague .gallery-header p {
+    margin: 0.25rem 0 0;
+  }
+
+  .league-gallery--afl .gallery-header {
+    background: var(--content-bg, #fff);
+    padding: 1rem 1.25rem 1.5rem;
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(html.dark) .league-gallery--afl .gallery-header {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  .league-gallery--afl .gallery-header p {
+    margin: 0;
+  }
+
+  .current-domain {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .gallery-controls {
+    display: grid;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .gallery-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .gallery-controls input[type="search"] {
+    border-radius: 0.5rem;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    font-size: 0.95rem;
+    background: var(--input-bg, #fff);
+    color: var(--input-text, inherit);
+  }
+
+  /* Search-field padding differs between the two leagues. */
+  .league-gallery--theleague .gallery-controls input[type="search"] {
+    padding: 1rem 0.75rem;
+  }
+
+  .league-gallery--afl .gallery-controls input[type="search"] {
+    padding: 1rem 1.25rem;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .team-card {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Team-card border fallback differs between the two leagues. */
+  .league-gallery--theleague .team-card {
+    border: 1px solid var(--content-border-color, #dddcdc);
+  }
+
+  .league-gallery--afl .team-card {
+    border: 1px solid var(--content-border-color, #e2e2e2);
+  }
+
+  .team-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .team-card__name {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .library-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .library-section__title {
+    margin: 0;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* Section-title size differs between the two leagues. */
+  .league-gallery--theleague .library-section__title {
+    font-size: 0.75rem;
+  }
+
+  .league-gallery--afl .library-section__title {
+    font-size: 0.9rem;
+  }
+
+  .asset-list--extras {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .asset-list--extras .asset-card {
+    background: var(--content-bg, #fff);
+  }
+
+  .asset-list--extras .asset-card img {
+    max-height: 400px;
+  }
+
+  .team-id,
+  .team-slug {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .team-eras {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+    font-style: italic;
+  }
+
+  /* TheLeague-only: single division line under a team. */
+  .team-division {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-link-hover-text-color, #b45309);
+  }
+
+  /* AFL-only: tier + conference/division meta row. */
+  .team-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .team-tier {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    background: var(--accent-link-hover-text-color, #b45309);
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .team-conference {
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  /* AFL-only: master (PSD) files section. */
+  .master-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .master-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    background: var(--content-bg, #fff);
+  }
+
+  /* Match the sibling .team-card raised treatment in dark: drop the light
+     border and use the single-ring shadow so there's no double edge. */
+  :global(html.dark) .master-card {
+    border-color: transparent;
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  .master-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .master-card__label {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .master-card__desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .master-card__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .master-download {
+    align-self: flex-start;
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.5rem;
+    background: var(--league-accent, var(--color-primary, #1c497c));
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .master-download:hover {
+    filter: brightness(0.95);
+  }
+
+  .master-download:focus-visible {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    outline-offset: 2px;
+  }
+
+  .psd-links {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .psd-links a {
+    font-size: 0.9rem;
+    color: var(--accent-link-hover-text-color, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .asset-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .asset-group h3 {
+    margin: 0 0 0.5rem 0;
+    text-transform: capitalize;
+    font-size: 1rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .asset-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .asset-card {
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--gallery-content-bg, #eeeeee);
+  }
+
+  .asset-card img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    align-self: center;
+    object-fit: contain;
+  }
+
+  .asset-card--icons img {
+    width: min(100px, 100%);
+    height: auto;
+    align-self: center;
+    justify-self: center;
+    object-fit: contain;
+  }
+
+  .asset-card--psd .psd-preview {
+    width: 100%;
+    padding: 1rem;
+    border: 1px dashed var(--content-border-color, #d1d5db);
+    border-radius: 0.5rem;
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--accent-link-hover-text-color, #2563eb);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .asset-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--accent-link-hover-text-color, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .asset-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .copy-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  .filename {
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .url-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .copy-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .copy-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    border-radius: 0.4rem;
+    background: var(--input-bg, #fff);
+    color: var(--muted-text-color, #6b7280);
+    cursor: pointer;
+  }
+
+  .copy-btn:hover {
+    color: var(--league-accent, var(--color-primary, #1c497c));
+    border-color: currentColor;
+  }
+
+  .copy-btn:focus-visible {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    outline-offset: 1px;
+  }
+
+  .copy-btn :global(.icon--check) {
+    display: none;
+  }
+
+  .copy-btn.copied {
+    color: var(--color-success, #16a34a);
+    border-color: currentColor;
+  }
+
+  .copy-btn.copied :global(.icon--copy) {
+    display: none;
+  }
+
+  .copy-btn.copied :global(.icon--check) {
+    display: block;
+  }
+
+  .asset-dimensions {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  input[type="text"] {
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    font-family: var(--font-family-base);
+    font-size: 0.85rem;
+    background: var(--input-bg, #fff);
+    color: var(--input-text, inherit);
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    word-break: break-all;
+    text-overflow: ellipsis;
+  }
+
+  input[type="text"]:focus {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    border-color: transparent;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  @media (max-width: 600px) {
+    .team-card__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

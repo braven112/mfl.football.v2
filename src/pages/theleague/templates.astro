@@ -1,12 +1,12 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import Card from '../../components/Card.astro';
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
 
 ---
 
-<Layout title="MFL.football - Responsive Fantasy League Templates">
-	<main>
+<TheLeagueLayout title="MFL.football - Responsive Fantasy League Templates">
+	<!-- TheLeagueLayout already renders the page's single <main> landmark -->
+	<div>
 		<div class="hero-section">
 			<h1><span class="text-gradient">MFL.football</span></h1>
 			<p class="subtitle">A responsive my fantasy league template from <a href="https://www.mfladdons.com/" target="_blank">MFLaddons</a></p>
@@ -97,8 +97,8 @@ import Card from '../../components/Card.astro';
 			<p>MFL has a <a href="https://forums.myfantasyleague.com/forums/index.php?showtopic=35720" target="_blank">great community forum</a>, someone is usually available to help answer any questions you may have.</p>
 			<p>For template-specific questions and updates, follow <a href="https://twitter.com/MFLaddons" target="_blank">@MFLaddons</a> on Twitter.</p>
 		</section>
-	</main>
-</Layout>
+	</div>
+</TheLeagueLayout>
 
 <style>
 
