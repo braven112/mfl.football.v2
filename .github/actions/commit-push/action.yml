@@ -1,0 +1,90 @@
+name: 'Commit and push data changes'
+description: >
+  Shared "commit if the working tree is dirty, otherwise no-op" step used by
+  data-writing workflows (roster/stats/tier syncs). Scopes the dirty-check
+  and `git add` independently so each caller can preserve its original
+  scoping exactly (some workflows only ever care about specific output
+  files; others treat the whole tree as fair game). Assumes a prior step
+  already ran `actions/checkout` and, if commits need to be pushed with
+  write access, passed `ssh-key: ${{ secrets.DEPLOY_KEY }}` to it.
+inputs:
+  check-paths:
+    description: >
+      Space-separated list of paths/globs to scope the dirty-check
+      (`git status --porcelain -- <paths>`) to. Leave blank for a whole-tree
+      check (bare `git status --porcelain`, no pathspec).
+    required: false
+    default: ''
+  add-paths:
+    description: 'Space-separated list of paths/globs passed to `git add`.'
+    required: true
+  commit-message:
+    description: 'Commit message.'
+    required: true
+  no-changes-message:
+    description: 'Message logged when there is nothing to commit.'
+    required: false
+    default: 'No changes to commit.'
+  git-user-name:
+    description: '`git config user.name` for the commit.'
+    required: false
+    default: 'Actions Bot'
+  git-user-email:
+    description: '`git config user.email` for the commit.'
+    required: false
+    default: 'actions@users.noreply.github.com'
+  pull-rebase:
+    description: >
+      Run `git pull --rebase origin main` after committing and before
+      pushing. Use for branches with concurrent writers (e.g. a 5-minute
+      cron) where a plain push can be rejected as non-fast-forward.
+    required: false
+    default: 'false'
+  push-ref:
+    description: >
+      If set, push via `git push origin HEAD:<push-ref>` instead of a bare
+      `git push` — for workflows that commit back to whatever branch/ref
+      they were launched on rather than always pushing to the checked-out
+      branch's upstream.
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Commit and push
+      shell: bash
+      env:
+        INPUT_CHECK_PATHS: ${{ inputs.check-paths }}
+        INPUT_ADD_PATHS: ${{ inputs.add-paths }}
+        INPUT_MESSAGE: ${{ inputs.commit-message }}
+        INPUT_NO_CHANGES_MESSAGE: ${{ inputs.no-changes-message }}
+        INPUT_USER_NAME: ${{ inputs.git-user-name }}
+        INPUT_USER_EMAIL: ${{ inputs.git-user-email }}
+        INPUT_PULL_REBASE: ${{ inputs.pull-rebase }}
+        INPUT_PUSH_REF: ${{ inputs.push-ref }}
+      run: |
+        if [ -n "$INPUT_CHECK_PATHS" ]; then
+          DIRTY="$(git status --porcelain -- $INPUT_CHECK_PATHS)"
+        else
+          DIRTY="$(git status --porcelain)"
+        fi
+
+        if [ -z "$DIRTY" ]; then
+          echo "$INPUT_NO_CHANGES_MESSAGE"
+          exit 0
+        fi
+
+        git config user.name "$INPUT_USER_NAME"
+        git config user.email "$INPUT_USER_EMAIL"
+        git add $INPUT_ADD_PATHS
+        git commit -m "$INPUT_MESSAGE"
+
+        if [ "$INPUT_PULL_REBASE" = "true" ]; then
+          git pull --rebase origin main
+        fi
+
+        if [ -n "$INPUT_PUSH_REF" ]; then
+          git push origin "HEAD:$INPUT_PUSH_REF"
+        else
+          git push
+        fi

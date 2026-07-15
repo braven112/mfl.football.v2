@@ -22,63 +22,71 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.24.0
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Fetch MFL data (theleague)
+      # Single job, sequential loop over leagues rather than a
+      # strategy.matrix: a matrix would spin up a separate job (and separate
+      # checkout/install) per league, and this workflow ends with ONE shared
+      # commit+push covering every league's output. Two matrix jobs racing to
+      # commit/push at the end of a 5-minute cron is exactly the kind of
+      # non-fast-forward push failure this refactor should avoid introducing
+      # — so the fetch stays one job with a loop. Adding a league is still a
+      # one-entry change: add a "slug:id:hasSalarySync" tuple to LEAGUES
+      # below. hasSalarySync mirrors leagueHasFeature(slug, 'salaryCap') from
+      # the league registry (src/config/leagues-data.mjs) — AFL doesn't have
+      # contracts/salary cap, so its entry is "false" here exactly as the
+      # pre-refactor workflow only ran "Update salary averages" for theleague.
+      - name: Fetch MFL data for all leagues
         env:
-          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
-          MFL_LEAGUE_SLUG: theleague
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
-        run: node ./scripts/fetch-mfl-feeds.mjs --force
+          THELEAGUE_MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
+        run: |
+          LEAGUES=(
+            "theleague:${THELEAGUE_MFL_LEAGUE_ID}:true"
+            "afl:19621:false"
+          )
+          for entry in "${LEAGUES[@]}"; do
+            IFS=':' read -r SLUG ID HAS_SALARY_SYNC <<< "$entry"
 
-      - name: Update salary averages (theleague)
-        env:
-          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
-          MFL_LEAGUE_SLUG: theleague
-        run: node ./scripts/update-salary-averages.mjs
+            echo "::group::Fetch MFL data ($SLUG)"
+            MFL_LEAGUE_ID="$ID" MFL_LEAGUE_SLUG="$SLUG" node ./scripts/fetch-mfl-feeds.mjs --force
+            echo "::endgroup::"
+
+            if [ "$HAS_SALARY_SYNC" = "true" ]; then
+              echo "::group::Update salary averages ($SLUG)"
+              # The pre-loop "Update salary averages" step passed ONLY
+              # MFL_LEAGUE_ID + MFL_LEAGUE_SLUG — no host or credentials —
+              # so the script's MFL export requests went out unauthenticated
+              # (update-salary-averages.mjs appends USERNAME/PASSWORD/APIKEY
+              # query params whenever those env vars are set). Unset the
+              # step-level credential vars here to preserve that behavior
+              # exactly rather than silently switching to authed requests.
+              env -u MFL_HOST -u MFL_USERNAME -u MFL_PASSWORD -u MFL_API_KEY \
+                MFL_LEAGUE_ID="$ID" MFL_LEAGUE_SLUG="$SLUG" node ./scripts/update-salary-averages.mjs
+              echo "::endgroup::"
+            fi
+          done
 
       # Note: draft-pick contract sync runs in its own workflow
       # (sync-draft-pick-contracts.yml), May-only cron, since the rookie
       # draft is the only window that needs it.
 
+      # Moved to run after the per-league loop (was previously sandwiched
+      # between the theleague and afl fetches). fetch-live-odds.mjs pulls
+      # from ESPN's scoreboard API independent of any per-league MFL data,
+      # so this reordering doesn't change what it reads or writes.
       - name: Fetch live NFL odds
         run: node ./scripts/fetch-live-odds.mjs
 
-      - name: Fetch MFL data (afl)
-        env:
-          MFL_LEAGUE_ID: '19621'
-          MFL_LEAGUE_SLUG: afl
-          MFL_HOST: ${{ vars.MFL_HOST }}
-          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
-          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
-          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
-        run: node ./scripts/fetch-mfl-feeds.mjs --force
-
       - name: Commit and push updates
-        run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No roster changes to commit."
-            exit 0
-          fi
-
-          git config user.name "Roster Sync Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/ src/data/
-          git commit -m "chore: sync rosters and playoff data"
-          git pull --rebase origin main
-          git push
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: 'data/ src/data/'
+          commit-message: 'chore: sync rosters and playoff data'
+          no-changes-message: 'No roster changes to commit.'
+          git-user-name: 'Roster Sync Bot'
+          pull-rebase: 'true'

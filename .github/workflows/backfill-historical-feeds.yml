@@ -33,19 +33,8 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.24.0
-
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
 
       - name: Backfill historical feeds
         run: |
@@ -58,17 +47,13 @@ jobs:
       - name: Recompute franchise history
         run: node ./scripts/compute-franchise-history.mjs
 
+      # schefter-feed.json picks up any new milestone posts emitted by
+      # the compute step (Phase 5 — badge crossings auto-post).
       - name: Commit and push
-        run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No new historical data picked up — nothing to commit."
-            exit 0
-          fi
-
-          git config user.name "Historical Feed Backfill Bot"
-          git config user.email "actions@users.noreply.github.com"
-          # schefter-feed.json picks up any new milestone posts emitted by
-          # the compute step (Phase 5 — badge crossings auto-post).
-          git add data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json
-          git commit -m "chore: backfill historical MFL feeds + recompute franchise history"
-          git push origin HEAD:${{ github.ref_name }}
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: 'data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json'
+          commit-message: 'chore: backfill historical MFL feeds + recompute franchise history'
+          no-changes-message: 'No new historical data picked up — nothing to commit.'
+          git-user-name: 'Historical Feed Backfill Bot'
+          push-ref: ${{ github.ref_name }}
