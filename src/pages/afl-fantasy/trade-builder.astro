@@ -50,6 +50,11 @@ const tradeBaitByFranchiseData = getModuleData(
   tradeBaitByFranchiseFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait-by-franchise.json`]
 );
 
+// Auth — must be an AFL owner
+const authUser = getAuthUser(Astro.request);
+const isAflOwner =
+  !!authUser && authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id && !!authUser.franchiseId;
+
 // Players owners have flagged on MFL's trade bait ("trade block"). Prefer the
 // franchise-attributed shape: AFL's two conferences roster the same NFL player
 // pool, so a flat id set would flag the player on BOTH teams that roster him
@@ -60,13 +65,19 @@ const tradeBaitByFranchiseData = getModuleData(
 //      in place by /api/trade-bait) — committed feeds only refresh on the
 //      next data-sync commit + redeploy, so without this a flag added on
 //      MFL (or through our own rosters page) wouldn't appear until then.
+//      The viewer's own MFL cookie authenticates the fetch: AFL's tradeBait
+//      export is owner-gated and this deployment has no server MFL creds.
 //   2. Committed tradeBait-by-franchise.json
 //   3. Committed flat tradeBait.json (no attribution — pre-migration data)
 const aflLeague = getLeagueBySlug('afl-fantasy');
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
 const liveTradeBait =
   aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
-    ? await getCachedTradeBait(String(selectedYear), aflLeague.id)
+    ? await getCachedTradeBait(
+        String(selectedYear),
+        aflLeague.id,
+        isAflOwner && authUser?.id ? authUser.id : undefined
+      )
     : null;
 const tradeBlockByFranchise = liveTradeBait
   ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
@@ -76,11 +87,6 @@ const isOnBlockFor = (franchiseId: string, playerId: string): boolean =>
   tradeBlockByFranchise
     ? (tradeBlockByFranchise.get(franchiseId)?.has(playerId) ?? false)
     : tradeBlockIds.has(playerId);
-
-// Auth — must be an AFL owner
-const authUser = getAuthUser(Astro.request);
-const isAflOwner =
-  !!authUser && authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id && !!authUser.franchiseId;
 
 const allTeams = getAllTeams();
 

@@ -182,14 +182,9 @@ for (const p of playersData.players.player as any[]) {
 // parser (which handles both the flat-array cache shape and the raw MFL
 // export shape; the inline raw-only parse this replaces silently dropped
 // badges on reload once the flat cache was written). Resolved into a
-// per-team set below, once selectedFranchiseId is known.
-const liveTradeBait =
-  aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
-    ? await getCachedTradeBait(String(selectedYear), aflLeague.id)
-    : null;
-const tradeBaitByFranchise = liveTradeBait
-  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
-  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
+// per-team set below, once selectedFranchiseId is known. The live fetch
+// happens after auth resolution — AFL's tradeBait export is owner-gated
+// and the viewer's own MFL cookie is the auth source.
 const flatTradeBaitIds = parseTradeBaitPlayerIds(tradeBaitData);
 
 // Auth + selected franchise resolution: query param > cookie > authUser > first AL team
@@ -230,6 +225,17 @@ const isOwner =
   authUser.franchiseId === selectedTeam.franchiseId;
 
 // Trade bait badges for the selected team (per-franchise cache wins)
+const liveTradeBait =
+  aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
+    ? await getCachedTradeBait(
+        String(selectedYear),
+        aflLeague.id,
+        authUser?.leagueId === '19621' && authUser.id ? authUser.id : undefined
+      )
+    : null;
+const tradeBaitByFranchise = liveTradeBait
+  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
+  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
 const tradeBaitSet = tradeBaitByFranchise
   ? (tradeBaitByFranchise.get(selectedFranchiseId) ?? new Set<string>())
   : flatTradeBaitIds;

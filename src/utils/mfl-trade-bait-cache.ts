@@ -100,10 +100,20 @@ const refreshing = new Map<string, Promise<TradeBaitFranchiseMap | null>>();
  * Get the per-franchise trade bait map from Redis cache (fresh < 2 min),
  * refreshing synchronously from MFL when stale or missing.
  * Returns null when Redis is unavailable (caller falls back to committed feeds).
+ *
+ * `viewerMflCookie` is the logged-in viewer's own MFL_USER_ID cookie
+ * (authUser.id). MFL's tradeBait export is owner-gated for private leagues
+ * (AFL) and this deployment has no server-level MFL credentials, so the
+ * viewer's cookie is usually the ONLY auth available. League members all
+ * see the same trade block, so caching a member-fetched result globally
+ * leaks nothing. Without any auth source, no MFL fetch is attempted at
+ * all — an unauthenticated request "succeeds" with an empty payload,
+ * which must never overwrite real data in the cache.
  */
 export async function getCachedTradeBait(
   season: string,
-  leagueId: string
+  leagueId: string,
+  viewerMflCookie?: string
 ): Promise<TradeBaitFranchiseMap | null> {
   const redis = await getRedis();
   if (!redis) return null;
@@ -114,14 +124,14 @@ export async function getCachedTradeBait(
 
     if (!cached?.franchises) {
       console.log(`[mfl-trade-bait-cache] Cache miss for ${key}, fetching synchronously`);
-      return await deduplicatedFetch(season, leagueId);
+      return await deduplicatedFetch(season, leagueId, viewerMflCookie);
     }
 
     // !(fresh) so a missing/corrupt fetchedAt (NaN age) refreshes too.
     const age = Date.now() - cached.fetchedAt;
     if (!(age <= STALE_TTL_MS)) {
       console.log(`[mfl-trade-bait-cache] Stale data for ${key} (age: ${Math.round(age / 1000)}s), refreshing synchronously`);
-      const fresh = await deduplicatedFetch(season, leagueId);
+      const fresh = await deduplicatedFetch(season, leagueId, viewerMflCookie);
       return fresh ?? cached.franchises; // Fall back to stale data if refresh fails
     }
 
@@ -134,14 +144,15 @@ export async function getCachedTradeBait(
 
 async function deduplicatedFetch(
   season: string,
-  leagueId: string
+  leagueId: string,
+  viewerMflCookie?: string
 ): Promise<TradeBaitFranchiseMap | null> {
   const key = cacheKey(leagueId, season);
 
   const existing = refreshing.get(key);
   if (existing) return existing;
 
-  const promise = fetchAndCacheTradeBait(season, leagueId)
+  const promise = fetchAndCacheTradeBait(season, leagueId, viewerMflCookie)
     .then((franchises) => franchises)
     .catch((err) => {
       console.warn('[mfl-trade-bait-cache] Fetch failed:', err);
@@ -178,23 +189,29 @@ export async function overwriteTradeBaitCache(
 
 async function fetchAndCacheTradeBait(
   season: string,
-  leagueId: string
+  leagueId: string,
+  viewerMflCookie?: string
 ): Promise<TradeBaitFranchiseMap> {
   const fetchStartedAt = Date.now();
 
   // Unlike the rosters export, MFL's tradeBait export is owner-gated for
   // private leagues (AFL): an unauthenticated request returns 200 with an
-  // EMPTY payload, not an error. Authenticate with whatever the server has —
-  // the league APIKEY travels as a URL param (survives redirects), and the
-  // server MFL_USER_ID cookie goes through mflFetch, which re-attaches the
-  // Cookie header across MFL's api→www## redirect (plain fetch drops it).
+  // EMPTY payload, not an error. Authenticate with whatever is available —
+  // the league APIKEY travels as a URL param (survives redirects), and an
+  // MFL_USER_ID cookie (server-level env, else the viewer's own) goes
+  // through mflFetch, which re-attaches the Cookie header across MFL's
+  // api→www## redirect (plain fetch drops it).
   const apiKey = process.env.MFL_APIKEY || process.env.MFL_API_KEY;
   let url = `https://api.myfantasyleague.com/${season}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
   if (apiKey) url += `&APIKEY=${encodeURIComponent(apiKey)}`;
 
-  const serverCookie = process.env.MFL_USER_ID;
-  const response = serverCookie
-    ? await mflFetch({ url, method: 'GET', mflUserCookie: serverCookie })
+  const cookie = process.env.MFL_USER_ID || viewerMflCookie;
+  if (!cookie && !apiKey) {
+    // No auth at all: the export would "succeed" empty and poison the cache.
+    throw new Error('no MFL auth available (set MFL_APIKEY/MFL_USER_ID, or pass the viewer cookie)');
+  }
+  const response = cookie
+    ? await mflFetch({ url, method: 'GET', mflUserCookie: cookie })
     : await fetch(url, {
         headers: { 'User-Agent': 'MFLFootball/2.0' },
         signal: AbortSignal.timeout(10_000),
@@ -208,10 +225,10 @@ async function fetchAndCacheTradeBait(
   const franchises = parseRawExport(data);
   if (Object.keys(franchises).length === 0) {
     // Keep the raw payload visible in logs — "empty" can mean nobody has
-    // flagged anyone, but it can also mean MFL answered the unauthenticated
-    // shape. The snippet makes the two distinguishable after the fact.
+    // flagged anyone, but it can also mean MFL didn't honor our auth. The
+    // snippet makes the two distinguishable after the fact.
     console.log(
-      `[mfl-trade-bait-cache] Export returned no franchises (${leagueId}/${season}, auth: ${serverCookie ? 'cookie' : apiKey ? 'apikey' : 'none'}) — raw: ${JSON.stringify(data).slice(0, 300)}`
+      `[mfl-trade-bait-cache] Export returned no franchises (${leagueId}/${season}, auth: ${process.env.MFL_USER_ID ? 'env-cookie' : viewerMflCookie ? 'viewer-cookie' : 'apikey'}) — raw: ${JSON.stringify(data).slice(0, 300)}`
     );
   }
 
