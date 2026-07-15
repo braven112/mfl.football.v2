@@ -43,6 +43,12 @@ jobs:
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+          # fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID (no
+          # registry fallback — see scripts/fetch-mfl-feeds.mjs), so the ids
+          # below are literals by necessity: workflow YAML can't import
+          # src/config/leagues-data.mjs. Keep both in sync with LEAGUES.*.id
+          # there. vars.MFL_LEAGUE_ID overrides theleague's id only — AFL has
+          # no vars.* override today since it hasn't needed one.
           THELEAGUE_MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
         run: |
           LEAGUES=(

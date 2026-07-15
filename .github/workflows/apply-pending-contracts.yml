@@ -46,7 +46,11 @@ jobs:
 
       - name: Apply pending contract declarations
         env:
-          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
+          # No hardcoded fallback needed: apply-pending-contracts.mjs already
+          # falls back to the registry's DEFAULT_LEAGUE_ID
+          # (src/config/leagues-data.mjs) when this is unset/empty. Set
+          # vars.MFL_LEAGUE_ID only to override for a non-default league.
+          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID }}
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
