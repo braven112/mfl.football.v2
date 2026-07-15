@@ -44,6 +44,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -109,8 +110,6 @@ function bracketNameToSlug(name) {
   if (/^afl cup final/.test(n)) return 'afl-cup';
   return null;
 }
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const log = (m) => console.log(`[afl-awards] ${m}`);
 const warn = (m) => console.warn(`[afl-awards] WARN: ${m}`);
@@ -178,23 +177,23 @@ async function isGenuineAfl(leagueJson) {
 
 // --- Online fetch --------------------------------------------------------------
 
-const UA = { 'User-Agent': 'mfl.football.v2 awards (+https://github.com/braven112/mfl.football.v2)' };
+const UA = 'mfl.football.v2 awards (+https://github.com/braven112/mfl.football.v2)';
 
-async function fetchExport(year, type, extra = '') {
+// Politeness + 429 backoff — MFL rate-limits rapid bursts. Retry a 429 a
+// couple times with escalating waits before giving up to the caller.
+// (sleepMs is multiplied per attempt by the shared helper, matching the
+// original 1400 * (attempt + 1) escalation.)
+function fetchExport(year, type, extra = '') {
   const { host, leagueId } = hostFor(year);
-  const url = `https://${host}.myfantasyleague.com/${year}/export?TYPE=${type}&L=${leagueId}&JSON=1${extra}`;
-  // Politeness + 429 backoff — MFL rate-limits rapid bursts. Retry a 429 a
-  // couple times with escalating waits before giving up to the caller.
-  for (let attempt = 0; ; attempt++) {
-    await sleep(1400 * (attempt + 1));
-    const res = await fetch(url, { headers: UA });
-    if (res.ok) return res.json();
-    if (res.status === 429 && attempt < 2) {
-      warn(`${url} → 429, retrying (attempt ${attempt + 2})`);
-      continue;
-    }
-    throw new Error(`${url} → ${res.status}`);
-  }
+  return sharedFetchExport(
+    { host, leagueId, year, type, extra },
+    {
+      userAgent: UA,
+      retries: 2,
+      sleepMs: 1400,
+      onRetry: (url, attempt) => warn(`${url} → 429, retrying (attempt ${attempt + 2})`),
+    },
+  );
 }
 
 // --- Per-year sources (local-if-genuine, else online) --------------------------

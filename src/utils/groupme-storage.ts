@@ -8,22 +8,7 @@
 
 import type { GroupMeMessage } from '../types/groupme';
 import type { SchefterPost } from '../types/schefter';
-
-type RedisClient = {
-  zadd: (key: string, ...args: unknown[]) => Promise<number>;
-  zrange: <T>(key: string, min: number, max: number, opts?: { rev?: boolean }) => Promise<T[]>;
-  zrangebyscore: <T>(key: string, min: number | string, max: number | string, opts?: { offset?: number; count?: number }) => Promise<T[]>;
-  zrevrangebyscore: <T>(key: string, max: number | string, min: number | string, opts?: { offset?: number; count?: number }) => Promise<T[]>;
-  zremrangebyrank: (key: string, start: number, stop: number) => Promise<number>;
-  zcard: (key: string) => Promise<number>;
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown, opts?: { ex?: number }) => Promise<string>;
-  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
-  hget: <T>(key: string, field: string) => Promise<T | null>;
-  incr: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<unknown>;
-  del: (key: string) => Promise<number>;
-};
+import { getRedis } from './redis-client';
 
 const KEYS = {
   messages: 'groupme:messages',
@@ -36,33 +21,6 @@ const KEYS = {
 } as const;
 
 const MAX_MESSAGES = 500;
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  // Log which Redis source is being used (debug — remove after confirming new Upstash works)
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
-  const kvUrl = process.env.KV_REST_API_URL;
-  console.log(`[groupme-storage] Redis: UPSTASH=${!!upstashUrl} (${upstashUrl?.substring(0, 30) ?? 'none'}), KV=${!!kvUrl} (${kvUrl?.substring(0, 30) ?? 'none'})`);
-  const url = upstashUrl || kvUrl || process.env.STORAGE_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[groupme-storage] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 /** Store messages in the sorted set, scored by createdAt timestamp */
 export async function storeMessages(messages: GroupMeMessage[]): Promise<number> {

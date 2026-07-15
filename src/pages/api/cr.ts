@@ -11,31 +11,8 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import type { CustomRankingsState } from '../../types/custom-rankings';
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown) => Promise<unknown>;
-};
-
-let loggedMissingRedisModule = false;
-
-async function getRedis(): Promise<RedisClient | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token });
-  } catch (error) {
-    // Local/dev fallback: do not crash route if Redis package is unavailable.
-    if (!loggedMissingRedisModule) {
-      loggedMissingRedisModule = true;
-      console.warn('Custom rankings KV unavailable: @upstash/redis is not installed.', error);
-    }
-    return null;
-  }
-}
+import { getRedis } from '../../utils/redis-client';
+import { unauthorized } from '../../utils/api-response';
 
 function makeKey(franchiseId: string): string {
   return `cr:${franchiseId}`;
@@ -44,10 +21,7 @@ function makeKey(franchiseId: string): string {
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return unauthorized({ error: 'Unauthorized' });
   }
 
   const redis = await getRedis();
@@ -76,10 +50,7 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user || !isCommissionerOrAdmin(user)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return unauthorized({ error: 'Unauthorized' });
   }
 
   const redis = await getRedis();

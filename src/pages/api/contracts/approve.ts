@@ -13,8 +13,7 @@ import { getDeclarationById, updateDeclaration } from '../../../utils/contract-s
 import { writeContractToMFL } from '../../../utils/mfl-contract-writer';
 import { invalidateRosterCache } from '../../../utils/mfl-roster-cache';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
+import { JSON_HEADERS } from '../../../utils/api-response';
 
 interface ApproveRequestBody {
   declarationId: string;

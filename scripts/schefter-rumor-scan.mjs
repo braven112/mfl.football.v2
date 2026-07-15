@@ -124,6 +124,14 @@ import {
   recordTeamNaming,
 } from './lib/schefter-team-naming.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
+import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import {
+  getPtHour,
+  getPtDateString,
+  secondsUntilPtMidnight,
+  isFridayPt,
+} from './lib/pt-date.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -449,28 +457,20 @@ function warn(...args) {
   console.warn(...args);
 }
 
-// ── Redis (Upstash) ──
+// ── Redis (Upstash) — getRedisConfig/createUpstashClient now shared, see scripts/lib/redis.mjs ──
 
 let _redis;
 
 async function getRedis() {
   if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
+  const config = getRedisConfig();
+  if (!config) {
     warn('[rumor-scan] Redis credentials not set — exiting');
     _redis = null;
     return null;
   }
   try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token });
+    _redis = await createUpstashClient(config);
     return _redis;
   } catch (err) {
     warn(`[rumor-scan] Redis import failed: ${err.message}`);
@@ -479,17 +479,7 @@ async function getRedis() {
   }
 }
 
-// ── Time helpers (Pacific Time) ──
-
-function getPtHour(now = new Date()) {
-  // Use Intl to get the hour in America/Los_Angeles regardless of server tz
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    hour: 'numeric',
-    hour12: false,
-  });
-  return parseInt(fmt.format(now), 10);
-}
+// ── Time helpers (Pacific Time) — getPtHour/getPtDateString/secondsUntilPtMidnight/isFridayPt now shared, see scripts/lib/pt-date.mjs ──
 
 function isQuietHours(now = new Date()) {
   const h = getPtHour(now);
@@ -507,35 +497,6 @@ function isMorningGreetingWindow(now = new Date()) {
   const h = getPtHour(now);
   // morning greeting: 07:00 (inclusive) through 10:59 PT
   return h >= QUIET_HOUR_END && h < MORNING_GREETING_END_HOUR;
-}
-
-function getPtDateString(now = new Date()) {
-  // YYYY-MM-DD in America/Los_Angeles
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  return fmt.format(now);
-}
-
-function secondsUntilPtMidnight(now = new Date()) {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: false,
-  });
-  const parts = Object.fromEntries(
-    fmt.formatToParts(now).filter((p) => p.type !== 'literal').map((p) => [p.type, p.value]),
-  );
-  const h = parseInt(parts.hour, 10);
-  const m = parseInt(parts.minute, 10);
-  const s = parseInt(parts.second, 10);
-  const elapsedSecToday = h * 3600 + m * 60 + s;
-  return 24 * 3600 - elapsedSecToday;
 }
 
 // ── File helpers ──
@@ -660,26 +621,24 @@ async function flushGroupMeSuppressions() {
   }
 }
 
+// Wraps the shared postToGroupMe() (scripts/lib/groupme.mjs). The missing-bot-id
+// check happens here, BEFORE the dry-run check, to preserve the original branch
+// order — if both are true, the original warned about the missing bot id rather
+// than logging the dry-run preview.
 async function postToGroupMe(text) {
   const botId = process.env.GROUPME_SCHEFTER_BOT_ID;
   if (!botId) {
     warn('[rumor-scan] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe (Roger is reserved for deadlines)');
     return;
   }
-  if (DRY_RUN) {
-    log(`  [dry-run] Would post to GroupMe:\n${text}`);
-    return;
-  }
-  try {
-    await fetch('https://api.groupme.com/v3/bots/post', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bot_id: botId, text }),
-    });
-    log('  [GroupMe] Posted');
-  } catch (err) {
-    warn(`  [GroupMe] Failed: ${err.message}`);
-  }
+  await sharedPostToGroupMe({
+    botId,
+    text,
+    dryRun: DRY_RUN,
+    onDryRun: () => log(`  [dry-run] Would post to GroupMe:\n${text}`),
+    onPosted: () => log('  [GroupMe] Posted'),
+    onFetchError: (err) => warn(`  [GroupMe] Failed: ${err.message}`),
+  });
 }
 
 // ── Tip anonymization ──
@@ -1116,14 +1075,9 @@ function computeAdaptiveGossipCap(freshTips, now = new Date()) {
  * that sweeps all non-trade tips still in the queue — so nothing expires
  * silently even on a slow week. Runs after the marinate gate passes and
  * before the normal bucket pick.
+ *
+ * isFridayPt now shared — see scripts/lib/pt-date.mjs.
  */
-function isFridayPt(now = new Date()) {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    weekday: 'short',
-  });
-  return fmt.format(now) === 'Fri';
-}
 
 // ── Post generation ──
 

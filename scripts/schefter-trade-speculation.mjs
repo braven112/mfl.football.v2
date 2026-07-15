@@ -67,6 +67,8 @@ import {
   RUMOR_LAST_POST_TS_KEY,
 } from './lib/speculation-budget.mjs';
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
+import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -96,37 +98,13 @@ const SPECULATION_SUB_TYPE = 'trade_speculation';
 const log = (...args) => console.log(...args);
 const warn = (...args) => console.warn(...args);
 
-// ── Time helpers (mirror rumor-scan) ──
-
-function getPtHour(now = new Date()) {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    hour: 'numeric',
-    hour12: false,
-  });
-  return parseInt(fmt.format(now), 10);
-}
+// ── Time helpers (getPtHour/secondsUntilPtMidnight now shared with
+// rumor-scan via scripts/lib/pt-date.mjs; the quiet-hours window stays
+// local since its 23:00–07:00 constants are this scanner's policy) ──
 
 function isQuietHours(now = new Date()) {
   const h = getPtHour(now);
   return h >= 23 || h < 7;
-}
-
-function secondsUntilPtMidnight(now = new Date()) {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: false,
-  });
-  const parts = Object.fromEntries(
-    fmt.formatToParts(now).filter((p) => p.type !== 'literal').map((p) => [p.type, p.value]),
-  );
-  const h = parseInt(parts.hour, 10);
-  const m = parseInt(parts.minute, 10);
-  const s = parseInt(parts.second, 10);
-  return 24 * 3600 - (h * 3600 + m * 60 + s);
 }
 
 // ── Redis ──
@@ -141,15 +119,8 @@ function secondsUntilPtMidnight(now = new Date()) {
 let _redis;
 async function getRedis({ required }) {
   if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
+  const config = getRedisConfig();
+  if (!config) {
     if (required) {
       throw new Error(
         '[speculation] Redis credentials missing (UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN). ' +
@@ -161,8 +132,7 @@ async function getRedis({ required }) {
     return null;
   }
   try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token });
+    _redis = await createUpstashClient(config);
     return _redis;
   } catch (err) {
     if (required) {

@@ -8,8 +8,9 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { JSON_HEADERS } from '../../../utils/api-response';
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const MFL_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || '13522';
 const MFL_USER_ID = process.env.MFL_USER_ID || '';
@@ -39,7 +40,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     const year = new Date().getFullYear();
-    const url = `${MFL_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
+    const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_HOST });
 
     const response = await fetch(url, {
       headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},

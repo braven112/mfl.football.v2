@@ -44,11 +44,10 @@ import {
   buildGroupMeText,
   validateAnnounceInput,
 } from '../src/utils/schefter-announce-core.mjs';
+import { postToGroupMe } from './lib/groupme.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-
-const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
 /**
  * Side-effect config per league: the committed feed path + the GroupMe bot-id
@@ -93,34 +92,22 @@ function truthy(v, fallback = false) {
 }
 
 async function sendGroupMe(target, text, { dryRun, log, warn }) {
-  if (dryRun) {
-    log(`  [dry-run] Would POST to GroupMe (${target.navSlug}):\n${text}\n`);
-    return { posted: false, reason: 'dry-run' };
-  }
-  if (!target.botId) {
-    // Roger is reserved for deadlines — never a Schefter fallback.
-    warn(
-      `  [${target.navSlug}] Schefter GroupMe bot id not set — skipping GroupMe (feed post still written)`,
-    );
-    return { posted: false, reason: 'no-bot-id' };
-  }
-  try {
-    const res = await fetch(GROUPME_POST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bot_id: target.botId, text }),
-    });
-    const status = typeof res?.status === 'number' ? res.status : 0;
-    if (status >= 200 && status < 300) {
-      log(`  [${target.navSlug}] Posted announcement to GroupMe`);
-      return { posted: true };
-    }
-    warn(`  [${target.navSlug}] GroupMe post failed: HTTP ${status}`);
-    return { posted: false, reason: `http-${status}` };
-  } catch (err) {
-    warn(`  [${target.navSlug}] GroupMe post error: ${err?.message ?? err}`);
-    return { posted: false, reason: 'fetch-error' };
-  }
+  // Roger is reserved for deadlines — never a Schefter fallback (the shared
+  // helper's no-bot-id short-circuit preserves that).
+  return postToGroupMe({
+    botId: target.botId,
+    text,
+    dryRun,
+    checkStatus: true,
+    onDryRun: () => log(`  [dry-run] Would POST to GroupMe (${target.navSlug}):\n${text}\n`),
+    onMissingBotId: () =>
+      warn(
+        `  [${target.navSlug}] Schefter GroupMe bot id not set — skipping GroupMe (feed post still written)`,
+      ),
+    onPosted: () => log(`  [${target.navSlug}] Posted announcement to GroupMe`),
+    onHttpError: (status) => warn(`  [${target.navSlug}] GroupMe post failed: HTTP ${status}`),
+    onFetchError: (err) => warn(`  [${target.navSlug}] GroupMe post error: ${err?.message ?? err}`),
+  });
 }
 
 async function main() {

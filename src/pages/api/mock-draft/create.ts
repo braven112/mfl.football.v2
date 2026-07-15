@@ -21,6 +21,8 @@ import {
   formatMflName,
 } from '../../../utils/player-name-matching';
 import { isDraftablePosition } from '../../../utils/build-draft-players';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { buildMflExportUrl } from '../../../utils/mfl-url';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
@@ -31,8 +33,6 @@ const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'random',
 ];
 const RANKING_SOURCE_SET = new Set<MockRankingSource>(ALL_RANKING_SOURCES);
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 /** Generate a short unique ID (no external deps) */
 function generateId(): string {
@@ -247,8 +247,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // MFL rookie ADP (live, pre-draft cutoff 3)
     try {
-      const mflHost = `https://www55.myfantasyleague.com/${leagueYearStr}`;
-      const adpUrl = `${mflHost}/export?TYPE=adp&L=${leagueId}&FCOUNT=12&IS_PPR=3&IS_KEEPER=3&IS_MOCK=0&CUTOFF=3&ROOKIES=1&JSON=1`;
+      const adpUrl = buildMflExportUrl({
+        type: 'adp',
+        leagueId,
+        year: leagueYearStr,
+        host: 'https://www55.myfantasyleague.com',
+        params: { FCOUNT: 12, IS_PPR: 3, IS_KEEPER: 3, IS_MOCK: 0, CUTOFF: 3, ROOKIES: 1 },
+      });
       const adpRes = await fetch(adpUrl, { signal: AbortSignal.timeout(5000) });
       if (adpRes.ok) {
         const adpData = await adpRes.json();

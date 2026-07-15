@@ -13,17 +13,7 @@
  */
 
 import type { Idea, Comment } from '../types/suggestions';
-
-type RedisClient = {
-  hget: <T>(key: string, field: string) => Promise<T | null>;
-  hgetall: <T>(key: string) => Promise<Record<string, T> | null>;
-  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
-  hdel: (key: string, ...fields: string[]) => Promise<number>;
-  zadd: (key: string, ...args: unknown[]) => Promise<number>;
-  zrangebyscore: (key: string, min: number | string, max: number | string) => Promise<string[]>;
-  incr: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<unknown>;
-};
+import { getRedis } from './redis-client';
 
 const KEYS = {
   ideas: 'sb:ideas',
@@ -32,29 +22,6 @@ const KEYS = {
   lastSeen: 'sb:last-seen',
   ratePrefix: 'sb:rate:',
 } as const;
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[suggestions] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 export function generateId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;

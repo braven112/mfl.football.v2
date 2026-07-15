@@ -18,45 +18,13 @@
 import type { APIRoute } from 'astro';
 import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed } from '../../../types/schefter';
+import { getRedis } from '../../../utils/redis-client';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
 
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
-
 const IMPRESSION_KEY_PREFIX = 'schefter:rumor:impressions:';
 const IMPRESSION_TTL_SEC = 30 * 24 * 60 * 60;
-
-type RedisClient = {
-  incr: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<unknown>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[rumor-impression] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });

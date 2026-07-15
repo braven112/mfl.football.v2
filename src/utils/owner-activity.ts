@@ -7,38 +7,9 @@
  * Reusable across: activity page, roster headers, trade builder, league summary.
  */
 
+import { getRedis } from './redis-client';
+
 export type ActivityLevel = 'active' | 'idle' | 'dormant' | 'unknown';
-
-type RedisClient = {
-	hgetall: <T = Record<string, string>>(key: string) => Promise<T | null>;
-	hset: (key: string, data: Record<string, unknown>) => Promise<unknown>;
-	hincrby: (key: string, field: string, increment: number) => Promise<number>;
-	expire: (key: string, seconds: number) => Promise<unknown>;
-	eval: <T = unknown>(script: string, keys: string[], args: (string | number)[]) => Promise<T>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-export async function getRedis(): Promise<RedisClient | null> {
-	if (_redis !== undefined) return _redis;
-
-	const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-	const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-	if (!url || !token) {
-		_redis = null;
-		return null;
-	}
-
-	try {
-		const { Redis } = await import('@upstash/redis');
-		_redis = new Redis({ url, token }) as unknown as RedisClient;
-		return _redis;
-	} catch (err) {
-		console.warn('[owner-activity] Redis unavailable:', err);
-		_redis = null;
-		return null;
-	}
-}
 
 function redisKey(leagueId: string): string {
 	return `activity:${leagueId}`;
@@ -119,7 +90,7 @@ export async function getAllActivity(leagueId: string): Promise<Record<string, n
 	const redis = await getRedis();
 	if (!redis) return {};
 
-	const raw = await redis.hgetall<Record<string, string>>(redisKey(leagueId));
+	const raw = await redis.hgetall<string>(redisKey(leagueId));
 	if (!raw) return {};
 
 	const result: Record<string, number> = {};
@@ -217,7 +188,7 @@ export async function getDailyPageViews(
 	}
 
 	const results = await Promise.all(
-		dates.map((d) => redis.hgetall<Record<string, string>>(pageviewKey(leagueId, d))),
+		dates.map((d) => redis.hgetall<string>(pageviewKey(leagueId, d))),
 	);
 
 	const data: Record<string, Record<string, number>> = {};
@@ -251,7 +222,7 @@ export async function getGlobalPagePopularity(
 ): Promise<{ page: string; count: number }[]> {
 	const redis = await getRedis();
 	if (!redis) return [];
-	const raw = await redis.hgetall<Record<string, string>>(globalPageKey(leagueId));
+	const raw = await redis.hgetall<string>(globalPageKey(leagueId));
 	return parsePageCounts(raw);
 }
 
@@ -262,7 +233,7 @@ export async function getOwnerPagePopularity(
 ): Promise<{ page: string; count: number }[]> {
 	const redis = await getRedis();
 	if (!redis) return [];
-	const raw = await redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, franchiseId));
+	const raw = await redis.hgetall<string>(ownerPageKey(leagueId, franchiseId));
 	return parsePageCounts(raw);
 }
 
@@ -274,7 +245,7 @@ export async function getAllOwnerPagePopularity(
 	const redis = await getRedis();
 	if (!redis) return {};
 	const results = await Promise.all(
-		franchiseIds.map((id) => redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, id))),
+		franchiseIds.map((id) => redis.hgetall<string>(ownerPageKey(leagueId, id))),
 	);
 	const out: Record<string, { page: string; count: number }[]> = {};
 	for (let i = 0; i < franchiseIds.length; i++) {

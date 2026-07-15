@@ -20,8 +20,7 @@ import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import fs from 'node:fs';
 import path from 'node:path';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
+import { JSON_HEADERS } from '../../utils/api-response';
 
 interface TradeBaitRequestBody {
   playerId: string;

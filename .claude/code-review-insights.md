@@ -613,3 +613,36 @@ Adding a `favicon-dark.svg` asset without a `<link rel="icon" media="(prefers-co
 const AFL_THEME_COLOR = '#002244';
 // then: content={AFL_THEME_COLOR}
 ```
+
+## Phase 1 shared-infra extraction (July 2026)
+
+### Canonical shared modules — use these, don't re-inline
+
+- **`src/utils/redis-client.ts`** — `getRedis()` + `RedisClient` superset
+  type. Never write an inline `new Redis({url, token})` block in app code
+  again; the triple env fallback (UPSTASH → KV → STORAGE) lives here.
+- **`src/utils/api-response.ts`** — `JSON_HEADERS`, `JSON_HEADERS_NO_STORE`,
+  `json()`, `unauthorized()`, `requireAuth()`. When migrating a route,
+  match its original cache-control exactly (`JSON_HEADERS_NO_STORE as
+  JSON_HEADERS` alias keeps diffs minimal).
+- **`src/utils/mfl-url.ts`** — `buildMflExportUrl()`. Only for `/export`
+  URLs; `/import` (write) URLs stay hand-built. Note it always sets `L=`,
+  so a no-league URL (login flow's `TYPE=myleagues`) cannot use it.
+- **`scripts/lib/{redis,mfl-api,fetch-retry,groupme,pt-date,env}.mjs`** —
+  node-script equivalents. `mfl-api.mjs#fetchExport` takes options
+  (retries/sleepMs/userAgent/onFetch/formatError) so each caller keeps its
+  original politeness/backoff behavior.
+
+### Source-grep invariant tests break on extraction
+
+Several tests pin invariants by regexing script source
+(`tests/schefter-rumor-topic-focus.test.ts`, `tests/schefter-quiet-day.test.ts`).
+Moving a function to `scripts/lib/` breaks the regex even when behavior is
+identical — update the test to assert the import + the shared module's
+source, mirroring the existing pattern for `schefter-bucket-logic.mjs`.
+
+### Worktree + background agents: commit early, commit often
+
+A background agent running `git stash`/`reset` in the same worktree can
+wipe sibling uncommitted work. Land shared-module scaffolding as its own
+commit before fanning out call-site migrations.

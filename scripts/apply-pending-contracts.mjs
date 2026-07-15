@@ -32,38 +32,11 @@
  *                                   STORAGE_REST_API_URL/TOKEN) required
  */
 
+import { getRedisConfig, redisCommand } from './lib/redis.mjs';
+import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
+
 const REDIS_KEY = 'contract-declarations';
-const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
-
-// ── Redis (raw REST, no @upstash/redis dependency needed) ─────────────────
-
-function getRedisConfig() {
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) return null;
-  return { url, token };
-}
-
-async function redisCommand(redis, body) {
-  const res = await fetch(redis.url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${redis.token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Redis command failed: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  return data.result;
-}
 
 async function getAllDeclarations(redis) {
   const result = await redisCommand(redis, ['HGETALL', REDIS_KEY]);
@@ -83,113 +56,7 @@ async function saveDeclaration(redis, declaration) {
   await redisCommand(redis, ['HSET', REDIS_KEY, declaration.id, JSON.stringify(declaration)]);
 }
 
-// ── MFL auth + write (mirrors scripts/sync-draft-pick-contracts.mjs) ──────
-
-async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs = 10_000 }) {
-  let currentUrl = url;
-  let currentMethod = method;
-  let currentBody = body;
-  const cookieHeader = Object.entries(cookies)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}=${v}`)
-    .join('; ');
-
-  for (let hop = 0; hop <= 3; hop++) {
-    const headers = { Cookie: cookieHeader };
-    if (currentMethod === 'POST' && currentBody) {
-      headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    }
-    const res = await fetch(currentUrl, {
-      method: currentMethod,
-      headers,
-      body: currentMethod === 'POST' ? currentBody : undefined,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (res.status < 300 || res.status >= 400) return res;
-    const location = res.headers.get('location');
-    if (!location) return res;
-    currentUrl = location.startsWith('http') ? location : new URL(location, currentUrl).href;
-    if (res.status === 302 || res.status === 303) {
-      if (currentMethod === 'POST' && currentBody) {
-        const sep = currentUrl.includes('?') ? '&' : '?';
-        currentUrl = `${currentUrl}${sep}${currentBody}`;
-      }
-      currentMethod = 'GET';
-      currentBody = undefined;
-    }
-  }
-  throw new Error(`mflFetch exceeded redirect limit for ${url}`);
-}
-
-async function loginToMFL(username, password) {
-  const year = new Date().getFullYear();
-  const loginUrl = `https://api.myfantasyleague.com/${year}/login`;
-  const params = new URLSearchParams({ USERNAME: username, PASSWORD: password, XML: '1' });
-
-  const allSetCookies = [];
-  let url = loginUrl;
-  let method = 'POST';
-  let body = params.toString();
-  let finalText = '';
-
-  for (let hop = 0; hop <= 3; hop++) {
-    const headers = method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {};
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: method === 'POST' ? body : undefined,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(8000),
-    });
-    const hopCookies = res.headers.getSetCookie?.() ?? [];
-    allSetCookies.push(...hopCookies);
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) {
-        finalText = await res.text();
-        break;
-      }
-      url = location.startsWith('http') ? location : new URL(location, url).href;
-      if (res.status === 302 || res.status === 303) {
-        if (method === 'POST' && body) {
-          const sep = url.includes('?') ? '&' : '?';
-          url = `${url}${sep}${body}`;
-        }
-        method = 'GET';
-        body = undefined;
-      }
-      continue;
-    }
-    finalText = await res.text();
-    break;
-  }
-
-  if (!finalText.trim()) {
-    const fallbackUrl = `${loginUrl}?${params.toString()}`;
-    const res = await fetch(fallbackUrl, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
-    finalText = await res.text();
-    const hopCookies = res.headers.getSetCookie?.() ?? [];
-    allSetCookies.push(...hopCookies);
-  }
-
-  const errorMatch = finalText.match(/<error[^>]*>(.*?)<\/error>/s);
-  if (errorMatch) throw new Error(`MFL login failed: ${errorMatch[1].trim()}`);
-
-  const cookieMatch = finalText.match(/MFL_USER_ID="([^"]+)"/);
-  if (!cookieMatch) throw new Error(`MFL login: no MFL_USER_ID in response: ${finalText.slice(0, 200)}`);
-
-  let commishCookie;
-  for (const cookieStr of allSetCookies) {
-    const m = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
-    if (m) {
-      commishCookie = m[1];
-      break;
-    }
-  }
-
-  return { mflUserId: cookieMatch[1], mflIsCommish: commishCookie };
-}
+// ── MFL write (mflFetch + loginToMFL now shared — see scripts/lib/mfl-api.mjs) ──
 
 async function writeContractToMFL({ leagueId, cookies, declaration }) {
   const year = new Date().getFullYear();

@@ -10,6 +10,7 @@
 
 import { SCHEFTER_REACTIONS, SCHEFTER_RUMOR_REACTIONS } from '../types/schefter';
 import type { SchefterReactionMap, SchefterReactionResponse } from '../types/schefter';
+import { getRedis } from './redis-client';
 
 const KEY_PREFIX = 'schefter:reactions:';
 /**
@@ -18,42 +19,6 @@ const KEY_PREFIX = 'schefter:reactions:';
  * revealing "Pigskins reacted 🔥" signals that could correlate with tip patterns.
  */
 const ANON_KEY_PREFIX = 'schefter:reactions:anon:';
-
-type PipelineClient = {
-  hgetall: (key: string) => void;
-  exec: <T>() => Promise<T>;
-};
-
-type RedisClient = {
-  hget: <T>(key: string, field: string) => Promise<T | null>;
-  hgetall: <T>(key: string) => Promise<Record<string, T> | null>;
-  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
-  hdel: (key: string, ...fields: string[]) => Promise<number>;
-  pipeline: () => PipelineClient;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[schefter-reactions] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 /** Validate that an emoji is in the allowed set */
 export function isValidReaction(emoji: string): boolean {
@@ -139,7 +104,7 @@ export async function getBatchReactions(
 
   try {
     // Use pipeline to batch all hgetall calls into one round-trip
-    const pipeline = (redis as unknown as { pipeline: () => PipelineClient }).pipeline();
+    const pipeline = redis.pipeline();
     for (const postId of postIds) {
       pipeline.hgetall(KEY_PREFIX + postId);
     }
@@ -310,7 +275,7 @@ export async function getBatchAnonymousReactions(
   }
 
   try {
-    const pipeline = (redis as unknown as { pipeline: () => PipelineClient }).pipeline();
+    const pipeline = redis.pipeline();
     for (const postId of postIds) {
       pipeline.hgetall(ANON_KEY_PREFIX + postId);
     }

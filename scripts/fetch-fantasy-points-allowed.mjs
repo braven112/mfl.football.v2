@@ -21,6 +21,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getNonEmpty } from './lib/env.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,12 +31,6 @@ const MFL_HOST = 'https://api.myfantasyleague.com';
 
 // Default to TheLeague; AFL could be added later
 const DEFAULT_LEAGUE_ID = '13522';
-
-const getNonEmpty = (value) => {
-  if (value === undefined || value === null) return undefined;
-  const trimmed = String(value).trim();
-  return trimmed.length ? trimmed : undefined;
-};
 
 /**
  * MFL → standard team code mapping.

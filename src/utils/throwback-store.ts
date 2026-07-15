@@ -5,33 +5,11 @@
  * used to render all 16 franchises' picks on live scoring / matchups.
  */
 
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown) => Promise<unknown>;
-  mget: <T>(...keys: string[]) => Promise<(T | null)[]>;
-};
+import { getRedis } from './redis-client';
+export { getRedis };
 
 export interface ThrowbackPreference {
   yearStart: number;
-}
-
-let loggedMissingRedisModule = false;
-
-export async function getRedis(): Promise<RedisClient | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token }) as unknown as RedisClient;
-  } catch (error) {
-    if (!loggedMissingRedisModule) {
-      loggedMissingRedisModule = true;
-      console.warn('Throwback preference KV unavailable: @upstash/redis is not installed.', error);
-    }
-    return null;
-  }
 }
 
 export function makeThrowbackKey(franchiseId: string): string {

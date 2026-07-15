@@ -18,8 +18,8 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { buildMflExportUrl } from '../../utils/mfl-url';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 
 const TAXI_SQUAD_LIMIT = 3;
 
@@ -34,9 +34,12 @@ async function fetchPlayerStatus(
   leagueId: string,
   playerId: string,
 ): Promise<MflPlayerRecord | null> {
-  const url =
-    `https://api.myfantasyleague.com/${year}/export` +
-    `?TYPE=players&L=${leagueId}&PLAYERS=${playerId}&DETAILS=1&JSON=1`;
+  const url = buildMflExportUrl({
+    type: 'players',
+    leagueId,
+    year,
+    params: { PLAYERS: playerId, DETAILS: 1 },
+  });
   try {
     const response = await fetch(url, {
       headers: { Accept: 'application/json' },
@@ -59,9 +62,12 @@ async function fetchPracticeSquadCount(
   leagueId: string,
   franchiseId: string,
 ): Promise<number | null> {
-  const url =
-    `https://api.myfantasyleague.com/${year}/export` +
-    `?TYPE=rosters&L=${leagueId}&FRANCHISE=${franchiseId}&JSON=1`;
+  const url = buildMflExportUrl({
+    type: 'rosters',
+    leagueId,
+    year,
+    params: { FRANCHISE: franchiseId },
+  });
   try {
     const response = await fetch(url, {
       headers: { Accept: 'application/json' },

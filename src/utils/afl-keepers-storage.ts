@@ -13,6 +13,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { getRedis } from './redis-client';
 
 export const KEEPER_LIMIT = 7;
 
@@ -29,39 +30,6 @@ export interface KeeperPlan {
 }
 
 const REDIS_KEY = 'afl-keepers';
-
-type RedisClient = {
-  hget: <T>(key: string, field: string) => Promise<T | null>;
-  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
-  hdel: (key: string, ...fields: string[]) => Promise<number>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[afl-keepers] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 /** Hash field key — keeps every (league, year, franchise) tuple distinct. */
 function planKey(leagueId: string, year: number, franchiseId: string): string {

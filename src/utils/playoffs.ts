@@ -5,6 +5,7 @@
 import type { TeamStanding } from '../types/standings';
 import { chooseTeamName } from './team-names';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
+import { buildMflExportUrl } from './mfl-url';
 
 const DEFAULT_HOST =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
@@ -13,8 +14,6 @@ const DEFAULT_LEAGUE_ID =
   (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) ||
   LEAGUES[DEFAULT_LEAGUE_SLUG].id;
 
-const trimHost = (host: string) => host.replace(/\/+$/, '');
-
 const buildMflUrl = (
   year: number | string,
   type: string,
@@ -22,16 +21,13 @@ const buildMflUrl = (
   host = DEFAULT_HOST
 ) => {
   const { L, ...rest } = params;
-  const query = new URLSearchParams({
-    TYPE: type,
-    L: String(L ?? DEFAULT_LEAGUE_ID),
-    JSON: '1',
-    ...Object.fromEntries(
-      Object.entries(rest).filter(([, value]) => value !== undefined)
-    ),
+  return buildMflExportUrl({
+    type,
+    leagueId: L ?? DEFAULT_LEAGUE_ID,
+    year,
+    params: rest,
+    host,
   });
-
-  return `${trimHost(host)}/${year}/export?${query.toString()}`;
 };
 
 type BracketRef = {

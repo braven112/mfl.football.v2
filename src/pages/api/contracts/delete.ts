@@ -8,8 +8,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getDeclarationById, deleteDeclaration } from '../../../utils/contract-storage';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
+import { JSON_HEADERS } from '../../../utils/api-response';
 
 export const POST: APIRoute = async ({ request }) => {
   try {

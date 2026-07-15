@@ -22,8 +22,8 @@ import { LEAGUES } from '../../../config/leagues';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../../utils/mfl-matchup-api';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ request }) => {
     // must never reject the submit.
     void (async () => {
       try {
-        const url = `https://api.myfantasyleague.com/${year}/export?TYPE=pendingTrades&L=${leagueId}&JSON=1`;
+        const url = buildMflExportUrl({ type: 'pendingTrades', leagueId, year });
         const res = await mflFetch({ url, method: 'GET', mflUserCookie: user.id });
         if (!res.ok) return;
         const text = await res.text();

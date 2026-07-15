@@ -14,32 +14,10 @@
  * Fallback: returns null when Redis is unavailable (caller uses static files)
  */
 
+import { getRedis, type RedisClient } from './redis-client';
+import { buildMflExportUrl } from './mfl-url';
+
 const STALE_TTL_MS = 2 * 60 * 1000; // 2 minutes
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown, opts?: { ex?: number }) => Promise<unknown>;
-  del: (key: string) => Promise<unknown>;
-};
-
-let loggedMissingRedis = false;
-
-async function getRedis(): Promise<RedisClient | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  try {
-    const { Redis } = await import('@upstash/redis');
-    return new Redis({ url, token });
-  } catch (error) {
-    if (!loggedMissingRedis) {
-      loggedMissingRedis = true;
-      console.warn('[mfl-roster-cache] @upstash/redis unavailable:', error);
-    }
-    return null;
-  }
-}
 
 function cacheKey(leagueId: string, season: string): string {
   return `mfl:rosters:${leagueId}:${season}`;
@@ -284,7 +262,7 @@ async function fetchAndCacheFranchiseRosters(
   leagueId: string
 ): Promise<CachedFranchiseRoster[]> {
   const fetchStartedAt = Date.now();
-  const url = `https://api.myfantasyleague.com/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
+  const url = buildMflExportUrl({ type: 'rosters', leagueId, year: season });
   const response = await fetch(url, {
     headers: { 'User-Agent': 'MFLFootball/2.0' },
     signal: AbortSignal.timeout(10_000),
@@ -341,7 +319,7 @@ async function fetchAndCacheRosters(
   leagueId: string
 ): Promise<Record<string, CachedRosterEntry>> {
   const fetchStartedAt = Date.now();
-  const url = `https://api.myfantasyleague.com/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
+  const url = buildMflExportUrl({ type: 'rosters', leagueId, year: season });
   const response = await fetch(url, {
     headers: { 'User-Agent': 'MFLFootball/2.0' },
     signal: AbortSignal.timeout(10_000),

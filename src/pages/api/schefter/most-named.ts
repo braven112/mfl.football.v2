@@ -33,6 +33,7 @@ import { chooseTeamName } from '../../../utils/team-names';
 import theLeagueConfig from '../../../data/theleague.config.json';
 // @ts-expect-error — JS module without bundled types; runtime exports verified.
 import { getTopNamedTeams } from '../../../../scripts/lib/schefter-team-naming.mjs';
+import { getRedis } from '../../../utils/redis-client';
 
 export const prerender = false;
 
@@ -50,59 +51,6 @@ const MAX_DAYS = 30;
 const DEFAULT_LIMIT = 5;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 16;
-
-type ScanResult = [number | string, string[]] | { cursor: number | string; keys: string[] };
-
-type ZRangeOptions = {
-  byScore?: boolean;
-  rev?: boolean;
-  offset?: number;
-  count?: number;
-  withScores?: boolean;
-};
-
-/**
- * Minimal interface against @upstash/redis — only the methods we actually
- * call. Lets the typechecker catch arity/typo mistakes without coupling us
- * to a particular client version's full surface area.
- */
-type RedisClient = {
-  scan: (cursor: number | string, opts?: { match?: string; count?: number }) => Promise<ScanResult>;
-  zcount: (key: string, min: number | string, max: number | string) => Promise<number>;
-  zrange: (
-    key: string,
-    min: number | string,
-    max: number | string,
-    opts?: ZRangeOptions,
-  ) => Promise<Array<string | number>>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[most-named] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });

@@ -46,6 +46,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -203,19 +204,15 @@ async function detectCacheLeagueIdMismatch(year, hostMap) {
 
 // --- Online fetch -------------------------------------------------------------
 
-async function fetchMfl(host, year, leagueId, type, extra = '') {
-  const url = `https://${host}.myfantasyleague.com/${year}/export?TYPE=${type}&L=${leagueId}&JSON=1${extra}`;
-  log(`fetching ${url}`);
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'mfl.football.v2 backfill (+https://github.com/braven112/mfl.football.v2)',
+const fetchMfl = (host, year, leagueId, type, extra = '') =>
+  sharedFetchExport(
+    { host, leagueId, year, type, extra },
+    {
+      userAgent: 'mfl.football.v2 backfill (+https://github.com/braven112/mfl.football.v2)',
+      onFetch: (url) => log(`fetching ${url}`),
+      formatError: (url, status) => `MFL ${url} returned ${status}`,
     },
-  });
-  if (!res.ok) {
-    throw new Error(`MFL ${url} returned ${res.status}`);
-  }
-  return res.json();
-}
+  );
 
 async function backfillYearOnline(year, hostMap) {
   const entry = hostMap.years[String(year)];

@@ -17,10 +17,10 @@ import leagueConfig from '../../../data/theleague.config.json';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getRedis, type RedisClient } from '../../../utils/redis-client';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 const TIPS_QUEUE_KEY = 'schefter:tips:queue';
 const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
@@ -40,18 +40,6 @@ const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
 const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
 const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
-
-type RedisClient = {
-  llen: (key: string) => Promise<number>;
-  zcard: (key: string) => Promise<number>;
-  scard: (key: string) => Promise<number>;
-  hlen: (key: string) => Promise<number>;
-  hgetall: <T = Record<string, unknown>>(key: string) => Promise<T | null>;
-  get: <T = unknown>(key: string) => Promise<T | null>;
-  lrange: <T = string>(key: string, start: number, stop: number) => Promise<T[]>;
-  zrange: <T = string>(key: string, min: number, max: number, opts?: { rev?: boolean }) => Promise<T[]>;
-  smembers: <T = string>(key: string) => Promise<T[]>;
-};
 
 // Imported from the scanner's shared lib so the admin preview matches the
 // scanner's bucket selection exactly. Both consumers must agree.
@@ -82,33 +70,6 @@ import recurrenceLedger from '../../../../data/schefter/topic-recurrence.json';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .mjs via allowJs
 import { detectMention } from '../../../../scripts/schefter-groupme-listen.mjs';
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[admin/schefter-stats] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 function coerce(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -419,12 +380,12 @@ async function readRedisStats(redis: RedisClient) {
     redis.zcard(`schefter:tipster:leaderboard:${seasonYear}`).catch(() => 0),
     redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
-    redis.hgetall<Record<string, string>>(OFFER_FIRST_SEEN_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_FIRST_SEEN_KEY).catch(() => null),
     redis.smembers<string>(OFFER_POSTED_KEY).catch(() => [] as string[]),
-    redis.hgetall<Record<string, string>>(OFFER_ARCHIVE_KEY).catch(() => null),
-    redis.hgetall<Record<string, string>>(OFFER_ROLLS_KEY).catch(() => null),
-    redis.hgetall<Record<string, string>>(OFFER_EXPOSURE_KEY).catch(() => null),
-    redis.hgetall<Record<string, unknown>>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_ARCHIVE_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_ROLLS_KEY).catch(() => null),
+    redis.hgetall<string>(OFFER_EXPOSURE_KEY).catch(() => null),
+    redis.hgetall<unknown>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
     // Pull the actual queue contents (not just LLEN) so the admin page can
     // render a "what's next to post" list. Cap at 50 — the queue rarely
     // grows past a handful, and 50 is a safe upper bound for payload size.

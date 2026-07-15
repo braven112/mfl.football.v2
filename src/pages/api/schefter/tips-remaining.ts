@@ -17,48 +17,14 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
+import { getRedis } from '../../../utils/redis-client';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
-
-const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 const RATE_LIMIT_PREFIX = 'schefter:tips:ratelimit:';
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
-
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  ttl: (key: string) => Promise<number>;
-};
-
-let _redis: RedisClient | null | undefined;
-
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    process.env.STORAGE_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    process.env.STORAGE_REST_API_TOKEN;
-
-  if (!url || !token) {
-    _redis = null;
-    return null;
-  }
-  try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
-    return _redis;
-  } catch (err) {
-    console.warn('[tips-remaining] Redis unavailable:', err);
-    _redis = null;
-    return null;
-  }
-}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
