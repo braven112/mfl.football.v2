@@ -7,7 +7,7 @@
 
 import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import type { FantasyPlayer, StartingLineup } from '../../types/matchup-previews';
-import { getPlayerHeadshot as getHeadshot } from '../../constants/roster-constants';
+import { getPlayerHeadshot as getHeadshot, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 
 interface Props {
   homeLineup: StartingLineup;
@@ -157,7 +157,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                     src={getPlayerHeadshot(player)}
                     alt={player.name}
                     class="player-headshot"
-                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                    onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
                   />
                 </div>
                 <div class="player-info">
@@ -195,7 +195,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                       src={getPlayerHeadshot(player)}
                       alt={player.name}
                       class="player-headshot"
-                      onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                      onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
                     />
                   </div>
                   <div class="player-info">
@@ -252,7 +252,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                     src={getPlayerHeadshot(player)}
                     alt={player.name}
                     class="player-headshot"
-                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                    onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
                   />
                 </div>
                 <div class="player-info">
@@ -290,7 +290,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                       src={getPlayerHeadshot(player)}
                       alt={player.name}
                       class="player-headshot"
-                      onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                      onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
                     />
                   </div>
                   <div class="player-info">

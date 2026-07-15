@@ -15,6 +15,9 @@ import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { formatCompactNumber } from '../../utils/formatters';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+
+const defaultLeague = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
 
 interface Props {
   leagueYear: number;
@@ -35,8 +38,8 @@ const {
   closingBid = null,
   resolveLeaguePath: r,
   referenceDate,
-  mflHost = 'www49.myfantasyleague.com',
-  leagueId = '13522',
+  mflHost = defaultLeague.mflHost,
+  leagueId = defaultLeague.id,
 } = Astro.props;
 
 const now = referenceDate ?? new Date();

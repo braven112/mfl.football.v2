@@ -8,6 +8,7 @@ import ContractDeclarationModal from '../ContractDeclarationModal.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { getContractWindow } from '../../../utils/contract-validation';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 import type { UnsignedFaAlert } from '../../../utils/homepage-dashboard';
 
 interface Props {
@@ -22,7 +23,7 @@ interface Props {
 const {
   isAuthenticated,
   userFranchiseId,
-  leagueId = '13522',
+  leagueId = DEFAULT_LEAGUE_ID,
   franchiseName = '',
   alerts = [],
   referenceDate = new Date(),
@@ -567,9 +568,9 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   // trimmed clone of the year-select branch of rosters.astro's CDM wiring —
   // no action-select, franchise-tag, extension, or cut flows apply here.
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../../utils/nfl';
+  import { DEFAULT_HEADSHOT_URL } from '../../../constants/roster-constants';
+  import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
-  const DEFAULT_HEADSHOT_URL =
-    'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
   const YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
   function formatSalaryCompact(val: number): string {
@@ -585,7 +586,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     const modal = document.getElementById('contract-declaration-modal');
     if (!section || !modal) return;
 
-    const leagueId = section.dataset.hpFaLeagueId || '13522';
+    const leagueId = section.dataset.hpFaLeagueId || DEFAULT_LEAGUE_ID;
     const franchiseId = section.dataset.hpFaFranchiseId || '';
     const franchiseName = section.dataset.hpFaFranchiseName || franchiseId;
 

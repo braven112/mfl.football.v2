@@ -25,6 +25,7 @@ import {
   saveCustomRankings,
 } from '../../../utils/custom-rankings-storage';
 import { detectTierBreaks } from '../../../utils/tier-detection';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../../config/leagues';
 import type {
   CustomRankingsState,
   RankedPlayer,
@@ -48,11 +49,16 @@ interface Props {
   vorpMapJson?: string;
 }
 
+// Canonical MFL photo host: the DEFAULT league's registry host, used for
+// every league's photo URLs — see MFL_PHOTO_HOST in constants/roster-constants.ts
+// for the verification rationale (pinned to one known-good host).
+const MFL_PHOTO_HOST = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
+
 function getHeadshotUrl(playerId: string, espnId: string | null): string {
   if (espnId) {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
-  return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+  return `https://${MFL_PHOTO_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`;
 }
 
 export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMapJson }: Props) {

@@ -9,6 +9,8 @@
  * Does NOT include any modal overlay, backdrop, or page layout.
  */
 
+import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
+
 export interface Props {
   /** Compact mode reduces spacing for modal embedding */
   compact?: boolean;
@@ -16,7 +18,7 @@ export interface Props {
   showLogo?: boolean;
   /** Override the default redirect URL after login */
   redirectUrl?: string;
-  /** League ID override (defaults to 13522) */
+  /** League ID override (defaults to the registry's DEFAULT_LEAGUE_ID) */
   leagueId?: string;
   /**
    * Season year override forwarded to MFL. AFL passes 2025 because its
@@ -38,7 +40,7 @@ const {
   compact = false,
   showLogo = compact,
   redirectUrl,
-  leagueId = '13522',
+  leagueId = DEFAULT_LEAGUE_ID,
   seasonYear,
   logoSrc = '/assets/logos/theleague-logo.svg',
   logoAlt = 'The League logo',
@@ -140,6 +142,8 @@ const {
 </div>
 
 <script>
+  import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
+
   // Multi-instance safe — each .login-form gets its own handler
   document.querySelectorAll<HTMLElement>('.login-form').forEach((formWrapper) => {
     const form = formWrapper.querySelector('form') as HTMLFormElement | null;
@@ -165,7 +169,7 @@ const {
 
     // Server-rendered redirect from component prop (highest priority)
     const componentRedirect = formWrapper.dataset.redirectUrl;
-    const leagueId = formWrapper.dataset.leagueId || '13522';
+    const leagueId = formWrapper.dataset.leagueId || DEFAULT_LEAGUE_ID;
     const seasonYearAttr = formWrapper.dataset.seasonYear || '';
     const seasonYear = /^\d{4}$/.test(seasonYearAttr) ? Number(seasonYearAttr) : null;
 

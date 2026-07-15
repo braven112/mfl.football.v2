@@ -65,9 +65,10 @@ const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 // Get league context from URL
 const leagueContext = getLeagueContext(Astro.url);
 
-// Determine the MFL host to use
-const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'www49.myfantasyleague.com';
-const mflHost = (host || envHost).replace(/^https?:\/\//, '').replace(/\/+$/, '');
+// Determine the MFL host to use. leagueContext.host is already registry-
+// derived (per-league mflHost, honoring the PUBLIC_MFL_HOST override) and
+// normalized, so it's the correct literal-free fallback for the `host` prop.
+const mflHost = (host || leagueContext.host).replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
 // Determine the year — always use the smart year function (handles Feb 14 rollover automatically)
 const currentYear = (year || getCurrentLeagueYear()).toString();

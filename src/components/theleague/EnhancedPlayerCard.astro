@@ -8,6 +8,7 @@ import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import InjuryManager from './InjuryManager.astro';
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
 import { getPlayerHeadshot, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 
 export interface Props {
   player: FantasyPlayer;
@@ -28,7 +29,7 @@ const {
   showHeadshot = true,
   showMatchupInfo = true,
   showInjuryManager = true,
-  leagueId = '13522',
+  leagueId = DEFAULT_LEAGUE_ID,
   year = new Date().getFullYear().toString(),
   className = '' 
 } = Astro.props;
@@ -59,7 +60,7 @@ const cardClasses = [
           src={getPlayerHeadshot(player.id, playerEspnId)}
           alt={player.name}
           class="player-headshot"
-          onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+          onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
         />
       </div>
     )}

@@ -8,6 +8,9 @@
  */
 import EventHeroShell from './EventHeroShell.astro';
 import { getRookieDraftDate } from '../../utils/league-event-resolver';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+
+const defaultLeague = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
 
 export interface Props {
   leagueYear: number;
@@ -24,8 +27,8 @@ export interface Props {
 
 const {
   leagueYear,
-  mflHost = 'www49.myfantasyleague.com',
-  leagueId = '13522',
+  mflHost = defaultLeague.mflHost,
+  leagueId = defaultLeague.id,
   resolveLeaguePath: r,
   spriteUrl,
   live = true,

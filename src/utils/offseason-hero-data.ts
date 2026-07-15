@@ -17,8 +17,9 @@ import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
 // TheLeague's data root, for the TheLeague-only functions below that don't
-// take a `league` param. Never hardcode 'data/theleague'.
-const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague')?.dataPath ?? 'data/theleague';
+// take a `league` param. Never hardcode the data path — 'theleague' is a
+// guaranteed-valid registry slug, so the non-null assertion is safe.
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague')!.dataPath;
 
 // ── JSON Data Loaders ──
 
@@ -34,10 +35,11 @@ function readJsonFile(relativePath: string): any {
 
 /**
  * Repo-relative path to a synced MFL feed file for a league year. League data
- * roots come from the league registry — never hardcode 'data/theleague' etc.
+ * roots come from the league registry — never hardcode a data path. `league`
+ * is a CanonicalLeagueSlug, so it's always a valid registry key.
  */
 function feedPath(league: CanonicalLeagueSlug, leagueYear: number, file: string): string {
-  const dataPath = getLeagueBySlug(league)?.dataPath ?? 'data/theleague';
+  const dataPath = getLeagueBySlug(league)!.dataPath;
   return `${dataPath}/mfl-feeds/${leagueYear}/${file}`;
 }
 
