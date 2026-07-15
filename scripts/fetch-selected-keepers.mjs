@@ -122,20 +122,23 @@ async function main() {
     );
   }
 
-  let url = `https://api.myfantasyleague.com/${year}/export?TYPE=selectedKeepers&L=${leagueId}&JSON=1`;
-  if (apiKey) url += `&APIKEY=${encodeURIComponent(apiKey)}`;
+  const fetchSelectedKeepers = async (franchiseId) => {
+    let url = `https://api.myfantasyleague.com/${year}/export?TYPE=selectedKeepers&L=${leagueId}&JSON=1`;
+    if (franchiseId) url += `&FRANCHISE=${franchiseId}`;
+    if (apiKey) url += `&APIKEY=${encodeURIComponent(apiKey)}`;
+    const res = await mflFetch(url, cookies);
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`selectedKeepers HTTP ${res.status}: ${text.slice(0, 300)}`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`selectedKeepers returned non-JSON: ${text.slice(0, 300)}`);
+    }
+  };
 
-  const res = await mflFetch(url, cookies);
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`selectedKeepers HTTP ${res.status}: ${text.slice(0, 300)}`);
-  }
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`selectedKeepers returned non-JSON: ${text.slice(0, 300)}`);
-  }
+  const data = await fetchSelectedKeepers();
   if (data.error) {
     throw new Error(`selectedKeepers API error: ${JSON.stringify(data.error)}`);
   }
@@ -179,6 +182,22 @@ async function main() {
       '\n(Note: a non-commissioner login only sees its own franchise, so "missing" is' +
         ' only meaningful when running with commissioner access.)'
     );
+  }
+
+  // --sweep: probe FRANCHISE=<id> for every franchise in the league. The docs
+  // say the param is commissioner-only; this shows exactly what our credential
+  // can and cannot see, one compact line per franchise.
+  if (process.argv.includes('--sweep')) {
+    console.log('\n=== FRANCHISE= sweep (commissioner-only param per MFL docs) ===');
+    for (const id of [...franchiseNames.keys()].sort()) {
+      try {
+        const d = await fetchSelectedKeepers(id);
+        console.log(`${id} ${franchiseNames.get(id)}: ${JSON.stringify(d)}`);
+      } catch (err) {
+        console.log(`${id} ${franchiseNames.get(id)}: ERROR ${err.message}`);
+      }
+      await new Promise((r) => setTimeout(r, 1200)); // stay friendly to MFL rate limits
+    }
   }
 }
 

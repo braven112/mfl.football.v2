@@ -36,4 +36,4 @@ jobs:
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
-        run: node ./scripts/fetch-selected-keepers.mjs
+        run: node ./scripts/fetch-selected-keepers.mjs --sweep
