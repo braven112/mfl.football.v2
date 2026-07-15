@@ -53,6 +53,8 @@ import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
+const THELEAGUE = getLeagueBySlug('theleague')!;
+
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 const userFranchiseId = authUser?.franchiseId;
@@ -122,7 +124,7 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
   // League scoping: AFL franchiseIds overlap TheLeague's — only a TheLeague
   // session counts as "an owner who could pick an era".
   const isTheLeagueSession =
-    !!authUser && authUser.leagueId === getLeagueBySlug('theleague')?.id;
+    !!authUser && authUser.leagueId === THELEAGUE.id;
   const needsThrowbackPick =
     isTheLeagueSession && userFranchiseId
       ? !(await getThrowbackPreference(userFranchiseId))
@@ -151,8 +153,8 @@ const isAuctionHeroActive = heroState.phase === 'auction-preview' || heroState.p
 const showAuctionsCard = !isAuctionHeroActive && isAuctionStripPeriod(now);
 
 // MFL external links for the auctions card
-const mflHost = 'www49.myfantasyleague.com';
-const mflLeagueId = '13522';
+const mflHost = THELEAGUE.mflHost;
+const mflLeagueId = THELEAGUE.id;
 const mflAuctionBase = `https://${mflHost}/${leagueYear}/options?L=${mflLeagueId}`;
 const placeBidUrl = `${mflAuctionBase}&O=43`;
 const completedAuctionsUrl = `${mflAuctionBase}&O=43`;
@@ -296,7 +298,7 @@ const salaryPlayers: HomeSalaryPlayer[] = (latestRoster.players ?? []).map((p: a
 });
 
 // Overlay Redis-cached roster data for near-real-time freshness
-const cachedRosterPlayers = await getCachedRosters(currentSalaryYear, '13522');
+const cachedRosterPlayers = await getCachedRosters(currentSalaryYear, THELEAGUE.id);
 if (cachedRosterPlayers) {
   const playerById = new Map(salaryPlayers.map((p) => [p.id, p]));
   for (const [playerId, cached] of Object.entries(cachedRosterPlayers)) {

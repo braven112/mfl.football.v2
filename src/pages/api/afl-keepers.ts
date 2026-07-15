@@ -24,8 +24,9 @@ import {
   sanitizeKeeperIds,
 } from '../../utils/afl-keepers-storage';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
+import { getLeagueBySlug } from '../../config/leagues';
 
-const AFL_LEAGUE_ID = '19621';
+const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 
 function unauthorized(message: string) {
   return new Response(JSON.stringify({ success: false, message }), {

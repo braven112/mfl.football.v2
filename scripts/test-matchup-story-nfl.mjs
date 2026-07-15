@@ -13,6 +13,9 @@ import {
   loadCachedNFLData,
   cacheNFLData
 } from './nfl-data-service.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 // Load .env file manually
 const envPath = path.join(process.cwd(), '.env');
@@ -49,12 +52,12 @@ function loadJSON(relativePath) {
 
 // Load data
 console.log('📊 Loading league data...');
-const standings = loadJSON('data/theleague/mfl-feeds/2025/standings.json');
-const weeklyResults = loadJSON('data/theleague/mfl-feeds/2025/weekly-results.json');
-const league = loadJSON('data/theleague/mfl-feeds/2025/league.json');
-const rosters = loadJSON('data/theleague/mfl-feeds/2025/rosters.json');
-const players = loadJSON('data/theleague/mfl-feeds/2025/players.json');
-const projectedScores = loadJSON('data/theleague/mfl-feeds/2025/projectedScores.json');
+const standings = loadJSON(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/standings.json`);
+const weeklyResults = loadJSON(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/weekly-results.json`);
+const league = loadJSON(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/league.json`);
+const rosters = loadJSON(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/rosters.json`);
+const players = loadJSON(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/players.json`);
+const projectedScores = loadJSON(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/projectedScores.json`);
 
 // Create player lookup map
 const playerMap = new Map();
@@ -424,7 +427,7 @@ async function main() {
       }
     };
 
-    const outPath = 'data/theleague/test-matchup-story-nfl.json';
+    const outPath = `${THELEAGUE_DATA_PATH}/test-matchup-story-nfl.json`;
     fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
     console.log(`\n💾 Saved to: ${outPath}`);
 

@@ -23,12 +23,14 @@ import {
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
+import { getLeagueBySlug } from '../../config/leagues';
 
 export const prerender = false;
 
+const THELEAGUE = getLeagueBySlug('theleague')!;
 const envHost =
-  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';
-const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
+  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || `https://${THELEAGUE.mflHost}`;
+const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || THELEAGUE.id;
 
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,

@@ -14,6 +14,7 @@ import { writeContractToMFL } from '../../../utils/mfl-contract-writer';
 import { invalidateRosterCache } from '../../../utils/mfl-roster-cache';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { JSON_HEADERS } from '../../../utils/api-response';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 interface ApproveRequestBody {
   declarationId: string;
@@ -109,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Invalidate roster cache so the roster page reflects the contract change immediately
       const season = String(getCurrentLeagueYear());
-      invalidateRosterCache(season, '13522').catch((err) =>
+      invalidateRosterCache(season, DEFAULT_LEAGUE_ID).catch((err) =>
         console.warn('[approve] roster cache invalidation failed:', err)
       );
 

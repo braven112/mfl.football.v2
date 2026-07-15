@@ -5,13 +5,14 @@
 
 import type { FantasyPlayer, LineupOptimization } from '../types/matchup-previews';
 import { createLineupOptimizer } from './lineup-optimizer';
+import { DEFAULT_LEAGUE_ID } from '../config/leagues';
 
 /**
  * Enhance existing player data with status indicators and optimization info
  */
 export function enhancePlayersWithStatus(
   players: any[], // Existing player data from matchup preview
-  leagueId: string = '13522',
+  leagueId: string = DEFAULT_LEAGUE_ID,
   year: string = '2025'
 ): FantasyPlayer[] {
   const optimizer = createLineupOptimizer(leagueId, year);

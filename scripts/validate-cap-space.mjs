@@ -1,6 +1,8 @@
 import fs from 'node:fs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const SALARY_CAP = 45_000_000;
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 console.log('\n=== CAP SPACE FORMULA VALIDATION ===\n');
 console.log('Validating that our cap calculation formula is consistent across:');
@@ -10,10 +12,10 @@ console.log('3. Rosters page implementation\n');
 
 // Read the raw MFL feeds
 const rostersData = JSON.parse(
-  fs.readFileSync('data/theleague/mfl-feeds/2025/rosters.json', 'utf8')
+  fs.readFileSync(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/rosters.json`, 'utf8')
 );
 const adjustmentsData = JSON.parse(
-  fs.readFileSync('data/theleague/mfl-feeds/2025/salaryAdjustments.json', 'utf8')
+  fs.readFileSync(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/salaryAdjustments.json`, 'utf8')
 );
 
 // Read our processed salary data

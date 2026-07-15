@@ -18,6 +18,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import fs from 'node:fs';
 import path from 'node:path';
 import { JSON_HEADERS } from '../../utils/api-response';
@@ -72,7 +73,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // 3. Create MFL API client with the USER's cookie (not the server env var)
     const leagueYear = getCurrentLeagueYear();
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
     const mflClient = createMFLApiClient({
       leagueId,
       year: String(leagueYear),
@@ -80,7 +81,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     // Local cache directory matches the league we're writing for so AFL
     // updates don't overwrite TheLeague's tradeBait.json (or vice versa).
-    const cacheLeagueDir = leagueId === '19621' ? 'afl-fantasy' : 'theleague';
+    const cacheLeague = getLeagueById(leagueId) ?? getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
 
     // 4. SECURITY: Verify the player belongs to the user's roster
     //    This prevents any user from adding players they don't own to trade bait,
@@ -109,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
         try {
           const cachePath = path.resolve(
             process.cwd(),
-            `data/${cacheLeagueDir}/mfl-feeds/${leagueYear}/tradeBait.json`,
+            `${cacheLeague.dataPath}/mfl-feeds/${leagueYear}/tradeBait.json`,
           );
           fs.writeFileSync(cachePath, JSON.stringify(result.allPlayerIds, null, 2), 'utf8');
         } catch (cacheErr) {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import { getNonEmpty } from './lib/env.mjs';
-import { ALL_LEAGUES, getLeagueById } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, getLeagueById, LEAGUES, DEFAULT_LEAGUE_SLUG, DEFAULT_LEAGUE_ID } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
@@ -31,8 +31,9 @@ const season =
   getNonEmpty(env.MFL_SEASON) ??
   getNonEmpty(env.MFL_YEAR) ??
   String(calculateCurrentLeagueYear());
-const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
-// Default the short nav slug from the registry (never hardcode id→slug maps).
+const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? DEFAULT_LEAGUE_ID;
+// Data dirs use the registry's navSlug ('theleague' / 'afl'), not the
+// canonical slug — matches the existing src/data/<key>/ layout.
 const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? getLeagueById(leagueId)?.navSlug ?? leagueId;
 
 // Canonical registry slug ('theleague' | 'afl-fantasy') used to key the shared
@@ -62,8 +63,14 @@ const seasonStateFile = path.join(dataDir, 'mfl-season-state.json');
 const feedsCacheDir = path.join(projectRoot, 'data', leagueKey, 'mfl-feeds', season);
 const cachedRostersFile = path.join(feedsCacheDir, 'rosters.json');
 const cachedPlayersFile = path.join(feedsCacheDir, 'players.json');
+// Canonical MFL photo host: the DEFAULT league's registry host (www49) for
+// every league's run. www49 photo URLs are the only ones verified to work
+// (all committed data uses them, for both leagues); whether www44 serves the
+// /player_photos_* paths is unverified. Do not switch this to the
+// per-league mflHost without confirming photos exist on that host.
+const MFL_PHOTO_HOST = LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost;
 const DEFAULT_HEADSHOT_URL =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
 
 const ensureArray = (value) => {
   if (!value) return [];
@@ -130,7 +137,7 @@ const buildNameKey = (name = '', team = '') =>
 
 const buildMflHeadshotUrl = (playerId) =>
   playerId
-    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+    ? `https://${MFL_PHOTO_HOST}/player_photos_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
 
 const average = (values = []) => {

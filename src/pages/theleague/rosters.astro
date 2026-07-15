@@ -67,6 +67,13 @@ import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
+import { getLeagueBySlug } from '../../config/leagues';
+
+// MFL host/id from the league registry — never hardcode these (CLAUDE.md).
+// Used throughout this page (server frontmatter and inline client scripts)
+// for headshot fallback URLs and leagueId defaults.
+const THELEAGUE_MFL_HOST = getLeagueBySlug('theleague')!.mflHost;
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 // Weather icon mapping based on condition text
 const getWeatherIcon = (displayValue: string | undefined): string => {
@@ -508,7 +515,7 @@ const fantasyPointsAllowedBySeason = {};
 // (the local JSON cache can't be updated on Vercel's read-only filesystem)
 const fetchLiveTradeBait = async (yr: string): Promise<string[] | null> => {
   try {
-    const url = `https://api.myfantasyleague.com/${yr}/export?TYPE=tradeBait&L=13522&JSON=1`;
+    const url = `https://api.myfantasyleague.com/${yr}/export?TYPE=tradeBait&L=${THELEAGUE_ID}&JSON=1`;
     const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
     if (!res.ok) return null;
     const data = await res.json();
@@ -594,10 +601,10 @@ const teamsList = activeTeams
 const teamLookup = Object.fromEntries(teamsList.map((team) => [team.id, team]));
 
 const DEFAULT_HEADSHOT_URL =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  `https://${THELEAGUE_MFL_HOST}/player_photos_2010/no_photo_available.jpg`;
 const getPlayerImageUrl = (playerId) =>
   playerId
-    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
+    ? `https://${THELEAGUE_MFL_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
 const getPlayerHeadshot = (mflId, espnId) => {
   if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
@@ -898,7 +905,7 @@ const liveRosterDataByPlayerId = {};
 // For the current league year, try Redis cache first (stale-while-revalidate).
 // This ensures contract changes on MFL are reflected within ~2 minutes without
 // needing a manual data sync.
-const cachedRosterPlayers = await getCachedRosters(currentLeagueYearStr, '13522');
+const cachedRosterPlayers = await getCachedRosters(currentLeagueYearStr, THELEAGUE_ID);
 if (cachedRosterPlayers) {
   liveRosterDataByPlayerId[currentLeagueYearStr] = cachedRosterPlayers;
 }
@@ -2134,12 +2141,16 @@ const serializedConfig = JSON.stringify({
   authUser: authUser
     ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId }
     : testEligibility
-      ? { franchiseId: defaultTeamId, leagueId: '13522' }
+      ? { franchiseId: defaultTeamId, leagueId: THELEAGUE_ID }
       : null,
   trendWeeks,
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
   eligibilityByTeam,
   declarationsByPlayer,
+  // Registry-sourced defaults for client-side fallbacks (never hardcode
+  // these client-side — see CLAUDE.md League registry section).
+  mflHost: THELEAGUE_MFL_HOST,
+  defaultLeagueId: THELEAGUE_ID,
 });
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
@@ -2149,7 +2160,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 let ownerActivityMap: Record<string, number> = {};
 try {
   ownerActivityMap = await Promise.race([
-    getAllActivity('13522'),
+    getAllActivity(THELEAGUE_ID),
     new Promise<Record<string, number>>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 3000)),
   ]);
 } catch { /* Redis unavailable or timed out */ }
@@ -5363,10 +5374,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   };
 
   const DEFAULT_HEADSHOT_URL =
-    'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+    `https://${config.mflHost}/player_photos_2010/no_photo_available.jpg`;
   const getPlayerImageUrl = (playerId) =>
     playerId
-      ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
+      ? `https://${config.mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`
       : DEFAULT_HEADSHOT_URL;
   const getPlayerHeadshot = (mflId, espnId) => {
     if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
@@ -5782,7 +5793,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     const franchiseId = config.authUser?.franchiseId ?? currentTeam;
     const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
-    const leagueId = config.authUser?.leagueId ?? '13522';
+    const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
 
     submitFranchiseTagsBtn.disabled = true;
     const origText = submitFranchiseTagsBtn.textContent.trim();
@@ -6171,7 +6182,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     };
 
     const DEFAULT_HEADSHOT_URL =
-      'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+      `https://${config.mflHost}/player_photos_2010/no_photo_available.jpg`;
 
     const getCollegeAssets = (collegeName) => {
       if (!collegeName) return null;
@@ -8090,7 +8101,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmHeadshotImg.src = cdmHeadshotUrl;
       if (cdmEspnId && cdmMflId) {
         const cdmCollege = `https://a.espncdn.com/i/headshots/college-football/players/full/${cdmEspnId}.png`;
-        const cdmMfl = `https://www49.myfantasyleague.com/player_photos_big_2014/${cdmMflId}_thumb.jpg`;
+        const cdmMfl = `https://${config.mflHost}/player_photos_big_2014/${cdmMflId}_thumb.jpg`;
         cdmHeadshotImg.onerror = function() { this.onerror = function() { this.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; }; this.src = cdmMfl; }; this.src = cdmCollege; };
       } else if (cdmEspnId) {
         const cdmCollege = `https://a.espncdn.com/i/headshots/college-football/players/full/${cdmEspnId}.png`;
@@ -9924,7 +9935,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
       const franchiseId = config.authUser?.franchiseId ?? currentTeam;
       const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
-      const leagueId = config.authUser?.leagueId ?? '13522';
+      const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
 
       // cdmFlowType tracks the current step flow; cdmSubmitType overrides for specific sub-choices.
       // For action-select flows, use cdmFlowType; otherwise fall back to cdmSubmitType then elig.type
@@ -10665,7 +10676,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       demoActive = true;
       // Temporarily set auth so eligibility styling renders
       demoOriginalAuthUser = config.authUser;
-      config.authUser = { franchiseId: currentTeam, leagueId: '13522' };
+      config.authUser = { franchiseId: currentTeam, leagueId: config.defaultLeagueId };
       // Inject data and re-render
       injectDemoData();
       updateView();

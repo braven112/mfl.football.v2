@@ -23,9 +23,11 @@ import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
 import '../../styles/player-cell.css';
 import leagueConfig from '../../data/theleague.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
 
 const currentYear = getCurrentLeagueYear();
 const currentSeasonYear = getCurrentSeasonYear();
+const mflHost = getLeagueBySlug('theleague')!.mflHost;
 
 // ── Load MFL data feeds ──
 const playerModules = import.meta.glob(
@@ -215,7 +217,7 @@ function buildPlayerRow(
 
   const headshot = identity?.headshot ?? (info.espn_id
     ? `https://a.espncdn.com/i/headshots/nfl/players/full/${info.espn_id}.png`
-    : `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`);
+    : `https://${mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`);
 
   return {
     id: playerId,
@@ -269,7 +271,7 @@ if (rostersData?.rosters?.franchise) {
 
 // ── Overlay Redis cache for near-real-time freshness ──
 try {
-  const cached = await getCachedRosters(String(currentYear), '13522');
+  const cached = await getCachedRosters(String(currentYear), getLeagueBySlug('theleague')!.id);
   if (cached) {
     const existingIds = new Set(expiringPlayers.map(p => p.id));
     for (const [playerId, entry] of Object.entries(cached)) {
@@ -492,7 +494,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson }}>
+<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost }}>
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
   const players = JSON.parse(playerDataJson);
@@ -511,11 +513,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
-  const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  const defaultHeadshot = 'https://' + mflHost + '/player_photos_2010/no_photo_available.jpg';
 
   function buildOnerror(mflId, espnId) {
     const college = espnId ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + espnId + '.png' : null;
-    const mfl = mflId ? 'https://www49.myfantasyleague.com/player_photos_big_2014/' + mflId + '_thumb.jpg' : null;
+    const mfl = mflId ? 'https://' + mflHost + '/player_photos_big_2014/' + mflId + '_thumb.jpg' : null;
     if (college && mfl) {
       return "this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='" + defaultHeadshot + "'};this.src='" + mfl + "'};this.src='" + college + "'";
     }

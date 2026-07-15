@@ -13,6 +13,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -32,7 +33,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const leagueId = user.leagueId || '13522';
+  const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
   const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
   if (!rawPartyHost) {
     return new Response(

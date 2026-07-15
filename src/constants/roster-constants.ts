@@ -4,6 +4,7 @@
  */
 
 import { normalizeTeamCode } from '../utils/nfl-logo';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 /**
  * Standard position order for sorting players
@@ -29,19 +30,38 @@ export const POSITION_COLORS: Record<string, string> = {
 export const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'] as const;
 
 /**
- * Default player headshot URL when player image is unavailable
+ * Canonical MFL host for player photos — the default league's registry host
+ * (www49), used for EVERY league's photo URLs.
+ *
+ * Host verification (Phase 2 registry sweep): live requests to compare
+ * player-photo bytes across MFL hosts (www49 vs www44) were blocked by the
+ * dev environment's egress policy, so whether www44 serves the
+ * /player_photos_* paths could not be confirmed. What IS verified: www49
+ * URLs work in production today for BOTH leagues — every committed data
+ * file and every existing page (including AFL pages) uses www49 photo URLs.
+ * So photos stay pinned to this one canonical, known-good host rather than
+ * switching AFL to an unverified per-league host. If a future session with
+ * MFL egress confirms photos are host-agnostic (or per-league), revisit —
+ * until then, do not "fix" photo URLs to use each league's own mflHost.
  */
-export const DEFAULT_HEADSHOT_URL =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+const MFL_PHOTO_HOST = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
 
 /**
- * Get player headshot URL by player ID
+ * Default player headshot URL when player image is unavailable.
+ */
+export const DEFAULT_HEADSHOT_URL =
+  `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
+
+/**
+ * Get player headshot URL by player ID. Served from the canonical photo host
+ * (see MFL_PHOTO_HOST above) for every league.
+ *
  * @param playerId - MFL player ID
  * @returns URL to player headshot image
  */
 export function getPlayerImageUrl(playerId?: string): string {
   return playerId
-    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
+    ? `https://${MFL_PHOTO_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
 }
 

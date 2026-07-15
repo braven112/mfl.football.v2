@@ -44,6 +44,7 @@ import {
 } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
 import { spriteUrl } from '../../utils/sprite-url';
+import { getLeagueBySlug } from '../../config/leagues';
 
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
@@ -62,7 +63,9 @@ if (myTeamParam) {
 const cookiePref = getAFLPreference(Astro.cookies);
 const authUser = getAuthUser(Astro.request);
 const authAflFranchiseId =
-  authUser?.leagueId === '19621' && authUser.franchiseId ? authUser.franchiseId : null;
+  authUser?.leagueId === getLeagueBySlug('afl-fantasy')!.id && authUser.franchiseId
+    ? authUser.franchiseId
+    : null;
 const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
 const resolvedFranchiseId = resolveAFLTeamSelection({
   myTeamParam,

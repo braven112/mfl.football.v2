@@ -7,6 +7,9 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import leagueConfig from '../../../data/theleague.config.json';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+const THELEAGUE_MFL_HOST = getLeagueBySlug('theleague')!.mflHost;
 
 // Commissioner actions (Apply button) only show when commish-mode toggle is ON
 const user = getAuthUser(Astro.request);
@@ -59,7 +62,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
   const identity = managePlayerMap.get(playerId);
   return identity?.headshot ?? (espnId
     ? `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
-    : `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`);
+    : `https://${THELEAGUE_MFL_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`);
 };
 ---
 

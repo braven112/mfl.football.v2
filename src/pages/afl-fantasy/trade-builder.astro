@@ -10,6 +10,7 @@ import {
   type AFLTeam,
   type ConferenceId,
 } from '../../utils/afl-conference';
+import { getLeagueBySlug } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -42,7 +43,8 @@ const picksData = getModuleData(picksFeeds[`../../../data/afl-fantasy/mfl-feeds/
 
 // Auth — must be an AFL owner
 const authUser = getAuthUser(Astro.request);
-const isAflOwner = !!authUser && authUser.leagueId === '19621' && !!authUser.franchiseId;
+const isAflOwner =
+  !!authUser && authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id && !!authUser.franchiseId;
 
 const allTeams = getAllTeams();
 

@@ -64,12 +64,14 @@ import {
 } from './lib/rookie-salary-slots.mjs';
 import { getRedisConfig } from './lib/redis.mjs';
 import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
+import { DEFAULT_LEAGUE_ID, defaultMflWriteHost } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const REDIS_KEY = 'contract-declarations';
 const RC_DEFAULT_YEARS = 4;
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
-const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
+// Commissioner writes fail on the api subdomain — see defaultMflWriteHost.
+const MFL_WRITE_HOST = defaultMflWriteHost();
 
 // ── Pure logic (testable) ──────────────────────────────────────────────
 
@@ -338,7 +340,7 @@ async function main() {
       team.nameShort || team.nameMedium || team.name || `Team ${team.franchiseId}`,
     );
   }
-  const leagueId = String(leagueConfig.leagueId || process.env.MFL_LEAGUE_ID || '13522');
+  const leagueId = String(leagueConfig.leagueId || process.env.MFL_LEAGUE_ID || DEFAULT_LEAGUE_ID);
 
   // Auth — prefer cookies if present (matches existing repo patterns); fall
   // back to username/password login. Either yields the same cookie pair used

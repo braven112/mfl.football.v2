@@ -8,9 +8,11 @@
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 async function analyzeSalaryCurves() {
   console.log('\n=== ANALYZING SALARY DECAY CURVES BY POSITION (2020-2025) ===\n');
@@ -20,7 +22,7 @@ async function analyzeSalaryCurves() {
   const allYearData = {};
   
   for (const year of years) {
-    const dataPath = join(__dirname, `../data/theleague/mfl-player-salaries-${year}.json`);
+    const dataPath = join(__dirname, `../${THELEAGUE_DATA_PATH}/mfl-player-salaries-${year}.json`);
     try {
       const data = JSON.parse(await fs.readFile(dataPath, 'utf-8'));
       allYearData[year] = data;

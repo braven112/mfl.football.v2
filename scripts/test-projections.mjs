@@ -3,14 +3,17 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 // Read the data files
 const rostersData = JSON.parse(
-  fs.readFileSync('data/theleague/mfl-feeds/2025/rosters.json', 'utf8')
+  fs.readFileSync(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/rosters.json`, 'utf8')
 );
 
 const projectedScoresData = JSON.parse(
-  fs.readFileSync('data/theleague/mfl-feeds/2025/projectedScores.json', 'utf8')
+  fs.readFileSync(`${THELEAGUE_DATA_PATH}/mfl-feeds/2025/projectedScores.json`, 'utf8')
 );
 
 const leagueConfig = JSON.parse(

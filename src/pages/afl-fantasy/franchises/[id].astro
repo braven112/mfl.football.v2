@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import {
   getFranchiseTrophyCase,
   getFranchiseTrophyRoom,
@@ -176,7 +177,7 @@ function lockedLabel(t: TrophyCaseItem): string {
 const authUser = getAuthUser(Astro.request);
 const isOwner =
   !!authUser &&
-  authUser.leagueId === '19621' &&
+  authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id &&
   authUser.franchiseId === id;
 
 // Name history — every era this OWNER has played under, oldest first,

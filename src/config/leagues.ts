@@ -10,10 +10,12 @@ import type { LeagueSlug } from '../types/nav';
 import {
   LEAGUES as RAW_LEAGUES,
   DEFAULT_LEAGUE_SLUG as RAW_DEFAULT,
+  DEFAULT_LEAGUE_ID as RAW_DEFAULT_ID,
   getLeagueBySlug as rawGetBySlug,
   getLeagueById as rawGetById,
   getLeagueByPath as rawGetByPath,
   buildHostToSlugMap,
+  defaultMflWriteHost,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -65,6 +67,8 @@ export interface LeagueDefinition {
 
 export const LEAGUES = RAW_LEAGUES as Record<CanonicalLeagueSlug, LeagueDefinition>;
 export const DEFAULT_LEAGUE_SLUG = RAW_DEFAULT as CanonicalLeagueSlug;
+/** MFL numeric id of the default league. Use instead of hardcoding '13522'. */
+export const DEFAULT_LEAGUE_ID = RAW_DEFAULT_ID as string;
 export const ALL_LEAGUES: LeagueDefinition[] = Object.values(LEAGUES);
 
 export function getLeagueBySlug(slug: string): LeagueDefinition | null {
@@ -85,4 +89,4 @@ export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): b
   return getLeagueBySlug(slug)?.features[feature] ?? false;
 }
 
-export { buildHostToSlugMap };
+export { buildHostToSlugMap, defaultMflWriteHost };

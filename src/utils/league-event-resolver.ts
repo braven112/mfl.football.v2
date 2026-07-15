@@ -16,7 +16,11 @@ import type {
 import { THE_LEAGUE_EVENTS } from '../data/theleague/league-events';
 import { LEAGUE_YEAR_OVERRIDES } from '../data/theleague/league-year-config';
 import { getCurrentLeagueYear, getLaborDayForYear } from './league-year';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 import aflEventsConfig from '../data/afl-fantasy/league-events.json';
+
+const THE_LEAGUE = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
+const AFL_LEAGUE = getLeagueBySlug('afl-fantasy')!;
 
 /** AFL Fantasy events typed against the shared LeagueEventDefinition schema. */
 export const AFL_FANTASY_EVENTS: LeagueEventDefinition[] = (aflEventsConfig as {
@@ -404,10 +408,10 @@ function getMergedResolvedEvents(
 
   const makeVars = (year: number): LinkTemplateVars =>
     linkVars || {
-      mflHost: 'www49.myfantasyleague.com',
+      mflHost: THE_LEAGUE.mflHost,
       year: year.toString(),
       prevYear: (year - 1).toString(),
-      leagueId: '13522',
+      leagueId: THE_LEAGUE.id,
     };
 
   // Resolve both current and next league year events
@@ -480,10 +484,10 @@ export function getAllResolvedEvents(options?: {
   const year = options?.leagueYear || getCurrentLeagueYear(now);
 
   const vars: LinkTemplateVars = options?.linkVars || {
-    mflHost: 'www49.myfantasyleague.com',
+    mflHost: THE_LEAGUE.mflHost,
     year: year.toString(),
     prevYear: (year - 1).toString(),
-    leagueId: '13522',
+    leagueId: THE_LEAGUE.id,
   };
 
   return resolveAllEvents(THE_LEAGUE_EVENTS, year, now, vars);
@@ -491,9 +495,13 @@ export function getAllResolvedEvents(options?: {
 
 // ── AFL Fantasy variants ─────────────────────────────────────────────────────
 
+// BUG FIX (Phase 2): this previously hardcoded TheLeague's www49 host for AFL
+// event links (leagueId was correctly 19621, but mflHost was wrong) — an
+// owner clicking an AFL event action link would land on the wrong MFL host.
+// Registry-derived, so it now correctly resolves to AFL's www44 host.
 const AFL_LINK_VARS_DEFAULT = {
-  mflHost: 'www49.myfantasyleague.com',
-  leagueId: '19621',
+  mflHost: AFL_LEAGUE.mflHost,
+  leagueId: AFL_LEAGUE.id,
 };
 
 /**

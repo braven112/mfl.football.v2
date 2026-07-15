@@ -8,6 +8,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -19,7 +20,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   const url = new URL(request.url);
-  const leagueId = url.searchParams.get('leagueId') || user.leagueId || '13522';
+  const leagueId = url.searchParams.get('leagueId') || user.leagueId || DEFAULT_LEAGUE_ID;
 
   const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
   if (!rawPartyHost) {

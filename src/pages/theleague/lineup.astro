@@ -31,6 +31,7 @@ import { getThrowbackFranchiseBrand } from '../../utils/franchise-brand';
 import { isThrowbackWeek } from '../../data/theleague/throwback-config';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
+import { getLeagueBySlug } from '../../config/leagues';
 import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
@@ -49,7 +50,7 @@ const currentWeek = getCurrentWeekForYear(leagueYear);
 const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || currentWeek;
 const week = Math.max(1, Math.min(22, requestedWeek));
 
-const MFL_LEAGUE_ID = '13522';
+const MFL_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
 // Parallel data fetches (all 9 run concurrently to avoid waterfall).

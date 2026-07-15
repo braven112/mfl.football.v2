@@ -5,6 +5,7 @@
 
 import { validatePacificPigskinsMatchup, createMatchupService } from './matchup-service';
 import { createMFLScheduleIntegration } from './mfl-schedule-integration';
+import { DEFAULT_LEAGUE_ID } from '../config/leagues';
 
 /**
  * Demo function to show MFL schedule integration capabilities
@@ -17,7 +18,7 @@ export async function demoMFLScheduleIntegration(): Promise<void> {
     // 1. Test playoff bracket detection
     console.log('1. Testing Playoff Bracket Detection...');
     const scheduleIntegration = createMFLScheduleIntegration({
-      leagueId: '13522',
+      leagueId: DEFAULT_LEAGUE_ID,
       year: '2025',
     });
 
@@ -35,7 +36,7 @@ export async function demoMFLScheduleIntegration(): Promise<void> {
     // 2. Test specific Pacific Pigskins vs Midwestside Connection validation
     console.log('\n2. Testing Pacific Pigskins vs Midwestside Connection Matchup...');
     const validation = await validatePacificPigskinsMatchup({
-      leagueId: '13522',
+      leagueId: DEFAULT_LEAGUE_ID,
       year: '2025',
     });
 
@@ -51,7 +52,7 @@ export async function demoMFLScheduleIntegration(): Promise<void> {
     // 3. Test matchup service integration
     console.log('\n3. Testing Matchup Service Integration...');
     const matchupService = createMatchupService({
-      leagueId: '13522',
+      leagueId: DEFAULT_LEAGUE_ID,
       year: '2025',
       enablePlayoffBrackets: true,
     });

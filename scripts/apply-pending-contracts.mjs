@@ -34,9 +34,11 @@
 
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
+import { DEFAULT_LEAGUE_ID, defaultMflWriteHost } from '../src/config/leagues-data.mjs';
 
 const REDIS_KEY = 'contract-declarations';
-const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
+// Commissioner writes fail on the api subdomain — see defaultMflWriteHost.
+const MFL_WRITE_HOST = defaultMflWriteHost();
 
 async function getAllDeclarations(redis) {
   const result = await redisCommand(redis, ['HGETALL', REDIS_KEY]);
@@ -103,7 +105,7 @@ function parseArgs(argv) {
 
 async function main() {
   const cli = parseArgs(process.argv.slice(2));
-  const leagueId = process.env.MFL_LEAGUE_ID || '13522';
+  const leagueId = process.env.MFL_LEAGUE_ID || DEFAULT_LEAGUE_ID;
 
   const redis = getRedisConfig();
   if (!redis) {

@@ -1281,7 +1281,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (espnId) {
       return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
     }
-    return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+    return `https://${mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`;
   }
 
   function getNflLogo(team) {
@@ -1303,11 +1303,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return nflAvatarBorder[team] || nflAvatarBorderFallback;
   }
 
-  const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  const defaultHeadshot = `https://${mflHost}/player_photos_2010/no_photo_available.jpg`;
 
   function buildOnerror(mflId, espnId) {
     const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
-    const mfl = mflId ? `https://www49.myfantasyleague.com/player_photos_big_2014/${mflId}_thumb.jpg` : null;
+    const mfl = mflId ? `https://${mflHost}/player_photos_big_2014/${mflId}_thumb.jpg` : null;
     if (college && mfl) {
       return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${mfl}'};this.src='${college}'`;
     }

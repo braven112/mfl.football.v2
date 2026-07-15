@@ -17,8 +17,9 @@ import {
 } from '../../utils/owner-activity';
 import { getTeamColor } from '../../utils/team-colors';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getLeagueBySlug } from '../../config/leagues';
 
-const leagueId = '13522';
+const leagueId = getLeagueBySlug('theleague')!.id;
 const franchiseIds = leagueConfig.teams.map((t: any) => t.franchiseId);
 let activityMap: Record<string, number> = {};
 let pageViewData: { dates: string[]; data: Record<string, Record<string, number>> } = { dates: [], data: {} };

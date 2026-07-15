@@ -16,9 +16,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 // ---------------------------------------------------------------------------
 // Config
@@ -28,9 +30,9 @@ const DRAFT_YEAR = (() => {
   return idx !== -1 ? Number(process.argv[idx + 1]) : new Date().getFullYear();
 })();
 
-const MFL_PLAYERS_PATH = path.join(ROOT, `data/theleague/mfl-feeds/${DRAFT_YEAR}/players.json`);
+const MFL_PLAYERS_PATH = path.join(ROOT, `${THELEAGUE_DATA_PATH}/mfl-feeds/${DRAFT_YEAR}/players.json`);
 const COLLEGE_LOGOS_PATH = path.join(ROOT, 'src/data/college-logos.json');
-const OUTPUT_PATH = path.join(ROOT, 'data/theleague/espn-college-ids.json');
+const OUTPUT_PATH = path.join(ROOT, `${THELEAGUE_DATA_PATH}/espn-college-ids.json`);
 
 const DRAFT_API = `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/${DRAFT_YEAR}/draft/athletes`;
 const COLLEGE_ROSTER_API = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams';

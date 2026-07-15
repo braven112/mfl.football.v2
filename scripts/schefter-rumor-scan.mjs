@@ -126,6 +126,7 @@ import {
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import {
   getPtHour,
   getPtDateString,
@@ -141,7 +142,7 @@ const TRADE_OFFERS_ONLY = process.argv.includes('--trade-offers-only');
 // ── Constants ──
 
 const LEAGUE_SLUG = 'theleague';
-const LEAGUE_ID = '13522';
+const LEAGUE_ID = getLeagueBySlug(LEAGUE_SLUG).id;
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
 const CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');

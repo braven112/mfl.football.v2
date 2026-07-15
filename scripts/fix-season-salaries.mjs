@@ -1,4 +1,7 @@
 import fs from 'fs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 // One-shot historical fixer: applies the salary-correction table below (from
 // the Google Doc) to a season's committed mfl-feeds rosters. Replaces the
@@ -215,8 +218,8 @@ const correctSalaries = {
 };
 
 // Read the players.json to get player IDs and names
-const playersFile = `data/theleague/mfl-feeds/${year}/players.json`;
-const rostersFile = `data/theleague/mfl-feeds/${year}/rosters.json`;
+const playersFile = `${THELEAGUE_DATA_PATH}/mfl-feeds/${year}/players.json`;
+const rostersFile = `${THELEAGUE_DATA_PATH}/mfl-feeds/${year}/rosters.json`;
 
 console.log('Loading player data...');
 const playersData = JSON.parse(fs.readFileSync(playersFile, 'utf8'));

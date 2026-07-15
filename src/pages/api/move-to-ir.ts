@@ -16,6 +16,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
+import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -54,7 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const year = getCurrentLeagueYear();
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
 
     const mflClient = createMFLApiClient({
       leagueId,

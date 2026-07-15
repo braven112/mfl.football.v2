@@ -13,10 +13,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import LoginForm from '../../components/theleague/LoginForm.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getAflLeagueYear } from '../../utils/league-year';
+import { getLeagueBySlug } from '../../config/leagues';
 
 export const prerender = false;
 
-const AFL_LEAGUE_ID = '19621';
+const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 // Scope the login (and resulting JWT) to AFL's current MFL league year. AFL
 // rolls over June 1 — see getAflLeagueYear. The new league must exist on MFL
 // by then, or `myleagues` returns nothing and owners see "your franchise could

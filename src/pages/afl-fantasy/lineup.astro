@@ -220,6 +220,8 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   const nflTeam = identity?.nflTeam ?? normalizeTeamCode(pd?.team || '');
   const position = identity?.position ?? (pd?.position || 'N/A').replace(/^Def$/i, 'DEF').replace(/^K$/i, 'PK');
   const espnId = identity?.espnId ?? null;
+  // MFL-photo fallback uses the canonical photo host (see roster-constants
+  // MFL_PHOTO_HOST) — the only host verified to serve player photos.
   const headshot = identity?.headshot ?? getPlayerHeadshot(rp.id, espnId);
   const proj = projMap.get(rp.id) ?? null;
   const isBye = nflByeWeeks[nflTeam] === week;

@@ -44,23 +44,26 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
+import { fetchExport as sharedFetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
-const CONFIG_PATH = path.join(ROOT, 'data/afl-fantasy/afl.config.json');
-const OUTPUT_PATH = path.join(ROOT, 'data/afl-fantasy/awards-history.json');
-const TIER_HISTORY_PATH = path.join(ROOT, 'data/afl-fantasy/tier-history.json');
+const AFL_LEAGUE = getLeagueBySlug('afl-fantasy');
+
+const FEEDS_DIR = path.join(ROOT, AFL_LEAGUE.dataPath, 'mfl-feeds');
+const CONFIG_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'afl.config.json');
+const OUTPUT_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'awards-history.json');
+const TIER_HISTORY_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'tier-history.json');
 
 // Per-year MFL host + league id. Pre-2016 the AFL lived on a different host and
 // league id every season (see data/afl-fantasy/year-host-map.json); 2016+
 // settled on www44/19621. Loaded in main().
-const HOST_MAP_PATH = path.join(ROOT, 'data/afl-fantasy/year-host-map.json');
-const DEFAULT_HOST = 'www44';
-const DEFAULT_LEAGUE_ID = '19621';
+const HOST_MAP_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'year-host-map.json');
+const DEFAULT_HOST = mflHostPrefix(AFL_LEAGUE.mflHost);
+const DEFAULT_LEAGUE_ID = AFL_LEAGUE.id;
 let HOST_MAP = {};
 
 function hostFor(year) {

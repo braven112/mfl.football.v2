@@ -180,6 +180,7 @@ if (baitPlayers) {
 // Auth + selected franchise resolution: query param > cookie > authUser > first AL team
 const authUser = getAuthUser(Astro.request);
 const aflPref = getAFLPreference(Astro.cookies);
+const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 
 const allTeams = getAllTeams();
 const teamsByConference = getTeamsGroupedByConference();
@@ -195,7 +196,7 @@ if (isValidFranchiseId(queryFranchiseId)) {
 } else if (aflPref?.franchiseId && isValidFranchiseId(aflPref.franchiseId)) {
   selectedFranchiseId = aflPref.franchiseId;
 } else if (
-  authUser?.leagueId === '19621' &&
+  authUser?.leagueId === AFL_LEAGUE_ID &&
   authUser.franchiseId &&
   isValidFranchiseId(authUser.franchiseId)
 ) {
@@ -210,7 +211,7 @@ const conferenceName = getConferenceName(selectedTeam.conference);
 // Owner detection: only AFL users on their own team see write actions
 const isOwner =
   !!authUser &&
-  authUser.leagueId === '19621' &&
+  authUser.leagueId === AFL_LEAGUE_ID &&
   authUser.franchiseId === selectedTeam.franchiseId;
 
 // Build roster
@@ -658,7 +659,7 @@ const pageConfig = {
   selectedYear,
   selectedFranchiseId,
   isOwner,
-  leagueId: '19621',
+  leagueId: AFL_LEAGUE_ID,
   initialView,
 };
 ---

@@ -21,16 +21,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Anthropic } from '@anthropic-ai/sdk';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
+
 const defaults = {
-  schedule: 'data/theleague/nfl-cache/week15-2024.json',
-  players: 'data/theleague/mfl-feeds/2025/players.json',
-  projections: 'data/theleague/mfl-feeds/2025/projectedScores.json',
-  output: 'data/theleague/high-total-matchups.json'
+  schedule: `${THELEAGUE_DATA_PATH}/nfl-cache/week15-2024.json`,
+  players: `${THELEAGUE_DATA_PATH}/mfl-feeds/2025/players.json`,
+  projections: `${THELEAGUE_DATA_PATH}/mfl-feeds/2025/projectedScores.json`,
+  output: `${THELEAGUE_DATA_PATH}/high-total-matchups.json`
 };
 
 const paths = {

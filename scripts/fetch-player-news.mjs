@@ -12,10 +12,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 // Parse command line args
 const args = process.argv.slice(2);
@@ -98,8 +100,8 @@ async function main() {
   console.log(`\n📰 NFL News Fetcher\n`);
 
   // Load roster data to determine which teams have fantasy players
-  const rostersPath = path.join(root, 'data/theleague/mfl-feeds/2025/rosters.json');
-  const playersPath = path.join(root, 'data/theleague/mfl-feeds/2025/players.json');
+  const rostersPath = path.join(root, `${THELEAGUE_DATA_PATH}/mfl-feeds/2025/rosters.json`);
+  const playersPath = path.join(root, `${THELEAGUE_DATA_PATH}/mfl-feeds/2025/players.json`);
 
   if (!fs.existsSync(rostersPath) || !fs.existsSync(playersPath)) {
     console.error('❌ Missing roster or player data');
@@ -161,7 +163,7 @@ async function main() {
   }
 
   // Save to file
-  const outputPath = path.join(root, `data/theleague/nfl-news-week${week}.json`);
+  const outputPath = path.join(root, `${THELEAGUE_DATA_PATH}/nfl-news-week${week}.json`);
   const output = {
     week: parseInt(week),
     fetchedAt: new Date().toISOString(),

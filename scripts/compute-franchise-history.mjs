@@ -23,14 +23,16 @@ import {
   buildMilestonePost,
   mergeMilestonePosts,
 } from './lib/franchise-milestone-posts.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const FEEDS_DIR = path.join(ROOT, 'data/theleague/mfl-feeds');
-const SALARIES_DIR = path.join(ROOT, 'data/theleague');
+const THELEAGUE = getLeagueBySlug('theleague');
+const FEEDS_DIR = path.join(ROOT, THELEAGUE.dataPath, 'mfl-feeds');
+const SALARIES_DIR = path.join(ROOT, THELEAGUE.dataPath);
 const LEAGUE_CONFIG_PATH = path.join(ROOT, 'src/data/theleague.config.json');
-const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, 'data/theleague/championship-history.json');
-const OUTPUT_PATH = path.join(ROOT, 'data/theleague/derived/franchise-history.json');
+const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, THELEAGUE.dataPath, 'championship-history.json');
+const OUTPUT_PATH = path.join(ROOT, THELEAGUE.dataPath, 'derived/franchise-history.json');
 const SCHEFTER_FEED_PATH = path.join(ROOT, 'src/data/theleague/schefter-feed.json');
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;

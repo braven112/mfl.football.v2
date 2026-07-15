@@ -22,15 +22,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getNonEmpty } from './lib/env.mjs';
+import { DEFAULT_LEAGUE_ID, getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
 const MFL_HOST = 'https://api.myfantasyleague.com';
-
-// Default to TheLeague; AFL could be added later
-const DEFAULT_LEAGUE_ID = '13522';
 
 /**
  * MFL → standard team code mapping.
@@ -208,7 +206,7 @@ async function main() {
 
   const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID) || DEFAULT_LEAGUE_ID;
   const year = getNonEmpty(process.env.MFL_YEAR) || String(getCurrentSeasonYear());
-  const leagueName = leagueId === '19621' ? 'afl-fantasy' : 'theleague';
+  const leagueName = getLeagueById(leagueId)?.slug ?? DEFAULT_LEAGUE_SLUG;
 
   console.log(`   League: ${leagueName} (${leagueId})`);
   console.log(`   Year:   ${year}`);

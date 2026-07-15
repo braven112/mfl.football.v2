@@ -16,6 +16,7 @@ import { getAuthUser } from '../../../utils/auth';
 import { buildDraftPlayers } from '../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../../types/draft-room';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 export const prerender = false;
 
@@ -67,7 +68,7 @@ const players = buildDraftPlayers(leagueYear, {
 // ── Serialize page data ──
 // Picks start empty — they'll be populated by PartyKit session sync
 const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
-const leagueId = user.leagueId || '13522';
+const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
 
 const pageData: DraftRoomPageData = {
   leagueYear,
