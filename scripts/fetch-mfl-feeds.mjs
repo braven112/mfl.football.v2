@@ -295,11 +295,24 @@ const parseTradeBaitByFranchise = (data) => {
   return byFranchise;
 };
 
-const writeTradeBaitByFranchise = (data) => {
+const writeTradeBaitByFranchise = (data, flatIds) => {
   const file = path.join(outDir, 'tradeBait-by-franchise.json');
+  const franchises = parseTradeBaitByFranchise(data);
+
+  // Guard: zero franchises while the flat list has ids means the response
+  // carried entries we failed to attribute — don't clobber a good snapshot
+  // with `franchises: {}` (pages prefer this file over the flat list, so an
+  // empty-but-valid file silently disables the flat fallback). MFL APIKEYs
+  // are league-scoped, so a key that matches one league can leave the other
+  // league's fetch effectively unauthenticated.
+  if (Object.keys(franchises).length === 0 && Array.isArray(flatIds) && flatIds.length > 0) {
+    console.warn(`Skipping tradeBait-by-franchise write — 0 franchises parsed but flat list has ${flatIds.length} id(s); keeping previous snapshot.`);
+    return;
+  }
+
   const payload = {
     fetchedAt: Date.now(),
-    franchises: parseTradeBaitByFranchise(data),
+    franchises,
   };
   fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf8');
   console.log(`Saved tradeBait-by-franchise -> ${file}`);
@@ -422,11 +435,12 @@ const endpoints = [
     parser: (t) => {
       try {
         const data = JSON.parse(t);
+        const flat = parseTradeBait(data);
         // Side effect: persist the franchise-attributed shape alongside the
         // flat list, so UIs can show WHO flagged a player (see
         // parseTradeBaitByFranchise above for why the flat list isn't enough).
-        writeTradeBaitByFranchise(data);
-        return parseTradeBait(data);
+        writeTradeBaitByFranchise(data, flat);
+        return flat;
       } catch (err) {
         console.error('Failed to parse tradeBait JSON:', err.message);
         return [];
@@ -485,9 +499,13 @@ const endpoints = [
   },
 ];
 
+// Redact the APIKEY from anything logged — workflow logs are visible to
+// anyone with repo read access.
+const redactUrl = (url) => String(url).replace(/APIKEY=[^&]+/, 'APIKEY=***');
+
 const fetchText = async (url) => {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Fetch failed ${res.status} ${url}`);
+  if (!res.ok) throw new Error(`Fetch failed ${res.status} ${redactUrl(url)}`);
   return res.text();
 };
 
@@ -498,8 +516,8 @@ const fetchTextWithRetry = (url, retries = 3, baseDelayMs = 1500) =>
     attempts: retries,
     baseDelayMs,
     parse: 'text',
-    formatHttpError: (res, u) => `Fetch failed ${res.status} ${u}`,
-    onRetry: (err, attempt, wait) => console.warn(`Retrying ${url} in ${wait}ms (${err.message})`),
+    formatHttpError: (res, u) => `Fetch failed ${res.status} ${redactUrl(u)}`,
+    onRetry: (err, attempt, wait) => console.warn(`Retrying ${redactUrl(url)} in ${wait}ms (${err.message})`),
   });
 
 const writeOut = (key, data) => {
@@ -708,7 +726,7 @@ const run = async () => {
     // Still fetch tradeBait for latest trade bait
     for (const { key, url, parser } of endpoints.filter(e => alwaysFetchKeys.has(e.key))) {
       try {
-        console.log(`Fetching ${key} from ${url}`);
+        console.log(`Fetching ${key} from ${redactUrl(url)}`);
         const text = await fetchText(url);
         const parsed = parser(text);
         writeOut(key, parsed);
@@ -721,7 +739,7 @@ const run = async () => {
 
   for (const { key, url, parser } of endpoints) {
     try {
-      console.log(`Fetching ${key} from ${url}`);
+      console.log(`Fetching ${key} from ${redactUrl(url)}`);
       const text = await fetchText(url);
       const parsed = parser(text);
       writeOut(key, parsed);

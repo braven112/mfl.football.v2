@@ -205,7 +205,12 @@ async function fetchAndCacheTradeBait(
   let url = `https://api.myfantasyleague.com/${season}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
   if (apiKey) url += `&APIKEY=${encodeURIComponent(apiKey)}`;
 
-  const cookie = process.env.MFL_USER_ID || viewerMflCookie;
+  // Viewer cookie FIRST: this export is per-league owner-gated, and the
+  // viewer is a known member of the league being fetched. A server-level
+  // MFL_USER_ID (none configured today) might belong to an account that
+  // isn't in this league — which MFL answers with the same deceptive empty
+  // payload as no auth at all.
+  const cookie = viewerMflCookie || process.env.MFL_USER_ID;
   if (!cookie && !apiKey) {
     // No auth at all: the export would "succeed" empty and poison the cache.
     throw new Error('no MFL auth available (set MFL_APIKEY/MFL_USER_ID, or pass the viewer cookie)');
@@ -228,12 +233,35 @@ async function fetchAndCacheTradeBait(
     // flagged anyone, but it can also mean MFL didn't honor our auth. The
     // snippet makes the two distinguishable after the fact.
     console.log(
-      `[mfl-trade-bait-cache] Export returned no franchises (${leagueId}/${season}, auth: ${process.env.MFL_USER_ID ? 'env-cookie' : viewerMflCookie ? 'viewer-cookie' : 'apikey'}) — raw: ${JSON.stringify(data).slice(0, 300)}`
+      `[mfl-trade-bait-cache] Export returned no franchises (${leagueId}/${season}, auth: ${viewerMflCookie ? 'viewer-cookie' : process.env.MFL_USER_ID ? 'env-cookie' : 'apikey'}) — raw: ${JSON.stringify(data).slice(0, 300)}`
     );
   }
 
   const redis = await getRedis();
   if (!redis) return franchises;
+
+  // An EMPTY result must never overwrite a non-empty cache. MFL answers a
+  // bad/expired cookie exactly like no auth — HTTP 200 with an empty
+  // payload — which is indistinguishable server-side from "nobody has
+  // flagged anyone". One viewer with a dead cookie would otherwise blank
+  // the trade block league-wide for everyone (fresh-stamped for 2 min,
+  // re-poisoned on every page load they trigger). Serve the existing data
+  // instead; a genuinely-empty league only caches empty when the cache was
+  // already empty, and a real "last flag removed" still lands via
+  // /api/trade-bait's authenticated overwrite.
+  if (Object.keys(franchises).length === 0) {
+    try {
+      const existing = await redis.get<CachedTradeBaitPayload>(cacheKey(leagueId, season));
+      if (existing?.franchises && Object.keys(existing.franchises).length > 0) {
+        console.warn(
+          `[mfl-trade-bait-cache] Refusing to overwrite ${Object.keys(existing.franchises).length}-franchise cache with an empty fetch for ${leagueId}/${season} (likely unauthorized auth) — serving cached data`
+        );
+        return existing.franchises;
+      }
+    } catch {
+      // Fall through — worst case we cache empty over empty.
+    }
+  }
 
   // A write overwrote the cache while this fetch was in flight — the data
   // we hold predates the write. Serve it to this request but don't cache it.
