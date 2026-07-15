@@ -1410,3 +1410,29 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 
 **Evidence:** `src/pages/api/trades/{pending,respond,submit}.ts` (fixed
 2026-07-14), `src/utils/owner-trade-reports.ts`, `src/config/leagues-data.mjs`.
+
+## 2026-07-15 - Session `leagueId` Is the WRONG League Signal for Write Endpoints Called by League-Scoped Pages — Pin by Route Path
+
+**Context:** Phase 2 registry sweep merged `api/lineup.ts` + `api/afl-fantasy/lineup.ts` into one implementation. First iteration resolved the league from `user.leagueId` (per the 2026-07-14 insight above). Review caught a real regression: `/theleague/lineup` gates only on `franchiseId` — not session league — so a dual-league owner holding an AFL session legitimately uses that page, and session-resolution would have silently submitted their TheLeague starters as their **AFL** lineup (a cross-league write).
+
+**Insight:** The 2026-07-14 rule ("select per-league config from the session's leagueId") is right for *league-scoped storage and rendering*, but wrong when a route's callers are league-specific PAGES whose league can differ from the session league. For those, the **route path carries the league intent** — pin it there (`createLineupRoute(slug)` factory in `src/utils/lineup-route.ts`, instantiated by both paths). Rule of thumb: session `leagueId` answers "which league is this user scoped to?"; the route path answers "which league is this page operating on?" — for MFL writes, the page's league wins because the user's MFL cookie is account-global and works for any league they own a franchise in.
+
+**Related hardening from the same review:** `/api/auth/login` passes the client-supplied `leagueId` through into the JWT (`mflResponse.leagueId || leagueId || ''`), so sessions with arbitrary non-registry leagueIds are mintable. Write endpoints that DO use session league (cut-player) must fail loudly (400) on a non-registry leagueId rather than guessing a host — never silently redirect a destructive write to a fallback league.
+
+**Evidence:** `src/utils/lineup-route.ts`, `tests/lineup-route-merge.test.ts` (cross-league cases), `src/pages/api/cut-player.ts` (unknown-league guard), PR #439.
+
+## 2026-07-15 - `PUBLIC_MFL_HOST` / `PUBLIC_MFL_LEAGUE_ID` Are TheLeague-Scoped Globals — Never Read Them on AFL Pages
+
+**Context:** `afl-fantasy/playoffs.astro` built its live-scoring polls and options links from `import.meta.env.PUBLIC_MFL_HOST || <fallback>`. Fixing only the fallback (www49 → registry AFL host) was dead code: those env vars are set for TheLeague (the shared layout/header and `utils/playoffs.ts` rely on them), so the env branch always won in deployment and AFL links kept pointing at TheLeague's MFL server.
+
+**Insight:** Treat `PUBLIC_MFL_HOST`/`PUBLIC_MFL_LEAGUE_ID` as TheLeague's values. A non-default-league page must read its host/id from the registry directly and deliberately ignore those env vars. More generally: when "fixing a fallback," check whether the primary branch (env override) is also league-wrong — otherwise the fix never executes.
+
+**Evidence:** `src/pages/afl-fantasy/playoffs.astro` (fixed 2026-07-15, PR #439).
+
+## 2026-07-15 - MFL Player Photos: www49 Is the Only VERIFIED Photo Host — Don't "Fix" Photo URLs to Per-League Hosts
+
+**Context:** The registry sweep initially made `getPlayerImageUrl`/`getPlayerHeadshot` per-league (AFL → www44). Review flagged the risk: whether `www44.myfantasyleague.com` serves the `/player_photos_2010/` and `/player_photos_big_2014/` static paths was never verified (dev-environment egress to myfantasyleague.com is proxy-blocked), while www49 photo URLs demonstrably work in production for BOTH leagues — every committed data file (including AFL identity maps and AFLActionModal's fallback) uses www49.
+
+**Insight:** Player photos are pinned to one canonical `MFL_PHOTO_HOST` (the default league's registry host) in `src/constants/roster-constants.ts` and `scripts/update-salary-averages.mjs`. This is intentionally NOT per-league. If a future session has MFL egress: fetch the same player photo from www49 and www44, compare status/bytes, and either document host-agnosticism or make it per-league — until then, switching AFL photo fallbacks to www44 risks replacing working images with 404s.
+
+**Evidence:** `src/constants/roster-constants.ts` `MFL_PHOTO_HOST` comment, PR #439 review round.
