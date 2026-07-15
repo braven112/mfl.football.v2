@@ -287,95 +287,6 @@ const pageConfig = {
           </p>
         </header>
 
-        <section class="tb-block" aria-label="League trade block">
-          <header class="tb-block__header">
-            <div>
-              <h2 class="tb-block__title">🏷️ On the Trade Block</h2>
-              <p class="tb-block__sub">
-                {tradeBlockTotal > 0
-                  ? `${tradeBlockTotal} player${tradeBlockTotal === 1 ? '' : 's'} flagged by ${tradeBlockGroups.length} team${tradeBlockGroups.length === 1 ? '' : 's'}`
-                  : 'Players owners have flagged as available'}
-              </p>
-            </div>
-            <a class="tb-block__manage" href={`/afl-fantasy/rosters?franchise=${fromFranchiseId}`}>
-              Manage yours
-            </a>
-          </header>
-
-          {tradeBlockTotal === 0 ? (
-            <div class="tb-block__empty">
-              <p>
-                Nobody has flagged a player yet. Be the first — put a player on the
-                block and let the league know you're open for business.
-              </p>
-              <p class="tb-block__hint">
-                On the Rosters page, open the ⋯ menu next to any player and choose
-                "Add to Trade Block."
-              </p>
-            </div>
-          ) : (
-            <div class="tb-block__grid">
-              {tradeBlockGroups.map((group) => (
-                <div class="tb-block__team">
-                  <div class="tb-block__team-header">
-                    {group.team.icon && <img class="tb-block__team-icon" src={group.team.icon} alt="" />}
-                    <span class="tb-block__team-name">{group.team.name}</span>
-                    {!group.isOwn && !group.sameConference && (
-                      <span class="tb-block__locked-note" title="Cross-conference trades aren't allowed">
-                        {getConferenceShort(group.team.conference)} · can't trade
-                      </span>
-                    )}
-                  </div>
-                  <ul class="tb-block__players">
-                    {group.players.map((p) => {
-                      const canTrade = group.isOwn || group.sameConference;
-                      const href = group.isOwn
-                        ? `/afl-fantasy/trade-builder?from=${fromFranchiseId}&player=${p.id}`
-                        : `/afl-fantasy/trade-builder?from=${fromFranchiseId}&to=${group.team.franchiseId}&target=${p.id}`;
-                      return canTrade ? (
-                        <li class="tb-block__row">
-                          <a
-                            class="tb-block__player"
-                            href={href}
-                            title={group.isOwn ? `Add ${p.name} to your offer` : `Start a trade for ${p.name}`}
-                          >
-                            <span class="tb-picker__cell">
-                              <PlayerCell
-                                name={p.name}
-                                position={p.position}
-                                nflTeam={p.team}
-                                mflId={p.id}
-                                espnId={p.espnId}
-                              />
-                            </span>
-                            <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
-                            <span class="tb-block__arrow" aria-hidden="true">→</span>
-                          </a>
-                        </li>
-                      ) : (
-                        <li class="tb-block__row tb-block__row--locked" title="Cross-conference trades aren't allowed">
-                          <span class="tb-block__player">
-                            <span class="tb-picker__cell">
-                              <PlayerCell
-                                name={p.name}
-                                position={p.position}
-                                nflTeam={p.team}
-                                mflId={p.id}
-                                espnId={p.espnId}
-                              />
-                            </span>
-                            <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
         <div class="tb-panels">
           <!-- LEFT: My side -->
           <section class="tb-side tb-side--mine" aria-label="Your offering">
@@ -529,6 +440,95 @@ const pageConfig = {
             )}
           </section>
         </div>
+
+        <section class="tb-block" aria-label="League trade block">
+          <header class="tb-block__header">
+            <div>
+              <h2 class="tb-block__title">🏷️ On the Trade Block</h2>
+              <p class="tb-block__sub">
+                {tradeBlockTotal > 0
+                  ? `${tradeBlockTotal} player${tradeBlockTotal === 1 ? '' : 's'} flagged by ${tradeBlockGroups.length} team${tradeBlockGroups.length === 1 ? '' : 's'}`
+                  : 'Players owners have flagged as available'}
+              </p>
+            </div>
+            <a class="tb-block__manage" href={`/afl-fantasy/rosters?franchise=${fromFranchiseId}`}>
+              Manage yours
+            </a>
+          </header>
+
+          {tradeBlockTotal === 0 ? (
+            <div class="tb-block__empty">
+              <p>
+                Nobody has flagged a player yet. Be the first — put a player on the
+                block and let the league know you're open for business.
+              </p>
+              <p class="tb-block__hint">
+                On the Rosters page, open the ⋯ menu next to any player and choose
+                "Add to Trade Block."
+              </p>
+            </div>
+          ) : (
+            <div class="tb-block__grid">
+              {tradeBlockGroups.map((group) => (
+                <div class="tb-block__team">
+                  <div class="tb-block__team-header">
+                    {group.team.icon && <img class="tb-block__team-icon" src={group.team.icon} alt="" />}
+                    <span class="tb-block__team-name">{group.team.name}</span>
+                    {!group.isOwn && !group.sameConference && (
+                      <span class="tb-block__locked-note" title="Cross-conference trades aren't allowed">
+                        {getConferenceShort(group.team.conference)} · can't trade
+                      </span>
+                    )}
+                  </div>
+                  <ul class="tb-block__players">
+                    {group.players.map((p) => {
+                      const canTrade = group.isOwn || group.sameConference;
+                      const href = group.isOwn
+                        ? `/afl-fantasy/trade-builder?from=${fromFranchiseId}&player=${p.id}`
+                        : `/afl-fantasy/trade-builder?from=${fromFranchiseId}&to=${group.team.franchiseId}&target=${p.id}`;
+                      return canTrade ? (
+                        <li class="tb-block__row">
+                          <a
+                            class="tb-block__player"
+                            href={href}
+                            title={group.isOwn ? `Add ${p.name} to your offer` : `Start a trade for ${p.name}`}
+                          >
+                            <span class="tb-picker__cell">
+                              <PlayerCell
+                                name={p.name}
+                                position={p.position}
+                                nflTeam={p.team}
+                                mflId={p.id}
+                                espnId={p.espnId}
+                              />
+                            </span>
+                            <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
+                            <span class="tb-block__arrow" aria-hidden="true">→</span>
+                          </a>
+                        </li>
+                      ) : (
+                        <li class="tb-block__row tb-block__row--locked" title="Cross-conference trades aren't allowed">
+                          <span class="tb-block__player">
+                            <span class="tb-picker__cell">
+                              <PlayerCell
+                                name={p.name}
+                                position={p.position}
+                                nflTeam={p.team}
+                                mflId={p.id}
+                                espnId={p.espnId}
+                              />
+                            </span>
+                            <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </>
     )}
   </div>
@@ -836,12 +836,13 @@ const pageConfig = {
       font-size: 0.875rem;
     }
 
-    /* Trade block marketplace — amber branding matches TheLeague's version */
+    /* Trade block marketplace — amber branding matches TheLeague's version.
+       Sits BELOW the two team panels, same as TheLeague's marketplace. */
     .tb-block {
       background: var(--card-bg, #fff);
       border-radius: 0.75rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      margin-bottom: 1.25rem;
+      margin-top: 1.5rem;
       overflow: hidden;
     }
 
