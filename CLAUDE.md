@@ -47,6 +47,9 @@ App code imports `../config/leagues`; node scripts import
 `src/config/leagues-data.mjs` directly. Gate league-specific UI with
 `leagueHasFeature(slug, 'contracts' | 'keepers' | ...)`. Adding a league or
 domain is a one-entry change in `leagues-data.mjs`.
+`tests/league-literal-guard.test.ts` enforces this — it scans src/, scripts/,
+and .github/workflows/ for the forbidden literals and fails the build if one
+creeps back in outside its small, documented allowlist.
 
 ## Auth — session JWT only
 
