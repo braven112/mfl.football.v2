@@ -7,11 +7,6 @@ name: AFL Selected Keepers Check
 
 on:
   workflow_dispatch:
-  # push trigger scoped to the dev branch because the session's GitHub App
-  # token can't POST workflow dispatches (403) — remove before merging.
-  push:
-    branches:
-      - claude/mfl-api-keepers-selection-sz92nv
 
 permissions:
   contents: read

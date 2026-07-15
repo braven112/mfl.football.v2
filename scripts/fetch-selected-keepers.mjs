@@ -7,6 +7,11 @@
  * on). So run this where MFL credentials are available — in practice the
  * roster-sync GitHub Actions environment.
  *
+ * Verified live 2026-07-15 (AFL, commissioner account, Lockout ON): MFL
+ * seals ALL selections until the keeper window closes — every request,
+ * including FRANCHISE= probes, returns only the caller's own franchise.
+ * League-wide data only becomes readable after lockout lifts.
+ *
  * Env:
  *   MFL_LEAGUE_ID  (optional) - defaults to the AFL ('19621')
  *   MFL_YEAR       (optional) - defaults to the current calendar year
