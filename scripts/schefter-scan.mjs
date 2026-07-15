@@ -38,6 +38,7 @@ import {
   isQuietHours,
 } from './lib/schefter-groupme-budget.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
+import { buildDropDigest } from './lib/schefter-drop-digest.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -88,8 +89,11 @@ const LEAGUES = [
       rumorMill: true,
       tradeBait: true,
       eventReminders: true,
-      // TheLeague uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague
+      // TheLeague uses the rumor mill + drop-ping flow for GroupMe; no direct posting in scanLeague
       directGroupMe: false,
+      // Announce roster cuts in the chat: big drops ping individually, the
+      // rest of a scan's drops collapse into one digest ping (same queue).
+      groupMeDropDigest: true,
     },
   }),
   buildSchefterLeague('afl-fantasy', {
@@ -104,6 +108,7 @@ const LEAGUES = [
       eventReminders: true,
       // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
       directGroupMe: true,
+      groupMeDropDigest: false,
     },
   }),
 ];
@@ -518,7 +523,19 @@ function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMa
 
     const dropPool = dropped.isDef ? DROP_DEF_TEMPLATES : DROP_TEMPLATES;
     const { headline, body } = pickTemplate(dropPool, raw.timestamp)(team, dropped.playerName, '');
-    return { ...base, tier: 'minor', headline, body };
+    return {
+      ...base,
+      tier: 'minor',
+      headline,
+      body,
+      // Consumed by the GroupMe drop digest (groupMeDropDigest leagues). A
+      // bulk-drop transaction features one player above, but the chat ping
+      // should name everyone who hit the wire.
+      drop: {
+        team,
+        playerNames: droppedIds.map(id => describePlayer(id, players).playerName),
+      },
+    };
   }
 
   // Acquisition (with or without a corresponding drop) — report the add.
@@ -890,22 +907,28 @@ async function scanLeague(league) {
   }
 
   // Feed-first invariant holds: the file is persisted above before any GroupMe
-  // ping. Enqueue big-name drops, then drain the pending queue (respecting
-  // quiet hours + spacing and the shared daily budget).
+  // ping. Enqueue big-name drops and the scan's drop digest, then drain the
+  // pending queue (respecting quiet hours + spacing and the shared daily budget).
   await enqueueBigDrops(newPosts, leagueSlug, now);
+  await enqueueDropDigest(newPosts, league, leagueSlug, now);
   await flushPendingBigDrops(now);
 
   return newPosts.length;
 }
 
-// ── Big-name drops → GroupMe (shared daily budget) ──
+// ── Drops → GroupMe (shared daily budget) ──
 //
-// Every drop already lands on the league feed (above). Drops of players with a
-// contract salary over BIG_DROP_THRESHOLD additionally ping GroupMe and consume
-// one of the shared MAX_POSTS_PER_DAY slots (schefter:rumor:posts_today). The
-// daily cap does NOT block these — a big drop is real news — but quiet hours
-// and minimum spacing DO hold the ping, so we stage pings in a Redis list and
-// drain them on later scans once the window opens.
+// Every drop already lands on the league feed (above). Two lanes ping GroupMe,
+// both staged in the same Redis pending list:
+//   1. Big drops — a player with a contract salary over BIG_DROP_THRESHOLD
+//      gets his own individual ping (a big drop is real news).
+//   2. Drop digest (groupMeDropDigest leagues) — the rest of a scan's pure
+//      drops collapse into ONE combined ping so cut-day floods don't buzz
+//      the chat a dozen times.
+// Each send consumes one of the shared MAX_POSTS_PER_DAY slots
+// (schefter:rumor:posts_today). The daily cap does NOT block these, but quiet
+// hours and minimum spacing DO hold the ping, so we stage pings in a Redis
+// list and drain them on later scans once the window opens.
 
 function buildBigDropGroupMeText(post) {
   return `${post.headline}\n\n${post.body}`;
@@ -947,6 +970,55 @@ async function enqueueBigDrops(posts, leagueSlug, now) {
 }
 
 /**
+ * Stage ONE combined GroupMe ping for the scan's ordinary (non-big) drops.
+ * Gated per league by features.groupMeDropDigest. Rides the same pending
+ * queue as big drops, so quiet hours / spacing / staleness / quality gate
+ * all apply unchanged.
+ */
+async function enqueueDropDigest(posts, league, leagueSlug, now) {
+  if (!league.features.groupMeDropDigest) return;
+
+  // posts arrive newest-first (reversed for the feed prepend above); the
+  // digest reads oldest-first. Big drops have their own lane.
+  const dropPosts = [...posts].reverse().filter(p => p.drop && !p.bigDrop);
+  const digest = buildDropDigest(
+    dropPosts.map(p => ({
+      headline: p.headline,
+      body: p.body,
+      team: p.drop.team,
+      playerNames: p.drop.playerNames,
+    })),
+  );
+  if (!digest) return;
+
+  const entry = {
+    id: dropPosts[0].id,
+    league: leagueSlug,
+    headline: digest.headline,
+    body: digest.body,
+    text: `${digest.headline}\n\n${digest.body}`,
+    ts: now.getTime(),
+  };
+
+  if (DRY_RUN) {
+    console.log(`  [dry-run] Would queue drop-digest GroupMe ping:\n${entry.text}`);
+    return;
+  }
+
+  const redis = await getRedis();
+  if (!redis) {
+    console.warn('  [drop-digest] Redis unavailable — digest feed-only (no GroupMe)');
+    return;
+  }
+  try {
+    await redis.rpush(BIG_DROP_PENDING_KEY, JSON.stringify(entry));
+    console.log(`  [drop-digest] Queued GroupMe ping: ${digest.headline}`);
+  } catch (err) {
+    console.warn(`  [drop-digest] enqueue failed: ${err.message} — feed-only`);
+  }
+}
+
+/**
  * Drain staged big-drop pings. Sends at most one per spacing window (4h), holds
  * everything during quiet hours, and discards pings that have gone stale.
  */
@@ -954,8 +1026,6 @@ async function flushPendingBigDrops(now) {
   if (DRY_RUN) return;
   const redis = await getRedis();
   if (!redis) return;
-
-  const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
 
   let pendingCount;
   try {
@@ -1004,8 +1074,13 @@ async function flushPendingBigDrops(now) {
       return;
     }
 
+    // Route to the entry's own league bot (an AFL entry must never ping
+    // TheLeague's chat, and vice versa).
+    const schefterBotId = entry.league === 'afl'
+      ? process.env.GROUPME_AFL_SCHEFTER_BOT_ID
+      : process.env.GROUPME_SCHEFTER_BOT_ID;
     if (!schefterBotId) {
-      console.warn('  [big-drop] GROUPME_SCHEFTER_BOT_ID not set — holding ping');
+      console.warn(`  [big-drop] Schefter bot ID not set for ${entry.league} — holding ping`);
       return;
     }
 
