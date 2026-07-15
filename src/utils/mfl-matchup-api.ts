@@ -465,7 +465,12 @@ export class MFLMatchupApiClient {
     playerId: string,
     action: 'add' | 'remove',
     franchiseId: string
-  ): Promise<{ success: boolean; error?: string; allPlayerIds?: string[] }> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    allPlayerIds?: string[];
+    byFranchise?: Record<string, { playerIds: string[]; willGiveUpComment: string; willTakeComment: string }>;
+  }> {
     if (!this.config.mflUserId) {
       return { success: false, error: 'Authentication required for trade bait updates' };
     }
@@ -542,22 +547,83 @@ export class MFLMatchupApiClient {
         return { success: false, error: errorMsg };
       }
 
-      // Build the complete list of all trade bait player IDs across ALL franchises
-      // (matches the format of tradeBait.json used for local caching)
+      // Build the complete list of all trade bait player IDs across ALL
+      // franchises (tradeBait.json shape) plus the franchise-attributed
+      // shape (tradeBait-by-franchise.json). Prefer a fresh POST-import
+      // re-read: building this from the PRE-import read means two owners
+      // flagging players within seconds would stamp each other's flag out
+      // of the caches (the read each holds predates the other's import).
+      // NOTE: comment fields are whatever MFL reports — the import above
+      // always sends IN_EXCHANGE_FOR='', so don't trust cached comments to
+      // round-trip until that param mapping is verified.
+      let entriesForCaches: any[] | null = null;
+      try {
+        const rereadResponse = await mflFetch({
+          url: readUrl,
+          method: 'GET',
+          mflUserCookie: this.config.mflUserId!,
+        });
+        const reread = await rereadResponse.json() as any;
+        let rereadEntries = reread?.tradeBaits?.tradeBait;
+        if (rereadEntries && !Array.isArray(rereadEntries)) rereadEntries = [rereadEntries];
+        if (Array.isArray(rereadEntries)) entriesForCaches = rereadEntries;
+      } catch (rereadErr) {
+        console.warn('Trade bait post-import re-read failed; falling back to merged pre-import snapshot:', rereadErr);
+      }
+
+      const VALID_PLAYER_ID = /^\d{4,}$/;
+      const parseIds = (willGiveUp: unknown): string[] => {
+        if (!willGiveUp) return [];
+        const raw = typeof willGiveUp === 'string'
+          ? willGiveUp.split(',').map((id: string) => id.trim())
+          : [String(willGiveUp)];
+        return raw.filter((id) => VALID_PLAYER_ID.test(id));
+      };
+
       const allPlayerIds = new Set<string>();
-      for (const entry of tradeBaitEntries) {
-        if (entry.franchise_id === franchiseId) continue; // Skip — we'll use our updated list
-        if (entry.willGiveUp) {
-          const ids = typeof entry.willGiveUp === 'string'
-            ? entry.willGiveUp.split(',').map((id: string) => id.trim()).filter(Boolean)
-            : [String(entry.willGiveUp)];
+      const byFranchise: Record<string, { playerIds: string[]; willGiveUpComment: string; willTakeComment: string }> = {};
+
+      if (entriesForCaches) {
+        // Authoritative post-import state straight from MFL.
+        for (const entry of entriesForCaches) {
+          const entryFranchiseId = String(entry.franchise_id ?? '').trim();
+          const ids = parseIds(entry.willGiveUp);
           ids.forEach(id => allPlayerIds.add(id));
+          if (entryFranchiseId && ids.length > 0) {
+            byFranchise[entryFranchiseId] = {
+              playerIds: ids,
+              willGiveUpComment: typeof entry.willGiveUpComments === 'string' ? entry.willGiveUpComments.trim() : '',
+              willTakeComment: typeof entry.willTakeComments === 'string' ? entry.willTakeComments.trim() : '',
+            };
+          }
+        }
+      } else {
+        // Fallback: merge our updated list into the pre-import snapshot.
+        for (const entry of tradeBaitEntries) {
+          const entryFranchiseId = String(entry.franchise_id ?? '').trim();
+          if (entryFranchiseId === franchiseId) continue; // Skip — we'll use our updated list
+          const ids = parseIds(entry.willGiveUp);
+          ids.forEach(id => allPlayerIds.add(id));
+          if (entryFranchiseId && ids.length > 0) {
+            byFranchise[entryFranchiseId] = {
+              playerIds: ids,
+              willGiveUpComment: typeof entry.willGiveUpComments === 'string' ? entry.willGiveUpComments.trim() : '',
+              willTakeComment: typeof entry.willTakeComments === 'string' ? entry.willTakeComments.trim() : '',
+            };
+          }
+        }
+        const updatedIds = currentPlayerIds.filter((id) => VALID_PLAYER_ID.test(id));
+        updatedIds.forEach(id => allPlayerIds.add(id));
+        if (updatedIds.length > 0) {
+          byFranchise[franchiseId] = {
+            playerIds: updatedIds,
+            willGiveUpComment: typeof franchiseEntry?.willGiveUpComments === 'string' ? franchiseEntry.willGiveUpComments.trim() : '',
+            willTakeComment: typeof franchiseEntry?.willTakeComments === 'string' ? franchiseEntry.willTakeComments.trim() : '',
+          };
         }
       }
-      // Add the updated list for the current franchise
-      currentPlayerIds.forEach(id => allPlayerIds.add(id));
 
-      return { success: true, allPlayerIds: Array.from(allPlayerIds) };
+      return { success: true, allPlayerIds: Array.from(allPlayerIds), byFranchise };
     } catch (error) {
       console.error('Failed to update trade bait:', error);
       return {

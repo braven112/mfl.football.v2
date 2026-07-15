@@ -19,6 +19,14 @@
       "impact": "user",
       "area": "playoffs",
       "league": "afl"
+    },
+    {
+      "date": "2026-07-15",
+      "type": "bug-fix",
+      "summary": "Trade block tags on the AFL Rosters page no longer vanish after a reload — flagging a player now sticks visibly, and the tag only shows on the team that actually flagged him (not his conference twin).",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
     }
   ]
 }

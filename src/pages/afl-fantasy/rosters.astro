@@ -40,6 +40,8 @@ import {
 import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
+import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
+import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 
 export const prerender = false;
 
@@ -65,6 +67,10 @@ const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/pla
 const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', {
   eager: true,
 });
+const tradeBaitByFranchiseFeeds = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json',
+  { eager: true }
+);
 const futurePicksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', {
   eager: true,
 });
@@ -100,6 +106,9 @@ const playersData = getModuleData(
 ) as any;
 const tradeBaitData = getModuleData(
   tradeBaitFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait.json`]
+) as any;
+const tradeBaitByFranchiseData = getModuleData(
+  tradeBaitByFranchiseFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait-by-franchise.json`]
 ) as any;
 const futurePicksData = getModuleData(
   futurePicksFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]
@@ -163,19 +172,20 @@ for (const p of playersData.players.player as any[]) {
   });
 }
 
-// Trade bait set for badges
-const tradeBaitSet = new Set<string>();
-const baitPlayers = tradeBaitData?.tradeBaits?.tradeBait;
-if (baitPlayers) {
-  const arr = Array.isArray(baitPlayers) ? baitPlayers : [baitPlayers];
-  for (const b of arr) {
-    const willGiveUp = (b?.willGiveUp ?? '') as string;
-    for (const id of willGiveUp.split(',')) {
-      const trimmed = id.trim();
-      if (/^\d+$/.test(trimmed)) tradeBaitSet.add(trimmed);
-    }
-  }
-}
+// Trade bait for badges. Prefer the franchise-attributed shape — the flat
+// list can't say WHO flagged a player, and both AFL conferences roster the
+// same NFL player pool, so a bare id matches two teams' rosters. For the
+// current league year, the live Redis cache wins (same freshness model as
+// the roster cache above; updated in place by /api/trade-bait so a flag
+// added through this page survives reload). Then the committed
+// tradeBait-by-franchise.json, then the flat tradeBait.json via the shared
+// parser (which handles both the flat-array cache shape and the raw MFL
+// export shape; the inline raw-only parse this replaces silently dropped
+// badges on reload once the flat cache was written). Resolved into a
+// per-team set below, once selectedFranchiseId is known. The live fetch
+// happens after auth resolution — AFL's tradeBait export is owner-gated
+// and the viewer's own MFL cookie is the auth source.
+const flatTradeBaitIds = parseTradeBaitPlayerIds(tradeBaitData);
 
 // Auth + selected franchise resolution: query param > cookie > authUser > first AL team
 const authUser = getAuthUser(Astro.request);
@@ -213,6 +223,22 @@ const isOwner =
   !!authUser &&
   authUser.leagueId === AFL_LEAGUE_ID &&
   authUser.franchiseId === selectedTeam.franchiseId;
+
+// Trade bait badges for the selected team (per-franchise cache wins)
+const liveTradeBait =
+  aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
+    ? await getCachedTradeBait(
+        String(selectedYear),
+        aflLeague.id,
+        authUser?.leagueId === AFL_LEAGUE_ID && authUser.id ? authUser.id : undefined
+      )
+    : null;
+const tradeBaitByFranchise = liveTradeBait
+  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
+  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
+const tradeBaitSet = tradeBaitByFranchise
+  ? (tradeBaitByFranchise.get(selectedFranchiseId) ?? new Set<string>())
+  : flatTradeBaitIds;
 
 // Build roster
 type RosterEntry = PlayerInfo & {

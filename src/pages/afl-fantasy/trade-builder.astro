@@ -11,6 +11,9 @@ import {
   type ConferenceId,
 } from '../../utils/afl-conference';
 import { getLeagueBySlug } from '../../config/leagues';
+import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
+import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
+import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -21,6 +24,8 @@ const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/ros
 const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true });
 const adpFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true });
 const picksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true });
+const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true });
+const tradeBaitByFranchiseFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true });
 
 const getModuleData = (mod: any) => (mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod);
 
@@ -40,11 +45,50 @@ const rostersData = getModuleData(rostersFeeds[`../../../data/afl-fantasy/mfl-fe
 const playersData = getModuleData(playersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]) as any;
 const adpData = getModuleData(adpFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/adp-dynasty.json`]) as any;
 const picksData = getModuleData(picksFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]) as any;
+const tradeBaitData = getModuleData(tradeBaitFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait.json`]);
+const tradeBaitByFranchiseData = getModuleData(
+  tradeBaitByFranchiseFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait-by-franchise.json`]
+);
 
 // Auth — must be an AFL owner
 const authUser = getAuthUser(Astro.request);
 const isAflOwner =
   !!authUser && authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id && !!authUser.franchiseId;
+
+// Players owners have flagged on MFL's trade bait ("trade block"). Prefer the
+// franchise-attributed shape: AFL's two conferences roster the same NFL player
+// pool, so a flat id set would flag the player on BOTH teams that roster him
+// when only one owner actually put him on the block.
+//
+// Source priority for the current league year:
+//   1. Live Redis cache (re-fetched from MFL when older than 2 min, updated
+//      in place by /api/trade-bait) — committed feeds only refresh on the
+//      next data-sync commit + redeploy, so without this a flag added on
+//      MFL (or through our own rosters page) wouldn't appear until then.
+//      The viewer's own MFL cookie authenticates the fetch: AFL's tradeBait
+//      export is owner-gated and this deployment has no server MFL creds.
+//   2. Committed tradeBait-by-franchise.json
+//   3. Committed flat tradeBait.json (no attribution — pre-migration data)
+// Only fetch for signed-in owners — everyone else sees the sign-in gate and
+// never renders the marketplace, so the (potentially 10s) MFL fetch would be
+// pure wasted latency. Known June-1 dead zone: between AFL's rollover and the
+// first feed sync that lands a new-year rosters.json, selectedYear (newest
+// committed feeds year) lags getAflLeagueYear() and this gate goes false —
+// flags written to the new year won't render until that sync lands.
+const aflLeague = getLeagueBySlug('afl-fantasy');
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
+const liveTradeBait =
+  isAflOwner && aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)
+    ? await getCachedTradeBait(String(selectedYear), aflLeague.id, authUser!.id)
+    : null;
+const tradeBlockByFranchise = liveTradeBait
+  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
+  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
+const tradeBlockIds = parseTradeBaitPlayerIds(tradeBaitData);
+const isOnBlockFor = (franchiseId: string, playerId: string): boolean =>
+  tradeBlockByFranchise
+    ? (tradeBlockByFranchise.get(franchiseId)?.has(playerId) ?? false)
+    : tradeBlockIds.has(playerId);
 
 const allTeams = getAllTeams();
 
@@ -82,6 +126,7 @@ type PlayerLite = {
   espnId?: string;
   adp?: number;
   adpRank?: number;
+  onTradeBlock: boolean;
 };
 const playerMap = new Map<string, PlayerLite>();
 for (const p of (playersData?.players?.player ?? []) as any[]) {
@@ -92,6 +137,7 @@ for (const p of (playersData?.players?.player ?? []) as any[]) {
     team: p.team || 'FA',
     age: p.age || 'N/A',
     espnId: p.espn_id,
+    onTradeBlock: false, // set per-franchise in rosterFor — attribution matters
   });
 }
 
@@ -105,12 +151,29 @@ for (const a of (adpData?.adp?.player ?? []) as any[]) {
 }
 
 // Get rosters
+// Memoized — the trade-block panel calls this once per team on top of the
+// from/to pickers, and the find+map+sort would otherwise repeat per call.
+const rosterCache = new Map<string, PlayerLite[]>();
 function rosterFor(franchiseId: string): PlayerLite[] {
+  const cached = rosterCache.get(franchiseId);
+  if (cached) return cached;
+  const roster = buildRosterFor(franchiseId);
+  rosterCache.set(franchiseId, roster);
+  return roster;
+}
+
+function buildRosterFor(franchiseId: string): PlayerLite[] {
   const f = (rostersData?.rosters?.franchise as any[] | undefined)?.find((fr) => fr.id === franchiseId);
   if (!f?.player) return [];
   const arr = Array.isArray(f.player) ? f.player : [f.player];
   return arr
-    .map((p: any) => playerMap.get(p.id))
+    .map((p: any) => {
+      const info = playerMap.get(p.id);
+      // Copy — playerMap entries are shared across rosters (both conferences
+      // roster the same NFL players), so onTradeBlock must not be mutated on
+      // the shared object.
+      return info ? { ...info, onTradeBlock: isOnBlockFor(franchiseId, String(p.id)) } : undefined;
+    })
     .filter((p: PlayerLite | undefined): p is PlayerLite => !!p)
     .sort((a: PlayerLite, b: PlayerLite) => {
       // ADP rank first (lower = more valuable), unranked players at the end
@@ -126,6 +189,11 @@ const toRoster = toFranchiseId ? rosterFor(toFranchiseId) : [];
 // Pre-selected player from query param
 const preSelectedPlayer =
   queryPlayer && fromRoster.some((p) => p.id === queryPlayer) ? queryPlayer : null;
+
+// Pre-selected player on THEIR side (?target=...) — used by trade block links
+const queryTarget = Astro.url.searchParams.get('target');
+const preSelectedTarget =
+  queryTarget && toRoster.some((p) => p.id === queryTarget) ? queryTarget : null;
 
 // Future draft picks for both teams
 type DraftPickAsset = {
@@ -158,12 +226,42 @@ function picksFor(franchiseId: string): DraftPickAsset[] {
 const fromPicks = fromFranchiseId ? picksFor(fromFranchiseId) : [];
 const toPicks = toFranchiseId ? picksFor(toFranchiseId) : [];
 
+// Trade block marketplace — league-wide view of flagged players, grouped by
+// team. Same-conference teams are actionable (click to start a trade); the
+// other conference is shown but locked since cross-conference trades aren't
+// allowed.
+type TradeBlockGroup = {
+  team: AFLTeam;
+  players: PlayerLite[];
+  isOwn: boolean;
+  sameConference: boolean;
+};
+const tradeBlockGroups: TradeBlockGroup[] = allTeams
+  .map((team) => ({
+    team,
+    players: rosterFor(team.franchiseId).filter((p) => p.onTradeBlock),
+    isOwn: team.franchiseId === fromFranchiseId,
+    sameConference: team.conference === fromConference,
+  }))
+  .filter((g) => g.players.length > 0)
+  // Flat-fallback mode has no franchise attribution, so a flagged player
+  // matches his roster copy in BOTH conferences — showing the cross-conference
+  // twin would double-list him under a team that never flagged him. Hide the
+  // other conference entirely until attributed data is available (it can't be
+  // traded with anyway).
+  .filter((g) => tradeBlockByFranchise !== null || g.isOwn || g.sameConference);
+const tradeBlockTotal = tradeBlockGroups.reduce((n, g) => n + g.players.length, 0);
+const tradeBlockCounts = new Map<string, number>(
+  tradeBlockGroups.map((g) => [g.team.franchiseId, g.players.length])
+);
+
 // Page-level config for client JS
 const pageConfig = {
   fromFranchiseId,
   toFranchiseId,
   selectedYear,
   preSelectedPlayer,
+  preSelectedTarget,
   isAflOwner,
   // Tag map so the client can pretty-print player info from IDs without re-fetching
   playerLookup: Object.fromEntries(
@@ -235,7 +333,11 @@ const pageConfig = {
                         nflTeam={p.team}
                         mflId={p.id}
                         espnId={p.espnId}
-                      />
+                      >
+                        {p.onTradeBlock && (
+                          <span slot="after-name" class="tb-bait" title="On the trade block">🏷️</span>
+                        )}
+                      </PlayerCell>
                     </span>
                     <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
                     <button type="button" class="tb-picker__add" aria-label={`Add ${p.name} to offer`}>+</button>
@@ -304,7 +406,7 @@ const pageConfig = {
                       .sort((a, b) => a.name.localeCompare(b.name))
                       .map((t) => (
                         <option value={t.franchiseId} selected={t.franchiseId === toFranchiseId}>
-                          {t.name}
+                          {t.name}{tradeBlockCounts.has(t.franchiseId) ? ` · 🏷️ ${tradeBlockCounts.get(t.franchiseId)}` : ''}
                         </option>
                       ))}
                   </select>
@@ -329,7 +431,11 @@ const pageConfig = {
                         nflTeam={p.team}
                         mflId={p.id}
                         espnId={p.espnId}
-                      />
+                      >
+                        {p.onTradeBlock && (
+                          <span slot="after-name" class="tb-bait" title="On the trade block">🏷️</span>
+                        )}
+                      </PlayerCell>
                     </span>
                     <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
                     <button type="button" class="tb-picker__add" aria-label={`Add ${p.name} to ask`}>+</button>
@@ -353,17 +459,108 @@ const pageConfig = {
             )}
           </section>
         </div>
+
+        <section class="tb-block" aria-label="League trade block">
+          <header class="tb-block__header">
+            <div>
+              <h2 class="tb-block__title">🏷️ On the Trade Block</h2>
+              <p class="tb-block__sub">
+                {tradeBlockTotal > 0
+                  ? `${tradeBlockTotal} player${tradeBlockTotal === 1 ? '' : 's'} flagged by ${tradeBlockGroups.length} team${tradeBlockGroups.length === 1 ? '' : 's'}`
+                  : 'Players owners have flagged as available'}
+              </p>
+            </div>
+            <a class="tb-block__manage" href={`/afl-fantasy/rosters?franchise=${fromFranchiseId}`}>
+              Manage yours
+            </a>
+          </header>
+
+          {tradeBlockTotal === 0 ? (
+            <div class="tb-block__empty">
+              <p>
+                Nobody has flagged a player yet. Be the first — put a player on the
+                block and let the league know you're open for business.
+              </p>
+              <p class="tb-block__hint">
+                On the Rosters page, open the ⋯ menu next to any player and choose
+                "Add to Trade Block."
+              </p>
+            </div>
+          ) : (
+            <div class="tb-block__grid">
+              {tradeBlockGroups.map((group) => (
+                <div class="tb-block__team">
+                  <div class="tb-block__team-header">
+                    {group.team.icon && <img class="tb-block__team-icon" src={group.team.icon} alt="" />}
+                    <span class="tb-block__team-name">{group.team.name}</span>
+                    {!group.isOwn && !group.sameConference && (
+                      <span class="tb-block__locked-note" title="Cross-conference trades aren't allowed">
+                        {getConferenceShort(group.team.conference)} · can't trade
+                      </span>
+                    )}
+                  </div>
+                  <ul class="tb-block__players">
+                    {group.players.map((p) => {
+                      const canTrade = group.isOwn || group.sameConference;
+                      const href = group.isOwn
+                        ? `/afl-fantasy/trade-builder?from=${fromFranchiseId}&player=${p.id}`
+                        : `/afl-fantasy/trade-builder?from=${fromFranchiseId}&to=${group.team.franchiseId}&target=${p.id}`;
+                      return canTrade ? (
+                        <li class="tb-block__row">
+                          <a
+                            class="tb-block__player"
+                            href={href}
+                            title={group.isOwn ? `Add ${p.name} to your offer` : `Start a trade for ${p.name}`}
+                          >
+                            <span class="tb-picker__cell">
+                              <PlayerCell
+                                name={p.name}
+                                position={p.position}
+                                nflTeam={p.team}
+                                mflId={p.id}
+                                espnId={p.espnId}
+                              />
+                            </span>
+                            <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
+                            <span class="tb-block__arrow" aria-hidden="true">→</span>
+                          </a>
+                        </li>
+                      ) : (
+                        <li class="tb-block__row tb-block__row--locked" title="Cross-conference trades aren't allowed">
+                          <span class="tb-block__player">
+                            <span class="tb-picker__cell">
+                              <PlayerCell
+                                name={p.name}
+                                position={p.position}
+                                nflTeam={p.team}
+                                mflId={p.id}
+                                espnId={p.espnId}
+                              />
+                            </span>
+                            <span class="tb-picker__adp">{p.adp != null ? `ADP ${p.adp.toFixed(1)}` : '—'}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </>
     )}
   </div>
 
-  <script id="tb-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
+  {/* <-escape so no value (e.g. a player name) can break out of the
+      script element with a literal </script>. */}
+  <script id="tb-config" type="application/json" set:html={JSON.stringify(pageConfig).replace(/</g, '\\u003c')}></script>
 
   <script>
     const cfgEl = document.getElementById('tb-config');
     if (cfgEl) {
       const config = JSON.parse(cfgEl.textContent || '{}');
-      const { fromFranchiseId, preSelectedPlayer, isAflOwner, playerLookup, pickLookup } = config;
+      const { fromFranchiseId, preSelectedPlayer, preSelectedTarget, isAflOwner, playerLookup, pickLookup } = config;
 
       const zoneFrom = document.getElementById('zone-from');
       const zoneTo = document.getElementById('zone-to');
@@ -411,6 +608,12 @@ const pageConfig = {
         return pickLookup[a.id]?.label ?? a.id;
       }
 
+      // Labels feed innerHTML below — escape them. Names come from the MFL
+      // players feed (not league members), but there's no reason to trust it.
+      function escapeHtml(s: string): string {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
       function renderZone(side: 'from' | 'to') {
         const zone = side === 'from' ? zoneFrom : zoneTo;
         if (!zone) return;
@@ -422,8 +625,8 @@ const pageConfig = {
         zone.innerHTML = assets
           .map(
             (a) => `
-              <li class="tb-asset" data-asset-type="${a.type}" data-asset-id="${a.id}" data-side="${side}">
-                <span class="tb-asset__label">${assetLabel(a)}</span>
+              <li class="tb-asset" data-asset-type="${escapeHtml(a.type)}" data-asset-id="${escapeHtml(a.id)}" data-side="${side}">
+                <span class="tb-asset__label">${escapeHtml(assetLabel(a))}</span>
                 <button type="button" class="tb-asset__remove" aria-label="Remove">×</button>
               </li>
             `
@@ -533,12 +736,18 @@ const pageConfig = {
         url.searchParams.set('from', fromFranchiseId);
         url.searchParams.set('to', toSelect.value);
         url.searchParams.delete('player');
+        url.searchParams.delete('target');
         window.location.href = url.toString();
       });
 
       // Pre-select player from query param
       if (preSelectedPlayer) {
         add('from', 'player', preSelectedPlayer);
+      }
+
+      // Pre-select THEIR player from a trade block link (?target=...)
+      if (preSelectedTarget) {
+        add('to', 'player', preSelectedTarget);
       }
 
       // Submit handler
@@ -652,6 +861,187 @@ const pageConfig = {
       margin: 0.25rem 0 0;
       color: var(--content-text-muted, #6b7280);
       font-size: 0.875rem;
+    }
+
+    /* Trade block marketplace — amber branding matches TheLeague's version.
+       Sits BELOW the two team panels, same as TheLeague's marketplace.
+       The accent palette is single-sourced on these custom properties; the
+       dark-mode block below re-points them instead of restyling each rule. */
+    .tb-block {
+      --tb-block-grad-a: #fffbeb;
+      --tb-block-grad-b: #fef3c7;
+      --tb-block-border: #fde68a;
+      --tb-block-text: #92400e;
+      --tb-block-accent: #f59e0b;
+      --tb-block-accent-contrast: #fff;
+      --tb-block-hover-bg: #fffbeb;
+
+      background: var(--card-bg, #fff);
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      margin-top: 1.5rem;
+      overflow: hidden;
+    }
+
+    :global(html.dark) .tb-block {
+      --tb-block-grad-a: #3a2e12;
+      --tb-block-grad-b: #4a3818;
+      --tb-block-border: #5a4420;
+      --tb-block-text: #fcd34d;
+      --tb-block-accent-contrast: #1f2937;
+      --tb-block-hover-bg: #3a2e12;
+
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .tb-block__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      padding: 0.875rem 1.25rem;
+      background: linear-gradient(135deg, var(--tb-block-grad-a) 0%, var(--tb-block-grad-b) 100%);
+      border-bottom: 1px solid var(--tb-block-border);
+    }
+
+    .tb-block__title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--page-text, #0f172a);
+    }
+
+    .tb-block__sub {
+      margin: 0.125rem 0 0;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--tb-block-text);
+    }
+
+    .tb-block__manage {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--tb-block-text);
+      text-decoration: none;
+      border: 1px solid var(--tb-block-accent);
+      border-radius: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      white-space: nowrap;
+    }
+
+    .tb-block__manage:hover {
+      background: var(--tb-block-accent);
+      color: var(--tb-block-accent-contrast);
+    }
+
+    .tb-block__empty {
+      display: grid;
+      gap: 0.375rem;
+      padding: 1.25rem;
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--content-text-muted, #6b7280);
+    }
+
+    .tb-block__empty p {
+      margin: 0;
+    }
+
+    .tb-block__hint {
+      font-size: 0.75rem;
+    }
+
+    .tb-block__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    .tb-block__team {
+      border-right: 1px solid var(--content-border, #e5e7eb);
+      border-bottom: 1px solid var(--content-border, #e5e7eb);
+    }
+
+    .tb-block__team-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--content-bg-muted, #f9fafb);
+      border-bottom: 1px solid var(--content-border, #e5e7eb);
+    }
+
+    .tb-block__team-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .tb-block__team-name {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--page-text, #0f172a);
+    }
+
+    .tb-block__locked-note {
+      margin-left: auto;
+      font-size: 0.6875rem;
+      color: var(--content-text-muted, #6b7280);
+    }
+
+    .tb-block__players {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .tb-block__row + .tb-block__row {
+      border-top: 1px solid var(--content-border, #f3f4f6);
+    }
+
+    .tb-block__row--locked {
+      opacity: 0.55;
+    }
+
+    .tb-block__player {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .tb-block__player .tb-picker__cell {
+      flex: 1;
+      min-width: 0;
+    }
+
+    a.tb-block__player:hover {
+      background: var(--tb-block-hover-bg);
+    }
+
+    a.tb-block__player:hover .tb-block__arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .tb-block__arrow {
+      flex-shrink: 0;
+      font-weight: 700;
+      color: var(--tb-block-accent);
+      opacity: 0;
+      transform: translateX(-4px);
+      transition: all 0.15s ease;
+    }
+
+    .tb-bait {
+      margin-left: 0.25rem;
+      font-size: 0.75rem;
     }
 
     .tb-panels {
@@ -1044,5 +1434,8 @@ const pageConfig = {
     :global(html.dark) .tb-balance__verdict[data-kind="good"] {
       color: #7dd3fc;
     }
+
+    /* Dark mode for the trade block is handled entirely by re-pointing the
+       --tb-block-* custom properties on :global(html.dark) .tb-block above. */
   </style>
 </TheLeagueLayout>
