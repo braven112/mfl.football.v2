@@ -70,6 +70,15 @@ export const DEFAULT_LEAGUE_SLUG = RAW_DEFAULT as CanonicalLeagueSlug;
 /** MFL numeric id of the default league. Use instead of hardcoding '13522'. */
 export const DEFAULT_LEAGUE_ID = RAW_DEFAULT_ID as string;
 export const ALL_LEAGUES: LeagueDefinition[] = Object.values(LEAGUES);
+/**
+ * The default league's full registry entry — for TheLeague-only components
+ * (auction/draft heroes, demo/prototype components) that need a
+ * `mflHost`/`leagueId` prop default and don't take a `league` param. Use
+ * `DEFAULT_LEAGUE.mflHost` / `DEFAULT_LEAGUE.id` instead of each call site
+ * re-deriving `getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!` independently (code
+ * review flagged this pattern copy-pasted across 6 components).
+ */
+export const DEFAULT_LEAGUE: LeagueDefinition = LEAGUES[DEFAULT_LEAGUE_SLUG];
 
 export function getLeagueBySlug(slug: string): LeagueDefinition | null {
   return rawGetBySlug(slug) as LeagueDefinition | null;

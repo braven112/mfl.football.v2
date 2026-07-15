@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';
 
 /**
@@ -60,27 +60,45 @@ const REGISTRY_FILE = 'src/config/leagues-data.mjs';
  * allowlisted: TheLeagueLayout.astro, HpUnsignedFaCard.astro, and ~15 other
  * src/components/** files that had literal leagueId/mflHost prop defaults or
  * hardcoded player-photo fallback URLs).
+ *
+ * Scoped by `literals` (not just `file`): a file being allowlisted only
+ * exempts the SPECIFIC literal(s) named, not the whole file. A stray new
+ * literal added anywhere else in an allowlisted file — e.g. a copy-pasted
+ * host string riding along with an already-justified id — still fails the
+ * guard and needs its own entry (code review caught this: a file-wide
+ * exemption would have silently covered roster-sync.yml's second literal,
+ * '19621', even though the allowlist reason only discussed '13522').
  */
-const ALLOWLIST: Array<{ file: string; reason: string }> = [
+const ALLOWLIST: Array<{ file: string; literals: string[]; reason: string }> = [
   {
     file: '.github/workflows/roster-sync.yml',
+    literals: ['13522', '19621'],
     reason:
-      "fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback (unlike apply-pending-contracts.mjs / sync-draft-pick-contracts.mjs, which do fall back to DEFAULT_LEAGUE_ID). Workflow YAML can't import src/config/leagues-data.mjs, so a literal id is the one documented exception here — kept in sync with LEAGUES.*.id by convention (see inline workflow comment).",
+      "fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback (unlike apply-pending-contracts.mjs / sync-draft-pick-contracts.mjs, which do fall back to DEFAULT_LEAGUE_ID). Workflow YAML can't import src/config/leagues-data.mjs, so literal ids are the one documented exception here — theleague's ('13522') via vars.MFL_LEAGUE_ID override, AFL's ('19621') bare in the per-league bash array — kept in sync with LEAGUES.*.id by convention (see inline workflow comment).",
   },
   {
     file: '.github/workflows/schefter-trade-speculation.yml',
+    literals: ['13522'],
     reason:
       "fetch-trade-bait.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback, same reasoning as roster-sync.yml above.",
   },
   {
     file: 'scripts/backfill-afl-championship-history.mjs',
+    literals: ['data/theleague'],
     reason:
       "the literal appears inside a human-readable $comment string written into the output JSON ('Mirrors data/theleague/championship-history.json shape') — descriptive text about file shape, not a code path dependency.",
   },
   {
     file: 'src/pages/theleague/insights.astro',
+    literals: ['data/theleague'],
     reason:
       "the 'AI Insights Corpus' dev-notes page — its body is prose documentation of engineering learnings for readers, including illustrative file-path examples in <code> tags. Not executable business logic.",
+  },
+  {
+    file: 'src/utils/schefter-og.ts',
+    literals: ['data/theleague', 'data/afl-fantasy'],
+    reason:
+      "FEED_PATHS maps league slug to its committed schefter-feed.json location, which is asymmetric — theleague's bundled copy lives under src/data/theleague/ (for static import elsewhere) while afl-fantasy's lives at the data/afl-fantasy/ root — so it isn't derivable from the single dataPath registry field. Not caught by a nearby call-site marker since it's a plain object literal, not a function argument.",
   },
 ];
 
@@ -95,19 +113,18 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.astro', '.vercel'])
 function walk(baseDir: string, extensions: Set<string>): string[] {
   const abs = join(ROOT, baseDir);
   const results: string[] = [];
-  let entries: string[];
+  let entries: Array<{ name: string; isDirectory(): boolean }>;
   try {
-    entries = readdirSync(abs);
+    entries = readdirSync(abs, { withFileTypes: true });
   } catch {
     return results;
   }
   for (const entry of entries) {
-    const full = join(abs, entry);
-    const st = statSync(full);
-    if (st.isDirectory()) {
-      if (SKIP_DIRS.has(entry)) continue;
+    const full = join(abs, entry.name);
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
       results.push(...walk(relative(ROOT, full), extensions));
-    } else if (extensions.has(extname(entry))) {
+    } else if (extensions.has(extname(entry.name))) {
       results.push(full);
     }
   }
@@ -188,6 +205,22 @@ function stripJsComments(src: string): string {
       continue;
     }
     if (inSingle) {
+      // Defense-in-depth: single/double-quoted strings can't legally
+      // contain a literal unescaped newline in JS/TS, so hitting one here
+      // means the regex-vs-division heuristic above misjudged something
+      // earlier on this line (missed a regex literal, or a preceding-token
+      // shape it doesn't recognize) and left us in a fake "inside a
+      // string" state. Reset at the newline so the damage is capped to the
+      // single line it happened on, instead of silently un-stripping every
+      // comment for the rest of the file (the exact failure mode that hid
+      // the original src/utils/mfl-login.ts bug — see the scanner
+      // self-test below and docs/claude/insights/features/league-literal-guard.md).
+      if (c === '\n') {
+        inSingle = false;
+        out.push(c);
+        i++;
+        continue;
+      }
       out.push(c);
       if (c === '\\') {
         if (i + 1 < n) out.push(src[i + 1]);
@@ -199,6 +232,12 @@ function stripJsComments(src: string): string {
       continue;
     }
     if (inDouble) {
+      if (c === '\n') {
+        inDouble = false;
+        out.push(c);
+        i++;
+        continue;
+      }
       out.push(c);
       if (c === '\\') {
         if (i + 1 < n) out.push(src[i + 1]);
@@ -423,13 +462,21 @@ function stripComments(content: string, ext: string): string {
  *
  * This is a heuristic, not a parser. It errs toward NOT flagging legitimate
  * file paths (verified empirically: it exempts every real occurrence in the
- * current tree except the 4 ALLOWLIST entries above) while still catching
+ * current tree except the ALLOWLIST entries above) while still catching
  * the actual historical bug shape — a hardcoded id/host, or a literal
  * embedded directly in business logic (e.g. a ternary) with no nearby I/O
  * call. Because the id/host checks above have NO such exemption, a
  * ternary like `leagueId === '19621' ? 'data/afl-fantasy' : 'data/theleague'`
  * is still caught via its '19621' literal even in the (unlikely) case a
  * stray I/O marker sits within the data-path window.
+ *
+ * The window is 250 chars — measured against every legitimate occurrence in
+ * the tree, the single farthest real marker (a multi-line generic-typed
+ * `import.meta.glob<{...}>(...)` call) needs ~213. src/utils/schefter-og.ts
+ * needed ~390 to reach an unrelated `import` statement at the top of the
+ * file — that was a coincidental pass, not a real same-statement marker, so
+ * it's an explicit ALLOWLIST entry instead of a wider window that would
+ * mask real violations elsewhere.
  */
 const STRUCTURAL_MARKERS = [
   'readfile', 'writefile', 'readjson', 'loadjson', 'savejson',
@@ -438,20 +485,45 @@ const STRUCTURAL_MARKERS = [
   'existssync', 'fetch(', 'mkdir', 'unlink', 'createreadstream',
   'createwritestream', 'json.parse', 'json.stringify',
 ];
-const STRUCTURAL_WINDOW = 400;
+const STRUCTURAL_WINDOW = 250;
+
+/**
+ * True when `matchIndex` sits strictly inside a template literal that also
+ * contains a `${` interpolation somewhere in that same literal.
+ *
+ * Uses backtick parity (not a nearest-backtick search) to find the
+ * enclosing literal: code review caught that a naive
+ * `lastIndexOf('\`')` / `indexOf('\`')` pair can span from an unrelated
+ * template literal *before* the match to a different, also-unrelated one
+ * *after* it — and if a `${` happens to appear anywhere in that spanned
+ * text (e.g. inside an ordinary string like `'Use ${variable} syntax'`
+ * sitting between the two literals), the match gets wrongly exempted even
+ * though it isn't inside any template literal at all. Counting backticks
+ * before the match tells us definitively whether we're inside one (odd
+ * count) or not (even count), and — if inside — exactly which pair of
+ * backticks encloses it.
+ */
+function isInsideInterpolatedTemplateLiteral(stripped: string, matchIndex: number): boolean {
+  let count = 0;
+  let lastOpen = -1;
+  for (let i = 0; i < matchIndex; i++) {
+    if (stripped[i] === '`') {
+      count++;
+      if (count % 2 === 1) lastOpen = i;
+    }
+  }
+  if (count % 2 !== 1) return false; // not inside any template literal
+  const close = stripped.indexOf('`', matchIndex);
+  if (close === -1) return false;
+  return stripped.slice(lastOpen, close + 1).includes('${');
+}
 
 function isStructurallyExempt(stripped: string, matchIndex: number): boolean {
   const windowStart = Math.max(0, matchIndex - STRUCTURAL_WINDOW);
   const window = stripped.slice(windowStart, matchIndex).toLowerCase();
   if (STRUCTURAL_MARKERS.some((marker) => window.includes(marker))) return true;
 
-  const backtickBefore = stripped.lastIndexOf('`', matchIndex);
-  const backtickAfter = stripped.indexOf('`', matchIndex);
-  if (backtickBefore !== -1 && backtickAfter !== -1) {
-    const segment = stripped.slice(backtickBefore, backtickAfter);
-    if (segment.includes('${')) return true;
-  }
-  return false;
+  return isInsideInterpolatedTemplateLiteral(stripped, matchIndex);
 }
 
 // ---------------------------------------------------------------------------
@@ -640,6 +712,29 @@ describe('league literal guard — scanner self-test', () => {
     );
     const hits = findViolations(src, { checkDataPaths: true });
     expect(hits).toEqual([]);
+  });
+
+  it('still flags a business-logic literal sitting between two UNRELATED template literals (code review regression)', () => {
+    // Code review (GitHub Copilot) caught that a naive nearest-backtick
+    // search for the template-literal exemption could span from an
+    // unrelated template literal *before* the match to a different,
+    // unrelated one *after* it — and if an ordinary string containing the
+    // literal text "${" happens to sit in that gap, the match got wrongly
+    // exempted even though it isn't inside any template literal at all.
+    // This reproduces that exact false-negative and asserts it's fixed.
+    const src = stripJsComments(
+      [
+        'const a = `foo`;',
+        "const label = 'Use ${variable} syntax';",
+        "const dataDir = leagueId === '19621' ? 'data/afl-fantasy' : 'data/theleague';",
+        'const b = `bar`;',
+      ].join('\n'),
+    );
+    const hits = findViolations(src, { checkDataPaths: true });
+    const patterns = hits.map((h) => h.pattern);
+    expect(patterns).toContain('19621');
+    expect(patterns).toContain('data/afl-fantasy');
+    expect(patterns).toContain('data/theleague');
   });
 
   it('strips JSDoc/line comments so documentation examples do not trip the guard', () => {

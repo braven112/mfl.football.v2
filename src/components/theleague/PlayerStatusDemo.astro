@@ -8,11 +8,10 @@ import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import LineupOptimizationIndicator from './LineupOptimizationIndicator.astro';
 import EnhancedPlayerCard from './EnhancedPlayerCard.astro';
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
-import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+import { DEFAULT_LEAGUE } from '../../config/leagues';
 import { DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 
-const defaultLeague = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
-const demoActionUrl = `https://${defaultLeague.mflHost}/2025/options?L=${defaultLeague.id}&F=0001&O=07`;
+const demoActionUrl = `https://${DEFAULT_LEAGUE.mflHost}/2025/options?L=${DEFAULT_LEAGUE.id}&F=0001&O=07`;
 
 // Demo data for testing the components
 const demoPlayers: FantasyPlayer[] = [
