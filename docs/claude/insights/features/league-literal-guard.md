@@ -54,8 +54,9 @@ per-file entry needed) — (1) a nearby call-site marker (`readFile`,
 `path.join`, `import.meta.glob`, `from '`, etc. within ~400 chars before the
 match), and (2) the match sits inside a template literal that also contains
 a `${` interpolation anywhere in the same literal. This shrank the
-allowlist from ~30 files to 4 genuine outliers (a `$comment` string in
-generated JSON, and prose on a dev-notes page). The id/host literals
+allowlist from ~30 files to 5 genuine outliers (two workflow files whose
+scripts require a literal id, a `$comment` string in generated JSON, prose
+on a dev-notes page, and the asymmetric feed-path map in `schefter-og.ts`). The id/host literals
 (`13522`, `19621`, `www49.myfantasyleague`, `www44.myfantasyleague`) get
 *no* such exemption — those are the ones that caused real historical bugs
 (host fallbacks, id ternaries), so they stay strict everywhere including

@@ -578,20 +578,24 @@ function scanRepo(): Violation[] {
   const codeFiles = [...walk('src', CODE_EXTENSIONS), ...walk('scripts', CODE_EXTENSIONS)];
   const workflowFiles = walk('.github/workflows', WORKFLOW_EXTENSIONS);
 
-  const allowedFiles = new Set(ALLOWLIST.map((a) => a.file));
+  // Literal-scoped, not file-wide: an allowlisted file is still scanned, and
+  // only the specific literals its entry excuses are ignored — a NEW forbidden
+  // literal added to an allowlisted file is still reported.
+  const allowedLiterals = new Map(ALLOWLIST.map((a) => [a.file, new Set(a.literals)]));
 
   for (const absPath of [...codeFiles, ...workflowFiles]) {
     const rel = relative(ROOT, absPath).split('\\').join('/');
     if (rel === REGISTRY_FILE) continue;
-    if (allowedFiles.has(rel)) continue;
 
     const ext = extname(absPath);
     const raw = readFileSync(absPath, 'utf8');
     const stripped = stripComments(raw, ext);
     const isWorkflow = WORKFLOW_EXTENSIONS.has(ext);
+    const excused = allowedLiterals.get(rel);
 
     const hits = findViolations(stripped, { checkDataPaths: !isWorkflow });
     for (const hit of hits) {
+      if (excused?.has(hit.pattern)) continue;
       violations.push({ file: rel, line: lineOf(stripped, hit.index), pattern: hit.pattern });
     }
   }
@@ -635,10 +639,14 @@ describe('league literal guard', () => {
       const stripped = stripComments(raw, ext);
       const isWorkflow = WORKFLOW_EXTENSIONS.has(ext);
       const hits = findViolations(stripped, { checkDataPaths: !isWorkflow });
-      expect(
-        hits.length,
-        `ALLOWLIST entry "${entry.file}" no longer contains any forbidden literal — remove it.`,
-      ).toBeGreaterThan(0);
+      const present = new Set(hits.map((h) => h.pattern));
+      for (const literal of entry.literals) {
+        expect(
+          present.has(literal),
+          `ALLOWLIST entry "${entry.file}" excuses "${literal}" but the file no longer ` +
+            `contains it — remove the literal from (or the whole) entry.`,
+        ).toBe(true);
+      }
     }
   });
 });
