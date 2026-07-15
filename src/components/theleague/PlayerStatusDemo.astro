@@ -8,6 +8,10 @@ import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import LineupOptimizationIndicator from './LineupOptimizationIndicator.astro';
 import EnhancedPlayerCard from './EnhancedPlayerCard.astro';
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
+import { DEFAULT_LEAGUE } from '../../config/leagues';
+import { DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+
+const demoActionUrl = `https://${DEFAULT_LEAGUE.mflHost}/2025/options?L=${DEFAULT_LEAGUE.id}&F=0001&O=07`;
 
 // Demo data for testing the components
 const demoPlayers: FantasyPlayer[] = [
@@ -75,7 +79,7 @@ const demoOptimizations: LineupOptimization[] = [
     severity: 'high',
     startingPlayer: demoPlayers[2], // Cooper Kupp (Out)
     message: 'Cooper Kupp (WR) is out and currently starting',
-    actionUrl: 'https://www49.myfantasyleague.com/2025/options?L=13522&F=0001&O=07',
+    actionUrl: demoActionUrl,
     includeInAnalysis: true,
     analysisText: 'Cooper Kupp is out and currently starting',
   },
@@ -86,7 +90,7 @@ const demoOptimizations: LineupOptimization[] = [
     suggestedPlayer: demoPlayers[3], // Tyreek Hill
     pointsDifference: 8.3,
     message: 'Consider starting Tyreek Hill (WR) over Cooper Kupp (+8.3 projected points)',
-    actionUrl: 'https://www49.myfantasyleague.com/2025/options?L=13522&F=0001&O=07',
+    actionUrl: demoActionUrl,
     includeInAnalysis: true,
     analysisText: 'Consider starting Tyreek Hill over Cooper Kupp (+8.3 pts)',
   },
@@ -95,7 +99,7 @@ const demoOptimizations: LineupOptimization[] = [
     severity: 'medium',
     startingPlayer: demoPlayers[4], // Jonathan Taylor
     message: 'Jonathan Taylor (RB) is on NFL IR and eligible for fantasy IR',
-    actionUrl: 'https://www49.myfantasyleague.com/2025/options?L=13522&F=0001&O=07',
+    actionUrl: demoActionUrl,
     includeInAnalysis: false,
     analysisText: 'Jonathan Taylor is on NFL IR and eligible for fantasy IR',
   },
@@ -152,7 +156,7 @@ const demoOptimizations: LineupOptimization[] = [
             src={`https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=96&h=70`}
             alt={player.name}
             class="player-headshot-small"
-            onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+            onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
           />
           <div class="player-info-enhanced">
             <div class="player-header-enhanced">

@@ -139,6 +139,7 @@
 
 <script>
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+  import { DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 
   type ModalAction = 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
 
@@ -195,8 +196,7 @@
     // PlayerDetailsModal's DEFAULT_IMG). Keeps the avatar tile from breaking
     // when ESPN doesn't have a headshot for a player (free agents, defenses,
     // pre-draft rookies).
-    const DEFAULT_HEADSHOT =
-      'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+    const DEFAULT_HEADSHOT = DEFAULT_HEADSHOT_URL;
 
     function formatDraft(
       year: number | null | undefined,

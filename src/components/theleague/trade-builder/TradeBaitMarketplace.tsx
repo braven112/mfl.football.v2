@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { TradeBuilderTeam } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-
-const DEFAULT_HEADSHOT = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+import { DEFAULT_HEADSHOT_URL as DEFAULT_HEADSHOT } from '../../../constants/roster-constants';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 

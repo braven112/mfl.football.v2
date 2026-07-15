@@ -9,6 +9,7 @@
 import EventHeroShell from './EventHeroShell.astro';
 import { randomHeroPlayer } from '../../utils/hero-players';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
+import { DEFAULT_LEAGUE } from '../../config/leagues';
 
 export interface Props {
   /** League year for constructing MFL external URLs */
@@ -26,8 +27,8 @@ export interface Props {
 
 const {
   leagueYear,
-  mflHost = 'www49.myfantasyleague.com',
-  leagueId = '13522',
+  mflHost = DEFAULT_LEAGUE.mflHost,
+  leagueId = DEFAULT_LEAGUE.id,
   resolveLeaguePath: r,
   spriteUrl,
   live = true,

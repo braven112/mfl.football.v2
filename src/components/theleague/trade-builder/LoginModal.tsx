@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { TradeBuilderAuthUser } from '../../../types/trade-builder';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 interface Props {
   onClose: () => void;
@@ -7,7 +8,7 @@ interface Props {
   leagueId?: string;
 }
 
-export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522' }: Props) {
+export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT_LEAGUE_ID }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

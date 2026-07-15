@@ -6,6 +6,7 @@
 
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
 import { generateLineupActionUrl, generateIREligibilityMessage } from '../../utils/matchup-preview-utils';
+import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 import '../../styles/loading.css';
 
 export interface Props {
@@ -17,10 +18,10 @@ export interface Props {
   className?: string;
 }
 
-const { 
-  player, 
-  optimizations, 
-  leagueId = '13522', 
+const {
+  player,
+  optimizations,
+  leagueId = DEFAULT_LEAGUE_ID,
   year = new Date().getFullYear().toString(),
   showIRButton = true,
   className = '' 

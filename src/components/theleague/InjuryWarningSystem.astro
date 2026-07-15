@@ -8,6 +8,7 @@
 import InjuryManager from './InjuryManager.astro';
 import type { FantasyPlayer, LineupOptimization, Matchup } from '../../types/matchup-previews';
 import { createLineupOptimizer } from '../../utils/lineup-optimizer';
+import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 
 export interface Props {
   matchup: Matchup;
@@ -17,9 +18,9 @@ export interface Props {
   className?: string;
 }
 
-const { 
-  matchup, 
-  leagueId = '13522', 
+const {
+  matchup,
+  leagueId = DEFAULT_LEAGUE_ID,
   year = new Date().getFullYear().toString(),
   showSummary = true,
   className = '' 

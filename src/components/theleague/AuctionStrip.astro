@@ -6,6 +6,8 @@
  * the 3rd Sunday of August (FA close). Sits above the normal hero banner
  * with 5 key auction links in a single horizontal row.
  */
+import { DEFAULT_LEAGUE } from '../../config/leagues';
+
 export interface Props {
   /** League year for constructing MFL external URLs */
   leagueYear: number;
@@ -23,8 +25,8 @@ export interface Props {
 
 const {
   leagueYear,
-  mflHost = 'www49.myfantasyleague.com',
-  leagueId = '13522',
+  mflHost = DEFAULT_LEAGUE.mflHost,
+  leagueId = DEFAULT_LEAGUE.id,
   resolveLeaguePath: r,
   spriteUrl,
   variant = 'auction',

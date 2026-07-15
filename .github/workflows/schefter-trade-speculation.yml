@@ -44,7 +44,13 @@ jobs:
 
       - name: Refresh trade-bait feed
         env:
-          MFL_LEAGUE_ID: "13522"
+          # fetch-trade-bait.mjs requires MFL_LEAGUE_ID (no registry
+          # fallback — see scripts/fetch-trade-bait.mjs), so this is one of
+          # the few places a literal id is the pragmatic choice: workflow
+          # YAML can't import src/config/leagues-data.mjs. Keep this in sync
+          # with LEAGUES.theleague.id there; set vars.MFL_LEAGUE_ID to
+          # override without a code change.
+          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
           MFL_LEAGUE_SLUG: theleague
         run: node scripts/fetch-trade-bait.mjs
 

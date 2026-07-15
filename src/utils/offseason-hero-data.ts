@@ -16,9 +16,24 @@ import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
+/**
+ * Looks up a league's data path, or throws a clear, specific error instead
+ * of letting a `!` non-null assertion crash with a generic "Cannot read
+ * properties of null" (code review feedback: prefer an explicit failure
+ * mode here, even though 'theleague' and every CanonicalLeagueSlug value
+ * are guaranteed-valid registry keys today).
+ */
+function requireDataPath(slug: string): string {
+  const league = getLeagueBySlug(slug);
+  if (!league) {
+    throw new Error(`offseason-hero-data: unknown league slug '${slug}' — check src/config/leagues-data.mjs`);
+  }
+  return league.dataPath;
+}
+
 // TheLeague's data root, for the TheLeague-only functions below that don't
-// take a `league` param. Never hardcode 'data/theleague'.
-const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague')?.dataPath ?? 'data/theleague';
+// take a `league` param. Never hardcode the data path.
+const THELEAGUE_DATA_PATH = requireDataPath('theleague');
 
 // ── JSON Data Loaders ──
 
@@ -34,10 +49,10 @@ function readJsonFile(relativePath: string): any {
 
 /**
  * Repo-relative path to a synced MFL feed file for a league year. League data
- * roots come from the league registry — never hardcode 'data/theleague' etc.
+ * roots come from the league registry — never hardcode a data path.
  */
 function feedPath(league: CanonicalLeagueSlug, leagueYear: number, file: string): string {
-  const dataPath = getLeagueBySlug(league)?.dataPath ?? 'data/theleague';
+  const dataPath = requireDataPath(league);
   return `${dataPath}/mfl-feeds/${leagueYear}/${file}`;
 }
 

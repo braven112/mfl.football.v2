@@ -30,17 +30,12 @@ interface Props {
 const hideLeaguePrefix = Astro.props.hideLeaguePrefix ?? false;
 const hideMobileNavIcons = Astro.props.hideMobileNavIcons ?? false;
 
-const envHost =
-  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
-  "www49.myfantasyleague.com/";
-const envLeagueId =
-  (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || "";
-// Always use the smart year function (handles Feb 14 rollover automatically)
+// Always use the smart year function (handles Feb 14 rollover automatically).
+// NOTE: host/leagueId/staticHost props are accepted for backward compatibility
+// but unused below — leagueHome etc. derive host/id from getLeagueContext(),
+// which is registry-backed and per-league-correct (unlike the removed
+// env-var-with-www49-literal-fallback that used to live here).
 const envYear = getCurrentLeagueYear().toString();
-const envStaticHost =
-  (import.meta.env.PUBLIC_STATIC_HOST as string | undefined) || envHost;
-
-const normalize = (value: string) => value.replace(/\/+$/, "");
 
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);

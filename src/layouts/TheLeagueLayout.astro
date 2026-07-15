@@ -65,9 +65,14 @@ const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 // Get league context from URL
 const leagueContext = getLeagueContext(Astro.url);
 
-// Determine the MFL host to use
-const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'www49.myfantasyleague.com';
-const mflHost = (host || envHost).replace(/^https?:\/\//, '').replace(/\/+$/, '');
+// Determine the MFL host to use. When a caller doesn't pass `host` at all,
+// leagueContext.host is a registry-derived (per-league mflHost, honoring the
+// PUBLIC_MFL_HOST override), normalized fallback — a strict improvement over
+// the literal 'www49.myfantasyleague.com' it replaces, which was wrong for
+// every AFL page. Callers that already compute their own `host` (e.g.
+// login.astro's separate PUBLIC_MFL_HOST-with-fallback) are unaffected either
+// way, since `host || ...` short-circuits on their value.
+const mflHost = (host || leagueContext.host).replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
 // Determine the year — always use the smart year function (handles Feb 14 rollover automatically)
 const currentYear = (year || getCurrentLeagueYear()).toString();

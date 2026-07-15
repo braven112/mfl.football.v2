@@ -25,6 +25,7 @@ import {
   saveCustomRankings,
 } from '../../../utils/custom-rankings-storage';
 import { detectTierBreaks } from '../../../utils/tier-detection';
+import { getPlayerImageUrl } from '../../../constants/roster-constants';
 import type {
   CustomRankingsState,
   RankedPlayer,
@@ -48,11 +49,15 @@ interface Props {
   vorpMapJson?: string;
 }
 
+// ESPN headshots are preferred; getPlayerImageUrl() (roster-constants.ts)
+// supplies the MFL fallback — it's the canonical URL builder pinned to the
+// DEFAULT league's registry host, carrying the "www44 was never verified to
+// serve photos" rationale in one place instead of a second hand-rolled copy.
 function getHeadshotUrl(playerId: string, espnId: string | null): string {
   if (espnId) {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
-  return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+  return getPlayerImageUrl(playerId);
 }
 
 export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMapJson }: Props) {
