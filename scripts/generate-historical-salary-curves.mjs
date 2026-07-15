@@ -16,10 +16,13 @@
 
 import fs from 'fs';
 import path from 'path';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
 const YEARS = [2020, 2021, 2022, 2023, 2024];
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
-const OUTPUT_FILE = 'data/theleague/historical-salary-curves.json';
+const OUTPUT_FILE = `${THELEAGUE_DATA_PATH}/historical-salary-curves.json`;
 
 // Helper to load JSON
 const loadJson = (p) => {
@@ -32,14 +35,14 @@ const loadJson = (p) => {
 const bidsByPosition = {}; 
 POSITIONS.forEach(p => bidsByPosition[p] = []);
 
-const playersFile = 'data/theleague/mfl-feeds/2025/players.json';
+const playersFile = `${THELEAGUE_DATA_PATH}/mfl-feeds/2025/players.json`;
 const playersData = loadJson(playersFile)?.players?.player || [];
 const playerMap = new Map(playersData.map(p => [p.id, p.position]));
 
 console.log(`Loaded ${playersData.length} players for position lookup.`);
 
 YEARS.forEach(year => {
-    const file = `data/theleague/mfl-feeds/${year}/auctionResults.json`;
+    const file = `${THELEAGUE_DATA_PATH}/mfl-feeds/${year}/auctionResults.json`;
     const data = loadJson(file);
     if (!data) {
         console.warn(`⚠️ Warning: No auction data for ${year}`);

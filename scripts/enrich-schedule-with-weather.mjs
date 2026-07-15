@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -178,7 +179,7 @@ async function main() {
   console.log(`\n🌤️  NFL Weather Enrichment\n`);
 
   // Load the schedule file
-  const scheduleFile = path.join(root, `data/theleague/nfl-cache/week${week}-${year}.json`);
+  const scheduleFile = path.join(root, `${getLeagueBySlug('theleague').dataPath}/nfl-cache/week${week}-${year}.json`);
 
   if (!fs.existsSync(scheduleFile)) {
     console.error(`❌ Schedule file not found: ${scheduleFile}`);

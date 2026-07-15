@@ -20,6 +20,7 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { buildMflExportUrl } from '../../utils/mfl-url';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
+import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 
 const TAXI_SQUAD_LIMIT = 3;
 
@@ -125,7 +126,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const year = String(getCurrentLeagueYear());
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
 
     const mflClient = createMFLApiClient({
       leagueId,

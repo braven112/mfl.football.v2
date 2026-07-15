@@ -151,8 +151,8 @@ const isAuctionHeroActive = heroState.phase === 'auction-preview' || heroState.p
 const showAuctionsCard = !isAuctionHeroActive && isAuctionStripPeriod(now);
 
 // MFL external links for the auctions card
-const mflHost = 'www49.myfantasyleague.com';
-const mflLeagueId = '13522';
+const mflHost = getLeagueBySlug('theleague')!.mflHost;
+const mflLeagueId = getLeagueBySlug('theleague')!.id;
 const mflAuctionBase = `https://${mflHost}/${leagueYear}/options?L=${mflLeagueId}`;
 const placeBidUrl = `${mflAuctionBase}&O=43`;
 const completedAuctionsUrl = `${mflAuctionBase}&O=43`;
@@ -296,7 +296,7 @@ const salaryPlayers: HomeSalaryPlayer[] = (latestRoster.players ?? []).map((p: a
 });
 
 // Overlay Redis-cached roster data for near-real-time freshness
-const cachedRosterPlayers = await getCachedRosters(currentSalaryYear, '13522');
+const cachedRosterPlayers = await getCachedRosters(currentSalaryYear, getLeagueBySlug('theleague')!.id);
 if (cachedRosterPlayers) {
   const playerById = new Map(salaryPlayers.map((p) => [p.id, p]));
   for (const [playerId, cached] of Object.entries(cachedRosterPlayers)) {

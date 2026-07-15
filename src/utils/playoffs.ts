@@ -9,7 +9,7 @@ import { buildMflExportUrl } from './mfl-url';
 
 const DEFAULT_HOST =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
-  'https://www49.myfantasyleague.com';
+  `https://${LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost}`;
 const DEFAULT_LEAGUE_ID =
   (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) ||
   LEAGUES[DEFAULT_LEAGUE_SLUG].id;

@@ -10,6 +10,9 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
+const THELEAGUE_NFL_CACHE_DIR = `${getLeagueBySlug('theleague').dataPath}/nfl-cache`;
 
 // ESPN API base URLs
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
@@ -535,7 +538,7 @@ export async function buildCompleteNFLData(year, week, mflYear = 2025) {
  * @param {Object} data - NFL data to cache
  * @param {string} cacheDir - Directory to save cache
  */
-export function cacheNFLData(data, cacheDir = 'data/theleague/nfl-cache') {
+export function cacheNFLData(data, cacheDir = THELEAGUE_NFL_CACHE_DIR) {
   const dir = path.join(process.cwd(), cacheDir);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -556,7 +559,7 @@ export function cacheNFLData(data, cacheDir = 'data/theleague/nfl-cache') {
  * @returns {Object|null} Cached data or null
  */
 export function loadCachedNFLData(year, week, maxAge = 3600000) {
-  const cacheDir = path.join(process.cwd(), 'data/theleague/nfl-cache');
+  const cacheDir = path.join(process.cwd(), THELEAGUE_NFL_CACHE_DIR);
   const filename = `week${week}-${year}.json`;
   const filepath = path.join(cacheDir, filename);
 

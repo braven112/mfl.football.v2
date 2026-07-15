@@ -47,14 +47,21 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
-const HOST_MAP_PATH = path.join(ROOT, 'data/afl-fantasy/year-host-map.json');
-const OUTPUT_PATH = path.join(ROOT, 'data/afl-fantasy/championship-history.json');
+const AFL_LEAGUE = getLeagueBySlug('afl-fantasy');
+// fetchMfl/fetchExport want the bare host prefix (they append
+// '.myfantasyleague.com' themselves), so derive it from the registry's full
+// mflHost for the 2016+ fallback years below.
+const AFL_FALLBACK = { host: AFL_LEAGUE.mflHost.split('.')[0], leagueId: AFL_LEAGUE.id };
+
+const FEEDS_DIR = path.join(ROOT, AFL_LEAGUE.dataPath, 'mfl-feeds');
+const HOST_MAP_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'year-host-map.json');
+const OUTPUT_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'championship-history.json');
 
 const args = process.argv.slice(2);
 const ONLINE = args.includes('--online');
@@ -378,9 +385,9 @@ async function rebuildHostMap(hostMap) {
     years[m[2]] = { host: m[1], leagueId: m[3] };
   }
   // Always include 2024+ since they're the current host
-  if (!years['2024']) years['2024'] = { host: 'www44', leagueId: '19621' };
-  if (!years['2025']) years['2025'] = { host: 'www44', leagueId: '19621' };
-  if (!years['2026']) years['2026'] = { host: 'www44', leagueId: '19621' };
+  if (!years['2024']) years['2024'] = { ...AFL_FALLBACK };
+  if (!years['2025']) years['2025'] = { ...AFL_FALLBACK };
+  if (!years['2026']) years['2026'] = { ...AFL_FALLBACK };
 
   const rebuilt = { ...hostMap, years };
   await writeJson(HOST_MAP_PATH, rebuilt);

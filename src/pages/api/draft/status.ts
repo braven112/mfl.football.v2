@@ -14,11 +14,12 @@ import { parseTradeFromComment } from '../../../utils/draft-utils';
 import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-room';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { getLeagueBySlug } from '../../../config/leagues';
 
 export const prerender = false;
 
-const DEFAULT_HOST = 'www49.myfantasyleague.com';
-const DEFAULT_LEAGUE_ID = '13522';
+const DEFAULT_HOST = getLeagueBySlug('theleague')!.mflHost;
+const DEFAULT_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 interface RawDraftPick {
   player?: string;

@@ -2,10 +2,11 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import leagueConfig from '../data/afl-fantasy/afl.config.json' with { type: 'json' };
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const publicDir = path.join(projectRoot, 'public');
-const dataDir = path.join(projectRoot, 'data', 'afl-fantasy');
+const dataDir = path.join(projectRoot, getLeagueBySlug('afl-fantasy').dataPath);
 const leagueAssetsDir = path.join(publicDir, 'assets', 'afl');
 const outputJsonPath = path.join(dataDir, 'afl.assets.json');
 

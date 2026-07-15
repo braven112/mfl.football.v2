@@ -9,13 +9,14 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import leagueConfigData from '../../../data/theleague.config.json';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 export const prerender = false;
 
 const user = getAuthUser(Astro.request);
 const leagueYear = getCurrentLeagueYear();
 const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
-const leagueId = user?.leagueId || '13522';
+const leagueId = user?.leagueId || DEFAULT_LEAGUE_ID;
 const isAdmin = user ? isCommissionerOrAdmin(user) : false;
 
 // Build team lookup for display

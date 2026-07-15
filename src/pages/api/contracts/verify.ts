@@ -10,9 +10,10 @@ import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
 import { JSON_HEADERS } from '../../../utils/api-response';
+import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
 const MFL_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
-const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || '13522';
+const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || DEFAULT_LEAGUE_ID;
 const MFL_USER_ID = process.env.MFL_USER_ID || '';
 
 interface MFLSalaryPlayer {

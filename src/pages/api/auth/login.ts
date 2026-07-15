@@ -3,8 +3,9 @@ import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
+import { getLeagueBySlug } from '../../../config/leagues';
 
-const AFL_LEAGUE_ID = '19621';
+const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {

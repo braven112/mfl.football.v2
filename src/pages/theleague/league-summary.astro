@@ -17,6 +17,7 @@ import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
 import { getPlayerMap } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
+import { getLeagueBySlug } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -149,7 +150,7 @@ const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
 // Same pattern as rosters.astro — static files are the baseline, Redis overlays
 // the latest salary/contract/status/franchise assignments on top.
 // ---------------------------------------------------------------------------
-const cachedRosterPlayers = await getCachedRosters(currentYear, '13522');
+const cachedRosterPlayers = await getCachedRosters(currentYear, getLeagueBySlug('theleague')!.id);
 if (cachedRosterPlayers) {
   const playerById = new Map(players.map((p) => [p.id, p]));
   for (const [playerId, cached] of Object.entries(cachedRosterPlayers)) {

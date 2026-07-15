@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getNonEmpty } from './lib/env.mjs';
+import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
 const getLaborDay = (year) => {
   const septemberFirst = new Date(year, 8, 1);
@@ -39,7 +40,8 @@ if (!leagueId) {
 }
 
 const leagueName = getNonEmpty(process.env.MFL_LEAGUE_SLUG) ||
-  (leagueId === '19621' ? 'afl-fantasy' : 'theleague');
+  getLeagueById(leagueId)?.slug ||
+  DEFAULT_LEAGUE_SLUG;
 const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.com';
 
 // Determine year (same logic as fetch-mfl-feeds.mjs)

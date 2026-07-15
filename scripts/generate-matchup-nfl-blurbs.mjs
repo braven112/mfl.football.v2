@@ -22,10 +22,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Anthropic } from '@anthropic-ai/sdk';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
+const THELEAGUE = getLeagueBySlug('theleague');
 
 const week = process.env.WEEK || '15';
 // Auto-detect season year based on Labor Day
@@ -41,8 +43,8 @@ const year = process.env.YEAR || autoDetectSeasonYear();
 const homeTeamId = process.env.HOME_TEAM_ID || '0013';
 const awayTeamId = process.env.AWAY_TEAM_ID || '0015';
 
-const dataDir = path.join(root, `data/theleague/mfl-feeds/${year}`);
-const outputPath = path.join(root, `data/theleague/matchup-nfl-blurbs-${homeTeamId}-${awayTeamId}.json`);
+const dataDir = path.join(root, `${THELEAGUE.dataPath}/mfl-feeds/${year}`);
+const outputPath = path.join(root, `${THELEAGUE.dataPath}/matchup-nfl-blurbs-${homeTeamId}-${awayTeamId}.json`);
 
 function loadJson(filename) {
   return JSON.parse(fs.readFileSync(path.join(dataDir, filename), 'utf8'));
@@ -76,7 +78,7 @@ async function buildMatchupContext() {
     const { getMFLData } = await import('./mfl-api-wrapper.js');
     
     console.log('🔄 Fetching live data from MFL API...');
-    const { injuryData, projections } = await getMFLData('13522', '2025', week);
+    const { injuryData, projections } = await getMFLData(THELEAGUE.id, '2025', week);
     
     mflInjuryData = injuryData;
     liveProjections = projections;
@@ -105,7 +107,7 @@ async function buildMatchupContext() {
   
   try {
     // Try to load live injury data first
-    const liveInjuryPath = path.join(root, `data/theleague/live-injury-data-week-${week}.json`);
+    const liveInjuryPath = path.join(root, `${THELEAGUE.dataPath}/live-injury-data-week-${week}.json`);
     
     if (fs.existsSync(liveInjuryPath)) {
       const liveInjuryData = JSON.parse(fs.readFileSync(liveInjuryPath, 'utf8'));
@@ -175,7 +177,7 @@ async function buildMatchupContext() {
   
   try {
     // Try to load live starting lineup data first
-    const liveLineupsPath = path.join(root, `data/theleague/live-starting-lineups-week-${week}.json`);
+    const liveLineupsPath = path.join(root, `${THELEAGUE.dataPath}/live-starting-lineups-week-${week}.json`);
     
     if (fs.existsSync(liveLineupsPath)) {
       const liveData = JSON.parse(fs.readFileSync(liveLineupsPath, 'utf8'));
@@ -192,7 +194,7 @@ async function buildMatchupContext() {
       }
     } else {
       // Fallback to static weekly results data
-      const weeklyResultsPath = path.join(root, 'data/theleague/mfl-feeds/2025/weekly-results-raw.json');
+      const weeklyResultsPath = path.join(root, `${THELEAGUE.dataPath}/mfl-feeds/2025/weekly-results-raw.json`);
       
       if (fs.existsSync(weeklyResultsPath)) {
         const weeklyResults = JSON.parse(fs.readFileSync(weeklyResultsPath, 'utf8'));
@@ -320,7 +322,7 @@ async function buildMatchupContext() {
  */
 function getMatchupGames(context) {
   const scheduleFile = `week${week}-${year}.json`;
-  const schedulePath = path.join(root, 'data/theleague/nfl-cache', scheduleFile);
+  const schedulePath = path.join(root, `${THELEAGUE.dataPath}/nfl-cache`, scheduleFile);
 
   if (!fs.existsSync(schedulePath)) {
     console.warn(`NFL schedule not found: ${schedulePath}`);
@@ -630,7 +632,7 @@ async function main() {
   }
 
   // Load matchup story if available
-  const storyPath = path.join(root, `data/theleague/test-matchup-story-nfl.json`);
+  const storyPath = path.join(root, `${THELEAGUE.dataPath}/test-matchup-story-nfl.json`);
   let matchupStory = null;
   if (fs.existsSync(storyPath)) {
     const storyData = JSON.parse(fs.readFileSync(storyPath, 'utf8'));

@@ -16,6 +16,10 @@ import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
+// TheLeague's data root, for the TheLeague-only functions below that don't
+// take a `league` param. Never hardcode 'data/theleague'.
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague')?.dataPath ?? 'data/theleague';
+
 // ── JSON Data Loaders ──
 
 function readJsonFile(relativePath: string): any {
@@ -163,7 +167,7 @@ export function getFranchiseHeadliners(
 export function getFranchiseCompositableHeadliners(
   leagueYear: number,
 ): Array<{ playerId: string; franchiseId: string }> {
-  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const rosterData = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/rosters.json`);
   const franchises = rosterData?.rosters?.franchise;
   if (!franchises) return [];
   const projections = getProjectionMap(leagueYear);
@@ -204,7 +208,7 @@ const STARTER_COUNT = 9;
  */
 export function getFranchiseProjectedTotals(leagueYear: number): Map<string, number> {
   const out = new Map<string, number>();
-  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const rosterData = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/rosters.json`);
   const franchises = rosterData?.rosters?.franchise;
   if (!franchises) return out;
   const projections = getProjectionMap(leagueYear);
@@ -676,7 +680,7 @@ interface ChampionshipResult {
  * has a single playoffGame object (not array) with home/away scores.
  */
 export function getChampionshipResult(seasonYear: number): ChampionshipResult | null {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${seasonYear}/playoff-brackets.json`);
+  const data = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${seasonYear}/playoff-brackets.json`);
   if (!data?.brackets?.['1']?.playoffBracket?.playoffRound) return null;
 
   const rounds = data.brackets['1'].playoffBracket.playoffRound;
@@ -717,7 +721,7 @@ interface TaggedPlayerRaw {
  * Transaction field format: "playerId|amount|..."
  */
 export function getTaggedPlayers(leagueYear: number): TaggedPlayerRaw[] {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/transactions.json`);
+  const data = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/transactions.json`);
   if (!data?.transactions?.transaction) return [];
 
   const txns = Array.isArray(data.transactions.transaction)
@@ -774,7 +778,7 @@ function getProjectionMap(
  * Returns Map<franchiseId, playerId[]> sorted newest-first.
  */
 function getRecentPickups(leagueYear: number): Map<string, string[]> {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/transactions.json`);
+  const data = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/transactions.json`);
   const map = new Map<string, { playerId: string; timestamp: number }[]>();
   if (!data?.transactions?.transaction) return new Map();
 
@@ -828,7 +832,7 @@ function getRecentPickups(leagueYear: number): Map<string, string[]> {
  * skipping duplicates.
  */
 export function getCutCandidates(leagueYear: number): CutCandidateRaw[] {
-  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  const rosterData = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/rosters.json`);
   if (!rosterData?.rosters?.franchise) return [];
 
   const franchises = Array.isArray(rosterData.rosters.franchise)
@@ -971,7 +975,7 @@ export function areAllDraftPicksFilled(data: any): boolean {
  */
 export function isDraftComplete(leagueYear: number): boolean {
   return areAllDraftPicksFilled(
-    readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/draftResults.json`)
+    readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/draftResults.json`)
   );
 }
 
@@ -989,7 +993,7 @@ function getPlayerMap(leagueYear: number): Map<string, { name: string; position:
     });
   }
   // Also load non-fantasy-position players from raw feed (coaches, etc. may appear in transactions)
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/players.json`);
+  const data = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/players.json`);
   if (data?.players?.player) {
     const players = Array.isArray(data.players.player) ? data.players.player : [data.players.player];
     for (const p of players) {

@@ -23,6 +23,7 @@ import path from 'node:path';
 import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getNonEmpty } from './lib/env.mjs';
+import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
 /**
  * Calculate Labor Day for a given year (first Monday in September)
@@ -113,7 +114,7 @@ const leagueKey = getNonEmpty(process.env.MFL_LEAGUE_SLUG) || leagueId;
 
 // Determine league name for output directory
 // MFL_LEAGUE_NAME env var or default based on league ID
-const leagueName = getNonEmpty(process.env.MFL_LEAGUE_NAME) || (leagueId === '19621' ? 'afl-fantasy' : 'theleague');
+const leagueName = getNonEmpty(process.env.MFL_LEAGUE_NAME) || getLeagueById(leagueId)?.slug || DEFAULT_LEAGUE_SLUG;
 
 // Determine which year(s) to fetch based on league calendar
 // If MFL_YEAR is explicitly set, use that (manual override)

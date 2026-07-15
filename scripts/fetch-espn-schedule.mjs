@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatTimePT } from './lib/pt-date.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -219,7 +220,7 @@ function getWeatherEmoji(description) {
  * Save data to file
  */
 function saveData(data, week, year) {
-  const outputDir = path.join(root, 'data/theleague/nfl-cache');
+  const outputDir = path.join(root, `${getLeagueBySlug('theleague').dataPath}/nfl-cache`);
   const outputFile = path.join(outputDir, `week${week}-${year}.json`);
 
   // Ensure directory exists

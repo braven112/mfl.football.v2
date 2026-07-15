@@ -23,6 +23,7 @@ import {
 import { isDraftablePosition } from '../../../utils/build-draft-players';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { DEFAULT_LEAGUE_ID, getLeagueBySlug } from '../../../config/leagues';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
@@ -102,7 +103,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const leagueId = user.leagueId || '13522';
+    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
     const leagueYear = getCurrentLeagueYear();
     const leagueYearStr = String(leagueYear);
 
@@ -274,7 +275,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     // MFL dynasty ADP (local feed, filter to rookies)
     {
-      const dynasty = loadJsonFile(`data/theleague/mfl-feeds/${leagueYearStr}/adp-dynasty.json`);
+      const dynasty = loadJsonFile(
+        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${leagueYearStr}/adp-dynasty.json`,
+      );
       const raw = dynasty?.adp?.player;
       const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
       const ordered = arr

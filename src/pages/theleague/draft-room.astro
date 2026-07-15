@@ -15,6 +15,7 @@ import { parseTradeFromComment } from '../../utils/draft-utils';
 import { buildDraftPlayers } from '../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../utils/franchise-brand';
 import type { DraftRoomPageData, DraftRoomPick, DraftRoomTeam } from '../../types/draft-room';
+import { getLeagueBySlug } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -128,9 +129,10 @@ const draftLimitHours = leagueConfig.draftLimitHours || '12:00';
 const draftTimerSusp = leagueConfig.draftTimerSusp || '03 07';
 
 // MFL "Make Pick" deep-link. baseURL rotates between www49/www48/etc per
-// MFL's load balancer; fall back to www49 if the feed lacks it.
-const leagueId = '13522';
-const mflBaseURL = (leagueConfig.baseURL as string | undefined) || 'https://www49.myfantasyleague.com';
+// MFL's load balancer; fall back to the registry host if the feed lacks it.
+const leagueId = getLeagueBySlug('theleague')!.id;
+const mflBaseURL =
+  (leagueConfig.baseURL as string | undefined) || `https://${getLeagueBySlug('theleague')!.mflHost}`;
 const mflPickUrl = `${mflBaseURL.replace(/\/$/, '')}/${leagueYearStr}/options?L=${leagueId}&O=17`;
 
 // ── Serialize page data ──

@@ -50,13 +50,17 @@ const ROOT = path.resolve(__dirname, '..');
 const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', ROOT, '');
 for (const [k, v] of Object.entries(fileEnv)) process.env[k] ??= v;
 
-const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
-const OUTPUT_DIR = path.join(ROOT, 'data/afl-fantasy/derived');
+const aflLeague = getLeagueBySlug('afl-fantasy');
+const FEEDS_DIR = path.join(ROOT, aflLeague.dataPath, 'mfl-feeds');
+const OUTPUT_DIR = path.join(ROOT, aflLeague.dataPath, 'derived');
 const OUTPUT_PATH = path.join(OUTPUT_DIR, 'free-agents.json');
 const COLLEGE_LOGOS_PATH = path.join(ROOT, 'src/data/college-logos.json');
-const ESPN_COLLEGE_IDS_PATH = path.join(ROOT, 'data/theleague/espn-college-ids.json');
+// Intentionally cross-league: AFL free-agent computation reuses TheLeague's
+// ESPN college-id mapping since it's a shared static reference dataset, not
+// per-league MFL data — only the path prefix is sourced from the registry.
+const ESPN_COLLEGE_IDS_PATH = path.join(ROOT, getLeagueBySlug('theleague').dataPath, 'espn-college-ids.json');
 
-const mflHost = getLeagueBySlug('afl-fantasy').mflHost;
+const mflHost = aflLeague.mflHost;
 
 // ── Season-year math (ported from src/utils/league-year.ts; keep in sync) ──
 // Labor Day = first Monday in September.

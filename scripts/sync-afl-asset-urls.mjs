@@ -8,10 +8,12 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const leagueFeedPath = path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', '2025', 'league.json');
-const configPath = path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json');
+const AFL_DATA_PATH = getLeagueBySlug('afl-fantasy').dataPath;
+const leagueFeedPath = path.join(projectRoot, AFL_DATA_PATH, 'mfl-feeds', '2025', 'league.json');
+const configPath = path.join(projectRoot, AFL_DATA_PATH, 'afl.config.json');
 
 /**
  * Main execution
