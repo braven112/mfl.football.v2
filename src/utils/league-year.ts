@@ -10,7 +10,7 @@
  * - Season results use currentSeasonYear (previous season)
  */
 
-import { getLeagueBySlug } from '../config/leagues';
+import { getLeagueBySlug, getLeagueById, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 export interface LeagueYearConfig {
   /** Current MFL league year (for rosters, contracts, live data) - Updates Feb 14th */
@@ -267,9 +267,10 @@ export function getRolloverLeagueYear(
  * @param referenceDate - Optional date for testing
  */
 export function getLeagueYearForMflId(leagueId: string, referenceDate?: Date): number {
-  return leagueId === getLeagueBySlug('afl-fantasy')?.id
-    ? getAflLeagueYear(referenceDate)
-    : getCurrentLeagueYear(referenceDate);
+  // Delegate to the slug-keyed helper so both dispatchers share one
+  // registry-driven rollover lookup — a third league with its own
+  // leagueYearRollover gets the right clock through either entry point.
+  return getLeagueYearForSlug(getLeagueById(leagueId)?.slug ?? DEFAULT_LEAGUE_SLUG, referenceDate);
 }
 
 /**

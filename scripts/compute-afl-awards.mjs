@@ -44,7 +44,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
+import { fetchExport as sharedFetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,9 +62,7 @@ const TIER_HISTORY_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'tier-history.jso
 // league id every season (see data/afl-fantasy/year-host-map.json); 2016+
 // settled on www44/19621. Loaded in main().
 const HOST_MAP_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'year-host-map.json');
-// fetchExport wants the bare host prefix (it appends '.myfantasyleague.com'
-// itself), so derive it from the registry's full mflHost.
-const DEFAULT_HOST = AFL_LEAGUE.mflHost.split('.')[0];
+const DEFAULT_HOST = mflHostPrefix(AFL_LEAGUE.mflHost);
 const DEFAULT_LEAGUE_ID = AFL_LEAGUE.id;
 let HOST_MAP = {};
 

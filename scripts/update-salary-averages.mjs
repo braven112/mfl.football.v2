@@ -63,8 +63,12 @@ const seasonStateFile = path.join(dataDir, 'mfl-season-state.json');
 const feedsCacheDir = path.join(projectRoot, 'data', leagueKey, 'mfl-feeds', season);
 const cachedRostersFile = path.join(feedsCacheDir, 'rosters.json');
 const cachedPlayersFile = path.join(feedsCacheDir, 'players.json');
-// Photo host follows the league being processed (registry mflHost).
-const MFL_PHOTO_HOST = getLeagueById(leagueId)?.mflHost ?? LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost;
+// Canonical MFL photo host: the DEFAULT league's registry host (www49) for
+// every league's run. www49 photo URLs are the only ones verified to work
+// (all committed data uses them, for both leagues); whether www44 serves the
+// /player_photos_* paths is unverified. Do not switch this to the
+// per-league mflHost without confirming photos exist on that host.
+const MFL_PHOTO_HOST = LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost;
 const DEFAULT_HEADSHOT_URL =
   `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
 

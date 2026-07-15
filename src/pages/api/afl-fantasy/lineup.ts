@@ -1,12 +1,15 @@
 /**
- * AFL Lineup API — thin re-export of the merged /api/lineup route.
+ * AFL Lineup API — GET (fetch lineup data) & POST (submit lineup), pinned
+ * to the AFL league.
  *
  * Phase 2 registry sweep: api/lineup.ts and this file were 92% identical
- * (only the hardcoded league id and year-rollover function differed). The
- * merged route in ../lineup.ts resolves the league from the session user's
- * `leagueId` via the registry and picks the correct year-rollover clock
- * (`getLeagueYearForSlug`), so this file just re-exports its handlers to
- * keep the /api/afl-fantasy/lineup path working for existing clients.
+ * (only the hardcoded league id and year-rollover function differed). Both
+ * are now thin instantiations of createLineupRoute — see
+ * src/utils/lineup-route.ts for the shared implementation and for why the
+ * league is pinned per route path (this path always targets AFL, exactly
+ * like the pre-merge route) rather than resolved from the session.
  */
 
-export { GET, POST } from '../lineup';
+import { createLineupRoute } from '../../../utils/lineup-route';
+
+export const { GET, POST } = createLineupRoute('afl-fantasy');

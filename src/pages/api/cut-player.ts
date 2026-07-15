@@ -70,6 +70,17 @@ export const POST: APIRoute = async ({ request }) => {
 
     const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
     const league = getLeagueById(leagueId);
+    // A session whose leagueId isn't in the registry can't be served safely:
+    // we'd have no host/year clock for it, and silently redirecting a WRITE
+    // into a different league would be worse. Fail loudly instead. (Sessions
+    // are only ever minted by our own login flow with registry ids, so this
+    // is a can't-happen guard, not a user-facing path.)
+    if (!league) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Unrecognized league on session. Please sign in again.' }),
+        { status: 400, headers: JSON_HEADERS }
+      );
+    }
     // Leagues roll to the new MFL year on different clocks: TheLeague flips
     // Feb 14, AFL flips June 1 (registry leagueYearRollover). Using TheLeague's
     // clock for AFL would target a not-yet-created MFL league between Feb 14

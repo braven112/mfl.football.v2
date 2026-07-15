@@ -1,26 +1,22 @@
 /**
- * Tests for the merged /api/lineup route (Phase 2 registry sweep).
+ * Tests for the merged lineup routes (Phase 2 registry sweep).
  *
  * api/lineup.ts and api/afl-fantasy/lineup.ts used to be 92% identical,
  * differing only in a hardcoded MFL league id and which year-rollover
- * function they called. They're now one implementation in api/lineup.ts
- * that resolves the league from the session user's `leagueId` via the
- * registry; api/afl-fantasy/lineup.ts re-exports its GET/POST so the old
- * path keeps working.
+ * function they called. They're now thin instantiations of
+ * createLineupRoute (src/utils/lineup-route.ts), with the league pinned
+ * PER ROUTE PATH — not resolved from the session.
  *
- * Coverage here:
- *  - Unauthenticated GET/POST → 401 on both the canonical route and the
- *    thin AFL re-export (proves the re-export actually delegates, not just
- *    that it imports without throwing).
- *  - The AFL re-export's GET/POST are the exact same function references as
- *    the canonical route's — not copies that could drift again.
- *  - League resolution: a session scoped to AFL's leagueId reaches MFL with
- *    AFL's league id and MFL host; a session scoped to TheLeague reaches MFL
- *    with TheLeague's id. This is the behavior the merge must preserve for
- *    both leagues.
+ * Why path-pinned matters (locked by the cross-league tests below):
+ * /theleague/lineup gates only on franchiseId, so a dual-league owner
+ * holding an AFL session can legitimately submit a TheLeague lineup via
+ * /api/lineup. Resolving the league from the session would silently
+ * retarget that write into the AFL league — a cross-league lineup
+ * overwrite. Each path must always target its own league, exactly like
+ * the pre-merge hardcoded routes.
  *
- * Full MFL round-trips are mocked — this is a unit test of the route's
- * league-resolution/year-selection wiring, not an MFL integration test.
+ * Full MFL round-trips are mocked — this is a unit test of the routes'
+ * league-pinning and year-selection wiring, not an MFL integration test.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSessionToken } from '../src/utils/session';
@@ -33,6 +29,9 @@ vi.mock('../src/utils/mfl-fetch', () => ({
 
 import { GET as lineupGET, POST as lineupPOST } from '../src/pages/api/lineup';
 import { GET as aflGET, POST as aflPOST } from '../src/pages/api/afl-fantasy/lineup';
+
+const THELEAGUE = getLeagueBySlug('theleague')!;
+const AFL = getLeagueBySlug('afl-fantasy')!;
 
 function makeContext(request: Request) {
   return {
@@ -61,14 +60,7 @@ function sessionCookieFor(leagueId: string, franchiseId: string | null = '0001')
   return `session_token=${token}`;
 }
 
-describe('merged /api/lineup route — re-export identity', () => {
-  it('afl-fantasy/lineup.ts re-exports the exact same GET/POST as api/lineup.ts', () => {
-    expect(aflGET).toBe(lineupGET);
-    expect(aflPOST).toBe(lineupPOST);
-  });
-});
-
-describe('merged /api/lineup route — auth gate', () => {
+describe('lineup routes — auth gate', () => {
   it('GET /api/lineup returns 401 when unauthenticated', async () => {
     const res = await lineupGET(makeContext(new Request('http://test.invalid/api/lineup')));
     expect(res.status).toBe(401);
@@ -86,12 +78,12 @@ describe('merged /api/lineup route — auth gate', () => {
     expect(res.status).toBe(401);
   });
 
-  it('GET /api/afl-fantasy/lineup returns 401 when unauthenticated (via re-export)', async () => {
+  it('GET /api/afl-fantasy/lineup returns 401 when unauthenticated', async () => {
     const res = await aflGET(makeContext(new Request('http://test.invalid/api/afl-fantasy/lineup')));
     expect(res.status).toBe(401);
   });
 
-  it('POST /api/afl-fantasy/lineup returns 401 when unauthenticated (via re-export)', async () => {
+  it('POST /api/afl-fantasy/lineup returns 401 when unauthenticated', async () => {
     const res = await aflPOST(
       makeContext(
         new Request('http://test.invalid/api/afl-fantasy/lineup', {
@@ -104,76 +96,87 @@ describe('merged /api/lineup route — auth gate', () => {
   });
 
   it('returns 403 when authenticated but no franchise is associated', async () => {
-    const cookie = sessionCookieFor(getLeagueBySlug('theleague')!.id, null);
+    const cookie = sessionCookieFor(THELEAGUE.id, null);
     const res = await lineupGET(
-      makeContext(
-        new Request('http://test.invalid/api/lineup', { headers: { cookie } })
-      )
+      makeContext(new Request('http://test.invalid/api/lineup', { headers: { cookie } }))
     );
     expect(res.status).toBe(403);
   });
 });
 
-describe('merged /api/lineup route — league resolution', () => {
+describe('lineup routes — league pinned per route path', () => {
   beforeEach(() => {
     mflFetchMock.mockReset();
     mflFetchMock.mockResolvedValue({
       json: async () => ({}),
-      text: async () => '',
+      text: async () => '<status>OK</status>',
     } as Response);
   });
 
-  it('resolves TheLeague from the session and calls MFL with TheLeague\'s id/host', async () => {
-    const theleague = getLeagueBySlug('theleague')!;
-    const cookie = sessionCookieFor(theleague.id);
+  it('/api/lineup always targets TheLeague — even for an AFL-scoped session (dual-league owner on /theleague/lineup)', async () => {
+    const cookie = sessionCookieFor(AFL.id);
     const res = await lineupGET(
-      makeContext(
-        new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } })
-      )
+      makeContext(new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } }))
     );
     expect(res.status).toBe(200);
-    expect(mflFetchMock).toHaveBeenCalledTimes(1);
     const calledUrl = String(mflFetchMock.mock.calls[0][0].url);
-    expect(calledUrl).toContain(`L=${theleague.id}`);
+    expect(calledUrl).toContain(`L=${THELEAGUE.id}`);
+    expect(calledUrl).not.toContain(`L=${AFL.id}`);
   });
 
-  it('resolves AFL from the session and calls MFL with AFL\'s id/host — via the canonical route', async () => {
-    const afl = getLeagueBySlug('afl-fantasy')!;
-    const cookie = sessionCookieFor(afl.id);
-    const res = await lineupGET(
-      makeContext(
-        new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } })
-      )
-    );
-    expect(res.status).toBe(200);
-    expect(mflFetchMock).toHaveBeenCalledTimes(1);
-    const calledUrl = String(mflFetchMock.mock.calls[0][0].url);
-    expect(calledUrl).toContain(`L=${afl.id}`);
-  });
-
-  it('resolves AFL from the session via the /api/afl-fantasy/lineup re-export identically', async () => {
-    const afl = getLeagueBySlug('afl-fantasy')!;
-    const cookie = sessionCookieFor(afl.id);
+  it('/api/afl-fantasy/lineup always targets AFL — even for a TheLeague-scoped session', async () => {
+    const cookie = sessionCookieFor(THELEAGUE.id);
     const res = await aflGET(
       makeContext(
         new Request('http://test.invalid/api/afl-fantasy/lineup?week=3', { headers: { cookie } })
       )
     );
     expect(res.status).toBe(200);
-    expect(mflFetchMock).toHaveBeenCalledTimes(1);
     const calledUrl = String(mflFetchMock.mock.calls[0][0].url);
-    expect(calledUrl).toContain(`L=${afl.id}`);
+    expect(calledUrl).toContain(`L=${AFL.id}`);
   });
 
-  it('falls back to the default league when leagueId does not match the registry', async () => {
-    const cookie = sessionCookieFor('not-a-real-league-id');
-    const res = await lineupGET(
+  it('POST /api/lineup submits to TheLeague', async () => {
+    const cookie = sessionCookieFor(THELEAGUE.id);
+    const starters = Array.from({ length: 9 }, (_, i) => String(10000 + i));
+    const res = await lineupPOST(
       makeContext(
-        new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } })
+        new Request('http://test.invalid/api/lineup', {
+          method: 'POST',
+          headers: { cookie },
+          body: JSON.stringify({ week: 3, starters }),
+        })
       )
     );
     expect(res.status).toBe(200);
+    const call = mflFetchMock.mock.calls[0][0];
+    expect(String(call.body)).toContain(`L=${THELEAGUE.id}`);
+  });
+
+  it('POST /api/afl-fantasy/lineup submits to AFL', async () => {
+    const cookie = sessionCookieFor(AFL.id);
+    const starters = Array.from({ length: 9 }, (_, i) => String(10000 + i));
+    const res = await aflPOST(
+      makeContext(
+        new Request('http://test.invalid/api/afl-fantasy/lineup', {
+          method: 'POST',
+          headers: { cookie },
+          body: JSON.stringify({ week: 3, starters }),
+        })
+      )
+    );
+    expect(res.status).toBe(200);
+    const call = mflFetchMock.mock.calls[0][0];
+    expect(String(call.body)).toContain(`L=${AFL.id}`);
+  });
+
+  it('a session with an unrecognized leagueId still reaches the path\'s pinned league (pre-merge behavior)', async () => {
+    const cookie = sessionCookieFor('not-a-real-league-id');
+    const res = await lineupGET(
+      makeContext(new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } }))
+    );
+    expect(res.status).toBe(200);
     const calledUrl = String(mflFetchMock.mock.calls[0][0].url);
-    expect(calledUrl).toContain(`L=${getLeagueBySlug('theleague')!.id}`);
+    expect(calledUrl).toContain(`L=${THELEAGUE.id}`);
   });
 });

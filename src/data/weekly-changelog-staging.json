@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-07-20",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-07-15",
+      "type": "bug-fix",
+      "summary": "AFL links that point back to MFL now actually point at the AFL. A pair of long-standing wiring mistakes had AFL pages borrowing TheLeague's MFL server for outbound links: the What's Next event buttons (live scoring, options pages) and the Playoffs page's live-scoring polls and league-options link were all built against TheLeague's www49 host — so an AFL owner clicking through could land on the wrong league entirely. Both now resolve the AFL's own MFL server from the league registry, every time.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    }
+  ]
 }

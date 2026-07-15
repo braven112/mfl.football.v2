@@ -82,7 +82,6 @@ export const POST: APIRoute = async ({ request }) => {
     // Local cache directory matches the league we're writing for so AFL
     // updates don't overwrite TheLeague's tradeBait.json (or vice versa).
     const cacheLeague = getLeagueById(leagueId) ?? getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
-    const cacheLeagueDir = cacheLeague.slug;
 
     // 4. SECURITY: Verify the player belongs to the user's roster
     //    This prevents any user from adding players they don't own to trade bait,
@@ -111,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
         try {
           const cachePath = path.resolve(
             process.cwd(),
-            `data/${cacheLeagueDir}/mfl-feeds/${leagueYear}/tradeBait.json`,
+            `${cacheLeague.dataPath}/mfl-feeds/${leagueYear}/tradeBait.json`,
           );
           fs.writeFileSync(cachePath, JSON.stringify(result.allPlayerIds, null, 2), 'utf8');
         } catch (cacheErr) {

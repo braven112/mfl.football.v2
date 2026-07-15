@@ -30,39 +30,38 @@ export const POSITION_COLORS: Record<string, string> = {
 export const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'] as const;
 
 /**
- * Default player headshot URL when player image is unavailable.
+ * Canonical MFL host for player photos — the default league's registry host
+ * (www49), used for EVERY league's photo URLs.
  *
- * Host verification (Phase 2 registry sweep): live requests to
- * www49/www44.myfantasyleague.com to compare player-photo bytes across MFL
- * hosts were blocked by this environment's egress policy (myfantasyleague.com
- * is not allow-listed for the sandbox — see the proxy status endpoint), so
- * host-agnosticism could not be empirically confirmed here. Chose the
- * conservative assumption (per-league host) rather than asserting
- * host-agnostic without proof. This constant covers the overwhelming
- * majority of call sites, which are all TheLeague-only pages/components, so
- * it stays pinned to TheLeague's registry host — behavior-preserving for
- * those. AFL call sites must use {@link getPlayerImageUrl} /
- * {@link getPlayerHeadshot} with `leagueSlug: 'afl-fantasy'` instead of this
- * constant. A future session with MFL host access should confirm
- * host-agnosticism and simplify back to one shared host if true.
+ * Host verification (Phase 2 registry sweep): live requests to compare
+ * player-photo bytes across MFL hosts (www49 vs www44) were blocked by the
+ * dev environment's egress policy, so whether www44 serves the
+ * /player_photos_* paths could not be confirmed. What IS verified: www49
+ * URLs work in production today for BOTH leagues — every committed data
+ * file and every existing page (including AFL pages) uses www49 photo URLs.
+ * So photos stay pinned to this one canonical, known-good host rather than
+ * switching AFL to an unverified per-league host. If a future session with
+ * MFL egress confirms photos are host-agnostic (or per-league), revisit —
+ * until then, do not "fix" photo URLs to use each league's own mflHost.
  */
-export const DEFAULT_HEADSHOT_URL =
-  `https://${getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost}/player_photos_2010/no_photo_available.jpg`;
+const MFL_PHOTO_HOST = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
 
 /**
- * Get player headshot URL by player ID.
+ * Default player headshot URL when player image is unavailable.
+ */
+export const DEFAULT_HEADSHOT_URL =
+  `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
+
+/**
+ * Get player headshot URL by player ID. Served from the canonical photo host
+ * (see MFL_PHOTO_HOST above) for every league.
  *
  * @param playerId - MFL player ID
- * @param leagueSlug - Canonical league slug whose MFL host serves the photo
- *   (defaults to the default league — TheLeague — preserving prior
- *   behavior for the ~20 TheLeague-only call sites). AFL call sites should
- *   pass 'afl-fantasy' explicitly.
  * @returns URL to player headshot image
  */
-export function getPlayerImageUrl(playerId?: string, leagueSlug: string = DEFAULT_LEAGUE_SLUG): string {
-  const host = getLeagueBySlug(leagueSlug)?.mflHost ?? getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
+export function getPlayerImageUrl(playerId?: string): string {
   return playerId
-    ? `https://${host}/player_photos_big_2014/${playerId}_thumb.jpg`
+    ? `https://${MFL_PHOTO_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
 }
 
@@ -114,15 +113,13 @@ export function resolveEspnId(
  *
  * @param mflId - MFL player ID
  * @param espnId - Optional ESPN player ID for higher quality headshots
- * @param leagueSlug - Canonical league slug for the MFL-photo fallback (see
- *   {@link getPlayerImageUrl}); irrelevant when espnId is present.
  * @returns URL to player headshot image
  */
-export function getPlayerHeadshot(mflId?: string, espnId?: string, leagueSlug: string = DEFAULT_LEAGUE_SLUG): string {
+export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
   if (espnId) {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
-  return getPlayerImageUrl(mflId, leagueSlug);
+  return getPlayerImageUrl(mflId);
 }
 
 /**

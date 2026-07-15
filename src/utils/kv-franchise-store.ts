@@ -13,7 +13,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from './auth';
 import { getRedis } from './redis-client';
-import { unauthorized } from './api-response';
+import { json, unauthorized } from './api-response';
 
 export interface CreateKvFranchiseStoreOptions {
   /**
@@ -42,6 +42,9 @@ export function createKvFranchiseStore(
   const authorize = (request: Request) => {
     const user = getAuthUser(request);
     if (!user) return null;
+    // A session without a franchise would read/write the shared bare key
+    // `${prefix}:` — reject it so malformed sessions can't pool data.
+    if (!user.franchiseId) return null;
     if (requireAdmin && !isCommissionerOrAdmin(user)) return null;
     return user;
   };
@@ -54,24 +57,15 @@ export function createKvFranchiseStore(
 
     const redis = await getRedis();
     if (!redis) {
-      return new Response(
-        JSON.stringify({ data: null, error: 'Storage not configured' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      );
+      return json({ data: null, error: 'Storage not configured' });
     }
 
     try {
       const data = await redis.get(makeKey(user.franchiseId));
-      return new Response(JSON.stringify({ data: data ?? null }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ data: data ?? null });
     } catch (err) {
       console.error(`Failed to load ${label} from KV:`, err);
-      return new Response(JSON.stringify({ data: null, error: 'Read failed' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ data: null, error: 'Read failed' });
     }
   };
 
@@ -83,25 +77,16 @@ export function createKvFranchiseStore(
 
     const redis = await getRedis();
     if (!redis) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Storage not configured' }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } },
-      );
+      return json({ success: false, error: 'Storage not configured' }, 503);
     }
 
     try {
       const body = await request.json();
       await redis.set(makeKey(user.franchiseId), body);
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ success: true });
     } catch (err) {
       console.error(`Failed to save ${label} to KV:`, err);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Write failed' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
-      );
+      return json({ success: false, error: 'Write failed' }, 500);
     }
   };
 

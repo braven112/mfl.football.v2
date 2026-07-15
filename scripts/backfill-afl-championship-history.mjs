@@ -46,7 +46,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
+import { fetchExport as sharedFetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -54,10 +54,8 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
 const AFL_LEAGUE = getLeagueBySlug('afl-fantasy');
-// fetchMfl/fetchExport want the bare host prefix (they append
-// '.myfantasyleague.com' themselves), so derive it from the registry's full
-// mflHost for the 2016+ fallback years below.
-const AFL_FALLBACK = { host: AFL_LEAGUE.mflHost.split('.')[0], leagueId: AFL_LEAGUE.id };
+// 2016+ fallback host/id for the year-host map, registry-derived.
+const AFL_FALLBACK = { host: mflHostPrefix(AFL_LEAGUE.mflHost), leagueId: AFL_LEAGUE.id };
 
 const FEEDS_DIR = path.join(ROOT, AFL_LEAGUE.dataPath, 'mfl-feeds');
 const HOST_MAP_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'year-host-map.json');

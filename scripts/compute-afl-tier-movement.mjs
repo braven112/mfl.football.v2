@@ -48,7 +48,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchExport as sharedFetchExport } from './lib/mfl-api.mjs';
+import { fetchExport as sharedFetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 import {
@@ -68,9 +68,7 @@ const FEEDS_DIR = path.join(ROOT, AFL_LEAGUE.dataPath, 'mfl-feeds');
 const CONFIG_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'afl.config.json');
 const OUTPUT_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'tier-history.json');
 
-// fetchExport wants the bare host prefix (it appends '.myfantasyleague.com'
-// itself), so derive it from the registry's full mflHost.
-const HOST = AFL_LEAGUE.mflHost.split('.')[0];
+const HOST = mflHostPrefix(AFL_LEAGUE.mflHost);
 const LEAGUE_ID = AFL_LEAGUE.id;
 
 const args = process.argv.slice(2);

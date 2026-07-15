@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSessionToken } from '../src/utils/session';
+import { DEFAULT_LEAGUE_ID } from '../src/config/leagues';
 
 const redisStore = new Map<string, unknown>();
 const fakeRedis = {
@@ -47,7 +48,7 @@ function sessionCookieFor(role: 'owner' | 'commissioner' | 'admin', franchiseId 
     userId: 'mfl-user-1',
     username: 'Test Owner',
     franchiseId,
-    leagueId: '13522',
+    leagueId: DEFAULT_LEAGUE_ID,
     role,
   });
   return `session_token=${token}`;
@@ -128,5 +129,12 @@ describe('createKvFranchiseStore — auth gate parity with pre-merge routes', ()
     const riRes = await riGET(makeContext(new Request('http://test.invalid/api/ri')));
     expect(crRes.status).toBe(401);
     expect(riRes.status).toBe(401);
+  });
+
+  it('rejects a session with an empty franchiseId (would otherwise pool data under the bare key)', async () => {
+    const cookie = sessionCookieFor('owner', '');
+    const res = await riGET(makeContext(new Request('http://test.invalid/api/ri', { headers: { cookie } })));
+    expect(res.status).toBe(401);
+    expect(fakeRedis.get).not.toHaveBeenCalled();
   });
 });

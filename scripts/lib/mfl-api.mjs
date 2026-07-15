@@ -153,6 +153,19 @@ export async function loginToMFL(username, password) {
  *     Defaults to `${url} → ${status}`; pass a custom formatter to match a
  *     caller's original wording.
  */
+/**
+ * Derive the bare host prefix fetchExport expects (e.g. 'www44') from a
+ * registry `mflHost` (e.g. 'www44.myfantasyleague.com'). Lives here, next to
+ * fetchExport, because it exists purely to bridge the registry's full-host
+ * format to fetchExport's prefix + '.myfantasyleague.com' URL assembly —
+ * change both together if that contract ever changes.
+ *
+ * @param {string} mflHost Full registry hostname.
+ */
+export function mflHostPrefix(mflHost) {
+  return mflHost.split('.')[0];
+}
+
 export async function fetchExport({ host, leagueId, year, type, extra = '' }, options = {}) {
   const {
     userAgent,

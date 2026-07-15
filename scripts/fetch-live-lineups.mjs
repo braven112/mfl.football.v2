@@ -52,6 +52,10 @@ function getCurrentNFLWeek(seasonYear = 2025) {
 }
 
 const leagueId = process.env.MFL_LEAGUE_ID || DEFAULT_LEAGUE_ID;
+// League entry for the id being fetched — host AND output paths must follow
+// the same league, or an AFL run would fetch AFL data but overwrite
+// TheLeague's files. Unknown ids fall back to the default league entirely.
+const league = getLeagueById(leagueId) ?? LEAGUES[DEFAULT_LEAGUE_SLUG];
 // Auto-detect season year based on Labor Day boundary
 const autoDetectSeasonYear = () => {
   const now = new Date();
@@ -74,7 +78,7 @@ async function fetchLiveStartingLineups() {
 
     // Use weeklyResults endpoint which includes starting lineup data.
     // Host resolved from the registry for whichever league we're fetching.
-    const baseUrl = `https://${getLeagueById(leagueId)?.mflHost ?? LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost}`;
+    const baseUrl = `https://${league.mflHost}`;
     const url = `${baseUrl}/${year}/export?TYPE=weeklyResults&L=${leagueId}&W=${currentWeek}&JSON=1`;
 
     console.log(`📡 Calling MFL API: ${url}`);
@@ -147,7 +151,7 @@ async function fetchLiveStartingLineups() {
     });
     
     // Save to data file
-    const outputPath = path.join(root, `${LEAGUES[DEFAULT_LEAGUE_SLUG].dataPath}/live-starting-lineups-week-${currentWeek}.json`);
+    const outputPath = path.join(root, `${league.dataPath}/live-starting-lineups-week-${currentWeek}.json`);
     const outputData = {
       generatedAt: new Date().toISOString(),
       week: parseInt(currentWeek),
@@ -175,7 +179,7 @@ async function fetchLiveStartingLineups() {
     console.error('❌ Failed to fetch live starting lineups:', error);
     
     // Create fallback data structure
-    const fallbackPath = path.join(root, `${LEAGUES[DEFAULT_LEAGUE_SLUG].dataPath}/live-starting-lineups-week-${currentWeek}.json`);
+    const fallbackPath = path.join(root, `${league.dataPath}/live-starting-lineups-week-${currentWeek}.json`);
     const fallbackData = {
       generatedAt: new Date().toISOString(),
       week: parseInt(currentWeek),
@@ -246,7 +250,7 @@ async function fetchLiveInjuryData() {
     console.log(`✅ Found ${injuredPlayers} players with injury status`);
     
     // Save injury data
-    const outputPath = path.join(root, `${LEAGUES[DEFAULT_LEAGUE_SLUG].dataPath}/live-injury-data-week-${currentWeek}.json`);
+    const outputPath = path.join(root, `${league.dataPath}/live-injury-data-week-${currentWeek}.json`);
     const outputData = {
       generatedAt: new Date().toISOString(),
       week: parseInt(currentWeek),

@@ -15,6 +15,7 @@ import {
   getLeagueById as rawGetById,
   getLeagueByPath as rawGetByPath,
   buildHostToSlugMap,
+  defaultMflWriteHost,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -88,4 +89,4 @@ export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): b
   return getLeagueBySlug(slug)?.features[feature] ?? false;
 }
 
-export { buildHostToSlugMap };
+export { buildHostToSlugMap, defaultMflWriteHost };

@@ -10,13 +10,13 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { mflFetch } from './mfl-fetch';
-import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG, defaultMflWriteHost } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
 
-// Reads use api.myfantasyleague.com; writes MUST use www49 (commissioner writes fail on the api subdomain)
+// Reads use api.myfantasyleague.com; commissioner writes fail on the api
+// subdomain — see defaultMflWriteHost.
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
-const MFL_WRITE_HOST =
-  process.env.MFL_WRITE_HOST || `https://${LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost}`;
+const MFL_WRITE_HOST = defaultMflWriteHost();
 const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || LEAGUES[DEFAULT_LEAGUE_SLUG].id;
 // Cookie names match the actual MFL cookie names for clarity
 const MFL_USER_ID = process.env.MFL_USER_ID || '';

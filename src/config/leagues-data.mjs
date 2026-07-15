@@ -101,6 +101,19 @@ export function getLeagueByPath(pathname) {
   return LEAGUES[DEFAULT_LEAGUE_SLUG];
 }
 
+/**
+ * Default host for MFL COMMISSIONER WRITES, honoring the MFL_WRITE_HOST env
+ * override. Commissioner imports fail on the api.myfantasyleague.com
+ * gateway — they must go to the league's own web host. Shared by
+ * mfl-contract-writer.ts, apply-pending-contracts.mjs, and
+ * sync-draft-pick-contracts.mjs so the invariant lives in one place.
+ *
+ * @param {Record<string, string | undefined>} [env] Defaults to process.env.
+ */
+export function defaultMflWriteHost(env = process.env) {
+  return env.MFL_WRITE_HOST || `https://${LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost}`;
+}
+
 /** Apex hostname → canonical slug map, derived from each league's domains. */
 export function buildHostToSlugMap() {
   /** @type {Record<string, string>} */
