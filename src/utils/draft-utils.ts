@@ -292,6 +292,39 @@ export function parseTradeFromComment(comment: string): string | undefined {
 }
 
 /**
+ * Whether the draft order is FINAL (official) rather than a projection.
+ *
+ * TheLeague's order stops being a prediction once the playoffs wrap: the
+ * champion (pick 16) is crowned and all three toilet bowl compensatory
+ * slots (1.17, 2.17, 2.18) are settled. Consumers use this to switch
+ * framing — "Draft Predictor / projected" during the season, "Draft
+ * Order / official" once the playoffs finish. If any bracket result can't
+ * be resolved we stay in "projected" framing — the safe direction to fail.
+ */
+export function isLeagueDraftOrderFinal(
+  leagueWinnerId: string,
+  toiletBowlWinners: ToiletBowlResult[]
+): boolean {
+  if (!leagueWinnerId) return false;
+  const levels = new Set(toiletBowlWinners.map((w) => w.level));
+  return levels.has('winner') && levels.has('consolation') && levels.has('consolation2');
+}
+
+/**
+ * Whether the draft has actually been CONDUCTED (players selected), as
+ * opposed to draft results that merely stub out the pick slots. Once true,
+ * the order isn't "official upcoming" anymore — it's history, and the page
+ * flips back toward predictor framing for the next cycle.
+ */
+export function isDraftConducted(draftResults: DraftResultsData | null | undefined): boolean {
+  const picks = draftResults?.draftResults?.draftUnit?.draftPick;
+  const pickArray = Array.isArray(picks) ? picks : picks ? [picks] : [];
+  // MFL stubs unmade picks with an empty/placeholder player field — only a
+  // real player id (digits) counts as a made selection.
+  return pickArray.some((p) => p?.player && /^\d+$/.test(p.player));
+}
+
+/**
  * Build trade chain from draft results
  * Combines trade comments with MFL assets data to create full trade history
  *

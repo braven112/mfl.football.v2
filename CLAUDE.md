@@ -234,21 +234,32 @@ new page silently shows last/next year's data for ~6 months of the calendar
 (the gap between the two rollover dates). Test date-dependent features with
 the `?testDate=YYYY-MM-DD` URL param rather than changing the system clock.
 
-## AFL draft order — "predictor" in-season, "official" after the NIT
+## Draft order framing — "predictor" in-season, "official" after playoffs
 
-The AFL draft order stops being a prediction the moment the NIT playoffs
-finish: standings are locked, both conference champions are decided, and all
-five NIT bonus positions are settled. Any surface that names or links the
-order must match the phase — "Draft Predictor / projected" during the
-regular season, "Draft Order / official" in the offseason. The source of
-truth is `isDraftOrderFinal` in `src/utils/afl-draft-utils.ts` (data-driven
-from the parsed playoff brackets — falls back to "projected" if any bracket
-result can't be resolved). `afl-fantasy/draft-predictor.astro` switches its
-title/subtitle/badge on it. Surfaces that only ever render in one phase can
-hardcode that phase's framing: the AL/NL draft heroes in
-`afl-hero-resolver.ts` only appear in the pre-draft offseason window, so they
-say "View Draft Order", never "predictor". Static copy (nav, page directory,
-Roger's prompt/seeds) should stay phase-neutral or state both phases.
+Both leagues' draft order stops being a prediction the moment its deciding
+games finish, and every surface that names or links the order must match
+the phase — "Draft Predictor / projected" during the regular season,
+"Draft Order / official" once it's locked. The phase is always data-driven
+from the parsed playoff brackets (falls back to "projected" if any bracket
+result can't be resolved):
+
+- **AFL:** official once the NIT wraps (both conference champions + all 5
+  NIT bonus positions). Source of truth: `isDraftOrderFinal` in
+  `src/utils/afl-draft-utils.ts`. `afl-fantasy/draft-predictor.astro`
+  switches its title/subtitle/badge on it.
+- **TheLeague:** three phases, because the rookie draft happens mid-spring:
+  projected (season underway) → official (champion + all 3 toilet bowl comp
+  slots settled, draft not yet held) → drafted (picks made; back to
+  predictor framing for the next cycle at Labor Day). Sources of truth:
+  `isLeagueDraftOrderFinal` + `isDraftConducted` in `src/utils/draft-utils.ts`;
+  `theleague/draft-predictor.astro` switches on them.
+
+Surfaces that only ever render in one phase can hardcode that phase's
+framing: the AL/NL draft heroes (`afl-hero-resolver.ts`) and the NFL-draft /
+rookie-draft heroes (`league-event-hero-view.ts`) only appear in offseason
+windows where the order is official, so they say "View Draft Order", never
+"predictor". Static copy (nav, page directory, Roger's prompt/seeds) should
+stay phase-neutral or state both phases.
 
 ## Page directory registry — required for every new page
 
