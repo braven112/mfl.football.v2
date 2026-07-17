@@ -2,7 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import DraftPredictorGrid from '../../components/theleague/DraftPredictorGrid.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw } from '../../utils/afl-draft-utils';
+import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw, isDraftOrderFinal } from '../../utils/afl-draft-utils';
 import {
   getAFLPreference,
   setAFLPreference,
@@ -105,12 +105,18 @@ const draftOrders = calculateAFLDraftOrder(
 
 const nextYear = getNextDraftYear();
 
+// Seasonal framing: once the NIT playoffs wrap, this stops being a prediction.
+// Standings are locked, champions are crowned, NIT bonuses are settled — the
+// order is official. During the regular season it's a projection that shifts
+// with the standings.
+const isOfficial = isDraftOrderFinal(conferenceChampions, nitResults);
+
 // Get both conference orders (we'll switch between them client-side)
 const alOrder = draftOrders.find(order => order.conference === 'American League');
 const nlOrder = draftOrders.find(order => order.conference === 'National League');
 ---
 
-<TheLeagueLayout title={`AFL - ${nextYear} Draft Predictor`}>
+<TheLeagueLayout title={`AFL - ${nextYear} Draft ${isOfficial ? 'Order' : 'Predictor'}`}>
   <script is:inline define:vars={{ preferredConference }}>
     // Set preferred conference on body for client-side script
     document.body.setAttribute('data-preferred-conference', preferredConference === '00' ? 'AL' : 'NL');
@@ -119,9 +125,14 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>
-        <h1 class="draft-predictor-title">{nextYear} Draft Order</h1>
+        <h1 class="draft-predictor-title">
+          {nextYear} Draft Order
+          {isOfficial && <span class="official-badge">Official</span>}
+        </h1>
         <p class="draft-predictor-subtitle">
-          Projected draft order for {nextYear} based on {currentYear} season standings
+          {isOfficial
+            ? `The official ${nextYear} draft order — locked in by the final ${currentYear} standings, conference championships, and NIT results`
+            : `Projected draft order for ${nextYear} based on ${currentYear} season standings — final once the playoffs and NIT wrap`}
         </p>
       </div>
 
@@ -250,6 +261,23 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     font-size: 2rem;
     font-weight: 700;
     color: var(--color-gray-900, #111827);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .official-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--color-secondary, #2e8743);
+    box-shadow: 0 2px 4px rgba(46, 135, 67, 0.25);
   }
 
   .draft-predictor-subtitle {

@@ -234,6 +234,22 @@ new page silently shows last/next year's data for ~6 months of the calendar
 (the gap between the two rollover dates). Test date-dependent features with
 the `?testDate=YYYY-MM-DD` URL param rather than changing the system clock.
 
+## AFL draft order — "predictor" in-season, "official" after the NIT
+
+The AFL draft order stops being a prediction the moment the NIT playoffs
+finish: standings are locked, both conference champions are decided, and all
+five NIT bonus positions are settled. Any surface that names or links the
+order must match the phase — "Draft Predictor / projected" during the
+regular season, "Draft Order / official" in the offseason. The source of
+truth is `isDraftOrderFinal` in `src/utils/afl-draft-utils.ts` (data-driven
+from the parsed playoff brackets — falls back to "projected" if any bracket
+result can't be resolved). `afl-fantasy/draft-predictor.astro` switches its
+title/subtitle/badge on it. Surfaces that only ever render in one phase can
+hardcode that phase's framing: the AL/NL draft heroes in
+`afl-hero-resolver.ts` only appear in the pre-draft offseason window, so they
+say "View Draft Order", never "predictor". Static copy (nav, page directory,
+Roger's prompt/seeds) should stay phase-neutral or state both phases.
+
 ## Page directory registry — required for every new page
 
 Adding a page to the site without adding it to

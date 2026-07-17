@@ -482,6 +482,30 @@ function buildAFLDraftPrediction(
 }
 
 /**
+ * Whether the draft order is FINAL (official) rather than a projection.
+ *
+ * The order stops being a prediction the moment the NIT playoffs wrap: at
+ * that point the Week 13 standings are long locked, both conference
+ * champions are decided, and all five NIT bonus positions are settled.
+ * Consumers use this to switch framing — "Draft Predictor / projected"
+ * during the season, "Draft Order / official" in the offseason.
+ *
+ * Requires both conference champions AND all 5 NIT bonus finishers to be
+ * resolvable from the bracket data. If any reference can't be resolved
+ * (e.g. a winner_of_game indirection), we stay in "projected" framing —
+ * the safe direction to fail.
+ */
+export function isDraftOrderFinal(
+  conferenceChampions: Map<string, string>,
+  nitResults: Map<string, NITResult[]>
+): boolean {
+  const champsKnown = conferenceChampions.has('00') && conferenceChampions.has('01');
+  let nitFinishers = 0;
+  for (const finishers of nitResults.values()) nitFinishers += finishers.length;
+  return champsKnown && nitFinishers >= 5;
+}
+
+/**
  * Mock NIT results for testing/preview before NIT is complete
  * Returns empty array - no bonus points awarded yet
  */

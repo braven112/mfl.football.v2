@@ -4,6 +4,7 @@ import {
   parseConferenceChampions,
   parseNITResults,
   buildHeadToHeadFromRaw,
+  isDraftOrderFinal,
 } from '../src/utils/afl-draft-utils';
 import type { HeadToHeadMap } from '../src/utils/afl-draft-utils';
 import type { StandingsFranchise } from '../src/types/standings';
@@ -343,5 +344,34 @@ describe('parseNITResults', () => {
     expect(results.has('01')).toBe(true);
     expect(results.get('00')?.some(r => r.franchiseId === '0005')).toBe(true);
     expect(results.get('01')?.some(r => r.franchiseId === '0018')).toBe(true);
+  });
+});
+
+describe('isDraftOrderFinal', () => {
+  const bothChamps = new Map([
+    ['00', '0007'],
+    ['01', '0013'],
+  ]);
+  const nit = (alCount: number, nlCount: number) =>
+    new Map([
+      ['00', Array.from({ length: alCount }, (_, i) => ({ franchiseId: `00a${i}`, finishPosition: i + 1 }))],
+      ['01', Array.from({ length: nlCount }, (_, i) => ({ franchiseId: `01b${i}`, finishPosition: i + 1 }))],
+    ]);
+
+  it('is final when both champions and all 5 NIT positions are resolved', () => {
+    expect(isDraftOrderFinal(bothChamps, nit(3, 2))).toBe(true);
+  });
+
+  it('stays a projection mid-season (no champions, no NIT results)', () => {
+    expect(isDraftOrderFinal(new Map(), nit(0, 0))).toBe(false);
+  });
+
+  it('stays a projection while the NIT is still in progress', () => {
+    // Champions decided but only 3 of the 5 NIT bonus games are done.
+    expect(isDraftOrderFinal(bothChamps, nit(2, 1))).toBe(false);
+  });
+
+  it('stays a projection when only one conference champion is known', () => {
+    expect(isDraftOrderFinal(new Map([['00', '0007']]), nit(3, 2))).toBe(false);
   });
 });
