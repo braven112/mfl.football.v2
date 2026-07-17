@@ -243,16 +243,21 @@ the phase — "Draft Predictor / projected" during the regular season,
 from the parsed playoff brackets (falls back to "projected" if any bracket
 result can't be resolved):
 
-- **AFL:** official once the NIT wraps (both conference champions + all 5
-  NIT bonus positions). Source of truth: `isDraftOrderFinal` in
-  `src/utils/afl-draft-utils.ts`. `afl-fantasy/draft-predictor.astro`
-  switches its title/subtitle/badge on it.
+- **AFL:** projected (season underway) → official once the NIT wraps (both
+  conference champions + all 5 NIT bonus positions; `isDraftOrderFinal` in
+  `src/utils/afl-draft-utils.ts`) → drafted once the late-August conference
+  drafts are conducted (shared `isDraftConducted`, which handles the AFL's
+  two-element `draftUnit` array). `afl-fantasy/draft-predictor.astro`
+  switches its title/subtitle/badge on the phase.
 - **TheLeague:** three phases, because the rookie draft happens mid-spring:
   projected (season underway) → official (champion + all 3 toilet bowl comp
   slots settled, draft not yet held) → drafted (picks made; back to
   predictor framing for the next cycle at Labor Day). Sources of truth:
   `isLeagueDraftOrderFinal` + `isDraftConducted` in `src/utils/draft-utils.ts`;
-  `theleague/draft-predictor.astro` switches on them.
+  `theleague/draft-predictor.astro` switches on them. In the drafted phase
+  the "final" view must render the as-drafted results, never the
+  `futureDraftPicks` merge — that snapshot freezes pre-draft and misses
+  later pick trades.
 
 Surfaces that only ever render in one phase can hardcode that phase's
 framing: the AL/NL draft heroes (`afl-hero-resolver.ts`) and the NFL-draft /

@@ -9,15 +9,21 @@ import {
   getAFLTeamData,
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
-import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { isDraftConducted } from '../../utils/draft-utils';
 import fs from 'fs';
 import path from 'path';
 
 // Note: This page is server-rendered (not prerendered) to support team preferences
 // export const prerender = true;
 
-// Load AFL data - use current season year (updates Labor Day)
-const currentYear = getCurrentSeasonYear();
+// Load AFL data - use current season year (updates Labor Day).
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so year
+// rollover (and the data files each year loads) can be QA'd without
+// touching the clock.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const currentYear = getCurrentSeasonYear(testDate);
+const nextYear = getNextDraftYear(testDate);
 const standingsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'standings.json');
 const playoffBracketsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'playoff-brackets.json');
 
@@ -103,20 +109,36 @@ const draftOrders = calculateAFLDraftOrder(
   headToHead
 );
 
-const nextYear = getNextDraftYear();
+// Seasonal framing — three phases:
+//   'projected' — season underway: the order is a live prediction.
+//   'official'  — NIT playoffs wrapped: standings locked, champions crowned,
+//                 NIT bonuses settled. No more predicting.
+//   'drafted'   — the conference drafts (late August) have been conducted:
+//                 the order shown is the one that was used. Predictor framing
+//                 resumes at the Labor Day year rollover.
+// The drafts land in the NEXT draft year's feed folder (e.g. the Aug 2026
+// drafts for the 2026 season live under mfl-feeds/2026/), which may not exist
+// yet — a missing file simply means "not drafted".
+let aflDraftResults: unknown = null;
+try {
+  const draftResultsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', nextYear.toString(), 'draftResults.json');
+  aflDraftResults = JSON.parse(fs.readFileSync(draftResultsPath, 'utf-8'));
+} catch (error) {
+  // Draft results don't exist until the conference drafts happen.
+}
 
-// Seasonal framing: once the NIT playoffs wrap, this stops being a prediction.
-// Standings are locked, champions are crowned, NIT bonuses are settled — the
-// order is official. During the regular season it's a projection that shifts
-// with the standings.
-const isOfficial = isDraftOrderFinal(conferenceChampions, nitResults);
+const draftPhase: 'projected' | 'official' | 'drafted' = isDraftConducted(aflDraftResults)
+  ? 'drafted'
+  : isDraftOrderFinal(conferenceChampions, nitResults)
+    ? 'official'
+    : 'projected';
 
 // Get both conference orders (we'll switch between them client-side)
 const alOrder = draftOrders.find(order => order.conference === 'American League');
 const nlOrder = draftOrders.find(order => order.conference === 'National League');
 ---
 
-<TheLeagueLayout title={`AFL - ${nextYear} Draft ${isOfficial ? 'Order' : 'Predictor'}`}>
+<TheLeagueLayout title={`AFL - ${nextYear} Draft ${draftPhase === 'projected' ? 'Predictor' : 'Order'}`}>
   <script is:inline define:vars={{ preferredConference }}>
     // Set preferred conference on body for client-side script
     document.body.setAttribute('data-preferred-conference', preferredConference === '00' ? 'AL' : 'NL');
@@ -127,12 +149,14 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       <div>
         <h1 class="draft-predictor-title">
           {nextYear} Draft Order
-          {isOfficial && <span class="official-badge">Official</span>}
+          {draftPhase === 'official' && <span class="official-badge">Official</span>}
         </h1>
         <p class="draft-predictor-subtitle">
-          {isOfficial
-            ? `The official ${nextYear} draft order — locked in by the final ${currentYear} standings, conference championships, and NIT results`
-            : `Projected draft order for ${nextYear} based on ${currentYear} season standings — final once the playoffs and NIT wrap`}
+          {draftPhase === 'drafted'
+            ? `The ${nextYear} drafts are in the books — this was the official order, set by the final ${currentYear} standings and NIT results. The ${nextYear + 1} predictor fires up when the new season kicks off.`
+            : draftPhase === 'official'
+              ? `The official ${nextYear} draft order — locked in by the final ${currentYear} standings, conference championships, and NIT results`
+              : `Projected draft order for ${nextYear} based on ${currentYear} season standings — final once the playoffs and NIT wrap`}
         </p>
       </div>
 
@@ -263,21 +287,21 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     color: var(--color-gray-900, #111827);
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--spacing-sm, 0.5rem);
     flex-wrap: wrap;
   }
 
   .official-badge {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border-radius: var(--radius-full, 9999px);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fff;
     background: var(--color-secondary, #2e8743);
-    box-shadow: 0 2px 4px rgba(46, 135, 67, 0.25);
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.15));
   }
 
   .draft-predictor-subtitle {

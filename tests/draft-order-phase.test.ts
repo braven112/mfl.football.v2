@@ -52,6 +52,32 @@ describe('isDraftConducted', () => {
     expect(isDraftConducted(results([{ round: '01', pick: '01', player: '----' }]))).toBe(false);
   });
 
+  it('ignores an all-zeros numeric placeholder id', () => {
+    expect(isDraftConducted(results([{ round: '01', pick: '01', player: '0000' }]))).toBe(false);
+  });
+
+  it("handles the AFL's two-element draftUnit array (one unit per conference)", () => {
+    const aflShape = {
+      draftResults: {
+        draftUnit: [
+          { unit: 'CONFERENCE00', draftPick: [{ round: '01', pick: '01', franchise: '0012', player: '17042' }] },
+          { unit: 'CONFERENCE01', draftPick: [{ round: '01', pick: '01', franchise: '0003', player: '17044' }] },
+        ],
+      },
+    };
+    expect(isDraftConducted(aflShape)).toBe(true);
+
+    const aflStubbed = {
+      draftResults: {
+        draftUnit: [
+          { unit: 'CONFERENCE00', draftPick: [{ round: '01', pick: '01', franchise: '0012', player: '' }] },
+          { unit: 'CONFERENCE01', draftPick: [] },
+        ],
+      },
+    };
+    expect(isDraftConducted(aflStubbed)).toBe(false);
+  });
+
   it('is false when draft results are missing entirely', () => {
     expect(isDraftConducted(null)).toBe(false);
     expect(isDraftConducted({})).toBe(false);

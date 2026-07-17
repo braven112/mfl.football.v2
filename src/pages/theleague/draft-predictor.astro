@@ -16,7 +16,7 @@ import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../co
 import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
-import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
@@ -48,9 +48,13 @@ const extractFeedSeason = (filepath: string) => {
   return match ? match[1] : null;
 };
 
-// Get current season year (updates Labor Day) and next draft year
-const currentYear = getCurrentSeasonYear();
-const nextYear = getNextDraftYear();
+// Get current season year (updates Labor Day) and next draft year.
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so year
+// rollover (and the data files each year loads) can be QA'd without
+// touching the clock.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const currentYear = getCurrentSeasonYear(testDate);
+const nextYear = getNextDraftYear(testDate);
 
 // Load standings for current year
 const standingsKey = Object.keys(standingsFeeds).find(
@@ -158,9 +162,31 @@ const view: DraftView = (VALID_VIEWS as readonly string[]).includes(normalizedVi
 // Note: Champion logic is already applied by calculateDraftOrder above
 // No need to apply it again here
 
+// Seasonal framing — three phases:
+//   'projected' — season underway, playoffs incomplete: the order is a live
+//                 prediction that shifts with the standings.
+//   'official'  — champion crowned and all three toilet bowl comp slots
+//                 settled, draft not yet held: the order is locked. No more
+//                 predicting.
+//   'drafted'   — the rookie draft has been conducted: the order is history,
+//                 and the page is back to being a predictor once the new
+//                 season's standings start rolling in (post-Labor Day).
+// In official AND drafted phases nothing is being predicted — only the
+// in-season projection earns the "Predictor" tab title below.
+const draftPhase: 'projected' | 'official' | 'drafted' = isDraftConducted(draftResultsData)
+  ? 'drafted'
+  : isLeagueDraftOrderFinal(leagueWinnerId, toiletBowlWinners)
+    ? 'official'
+    : 'projected';
+
 // Final order: merge standings-based predictions with futureDraftPicks ownership
 let finalBase: DraftPrediction[];
-if (futureDraftPicksData && isValidFutureDraftPicksData(futureDraftPicksData)) {
+if (draftPhase === 'drafted' && actualDraftPicks.length > 0) {
+  // The draft happened — the as-drafted results are ground truth. The
+  // futureDraftPicks snapshot is a pre-draft fetch (frozen months earlier)
+  // and misses any pick trades made after it, so it must NOT win here.
+  finalBase = actualDraftPicks;
+} else if (futureDraftPicksData && isValidFutureDraftPicksData(futureDraftPicksData)) {
   // Merge standings order (with champion at pick 16) with current ownership from futureDraftPicks API
   finalBase = mergeStandingsWithFuturePicks(sortedPredictions, futureDraftPicksData, currentTeamConfigMap, nextYear);
 } else if (actualDraftPicks.length > 0) {
@@ -182,21 +208,6 @@ const mergeSpecialPicks = (
 };
 
 const finalPredictions = mergeSpecialPicks(finalBase, specialPickMap);
-
-// Seasonal framing — three phases:
-//   'projected' — season underway, playoffs incomplete: the order is a live
-//                 prediction that shifts with the standings.
-//   'official'  — champion crowned and all three toilet bowl comp slots
-//                 settled, draft not yet held: the order is locked. No more
-//                 predicting.
-//   'drafted'   — the rookie draft has been conducted: the order is history,
-//                 and the page is back to being a predictor once the new
-//                 season's standings start rolling in (post-Labor Day).
-const draftPhase: 'projected' | 'official' | 'drafted' = isDraftConducted(draftResultsData)
-  ? 'drafted'
-  : isLeagueDraftOrderFinal(leagueWinnerId, toiletBowlWinners)
-    ? 'official'
-    : 'projected';
 
 // History view: pick a year and show all draft picks with trade notes
 const historyYearParam = Astro.url.searchParams.get('year');
@@ -389,7 +400,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
 );
 ---
 
-<TheLeagueLayout title={draftPhase === 'official' ? `${nextYear} Draft Order` : 'Draft Predictor'}>
+<TheLeagueLayout title={draftPhase === 'projected' ? 'Draft Predictor' : `${nextYear} Draft Order`}>
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>
@@ -595,21 +606,21 @@ const filteredHistoryRows = historyRows.filter((row) =>
     color: var(--color-gray-900, #111827);
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--spacing-sm, 0.5rem);
     flex-wrap: wrap;
   }
 
   .official-badge {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border-radius: var(--radius-full, 9999px);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fff;
     background: var(--color-secondary, #2e8743);
-    box-shadow: 0 2px 4px rgba(46, 135, 67, 0.25);
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.15));
   }
 
   .draft-predictor-subtitle {

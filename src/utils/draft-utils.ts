@@ -315,13 +315,25 @@ export function isLeagueDraftOrderFinal(
  * opposed to draft results that merely stub out the pick slots. Once true,
  * the order isn't "official upcoming" anymore — it's history, and the page
  * flips back toward predictor framing for the next cycle.
+ *
+ * Accepts both draftResults shapes: TheLeague's single `draftUnit` object
+ * and the AFL's two-element `draftUnit` array (one unit per conference).
  */
-export function isDraftConducted(draftResults: DraftResultsData | null | undefined): boolean {
-  const picks = draftResults?.draftResults?.draftUnit?.draftPick;
-  const pickArray = Array.isArray(picks) ? picks : picks ? [picks] : [];
-  // MFL stubs unmade picks with an empty/placeholder player field — only a
-  // real player id (digits) counts as a made selection.
-  return pickArray.some((p) => p?.player && /^\d+$/.test(p.player));
+export function isDraftConducted(draftResults: unknown): boolean {
+  const unitRaw = (draftResults as DraftResultsData | null | undefined)?.draftResults?.draftUnit as
+    | { draftPick?: DraftResultPick | DraftResultPick[] }
+    | Array<{ draftPick?: DraftResultPick | DraftResultPick[] }>
+    | undefined;
+  const units = Array.isArray(unitRaw) ? unitRaw : unitRaw ? [unitRaw] : [];
+  return units.some((unit) => {
+    const picks = unit?.draftPick;
+    const pickArray = Array.isArray(picks) ? picks : picks ? [picks] : [];
+    // MFL stubs unmade picks with an empty/placeholder player field — only a
+    // real player id (digits, nonzero) counts as a made selection.
+    return pickArray.some(
+      (p) => p?.player && /^\d+$/.test(p.player) && parseInt(p.player, 10) > 0
+    );
+  });
 }
 
 /**
