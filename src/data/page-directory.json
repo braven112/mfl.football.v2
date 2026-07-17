@@ -123,7 +123,7 @@
   {
     "id": "draft-order",
     "title": "Draft Order",
-    "description": "Projected draft order based on current standings and tiebreakers",
+    "description": "Rookie draft order — projected from standings in-season, official once the playoffs wrap, final as drafted",
     "path": "/draft-predictor",
     "icon": "draft-podium",
     "category": "popular",
@@ -582,12 +582,12 @@
   },
   {
     "id": "afl-draft-predictor",
-    "title": "Draft Predictor",
-    "description": "Projected AFL draft order for the upcoming season — based on standings, tiebreakers, and current league results.",
+    "title": "Draft Order",
+    "description": "AFL draft order for the upcoming season — projected from standings during the year, official once the playoffs and NIT wrap.",
     "path": "/afl-fantasy/draft-predictor",
     "icon": "draft-podium",
     "category": "tools",
-    "tags": ["afl", "draft", "predictor", "draft predictor", "draft order", "order", "pick", "picks", "round", "rounds", "rookie", "rookies", "veteran", "projection", "next year", "upcoming", "future", "1.01", "first round", "conference draft", "al draft", "nl draft"],
+    "tags": ["afl", "draft", "predictor", "draft predictor", "draft order", "official draft order", "order", "pick", "picks", "round", "rounds", "rookie", "rookies", "veteran", "projection", "next year", "upcoming", "future", "1.01", "first round", "conference draft", "al draft", "nl draft", "official", "final"],
     "visibility": "all",
     "popularity": 55
   },

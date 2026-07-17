@@ -1477,3 +1477,13 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 **Insight:** Player photos are pinned to one canonical `MFL_PHOTO_HOST` (the default league's registry host) in `src/constants/roster-constants.ts` and `scripts/update-salary-averages.mjs`. This is intentionally NOT per-league. If a future session has MFL egress: fetch the same player photo from www49 and www44, compare status/bytes, and either document host-agnosticism or make it per-league — until then, switching AFL photo fallbacks to www44 risks replacing working images with 404s.
 
 **Evidence:** `src/constants/roster-constants.ts` `MFL_PHOTO_HOST` comment, PR #439 review round.
+
+## 2026-07-17 - "Has the Draft Happened?" Cannot Be Inferred From draftResults Existing — Check for Real Player IDs
+
+**Context:** Seasonal framing for the draft-order pages ("predictor" in-season, "official" post-playoffs, "drafted" after the rookie draft) needs a reliable draft-conducted signal. The naive check — `draftResults.json` exists / has `draftPick` entries — is wrong twice over.
+
+**Insight:** Two traps: (1) MFL can emit `draftResults` with STUBBED pick slots before the draft (rows carrying `round`/`pick`/`franchise` but an empty or placeholder `player` field), so presence of pick rows ≠ draft happened; only a pick whose `player` is a real numeric id counts as a made selection. (2) The year window: between the spring rookie draft and Labor Day, `getNextDraftYear()` still returns the just-completed draft's year — so "the draft for nextYear is already conducted" is a real state every page consuming that helper must handle (~4 months of the calendar).
+
+**Recommendation:** Use `isDraftConducted(draftResultsData)` from `src/utils/draft-utils.ts` (checks `/^\d+$/` on `player`) rather than re-deriving. Phase logic for order framing: `isDraftConducted` → drafted; else `isLeagueDraftOrderFinal` (champion + all 3 toilet bowl comp slots) → official; else projected. AFL equivalent: `isDraftOrderFinal` in `src/utils/afl-draft-utils.ts` (both conference champs + all 5 NIT positions). See CLAUDE.md "Draft order framing" for the framing rule itself.
+
+**Evidence:** `tests/draft-order-phase.test.ts`, `data/theleague/mfl-feeds/2026/draftResults.json` (51 real picks), `src/pages/theleague/draft-predictor.astro` phase switch.

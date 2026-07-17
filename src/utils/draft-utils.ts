@@ -292,6 +292,51 @@ export function parseTradeFromComment(comment: string): string | undefined {
 }
 
 /**
+ * Whether the draft order is FINAL (official) rather than a projection.
+ *
+ * TheLeague's order stops being a prediction once the playoffs wrap: the
+ * champion (pick 16) is crowned and all three toilet bowl compensatory
+ * slots (1.17, 2.17, 2.18) are settled. Consumers use this to switch
+ * framing — "Draft Predictor / projected" during the season, "Draft
+ * Order / official" once the playoffs finish. If any bracket result can't
+ * be resolved we stay in "projected" framing — the safe direction to fail.
+ */
+export function isLeagueDraftOrderFinal(
+  leagueWinnerId: string,
+  toiletBowlWinners: ToiletBowlResult[]
+): boolean {
+  if (!leagueWinnerId) return false;
+  const levels = new Set(toiletBowlWinners.map((w) => w.level));
+  return levels.has('winner') && levels.has('consolation') && levels.has('consolation2');
+}
+
+/**
+ * Whether the draft has actually been CONDUCTED (players selected), as
+ * opposed to draft results that merely stub out the pick slots. Once true,
+ * the order isn't "official upcoming" anymore — it's history, and the page
+ * flips back toward predictor framing for the next cycle.
+ *
+ * Accepts both draftResults shapes: TheLeague's single `draftUnit` object
+ * and the AFL's two-element `draftUnit` array (one unit per conference).
+ */
+export function isDraftConducted(draftResults: unknown): boolean {
+  const unitRaw = (draftResults as DraftResultsData | null | undefined)?.draftResults?.draftUnit as
+    | { draftPick?: DraftResultPick | DraftResultPick[] }
+    | Array<{ draftPick?: DraftResultPick | DraftResultPick[] }>
+    | undefined;
+  const units = Array.isArray(unitRaw) ? unitRaw : unitRaw ? [unitRaw] : [];
+  return units.some((unit) => {
+    const picks = unit?.draftPick;
+    const pickArray = Array.isArray(picks) ? picks : picks ? [picks] : [];
+    // MFL stubs unmade picks with an empty/placeholder player field — only a
+    // real player id (digits, nonzero) counts as a made selection.
+    return pickArray.some(
+      (p) => p?.player && /^\d+$/.test(p.player) && parseInt(p.player, 10) > 0
+    );
+  });
+}
+
+/**
  * Build trade chain from draft results
  * Combines trade comments with MFL assets data to create full trade history
  *

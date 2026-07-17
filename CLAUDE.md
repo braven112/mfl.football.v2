@@ -234,6 +234,38 @@ new page silently shows last/next year's data for ~6 months of the calendar
 (the gap between the two rollover dates). Test date-dependent features with
 the `?testDate=YYYY-MM-DD` URL param rather than changing the system clock.
 
+## Draft order framing — "predictor" in-season, "official" after playoffs
+
+Both leagues' draft order stops being a prediction the moment its deciding
+games finish, and every surface that names or links the order must match
+the phase — "Draft Predictor / projected" during the regular season,
+"Draft Order / official" once it's locked. The phase is always data-driven
+from the parsed playoff brackets (falls back to "projected" if any bracket
+result can't be resolved):
+
+- **AFL:** projected (season underway) → official once the NIT wraps (both
+  conference champions + all 5 NIT bonus positions; `isDraftOrderFinal` in
+  `src/utils/afl-draft-utils.ts`) → drafted once the late-August conference
+  drafts are conducted (shared `isDraftConducted`, which handles the AFL's
+  two-element `draftUnit` array). `afl-fantasy/draft-predictor.astro`
+  switches its title/subtitle/badge on the phase.
+- **TheLeague:** three phases, because the rookie draft happens mid-spring:
+  projected (season underway) → official (champion + all 3 toilet bowl comp
+  slots settled, draft not yet held) → drafted (picks made; back to
+  predictor framing for the next cycle at Labor Day). Sources of truth:
+  `isLeagueDraftOrderFinal` + `isDraftConducted` in `src/utils/draft-utils.ts`;
+  `theleague/draft-predictor.astro` switches on them. In the drafted phase
+  the "final" view must render the as-drafted results, never the
+  `futureDraftPicks` merge — that snapshot freezes pre-draft and misses
+  later pick trades.
+
+Surfaces that only ever render in one phase can hardcode that phase's
+framing: the AL/NL draft heroes (`afl-hero-resolver.ts`) and the NFL-draft /
+rookie-draft heroes (`league-event-hero-view.ts`) only appear in offseason
+windows where the order is official, so they say "View Draft Order", never
+"predictor". Static copy (nav, page directory, Roger's prompt/seeds) should
+stay phase-neutral or state both phases.
+
 ## Page directory registry — required for every new page
 
 Adding a page to the site without adding it to

@@ -206,8 +206,10 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           ? 'The American League live draft is happening right now. Make your picks before the timer expires.'
           : `Your live draft is ${dayPhrase(days)} — Saturday at 12:30pm PT. Scout the board and finalize your queue.`
         : event.definition.description,
+      // This hero only surfaces in the pre-draft offseason window (post-NIT),
+      // when the order is official — never call it a "predictor" here.
       link: '/afl-fantasy/draft-predictor',
-      linkLabel: live ? 'Enter Draft Room' : 'Open Draft Predictor',
+      linkLabel: live ? 'Enter Draft Room' : 'View Draft Order',
       icon: 'draft-podium',
       accent: ACCENT_STEEL,
       glow: 'rgba(59,107,154,.55)',
@@ -230,8 +232,9 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           ? 'The National League email draft is open. Submit your queue and watch the clock — picks tick through one at a time.'
           : `Your email draft starts ${dayPhrase(days)} — Sunday at 9am PT. Set your queue before the first pick is on the clock.`
         : event.definition.description,
+      // Same as the AL view: offseason-only hero, the order is official.
       link: '/afl-fantasy/draft-predictor',
-      linkLabel: live ? 'Watch the Board' : 'Open Draft Predictor',
+      linkLabel: live ? 'Watch the Board' : 'View Draft Order',
       icon: 'draft-podium',
       accent: ACCENT_GOLD,
       glow: 'rgba(196,30,58,.55)',
