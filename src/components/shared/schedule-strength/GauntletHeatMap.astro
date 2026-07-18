@@ -5,12 +5,19 @@
  * the opponent's franchise page and prints its numeric difficulty so the
  * color ramp is never the only signal.
  */
+export interface HeatGame {
+  oppAbbrev: string;
+  oppName: string;
+  oppHref: string;
+  difficulty: number | null;
+}
+
 export interface HeatCell {
   week: number;
   bye: boolean;
-  oppAbbrev?: string;
-  oppName?: string;
-  oppHref?: string;
+  /** One entry per game that week — AFL plays two games per week. */
+  games: HeatGame[];
+  /** Averaged across the week's games (equals the game value for one game). */
   difficulty: number | null;
   step: number;
 }
@@ -55,26 +62,34 @@ const { franchises, weeks } = Astro.props;
           </th>
           {f.cells.map(cell => (
             <td class="hm__cell">
-              {cell.bye ? (
+              {cell.bye || cell.games.length === 0 ? (
                 <span class="hm__chip hm__chip--s0" aria-label={`Week ${cell.week}: bye`}>
                   <span class="hm__v">BYE</span>
                 </span>
-              ) : cell.oppHref ? (
+              ) : cell.games.length === 1 ? (
                 <a
                   class={`hm__chip hm__chip--s${cell.step}`}
-                  href={cell.oppHref}
-                  aria-label={`Week ${cell.week} vs ${cell.oppName ?? cell.oppAbbrev}${cell.difficulty != null ? ` — difficulty ${cell.difficulty} of 100` : ''}`}
+                  href={cell.games[0].oppHref}
+                  aria-label={`Week ${cell.week} vs ${cell.games[0].oppName}${cell.difficulty != null ? ` — difficulty ${cell.difficulty} of 100` : ''}`}
                 >
-                  <span class="hm__opp" aria-hidden="true">{cell.oppAbbrev}</span>
+                  <span class="hm__opp" aria-hidden="true">{cell.games[0].oppAbbrev}</span>
                   <span class="hm__v" aria-hidden="true">{cell.difficulty ?? '—'}</span>
                 </a>
               ) : (
                 <span
-                  class={`hm__chip hm__chip--s${cell.step}`}
-                  aria-label={`Week ${cell.week} vs ${cell.oppName ?? cell.oppAbbrev}${cell.difficulty != null ? ` — difficulty ${cell.difficulty} of 100` : ''}`}
+                  class={`hm__chip hm__chip--multi hm__chip--s${cell.step}`}
+                  aria-label={`Week ${cell.week}: ${cell.games.length} games${cell.difficulty != null ? `, average difficulty ${cell.difficulty} of 100` : ''}`}
                 >
-                  <span class="hm__opp" aria-hidden="true">{cell.oppAbbrev}</span>
-                  <span class="hm__v" aria-hidden="true">{cell.difficulty ?? '—'}</span>
+                  {cell.games.map(g => (
+                    <a
+                      class="hm__game"
+                      href={g.oppHref}
+                      aria-label={`Week ${cell.week} vs ${g.oppName}${g.difficulty != null ? ` — difficulty ${g.difficulty} of 100` : ''}`}
+                    >
+                      <span class="hm__opp" aria-hidden="true">{g.oppAbbrev}</span>
+                      <span class="hm__gv" aria-hidden="true">{g.difficulty ?? '—'}</span>
+                    </a>
+                  ))}
                 </span>
               )}
             </td>
@@ -140,6 +155,24 @@ const { franchises, weeks } = Astro.props;
   }
   .hm__opp { font-size: 0.62rem; letter-spacing: 0.04em; opacity: 0.85; }
   .hm__v { font-weight: 700; font-size: 0.85rem; }
+
+  /* Double-header cells (AFL): one row per game, each its own link. */
+  .hm__chip--multi { gap: 0.1rem; padding: 0.2rem 0.3rem; }
+  .hm__game {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 0.2rem;
+    padding: 0 0.15rem;
+  }
+  .hm__game:focus-visible {
+    outline: 2px solid var(--gnt-focus, var(--color-primary, #1c497c));
+    outline-offset: -1px;
+  }
+  .hm__game:hover .hm__opp { text-decoration: underline; }
+  .hm__gv { font-weight: 700; font-size: 0.72rem; }
   .hm__chip--s0 { background: var(--gnt-cell-0, #f3f4f6); color: var(--gnt-cell-0-ink, #6b7280); }
   .hm__chip--s1 { background: var(--gnt-cell-1, #dcfce7); color: var(--gnt-cell-1-ink, #14532d); }
   .hm__chip--s2 { background: var(--gnt-cell-2, #d1e7c4); color: var(--gnt-cell-2-ink, #1a4d1f); }

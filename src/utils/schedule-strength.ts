@@ -35,8 +35,11 @@ export interface GauntletDerived {
     franchises: Array<{
       franchiseId: string; name: string;
       cells: Array<{
-        week: number; bye: boolean; oppId: string | null;
-        oppAbbrev?: string; difficulty: number | null; step: number;
+        week: number; bye: boolean;
+        /** One entry per game that week — AFL plays two games per week. */
+        opps: Array<{ oppId: string; oppAbbrev?: string; difficulty: number | null }>;
+        /** Averaged across the week's games. */
+        difficulty: number | null; step: number;
       }>;
     }>;
   };
@@ -170,9 +173,12 @@ export function resolveGauntletView({
     cells: f.cells.map(c => ({
       week: c.week,
       bye: c.bye,
-      oppAbbrev: c.oppId ? (teamById.get(c.oppId)?.abbrev ?? c.oppAbbrev) : undefined,
-      oppName: c.oppId ? displayName(c.oppId, c.oppAbbrev ?? c.oppId) : undefined,
-      oppHref: c.oppId ? franchiseHref(c.oppId) : undefined,
+      games: (c.opps ?? []).map(g => ({
+        oppAbbrev: teamById.get(g.oppId)?.abbrev ?? g.oppAbbrev ?? g.oppId,
+        oppName: displayName(g.oppId, g.oppAbbrev ?? g.oppId),
+        oppHref: franchiseHref(g.oppId),
+        difficulty: g.difficulty,
+      })),
       difficulty: c.difficulty,
       step: c.step,
     })),

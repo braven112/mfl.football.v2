@@ -113,10 +113,23 @@ describe('computeTeamStrengths', () => {
 describe('buildOpponentGrid', () => {
   it('maps both directions of each pairing and omits byes', () => {
     const grid = buildOpponentGrid(SCHEDULE);
-    expect(grid.get('0001')!.get(1)).toBe('0002');
-    expect(grid.get('0002')!.get(1)).toBe('0001');
+    expect(grid.get('0001')!.get(1)).toEqual(['0002']);
+    expect(grid.get('0002')!.get(1)).toEqual(['0001']);
     expect(grid.get('0001')!.has(6)).toBe(false); // bye
-    expect(grid.get('0002')!.get(6)).toBe('0003');
+    expect(grid.get('0002')!.get(6)).toEqual(['0003']);
+  });
+
+  it('keeps BOTH games when a franchise plays twice in a week (AFL double-headers)', () => {
+    const doubleHeader = {
+      schedule: {
+        weeklySchedule: [
+          { week: '1', matchup: [matchup('0001', '0002'), matchup('0001', '0003'), matchup('0002', '0004'), matchup('0003', '0004')] },
+        ],
+      },
+    };
+    const grid = buildOpponentGrid(doubleHeader);
+    expect(grid.get('0001')!.get(1)).toEqual(['0002', '0003']);
+    expect(grid.get('0004')!.get(1)).toEqual(['0002', '0003']);
   });
 });
 
@@ -176,18 +189,55 @@ describe('computeScheduleStrength', () => {
     }
   });
 
-  it('every non-bye heat-map cell carries opponent + numeric difficulty + step', () => {
+  it('every non-bye heat-map cell carries opponents + numeric difficulty + step', () => {
     const r = compute();
     for (const f of r.heatMap.franchises) {
       for (const c of f.cells) {
         if (c.bye) continue;
-        expect(c.oppId).toBeTruthy();
-        expect(c.oppAbbrev).toBeTruthy();
+        expect(c.opps.length).toBeGreaterThanOrEqual(1);
+        for (const g of c.opps) {
+          expect(g.oppId).toBeTruthy();
+          expect(g.oppAbbrev).toBeTruthy();
+        }
         expect(Number.isFinite(c.difficulty)).toBe(true);
         expect(c.step).toBeGreaterThanOrEqual(1);
         expect(c.step).toBeLessThanOrEqual(5);
       }
     }
+  });
+
+  it('double-header weeks count every game in records and averages (AFL)', () => {
+    // Week 1-3 each play the SAME two games per team: Alpha beats both
+    // Bravo and Delta every week, Delta loses both.
+    const dhSchedule = {
+      schedule: {
+        weeklySchedule: [1, 2, 3, 4].map(wk => ({
+          week: String(wk),
+          matchup: [
+            matchup('0001', '0002'), matchup('0001', '0004'),
+            matchup('0002', '0003'), matchup('0003', '0004'),
+          ],
+        })),
+      },
+    };
+    const r = computeScheduleStrength({
+      leagueSlug: 'afl-fantasy',
+      teams: TEAMS,
+      schedule: dhSchedule,
+      standings: STANDINGS,
+      weeklyResults: WEEKLY,
+      week: 4,
+      year: 2026,
+    });
+    const alpha = r.played.find(p => p.franchiseId === '0001')!;
+    expect(alpha.record).toBe('6-0'); // 2 wins × 3 completed weeks
+    const delta = r.played.find(p => p.franchiseId === '0004')!;
+    expect(delta.record).toBe('0-6');
+    // Heat-map cell for the remaining week carries both games.
+    const alphaRow = r.heatMap.franchises.find(f => f.franchiseId === '0001')!;
+    const wk4 = alphaRow.cells.find(c => c.week === 4)!;
+    expect(wk4.opps.map(g => g.oppId)).toEqual(['0002', '0004']);
+    expect(Number.isFinite(wk4.difficulty)).toBe(true);
   });
 });
 

@@ -31,6 +31,7 @@ import {
   computeTeamStrengths,
   difficultyStep,
   buildOpponentGrid,
+  scheduleFromRawResults,
 } from './lib/team-strength.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -83,24 +84,38 @@ async function loadPreviousWeek(league, year, week) {
   return null;
 }
 
-/** W-L-T record over completed weeks from the opponent grid + weekly scores. */
+/**
+ * W-L-T record over completed weeks from the opponent grid + weekly scores.
+ * Grid values are arrays (AFL plays two games per week) — every game counts.
+ */
 function computeRecord(grid, weeklyResults, fid, throughWeek) {
   const scoresByWeek = new Map();
   for (const w of (weeklyResults?.weeks || [])) scoresByWeek.set(int(w.week), w.scores || {});
   let wins = 0, losses = 0, ties = 0;
   const opps = grid.get(fid);
   if (!opps) return { wins, losses, ties };
-  for (const [wk, oppId] of opps) {
+  for (const [wk, oppIds] of opps) {
     if (wk > throughWeek) continue;
     const scores = scoresByWeek.get(wk);
     const mine = num(scores?.[fid], NaN);
-    const theirs = num(scores?.[oppId], NaN);
-    if (!Number.isFinite(mine) || !Number.isFinite(theirs)) continue;
-    if (mine > theirs) wins++;
-    else if (mine < theirs) losses++;
-    else ties++;
+    if (!Number.isFinite(mine)) continue;
+    for (const oppId of oppIds) {
+      const theirs = num(scores?.[oppId], NaN);
+      if (!Number.isFinite(theirs)) continue;
+      if (mine > theirs) wins++;
+      else if (mine < theirs) losses++;
+      else ties++;
+    }
   }
   return { wins, losses, ties };
+}
+
+/** Parse MFL "W-L-T" strings ("11-7-0") → { wins, losses, ties } or null. */
+export function parseH2hRecord(wlt) {
+  if (typeof wlt !== 'string') return null;
+  const m = wlt.trim().match(/^(\d+)-(\d+)(?:-(\d+))?$/);
+  if (!m) return null;
+  return { wins: int(m[1]), losses: int(m[2]), ties: int(m[3] ?? 0) };
 }
 
 export function computeScheduleStrength({ leagueSlug, teams, schedule, standings, weeklyResults, week, year }) {
@@ -129,7 +144,9 @@ export function computeScheduleStrength({ leagueSlug, teams, schedule, standings
 
   const perTeam = franchiseIds.map(fid => {
     const opps = grid.get(fid) ?? new Map();
-    const oppFor = weeks => weeks.map(w => opps.get(w)).filter(Boolean);
+    // Grid values are opponent ARRAYS (AFL = two games/week) — flatten so
+    // every game weighs into the averages.
+    const oppFor = weeks => weeks.flatMap(w => opps.get(w) ?? []);
 
     const avgOver = weeks => {
       const vals = oppFor(weeks).map(id => strengths.get(id)?.strength).filter(Number.isFinite);
@@ -142,7 +159,12 @@ export function computeScheduleStrength({ leagueSlug, teams, schedule, standings
 
     const remaining = avgOver(remainingWeeks);
     const past = avgOver(playedWeeks);
-    const record = computeRecord(grid, weeklyResults, fid, completedWeek);
+    // Prefer MFL's own h2h record (standings h2hwlt) — it's what owners see,
+    // and it excludes the extra AFL matchups (double-header weeks) that MFL
+    // itself doesn't count toward the official record. Recompute from scores
+    // only when standings are absent (defensive fallback).
+    const record = parseH2hRecord(standingsByFid.get(fid)?.h2hwlt)
+      ?? computeRecord(grid, weeklyResults, fid, completedWeek);
 
     return {
       franchiseId: fid,
@@ -153,17 +175,20 @@ export function computeScheduleStrength({ leagueSlug, teams, schedule, standings
       pastOppPpg: avgPpgOver(playedWeeks),
       record,
       cells: remainingWeeks.map(w => {
-        const oppId = opps.get(w) ?? null;
-        if (!oppId) return { week: w, bye: true, oppId: null, difficulty: null, step: 0 };
-        const difficulty = strengths.get(oppId)?.strength ?? null;
-        return {
-          week: w,
-          bye: false,
+        const oppIds = opps.get(w) ?? [];
+        if (oppIds.length === 0) return { week: w, bye: true, opps: [], difficulty: null, step: 0 };
+        const games = oppIds.map(oppId => ({
           oppId,
           oppAbbrev: abbrevByFid.get(oppId) ?? oppId,
-          difficulty,
-          step: difficultyStep(difficulty),
-        };
+          difficulty: strengths.get(oppId)?.strength ?? null,
+        }));
+        const finite = games.map(g => g.difficulty).filter(Number.isFinite);
+        // Cell difficulty = average across the week's games (a single-game
+        // league reduces to that game's value).
+        const difficulty = finite.length
+          ? Math.round(finite.reduce((a, b) => a + b, 0) / finite.length)
+          : null;
+        return { week: w, bye: false, opps: games, difficulty, step: difficultyStep(difficulty) };
       }),
     };
   });
@@ -268,11 +293,21 @@ async function runLeague(slug, opts) {
   const year = opts.year ?? getSeasonYear();
   const feedDir = path.join(projectRoot, league.dataPath, 'mfl-feeds', String(year));
 
-  const [schedule, standings, weeklyResults] = await Promise.all([
+  let [schedule, standings, weeklyResults] = await Promise.all([
     tryLoadJSON(path.join(feedDir, 'schedule.json')),
     tryLoadJSON(path.join(feedDir, 'standings.json')),
     tryLoadJSON(path.join(feedDir, 'weekly-results.json')),
   ]);
+
+  if (!schedule?.schedule?.weeklySchedule?.length && year < getSeasonYear()) {
+    // Past season with no schedule.json (only ever fetched by the historical
+    // backfill): reconstruct pairings from weekly-results-raw. Played
+    // pairings are identical, and a finished season has no future weeks for
+    // the raw data to miss.
+    const raw = await tryLoadJSON(path.join(feedDir, 'weekly-results-raw.json'));
+    schedule = scheduleFromRawResults(raw);
+    if (schedule) console.log(`  [${slug}] ${year}: schedule.json missing — rebuilt pairings from weekly-results-raw.`);
+  }
 
   if (!schedule?.schedule?.weeklySchedule?.length) {
     console.log(`  [${slug}] no schedule.json for ${year} — skipping (feed sync will backfill).`);

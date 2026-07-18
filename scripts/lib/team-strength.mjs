@@ -112,8 +112,12 @@ export function difficultyStep(score) {
 }
 
 /**
- * Walk schedule.json H2H pairings → Map<franchiseId, Map<week, opponentId>>.
+ * Walk schedule.json H2H pairings → Map<franchiseId, Map<week, opponentId[]>>.
  * Weeks with no matchup for a franchise (bye) are simply absent.
+ *
+ * The per-week value is an ARRAY: AFL plays two games per franchise per week
+ * (24 pairings for 24 teams), so a scalar per week silently drops half the
+ * season — records and difficulty averages come out halved.
  */
 export function buildOpponentGrid(schedule) {
   const grid = new Map();
@@ -123,11 +127,34 @@ export function buildOpponentGrid(schedule) {
       const fs = m.franchise || [];
       if (fs.length !== 2) continue;
       const [a, b] = fs;
-      if (!grid.has(a.id)) grid.set(a.id, new Map());
-      if (!grid.has(b.id)) grid.set(b.id, new Map());
-      grid.get(a.id).set(wk, b.id);
-      grid.get(b.id).set(wk, a.id);
+      for (const [me, opp] of [[a, b], [b, a]]) {
+        if (!grid.has(me.id)) grid.set(me.id, new Map());
+        const weekMap = grid.get(me.id);
+        if (!weekMap.has(wk)) weekMap.set(wk, []);
+        weekMap.get(wk).push(opp.id);
+      }
     }
   }
   return grid;
+}
+
+/**
+ * Build a schedule.json-shaped object from weekly-results-raw (per-week
+ * matchup arrays with scores). Fallback for past seasons whose schedule.json
+ * was never fetched — played pairings are identical, and a past season has
+ * no future weeks for the raw data to miss.
+ */
+export function scheduleFromRawResults(weeklyResultsRaw) {
+  if (!Array.isArray(weeklyResultsRaw)) return null;
+  const weeklySchedule = weeklyResultsRaw
+    .map(w => w?.weeklyResults)
+    .filter(w => w?.week && Array.isArray(w.matchup))
+    .map(w => ({
+      week: String(w.week),
+      matchup: w.matchup
+        .filter(m => (m.franchise || []).length === 2)
+        .map(m => ({ franchise: m.franchise.map(f => ({ id: f.id, isHome: f.isHome ?? '0' })) })),
+    }));
+  if (weeklySchedule.length === 0) return null;
+  return { schedule: { weeklySchedule } };
 }

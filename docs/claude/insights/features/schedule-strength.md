@@ -91,3 +91,24 @@ these components must add `gauntlet-theme` to its wrapper. Ramp colors are
 literals by design (gray tokens invert in dark mode); the s0/BYE ink is
 gray-600-equivalent `#4b5563`, not gray-500 — gray-500 on `#f3f4f6` is 4.39:1,
 below AA.
+
+## 2026-07-18 - AFL Plays Extra Games MFL Doesn't Count — Grid Is Array-Valued, Records Come From Standings
+
+**Insight:** AFL raw results contain weeks with 24 matchups for 24 teams (each
+franchise plays TWO distinct opponents — e.g. 2025 weeks 1, 2, 13), and MFL's
+official `h2hwlt` record EXCLUDES the extra games (17-game records despite
+20 played). Nothing in schedule.json or weekly-results-raw flags which matchup
+is the official one. Two consequences baked into the pipeline:
+1. `buildOpponentGrid` maps week → opponent ARRAY (a scalar silently dropped
+   half of AFL's double-header weeks: halved records, understated difficulty).
+   Heat-map cells carry `opps[]` with a per-week averaged `difficulty`.
+2. Displayed records parse standings `h2hwlt` (`parseH2hRecord`), falling back
+   to score-derived computation only when standings are missing. Never
+   recompute records from pairings for display — they won't match what owners
+   see on MFL (verified: computed-from-pairings mismatched ALL 24 AFL teams).
+Difficulty averages deliberately DO include the extra games — you still have
+to beat that opponent that week.
+
+Also: for past seasons whose `schedule.json` was never backfilled (AFL
+2024/2025), `scheduleFromRawResults` rebuilds pairings from
+weekly-results-raw — sufficient for a completed season (no future weeks).
