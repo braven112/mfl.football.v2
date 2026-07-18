@@ -1,0 +1,168 @@
+---
+/**
+ * The Gauntlet — ranked schedule-difficulty table (Sections 1 & 2).
+ * League-agnostic: rows arrive pre-resolved (names, hrefs, icons) from the
+ * league page's frontmatter. `variant` switches the trailing column between
+ * the run-in trend and the played-weeks record.
+ */
+export interface StrengthRow {
+  rank: number;
+  franchiseId: string;
+  displayName: string;
+  icon?: string;
+  href?: string;
+  oppPpg: number | null;
+  difficulty: number;
+  step: number;
+  /** run-in only: prevRank − rank; positive = schedule got harder */
+  trendDeltaRanks?: number | null;
+  /** played only */
+  record?: string;
+}
+
+export interface Props {
+  variant: 'run-in' | 'played';
+  rows: StrengthRow[];
+  caption: string;
+}
+
+const { variant, rows, caption } = Astro.props;
+const isRunIn = variant === 'run-in';
+
+function trendMeta(delta: number | null | undefined) {
+  if (delta == null) return { glyph: '·', cls: 'flat', label: 'New this week' };
+  if (delta > 0) return { glyph: `▲ ${delta}`, cls: 'up', label: `Up ${delta} ${delta === 1 ? 'spot' : 'spots'} — schedule got harder` };
+  if (delta < 0) return { glyph: `▼ ${Math.abs(delta)}`, cls: 'down', label: `Down ${Math.abs(delta)} ${delta === -1 ? 'spot' : 'spots'} — schedule got easier` };
+  return { glyph: '▬', cls: 'flat', label: 'No change from last week' };
+}
+---
+
+<div class="sst-scroll">
+  <table class="sst">
+    <caption>{caption}</caption>
+    <thead>
+      <tr>
+        <th scope="col" class="sst__rank-h"><span class="visually-hidden">Rank</span></th>
+        <th scope="col">Team</th>
+        <th scope="col" class="sst__num sst__ppg">Opp PPG</th>
+        <th scope="col">Difficulty (0–100)</th>
+        {isRunIn
+          ? <th scope="col">Trend</th>
+          : <th scope="col" class="sst__num">Record</th>}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map(row => {
+        const trend = trendMeta(row.trendDeltaRanks);
+        return (
+          <tr>
+            <td class="sst__rank">{row.rank}</td>
+            <th scope="row" class="sst__team-cell">
+              <span class="sst__team">
+                {row.icon && <img class="sst__icon" src={row.icon} alt="" loading="lazy" width="20" height="20" />}
+                {row.href
+                  ? <a class="sst__team-link" href={row.href}>{row.displayName}</a>
+                  : row.displayName}
+              </span>
+            </th>
+            <td class="sst__num sst__ppg">{row.oppPpg != null ? row.oppPpg.toFixed(1) : '—'}</td>
+            <td class={`sst__diff sst__diff--s${row.step}`}>
+              <span class="sst__barwrap">
+                <span class="sst__bar" aria-hidden="true"><i style={`width:${row.difficulty}%`}></i></span>
+                <span class="sst__score">{row.difficulty}</span>
+              </span>
+            </td>
+            {isRunIn ? (
+              <td class={`sst__trend sst__trend--${trend.cls}`} aria-label={trend.label}>
+                <span aria-hidden="true">{trend.glyph}</span>
+              </td>
+            ) : (
+              <td class="sst__num">{row.record ?? '—'}</td>
+            )}
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .sst-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sst {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    font-size: 0.9rem;
+  }
+  .sst caption {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .sst th, .sst td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--gnt-border, var(--content-border, #e2e8f0));
+  }
+  .sst thead th {
+    position: sticky;
+    top: 0;
+    background: var(--gnt-th-bg, var(--color-gray-50, #f9fafb));
+    font-size: 0.71rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280));
+    font-weight: 700;
+  }
+  .sst__rank-h { width: 2rem; }
+  .sst__rank {
+    color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280));
+    font-variant-numeric: tabular-nums;
+  }
+  .sst__team-cell { font-weight: 600; }
+  .sst__team { display: flex; align-items: center; gap: 0.55rem; }
+  .sst__icon { width: 1.25rem; height: 1.25rem; object-fit: contain; flex: none; }
+  .sst__team-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .sst__team-link:hover { text-decoration: underline; }
+  .sst__num { text-align: right; font-variant-numeric: tabular-nums; }
+  .sst__barwrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 11rem;
+  }
+  .sst__bar {
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--gnt-bar-track, var(--color-gray-100, #f3f4f6));
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  .sst__bar i { display: block; height: 100%; border-radius: 999px; }
+  .sst__diff--s1 .sst__bar i { background: var(--gnt-fill-1, #16a34a); }
+  .sst__diff--s2 .sst__bar i { background: var(--gnt-fill-2, #65a30d); }
+  .sst__diff--s3 .sst__bar i { background: var(--gnt-fill-3, #ca8a04); }
+  .sst__diff--s4 .sst__bar i { background: var(--gnt-fill-4, #ea580c); }
+  .sst__diff--s5 .sst__bar i { background: var(--gnt-fill-5, #dc2626); }
+  .sst__score {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    min-width: 2ch;
+    text-align: right;
+  }
+  .sst__trend { font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+  .sst__trend--up { color: var(--gnt-trend-up, #b91c1c); }
+  .sst__trend--down { color: var(--gnt-trend-down, #15803d); }
+  .sst__trend--flat { color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280)); }
+
+  @media (max-width: 640px) {
+    .sst__ppg { display: none; }
+    .sst th, .sst td { padding: 0.45rem 0.5rem; }
+    .sst__barwrap { min-width: 8rem; }
+  }
+</style>

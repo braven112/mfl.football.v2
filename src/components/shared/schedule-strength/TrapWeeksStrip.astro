@@ -1,0 +1,69 @@
+---
+/**
+ * The Gauntlet — trap-weeks strip: league-average opponent difficulty per
+ * remaining week. Flags weeks where the league collectively hits a wall.
+ */
+export interface TrapWeek {
+  week: number;
+  avgDifficulty: number | null;
+  step: number;
+}
+
+export interface Props {
+  trapWeeks: TrapWeek[];
+  /** avgDifficulty at or above this shows the trap-week flag */
+  flagThreshold?: number;
+}
+
+const { trapWeeks, flagThreshold = 70 } = Astro.props;
+---
+
+<div class="trap" role="list">
+  {trapWeeks.map(t => (
+    <div
+      class={`trap__cell trap__cell--s${t.step}`}
+      role="listitem"
+      aria-label={`Week ${t.week}: league-average difficulty ${t.avgDifficulty ?? 'unavailable'}${t.avgDifficulty != null && t.avgDifficulty >= flagThreshold ? ' — trap week' : ''}`}
+    >
+      <span class="trap__wk" aria-hidden="true">Week {t.week}</span>
+      <span class="trap__v" aria-hidden="true">{t.avgDifficulty ?? '—'}</span>
+      {t.avgDifficulty != null && t.avgDifficulty >= flagThreshold && (
+        <span class="trap__flag" aria-hidden="true">⚠ trap week</span>
+      )}
+    </div>
+  ))}
+</div>
+
+<style>
+  .trap { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .trap__cell {
+    border-radius: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    text-align: center;
+    min-width: 4.6rem;
+  }
+  .trap__wk {
+    display: block;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .trap__v {
+    font-weight: 800;
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .trap__flag {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .trap__cell--s0 { background: var(--gnt-cell-0, #f3f4f6); color: var(--gnt-cell-0-ink, #6b7280); }
+  .trap__cell--s1 { background: var(--gnt-cell-1, #dcfce7); color: var(--gnt-cell-1-ink, #14532d); }
+  .trap__cell--s2 { background: var(--gnt-cell-2, #d1e7c4); color: var(--gnt-cell-2-ink, #1a4d1f); }
+  .trap__cell--s3 { background: var(--gnt-cell-3, #fef9c3); color: var(--gnt-cell-3-ink, #713f12); }
+  .trap__cell--s4 { background: var(--gnt-cell-4, #fed7aa); color: var(--gnt-cell-4-ink, #7c2d12); }
+  .trap__cell--s5 { background: var(--gnt-cell-5, #fecaca); color: var(--gnt-cell-5-ink, #7f1d1d); }
+</style>

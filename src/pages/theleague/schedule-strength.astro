@@ -1,0 +1,55 @@
+---
+/**
+ * The Gauntlet — TheLeague schedule-strength dashboard.
+ * Data: data/theleague/derived/schedule-strength-<year>-w<NN>.json, written
+ * weekly by scripts/compute-schedule-strength.mjs (Wednesday cron + prebuild).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import GauntletDashboard from '../../components/shared/schedule-strength/GauntletDashboard.astro';
+import { resolveGauntletView, type GauntletDerived } from '../../utils/schedule-strength';
+import leagueConfig from '../../data/theleague.config.json';
+
+const files = import.meta.glob<GauntletDerived>(
+  '../../../data/theleague/derived/schedule-strength-*.json',
+  { eager: true, import: 'default' }
+);
+
+const view = resolveGauntletView({
+  files,
+  teams: leagueConfig.teams,
+  baseUrl: '/theleague',
+  pagePath: '/theleague/schedule-strength',
+  requestedYear: Astro.url.searchParams.get('year'),
+});
+
+const title = view.data
+  ? `The Gauntlet · ${view.seasonComplete ? `${view.year} Final` : `Week ${view.data.week}`} Schedule Strength`
+  : 'The Gauntlet · Schedule Strength';
+---
+
+<TheLeagueLayout title={title}>
+  <div class="gauntlet-page">
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Schedule Strength' },
+    ]} />
+    <GauntletDashboard
+      columnName={view.data?.columnName ?? 'The Gauntlet'}
+      week={view.data?.week ?? 0}
+      year={view.year ?? new Date().getFullYear()}
+      runIn={view.runIn}
+      played={view.played}
+      scheduleLuck={view.scheduleLuck}
+      heatMapFranchises={view.heatMapFranchises}
+      heatMapWeeks={view.heatMapWeeks}
+      trapWeeks={view.trapWeeks}
+      yearOptions={view.yearOptions}
+      seasonComplete={view.seasonComplete}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .gauntlet-page { min-height: 60vh; }
+</style>
