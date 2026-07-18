@@ -18,10 +18,65 @@ Two halves:
 Everything below reuses existing, proven infrastructure — this feature is mostly
 assembly, not invention.
 
+## Execution auth — owner-credential replay (NOT commissioner impersonation)
+
+**Commissioner impersonation is ruled out.** TheLeague keeps `lockout: "Yes"`
+year-round (`data/theleague/mfl-feeds/2026/league.json:119`), and MFL hard-fails
+impersonation under lockout: `"Can not impersonate another franchise when
+LOCKOUT is on."` — already hit and documented by the auto-taxi attempt
+(`.github/workflows/sync-draft-pick-contracts.yml:7-13`). Turning lockout off
+for the deadline is not on the table.
+
+**Instead, the job replays each owner's own MFL session cookie.** Lockout
+blocks the commissioner acting *as* a franchise; it does not block a franchise's
+own moves. The pieces already exist:
+
+- The session JWT stores the owner's raw `MFL_USER_ID` cookie as `authUser.id`
+  (`src/pages/api/auth/login.ts:52-57`), and every owner-mode write today
+  (`/api/cut-player`, IR, taxi, trades) already authenticates with it via
+  `mflFetch({ mflUserCookie: user.id })`.
+- The app already treats that cookie as valid for the full 90-day session
+  (`src/utils/session.ts:59-68`) — an owner who logged in in June and cuts a
+  player in August is replaying a 2-month-old cookie. Persisting it server-side
+  adds custody, not a new validity assumption.
+
+### Credential capture & custody
+
+- **Capture:** store the owner's MFL cookie in Redis, keyed
+  `autocut:cred:{franchiseId}`, refreshed on (a) every login and (b) every
+  cut-list save. Refresh-on-login maximizes coverage — the fallback ("cut last
+  added") applies to owners who never open the cut-list UI, and their cuts can
+  only execute if a cookie was captured sometime.
+- **Custody rules:** encrypt at rest (AES-GCM, key derived from a dedicated env
+  secret — not `JWT_SECRET`, so rotating one doesn't torch the other); never
+  log it, never include it in any API response; the execution job deletes each
+  franchise's credential after its cuts verify; a cleanup pass deletes all
+  `autocut:cred:*` keys after the deadline regardless.
+- **Disclosure:** the cut-list UI states plainly that saving authorizes the
+  site to execute cuts as you at the deadline. Refresh-on-login should be
+  mentioned in the What's New entry announcing the feature.
+- **Validation:** a cookie is checked with a cheap authenticated read
+  (`export?TYPE=myleagues&JSON=1` — returns `{"leagues":{}}` when the cookie is
+  dead, per `docs/claude/insights/domains/mfl-api.md`) at capture time and again
+  by the pre-deadline dry runs (below).
+
+### Coverage gap — owners with no valid stored cookie
+
+An owner who hasn't logged in within cookie lifetime has no replayable
+credential. Handling:
+
+1. Pre-deadline dry runs at T-7d and T-2d validate every over-limit franchise's
+   stored cookie and post a GroupMe nag (via the existing Roger touch
+   machinery) naming teams that need to log in once — logging in is the fix.
+2. Any franchise still uncovered at execution time is skipped, listed in the
+   run report, and left for the commissioner to cut manually in the MFL UI.
+   (Whether MFL's commissioner *roster tools* — as opposed to impersonation —
+   can drop players under lockout is worth a one-off manual check in the MFL
+   web UI, but it's a manual-fallback nicety, not a dependency.)
+
 ## Cut-selection algorithm (the core logic)
 
-New pure module `src/utils/august-cut-selection.ts` (mirrored or imported into
-the script via a `scripts/lib/` shim if needed):
+New pure module `src/utils/august-cut-selection.ts`:
 
 ```
 selectAutoCuts({ activeRoster, markedPlayerIds, acquisitions, target = 22 })
@@ -46,11 +101,10 @@ Rules, in order:
 
 Existing building blocks:
 
-- Acquisition ordering: `getRecentPickups()` in
-  `src/utils/offseason-hero-data.ts:795` and the richer typed parser in
+- Acquisition ordering: the typed transaction parser in
   `src/utils/contract-eligibility.ts` (`parseTransactions`,
-  `findAcquisitionTransaction`, `ACQUISITION_TYPES`). The new module should use
-  the `contract-eligibility.ts` parser and share it with the script.
+  `findAcquisitionTransaction`, `ACQUISITION_TYPES`); `getRecentPickups()` in
+  `src/utils/offseason-hero-data.ts:795` is the simpler prior art.
 - Target constant: `TARGET_ACTIVE_COUNT = 22` in
   `src/utils/salary-calculations.ts:13` — import it, don't re-declare.
 - Deadline: `getAugustCutdownDate(year)` in
@@ -64,7 +118,9 @@ Existing building blocks:
 - **Key:** `autocut:{franchiseId}` in Upstash, via
   `createKvFranchiseStore('autocut', { label: 'auto-cut list' })`
   (`src/utils/kv-franchise-store.ts:34`) → instant authenticated GET/POST route
-  at `src/pages/api/autocut-list.ts`.
+  at `src/pages/api/autocut-list.ts`. (The credential-refresh hook makes this
+  route slightly custom — copy the factory pattern rather than instantiating it
+  if the hook doesn't fit.)
 - **Payload:** `{ year: number, playerIds: string[], updatedAt: string }` —
   `playerIds` is ordered (cut priority). Store the league year so a stale list
   from last August is ignored, not silently executed.
@@ -96,8 +152,8 @@ already owns this real estate in August).
 ## Execution — scheduled job
 
 **`scripts/apply-august-cuts.mjs`** + **`.github/workflows/apply-august-cuts.yml`**,
-modeled directly on `apply-pending-contracts.{mjs,yml}` (the existing
-"deadline-executing MFL write job" — every pattern below is already proven there):
+modeled on `apply-pending-contracts.{mjs,yml}` (the existing "deadline-executing
+MFL write job"):
 
 - `TZ: America/Los_Angeles` on the workflow; cron every 15 minutes during August
   only (`*/15 * * 8 *` UTC is fine — the in-script gate does the real work; no
@@ -106,63 +162,64 @@ modeled directly on `apply-pending-contracts.{mjs,yml}` (the existing
   AND a Redis one-shot flag `autocut:executed:{year}` is unset; set the flag
   after a successful run. Never early (same philosophy as
   `roger-reminder-window.mjs`), naturally idempotent, and self-healing if a
-  scheduled run is missed.
+  scheduled run is missed. The same script with `--validate-only` powers the
+  T-7d/T-2d credential-check dry runs.
 - **`--dry-run` flag + `workflow_dispatch` boolean input defaulting to `true`**,
   exactly like `apply-pending-contracts.yml:24-29` — manual runs are safe by
   default, scheduled runs are live.
 - Per-franchise flow: fetch live roster (`getRosters`) → run `selectAutoCuts`
-  → execute each cut → **re-read roster to verify** → next franchise. Refuse to
-  act on a franchise if the roster read looks degraded/empty (same guard as
+  → execute each cut **with that owner's stored cookie** → re-read roster to
+  verify → delete the credential → next franchise. Refuse to act on a franchise
+  if the roster read looks degraded/empty (same guard as
   `cut-player.ts:121-151`), and never cut a roster below 22. Treat
   "player already gone" as success (409-tolerant, like the KeeperPlanner batch
   loop at `src/components/afl-fantasy/KeeperPlanner.astro:662-714`).
+- **Cut mechanics:** the same `add_drop` page-handler POST `/api/cut-player`
+  uses (form fields at `cut-player.ts:165-174`), owner-mode, **never sending
+  `FRANCHISE_ID`** — sending it on an owner request trips the
+  lockout-impersonation check and silently no-ops
+  (`docs/claude/insights/features/roster-actions.md:19`). Two implementation
+  options: (a) port the add_drop POST + `mflFetch` redirect-cookie handling
+  into the script, or (b) keep the script a thin orchestrator that calls a new
+  internal admin API route on the deployed site per franchise, reusing
+  `cut-player.ts`'s code path wholesale. Prefer (b) — one credential access
+  point, zero logic duplication — unless serverless timeouts bite
+  (mitigate: one invocation per franchise).
 - **Beware the stale-rosters window:** MFL's `rosters` endpoint can return stale
   data for recent drops in the offseason
   (`docs/claude/insights/domains/mfl-api.md:188-232`) — cross-check
   `transactions` when verifying, and don't double-cut on a stale read.
-- **Report:** write a per-run JSON report (who was cut, why, failures), emit
+- **Report:** write a per-run JSON report (who was cut, why, which franchises
+  were skipped for missing credentials, failures), emit
   `::notice::`/`::warning::` annotations, open a GH issue on any failure
   (pattern in `schefter-scan.yml:30-105`), and hand Schefter a cutdown-recap
   hook (optional, phase 2).
 
-## Phase 0 — the one thing that must be verified first
+## Phase 0 — verification spike (small, owner-mode)
 
-**How does a headless job cut players it doesn't own?** The production cut path
-(`src/pages/api/cut-player.ts`) deliberately uses MFL's `add_drop` **page
-handler** with the *owner's* cookie, because the documented `fcfsWaiver` import
-rejects drops while a roster is over-limit — the exact state this feature
-exists to fix. The job has commissioner credentials (Actions secrets
-`MFL_USER_ID` / `MFL_IS_COMMISH`, used by `apply-pending-contracts.mjs`), and
-commissioner impersonation via `FRANCHISE_ID` is documented for import types
-(`docs/claude/insights/domains/mfl-api.md:493-557`) — but **`add_drop` is a page
-handler, not a documented import, so commissioner-for-franchise support is
-unverified.**
+The commissioner question is settled (blocked by lockout). What remains to
+verify, with a throwaway test cut while stakes are zero:
 
-Spike (mfl-api-expert / qa-api-debugger, against the live league while stakes
-are zero):
-
-1. Can the commissioner POST `add_drop` with `FRANCHISE_ID` (www49 host, both
-   commissioner cookies) and drop a player from another franchise's over-limit
-   roster? → If yes, the whole design above works as written. Document the
-   verified form fields in `docs/claude/insights/domains/mfl-api.md`.
-2. If no: test the commissioner roster-management page handlers as alternates.
-3. Hard fallback if nothing works headless: semi-automated mode — the job
-   computes every team's cut plan and posts it; owners get a one-click
-   "execute my cut plan" batch button (owner-cookie, sequential
-   `/api/cut-player` calls — the proven KeeperPlanner pattern), and the
-   commissioner runs a same-button sweep for absentee owners from the admin UI.
-   The cut-list UI and selection logic are identical in both worlds, so Phase 0
-   doesn't block Phases 1–2.
+1. **Headless cookie replay works:** a stored `MFL_USER_ID` cookie, replayed
+   from a script/Actions context (not a browser), successfully drops a player
+   via `add_drop` on an over-limit roster. (Expected yes — `/api/cut-player`
+   is exactly this from a serverless context — but prove it from script land.)
+2. **Cookie longevity:** confirm a weeks-old cookie still authenticates
+   (validate with `export?TYPE=myleagues&JSON=1`), and document observed
+   lifetime in `docs/claude/insights/domains/mfl-api.md`.
+3. **Manual-fallback check:** in the MFL web UI as commissioner, can the
+   commissioner roster tools drop a player with lockout on? Informs the
+   stragglers plan; nothing depends on it.
 
 ## Build phases
 
 | Phase | Deliverable | Depends on |
 |---|---|---|
-| 0 | MFL commissioner `add_drop` impersonation spike; write up in insights doc | — |
-| 1 | `august-cut-selection.ts` + unit tests; `autocut` KV store + API route | — |
+| 0 | Owner-cookie replay spike from script context; longevity check; insights write-up | — |
+| 1 | `august-cut-selection.ts` + unit tests; `autocut` KV store + API route; credential capture on login + save (encrypted) | — |
 | 2 | Rosters-page UI: toggles, priority ordering, do-nothing preview, countdown | 1 |
-| 3 | `apply-august-cuts.mjs` + workflow (dry-run default), report artifact | 0, 1 |
-| 4 | Roger/GroupMe pre-deadline touches ("N teams over, M players auto-cut in 48h") + Schefter recap post; What's New entry | 3 |
+| 3 | `apply-august-cuts.mjs` + workflow (dry-run default), `--validate-only` mode, report artifact, credential cleanup | 0, 1 |
+| 4 | Roger/GroupMe touches: T-7d/T-2d "log in so your cuts can run" nags + post-cut recap; What's New entry | 3 |
 
 ## Tests
 
@@ -172,6 +229,8 @@ are zero):
   excluded; never cuts below 22. Pure function, exhaustive cases.
 - Date-gate test — never fires before 8:45pm PT on the 3rd Sunday; fires on
   late/catch-up runs; one-shot flag prevents re-execution.
+- Credential custody tests — encryption round-trip; the API route never echoes
+  the credential; execution deletes it.
 - Script-level dry-run test asserting no MFL write is attempted with
   `--dry-run` (grep-sentinel style like `tests/schefter-quiet-day.test.ts` or a
   fetch-mock).
@@ -180,15 +239,18 @@ are zero):
 
 ## Decisions made (flag if you disagree)
 
-1. **Marked players are cut only to reach 22**, never unconditionally. "Mark to
+1. **Execution runs owner-mode with stored session cookies** — commissioner
+   impersonation is impossible with lockout on, and lockout stays on.
+2. **Marked players are cut only to reach 22**, never unconditionally. "Mark to
    cut first" reads as priority ordering, not a standing drop order.
-2. **Fallback ordering is acquisition-timestamp descending** ("last in, first
+3. **Fallback ordering is acquisition-timestamp descending** ("last in, first
    out"), from the current-year transactions feed; long-held players without a
    record are safest.
-3. **Taxi and IR players are untouchable** by the automation — the 22 limit is
+4. **Taxi and IR players are untouchable** by the automation — the 22 limit is
    active-roster only.
-4. **The job runs once, at/after the deadline** (with catch-up), not
+5. **The job runs once, at/after the deadline** (with catch-up), not
    continuously — owners keep full control until 8:45pm PT.
-5. **Every team over the limit is in scope** — no opt-in. The cutdown is a
-   league rule; the cut list is how an owner controls *which* players go, not
-   *whether* cuts happen.
+6. **Every team over the limit is in scope** — no opt-in; cookies are captured
+   at login (with disclosure) so coverage isn't limited to owners who used the
+   cut-list UI. Franchises with no valid credential are skipped, reported, and
+   nagged beforehand.
