@@ -870,4 +870,4 @@ randomization; templates/css-customization diverged only at the footer chrome
 
 **Evidence:** `src/components/shared/schedule-strength/StrengthTable.astro` (`.sst-scroll`), caught in the Gauntlet frontend-ux review; verified reasoning against the CSS overflow spec.
 
-**Recommendation:** When applying the editorial "sticky headers" pattern to a table in a scroll wrapper, always pair `overflow-x: auto` with `max-height` on the same wrapper — or consciously drop the sticky claim for short tables.
+**Recommendation:** When applying the editorial "sticky headers" pattern to a table in a scroll wrapper, either pair `overflow-x: auto` with `max-height` on the same wrapper, or consciously drop the sticky claim for short tables. **Follow-up (same day):** the `max-height` route backfired on the Gauntlet's 16-row table — the inner scrollbox visually truncated the standings and the user read it as "only 13 teams ranked." For full-league ranking tables, prefer showing every row and forgoing the sticky header; reserve the max-height fix for genuinely long tables where an inner scroll region is obvious.
