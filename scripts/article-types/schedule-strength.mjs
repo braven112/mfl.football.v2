@@ -33,8 +33,10 @@ function leagueMeta(league) {
 const gauntletWeek = (week) => week + 1;
 
 export const config = {
+  // League token comes from the registry's navSlug so ids stay unique if a
+  // third league ever appears (a hardcoded binary suffix would collide).
   id: (year, week, league = 'theleague') =>
-    `sf_${year}_gauntlet_w${String(gauntletWeek(week)).padStart(2, '0')}_${league === 'theleague' ? 'tl' : 'afl'}`,
+    `sf_${year}_gauntlet_w${String(gauntletWeek(week)).padStart(2, '0')}_${LEAGUES[league]?.navSlug ?? league}`,
   requiredData: [],
   postType: 'article',
   tier: 'analysis',
@@ -57,10 +59,20 @@ async function loadDerived(projectRoot, league, year, week) {
 
 export async function buildFactSheet(data, week, year, projectRoot, { league = 'theleague' } = {}) {
   const meta = leagueMeta(league);
-  const derived = await loadDerived(projectRoot, league, year, week);
 
+  // A missing derived file or an empty run-in (season over, no remaining
+  // weeks) is a clean skip, not an error — returning null tells the runner
+  // to exit quietly instead of failing the workflow at season end.
+  let derived;
+  try {
+    derived = await loadDerived(projectRoot, league, year, week);
+  } catch {
+    console.log(`  [skip] No derived schedule-strength file for ${league} ${year} w${gauntletWeek(week)}.`);
+    return null;
+  }
   if (!derived.runIn?.length) {
-    throw new Error(`Derived schedule-strength file for ${league} ${year} w${gauntletWeek(week)} has no run-in data.`);
+    console.log(`  [skip] ${league} ${year} w${gauntletWeek(week)} has no remaining schedule (season complete).`);
+    return null;
   }
 
   const lines = [];

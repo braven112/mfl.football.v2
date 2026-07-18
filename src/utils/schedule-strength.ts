@@ -83,13 +83,7 @@ export function indexDerivedFiles(
   return latestByYear;
 }
 
-export function resolveGauntletView({
-  files,
-  teams,
-  baseUrl,
-  pagePath,
-  requestedYear,
-}: {
+interface ResolveOptions {
   files: Record<string, GauntletDerived>;
   teams: TeamConfigEntry[];
   /** e.g. '/theleague' — used for franchise links */
@@ -97,7 +91,59 @@ export function resolveGauntletView({
   /** e.g. '/theleague/schedule-strength' — used for year-selector links */
   pagePath: string;
   requestedYear: string | null;
-}): GauntletView {
+  /** Skip building the heat map (article pages never render it). */
+  includeHeatMap?: boolean;
+}
+
+/**
+ * Lazy-glob variant for pages that keep every weekly issue on disk: picks the
+ * target year from the glob KEYS alone, then imports only that one file.
+ * Weekly files are retained forever (published articles reference them), so
+ * an eager glob would bundle every issue into the server chunk.
+ */
+export async function resolveGauntletViewLazy({
+  files,
+  ...rest
+}: Omit<ResolveOptions, 'files'> & {
+  files: Record<string, () => Promise<GauntletDerived>>;
+}): Promise<GauntletView> {
+  const latestKeyByYear = new Map<number, { key: string; week: number }>();
+  for (const key of Object.keys(files)) {
+    const m = key.match(/schedule-strength-(\d{4})-w(\d{1,2})\.json$/);
+    if (!m) continue;
+    const year = parseInt(m[1], 10);
+    const week = parseInt(m[2], 10);
+    const existing = latestKeyByYear.get(year);
+    if (!existing || week > existing.week) latestKeyByYear.set(year, { key, week });
+  }
+  const years = [...latestKeyByYear.keys()].sort((a, b) => b - a);
+  const parsed = rest.requestedYear ? parseInt(rest.requestedYear, 10) : NaN;
+  const year = years.includes(parsed) ? parsed : (years[0] ?? null);
+  const entry = year != null ? latestKeyByYear.get(year)! : null;
+  const data = entry ? await files[entry.key]() : null;
+
+  const view = resolveGauntletView({
+    ...rest,
+    files: entry && data ? { [entry.key]: data } : {},
+    requestedYear: year != null ? String(year) : null,
+  });
+  // The single-file delegate only knows one year — restore the full list.
+  view.yearOptions = years.map(y => ({
+    year: y,
+    href: y === years[0] ? rest.pagePath : `${rest.pagePath}?year=${y}`,
+    current: y === year,
+  }));
+  return view;
+}
+
+export function resolveGauntletView({
+  files,
+  teams,
+  baseUrl,
+  pagePath,
+  requestedYear,
+  includeHeatMap = true,
+}: ResolveOptions): GauntletView {
   const latestByYear = indexDerivedFiles(files);
   const years = [...latestByYear.keys()].sort((a, b) => b - a);
 
@@ -166,7 +212,7 @@ export function resolveGauntletView({
     direction: l.direction,
   }));
 
-  const heatMapFranchises: HeatFranchise[] = data.heatMap.franchises.map(f => ({
+  const heatMapFranchises: HeatFranchise[] = !includeHeatMap ? [] : data.heatMap.franchises.map(f => ({
     franchiseId: f.franchiseId,
     displayName: displayName(f.franchiseId, f.name),
     icon: icon(f.franchiseId),

@@ -17,9 +17,9 @@
  *
  * "Week N" = the upcoming week (last completed week + 1). Past difficulty is
  * computed over completed weeks; remaining difficulty over scheduled weeks
- * >= N. Trends diff against the most recent earlier week's file BEFORE the
- * new write; superseded weekly files are then pruned so exactly one file per
- * year survives (the dashboards eager-glob this directory).
+ * >= N. Trends diff against the most recent earlier week's file. Weekly
+ * files are retained forever — published articles reference their exact
+ * week's file, and pages import the directory lazily (no bundle cost).
  */
 
 import { promises as fs } from 'node:fs';
@@ -27,19 +27,23 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { getSeasonYear, getCompletedWeek } from './article-utils/week-resolver.mjs';
+import { loadJSON, tryLoadJSON, scheduleFromRawResults } from './article-utils/data-loaders.mjs';
 import {
   computeTeamStrengths,
   difficultyStep,
   buildOpponentGrid,
-  scheduleFromRawResults,
+  num,
+  int,
+  parseH2hRecord,
 } from './lib/team-strength.mjs';
+
+// Re-exported for consumers/tests that treat this script as the pipeline API.
+export { parseH2hRecord };
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
-const LEAGUE_CONFIG_PATHS = {
-  theleague: 'src/data/theleague.config.json',
-  'afl-fantasy': 'data/afl-fantasy/afl.config.json',
-};
+// League config locations come from the registry (single source of truth).
+const LEAGUE_SLUGS = Object.keys(LEAGUES);
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -52,23 +56,12 @@ function parseArgs() {
       case '--dry-run': opts.dryRun = true; break;
     }
   }
-  if (opts.league && !LEAGUE_CONFIG_PATHS[opts.league]) {
-    console.error(`Unknown --league ${opts.league} (expected: ${Object.keys(LEAGUE_CONFIG_PATHS).join(' | ')})`);
+  if (opts.league && !LEAGUE_SLUGS.includes(opts.league)) {
+    console.error(`Unknown --league ${opts.league} (expected: ${LEAGUE_SLUGS.join(' | ')})`);
     process.exit(1);
   }
   return opts;
 }
-
-async function loadJSON(p) {
-  return JSON.parse(await fs.readFile(p, 'utf8'));
-}
-
-async function tryLoadJSON(p) {
-  try { return await loadJSON(p); } catch { return null; }
-}
-
-const num = (v, f = 0) => { const n = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(n) ? n : f; };
-const int = (v, f = 0) => { const n = typeof v === 'number' ? v : parseInt(v, 10); return Number.isFinite(n) ? n : f; };
 
 function derivedPath(league, year, week) {
   return path.join(projectRoot, league.dataPath, 'derived',
@@ -108,14 +101,6 @@ function computeRecord(grid, weeklyResults, fid, throughWeek) {
     }
   }
   return { wins, losses, ties };
-}
-
-/** Parse MFL "W-L-T" strings ("11-7-0") → { wins, losses, ties } or null. */
-export function parseH2hRecord(wlt) {
-  if (typeof wlt !== 'string') return null;
-  const m = wlt.trim().match(/^(\d+)-(\d+)(?:-(\d+))?$/);
-  if (!m) return null;
-  return { wins: int(m[1]), losses: int(m[2]), ties: int(m[3] ?? 0) };
 }
 
 export function computeScheduleStrength({ leagueSlug, teams, schedule, standings, weeklyResults, week, year }) {
@@ -288,7 +273,7 @@ export function attachTrends(result, previous) {
 
 async function runLeague(slug, opts) {
   const league = LEAGUES[slug];
-  const configPath = path.join(projectRoot, LEAGUE_CONFIG_PATHS[slug]);
+  const configPath = path.join(projectRoot, ...league.configPath.split('/'));
   const config = await loadJSON(configPath);
   const year = opts.year ?? getSeasonYear();
   const feedDir = path.join(projectRoot, league.dataPath, 'mfl-feeds', String(year));
@@ -352,30 +337,19 @@ async function runLeague(slug, opts) {
   await fs.mkdir(path.dirname(outPath), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(result, null, 2));
   console.log(`  [${slug}] wrote ${path.relative(projectRoot, outPath)} (week ${week}, ${result.runIn.length} teams)`);
-
-  // Prune superseded weekly files for this year. Trends were already attached
-  // above from the prior week's file, and next week's run only needs THIS
-  // file — so one file per year is all that ever needs to exist. Without
-  // pruning, the dashboards' eager import.meta.glob bundles every historical
-  // weekly snapshot (17/season/league) into the server chunk forever.
-  const derivedDir = path.dirname(outPath);
-  const keep = path.basename(outPath);
-  for (const f of await fs.readdir(derivedDir)) {
-    if (f.startsWith(`schedule-strength-${year}-w`) && f !== keep) {
-      await fs.unlink(path.join(derivedDir, f));
-      console.log(`  [${slug}] pruned superseded ${f}`);
-    }
-  }
+  // Deliberately NO pruning: every published Gauntlet article points at its
+  // exact week's derived file forever (post.scheduleStrength), and trends
+  // need the prior week's file on re-runs. Pages import these lazily, so
+  // retention doesn't bloat the server bundle.
   return result;
 }
 
 async function main() {
   const opts = parseArgs();
-  const slugs = opts.league ? [opts.league] : Object.keys(LEAGUE_CONFIG_PATHS);
+  const slugs = opts.league ? [opts.league] : LEAGUE_SLUGS;
   console.log(`\n🏈 Schedule strength (The Gauntlet) — ${slugs.join(', ')}\n`);
-  for (const slug of slugs) {
-    await runLeague(slug, opts);
-  }
+  // Leagues touch disjoint files — run them concurrently.
+  await Promise.all(slugs.map(slug => runLeague(slug, opts)));
 }
 
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

@@ -134,8 +134,6 @@ export function parseStreak(strk) {
   return { type: m[1].toUpperCase(), length: parseInt(m[2], 10) };
 }
 
-// Shared with the schedule-strength (Gauntlet) pipeline — one implementation.
-export { rollingAvgPF };
 
 /** Last-N record from H2H: { wins, losses, ties }. Reads schedule + weekly-results. */
 function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3) {

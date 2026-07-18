@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 // @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   parseStreak,
-  rollingAvgPF,
   computeRankings,
   attachTrend,
 // @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/generate-power-rankings.mjs';
+// @ts-expect-error — sibling .mjs module, no .d.ts
+import { rollingAvgPF } from '../scripts/lib/team-strength.mjs';
 
 describe('parseStreak', () => {
   it('parses W and L streaks', () => {

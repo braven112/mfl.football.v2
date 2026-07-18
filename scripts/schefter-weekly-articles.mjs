@@ -28,7 +28,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
@@ -132,12 +132,13 @@ async function main() {
   }
 
   // League-aware completeness threshold: a week only counts as complete once
-  // every franchise has a score (16 for TheLeague, 24 for AFL). Standings
-  // carries the authoritative franchise count; fall back to the historical 16.
+  // every franchise has a score (16 for TheLeague, 24 for AFL). Use the
+  // league config's team count — the SAME source compute-schedule-strength
+  // uses — so both scripts always resolve the same week (a mismatch makes
+  // the article look for a derived file compute never wrote).
   let franchiseCount = 16;
   try {
-    const standings = await loadJSON(path.join(dataDir, 'standings.json'));
-    franchiseCount = standings?.leagueStandings?.franchise?.length || 16;
+    franchiseCount = (await loadTeams(projectRoot, league)).size || 16;
   } catch { /* keep default */ }
 
   const completedWeek = getCompletedWeek(weeklyResults, franchiseCount);
@@ -183,9 +184,15 @@ async function main() {
     );
   }
 
-  // Step 7: Build fact sheet (deterministic — no AI)
+  // Step 7: Build fact sheet (deterministic — no AI). A null return is a
+  // clean skip (e.g. schedule-strength at season end).
   console.log('  Building fact sheet...');
-  const { factSheet, enrichment } = await mod.buildFactSheet(data, week, year, projectRoot, { league });
+  const factSheetResult = await mod.buildFactSheet(data, week, year, projectRoot, { league });
+  if (!factSheetResult) {
+    console.log('  [skip] Fact sheet builder declined to run. Exiting cleanly.');
+    return;
+  }
+  const { factSheet, enrichment } = factSheetResult;
 
   if (dryRun) {
     console.log('\n--- FACT SHEET (dry run) ---\n');

@@ -22,10 +22,13 @@ const SEQUENTIAL = [
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history' },
   { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents' },
-  { name: 'compute:schedule-strength', cmd: 'pnpm run compute:schedule-strength' },
 ];
 
 const PARALLEL = [
+  // Pure local compute (feeds already on disk, no network, independent
+  // output dir) — overlaps with the network fetches instead of serializing
+  // onto the build critical path.
+  { name: 'compute:schedule-strength', cmd: 'pnpm run compute:schedule-strength' },
   { name: 'fetch:live:lineups', cmd: 'pnpm run fetch:live:lineups' },
   { name: 'fetch:trade-bait', cmd: 'pnpm run fetch:trade-bait' },
   { name: 'fetch:adp', cmd: 'pnpm run fetch:adp' },

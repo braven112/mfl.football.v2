@@ -1,0 +1,118 @@
+---
+/**
+ * The Gauntlet — article-embed section (run-in table, schedule luck, trap
+ * weeks + dashboard CTA). One shared implementation for both leagues' news
+ * article pages so the column can never render differently per league.
+ *
+ * The page passes its LAZY derived-file glob; only the one issue matching the
+ * post's scheduleStrength pointer is imported (plain articles pay nothing,
+ * and retained weekly archives never enter the server bundle). Renders
+ * nothing when the pointer or its file is absent.
+ */
+import StrengthTable from './StrengthTable.astro';
+import ScheduleLuckCallout from './ScheduleLuckCallout.astro';
+import TrapWeeksStrip from './TrapWeeksStrip.astro';
+import { resolveGauntletView, type GauntletDerived } from '../../../utils/schedule-strength';
+import '../../../styles/schedule-strength.css';
+
+interface TeamConfigEntry {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  icon?: string;
+}
+
+export interface Props {
+  gauntletRef: { year: number; week: number } | null | undefined;
+  files: Record<string, () => Promise<GauntletDerived>>;
+  teams: TeamConfigEntry[];
+  /** e.g. '/theleague' */
+  baseUrl: string;
+  /** Resolved href for the dashboard CTA (league path already localized). */
+  dashboardHref: string;
+}
+
+const { gauntletRef, files, teams, baseUrl, dashboardHref } = Astro.props;
+
+let view = null;
+if (gauntletRef) {
+  const suffix = `schedule-strength-${gauntletRef.year}-w${String(gauntletRef.week).padStart(2, '0')}.json`;
+  const key = Object.keys(files).find(file => file.endsWith(suffix));
+  const derived = key ? await files[key]() : null;
+  if (key && derived) {
+    view = resolveGauntletView({
+      files: { [key]: derived },
+      teams,
+      baseUrl,
+      pagePath: `${baseUrl}/schedule-strength`,
+      requestedYear: String(gauntletRef.year),
+      includeHeatMap: false,
+    });
+  }
+}
+---
+
+{view?.data && (
+  <div class="sf-gauntlet gauntlet-theme">
+    {view.runIn.length > 0 && (
+      <section class="sf-gauntlet__section">
+        <h2 class="sf-gauntlet__title">The Run-In</h2>
+        <StrengthTable
+          variant="run-in"
+          rows={view.runIn}
+          caption={`Remaining schedule difficulty, hardest first — Week ${view.data.week}`}
+        />
+      </section>
+    )}
+    {view.scheduleLuck.length > 0 && (
+      <section class="sf-gauntlet__section">
+        <h2 class="sf-gauntlet__title">Schedule Luck</h2>
+        <ScheduleLuckCallout rows={view.scheduleLuck} />
+      </section>
+    )}
+    {view.trapWeeks.length > 0 && (
+      <section class="sf-gauntlet__section">
+        <h2 class="sf-gauntlet__title">Trap Weeks</h2>
+        <TrapWeeksStrip trapWeeks={view.trapWeeks} />
+      </section>
+    )}
+    <a class="sf-gauntlet__cta" href={dashboardHref}>
+      Full dashboard: week-by-week heat map →
+    </a>
+  </div>
+)}
+
+<style>
+  .sf-gauntlet {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0 1.25rem 1.25rem;
+  }
+
+  .sf-gauntlet__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sf-gauntlet__title {
+    margin: 0;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    border-left: 3px solid var(--color-primary, #1c497c);
+    padding-left: 0.6rem;
+  }
+
+  .sf-gauntlet__cta {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--link-color, var(--color-primary, #1c497c));
+    text-decoration: none;
+  }
+  .sf-gauntlet__cta:hover { text-decoration: underline; }
+</style>

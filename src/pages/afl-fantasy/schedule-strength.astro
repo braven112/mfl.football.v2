@@ -7,15 +7,19 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import GauntletDashboard from '../../components/shared/schedule-strength/GauntletDashboard.astro';
-import { resolveGauntletView, type GauntletDerived } from '../../utils/schedule-strength';
+import { resolveGauntletViewLazy, type GauntletDerived } from '../../utils/schedule-strength';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
+// Lazy glob: weekly issues are retained forever (published articles point at
+// them), so only the selected year's latest file is imported per request —
+// an eager glob would bundle every archived issue into the server chunk.
 const files = import.meta.glob<GauntletDerived>(
   '../../../data/afl-fantasy/derived/schedule-strength-*.json',
-  { eager: true, import: 'default' }
+  { import: 'default' }
 );
 
-const view = resolveGauntletView({
+const view = await resolveGauntletViewLazy({
   files,
   teams: aflConfig.teams,
   baseUrl: '/afl-fantasy',
@@ -37,7 +41,7 @@ const title = view.data
     <GauntletDashboard
       columnName={view.data?.columnName ?? 'The Gauntlet'}
       week={view.data?.week ?? 0}
-      year={view.year ?? new Date().getFullYear()}
+      year={view.year ?? getCurrentSeasonYear()}
       runIn={view.runIn}
       played={view.played}
       scheduleLuck={view.scheduleLuck}

@@ -12,14 +12,23 @@
  *     (avgpf, all_play_pct, h2hpct as MFL strings)
  */
 
-function num(v, fallback = 0) {
+/** Coerce MFL string numerics; shared so the analytics pipelines can't drift. */
+export function num(v, fallback = 0) {
   const n = typeof v === 'number' ? v : parseFloat(v);
   return Number.isFinite(n) ? n : fallback;
 }
 
-function int(v, fallback = 0) {
+export function int(v, fallback = 0) {
   const n = typeof v === 'number' ? v : parseInt(v, 10);
   return Number.isFinite(n) ? n : fallback;
+}
+
+/** Parse MFL "W-L-T" strings ("11-7-0") → { wins, losses, ties } or null. */
+export function parseH2hRecord(wlt) {
+  if (typeof wlt !== 'string') return null;
+  const m = wlt.trim().match(/^(\d+)-(\d+)(?:-(\d+))?$/);
+  if (!m) return null;
+  return { wins: int(m[1]), losses: int(m[2]), ties: int(m[3] ?? 0) };
 }
 
 /** Average team's last N completed weeks of points. Returns null if no weeks available. */
@@ -138,23 +147,3 @@ export function buildOpponentGrid(schedule) {
   return grid;
 }
 
-/**
- * Build a schedule.json-shaped object from weekly-results-raw (per-week
- * matchup arrays with scores). Fallback for past seasons whose schedule.json
- * was never fetched — played pairings are identical, and a past season has
- * no future weeks for the raw data to miss.
- */
-export function scheduleFromRawResults(weeklyResultsRaw) {
-  if (!Array.isArray(weeklyResultsRaw)) return null;
-  const weeklySchedule = weeklyResultsRaw
-    .map(w => w?.weeklyResults)
-    .filter(w => w?.week && Array.isArray(w.matchup))
-    .map(w => ({
-      week: String(w.week),
-      matchup: w.matchup
-        .filter(m => (m.franchise || []).length === 2)
-        .map(m => ({ franchise: m.franchise.map(f => ({ id: f.id, isHome: f.isHome ?? '0' })) })),
-    }));
-  if (weeklySchedule.length === 0) return null;
-  return { schedule: { weeklySchedule } };
-}

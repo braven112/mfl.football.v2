@@ -30,18 +30,22 @@ trail schedule.json: MFL bakes playoff pairings into the schedule without
 recorded results, so "completedWeek + 1" on a finished season would show a
 stale 8-team run-in).
 
-## 2026-07-18 - Prune-After-Trend Invariant (Bundle Size Depends On It)
+## 2026-07-18 - Weekly Files Are Retained Forever; ALL Globs Are Lazy (Pruning Was Reverted)
 
-**Insight:** `compute-schedule-strength.mjs` attaches week-over-week trends by
-reading the most recent earlier derived file, THEN prunes every other same-year
-weekly file — exactly one file per year survives. Order matters: trends read
-before the prune, and the next run only ever needs the file just written. The
-dashboards `import.meta.glob({ eager: true })` the derived directory, so
-without pruning every weekly snapshot (17/season/league × 15-40KB) would be
-bundled into the server chunk forever. The `/news/[id]` pages avoid even that
-by using a LAZY glob and importing only the one issue matching the post's
-pointer. (The astro-performance review noted `power-rankings` pages have the
-same eager-glob-everything pattern with no pruning — a candidate follow-up.)
+**Insight:** An earlier revision pruned superseded weekly files to keep the
+dashboards' eager glob small — the /live review caught that this deletes data
+published articles still reference: every Gauntlet post carries
+`scheduleStrength: { year, week }` and resolves its EXACT week's file, so
+pruning silently stripped the tables out of every past article after seven
+days (and a re-run in the same week lost its trend source). The resolution:
+NO pruning ever, and no eager glob anywhere — the dashboards use
+`resolveGauntletViewLazy` (picks the year from glob KEYS alone, imports one
+file per request) and the article pages import only the pointed-at issue via
+`GauntletArticleSection`. Retention costs repo bytes only (~17 files/season/
+league at 15-40KB), never server-bundle bytes. If you ever reintroduce
+cleanup, the invariant is: a derived file may only be deleted when no feed
+post references its {year, week}. (The astro-performance review noted
+`power-rankings` pages still eager-glob everything — candidate follow-up.)
 
 ## 2026-07-18 - Weekly-Articles Runner Is Now League-Parameterized
 

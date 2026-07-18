@@ -16,17 +16,14 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed, SchefterPost, AuctionGrade } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
-import StrengthTable from '../../../components/shared/schedule-strength/StrengthTable.astro';
-import ScheduleLuckCallout from '../../../components/shared/schedule-strength/ScheduleLuckCallout.astro';
-import TrapWeeksStrip from '../../../components/shared/schedule-strength/TrapWeeksStrip.astro';
-import { resolveGauntletView, type GauntletDerived } from '../../../utils/schedule-strength';
+import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
+import type { GauntletDerived } from '../../../utils/schedule-strength';
 import leagueConfig from '../../../data/theleague.config.json';
-import '../../../styles/schedule-strength.css';
 
 // The Gauntlet articles render their rankings from the same derived JSON the
 // dashboard uses (single source of truth — article and page cannot disagree).
-// Lazy glob: only the one matching issue is imported, and only for posts that
-// carry a scheduleStrength pointer — plain articles pay nothing.
+// Lazy glob: GauntletArticleSection imports only the matching issue, and only
+// for posts that carry a scheduleStrength pointer.
 const gauntletFiles = import.meta.glob<GauntletDerived>(
   '../../../../data/theleague/derived/schedule-strength-*.json',
   { import: 'default' }
@@ -47,22 +44,6 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
 });
 const isGradeArticle = !!(post.grades && post.grades.length > 0);
 
-const gauntletRef = post.scheduleStrength ?? null;
-let gauntletView = null;
-if (gauntletRef) {
-  const suffix = `schedule-strength-${gauntletRef.year}-w${String(gauntletRef.week).padStart(2, '0')}.json`;
-  const key = Object.keys(gauntletFiles).find(file => file.endsWith(suffix));
-  const derived = key ? await gauntletFiles[key]() : null;
-  if (key && derived) {
-    gauntletView = resolveGauntletView({
-      files: { [key]: derived },
-      teams: leagueConfig.teams,
-      baseUrl: '/theleague',
-      pagePath: '/theleague/schedule-strength',
-      requestedYear: String(gauntletRef.year),
-    });
-  }
-}
 
 function gradeColor(grade: string): string {
   const letter = grade.charAt(0);
@@ -192,35 +173,13 @@ function gradeColor(grade: string): string {
       )}
 
       <!-- The Gauntlet: rankings from the shared derived data -->
-      {gauntletView?.data && (
-        <div class="sf-gauntlet gauntlet-theme">
-          {gauntletView.runIn.length > 0 && (
-            <section class="sf-gauntlet__section">
-              <h2 class="sf-gauntlet__title">The Run-In</h2>
-              <StrengthTable
-                variant="run-in"
-                rows={gauntletView.runIn}
-                caption={`Remaining schedule difficulty, hardest first — Week ${gauntletView.data.week}`}
-              />
-            </section>
-          )}
-          {gauntletView.scheduleLuck.length > 0 && (
-            <section class="sf-gauntlet__section">
-              <h2 class="sf-gauntlet__title">Schedule Luck</h2>
-              <ScheduleLuckCallout rows={gauntletView.scheduleLuck} />
-            </section>
-          )}
-          {gauntletView.trapWeeks.length > 0 && (
-            <section class="sf-gauntlet__section">
-              <h2 class="sf-gauntlet__title">Trap Weeks</h2>
-              <TrapWeeksStrip trapWeeks={gauntletView.trapWeeks} />
-            </section>
-          )}
-          <a class="sf-gauntlet__cta" href={r('/theleague/schedule-strength')}>
-            Full dashboard: week-by-week heat map →
-          </a>
-        </div>
-      )}
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={leagueConfig.teams}
+        baseUrl="/theleague"
+        dashboardHref={r('/theleague/schedule-strength')}
+      />
 
       <!-- Reactions -->
       <div class="sf-article__reactions">
@@ -247,37 +206,6 @@ function gradeColor(grade: string): string {
     margin: 0 auto;
     padding: 1rem 0;
   }
-
-  .sf-gauntlet {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 0 1.25rem 1.25rem;
-  }
-
-  .sf-gauntlet__section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .sf-gauntlet__title {
-    margin: 0;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 700;
-    border-left: 3px solid var(--color-primary, #1c497c);
-    padding-left: 0.6rem;
-  }
-
-  .sf-gauntlet__cta {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--link-color, var(--color-primary, #1c497c));
-    text-decoration: none;
-  }
-  .sf-gauntlet__cta:hover { text-decoration: underline; }
 
   .sf-article__card {
     background: var(--sf-bg, #fff);

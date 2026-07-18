@@ -63,26 +63,24 @@ jobs:
         id: resolve
         env:
           INPUT_TYPE: ${{ github.event.inputs.type }}
+          CRON_EXPR: ${{ github.event.schedule }}
         run: |
           if [ -n "$INPUT_TYPE" ]; then
             echo "type=$INPUT_TYPE" >> "$GITHUB_OUTPUT"
           else
-            # Map cron schedule (UTC day-of-week + hour) to article type
-            DOW=$(date -u +%u)  # 1=Mon ... 7=Sun
-            HOUR=$(date -u +%H)
+            # Map the TRIGGERING cron expression (github.event.schedule) to an
+            # article type. Never derive the type from wall-clock time — GitHub
+            # schedule delays of 10-60 min are routine, and a delayed daily
+            # 15:00 run crossing into 16:00 on a Wednesday would otherwise be
+            # misrouted to schedule-strength instead of cut-watch.
             TYPE=""
-            case "${DOW}-${HOUR}" in
-              2-13) TYPE="weekly-recap" ;;
-              3-16) TYPE="schedule-strength" ;;
-              4-05) TYPE="waiver-pickups" ;;
-              5-15) TYPE="weekend-preview" ;;
-              6-16) TYPE="matchup-preview" ;;
-              *)
-                # Daily 15:00 UTC = cut-watch (the script self-guards to Jul 15–Aug 16)
-                if [ "$HOUR" = "15" ]; then
-                  TYPE="cut-watch"
-                fi
-                ;;
+            case "$CRON_EXPR" in
+              "0 13 * * 2") TYPE="weekly-recap" ;;
+              "0 16 * * 3") TYPE="schedule-strength" ;;
+              "0 5 * * 4")  TYPE="waiver-pickups" ;;
+              "0 15 * * 5") TYPE="weekend-preview" ;;
+              "0 16 * * 6") TYPE="matchup-preview" ;;
+              "0 15 * * *") TYPE="cut-watch" ;;
             esac
             echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
           fi
@@ -107,7 +105,16 @@ jobs:
             # generate per league. GroupMe promo fires inside the script, only
             # when the feed write actually happened this run. A missing AFL
             # schedule/derived file skips AFL without failing TheLeague.
-            node scripts/compute-schedule-strength.mjs
+            #
+            # Week semantics: the article runner's --week is the last COMPLETED
+            # week; compute's --week is the GAUNTLET (upcoming) week = N+1. A
+            # week override must reach BOTH scripts or the article looks for a
+            # derived file compute never wrote.
+            COMPUTE_WEEK_ARG=""
+            if [ -n "$WEEK_OVERRIDE" ]; then
+              COMPUTE_WEEK_ARG="--week $((WEEK_OVERRIDE + 1))"
+            fi
+            node scripts/compute-schedule-strength.mjs $COMPUTE_WEEK_ARG
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague $WEEK_ARG
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy $WEEK_ARG || echo "AFL generation failed (non-fatal)"
           else
