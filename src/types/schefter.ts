@@ -268,6 +268,12 @@ export interface SchefterPost {
   intro?: string[];
   /** Auction grade entries (grade-card articles only) */
   grades?: AuctionGrade[];
+  /**
+   * The Gauntlet articles: pointer to the derived schedule-strength JSON
+   * (data/<league>/derived/schedule-strength-<year>-w<week>.json) that the
+   * article page renders its rankings table / luck callout / trap weeks from.
+   */
+  scheduleStrength?: { year: number; week: number };
   /** Featured image path relative to /assets/schefter/ (articles only) */
   image?: string;
   /** Image alt text (articles only) */

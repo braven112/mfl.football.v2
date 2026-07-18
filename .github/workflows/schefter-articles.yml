@@ -12,6 +12,10 @@ on:
     - cron: "0 16 * * 6"
     # Daily 8am PT (15:00 UTC) — cut-watch (self-guards to Jul 15–Aug 16)
     - cron: "0 15 * * *"
+    # Wednesday 9am PT (16:00 UTC) — schedule-strength (The Gauntlet, both
+    # leagues). 16:00 rather than 15:00 so the daily cut-watch mapping isn't
+    # shadowed on Wednesdays.
+    - cron: "0 16 * * 3"
   workflow_dispatch:
     inputs:
       type:
@@ -27,6 +31,7 @@ on:
           - championship-recap
           - draft-grades
           - team-grades
+          - schedule-strength
       week:
         description: "Override week number (optional)"
         required: false
@@ -68,6 +73,7 @@ jobs:
             TYPE=""
             case "${DOW}-${HOUR}" in
               2-13) TYPE="weekly-recap" ;;
+              3-16) TYPE="schedule-strength" ;;
               4-05) TYPE="waiver-pickups" ;;
               5-15) TYPE="weekend-preview" ;;
               6-16) TYPE="matchup-preview" ;;
@@ -87,13 +93,26 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
           WEEK_OVERRIDE: ${{ github.event.inputs.week }}
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
         run: |
           WEEK_ARG=""
           if [ -n "$WEEK_OVERRIDE" ]; then
             WEEK_ARG="--week $WEEK_OVERRIDE"
           fi
           echo "Generating: $ARTICLE_TYPE"
-          node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+          if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
+            # The Gauntlet runs for BOTH leagues: compute fresh derived data
+            # first (the article reads the derived JSON, never raw feeds), then
+            # generate per league. GroupMe promo fires inside the script, only
+            # when the feed write actually happened this run. A missing AFL
+            # schedule/derived file skips AFL without failing TheLeague.
+            node scripts/compute-schedule-strength.mjs
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague $WEEK_ARG
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy $WEEK_ARG || echo "AFL generation failed (non-fatal)"
+          else
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+          fi
 
       - name: Commit and push
         if: steps.resolve.outputs.type != ''
@@ -107,7 +126,11 @@ jobs:
           # is guarded inside the script.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
+          FILES="src/data/theleague/schefter-feed.json"
+          if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
+            FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
+          fi
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter article — $ARTICLE_TYPE" \
-            --files "src/data/theleague/schefter-feed.json"
+            --files "$FILES"

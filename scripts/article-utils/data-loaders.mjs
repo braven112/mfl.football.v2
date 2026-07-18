@@ -5,6 +5,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
 
 /** Load and parse a JSON file. */
 export function loadJSON(filePath) {
@@ -43,15 +44,21 @@ export function formatDefName(name) {
   return `the ${name} defense`;
 }
 
+function leagueRegistry(league = 'theleague') {
+  const reg = LEAGUES[league];
+  if (!reg) throw new Error(`Unknown league: ${league} (expected ${Object.keys(LEAGUES).join(' | ')})`);
+  return reg;
+}
+
 /**
  * Resolve the main repo data directory (handles worktree paths).
  * When running from .claude/worktrees/*, we read from main repo data/.
  */
-export function resolveDataDir(projectRoot, year = 2026) {
+export function resolveDataDir(projectRoot, year = 2026, league = 'theleague') {
   const mainRepo = projectRoot.includes('.claude/worktrees/')
     ? projectRoot.replace(/\.claude\/worktrees\/[^/]+$/, '')
     : projectRoot;
-  return path.join(mainRepo, 'data', 'theleague', 'mfl-feeds', String(year));
+  return path.join(mainRepo, leagueRegistry(league).dataPath, 'mfl-feeds', String(year));
 }
 
 /** Resolve path relative to the main repo (not worktree). */
@@ -108,9 +115,17 @@ export async function loadLeague(dataDir) {
   return loadJSON(path.join(dataDir, 'league.json'));
 }
 
-/** Feed path for TheLeague. */
-export function getFeedPath(projectRoot) {
-  return path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
+/**
+ * Schefter feed path for a league (default TheLeague). The two feed
+ * locations differ deliberately and are load-bearing — TheLeague's feed is a
+ * build-time src/data import; AFL's lives under its dataPath. Mirrors the
+ * canonical map in schefter-scan.mjs. Do NOT normalize.
+ */
+export function getFeedPath(projectRoot, league = 'theleague') {
+  if (league === 'theleague') {
+    return path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
+  }
+  return path.join(projectRoot, leagueRegistry(league).dataPath, 'schefter-feed.json');
 }
 
 /** Format a player for display — DEF-aware. */

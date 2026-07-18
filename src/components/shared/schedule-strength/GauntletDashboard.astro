@@ -13,6 +13,7 @@
  * invert in dark mode (see docs/claude/insights/domains/design-system.md).
  */
 import StrengthTable, { type StrengthRow } from './StrengthTable.astro';
+import '../../../styles/schedule-strength.css';
 import ScheduleLuckCallout, { type LuckRow } from './ScheduleLuckCallout.astro';
 import GauntletHeatMap, { type HeatFranchise } from './GauntletHeatMap.astro';
 import TrapWeeksStrip, { type TrapWeek } from './TrapWeeksStrip.astro';
@@ -44,7 +45,7 @@ const {
 } = Astro.props;
 ---
 
-<div class="gauntlet">
+<div class="gauntlet gauntlet-theme">
   <header class="gauntlet__hero">
     <span class="gauntlet__eyebrow">A Claude Schefter Weekly Column</span>
     <h1 class="gauntlet__title">
@@ -125,53 +126,14 @@ const {
 </div>
 
 <style>
+  /* Theme hooks (--gnt-*) come from the shared .gauntlet-theme class in
+     src/styles/schedule-strength.css so the weekly Schefter article renders
+     these components identically. */
   .gauntlet {
     display: flex;
     flex-direction: column;
     gap: 2.75rem;
     padding-block: 1rem 3rem;
-
-    /* Theme hooks consumed by every child component (light values). */
-    --gnt-page-bg: var(--page-bg, #ffffff);
-    --gnt-border: var(--content-border, #e2e8f0);
-    --gnt-th-bg: var(--color-gray-50, #f9fafb);
-    --gnt-callout-bg: var(--color-gray-50, #f8fafc);
-    --gnt-bar-track: var(--color-gray-100, #f3f4f6);
-    --gnt-ink-soft: var(--color-gray-600, #4b5563);
-    --gnt-ink-faint: var(--color-gray-500, #6b7280);
-    --gnt-focus: var(--color-primary, #1c497c);
-    --gnt-trend-up: #b91c1c;
-    --gnt-trend-down: #15803d;
-    --gnt-fill-1: #16a34a;
-    --gnt-fill-2: #65a30d;
-    --gnt-fill-3: #ca8a04;
-    --gnt-fill-4: #ea580c;
-    --gnt-fill-5: #dc2626;
-    --gnt-cell-0: #f3f4f6; --gnt-cell-0-ink: #6b7280;
-    --gnt-cell-1: #dcfce7; --gnt-cell-1-ink: #14532d;
-    --gnt-cell-2: #d1e7c4; --gnt-cell-2-ink: #1a4d1f;
-    --gnt-cell-3: #fef9c3; --gnt-cell-3-ink: #713f12;
-    --gnt-cell-4: #fed7aa; --gnt-cell-4-ink: #7c2d12;
-    --gnt-cell-5: #fecaca; --gnt-cell-5-ink: #7f1d1d;
-  }
-
-  /* Dark theme — one override block; ramp flips to dark surfaces + light ink. */
-  :global(html.dark) .gauntlet {
-    --gnt-trend-up: #f87171;
-    --gnt-trend-down: #4ade80;
-    --gnt-fill-1: #4ade80;
-    --gnt-fill-2: #a3e635;
-    --gnt-fill-3: #facc15;
-    --gnt-fill-4: #fb923c;
-    --gnt-fill-5: #f87171;
-    --gnt-cell-0: rgba(255, 255, 255, 0.06); --gnt-cell-0-ink: #9ca3af;
-    --gnt-cell-1: #14532d; --gnt-cell-1-ink: #dcfce7;
-    --gnt-cell-2: #3f6212; --gnt-cell-2-ink: #ecfccb;
-    --gnt-cell-3: #854d0e; --gnt-cell-3-ink: #fefce8;
-    --gnt-cell-4: #9a3412; --gnt-cell-4-ink: #ffedd5;
-    --gnt-cell-5: #991b1b; --gnt-cell-5-ink: #fee2e2;
-    --gnt-bar-track: rgba(255, 255, 255, 0.08);
-    --gnt-callout-bg: rgba(255, 255, 255, 0.04);
   }
 
   .gauntlet__hero { display: flex; flex-direction: column; gap: 0.35rem; }
