@@ -154,7 +154,7 @@ cache forever (year selector reads these).
 
 ## Cadence
 
-- Compute + article + GroupMo promo: **Wednesday** (stats settled Tuesday;
+- Compute + article + GroupMe promo: **Wednesday** (stats settled Tuesday;
   Wednesday is an empty slot — recap/power-rankings own Tuesday).
 - Cron lives in `.github/workflows/schefter-articles.yml` alongside the
   other article types. No GitHub Actions feature-gate vars (CLAUDE.md rule) —
