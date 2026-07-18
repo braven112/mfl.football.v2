@@ -131,7 +131,16 @@ async function main() {
     weeklyResults = { weeks: [] };
   }
 
-  const completedWeek = getCompletedWeek(weeklyResults);
+  // League-aware completeness threshold: a week only counts as complete once
+  // every franchise has a score (16 for TheLeague, 24 for AFL). Standings
+  // carries the authoritative franchise count; fall back to the historical 16.
+  let franchiseCount = 16;
+  try {
+    const standings = await loadJSON(path.join(dataDir, 'standings.json'));
+    franchiseCount = standings?.leagueStandings?.franchise?.length || 16;
+  } catch { /* keep default */ }
+
+  const completedWeek = getCompletedWeek(weeklyResults, franchiseCount);
   const currentWeek = getCurrentNFLWeek(year);
   const week = opts.week ?? completedWeek;
 

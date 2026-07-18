@@ -278,7 +278,7 @@ async function runLeague(slug, opts) {
     return null;
   }
 
-  const completedWeek = getCompletedWeek(weeklyResults ?? { weeks: [] });
+  const completedWeek = getCompletedWeek(weeklyResults ?? { weeks: [] }, config.teams.length);
   if (completedWeek < 1 && opts.week == null) {
     console.log(`  [${slug}] no completed weeks for ${year} — skipping until the season starts.`);
     return null;
