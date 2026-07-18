@@ -87,7 +87,10 @@ function trendMeta(delta: number | null | undefined) {
 </div>
 
 <style>
-  .sst-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* max-height makes this the vertical scroll container too — without it the
+     sticky thead pins to a container edge that never scrolls (overflow-x:auto
+     forces overflow-y:auto) and the sticky header never engages. */
+  .sst-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-height: 70vh; }
   .sst {
     border-collapse: separate;
     border-spacing: 0;

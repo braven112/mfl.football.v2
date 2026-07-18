@@ -89,7 +89,9 @@ const {
       <StrengthTable
         variant="played"
         rows={played}
-        caption={`Past schedule difficulty, hardest first — through Week ${week - 1}`}
+        caption={seasonComplete
+          ? `Past schedule difficulty, hardest first — full ${year} season`
+          : `Past schedule difficulty, hardest first — through Week ${week - 1}`}
       />
     </section>
   )}

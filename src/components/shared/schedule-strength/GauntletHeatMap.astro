@@ -63,18 +63,18 @@ const { franchises, weeks } = Astro.props;
                 <a
                   class={`hm__chip hm__chip--s${cell.step}`}
                   href={cell.oppHref}
-                  aria-label={`Week ${cell.week} vs ${cell.oppName ?? cell.oppAbbrev} — difficulty ${cell.difficulty} of 100`}
+                  aria-label={`Week ${cell.week} vs ${cell.oppName ?? cell.oppAbbrev}${cell.difficulty != null ? ` — difficulty ${cell.difficulty} of 100` : ''}`}
                 >
                   <span class="hm__opp" aria-hidden="true">{cell.oppAbbrev}</span>
-                  <span class="hm__v" aria-hidden="true">{cell.difficulty}</span>
+                  <span class="hm__v" aria-hidden="true">{cell.difficulty ?? '—'}</span>
                 </a>
               ) : (
                 <span
                   class={`hm__chip hm__chip--s${cell.step}`}
-                  aria-label={`Week ${cell.week} vs ${cell.oppName ?? cell.oppAbbrev} — difficulty ${cell.difficulty} of 100`}
+                  aria-label={`Week ${cell.week} vs ${cell.oppName ?? cell.oppAbbrev}${cell.difficulty != null ? ` — difficulty ${cell.difficulty} of 100` : ''}`}
                 >
                   <span class="hm__opp" aria-hidden="true">{cell.oppAbbrev}</span>
-                  <span class="hm__v" aria-hidden="true">{cell.difficulty}</span>
+                  <span class="hm__v" aria-hidden="true">{cell.difficulty ?? '—'}</span>
                 </span>
               )}
             </td>

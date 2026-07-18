@@ -26,8 +26,10 @@
   --gnt-fill-3: #ca8a04;
   --gnt-fill-4: #ea580c;
   --gnt-fill-5: #dc2626;
+  /* s0 ink is gray-600, not gray-500 — the bold BYE label on #f3f4f6 needs
+     6.9:1; gray-500 lands at 4.39:1 (below AA). */
   --gnt-cell-0: #f3f4f6;
-  --gnt-cell-0-ink: #6b7280;
+  --gnt-cell-0-ink: #4b5563;
   --gnt-cell-1: #dcfce7;
   --gnt-cell-1-ink: #14532d;
   --gnt-cell-2: #d1e7c4;
@@ -49,7 +51,7 @@ html.dark .gauntlet-theme {
   --gnt-fill-4: #fb923c;
   --gnt-fill-5: #f87171;
   --gnt-cell-0: rgba(255, 255, 255, 0.06);
-  --gnt-cell-0-ink: #9ca3af;
+  --gnt-cell-0-ink: #b6c2d0;
   --gnt-cell-1: #14532d;
   --gnt-cell-1-ink: #dcfce7;
   --gnt-cell-2: #3f6212;
