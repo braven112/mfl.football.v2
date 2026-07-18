@@ -25,6 +25,10 @@ const SEQUENTIAL = [
 ];
 
 const PARALLEL = [
+  // Pure local compute (feeds already on disk, no network, independent
+  // output dir) — overlaps with the network fetches instead of serializing
+  // onto the build critical path.
+  { name: 'compute:schedule-strength', cmd: 'pnpm run compute:schedule-strength' },
   { name: 'fetch:live:lineups', cmd: 'pnpm run fetch:live:lineups' },
   { name: 'fetch:trade-bait', cmd: 'pnpm run fetch:trade-bait' },
   { name: 'fetch:adp', cmd: 'pnpm run fetch:adp' },

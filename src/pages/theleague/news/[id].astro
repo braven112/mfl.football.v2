@@ -16,6 +16,18 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed, SchefterPost, AuctionGrade } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
+import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
+import type { GauntletDerived } from '../../../utils/schedule-strength';
+import leagueConfig from '../../../data/theleague.config.json';
+
+// The Gauntlet articles render their rankings from the same derived JSON the
+// dashboard uses (single source of truth — article and page cannot disagree).
+// Lazy glob: GauntletArticleSection imports only the matching issue, and only
+// for posts that carry a scheduleStrength pointer.
+const gauntletFiles = import.meta.glob<GauntletDerived>(
+  '../../../../data/theleague/derived/schedule-strength-*.json',
+  { import: 'default' }
+);
 
 const { id } = Astro.params;
 const feed = feedData as SchefterFeed;
@@ -31,6 +43,7 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
   year: 'numeric', month: 'long', day: 'numeric',
 });
 const isGradeArticle = !!(post.grades && post.grades.length > 0);
+
 
 function gradeColor(grade: string): string {
   const letter = grade.charAt(0);
@@ -158,6 +171,15 @@ function gradeColor(grade: string): string {
           ))}
         </div>
       )}
+
+      <!-- The Gauntlet: rankings from the shared derived data -->
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={leagueConfig.teams}
+        baseUrl="/theleague"
+        dashboardHref={r('/theleague/schedule-strength')}
+      />
 
       <!-- Reactions -->
       <div class="sf-article__reactions">

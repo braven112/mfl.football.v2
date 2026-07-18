@@ -1,0 +1,59 @@
+---
+/**
+ * The Gauntlet — AFL Fantasy schedule-strength dashboard.
+ * Data: data/afl-fantasy/derived/schedule-strength-<year>-w<NN>.json, written
+ * weekly by scripts/compute-schedule-strength.mjs (Wednesday cron + prebuild).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import GauntletDashboard from '../../components/shared/schedule-strength/GauntletDashboard.astro';
+import { resolveGauntletViewLazy, type GauntletDerived } from '../../utils/schedule-strength';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+// Lazy glob: weekly issues are retained forever (published articles point at
+// them), so only the selected year's latest file is imported per request —
+// an eager glob would bundle every archived issue into the server chunk.
+const files = import.meta.glob<GauntletDerived>(
+  '../../../data/afl-fantasy/derived/schedule-strength-*.json',
+  { import: 'default' }
+);
+
+const view = await resolveGauntletViewLazy({
+  files,
+  teams: aflConfig.teams,
+  baseUrl: '/afl-fantasy',
+  pagePath: '/afl-fantasy/schedule-strength',
+  requestedYear: Astro.url.searchParams.get('year'),
+});
+
+const title = view.data
+  ? `The Gauntlet · ${view.seasonComplete ? `${view.year} Final` : `Week ${view.data.week}`} Schedule Strength`
+  : 'The Gauntlet · Schedule Strength';
+---
+
+<TheLeagueLayout title={title}>
+  <div class="gauntlet-page">
+    <Breadcrumbs items={[
+      { label: 'AFL Fantasy', href: '/afl-fantasy' },
+      { label: 'Schedule Strength' },
+    ]} />
+    <GauntletDashboard
+      columnName={view.data?.columnName ?? 'The Gauntlet'}
+      week={view.data?.week ?? 0}
+      year={view.year ?? getCurrentSeasonYear()}
+      runIn={view.runIn}
+      played={view.played}
+      scheduleLuck={view.scheduleLuck}
+      heatMapFranchises={view.heatMapFranchises}
+      heatMapWeeks={view.heatMapWeeks}
+      trapWeeks={view.trapWeeks}
+      yearOptions={view.yearOptions}
+      seasonComplete={view.seasonComplete}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .gauntlet-page { min-height: 60vh; }
+</style>

@@ -1,0 +1,68 @@
+---
+/**
+ * The Gauntlet — schedule-luck callout cards: the franchises whose records
+ * most disagree with the schedule they've faced.
+ */
+export interface LuckRow {
+  franchiseId: string;
+  displayName: string;
+  record: string;
+  pastDifficulty: number;
+  gap: number;
+  direction: 'lucky' | 'unlucky';
+}
+
+export interface Props {
+  rows: LuckRow[];
+}
+
+const { rows } = Astro.props;
+
+function blurb(row: LuckRow): string {
+  if (row.direction === 'unlucky') {
+    return `${row.record} against one of the league's tougher slates (past difficulty ${row.pastDifficulty}). Better than the record says.`;
+  }
+  return `${row.record} — but they've faced one of the softer schedules so far (past difficulty ${row.pastDifficulty}). Buckle up.`;
+}
+---
+
+<div class="luck">
+  {rows.map(row => (
+    <article class={`luck__card luck__card--${row.direction}`}>
+      <span class="luck__tag">
+        <span aria-hidden="true">{row.direction === 'unlucky' ? '▼' : '▲'}</span>
+        {row.direction === 'unlucky' ? 'Schedule victim' : 'Soft landing'}
+      </span>
+      <h3 class="luck__team">{row.displayName}</h3>
+      <p class="luck__blurb">{blurb(row)}</p>
+    </article>
+  ))}
+</div>
+
+<style>
+  .luck {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.9rem;
+  }
+  .luck__card {
+    border: 1px solid var(--gnt-border, var(--content-border, #e2e8f0));
+    background: var(--gnt-callout-bg, var(--color-gray-50, #f8fafc));
+    border-radius: 0.5rem;
+    padding: 0.9rem 1rem;
+  }
+  .luck__tag {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+  }
+  .luck__card--unlucky .luck__tag { color: var(--gnt-trend-up, #b91c1c); }
+  .luck__card--lucky .luck__tag { color: var(--gnt-trend-down, #15803d); }
+  .luck__team { margin: 0.2rem 0 0.1rem; font-size: 1rem; }
+  .luck__blurb {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--gnt-ink-soft, var(--color-gray-600, #4b5563));
+  }
+</style>

@@ -1,0 +1,361 @@
+#!/usr/bin/env node
+/**
+ * Schedule Strength ("The Gauntlet") — weekly derived data for both leagues.
+ *
+ * For each franchise, computes remaining-schedule and past-schedule difficulty
+ * from opponent strength (shared composite in scripts/lib/team-strength.mjs:
+ * 50% season ppg + 25% all-play + 25% rolling-3wk form), plus the week-by-week
+ * heat map, schedule-luck gaps, and trap weeks. Writes
+ * data/<league>/derived/schedule-strength-<year>-w<NN>.json — the single
+ * source of truth for the dashboard pages AND the weekly Schefter article.
+ *
+ * Usage:
+ *   node scripts/compute-schedule-strength.mjs                    # both leagues, current season/week
+ *   node scripts/compute-schedule-strength.mjs --league theleague
+ *   node scripts/compute-schedule-strength.mjs --league afl-fantasy --year 2023 --week 8
+ *   node scripts/compute-schedule-strength.mjs --dry-run
+ *
+ * "Week N" = the upcoming week (last completed week + 1). Past difficulty is
+ * computed over completed weeks; remaining difficulty over scheduled weeks
+ * >= N. Trends diff against the most recent earlier week's file. Weekly
+ * files are retained forever — published articles reference their exact
+ * week's file, and pages import the directory lazily (no bundle cost).
+ */
+
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { getSeasonYear, getCompletedWeek } from './article-utils/week-resolver.mjs';
+import { loadJSON, tryLoadJSON, scheduleFromRawResults } from './article-utils/data-loaders.mjs';
+import {
+  computeTeamStrengths,
+  difficultyStep,
+  buildOpponentGrid,
+  num,
+  int,
+  parseH2hRecord,
+} from './lib/team-strength.mjs';
+
+// Re-exported for consumers/tests that treat this script as the pipeline API.
+export { parseH2hRecord };
+
+const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+
+// League config locations come from the registry (single source of truth).
+const LEAGUE_SLUGS = Object.keys(LEAGUES);
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const opts = { league: null, year: null, week: null, dryRun: false };
+  for (let i = 0; i < args.length; i++) {
+    switch (args[i]) {
+      case '--league': opts.league = args[++i]; break;
+      case '--year': opts.year = parseInt(args[++i], 10); break;
+      case '--week': opts.week = parseInt(args[++i], 10); break;
+      case '--dry-run': opts.dryRun = true; break;
+    }
+  }
+  if (opts.league && !LEAGUE_SLUGS.includes(opts.league)) {
+    console.error(`Unknown --league ${opts.league} (expected: ${LEAGUE_SLUGS.join(' | ')})`);
+    process.exit(1);
+  }
+  return opts;
+}
+
+function derivedPath(league, year, week) {
+  return path.join(projectRoot, league.dataPath, 'derived',
+    `schedule-strength-${year}-w${String(week).padStart(2, '0')}.json`);
+}
+
+/** Most recent earlier week's derived file for trend deltas. */
+async function loadPreviousWeek(league, year, week) {
+  for (let w = week - 1; w >= 1; w--) {
+    const prior = await tryLoadJSON(derivedPath(league, year, w));
+    if (prior?.runIn?.length) return prior;
+  }
+  return null;
+}
+
+/**
+ * W-L-T record over completed weeks from the opponent grid + weekly scores.
+ * Grid values are arrays (AFL plays two games per week) — every game counts.
+ */
+function computeRecord(grid, weeklyResults, fid, throughWeek) {
+  const scoresByWeek = new Map();
+  for (const w of (weeklyResults?.weeks || [])) scoresByWeek.set(int(w.week), w.scores || {});
+  let wins = 0, losses = 0, ties = 0;
+  const opps = grid.get(fid);
+  if (!opps) return { wins, losses, ties };
+  for (const [wk, oppIds] of opps) {
+    if (wk > throughWeek) continue;
+    const scores = scoresByWeek.get(wk);
+    const mine = num(scores?.[fid], NaN);
+    if (!Number.isFinite(mine)) continue;
+    for (const oppId of oppIds) {
+      const theirs = num(scores?.[oppId], NaN);
+      if (!Number.isFinite(theirs)) continue;
+      if (mine > theirs) wins++;
+      else if (mine < theirs) losses++;
+      else ties++;
+    }
+  }
+  return { wins, losses, ties };
+}
+
+export function computeScheduleStrength({ leagueSlug, teams, schedule, standings, weeklyResults, week, year }) {
+  const completedWeek = week - 1;
+  const franchiseIds = teams.map(t => t.franchiseId);
+  const standingsByFid = new Map(
+    (standings?.leagueStandings?.franchise || []).map(f => [f.id, f])
+  );
+
+  const strengths = computeTeamStrengths({
+    franchiseIds,
+    standingsByFid,
+    weeklyResults,
+    throughWeek: completedWeek,
+  });
+
+  const grid = buildOpponentGrid(schedule);
+  const allWeeks = [...new Set(
+    (schedule?.schedule?.weeklySchedule || []).map(w => int(w.week))
+  )].sort((a, b) => a - b);
+  const remainingWeeks = allWeeks.filter(w => w >= week);
+  const playedWeeks = allWeeks.filter(w => w < week);
+
+  const nameByFid = new Map(teams.map(t => [t.franchiseId, t.name]));
+  const abbrevByFid = new Map(teams.map(t => [t.franchiseId, t.abbrev ?? t.name]));
+
+  const perTeam = franchiseIds.map(fid => {
+    const opps = grid.get(fid) ?? new Map();
+    // Grid values are opponent ARRAYS (AFL = two games/week) — flatten so
+    // every game weighs into the averages.
+    const oppFor = weeks => weeks.flatMap(w => opps.get(w) ?? []);
+
+    const avgOver = weeks => {
+      const vals = oppFor(weeks).map(id => strengths.get(id)?.strength).filter(Number.isFinite);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    };
+    const avgPpgOver = weeks => {
+      const vals = oppFor(weeks).map(id => strengths.get(id)?.seasonPpg).filter(Number.isFinite);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    };
+
+    const remaining = avgOver(remainingWeeks);
+    const past = avgOver(playedWeeks);
+    // Prefer MFL's own h2h record (standings h2hwlt) — it's what owners see,
+    // and it excludes the extra AFL matchups (double-header weeks) that MFL
+    // itself doesn't count toward the official record. Recompute from scores
+    // only when standings are absent (defensive fallback).
+    const record = parseH2hRecord(standingsByFid.get(fid)?.h2hwlt)
+      ?? computeRecord(grid, weeklyResults, fid, completedWeek);
+
+    return {
+      franchiseId: fid,
+      name: nameByFid.get(fid) ?? fid,
+      remainingDifficulty: remaining != null ? Math.round(remaining) : null,
+      remainingOppPpg: avgPpgOver(remainingWeeks),
+      pastDifficulty: past != null ? Math.round(past) : null,
+      pastOppPpg: avgPpgOver(playedWeeks),
+      record,
+      cells: remainingWeeks.map(w => {
+        const oppIds = opps.get(w) ?? [];
+        if (oppIds.length === 0) return { week: w, bye: true, opps: [], difficulty: null, step: 0 };
+        const games = oppIds.map(oppId => ({
+          oppId,
+          oppAbbrev: abbrevByFid.get(oppId) ?? oppId,
+          difficulty: strengths.get(oppId)?.strength ?? null,
+        }));
+        const finite = games.map(g => g.difficulty).filter(Number.isFinite);
+        // Cell difficulty = average across the week's games (a single-game
+        // league reduces to that game's value).
+        const difficulty = finite.length
+          ? Math.round(finite.reduce((a, b) => a + b, 0) / finite.length)
+          : null;
+        return { week: w, bye: false, opps: games, difficulty, step: difficultyStep(difficulty) };
+      }),
+    };
+  });
+
+  // Run-in ranking — hardest first.
+  const runIn = perTeam
+    .filter(t => t.remainingDifficulty != null)
+    .sort((a, b) => b.remainingDifficulty - a.remainingDifficulty)
+    .map((t, i) => ({
+      rank: i + 1,
+      franchiseId: t.franchiseId,
+      name: t.name,
+      remainingOppPpg: t.remainingOppPpg != null ? Math.round(t.remainingOppPpg * 10) / 10 : null,
+      difficulty: t.remainingDifficulty,
+      step: difficultyStep(t.remainingDifficulty),
+      prevRank: null,
+      trendDeltaRanks: null,
+    }));
+
+  // Past ranking — hardest first.
+  const played = perTeam
+    .filter(t => t.pastDifficulty != null)
+    .sort((a, b) => b.pastDifficulty - a.pastDifficulty)
+    .map((t, i) => ({
+      rank: i + 1,
+      franchiseId: t.franchiseId,
+      name: t.name,
+      pastOppPpg: t.pastOppPpg != null ? Math.round(t.pastOppPpg * 10) / 10 : null,
+      difficulty: t.pastDifficulty,
+      step: difficultyStep(t.pastDifficulty),
+      record: `${t.record.wins}-${t.record.losses}${t.record.ties ? `-${t.record.ties}` : ''}`,
+    }));
+
+  // Schedule luck — biggest gaps between win% and past schedule difficulty.
+  // Positive gap = harder schedule than the record shows (unlucky).
+  const scheduleLuck = perTeam
+    .filter(t => t.pastDifficulty != null)
+    .map(t => {
+      const games = t.record.wins + t.record.losses + t.record.ties;
+      const winPct = games > 0 ? (t.record.wins + t.record.ties / 2) / games : 0.5;
+      const gap = Math.round(t.pastDifficulty - winPct * 100);
+      return {
+        franchiseId: t.franchiseId,
+        name: t.name,
+        record: `${t.record.wins}-${t.record.losses}${t.record.ties ? `-${t.record.ties}` : ''}`,
+        pastDifficulty: t.pastDifficulty,
+        gap,
+        direction: gap >= 0 ? 'unlucky' : 'lucky',
+      };
+    })
+    .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
+    .slice(0, 3);
+
+  // Trap weeks — league-average opponent difficulty per remaining week.
+  const trapWeeks = remainingWeeks.map(w => {
+    const vals = perTeam
+      .map(t => t.cells.find(c => c.week === w))
+      .filter(c => c && !c.bye && Number.isFinite(c.difficulty))
+      .map(c => c.difficulty);
+    const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+    return { week: w, avgDifficulty: avg, step: difficultyStep(avg) };
+  });
+
+  return {
+    league: leagueSlug,
+    year,
+    week,
+    generatedAt: new Date().toISOString(),
+    columnName: 'The Gauntlet',
+    weeks: remainingWeeks,
+    runIn,
+    played,
+    scheduleLuck,
+    heatMap: {
+      weeks: remainingWeeks,
+      franchises: perTeam.map(t => ({
+        franchiseId: t.franchiseId,
+        name: t.name,
+        cells: t.cells,
+      })),
+    },
+    trapWeeks,
+  };
+}
+
+export function attachTrends(result, previous) {
+  if (!previous?.runIn?.length) return result;
+  const prevRankByFid = new Map(previous.runIn.map(r => [r.franchiseId, r.rank]));
+  for (const row of result.runIn) {
+    const prev = prevRankByFid.get(row.franchiseId) ?? null;
+    row.prevRank = prev;
+    // Positive delta = moved UP the hardest-first board (schedule got harder).
+    row.trendDeltaRanks = prev != null ? prev - row.rank : null;
+  }
+  return result;
+}
+
+async function runLeague(slug, opts) {
+  const league = LEAGUES[slug];
+  const configPath = path.join(projectRoot, ...league.configPath.split('/'));
+  const config = await loadJSON(configPath);
+  const year = opts.year ?? getSeasonYear();
+  const feedDir = path.join(projectRoot, league.dataPath, 'mfl-feeds', String(year));
+
+  let [schedule, standings, weeklyResults] = await Promise.all([
+    tryLoadJSON(path.join(feedDir, 'schedule.json')),
+    tryLoadJSON(path.join(feedDir, 'standings.json')),
+    tryLoadJSON(path.join(feedDir, 'weekly-results.json')),
+  ]);
+
+  if (!schedule?.schedule?.weeklySchedule?.length && year < getSeasonYear()) {
+    // Past season with no schedule.json (only ever fetched by the historical
+    // backfill): reconstruct pairings from weekly-results-raw. Played
+    // pairings are identical, and a finished season has no future weeks for
+    // the raw data to miss.
+    const raw = await tryLoadJSON(path.join(feedDir, 'weekly-results-raw.json'));
+    schedule = scheduleFromRawResults(raw);
+    if (schedule) console.log(`  [${slug}] ${year}: schedule.json missing — rebuilt pairings from weekly-results-raw.`);
+  }
+
+  if (!schedule?.schedule?.weeklySchedule?.length) {
+    console.log(`  [${slug}] no schedule.json for ${year} — skipping (feed sync will backfill).`);
+    return null;
+  }
+
+  const completedWeek = getCompletedWeek(weeklyResults ?? { weeks: [] }, config.teams.length);
+  if (completedWeek < 1 && opts.week == null) {
+    console.log(`  [${slug}] no completed weeks for ${year} — skipping until the season starts.`);
+    return null;
+  }
+  // Past seasons are final: point "week" past the last scheduled week so the
+  // run-in is empty (weekly-results can trail the schedule — e.g. playoff
+  // pairings exist in schedule.json without recorded weekly results).
+  const maxScheduleWeek = Math.max(
+    ...schedule.schedule.weeklySchedule.map(w => int(w.week))
+  );
+  const isPastSeason = year < getSeasonYear();
+  const week = opts.week ?? (isPastSeason ? maxScheduleWeek + 1 : completedWeek + 1);
+
+  const result = computeScheduleStrength({
+    leagueSlug: slug,
+    teams: config.teams,
+    schedule,
+    standings,
+    weeklyResults: weeklyResults ?? { weeks: [] },
+    week,
+    year,
+  });
+
+  const previous = await loadPreviousWeek(league, year, week);
+  attachTrends(result, previous);
+
+  const outPath = derivedPath(league, year, week);
+  if (opts.dryRun) {
+    console.log(`  [${slug}] dry-run — would write ${path.relative(projectRoot, outPath)}`);
+    console.log(`    hardest run-in: ${result.runIn[0]?.name} (${result.runIn[0]?.difficulty})`);
+    console.log(`    easiest run-in: ${result.runIn.at(-1)?.name} (${result.runIn.at(-1)?.difficulty})`);
+    return result;
+  }
+
+  await fs.mkdir(path.dirname(outPath), { recursive: true });
+  await fs.writeFile(outPath, JSON.stringify(result, null, 2));
+  console.log(`  [${slug}] wrote ${path.relative(projectRoot, outPath)} (week ${week}, ${result.runIn.length} teams)`);
+  // Deliberately NO pruning: every published Gauntlet article points at its
+  // exact week's derived file forever (post.scheduleStrength), and trends
+  // need the prior week's file on re-runs. Pages import these lazily, so
+  // retention doesn't bloat the server bundle.
+  return result;
+}
+
+async function main() {
+  const opts = parseArgs();
+  const slugs = opts.league ? [opts.league] : LEAGUE_SLUGS;
+  console.log(`\n🏈 Schedule strength (The Gauntlet) — ${slugs.join(', ')}\n`);
+  // Leagues touch disjoint files — run them concurrently.
+  await Promise.all(slugs.map(slug => runLeague(slug, opts)));
+}
+
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  main().catch(err => {
+    console.error('Error:', err.message);
+    process.exit(1);
+  });
+}

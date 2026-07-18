@@ -1,0 +1,191 @@
+---
+/**
+ * The Gauntlet — week-by-week opponent-difficulty heat map.
+ * Semantic table (franchise rows × week columns); every non-bye cell links to
+ * the opponent's franchise page and prints its numeric difficulty so the
+ * color ramp is never the only signal.
+ */
+export interface HeatGame {
+  oppAbbrev: string;
+  oppName: string;
+  oppHref: string;
+  difficulty: number | null;
+}
+
+export interface HeatCell {
+  week: number;
+  bye: boolean;
+  /** One entry per game that week — AFL plays two games per week. */
+  games: HeatGame[];
+  /** Averaged across the week's games (equals the game value for one game). */
+  difficulty: number | null;
+  step: number;
+}
+
+export interface HeatFranchise {
+  franchiseId: string;
+  displayName: string;
+  icon?: string;
+  cells: HeatCell[];
+}
+
+export interface Props {
+  franchises: HeatFranchise[];
+  weeks: number[];
+}
+
+const { franchises, weeks } = Astro.props;
+---
+
+<p class="visually-hidden">
+  Grid of {franchises.length} franchises by {weeks.length} remaining weeks; each cell shows that
+  week's opponent and its difficulty from 0 to 100 — higher is harder.
+</p>
+
+<div class="hm-scroll">
+  <table class="hm">
+    <caption>Opponent difficulty per franchise per remaining week</caption>
+    <thead>
+      <tr>
+        <th scope="col" class="hm__rowh">Team</th>
+        {weeks.map(w => <th scope="col" class="hm__wk">Wk {w}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {franchises.map(f => (
+        <tr>
+          <th scope="row" class="hm__rowh">
+            <span class="hm__team">
+              {f.icon && <img class="hm__icon" src={f.icon} alt="" loading="lazy" width="18" height="18" />}
+              <span class="hm__name">{f.displayName}</span>
+            </span>
+          </th>
+          {f.cells.map(cell => (
+            <td class="hm__cell">
+              {cell.bye || cell.games.length === 0 ? (
+                <span class="hm__chip hm__chip--s0" aria-label={`Week ${cell.week}: bye`}>
+                  <span class="hm__v">BYE</span>
+                </span>
+              ) : cell.games.length === 1 ? (
+                <a
+                  class={`hm__chip hm__chip--s${cell.step}`}
+                  href={cell.games[0].oppHref}
+                  aria-label={`Week ${cell.week} vs ${cell.games[0].oppName}${cell.difficulty != null ? ` — difficulty ${cell.difficulty} of 100` : ''}`}
+                >
+                  <span class="hm__opp" aria-hidden="true">{cell.games[0].oppAbbrev}</span>
+                  <span class="hm__v" aria-hidden="true">{cell.difficulty ?? '—'}</span>
+                </a>
+              ) : (
+                <span
+                  class={`hm__chip hm__chip--multi hm__chip--s${cell.step}`}
+                  aria-label={`Week ${cell.week}: ${cell.games.length} games${cell.difficulty != null ? `, average difficulty ${cell.difficulty} of 100` : ''}`}
+                >
+                  {cell.games.map(g => (
+                    <a
+                      class="hm__game"
+                      href={g.oppHref}
+                      aria-label={`Week ${cell.week} vs ${g.oppName}${g.difficulty != null ? ` — difficulty ${g.difficulty} of 100` : ''}`}
+                    >
+                      <span class="hm__opp" aria-hidden="true">{g.oppAbbrev}</span>
+                      <span class="hm__gv" aria-hidden="true">{g.difficulty ?? '—'}</span>
+                    </a>
+                  ))}
+                </span>
+              )}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .hm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .hm {
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 640px;
+  }
+  .hm caption {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .hm thead th {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280));
+    padding: 0.35rem 0.4rem;
+    text-align: center;
+    font-weight: 700;
+  }
+  .hm__rowh {
+    position: sticky;
+    left: 0;
+    background: var(--gnt-page-bg, var(--page-bg, #ffffff));
+    text-align: left;
+    z-index: 1;
+    padding: 0.25rem 0.75rem 0.25rem 0;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .hm__team { display: flex; align-items: center; gap: 0.5rem; }
+  .hm__icon { width: 1.125rem; height: 1.125rem; object-fit: contain; flex: none; }
+  .hm__name { white-space: nowrap; }
+  .hm__cell { padding: 0.15rem; }
+  .hm__chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    min-height: 2.9rem;
+    border-radius: 0.3rem;
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+  }
+  a.hm__chip:focus-visible {
+    outline: 2px solid var(--gnt-focus, var(--color-primary, #1c497c));
+    outline-offset: -2px;
+    position: relative;
+    z-index: 1;
+  }
+  .hm__opp { font-size: 0.62rem; letter-spacing: 0.04em; opacity: 0.85; }
+  .hm__v { font-weight: 700; font-size: 0.85rem; }
+
+  /* Double-header cells (AFL): one row per game, each its own link. */
+  .hm__chip--multi { gap: 0.1rem; padding: 0.2rem 0.3rem; }
+  .hm__game {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 0.2rem;
+    padding: 0 0.15rem;
+  }
+  .hm__game:focus-visible {
+    outline: 2px solid var(--gnt-focus, var(--color-primary, #1c497c));
+    outline-offset: -1px;
+  }
+  .hm__game:hover .hm__opp { text-decoration: underline; }
+  .hm__gv { font-weight: 700; font-size: 0.72rem; }
+  .hm__chip--s0 { background: var(--gnt-cell-0, #f3f4f6); color: var(--gnt-cell-0-ink, #6b7280); }
+  .hm__chip--s1 { background: var(--gnt-cell-1, #dcfce7); color: var(--gnt-cell-1-ink, #14532d); }
+  .hm__chip--s2 { background: var(--gnt-cell-2, #d1e7c4); color: var(--gnt-cell-2-ink, #1a4d1f); }
+  .hm__chip--s3 { background: var(--gnt-cell-3, #fef9c3); color: var(--gnt-cell-3-ink, #713f12); }
+  .hm__chip--s4 { background: var(--gnt-cell-4, #fed7aa); color: var(--gnt-cell-4-ink, #7c2d12); }
+  .hm__chip--s5 { background: var(--gnt-cell-5, #fecaca); color: var(--gnt-cell-5-ink, #7f1d1d); }
+
+  @media (max-width: 640px) {
+    .hm__v { font-size: 0.6875rem; }
+    .hm__name {
+      max-width: 7rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+</style>

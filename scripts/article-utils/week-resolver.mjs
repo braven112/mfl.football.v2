@@ -28,14 +28,18 @@ export function getCurrentNFLWeek(year, now = new Date()) {
 
 /**
  * Find the last completed week from weekly results data.
- * A week is "complete" when all 16 franchises have non-zero scores.
+ * A week is "complete" when all franchises have non-zero scores.
+ *
+ * `minScores` is the league's franchise count — the historical default of 16
+ * matches TheLeague; AFL callers must pass 24 or a week with only 16-23
+ * reporting franchises is misclassified as complete.
  */
-export function getCompletedWeek(weeklyResults) {
+export function getCompletedWeek(weeklyResults, minScores = 16) {
   if (!weeklyResults?.weeks) return 0;
   for (let i = weeklyResults.weeks.length - 1; i >= 0; i--) {
     const week = weeklyResults.weeks[i];
     const scores = Object.values(week.scores || {});
-    if (scores.length >= 16 && scores.every(s => s > 0)) {
+    if (scores.length >= minScores && scores.every(s => s > 0)) {
       return week.week;
     }
   }

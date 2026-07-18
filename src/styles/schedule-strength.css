@@ -1,0 +1,67 @@
+/**
+ * The Gauntlet — shared theme hooks for the schedule-strength components
+ * (StrengthTable, ScheduleLuckCallout, GauntletHeatMap, TrapWeeksStrip).
+ *
+ * Any container rendering those components gets `.gauntlet-theme` so the
+ * dashboard page and the weekly Schefter article stay visually identical.
+ *
+ * The green→red difficulty ramp uses literals, NOT gray-scale tokens — the
+ * gray ramp inverts in dark mode (see design-system insights, 2026-07-05).
+ * Dark cells flip to dark surfaces with light ink; every pairing holds
+ * WCAG AA for the numeric label printed inside the cell.
+ */
+.gauntlet-theme {
+  --gnt-page-bg: var(--page-bg, #ffffff);
+  --gnt-border: var(--content-border, #e2e8f0);
+  --gnt-th-bg: var(--color-gray-50, #f9fafb);
+  --gnt-callout-bg: var(--color-gray-50, #f8fafc);
+  --gnt-bar-track: var(--color-gray-100, #f3f4f6);
+  --gnt-ink-soft: var(--color-gray-600, #4b5563);
+  --gnt-ink-faint: var(--color-gray-500, #6b7280);
+  --gnt-focus: var(--color-primary, #1c497c);
+  --gnt-trend-up: #b91c1c;
+  --gnt-trend-down: #15803d;
+  --gnt-fill-1: #16a34a;
+  --gnt-fill-2: #65a30d;
+  --gnt-fill-3: #ca8a04;
+  --gnt-fill-4: #ea580c;
+  --gnt-fill-5: #dc2626;
+  /* s0 ink is gray-600, not gray-500 — the bold BYE label on #f3f4f6 needs
+     6.9:1; gray-500 lands at 4.39:1 (below AA). */
+  --gnt-cell-0: #f3f4f6;
+  --gnt-cell-0-ink: #4b5563;
+  --gnt-cell-1: #dcfce7;
+  --gnt-cell-1-ink: #14532d;
+  --gnt-cell-2: #d1e7c4;
+  --gnt-cell-2-ink: #1a4d1f;
+  --gnt-cell-3: #fef9c3;
+  --gnt-cell-3-ink: #713f12;
+  --gnt-cell-4: #fed7aa;
+  --gnt-cell-4-ink: #7c2d12;
+  --gnt-cell-5: #fecaca;
+  --gnt-cell-5-ink: #7f1d1d;
+}
+
+html.dark .gauntlet-theme {
+  --gnt-trend-up: #f87171;
+  --gnt-trend-down: #4ade80;
+  --gnt-fill-1: #4ade80;
+  --gnt-fill-2: #a3e635;
+  --gnt-fill-3: #facc15;
+  --gnt-fill-4: #fb923c;
+  --gnt-fill-5: #f87171;
+  --gnt-cell-0: rgba(255, 255, 255, 0.06);
+  --gnt-cell-0-ink: #b6c2d0;
+  --gnt-cell-1: #14532d;
+  --gnt-cell-1-ink: #dcfce7;
+  --gnt-cell-2: #3f6212;
+  --gnt-cell-2-ink: #ecfccb;
+  --gnt-cell-3: #854d0e;
+  --gnt-cell-3-ink: #fefce8;
+  --gnt-cell-4: #9a3412;
+  --gnt-cell-4-ink: #ffedd5;
+  --gnt-cell-5: #991b1b;
+  --gnt-cell-5-ink: #fee2e2;
+  --gnt-bar-track: rgba(255, 255, 255, 0.08);
+  --gnt-callout-bg: rgba(255, 255, 255, 0.04);
+}

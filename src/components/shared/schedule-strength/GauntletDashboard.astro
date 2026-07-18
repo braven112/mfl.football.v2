@@ -1,0 +1,205 @@
+---
+/**
+ * The Gauntlet — schedule-strength dashboard orchestrator.
+ *
+ * League-agnostic: both league pages resolve data (derived JSON + config
+ * lookups) in their frontmatter and pass fully-display-ready props. The
+ * weekly Schefter article page reuses StrengthTable / ScheduleLuckCallout /
+ * TrapWeeksStrip directly with the same derived data.
+ *
+ * Theme: every surface-dependent color routes through --gnt-* custom
+ * properties declared here with light values and overridden once for dark.
+ * The green→red difficulty ramp uses literals — NOT gray-scale tokens, which
+ * invert in dark mode (see docs/claude/insights/domains/design-system.md).
+ */
+import StrengthTable, { type StrengthRow } from './StrengthTable.astro';
+import '../../../styles/schedule-strength.css';
+import ScheduleLuckCallout, { type LuckRow } from './ScheduleLuckCallout.astro';
+import GauntletHeatMap, { type HeatFranchise } from './GauntletHeatMap.astro';
+import TrapWeeksStrip, { type TrapWeek } from './TrapWeeksStrip.astro';
+
+export interface YearOption {
+  year: number;
+  href: string;
+  current: boolean;
+}
+
+export interface Props {
+  columnName: string;
+  week: number;
+  year: number;
+  runIn: StrengthRow[];
+  played: StrengthRow[];
+  scheduleLuck: LuckRow[];
+  heatMapFranchises: HeatFranchise[];
+  heatMapWeeks: number[];
+  trapWeeks: TrapWeek[];
+  yearOptions: YearOption[];
+  /** true when viewing a completed season (no remaining weeks) */
+  seasonComplete: boolean;
+}
+
+const {
+  columnName, week, year, runIn, played, scheduleLuck,
+  heatMapFranchises, heatMapWeeks, trapWeeks, yearOptions, seasonComplete,
+} = Astro.props;
+---
+
+<div class="gauntlet gauntlet-theme">
+  <header class="gauntlet__hero">
+    <span class="gauntlet__eyebrow">A Claude Schefter Weekly Column</span>
+    <h1 class="gauntlet__title">
+      {columnName}
+      <span class="gauntlet__meta">· {seasonComplete ? `Final · ${year}` : `Week ${week} · ${year}`}</span>
+    </h1>
+    <p class="gauntlet__sub">
+      How hard is {seasonComplete ? 'the season each team survived' : 'the rest of the season for every team'}?
+      Opponent strength, week by week{seasonComplete ? '.' : ' — updated every Wednesday.'}
+    </p>
+    {yearOptions.length > 1 && (
+      <nav class="gauntlet__years" aria-label="Season">
+        {yearOptions.map(y => (
+          <a href={y.href} aria-current={y.current ? 'page' : undefined}>{y.year}</a>
+        ))}
+      </nav>
+    )}
+  </header>
+
+  {!seasonComplete && runIn.length > 0 && (
+    <section class="gauntlet__section">
+      <div class="gauntlet__stitle">
+        <h2>The Run-In</h2>
+        <p>Remaining-schedule difficulty, hardest first. Trend = rank change vs last week.</p>
+      </div>
+      <StrengthTable
+        variant="run-in"
+        rows={runIn}
+        caption={`Remaining schedule difficulty, hardest first — Week ${week}`}
+      />
+    </section>
+  )}
+
+  {played.length > 0 && (
+    <section class="gauntlet__section">
+      <div class="gauntlet__stitle">
+        <h2>What They've Been Through</h2>
+        <p>Strength of schedule already played — and who your record is lying about.</p>
+      </div>
+      {scheduleLuck.length > 0 && <ScheduleLuckCallout rows={scheduleLuck} />}
+      <StrengthTable
+        variant="played"
+        rows={played}
+        caption={seasonComplete
+          ? `Past schedule difficulty, hardest first — full ${year} season`
+          : `Past schedule difficulty, hardest first — through Week ${week - 1}`}
+      />
+    </section>
+  )}
+
+  {!seasonComplete && heatMapFranchises.length > 0 && heatMapWeeks.length > 0 && (
+    <section class="gauntlet__section">
+      <div class="gauntlet__stitle">
+        <h2>Week-by-Week Heat Map</h2>
+        <p>Each cell = that week's opponent difficulty. Green is a breather; red is the buzz saw.</p>
+      </div>
+      <GauntletHeatMap franchises={heatMapFranchises} weeks={heatMapWeeks} />
+    </section>
+  )}
+
+  {!seasonComplete && trapWeeks.length > 0 && (
+    <section class="gauntlet__section">
+      <div class="gauntlet__stitle">
+        <h2>Trap Weeks</h2>
+        <p>League-average difficulty of each remaining week — where the league collectively hits a wall.</p>
+      </div>
+      <TrapWeeksStrip trapWeeks={trapWeeks} />
+    </section>
+  )}
+
+  {runIn.length === 0 && played.length === 0 && (
+    <section class="gauntlet__empty" role="status">
+      <h2>The Gauntlet returns in the fall</h2>
+      <p>
+        Schedule-strength rankings need at least one week of results. The first issue of the season
+        publishes the Wednesday after Week 1 wraps.
+      </p>
+    </section>
+  )}
+</div>
+
+<style>
+  /* Theme hooks (--gnt-*) come from the shared .gauntlet-theme class in
+     src/styles/schedule-strength.css so the weekly Schefter article renders
+     these components identically. */
+  .gauntlet {
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+    padding-block: 1rem 3rem;
+  }
+
+  .gauntlet__hero { display: flex; flex-direction: column; gap: 0.35rem; }
+  .gauntlet__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gnt-ink-faint);
+    font-weight: 600;
+  }
+  .gauntlet__title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .gauntlet__meta { color: var(--link-color, var(--color-primary, #1c497c)); font-weight: 700; }
+  .gauntlet__sub {
+    color: var(--gnt-ink-soft);
+    max-width: 60ch;
+    margin: 0;
+  }
+  .gauntlet__years { display: flex; gap: 0.4rem; margin-top: 0.6rem; flex-wrap: wrap; }
+  .gauntlet__years a {
+    font-size: 0.8125rem;
+    text-decoration: none;
+    color: var(--gnt-ink-soft);
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--gnt-border);
+    border-radius: 999px;
+  }
+  .gauntlet__years a:focus-visible { outline: 2px solid var(--gnt-focus); outline-offset: 2px; }
+  .gauntlet__years a[aria-current] {
+    background: var(--color-primary, #1c497c);
+    border-color: var(--color-primary, #1c497c);
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .gauntlet__section { display: flex; flex-direction: column; gap: 1rem; }
+  .gauntlet__stitle {
+    border-left: 3px solid var(--color-primary, #1c497c);
+    padding-left: 0.75rem;
+  }
+  .gauntlet__stitle h2 {
+    margin: 0;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+  .gauntlet__stitle p {
+    margin: 0.15rem 0 0;
+    font-size: 0.875rem;
+    color: var(--gnt-ink-soft);
+  }
+
+  .gauntlet__empty {
+    max-width: 640px;
+    margin: 3rem auto;
+    text-align: center;
+    color: var(--gnt-ink-soft);
+  }
+  .gauntlet__empty h2 { margin: 0 0 0.5rem; }
+  .gauntlet__empty p { margin: 0; }
+</style>

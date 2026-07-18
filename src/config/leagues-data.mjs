@@ -23,6 +23,15 @@ export const LEAGUES = {
     dataPath: 'data/theleague',
     /** Apex domains that serve this league (bare + www) */
     domains: ['theleague.us', 'www.theleague.us'],
+    /**
+     * Repo-relative league config + Schefter feed locations. TheLeague's
+     * live under src/data (build-time imports); AFL's under its dataPath.
+     * These are the single source of truth — consumers (article pipeline,
+     * schedule-strength compute, schefter-scan) must read them from here,
+     * not re-encode the paths.
+     */
+    configPath: 'src/data/theleague.config.json',
+    schefterFeedPath: 'src/data/theleague/schefter-feed.json',
     features: {
       contracts: true,
       salaryCap: true,
@@ -41,6 +50,9 @@ export const LEAGUES = {
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
+    /** See TheLeague entry — single source of truth for these locations. */
+    configPath: 'data/afl-fantasy/afl.config.json',
+    schefterFeedPath: 'data/afl-fantasy/schefter-feed.json',
     /**
      * League-year rollover (month is 1-indexed). AFL flips to the new MFL
      * league year on June 1 — NOT TheLeague's Feb 14 date — because the new

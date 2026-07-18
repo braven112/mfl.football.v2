@@ -458,6 +458,14 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    // Full-season H2H pairings. Historically only the backfill script wrote
+    // schedule.json, so current-year copies existed only for leagues that had
+    // been backfilled (AFL 2026 had none). Schedule-strength depends on it.
+    key: 'schedule',
+    url: `${host}/${year}/export?TYPE=schedule&L=${leagueId}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
     key: 'weekly-results',
     url: null, // handled separately per-week
     parser: (t) => JSON.parse(t),

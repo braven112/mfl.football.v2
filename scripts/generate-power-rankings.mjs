@@ -30,6 +30,7 @@ import {
   getUserPrompt,
   applyAIVoice,
 } from './lib/power-rankings-ai.mjs';
+import { rollingAvgPF, minMax01 } from './lib/team-strength.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -133,16 +134,6 @@ export function parseStreak(strk) {
   return { type: m[1].toUpperCase(), length: parseInt(m[2], 10) };
 }
 
-/** Average team's last N completed weeks of points. Returns null if no weeks available. */
-export function rollingAvgPF(weeklyResults, franchiseId, throughWeek, n = 3) {
-  const weeks = (weeklyResults?.weeks || [])
-    .filter(w => int(w.week) <= throughWeek && Number.isFinite(num(w.scores?.[franchiseId], NaN)))
-    .sort((a, b) => int(a.week) - int(b.week));
-  if (weeks.length === 0) return null;
-  const slice = weeks.slice(-n);
-  const sum = slice.reduce((acc, w) => acc + num(w.scores?.[franchiseId]), 0);
-  return sum / slice.length;
-}
 
 /** Last-N record from H2H: { wins, losses, ties }. Reads schedule + weekly-results. */
 function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3) {
@@ -181,15 +172,6 @@ function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3)
   return { wins, losses, ties, gamesCounted: slice.length };
 }
 
-/** Normalize array of values to 0-100 by min-max. */
-function minMax01(values) {
-  const finite = values.filter(v => Number.isFinite(v));
-  if (finite.length === 0) return values.map(() => 50);
-  const min = Math.min(...finite);
-  const max = Math.max(...finite);
-  if (max === min) return values.map(() => 50);
-  return values.map(v => Number.isFinite(v) ? ((v - min) / (max - min)) * 100 : 50);
-}
 
 // ─── Composite ranking ─────────────────────────────────────────────
 

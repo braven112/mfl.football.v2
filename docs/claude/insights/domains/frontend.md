@@ -859,3 +859,15 @@ the byte until the surrounding chrome.
 (2026-07-14): 8/11 routes byte-identical text; homepage diff proven to be hero
 randomization; templates/css-customization diverged only at the footer chrome
 (intended TheLeagueLayout migration).
+
+---
+
+## 2026-07-18 - Sticky Table Headers Silently No-Op Inside a Bare `overflow-x: auto` Wrapper
+
+**Context:** The Gauntlet's `StrengthTable.astro` followed the editorial standard — `thead th { position: sticky; top: 0 }` inside a `.sst-scroll { overflow-x: auto }` wrapper — and the header never pinned during page scroll.
+
+**Insight:** Setting `overflow-x: auto` forces the computed `overflow-y` to `auto` as well (CSS spec: one non-visible axis makes both non-visible). The wrapper therefore becomes the sticky element's scroll container — but with no height constraint it grows to full content height, never scrolls vertically itself, and the "sticky" header just sits at the container's top, off-screen while the PAGE scrolls. The sticky behavior isn't broken; it's anchored to the wrong scroller. Fix: give the wrapper a `max-height` (e.g. `70vh`) so vertical scrolling happens inside it and the sticky header actually engages. Any table wrapped for horizontal mobile scroll has this trap — a sticky header + `overflow-x: auto` wrapper without a max-height is a silent no-op everywhere.
+
+**Evidence:** `src/components/shared/schedule-strength/StrengthTable.astro` (`.sst-scroll`), caught in the Gauntlet frontend-ux review; verified reasoning against the CSS overflow spec.
+
+**Recommendation:** When applying the editorial "sticky headers" pattern to a table in a scroll wrapper, either pair `overflow-x: auto` with `max-height` on the same wrapper, or consciously drop the sticky claim for short tables. **Follow-up (same day):** the `max-height` route backfired on the Gauntlet's 16-row table — the inner scrollbox visually truncated the standings and the user read it as "only 13 teams ranked." For full-league ranking tables, prefer showing every row and forgoing the sticky header; reserve the max-height fix for genuinely long tables where an inner scroll region is obvious.

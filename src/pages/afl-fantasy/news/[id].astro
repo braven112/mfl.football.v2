@@ -1,0 +1,124 @@
+---
+/**
+ * Schefter Article Detail Page — AFL Fantasy.
+ *
+ * AFL previously had no full-article route (feed cards linked nowhere), which
+ * blocked longform article types like The Gauntlet. Mirrors the TheLeague
+ * route for content articles; AFL has no auction-grade articles, so the
+ * grade-card branch is deliberately omitted.
+ * Server-rendered so the afl-fantasy.com middleware rewrite works correctly.
+ */
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import SchefterReactionBar from '../../../components/shared/SchefterReactionBar.tsx';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import feedData from '../../../../data/afl-fantasy/schefter-feed.json';
+import type { SchefterFeed } from '../../../types/schefter';
+import '../../../styles/schefter-feed.css';
+import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
+import type { GauntletDerived } from '../../../utils/schedule-strength';
+import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+
+// Lazy glob: GauntletArticleSection imports only the matching issue, and only
+// for posts that carry a scheduleStrength pointer — plain articles pay nothing.
+const gauntletFiles = import.meta.glob<GauntletDerived>(
+  '../../../../data/afl-fantasy/derived/schedule-strength-*.json',
+  { import: 'default' }
+);
+
+const { id } = Astro.params;
+const feed = feedData as SchefterFeed;
+const post = feed.posts.find(p => p.type === 'article' && p.id === id && p.content);
+
+if (!post) {
+  return Astro.redirect('/afl-fantasy/news');
+}
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+const imagePath = post.image ? `/assets/schefter/${post.image}` : null;
+const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric',
+});
+
+---
+
+<TheLeagueLayout title={`${post.headline} — The Schefter Report`}>
+  <div class="sf-article">
+
+    <Breadcrumbs items={[
+      { label: 'AFL Fantasy', href: '/afl-fantasy' },
+      { label: 'The Schefter Report', href: '/afl-fantasy/news' },
+      { label: post.headline },
+    ]} />
+
+    <div class="sf-article__card">
+      {imagePath && (
+        <div class="sf-article__hero-wrap">
+          <img
+            src={imagePath}
+            alt={post.imageAlt ?? post.headline}
+            class="sf-article__hero-img"
+            loading="eager"
+          />
+        </div>
+      )}
+
+      <div class="sf-article__header">
+        <div class="sf-article__meta">
+          <span class="sf-article__badge">Article</span>
+          <span class="sf-article__meta-dot" aria-hidden="true"></span>
+          <time class="sf-article__date" datetime={post.timestamp}>{formattedDate}</time>
+        </div>
+
+        <h1 class="sf-article__title">{post.headline}</h1>
+
+        <div class="sf-article__author">
+          <img class="sf-article__author-avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="32" height="32" />
+          <div>
+            <span class="sf-article__author-name">Claude Schefter</span>
+            <span class="sf-article__author-handle">@schefter</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sf-article__body">
+        {post.content?.map(paragraph => (
+          <p set:html={paragraph} />
+        ))}
+      </div>
+
+      <!-- The Gauntlet: rankings from the shared derived data -->
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={aflConfig.teams}
+        baseUrl="/afl-fantasy"
+        dashboardHref={r('/afl-fantasy/schedule-strength')}
+      />
+
+      <div class="sf-article__reactions">
+        <SchefterReactionBar
+          client:visible
+          postId={post.id}
+          isAuthenticated={false}
+        />
+      </div>
+
+      <div class="sf-article__footer">
+        <a href={r('/afl-fantasy/news')} class="sf-article__footer-link">
+          ← More from The Schefter Report
+        </a>
+      </div>
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .sf-article {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 1rem 0;
+  }
+
+</style>

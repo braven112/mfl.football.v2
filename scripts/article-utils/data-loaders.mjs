@@ -5,10 +5,37 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
 
 /** Load and parse a JSON file. */
 export function loadJSON(filePath) {
   return fs.readFile(filePath, 'utf8').then(JSON.parse);
+}
+
+/** Like loadJSON but resolves null on missing/unparseable files. */
+export async function tryLoadJSON(filePath) {
+  try { return await loadJSON(filePath); } catch { return null; }
+}
+
+/**
+ * Build a schedule.json-shaped object from weekly-results-raw (per-week
+ * matchup arrays with scores). Fallback for past seasons whose schedule.json
+ * was never fetched — played pairings are identical, and a past season has
+ * no future weeks for the raw data to miss.
+ */
+export function scheduleFromRawResults(weeklyResultsRaw) {
+  if (!Array.isArray(weeklyResultsRaw)) return null;
+  const weeklySchedule = weeklyResultsRaw
+    .map(w => w?.weeklyResults)
+    .filter(w => w?.week && Array.isArray(w.matchup))
+    .map(w => ({
+      week: String(w.week),
+      matchup: w.matchup
+        .filter(m => (m.franchise || []).length === 2)
+        .map(m => ({ franchise: m.franchise.map(f => ({ id: f.id, isHome: f.isHome ?? '0' })) })),
+    }));
+  if (weeklySchedule.length === 0) return null;
+  return { schedule: { weeklySchedule } };
 }
 
 /** MFL names are "Last, First" — flip to "First Last". */
@@ -43,15 +70,21 @@ export function formatDefName(name) {
   return `the ${name} defense`;
 }
 
+function leagueRegistry(league = 'theleague') {
+  const reg = LEAGUES[league];
+  if (!reg) throw new Error(`Unknown league: ${league} (expected ${Object.keys(LEAGUES).join(' | ')})`);
+  return reg;
+}
+
 /**
  * Resolve the main repo data directory (handles worktree paths).
  * When running from .claude/worktrees/*, we read from main repo data/.
  */
-export function resolveDataDir(projectRoot, year = 2026) {
+export function resolveDataDir(projectRoot, year = 2026, league = 'theleague') {
   const mainRepo = projectRoot.includes('.claude/worktrees/')
     ? projectRoot.replace(/\.claude\/worktrees\/[^/]+$/, '')
     : projectRoot;
-  return path.join(mainRepo, 'data', 'theleague', 'mfl-feeds', String(year));
+  return path.join(mainRepo, leagueRegistry(league).dataPath, 'mfl-feeds', String(year));
 }
 
 /** Resolve path relative to the main repo (not worktree). */
@@ -85,9 +118,10 @@ export async function loadPlayers(dataDir) {
 
 /**
  * Load team config → Map<franchiseId, {name, abbrev, color, division}>
+ * Config location comes from the registry's configPath.
  */
-export async function loadTeams(projectRoot) {
-  const configPath = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
+export async function loadTeams(projectRoot, league = 'theleague') {
+  const configPath = path.join(projectRoot, ...leagueRegistry(league).configPath.split('/'));
   const config = await loadJSON(configPath);
   const map = new Map();
   for (const t of config.teams) {
@@ -108,9 +142,14 @@ export async function loadLeague(dataDir) {
   return loadJSON(path.join(dataDir, 'league.json'));
 }
 
-/** Feed path for TheLeague. */
-export function getFeedPath(projectRoot) {
-  return path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
+/**
+ * Schefter feed path for a league (default TheLeague). The two feed
+ * locations differ deliberately (TheLeague's feed is a build-time src/data
+ * import; AFL's lives under its dataPath) — the registry's schefterFeedPath
+ * is the single source of truth.
+ */
+export function getFeedPath(projectRoot, league = 'theleague') {
+  return path.join(projectRoot, ...leagueRegistry(league).schefterFeedPath.split('/'));
 }
 
 /** Format a player for display — DEF-aware. */

@@ -28,10 +28,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
+import { postToGroupMe } from './lib/groupme.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -44,26 +45,42 @@ const VALID_TYPES = [
   'championship-recap',
   'draft-grades',
   'team-grades',
+  'schedule-strength',
 ];
+
+const VALID_LEAGUES = ['theleague', 'afl-fantasy'];
+
+// Per-league Schefter GroupMe bot env vars. Roger's bots are never a
+// fallback — if the Schefter bot id is unset, the promo is skipped.
+const GROUPME_BOT_ENV = {
+  theleague: 'GROUPME_SCHEFTER_BOT_ID',
+  'afl-fantasy': 'GROUPME_AFL_SCHEFTER_BOT_ID',
+};
 
 // ── CLI Parsing ──
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { type: null, week: null, year: null, dryRun: false };
+  const opts = { type: null, week: null, year: null, dryRun: false, league: 'theleague' };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--type': opts.type = args[++i]; break;
       case '--week': opts.week = parseInt(args[++i], 10); break;
       case '--year': opts.year = parseInt(args[++i], 10); break;
+      case '--league': opts.league = args[++i]; break;
       case '--dry-run': opts.dryRun = true; break;
     }
   }
 
   if (!opts.type || !VALID_TYPES.includes(opts.type)) {
-    console.error(`Usage: node scripts/schefter-weekly-articles.mjs --type <type> [--week N] [--year N] [--dry-run]`);
+    console.error(`Usage: node scripts/schefter-weekly-articles.mjs --type <type> [--league <league>] [--week N] [--year N] [--dry-run]`);
     console.error(`Valid types: ${VALID_TYPES.join(', ')}`);
+    process.exit(1);
+  }
+
+  if (!VALID_LEAGUES.includes(opts.league)) {
+    console.error(`Unknown --league ${opts.league}. Valid leagues: ${VALID_LEAGUES.join(', ')}`);
     process.exit(1);
   }
 
@@ -98,13 +115,13 @@ async function loadDataFiles(dataDir, keys) {
 
 async function main() {
   const opts = parseArgs();
-  const { type, dryRun } = opts;
+  const { type, dryRun, league } = opts;
 
-  console.log(`\n🎙️ Schefter Article Generator — ${type}\n`);
+  console.log(`\n🎙️ Schefter Article Generator — ${type} (${league})\n`);
 
   // Step 1: Resolve year + week
   const year = opts.year ?? getSeasonYear();
-  const dataDir = resolveDataDir(projectRoot, year);
+  const dataDir = resolveDataDir(projectRoot, year, league);
 
   // Load weekly results for completed week detection
   let weeklyResults;
@@ -114,7 +131,17 @@ async function main() {
     weeklyResults = { weeks: [] };
   }
 
-  const completedWeek = getCompletedWeek(weeklyResults);
+  // League-aware completeness threshold: a week only counts as complete once
+  // every franchise has a score (16 for TheLeague, 24 for AFL). Use the
+  // league config's team count — the SAME source compute-schedule-strength
+  // uses — so both scripts always resolve the same week (a mismatch makes
+  // the article look for a derived file compute never wrote).
+  let franchiseCount = 16;
+  try {
+    franchiseCount = (await loadTeams(projectRoot, league)).size || 16;
+  } catch { /* keep default */ }
+
+  const completedWeek = getCompletedWeek(weeklyResults, franchiseCount);
   const currentWeek = getCurrentNFLWeek(year);
   const week = opts.week ?? completedWeek;
 
@@ -133,11 +160,11 @@ async function main() {
   }
 
   // Step 4: Generate deterministic article ID
-  const articleId = mod.config.id(year, week);
+  const articleId = mod.config.id(year, week, league);
   console.log(`  Article ID: ${articleId}`);
 
   // Step 5: Dedup check
-  const feedPath = getFeedPath(projectRoot);
+  const feedPath = getFeedPath(projectRoot, league);
   if (await isDuplicate(feedPath, articleId)) {
     console.log(`  [skip] Article ${articleId} already exists in feed. Exiting.`);
     return;
@@ -157,9 +184,15 @@ async function main() {
     );
   }
 
-  // Step 7: Build fact sheet (deterministic — no AI)
+  // Step 7: Build fact sheet (deterministic — no AI). A null return is a
+  // clean skip (e.g. schedule-strength at season end).
   console.log('  Building fact sheet...');
-  const { factSheet, enrichment } = await mod.buildFactSheet(data, week, year, projectRoot);
+  const factSheetResult = await mod.buildFactSheet(data, week, year, projectRoot, { league });
+  if (!factSheetResult) {
+    console.log('  [skip] Fact sheet builder declined to run. Exiting cleanly.');
+    return;
+  }
+  const { factSheet, enrichment } = factSheetResult;
 
   if (dryRun) {
     console.log('\n--- FACT SHEET (dry run) ---\n');
@@ -184,10 +217,30 @@ async function main() {
   }
 
   // Step 10: Build post and append to feed
-  const post = mod.buildPost(aiOutput, enrichment, articleId);
+  const post = mod.buildPost(aiOutput, enrichment, articleId, { league });
   const written = await appendToFeed(feedPath, post);
   if (written) {
     console.log(`\n✅ Article "${post.headline}" appended to feed.`);
+  }
+
+  // Step 11: GroupMe promo — only for article types that define one, and only
+  // when the feed write actually happened this run (a re-run must never
+  // re-buzz the chat; same no-double-ping rule as schefter-announce.mjs).
+  if (written && typeof mod.buildGroupMePromo === 'function') {
+    const text = mod.buildGroupMePromo(post, enrichment, { league });
+    if (text) {
+      const botId = process.env[GROUPME_BOT_ENV[league]];
+      const { posted } = await postToGroupMe({
+        botId,
+        text,
+        checkStatus: true,
+        onMissingBotId: () => console.log(`  [groupme] ${GROUPME_BOT_ENV[league]} not set — skipping promo.`),
+        onPosted: () => console.log('  [groupme] promo posted.'),
+        onHttpError: (status) => console.warn(`  [groupme] promo failed: HTTP ${status}`),
+        onFetchError: (err) => console.warn(`  [groupme] promo failed: ${err.message}`),
+      });
+      if (!posted) console.log('  [groupme] promo not delivered (see above).');
+    }
   }
 }
 
