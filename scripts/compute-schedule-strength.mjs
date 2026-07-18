@@ -17,8 +17,9 @@
  *
  * "Week N" = the upcoming week (last completed week + 1). Past difficulty is
  * computed over completed weeks; remaining difficulty over scheduled weeks
- * >= N. Trends diff against the most recent earlier week's file, so keep
- * prior weeks' files in place (they're small).
+ * >= N. Trends diff against the most recent earlier week's file BEFORE the
+ * new write; superseded weekly files are then pruned so exactly one file per
+ * year survives (the dashboards eager-glob this directory).
  */
 
 import { promises as fs } from 'node:fs';
@@ -316,6 +317,20 @@ async function runLeague(slug, opts) {
   await fs.mkdir(path.dirname(outPath), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(result, null, 2));
   console.log(`  [${slug}] wrote ${path.relative(projectRoot, outPath)} (week ${week}, ${result.runIn.length} teams)`);
+
+  // Prune superseded weekly files for this year. Trends were already attached
+  // above from the prior week's file, and next week's run only needs THIS
+  // file — so one file per year is all that ever needs to exist. Without
+  // pruning, the dashboards' eager import.meta.glob bundles every historical
+  // weekly snapshot (17/season/league) into the server chunk forever.
+  const derivedDir = path.dirname(outPath);
+  const keep = path.basename(outPath);
+  for (const f of await fs.readdir(derivedDir)) {
+    if (f.startsWith(`schedule-strength-${year}-w`) && f !== keep) {
+      await fs.unlink(path.join(derivedDir, f));
+      console.log(`  [${slug}] pruned superseded ${f}`);
+    }
+  }
   return result;
 }
 

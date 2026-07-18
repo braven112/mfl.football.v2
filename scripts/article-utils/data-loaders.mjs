@@ -92,9 +92,12 @@ export async function loadPlayers(dataDir) {
 
 /**
  * Load team config → Map<franchiseId, {name, abbrev, color, division}>
+ * TheLeague's config lives under src/data; AFL's under its dataPath.
  */
-export async function loadTeams(projectRoot) {
-  const configPath = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
+export async function loadTeams(projectRoot, league = 'theleague') {
+  const configPath = league === 'theleague'
+    ? path.join(projectRoot, 'src', 'data', 'theleague.config.json')
+    : path.join(projectRoot, leagueRegistry(league).dataPath, 'afl.config.json');
   const config = await loadJSON(configPath);
   const map = new Map();
   for (const t of config.teams) {

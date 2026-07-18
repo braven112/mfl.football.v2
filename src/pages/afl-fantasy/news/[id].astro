@@ -23,9 +23,11 @@ import { resolveGauntletView, type GauntletDerived } from '../../../utils/schedu
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import '../../../styles/schedule-strength.css';
 
+// Lazy glob: only the one matching issue is imported, and only for posts that
+// carry a scheduleStrength pointer — plain articles pay nothing.
 const gauntletFiles = import.meta.glob<GauntletDerived>(
   '../../../../data/afl-fantasy/derived/schedule-strength-*.json',
-  { eager: true, import: 'default' }
+  { import: 'default' }
 );
 
 const { id } = Astro.params;
@@ -43,19 +45,21 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
 });
 
 const gauntletRef = post.scheduleStrength ?? null;
-const gauntletView = gauntletRef
-  ? resolveGauntletView({
-      files: Object.fromEntries(
-        Object.entries(gauntletFiles).filter(([file]) =>
-          file.endsWith(`schedule-strength-${gauntletRef.year}-w${String(gauntletRef.week).padStart(2, '0')}.json`)
-        )
-      ),
+let gauntletView = null;
+if (gauntletRef) {
+  const suffix = `schedule-strength-${gauntletRef.year}-w${String(gauntletRef.week).padStart(2, '0')}.json`;
+  const key = Object.keys(gauntletFiles).find(file => file.endsWith(suffix));
+  const derived = key ? await gauntletFiles[key]() : null;
+  if (key && derived) {
+    gauntletView = resolveGauntletView({
+      files: { [key]: derived },
       teams: aflConfig.teams,
       baseUrl: '/afl-fantasy',
       pagePath: '/afl-fantasy/schedule-strength',
       requestedYear: String(gauntletRef.year),
-    })
-  : null;
+    });
+  }
+}
 ---
 
 <TheLeagueLayout title={`${post.headline} — The Schefter Report`}>

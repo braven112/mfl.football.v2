@@ -12,7 +12,7 @@ import type { TrapWeek } from '../components/shared/schedule-strength/TrapWeeksS
 import type { YearOption } from '../components/shared/schedule-strength/GauntletDashboard.astro';
 
 export interface GauntletDerived {
-  league: string;
+  league: 'theleague' | 'afl-fantasy';
   year: number;
   week: number;
   columnName: string;
