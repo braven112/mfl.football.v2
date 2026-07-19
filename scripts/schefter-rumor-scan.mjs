@@ -173,6 +173,10 @@ const PLAYERS_PATH = SCHEFTER_LEAGUE.playersPath;
 
 const RUMOR_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:posts_today');
 const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_today');
+// Counts GENERATION cycles (delivered or suppressed) — the aggregate
+// LLM-rate ceiling, NOT a posting budget. See checkGates and the
+// BUDGET-ON-DELIVERY sentinel for why the two are separate counters.
+const RUMOR_GEN_ATTEMPTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gen_attempts_today');
 const RUMOR_LAST_POST_TS_KEY = schefterKey(NAV_SLUG, 'rumor:last_post_ts');
 const FIRST_TIP_TS_KEY = schefterKey(NAV_SLUG, 'tips:first_tip_ts');
 const TIPS_QUEUE_KEY = schefterKey(NAV_SLUG, 'tips:queue');
@@ -247,6 +251,12 @@ const ROGER_RIFF_PROBABILITY = 0.07;
 // reserved for trade rumors. When the backlog is deep OR a tip is aging
 // out we bump the gossip cap by one that day — see computeAdaptiveGossipCap.
 const MAX_POSTS_PER_DAY = 3;
+// LLM safety valve: max generation cycles per day, counted whether the
+// beat ships or gets suppressed. Posting budgets count delivered posts
+// only, so without this an all-suppressed day would re-generate on every
+// 15-min cron tick (~64 LLM rounds). Generous by design — 4× the posting
+// cap — because it exists to stop runaway spend, not to shape cadence.
+const MAX_GEN_ATTEMPTS_PER_DAY = 12;
 const MAX_GOSSIP_POSTS_PER_DAY = 1;
 const MAX_GOSSIP_POSTS_PER_DAY_ADAPTIVE = 2;
 const GOSSIP_BOOST_QUEUE_DEPTH = 6;
@@ -275,6 +285,9 @@ const PROCESSED_TTL_SEC = 24 * 60 * 60;
 // next cycle — at which point a corroborating tip about the same franchise
 // can promote the scope to "franchise-multi-source" (rule 4) and clear the
 // new specificity bar. Tips that exceed either threshold below are dropped.
+// MAX_SUPPRESSED_STRIKES is per-TIP across all cycles (3 generation
+// attempts lifetime), not a per-cycle counter — the per-day generation
+// ceiling is MAX_GEN_ATTEMPTS_PER_DAY.
 const MAX_SUPPRESSED_STRIKES = 3;
 const MAX_HELD_MS = 48 * 60 * 60 * 1000;
 
@@ -2735,6 +2748,17 @@ async function checkGates(redis, now) {
     return { ok: false, reason: `posts_today=${postsToday} — daily cap reached` };
   }
 
+  // 2b. generation-attempt safety valve. Posting budgets count DELIVERED
+  // posts only (BUDGET-ON-DELIVERY sentinel), so on an all-suppressed day
+  // nothing above would ever trip — this separate attempt counter is the
+  // aggregate LLM-rate ceiling that stops every cron tick from burning a
+  // generate+score round against a queue of unshippable tips.
+  const genAttemptsRaw = await redis.get(RUMOR_GEN_ATTEMPTS_TODAY_KEY);
+  const genAttempts = typeof genAttemptsRaw === 'number' ? genAttemptsRaw : parseInt(genAttemptsRaw ?? '0', 10) || 0;
+  if (genAttempts >= MAX_GEN_ATTEMPTS_PER_DAY) {
+    return { ok: false, reason: `gen_attempts_today=${genAttempts} — LLM safety valve (max ${MAX_GEN_ATTEMPTS_PER_DAY}/day)` };
+  }
+
   // 3. spacing (only enforced once there has been a post today)
   if (postsToday >= 1) {
     const lastRaw = await redis.get(RUMOR_LAST_POST_TS_KEY);
@@ -3530,36 +3554,46 @@ async function main() {
   // RELAXED_QUALITY_THRESHOLD. A beat runs against the relaxed bar when
   // EITHER holds:
   //   - league drought: this league's feed has no rumor-mill post in the
-  //     last RUMOR_QUIET_FEED_DAYS (or none ever — a fresh launch), or
+  //     last RUMOR_QUIET_FEED_DAYS (or none ever — a fresh launch).
+  //     Applies to EVERY beat in the cycle, whatever its lane — a silent
+  //     league is the whole reason to loosen up.
   //   - fresh subject: the beat's bucket fingerprint has not shipped a post
   //     during the current ISO week. The recurrence ledger is stamped only
   //     on delivery, so it is the source of truth for "posted about it".
+  //     Only fingerprint lanes qualify — bucketFingerprint() returns null
+  //     for trade-offer / whisper-back buckets (and mailbag beats have no
+  //     single bucket), so those stay on the standard bar.
+  // Note the deliberate consequence: any subject that hasn't shipped this
+  // week — including a brand-new one — gets the 3-bar. That is Brandon's
+  // rule verbatim ("a 3/10 is ok to post if he hasn't posted about it that
+  // week"); the strict 6-bar applies to repeat coverage within a week.
   // Scores of 1-2 (hallucinated / contradictory) still suppress either way.
   const RUMOR_QUIET_FEED_DAYS = 7;
-  const newestRumorTs = (feedForAnonymize.posts ?? [])
-    .filter((p) => p?.transactionSubType === RUMOR_SUB_TYPE)
-    .reduce((acc, p) => Math.max(acc, new Date(p.timestamp).getTime() || 0), 0);
+  const newestRumorTs = (feedForAnonymize.posts ?? []).reduce(
+    (acc, p) =>
+      p?.transactionSubType === RUMOR_SUB_TYPE
+        ? Math.max(acc, new Date(p.timestamp).getTime() || 0)
+        : acc,
+    0,
+  );
   const leagueQuiet =
     newestRumorTs === 0 ||
     now.getTime() - newestRumorTs > RUMOR_QUIET_FEED_DAYS * 24 * 60 * 60 * 1000;
-  const relaxedThresholdFor = (beat) => {
+  const relaxedThresholdFor = (beatIndex) => {
     if (leagueQuiet) return { threshold: RELAXED_QUALITY_THRESHOLD, why: `league quiet ${RUMOR_QUIET_FEED_DAYS}d` };
-    try {
-      const [bucket] = buildTopicBuckets(beat?.batch ?? []);
-      const fp = bucket ? bucketFingerprint(bucket) : null;
-      const weeksSeen = fp ? (recurrenceLedger?.fingerprints?.[fp]?.weeksSeen ?? []) : null;
-      if (weeksSeen && !weeksSeen.includes(currentIsoWeek)) {
-        return { threshold: RELAXED_QUALITY_THRESHOLD, why: 'fresh subject this week' };
-      }
-    } catch {
-      /* non-fingerprint lanes fall through to the standard threshold */
+    // Each beat's bucket was already resolved when the beat was built —
+    // reuse it rather than re-clustering the batch.
+    const bucket = beatBuckets[beatIndex] ?? null;
+    const fp = bucket ? bucketFingerprint(bucket) : null;
+    if (fp && !(recurrenceLedger?.fingerprints?.[fp]?.weeksSeen ?? []).includes(currentIsoWeek)) {
+      return { threshold: RELAXED_QUALITY_THRESHOLD, why: 'fresh subject this week' };
     }
     return null;
   };
   const gateResults = await Promise.all(
     builtPosts.map((p, i) => {
       const primaryTip = beats[i]?.anonymized?.[0];
-      const relaxed = relaxedThresholdFor(beats[i]);
+      const relaxed = relaxedThresholdFor(i);
       if (relaxed) {
         log(`  [quality-gate] relaxed threshold ${relaxed.threshold} for beat ${i + 1} (${relaxed.why})`);
       }
@@ -3575,12 +3609,15 @@ async function main() {
           apiKey: process.env.ANTHROPIC_API_KEY,
           log,
           warn,
-          ...(relaxed ? { threshold: relaxed.threshold } : {}),
+          // undefined falls back to QUALITY_THRESHOLD inside the gate.
+          threshold: relaxed?.threshold,
         },
       );
     }),
   );
 
+  // gateResults order matches beats/builtPosts order (Promise.all
+  // preserves input order), so index i is safe to share across all three.
   const allowedIndexSet = new Set(
     gateResults
       .map((g, i) => (g && g.allow !== false ? i : -1))
@@ -3641,13 +3678,23 @@ async function main() {
     if (unusedTips.length > 0) {
       log(`  [dry-run] Would hold ${unusedTips.length} unchosen-bucket tip(s) for the next cycle: ${unusedTips.map((t) => t.id).join(', ')}`);
     }
+    log('  [dry-run] Would increment gen_attempts_today by 1 (LLM safety valve — counts every generation cycle)');
     if (allowedPosts.length > 0) {
       log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''}, set last_post_ts (budgets count delivered posts only)`);
     } else {
       log('  [dry-run] Fully-suppressed cycle — would consume NO daily budget (posts_today, gossip cap, spacing all unchanged)');
     }
+    // Mirror the real path's delivery gating exactly — the riff/greeting
+    // stamps only burn when beat 0 (their carrier) actually ships.
     if (hadRogerRiff) {
-      log(`  [dry-run] Would set ${ROGER_LAST_RIFF_DATE_KEY}=${todayPt} (ex=48h)`);
+      log(`  [dry-run] ${allowedIndexSet.has(0)
+        ? `Would set ${ROGER_LAST_RIFF_DATE_KEY}=${todayPt} (ex=48h)`
+        : 'Riff beat suppressed — would NOT set roger riff date'}`);
+    }
+    if (morningGreeting) {
+      log(`  [dry-run] ${allowedIndexSet.has(0)
+        ? `Would set ${MORNING_GREETING_DATE_KEY}=${todayPt} (ex=48h)`
+        : 'Greeting beat suppressed — would NOT set morning-greeting date'}`);
     }
     for (const p of allowedPosts) {
       await postToGroupMe(groupMeTextFor(p));
@@ -3792,6 +3839,25 @@ async function main() {
     // and quiet hours block 8h/day. tests/schefter-gossip-budget.test.ts
     // greps for this sentinel — do not delete it without replacing the
     // coverage.
+    // Attempt counter (LLM safety valve) — the ONE counter that runs on
+    // every generation cycle, delivered or suppressed. Not a posting
+    // budget; see checkGates 2b.
+    const genAttempts = await redis.incr(RUMOR_GEN_ATTEMPTS_TODAY_KEY);
+    if (genAttempts === 1) {
+      await redis.expire(RUMOR_GEN_ATTEMPTS_TODAY_KEY, secondsUntilPtMidnight(now));
+    }
+
+    if (postKind === 'mailbag') {
+      // Once-per-Friday ATTEMPT marker — deliberately NOT delivery-gated,
+      // unlike the posting budgets below. A suppressed mailbag re-firing
+      // every 15-min cycle would strike every swept gossip tip to
+      // exhaustion within the hour, wiping the very backlog the mailbag
+      // exists to preserve. One attempt per Friday; a suppressed sweep's
+      // tips keep one strike and surface via the normal lane or next week.
+      await redis.set(FRIDAY_MAILBAG_DONE_KEY, todayPtDate, { ex: 48 * 60 * 60 });
+      log(`  [mailbag] Marked done for ${todayPtDate}${allowedPosts.length === 0 ? ' (suppressed — attempt still consumed to protect the swept tips)' : ''}`);
+    }
+
     let newCount = null;
     if (allowedPosts.length > 0) {
       newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
@@ -3804,12 +3870,6 @@ async function main() {
           await redis.expire(RUMOR_GOSSIP_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
         }
         log(`  Gossip counter: now ${newGossipCount}/${adaptiveGossipCap}`);
-      }
-      if (postKind === 'mailbag') {
-        // Mark today's mailbag done. 48h TTL — the key naturally falls off
-        // before next Friday even if clocks skew.
-        await redis.set(FRIDAY_MAILBAG_DONE_KEY, todayPtDate, { ex: 48 * 60 * 60 });
-        log(`  [mailbag] Marked done for ${todayPtDate}`);
       }
       // Spacing anchor — starts the 4h chat-cadence clock from this delivery.
       await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());

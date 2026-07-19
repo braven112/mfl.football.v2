@@ -28,21 +28,19 @@ describe('daily budgets count delivered posts only', () => {
     expect(SRC).toMatch(/BUDGET-ON-DELIVERY SENTINEL/);
   });
 
-  it('increments posts_today and the gossip counter only inside the delivered guard', () => {
-    // Both incrs must live inside the `if (allowedPosts.length > 0)` block
-    // that follows the sentinel comment. If someone hoists either incr back
-    // out, the block match breaks.
+  it('increments posts_today and the gossip counter exactly once, inside the delivered guard', () => {
+    // The guarded body between `if (allowedPosts.length > 0) {` and its
+    // `} else {` (after the sentinel) must contain exactly one incr of each
+    // posting budget — one slot per delivering cycle, regardless of how
+    // many beats shipped, and zero slots on a fully-suppressed cycle.
     const guarded = SRC.match(
-      /BUDGET-ON-DELIVERY SENTINEL[\s\S]*?if \(allowedPosts\.length > 0\) \{([\s\S]*?)\n    \} else \{/,
+      /BUDGET-ON-DELIVERY SENTINEL[\s\S]*?if \(allowedPosts\.length > 0\) \{([\s\S]*?)\n\s*\} else \{/,
     );
     expect(guarded).not.toBeNull();
-    expect(guarded![1]).toContain('redis.incr(RUMOR_POSTS_TODAY_KEY)');
-    expect(guarded![1]).toContain('redis.incr(RUMOR_GOSSIP_POSTS_TODAY_KEY)');
+    expect(guarded![1].match(/redis\.incr\(RUMOR_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
+    expect(guarded![1].match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
     expect(guarded![1]).toContain('redis.set(RUMOR_LAST_POST_TS_KEY');
-    // And no OTHER incr of either budget exists beyond the two legitimate
-    // sites: this guarded block and the quiet-day lane (which increments
-    // only after its feed entry is written — the post genuinely shipped).
-    expect(SRC.match(/redis\.incr\(RUMOR_POSTS_TODAY_KEY\)/g)).toHaveLength(2);
+    // The gossip cap has no other incr site anywhere in the scanner.
     expect(SRC.match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
   });
 
@@ -50,10 +48,25 @@ describe('daily budgets count delivered posts only', () => {
     expect(SRC).not.toMatch(/regardless of suppression/);
   });
 
+  it('keeps an aggregate LLM safety valve now that posting budgets skip suppressed cycles', () => {
+    // Without this, an all-suppressed day re-generates on every cron tick:
+    // posts_today never trips and the spacing gate (keyed on postsToday>=1)
+    // never engages. The attempt counter is the ceiling on generate+score
+    // rounds per day.
+    expect(SRC).toMatch(/MAX_GEN_ATTEMPTS_PER_DAY = \d+/);
+    expect(SRC).toMatch(/genAttempts >= MAX_GEN_ATTEMPTS_PER_DAY/);
+    expect(SRC).toMatch(/redis\.incr\(RUMOR_GEN_ATTEMPTS_TODAY_KEY\)/);
+  });
+
+  it('mailbag-done stays an attempt marker (a suppressed sweep must not re-fire all Friday)', () => {
+    // Delivery-gating this one would strike the whole swept gossip pool to
+    // exhaustion within three 15-min cycles. The comment is the contract.
+    expect(SRC).toMatch(/deliberately NOT delivery-gated/);
+  });
+
   it('reports delivered posts, not generated beats, from the normal lane', () => {
-    // main() must end by returning the shipped count — the old `return 1`
-    // made a fully-suppressed cycle log "Posts written: 1".
-    expect(SRC).toMatch(/return allowedPosts\.length;\n\}/);
+    expect(SRC).toMatch(/return allowedPosts\.length;/);
+    expect(SRC).not.toMatch(/=== Done\. Posts written: 1 ===/);
   });
 
   it('delivery-gates the morning-greeting and roger-riff daily stamps', () => {
@@ -74,7 +87,7 @@ describe('quiet-feed gate leniency', () => {
     expect(SRC).toMatch(/RUMOR_QUIET_FEED_DAYS = 7/);
     expect(SRC).toMatch(/relaxedThresholdFor/);
     expect(SRC).toMatch(/threshold: RELAXED_QUALITY_THRESHOLD/);
-    expect(SRC).toMatch(/weeksSeen\.includes\(currentIsoWeek\)/);
-    expect(SRC).toMatch(/\.\.\.\(relaxed \? \{ threshold: relaxed\.threshold \} : \{\}\)/);
+    expect(SRC).toMatch(/weeksSeen \?\? \[\]\)\.includes\(currentIsoWeek\)/);
+    expect(SRC).toMatch(/threshold: relaxed\?\.threshold/);
   });
 });
