@@ -1,6 +1,6 @@
 /**
  * Tests for the August cuts deadline job's pure decision logic
- * (scripts/lib/august-cuts-logic.mjs) plus source-contract assertions on the
+ * (src/utils/august-cuts-logic.mjs) plus source-contract assertions on the
  * orchestrator script itself (grep-sentinel style, like
  * tests/schefter-quiet-day.test.ts).
  *
@@ -28,7 +28,7 @@ import {
   appendOutcome,
   mergeSnapshot,
   snapshotHasOutcomes,
-} from '../scripts/lib/august-cuts-logic.mjs';
+} from '../src/utils/august-cuts-logic.mjs';
 // @ts-expect-error — sibling .mjs module, no .d.ts
 import { getAugustCutdownDate, calendarDaysUntilCutdown } from '../scripts/lib/august-cutdown.mjs';
 

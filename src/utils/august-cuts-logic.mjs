@@ -12,7 +12,7 @@
  * deadline instant.
  */
 
-import { shouldFireReminder } from './roger-reminder-window.mjs';
+import { shouldFireReminder } from '../../scripts/lib/roger-reminder-window.mjs';
 
 /** Max execution attempts per franchise before it's left for the commissioner. */
 export const MAX_ATTEMPTS = 3;

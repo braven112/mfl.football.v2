@@ -8923,11 +8923,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         ) {
           const autocutPriority = getMarkedOnRoster().indexOf(autocutPid) + 1;
           const isAutocutMarked = autocutPriority > 0;
+          // Badge-honesty mirror: a mark below the current cut line won't
+          // execute at today's roster count — don't imply it will.
+          const autocutBelowLine =
+            isAutocutMarked && autocutPriority > Math.max(computeAutocutSlate().overage, 0);
           actionOptions.appendChild(makeCdmActionBtn(
             'autocut-toggle',
             isAutocutMarked ? 'Unmark auto-cut' : 'Mark for August auto-cut',
             isAutocutMarked
-              ? `Priority #${autocutPriority} in your cut order — click to remove`
+              ? `Priority #${autocutPriority} in your cut order${autocutBelowLine ? ' — below the cut line, safe unless your roster grows' : ''} — click to remove`
               : `Cut automatically at the deadline if you're over ${config.targetActiveCount ?? 22}`,
             () => toggleAutocutMark(autocutPid, isAutocutMarked),
             false, 'icon-clipboard'
@@ -9496,14 +9500,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // ---- Roster-row badge ("AUTO-CUT #2") --------------------------
+    // ---- Roster-row badge ("AUTO-CUT #2" / "MARKED #4") ------------
+    // Badge honesty: only marks at/above the current cut line (priority ≤
+    // overage) will actually execute; marks beyond it are staged and safe
+    // unless the roster grows — say so instead of implying execution.
     const buildAutocutBadgeHTML = (playerId) => {
       const priority = getMarkedOnRoster().indexOf(String(playerId)) + 1;
       if (priority < 1) return '';
+      const cutLine = Math.max(computeAutocutSlate().overage, 0);
+      const belowLine = priority > cutLine;
+      const title = belowLine
+        ? `Marked #${priority} — below the current cut line; safe unless your roster grows`
+        : `Marked for August auto-cut — priority ${priority}`;
       return (
-        `<span class="autocut-badge" title="Marked for August auto-cut — priority ${priority}">` +
+        `<span class="autocut-badge${belowLine ? ' autocut-badge--below-line' : ''}" title="${title}">` +
         `<svg aria-hidden="true" width="12" height="12"><use href="/assets/icons/sprite.svg#icon-clipboard"></use></svg>` +
-        `<span>AUTO-CUT #${priority}</span></span>`
+        `<span>${belowLine ? 'MARKED' : 'AUTO-CUT'} #${priority}</span></span>`
       );
     };
 
@@ -9678,6 +9690,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         // Do NOT auto-close the modal (unlike trade-block) — re-render the
         // option in place so the owner can keep marking players.
         if (cdmPlayerData) populateCdmActionOptions(cdmPlayerData.eligibility);
+        // The rebuild destroyed the clicked button — restore keyboard focus
+        // to the fresh toggle so repeated marking doesn't drop focus.
+        document
+          .querySelector('#cdm-action-options .cdm-action-option--autocut-toggle')
+          ?.focus();
       };
 
       autocutState.saving = true;
@@ -9714,6 +9731,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     // ---- Cutdown Plan panel rendering -------------------------------
     const renderCdpCountdown = () => {
+      // The interval tick keeps firing after a view/demo switch hides the
+      // panel — never write countdown copy unless this is the owner's view.
+      if (!isAutocutOwnView()) return;
       const el = document.getElementById('cdp-status-countdown');
       if (!el || !autocutCfg) return;
       const ms = new Date(autocutCfg.deadline).getTime() - Date.now();
@@ -9762,8 +9782,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       } else if (autocutState.savedUpdatedAt) {
         statusEl.dataset.state = 'saved';
         statusEl.innerHTML =
-          `Cut list saved ${fmtCdpDate(autocutState.savedUpdatedAt)}.` +
-          `<span class="cdp-save-status__muted">Server credential storage is unavailable — the deadline automation may not be able to execute these cuts for you.</span>`;
+          `Cut list saved ${fmtCdpDate(autocutState.savedUpdatedAt)}, but your login isn't verified.` +
+          `<span class="cdp-save-status__muted">The deadline automation may not be able to execute these cuts. Re-save to refresh.</span>`;
       } else {
         statusEl.dataset.state = 'none';
         statusEl.textContent = '';
@@ -9865,7 +9885,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               const priority = idx + 1;
               const total = markedCutIds.length;
               return (
-                `<li class="cdp-slate__row cdp-slate__row--marked" data-player-id="${escCdp(cut.playerId)}" draggable="${dragEnabled ? 'true' : 'false'}" tabindex="0">` +
+                `<li class="cdp-slate__row cdp-slate__row--marked" data-player-id="${escCdp(cut.playerId)}" draggable="${dragEnabled ? 'true' : 'false'}">` +
                 `<span class="cdp-slate__priority" aria-hidden="true">${priority}</span>` +
                 `<div class="cdp-slate__reorder" role="group" aria-label="Reorder ${escCdp(name)}, priority ${priority} of ${total}">` +
                 `<button type="button" class="cdp-arrow" data-direction="up" data-player-id="${escCdp(cut.playerId)}" aria-label="Move ${escCdp(name)} up in cut priority"${idx === 0 ? ' disabled' : ''}>` +
@@ -10040,6 +10060,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (errEl) {
         errEl.hidden = true;
         errEl.innerHTML = '';
+        // A fresh confirm session must not inherit last run's alert state.
+        errEl.removeAttribute('role');
+        errEl.removeAttribute('tabindex');
       }
       if (confirmBtn) {
         confirmBtn.disabled = false;
@@ -10155,14 +10178,24 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         if (cancelBtn) cancelBtn.disabled = false;
       } else {
         cdpCutRetryIds = failures.map((f) => f.id);
+        // Don't leave the aria-live progress label stale on failure — it's
+        // what AT users hear first.
+        if (label) {
+          label.textContent = `${failures.length} of ${cutIds.length} cuts failed — see details`;
+        }
         if (errEl) {
-          errEl.hidden = false;
+          // Set role BEFORE content so role-change-with-content AT combos
+          // announce (same pattern as renderCdpSaveState).
+          errEl.setAttribute('role', 'alert');
           errEl.innerHTML =
             `<strong>${failures.length} of ${cutIds.length} cuts failed.</strong><br/>` +
             failures
               .map((f) => `${escCdp(nameOf.get(f.id))}: ${escCdp(f.message)}`)
               .join('<br/>') +
             '<br/><br/>Any successful cuts went through. Retry runs only the failed players.';
+          errEl.hidden = false;
+          errEl.setAttribute('tabindex', '-1');
+          errEl.focus();
         }
         // Per-player inline failure state on the confirmation rows
         const listEl = document.getElementById('cdp-cutnow-list');

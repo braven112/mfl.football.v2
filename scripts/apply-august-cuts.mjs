@@ -81,13 +81,15 @@ import {
   appendOutcome,
   mergeSnapshot,
   snapshotHasOutcomes,
-} from './lib/august-cuts-logic.mjs';
+} from '../src/utils/august-cuts-logic.mjs';
 import {
   selectAutoCuts,
   parseAcquisitionEvents,
   ACTIVE_ROSTER_STATUS,
 } from '../src/utils/august-cut-selection-core.mjs';
 import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+// Shared franchise-id normalization (matches auth.ts / autocut-storage.ts).
+import { normalizeFranchiseId as pad4 } from '../src/utils/franchise-id.mjs';
 
 const LEAGUE = getLeagueBySlug(DEFAULT_LEAGUE_SLUG);
 const LEAGUE_ID = LEAGUE.id;
@@ -126,11 +128,6 @@ function parseArgs(argv) {
 // ---------------------------------------------------------------------------
 // Redis helpers (raw REST — the .ts storage utils gate on process.env.VERCEL)
 // ---------------------------------------------------------------------------
-
-function pad4(franchiseId) {
-  const trimmed = `${franchiseId ?? ''}`.trim();
-  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
-}
 
 const cutListKey = (fid) => `autocut:${pad4(fid)}`;
 const credKey = (fid) => `autocut:cred:${pad4(fid)}`;

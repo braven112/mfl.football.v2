@@ -48,6 +48,9 @@ async function isMflCookieLive(mflUserCookie: string, year: number): Promise<boo
     });
     if (!response.ok) return false;
     const data = await response.json().catch(() => null);
+    // Observed inconsistency: some MFL hosts/years wrap the response as
+    // {"myleagues":{"league":[...]}} and others as {"leagues":{"league":[...]}}
+    // (docs/claude/insights/domains/mfl-api.md, myleagues entries) — accept both.
     const leagues = data?.myleagues?.league ?? data?.leagues?.league ?? [];
     const leagueList = Array.isArray(leagues) ? leagues : leagues ? [leagues] : [];
     return leagueList.length > 0;

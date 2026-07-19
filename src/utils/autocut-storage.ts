@@ -23,6 +23,8 @@
 
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { getRedis } from './redis-client';
+// Shared normalization (matches auth.ts) so '1' and '0001' share a key.
+import { normalizeFranchiseId } from './franchise-id.mjs';
 
 /** Stale threshold for stored credentials (tunable league decision #7). */
 export const CREDENTIAL_MAX_AGE_DAYS = 30;
@@ -55,12 +57,6 @@ export interface StoredCredential {
   /** Raw decrypted MFL_USER_ID cookie value. NEVER log or return over HTTP. */
   cookie: string;
   capturedAt: string;
-}
-
-/** Match auth.ts's franchise normalization so '1' and '0001' share a key. */
-function normalizeFranchiseId(franchiseId: string): string {
-  const trimmed = `${franchiseId ?? ''}`.trim();
-  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
 }
 
 export function cutListKey(franchiseId: string): string {

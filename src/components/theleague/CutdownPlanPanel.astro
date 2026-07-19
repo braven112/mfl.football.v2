@@ -321,7 +321,10 @@ const { deadlineLabel, username } = Astro.props;
     text-transform: none;
   }
   .cdp-slate__cap-item--savings strong {
-    color: var(--secondary-color, #2e8743);
+    /* Direct hex, not var(--secondary-color): the token's #2e8743 fails
+       4.5:1 contrast on the amber-tinted marked rows; #1f6b34 passes there
+       and on white. */
+    color: #1f6b34;
   }
 
   .cdp-slate__footer {
@@ -463,6 +466,13 @@ const { deadlineLabel, username } = Astro.props;
     color: var(--autocut-accent, #f59e0b);
     flex-shrink: 0;
   }
+  /* Marked but below the current cut line ("MARKED #N") — same shape,
+     muted amber, so it reads as staged rather than executing. */
+  .autocut-badge--below-line {
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 8%, transparent);
+    border-color: color-mix(in srgb, var(--autocut-accent, #f59e0b) 30%, transparent);
+    color: var(--color-gray-700, #374151);
+  }
 
   /* ── Modals (shared shell: frosted backdrop, mobile bottom sheet) ── */
   .cdp-reauth-overlay,
@@ -473,7 +483,7 @@ const { deadlineLabel, username } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(15, 23, 42, 0.45);
+    background: color-mix(in srgb, var(--color-gray-900, #0f172a) 45%, transparent);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
     padding: 1rem;
@@ -489,7 +499,7 @@ const { deadlineLabel, username } = Astro.props;
     border-radius: var(--radius-lg, 12px);
     padding: 1.25rem;
     width: 100%;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    box-shadow: 0 20px 50px color-mix(in srgb, var(--color-gray-900, #0f172a) 25%, transparent);
     max-height: 85vh;
     overflow-y: auto;
   }

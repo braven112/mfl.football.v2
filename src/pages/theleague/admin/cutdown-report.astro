@@ -35,8 +35,9 @@ import { chooseTeamName } from '../../../utils/team-names';
 import { DEFAULT_LEAGUE } from '../../../config/leagues';
 import leagueConfig from '../../../data/theleague.config.json';
 // Same decision logic the deadline job runs — attempt parsing can't drift.
-import { parseDoneValue, MAX_ATTEMPTS } from '../../../../scripts/lib/august-cuts-logic.mjs';
+import { parseDoneValue, MAX_ATTEMPTS } from '../../../utils/august-cuts-logic.mjs';
 import { ACTIVE_ROSTER_STATUS } from '../../../utils/august-cut-selection-core.mjs';
+import { normalizeFranchiseId as pad4 } from '../../../utils/franchise-id.mjs';
 import { parsePausedValue } from '../../api/admin/autocut-control';
 
 export const prerender = false;
@@ -52,10 +53,6 @@ const now = new Date();
 
 const toArray = (value: any): any[] =>
   Array.isArray(value) ? value : value === null || value === undefined ? [] : [value];
-const pad4 = (fid: string): string => {
-  const trimmed = `${fid ?? ''}`.trim();
-  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
-};
 function readJsonFile(relativePath: string): any {
   try {
     const filePath = path.join(process.cwd(), relativePath);
@@ -140,13 +137,26 @@ const teamNameByFid = new Map(teams.map((t) => [t.franchiseId, t.name]));
 
 const cutLists = new Map<string, AutocutList>();
 if (redisAvailable) {
-  for (const team of teams) {
-    const list = await getCutList(team.franchiseId);
-    // Stale lists from a previous league year are ignored, never displayed
-    // as current intent (mirrors the job's computePlans guard).
-    if (list && list.year === year && list.playerIds.length > 0) {
-      cutLists.set(team.franchiseId, list);
-    }
+  // Parallel reads with a batch timeout (same 3s Promise.race pattern as
+  // rosters.astro's autocut reads) — a slow Redis degrades to "no live
+  // lists" instead of serially stalling the whole page render.
+  try {
+    const lists = await Promise.race([
+      Promise.all(teams.map((team) => getCutList(team.franchiseId))),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Redis timeout')), 3000),
+      ),
+    ]);
+    teams.forEach((team, i) => {
+      const list = lists[i];
+      // Stale lists from a previous league year are ignored, never displayed
+      // as current intent (mirrors the job's computePlans guard).
+      if (list && list.year === year && list.playerIds.length > 0) {
+        cutLists.set(team.franchiseId, list);
+      }
+    });
+  } catch {
+    /* storage unavailable/slow — render without live cut lists */
   }
 }
 
@@ -579,13 +589,14 @@ const pausedMetaLine = pausedState.paused
                             </span>
                           )}
                           {row.showCheckbox && (
-                            <label class="cdr-manual-done">
+                            <label class="cdr-manual-done" title="Permanent audit record — can't be undone here">
                               <input
                                 type="checkbox"
                                 data-manual-done
                                 data-player-id={row.player.id}
                                 data-franchise-id={card.franchiseId}
                                 disabled={!redisAvailable}
+                                title="Permanent audit record — can't be undone here"
                               />
                               Done manually
                             </label>
@@ -735,6 +746,7 @@ const pausedMetaLine = pausedState.paused
       if (!box.checked) {
         // Prevent unchecking: the outcome is already durable server-side.
         box.checked = true;
+        showError("Manual-done is a permanent audit record — it can't be undone here.");
         return;
       }
       clearError();
