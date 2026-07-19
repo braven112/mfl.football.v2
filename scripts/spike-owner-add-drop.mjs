@@ -92,13 +92,18 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '--live') args.live = true;
     else if (a === '--dry-run') args.dryRun = true;
-    else if (a === '--player') args.player = argv[++i];
-    else if (a === '--year') {
+    else if (a === '--player') {
+      const raw = argv[++i];
+      if (!raw || !/^\d+$/.test(raw)) {
+        throw new SpikeError(`--player requires a numeric MFL player id (got: ${raw ?? '<missing>'})`);
+      }
+      args.player = raw;
+    } else if (a === '--year') {
       const raw = argv[++i];
       const parsed = Number.parseInt(raw, 10);
-      if (!Number.isFinite(parsed)) throw new Error(`--year requires a numeric year (got: ${raw ?? '<missing>'})`);
+      if (!Number.isFinite(parsed)) throw new SpikeError(`--year requires a numeric year (got: ${raw ?? '<missing>'})`);
       args.year = parsed;
-    } else throw new Error(`Unknown flag: ${a}`);
+    } else throw new SpikeError(`Unknown flag: ${a}`);
   }
   return args;
 }
@@ -120,16 +125,25 @@ function apiKeyExtra() {
   return key ? `&APIKEY=${encodeURIComponent(key)}` : '';
 }
 
+/** Strip the APIKEY value from any string (URLs embedded in error messages). */
+const redactApiKey = (s) => `${s}`.replace(/APIKEY=[^&\s]+/g, 'APIKEY=***');
+
 async function fetchLeagueExport(year, type, extra = '') {
-  return fetchExport(
-    { host: mflHostPrefix(LEAGUE.mflHost), leagueId: LEAGUE_ID, year, type, extra: `${extra}${apiKeyExtra()}` },
-    {
-      retries: 2,
-      sleepMs: 750,
-      onFetch: (url) => info(`fetch ${url.replace(/APIKEY=[^&]+/, 'APIKEY=***')}`),
-      onRetry: (url, attempt) => console.warn(`${TAG} 429 from MFL (attempt ${attempt + 1}) — backing off`),
-    },
-  );
+  try {
+    return await fetchExport(
+      { host: mflHostPrefix(LEAGUE.mflHost), leagueId: LEAGUE_ID, year, type, extra: `${extra}${apiKeyExtra()}` },
+      {
+        retries: 2,
+        sleepMs: 750,
+        onFetch: (url) => info(`fetch ${redactApiKey(url)}`),
+        onRetry: (url, attempt) => console.warn(`${TAG} 429 from MFL (attempt ${attempt + 1}) — backing off`),
+      },
+    );
+  } catch (err) {
+    // fetchExport errors embed the full request URL — redact the APIKEY
+    // before the message can reach logs or ::error:: annotations.
+    throw new SpikeError(redactApiKey(err?.message ?? err));
+  }
 }
 
 /**

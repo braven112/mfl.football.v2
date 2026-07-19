@@ -69,14 +69,14 @@ jobs:
           CONFIRM: ${{ inputs.confirm }}
           PLAYER: ${{ inputs.player }}
         run: |
-          FLAGS="--dry-run"
+          FLAGS=("--dry-run")
           if [ "$CONFIRM" = "run-live-spike" ]; then
             echo "::notice::confirm matched — running the LIVE spike (one real add + drop)."
-            FLAGS="--live"
+            FLAGS=("--live")
           else
             echo "::warning::confirm was not 'run-live-spike' — running a DRY-RUN only (no MFL writes)."
           fi
           if [ -n "$PLAYER" ]; then
-            FLAGS="$FLAGS --player $PLAYER"
+            FLAGS+=("--player" "$PLAYER")
           fi
-          node scripts/spike-owner-add-drop.mjs $FLAGS
+          node scripts/spike-owner-add-drop.mjs "${FLAGS[@]}"
