@@ -39,12 +39,10 @@
 import type { APIRoute } from 'astro';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
 
 export const prerender = false;
-
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
 
 const MARINATE_WINDOW_MS = 60 * 60 * 1000;
 const DAILY_CAP = 3;
@@ -85,7 +83,8 @@ type CookerSnapshot = {
   heat: Heat;
   backloggedHint: boolean;
 };
-let _cache: { data: CookerSnapshot; expiresAt: number } | null = null;
+// Cache is keyed per league — both leagues poll this route.
+const _cache = new Map<string, { data: CookerSnapshot; expiresAt: number }>();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
@@ -99,15 +98,22 @@ function coerce(raw: unknown): number | null {
 
 /** Expose cache reset for tests — not wired to anything in production. */
 export function _resetCookerCacheForTests(): void {
-  _cache = null;
+  _cache.clear();
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url: new URL(request.url) });
+  if (!league) return json({ error: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) return json({ error: 'feature_disabled' }, 404);
+  const navSlug = league.navSlug;
+
   // Serve from in-process cache when fresh — same-instance concurrent
   // callers share a single Redis read per CACHE_TTL_MS window.
   const now = Date.now();
-  if (_cache && _cache.expiresAt > now) {
-    return json(_cache.data);
+  const cached = _cache.get(navSlug);
+  if (cached && cached.expiresAt > now) {
+    return json(cached.data);
   }
 
   const redis = await getRedis();
@@ -125,7 +131,7 @@ export const GET: APIRoute = async () => {
     };
     // Cache the zero state too — prevents a hot-path of Redis-missing
     // requests from re-running the import every poll.
-    _cache = { data: empty, expiresAt: now + CACHE_TTL_MS };
+    _cache.set(navSlug, { data: empty, expiresAt: now + CACHE_TTL_MS });
     return json(empty);
   }
 
@@ -135,9 +141,9 @@ export const GET: APIRoute = async () => {
 
   try {
     const [len, first, today] = await Promise.all([
-      redis.llen(TIPS_QUEUE_KEY),
-      redis.get<string | number>(FIRST_TIP_TS_KEY),
-      redis.get<string | number>(RUMOR_POSTS_TODAY_KEY),
+      redis.llen(schefterKey(navSlug, 'tips:queue')),
+      redis.get<string | number>(schefterKey(navSlug, 'tips:first_tip_ts')),
+      redis.get<string | number>(schefterKey(navSlug, 'rumor:posts_today')),
     ]);
     queueDepth = Math.max(0, Number.isFinite(len) ? (len as number) : 0);
     marinateStartedAt = coerce(first);
@@ -164,6 +170,6 @@ export const GET: APIRoute = async () => {
     heat,
     backloggedHint,
   };
-  _cache = { data: snapshot, expiresAt: now + CACHE_TTL_MS };
+  _cache.set(navSlug, { data: snapshot, expiresAt: now + CACHE_TTL_MS });
   return json(snapshot);
 };

@@ -11,14 +11,16 @@
 import { SCHEFTER_REACTIONS, SCHEFTER_RUMOR_REACTIONS } from '../types/schefter';
 import type { SchefterReactionMap, SchefterReactionResponse } from '../types/schefter';
 import { getRedis } from './redis-client';
+import { GLOBAL_SCHEFTER_NAMESPACES } from '../../scripts/lib/schefter-keys.mjs';
 
-const KEY_PREFIX = 'schefter:reactions:';
+// postId-keyed and shared across leagues by design — see schefter-keys.mjs.
+const KEY_PREFIX = GLOBAL_SCHEFTER_NAMESPACES.reactions;
 /**
  * Anonymous reactions key-space. Members are hashedOwnerId (same hash used for
  * tip identity) — never franchiseId. Used by rumor_mill posts to avoid
  * revealing "Pigskins reacted 🔥" signals that could correlate with tip patterns.
  */
-const ANON_KEY_PREFIX = 'schefter:reactions:anon:';
+const ANON_KEY_PREFIX = GLOBAL_SCHEFTER_NAMESPACES.reactionsAnon;
 
 /** Validate that an emoji is in the allowed set */
 export function isValidReaction(emoji: string): boolean {

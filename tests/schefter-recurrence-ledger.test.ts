@@ -270,7 +270,9 @@ describe('scanner + admin integration (source guards)', () => {
 
   it('scanner skips stale buckets in the normal lane and keeps the mailbag path unfiltered', () => {
     // pickPrimaryBucket must be fed the filtered list — not the raw buckets.
-    expect(SCANNER_SRC).toMatch(/pickPrimaryBucket\(normalLaneBuckets/);
+    // eligibleLaneBuckets = normalLaneBuckets minus hotseat-cooldown holds
+    expect(SCANNER_SRC).toMatch(/pickPrimaryBucket\(eligibleLaneBuckets/);
+    expect(SCANNER_SRC).toMatch(/for \(const b of normalLaneBuckets\)/);
     // Mailbag still draws from the gossip pool (fresh tips, not buckets), so
     // stale fingerprints reach the Friday roundup as intended.
     expect(SCANNER_SRC).toMatch(/mailbagBatch = gossipPool\.slice/);
@@ -288,7 +290,14 @@ describe('scanner + admin integration (source guards)', () => {
   it('admin schefter-stats surfaces staleStreakWeeks + isStale per ranked bucket', () => {
     expect(ADMIN_SRC).toMatch(/staleStreakWeeks: bucketStreakLength/);
     expect(ADMIN_SRC).toMatch(/isStale: isBucketStale/);
-    expect(ADMIN_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/\.\.\/data\/schefter\/topic-recurrence\.json'/);
+    // Ledger moved to its per-league home; the static import is TheLeague's
+    // (AFL gets an empty ledger until data/schefter/afl/ gets its own).
+    expect(ADMIN_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/\.\.\/data\/schefter\/theleague\/topic-recurrence\.json'/);
+    // Each league's ledger is statically imported and selected by league;
+    // unknown leagues fall to the empty ledger (streak=1, never stale).
+    expect(ADMIN_SRC).toMatch(/league\.navSlug === 'afl' \? aflRecurrenceLedger :/);
+    expect(ADMIN_SRC).toMatch(/isTheLeague \? theleagueRecurrenceLedger :/);
+    expect(ADMIN_SRC).toMatch(/EMPTY_RECURRENCE_LEDGER/);
   });
 });
 

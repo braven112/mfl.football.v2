@@ -1,0 +1,33 @@
+---
+/**
+ * Schefter Ops — /afl-fantasy/admin/schefter
+ *
+ * Thin wrapper: league-scoped admin gate + layout. The dashboard lives in
+ * the shared components/schefter/AdminDashboard.astro; the stats API it
+ * fronts is JWT-league-scoped the same way.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import AdminDashboard from '../../../components/schefter/AdminDashboard.astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// League-scoped gate: commissioner/admin AND the session must belong to
+// the AFL — a TheLeague commissioner's session must not open the AFL's ops
+// dashboard.
+const user = getAuthUser(Astro.request);
+const afl = getLeagueBySlug('afl-fantasy');
+if (
+  !user ||
+  !isCommissionerOrAdmin(user) ||
+  !afl ||
+  !isAuthorizedForLeague(user, afl.id)
+) {
+  return Astro.redirect('/afl-fantasy');
+}
+---
+
+<TheLeagueLayout title="Schefter Ops — Admin">
+  <AdminDashboard base="/afl-fantasy" navSlug="afl" />
+</TheLeagueLayout>

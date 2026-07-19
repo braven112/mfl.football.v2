@@ -96,6 +96,8 @@ import {
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
+import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
+import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
   buildTopicBuckets,
@@ -113,7 +115,7 @@ import {
   isoWeekLabel,
   markFingerprintSeen,
   getMemoryRecall,
-  LEDGER_PATH,
+  ledgerPath,
 } from './lib/schefter-recurrence-ledger.mjs';
 import {
   isOverNamingRateLimit,
@@ -127,6 +129,7 @@ import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
   getPtHour,
   getPtDateString,
@@ -139,29 +142,51 @@ const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
 const TRADE_OFFERS_ONLY = process.argv.includes('--trade-offers-only');
 
+// ── League selection (--league <slug>, default theleague) ──
+//
+// One scanner process serves exactly ONE league per invocation — the
+// schefter-articles.yml pattern. Everything league-shaped below (paths,
+// Redis key prefixes, GroupMe bot, base URL, feature gates) derives from
+// this selection once at module init.
+function parseLeagueArg() {
+  const idx = process.argv.indexOf('--league');
+  if (idx === -1) return 'theleague';
+  const val = process.argv[idx + 1];
+  if (!val || val.startsWith('--')) {
+    throw new Error('--league requires a value (theleague | afl-fantasy)');
+  }
+  return val;
+}
+const SCHEFTER_LEAGUE = getSchefterLeague(parseLeagueArg());
+
 // ── Constants ──
 
-const LEAGUE_SLUG = 'theleague';
-const LEAGUE_ID = getLeagueBySlug(LEAGUE_SLUG).id;
+const LEAGUE_SLUG = SCHEFTER_LEAGUE.registrySlug;
+const LEAGUE_ID = SCHEFTER_LEAGUE.leagueId;
+// Redis keys below are league-scoped via schefterKey(NAV_SLUG, …): TheLeague
+// keeps its legacy unprefixed keys; any other league gets schefter:<navSlug>:*.
+const NAV_SLUG = SCHEFTER_LEAGUE.slug;
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
-const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
-const CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
-const PLAYERS_PATH = (year) =>
-  path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json');
+const FEED_PATH = SCHEFTER_LEAGUE.feedPath;
+const CONFIG_PATH = SCHEFTER_LEAGUE.configPath;
+const PLAYERS_PATH = SCHEFTER_LEAGUE.playersPath;
 
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-const RUMOR_GOSSIP_POSTS_TODAY_KEY = 'schefter:rumor:gossip_posts_today';
-const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
-const ROGER_LAST_RIFF_DATE_KEY = 'schefter:ask_roger:last_riff_date';
-const MORNING_GREETING_DATE_KEY = 'schefter:morning_greeting:last_used_date';
+const RUMOR_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:posts_today');
+const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_today');
+const RUMOR_LAST_POST_TS_KEY = schefterKey(NAV_SLUG, 'rumor:last_post_ts');
+const FIRST_TIP_TS_KEY = schefterKey(NAV_SLUG, 'tips:first_tip_ts');
+const TIPS_QUEUE_KEY = schefterKey(NAV_SLUG, 'tips:queue');
+const TIPS_PROCESSED_KEY = schefterKey(NAV_SLUG, 'tips:processed');
+const ROGER_LAST_RIFF_DATE_KEY = schefterKey(NAV_SLUG, 'ask_roger:last_riff_date');
+const MORNING_GREETING_DATE_KEY = schefterKey(NAV_SLUG, 'morning_greeting:last_used_date');
 // Feature 7 — "saying no, out loud" cooldown. Stores PT-date string of the
 // last quiet-day post. Fires AT MOST once per QUIET_DAY_COOLDOWN_DAYS so
 // Schefter doesn't make "slow news" his whole bit. See attemptQuietDayPost.
-const QUIET_DAY_LAST_DATE_KEY = 'schefter:rumor:quiet_day_last_date';
+const QUIET_DAY_LAST_DATE_KEY = schefterKey(NAV_SLUG, 'rumor:quiet_day_last_date');
 const QUIET_DAY_COOLDOWN_DAYS = 3;
+// Rule 27 — hotseat storylines about one team cool down for 14 rolling days.
+const HOTSEAT_TEAM_COOLDOWN_DAYS = 14;
+const hotseatCooldownKey = (fid) => `${schefterKey(NAV_SLUG, 'hotseat:last_post:')}${fid}`;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
 // Cumulative-probability model with graduated exposure. The base per-run
@@ -184,9 +209,9 @@ const QUIET_DAY_COOLDOWN_DAYS = 3;
 //   - `posted` SET — still written on every post for admin tooling (the
 //     Captured Trades card's posted/closed/stale pill logic). No longer an
 //     absorbing gate; an offer can be in `posted` AND keep getting posts.
-const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
-const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
-const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
+const OFFER_FIRST_SEEN_KEY = schefterKey(NAV_SLUG, 'trade_offers:first_seen');
+const OFFER_EXPOSURE_KEY = schefterKey(NAV_SLUG, 'trade_offers:exposure');
+const OFFER_POSTED_KEY = schefterKey(NAV_SLUG, 'trade_offers:posted');
 const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on first_seen / exposure / posted
 
 // Permanent archive of every offer the scanner has ever ingested. Distinct
@@ -195,22 +220,22 @@ const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on first_seen / expo
 // from months/years ago, including ones that were never posted (retracted
 // before the dice roll fired). Entry is JSON-encoded {offerId, offeringFid,
 // partnerFid, willGiveUp, willReceive, comments, mflTimestamp, firstSeenMs}.
-const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
+const OFFER_ARCHIVE_KEY = schefterKey(NAV_SLUG, 'trade_offers:archive');
 // Per-offer roll counter: hincrby on every offer-scan iteration that gets to
 // the dice roll (i.e., offers still eligible — not already-posted, not
 // legacy-burned). Tells the commish how many GitHub Actions runs had a chance
 // to leak the rumor before MFL dropped the offer.
-const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
+const OFFER_ROLLS_KEY = schefterKey(NAV_SLUG, 'trade_offers:rolls');
 
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;   // 48h → framing flip
 
-const OFFER_OWNER_KEY_PREFIX = 'schefter:trade_offers:owner:';
-const OFFER_DIV_KEY_PREFIX = 'schefter:trade_offers:div:';
+const OFFER_OWNER_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:owner:');
+const OFFER_DIV_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:div:');
 // Owner-sourced intake: owners populate this hash from /api/trades/pending
 // and /api/trades/submit. See src/utils/owner-trade-reports.ts. Read-only
 // from this scanner — the API routes own the writes and TTL.
-const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
-const PLAYER_OFFER_HISTORY_PREFIX = 'schefter:player_offer_history:';
+const OFFER_OWNER_REPORTS_KEY = schefterKey(NAV_SLUG, 'trade_offers:owner_reports');
+const PLAYER_OFFER_HISTORY_PREFIX = schefterKey(NAV_SLUG, 'player_offer_history:');
 const OFFER_ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;    // 7d owner + div
 const PLAYER_HISTORY_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;  // 21d player escalation
 
@@ -277,7 +302,7 @@ const MORNING_GREETING_END_HOUR = 11; // 7:00–10:59 PT
 // Friday mailbag — one big roundup that sweeps the queue so nothing
 // expires unseen. Runs once per Friday PT. Same Redis-key TTL pattern as
 // the other daily counters.
-const FRIDAY_MAILBAG_DONE_KEY = 'schefter:mailbag:done_date';
+const FRIDAY_MAILBAG_DONE_KEY = schefterKey(NAV_SLUG, 'mailbag:done_date');
 const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 
 // Public URL of the tip page — appended to every GroupMe rumor post so
@@ -287,7 +312,7 @@ const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 // canonical path is /schefter/tip.
 const TIP_PAGE_PATH = '/schefter/tip';
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
-const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
+const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || SCHEFTER_LEAGUE.baseUrl).replace(/\/+$/, '');
 const TIP_PAGE_ABSOLUTE_URL = `${PUBLIC_BASE_URL}${TIP_PAGE_PATH}`;
 
 // Trade-bait rumors send readers to the Trade Builder instead of the tip
@@ -298,7 +323,7 @@ const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
 const TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block?';
 
 function buildTradeBuilderPath(franchiseId) {
-  return `/theleague/trade-builder?b=${encodeURIComponent(franchiseId)}`;
+  return `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(franchiseId)}`;
 }
 
 /**
@@ -322,7 +347,7 @@ function isTradeFlavoredTip(tip) {
  * to a single franchise (league-wide speculation, or a multi-franchise
  * cluster). Owners land on the empty builder and pick from there.
  */
-const TRADE_BUILDER_PATH = '/theleague/trade-builder';
+const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/trade-builder`;
 
 /**
  * Resolve the CTA for a post based on its primary bucket.
@@ -521,6 +546,11 @@ async function loadTeams() {
       nameShort: t.nameShort,
       abbrev: t.abbrev,
       division: t.division,
+      // AFL-only fields; undefined for TheLeague. `tier` drives the hotseat
+      // scope floor ({ kind: 'tier' }) — dropping it here silently downgrades
+      // every Relegation-watch post to league-wide framing.
+      conference: t.conference,
+      tier: t.tier,
     });
   }
   return map;
@@ -627,7 +657,7 @@ async function flushGroupMeSuppressions() {
 // order — if both are true, the original warned about the missing bot id rather
 // than logging the dry-run preview.
 async function postToGroupMe(text) {
-  const botId = process.env.GROUPME_SCHEFTER_BOT_ID;
+  const botId = SCHEFTER_LEAGUE.groupMeSchefterBotId;
   if (!botId) {
     warn('[rumor-scan] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe (Roger is reserved for deadlines)');
     return;
@@ -663,7 +693,7 @@ async function postToGroupMe(text) {
 async function safeIsOverNamingRateLimit(tipsterHash, franchiseId, redis) {
   if (!redis) return false;
   try {
-    return await isOverNamingRateLimit(tipsterHash, franchiseId, redis);
+    return await isOverNamingRateLimit(tipsterHash, franchiseId, redis, NAV_SLUG);
   } catch {
     return false;
   }
@@ -672,7 +702,7 @@ async function safeIsOverNamingRateLimit(tipsterHash, franchiseId, redis) {
 async function safeGetTeamNameCount30d(franchiseId, redis) {
   if (!redis) return 0;
   try {
-    return await getTeamNameCount30d(franchiseId, redis);
+    return await getTeamNameCount30d(franchiseId, redis, undefined, NAV_SLUG);
   } catch {
     return 0;
   }
@@ -863,6 +893,12 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       }
     }
 
+    // Per-topic naming/scope policy from the topic registry. Accusation-
+    // shaped and reader-de-anonymizable topics carry stricter rules than the
+    // default multi-source/explicit-pick ladder.
+    const topicPolicy = getTopicPolicy(tip.topic, NAV_SLUG);
+    if (topicPolicy.mandatoryHedge) safe.mandatoryHedge = true;
+
     const hint = tip.franchiseHint;
     if (!hint || hint === 'league-wide') {
       safe.scope = { kind: 'league-wide' };
@@ -877,7 +913,19 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
     }
 
     const team = teams.get(hint);
-    if (multiSourceFranchises.has(hint)) {
+    if (topicPolicy.namingPolicy === 'never') {
+      // Scope floor: content readers could de-anonymize by cross-referencing
+      // public standings (hot-seat) never names and never scopes below the
+      // configured floor — league-wide for TheLeague's 4-team divisions,
+      // tier (12-team pool) for the AFL.
+      safe.scope =
+        topicPolicy.scopeFloor === 'tier' && team?.tier
+          ? { kind: 'tier', tier: team.tier }
+          : { kind: 'league-wide' };
+      safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise: null });
+      return safe;
+    }
+    if (multiSourceFranchises.has(hint) && topicPolicy.namingPolicy !== 'explicit-pick-only') {
       // Unlock named franchise + "multiple sources" phrasing
       const nameCount30d = await safeGetTeamNameCount30d(hint, redis);
       safe.scope = {
@@ -1119,9 +1167,26 @@ const TOPIC_NOUNS = {
   trade: 'trade',
   roster: 'roster',
   prediction: 'prediction',
-  commish: 'league-office',
+  commish: 'league-office',       // legacy id — old queued tips still carry it
+  frontoffice: 'front-office',
+  hotseat: 'hot-seat',
+  tampering: 'tampering',
+  intentions: 'draft-day',
+  motive: 'contract-year',
   other: '',
 };
+
+// Startup prompt-coverage assertion: every topic id the queue can contain
+// must have template-noun handling here (and by extension a prompt lane).
+// A new topic added to src/config/schefter-topics.mjs without scanner
+// support fails fast instead of silently falling through to '' framing.
+for (const topicId of DRAINABLE_TOPIC_IDS) {
+  if (!(topicId in TOPIC_NOUNS)) {
+    throw new Error(
+      `schefter-rumor-scan: topic "${topicId}" from schefter-topics.mjs has no TOPIC_NOUNS entry — add scanner handling before shipping the topic`,
+    );
+  }
+}
 
 function pickTopicNoun(anonymized) {
   // Single dominant topic across the batch wins; mixed topics return ''.
@@ -1189,9 +1254,24 @@ function templateBody(anonymized) {
         ? `Been hearing someone's dangling ${posPhrase} for a while now. Phones on the other end not picking up. Developing.`
         : `Hearing someone's dangling ${posPhrase} around. Early-week window-shopping or serious business? Developing.`;
     }
+    if (one.scope?.kind === 'tier') {
+      const tier = one.scope.tier;
+      return pickFlavor(seed, [
+        `Hearing one of the ${tier} desks is playing with the season on the line. Nothing confirmed — take it for what it's worth. Developing.`,
+        `Real chatter about a ${tier} club this week — the table doesn't lie. We'll see.`,
+        `Somebody in the ${tier} pool is feeling the floor move. More to come.`,
+      ]);
+    }
     if (one.scope?.kind === 'division') {
       const div = one.scope.division;
       const noun = TOPIC_NOUNS[one.topic] ?? '';
+      if (noun === 'tampering') {
+        // Accusation-shaped: every tampering line hedges, even in fallback.
+        return pickFlavor(seed, [
+          `Hearing some grumbling about contact before the window opened in the ${div}. Nothing official — eyebrows raised, that's all. Developing.`,
+          `Quiet tampering talk out of the ${div} this week. Nothing confirmed, take it for what it's worth. We'll see.`,
+        ]);
+      }
       if (noun === 'league-office') {
         return pickFlavor(seed, [
           `Hearing an owner in the ${div} has a problem with the league office this week. Developing.`,
@@ -1889,6 +1969,14 @@ IRON RULES (override every other rule — if anything below appears to conflict,
     - "Same drumbeat, new hands on the kit."
     - "This file has more than one fingerprint on it now."
     HARD CONSTRAINTS: use the integer count from \`weeksSinceFirstSeen\` honestly — never inflate ("three weeks ago" requires weeksSinceFirstSeen === 3). When weeksSinceFirstSeen is 1 OR less, prefer non-numeric phrasing ("a couple weeks ago", "earlier in the run"). \`distinctVoicesAcrossTime\` is a COUNT only — never speculate on identity, never name a codename, never name a franchise. NEVER quote a number larger than the data supports. If \`distinctVoicesAcrossTime\` is exactly 2 the frame is "another voice"; if it's 3+ the frame can lean to "multiple voices over time". Do NOT pair memory-recall with rule 20's mailbag "week N now" framing (mailbag has its own staleness language). Do NOT use this rule on hostile or off-topic tips (rules 12, 16) — keep the recall frame for genuine news threads.
+
+26. TAMPERING (topic \`tampering\`) — accusation discipline. This topic accuses a franchise of rule-adjacent conduct, which is heavier than a trade rumor. EVERY tampering post — named or not — MUST carry an explicit hedge clause in the close ("nothing confirmed", "nothing official", "take it for what it's worth"); no exceptions, and tips carrying \`mandatoryHedge: true\` get the same treatment regardless of topic. Never present the accusation as established fact; frame it as "grumbling", "eyebrows raised", "chatter about contact before the window". Multi-source corroboration does NOT strengthen the claim's certainty in your phrasing — more sources means more grumbling, not more truth.
+
+27. HOT SEAT / RELEGATION WATCH (topic \`hotseat\`). Readers can cross-reference standings, so the post itself is the last line of anonymity defense: NEVER name a franchise, NEVER narrow below the scope you're given (league-wide, or tier for the AFL), and never stack details (record + roster moves + division) that let a reader triangulate a single team. Frame the stakes, not the identity: "somebody's about to blow it all up", "one of the Premier League desks is playing like they don't want to stay up". Don't re-report the same hot-seat storyline in consecutive posts — if it shipped recently, find a different angle or skip it.
+
+28. FRONT-OFFICE DYSFUNCTION (topic \`frontoffice\`, legacy \`commish\`). Rule 5's institutional framing extends to ANY target, not just the commissioner: critique "the front office", "that desk's decision-making", "the process" — never the person. A dysfunction tip about a regular franchise inherits the same naming gates as roster gossip (rules 4/4b), but the voice stays institutional even when the team is named.
+
+29. RIVAL-GM SOURCING FLAVOR. The rumor mill's texture is competitive intelligence — what rival front offices notice about each other. Rotate rival-sourcing attribution into gossip posts (never the same phrase twice in 5 posts): "a rival front office is watching this closely", "other GMs around the league have taken notice", "one executive I talked to called it", "word from a rival desk". Pair with leverage-reading ("that's not a move you make unless…", "read into that what you want") and market-temperature language ("the market's heating up", "not much traction so far"). HARD CONSTRAINT: sourcing flavor must stay generic — never invent a specific rival franchise as the source, and never let the attribution imply the actual tipster's division, conference, or identity. These phrases are set dressing, not sourcing claims.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
@@ -2683,12 +2771,19 @@ async function main() {
   log(`\n=== Schefter Rumor-Mill Scan ${DRY_RUN ? '[DRY RUN]' : ''} ===`);
   log(`  Timestamp: ${new Date().toISOString()}`);
 
-  // Enable gate
+  // Enable gates: the env var is the GLOBAL kill switch; per-league
+  // enablement comes from the registry's schefterTips flag (surfaced as
+  // features.rumorMill via scripts/lib/schefter-leagues.mjs).
   const enabled = process.env.SCHEFTER_RUMOR_MILL_ENABLED;
   if (!enabled || enabled === '0' || String(enabled).toLowerCase() === 'false') {
     log('  SCHEFTER_RUMOR_MILL_ENABLED is not truthy — exiting');
     return 0;
   }
+  if (!SCHEFTER_LEAGUE.features?.rumorMill) {
+    log(`  rumor mill is not enabled for ${LEAGUE_SLUG} (features.schefterTips) — exiting`);
+    return 0;
+  }
+  log(`  League: ${LEAGUE_SLUG} (${LEAGUE_ID})`);
 
   const redis = await getRedis();
   if (!redis) {
@@ -2698,16 +2793,26 @@ async function main() {
 
   // Load personality + lore + bits once per run. If any file fails we fall
   // back to the legacy inline prompt inside generateAiBody.
-  const lore = await loadLore({ log, warn });
-  const history = await loadPostHistory({ log, warn });
+  const lore = await loadLore({ log, warn, navSlug: NAV_SLUG });
+  const history = await loadPostHistory({ log, warn, navSlug: NAV_SLUG });
   const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
   log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
   // ── Phase 6: Trade-Offer Rumor source ──
   // Runs BEFORE the queue read so fresh redacted tips land in this cycle.
   // In detection-only mode, mutates Redis counters but doesn't queue.
+  // TheLeague-only lane: AFL's tradeOfferRumors toggle is off (MFL
+  // pendingOffer access + the duplicate-player escalation model need their
+  // own design before this lane can go multi-league).
   let offerTipsPushed = 0;
-  try {
+  if (!SCHEFTER_LEAGUE.features?.tradeOfferRumors) {
+    log(`  [offer-scan] trade-offer lane disabled for ${LEAGUE_SLUG} — skipping`);
+    if (TRADE_OFFERS_ONLY) {
+      log('  [offer-scan] --trade-offers-only with lane disabled → exiting');
+      return 0;
+    }
+  } else {
+    try {
     const offerScan = await scanTradeOffers({ redis, dryRun: DRY_RUN });
     if (offerScan.debug.length > 0) {
       log(`  [offer-scan] Processed ${offerScan.debug.length} offer(s), ${offerScan.tips.length} tip(s) queued`);
@@ -2741,6 +2846,7 @@ async function main() {
   } catch (err) {
     warn(`  [offer-scan] failed: ${err.message} — continuing with other sources`);
     if (TRADE_OFFERS_ONLY) return 0;
+  }
   }
 
   // ── Phase 3: GroupMe mention ingest ──
@@ -2874,7 +2980,7 @@ async function main() {
   // signal sources (Redis: rumors_total + topic_counts).
   let tipsterContext = new Map();
   try {
-    tipsterContext = await buildTipsterContext(freshTips, redis);
+    tipsterContext = await buildTipsterContext(freshTips, redis, NAV_SLUG);
     if (tipsterContext.size > 0) {
       const summary = [...tipsterContext.values()].map((c) => {
         const tags = [];
@@ -2899,7 +3005,7 @@ async function main() {
   const seasonYear = currentSeasonYear(now);
   let recurrenceLedger;
   let ledgerReset;
-  const ledgerPathAbs = path.join(projectRoot, LEDGER_PATH);
+  const ledgerPathAbs = path.join(projectRoot, ledgerPath(NAV_SLUG));
   try {
     [recurrenceLedger, ledgerReset] = rolloverForSeason(loadLedger(ledgerPathAbs), seasonYear);
     if (ledgerReset) {
@@ -2948,7 +3054,28 @@ async function main() {
     batch = mailbagBatch;
   } else {
     // Normal lane sees only non-stale buckets — stale repeats wait for Friday.
-    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now, tipsterContext });
+    // Rule 27 hard backstop: a hotseat storyline about the same team fires at
+    // most once per rolling HOTSEAT_TEAM_COOLDOWN_DAYS, regardless of the
+    // staleness-streak math ("your team is bad" repeated hits differently
+    // than a trade rumor repeated). League-wide hotseat buckets pass through.
+    const eligibleLaneBuckets = [];
+    for (const b of normalLaneBuckets) {
+      const m = /^topic:hotseat:(.+)$/.exec(b.key);
+      // Only real franchise scopes cool down — 'league-wide' and 'commish'
+      // aren't teams. Read-only check, so it runs in dry-run too (dry-run
+      // output should pick the same bucket a live run would).
+      if (m && /^\d{4}$/.test(m[1]) && redis) {
+        try {
+          const held = await redis.get(hotseatCooldownKey(m[1]));
+          if (held) {
+            log(`  Bucket ${b.key} held — hotseat cooldown active for that team`);
+            continue;
+          }
+        } catch { /* fail open */ }
+      }
+      eligibleLaneBuckets.push(b);
+    }
+    const pick = pickPrimaryBucket(eligibleLaneBuckets, { gossipAllowedToday, now, tipsterContext });
     if (!pick) {
       if (staleBuckets.length > 0) {
         log(`  No fresh bucket qualifies — ${staleBuckets.length} stale bucket(s) held for next Friday mailbag`);
@@ -3330,7 +3457,7 @@ async function main() {
     let threadId = null;
     if (dominantParentId) {
       try {
-        const registered = await redis.get(`schefter:thread_of:${dominantParentId}`);
+        const registered = await redis.get(globalSchefterKey('threadOf', dominantParentId));
         threadId = typeof registered === 'string' && registered.length > 0
           ? registered
           : dominantParentId;
@@ -3525,9 +3652,31 @@ async function main() {
         post.id,
         new Date(post.timestamp).getTime(),
         redis,
+        NAV_SLUG,
       );
     } catch (err) {
       warn(`  [team-naming] record failed for ${post.id} → ${franchiseId}: ${err.message}`);
+    }
+  }
+
+  // Rule 27 — stamp the hotseat per-team cooldown for any shipped post whose
+  // batch contains a hotseat tip pointed at a specific team. The key TTLs
+  // itself away after HOTSEAT_TEAM_COOLDOWN_DAYS.
+  for (let i = 0; i < allowedPosts.length; i++) {
+    const beat = allowedBeats[i];
+    for (const t of beat?.batch ?? []) {
+      if (t?.topic !== 'hotseat') continue;
+      const fid = typeof t.franchiseHint === 'string' && t.franchiseHint !== 'league-wide' && t.franchiseHint !== 'commish'
+        ? t.franchiseHint
+        : null;
+      if (!fid || !redis) continue;
+      try {
+        await redis.set(hotseatCooldownKey(fid), Date.now(), {
+          ex: HOTSEAT_TEAM_COOLDOWN_DAYS * 24 * 60 * 60,
+        });
+      } catch (err) {
+        warn(`  [hotseat-cooldown] stamp failed for ${fid}: ${err.message}`);
+      }
     }
   }
 
@@ -3545,7 +3694,7 @@ async function main() {
         subject,
         tipSources,
       }),
-      { log, warn },
+      { log, warn, navSlug: NAV_SLUG },
     );
   }
 
@@ -3661,7 +3810,7 @@ async function main() {
       if (tip && tip.source === 'web' && typeof tip.hashedOwnerId === 'string' && tip.hashedOwnerId.length > 0) {
         try {
           await redis.set(
-            `schefter:tipster_hash_for_tip:${tip.id}`,
+            globalSchefterKey('tipsterHashForTip', tip.id),
             tip.hashedOwnerId,
             { ex: 14 * 24 * 60 * 60 },
           );
@@ -3700,9 +3849,9 @@ async function main() {
     const threadId = p.threadId;
     const dominantParentId = parentIdByPostId.get(p.id);
     try {
-      const threadZsetKey = `schefter:thread:${threadId}`;
-      const threadOfParentKey = `schefter:thread_of:${dominantParentId}`;
-      const threadOfNewKey = `schefter:thread_of:${p.id}`;
+      const threadZsetKey = globalSchefterKey('thread', threadId);
+      const threadOfParentKey = globalSchefterKey('threadOf', dominantParentId);
+      const threadOfNewKey = globalSchefterKey('threadOf', p.id);
       const threadTtlSec = 14 * 24 * 60 * 60;
 
       await redis.zadd(threadZsetKey, { score: new Date(p.timestamp).getTime(), member: p.id });
@@ -3739,6 +3888,7 @@ async function main() {
       redis,
       batch: consumedBatch,
       seasonYear,
+      navSlug: NAV_SLUG,
       dryRun: DRY_RUN,
       log,
       warn,
@@ -3754,6 +3904,7 @@ async function main() {
     await incrementTipsterTopicCounters({
       redis,
       batch: consumedBatch,
+      navSlug: NAV_SLUG,
       dryRun: DRY_RUN,
       log,
       warn,
@@ -3772,10 +3923,18 @@ async function main() {
  * stays in pure-Node .mjs without importing the .ts module.
  */
 function getSeasonYearForTipster(now = new Date()) {
-  const calendarYear = now.getUTCFullYear();
-  // Feb 14 @ 8:45 PST = Feb 15 04:45 UTC
-  const febCutoff = Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0);
-  return now.getTime() >= febCutoff ? calendarYear : calendarYear - 1;
+  // Driven by the registry's per-league rollover date so the scanner (which
+  // WRITES season-scoped keys) and the API layer (schefterSeasonYear, which
+  // READS them) always agree — a hardcoded fork here would split the season
+  // leaderboard the moment the registry date changed. Comparison is done on
+  // Pacific-Time date parts, matching src/utils/league-year.ts semantics.
+  const rollover = getLeagueBySlug(LEAGUE_SLUG)?.leagueYearRollover ?? { month: 2, day: 14 };
+  const pt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const year = pt.getFullYear();
+  const flipped =
+    pt.getMonth() + 1 > rollover.month ||
+    (pt.getMonth() + 1 === rollover.month && pt.getDate() >= rollover.day);
+  return flipped ? year : year - 1;
 }
 
 // Only run main() when invoked directly (node scripts/schefter-rumor-scan.mjs).

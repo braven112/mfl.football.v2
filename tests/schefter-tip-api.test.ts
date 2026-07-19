@@ -87,8 +87,8 @@ describe('anon Style Book — tip.ts integration', () => {
     // The anon Style Book MUST live on its own keyspace so named and anon
     // leaderboards never mix. If these asserts fail, tips are leaking into
     // the named pool.
-    expect(tipSource).toMatch(/schefter:style_book:anon:/);
-    expect(tipSource).toMatch(/schefter:style_book:anon_leaderboard:/);
+    expect(tipSource).toMatch(/k\('style_book:anon:'\)/);
+    expect(tipSource).toMatch(/k\('style_book:anon_leaderboard:'\)/);
   });
 
   it('stamps attackOnSchefter + styleBookCount + tipsterCodename on the tip', () => {
@@ -98,7 +98,7 @@ describe('anon Style Book — tip.ts integration', () => {
   });
 
   it('assigns/retrieves a codename so the leaderboard has something to render', () => {
-    expect(tipSource).toMatch(/assignCodename\(redis,\s*hashedOwnerId\)/);
+    expect(tipSource).toMatch(/assignCodename\(redis,\s*hashedOwnerId,\s*navSlug\)/);
   });
 
   it('increments the anon leaderboard ZSET using the HASH (never the tip text)', () => {
@@ -122,7 +122,7 @@ describe('anon Style Book — tip.ts integration', () => {
     // improve their dial by simply not sending mean tips for a while. A
     // cumulative INCR counter would punish old behavior forever, which
     // contradicts the design intent.
-    expect(tipSource).toMatch(/schefter:off_topic:timeline:/);
+    expect(tipSource).toMatch(/k\('off_topic:timeline:'\)/);
     expect(tipSource).toMatch(/OFF_TOPIC_WINDOW_MS/);
   });
 
@@ -130,11 +130,11 @@ describe('anon Style Book — tip.ts integration', () => {
     expect(tipSource).toMatch(/30 \* 24 \* 60 \* 60 \* 1000/);
   });
 
-  it('increments timeline only when topic is "commish"', () => {
+  it('increments timeline only for the frontoffice (legacy "commish") topic', () => {
     // The Beef topic is the off-topic channel by design. We don't bump on
     // trade/roster/prediction/other — those are either league-business or
     // genuinely general.
-    expect(tipSource).toMatch(/if \(topic === 'commish'\)/);
+    expect(tipSource).toMatch(/if \(normalizedTopic === 'frontoffice'\)/);
   });
 
   it('prunes entries older than the window on every write', () => {

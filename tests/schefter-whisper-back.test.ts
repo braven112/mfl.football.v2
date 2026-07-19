@@ -43,7 +43,7 @@ describe('Phase 7 — whisper-back validation at POST /api/schefter/tip', () => 
     // Guarantees whisper-backs count toward the per-owner cap: the INCR runs
     // before the queue push.
     const incrIdx = tip.indexOf('redis.incr(rateKey)');
-    const queueIdx = tip.indexOf('redis.lpush(TIPS_QUEUE_KEY');
+    const queueIdx = tip.indexOf("redis.lpush(k('tips:queue')");
     expect(incrIdx).toBeGreaterThan(-1);
     expect(queueIdx).toBeGreaterThan(-1);
     expect(incrIdx).toBeLessThan(queueIdx);
@@ -80,7 +80,7 @@ describe('Phase 7 — scanner thread persistence', () => {
   const scanner = read('scripts/schefter-rumor-scan.mjs');
 
   it('threads are keyed in Redis under schefter:thread:{threadId}', () => {
-    expect(scanner).toMatch(/schefter:thread:\$\{threadId\}/);
+    expect(scanner).toMatch(/globalSchefterKey\('thread', threadId\)/);
   });
 
   it('thread registry writes a 14-day TTL', () => {
@@ -89,10 +89,10 @@ describe('Phase 7 — scanner thread persistence', () => {
   });
 
   it('records thread_of mapping for both parent and new post', () => {
-    expect(scanner).toMatch(/thread_of:\$\{dominantParentId\}/);
+    expect(scanner).toMatch(/globalSchefterKey\('threadOf', dominantParentId\)/);
     // Loop variable is `p` now (we iterate over builtPosts per beat), but
     // the key shape is the same: `thread_of:${postId}`.
-    expect(scanner).toMatch(/thread_of:\$\{(?:post|p)\.id\}/);
+    expect(scanner).toMatch(/globalSchefterKey\('threadOf', (?:post|p)\.id\)/);
   });
 
   it('tells the LLM to open with continuity language when a threadFollowup is present', () => {

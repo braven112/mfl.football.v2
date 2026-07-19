@@ -24,8 +24,11 @@
  * map; we walk only the franchise ids the league actually has.
  */
 
-export const TB_DRAFT_PLAYER_KEY_PREFIX = 'schefter:tb_drafts:player:';
-export const TB_DRAFT_OWNER_KEY_PREFIX = 'schefter:tb_drafts:owner:';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
+/** Legacy (TheLeague) prefixes — trade-builder drafts are TheLeague-only today. */
+export const TB_DRAFT_PLAYER_KEY_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tb_drafts:player:');
+export const TB_DRAFT_OWNER_KEY_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tb_drafts:owner:');
 export const TB_DRAFT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 export const TB_DRAFT_KEY_TTL_SEC = 7 * 24 * 60 * 60;
 /**

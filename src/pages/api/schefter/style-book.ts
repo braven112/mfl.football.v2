@@ -29,25 +29,29 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { resolveSchefterLeague, leagueHasSchefterTips, schefterSeasonYear } from '../../../utils/schefter-league';
 import { getCodename } from '../../../utils/schefter-codenames';
 import { getRedis, type RedisClient } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
 const LEADERBOARD_LIMIT = 25;
 const CACHE_TTL_MS = 30_000;
 
-// Named (GroupMe) Style Book
-const NAMED_LIFETIME_PREFIX = 'schefter:style_book:';
-const NAMED_LAST_SHOT_PREFIX = 'schefter:style_book:last_shot_at:';
-const NAMED_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
-
-// Anonymous (web-tip) Style Book
-const ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
-const ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
-const ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
+// Style Book key prefixes, league-scoped. Named (GroupMe) attackers key on
+// public display name; anonymous (web-tip) attackers key on the tipster hash.
+function styleBookKeys(navSlug: string) {
+  return {
+    namedLifetimePrefix: schefterKey(navSlug, 'style_book:'),
+    namedLastShotPrefix: schefterKey(navSlug, 'style_book:last_shot_at:'),
+    namedLeaderboardPrefix: schefterKey(navSlug, 'style_book:leaderboard:'),
+    anonLifetimePrefix: schefterKey(navSlug, 'style_book:anon:'),
+    anonLastShotPrefix: schefterKey(navSlug, 'style_book:anon:last_shot_at:'),
+    anonLeaderboardPrefix: schefterKey(navSlug, 'style_book:anon_leaderboard:'),
+  };
+}
 
 type NamedEntry = {
   author: string;
@@ -75,7 +79,7 @@ type StyleBookResponse = {
   };
 };
 
-let _cache: { data: StyleBookResponse; expiresAt: number } | null = null;
+const _cache = new Map<string, { data: StyleBookResponse; expiresAt: number }>();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
@@ -124,14 +128,16 @@ function normalizeZrange(raw: unknown): Array<{ member: string; score: number }>
 }
 
 export function _resetStyleBookCacheForTests(): void {
-  _cache = null;
+  _cache.clear();
 }
 
 async function fetchNamedEntries(
   redis: RedisClient,
   seasonYear: number,
+  navSlug: string,
 ): Promise<{ entries: NamedEntry[]; authorCount: number }> {
-  const leaderboardKey = `${NAMED_LEADERBOARD_PREFIX}${seasonYear}`;
+  const { namedLeaderboardPrefix, namedLifetimePrefix, namedLastShotPrefix } = styleBookKeys(navSlug);
+  const leaderboardKey = `${namedLeaderboardPrefix}${seasonYear}`;
   const [rawLeaderboard, rawCount] = await Promise.all([
     redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
     redis.zcard(leaderboardKey).catch(() => 0),
@@ -148,8 +154,8 @@ async function fetchNamedEntries(
       if (authorKey) {
         try {
           const [lifeRaw, shotRaw] = await Promise.all([
-            redis.get<string | number>(`${NAMED_LIFETIME_PREFIX}${authorKey}`),
-            redis.get<string | number>(`${NAMED_LAST_SHOT_PREFIX}${authorKey}`),
+            redis.get<string | number>(`${namedLifetimePrefix}${authorKey}`),
+            redis.get<string | number>(`${namedLastShotPrefix}${authorKey}`),
           ]);
           lifetimeCount = coerceCount(lifeRaw);
           lastShotAt = coerceTimestamp(shotRaw);
@@ -177,8 +183,10 @@ async function fetchNamedEntries(
 async function fetchAnonEntries(
   redis: RedisClient,
   seasonYear: number,
+  navSlug: string,
 ): Promise<{ entries: AnonEntry[]; authorCount: number }> {
-  const leaderboardKey = `${ANON_LEADERBOARD_PREFIX}${seasonYear}`;
+  const { anonLeaderboardPrefix, anonLifetimePrefix, anonLastShotPrefix } = styleBookKeys(navSlug);
+  const leaderboardKey = `${anonLeaderboardPrefix}${seasonYear}`;
   const [rawLeaderboard, rawCount] = await Promise.all([
     redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
     redis.zcard(leaderboardKey).catch(() => 0),
@@ -192,7 +200,7 @@ async function fetchAnonEntries(
     const hashedOwnerId = row.member;
     let codename: string | null = null;
     try {
-      codename = await getCodename(redis, hashedOwnerId);
+      codename = await getCodename(redis, hashedOwnerId, navSlug);
     } catch {
       codename = null;
     }
@@ -202,8 +210,8 @@ async function fetchAnonEntries(
     let lastShotAt: number | null = null;
     try {
       const [lifeRaw, shotRaw] = await Promise.all([
-        redis.get<string | number>(`${ANON_LIFETIME_PREFIX}${hashedOwnerId}`),
-        redis.get<string | number>(`${ANON_LAST_SHOT_PREFIX}${hashedOwnerId}`),
+        redis.get<string | number>(`${anonLifetimePrefix}${hashedOwnerId}`),
+        redis.get<string | number>(`${anonLastShotPrefix}${hashedOwnerId}`),
       ]);
       lifetimeCount = coerceCount(lifeRaw);
       lastShotAt = coerceTimestamp(shotRaw);
@@ -220,13 +228,20 @@ async function fetchAnonEntries(
   return { entries, authorCount };
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url: new URL(request.url) });
+  if (!league) return json({ error: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) return json({ error: 'feature_disabled' }, 404);
+  const navSlug = league.navSlug;
+
   const now = Date.now();
-  if (_cache && _cache.expiresAt > now) {
-    return json(_cache.data);
+  const cached = _cache.get(navSlug);
+  if (cached && cached.expiresAt > now) {
+    return json(cached.data);
   }
 
-  const seasonYear = getCurrentLeagueYear();
+  const seasonYear = schefterSeasonYear(league);
   const redis = await getRedis();
 
   if (!redis) {
@@ -235,7 +250,7 @@ export const GET: APIRoute = async () => {
       named: { entries: [], totals: { seasonShots: 0, authors: 0 } },
       anonymous: { entries: [], totals: { seasonShots: 0, authors: 0 } },
     };
-    _cache = { data: empty, expiresAt: now + CACHE_TTL_MS };
+    _cache.set(navSlug, { data: empty, expiresAt: now + CACHE_TTL_MS });
     return json(empty);
   }
 
@@ -243,8 +258,8 @@ export const GET: APIRoute = async () => {
   let anonymous: { entries: AnonEntry[]; authorCount: number };
   try {
     [named, anonymous] = await Promise.all([
-      fetchNamedEntries(redis, seasonYear),
-      fetchAnonEntries(redis, seasonYear),
+      fetchNamedEntries(redis, seasonYear, navSlug),
+      fetchAnonEntries(redis, seasonYear, navSlug),
     ]);
   } catch (err) {
     console.error('[style-book] Read error:', err);
@@ -266,6 +281,6 @@ export const GET: APIRoute = async () => {
     },
   };
 
-  _cache = { data: response, expiresAt: now + CACHE_TTL_MS };
+  _cache.set(navSlug, { data: response, expiresAt: now + CACHE_TTL_MS });
   return json(response);
 };

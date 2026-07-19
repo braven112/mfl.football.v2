@@ -22,12 +22,15 @@ import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { detectAttackOnSchefter } from '../../../utils/schefter-attack-detection';
 import { assignCodename } from '../../../utils/schefter-codenames';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
-// @ts-expect-error — JS module without bundled types; runtime exports verified.
 import { incrementNamingTarget } from '../../../../scripts/lib/schefter-naming-rate-limit.mjs';
-import theLeagueConfig from '../../../data/theleague.config.json';
+import { resolveSchefterLeague, leagueHasSchefterTips, schefterSeasonYear } from '../../../utils/schefter-league';
+import { getSchefterFeed, findLeagueTeam } from '../../../utils/schefter-league-data';
 import {
-  TIP_TOPICS,
+  normalizeTopicId,
+  getTopicIds,
+  getTopicPolicy,
+} from '../../../config/schefter-topics.mjs';
+import {
   TIP_TEXT_MIN,
   TIP_TEXT_MAX,
   LEAGUE_WIDE_HINT,
@@ -36,25 +39,20 @@ import {
   type Tip,
   type TipTopic,
 } from '../../../types/schefter-tips';
-import feedData from '../../../data/theleague/schefter-feed.json';
-import type { SchefterFeed } from '../../../types/schefter';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const RATE_LIMIT_PREFIX = 'schefter:tips:ratelimit:';
 const RATE_LIMIT_MAX = 3;
+/** How long after submit a tip can be withdrawn (client shows a countdown). */
+export const UNDO_WINDOW_MS = 60_000;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 
 // Anon Style Book keys. Named (GroupMe) attackers live under
 // `schefter:style_book:{authorKey}` keyed on the public display name. Anon
 // web tippers live here keyed on the tipster hash so the two leaderboards
 // never mix and de-anonymization is impossible through the leaderboard.
-const STYLE_BOOK_ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
-const STYLE_BOOK_ANON_SEASON_PREFIX = 'schefter:style_book:anon:season:';
-const STYLE_BOOK_ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
-const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
+// (League-scoped via schefterKey(league.navSlug, …) inside the handler.)
 
 // Off-topic tip timeline — rolling-window ZSET of "Beef" (commish-scope) tip
 // submissions per tipster. The A=C barometer reads the count of entries in
@@ -65,7 +63,6 @@ const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard
 // tippers get the lighter hissy-fit framing; recent repeat offenders earn
 // the "every accusation is a confession" twist. Keyed on hashedOwnerId;
 // the rolling count is surfaced to the LLM as offTopicCount.
-const OFF_TOPIC_TIMELINE_PREFIX = 'schefter:off_topic:timeline:';
 const OFF_TOPIC_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const OFF_TOPIC_TIMELINE_TTL_SEC = 90 * 24 * 60 * 60;   // 90d belt-and-suspenders TTL
 
@@ -76,17 +73,6 @@ function errorResponse(code: string, message: string, status: number): Response 
   });
 }
 
-function resolveDivision(franchiseId: string): string | undefined {
-  const teams = (theLeagueConfig as { teams?: Array<{ franchiseId: string; division?: string }> }).teams ?? [];
-  const team = teams.find((t) => t.franchiseId === franchiseId);
-  return team?.division;
-}
-
-function isValidFranchiseId(franchiseId: string): boolean {
-  const teams = (theLeagueConfig as { teams?: Array<{ franchiseId: string }> }).teams ?? [];
-  return teams.some((t) => t.franchiseId === franchiseId);
-}
-
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user) {
@@ -95,6 +81,18 @@ export const POST: APIRoute = async ({ request }) => {
   if (!user.franchiseId) {
     return errorResponse('no_franchise', 'No franchise associated with your account.', 403);
   }
+
+  // League comes from the session JWT — an AFL session cannot write into
+  // TheLeague's queue (and vice versa). No URL change for existing clients.
+  const league = resolveSchefterLeague({ user, url: new URL(request.url) });
+  if (!league) {
+    return errorResponse('bad_league', 'Unknown league.', 400);
+  }
+  if (!leagueHasSchefterTips(league)) {
+    return errorResponse('feature_disabled', 'The tip line is not open for this league.', 404);
+  }
+  const navSlug = league.navSlug;
+  const k = (suffix: string) => schefterKey(navSlug, suffix);
 
   let body: unknown;
   try {
@@ -125,13 +123,16 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  if (typeof topic !== 'string' || !(TIP_TOPICS as readonly string[]).includes(topic)) {
+  const normalizedTopic =
+    typeof topic === 'string' ? normalizeTopicId(topic, navSlug) : null;
+  if (!normalizedTopic) {
     return errorResponse(
       'bad_topic',
-      `Topic must be one of: ${TIP_TOPICS.join(', ')}.`,
+      `Topic must be one of: ${getTopicIds(navSlug).join(', ')}.`,
       400,
     );
   }
+  const topicPolicy = getTopicPolicy(normalizedTopic, navSlug);
 
   let normalizedHint: string | undefined;
   let division: string | undefined;
@@ -142,15 +143,18 @@ export const POST: APIRoute = async ({ request }) => {
     if (franchiseHint === LEAGUE_WIDE_HINT) {
       normalizedHint = LEAGUE_WIDE_HINT;
     } else if (franchiseHint === COMMISH_HINT) {
-      if (topic === 'trade') {
-        return errorResponse('bad_hint', 'The commissioner is not a valid target for trade-interest tips.', 400);
+      if (!topicPolicy.commishTargetAllowed) {
+        return errorResponse('bad_hint', 'The commissioner is not a valid target for this topic.', 400);
       }
       normalizedHint = COMMISH_HINT;
-    } else if (isValidFranchiseId(franchiseHint)) {
-      normalizedHint = franchiseHint;
-      division = resolveDivision(franchiseHint);
     } else {
-      return errorResponse('bad_hint', 'Unknown franchise.', 400);
+      const hintTeam = findLeagueTeam(league, franchiseHint);
+      if (hintTeam) {
+        normalizedHint = franchiseHint;
+        division = hintTeam.division;
+      } else {
+        return errorResponse('bad_hint', 'Unknown franchise.', 400);
+      }
     }
   }
 
@@ -162,7 +166,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (typeof repliesToPostId !== 'string') {
       return errorResponse('bad_reply', 'repliesToPostId must be a string.', 400);
     }
-    const feed = feedData as SchefterFeed;
+    const feed = getSchefterFeed(league);
     const parent = feed.posts.find((p) => p.id === repliesToPostId);
     if (!parent) {
       return errorResponse('reply_not_found', 'That rumor is not in the feed.', 404);
@@ -203,7 +207,7 @@ export const POST: APIRoute = async ({ request }) => {
   // including commissioners/admins. Any surface that exposes a "tips used
   // today" count would otherwise become a de-anonymization oracle for the
   // exempt user (see engagement plan P0).
-  const rateKey = `${RATE_LIMIT_PREFIX}${hashedOwnerId}`;
+  const rateKey = `${k('tips:ratelimit:')}${hashedOwnerId}`;
   try {
     const count = await redis.incr(rateKey);
     if (count === 1) {
@@ -225,7 +229,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const tipsterDivision = resolveDivision(user.franchiseId);
+  const tipsterDivision = findLeagueTeam(league, user.franchiseId)?.division;
 
   // Style Book — anonymous web-tip path. If the tip text attacks Schefter,
   // bump the anon-leaderboard counters keyed on the hashed owner id. Named
@@ -242,11 +246,11 @@ export const POST: APIRoute = async ({ request }) => {
   let tipsterCodename: string | null = null;
   if (attackCheck.attack) {
     try {
-      const year = getCurrentLeagueYear();
-      const lifetimeKey = `${STYLE_BOOK_ANON_LIFETIME_PREFIX}${hashedOwnerId}`;
-      const seasonKey = `${STYLE_BOOK_ANON_SEASON_PREFIX}${year}:${hashedOwnerId}`;
-      const lastShotKey = `${STYLE_BOOK_ANON_LAST_SHOT_PREFIX}${hashedOwnerId}`;
-      const leaderboardKey = `${STYLE_BOOK_ANON_LEADERBOARD_PREFIX}${year}`;
+      const year = schefterSeasonYear(league);
+      const lifetimeKey = `${k('style_book:anon:')}${hashedOwnerId}`;
+      const seasonKey = `${k('style_book:anon:season:')}${year}:${hashedOwnerId}`;
+      const lastShotKey = `${k('style_book:anon:last_shot_at:')}${hashedOwnerId}`;
+      const leaderboardKey = `${k('style_book:anon_leaderboard:')}${year}`;
 
       await redis.incr(lifetimeKey);
       const seasonRaw = await redis.incr(seasonKey);
@@ -263,7 +267,7 @@ export const POST: APIRoute = async ({ request }) => {
       // when referring to this anonymous attacker in posts. assignCodename
       // is idempotent — returns the existing codename if one's already set.
       try {
-        tipsterCodename = await assignCodename(redis, hashedOwnerId);
+        tipsterCodename = await assignCodename(redis, hashedOwnerId, navSlug);
       } catch (err) {
         console.warn('[schefter/tip] codename assign (style-book) failed:', err);
       }
@@ -280,12 +284,19 @@ export const POST: APIRoute = async ({ request }) => {
   //
   // Best-effort — Redis failure never blocks enqueue; offTopicCount just
   // stays null and the LLM falls back to rule 16's default (hissy fit only).
+  // Tip id is minted BEFORE the barometer write below so the off-topic
+  // timeline member is the tip id — which lets the undo endpoint ZREM the
+  // exact entry when the tip is withdrawn.
+  const tipId = crypto.randomUUID();
+
   let offTopicCount: number | null = null;
-  if (topic === 'commish') {
+  // 'frontoffice' succeeded the legacy 'commish' ("Beef") topic — the
+  // barometer keeps counting the same behavioral lane under the new id.
+  if (normalizedTopic === 'frontoffice') {
     try {
       const nowMs = Date.now();
-      const timelineKey = `${OFF_TOPIC_TIMELINE_PREFIX}${hashedOwnerId}`;
-      const tipMarker = crypto.randomUUID();
+      const timelineKey = `${k('off_topic:timeline:')}${hashedOwnerId}`;
+      const tipMarker = tipId;
 
       // Add this tip to the timeline + prune anything outside the window +
       // refresh TTL. The TTL is a safety net — if a tipster stops sending
@@ -318,19 +329,19 @@ export const POST: APIRoute = async ({ request }) => {
     normalizedHint !== COMMISH_HINT
   ) {
     try {
-      await incrementNamingTarget(hashedOwnerId, normalizedHint, redis);
+      await incrementNamingTarget(hashedOwnerId, normalizedHint, redis, navSlug);
     } catch (err) {
       console.warn('[schefter/tip] naming rate-limit increment failed:', err);
     }
   }
 
   const tip: Tip = {
-    id: crypto.randomUUID(),
+    id: tipId,
     hashedOwnerId,
     franchiseHint: normalizedHint,
     division,
     ...(tipsterDivision ? { tipsterDivision } : {}),
-    topic: topic as TipTopic,
+    topic: normalizedTopic as TipTopic,
     text: trimmedText,
     submittedAt: Date.now(),
     source: 'web',
@@ -348,21 +359,21 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     // Check current queue depth BEFORE push so we can anchor the marinate timer
     // only when the queue transitions from empty to non-empty.
-    const prevLen = await redis.llen(TIPS_QUEUE_KEY);
+    const prevLen = await redis.llen(k('tips:queue'));
 
-    await redis.lpush(TIPS_QUEUE_KEY, JSON.stringify(tip));
+    await redis.lpush(k('tips:queue'), JSON.stringify(tip));
 
     if (prevLen === 0) {
       // First tip of a new batch — start the 1-hour marinate clock. SET NX so
       // a racing request doesn't clobber the anchor if it's already set.
-      await redis.set(FIRST_TIP_TS_KEY, Date.now(), { nx: true });
+      await redis.set(k('tips:first_tip_ts'), Date.now(), { nx: true });
     }
 
     // Phase 9 — topic timeline. One ZSET per topic, member = tip id (anonymous),
     // score = submit timestamp. Hot-topics endpoint ZCOUNTs over the last 7d.
     // Also prune entries older than 30 days so the sets stay bounded.
     try {
-      const timelineKey = `schefter:topic_timeline:${tip.topic}`;
+      const timelineKey = `${k('topic_timeline:')}${tip.topic}`;
       await redis.zadd(timelineKey, { score: tip.submittedAt, member: tip.id });
       await redis.zremrangebyscore(timelineKey, 0, tip.submittedAt - 30 * 24 * 60 * 60 * 1000);
     } catch (err) {
@@ -378,8 +389,32 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: JSON_HEADERS,
-  });
+  // Eager codename reveal (Phase 8 UX): every successful submit resolves (or
+  // assigns) the tipster's codename so the client can show it immediately —
+  // no more waiting for a first published rumor to learn your nom de plume.
+  // assignCodename is idempotent; failure is non-fatal (codename: null).
+  let revealCodename: string | null = tipsterCodename;
+  if (!revealCodename) {
+    try {
+      revealCodename = await assignCodename(redis, hashedOwnerId, navSlug);
+    } catch (err) {
+      console.warn('[schefter/tip] codename assign (reveal) failed:', err);
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      codename: revealCodename,
+      tipId: tip.id,
+      submittedAt: tip.submittedAt,
+      // Client-side undo window (ms). The DELETE endpoint enforces its own
+      // server-side grace on top of this.
+      undoWindowMs: UNDO_WINDOW_MS,
+    }),
+    {
+      status: 200,
+      headers: JSON_HEADERS,
+    },
+  );
 };

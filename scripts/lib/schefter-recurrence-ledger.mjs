@@ -228,9 +228,16 @@ export function rolloverForSeason(ledger, season) {
   return [ledger, false];
 }
 
-export const LEDGER_PATH = path.join('data', 'schefter', 'topic-recurrence.json');
+/**
+ * Repo-relative ledger path for one league. Per-league layout:
+ * data/schefter/<navSlug>/topic-recurrence.json. No legacy fallback — a
+ * scanner reading the wrong league's ledger is a bug, not a degradation.
+ */
+export function ledgerPath(navSlug = 'theleague') {
+  return path.join('data', 'schefter', navSlug, 'topic-recurrence.json');
+}
 
-export function loadLedger(filePath = LEDGER_PATH) {
+export function loadLedger(filePath = ledgerPath()) {
   if (!existsSync(filePath)) {
     return emptyLedger(currentSeasonYear());
   }
@@ -252,7 +259,7 @@ export function loadLedger(filePath = LEDGER_PATH) {
   }
 }
 
-export function saveLedger(ledger, filePath = LEDGER_PATH) {
+export function saveLedger(ledger, filePath = ledgerPath()) {
   const dir = path.dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(filePath, JSON.stringify(ledger, null, 2) + '\n', 'utf8');

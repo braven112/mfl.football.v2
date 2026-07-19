@@ -30,8 +30,8 @@
 
 import type { APIRoute } from 'astro';
 import { chooseTeamName } from '../../../utils/team-names';
-import theLeagueConfig from '../../../data/theleague.config.json';
-// @ts-expect-error — JS module without bundled types; runtime exports verified.
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
+import { getSchefterLeagueConfig, type LeagueTeamConfig } from '../../../utils/schefter-league-data';
 import { getTopNamedTeams } from '../../../../scripts/lib/schefter-team-naming.mjs';
 import { getRedis } from '../../../utils/redis-client';
 
@@ -63,20 +63,15 @@ function clampInt(raw: string | null, def: number, min: number, max: number): nu
   return Math.min(max, Math.max(min, n));
 }
 
-type TeamConfig = {
-  franchiseId: string;
-  name: string;
-  nameMedium?: string;
-  nameShort?: string;
-  abbrev?: string;
-  division?: string;
-};
-
-const teamsById = new Map<string, TeamConfig>(
-  ((theLeagueConfig as { teams?: TeamConfig[] }).teams ?? []).map((t) => [t.franchiseId, t]),
-);
-
 export const GET: APIRoute = async ({ url }) => {
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url });
+  if (!league) return json({ error: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) return json({ error: 'feature_disabled' }, 404);
+  const teamsById = new Map<string, LeagueTeamConfig>(
+    getSchefterLeagueConfig(league).teams.map((t) => [t.franchiseId, t]),
+  );
+
   const days = clampInt(url.searchParams.get('days'), DEFAULT_DAYS, MIN_DAYS, MAX_DAYS);
   const limit = clampInt(url.searchParams.get('limit'), DEFAULT_LIMIT, MIN_LIMIT, MAX_LIMIT);
 
@@ -87,7 +82,7 @@ export const GET: APIRoute = async ({ url }) => {
 
   let rows: Array<{ franchiseId: string; count: number; lastNamedAt: number }> = [];
   try {
-    rows = await getTopNamedTeams(redis, days, limit);
+    rows = await getTopNamedTeams(redis, days, limit, league.navSlug);
   } catch (err) {
     console.warn('[most-named] getTopNamedTeams failed:', err);
     return json({ teams: [], windowDays: days, limit });

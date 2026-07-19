@@ -37,7 +37,7 @@ describe('morning-greeting constants + Redis key', () => {
 
   it('declares the Redis date key under the schefter:morning_greeting namespace', () => {
     expect(SCANNER_SRC).toMatch(
-      /MORNING_GREETING_DATE_KEY\s*=\s*['"]schefter:morning_greeting:last_used_date['"]/,
+      /MORNING_GREETING_DATE_KEY\s*=\s*schefterKey\(NAV_SLUG, 'morning_greeting:last_used_date'\)/,
     );
   });
 });

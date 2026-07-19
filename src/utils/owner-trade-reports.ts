@@ -22,8 +22,14 @@
 import leagueConfig from '../data/theleague.config.json';
 import { LEAGUES } from '../config/leagues';
 import { getRedis } from './redis-client';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../scripts/lib/schefter-keys.mjs';
 
-const HASH_KEY = 'schefter:trade_offers:owner_reports';
+// The trade-offer lane is TheLeague-only for now (AFL follow-up); when it
+// goes multi-league this key must take the league's navSlug.
+const HASH_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:owner_reports');
 const TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export interface OwnerTradeReport {

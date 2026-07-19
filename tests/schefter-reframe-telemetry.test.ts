@@ -10,7 +10,7 @@
  *  - buildHistoryEntry() persists reframeMode into the post-history record.
  *  - Empty / non-string body returns ''.
  *  - Routine reportage with no hostile frame returns ''.
- *  - The schema doc in data/schefter/post-history.json mentions reframeMode.
+ *  - The schema doc in data/schefter/theleague/post-history.json mentions reframeMode.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -203,7 +203,7 @@ describe('buildHistoryEntry — reframeMode is persisted', () => {
 
 describe('post-history.json schema doc mentions reframeMode', () => {
   const raw = readFileSync(
-    path.join(process.cwd(), 'data/schefter/post-history.json'),
+    path.join(process.cwd(), 'data/schefter/theleague/post-history.json'),
     'utf8',
   );
 

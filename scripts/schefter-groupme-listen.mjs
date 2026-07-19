@@ -19,13 +19,15 @@
  * dependency-light so the scanner can call it without extra setup.
  */
 
+import { schefterKey } from './lib/schefter-keys.mjs';
+
 const GROUPME_API_BASE = 'https://api.groupme.com/v3';
 
 // Redis keys
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const WATERMARK_KEY = 'schefter:groupme:last_mention_id';
-const RECENT_MENTIONS_KEY = 'schefter:groupme:recent_mentions';
+const TIPS_QUEUE_KEY = schefterKey('theleague', 'tips:queue');
+const FIRST_TIP_TS_KEY = schefterKey('theleague', 'tips:first_tip_ts');
+const WATERMARK_KEY = schefterKey('theleague', 'groupme:last_mention_id');
+const RECENT_MENTIONS_KEY = schefterKey('theleague', 'groupme:recent_mentions');
 const RECENT_MENTIONS_TTL_SEC = 24 * 60 * 60;
 const MAX_RECENT_MENTIONS = 50;
 
@@ -34,7 +36,7 @@ const MAX_RECENT_MENTIONS = 50;
 // message carries an attachment `{type:'reply', reply_id, base_reply_id}`.
 // We resolve that reply_id against this cache so replies become tips without
 // requiring the name ("schefter", "claude") in the body.
-const BOT_MESSAGE_IDS_KEY = 'schefter:groupme:bot_message_ids';
+const BOT_MESSAGE_IDS_KEY = schefterKey('theleague', 'groupme:bot_message_ids');
 const BOT_MESSAGE_IDS_TTL_SEC = 48 * 60 * 60; // 48h — GroupMe replies older than this are rare
 const MAX_TRACKED_BOT_MESSAGES = 50;
 
@@ -44,10 +46,10 @@ const MAX_TRACKED_BOT_MESSAGES = 50;
 // keys are updated in the same transaction that pushes to the tips queue,
 // and the tip gains `attackOnSchefter: true` plus the current `styleBookCount`
 // so the LLM can escalate the Style Book bit with running-total flavor.
-const STYLE_BOOK_LIFETIME_PREFIX = 'schefter:style_book:';
-const STYLE_BOOK_SEASON_PREFIX = 'schefter:style_book:season:';
-const STYLE_BOOK_LAST_SHOT_PREFIX = 'schefter:style_book:last_shot_at:';
-const STYLE_BOOK_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
+const STYLE_BOOK_LIFETIME_PREFIX = schefterKey('theleague', 'style_book:');
+const STYLE_BOOK_SEASON_PREFIX = schefterKey('theleague', 'style_book:season:');
+const STYLE_BOOK_LAST_SHOT_PREFIX = schefterKey('theleague', 'style_book:last_shot_at:');
+const STYLE_BOOK_LEADERBOARD_PREFIX = schefterKey('theleague', 'style_book:leaderboard:');
 
 // Regex patterns (case-insensitive)
 // "claude schefter" > "schefter" > "schefty" > "claude" — match all, we only count once.

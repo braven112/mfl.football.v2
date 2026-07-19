@@ -12,34 +12,50 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import feedData from '../../../data/theleague/schefter-feed.json';
-import leagueConfig from '../../../data/theleague.config.json';
+import { schefterSeasonYear } from '../../../utils/schefter-league';
+import { getSchefterFeed, getSchefterLeagueConfig, type SchefterLeagueConfig } from '../../../utils/schefter-league-data';
+import type { LeagueDefinition } from '../../../config/leagues';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import { getPlayerMap } from '../../../utils/player-map';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getRedis, type RedisClient } from '../../../utils/redis-client';
+import { getLeagueById } from '../../../config/leagues';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
-
+// GroupMe ingestion is a TheLeague-only lane (there is no AFL GroupMe
+// listener), so these keys stay unprefixed and are only read when the
+// resolved league is TheLeague.
 const GROUPME_MESSAGES_KEY = 'groupme:messages';
 const GROUPME_LAST_MESSAGE_ID_KEY = 'groupme:last_message_id';
 const GROUPME_LAST_SYNC_KEY = 'groupme:last_sync_ts';
 
-const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
-const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
-const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
-const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
-const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
-const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
-const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * League-scoped Redis keys, built per-request from the resolved league's
+ * navSlug. TheLeague keeps the legacy unprefixed `schefter:<suffix>` form;
+ * every other league gets `schefter:<navSlug>:<suffix>`.
+ */
+function buildKeys(navSlug: string) {
+  const k = (suffix: string) => schefterKey(navSlug, suffix);
+  return {
+    tipsQueue: k('tips:queue'),
+    tipsProcessed: k('tips:processed'),
+    firstTipTs: k('tips:first_tip_ts'),
+    rumorPostsToday: k('rumor:posts_today'),
+    rumorLastPostTs: k('rumor:last_post_ts'),
+    offerSeen: k('trade_offers:seen'),
+    offerFirstSeen: k('trade_offers:first_seen'),
+    offerPosted: k('trade_offers:posted'),
+    offerOwnerReports: k('trade_offers:owner_reports'),
+    offerArchive: k('trade_offers:archive'),
+    offerRolls: k('trade_offers:rolls'),
+    offerExposure: k('trade_offers:exposure'),
+    tipsterLeaderboardPrefix: k('tipster:leaderboard:'),
+  };
+}
+type SchefterStatsKeys = ReturnType<typeof buildKeys>;
 
 // Imported from the scanner's shared lib so the admin preview matches the
 // scanner's bucket selection exactly. Both consumers must agree.
@@ -61,7 +77,19 @@ import { buildTipsterContext } from '../../../../scripts/lib/schefter-tipster-co
 // Static JSON import — the scanner commits this file each run, and Vercel
 // redeploys on push, so the admin preview lags by at most one scanner cycle.
 // That's acceptable: the staleness flag is informational, not a gate.
-import recurrenceLedger from '../../../../data/schefter/topic-recurrence.json';
+//
+// League note: this is TheLeague's ledger (AFL's will live at
+// data/schefter/afl/topic-recurrence.json). Because the import is static,
+// the admin staleness preview is TheLeague-only for now — when the resolved
+// league is AFL we pass an empty ledger into isBucketStale /
+// bucketStreakLength instead of leaking TheLeague's streak data.
+import theleagueRecurrenceLedger from '../../../../data/schefter/theleague/topic-recurrence.json';
+import aflRecurrenceLedger from '../../../../data/schefter/afl/topic-recurrence.json';
+
+// Empty-ledger stand-in for leagues without a static ledger import (AFL).
+// The ledger helpers only ever read `ledger?.fingerprints?.[fp]`, so an
+// empty fingerprints map yields "never seen": isStale=false, streak=1.
+const EMPTY_RECURRENCE_LEDGER = { fingerprints: {} };
 // Reuse the listener's exact mention regex so the admin's "schefterDetected"
 // flag matches what the live scanner would have done with the same text.
 // Native-reply detection isn't reproducible here (it requires the bot-message
@@ -70,6 +98,7 @@ import recurrenceLedger from '../../../../data/schefter/topic-recurrence.json';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .mjs via allowJs
 import { detectMention } from '../../../../scripts/schefter-groupme-listen.mjs';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 
 function coerce(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -81,18 +110,23 @@ function safeParse(s: string): unknown {
   try { return JSON.parse(s); } catch { return null; }
 }
 
-// Module-level team lookup (franchiseId → {name, abbrev, nameShort}). Same
+// Per-request team lookup (franchiseId → {name, abbrev, nameShort}). Same
 // shape the live trades endpoint exposes — we're rendering the same kind
-// of card, just for offers MFL no longer lists.
-const teamLookup = new Map<string, { name: string; abbrev: string; nameShort: string }>();
-for (const team of (leagueConfig as { teams?: Array<{ franchiseId: string; name?: string; abbrev?: string; nameShort?: string }> }).teams ?? []) {
-  if (team.franchiseId) {
-    teamLookup.set(team.franchiseId, {
-      name: team.name || '',
-      abbrev: team.abbrev || '',
-      nameShort: team.nameShort || '',
-    });
+// of card, just for offers MFL no longer lists. Built from the resolved
+// league's config so team names always match the requesting league.
+type TeamLookup = Map<string, { name: string; abbrev: string; nameShort: string }>;
+function buildTeamLookup(config: SchefterLeagueConfig): TeamLookup {
+  const lookup: TeamLookup = new Map();
+  for (const team of config.teams ?? []) {
+    if (team.franchiseId) {
+      lookup.set(team.franchiseId, {
+        name: team.name || '',
+        abbrev: team.abbrev || '',
+        nameShort: team.nameShort || '',
+      });
+    }
   }
+  return lookup;
 }
 
 type ResolvedArchiveAsset = { type: 'player' | 'pick' | 'bbid'; label: string; position?: string };
@@ -105,6 +139,7 @@ type ResolvedArchiveAsset = { type: 'player' | 'pick' | 'bbid'; label: string; p
 function resolveArchiveAssets(
   assetString: string,
   playerMap: Map<string, { name: string; position: string; team: string }>,
+  teamLookup: TeamLookup,
 ): ResolvedArchiveAsset[] {
   const { playerIds, draftPicks, blindBid } = parseAssets(assetString);
   const resolved: ResolvedArchiveAsset[] = [];
@@ -142,9 +177,9 @@ function resolveArchiveAssets(
  * `scripts/lib/redact-trade-offer.mjs`) — when the scanner promotes a tip
  * to a published post the original tipId rides through into `post.tipIds`.
  */
-function buildOfferToPostIndex(): Map<string, { postId: string; postTimestamp: string }> {
+function buildOfferToPostIndex(feed: FeedShape): Map<string, { postId: string; postTimestamp: string }> {
   const index = new Map<string, { postId: string; postTimestamp: string }>();
-  const posts = (feedData as { posts?: Array<{ id?: unknown; timestamp?: unknown; tipIds?: unknown }> }).posts ?? [];
+  const posts = (feed as { posts?: Array<{ id?: unknown; timestamp?: unknown; tipIds?: unknown }> }).posts ?? [];
   for (const post of posts) {
     if (!post || typeof post !== 'object') continue;
     const tipIds = Array.isArray(post.tipIds) ? post.tipIds : [];
@@ -343,8 +378,22 @@ function deriveFeedStats(feed: FeedShape) {
   };
 }
 
-async function readRedisStats(redis: RedisClient) {
-  const seasonYear = new Date().getUTCFullYear();
+async function readRedisStats(
+  redis: RedisClient,
+  opts: {
+    league: LeagueDefinition;
+    keys: SchefterStatsKeys;
+    feed: FeedShape;
+    teamLookup: TeamLookup;
+  },
+) {
+  const { league, keys, feed, teamLookup } = opts;
+  // GroupMe ingestion, trade-offer detection, and MFL pending-trade
+  // proposals are TheLeague-only lanes. For any other league we skip those
+  // Redis reads entirely and return empty/zeroed structures of the same
+  // shape so the dashboard renders cleanly.
+  const isTheLeague = league.slug === 'theleague';
+  const seasonYear = schefterSeasonYear(league);
 
   const [
     queueDepth,
@@ -368,32 +417,34 @@ async function readRedisStats(redis: RedisClient) {
     pendingTipsRaw,
     recentGroupMeRaw,
   ] = await Promise.all([
-    redis.llen(TIPS_QUEUE_KEY).catch(() => 0),
-    redis.llen(TIPS_PROCESSED_KEY).catch(() => 0),
-    redis.get<string | number>(FIRST_TIP_TS_KEY).catch(() => null),
-    redis.get<string | number>(RUMOR_POSTS_TODAY_KEY).catch(() => null),
-    redis.get<string | number>(RUMOR_LAST_POST_TS_KEY).catch(() => null),
-    redis.zcard(GROUPME_MESSAGES_KEY).catch(() => 0),
-    redis.get<string>(GROUPME_LAST_MESSAGE_ID_KEY).catch(() => null),
-    redis.get<string | number>(GROUPME_LAST_SYNC_KEY).catch(() => null),
-    redis.zcard(OFFER_SEEN_KEY).catch(() => 0),
-    redis.zcard(`schefter:tipster:leaderboard:${seasonYear}`).catch(() => 0),
-    redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
-    redis.scard(OFFER_POSTED_KEY).catch(() => 0),
-    redis.hgetall<string>(OFFER_FIRST_SEEN_KEY).catch(() => null),
-    redis.smembers<string>(OFFER_POSTED_KEY).catch(() => [] as string[]),
-    redis.hgetall<string>(OFFER_ARCHIVE_KEY).catch(() => null),
-    redis.hgetall<string>(OFFER_ROLLS_KEY).catch(() => null),
-    redis.hgetall<string>(OFFER_EXPOSURE_KEY).catch(() => null),
-    redis.hgetall<unknown>(OFFER_OWNER_REPORTS_KEY).catch(() => null),
+    redis.llen(keys.tipsQueue).catch(() => 0),
+    redis.llen(keys.tipsProcessed).catch(() => 0),
+    redis.get<string | number>(keys.firstTipTs).catch(() => null),
+    redis.get<string | number>(keys.rumorPostsToday).catch(() => null),
+    redis.get<string | number>(keys.rumorLastPostTs).catch(() => null),
+    isTheLeague ? redis.zcard(GROUPME_MESSAGES_KEY).catch(() => 0) : Promise.resolve(0),
+    isTheLeague ? redis.get<string>(GROUPME_LAST_MESSAGE_ID_KEY).catch(() => null) : Promise.resolve(null),
+    isTheLeague ? redis.get<string | number>(GROUPME_LAST_SYNC_KEY).catch(() => null) : Promise.resolve(null),
+    isTheLeague ? redis.zcard(keys.offerSeen).catch(() => 0) : Promise.resolve(0),
+    redis.zcard(`${keys.tipsterLeaderboardPrefix}${seasonYear}`).catch(() => 0),
+    isTheLeague ? redis.hlen(keys.offerFirstSeen).catch(() => 0) : Promise.resolve(0),
+    isTheLeague ? redis.scard(keys.offerPosted).catch(() => 0) : Promise.resolve(0),
+    isTheLeague ? redis.hgetall<string>(keys.offerFirstSeen).catch(() => null) : Promise.resolve(null),
+    isTheLeague ? redis.smembers<string>(keys.offerPosted).catch(() => [] as string[]) : Promise.resolve([] as string[]),
+    isTheLeague ? redis.hgetall<string>(keys.offerArchive).catch(() => null) : Promise.resolve(null),
+    isTheLeague ? redis.hgetall<string>(keys.offerRolls).catch(() => null) : Promise.resolve(null),
+    isTheLeague ? redis.hgetall<string>(keys.offerExposure).catch(() => null) : Promise.resolve(null),
+    isTheLeague ? redis.hgetall<unknown>(keys.offerOwnerReports).catch(() => null) : Promise.resolve(null),
     // Pull the actual queue contents (not just LLEN) so the admin page can
     // render a "what's next to post" list. Cap at 50 — the queue rarely
     // grows past a handful, and 50 is a safe upper bound for payload size.
-    redis.lrange<string>(TIPS_QUEUE_KEY, 0, 49).catch(() => [] as string[]),
+    redis.lrange<string>(keys.tipsQueue, 0, 49).catch(() => [] as string[]),
     // Pull the recent GroupMe message cache so the admin can see every
     // message that came through the chat — both the ones Schefter detected
     // and the ones he ignored. Cap at 50; the cache itself holds 500.
-    redis.zrange<string>(GROUPME_MESSAGES_KEY, 0, 49, { rev: true }).catch(() => [] as string[]),
+    isTheLeague
+      ? redis.zrange<string>(GROUPME_MESSAGES_KEY, 0, 49, { rev: true }).catch(() => [] as string[])
+      : Promise.resolve([] as string[]),
   ]);
 
   // Parse the queue snapshot into admin-safe tip objects. We strip the
@@ -488,9 +539,16 @@ async function readRedisStats(redis: RedisClient) {
   // skips it from the normal lane until a quiet week breaks the run.
   const previewNow = new Date();
   const currentIsoWeek = isoWeekLabel(previewNow);
+  // Staleness preview reads the statically-imported TheLeague ledger; other
+  // leagues get the empty ledger (streak=1, isStale=false) until their
+  // ledger file gets its own import — see the recurrenceLedger import note.
+  const ledger =
+    league.navSlug === 'afl' ? aflRecurrenceLedger :
+    isTheLeague ? theleagueRecurrenceLedger :
+    EMPTY_RECURRENCE_LEDGER;
   let tipsterContext: Map<string, unknown> = new Map();
   try {
-    tipsterContext = await buildTipsterContext(pendingTipsWithHashes, redis);
+    tipsterContext = await buildTipsterContext(pendingTipsWithHashes, redis, league.navSlug);
   } catch (err) {
     console.warn('[admin/schefter-stats] tipster context build failed:', err);
     tipsterContext = new Map();
@@ -507,15 +565,15 @@ async function readRedisStats(redis: RedisClient) {
     tipIds: (b.tips as Array<{ id?: unknown }>).map((t) => (typeof t.id === 'string' ? t.id : null)).filter((x): x is string => !!x),
     oldestSubmittedAt: b.oldestSubmittedAt,
     priorityScore: bucketPriorityScore(b, previewNow, tipsterContext),
-    staleStreakWeeks: bucketStreakLength(b, recurrenceLedger, currentIsoWeek),
-    isStale: isBucketStale(b, recurrenceLedger, currentIsoWeek),
+    staleStreakWeeks: bucketStreakLength(b, ledger, currentIsoWeek),
+    isStale: isBucketStale(b, ledger, currentIsoWeek),
   }));
 
   // Sample the processed archive to break down tip sources (web vs groupme vs trade_offer)
   let tipSourceBreakdown: Record<string, number> = { web: 0, groupme: 0, trade_offer: 0, unknown: 0 };
   let tipSampleSize = 0;
   try {
-    const sample = await redis.lrange<string>(TIPS_PROCESSED_KEY, 0, 199);
+    const sample = await redis.lrange<string>(keys.tipsProcessed, 0, 199);
     for (const raw of sample) {
       tipSampleSize += 1;
       try {
@@ -578,10 +636,17 @@ async function readRedisStats(redis: RedisClient) {
   // Entries that exist only in `first_seen` (not yet migrated to archive,
   // i.e. captured before this commit landed) get a placeholder record so
   // the running total stays honest — they're shown with offerId only.
-  const offerToPostIndex = buildOfferToPostIndex();
+  const offerToPostIndex = isTheLeague
+    ? buildOfferToPostIndex(feed)
+    : new Map<string, { postId: string; postTimestamp: string }>();
+  // NFL player identity for archive asset labels — only needed for the
+  // TheLeague-only trade-offer archive, so skip the load elsewhere.
   const playerMap = (() => {
+    if (!isTheLeague) {
+      return new Map<string, { name: string; position: string; team: string }>();
+    }
     try {
-      const identityMap = getPlayerMap(getCurrentLeagueYear());
+      const identityMap = getPlayerMap(schefterSeasonYear(league));
       const m = new Map<string, { name: string; position: string; team: string }>();
       for (const [id, identity] of identityMap) {
         m.set(id, { name: identity.name, position: identity.position, team: identity.nflTeam });
@@ -633,7 +698,7 @@ async function readRedisStats(redis: RedisClient) {
     }
   }
   // Graduated-disclosure signal count. The exposure HASH is the single
-  // source of truth — we deliberately do NOT fall back to OFFER_POSTED_KEY.
+  // source of truth — we deliberately do NOT fall back to the posted SET.
   // Old (pre-2026-05) trades sit in `posted` but have no exposure entry, so
   // they show the "posted" pill with NO signal number — they predate the
   // ladder. Only new-model posts carry a "signal N" pill.
@@ -676,8 +741,8 @@ async function readRedisStats(redis: RedisClient) {
         postTimestamp: link?.postTimestamp || null,
         legacyBackfill: false,
         assets: {
-          willGiveUp: resolveArchiveAssets(typeof m.willGiveUp === 'string' ? m.willGiveUp : '', playerMap),
-          willReceive: resolveArchiveAssets(typeof m.willReceive === 'string' ? m.willReceive : '', playerMap),
+          willGiveUp: resolveArchiveAssets(typeof m.willGiveUp === 'string' ? m.willGiveUp : '', playerMap, teamLookup),
+          willReceive: resolveArchiveAssets(typeof m.willReceive === 'string' ? m.willReceive : '', playerMap, teamLookup),
         },
         comments: typeof m.comments === 'string' ? m.comments : '',
       });
@@ -930,11 +995,26 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'forbidden' }, 403);
   }
 
-  const feedStats = deriveFeedStats(feedData as FeedShape);
+  // League scoping: the session JWT's league wins (a TheLeague commissioner
+  // gets TheLeague stats, an AFL commissioner gets AFL stats), then the
+  // ?league= param, then the TheLeague default.
+  // Admin is league-scoped end to end: the league comes ONLY from the
+  // session JWT. No ?league= fallback here — a token without a leagueId
+  // must not be able to select another league's ops payload.
+  const league = user.leagueId ? getLeagueById(user.leagueId) : null;
+  if (!league) {
+    return json({ error: 'unknown league' }, 403);
+  }
+
+  const feed = getSchefterFeed(league) as unknown as FeedShape;
+  const teamLookup = buildTeamLookup(getSchefterLeagueConfig(league));
+  const keys = buildKeys(league.navSlug);
+
+  const feedStats = deriveFeedStats(feed);
 
   const redis = await getRedis();
   const redisStats = redis
-    ? await readRedisStats(redis).catch((err) => {
+    ? await readRedisStats(redis, { league, keys, feed, teamLookup }).catch((err) => {
         console.error('[admin/schefter-stats] Redis read error:', err);
         return null;
       })

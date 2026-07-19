@@ -10,10 +10,12 @@
 
 import type { SchefterReply } from '../types/schefter-replies';
 import { getRedis } from './redis-client';
+import { GLOBAL_SCHEFTER_NAMESPACES } from '../../scripts/lib/schefter-keys.mjs';
 
+// postId-keyed and shared across leagues by design — see schefter-keys.mjs.
 const KEYS = {
-  repliesPrefix: 'schefter:replies:',
-  ratePrefix: 'schefter:reply-rate:',
+  repliesPrefix: GLOBAL_SCHEFTER_NAMESPACES.replies,
+  ratePrefix: GLOBAL_SCHEFTER_NAMESPACES.replyRate,
 } as const;
 
 export function generateReplyId(): string {

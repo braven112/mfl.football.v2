@@ -12,7 +12,7 @@
  * navConfig.sections.forEach(section => { ... });
  *
  * // Check admin IDs
- * const isAdmin = navConfig.adminFranchiseIds.includes(franchiseId);
+ * const isAdmin = isAdminFranchise(franchiseId, league);
  *
  * // Get footer links
  * navConfig.footerLinks.forEach(link => { ... });
@@ -68,18 +68,22 @@ export function getLinkById(id: string): NavLink | undefined {
 }
 
 /**
- * Get the admin franchise IDs
+ * Get the admin franchise IDs for one league. Admin status is league-scoped:
+ * the same 4-digit franchise id belongs to different teams in each league.
  */
-export function getAdminFranchiseIds(): string[] {
-  return navConfig.adminFranchiseIds;
+export function getAdminFranchiseIds(league: LeagueSlug = 'theleague'): string[] {
+  return navConfig.adminFranchiseIds[league] ?? [];
 }
 
 /**
- * Check if a franchise ID is an admin
+ * Check if a franchise ID is an admin — within the given league only.
  */
-export function isAdminFranchise(franchiseId: string | null | undefined): boolean {
+export function isAdminFranchise(
+  franchiseId: string | null | undefined,
+  league: LeagueSlug = 'theleague',
+): boolean {
   if (!franchiseId) return false;
-  return navConfig.adminFranchiseIds.includes(franchiseId);
+  return getAdminFranchiseIds(league).includes(franchiseId);
 }
 
 /**

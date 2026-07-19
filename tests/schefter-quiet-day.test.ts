@@ -180,7 +180,7 @@ describe('rumor-scan quiet-day wiring', () => {
   );
 
   it('defines the cooldown key + the days-between constant', () => {
-    expect(SRC).toMatch(/QUIET_DAY_LAST_DATE_KEY\s*=\s*'schefter:rumor:quiet_day_last_date'/);
+    expect(SRC).toMatch(/QUIET_DAY_LAST_DATE_KEY\s*=\s*schefterKey\(NAV_SLUG, 'rumor:quiet_day_last_date'\)/);
     expect(SRC).toMatch(/QUIET_DAY_COOLDOWN_DAYS\s*=\s*\d+/);
   });
 

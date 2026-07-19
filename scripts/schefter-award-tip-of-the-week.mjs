@@ -29,6 +29,7 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { schefterKey, GLOBAL_SCHEFTER_NAMESPACES, DEFAULT_SCHEFTER_NAV_SLUG } from './lib/schefter-keys.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,10 +38,10 @@ const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
 
 const WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const IMPRESSION_KEY_PREFIX = 'schefter:rumor:impressions:';
-const BADGE_KEY_PREFIX = 'schefter:tipster:badges:';
-const TOTW_POST_KEY_PREFIX = 'schefter:rumor:totw:';
-const HASH_FOR_TIP_KEY_PREFIX = 'schefter:tipster_hash_for_tip:';
+const IMPRESSION_KEY_PREFIX = GLOBAL_SCHEFTER_NAMESPACES.rumorImpressions;
+const BADGE_KEY_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:badges:');
+const TOTW_POST_KEY_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:totw:');
+const HASH_FOR_TIP_KEY_PREFIX = GLOBAL_SCHEFTER_NAMESPACES.tipsterHashForTip;
 
 function log(...a) { console.log(...a); }
 function warn(...a) { console.warn(...a); }

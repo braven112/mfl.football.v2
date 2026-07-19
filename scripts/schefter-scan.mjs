@@ -37,8 +37,10 @@ import {
   consumeDailyPost,
   isQuietHours,
 } from './lib/schefter-groupme-budget.mjs';
+import { schefterKey } from './lib/schefter-keys.mjs';
+import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
-import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 
@@ -52,63 +54,10 @@ const DRY_RUN = process.argv.includes('--dry-run');
 
 // ── League configs ──
 //
-// Per CLAUDE.md "League registry — never hardcode league constants", per-league
-// IDs/paths/domains come from src/config/leagues-data.mjs. Only Schefter-specific
-// fields live here:
-//   - feedPath / eventsPath: scanner-owned artifacts (the registry's dataPath
-//     anchors them, but Schefter chooses the filenames).
-//   - configPath: TheLeague's pre-dates the registry's dataPath convention.
-//   - groupMeSchefterBotId / groupMeRogerBotId: GroupMe routing per league.
-//   - features: which sub-pipelines run. Source of truth for the Schefter flow.
-//     AFL's commish-cadence flows (rumorMill, tradeBait) stay off — see
-//     AFL_DUPLICATION_PLAN §2.4 (different commish, AFL persona pending).
-//     eventReminders is on for both; AFL routes via GROUPME_AFL_ROGER_BOT_ID.
-
-function buildSchefterLeague(registrySlug, overrides) {
-  const reg = getLeagueBySlug(registrySlug);
-  if (!reg) throw new Error(`Unknown league in registry: ${registrySlug}`);
-  return {
-    // navSlug = 'theleague' | 'afl' — the short slug already used throughout
-    // this script (e.g. for post.league and the `=== Scanning afl ===` logs).
-    slug: reg.navSlug,
-    leagueId: reg.id,
-    playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
-    baseUrl: `https://${reg.domains[0]}`,
-    calendarUrl: `https://${reg.domains[0]}/calendar`,
-    ...overrides,
-  };
-}
-
-const LEAGUES = [
-  buildSchefterLeague('theleague', {
-    feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json'),
-    configPath: path.join(projectRoot, 'src', 'data', 'theleague.config.json'),
-    eventsPath: path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json'),
-    groupMeSchefterBotId: process.env.GROUPME_SCHEFTER_BOT_ID,
-    groupMeRogerBotId: process.env.GROUPME_ROGER_BOT_ID,
-    features: {
-      rumorMill: true,
-      tradeBait: true,
-      eventReminders: true,
-      // TheLeague uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague
-      directGroupMe: false,
-    },
-  }),
-  buildSchefterLeague('afl-fantasy', {
-    feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'schefter-feed.json'),
-    configPath: path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json'),
-    eventsPath: path.join(projectRoot, 'data', 'afl-fantasy', 'resolved-events.json'),
-    groupMeSchefterBotId: process.env.GROUPME_AFL_SCHEFTER_BOT_ID,
-    groupMeRogerBotId: process.env.GROUPME_AFL_ROGER_BOT_ID,
-    features: {
-      rumorMill: false,
-      tradeBait: false,
-      eventReminders: true,
-      // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
-      directGroupMe: true,
-    },
-  }),
-];
+// Extracted to scripts/lib/schefter-leagues.mjs so the rumor-mill scanner
+// shares the same league table. Feature toggles and per-league bot ids live
+// there; rumorMill derives from the registry's features.schefterTips flag.
+const LEAGUES = SCHEFTER_LEAGUES;
 
 // ── Constants ──
 
@@ -123,7 +72,7 @@ const BIG_DROP_THRESHOLD = 1_000_000;
 // are discarded rather than pinged stale.
 const BIG_DROP_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 // Redis list of big-drop GroupMe pings waiting on the quiet-hours/spacing gate.
-const BIG_DROP_PENDING_KEY = 'schefter:bigdrop:pending_groupme';
+const BIG_DROP_PENDING_KEY = schefterKey('theleague', 'bigdrop:pending_groupme');
 const ROUND_ORDINALS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' };
 
 // ── Helpers ──
@@ -889,7 +838,12 @@ async function scanLeague(league) {
   // Feed-first invariant holds: the file is persisted above before any GroupMe
   // ping. Enqueue big-name drops, then drain the pending queue (respecting
   // quiet hours + spacing and the shared daily budget).
-  await enqueueBigDrops(newPosts, leagueSlug, now);
+  // directGroupMe leagues (AFL) already posted the drop to their own chat
+  // above — staging a big-drop ping would double-post it. The staged lane
+  // exists for leagues whose transactions do NOT direct-post (TheLeague).
+  if (!league.features?.directGroupMe) {
+    await enqueueBigDrops(newPosts, leagueSlug, now);
+  }
   await flushPendingBigDrops(now);
 
   return newPosts.length;
@@ -952,8 +906,6 @@ async function flushPendingBigDrops(now) {
   const redis = await getRedis();
   if (!redis) return;
 
-  const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
-
   let pendingCount;
   try {
     pendingCount = await redis.llen(BIG_DROP_PENDING_KEY);
@@ -991,7 +943,13 @@ async function flushPendingBigDrops(now) {
       continue;
     }
 
-    const window = await evaluatePingWindow(redis, now);
+    // Route per entry: each staged ping carries its league (navSlug), so the
+    // bot and the daily ping budget are that league's own — a queued AFL drop
+    // must never post through TheLeague's bot or burn TheLeague's budget.
+    const entryLeague = entry.league === 'afl' ? 'afl' : 'theleague';
+    const schefterBotId = getSchefterLeague(entryLeague === 'afl' ? 'afl-fantasy' : 'theleague').groupMeSchefterBotId;
+
+    const window = await evaluatePingWindow(redis, now, entryLeague);
     if (window.quietHours) {
       console.log('  [big-drop] Quiet hours — holding pings');
       return;
@@ -1002,7 +960,7 @@ async function flushPendingBigDrops(now) {
     }
 
     if (!schefterBotId) {
-      console.warn('  [big-drop] GROUPME_SCHEFTER_BOT_ID not set — holding ping');
+      console.warn(`  [big-drop] Schefter bot id not set for ${entryLeague} — holding ping`);
       return;
     }
 
@@ -1026,7 +984,7 @@ async function flushPendingBigDrops(now) {
     }
 
     await postToGroupMe(entry.text, { botIdOverride: schefterBotId });
-    await consumeDailyPost(redis, now);
+    await consumeDailyPost(redis, now, entryLeague);
     console.log(`  [big-drop] Pinged GroupMe (post ${window.postsToday + 1}, cap ${window.atCap ? 'exceeded' : 'ok'}): ${entry.headline}`);
     // One ping per run: spacing now blocks the rest until a later scan.
     return;
@@ -1247,8 +1205,8 @@ async function scanPendingTrades(league) {
   // Load personality + lore + bits + rolling post-memory ONCE per scan cycle.
   // If anything is missing the lore loader falls back and logs a warning;
   // recentPostsBlock is an empty string when history is empty.
-  const lore = await loadLore({ log: console.log, warn: console.warn });
-  const history = await loadPostHistory({ log: console.log, warn: console.warn });
+  const lore = await loadLore({ log: console.log, warn: console.warn, navSlug: league.slug });
+  const history = await loadPostHistory({ log: console.log, warn: console.warn, navSlug: league.slug });
   const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
   console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
@@ -1366,7 +1324,7 @@ async function scanPendingTrades(league) {
             subject: `trade-pending (${team1} ↔ ${team2})`,
             tipSources: ['trade_pending'],
           }),
-          { log: console.log, warn: console.warn },
+          { log: console.log, warn: console.warn, navSlug: league.slug },
         );
       }
     } catch (err) {
@@ -1466,8 +1424,8 @@ async function getRedis() {
   }
 }
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
+const TIPS_QUEUE_KEY = schefterKey('theleague', 'tips:queue');
+const FIRST_TIP_TS_KEY = schefterKey('theleague', 'tips:first_tip_ts');
 
 function buildTradeBaitTip({
   franchiseId,

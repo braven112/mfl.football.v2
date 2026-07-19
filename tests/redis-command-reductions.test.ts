@@ -303,7 +303,7 @@ describe('source-level invariants', () => {
   it('cooker-status keeps a 15s cache window', () => {
     const src = read('src/pages/api/schefter/cooker-status.ts');
     expect(src).toMatch(/CACHE_TTL_MS\s*=\s*15_000/);
-    expect(src).toMatch(/_cache\s*=\s*\{\s*data/);
+    expect(src).toMatch(/_cache\.set\(navSlug, \{ data/);
   });
 
   it('cooker-status serves from cache BEFORE calling getRedis()', () => {
@@ -311,7 +311,7 @@ describe('source-level invariants', () => {
     // runs AFTER getRedis() would still avoid the 3 reads but would churn
     // the redis client import every call.
     const src = read('src/pages/api/schefter/cooker-status.ts');
-    const cacheCheckIdx = src.indexOf('_cache.expiresAt > now');
+    const cacheCheckIdx = src.indexOf('cached.expiresAt > now');
     const getRedisIdx = src.indexOf('const redis = await getRedis();');
     expect(cacheCheckIdx).toBeGreaterThan(-1);
     expect(getRedisIdx).toBeGreaterThan(-1);

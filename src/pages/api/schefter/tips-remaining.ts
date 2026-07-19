@@ -19,10 +19,11 @@ import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
 
 export const prerender = false;
 
-const RATE_LIMIT_PREFIX = 'schefter:tips:ratelimit:';
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 
@@ -35,6 +36,10 @@ export const GET: APIRoute = async ({ request }) => {
   if (!user) return json({ error: 'unauthorized' }, 401);
   if (!user.franchiseId) return json({ error: 'no_franchise' }, 403);
 
+  const league = resolveSchefterLeague({ user, url: new URL(request.url) });
+  if (!league) return json({ error: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) return json({ error: 'feature_disabled' }, 404);
+
   let hashedOwnerId: string;
   try {
     hashedOwnerId = hashTipsterId(user.id);
@@ -45,12 +50,13 @@ export const GET: APIRoute = async ({ request }) => {
   const redis = await getRedis();
   if (!redis) {
     // Degraded mode: we can't read the counter, but we shouldn't block the UI
-    // from rendering. Return the optimistic max; submit endpoint will still
-    // enforce the cap in Redis when it comes back online.
-    return json({ used: 0, remaining: RATE_LIMIT_MAX, max: RATE_LIMIT_MAX, resetsAt: null });
+    // from rendering. Return the optimistic max WITH a degraded flag so the
+    // chip can say "couldn't confirm" instead of a confident "3 left"; the
+    // submit endpoint still enforces the cap when Redis comes back.
+    return json({ used: 0, remaining: RATE_LIMIT_MAX, max: RATE_LIMIT_MAX, resetsAt: null, degraded: true });
   }
 
-  const key = `${RATE_LIMIT_PREFIX}${hashedOwnerId}`;
+  const key = `${schefterKey(league.navSlug, 'tips:ratelimit:')}${hashedOwnerId}`;
   let used = 0;
   let resetsAt: number | null = null;
   try {

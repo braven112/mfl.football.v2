@@ -160,7 +160,7 @@ describe('HARD RULE 16 — off-topic personal insults', () => {
 });
 
 describe('personality.md — hostile-tips expansion', () => {
-  const src = read('data/schefter/personality.md');
+  const src = read('data/schefter/theleague/personality.md');
 
   it('states the design principle at the top of the section', () => {
     expect(src).toMatch(/The editorial filter IS the product/);
@@ -258,7 +258,8 @@ describe('personality.md — hostile-tips expansion', () => {
 });
 
 describe('tip.astro — meanness-welcome UX', () => {
-  const src = read('src/pages/theleague/schefter/tip.astro');
+  // The page body moved into the shared component (per-league thin wrappers).
+  const src = read('src/components/schefter/TipPage.astro');
 
   it('invites mean tips in the hero lede', () => {
     expect(src).toMatch(/be as mean as you can think of/);

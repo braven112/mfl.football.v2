@@ -23,7 +23,7 @@ function read(rel: string): string {
   return readFileSync(path.join(process.cwd(), rel), 'utf8');
 }
 
-const RUNNING_BITS = read('data/schefter/running-bits.md');
+const RUNNING_BITS = read('data/schefter/theleague/running-bits.md');
 
 describe('"The Tight End Files" running-bit lore', () => {
   it('section exists with the expected header', () => {

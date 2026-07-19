@@ -13,8 +13,11 @@
  */
 
 import type { APIRoute } from 'astro';
-import { TIP_TOPICS, type TipTopic } from '../../../types/schefter-tips';
+import type { TipTopic } from '../../../types/schefter-tips';
+import { getTopicIds } from '../../../config/schefter-topics.mjs';
 import { getRedis } from '../../../utils/redis-client';
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
@@ -26,7 +29,13 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url: new URL(request.url) });
+  if (!league) return json({ error: 'Unknown league.', code: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) {
+    return json({ error: 'Not available for this league.', code: 'feature_disabled' }, 404);
+  }
   const redis = await getRedis();
   if (!redis) {
     return json({ topics: [], windowDays: WINDOW_DAYS });
@@ -38,9 +47,19 @@ export const GET: APIRoute = async () => {
   const results: Array<{ topic: TipTopic; count: number }> = [];
 
   await Promise.all(
-    (TIP_TOPICS as readonly TipTopic[]).map(async (topic) => {
+    (getTopicIds(league.navSlug) as TipTopic[]).map(async (topic) => {
       try {
-        const count = await redis.zcount(`schefter:topic_timeline:${topic}`, windowStart, now);
+        let count = await redis.zcount(`${schefterKey(league.navSlug, 'topic_timeline:')}${topic}`, windowStart, now);
+        if (topic === 'frontoffice') {
+          // Pre-rename submissions wrote the legacy 'commish' timeline; sum it
+          // in so the widget doesn't under-report for the 30-day overlap
+          // window after the rename ships. Safe to remove once the legacy
+          // ZSET has fully aged out (entries prune at 30 days).
+          const legacy = await redis
+            .zcount(`${schefterKey(league.navSlug, 'topic_timeline:')}commish`, windowStart, now)
+            .catch(() => 0);
+          count += Math.max(0, Number.isFinite(legacy) ? legacy : 0);
+        }
         results.push({ topic, count: Math.max(0, Number.isFinite(count) ? count : 0) });
       } catch (err) {
         console.warn(`[hot-topics] zcount failed for ${topic}:`, err);

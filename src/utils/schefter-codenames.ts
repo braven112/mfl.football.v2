@@ -19,6 +19,11 @@
  * Never exposes the raw hashedOwnerId in UI — only the codename.
  */
 
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../scripts/lib/schefter-keys.mjs';
+
 /** Schefter-voiced codenames. "Fully unique per owner" — no # suffixes. */
 export const SCHEFTER_CODENAMES = [
   'Burner Phone',
@@ -54,8 +59,26 @@ export const SCHEFTER_CODENAMES = [
 
 export type SchefterCodename = (typeof SCHEFTER_CODENAMES)[number];
 
-export const CODENAME_KEY_PREFIX = 'schefter:tipster:codename:';
-export const CODENAMES_USED_KEY = 'schefter:tipster:codenames_used';
+/** Legacy (TheLeague) key forms — kept for existing importers/tests. */
+export const CODENAME_KEY_PREFIX = schefterKey(
+  DEFAULT_SCHEFTER_NAV_SLUG,
+  'tipster:codename:',
+);
+export const CODENAMES_USED_KEY = schefterKey(
+  DEFAULT_SCHEFTER_NAV_SLUG,
+  'tipster:codenames_used',
+);
+
+/** League-scoped key forms — each league has its own codename pool. */
+export function codenameKeys(navSlug: string): {
+  codenamePrefix: string;
+  usedKey: string;
+} {
+  return {
+    codenamePrefix: schefterKey(navSlug, 'tipster:codename:'),
+    usedKey: schefterKey(navSlug, 'tipster:codenames_used'),
+  };
+}
 
 /** Redis surface required for codename assignment. Kept tiny on purpose. */
 export type CodenameRedis = {
@@ -91,10 +114,12 @@ export function seedSlotForHash(hashedOwnerId: string): number {
 export async function assignCodename(
   redis: CodenameRedis,
   hashedOwnerId: string,
+  navSlug: string = DEFAULT_SCHEFTER_NAV_SLUG,
 ): Promise<string> {
   if (!hashedOwnerId) throw new Error('assignCodename: hashedOwnerId required');
 
-  const userKey = `${CODENAME_KEY_PREFIX}${hashedOwnerId}`;
+  const { codenamePrefix, usedKey } = codenameKeys(navSlug);
+  const userKey = `${codenamePrefix}${hashedOwnerId}`;
 
   const existing = await redis.get<string>(userKey);
   if (typeof existing === 'string' && existing.length > 0) return existing;
@@ -104,7 +129,7 @@ export async function assignCodename(
 
   for (let i = 0; i < total; i++) {
     const candidate = SCHEFTER_CODENAMES[(start + i) % total];
-    const added = await redis.sadd(CODENAMES_USED_KEY, candidate);
+    const added = await redis.sadd(usedKey, candidate);
     if (added === 1) {
       // We own this name. Try to persist it atomically.
       const writeRes = await redis.set(userKey, candidate, { nx: true });
@@ -112,7 +137,7 @@ export async function assignCodename(
         return candidate;
       }
       // Another worker persisted first — release our hold and read theirs.
-      await redis.srem(CODENAMES_USED_KEY, candidate);
+      await redis.srem(usedKey, candidate);
       const actual = await redis.get<string>(userKey);
       if (typeof actual === 'string' && actual.length > 0) return actual;
     }
@@ -132,7 +157,9 @@ export async function assignCodename(
 export async function getCodename(
   redis: CodenameRedis,
   hashedOwnerId: string,
+  navSlug: string = DEFAULT_SCHEFTER_NAV_SLUG,
 ): Promise<string | null> {
-  const existing = await redis.get<string>(`${CODENAME_KEY_PREFIX}${hashedOwnerId}`);
+  const { codenamePrefix } = codenameKeys(navSlug);
+  const existing = await redis.get<string>(`${codenamePrefix}${hashedOwnerId}`);
   return typeof existing === 'string' && existing.length > 0 ? existing : null;
 }

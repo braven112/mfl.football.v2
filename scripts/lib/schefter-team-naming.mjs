@@ -22,12 +22,17 @@
  * per franchise even on busy weeks) so the cost isn't worth the round-trip.
  */
 
-const TEAM_NAMING_PREFIX = 'schefter:team_name_count:';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
 const TEAM_NAMING_TTL_SEC = 30 * 24 * 60 * 60; // 30d
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function buildKey(franchiseId) {
-  return `${TEAM_NAMING_PREFIX}${franchiseId}`;
+function teamNamingPrefix(navSlug) {
+  return schefterKey(navSlug, 'team_name_count:');
+}
+
+function buildKey(franchiseId, navSlug) {
+  return `${teamNamingPrefix(navSlug)}${franchiseId}`;
 }
 
 /**
@@ -42,12 +47,12 @@ function buildKey(franchiseId) {
  * @param {string} franchiseId
  * @param {string} postId
  * @param {number} postTimestampMs - epoch ms; used as the ZSET score
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  */
-export async function recordTeamNaming(franchiseId, postId, postTimestampMs, redis) {
+export async function recordTeamNaming(franchiseId, postId, postTimestampMs, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !franchiseId || !postId) return;
   const ts = Number.isFinite(postTimestampMs) ? postTimestampMs : Date.now();
-  const key = buildKey(franchiseId);
+  const key = buildKey(franchiseId, navSlug);
   await redis.zadd(key, { score: ts, member: postId });
   // Refresh TTL on every write so an actively-named team's window stays open.
   // Unlike the rate-limit key, here we WANT activity to extend retention —
@@ -61,13 +66,13 @@ export async function recordTeamNaming(franchiseId, postId, postTimestampMs, red
  * ladder (1 → light, 2-3 → "keeps coming up", 4+ → "most-named").
  *
  * @param {string} franchiseId
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @param {number} [windowDays=30]
  * @returns {Promise<number>}
  */
-export async function getTeamNameCount30d(franchiseId, redis, windowDays = 30) {
+export async function getTeamNameCount30d(franchiseId, redis, windowDays = 30, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !franchiseId) return 0;
-  const key = buildKey(franchiseId);
+  const key = buildKey(franchiseId, navSlug);
   const min = Date.now() - windowDays * DAY_MS;
   const raw = await redis.zcount(key, min, '+inf');
   const count = typeof raw === 'number' ? raw : Number.parseInt(String(raw ?? '0'), 10);
@@ -84,19 +89,19 @@ export async function getTeamNameCount30d(franchiseId, redis, windowDays = 30) {
  * (or this gets called more often than once-per-page-render), we could
  * materialize a top-N ZSET on each recordTeamNaming call instead.
  *
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @param {number} [days=7] - rolling window
  * @param {number} [limit=5] - max rows returned
  * @returns {Promise<Array<{franchiseId: string, count: number, lastNamedAt: number}>>}
  *   sorted desc by count, ties broken by most-recent lastNamedAt
  */
-export async function getTopNamedTeams(redis, days = 7, limit = 5) {
+export async function getTopNamedTeams(redis, days = 7, limit = 5, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis) return [];
   const min = Date.now() - days * DAY_MS;
 
   // Enumerate every team-naming key via SCAN. Match pattern is the prefix
   // plus a wildcard. Use a generous COUNT to keep iterations short.
-  const matchPattern = `${TEAM_NAMING_PREFIX}*`;
+  const matchPattern = `${teamNamingPrefix(navSlug)}*`;
   const found = [];
   let cursor = 0;
   do {
@@ -118,7 +123,7 @@ export async function getTopNamedTeams(redis, days = 7, limit = 5) {
   // Run in parallel — 16 teams max, no rate-limit risk.
   const rows = await Promise.all(
     found.map(async (key) => {
-      const franchiseId = key.slice(TEAM_NAMING_PREFIX.length);
+      const franchiseId = key.slice(teamNamingPrefix(navSlug).length);
       const [countRaw, recent] = await Promise.all([
         redis.zcount(key, min, '+inf'),
         // Most-recent member in the window — ZRANGEBYSCORE with WITHSCORES

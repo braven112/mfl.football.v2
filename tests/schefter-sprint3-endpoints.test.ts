@@ -56,7 +56,7 @@ describe('Phase 9 — hot-topics endpoint', () => {
 
   it('counts per-topic ZSET membership (exact, not decayed HASH)', () => {
     expect(src).toMatch(/zcount/);
-    expect(src).toMatch(/schefter:topic_timeline:/);
+    expect(src).toMatch(/schefterKey\(league\.navSlug, 'topic_timeline:'\)/);
   });
 
   it('sorts descending', () => {
@@ -64,7 +64,7 @@ describe('Phase 9 — hot-topics endpoint', () => {
   });
 
   it('tip submit endpoint writes to the per-topic timeline', () => {
-    expect(tip).toMatch(/schefter:topic_timeline:\$\{tip\.topic\}/);
+    expect(tip).toMatch(/k\('topic_timeline:'\)\}\$\{tip\.topic\}/);
     expect(tip).toMatch(/redis\.zadd\(timelineKey/);
   });
 

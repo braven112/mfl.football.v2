@@ -20,8 +20,8 @@
  * need a Redis read.
  */
 
-const RUMORS_TOTAL_PREFIX = 'schefter:tipster:rumors_total:';
-const TOPIC_COUNTS_PREFIX = 'schefter:tipster:topic_counts:';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
 
 // Thresholds — pulled out as named constants so they're easy to tune without
 // hunting through scoring logic. Numbers chosen so a first-timer always
@@ -91,7 +91,9 @@ function deriveBeat(topicCounts) {
  * @param {import('@upstash/redis').Redis | null} redis
  * @returns {Promise<Map<string, TipsterContext>>}
  */
-export async function buildTipsterContext(freshTips, redis) {
+export async function buildTipsterContext(freshTips, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
+  const rumorsTotalPrefix = schefterKey(navSlug, 'tipster:rumors_total:');
+  const topicCountsPrefix = schefterKey(navSlug, 'tipster:topic_counts:');
   const queueCounts = new Map();
   for (const tip of Array.isArray(freshTips) ? freshTips : []) {
     if (tip?.source !== 'web') continue;
@@ -124,13 +126,13 @@ export async function buildTipsterContext(freshTips, redis) {
   await Promise.all([...queueCounts.entries()].map(async ([hash, count]) => {
     let rumorsTotal = 0;
     try {
-      const v = await redis.get(`${RUMORS_TOTAL_PREFIX}${hash}`);
+      const v = await redis.get(`${rumorsTotalPrefix}${hash}`);
       rumorsTotal = Number(v);
       if (!Number.isFinite(rumorsTotal) || rumorsTotal < 0) rumorsTotal = 0;
     } catch {
       rumorsTotal = 0;
     }
-    const topicCounts = await readHash(redis, `${TOPIC_COUNTS_PREFIX}${hash}`);
+    const topicCounts = await readHash(redis, `${topicCountsPrefix}${hash}`);
     const beat = deriveBeat(topicCounts);
     ctx.set(hash, {
       hashedOwnerId: hash,
