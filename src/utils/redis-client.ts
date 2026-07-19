@@ -91,6 +91,13 @@ export type RedisClient = {
   lpush: (key: string, ...values: unknown[]) => Promise<number>;
   llen: (key: string) => Promise<number>;
   lrange: <T = string>(key: string, start: number, stop: number) => Promise<T[]>;
+  lrem: (key: string, count: number, value: unknown) => Promise<number>;
+
+  // Counters
+  decr: (key: string) => Promise<number>;
+
+  // Sorted-set removal (used by the tip undo path)
+  zrem: (key: string, ...members: string[]) => Promise<number>;
 
   // Misc
   pipeline: () => RedisPipelineClient;

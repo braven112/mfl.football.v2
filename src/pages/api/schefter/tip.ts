@@ -49,6 +49,8 @@ import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-respon
 import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 
 const RATE_LIMIT_MAX = 3;
+/** How long after submit a tip can be withdrawn (client shows a countdown). */
+export const UNDO_WINDOW_MS = 60_000;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 
 // Anon Style Book keys. Named (GroupMe) attackers live under
@@ -384,8 +386,32 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: JSON_HEADERS,
-  });
+  // Eager codename reveal (Phase 8 UX): every successful submit resolves (or
+  // assigns) the tipster's codename so the client can show it immediately —
+  // no more waiting for a first published rumor to learn your nom de plume.
+  // assignCodename is idempotent; failure is non-fatal (codename: null).
+  let revealCodename: string | null = tipsterCodename;
+  if (!revealCodename) {
+    try {
+      revealCodename = await assignCodename(redis, hashedOwnerId, navSlug);
+    } catch (err) {
+      console.warn('[schefter/tip] codename assign (reveal) failed:', err);
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      codename: revealCodename,
+      tipId: tip.id,
+      submittedAt: tip.submittedAt,
+      // Client-side undo window (ms). The DELETE endpoint enforces its own
+      // server-side grace on top of this.
+      undoWindowMs: UNDO_WINDOW_MS,
+    }),
+    {
+      status: 200,
+      headers: JSON_HEADERS,
+    },
+  );
 };

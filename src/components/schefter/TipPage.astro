@@ -94,6 +94,29 @@ const franchiseOptions = teams.map((t) => ({
   division: t.division,
 }));
 
+// Whisper-back picker — recent rumor_mill posts a tip can reply to. Server
+// enforces the same 14-day ceiling (WHISPER_BACK_MAX_AGE_MS) on submit.
+const WHISPER_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const recentRumors = feed.posts
+  .filter((p: any) =>
+    p.type === 'transaction' &&
+    p.transactionSubType === 'rumor_mill' &&
+    Date.now() - new Date(p.timestamp).getTime() <= WHISPER_MAX_AGE_MS)
+  .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  .slice(0, 8)
+  .map((p: any) => ({
+    id: p.id,
+    label: (() => {
+      const raw = String(p.headline || p.body || '').replace(/<[^>]+>/g, '').trim();
+      const when = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const text = raw.length > 64 ? raw.slice(0, 61).trimEnd() + '…' : raw;
+      return `${when} — ${text}`;
+    })(),
+  }));
+
+// Deep link ?whisper=<postId> preselects the reply target.
+const whisperParam = Astro.url.searchParams.get('whisper');
+
 // Pre-select a franchise on form load when the visitor arrived via a
 // whisper-back CTA on a Schefter post (e.g. .../schefter/tip?target=0008).
 const targetParam = Astro.url.searchParams.get('target');
@@ -221,8 +244,26 @@ const preselectTeam = (() => {
             Picking a team unlocks direct naming for this tip. Leave it generic to keep
             the post about a division.
           </p>
+          <p class="tip-field__help tip-commish-note" id="tip-commish-note" hidden>
+            The Commish isn't a valid target for this topic — switched to league-wide.
+          </p>
         </div>
       </div>
+
+      {recentRumors.length > 0 && (
+        <div class="tip-field">
+          <label class="tip-field__label" for="tip-whisper">Replying to a rumor? <span class="tip-field__label-optional">(optional)</span></label>
+          <select class="tip-field__select" id="tip-whisper" name="repliesToPostId">
+            <option value="" selected={!whisperParam}>Not a reply — fresh intel</option>
+            {recentRumors.map((r) => (
+              <option value={r.id} selected={r.id === whisperParam}>{r.label}</option>
+            ))}
+          </select>
+          <p class="tip-field__help">
+            Whisper back on a recent rumor and Schefter threads your tip into that storyline.
+          </p>
+        </div>
+      )}
 
       <div class="tip-actions">
         <button type="submit" class="tip-submit" id="tip-submit">Send tip</button>
@@ -230,6 +271,16 @@ const preselectTeam = (() => {
           <span class="tip-remaining__text" id="tip-remaining-text">Checking tips left…</span>
         </span>
         <p class="tip-status" id="tip-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="tip-confirm" id="tip-confirm" hidden aria-live="polite">
+        <p class="tip-confirm__headline" id="tip-confirm-headline">Schefter's got it.</p>
+        <p class="tip-confirm__detail" id="tip-confirm-detail"></p>
+        <div class="tip-confirm__actions">
+          <button type="button" class="tip-confirm__undo" id="tip-undo">
+            Undo <span id="tip-undo-count">60</span>s
+          </button>
+        </div>
       </div>
     </form>
 
@@ -727,6 +778,23 @@ const preselectTeam = (() => {
       grid-template-columns: 1fr 1fr;
     }
   }
+  @media (max-width: 479px) {
+    /* iOS zooms on focus when form controls are <16px — keep them at 1rem. */
+    .tip-field__select,
+    .tip-field__textarea {
+      font-size: 1rem;
+    }
+    /* Primary CTA gets full width + a ≥44px touch target; the chip and
+       status stack beneath instead of wrapping around the button. */
+    .tip-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .tip-submit {
+      width: 100%;
+      min-height: 44px;
+    }
+  }
 
   .tip-actions {
     display: flex;
@@ -790,6 +858,62 @@ const preselectTeam = (() => {
   .tip-status[data-state='success'] {
     color: var(--color-success-dark, #047857);
   }
+  .tip-confirm {
+    margin-top: var(--space-3, 0.75rem);
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-lg, 0.75rem);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .tip-confirm__headline {
+    margin: 0;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: var(--color-gray-900, #111827);
+  }
+  .tip-confirm__detail {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .tip-confirm__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .tip-confirm__undo {
+    align-self: flex-start;
+    padding: 0.375rem 0.875rem;
+    min-height: 2.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 999px;
+    background: var(--input-bg, #fff);
+    color: var(--color-gray-800, #1f2937);
+    cursor: pointer;
+  }
+  .tip-confirm__undo:hover:not(:disabled) {
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+  .tip-confirm__undo:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .tip-commish-note {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+  .tip-field__label-optional {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--color-gray-500, #6b7280);
+  }
+
   .tip-status[data-state='error'] {
     color: var(--color-error-dark, #b91c1c);
   }
@@ -1330,14 +1454,20 @@ const preselectTeam = (() => {
   const TOPIC_META = TIP_CONFIG.topics;
   const PUBLIC_QS = TIP_CONFIG.publicQs;
 
+  const commishNote = document.getElementById('tip-commish-note');
+
   function syncCommishOption() {
     if (!topicSelect || !franchiseSelect || !commishOption) return;
     const allowed = TOPIC_META[topicSelect.value]?.commishTargetAllowed ?? true;
-    commishOption.hidden = !allowed;
+    // Keep the option visible but disabled so it doesn't silently vanish —
+    // and explain the reassignment when we have to make one.
     commishOption.disabled = !allowed;
+    let reassigned = false;
     if (!allowed && franchiseSelect.value === 'commish') {
       franchiseSelect.value = 'league-wide';
+      reassigned = true;
     }
+    if (commishNote) commishNote.hidden = !reassigned;
   }
   topicSelect?.addEventListener('change', syncCommishOption);
   syncCommishOption();
@@ -1388,6 +1518,12 @@ const preselectTeam = (() => {
         return;
       }
       const data = await res.json();
+      if (data?.degraded) {
+        // Redis is down server-side: don't show a confident "3 left".
+        remainingChip.setAttribute('data-state', 'ok');
+        remainingText.textContent = 'Tips left unknown — cap still enforced on send';
+        return;
+      }
       const used = Number(data?.used ?? 0);
       const max = Number(data?.max ?? 3);
       const remaining = Number.isFinite(data?.remaining) ? Number(data.remaining) : Math.max(0, max - used);
@@ -1418,7 +1554,16 @@ const preselectTeam = (() => {
     if (!recordBody) return;
     const me = data.me;
     if (!me || (!me.codename && (me.rumorsTotal ?? 0) === 0)) {
-      recordBody.innerHTML = '<p class="tip-rail-record__empty">No rumors seeded yet. Tip something Schefter can run with and you\'ll earn a codename.</p>';
+      recordBody.innerHTML = '<p class="tip-rail-record__empty">No tips filed yet. Send one and you\'ll get your codename on the spot.</p>';
+      return;
+    }
+    // Codenames are issued at first submit now — a codename with zero rumors
+    // means "filed, nothing printed yet", not an error.
+    if (me.codename && (me.rumorsTotal ?? 0) === 0) {
+      recordBody.innerHTML = `
+        <span class="tip-rail-record__codename">Your codename · ${escapeHtml(me.codename)}</span>
+        <p class="tip-rail-record__empty">Nothing printed yet — your first rumor is still in the works.</p>
+      `;
       return;
     }
     const codename = me.codename ? escapeHtml(me.codename) : 'Unnamed Source';
@@ -1628,6 +1773,85 @@ const preselectTeam = (() => {
   textarea?.addEventListener('input', updateCounter);
   updateCounter();
 
+  // A tab left open overnight (or a submit from another tab) shouldn't show
+  // a stale "3 left" — re-check whenever the tab regains focus.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshRemaining();
+  });
+
+  // ── Confirmation panel + 60s undo ──
+  const confirmPanel = document.getElementById('tip-confirm');
+  const confirmHeadline = document.getElementById('tip-confirm-headline');
+  const confirmDetail = document.getElementById('tip-confirm-detail');
+  const undoBtn = document.getElementById('tip-undo') as HTMLButtonElement | null;
+  const undoCount = document.getElementById('tip-undo-count');
+  let undoTimer: number | null = null;
+  let lastSubmission: { tipId: string; text: string; topic: string; franchiseHint: string; deadline: number } | null = null;
+
+  function hideConfirm() {
+    if (confirmPanel) confirmPanel.hidden = true;
+    if (undoTimer !== null) { window.clearInterval(undoTimer); undoTimer = null; }
+    lastSubmission = null;
+  }
+
+  function showConfirm(data: { codename?: string | null; tipId?: string; undoWindowMs?: number }, submitted: { text: string; topic: string; franchiseHint: string }) {
+    if (!confirmPanel || !confirmHeadline || !confirmDetail) return;
+    const codename = typeof data.codename === 'string' && data.codename ? data.codename : null;
+    confirmHeadline.textContent = codename
+      ? `Filed. You're on the record as “${codename}.”`
+      : "Schefter's got it.";
+    confirmDetail.textContent = "In the marinade — he'll use it when the time is right. Nobody sees what you actually wrote.";
+    confirmPanel.hidden = false;
+
+    const windowMs = typeof data.undoWindowMs === 'number' ? data.undoWindowMs : 60_000;
+    if (data.tipId && undoBtn && undoCount) {
+      lastSubmission = { tipId: data.tipId, deadline: Date.now() + windowMs, ...submitted };
+      undoBtn.hidden = false;
+      undoBtn.disabled = false;
+      const tick = () => {
+        if (!lastSubmission) return;
+        const left = Math.max(0, Math.ceil((lastSubmission.deadline - Date.now()) / 1000));
+        undoCount.textContent = String(left);
+        if (left <= 0 && undoBtn) {
+          undoBtn.disabled = true;
+          undoBtn.hidden = true;
+          if (undoTimer !== null) { window.clearInterval(undoTimer); undoTimer = null; }
+        }
+      };
+      if (undoTimer !== null) window.clearInterval(undoTimer);
+      undoTimer = window.setInterval(tick, 1000);
+      tick();
+    } else if (undoBtn) {
+      undoBtn.hidden = true;
+    }
+  }
+
+  undoBtn?.addEventListener('click', async () => {
+    if (!lastSubmission) return;
+    undoBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/schefter/tip/${encodeURIComponent(lastSubmission.tipId)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.ok) {
+        // Restore what they wrote so a typo fix is one edit away.
+        if (textarea) textarea.value = lastSubmission.text;
+        if (topicSelect) topicSelect.value = lastSubmission.topic;
+        if (franchiseSelect) franchiseSelect.value = lastSubmission.franchiseHint || 'league-wide';
+        updateCounter();
+        setStatus('Tip withdrawn — slot refunded. Edit away.', 'success');
+        refreshRemaining();
+      } else if (data?.code === 'undo_window_closed') {
+        setStatus('Too late — that one is already in the kitchen.', 'error');
+      } else {
+        setStatus("Couldn't withdraw the tip — it may already be in the kitchen.", 'error');
+      }
+    } catch {
+      setStatus('Network error withdrawing the tip.', 'error');
+    } finally {
+      hideConfirm();
+    }
+  });
+
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!form || !submitBtn || !textarea) return;
@@ -1636,6 +1860,7 @@ const preselectTeam = (() => {
     const text = String(fd.get('text') ?? '').trim();
     const topic = String(fd.get('topic') ?? '');
     const franchiseHint = String(fd.get('franchiseHint') ?? '');
+    const repliesToPostId = String(fd.get('repliesToPostId') ?? '');
 
     if (!text) {
       setStatus('Tip cannot be empty.', 'error');
@@ -1643,21 +1868,29 @@ const preselectTeam = (() => {
     }
 
     submitBtn.disabled = true;
+    hideConfirm();
     setStatus('Sending…', '');
 
     try {
       const res = await fetch('/api/schefter/tip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, topic, franchiseHint }),
+        body: JSON.stringify({
+          text,
+          topic,
+          franchiseHint,
+          ...(repliesToPostId ? { repliesToPostId } : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data?.ok) {
-        setStatus("Schefter's got it. He'll use it when the time is right.", 'success');
+        setStatus('', '');
+        showConfirm(data, { text, topic, franchiseHint });
         form.reset();
         updateCounter();
         syncPlaceholder();
+        syncCommishOption();
         refreshRemaining();
       } else {
         const msg = (data && typeof data.error === 'string' && data.error) ||

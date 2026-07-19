@@ -50,9 +50,10 @@ export const GET: APIRoute = async ({ request }) => {
   const redis = await getRedis();
   if (!redis) {
     // Degraded mode: we can't read the counter, but we shouldn't block the UI
-    // from rendering. Return the optimistic max; submit endpoint will still
-    // enforce the cap in Redis when it comes back online.
-    return json({ used: 0, remaining: RATE_LIMIT_MAX, max: RATE_LIMIT_MAX, resetsAt: null });
+    // from rendering. Return the optimistic max WITH a degraded flag so the
+    // chip can say "couldn't confirm" instead of a confident "3 left"; the
+    // submit endpoint still enforces the cap when Redis comes back.
+    return json({ used: 0, remaining: RATE_LIMIT_MAX, max: RATE_LIMIT_MAX, resetsAt: null, degraded: true });
   }
 
   const key = `${schefterKey(league.navSlug, 'tips:ratelimit:')}${hashedOwnerId}`;
