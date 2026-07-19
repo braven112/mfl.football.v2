@@ -162,6 +162,52 @@ After every resolution, before pushing:
 `git rerere` is enabled (see `.git/config`); identical conflicts on
 re-rebase replay automatically. Do not turn it off.
 
+## Schefter multi-league (tips + rumor mill run for BOTH leagues)
+
+The tips → rumor-mill system is multi-tenant since July 2026. Load-bearing
+rules — breaking any of these cross-contaminates the leagues:
+
+- **Redis keys** go through `scripts/lib/schefter-keys.mjs#schefterKey(
+  navSlug, suffix)` — TheLeague keeps its legacy unprefixed keys
+  byte-identical, every other league gets `schefter:<navSlug>:*`.
+  `tests/schefter-keys.test.ts` freezes the legacy strings and forbids raw
+  `'schefter:'` literals outside the helper. Id-keyed namespaces
+  (reactions/replies/threads/impressions/tipster_hash_for_tip) are global
+  by design via `globalSchefterKey`.
+- **API routes**: authed routes resolve the league from the session JWT
+  (`src/utils/schefter-league.ts#resolveSchefterLeague`); public routes take
+  `?league=<slug|navSlug>` defaulting to TheLeague. Never import a league's
+  config/feed directly in a schefter route — use the helpers.
+- **Season years** for tipster counters use each league's own rollover
+  clock (`schefterSeasonYear`) — AFL rolls June 1, TheLeague Feb 14.
+- **Scanner**: `schefter-rumor-scan.mjs --league <slug>`, one league per
+  invocation, sequential workflow steps (parallel would race the feed
+  commit). Per-league enablement = registry `features.schefterTips`; the
+  `SCHEFTER_RUMOR_MILL_ENABLED` env var is only the global kill switch.
+  The trade-offer lane and GroupMe mention ingestion are TheLeague-only
+  (`scripts/lib/schefter-leagues.mjs` toggles) — AFL needs its own design
+  for duplicate players before that lane can open.
+- **Lore/persona** is per-league under `data/schefter/<navSlug>/`
+  (personality, league-lore, running-bits, post-history, topic-recurrence).
+  No legacy-path fallback on purpose — a missing file fails loudly rather
+  than silently reading the other league's voice.
+- **Pages** are thin per-league wrappers over shared components
+  (`src/components/schefter/{TipPage,StyleBookPage,RumorThread,
+  AdminDashboard}.astro`) — build tip-page improvements in the component
+  once and both leagues inherit them.
+- **Topics** come from `src/config/schefter-topics.mjs` — single source of
+  truth for ids, labels, placeholders, per-league availability (AFL has no
+  `motive`; hotseat is "Relegation watch" there), and scanner naming
+  policies (tampering = explicit-pick-only + mandatory hedge; hotseat =
+  never-name + scope floor + 14d per-team cooldown). Legacy `commish`
+  normalizes to `frontoffice`. Adding a topic requires a scanner
+  TOPIC_NOUNS entry — the scanner asserts coverage at startup.
+- **Admin** is league-scoped end to end: `adminFranchiseIds` in
+  nav-config.json is a per-league map, `isCommissionerOrAdmin` checks the
+  session's own league, and both admin pages gate on
+  `isAuthorizedForLeague`. AFL franchise 0001 must never pass TheLeague's
+  admin gate (different teams, same id).
+
 ## Schefter tipster context (Phase 8 — bot intelligence)
 
 The rumor-mill scanner weights bucket priority and surfaces voice cues
@@ -315,7 +361,7 @@ interesting change — set it on the staging file's top-level
 
 ## Schefter recurrence ledger v2 (Phase 8 — feature 10)
 
-`data/schefter/topic-recurrence.json` bumped to v2. Each fingerprint
+`data/schefter/<navSlug>/topic-recurrence.json` (per-league since the AFL launch) bumped to v2. Each fingerprint
 entry now carries `tipsterHashes` (sorted-unique, capped at 64) in
 addition to the existing `weeksSeen`. The bump powers cross-week memory
 recall (HARD RULE 25): when a bucket reappears with at least one voice
