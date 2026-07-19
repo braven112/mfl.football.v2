@@ -3561,10 +3561,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     flex-shrink: 0;
   }
 
-  [data-level='active'] .last-seen-dot { background: var(--activity-green, #16a34a); }
-  [data-level='idle'] .last-seen-dot { background: var(--activity-yellow, #ca8a04); }
-  [data-level='dormant'] .last-seen-dot { background: var(--activity-red, #dc2626); }
-  [data-level='unknown'] .last-seen-dot { background: var(--activity-gray, #6b7280); }
+  [data-level='active'] .last-seen-dot { background: #16a34a; }
+  [data-level='idle'] .last-seen-dot { background: #ca8a04; }
+  [data-level='dormant'] .last-seen-dot { background: var(--color-error, #dc2626); }
+  [data-level='unknown'] .last-seen-dot { background: var(--color-gray-500, #6b7280); }
+  :global(html.dark) [data-level='active'] .last-seen-dot { background: var(--color-success); }
+  :global(html.dark) [data-level='idle'] .last-seen-dot { background: var(--color-warning); }
   .team-card__last-seen[data-level='unknown'] { display: none; }
 
   .roster-summary {

@@ -961,13 +961,13 @@ const pausedMetaLine = pausedState.paused
     display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
     flex-wrap: wrap; margin-bottom: 1.5rem;
   }
-  .ops-eyebrow { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted, #64748b); margin: 0 0 0.25rem; }
+  .ops-eyebrow { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--content-text-muted, #64748b); margin: 0 0 0.25rem; }
   .ops-eyebrow a { color: inherit; text-decoration: underline; }
-  .ops-title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--color-text, #0f172a); }
-  .ops-sub { margin: 0; color: var(--color-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
+  .ops-title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--page-text, #0f172a); }
+  .ops-sub { margin: 0; color: var(--content-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
   .ops-header__actions { display: flex; align-items: flex-start; gap: 0.75rem; }
-  .ops-foot { margin-top: 2rem; font-size: 0.78rem; color: var(--color-text-muted, #64748b); }
-  .ops-foot code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+  .ops-foot { margin-top: 2rem; font-size: 0.78rem; color: var(--content-text-muted, #64748b); }
+  .ops-foot code { background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
 
   /* Every count/date figure aligns — editorial standard. */
   .ops-num { font-variant-numeric: tabular-nums; }
@@ -976,17 +976,17 @@ const pausedMetaLine = pausedState.paused
   .cdr-kill-switch { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
   .cdr-kill-label {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--color-text-muted, #64748b);
+    color: var(--content-text-muted, #64748b);
   }
   .cdr-kill-toggle {
     display: inline-flex; align-items: center; gap: 0.45rem;
     padding: 0.45rem 0.9rem; border-radius: 999px; cursor: pointer;
     font-weight: 700; font-size: 0.85rem;
-    border: 1px solid var(--color-border, #e2e8f0);
-    background: var(--color-surface, #fff); color: var(--color-text, #0f172a);
+    border: 1px solid var(--content-border, #e2e8f0);
+    background: var(--content-bg, #fff); color: var(--page-text, #0f172a);
   }
   .cdr-kill-toggle:disabled { opacity: 0.55; cursor: not-allowed; }
-  .cdr-kill-toggle:focus-visible { outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 2px; }
+  .cdr-kill-toggle:focus-visible { outline: 2px solid var(--color-primary, #0ea5e9); outline-offset: 2px; }
   .cdr-kill-toggle__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .cdr-kill-toggle[data-state='running'] .cdr-kill-toggle__dot { background: var(--color-success, #16a34a); }
   .cdr-kill-toggle[data-state='paused'] .cdr-kill-toggle__dot { background: var(--warning-color, #f59e0b); }
@@ -996,16 +996,16 @@ const pausedMetaLine = pausedState.paused
   }
   .cdr-kill-confirm {
     display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;
-    font-size: 0.82rem; color: var(--color-text, #0f172a);
+    font-size: 0.82rem; color: var(--page-text, #0f172a);
   }
   .cdr-kill-meta { font-size: 0.75rem; color: var(--color-gray-500, #6b7280); font-variant-numeric: tabular-nums; }
 
   .cdr-btn {
-    border: 1px solid var(--color-border, #e2e8f0); border-radius: 6px;
+    border: 1px solid var(--content-border, #e2e8f0); border-radius: 6px;
     padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-    background: var(--color-surface, #fff); color: var(--color-text, #0f172a);
+    background: var(--content-bg, #fff); color: var(--page-text, #0f172a);
   }
-  .cdr-btn:focus-visible { outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 2px; }
+  .cdr-btn:focus-visible { outline: 2px solid var(--color-primary, #0ea5e9); outline-offset: 2px; }
   .cdr-btn--danger {
     background: var(--color-error, #dc2626); border-color: var(--color-error, #dc2626); color: #fff;
   }
@@ -1014,28 +1014,28 @@ const pausedMetaLine = pausedState.paused
   /* --- Banner ----------------------------------------------------------- */
   .cdr-banner {
     padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem;
-    margin-bottom: 1.25rem; color: var(--color-text, #0f172a);
-    background: var(--color-surface, #f8fafc);
-    border: 1px solid var(--color-border, #e2e8f0);
+    margin-bottom: 1.25rem; color: var(--page-text, #0f172a);
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
   }
   .cdr-banner--pre { border-left: 3px solid var(--warning-color, #f59e0b); }
   .cdr-banner--post { border-left: 3px solid var(--color-primary, #1c497c); }
-  .cdr-banner em { color: var(--color-text-muted, #64748b); }
+  .cdr-banner em { color: var(--content-text-muted, #64748b); }
 
   /* --- Empty states ------------------------------------------------------ */
   .cdr-empty {
     padding: 2rem 1.5rem; border-radius: 12px; text-align: center;
-    background: var(--color-surface, #f8fafc); border: 1px dashed var(--color-border, #e2e8f0);
+    background: var(--content-bg-muted, #f8fafc); border: 1px dashed var(--content-border, #e2e8f0);
   }
-  .cdr-empty h2 { margin: 0 0 0.5rem; font-size: 1.1rem; color: var(--color-text, #0f172a); }
+  .cdr-empty h2 { margin: 0 0 0.5rem; font-size: 1.1rem; color: var(--page-text, #0f172a); }
   .cdr-empty p { margin: 0 auto; max-width: 60ch; font-size: 0.9rem; color: var(--color-gray-500, #6b7280); }
-  .cdr-empty code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+  .cdr-empty code { background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
 
   /* --- Franchise cards --------------------------------------------------- */
   .cdr-cards { display: grid; gap: 1rem; }
   .cdr-card {
-    background: var(--color-surface, #fff);
-    border: 1px solid var(--color-border, #e2e8f0);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 12px; padding: 1rem 1.1rem;
   }
   /* Negative-state pattern: subtle left border, never a red-flooded card. */
@@ -1046,7 +1046,7 @@ const pausedMetaLine = pausedState.paused
 
   .cdr-card__head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
   .cdr-card__icon { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; flex-shrink: 0; }
-  .cdr-card__title { font-size: 1.05rem; margin: 0; color: var(--color-text, #0f172a); }
+  .cdr-card__title { font-size: 1.05rem; margin: 0; color: var(--page-text, #0f172a); }
   .cdr-roster-count { margin-left: auto; font-size: 0.82rem; color: var(--color-gray-500, #6b7280); }
   .cdr-over { color: var(--color-error, #dc2626); font-style: normal; font-weight: 700; }
   .cdr-attempts {
@@ -1059,13 +1059,13 @@ const pausedMetaLine = pausedState.paused
     font-size: 0.72rem; font-weight: 700; cursor: pointer;
     padding: 0.2rem 0.6rem; border-radius: 999px;
     border: 1px solid var(--color-primary, #1c497c);
-    background: var(--color-surface, #fff); color: var(--color-primary, #1c497c);
+    background: var(--content-bg, #fff); color: var(--color-primary, #1c497c);
   }
   .cdr-retry-btn:hover:not(:disabled) {
     background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
   }
   .cdr-retry-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-  .cdr-retry-btn:focus-visible { outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 2px; }
+  .cdr-retry-btn:focus-visible { outline: 2px solid var(--color-primary, #0ea5e9); outline-offset: 2px; }
 
   /* Card status badge — text is the signal; glyph + color reinforce. */
   .cdr-status {
@@ -1073,8 +1073,8 @@ const pausedMetaLine = pausedState.paused
     font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
     padding: 0.18rem 0.55rem; border-radius: 999px; white-space: nowrap;
   }
-  .cdr-status[data-status='pending'] { background: var(--color-surface-alt, #f1f5f9); color: var(--color-gray-500, #6b7280); }
-  .cdr-status[data-status='nothing'] { background: var(--color-surface-alt, #f1f5f9); color: var(--color-gray-500, #6b7280); }
+  .cdr-status[data-status='pending'] { background: var(--content-bg-muted, #f1f5f9); color: var(--color-gray-500, #6b7280); }
+  .cdr-status[data-status='nothing'] { background: var(--content-bg-muted, #f1f5f9); color: var(--color-gray-500, #6b7280); }
   .cdr-status[data-status='done'] { background: #dcfce7; color: #166534; }
   .cdr-status[data-status='attention'] { background: #fee2e2; color: #991b1b; }
   .cdr-status[data-status='skipped'] { background: #fef3c7; color: #92400e; }
@@ -1096,8 +1096,8 @@ const pausedMetaLine = pausedState.paused
   .cdr-row {
     display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
     padding: 0.35rem 0.5rem; border-radius: 8px;
-    border: 1px solid var(--color-border, #e2e8f0);
-    background: var(--color-surface, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    background: var(--content-bg, #fff);
   }
   .cdr-priority {
     width: 1.4rem; height: 1.4rem; flex-shrink: 0;
@@ -1124,7 +1124,7 @@ const pausedMetaLine = pausedState.paused
   }
   .cdr-slate-caption--frozen {
     color: var(--color-gray-500, #6b7280);
-    background: var(--color-surface-alt, #f1f5f9);
+    background: var(--content-bg-muted, #f1f5f9);
   }
 
   /* Outcome rows — failures/skips use the subtle left-border treatment. */
@@ -1136,7 +1136,7 @@ const pausedMetaLine = pausedState.paused
   }
   .cdr-outcome--skipped { border-left-color: var(--warning-color, #f59e0b); }
   .cdr-outcome--done, .cdr-outcome--manual-done { border-left: 2px solid var(--color-success, #16a34a); }
-  .cdr-outcome--dry-run { border-left: 2px dashed var(--color-border, #cbd5e1); }
+  .cdr-outcome--dry-run { border-left: 2px dashed var(--content-border, #cbd5e1); }
 
   .cdr-outcome-badge {
     font-size: 0.72rem; font-weight: 700; white-space: nowrap;
@@ -1150,7 +1150,7 @@ const pausedMetaLine = pausedState.paused
 
   .cdr-manual-done {
     display: inline-flex; align-items: center; gap: 0.35rem;
-    margin-left: auto; font-size: 0.78rem; color: var(--color-text, #0f172a);
+    margin-left: auto; font-size: 0.78rem; color: var(--page-text, #0f172a);
     cursor: pointer;
   }
   .cdr-manual-done input { width: 16px; height: 16px; accent-color: var(--color-success, #16a34a); cursor: pointer; }
@@ -1162,16 +1162,16 @@ const pausedMetaLine = pausedState.paused
   .cdr-action {
     margin: 0 0 0.9rem; padding: 0.55rem 0.75rem;
     font-size: 0.82rem; line-height: 1.45; font-weight: 600;
-    color: var(--color-text, #0f172a);
+    color: var(--page-text, #0f172a);
     border-left: 3px solid var(--color-warning, #d97706);
-    background: var(--color-surface-alt, #f8fafc); border-radius: 4px;
+    background: var(--content-bg-muted, #f8fafc); border-radius: 4px;
   }
   .cdr-action--error { border-left-color: var(--color-error, #dc2626); }
   .cdr-notes { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
   .cdr-note {
     font-size: 0.78rem; color: var(--color-gray-500, #6b7280);
     padding: 0.3rem 0.5rem; border-radius: 6px;
-    background: var(--color-surface-alt, #f1f5f9);
+    background: var(--content-bg-muted, #f1f5f9);
   }
   .cdr-note--failed {
     border-left: 2px solid var(--color-error, #dc2626);
@@ -1193,22 +1193,13 @@ const pausedMetaLine = pausedState.paused
   }
 
   /* ==============================================
-   * Dark mode — same pattern as admin/schefter.astro (the template this
-   * page copied). The palette above is built on page-local tokens
-   * (--color-surface, --color-text, --color-border, …) consumed only via
-   * var(--x, <light fallback>) — they aren't defined globally, so without
-   * this block every card, banner, pill, and confirm row bakes in its
-   * light fallback while the surrounding shell flips dark.
-   * Re-point each local at the real dark ramp (tokens-dark.css).
+   * Dark mode — the palette above uses real design-system tokens
+   * (tokens.css / tokens-dark.css), so it follows the theme on its own.
+   * The overrides below exist only for spots that hardcode a light-mode
+   * literal on purpose (status-chip pastels, the danger button).
+   * tests/design-token-guard.test.ts blocks references to tokens that
+   * are defined nowhere — don't reintroduce page-local names.
    * ============================================== */
-  :global(html.dark) .ops-page {
-    --color-surface: var(--content-bg, #1e1e1e);
-    --color-surface-alt: var(--content-bg-muted, #181818);
-    --color-text: var(--color-text-primary, #e0e0e0);
-    --color-text-muted: var(--content-text-muted, #8a8a8a);
-    --color-border: var(--color-border-default, #5f6885);
-    --color-accent: var(--color-primary, #3b82f6);
-  }
 
   /* Status chips hardcode light-mode green/red/amber pastels (#dcfce7 &c)
      that read as bright rectangles on a dark card. Swap to the dark

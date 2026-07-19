@@ -222,14 +222,14 @@
 .loading-branded__title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--loading-branded-text, var(--color-gray-900, #111827));
+  color: var(--color-gray-900, #111827);
   letter-spacing: 0.01em;
 }
 
 .loading-branded__narration {
   font-size: 0.875rem;
   font-style: italic;
-  color: var(--loading-branded-sub, var(--color-gray-500, #6b7280));
+  color: var(--color-gray-500, #6b7280);
   min-height: 1.2em;
 }
 

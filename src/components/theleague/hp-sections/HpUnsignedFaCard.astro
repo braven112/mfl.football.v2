@@ -362,7 +362,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   }
 
   .hp-fa__item--urgent {
-    box-shadow: inset 3px 0 0 var(--color-red-600, #dc2626);
+    box-shadow: inset 3px 0 0 var(--color-error, #dc2626);
   }
 
   .hp-fa__player {
@@ -407,8 +407,13 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   }
 
   .hp-fa__type--auction_won {
-    background: color-mix(in srgb, var(--color-amber-500, #d97706) 14%, white);
-    color: var(--color-amber-700, #b45309);
+    background: color-mix(in srgb, #d97706 14%, white);
+    color: #b45309;
+  }
+
+  :global(html.dark) .hp-fa__type--auction_won {
+    background: var(--color-warning-light, rgba(245, 158, 11, 0.15));
+    color: var(--color-warning-dark, #fcd34d);
   }
 
   .hp-fa__amount {
@@ -432,7 +437,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   }
 
   .hp-fa__meta-line--urgent {
-    color: var(--color-red-600, #dc2626);
+    color: var(--color-error, #dc2626);
   }
 
   .hp-fa__set-years {
@@ -502,8 +507,13 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   }
 
   .hp-fa__status-pill--pending {
-    background: color-mix(in srgb, var(--color-amber-500, #d97706) 14%, white);
-    color: var(--color-amber-700, #b45309);
+    background: color-mix(in srgb, #d97706 14%, white);
+    color: #b45309;
+  }
+
+  :global(html.dark) .hp-fa__status-pill--pending {
+    background: var(--color-warning-light, rgba(245, 158, 11, 0.15));
+    color: var(--color-warning-dark, #fcd34d);
   }
 
   .hp-fa__set-years--secondary {

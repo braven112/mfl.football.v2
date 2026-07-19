@@ -1469,7 +1469,7 @@ const pageConfig = {
     .roster-page {
       max-width: 1180px;
       margin: 0 auto;
-      padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--padding-xxl, 3rem);
+      padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--spacing-2xl, 3rem);
       display: grid;
       gap: var(--padding-md, 1rem);
     }
@@ -1561,7 +1561,8 @@ const pageConfig = {
       flex-shrink: 0;
     }
 
-    [data-level='active'] .last-seen-dot { background: var(--activity-green, #16a34a); }
+    [data-level='active'] .last-seen-dot { background: #16a34a; }
+    :global(html.dark) [data-level='active'] .last-seen-dot { background: var(--color-success, #34d399); }
 
     /* View tabs (SVG icon tiles) — copied structurally from TheLeague */
     .team-card__actions {
@@ -1931,11 +1932,15 @@ const pageConfig = {
     }
 
     .roster-table tbody tr[data-row-status="active"] {
-      border-left-color: var(--activity-green, #16a34a);
+      border-left-color: #16a34a;
+    }
+
+    :global(html.dark) .roster-table tbody tr[data-row-status="active"] {
+      border-left-color: var(--color-success, #34d399);
     }
 
     .roster-table tbody tr[data-row-status="ir"] {
-      border-left-color: var(--color-danger, #dc2626);
+      border-left-color: var(--color-error, #dc2626);
     }
 
     .roster-table tbody tr:hover {

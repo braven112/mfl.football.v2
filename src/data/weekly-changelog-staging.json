@@ -7,6 +7,14 @@
     {
       "date": "2026-07-19",
       "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "design-system",
+      "summary": "Dark mode got a full sweep of the closet. The Admin Hub bug from earlier this week — styling against color tokens that don't actually exist, so everything silently rendered its light-mode fallback — turned out to have cousins in some forty files: white draft-queue rows on a dark draft room, lineup accordions and matchup pickers stuck with light text, homepage urgency chips glowing like flashlights, and a templates page whose headings had no color at all. Every one now runs through the real theme tokens, and a new build-time guard fails any future code that references a token that doesn't exist — so this whole class of bug is done recurring."
+    },
+    {
+      "date": "2026-07-19",
+      "type": "bug-fix",
       "league": "theleague",
       "impact": "admin",
       "area": "admin",
