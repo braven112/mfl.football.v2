@@ -129,6 +129,7 @@ import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
   getPtHour,
   getPtDateString,
@@ -141,18 +142,34 @@ const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
 const TRADE_OFFERS_ONLY = process.argv.includes('--trade-offers-only');
 
+// ── League selection (--league <slug>, default theleague) ──
+//
+// One scanner process serves exactly ONE league per invocation — the
+// schefter-articles.yml pattern. Everything league-shaped below (paths,
+// Redis key prefixes, GroupMe bot, base URL, feature gates) derives from
+// this selection once at module init.
+function parseLeagueArg() {
+  const idx = process.argv.indexOf('--league');
+  if (idx === -1) return 'theleague';
+  const val = process.argv[idx + 1];
+  if (!val || val.startsWith('--')) {
+    throw new Error('--league requires a value (theleague | afl-fantasy)');
+  }
+  return val;
+}
+const SCHEFTER_LEAGUE = getSchefterLeague(parseLeagueArg());
+
 // ── Constants ──
 
-const LEAGUE_SLUG = 'theleague';
-const LEAGUE_ID = getLeagueBySlug(LEAGUE_SLUG).id;
+const LEAGUE_SLUG = SCHEFTER_LEAGUE.registrySlug;
+const LEAGUE_ID = SCHEFTER_LEAGUE.leagueId;
 // Redis keys below are league-scoped via schefterKey(NAV_SLUG, …): TheLeague
 // keeps its legacy unprefixed keys; any other league gets schefter:<navSlug>:*.
-const NAV_SLUG = getLeagueBySlug(LEAGUE_SLUG).navSlug;
+const NAV_SLUG = SCHEFTER_LEAGUE.slug;
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
-const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
-const CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
-const PLAYERS_PATH = (year) =>
-  path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json');
+const FEED_PATH = SCHEFTER_LEAGUE.feedPath;
+const CONFIG_PATH = SCHEFTER_LEAGUE.configPath;
+const PLAYERS_PATH = SCHEFTER_LEAGUE.playersPath;
 
 const RUMOR_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:posts_today');
 const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_today');
@@ -295,7 +312,7 @@ const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 // canonical path is /schefter/tip.
 const TIP_PAGE_PATH = '/schefter/tip';
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
-const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
+const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || SCHEFTER_LEAGUE.baseUrl).replace(/\/+$/, '');
 const TIP_PAGE_ABSOLUTE_URL = `${PUBLIC_BASE_URL}${TIP_PAGE_PATH}`;
 
 // Trade-bait rumors send readers to the Trade Builder instead of the tip
@@ -306,7 +323,7 @@ const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
 const TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block?';
 
 function buildTradeBuilderPath(franchiseId) {
-  return `/theleague/trade-builder?b=${encodeURIComponent(franchiseId)}`;
+  return `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(franchiseId)}`;
 }
 
 /**
@@ -330,7 +347,7 @@ function isTradeFlavoredTip(tip) {
  * to a single franchise (league-wide speculation, or a multi-franchise
  * cluster). Owners land on the empty builder and pick from there.
  */
-const TRADE_BUILDER_PATH = '/theleague/trade-builder';
+const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/trade-builder`;
 
 /**
  * Resolve the CTA for a post based on its primary bucket.
@@ -635,7 +652,7 @@ async function flushGroupMeSuppressions() {
 // order — if both are true, the original warned about the missing bot id rather
 // than logging the dry-run preview.
 async function postToGroupMe(text) {
-  const botId = process.env.GROUPME_SCHEFTER_BOT_ID;
+  const botId = SCHEFTER_LEAGUE.groupMeSchefterBotId;
   if (!botId) {
     warn('[rumor-scan] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe (Roger is reserved for deadlines)');
     return;
@@ -671,7 +688,7 @@ async function postToGroupMe(text) {
 async function safeIsOverNamingRateLimit(tipsterHash, franchiseId, redis) {
   if (!redis) return false;
   try {
-    return await isOverNamingRateLimit(tipsterHash, franchiseId, redis);
+    return await isOverNamingRateLimit(tipsterHash, franchiseId, redis, NAV_SLUG);
   } catch {
     return false;
   }
@@ -680,7 +697,7 @@ async function safeIsOverNamingRateLimit(tipsterHash, franchiseId, redis) {
 async function safeGetTeamNameCount30d(franchiseId, redis) {
   if (!redis) return 0;
   try {
-    return await getTeamNameCount30d(franchiseId, redis);
+    return await getTeamNameCount30d(franchiseId, redis, undefined, NAV_SLUG);
   } catch {
     return 0;
   }
@@ -2749,12 +2766,19 @@ async function main() {
   log(`\n=== Schefter Rumor-Mill Scan ${DRY_RUN ? '[DRY RUN]' : ''} ===`);
   log(`  Timestamp: ${new Date().toISOString()}`);
 
-  // Enable gate
+  // Enable gates: the env var is the GLOBAL kill switch; per-league
+  // enablement comes from the registry's schefterTips flag (surfaced as
+  // features.rumorMill via scripts/lib/schefter-leagues.mjs).
   const enabled = process.env.SCHEFTER_RUMOR_MILL_ENABLED;
   if (!enabled || enabled === '0' || String(enabled).toLowerCase() === 'false') {
     log('  SCHEFTER_RUMOR_MILL_ENABLED is not truthy — exiting');
     return 0;
   }
+  if (!SCHEFTER_LEAGUE.features?.rumorMill) {
+    log(`  rumor mill is not enabled for ${LEAGUE_SLUG} (features.schefterTips) — exiting`);
+    return 0;
+  }
+  log(`  League: ${LEAGUE_SLUG} (${LEAGUE_ID})`);
 
   const redis = await getRedis();
   if (!redis) {
@@ -2772,8 +2796,17 @@ async function main() {
   // ── Phase 6: Trade-Offer Rumor source ──
   // Runs BEFORE the queue read so fresh redacted tips land in this cycle.
   // In detection-only mode, mutates Redis counters but doesn't queue.
+  // TheLeague-only lane: AFL's tradeOfferRumors toggle is off (MFL
+  // pendingOffer access + the duplicate-player escalation model need their
+  // own design before this lane can go multi-league).
   let offerTipsPushed = 0;
-  try {
+  if (!SCHEFTER_LEAGUE.features?.tradeOfferRumors) {
+    log(`  [offer-scan] trade-offer lane disabled for ${LEAGUE_SLUG} — skipping`);
+    if (TRADE_OFFERS_ONLY) {
+      log('  [offer-scan] --trade-offers-only with lane disabled → exiting');
+      return 0;
+    }
+  } else try {
     const offerScan = await scanTradeOffers({ redis, dryRun: DRY_RUN });
     if (offerScan.debug.length > 0) {
       log(`  [offer-scan] Processed ${offerScan.debug.length} offer(s), ${offerScan.tips.length} tip(s) queued`);
@@ -2940,7 +2973,7 @@ async function main() {
   // signal sources (Redis: rumors_total + topic_counts).
   let tipsterContext = new Map();
   try {
-    tipsterContext = await buildTipsterContext(freshTips, redis);
+    tipsterContext = await buildTipsterContext(freshTips, redis, NAV_SLUG);
     if (tipsterContext.size > 0) {
       const summary = [...tipsterContext.values()].map((c) => {
         const tags = [];
@@ -3609,6 +3642,7 @@ async function main() {
         post.id,
         new Date(post.timestamp).getTime(),
         redis,
+        NAV_SLUG,
       );
     } catch (err) {
       warn(`  [team-naming] record failed for ${post.id} → ${franchiseId}: ${err.message}`);
@@ -3844,6 +3878,7 @@ async function main() {
       redis,
       batch: consumedBatch,
       seasonYear,
+      navSlug: NAV_SLUG,
       dryRun: DRY_RUN,
       log,
       warn,
@@ -3859,6 +3894,7 @@ async function main() {
     await incrementTipsterTopicCounters({
       redis,
       batch: consumedBatch,
+      navSlug: NAV_SLUG,
       dryRun: DRY_RUN,
       log,
       warn,
@@ -3878,7 +3914,13 @@ async function main() {
  */
 function getSeasonYearForTipster(now = new Date()) {
   const calendarYear = now.getUTCFullYear();
-  // Feb 14 @ 8:45 PST = Feb 15 04:45 UTC
+  if (NAV_SLUG === 'afl') {
+    // AFL league year rolls June 1 (registry leagueYearRollover) — using
+    // TheLeague's Feb clock would split the AFL season leaderboard.
+    const juneCutoff = Date.UTC(calendarYear, 5, 1, 7, 0, 0, 0); // Jun 1 midnight PT
+    return now.getTime() >= juneCutoff ? calendarYear : calendarYear - 1;
+  }
+  // TheLeague: Feb 14 @ 8:45 PST = Feb 15 04:45 UTC
   const febCutoff = Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0);
   return now.getTime() >= febCutoff ? calendarYear : calendarYear - 1;
 }

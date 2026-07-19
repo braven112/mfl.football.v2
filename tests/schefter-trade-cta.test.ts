@@ -65,7 +65,8 @@ describe('resolveCta — trade-flavored beats route to the Trade Builder', () =>
   it('imports the Trade Builder constants used by the CTA path', () => {
     expect(SCANNER_SRC).toMatch(/TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder/);
     expect(SCANNER_SRC).toMatch(/TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block/);
-    expect(SCANNER_SRC).toMatch(/const TRADE_BUILDER_PATH = '\/theleague\/trade-builder'/);
+    // League-relative since the --league conversion: `/${LEAGUE_SLUG}/trade-builder`.
+    expect(SCANNER_SRC).toMatch(/const TRADE_BUILDER_PATH = `\/\$\{LEAGUE_SLUG\}\/trade-builder`/);
   });
 
   it('routes single-franchise trade beats through buildTradeBuilderPath(fid)', () => {
