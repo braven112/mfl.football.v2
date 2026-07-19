@@ -72,6 +72,8 @@ const MANUAL_CAPTURE_ONLY = {
     'entry links to the auth-gated settings page; capture /theleague/live-scoring?week=4&demo=1 instead (week=4 activates throwback identities, demo=1 forces the sample replay so matchups render offseason)',
   'august-cutdown-plan':
     'owner-auth-gated Cutdown Plan panel on /theleague/rosters — needs a forged owner session for a franchise over the 22-active limit during the Jun 1 → 3rd-Sunday-of-August window; blind capture shoots the signed-out roster page',
+  'august-cut-auto-slate':
+    'owner-auth-gated roster-row AUTO-CUT badges on /theleague/rosters — same forged-owner + over-limit + cut-window requirement as august-cutdown-plan; badges only render for the logged-in owner viewing their own team, so blind capture shoots the signed-out roster page',
 };
 
 /**

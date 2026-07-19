@@ -6979,6 +6979,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return;
       }
 
+      // Compute the auto-cut slate once per render (own-view only), then reuse
+      // it for every row's badge instead of recomputing selectAutoCuts per row.
+      const autocutBadgeMap = isAutocutOwnView() ? buildAutocutBadgeMap() : null;
+
       rosterTableBody.innerHTML = rows
         .map((player) => {
           // Apply contract action if exists
@@ -7268,8 +7272,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
           // August auto-cut badge — own team, cut window, active roster only
           const autocutBadge =
-            isAutocutOwnView() && (player.displayTag || 'active') === 'active'
-              ? buildAutocutBadgeHTML(player.id)
+            autocutBadgeMap && (player.displayTag || 'active') === 'active'
+              ? buildAutocutBadgeHTML(player.id, autocutBadgeMap)
               : '';
 
           const playerCellHtml = buildPlayerCellHTML({
@@ -9508,22 +9512,74 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // ---- Roster-row badge ("AUTO-CUT #2" / "MARKED #4") ------------
-    // Badge honesty: only marks at/above the current cut line (priority ≤
-    // overage) will actually execute; marks beyond it are staged and safe
-    // unless the roster grows — say so instead of implying execution.
-    const buildAutocutBadgeHTML = (playerId) => {
-      const priority = getMarkedOnRoster().indexOf(String(playerId)) + 1;
-      if (priority < 1) return '';
-      const cutLine = Math.max(computeAutocutSlate().overage, 0);
-      const belowLine = priority > cutLine;
-      const title = belowLine
-        ? `Marked #${priority} — below the current cut line; safe unless your roster grows`
-        : `Marked for August auto-cut — priority ${priority}`;
+    // ---- Roster-row badge ("AUTO-CUT #2 · last added" / "MARKED #4") ---
+    // The roster rows badge the ENTIRE computed cut slate — not just the
+    // marked players — so an owner who has marked nothing still sees exactly
+    // who the automation will cut (the newest pickups, "last added"), which
+    // nudges them to set their own order. buildAutocutBadgeMap() runs the same
+    // selectAutoCuts the deadline job runs and maps every player that earns a
+    // roster-row badge:
+    //  - kind 'cut'   → in the slate (executes at the deadline): AUTO-CUT #N,
+    //    reason 'marked' ("your pick") or 'last-added' ("last added").
+    //  - kind 'marked-below' → marked but past the current cut line: MARKED #N.
+    //    Badge honesty preserved — staged, safe unless the roster grows. When
+    //    overage ≤ 0 (at/under the limit) there are no 'cut' entries at all;
+    //    every marked player falls here, matching the pre-slate behavior where
+    //    nothing executes.
+    const buildAutocutBadgeMap = () => {
+      const map = new Map();
+      const slate = computeAutocutSlate();
+      const overage = Math.max(slate.overage, 0);
+      if (overage > 0) {
+        // slate.cuts is in execution order, length === overage (capped);
+        // marked cuts come first, then newest-acquisition ("last-added") fill.
+        slate.cuts.forEach((cut, i) => {
+          map.set(String(cut.playerId), {
+            kind: 'cut',
+            priority: i + 1,
+            reason: cut.reason, // 'marked' | 'last-added'
+          });
+        });
+      }
+      // Marked players not already in the slate → below-the-line "MARKED #N".
+      // getMarkedOnRoster() is priority-ordered, so these numbers continue
+      // past the cut line (and cover every marked player when overage ≤ 0).
+      getMarkedOnRoster().forEach((pid, i) => {
+        if (map.has(pid)) return;
+        map.set(pid, { kind: 'marked-below', priority: i + 1 });
+      });
+      return map;
+    };
+
+    const buildAutocutBadgeHTML = (playerId, badgeMap) => {
+      // Callers pass a pre-gated map; the fallback still honors own-view so a
+      // future caller can't accidentally render badges off-window or off-team.
+      const map = badgeMap || (isAutocutOwnView() ? buildAutocutBadgeMap() : null);
+      if (!map) return '';
+      const info = map.get(String(playerId));
+      if (!info) return '';
+      const icon =
+        `<svg aria-hidden="true" width="12" height="12"><use href="/assets/icons/sprite.svg#icon-clipboard"></use></svg>`;
+      if (info.kind === 'marked-below') {
+        const title = `Marked #${info.priority} — below the current cut line; safe unless your roster grows`;
+        return (
+          `<span class="autocut-badge autocut-badge--below-line" title="${title}">` +
+          icon +
+          `<span class="autocut-badge__label">MARKED #${info.priority}</span></span>`
+        );
+      }
+      // kind === 'cut' — will execute at the deadline. The 'your pick' vs
+      // 'last added' distinction is carried in TEXT (not color alone).
+      const isMarked = info.reason === 'marked';
+      const reasonText = isMarked ? 'your pick' : 'last added';
+      const title = isMarked
+        ? `Auto-cut #${info.priority} — you marked this player; cut at the deadline unless your roster changes`
+        : `Auto-cut #${info.priority} — one of your most recent pickups, auto-selected because you haven't marked enough players. Mark someone to protect this one.`;
       return (
-        `<span class="autocut-badge${belowLine ? ' autocut-badge--below-line' : ''}" title="${title}">` +
-        `<svg aria-hidden="true" width="12" height="12"><use href="/assets/icons/sprite.svg#icon-clipboard"></use></svg>` +
-        `<span>${belowLine ? 'MARKED' : 'AUTO-CUT'} #${priority}</span></span>`
+        `<span class="autocut-badge" title="${title}">` +
+        icon +
+        `<span class="autocut-badge__label">AUTO-CUT #${info.priority}</span>` +
+        `<span class="autocut-badge__reason">${reasonText}</span></span>`
       );
     };
 
@@ -9534,22 +9590,25 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const rows = document.querySelectorAll('#rosterTableBody tr[data-player-id]');
       if (!rows.length) return;
       const own = isAutocutOwnView();
-      const marked = own ? getMarkedOnRoster() : [];
+      // One slate computation drives every row (map keyed by player id).
+      const map = own ? buildAutocutBadgeMap() : null;
       rows.forEach((row) => {
         const pid = String(row.dataset.playerId);
-        const priority = marked.indexOf(pid) + 1;
-        const shouldShow =
-          own && priority > 0 && row.classList.contains('roster-row--active');
+        // Active-roster rows only — taxi/IR are automation-exempt and never
+        // badged (mirrors the inline render gate at buildPlayerCellHTML time).
+        const info =
+          map && row.classList.contains('roster-row--active') ? map.get(pid) : null;
         const existing = row.querySelector('.autocut-badge');
-        if (!shouldShow) {
+        if (!info) {
           if (existing) existing.remove();
           return;
         }
+        const html = buildAutocutBadgeHTML(pid, map);
         if (existing) {
-          existing.outerHTML = buildAutocutBadgeHTML(pid);
+          existing.outerHTML = html;
         } else {
           const nameEl = row.querySelector('.player-cell__name');
-          if (nameEl) nameEl.insertAdjacentHTML('beforeend', buildAutocutBadgeHTML(pid));
+          if (nameEl) nameEl.insertAdjacentHTML('beforeend', html);
         }
       });
     };
@@ -9848,8 +9907,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       const collapsedEl = document.getElementById('cdp-collapsed');
       const bodyEl = document.getElementById('cdp-body');
+      const legendEl = document.getElementById('cdp-legend');
 
       if (slate.overage <= 0) {
+        // Nothing executes at/under the limit — no AUTO-CUT badges, no nudge.
+        if (legendEl) legendEl.hidden = true;
         const markedCount = getMarkedOnRoster().length;
         const copyEl = document.getElementById('cdp-collapsed-copy');
         if (copyEl) {
@@ -9864,6 +9926,18 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
       if (collapsedEl) collapsedEl.hidden = true;
       if (bodyEl) bodyEl.hidden = false;
+
+      // Legend / nudge — ties the amber AUTO-CUT roster-row badges to action.
+      // Reuses the panel's own deadline copy; only shown when cuts are pending.
+      if (legendEl) {
+        legendEl.hidden = false;
+        legendEl.innerHTML =
+          `The <strong>${cutsNeeded}</strong> player${cutsNeeded === 1 ? '' : 's'} badged ` +
+          `<span class="cdp-legend__chip">AUTO-CUT</span> on your roster ` +
+          `${cutsNeeded === 1 ? 'is your automatic August cut' : 'are your automatic August cuts'} ` +
+          `if you do nothing — cut on ${escCdp(autocutCfg.deadlineLabel)}. ` +
+          `Mark your own picks to choose who goes instead.`;
+      }
 
       const slateEl = document.getElementById('cdp-slate');
       const markedCutIds = slate.cuts
