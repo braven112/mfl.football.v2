@@ -12,8 +12,13 @@ name: Phase 0 — Owner Cookie Spike
 # It is workflow_dispatch ONLY (no cron): it must never fire on its own.
 #   - `confirm` must equal exactly `run-live-spike` or the run refuses to write
 #     (it still does a safe --dry-run so you can see the plan).
-#   - `player` optionally pins the free-agent id (otherwise the script auto-picks
-#     a deep kicker).
+#   - `drop` (RECOMMENDED): a player you added to your own team by hand — a
+#     numeric MFL id OR a name substring (e.g. "Badgley"). Runs DROP-ONLY: the
+#     exact deadline-job operation (owner-cookie add_drop drop, no add) on your
+#     real over-limit roster. Net-zero across your manual add + this drop.
+#   - `player` (add+drop mode): optionally pins the free-agent id to add then
+#     drop. Ignored when `drop` is set. Note: an add onto an already over-limit
+#     roster can be rejected by MFL — prefer the `drop` path.
 #
 # scripts/spike-owner-add-drop.mjs never logs cookie material and exits
 # non-zero on any failure. If the ADD lands but the DROP fails it shouts the
@@ -27,8 +32,13 @@ on:
         type: string
         required: true
         default: ''
+      drop:
+        description: "DROP-ONLY (recommended): a player you added to your team by hand — MFL id or name substring like 'Badgley'. Drops it, the exact deadline-job op."
+        type: string
+        required: false
+        default: ''
       player:
-        description: "Optional MFL free-agent id to use instead of the auto-picked kicker."
+        description: "add+drop mode: optional MFL free-agent id to add then drop. Ignored when 'drop' is set."
         type: string
         required: false
         default: ''
@@ -67,16 +77,20 @@ jobs:
           # Pass dispatch inputs via env (never interpolate ${{ }} straight into
           # the shell — that's a script-injection surface).
           CONFIRM: ${{ inputs.confirm }}
+          DROP: ${{ inputs.drop }}
           PLAYER: ${{ inputs.player }}
         run: |
           FLAGS=("--dry-run")
           if [ "$CONFIRM" = "run-live-spike" ]; then
-            echo "::notice::confirm matched — running the LIVE spike (one real add + drop)."
+            echo "::notice::confirm matched — running the LIVE spike."
             FLAGS=("--live")
           else
             echo "::warning::confirm was not 'run-live-spike' — running a DRY-RUN only (no MFL writes)."
           fi
-          if [ -n "$PLAYER" ]; then
+          if [ -n "$DROP" ]; then
+            echo "::notice::DROP-ONLY mode — dropping '$DROP' (the deadline-job operation)."
+            FLAGS+=("--drop" "$DROP")
+          elif [ -n "$PLAYER" ]; then
             FLAGS+=("--player" "$PLAYER")
           fi
           node scripts/spike-owner-add-drop.mjs "${FLAGS[@]}"

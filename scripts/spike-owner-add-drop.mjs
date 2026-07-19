@@ -87,7 +87,7 @@ class SpikeError extends Error {}
 // ---------------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const args = { live: false, dryRun: false, player: null, year: null };
+  const args = { live: false, dryRun: false, player: null, drop: null, year: null };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--live') args.live = true;
@@ -98,12 +98,23 @@ function parseArgs(argv) {
         throw new SpikeError(`--player requires a numeric MFL player id (got: ${raw ?? '<missing>'})`);
       }
       args.player = raw;
+    } else if (a === '--drop') {
+      // Accepts a numeric MFL id OR a name substring resolved against the
+      // roster in-CI (e.g. "Badgley") so the operator never needs the raw id.
+      const raw = argv[++i];
+      if (!raw || !`${raw}`.trim()) {
+        throw new SpikeError('--drop requires a numeric MFL player id or a roster name substring (got: <missing>)');
+      }
+      args.drop = `${raw}`.trim();
     } else if (a === '--year') {
       const raw = argv[++i];
       const parsed = Number.parseInt(raw, 10);
       if (!Number.isFinite(parsed)) throw new SpikeError(`--year requires a numeric year (got: ${raw ?? '<missing>'})`);
       args.year = parsed;
     } else throw new SpikeError(`Unknown flag: ${a}`);
+  }
+  if (args.drop && args.player) {
+    throw new SpikeError('--drop and --player are mutually exclusive: --drop runs the drop-only path, --player is for the add+drop path.');
   }
   return args;
 }
@@ -182,6 +193,17 @@ async function transactionMatches(year, franchiseId, needle, sinceEpochSeconds) 
 
 const addConfirmedByTransactions = (year, fid, pid, since) => transactionMatches(year, fid, `${pid}|`, since);
 const dropConfirmedByTransactions = (year, fid, pid, since) => transactionMatches(year, fid, `|${pid},`, since);
+
+/** Names/positions for a specific set of player ids (small, targeted read). */
+async function fetchPlayerNames(year, ids) {
+  const map = new Map();
+  if (!ids.length) return map;
+  const data = await fetchLeagueExport(year, 'players', `&PLAYERS=${ids.join(',')}&DETAILS=0`);
+  for (const p of toArray(data?.players?.player)) {
+    map.set(`${p.id}`, { name: `${p.name ?? ''}`, position: `${p.position ?? ''}`, team: `${p.team ?? ''}` });
+  }
+  return map;
+}
 
 // ---------------------------------------------------------------------------
 // MFL write — the add_drop page handler (owner mode; ported from cut-player.ts
@@ -378,6 +400,83 @@ async function pickTargetPlayer(year) {
   return chosen;
 }
 
+/**
+ * Verify a player is gone from a franchise's roster, retrying the roster read
+ * a few times to ride out MFL's offseason stale-rosters window before falling
+ * back to the authoritative transactions feed.
+ */
+async function verifyDropped(year, fid, pid, sinceEpoch) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await sleep(1_500);
+    try {
+      const after = await fetchRosterPlayerIds(year, fid);
+      if (!after.includes(pid)) return true;
+    } catch (err) {
+      console.warn(`${TAG} drop verify roster read failed (attempt ${attempt + 1}): ${err.message}`);
+    }
+  }
+  return dropConfirmedByTransactions(year, fid, pid, sinceEpoch);
+}
+
+// ---------------------------------------------------------------------------
+// Drop-only mode — the EXACT deadline-job operation. You add a throwaway
+// player by hand in the MFL UI, then this drops that same player: owner cookie,
+// add_drop drop_pid, no FRANCHISE_ID, on your real (over-limit) roster.
+// ---------------------------------------------------------------------------
+
+async function runDropOnly({ year, fid, cookie, dropTarget, live }) {
+  const beforeIds = await fetchRosterPlayerIds(year, fid);
+
+  // Resolve the target: a numeric arg is an id; anything else is a name
+  // substring matched against THIS roster (so "Badgley" just works).
+  let dropPid;
+  if (/^\d+$/.test(dropTarget)) {
+    dropPid = dropTarget;
+  } else {
+    const names = await fetchPlayerNames(year, beforeIds);
+    const needle = dropTarget.toLowerCase();
+    const matches = beforeIds.filter((id) => (names.get(id)?.name ?? '').toLowerCase().includes(needle));
+    if (matches.length === 0) {
+      throw new SpikeError(`no rostered player on franchise ${fid} matches "${dropTarget}" — add the player in the MFL UI first, or pass a numeric id.`);
+    }
+    if (matches.length > 1) {
+      const desc = matches.map((id) => `${id} (${names.get(id)?.name})`).join(', ');
+      throw new SpikeError(`"${dropTarget}" matches ${matches.length} rostered players: ${desc} — pass the numeric id instead.`);
+    }
+    dropPid = matches[0];
+    info(`resolved "${dropTarget}" → player ${dropPid} (${names.get(dropPid)?.name}, ${names.get(dropPid)?.position} ${names.get(dropPid)?.team})`);
+  }
+
+  if (!beforeIds.includes(dropPid)) {
+    throw new SpikeError(
+      `player ${dropPid} is NOT on franchise ${fid}'s roster — add it in the MFL UI first ` +
+        `(drop-only mode drops a player you already loaded onto your team).`,
+    );
+  }
+  pass('pre-read', `franchise ${fid} has ${beforeIds.length} player(s); target ${dropPid} is rostered`);
+
+  if (!live) {
+    info('DRY-RUN complete — validated credential, cookie, and that the target is rostered. Skipped the add_drop drop POST.');
+    pass('dry-run', 'all pre-write steps succeeded; no MFL writes attempted');
+    return;
+  }
+
+  const runStartEpoch = Math.floor(Date.now() / 1000) - 60;
+  info(`DROP: POST add_drop drop_pid=${dropPid} (owner-mode, franchise ${fid}) — identical to the deadline job.`);
+  const dropRes = await postAddDrop({ year, dropPid, ownerCookie: cookie });
+  if (!dropRes.ok) {
+    fail('drop', `MFL rejected the drop: ${dropRes.error}`);
+    throw new SpikeError(`drop failed: ${dropRes.error}`);
+  }
+
+  if (!(await verifyDropped(year, fid, dropPid, runStartEpoch))) {
+    fail('drop-verify', `could not confirm ${dropPid} was removed from franchise ${fid}. Check the MFL UI.`);
+    throw new SpikeError('drop not verified.');
+  }
+  pass('drop', `${dropPid} confirmed removed from franchise ${fid} (${beforeIds.length} → ${beforeIds.length - 1})`);
+  info('DROP-ONLY SPIKE COMPLETE — the exact deadline-job write path (owner-cookie add_drop on an over-limit roster) is proven live.');
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -403,6 +502,14 @@ async function main() {
   // 2. Validate the cookie and DERIVE the target franchise (never assume 0001).
   const { fid, leagueCount } = await resolveTargetFranchise(cookie, year);
   pass('cookie-validated', `myleagues authenticated (${leagueCount} league(s)); target franchise ${fid}`);
+
+  // DROP-ONLY MODE — the exact deadline-job operation. You add a throwaway
+  // player by hand, then this drops that same player (owner cookie, add_drop
+  // drop, no add). Net-zero across your manual add + this drop.
+  if (args.drop) {
+    await runDropOnly({ year, fid, cookie, dropTarget: args.drop, live });
+    return;
+  }
 
   // 3. Choose the target free agent.
   let target;
