@@ -34,6 +34,12 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
         blurb: 'Live dashboard proving the rumor mill is consuming tips, GroupMe mentions, and trade proposals — plus pending-trade announcement counts.',
         gate: 'redirect',
       },
+      {
+        href: '/theleague/admin/cutdown-report',
+        title: 'August Cutdown Report',
+        blurb: 'Audit trail for the roster-cut automation — every franchise\'s marked list, computed slate, and execution outcomes, plus the pause/resume kill switch.',
+        gate: 'redirect',
+      },
     ],
   },
   {
@@ -144,14 +150,14 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
 <style>
   .admin-hub { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; }
   .admin-hub__header { margin-bottom: 1.5rem; }
-  .admin-hub__title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--color-text, #0f172a); }
-  .admin-hub__sub { margin: 0; color: var(--color-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
-  .admin-hub__sub code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.8rem; }
+  .admin-hub__title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--page-text, #0f172a); }
+  .admin-hub__sub { margin: 0; color: var(--content-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
+  .admin-hub__sub code { background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.8rem; }
 
   .admin-hub__section { margin-top: 1.75rem; }
   .admin-hub__section-title {
     font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-    color: var(--color-text-muted, #64748b); margin: 0 0 0.5rem;
+    color: var(--content-text-muted, #64748b); margin: 0 0 0.5rem;
   }
   .admin-hub__list {
     list-style: none; padding: 0; margin: 0;
@@ -161,20 +167,30 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
   .admin-hub__link {
     display: flex; flex-direction: column; gap: 0.35rem;
     width: 100%; padding: 0.9rem 1rem;
-    background: var(--color-surface, #fff);
-    border: 1px solid var(--color-border, #e2e8f0); border-radius: 10px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--card-border, #e2e8f0); border-radius: 10px;
     text-decoration: none; color: inherit; transition: border-color 0.15s, transform 0.15s;
   }
   .admin-hub__link:hover { border-color: var(--color-accent, #0ea5e9); transform: translateY(-1px); }
   .admin-hub__link-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-  .admin-hub__link-title { font-weight: 600; font-size: 0.95rem; color: var(--color-text, #0f172a); }
-  .admin-hub__link-blurb { margin: 0; font-size: 0.82rem; color: var(--color-text-muted, #64748b); }
-  .admin-hub__link-href { font-size: 0.72rem; color: var(--color-text-muted, #64748b); }
+  .admin-hub__link-title { font-weight: 600; font-size: 0.95rem; color: var(--page-text, #0f172a); }
+  .admin-hub__link-blurb { margin: 0; font-size: 0.82rem; color: var(--content-text-muted, #64748b); }
+  .admin-hub__link-href { font-size: 0.72rem; color: var(--content-text-muted, #64748b); }
 
   .admin-hub__pill {
     font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
     padding: 0.12rem 0.45rem; border-radius: 999px;
   }
+  /* Light mode keeps hand-picked pill colors: the badge tokens' light values
+     (#d97706 on #fef3c7 = 2.9:1) fail WCAG AA for this tiny uppercase text. */
   .admin-hub__pill--redirect { background: #fef3c7; color: #92400e; }
   .admin-hub__pill--conditional { background: #e0f2fe; color: #075985; }
+  :global(html.dark) .admin-hub__pill--redirect {
+    background: var(--badge-warning-bg, rgba(245, 158, 11, 0.15));
+    color: var(--badge-warning-text, #fcd34d);
+  }
+  :global(html.dark) .admin-hub__pill--conditional {
+    background: var(--badge-info-bg, rgba(59, 130, 246, 0.15));
+    color: var(--badge-info-text, #93bbfd);
+  }
 </style>

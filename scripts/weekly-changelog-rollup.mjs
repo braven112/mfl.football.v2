@@ -45,6 +45,9 @@ const AREA_LABELS = {
   'rules': 'Rules',
   'import-rankings': 'Import Rankings',
   'whats-new': "What's New",
+  'admin': 'Admin',
+  'schefter': 'Schefter Report',
+  'draft': 'Draft',
   'other': 'Other',
 };
 
