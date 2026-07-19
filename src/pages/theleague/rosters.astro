@@ -9440,6 +9440,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // would spoof ownership and render that team's real cut list pre-deadline.
     const AUTOCUT_REAL_FID = config.authUser?.franchiseId ?? null;
 
+    // Contract Demo active flag — declared HERE, not in the demo section
+    // below, because isAutocutOwnView() runs during the initial updateView()
+    // render, which executes before the demo section's declarations. Keeping
+    // the `let` down there put the read in the temporal dead zone and threw
+    // "Cannot access 'demoActive' before initialization", killing the whole
+    // page script for any logged-in owner during the cut window.
+    let demoActive = false;
+
     const isAutocutEnabled = () => !!autocutCfg && !!AUTOCUT_REAL_FID;
     // Own-view is false during demo (demoActive) on ANY team — demo data is
     // fabricated and the overlay may mock rosters, so the panel + CDM option
@@ -11467,7 +11475,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const demoStart = document.getElementById('cdemo-start');
     const demoOverlay = demoTutorial?.querySelector('.cdemo-tutorial__overlay');
 
-    let demoActive = false;
+    // NOTE: demoActive is declared up in the autocut section — the initial
+    // updateView() render reads it via isAutocutOwnView() before this section
+    // executes, so declaring it here would be a TDZ crash.
     let demoStep = 1;
     let demoOriginalPlayers = null; // snapshot before injection
     let demoOriginalAuthUser = null; // snapshot of auth state before demo

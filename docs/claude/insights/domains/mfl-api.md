@@ -1487,3 +1487,13 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 **Recommendation:** Use `isDraftConducted(draftResultsData)` from `src/utils/draft-utils.ts` (checks `/^\d+$/` on `player`) rather than re-deriving. Phase logic for order framing: `isDraftConducted` → drafted; else `isLeagueDraftOrderFinal` (champion + all 3 toilet bowl comp slots) → official; else projected. AFL equivalent: `isDraftOrderFinal` in `src/utils/afl-draft-utils.ts` (both conference champs + all 5 NIT positions). See CLAUDE.md "Draft order framing" for the framing rule itself.
 
 **Evidence:** `tests/draft-order-phase.test.ts`, `data/theleague/mfl-feeds/2026/draftResults.json` (51 real picks), `src/pages/theleague/draft-predictor.astro` phase switch.
+
+## 2026-07-19 - `export?TYPE=myleagues&JSON=1` Returns TWO Different Wrapper Keys — Accept Both
+
+**Context:** The autocut save endpoint verifies the owner's MFL credential at save time with the cheap authenticated `myleagues` read.
+
+**Insight:** The same export endpoint wraps its response as `{"myleagues":{"league":[...]}}` in some cases and `{"leagues":{"league":[...]}}` in others (the two earlier myleagues entries in this file each show one shape — both are real, from the same endpoint). Code that destructures only one wrapper key intermittently sees "no leagues" for an authenticated user.
+
+**Recommendation:** Always read `data?.myleagues?.league ?? data?.leagues?.league ?? []`. Also remember the single-league case may be an object, not an array — normalize before iterating.
+
+**Evidence:** `src/pages/api/autocut-list.ts` (credential verification read, ~line 52); prior entries "The `myleagues` API Returns Franchise ID" and "MFL Custom Pages Can Run JavaScript" (point 3) in this file.
