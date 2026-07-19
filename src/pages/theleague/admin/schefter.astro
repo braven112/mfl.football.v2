@@ -11,7 +11,8 @@
  * committed feed JSON. No mutations here.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { OFFER_POST_PROBABILITY } from '../../../../scripts/lib/redact-trade-offer.mjs';
 import whatsNew from '../../../data/whats-new.json';
 
@@ -35,8 +36,17 @@ const announceArticles = (Array.isArray(whatsNew) ? whatsNew : [])
 
 export const prerender = false;
 
+// League-scoped gate: commissioner/admin AND the session must belong to
+// TheLeague — an AFL commissioner's session must not open TheLeague's ops
+// dashboard (the stats API it fronts is JWT-league-scoped the same way).
 const user = getAuthUser(Astro.request);
-if (!user || !isCommissionerOrAdmin(user)) {
+const theLeague = getLeagueBySlug('theleague');
+if (
+  !user ||
+  !isCommissionerOrAdmin(user) ||
+  !theLeague ||
+  !isAuthorizedForLeague(user, theLeague.id)
+) {
   return Astro.redirect('/theleague');
 }
 

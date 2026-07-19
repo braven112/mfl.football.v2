@@ -157,7 +157,7 @@ const currentPath = Astro.url.pathname + Astro.url.search;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
 // Get admin franchise IDs
-const adminFranchiseIds = getAdminFranchiseIds();
+const adminFranchiseIds = getAdminFranchiseIds(league);
 
 // Commissioner mode: use JWT session auth as the single source of truth
 const isCommissioner = !!layoutAuthUser && isCommissionerOrAdmin(layoutAuthUser);

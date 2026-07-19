@@ -321,7 +321,9 @@ describe('admin schefter-stats — tipsterContext wiring', () => {
     // them. The dual-array trick (pendingTips vs pendingTipsWithHashes) is
     // what lets the route compute the score without leaking identity.
     expect(ADMIN_SRC).toMatch(/pendingTipsWithHashes/);
-    expect(ADMIN_SRC).toMatch(/await\s+buildTipsterContext\(pendingTipsWithHashes,\s*redis\)/);
+    // Third arg is the resolved league's navSlug — the admin preview must
+    // read the same league-scoped tipster counters the scanner writes.
+    expect(ADMIN_SRC).toMatch(/await\s+buildTipsterContext\(pendingTipsWithHashes,\s*redis,\s*league\.navSlug\)/);
   });
 
   it('passes tipsterContext into rankBuckets AND bucketPriorityScore', () => {

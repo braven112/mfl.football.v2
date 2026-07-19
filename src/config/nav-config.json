@@ -356,7 +356,10 @@
       ]
     }
   ],
-  "adminFranchiseIds": ["0001", "0000"],
+  "adminFranchiseIds": {
+    "theleague": ["0001", "0000"],
+    "afl": ["0001"]
+  },
   "footerLinks": [
     {
       "id": "mfl-home",

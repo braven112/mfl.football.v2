@@ -10,6 +10,7 @@
 
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
 import { isAdminFranchise } from '../config/nav-config';
+import { getLeagueById } from '../config/leagues';
 
 export interface AuthUser {
   id: string;
@@ -69,9 +70,12 @@ export function isFranchiseOwner(user: AuthUser, franchiseId: string): boolean {
 export function isCommissionerOrAdmin(user: AuthUser): boolean {
   if (user.role === 'commissioner' || user.role === 'admin') return true;
 
-  // Fallback: check admin franchise IDs from nav config
-  // This handles cases where MFL login didn't return the MFL_IS_COMMISH cookie
-  return isAdminFranchise(user.franchiseId);
+  // Fallback: check admin franchise IDs from nav config (handles cases where
+  // MFL login didn't return the MFL_IS_COMMISH cookie). League-scoped: the
+  // fallback list is checked for the league THIS session belongs to — an AFL
+  // session for franchise 0001 must not inherit TheLeague 0001's admin bit.
+  const navSlug = getLeagueById(user.leagueId)?.navSlug === 'afl' ? 'afl' : 'theleague';
+  return isAdminFranchise(user.franchiseId, navSlug);
 }
 
 /**

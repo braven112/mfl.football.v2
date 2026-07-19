@@ -290,7 +290,10 @@ describe('scanner + admin integration (source guards)', () => {
   it('admin schefter-stats surfaces staleStreakWeeks + isStale per ranked bucket', () => {
     expect(ADMIN_SRC).toMatch(/staleStreakWeeks: bucketStreakLength/);
     expect(ADMIN_SRC).toMatch(/isStale: isBucketStale/);
-    expect(ADMIN_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/\.\.\/data\/schefter\/topic-recurrence\.json'/);
+    // Ledger moved to its per-league home; the static import is TheLeague's
+    // (AFL gets an empty ledger until data/schefter/afl/ gets its own).
+    expect(ADMIN_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/\.\.\/data\/schefter\/theleague\/topic-recurrence\.json'/);
+    expect(ADMIN_SRC).toMatch(/isTheLeague \? recurrenceLedger : EMPTY_RECURRENCE_LEDGER/);
   });
 });
 
