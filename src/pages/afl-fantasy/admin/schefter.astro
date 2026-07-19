@@ -1,6 +1,6 @@
 ---
 /**
- * Schefter Ops — /theleague/admin/schefter
+ * Schefter Ops — /afl-fantasy/admin/schefter
  *
  * Thin wrapper: league-scoped admin gate + layout. The dashboard lives in
  * the shared components/schefter/AdminDashboard.astro; the stats API it
@@ -14,20 +14,20 @@ import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../..
 import { getLeagueBySlug } from '../../../config/leagues';
 
 // League-scoped gate: commissioner/admin AND the session must belong to
-// TheLeague — an AFL commissioner's session must not open TheLeague's ops
+// the AFL — a TheLeague commissioner's session must not open the AFL's ops
 // dashboard.
 const user = getAuthUser(Astro.request);
-const theLeague = getLeagueBySlug('theleague');
+const afl = getLeagueBySlug('afl-fantasy');
 if (
   !user ||
   !isCommissionerOrAdmin(user) ||
-  !theLeague ||
-  !isAuthorizedForLeague(user, theLeague.id)
+  !afl ||
+  !isAuthorizedForLeague(user, afl.id)
 ) {
-  return Astro.redirect('/theleague');
+  return Astro.redirect('/afl-fantasy');
 }
 ---
 
 <TheLeagueLayout title="Schefter Ops — Admin">
-  <AdminDashboard base="/theleague" navSlug="theleague" />
+  <AdminDashboard base="/afl-fantasy" navSlug="afl" />
 </TheLeagueLayout>

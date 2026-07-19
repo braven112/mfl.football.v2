@@ -1,0 +1,45 @@
+---
+/**
+ * Tip Schefter — /afl-fantasy/schefter/tip
+ *
+ * Thin wrapper: auth + layout. The page body lives in the shared
+ * components/schefter/TipPage.astro — TheLeague and the AFL render the same
+ * form/rails and inherit improvements together. AFL-specific presentation:
+ * team divisions are labeled with their conference ("AL North") since the
+ * four AFL division names alone don't tell you which side of the league a
+ * team plays in.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import TipPage from '../../../components/schefter/TipPage.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getSchefterFeed, getSchefterLeagueConfig } from '../../../utils/schefter-league';
+import { getConferenceShort, isValidConferenceId } from '../../../utils/afl-conference';
+
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId) {
+  return Astro.redirect('/afl-fantasy/login?redirect=/afl-fantasy/schefter/tip');
+}
+
+const league = getLeagueBySlug('afl-fantasy')!;
+const feed = getSchefterFeed(league);
+const teams = getSchefterLeagueConfig(league).teams.map((t) => ({
+  ...t,
+  division:
+    t.conference && isValidConferenceId(t.conference) && t.division
+      ? `${getConferenceShort(t.conference)} ${t.division}`
+      : t.division,
+}));
+---
+
+<TheLeagueLayout title="Tip Schefter">
+  <TipPage
+    navSlug="afl"
+    base="/afl-fantasy"
+    leagueName="AFL"
+    feed={feed}
+    teams={teams}
+  />
+</TheLeagueLayout>

@@ -1,0 +1,28 @@
+---
+/**
+ * Rumor Thread Permalink — /afl-fantasy/schefter/thread/[threadId]
+ *
+ * Thin wrapper over the shared components/schefter/RumorThread.astro.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import RumorThread from '../../../../components/schefter/RumorThread.astro';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import { getSchefterFeed } from '../../../../utils/schefter-league';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/afl-fantasy/news');
+
+const feed = getSchefterFeed(getLeagueBySlug('afl-fantasy')!);
+---
+
+<TheLeagueLayout title="Rumor thread — The Schefter Report">
+  <RumorThread
+    navSlug="afl"
+    base="/afl-fantasy"
+    leagueName="AFL"
+    feed={feed}
+    threadId={id}
+  />
+</TheLeagueLayout>

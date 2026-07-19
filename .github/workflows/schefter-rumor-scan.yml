@@ -35,13 +35,17 @@ jobs:
       - name: Install dependencies
         run: npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
 
-      - name: Run Schefter rumor-mill scanner
+      # Sequential per-league runs (NOT a matrix): parallel jobs would race
+      # the feed commit below. Per-league enablement lives in the registry's
+      # schefterTips flag; SCHEFTER_RUMOR_MILL_ENABLED is the global switch.
+      - name: Run Schefter rumor-mill scanner (TheLeague)
         env:
           SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
           SCHEFTER_TRADE_OFFER_RUMORS_ENABLED: ${{ vars.SCHEFTER_TRADE_OFFER_RUMORS_ENABLED }}
           SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY: ${{ vars.SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
           SCHEFTER_TIPSTER_SALT: ${{ secrets.SCHEFTER_TIPSTER_SALT }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
@@ -51,9 +55,31 @@ jobs:
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
         run: |
           if [ "$DRY_RUN_INPUT" = "true" ]; then
-            node scripts/schefter-rumor-scan.mjs --dry-run
+            node scripts/schefter-rumor-scan.mjs --league theleague --dry-run
           else
-            node scripts/schefter-rumor-scan.mjs
+            node scripts/schefter-rumor-scan.mjs --league theleague
+          fi
+
+      - name: Run Schefter rumor-mill scanner (AFL)
+        env:
+          SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
+          SCHEFTER_TRADE_OFFER_RUMORS_ENABLED: ${{ vars.SCHEFTER_TRADE_OFFER_RUMORS_ENABLED }}
+          SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY: ${{ vars.SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          SCHEFTER_TIPSTER_SALT: ${{ secrets.SCHEFTER_TIPSTER_SALT }}
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN_INPUT" = "true" ]; then
+            node scripts/schefter-rumor-scan.mjs --league afl-fantasy --dry-run
+          else
+            node scripts/schefter-rumor-scan.mjs --league afl-fantasy
           fi
 
       - name: Commit and push feed updates
@@ -73,4 +99,4 @@ jobs:
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter rumor-mill — new anonymous-tip post" \
-            --files "src/data/theleague/schefter-feed.json,data/schefter/theleague/post-history.json,data/schefter/theleague/topic-recurrence.json"
+            --files "src/data/theleague/schefter-feed.json,data/schefter/theleague/post-history.json,data/schefter/theleague/topic-recurrence.json,data/afl-fantasy/schefter-feed.json,data/schefter/afl/post-history.json,data/schefter/afl/topic-recurrence.json"

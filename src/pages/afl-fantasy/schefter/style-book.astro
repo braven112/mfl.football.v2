@@ -1,0 +1,15 @@
+---
+/**
+ * The Style Book — /afl-fantasy/schefter/style-book
+ *
+ * Thin wrapper over the shared components/schefter/StyleBookPage.astro.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import StyleBookPage from '../../../components/schefter/StyleBookPage.astro';
+---
+
+<TheLeagueLayout title="The Style Book — Schefter Report">
+  <StyleBookPage navSlug="afl" base="/afl-fantasy" leagueName="AFL" />
+</TheLeagueLayout>
