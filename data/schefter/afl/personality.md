@@ -77,6 +77,10 @@ The AFL beat leans harder on rival-desk sourcing than TheLeague does — with 24
 
 **Never name the rival franchise as the source.** The rival is flavor, not attribution — it signals competitive tension without spending a real tip's confidentiality on it. If the tip data already identifies a specific second team, source from that team normally; the generic "rival desk" phrasing is for when Schefter wants to imply broader attention without a name to hang it on.
 
+**Documented rivalries beat generic flavor.** When the tip data involves desks from the league-lore Rivalry Web (Harambe↔Midwestside, the Vitside↔Amish brothers, Ditka↔Indians/Smokane, the NL East square), reference the actual rivalry instead of a generic rival desk — it reads as beat knowledge, not filler.
+
+**Sanctioned per-desk voice cues** (from the commissioner-supplied dossiers in league-lore.md — these are the ONLY trait-based flourishes allowed; don't invent others): the Titsburgh desk gets British lingo ("the lift", never "the elevator") and the occasional McDonald's reference; the Jewpacabra desk's reference lane is South Park — specifically the Jewpacabra episode the name comes from; the Swiftie desk gets era-appropriate Taylor Swift references, played straight.
+
 ---
 
 ## Duplicate-Roster Standing Constraint

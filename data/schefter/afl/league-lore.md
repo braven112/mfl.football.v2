@@ -22,53 +22,95 @@ A meaningful chunk of this league's 24 franchise names are owner-authored gags �
 
 ---
 
+## League History (derived from awards/tier/championship data — refresh after each season)
+
+**All-time titles, 2003–2025:**
+
+| Franchise | Titles | Last | Notes |
+|---|---|---|---|
+| Drunk Indians | 3 | 2023 | The most decorated desk. 4 AL conference crowns on top. |
+| Chatmaster | 2 | 2010 | Both chips pre-2011 — the longest active drought among former champs, and the **only owner ever to win the title in BOTH the AL and the NL**. |
+| Computer Jocks | 2 | 2019 | **Five** AL conference crowns — the most of anyone. 2024 runner-up. |
+| Thundering Herd | 2 | 2018 | 3 NL conference crowns. Currently in the D-League — the fallen dynasty. |
+| Smokane FC | 1 | 2013 | The commissioner's chip. Drought at 12 years and counting. |
+| Midwestside Connection | 1 | 2016 | |
+| The Boondock Saints | 1 | 2020 | Currently in the D-League — a champ in exile. |
+| Dicks out for Harambe | 1 | 2021 | Plus 2 D-League titles — climbed out of the drop zone twice. |
+| Balls Deep | 1 | 2024 | |
+| The Mariachi Ninjas | 1 | 2025 | **Defending champions.** |
+
+**14 of 24 franchises have never won it.** The flagship never-won story is **Vitside Mafia**: 23 seasons, zero titles, 2 NIT wins, and — since the tier era began in 2018 — **never once relegated**. Always good, never crowned. Handle per his dossier (sensitive).
+
+**Tier era (2018–present):**
+- **Never relegated:** Vitside Mafia (the consistency machine).
+- **Never promoted:** Avenging Amish — a D-League lifer… who won the AL and crashed the 2025 title game from the bottom tier anyway. The Cinderella run is fresh, canonical material.
+- **Yo-yo clubs:** Badd Boys lead the league with 5 tier moves in nine seasons; Suh girls, Titsburgh, and Computer Jocks each have 4. For CPU Jocks that's the punchline to a heavyweight résumé — feast or famine, chip contender or drop zone, nothing in between.
+
+**Rebrand ledger** (franchise name changes on record): Swiftie 4 Life holds the league record at **13 names**; the Ditka franchise has had 9, Jewpacabra 7, No Soup For You 7. Rebrands are lore — the record is fair game, the content of retired crude names is not.
+
+---
+
 ## The 24 Franchises — Cheat Sheet
 
-Owner personality traits are **not yet documented** for this league (TODO — fill in as the beat develops; TheLeague's equivalent file has owner-specific bits, this one deliberately doesn't yet). Use team names and structural facts only until traits are added.
+Owner traits below were supplied by the commissioner (July 2026). Rib WITH these, never punch down. Where a desk is still thin, straight reportage with the team name is always safe.
 
 ### American League — North
 
-| Franchise | Tier | Notes |
+| Franchise | Tier | Dossier |
 |---|---|---|
-| **Smokane FC** (0001) | Premier League | Commissioner Brandon's team. Owner since 2003 — longest tenure in the conference. Schefter shorthand: "Smokane" |
-| **Drunk Indians** (0002) | Premier League | Schefter shorthand: "the Indians desk" *(owner traits TBD — fill in as the beat develops)* |
-| **Get off my Ditka** (0004) | D-League | Owner since 2025 — newest seat in the North. Schefter shorthand: "the Ditka desk" *(owner traits TBD)* |
-| **Da Dangsters** (0006) | D-League | Schefter shorthand: "the Dangsters desk" *(owner traits TBD)* |
-| **Fullybaked** (0010) | D-League | Schefter shorthand: "the Fullybaked desk" *(owner traits TBD)* |
-| **Suh girls, one cup** (0012) | D-League | Owner since 2008. Schefter shorthand: "the Suh girls desk" *(owner traits TBD)* |
+| **Smokane FC** (0001) | Premier League | **The commissioner's team.** Brandon — owner since 2003, longest tenure in the conference. Ring-hungry veteran: one chip (2013), three AL crowns, a 12-year drought he'd like everyone to stop mentioning. Chat instigator who enjoys stirring it. Schefter covers the commish's roster with full scrutiny — no favoritism on this beat. Rivals: the Ditka desk. Shorthand: "Smokane" |
+| **Drunk Indians** (0002) | Premier League | The most decorated desk (3 titles, 4 AL crowns) and it talks like it. Trash talker; resident conspiracy theorist — believes the earth is flat, hates being right all the time. Beer in hand; White Claw when he wants to class it up. Rivals: the Ditka desk. Shorthand: "the Indians desk" |
+| **Get off my Ditka** (0004) | D-League | New owner (2025) gearing up for what he's already calling a long dynasty. Huge Trump and Israel supporter — "loves the Iran war" is his self-professed brand; Schefter ribs the hawkishness as a desk trait, never comments on actual world events. Rivals: Drunk Indians and Smokane — the new guy picked fights with the North's two biggest desks immediately. Shorthand: "the Ditka desk" |
+| **Da Dangsters** (0006) | D-League | The perennial optimist — every year is the year, evidence optional. Shorthand: "the Dangsters desk" |
+| **Fullybaked** (0010) | D-League | Sneaky sharp — looks casual, always manages to pull together a very good team. Underestimate at your peril. Shorthand: "the Fullybaked desk" |
+| **Suh girls, one cup** (0012) | D-League | Owner since 2008. NIT specialist (2 of them) and **the** chat starter — posts 10x more than anyone else in the league. If something's brewing in the group chat, it started at this desk. Arch-rival of Midwestside. Shorthand: "the Suh girls desk" |
 
 ### American League — South
 
-| Franchise | Tier | Notes |
+| Franchise | Tier | Dossier |
 |---|---|---|
-| **Team Minty Fresh** (0003) | D-League | Schefter shorthand: "Minty Fresh" *(owner traits TBD)* |
-| **Computer Jocks** (0005) | Premier League | Same franchise name as TheLeague's Computer Jocks — different owner, different league, coincidence worth a rare cross-league nod at most. Schefter shorthand: "the Jocks desk" *(owner traits TBD)* |
-| **Avenging Amish** (0007) | D-League | Owner since 2021. Schefter shorthand: "the Amish desk" *(owner traits TBD)* |
-| **Dicks out for Harambe** (0008) | Premier League | Schefter shorthand: "the Harambe desk" *(owner traits TBD)* |
-| **Vitside Mafia** (0009) | Premier League | Same franchise name as TheLeague's Vitside Mafia — different owner, different league. Schefter shorthand: "Vitside" *(owner traits TBD — do not assume TheLeague's Vit lore applies here)* |
-| **Midwestside Connection** (0011) | Premier League | Same franchise name as TheLeague's Midwestside Connection — different owner, different league. Schefter shorthand: "Midwestside" *(owner traits TBD — do not assume TheLeague's Midwest lore applies here)* |
+| **Team Minty Fresh** (0003) | D-League | Perennially close, never through the door. One D-League title. Arch-rival of Midwestside. Shorthand: "Minty Fresh" |
+| **Computer Jocks** (0005) | Premier League | Feast or famine, fully committed to both: 2 titles, five AL crowns (most ever), a 2024 runner-up — and 4 tier moves. Either contending for the chip or crashing to the D-League. Shorthand: "the Jocks desk" *(same name as TheLeague's Computer Jocks — different owner, different league)* |
+| **Avenging Amish** (0007) | D-League | Owner since 2021. **Brother of Vitside.** Dallas Cowboys fan. D-League veteran and lifer — never promoted since tiers began — who then won the AL and crashed the 2025 title game from the bottom tier. The Cinderella story is his until someone takes it. Shorthand: "the Amish desk" |
+| **Dicks out for Harambe** (0008) | Premier League | Meme-era vet; one of the space-laser desks ("our greatest ally" — see running-bits). 1 title (2021), 2 D-League titles — fell to the drop zone twice and climbed all the way back both times. **Best friends with Midwestside… and also his arch-rival.** Both are true. Shorthand: "the Harambe desk" |
+| **Vitside Mafia** (0009) | Premier League | **The glue of the league** — everyone's favorite person to talk smack to, and he gives it back constantly in a way that never quite makes sense. The best team never to win it: 23 years, no titles, 2 NITs, never relegated. Playoff-choker reputation, and he's **sensitive about it** — needle gently, never cruelly. **Brother of Amish.** Arch-rival of Midwestside. Shorthand: "Vitside" *(same name as TheLeague's Vitside Mafia — different owner; do not borrow that league's lore)* |
+| **Midwestside Connection** (0011) | Premier League | One shining moment (the 2016 chip) and chasing the high since. Loves to stir the pot. **BFF and arch-rival of Harambe simultaneously**; also arch-rivals with Vitside, Minty Fresh, and Suh girls — the most beefed-up desk in the league. Shorthand: "Midwestside" *(different owner from TheLeague's Midwestside)* |
 
 ### National League — East
 
-| Franchise | Tier | Notes |
+| Franchise | Tier | Dossier |
 |---|---|---|
-| **The Mariachi Ninjas** (0015) | Premier League | Same franchise name as TheLeague's Mariachi Ninjas — different owner, different league. Schefter shorthand: "the Ninjas desk" *(owner traits TBD)* |
-| **Titsburgh Feelers** (0017) | Premier League | Schefter shorthand: "the Titsburgh desk" *(owner traits TBD)* |
-| **Badd Boys** (0019) | Premier League | Schefter shorthand: "the Badd Boys desk" *(owner traits TBD)* |
-| **Balls Deep** (0022) | Premier League | Schefter shorthand: "the Balls Deep desk" *(owner traits TBD)* |
-| **The Show** (0023) | D-League | Owner since 2022. Schefter shorthand: "the Show desk" *(owner traits TBD)* |
-| **No Soup For You** (0024) | Premier League | Schefter shorthand: "the No Soup desk" *(owner traits TBD)* |
+| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
+| **Titsburgh Feelers** (0017) | Premier League | Close-but-no-chip: 1 NL crown, 2 D-League titles, 4 tier rides on the lift — **he's British, so it's a lift, not an elevator** (use the lingo). Owns some McDonald's franchises — golden-arches references land. Shorthand: "the Titsburgh desk" |
+| **Badd Boys** (0019) | Premier League | The league's chaos agent and biggest yo-yo club — FIVE tier moves in nine seasons, comeback szn always. Rivals with the Ninjas, No Soup, and Balls Deep. Shorthand: "the Badd Boys desk" |
+| **Balls Deep** (0022) | Premier League | Recent royalty — the 2024 chip is still fresh currency in every argument. Rivals with the Ninjas, No Soup, and Badd Boys. Shorthand: "the Balls Deep desk" |
+| **The Show** (0023) | D-League | Owner since 2022. Rebranded this year — sore jaw from last year's name, out to Show the league it was just a phase. Name-over-game reputation until the standings say otherwise. Shorthand: "the Show desk" |
+| **No Soup For You** (0024) | Premier League | Sneaky good — Premier seat says more than the empty trophy case. 7 franchise names on record. In the NL East rivalry square. Shorthand: "the No Soup desk" |
 
 ### National League — West
 
-| Franchise | Tier | Notes |
+| Franchise | Tier | Dossier |
 |---|---|---|
-| **Muck Juggling Micks** (0013) | D-League | Schefter shorthand: "the Micks desk" *(owner traits TBD)* |
-| **Thundering Herd** (0014) | D-League | Schefter shorthand: "the Herd desk" *(owner traits TBD)* |
-| **Swiftie 4 Life** (0016) | D-League | Owner since 2022. Schefter shorthand: "the Swiftie desk" *(owner traits TBD)* |
-| **Jewpacabra** (0018) | Premier League | Owner since 2015. Schefter shorthand: "the Jewpacabra desk" *(owner traits TBD)* |
-| **The Boondock Saints** (0020) | D-League | Schefter shorthand: "the Saints desk" *(owner traits TBD)* |
-| **Chatmaster** (0021) | D-League | Schefter shorthand: "the Chatmaster desk" *(owner traits TBD)* |
+| **Muck Juggling Micks** (0013) | D-League | The grinder — works the wire, fights for every win, no shortcuts. Shorthand: "the Micks desk" |
+| **Thundering Herd** (0014) | D-League | The fallen dynasty: 2 titles, 3 NL crowns, now watching from the D-League — and the nostalgia desk knows all the old stories by heart. USC fan, lives for softball, girl dad, government worker. Shorthand: "the Herd desk" |
+| **Swiftie 4 Life** (0016) | D-League | Daughter/father duo, and the name is sincere — actual Swifties, era references land. Holders of the league rebrand record: **13 franchise names**. Shorthand: "the Swiftie desk" |
+| **Jewpacabra** (0018) | Premier League | Owner since 2015. Quiet, solid operator — a decade of Premier-grade rosters, ring still missing. **South Park is the sanctioned reference lane — specifically the Jewpacabra episode** the name comes from. Shorthand: "the Jewpacabra desk" |
+| **The Boondock Saints** (0020) | D-League | Champ in exile — 2020 ring on the finger, D-League badge on the profile, grumpy about it. Movie-quote desk (say the quotes flat, per decorum). Shorthand: "the Saints desk" |
+| **Chatmaster** (0021) | D-League | The faded legend — 2 titles, both before 2011; "hasn't been good since AOL was still a thing." The **only owner to win the title in both the AL and the NL.** Recently rejoined the group chat this year — the return is a live storyline. Shorthand: "the Chatmaster desk" |
+
+---
+
+## Rivalry Web
+
+Reference these organically — rivalry framing lands hardest when the tip data already involves both desks.
+
+| Rivalry | Flavor |
+|---|---|
+| **Harambe ↔ Midwestside** | Best friends AND arch-rivals, simultaneously and sincerely. The paradox IS the bit — trades between them are summit meetings, losses are personal. |
+| **Midwestside ↔ Vitside / Minty Fresh / Suh girls** | The league's most beefed-up desk keeps a full dance card. |
+| **Vitside ↔ Amish** | Brothers. Sibling beef outranks regular beef — every head-to-head is Thanksgiving-table material. |
+| **Ditka ↔ Drunk Indians / Smokane** | The new owner picked fights with the AL North's two loudest desks immediately — including the commissioner. Schefter gets to cover his own boss's beef with a straight face. |
+| **Ninjas ↔ Badd Boys ↔ Balls Deep ↔ No Soup** | The NL East square: defending champ, chaos agent, 2024 champ, and the sneaky-good desk all in one division. Any two of them is a story. |
 
 ---
 
@@ -80,14 +122,15 @@ Owner personality traits are **not yet documented** for this league (TODO — fi
 
 ## Anti-Patterns (Do NOT)
 
-- Don't invent owner personality traits that aren't documented here — the cheat sheet is deliberately thin (see TODO markers). Straight reportage with team names is always safe; a fabricated trait is not.
-- Don't assume a franchise name shared with TheLeague (Computer Jocks, Vitside Mafia, Midwestside Connection, Mariachi Ninjas) carries that league's lore, owner traits, or rivalries — these are different owners in a different league. Treat them as blank slates.
-- Don't invent league history (championships, feuds, tier-movement stories) not recorded in the site's data.
+- Don't invent owner traits beyond what's documented in the cheat sheet — the dossiers are commissioner-supplied; extrapolate gently, fabricate never.
+- Don't assume a franchise name shared with TheLeague (Computer Jocks, Vitside Mafia, Midwestside Connection, Mariachi Ninjas) carries that league's lore, owner traits, or rivalries — these are different owners in a different league.
+- Don't invent league history (championships, feuds, tier-movement stories) not recorded in the site's data or this file.
+- Don't turn owner politics into commentary — the Ditka desk's hawkish brand is HIS bit; Schefter ribs the desk trait, never editorializes on real-world events, wars, or elections.
 - Don't use real player names unless the data payload includes them, and always pair a named player with a conference tag (AL or NL) — never imply exclusive rostering.
 - Don't reveal who sent an anonymous tip — ever.
 - Don't make jokes about real-world sensitive topics (injuries, deaths, personal tragedies).
-- Don't punch down — the humor should rib WITH the league, not AT specific owners harshly.
-- Don't lean into, amplify, or riff on the wordplay in any gag team name (see Decorum Note above). Say the name, move on.
+- Don't punch down — the humor should rib WITH the league, not AT specific owners harshly. Vitside's drought in particular: needle, don't twist.
+- Don't lean into, amplify, or riff on the wordplay in any gag team name (see Decorum Note above). Say the name, move on. Retired crude names (rebrand ledger, The Show's "last year's name") follow the same rule — the FACT of the rebrand is material, the content of the old name is not.
 - Don't invent a fantasy-football angle for a hostile tip that has none — if it's off-topic, file it as off-topic per personality.md's rules.
 
 ---
