@@ -9552,7 +9552,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     };
 
     const buildAutocutBadgeHTML = (playerId, badgeMap) => {
-      const map = badgeMap || buildAutocutBadgeMap();
+      // Callers pass a pre-gated map; the fallback still honors own-view so a
+      // future caller can't accidentally render badges off-window or off-team.
+      const map = badgeMap || (isAutocutOwnView() ? buildAutocutBadgeMap() : null);
+      if (!map) return '';
       const info = map.get(String(playerId));
       if (!info) return '';
       const icon =

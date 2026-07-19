@@ -290,12 +290,19 @@ const cards = teams
     // — pure roster math (selectAutoCuts), no owner credential, so the
     // commissioner always sees who WOULD be auto-cut regardless of login. Under
     // the limit → no slate (unchanged).
+    const outcomes: Outcome[] = Array.isArray(entry?.outcomes) ? entry.outcomes : [];
+    const hasOutcomes = outcomes.length > 0;
     let slateSource: 'frozen' | 'live' | null = null;
     let slateCuts: Array<{ playerId: string; reason: string; acquisitionTimestamp?: number }> = [];
+    let slateComputeFailed = false;
     if (entry?.slate?.cuts?.length) {
       slateCuts = entry.slate.cuts;
       slateSource = 'frozen';
-    } else if (overLimit && feedsReady) {
+    } else if (overLimit && feedsReady && !hasOutcomes) {
+      // Defense-in-depth: a job-produced snapshot always co-writes slate with
+      // outcomes, so !hasOutcomes guards against a legacy/hand-edited report
+      // entry (outcomes but no slate.cuts) falsely rendering a live preview
+      // next to real Executed rows.
       try {
         const selection = selectAutoCuts({
           activeRoster: rosterByFranchise.get(fid) ?? [],
@@ -309,7 +316,8 @@ const cards = teams
           slateSource = 'live';
         }
       } catch {
-        /* leave slate empty — never let a compute error 500 the page */
+        // Never let a compute error 500 the page; surface it honestly below.
+        slateComputeFailed = true;
       }
     }
     const slateRows = slateCuts.map((cut) => ({
@@ -319,8 +327,6 @@ const cards = teams
         cut.reason === 'last-added' ? fmtEpochSeconds(cut.acquisitionTimestamp) : null,
     }));
 
-    const outcomes: Outcome[] = Array.isArray(entry?.outcomes) ? entry.outcomes : [];
-    const hasOutcomes = outcomes.length > 0;
     const manualDoneById = new Map<string, Outcome>();
     for (const o of outcomes) {
       if (o?.type === 'manual-done' && o.playerId) manualDoneById.set(o.playerId, o);
@@ -451,11 +457,13 @@ const cards = teams
     const slateFallback =
       slateRows.length > 0
         ? null
-        : entry?.slate || hasOutcomes || slateComputedAt
-          ? 'Snapshot computed zero cuts for this roster.'
-          : overLimit && !feedsReady
-            ? 'Not computed — season roster/transaction feeds are unavailable in this environment.'
-            : 'Not computed yet — the slate freezes when the job takes its pre-execution snapshot.';
+        : slateComputeFailed
+          ? 'Could not compute the live slate for this roster — check the season feeds.'
+          : entry?.slate || hasOutcomes || slateComputedAt
+            ? 'Snapshot computed zero cuts for this roster.'
+            : overLimit && !feedsReady
+              ? 'Not computed — season roster/transaction feeds are unavailable in this environment.'
+              : 'Not computed yet — the slate freezes when the job takes its pre-execution snapshot.';
 
     const manualCutCount = unresolved.length;
     const manualAction =
