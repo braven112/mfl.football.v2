@@ -871,3 +871,15 @@ randomization; templates/css-customization diverged only at the footer chrome
 **Evidence:** `src/components/shared/schedule-strength/StrengthTable.astro` (`.sst-scroll`), caught in the Gauntlet frontend-ux review; verified reasoning against the CSS overflow spec.
 
 **Recommendation:** When applying the editorial "sticky headers" pattern to a table in a scroll wrapper, either pair `overflow-x: auto` with `max-height` on the same wrapper, or consciously drop the sticky claim for short tables. **Follow-up (same day):** the `max-height` route backfired on the Gauntlet's 16-row table — the inner scrollbox visually truncated the standings and the user read it as "only 13 teams ranked." For full-league ranking tables, prefer showing every row and forgoing the sticky header; reserve the max-height fix for genuinely long tables where an inner scroll region is obvious.
+
+---
+
+## 2026-07-19 - Extracting a Page Into a Shared Component: JSON Config Blob + Import-Depth Traps
+
+**Context:** The 1,669-line `theleague/schefter/tip.astro` (and the 1,908-line admin dashboard) became shared components under `src/components/schefter/` so TheLeague and the AFL render identical pages from ~30-line wrappers.
+
+**Insight:** Two patterns made the move safe, one trap bit twice. (1) An Astro page's `<style>` and `<script>` travel with the body into the component unchanged — scoping keeps working because the component IS the new scope; resist the urge to hoist styles into a global CSS file. (2) The inline client `<script>` can't see frontmatter, so league-varying values (URL base, `?league=` query string for public APIs, topic metadata) go through a rendered `<script type="application/json" set:html={JSON.stringify(...)}>` blob the script parses — one blob, not N data-attributes. (3) The trap: import-depth arithmetic during the move. This repo has BOTH `src/data/` and root `data/` — from `src/pages/theleague/admin/` they're `../../../data/` and `../../../../data/`; from `src/components/schefter/` they become `../../data/` and `../../../data/`. A blanket find/replace on `'../../../` corrupts one of them silently (dev server 500s with "Could not import" only when the page is hit). Fix each import family separately and grep the result for both `data/` roots.
+
+**Evidence:** `src/components/schefter/{TipPage,AdminDashboard}.astro` extraction (branch `claude/afl-tips-schefter-alignment-04jzfx`); the whats-new.json import broke exactly this way and was caught by a live page fetch, not by tests.
+
+**Recommendation:** For any page-to-component extraction: move body+style+script wholesale, add a single JSON config blob for client-script parameters, then verify every changed import with a live render of BOTH consuming pages before committing — the unit suite does not import .astro files and will stay green through a broken import.
