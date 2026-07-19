@@ -25,6 +25,8 @@ import { hashTipsterId } from '../../../../utils/schefter-tipster-hash';
 import { getRedis } from '../../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../../utils/api-response';
 import { schefterKey } from '../../../../../scripts/lib/schefter-keys.mjs';
+import { decrementNamingTarget } from '../../../../../scripts/lib/schefter-naming-rate-limit.mjs';
+import { LEAGUE_WIDE_HINT, COMMISH_HINT } from '../../../../types/schefter-tips';
 import {
   resolveSchefterLeague,
   leagueHasSchefterTips,
@@ -66,11 +68,14 @@ export const DELETE: APIRoute = async ({ request, params }) => {
 
   try {
     const queueKey = k('tips:queue');
-    const raw = await redis.lrange<string>(queueKey, 0, -1);
+    // Tips are LPUSHed, so a tip still inside its undo window is always near
+    // the head of the list. Bound the read so a backed-up queue (scanner
+    // paused for weeks) can't turn every undo into a full-list transfer.
+    const raw = await redis.lrange<string>(queueKey, 0, 49);
     const entries = Array.isArray(raw) ? raw : [];
 
     let matchedRaw: string | null = null;
-    let matched: { id?: string; hashedOwnerId?: string; submittedAt?: number; topic?: string } | null = null;
+    let matched: { id?: string; hashedOwnerId?: string; submittedAt?: number; topic?: string; franchiseHint?: string } | null = null;
     for (const entry of entries) {
       try {
         const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
@@ -106,37 +111,66 @@ export const DELETE: APIRoute = async ({ request, params }) => {
       return json({ ok: false, gone: true });
     }
 
-    // Refund the rate-limit slot (floor at 0 — DECR below zero would let a
-    // rapid submit/undo loop bank extra submissions).
-    try {
-      const rateKey = `${k('tips:ratelimit:')}${hashedOwnerId}`;
-      const next = await redis.decr(rateKey);
-      if (typeof next === 'number' && next < 0) {
-        // Shouldn't happen (undo requires a prior submit), but clamp back to
-        // 0 without touching the key's TTL.
-        await redis.incr(rateKey);
+    // Refund/clean every durable signal the submit path wrote, in parallel —
+    // the blocks are independent and each tolerates its own failure. The
+    // invariant restored: counters correspond 1:1 with tips that STAY queued.
+    const refundRateLimit = async () => {
+      // Floor at 0 — DECR below zero would let a rapid submit/undo loop bank
+      // extra submissions.
+      try {
+        const rateKey = `${k('tips:ratelimit:')}${hashedOwnerId}`;
+        const next = await redis.decr(rateKey);
+        if (typeof next === 'number' && next < 0) {
+          await redis.incr(rateKey);
+        }
+      } catch (err) {
+        console.warn('[schefter/tip-undo] rate refund failed:', err);
       }
-    } catch (err) {
-      console.warn('[schefter/tip-undo] rate refund failed:', err);
-    }
-
-    // Remove the topic-timeline entry so hot-topics counts stay honest.
-    try {
-      if (matched.topic) {
-        await redis.zrem(`${k('topic_timeline:')}${matched.topic}`, tipId);
+    };
+    const cleanTopicTimeline = async () => {
+      // Keeps hot-topics counts honest.
+      try {
+        if (matched?.topic) {
+          await redis.zrem(`${k('topic_timeline:')}${matched.topic}`, tipId);
+        }
+      } catch {
+        /* non-fatal */
       }
-    } catch {
-      /* non-fatal */
-    }
-
-    // If the queue just emptied, clear the marinate anchor so the next tip
-    // starts a fresh clock instead of inheriting this one's.
-    try {
-      const len = await redis.llen(queueKey);
-      if (len === 0) await redis.del(k('tips:first_tip_ts'));
-    } catch {
-      /* non-fatal */
-    }
+    };
+    const cleanOffTopicTimeline = async () => {
+      // The A=C barometer entry's member IS the tip id (tip.ts mints the id
+      // before the barometer write for exactly this reason).
+      try {
+        await redis.zrem(`${k('off_topic:timeline:')}${hashedOwnerId}`, tipId);
+      } catch {
+        /* non-fatal */
+      }
+    };
+    const refundNamingTarget = async () => {
+      // A withdrawn explicit pick must not burn one of the 2-per-30d naming
+      // slots for that (tipster, target) pair.
+      const hint = matched?.franchiseHint;
+      if (hint && hint !== LEAGUE_WIDE_HINT && hint !== COMMISH_HINT) {
+        await decrementNamingTarget(hashedOwnerId, hint, redis, navSlug);
+      }
+    };
+    const resetMarinateAnchor = async () => {
+      // If the queue just emptied, clear the marinate anchor so the next tip
+      // starts a fresh clock instead of inheriting this one's.
+      try {
+        const len = await redis.llen(queueKey);
+        if (len === 0) await redis.del(k('tips:first_tip_ts'));
+      } catch {
+        /* non-fatal */
+      }
+    };
+    await Promise.all([
+      refundRateLimit(),
+      cleanTopicTimeline(),
+      cleanOffTopicTimeline(),
+      refundNamingTarget(),
+      resetMarinateAnchor(),
+    ]);
 
     return json({ ok: true });
   } catch (err) {

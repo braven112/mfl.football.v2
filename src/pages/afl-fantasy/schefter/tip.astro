@@ -13,13 +13,20 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import TipPage from '../../../components/schefter/TipPage.astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
-import { getSchefterFeed, getSchefterLeagueConfig } from '../../../utils/schefter-league';
+import { getSchefterFeed, getSchefterLeagueConfig } from '../../../utils/schefter-league-data';
 import { getConferenceShort, isValidConferenceId } from '../../../utils/afl-conference';
 
 const user = getAuthUser(Astro.request);
-if (!user?.franchiseId) {
+// The session must belong to THIS league: the tip API resolves the league
+// from the JWT, and both leagues reuse 4-digit franchise ids — a foreign
+// session submitting from this page would file a tip into its own league's
+// queue against the wrong league's team. Bounce to this league's login.
+if (
+  !user?.franchiseId ||
+  !isAuthorizedForLeague(user, getLeagueBySlug('afl-fantasy')!.id)
+) {
   return Astro.redirect('/afl-fantasy/login?redirect=/afl-fantasy/schefter/tip');
 }
 

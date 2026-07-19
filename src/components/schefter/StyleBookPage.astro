@@ -14,6 +14,7 @@
 
 import Breadcrumbs from '../theleague/Breadcrumbs.astro';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
+import { publicLeagueQs } from '../../utils/schefter-league';
 import '../../styles/schefter-feed.css';
 
 const schefterAuthor = getAuthor('claude-schefter');
@@ -28,7 +29,7 @@ interface Props {
   leagueName: string;
 }
 const { navSlug, base, leagueName } = Astro.props;
-const publicQs = navSlug === 'theleague' ? '' : `?league=${navSlug}`;
+const publicQs = publicLeagueQs(navSlug);
 ---
   <div class="style-book-page" data-public-qs={publicQs}>
     <header class="style-book-hero">

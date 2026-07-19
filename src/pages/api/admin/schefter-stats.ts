@@ -12,17 +12,13 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import {
-  resolveSchefterLeague,
-  getSchefterFeed,
-  getSchefterLeagueConfig,
-  schefterSeasonYear,
-  type SchefterLeagueConfig,
-} from '../../../utils/schefter-league';
+import { schefterSeasonYear } from '../../../utils/schefter-league';
+import { getSchefterFeed, getSchefterLeagueConfig, type SchefterLeagueConfig } from '../../../utils/schefter-league-data';
 import type { LeagueDefinition } from '../../../config/leagues';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getRedis, type RedisClient } from '../../../utils/redis-client';
+import { getLeagueById } from '../../../config/leagues';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
@@ -87,7 +83,8 @@ import { buildTipsterContext } from '../../../../scripts/lib/schefter-tipster-co
 // the admin staleness preview is TheLeague-only for now — when the resolved
 // league is AFL we pass an empty ledger into isBucketStale /
 // bucketStreakLength instead of leaking TheLeague's streak data.
-import recurrenceLedger from '../../../../data/schefter/theleague/topic-recurrence.json';
+import theleagueRecurrenceLedger from '../../../../data/schefter/theleague/topic-recurrence.json';
+import aflRecurrenceLedger from '../../../../data/schefter/afl/topic-recurrence.json';
 
 // Empty-ledger stand-in for leagues without a static ledger import (AFL).
 // The ledger helpers only ever read `ledger?.fingerprints?.[fp]`, so an
@@ -545,7 +542,10 @@ async function readRedisStats(
   // Staleness preview reads the statically-imported TheLeague ledger; other
   // leagues get the empty ledger (streak=1, isStale=false) until their
   // ledger file gets its own import — see the recurrenceLedger import note.
-  const ledger = isTheLeague ? recurrenceLedger : EMPTY_RECURRENCE_LEDGER;
+  const ledger =
+    league.navSlug === 'afl' ? aflRecurrenceLedger :
+    isTheLeague ? theleagueRecurrenceLedger :
+    EMPTY_RECURRENCE_LEDGER;
   let tipsterContext: Map<string, unknown> = new Map();
   try {
     tipsterContext = await buildTipsterContext(pendingTipsWithHashes, redis, league.navSlug);
@@ -998,9 +998,12 @@ export const GET: APIRoute = async ({ request }) => {
   // League scoping: the session JWT's league wins (a TheLeague commissioner
   // gets TheLeague stats, an AFL commissioner gets AFL stats), then the
   // ?league= param, then the TheLeague default.
-  const league = resolveSchefterLeague({ user, url: new URL(request.url) });
+  // Admin is league-scoped end to end: the league comes ONLY from the
+  // session JWT. No ?league= fallback here — a token without a leagueId
+  // must not be able to select another league's ops payload.
+  const league = user.leagueId ? getLeagueById(user.leagueId) : null;
   if (!league) {
-    return json({ error: 'unknown league' }, 400);
+    return json({ error: 'unknown league' }, 403);
   }
 
   const feed = getSchefterFeed(league) as unknown as FeedShape;

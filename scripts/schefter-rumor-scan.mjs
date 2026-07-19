@@ -546,6 +546,11 @@ async function loadTeams() {
       nameShort: t.nameShort,
       abbrev: t.abbrev,
       division: t.division,
+      // AFL-only fields; undefined for TheLeague. `tier` drives the hotseat
+      // scope floor ({ kind: 'tier' }) — dropping it here silently downgrades
+      // every Relegation-watch post to league-wide framing.
+      conference: t.conference,
+      tier: t.tier,
     });
   }
   return map;
@@ -2806,7 +2811,8 @@ async function main() {
       log('  [offer-scan] --trade-offers-only with lane disabled → exiting');
       return 0;
     }
-  } else try {
+  } else {
+    try {
     const offerScan = await scanTradeOffers({ redis, dryRun: DRY_RUN });
     if (offerScan.debug.length > 0) {
       log(`  [offer-scan] Processed ${offerScan.debug.length} offer(s), ${offerScan.tips.length} tip(s) queued`);
@@ -2840,6 +2846,7 @@ async function main() {
   } catch (err) {
     warn(`  [offer-scan] failed: ${err.message} — continuing with other sources`);
     if (TRADE_OFFERS_ONLY) return 0;
+  }
   }
 
   // ── Phase 3: GroupMe mention ingest ──
@@ -3054,7 +3061,10 @@ async function main() {
     const eligibleLaneBuckets = [];
     for (const b of normalLaneBuckets) {
       const m = /^topic:hotseat:(.+)$/.exec(b.key);
-      if (m && m[1] !== 'league-wide' && redis && !DRY_RUN) {
+      // Only real franchise scopes cool down — 'league-wide' and 'commish'
+      // aren't teams. Read-only check, so it runs in dry-run too (dry-run
+      // output should pick the same bucket a live run would).
+      if (m && /^\d{4}$/.test(m[1]) && redis) {
         try {
           const held = await redis.get(hotseatCooldownKey(m[1]));
           if (held) {
@@ -3913,16 +3923,18 @@ async function main() {
  * stays in pure-Node .mjs without importing the .ts module.
  */
 function getSeasonYearForTipster(now = new Date()) {
-  const calendarYear = now.getUTCFullYear();
-  if (NAV_SLUG === 'afl') {
-    // AFL league year rolls June 1 (registry leagueYearRollover) — using
-    // TheLeague's Feb clock would split the AFL season leaderboard.
-    const juneCutoff = Date.UTC(calendarYear, 5, 1, 7, 0, 0, 0); // Jun 1 midnight PT
-    return now.getTime() >= juneCutoff ? calendarYear : calendarYear - 1;
-  }
-  // TheLeague: Feb 14 @ 8:45 PST = Feb 15 04:45 UTC
-  const febCutoff = Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0);
-  return now.getTime() >= febCutoff ? calendarYear : calendarYear - 1;
+  // Driven by the registry's per-league rollover date so the scanner (which
+  // WRITES season-scoped keys) and the API layer (schefterSeasonYear, which
+  // READS them) always agree — a hardcoded fork here would split the season
+  // leaderboard the moment the registry date changed. Comparison is done on
+  // Pacific-Time date parts, matching src/utils/league-year.ts semantics.
+  const rollover = getLeagueBySlug(LEAGUE_SLUG)?.leagueYearRollover ?? { month: 2, day: 14 };
+  const pt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const year = pt.getFullYear();
+  const flipped =
+    pt.getMonth() + 1 > rollover.month ||
+    (pt.getMonth() + 1 === rollover.month && pt.getDate() >= rollover.day);
+  return flipped ? year : year - 1;
 }
 
 // Only run main() when invoked directly (node scripts/schefter-rumor-scan.mjs).

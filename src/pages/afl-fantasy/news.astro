@@ -24,6 +24,12 @@ try {
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 
+// Claude Schefter's featured articles — surfaced in the right rail.
+const schefterArticles = feed.posts
+  .filter((p: any) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))
+  .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  .slice(0, 5);
+
 // Per-post OG meta: GroupMe deep links carry ?post=<id> so unfurlers (which
 // strip the #post-<id> anchor) still resolve a per-post title + composite
 // image (/api/og/schefter/<id>.png) instead of the generic page card.
@@ -78,7 +84,6 @@ const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url, 'afl-fantasy') : unde
         </svg>
       </a>
 
-      <HottestDesksWidget desks={hottestDesks} windowLabel="this week" />
 
       {schefterArticles.length > 0 && (
         <section class="sf-rail-section" aria-label="Featured articles from Claude Schefter">
@@ -86,7 +91,7 @@ const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url, 'afl-fantasy') : unde
           <ul class="sf-rail-articles">
             {schefterArticles.map((article: any) => (
               <li class="sf-rail-articles__item">
-                <a href={article.link ?? `/theleague/news/${article.id}`} class="sf-rail-article-card">
+                <a href={article.link ?? `/afl-fantasy/news/${article.id}`} class="sf-rail-article-card">
                   {article.image && (
                     <img
                       src={`/assets/schefter/${article.image}`}

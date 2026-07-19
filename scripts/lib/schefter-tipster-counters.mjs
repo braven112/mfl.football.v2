@@ -230,10 +230,11 @@ export async function incrementTipsterTopicCounters({
     return;
   }
 
+  const { topicCountsPrefix } = tipsterCounterKeys(navSlug);
   for (const [hash, topics] of pairs) {
     for (const topic of topics) {
       try {
-        await redis.hincrby(`${tipsterCounterKeys(navSlug).topicCountsPrefix}${hash}`, topic, 1);
+        await redis.hincrby(`${topicCountsPrefix}${hash}`, topic, 1);
       } catch (err) {
         warn(`  [tipster-topic-counters] increment failed for ${hash.slice(0, 6)} topic=${topic}: ${err.message}`);
       }

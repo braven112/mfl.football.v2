@@ -7,9 +7,9 @@
  * (canonical or navSlug) and default to TheLeague so every pre-multi-league
  * URL keeps working unchanged.
  *
- * Feed/config access: both leagues' JSON is statically imported and selected
- * by slug (precedent: afl-fantasy pages already statically import
- * data/afl-fantasy/schefter-feed.json — Vite bundles JSON outside src/).
+ * Feed/config DATA accessors live in schefter-league-data.ts — importing this
+ * module never pulls the ~1.3MB of feed JSON into a route's graph. Re-exported
+ * here for convenience of routes that need both.
  */
 
 import type { AuthUser } from './auth';
@@ -19,27 +19,12 @@ import {
   getLeagueById,
   type LeagueDefinition,
 } from '../config/leagues';
-import theLeagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import theLeagueFeed from '../data/theleague/schefter-feed.json';
-import aflFeed from '../../data/afl-fantasy/schefter-feed.json';
-import type { SchefterFeed } from '../types/schefter';
 import { getLeagueYearForSlug } from './league-year';
 
-export interface LeagueTeamConfig {
-  franchiseId: string;
-  name: string;
-  nameMedium?: string;
-  nameShort?: string;
-  abbrev?: string;
-  division?: string;
-  conference?: string;
-  tier?: string;
-}
-
-export interface SchefterLeagueConfig {
-  teams: LeagueTeamConfig[];
-}
+export type {
+  LeagueTeamConfig,
+  SchefterLeagueConfig,
+} from './schefter-league-data';
 
 /**
  * Resolve the league for a Schefter API request.
@@ -65,31 +50,19 @@ export function resolveSchefterLeague(opts: {
   return LEAGUES[DEFAULT_LEAGUE_SLUG];
 }
 
-/** The league's Schefter feed (statically imported, selected by slug). */
-export function getSchefterFeed(league: LeagueDefinition): SchefterFeed {
-  return (league.slug === 'afl-fantasy' ? aflFeed : theLeagueFeed) as SchefterFeed;
-}
-
-/** The league's team config (statically imported, selected by slug). */
-export function getSchefterLeagueConfig(league: LeagueDefinition): SchefterLeagueConfig {
-  return (league.slug === 'afl-fantasy'
-    ? aflConfig
-    : theLeagueConfig) as unknown as SchefterLeagueConfig;
-}
-
 /** True when the league's tip system is live (schefterTips feature flag). */
 export function leagueHasSchefterTips(league: LeagueDefinition): boolean {
   return league.features.schefterTips === true;
 }
 
-/** Find a team by 4-digit franchise id in the league's config. */
-export function findLeagueTeam(
-  league: LeagueDefinition,
-  franchiseId: string,
-): LeagueTeamConfig | undefined {
-  return getSchefterLeagueConfig(league).teams.find(
-    (t) => t.franchiseId === franchiseId,
-  );
+/**
+ * Query string a PUBLIC schefter API call needs for this league. The default
+ * league omits the param (legacy URLs), every other league sends ?league=.
+ * Single source of the "default league omits the param" convention — shared
+ * components must use this instead of re-deriving it inline.
+ */
+export function publicLeagueQs(navSlug: string): string {
+  return LEAGUES[DEFAULT_LEAGUE_SLUG].navSlug === navSlug ? '' : `?league=${navSlug}`;
 }
 
 /**

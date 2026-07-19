@@ -16,6 +16,7 @@ import Breadcrumbs from '../theleague/Breadcrumbs.astro';
 import { chooseTeamName } from '../../utils/team-names';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { getTipTopics } from '../../config/schefter-topics.mjs';
+import { publicLeagueQs } from '../../utils/schefter-league';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
 
@@ -43,7 +44,7 @@ const { navSlug, base, leagueName, feed, teams: rawTeams } = Astro.props;
 
 // Public (unauthenticated) API endpoints need an explicit league param for
 // non-default leagues; authed endpoints resolve the league from the JWT.
-const publicQs = navSlug === 'theleague' ? '' : `?league=${navSlug}`;
+const publicQs = publicLeagueQs(navSlug);
 
 const schefterArticles = feed.posts
   .filter((p: any) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))

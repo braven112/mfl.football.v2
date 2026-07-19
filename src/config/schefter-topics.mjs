@@ -168,8 +168,12 @@ export const DRAINABLE_TOPIC_IDS = [
  *   mandatoryHedge: boolean, scopeFloor: string|null,
  *   perTeamCooldownDays: number|null}>}
  */
+const _topicsCache = new Map();
+
 export function getTipTopics(navSlug) {
-  return TIP_TOPIC_META.filter(
+  const cached = _topicsCache.get(navSlug);
+  if (cached) return cached;
+  const resolved = TIP_TOPIC_META.filter(
     (t) => !t.leagues || t.leagues.includes(navSlug),
   ).map((t) => {
     const override = t.leagueOverrides?.[navSlug] ?? {};
@@ -184,6 +188,8 @@ export function getTipTopics(navSlug) {
       perTeamCooldownDays: t.perTeamCooldownDays ?? null,
     };
   });
+  _topicsCache.set(navSlug, resolved);
+  return resolved;
 }
 
 /** Valid topic ids for one league (modern ids only). */

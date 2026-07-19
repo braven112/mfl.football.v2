@@ -9,11 +9,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveSchefterLeague,
-  getSchefterLeagueConfig,
-  findLeagueTeam,
   leagueHasSchefterTips,
   schefterSeasonYear,
+  publicLeagueQs,
 } from '../src/utils/schefter-league';
+import {
+  getSchefterLeagueConfig,
+  findLeagueTeam,
+} from '../src/utils/schefter-league-data';
 import type { AuthUser } from '../src/utils/auth';
 
 const AFL_ID = '19621';
@@ -67,12 +70,13 @@ describe('resolveSchefterLeague', () => {
 });
 
 describe('feature gate + config selection', () => {
-  it('schefterTips is on for TheLeague and (pre-launch) off for the AFL', () => {
+  it('schefterTips is on for both leagues', () => {
     const tl = resolveSchefterLeague({ url: url('/x?league=theleague') })!;
     const afl = resolveSchefterLeague({ url: url('/x?league=afl') })!;
     expect(leagueHasSchefterTips(tl)).toBe(true);
-    // NOTE: flips to true at AFL launch — update this expectation then.
-    expect(typeof leagueHasSchefterTips(afl)).toBe('boolean');
+    // Launched July 2026 — pinned so a bad merge can't silently kill the AFL
+    // tip line while the nav still renders the link.
+    expect(leagueHasSchefterTips(afl)).toBe(true);
   });
 
   it('config selection returns each league its own teams', () => {
@@ -85,6 +89,13 @@ describe('feature gate + config selection', () => {
     // AFL teams carry conference/tier fields TheLeague doesn't have.
     expect(findLeagueTeam(afl, '0001')?.conference).toBeDefined();
     expect(findLeagueTeam(afl, '0001')?.tier).toBeDefined();
+  });
+});
+
+describe('publicLeagueQs — default league omits the param', () => {
+  it('TheLeague sends nothing; other leagues send ?league=<navSlug>', () => {
+    expect(publicLeagueQs('theleague')).toBe('');
+    expect(publicLeagueQs('afl')).toBe('?league=afl');
   });
 });
 

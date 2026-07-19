@@ -232,7 +232,9 @@ export function getLinkIcon(link: NavLink, league: LeagueSlug): string {
 export function isLinkVisible(
   link: NavLink,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds
+  // adminFranchiseIds is a per-league map now — with no league in scope the
+  // default fails CLOSED (no admin links) rather than passing the raw map.
+  adminFranchiseIds: string[] = []
 ): boolean {
   // No visibility restriction means public
   if (!link.visibility || link.visibility === 'public') {
@@ -270,7 +272,7 @@ export function isSectionVisible(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds
+  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
 ): boolean {
   // Check league restriction
   if (section.leagueOnly && section.leagueOnly !== league) {
@@ -315,7 +317,7 @@ export function getVisibleLinks(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds
+  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
 ): NavLink[] {
   return section.links.filter(link => {
     // Check link's league restriction
@@ -337,7 +339,7 @@ export function getVisibleLinks(
 export function getVisibleSections(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds
+  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
 ): NavSection[] {
   return navConfig.sections
     .filter(section => isSectionVisible(section, league, franchiseId, adminFranchiseIds))

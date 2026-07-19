@@ -38,9 +38,9 @@ import {
   isQuietHours,
 } from './lib/schefter-groupme-budget.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
-import { SCHEFTER_LEAGUES } from './lib/schefter-leagues.mjs';
+import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
-import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 
@@ -838,7 +838,12 @@ async function scanLeague(league) {
   // Feed-first invariant holds: the file is persisted above before any GroupMe
   // ping. Enqueue big-name drops, then drain the pending queue (respecting
   // quiet hours + spacing and the shared daily budget).
-  await enqueueBigDrops(newPosts, leagueSlug, now);
+  // directGroupMe leagues (AFL) already posted the drop to their own chat
+  // above — staging a big-drop ping would double-post it. The staged lane
+  // exists for leagues whose transactions do NOT direct-post (TheLeague).
+  if (!league.features?.directGroupMe) {
+    await enqueueBigDrops(newPosts, leagueSlug, now);
+  }
   await flushPendingBigDrops(now);
 
   return newPosts.length;
@@ -901,8 +906,6 @@ async function flushPendingBigDrops(now) {
   const redis = await getRedis();
   if (!redis) return;
 
-  const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
-
   let pendingCount;
   try {
     pendingCount = await redis.llen(BIG_DROP_PENDING_KEY);
@@ -940,7 +943,13 @@ async function flushPendingBigDrops(now) {
       continue;
     }
 
-    const window = await evaluatePingWindow(redis, now);
+    // Route per entry: each staged ping carries its league (navSlug), so the
+    // bot and the daily ping budget are that league's own — a queued AFL drop
+    // must never post through TheLeague's bot or burn TheLeague's budget.
+    const entryLeague = entry.league === 'afl' ? 'afl' : 'theleague';
+    const schefterBotId = getSchefterLeague(entryLeague === 'afl' ? 'afl-fantasy' : 'theleague').groupMeSchefterBotId;
+
+    const window = await evaluatePingWindow(redis, now, entryLeague);
     if (window.quietHours) {
       console.log('  [big-drop] Quiet hours — holding pings');
       return;
@@ -951,7 +960,7 @@ async function flushPendingBigDrops(now) {
     }
 
     if (!schefterBotId) {
-      console.warn('  [big-drop] GROUPME_SCHEFTER_BOT_ID not set — holding ping');
+      console.warn(`  [big-drop] Schefter bot id not set for ${entryLeague} — holding ping`);
       return;
     }
 
@@ -975,7 +984,7 @@ async function flushPendingBigDrops(now) {
     }
 
     await postToGroupMe(entry.text, { botIdOverride: schefterBotId });
-    await consumeDailyPost(redis, now);
+    await consumeDailyPost(redis, now, entryLeague);
     console.log(`  [big-drop] Pinged GroupMe (post ${window.postsToday + 1}, cap ${window.atCap ? 'exceeded' : 'ok'}): ${entry.headline}`);
     // One ping per run: spacing now blocks the rest until a later scan.
     return;

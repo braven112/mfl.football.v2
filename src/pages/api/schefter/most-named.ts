@@ -30,12 +30,8 @@
 
 import type { APIRoute } from 'astro';
 import { chooseTeamName } from '../../../utils/team-names';
-import {
-  resolveSchefterLeague,
-  leagueHasSchefterTips,
-  getSchefterLeagueConfig,
-  type LeagueTeamConfig,
-} from '../../../utils/schefter-league';
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
+import { getSchefterLeagueConfig, type LeagueTeamConfig } from '../../../utils/schefter-league-data';
 import { getTopNamedTeams } from '../../../../scripts/lib/schefter-team-naming.mjs';
 import { getRedis } from '../../../utils/redis-client';
 

@@ -23,13 +23,8 @@ import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { detectAttackOnSchefter } from '../../../utils/schefter-attack-detection';
 import { assignCodename } from '../../../utils/schefter-codenames';
 import { incrementNamingTarget } from '../../../../scripts/lib/schefter-naming-rate-limit.mjs';
-import {
-  resolveSchefterLeague,
-  getSchefterFeed,
-  findLeagueTeam,
-  leagueHasSchefterTips,
-  schefterSeasonYear,
-} from '../../../utils/schefter-league';
+import { resolveSchefterLeague, leagueHasSchefterTips, schefterSeasonYear } from '../../../utils/schefter-league';
+import { getSchefterFeed, findLeagueTeam } from '../../../utils/schefter-league-data';
 import {
   normalizeTopicId,
   getTopicIds,
@@ -152,11 +147,14 @@ export const POST: APIRoute = async ({ request }) => {
         return errorResponse('bad_hint', 'The commissioner is not a valid target for this topic.', 400);
       }
       normalizedHint = COMMISH_HINT;
-    } else if (findLeagueTeam(league, franchiseHint)) {
-      normalizedHint = franchiseHint;
-      division = findLeagueTeam(league, franchiseHint)?.division;
     } else {
-      return errorResponse('bad_hint', 'Unknown franchise.', 400);
+      const hintTeam = findLeagueTeam(league, franchiseHint);
+      if (hintTeam) {
+        normalizedHint = franchiseHint;
+        division = hintTeam.division;
+      } else {
+        return errorResponse('bad_hint', 'Unknown franchise.', 400);
+      }
     }
   }
 
@@ -286,6 +284,11 @@ export const POST: APIRoute = async ({ request }) => {
   //
   // Best-effort — Redis failure never blocks enqueue; offTopicCount just
   // stays null and the LLM falls back to rule 16's default (hissy fit only).
+  // Tip id is minted BEFORE the barometer write below so the off-topic
+  // timeline member is the tip id — which lets the undo endpoint ZREM the
+  // exact entry when the tip is withdrawn.
+  const tipId = crypto.randomUUID();
+
   let offTopicCount: number | null = null;
   // 'frontoffice' succeeded the legacy 'commish' ("Beef") topic — the
   // barometer keeps counting the same behavioral lane under the new id.
@@ -293,7 +296,7 @@ export const POST: APIRoute = async ({ request }) => {
     try {
       const nowMs = Date.now();
       const timelineKey = `${k('off_topic:timeline:')}${hashedOwnerId}`;
-      const tipMarker = crypto.randomUUID();
+      const tipMarker = tipId;
 
       // Add this tip to the timeline + prune anything outside the window +
       // refresh TTL. The TTL is a safety net — if a tipster stops sending
@@ -333,7 +336,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const tip: Tip = {
-    id: crypto.randomUUID(),
+    id: tipId,
     hashedOwnerId,
     franchiseHint: normalizedHint,
     division,

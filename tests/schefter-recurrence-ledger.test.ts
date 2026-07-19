@@ -293,7 +293,11 @@ describe('scanner + admin integration (source guards)', () => {
     // Ledger moved to its per-league home; the static import is TheLeague's
     // (AFL gets an empty ledger until data/schefter/afl/ gets its own).
     expect(ADMIN_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/\.\.\/data\/schefter\/theleague\/topic-recurrence\.json'/);
-    expect(ADMIN_SRC).toMatch(/isTheLeague \? recurrenceLedger : EMPTY_RECURRENCE_LEDGER/);
+    // Each league's ledger is statically imported and selected by league;
+    // unknown leagues fall to the empty ledger (streak=1, never stale).
+    expect(ADMIN_SRC).toMatch(/league\.navSlug === 'afl' \? aflRecurrenceLedger :/);
+    expect(ADMIN_SRC).toMatch(/isTheLeague \? theleagueRecurrenceLedger :/);
+    expect(ADMIN_SRC).toMatch(/EMPTY_RECURRENCE_LEDGER/);
   });
 });
 

@@ -83,6 +83,30 @@ export async function incrementNamingTarget(tipsterHash, franchiseId, redis, nav
  * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @returns {Promise<boolean>}
  */
+/**
+ * Refund one explicit-pick from the (tipster, target) counter — the undo
+ * endpoint calls this when a tip is withdrawn inside its undo window, so a
+ * submit→undo→resubmit cycle costs ONE pick, not two. Floors at 0 (an undo
+ * can never bank extra picks). Never throws.
+ *
+ * @param {string} tipsterHash
+ * @param {string} franchiseId
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
+ * @param {string} [navSlug]
+ */
+export async function decrementNamingTarget(tipsterHash, franchiseId, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
+  if (!redis || !tipsterHash || !franchiseId) return;
+  try {
+    const key = buildKey(tipsterHash, franchiseId, navSlug);
+    const next = await redis.decr(key);
+    if (typeof next === 'number' && next < 0) {
+      await redis.incr(key);
+    }
+  } catch {
+    /* refund is best-effort */
+  }
+}
+
 export async function isOverNamingRateLimit(tipsterHash, franchiseId, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !tipsterHash || !franchiseId) return false;
   const key = buildKey(tipsterHash, franchiseId, navSlug);

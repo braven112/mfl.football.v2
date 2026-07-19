@@ -270,6 +270,7 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
           />
           {isTipRumor && (
             <SchefterWhisperBack
+              base={post.league === 'afl' ? '/afl-fantasy' : '/theleague'}
               client:idle
               postId={post.id}
               isAuthenticated={isAuthenticated}
@@ -277,7 +278,7 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
           )}
         </div>
         {isTipRumor && post.threadId && (
-          <a class="sfc-post__thread-link" href={`/theleague/schefter/thread/${post.threadId}`}>
+          <a class="sfc-post__thread-link" href={`${post.league === 'afl' ? '/afl-fantasy' : '/theleague'}/schefter/thread/${post.threadId}`}>
             View the full thread →
           </a>
         )}

@@ -11,12 +11,14 @@ import React, { useCallback, useState } from 'react';
 
 interface Props {
   postId: string;
+  /** League URL base for auth links, e.g. '/theleague' or '/afl-fantasy'. */
+  base?: string;
   isAuthenticated: boolean;
 }
 
 const MAX_CHARS = 500;
 
-export default function SchefterWhisperBack({ postId, isAuthenticated }: Props) {
+export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/theleague' }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [topic, setTopic] = useState<'trade' | 'roster' | 'prediction' | 'commish' | 'other'>('other');
@@ -64,7 +66,7 @@ export default function SchefterWhisperBack({ postId, isAuthenticated }: Props) 
 
   if (!isAuthenticated) {
     return (
-      <a href={`/theleague/login?redirect=/theleague/news`} className="sfc-whisper__signin">
+      <a href={`${base}/login?redirect=${base}/news`} className="sfc-whisper__signin">
         Sign in to whisper back
       </a>
     );

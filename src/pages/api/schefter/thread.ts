@@ -11,7 +11,8 @@
 
 import type { APIRoute } from 'astro';
 import type { SchefterPost } from '../../../types/schefter';
-import { resolveSchefterLeague, getSchefterFeed } from '../../../utils/schefter-league';
+import { resolveSchefterLeague } from '../../../utils/schefter-league';
+import { getSchefterFeed } from '../../../utils/schefter-league-data';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 import { globalSchefterKey } from '../../../../scripts/lib/schefter-keys.mjs';

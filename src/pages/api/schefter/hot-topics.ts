@@ -49,7 +49,17 @@ export const GET: APIRoute = async ({ request }) => {
   await Promise.all(
     (getTopicIds(league.navSlug) as TipTopic[]).map(async (topic) => {
       try {
-        const count = await redis.zcount(`${schefterKey(league.navSlug, 'topic_timeline:')}${topic}`, windowStart, now);
+        let count = await redis.zcount(`${schefterKey(league.navSlug, 'topic_timeline:')}${topic}`, windowStart, now);
+        if (topic === 'frontoffice') {
+          // Pre-rename submissions wrote the legacy 'commish' timeline; sum it
+          // in so the widget doesn't under-report for the 30-day overlap
+          // window after the rename ships. Safe to remove once the legacy
+          // ZSET has fully aged out (entries prune at 30 days).
+          const legacy = await redis
+            .zcount(`${schefterKey(league.navSlug, 'topic_timeline:')}commish`, windowStart, now)
+            .catch(() => 0);
+          count += Math.max(0, Number.isFinite(legacy) ? legacy : 0);
+        }
         results.push({ topic, count: Math.max(0, Number.isFinite(count) ? count : 0) });
       } catch (err) {
         console.warn(`[hot-topics] zcount failed for ${topic}:`, err);
