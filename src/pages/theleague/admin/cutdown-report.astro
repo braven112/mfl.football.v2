@@ -28,8 +28,9 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getRedis } from '../../../utils/redis-client';
 import { getCutList, type AutocutList } from '../../../utils/autocut-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
-import { getAugustCutdownDate } from '../../../utils/contract-eligibility';
+import { getAugustCutdownDate, parseTransactions } from '../../../utils/contract-eligibility';
 import { TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
+import { selectAutoCuts } from '../../../utils/august-cut-selection';
 import { getPlayerMap } from '../../../utils/player-map';
 import { chooseTeamName } from '../../../utils/team-names';
 import { DEFAULT_LEAGUE } from '../../../config/leagues';
@@ -110,17 +111,54 @@ if (redis) {
 }
 
 // Active-roster counts from the synced feed (same source the rosters page reads).
+// We also keep each franchise's full {id,status} player list so we can compute
+// a live cut slate for over-limit franchises the deadline job hasn't snapshotted
+// yet (pure roster math — no owner credential needed).
 const rosterData = readJsonFile(
   path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'rosters.json'),
 );
 const activeCounts = new Map<string, number>();
+const rosterByFranchise = new Map<string, Array<{ id: string; status: string }>>();
 for (const fr of toArray(rosterData?.rosters?.franchise)) {
   const players = toArray(fr?.player);
+  const fid = pad4(fr.id);
   activeCounts.set(
-    pad4(fr.id),
+    fid,
     players.filter((p: any) => `${p?.status ?? ''}` === ACTIVE_ROSTER_STATUS).length,
   );
+  rosterByFranchise.set(
+    fid,
+    players.map((p: any) => ({ id: `${p?.id ?? ''}`, status: `${p?.status ?? ''}` })),
+  );
 }
+
+// Transactions feed, parsed ONCE (acquisition records power newest-added-first
+// ordering in the live slate). parseTransactions already drops trades. A
+// missing/unreadable feed leaves this null → live slates degrade to
+// "not computed" rather than computing an unordered guess or 500-ing.
+const transactionsData = readJsonFile(
+  path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'transactions.json'),
+);
+let parsedTransactions: ReturnType<typeof parseTransactions> | null = null;
+try {
+  parsedTransactions = transactionsData
+    ? parseTransactions(toArray(transactionsData?.transactions?.transaction))
+    : null;
+} catch {
+  parsedTransactions = null;
+}
+const acquisitionsByFranchise = new Map<string, ReturnType<typeof parseTransactions>>();
+for (const txn of parsedTransactions ?? []) {
+  const fid = pad4(txn.franchise);
+  const bucket = acquisitionsByFranchise.get(fid);
+  if (bucket) bucket.push(txn);
+  else acquisitionsByFranchise.set(fid, [txn]);
+}
+
+// Live slate computation requires both feeds: the roster (activeRoster + the
+// over-limit signal) and parsed transactions (acquisition ordering). Either
+// missing → fall back to the frozen-snapshot-only behavior.
+const feedsReady = rosterData != null && parsedTransactions != null;
 
 // Saved cut lists (live Redis reads; getCutList degrades to null without Redis).
 const teams = (leagueConfig.teams as any[]).map((t) => ({
@@ -246,8 +284,34 @@ const cards = teams
     }));
     const markedUpdatedAt: string | null = markedSource?.updatedAt ?? null;
 
-    const slateCuts: Array<{ playerId: string; reason: string; acquisitionTimestamp?: number }> =
-      entry?.slate?.cuts ?? [];
+    // Slate sourcing: the deadline job's frozen snapshot is authoritative once
+    // it exists ('frozen'). Before any job run there's no snapshot, so for an
+    // over-limit franchise we compute the same slate LIVE server-side ('live')
+    // — pure roster math (selectAutoCuts), no owner credential, so the
+    // commissioner always sees who WOULD be auto-cut regardless of login. Under
+    // the limit → no slate (unchanged).
+    let slateSource: 'frozen' | 'live' | null = null;
+    let slateCuts: Array<{ playerId: string; reason: string; acquisitionTimestamp?: number }> = [];
+    if (entry?.slate?.cuts?.length) {
+      slateCuts = entry.slate.cuts;
+      slateSource = 'frozen';
+    } else if (overLimit && feedsReady) {
+      try {
+        const selection = selectAutoCuts({
+          activeRoster: rosterByFranchise.get(fid) ?? [],
+          markedPlayerIds: liveList?.playerIds ?? [],
+          acquisitions: acquisitionsByFranchise.get(fid) ?? [],
+          target: TARGET_ACTIVE_COUNT,
+          franchiseId: fid,
+        });
+        if (selection.cuts.length) {
+          slateCuts = selection.cuts;
+          slateSource = 'live';
+        }
+      } catch {
+        /* leave slate empty — never let a compute error 500 the page */
+      }
+    }
     const slateRows = slateCuts.map((cut) => ({
       player: playerView(cut.playerId),
       reason: cut.reason,
@@ -380,6 +444,19 @@ const cards = teams
     // expected, non-alarming case (the system CAN'T cut without the owner's
     // working cookie — lockout blocks impersonation); a mid-run error is the
     // rarer one. Either way the marked list + labeled slate below are the plan.
+    // Fallback copy for the slate column when there's genuinely nothing to
+    // show: a snapshot that computed zero cuts, feeds unavailable for a live
+    // compute, or a not-yet-run/under-limit franchise.
+    const slateComputedAt = entry ? (snapshot?.generatedAt ?? null) : null;
+    const slateFallback =
+      slateRows.length > 0
+        ? null
+        : entry?.slate || hasOutcomes || slateComputedAt
+          ? 'Snapshot computed zero cuts for this roster.'
+          : overLimit && !feedsReady
+            ? 'Not computed — season roster/transaction feeds are unavailable in this environment.'
+            : 'Not computed yet — the slate freezes when the job takes its pre-execution snapshot.';
+
     const manualCutCount = unresolved.length;
     const manualAction =
       manualCutCount > 0 && status.code === 'skipped'
@@ -405,7 +482,9 @@ const cards = teams
       markedUpdatedAt,
       markedIsLive: !!liveList,
       slateRows,
-      slateComputedAt: entry ? (snapshot?.generatedAt ?? null) : null,
+      slateSource,
+      slateComputedAt,
+      slateFallback,
       executedRows,
       franchiseNotes,
       hasOutcomes,
@@ -595,12 +674,18 @@ const pausedMetaLine = pausedState.paused
               <div class="cdr-col">
                 <h3 class="cdr-section-title">Computed slate</h3>
                 {card.slateRows.length === 0 ? (
-                  <p class="cdr-none">
-                    {card.hasOutcomes || card.slateComputedAt
-                      ? 'Snapshot computed zero cuts for this roster.'
-                      : 'Not computed yet — the slate freezes when the job takes its pre-execution snapshot.'}
-                  </p>
+                  <p class="cdr-none">{card.slateFallback}</p>
                 ) : (
+                  <>
+                  {card.slateSource === 'frozen' ? (
+                    <p class="cdr-slate-caption cdr-slate-caption--frozen">
+                      Frozen at job time{card.slateComputedAt && <> · {fmtDateTime(card.slateComputedAt)}</>}
+                    </p>
+                  ) : (
+                    <p class="cdr-slate-caption cdr-slate-caption--live">
+                      Live preview — computed now from the current roster; freezes when the job runs
+                    </p>
+                  )}
                   <ol class="cdr-list" aria-label={`${card.teamName} computed cut slate`}>
                     {card.slateRows.map((row) => (
                       <li class="cdr-row">
@@ -620,6 +705,7 @@ const pausedMetaLine = pausedState.paused
                       </li>
                     ))}
                   </ol>
+                  </>
                 )}
               </div>
 
@@ -1015,6 +1101,23 @@ const pausedMetaLine = pausedState.paused
   }
   .cdr-reason { margin-left: auto; font-size: 0.72rem; color: var(--color-gray-500, #6b7280); white-space: nowrap; }
   .cdr-reason[data-reason='marked'] { color: var(--color-gray-900, #111827); font-weight: 600; }
+
+  /* Slate provenance caption — tells the commissioner whether the slate below
+     is a live server-side preview or the value frozen by the deadline job. */
+  .cdr-slate-caption {
+    margin: 0 0 0.5rem; font-size: 0.72rem; line-height: 1.35;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.12rem 0.5rem; border-radius: 999px;
+    font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .cdr-slate-caption--live {
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+  }
+  .cdr-slate-caption--frozen {
+    color: var(--color-gray-500, #6b7280);
+    background: var(--color-surface-alt, #f1f5f9);
+  }
 
   /* Outcome rows — failures/skips use the subtle left-border treatment. */
   .cdr-outcome--failed,
