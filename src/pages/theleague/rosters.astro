@@ -6979,6 +6979,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return;
       }
 
+      // Compute the auto-cut slate once per render (own-view only), then reuse
+      // it for every row's badge instead of recomputing selectAutoCuts per row.
+      const autocutBadgeMap = isAutocutOwnView() ? buildAutocutBadgeMap() : null;
+
       rosterTableBody.innerHTML = rows
         .map((player) => {
           // Apply contract action if exists
@@ -7268,8 +7272,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
           // August auto-cut badge — own team, cut window, active roster only
           const autocutBadge =
-            isAutocutOwnView() && (player.displayTag || 'active') === 'active'
-              ? buildAutocutBadgeHTML(player.id)
+            autocutBadgeMap && (player.displayTag || 'active') === 'active'
+              ? buildAutocutBadgeHTML(player.id, autocutBadgeMap)
               : '';
 
           const playerCellHtml = buildPlayerCellHTML({
