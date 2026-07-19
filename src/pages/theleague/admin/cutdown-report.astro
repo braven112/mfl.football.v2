@@ -375,6 +375,25 @@ const cards = teams
     // clearing its done-hash field lets the next deadline tick reprocess it.
     const showRetry = status.code === 'attention' || status.code === 'skipped';
 
+    // Action callout: when the automation couldn't finish a franchise, tell the
+    // commissioner plainly to cut the slate below by hand. A dead login is the
+    // expected, non-alarming case (the system CAN'T cut without the owner's
+    // working cookie — lockout blocks impersonation); a mid-run error is the
+    // rarer one. Either way the marked list + labeled slate below are the plan.
+    const manualCutCount = unresolved.length;
+    const manualAction =
+      manualCutCount > 0 && status.code === 'skipped'
+        ? {
+            tone: 'login' as const,
+            text: `${team.name}'s login couldn't be verified, so nothing was cut automatically — cut the ${manualCutCount} player${manualCutCount === 1 ? '' : 's'} below by hand in MFL and check each off. "Retry automation" re-tries the job if they log back in.`,
+          }
+        : manualCutCount > 0 && status.code === 'attention'
+          ? {
+              tone: 'error' as const,
+              text: `The automation couldn't finish ${team.name} (${attemptsLabel ?? 'errored'}) — cut the ${manualCutCount} unresolved player${manualCutCount === 1 ? '' : 's'} below by hand and check each off, or "Retry automation".`,
+            }
+          : null;
+
     return {
       franchiseId: fid,
       teamName: team.name,
@@ -393,6 +412,7 @@ const cards = teams
       status,
       attemptsLabel,
       showRetry,
+      manualAction,
     };
   })
   .filter((c): c is NonNullable<typeof c> => c !== null)
@@ -534,6 +554,12 @@ const pausedMetaLine = pausedState.paused
                 </span>
               )}
             </header>
+
+            {card.manualAction && (
+              <p class:list={['cdr-action', `cdr-action--${card.manualAction.tone}`]} role="alert">
+                {card.manualAction.text}
+              </p>
+            )}
 
             <div class="cdr-card__cols">
               <div class="cdr-col">
@@ -1022,6 +1048,14 @@ const pausedMetaLine = pausedState.paused
 
   .cdr-meta { font-size: 0.72rem; color: var(--color-gray-500, #6b7280); font-variant-numeric: tabular-nums; margin: 0; }
   .cdr-none { font-size: 0.82rem; color: var(--color-gray-500, #6b7280); margin: 0; }
+  .cdr-action {
+    margin: 0 0 0.9rem; padding: 0.55rem 0.75rem;
+    font-size: 0.82rem; line-height: 1.45; font-weight: 600;
+    color: var(--color-text, #0f172a);
+    border-left: 3px solid var(--color-warning, #d97706);
+    background: var(--color-surface-alt, #f8fafc); border-radius: 4px;
+  }
+  .cdr-action--error { border-left-color: var(--color-error, #dc2626); }
   .cdr-notes { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
   .cdr-note {
     font-size: 0.78rem; color: var(--color-gray-500, #6b7280);
