@@ -49,3 +49,30 @@ like "TheLeague's secret weapon comes to the AFL" fails an AFL-only entry.
 - **Per-league in-process caches:** any API route module cache (cooker-status,
   style-book, schefter-lore `_cache`) must be a Map keyed by navSlug — a
   scalar cache silently serves league A's data to league B.
+
+## 2026-07-19 - Every Daily Slot Must Be Delivery-Gated (Two Incidents Now)
+
+**Context:** AFL launch day: the first post-quiet-hours cycle generated a
+beat, the quality gate suppressed it (3/10), and the scanner still burned
+`posts_today`, the 1/day gossip cap, and the morning-greeting slot. Every
+later cycle held the queued tips with "gossip budget spent" — the rumor
+mill was silent all day. The 4h spacing anchor had the SAME bug months
+earlier (a suppressed ~7am beat blanked a morning).
+
+**Insight:** The scanner stamps several once-per-day Redis slots
+(posts_today, gossip cap, spacing anchor, mailbag-done, morning greeting,
+Roger riff). Any slot stamped before knowing whether the beat survived the
+quality gate will eventually starve the pipeline, because the gate runs
+LAST. All of them now live behind the delivered guard
+(`allowedPosts.length > 0`, beat-0 stamps on `allowedIndexSet.has(0)`) —
+the BUDGET-ON-DELIVERY sentinel + `tests/schefter-gossip-budget.test.ts`
+lock this in. If you add a new once-per-day stamp, put it inside the guard.
+Attempt-rate stays bounded by MAX_SUPPRESSED_STRIKES (3/tip), MAX_HELD_MS
+(48h), and quiet hours — do not reintroduce an attempt-based counter.
+
+**Insight:** The gate threshold is context-aware since this fix: quiet feed
+(no rumor post in 7d / ever) or fresh subject (bucket fingerprint absent
+from the recurrence ledger's current ISO week) drops the bar from 6 to
+`RELAXED_QUALITY_THRESHOLD` (3). The recurrence ledger is the correct
+"have we posted about this" source precisely because it's stamped only on
+delivery. Scores 1-2 always suppress.

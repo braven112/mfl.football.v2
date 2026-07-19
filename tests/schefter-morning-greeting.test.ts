@@ -92,11 +92,15 @@ describe('once-per-day Redis gate', () => {
     expect(SCANNER_SRC).toMatch(/if \(isMorningGreetingWindow\(now\)\)/);
   });
 
-  it('stamps the date in Redis only after a successful post commit', () => {
+  it('stamps the date in Redis only when the greeting beat actually shipped', () => {
     // The set call lives inside the same try/catch as last_post_ts and the
-    // Roger riff stamp — failed cycles don't write.
+    // Roger riff stamp, and (since July 2026) is additionally gated on
+    // beat 0 surviving the quality gate — a suppressed greeting never
+    // fired, so it must not burn the once-a-day slot.
+    // The load-bearing part is the beat-0-shipped gating; the 48h TTL is
+    // covered separately by the test below.
     expect(SCANNER_SRC).toMatch(
-      /if \(morningGreeting\) \{\s*\n?\s*await redis\.set\(MORNING_GREETING_DATE_KEY,\s*todayPt,\s*\{\s*ex:\s*48\s*\*\s*60\s*\*\s*60\s*\}\s*\)/,
+      /if \(morningGreeting && beatZeroShipped\) \{[\s\S]{0,120}?redis\.set\(MORNING_GREETING_DATE_KEY,\s*todayPt/,
     );
   });
 

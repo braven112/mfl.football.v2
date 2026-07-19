@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-07-19",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "schefter",
+      "summary": "Claude Schefter no longer ghosts you after one bad draft. When his quality gate spiked a post for being too vague, the scanner still charged it against the day's posting budget — so one scrapped rumor at 7am could silence the rumor mill until midnight, tips waiting patiently the whole time. Budgets now only count posts that actually ship. And when the feed's been quiet for a week (or a subject hasn't come up all week), the bar for 'worth posting' drops — a scrappy 3/10 rumor beats radio silence."
+    },
+    {
       "date": "2026-07-17",
       "type": "bug-fix",
       "league": "afl",

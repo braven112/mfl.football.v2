@@ -157,9 +157,12 @@ describe('busy-morning directive in the LLM prompt', () => {
 
 describe('cap accounting — busy-morning posts share one slot', () => {
   it('uses one MAX_POSTS_PER_DAY slot for the whole cycle (matches gossip secondary pattern)', () => {
-    // The cap-increment line increments by 1 regardless of beat count.
-    // We grep for the dry-run log line that documents this — its wording
-    // calls out the "1 cycle = 1 slot" invariant explicitly.
-    expect(SCANNER_SRC).toMatch(/1 cycle\s*=\s*1 slot/);
+    // The cap increments by 1 per delivering cycle regardless of beat
+    // count — the dry-run log line documents "by 1", and since July 2026
+    // the incr lives inside the budget-on-delivery guard so a fully-
+    // suppressed cycle consumes no slot at all (see
+    // tests/schefter-gossip-budget.test.ts for that side).
+    expect(SCANNER_SRC).toMatch(/Would increment schefter:rumor:posts_today by 1/);
+    expect(SCANNER_SRC).toMatch(/BUDGET-ON-DELIVERY SENTINEL/);
   });
 });
