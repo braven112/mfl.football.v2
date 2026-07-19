@@ -181,6 +181,16 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
     font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
     padding: 0.12rem 0.45rem; border-radius: 999px;
   }
-  .admin-hub__pill--redirect { background: var(--badge-warning-bg, #fef3c7); color: var(--badge-warning-text, #92400e); }
-  .admin-hub__pill--conditional { background: var(--badge-info-bg, #e0f2fe); color: var(--badge-info-text, #075985); }
+  /* Light mode keeps hand-picked pill colors: the badge tokens' light values
+     (#d97706 on #fef3c7 = 2.9:1) fail WCAG AA for this tiny uppercase text. */
+  .admin-hub__pill--redirect { background: #fef3c7; color: #92400e; }
+  .admin-hub__pill--conditional { background: #e0f2fe; color: #075985; }
+  :global(html.dark) .admin-hub__pill--redirect {
+    background: var(--badge-warning-bg, rgba(245, 158, 11, 0.15));
+    color: var(--badge-warning-text, #fcd34d);
+  }
+  :global(html.dark) .admin-hub__pill--conditional {
+    background: var(--badge-info-bg, rgba(59, 130, 246, 0.15));
+    color: var(--badge-info-text, #93bbfd);
+  }
 </style>
