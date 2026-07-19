@@ -43,10 +43,28 @@ own moves. The pieces already exist:
 ### Credential capture & custody
 
 - **Capture:** store the owner's MFL cookie in Redis, keyed
-  `autocut:cred:{franchiseId}`, refreshed on (a) every login and (b) every
-  cut-list save. Refresh-on-login maximizes coverage — the fallback ("cut last
-  added") applies to owners who never open the cut-list UI, and their cuts can
-  only execute if a cookie was captured sometime.
+  `autocut:cred:{franchiseId}` with a `capturedAt` timestamp, refreshed on
+  (a) every login and (b) every cut-list save. Refresh-on-login maximizes
+  coverage — the fallback ("cut last added") applies to owners who never open
+  the cut-list UI, and their cuts can only execute if a cookie was captured
+  sometime.
+- **Save-time guarantee (step-up auth):** saving a cut list requires a
+  credential that is *proven live right now*. The save route validates the
+  session's MFL cookie with the cheap authenticated read before persisting; if
+  the cookie is missing, stale (captured > 30 days ago), or fails validation,
+  the route returns `{ requiresReauth: true }` and the UI opens an inline MFL
+  re-login modal (username prefilled, posts to the existing `/api/auth/login`,
+  which refreshes both the session and the stored credential), then retries
+  the save. Result: every saved cut list carries a credential verified working
+  at the moment of save — an owner cannot set cuts on a dead cookie. On
+  success the UI confirms it: "Cuts locked in — credentials verified
+  <date>". Owners with a recent, valid cookie never see the modal, so the
+  friction lands only where it buys certainty.
+- **Residual risk this does NOT cover:** an owner who changes their MFL
+  password (or otherwise invalidates the cookie) *after* saving. Forcing
+  re-login on every save wouldn't cover it either — only the pre-deadline
+  revalidation runs catch it, which is why they stay in the plan even with
+  step-up auth at save time.
 - **Custody rules:** encrypt at rest (AES-GCM, key derived from a dedicated env
   secret — not `JWT_SECRET`, so rotating one doesn't torch the other); never
   log it, never include it in any API response; the execution job deletes each
@@ -136,7 +154,8 @@ the "Must cut N players by cutdown" MetricCard already lives, line ~2860):
 1. **Auto-cut toggle per player** (own franchise only, visible during the cut
    window — reuse the Jun-1→deadline window from `isCutWatch()` in
    `src/utils/hero-resolver.ts:742`). Marked players get a visible badge and an
-   owner-orderable priority.
+   owner-orderable priority. Saving triggers the step-up auth flow above when
+   the credential isn't verifiably live.
 2. **"What happens if you do nothing" preview** — the load-bearing UX. Run
    `selectAutoCuts` client-side against the current roster + marked list and
    show exactly which players will be cut at the deadline, labeled *marked* vs
@@ -216,7 +235,7 @@ verify, with a throwaway test cut while stakes are zero:
 | Phase | Deliverable | Depends on |
 |---|---|---|
 | 0 | Owner-cookie replay spike from script context; longevity check; insights write-up | — |
-| 1 | `august-cut-selection.ts` + unit tests; `autocut` KV store + API route; credential capture on login + save (encrypted) | — |
+| 1 | `august-cut-selection.ts` + unit tests; `autocut` KV store + API route with save-time validation + `requiresReauth` step-up; credential capture on login + save (encrypted) | — |
 | 2 | Rosters-page UI: toggles, priority ordering, do-nothing preview, countdown | 1 |
 | 3 | `apply-august-cuts.mjs` + workflow (dry-run default), `--validate-only` mode, report artifact, credential cleanup | 0, 1 |
 | 4 | Roger/GroupMe touches: T-7d/T-2d "log in so your cuts can run" nags + post-cut recap; What's New entry | 3 |
@@ -231,6 +250,9 @@ verify, with a throwaway test cut while stakes are zero:
   late/catch-up runs; one-shot flag prevents re-execution.
 - Credential custody tests — encryption round-trip; the API route never echoes
   the credential; execution deletes it.
+- Step-up auth tests — save with a missing/stale/invalid credential returns
+  `requiresReauth` and persists nothing; save after re-login persists list +
+  refreshed credential atomically.
 - Script-level dry-run test asserting no MFL write is attempted with
   `--dry-run` (grep-sentinel style like `tests/schefter-quiet-day.test.ts` or a
   fetch-mock).
@@ -254,3 +276,8 @@ verify, with a throwaway test cut while stakes are zero:
    at login (with disclosure) so coverage isn't limited to owners who used the
    cut-list UI. Franchises with no valid credential are skipped, reported, and
    nagged beforehand.
+7. **Saving a cut list requires a live-verified credential** (step-up re-login
+   when the session's cookie is missing, > 30 days old, or fails a live
+   validation check) — validation-first rather than forcing password re-entry
+   on every save, since a cookie proven live at save time gives the same
+   guarantee with less friction. The 30-day threshold is a tunable constant.
