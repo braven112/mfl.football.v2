@@ -28,6 +28,12 @@ export interface LeagueFeatures {
   powerRankings: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
+  /**
+   * Anonymous tip submission + rumor-mill pipeline (tip page, style book,
+   * whisper-back threads, rumor scanner lane). Distinct from schefterFeed,
+   * which only governs the news feed page.
+   */
+  schefterTips: boolean;
   liveScoring: boolean;
 }
 

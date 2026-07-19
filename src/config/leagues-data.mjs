@@ -39,6 +39,7 @@ export const LEAGUES = {
       powerRankings: true,
       liveLineups: true,
       schefterFeed: true,
+      schefterTips: true,
       liveScoring: true,
     },
   },
@@ -77,6 +78,9 @@ export const LEAGUES = {
       powerRankings: false,
       liveLineups: false,
       schefterFeed: true,
+      // Flips to true when the AFL rumor mill launches (needs persona files,
+      // AFL tip page, and the AFL scanner workflow step in place first).
+      schefterTips: false,
       liveScoring: false,
     },
   },
