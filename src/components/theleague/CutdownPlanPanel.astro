@@ -421,7 +421,9 @@ const { deadlineLabel, username } = Astro.props;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
-    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 12%, var(--color-white, #fff));
+    /* Mix over --content-bg, not --color-white: --color-white stays #ffffff
+       in dark mode (tokens-dark.css), so a white mix base never flips. */
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 12%, var(--content-bg, #fff));
     border: 1px solid color-mix(in srgb, var(--autocut-accent, #f59e0b) 45%, transparent);
     border-radius: var(--radius-md, 8px);
     padding: 0.5rem 0.75rem;
@@ -645,5 +647,36 @@ const { deadlineLabel, username } = Astro.props;
       max-width: none;
       border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
     }
+  }
+
+  /* ── Dark mode ─────────────────────────────────────────────────
+     Surfaces/text above ride the theme-flipping tokens (--content-bg,
+     inverted gray scale); these are the spots where a token flips the
+     wrong way or a literal was picked for light-surface contrast. */
+
+  /* --color-gray-900 flips to near-white in dark, turning the modal
+     scrim/shadow into a light haze — scrims stay dark in both themes. */
+  html.dark .cdp-reauth-overlay,
+  html.dark .cdp-cutnow-overlay {
+    background: color-mix(in srgb, #000 60%, transparent);
+  }
+  html.dark .cdp-reauth-modal,
+  html.dark .cdp-cutnow-modal {
+    box-shadow: 0 20px 50px color-mix(in srgb, #000 45%, transparent);
+  }
+
+  /* Savings green: #1f6b34 was chosen for 4.5:1 on white/amber-tinted
+     light rows, but it's ~2.6:1 on the dark card — brighten to the dark
+     success token (#34d399 ≈ 8.7:1 on #1e1e1e). */
+  html.dark .cdp-slate__cap-item--savings strong {
+    color: var(--color-success, #34d399);
+  }
+
+  /* --color-error flips to #f87171 in dark, and white text on it fails
+     4.5:1. Pin the danger button to the solid red (white on #dc2626 =
+     4.8:1), same treatment in both themes. */
+  html.dark .cdp-btn-danger {
+    background: #dc2626;
+    border-color: #dc2626;
   }
 </style>

@@ -979,4 +979,59 @@ const pausedMetaLine = pausedState.paused
     .cdr-card__cols { grid-template-columns: 1fr; }
     .cdr-roster-count { margin-left: 0; width: 100%; }
   }
+
+  /* ==============================================
+   * Dark mode — same pattern as admin/schefter.astro (the template this
+   * page copied). The palette above is built on page-local tokens
+   * (--color-surface, --color-text, --color-border, …) consumed only via
+   * var(--x, <light fallback>) — they aren't defined globally, so without
+   * this block every card, banner, pill, and confirm row bakes in its
+   * light fallback while the surrounding shell flips dark.
+   * Re-point each local at the real dark ramp (tokens-dark.css).
+   * ============================================== */
+  :global(html.dark) .ops-page {
+    --color-surface: var(--content-bg, #1e1e1e);
+    --color-surface-alt: var(--content-bg-muted, #181818);
+    --color-text: var(--color-text-primary, #e0e0e0);
+    --color-text-muted: var(--content-text-muted, #8a8a8a);
+    --color-border: var(--color-border-default, #5f6885);
+    --color-accent: var(--color-primary, #3b82f6);
+  }
+
+  /* Status chips hardcode light-mode green/red/amber pastels (#dcfce7 &c)
+     that read as bright rectangles on a dark card. Swap to the dark
+     semantic pairs: translucent tint + brightened text. */
+  :global(html.dark) .cdr-status[data-status='done'] {
+    background: var(--color-success-light, rgba(16, 185, 129, 0.15));
+    color: var(--color-success-dark, #6ee7b7);
+  }
+  :global(html.dark) .cdr-status[data-status='attention'] {
+    background: var(--color-error-light, rgba(220, 38, 38, 0.15));
+    color: var(--color-error-dark, #fca5a5);
+  }
+  :global(html.dark) .cdr-status[data-status='skipped'] {
+    background: var(--color-warning-light, rgba(245, 158, 11, 0.15));
+    color: var(--color-warning-dark, #fcd34d);
+  }
+
+  /* Outcome badge text: #166534 / #92400e are light-surface colors —
+     brighten to the dark success/warning text tokens. */
+  :global(html.dark) .cdr-outcome-badge[data-state='done'],
+  :global(html.dark) .cdr-outcome-badge[data-state='manual-done'] {
+    color: var(--color-success-dark, #6ee7b7);
+  }
+  :global(html.dark) .cdr-outcome-badge[data-state='skipped'],
+  :global(html.dark) .cdr-outcome-badge[data-state='not-attempted'] {
+    color: var(--color-warning-dark, #fcd34d);
+  }
+  :global(html.dark) .cdr-manual-done__saved {
+    color: var(--color-success-dark, #6ee7b7);
+  }
+
+  /* --color-error flips to #f87171 in dark, and white text on it fails
+     4.5:1. Pin the danger button to the solid light-mode red (white on
+     #dc2626 = 4.8:1), same treatment in both themes. */
+  :global(html.dark) .cdr-btn--danger {
+    background: #dc2626; border-color: #dc2626; color: #fff;
+  }
 </style>
