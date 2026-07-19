@@ -303,12 +303,18 @@ describe('GET /api/schefter/style-book', () => {
 
 describe('style-book page — contract', () => {
   const pageSrc = readFileSync(
-    path.join(process.cwd(), 'src/pages/theleague/schefter/style-book.astro'),
+    // The page body moved into the shared component (per-league thin wrappers).
+    path.join(process.cwd(), 'src/components/schefter/StyleBookPage.astro'),
     'utf8',
   );
 
   it('marks the page as not prerendered (needs server-side fetch)', () => {
-    expect(pageSrc).toMatch(/export\s+const\s+prerender\s*=\s*false/);
+    // prerender lives on the per-league wrapper page, not the shared component.
+    const wrapperSrc = readFileSync(
+      path.join(process.cwd(), 'src/pages/theleague/schefter/style-book.astro'),
+      'utf-8',
+    );
+    expect(wrapperSrc).toMatch(/export\s+const\s+prerender\s*=\s*false/);
   });
 
   it('fetches from the public /api/schefter/style-book endpoint', () => {

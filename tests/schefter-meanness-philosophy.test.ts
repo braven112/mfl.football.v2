@@ -258,7 +258,8 @@ describe('personality.md — hostile-tips expansion', () => {
 });
 
 describe('tip.astro — meanness-welcome UX', () => {
-  const src = read('src/pages/theleague/schefter/tip.astro');
+  // The page body moved into the shared component (per-league thin wrappers).
+  const src = read('src/components/schefter/TipPage.astro');
 
   it('invites mean tips in the hero lede', () => {
     expect(src).toMatch(/be as mean as you can think of/);
