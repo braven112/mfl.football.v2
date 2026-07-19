@@ -200,7 +200,8 @@ The slate is also surfaced passively where owners already look: the T-7d/T-2d
 GroupMe touches say "your plan: 3 marked + 2 auto-selected — review at
 /theleague/rosters", and the CutWatch hero deep-links to the panel.
 
-No new page → no `page-directory.json` entry needed. A What's New `new-feature`
+The owner UI adds no new page → no `page-directory.json` entry for it (the
+commissioner audit page below does need one). A What's New `new-feature`
 entry (with screenshot) is required at ship time; it's an owner tool, so ask
 whether it's hero-worthy (likely `excludeFromHero: true` — the CutWatch hero
 already owns this real estate in August).
@@ -245,11 +246,53 @@ MFL write job"):
   data for recent drops in the offseason
   (`docs/claude/insights/domains/mfl-api.md:188-232`) — cross-check
   `transactions` when verifying, and don't double-cut on a stale read.
+- **Pre-execution snapshot (audit trail — see next section):** before the
+  first cut is attempted, write `autocut:snapshot:{year}` capturing every
+  franchise's saved cut list and computed slate. Execution results are
+  appended per franchise as the run proceeds. Cut lists (`autocut:{fid}`) are
+  **never deleted** by the job — only credentials are.
 - **Report:** write a per-run JSON report (who was cut, why, which franchises
   were skipped for missing credentials, failures), emit
   `::notice::`/`::warning::` annotations, open a GH issue on any failure
-  (pattern in `schefter-scan.yml:30-105`), and hand Schefter a cutdown-recap
-  hook (optional, phase 2).
+  (pattern in `schefter-scan.yml:30-105`) linking to the commissioner audit
+  page, and hand Schefter a cutdown-recap hook (optional, phase 2).
+
+## Commissioner audit trail — selections survive any failure
+
+Requirement: if execution errors (partially or completely), the commissioner
+must be able to see exactly who each owner had slated, after the deadline, and
+finish the job manually in the MFL UI.
+
+- **Selections are durable by design.** Owner cut lists live at
+  `autocut:{franchiseId}` and are retained after execution (successful or
+  not) until the next league year's window opens. The post-run cleanup pass
+  deletes *credentials only*.
+- **Snapshot before the first write.** The job's first act (after the date
+  gate passes, before any MFL call) is to freeze `autocut:snapshot:{year}`:
+  for every over-limit franchise — the owner's saved marked list (with
+  priority order and `updatedAt`), the roster state at execution time, and the
+  full computed slate with per-player reasons (`marked` / `last-added` +
+  acquisition date). A crash on franchise 1 still leaves all 16 plans
+  readable. Execution outcomes (`cut-verified` / `failed: <error>` /
+  `skipped: no-credential`) are appended to the snapshot per franchise as the
+  run proceeds.
+- **Durable copy in the repo.** After the run (success or failure), the
+  workflow commits the snapshot as
+  `data/theleague/august-cuts/{year}-report.json` using the existing
+  commit-back pattern (`scripts/commit-feed-and-push.mjs`, as in
+  `schefter-scan.yml`). Redis is the live copy; the committed file is the
+  permanent record that survives key expiry and makes year-over-year audits
+  trivial.
+- **Admin page: `/theleague/admin/cutdown-report`.** Commissioner-gated
+  (`isCommissionerOrAdmin`), reads the snapshot (Redis, falling back to the
+  committed file). One card per franchise: owner's marked list vs computed
+  slate vs what actually executed, with failures highlighted and a per-player
+  "done manually" checkbox (stored back to the snapshot) so the commissioner
+  can track manual cleanup to completion. New page → needs a
+  `page-directory.json` entry with `visibility: "admin"`.
+- **Failure paging:** any failed or skipped franchise triggers the GH issue
+  (already in the report step) *and* a commissioner-only notification listing
+  the affected teams and linking the admin page.
 
 ## Phase 0 — verification spike (small, owner-mode)
 
@@ -274,8 +317,9 @@ verify, with a throwaway test cut while stakes are zero:
 | 0 | Owner-cookie replay spike from script context; longevity check; insights write-up | — |
 | 1 | `august-cut-selection.ts` + unit tests; `autocut` KV store + API route with save-time validation + `requiresReauth` step-up; credential capture on login + save (encrypted) | — |
 | 2 | Rosters-page UI: toggles, priority ordering, do-nothing preview, countdown | 1 |
-| 3 | `apply-august-cuts.mjs` + workflow (dry-run default), `--validate-only` mode, report artifact, credential cleanup | 0, 1 |
-| 4 | Roger/GroupMe touches: T-7d/T-2d "log in so your cuts can run" nags + post-cut recap; What's New entry | 3 |
+| 3 | `apply-august-cuts.mjs` + workflow (dry-run default), `--validate-only` mode, pre-execution snapshot, committed report, credential cleanup | 0, 1 |
+| 4 | Commissioner audit page `/theleague/admin/cutdown-report` + page-directory entry (admin) + failure notification | 3 |
+| 5 | Roger/GroupMe touches: T-7d/T-2d "log in so your cuts can run" nags + post-cut recap; What's New entry | 3 |
 
 ## Tests
 
@@ -290,6 +334,10 @@ verify, with a throwaway test cut while stakes are zero:
 - Step-up auth tests — save with a missing/stale/invalid credential returns
   `requiresReauth` and persists nothing; save after re-login persists list +
   refreshed credential atomically.
+- Audit-trail tests — the snapshot is written before any MFL call (a mocked
+  first-cut failure must still leave a complete snapshot of all franchises'
+  slates); execution never deletes `autocut:{fid}` lists; per-franchise
+  outcomes append correctly.
 - Script-level dry-run test asserting no MFL write is attempted with
   `--dry-run` (grep-sentinel style like `tests/schefter-quiet-day.test.ts` or a
   fetch-mock).
@@ -318,3 +366,8 @@ verify, with a throwaway test cut while stakes are zero:
    validation check) — validation-first rather than forcing password re-entry
    on every save, since a cookie proven live at save time gives the same
    guarantee with less friction. The 30-day threshold is a tunable constant.
+8. **Selections outlive execution.** Cut lists are never deleted by the job
+   (credentials are), a full snapshot of every plan is frozen before the first
+   MFL write, and the snapshot is committed to the repo — so any error leaves
+   the commissioner a complete, permanent record of who each owner had slated,
+   viewable on the admin audit page.
