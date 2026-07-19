@@ -87,9 +87,9 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
-  const leaderboardKey = `schefter:tipster:leaderboard:${seasonYear}`;
-  const totalKey = `schefter:tipster:rumors_total:${hashedOwnerId}`;
-  const seasonKey = `schefter:tipster:rumors_season:${seasonYear}:${hashedOwnerId}`;
+  const leaderboardKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:leaderboard:')}${seasonYear}`;
+  const totalKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:rumors_total:')}${hashedOwnerId}`;
+  const seasonKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:rumors_season:')}${seasonYear}:${hashedOwnerId}`;
 
   let codename: string | null = null;
   let rumorsTotal = 0;
@@ -103,7 +103,7 @@ export const GET: APIRoute = async ({ request }) => {
       redis.get<string | number>(totalKey),
       redis.get<string | number>(seasonKey),
       redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
-      redis.smembers(`schefter:tipster:badges:${hashedOwnerId}`).catch(() => []),
+      redis.smembers(`${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:badges:')}${hashedOwnerId}`).catch(() => []),
     ]);
     codename = cn;
     rumorsTotal = coerceCount(total);

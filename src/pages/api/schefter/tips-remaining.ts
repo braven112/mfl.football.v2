@@ -19,10 +19,14 @@ import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
-const RATE_LIMIT_PREFIX = 'schefter:tips:ratelimit:';
+const RATE_LIMIT_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:ratelimit:');
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 

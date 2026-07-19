@@ -87,8 +87,8 @@ describe('anon Style Book — tip.ts integration', () => {
     // The anon Style Book MUST live on its own keyspace so named and anon
     // leaderboards never mix. If these asserts fail, tips are leaking into
     // the named pool.
-    expect(tipSource).toMatch(/schefter:style_book:anon:/);
-    expect(tipSource).toMatch(/schefter:style_book:anon_leaderboard:/);
+    expect(tipSource).toMatch(/schefterKey\(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:'\)/);
+    expect(tipSource).toMatch(/schefterKey\(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon_leaderboard:'\)/);
   });
 
   it('stamps attackOnSchefter + styleBookCount + tipsterCodename on the tip', () => {
@@ -122,7 +122,7 @@ describe('anon Style Book — tip.ts integration', () => {
     // improve their dial by simply not sending mean tips for a while. A
     // cumulative INCR counter would punish old behavior forever, which
     // contradicts the design intent.
-    expect(tipSource).toMatch(/schefter:off_topic:timeline:/);
+    expect(tipSource).toMatch(/schefterKey\(DEFAULT_SCHEFTER_NAV_SLUG, 'off_topic:timeline:'\)/);
     expect(tipSource).toMatch(/OFF_TOPIC_WINDOW_MS/);
   });
 

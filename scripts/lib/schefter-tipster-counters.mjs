@@ -17,16 +17,23 @@
  * returning the leaderboard so the hash never leaves the server.
  */
 
-const CODENAME_KEY_PREFIX = 'schefter:tipster:codename:';
-const CODENAMES_USED_KEY = 'schefter:tipster:codenames_used';
-const RUMORS_TOTAL_PREFIX = 'schefter:tipster:rumors_total:';
-const RUMORS_SEASON_PREFIX = 'schefter:tipster:rumors_season:';
-const LEADERBOARD_PREFIX = 'schefter:tipster:leaderboard:';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
+/** League-scoped tipster counter keys. Every league has its own scorecard. */
+export function tipsterCounterKeys(navSlug) {
+  return {
+    codenamePrefix: schefterKey(navSlug, 'tipster:codename:'),
+    codenamesUsedKey: schefterKey(navSlug, 'tipster:codenames_used'),
+    rumorsTotalPrefix: schefterKey(navSlug, 'tipster:rumors_total:'),
+    rumorsSeasonPrefix: schefterKey(navSlug, 'tipster:rumors_season:'),
+    leaderboardPrefix: schefterKey(navSlug, 'tipster:leaderboard:'),
+    topicCountsPrefix: schefterKey(navSlug, 'tipster:topic_counts:'),
+  };
+}
 // Per-tipster topic histogram, populated alongside the rumor counters above.
 // HASH: topic → lifetime count. Read by buildTipsterContext (lib/schefter-
 // tipster-context.mjs) to derive a "standing beat" — the topic share that
 // HARD RULE 24 surfaces in the prompt without ever attaching a codename.
-const TOPIC_COUNTS_PREFIX = 'schefter:tipster:topic_counts:';
 
 /** Must stay in sync with src/utils/schefter-codenames.ts. */
 const SCHEFTER_CODENAMES = [
@@ -73,10 +80,11 @@ function seedSlot(hashedOwnerId) {
  * Claim an unused codename for a tipster. Idempotent. If the user already has
  * one, returns it. Returns `null` only if `redis` is missing.
  */
-export async function assignCodename(redis, hashedOwnerId) {
+export async function assignCodename(redis, hashedOwnerId, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !hashedOwnerId) return null;
 
-  const userKey = CODENAME_KEY_PREFIX + hashedOwnerId;
+  const { codenamePrefix, codenamesUsedKey } = tipsterCounterKeys(navSlug);
+  const userKey = codenamePrefix + hashedOwnerId;
   const existing = await redis.get(userKey);
   if (typeof existing === 'string' && existing.length > 0) return existing;
 
@@ -85,12 +93,12 @@ export async function assignCodename(redis, hashedOwnerId) {
 
   for (let i = 0; i < total; i++) {
     const candidate = SCHEFTER_CODENAMES[(start + i) % total];
-    const added = await redis.sadd(CODENAMES_USED_KEY, candidate);
+    const added = await redis.sadd(codenamesUsedKey, candidate);
     if (added === 1) {
       const writeRes = await redis.set(userKey, candidate, { nx: true });
       if (writeRes === 'OK' || writeRes === true) return candidate;
       // Lost the race — release the hold and pick up the winner's name.
-      await redis.srem(CODENAMES_USED_KEY, candidate);
+      await redis.srem(codenamesUsedKey, candidate);
       const actual = await redis.get(userKey);
       if (typeof actual === 'string' && actual.length > 0) return actual;
     }
@@ -120,6 +128,7 @@ export async function incrementTipsterCounters({
   redis,
   batch,
   seasonYear,
+  navSlug = DEFAULT_SCHEFTER_NAV_SLUG,
   dryRun = false,
   log = () => {},
   warn = () => {},
@@ -144,14 +153,15 @@ export async function incrementTipsterCounters({
     return;
   }
 
-  const leaderboardKey = `${LEADERBOARD_PREFIX}${seasonYear}`;
+  const keys = tipsterCounterKeys(navSlug);
+  const leaderboardKey = `${keys.leaderboardPrefix}${seasonYear}`;
 
   for (const hash of distinctHashes) {
     try {
-      await assignCodename(redis, hash);
+      await assignCodename(redis, hash, navSlug);
 
-      const totalKey = `${RUMORS_TOTAL_PREFIX}${hash}`;
-      const seasonKey = `${RUMORS_SEASON_PREFIX}${seasonYear}:${hash}`;
+      const totalKey = `${keys.rumorsTotalPrefix}${hash}`;
+      const seasonKey = `${keys.rumorsSeasonPrefix}${seasonYear}:${hash}`;
 
       await Promise.all([
         redis.incr(totalKey),
@@ -187,6 +197,7 @@ export async function incrementTipsterCounters({
 export async function incrementTipsterTopicCounters({
   redis,
   batch,
+  navSlug = DEFAULT_SCHEFTER_NAV_SLUG,
   dryRun = false,
   log = () => {},
   warn = () => {},
@@ -222,7 +233,7 @@ export async function incrementTipsterTopicCounters({
   for (const [hash, topics] of pairs) {
     for (const topic of topics) {
       try {
-        await redis.hincrby(`${TOPIC_COUNTS_PREFIX}${hash}`, topic, 1);
+        await redis.hincrby(`${tipsterCounterKeys(navSlug).topicCountsPrefix}${hash}`, topic, 1);
       } catch (err) {
         warn(`  [tipster-topic-counters] increment failed for ${hash.slice(0, 6)} topic=${topic}: ${err.message}`);
       }

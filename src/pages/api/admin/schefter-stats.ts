@@ -22,23 +22,23 @@ import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-respon
 
 export const prerender = false;
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
+const TIPS_QUEUE_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:queue');
+const TIPS_PROCESSED_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:processed');
+const FIRST_TIP_TS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:first_tip_ts');
+const RUMOR_POSTS_TODAY_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:posts_today');
+const RUMOR_LAST_POST_TS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:last_post_ts');
 
 const GROUPME_MESSAGES_KEY = 'groupme:messages';
 const GROUPME_LAST_MESSAGE_ID_KEY = 'groupme:last_message_id';
 const GROUPME_LAST_SYNC_KEY = 'groupme:last_sync_ts';
 
-const OFFER_SEEN_KEY = 'schefter:trade_offers:seen';
-const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
-const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
-const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
-const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
-const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
-const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
+const OFFER_SEEN_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:seen');
+const OFFER_FIRST_SEEN_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:first_seen');
+const OFFER_POSTED_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:posted');
+const OFFER_OWNER_REPORTS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:owner_reports');
+const OFFER_ARCHIVE_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:archive');
+const OFFER_ROLLS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:rolls');
+const OFFER_EXPOSURE_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'trade_offers:exposure');
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 
 // Imported from the scanner's shared lib so the admin preview matches the
@@ -70,6 +70,10 @@ import recurrenceLedger from '../../../../data/schefter/topic-recurrence.json';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .mjs via allowJs
 import { detectMention } from '../../../../scripts/schefter-groupme-listen.mjs';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
 function coerce(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -377,7 +381,7 @@ async function readRedisStats(redis: RedisClient) {
     redis.get<string>(GROUPME_LAST_MESSAGE_ID_KEY).catch(() => null),
     redis.get<string | number>(GROUPME_LAST_SYNC_KEY).catch(() => null),
     redis.zcard(OFFER_SEEN_KEY).catch(() => 0),
-    redis.zcard(`schefter:tipster:leaderboard:${seasonYear}`).catch(() => 0),
+    redis.zcard(`${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:leaderboard:')}${seasonYear}`).catch(() => 0),
     redis.hlen(OFFER_FIRST_SEEN_KEY).catch(() => 0),
     redis.scard(OFFER_POSTED_KEY).catch(() => 0),
     redis.hgetall<string>(OFFER_FIRST_SEEN_KEY).catch(() => null),

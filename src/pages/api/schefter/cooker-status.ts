@@ -39,12 +39,16 @@
 import type { APIRoute } from 'astro';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
+const TIPS_QUEUE_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:queue');
+const FIRST_TIP_TS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:first_tip_ts');
+const RUMOR_POSTS_TODAY_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:posts_today');
 
 const MARINATE_WINDOW_MS = 60 * 60 * 1000;
 const DAILY_CAP = 3;

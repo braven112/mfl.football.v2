@@ -445,7 +445,7 @@ describe('schefter-groupme-listen.mjs — persistence invariants', () => {
   const src = read('scripts/schefter-groupme-listen.mjs');
 
   it('uses the expected Redis key for bot message IDs', () => {
-    expect(src).toMatch(/schefter:groupme:bot_message_ids/);
+    expect(src).toMatch(/BOT_MESSAGE_IDS_KEY = schefterKey\('theleague', 'groupme:bot_message_ids'\)/);
   });
 
   it('caps the bot-message-ID list at 50 entries', () => {

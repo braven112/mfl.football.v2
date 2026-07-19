@@ -37,6 +37,7 @@ import {
   consumeDailyPost,
   isQuietHours,
 } from './lib/schefter-groupme-budget.mjs';
+import { schefterKey } from './lib/schefter-keys.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
@@ -123,7 +124,7 @@ const BIG_DROP_THRESHOLD = 1_000_000;
 // are discarded rather than pinged stale.
 const BIG_DROP_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 // Redis list of big-drop GroupMe pings waiting on the quiet-hours/spacing gate.
-const BIG_DROP_PENDING_KEY = 'schefter:bigdrop:pending_groupme';
+const BIG_DROP_PENDING_KEY = schefterKey('theleague', 'bigdrop:pending_groupme');
 const ROUND_ORDINALS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' };
 
 // ── Helpers ──
@@ -1466,8 +1467,8 @@ async function getRedis() {
   }
 }
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
+const TIPS_QUEUE_KEY = schefterKey('theleague', 'tips:queue');
+const FIRST_TIP_TS_KEY = schefterKey('theleague', 'tips:first_tip_ts');
 
 function buildTradeBaitTip({
   franchiseId,

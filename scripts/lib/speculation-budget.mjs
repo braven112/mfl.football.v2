@@ -17,8 +17,11 @@
  *     rumor-mill already burned all 3 normal slots.
  */
 
-export const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-export const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
+/** Legacy (TheLeague) keys — the speculation lane is TheLeague-only today. */
+export const RUMOR_POSTS_TODAY_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:posts_today');
+export const RUMOR_LAST_POST_TS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:last_post_ts');
 
 export const MAX_GLOBAL_POSTS_PER_DAY = 3;
 export const RESERVED_PEAK_SLOT = 1;

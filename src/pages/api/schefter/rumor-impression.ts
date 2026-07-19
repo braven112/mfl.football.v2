@@ -20,10 +20,14 @@ import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed } from '../../../types/schefter';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
-const IMPRESSION_KEY_PREFIX = 'schefter:rumor:impressions:';
+const IMPRESSION_KEY_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:impressions:');
 const IMPRESSION_TTL_SEC = 30 * 24 * 60 * 60;
 
 function json(data: unknown, status = 200): Response {

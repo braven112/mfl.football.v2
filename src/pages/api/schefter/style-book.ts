@@ -33,6 +33,10 @@ import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getCodename } from '../../../utils/schefter-codenames';
 import { getRedis, type RedisClient } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
@@ -40,14 +44,14 @@ const LEADERBOARD_LIMIT = 25;
 const CACHE_TTL_MS = 30_000;
 
 // Named (GroupMe) Style Book
-const NAMED_LIFETIME_PREFIX = 'schefter:style_book:';
-const NAMED_LAST_SHOT_PREFIX = 'schefter:style_book:last_shot_at:';
-const NAMED_LEADERBOARD_PREFIX = 'schefter:style_book:leaderboard:';
+const NAMED_LIFETIME_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:');
+const NAMED_LAST_SHOT_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:last_shot_at:');
+const NAMED_LEADERBOARD_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:leaderboard:');
 
 // Anonymous (web-tip) Style Book
-const ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
-const ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
-const ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
+const ANON_LIFETIME_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:');
+const ANON_LAST_SHOT_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:last_shot_at:');
+const ANON_LEADERBOARD_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon_leaderboard:');
 
 type NamedEntry = {
   author: string;

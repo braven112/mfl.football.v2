@@ -40,10 +40,14 @@ import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed } from '../../../types/schefter';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import {
+  schefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const RATE_LIMIT_PREFIX = 'schefter:tips:ratelimit:';
+const TIPS_QUEUE_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:queue');
+const FIRST_TIP_TS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:first_tip_ts');
+const RATE_LIMIT_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:ratelimit:');
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 
@@ -51,10 +55,10 @@ const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 // `schefter:style_book:{authorKey}` keyed on the public display name. Anon
 // web tippers live here keyed on the tipster hash so the two leaderboards
 // never mix and de-anonymization is impossible through the leaderboard.
-const STYLE_BOOK_ANON_LIFETIME_PREFIX = 'schefter:style_book:anon:';
-const STYLE_BOOK_ANON_SEASON_PREFIX = 'schefter:style_book:anon:season:';
-const STYLE_BOOK_ANON_LAST_SHOT_PREFIX = 'schefter:style_book:anon:last_shot_at:';
-const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard:';
+const STYLE_BOOK_ANON_LIFETIME_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:');
+const STYLE_BOOK_ANON_SEASON_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:season:');
+const STYLE_BOOK_ANON_LAST_SHOT_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:last_shot_at:');
+const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon_leaderboard:');
 
 // Off-topic tip timeline — rolling-window ZSET of "Beef" (commish-scope) tip
 // submissions per tipster. The A=C barometer reads the count of entries in
@@ -65,7 +69,7 @@ const STYLE_BOOK_ANON_LEADERBOARD_PREFIX = 'schefter:style_book:anon_leaderboard
 // tippers get the lighter hissy-fit framing; recent repeat offenders earn
 // the "every accusation is a confession" twist. Keyed on hashedOwnerId;
 // the rolling count is surfaced to the LLM as offTopicCount.
-const OFF_TOPIC_TIMELINE_PREFIX = 'schefter:off_topic:timeline:';
+const OFF_TOPIC_TIMELINE_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'off_topic:timeline:');
 const OFF_TOPIC_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const OFF_TOPIC_TIMELINE_TTL_SEC = 90 * 24 * 60 * 60;   // 90d belt-and-suspenders TTL
 
@@ -362,7 +366,7 @@ export const POST: APIRoute = async ({ request }) => {
     // score = submit timestamp. Hot-topics endpoint ZCOUNTs over the last 7d.
     // Also prune entries older than 30 days so the sets stay bounded.
     try {
-      const timelineKey = `schefter:topic_timeline:${tip.topic}`;
+      const timelineKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'topic_timeline:')}${tip.topic}`;
       await redis.zadd(timelineKey, { score: tip.submittedAt, member: tip.id });
       await redis.zremrangebyscore(timelineKey, 0, tip.submittedAt - 30 * 24 * 60 * 60 * 1000);
     } catch (err) {

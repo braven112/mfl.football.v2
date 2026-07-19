@@ -31,7 +31,7 @@ describe('rumor-scan daily caps — trade-heavy, gossip-rationed', () => {
   });
 
   it('tracks the gossip counter in its own Redis key', () => {
-    expect(src).toMatch(/const\s+RUMOR_GOSSIP_POSTS_TODAY_KEY\s*=\s*['"]schefter:rumor:gossip_posts_today['"]/);
+    expect(src).toMatch(/const\s+RUMOR_GOSSIP_POSTS_TODAY_KEY\s*=\s*schefterKey\(NAV_SLUG, 'rumor:gossip_posts_today'\)/);
   });
 
   it('increments the gossip counter only when postKind === "gossip"', () => {
@@ -431,7 +431,7 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
   const src = read('scripts/schefter-rumor-scan.mjs');
 
   it('defines the mailbag done-date key and weekday index', () => {
-    expect(src).toMatch(/const\s+FRIDAY_MAILBAG_DONE_KEY\s*=\s*['"]schefter:mailbag:done_date['"]/);
+    expect(src).toMatch(/const\s+FRIDAY_MAILBAG_DONE_KEY\s*=\s*schefterKey\(NAV_SLUG, 'mailbag:done_date'\)/);
     expect(src).toMatch(/const\s+FRIDAY_WEEKDAY_INDEX\s*=\s*5/);
   });
 

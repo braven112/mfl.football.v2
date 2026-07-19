@@ -109,7 +109,7 @@ describe('rumor-scan budget constants stay in sync', () => {
     expect(MIN_SPACING_MS).toBe(4 * 60 * 60 * 1000);
     expect(src).toContain(`const QUIET_HOUR_START = ${QUIET_HOUR_START}`);
     expect(src).toContain(`const QUIET_HOUR_END = ${QUIET_HOUR_END}`);
-    expect(src).toContain(`'${RUMOR_POSTS_TODAY_KEY}'`);
-    expect(src).toContain(`'${RUMOR_LAST_POST_TS_KEY}'`);
+    expect(src).toMatch(/RUMOR_POSTS_TODAY_KEY = schefterKey\(NAV_SLUG, 'rumor:posts_today'\)/);
+    expect(src).toMatch(/RUMOR_LAST_POST_TS_KEY = schefterKey\(NAV_SLUG, 'rumor:last_post_ts'\)/);
   });
 });

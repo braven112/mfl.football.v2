@@ -96,6 +96,7 @@ import {
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
+import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
 import {
   classifyTipKind,
   buildTopicBuckets,
@@ -143,24 +144,27 @@ const TRADE_OFFERS_ONLY = process.argv.includes('--trade-offers-only');
 
 const LEAGUE_SLUG = 'theleague';
 const LEAGUE_ID = getLeagueBySlug(LEAGUE_SLUG).id;
+// Redis keys below are league-scoped via schefterKey(NAV_SLUG, …): TheLeague
+// keeps its legacy unprefixed keys; any other league gets schefter:<navSlug>:*.
+const NAV_SLUG = getLeagueBySlug(LEAGUE_SLUG).navSlug;
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
 const CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
 const PLAYERS_PATH = (year) =>
   path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json');
 
-const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-const RUMOR_GOSSIP_POSTS_TODAY_KEY = 'schefter:rumor:gossip_posts_today';
-const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
-const FIRST_TIP_TS_KEY = 'schefter:tips:first_tip_ts';
-const TIPS_QUEUE_KEY = 'schefter:tips:queue';
-const TIPS_PROCESSED_KEY = 'schefter:tips:processed';
-const ROGER_LAST_RIFF_DATE_KEY = 'schefter:ask_roger:last_riff_date';
-const MORNING_GREETING_DATE_KEY = 'schefter:morning_greeting:last_used_date';
+const RUMOR_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:posts_today');
+const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_today');
+const RUMOR_LAST_POST_TS_KEY = schefterKey(NAV_SLUG, 'rumor:last_post_ts');
+const FIRST_TIP_TS_KEY = schefterKey(NAV_SLUG, 'tips:first_tip_ts');
+const TIPS_QUEUE_KEY = schefterKey(NAV_SLUG, 'tips:queue');
+const TIPS_PROCESSED_KEY = schefterKey(NAV_SLUG, 'tips:processed');
+const ROGER_LAST_RIFF_DATE_KEY = schefterKey(NAV_SLUG, 'ask_roger:last_riff_date');
+const MORNING_GREETING_DATE_KEY = schefterKey(NAV_SLUG, 'morning_greeting:last_used_date');
 // Feature 7 — "saying no, out loud" cooldown. Stores PT-date string of the
 // last quiet-day post. Fires AT MOST once per QUIET_DAY_COOLDOWN_DAYS so
 // Schefter doesn't make "slow news" his whole bit. See attemptQuietDayPost.
-const QUIET_DAY_LAST_DATE_KEY = 'schefter:rumor:quiet_day_last_date';
+const QUIET_DAY_LAST_DATE_KEY = schefterKey(NAV_SLUG, 'rumor:quiet_day_last_date');
 const QUIET_DAY_COOLDOWN_DAYS = 3;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
@@ -184,9 +188,9 @@ const QUIET_DAY_COOLDOWN_DAYS = 3;
 //   - `posted` SET — still written on every post for admin tooling (the
 //     Captured Trades card's posted/closed/stale pill logic). No longer an
 //     absorbing gate; an offer can be in `posted` AND keep getting posts.
-const OFFER_FIRST_SEEN_KEY = 'schefter:trade_offers:first_seen';
-const OFFER_EXPOSURE_KEY = 'schefter:trade_offers:exposure';
-const OFFER_POSTED_KEY = 'schefter:trade_offers:posted';
+const OFFER_FIRST_SEEN_KEY = schefterKey(NAV_SLUG, 'trade_offers:first_seen');
+const OFFER_EXPOSURE_KEY = schefterKey(NAV_SLUG, 'trade_offers:exposure');
+const OFFER_POSTED_KEY = schefterKey(NAV_SLUG, 'trade_offers:posted');
 const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on first_seen / exposure / posted
 
 // Permanent archive of every offer the scanner has ever ingested. Distinct
@@ -195,22 +199,22 @@ const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on first_seen / expo
 // from months/years ago, including ones that were never posted (retracted
 // before the dice roll fired). Entry is JSON-encoded {offerId, offeringFid,
 // partnerFid, willGiveUp, willReceive, comments, mflTimestamp, firstSeenMs}.
-const OFFER_ARCHIVE_KEY = 'schefter:trade_offers:archive';
+const OFFER_ARCHIVE_KEY = schefterKey(NAV_SLUG, 'trade_offers:archive');
 // Per-offer roll counter: hincrby on every offer-scan iteration that gets to
 // the dice roll (i.e., offers still eligible — not already-posted, not
 // legacy-burned). Tells the commish how many GitHub Actions runs had a chance
 // to leak the rumor before MFL dropped the offer.
-const OFFER_ROLLS_KEY = 'schefter:trade_offers:rolls';
+const OFFER_ROLLS_KEY = schefterKey(NAV_SLUG, 'trade_offers:rolls');
 
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;   // 48h → framing flip
 
-const OFFER_OWNER_KEY_PREFIX = 'schefter:trade_offers:owner:';
-const OFFER_DIV_KEY_PREFIX = 'schefter:trade_offers:div:';
+const OFFER_OWNER_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:owner:');
+const OFFER_DIV_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:div:');
 // Owner-sourced intake: owners populate this hash from /api/trades/pending
 // and /api/trades/submit. See src/utils/owner-trade-reports.ts. Read-only
 // from this scanner — the API routes own the writes and TTL.
-const OFFER_OWNER_REPORTS_KEY = 'schefter:trade_offers:owner_reports';
-const PLAYER_OFFER_HISTORY_PREFIX = 'schefter:player_offer_history:';
+const OFFER_OWNER_REPORTS_KEY = schefterKey(NAV_SLUG, 'trade_offers:owner_reports');
+const PLAYER_OFFER_HISTORY_PREFIX = schefterKey(NAV_SLUG, 'player_offer_history:');
 const OFFER_ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;    // 7d owner + div
 const PLAYER_HISTORY_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;  // 21d player escalation
 
@@ -277,7 +281,7 @@ const MORNING_GREETING_END_HOUR = 11; // 7:00–10:59 PT
 // Friday mailbag — one big roundup that sweeps the queue so nothing
 // expires unseen. Runs once per Friday PT. Same Redis-key TTL pattern as
 // the other daily counters.
-const FRIDAY_MAILBAG_DONE_KEY = 'schefter:mailbag:done_date';
+const FRIDAY_MAILBAG_DONE_KEY = schefterKey(NAV_SLUG, 'mailbag:done_date');
 const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 
 // Public URL of the tip page — appended to every GroupMe rumor post so
@@ -3330,7 +3334,7 @@ async function main() {
     let threadId = null;
     if (dominantParentId) {
       try {
-        const registered = await redis.get(`schefter:thread_of:${dominantParentId}`);
+        const registered = await redis.get(globalSchefterKey('threadOf', dominantParentId));
         threadId = typeof registered === 'string' && registered.length > 0
           ? registered
           : dominantParentId;
@@ -3661,7 +3665,7 @@ async function main() {
       if (tip && tip.source === 'web' && typeof tip.hashedOwnerId === 'string' && tip.hashedOwnerId.length > 0) {
         try {
           await redis.set(
-            `schefter:tipster_hash_for_tip:${tip.id}`,
+            globalSchefterKey('tipsterHashForTip', tip.id),
             tip.hashedOwnerId,
             { ex: 14 * 24 * 60 * 60 },
           );
@@ -3700,9 +3704,9 @@ async function main() {
     const threadId = p.threadId;
     const dominantParentId = parentIdByPostId.get(p.id);
     try {
-      const threadZsetKey = `schefter:thread:${threadId}`;
-      const threadOfParentKey = `schefter:thread_of:${dominantParentId}`;
-      const threadOfNewKey = `schefter:thread_of:${p.id}`;
+      const threadZsetKey = globalSchefterKey('thread', threadId);
+      const threadOfParentKey = globalSchefterKey('threadOf', dominantParentId);
+      const threadOfNewKey = globalSchefterKey('threadOf', p.id);
       const threadTtlSec = 14 * 24 * 60 * 60;
 
       await redis.zadd(threadZsetKey, { score: new Date(p.timestamp).getTime(), member: p.id });

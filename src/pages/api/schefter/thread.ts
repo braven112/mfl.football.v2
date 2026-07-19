@@ -14,6 +14,11 @@ import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
+import {
+  schefterKey,
+  globalSchefterKey,
+  DEFAULT_SCHEFTER_NAV_SLUG,
+} from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
@@ -57,7 +62,7 @@ export const GET: APIRoute = async ({ request }) => {
   if (!redis) return json({ threadId, posts: [] });
 
   try {
-    const raw = await redis.zrange(`schefter:thread:${threadId}`, 0, -1);
+    const raw = await redis.zrange(globalSchefterKey('thread', threadId), 0, -1);
     const ids = Array.isArray(raw) ? raw.map((m) => String(m)) : [];
     if (ids.length === 0) return json({ threadId, posts: [] });
 

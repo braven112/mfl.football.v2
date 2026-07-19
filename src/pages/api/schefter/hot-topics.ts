@@ -40,7 +40,7 @@ export const GET: APIRoute = async () => {
   await Promise.all(
     (TIP_TOPICS as readonly TipTopic[]).map(async (topic) => {
       try {
-        const count = await redis.zcount(`schefter:topic_timeline:${topic}`, windowStart, now);
+        const count = await redis.zcount(`${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'topic_timeline:')}${topic}`, windowStart, now);
         results.push({ topic, count: Math.max(0, Number.isFinite(count) ? count : 0) });
       } catch (err) {
         console.warn(`[hot-topics] zcount failed for ${topic}:`, err);

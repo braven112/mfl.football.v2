@@ -23,7 +23,8 @@
  *     when the tipster can resume direct naming on the same target.
  */
 
-const NAMING_RATE_LIMIT_PREFIX = 'schefter:tipster_target_count:';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
 const NAMING_RATE_LIMIT_TTL_SEC = 30 * 24 * 60 * 60; // 30d
 
 /**
@@ -34,8 +35,8 @@ const NAMING_RATE_LIMIT_TTL_SEC = 30 * 24 * 60 * 60; // 30d
  */
 export const MAX_EXPLICIT_PICKS_PER_TARGET = 2;
 
-function buildKey(tipsterHash, franchiseId) {
-  return `${NAMING_RATE_LIMIT_PREFIX}${tipsterHash}:${franchiseId}`;
+function buildKey(tipsterHash, franchiseId, navSlug) {
+  return `${schefterKey(navSlug, 'tipster_target_count:')}${tipsterHash}:${franchiseId}`;
 }
 
 /**
@@ -48,9 +49,9 @@ function buildKey(tipsterHash, franchiseId) {
  * @param {import('@upstash/redis').Redis} redis
  * @returns {Promise<number>} new counter value, or 0 if redis missing / no-op
  */
-export async function incrementNamingTarget(tipsterHash, franchiseId, redis) {
+export async function incrementNamingTarget(tipsterHash, franchiseId, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !tipsterHash || !franchiseId) return 0;
-  const key = buildKey(tipsterHash, franchiseId);
+  const key = buildKey(tipsterHash, franchiseId, navSlug);
   const next = await redis.incr(key);
   // EXPIRE on first observation only — re-applying it on every INCR would
   // reset the rolling-30d window and let a determined tipster keep their
@@ -82,9 +83,9 @@ export async function incrementNamingTarget(tipsterHash, franchiseId, redis) {
  * @param {import('@upstash/redis').Redis} redis
  * @returns {Promise<boolean>}
  */
-export async function isOverNamingRateLimit(tipsterHash, franchiseId, redis) {
+export async function isOverNamingRateLimit(tipsterHash, franchiseId, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !tipsterHash || !franchiseId) return false;
-  const key = buildKey(tipsterHash, franchiseId);
+  const key = buildKey(tipsterHash, franchiseId, navSlug);
   const raw = await redis.get(key);
   const count = typeof raw === 'number' ? raw : Number.parseInt(String(raw ?? '0'), 10);
   if (!Number.isFinite(count) || count <= 0) return false;

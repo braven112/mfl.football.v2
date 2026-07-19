@@ -16,8 +16,19 @@
  * rumor scanner's values drift from these.
  */
 
-export const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
-export const RUMOR_LAST_POST_TS_KEY = 'schefter:rumor:last_post_ts';
+import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from './schefter-keys.mjs';
+
+/** League-scoped daily GroupMe budget keys (shared by both scanners). */
+export function rumorBudgetKeys(navSlug) {
+  return {
+    postsTodayKey: schefterKey(navSlug, 'rumor:posts_today'),
+    lastPostTsKey: schefterKey(navSlug, 'rumor:last_post_ts'),
+  };
+}
+
+/** Legacy (TheLeague) key forms — kept for existing importers/tests. */
+export const RUMOR_POSTS_TODAY_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:posts_today');
+export const RUMOR_LAST_POST_TS_KEY = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:last_post_ts');
 
 export const MAX_POSTS_PER_DAY = 3;
 export const MIN_SPACING_MS = 4 * 60 * 60 * 1000; // 4h between any two pings
@@ -65,9 +76,9 @@ function toInt(raw) {
 }
 
 /** Read today's GroupMe post count from Redis. */
-export async function readPostsToday(redis) {
+export async function readPostsToday(redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis) return 0;
-  return toInt(await redis.get(RUMOR_POSTS_TODAY_KEY));
+  return toInt(await redis.get(rumorBudgetKeys(navSlug).postsTodayKey));
 }
 
 /**
@@ -84,10 +95,10 @@ export function isSpacingHeld(now, lastPostTsMs, postsToday) {
  * intentionally NOT enforced here — big drops always ping (the caller passes
  * the cap decision) — but quiet hours and spacing always hold a ping back.
  */
-export async function evaluatePingWindow(redis, now = new Date()) {
-  const postsToday = await readPostsToday(redis);
+export async function evaluatePingWindow(redis, now = new Date(), navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
+  const postsToday = await readPostsToday(redis, navSlug);
   const quietHours = isQuietHours(now);
-  const lastTs = redis ? toInt(await redis.get(RUMOR_LAST_POST_TS_KEY)) : 0;
+  const lastTs = redis ? toInt(await redis.get(rumorBudgetKeys(navSlug).lastPostTsKey)) : 0;
   const spacingHeld = isSpacingHeld(now, lastTs, postsToday);
   return {
     ok: !quietHours && !spacingHeld,
@@ -99,11 +110,12 @@ export async function evaluatePingWindow(redis, now = new Date()) {
 }
 
 /** Consume one daily GroupMe slot: bump the counter and stamp last-post time. */
-export async function consumeDailyPost(redis, now = new Date()) {
+export async function consumeDailyPost(redis, now = new Date(), navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis) return;
-  const newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
+  const { postsTodayKey, lastPostTsKey } = rumorBudgetKeys(navSlug);
+  const newCount = await redis.incr(postsTodayKey);
   if (newCount === 1) {
-    await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+    await redis.expire(postsTodayKey, secondsUntilPtMidnight(now));
   }
-  await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
+  await redis.set(lastPostTsKey, now.getTime());
 }
