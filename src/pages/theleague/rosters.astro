@@ -23,8 +23,10 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
-import { getTeamEligibility } from '../../utils/contract-eligibility';
+import { getTeamEligibility, getAugustCutdownDate, parseTransactions } from '../../utils/contract-eligibility';
 import { getDeclarations } from '../../utils/contract-storage';
+import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
+import CutdownPlanPanel from '../../components/theleague/CutdownPlanPanel.astro';
 import type { RosterPlayer, MFLPlayerInfo } from '../../types/contract-eligibility';
 import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../scripts/chart-utils';
@@ -2114,6 +2116,90 @@ for (const decl of allDeclarations) {
   }
 }
 
+// --- August auto-cut (Cutdown Plan) — owner-facing UI data -----------------
+// Window: Jun 1 → 3rd Sunday of August 8:45 PM PT (isCutWatch semantics,
+// hero-resolver.ts). getAugustCutdownDate is the single source of truth.
+// Honors ?testDate= like the planner phase does.
+const autocutRefDate =
+  plannerRefDate && !isNaN(plannerRefDate.getTime()) ? plannerRefDate : new Date();
+const autocutDeadline = getAugustCutdownDate(autocutRefDate.getFullYear());
+const autocutWindowActive =
+  autocutRefDate >= new Date(autocutRefDate.getFullYear(), 5, 1) &&
+  autocutRefDate <= autocutDeadline;
+
+// Pre-deadline privacy: this payload exists ONLY for the authenticated
+// owner's own franchise. Never build it for another team's marked list.
+let autocutConfig: {
+  year: number;
+  deadline: string;
+  deadlineLabel: string;
+  playerIds: string[];
+  updatedAt: string | null;
+  verifiedAt: string | null;
+  acquisitions: Array<{
+    type: string;
+    timestamp: number;
+    addedPlayerIds: string[];
+    franchise?: string;
+  }>;
+} | null = null;
+
+if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchiseId]) {
+  // Saved list + credential-verified timestamp (Redis; degrade gracefully).
+  let savedCutList: Awaited<ReturnType<typeof getCutList>> = null;
+  let autocutVerifiedAt: string | null = null;
+  try {
+    [savedCutList, autocutVerifiedAt] = await Promise.race([
+      Promise.all([
+        getCutList(authUser.franchiseId),
+        getCredentialCapturedAt(authUser.franchiseId),
+      ]),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Redis timeout')), 3000),
+      ),
+    ]);
+  } catch {
+    /* storage unavailable/slow — render the panel in its unsaved state */
+  }
+
+  // Acquisition events for the last-added fallback ordering. parseTransactions
+  // already excludes trades (ACQUISITION_TYPES only) — plan decision #9.
+  const rawTxFeed = loadFeedJson(currentLeagueYear, 'transactions.json');
+  const rawTxList = rawTxFeed?.transactions?.transaction ?? [];
+  const autocutAcquisitions = parseTransactions(
+    Array.isArray(rawTxList) ? rawTxList : [rawTxList],
+  )
+    .filter((t) => t.franchise === authUser.franchiseId)
+    .map((t) => ({
+      type: t.type,
+      timestamp: t.timestamp,
+      addedPlayerIds: t.addedPlayerIds,
+      franchise: t.franchise,
+    }));
+
+  const deadlineLabel = `${autocutDeadline.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })}, 8:45 PM PT`;
+
+  autocutConfig = {
+    year: currentLeagueYear,
+    deadline: autocutDeadline.toISOString(),
+    deadlineLabel,
+    // A stale list from a previous league year is ignored, not executed.
+    playerIds:
+      savedCutList && savedCutList.year === currentLeagueYear
+        ? savedCutList.playerIds
+        : [],
+    updatedAt:
+      savedCutList && savedCutList.year === currentLeagueYear
+        ? savedCutList.updatedAt
+        : null,
+    verifiedAt: autocutVerifiedAt,
+    acquisitions: autocutAcquisitions,
+  };
+}
+
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
   seasonOptions,
@@ -2139,10 +2225,11 @@ const serializedConfig = JSON.stringify({
   reserveForRookies: RESERVE_FOR_ROOKIES,
   collegeLogos: collegeLogosNormalized,
   authUser: authUser
-    ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId }
+    ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId, username: authUser.name }
     : testEligibility
-      ? { franchiseId: defaultTeamId, leagueId: THELEAGUE_ID }
+      ? { franchiseId: defaultTeamId, leagueId: THELEAGUE_ID, username: '' }
       : null,
+  autocut: autocutConfig,
   trendWeeks,
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
   eligibilityByTeam,
@@ -2675,6 +2762,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         </span>
       </div>
       </div>
+
+      <!-- Cutdown Plan (August auto-cut) — ships hidden; the client reveals
+           it only while the viewer is on their own franchise. -->
+      {autocutConfig && (
+        <CutdownPlanPanel
+          deadlineLabel={autocutConfig.deadlineLabel}
+          username={authUser?.name ?? ''}
+        />
+      )}
 
       <!-- Cap Subtotals Card -->
       <div class="chart-card chart-card--sub">
@@ -5220,6 +5316,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+  // Same selection function the deadline job runs — the Cutdown Plan preview
+  // and the automation's reality cannot drift (plan requirement).
+  import { selectAutoCuts } from '../../utils/august-cut-selection';
 
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
@@ -7167,6 +7266,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder">🏷️</a>`
             : '';
 
+          // August auto-cut badge — own team, cut window, active roster only
+          const autocutBadge =
+            isAutocutOwnView() && (player.displayTag || 'active') === 'active'
+              ? buildAutocutBadgeHTML(player.id)
+              : '';
+
           const playerCellHtml = buildPlayerCellHTML({
             name: player.name,
             headshot: player.headshot,
@@ -7195,7 +7300,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               offenseSnaps: player.offenseSnaps, defenseSnaps: player.defenseSnaps,
               stSnaps: player.stSnaps,
             },
-            afterName: injuryBadge + tradeBaitBadge,
+            afterName: injuryBadge + tradeBaitBadge + autocutBadge,
           });
 
           return `<tr data-player-id="${player.id}" data-birthdate="${player.birthdate ?? ''}" class="${rowClasses.join(' ')}">
@@ -8797,6 +8902,41 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             false, 'icon-ambulance'
           ));
         }
+
+        // August auto-cut toggle — cut window only, active-roster players
+        // only (taxi/IR are automation-exempt, so they simply never get the
+        // option). Sits between the roster moves and Cut Player: reversible
+        // marking reads as lighter than the irreversible cut. One click is
+        // an IMMEDIATE save of the full list (append-to-end priority) through
+        // the same step-up-auth path as the panel's Save button — mirrors the
+        // trade-block toggle, not the two-step roster-move confirm.
+        // isOwnTeam above trusts config.authUser, which demo mode spoofs — so
+        // gate the auto-cut option on isAutocutOwnView() (real fid + not demo),
+        // never isAutocutEnabled(). Keeps the option absent in demo and on any
+        // team that isn't the authenticated owner's own.
+        const autocutPid = String(cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '');
+        if (
+          tag === 'active' &&
+          isAutocutOwnView() &&
+          autocutPid &&
+          !autocutPid.startsWith('DEMO_')
+        ) {
+          const autocutPriority = getMarkedOnRoster().indexOf(autocutPid) + 1;
+          const isAutocutMarked = autocutPriority > 0;
+          // Badge-honesty mirror: a mark below the current cut line won't
+          // execute at today's roster count — don't imply it will.
+          const autocutBelowLine =
+            isAutocutMarked && autocutPriority > Math.max(computeAutocutSlate().overage, 0);
+          actionOptions.appendChild(makeCdmActionBtn(
+            'autocut-toggle',
+            isAutocutMarked ? 'Unmark auto-cut' : 'Mark for August auto-cut',
+            isAutocutMarked
+              ? `Priority #${autocutPriority} in your cut order${autocutBelowLine ? ' — below the cut line, safe unless your roster grows' : ''} — click to remove`
+              : `Cut automatically at the deadline if you're over ${config.targetActiveCount ?? 22}`,
+            () => toggleAutocutMark(autocutPid, isAutocutMarked),
+            false, 'icon-clipboard'
+          ));
+        }
       }
 
       actionOptions.appendChild(makeCdmActionBtn(
@@ -9266,6 +9406,1057 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // rebuilds rows from the bucket arrays we just mutated.
       updateView();
     };
+
+    // ================================================================
+    //  August auto-cut (Cutdown Plan) — Wave 2 UI
+    //
+    //  - CDM "Mark for August auto-cut" toggle: one click = an immediate
+    //    save of the full ordered list (append-to-end priority), through
+    //    the same step-up-auth path as the panel's Save button.
+    //  - Roster-row "AUTO-CUT #N" badges (own team, cut window only).
+    //  - Cutdown Plan panel: live slate via the shared selectAutoCuts,
+    //    drag/arrow reorder (staged — explicit Save persists), cap math
+    //    via calculateCutPenalty, "cut marked players now" batch flow
+    //    (KeeperPlanner pattern: sequential POSTs, 409 = already gone,
+    //    retry-failed-only).
+    //
+    //  Pre-deadline privacy: config.autocut exists only for the session
+    //  owner's own franchise; nothing here ever renders another team's
+    //  marked list.
+    // ================================================================
+    const autocutCfg = config.autocut || null;
+    const autocutState = {
+      playerIds: [...(autocutCfg?.playerIds || [])], // local working order
+      savedPlayerIds: [...(autocutCfg?.playerIds || [])], // last persisted order
+      savedUpdatedAt: autocutCfg?.updatedAt || null,
+      verifiedAt: autocutCfg?.verifiedAt || null,
+      saving: false,
+    };
+
+    // Privacy anchor: snapshot the REAL authenticated franchise id at module
+    // init, BEFORE Contract Demo's startDemo() can overwrite config.authUser
+    // with { franchiseId: currentTeam, ... }. Every autocut gate reads this,
+    // never config.authUser — otherwise entering demo on another franchise
+    // would spoof ownership and render that team's real cut list pre-deadline.
+    const AUTOCUT_REAL_FID = config.authUser?.franchiseId ?? null;
+
+    // Contract Demo active flag — declared HERE, not in the demo section
+    // below, because isAutocutOwnView() runs during the initial updateView()
+    // render, which executes before the demo section's declarations. Keeping
+    // the `let` down there put the read in the temporal dead zone and threw
+    // "Cannot access 'demoActive' before initialization", killing the whole
+    // page script for any logged-in owner during the cut window.
+    let demoActive = false;
+
+    const isAutocutEnabled = () => !!autocutCfg && !!AUTOCUT_REAL_FID;
+    // Own-view is false during demo (demoActive) on ANY team — demo data is
+    // fabricated and the overlay may mock rosters, so the panel + CDM option
+    // must vanish for the demo's duration and re-appear on exit (updateView →
+    // renderCutdownPanel re-renders on both enter and exit).
+    const isAutocutOwnView = () =>
+      isAutocutEnabled() && !demoActive && currentTeam === AUTOCUT_REAL_FID;
+
+    // Always the CURRENT league year's bucket for the owner's REAL franchise —
+    // the plan is year-scoped regardless of which season/team is being browsed.
+    const getAutocutTeamData = () =>
+      config.seasons?.[String(autocutCfg?.year)]?.teams?.[AUTOCUT_REAL_FID] || null;
+
+    const findAutocutPlayer = (playerId) => {
+      const td = getAutocutTeamData();
+      return (td?.players || []).find((p) => String(p.id) === String(playerId)) || null;
+    };
+
+    /** Marked ids still on the active roster, in priority order — drives
+     *  badge numbers, slate priorities, and the cut-now list. Off-roster
+     *  ids stay in the stored list but never surface (selectAutoCuts skips
+     *  them too). */
+    const getMarkedOnRoster = () => {
+      const td = getAutocutTeamData();
+      const active = new Set(
+        (td?.players || [])
+          .filter((p) => !String(p.id).startsWith('DEMO_'))
+          .map((p) => String(p.id)),
+      );
+      return autocutState.playerIds.filter((id) => active.has(id));
+    };
+
+    /** Run the SAME selection function the deadline job runs. */
+    const computeAutocutSlate = () => {
+      const td = getAutocutTeamData();
+      const activeRoster = (td?.players || [])
+        .filter((p) => !String(p.id).startsWith('DEMO_'))
+        .map((p) => ({ id: String(p.id), status: 'ROSTER' }));
+      return selectAutoCuts({
+        activeRoster,
+        markedPlayerIds: autocutState.playerIds,
+        acquisitions: autocutCfg?.acquisitions || [],
+        franchiseId: AUTOCUT_REAL_FID,
+      });
+    };
+
+    const escCdp = (s) =>
+      String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    const fmtCdpDate = (value) => {
+      const d = typeof value === 'number' ? new Date(value) : new Date(String(value));
+      return isNaN(d.getTime())
+        ? ''
+        : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    // ---- Roster-row badge ("AUTO-CUT #2" / "MARKED #4") ------------
+    // Badge honesty: only marks at/above the current cut line (priority ≤
+    // overage) will actually execute; marks beyond it are staged and safe
+    // unless the roster grows — say so instead of implying execution.
+    const buildAutocutBadgeHTML = (playerId) => {
+      const priority = getMarkedOnRoster().indexOf(String(playerId)) + 1;
+      if (priority < 1) return '';
+      const cutLine = Math.max(computeAutocutSlate().overage, 0);
+      const belowLine = priority > cutLine;
+      const title = belowLine
+        ? `Marked #${priority} — below the current cut line; safe unless your roster grows`
+        : `Marked for August auto-cut — priority ${priority}`;
+      return (
+        `<span class="autocut-badge${belowLine ? ' autocut-badge--below-line' : ''}" title="${title}">` +
+        `<svg aria-hidden="true" width="12" height="12"><use href="/assets/icons/sprite.svg#icon-clipboard"></use></svg>` +
+        `<span>${belowLine ? 'MARKED' : 'AUTO-CUT'} #${priority}</span></span>`
+      );
+    };
+
+    /** Sync badges in place (mark/unmark/reorder) — badge-only DOM update,
+     *  same class of fix as the trade-bait badge; no section boundary is
+     *  crossed so no full updateView() is needed. */
+    const refreshAutocutBadges = () => {
+      const rows = document.querySelectorAll('#rosterTableBody tr[data-player-id]');
+      if (!rows.length) return;
+      const own = isAutocutOwnView();
+      const marked = own ? getMarkedOnRoster() : [];
+      rows.forEach((row) => {
+        const pid = String(row.dataset.playerId);
+        const priority = marked.indexOf(pid) + 1;
+        const shouldShow =
+          own && priority > 0 && row.classList.contains('roster-row--active');
+        const existing = row.querySelector('.autocut-badge');
+        if (!shouldShow) {
+          if (existing) existing.remove();
+          return;
+        }
+        if (existing) {
+          existing.outerHTML = buildAutocutBadgeHTML(pid);
+        } else {
+          const nameEl = row.querySelector('.player-cell__name');
+          if (nameEl) nameEl.insertAdjacentHTML('beforeend', buildAutocutBadgeHTML(pid));
+        }
+      });
+    };
+
+    // ---- Save plumbing (shared by CDM toggle + panel Save) ---------
+    /** POST the full ordered list. Returns { ok, requiresReauth, error, data }. */
+    const postCutList = async (playerIds) => {
+      try {
+        const res = await fetch('/api/autocut-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ year: autocutCfg.year, playerIds }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data?.requiresReauth) return { ok: false, requiresReauth: true };
+        if (!res.ok || !data?.success) {
+          return { ok: false, error: data?.error || `HTTP ${res.status}` };
+        }
+        return { ok: true, data };
+      } catch (err) {
+        return { ok: false, error: err?.message || 'Network error' };
+      }
+    };
+
+    const commitAutocutSave = (playerIds, data) => {
+      autocutState.playerIds = [...playerIds];
+      autocutState.savedPlayerIds = [...playerIds];
+      autocutState.savedUpdatedAt = data?.data?.updatedAt || new Date().toISOString();
+      if (data?.credentialStored && data?.credentialCapturedAt) {
+        autocutState.verifiedAt = data.credentialCapturedAt;
+      } else if (data && data.credentialStored === false) {
+        // Saved, but the server couldn't store the credential — the muted
+        // note in the save-status line surfaces this.
+        autocutState.verifiedAt = null;
+      }
+      refreshAutocutBadges();
+      renderCutdownPanel();
+    };
+
+    // ---- Save-race guard -------------------------------------------
+    // The CDM toggle and the panel Save both POST the full ordered list. If
+    // two overlap, the slower response used to clobber the faster one on both
+    // client and server. A monotonic token stamps each save; only the newest
+    // one in flight is allowed to commit — stale responses are discarded.
+    let autocutSaveSeq = 0;
+
+    /** Single commit path for BOTH entry points. Bumps the token, POSTs, and
+     *  only commits if this save is still the newest. Clears the in-flight
+     *  flag on the winning save (a superseded save leaves it for the newer
+     *  writer that owns it). Returns the postCutList result plus { stale }. */
+    const postAndCommit = async (newIds) => {
+      const mySeq = ++autocutSaveSeq;
+      const result = await postCutList(newIds);
+      if (mySeq !== autocutSaveSeq) {
+        // A newer save superseded this one — do not commit, do not touch
+        // state or the saving flag (the newer writer owns both).
+        console.debug('[autocut] stale save discarded', mySeq, autocutSaveSeq);
+        return { ...result, stale: true };
+      }
+      autocutState.saving = false;
+      if (result.ok) commitAutocutSave(newIds, result.data);
+      return result;
+    };
+
+    // ---- Step-up auth: inline MFL re-login modal -------------------
+    let cdpReauthCtx = null; // { onSuccess, onCancel, returnFocusTo }
+
+    const openCdpReauthModal = (ctx) => {
+      const overlay = document.getElementById('cdp-reauth-overlay');
+      if (!overlay) return;
+      cdpReauthCtx = ctx || {};
+      const errEl = document.getElementById('cdp-reauth-error');
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.removeAttribute('role');
+        errEl.textContent = '';
+      }
+      const pw = document.getElementById('cdp-reauth-password');
+      if (pw) pw.value = '';
+      const submitBtn = document.getElementById('cdp-reauth-submit');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log in & save';
+      }
+      overlay.hidden = false;
+      setTimeout(() => {
+        const user = document.getElementById('cdp-reauth-username');
+        (user && !user.value ? user : pw)?.focus();
+      }, 0);
+    };
+
+    const closeCdpReauthModal = (cancelled) => {
+      const overlay = document.getElementById('cdp-reauth-overlay');
+      if (!overlay || overlay.hidden) return;
+      overlay.hidden = true;
+      const ctx = cdpReauthCtx;
+      cdpReauthCtx = null;
+      if (ctx?.returnFocusTo?.isConnected) ctx.returnFocusTo.focus();
+      if (cancelled && ctx?.onCancel) ctx.onCancel();
+    };
+
+    // ---- CDM action-option toggle ----------------------------------
+    const toggleAutocutMark = async (playerId, isMarked) => {
+      const actionOptions = document.getElementById('cdm-action-options');
+      const btn = actionOptions?.querySelector('.cdm-action-option--autocut-toggle');
+      const label = btn?.querySelector('.cdm-action-option__label');
+      const desc = btn?.querySelector('.cdm-action-option__desc');
+
+      // Race guard: refuse to start a second write while the panel Save (or a
+      // prior toggle) is still in flight — surface the same quiet in-place
+      // message pattern the option uses for other transient states.
+      if (autocutState.saving) {
+        if (desc) desc.textContent = 'A save is already in progress — try again in a moment.';
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (label) label.textContent = isMarked ? 'Removing…' : 'Marking…';
+      if (desc) desc.textContent = 'Saving your cut list…';
+
+      // Marking always appends to the end — lowest priority. Reordering
+      // happens only in the Cutdown Plan panel.
+      const newIds = isMarked
+        ? autocutState.playerIds.filter((id) => id !== playerId)
+        : [...autocutState.playerIds.filter((id) => id !== playerId), playerId];
+
+      const restore = (message) => {
+        if (label) label.textContent = isMarked ? 'Unmark auto-cut' : 'Mark for August auto-cut';
+        if (desc) desc.textContent = message || 'Something went wrong. Try again.';
+        if (btn) btn.disabled = false;
+      };
+
+      // State commit + re-render now live in postAndCommit; this only handles
+      // the toggle-specific announce + option re-render on a winning save.
+      const finishSuccess = () => {
+        const announcer = document.getElementById('cdm-announcer');
+        if (announcer) {
+          const priority = getMarkedOnRoster().indexOf(playerId) + 1;
+          announcer.textContent = isMarked
+            ? 'Player removed from auto-cut list'
+            : `Player marked for auto-cut, priority ${priority}`;
+          setTimeout(() => {
+            announcer.textContent = '';
+          }, 1500);
+        }
+        // Do NOT auto-close the modal (unlike trade-block) — re-render the
+        // option in place so the owner can keep marking players.
+        if (cdmPlayerData) populateCdmActionOptions(cdmPlayerData.eligibility);
+        // The rebuild destroyed the clicked button — restore keyboard focus
+        // to the fresh toggle so repeated marking doesn't drop focus.
+        document
+          .querySelector('#cdm-action-options .cdm-action-option--autocut-toggle')
+          ?.focus();
+      };
+
+      autocutState.saving = true;
+      const result = await postAndCommit(newIds);
+      if (result.stale) {
+        // Superseded by a newer save — leave the newest writer's UI in place.
+        return;
+      }
+      if (result.ok) {
+        finishSuccess();
+        return;
+      }
+      if (result.requiresReauth) {
+        openCdpReauthModal({
+          returnFocusTo: btn,
+          onCancel: () =>
+            restore(
+              isMarked
+                ? 'Re-login cancelled — player is still marked.'
+                : 'Re-login cancelled — player was not marked.',
+            ),
+          onSuccess: async () => {
+            autocutState.saving = true;
+            const retry = await postAndCommit(newIds);
+            if (retry.stale) return;
+            if (retry.ok) finishSuccess();
+            else restore(retry.error || 'Save failed after re-login. Try again.');
+          },
+        });
+        return;
+      }
+      restore(result.error);
+    };
+
+    // ---- Cutdown Plan panel rendering -------------------------------
+    const renderCdpCountdown = () => {
+      // The interval tick keeps firing after a view/demo switch hides the
+      // panel — never write countdown copy unless this is the owner's view.
+      if (!isAutocutOwnView()) return;
+      const el = document.getElementById('cdp-status-countdown');
+      if (!el || !autocutCfg) return;
+      const ms = new Date(autocutCfg.deadline).getTime() - Date.now();
+      if (ms <= 0) {
+        el.textContent = 'deadline passed';
+        return;
+      }
+      const days = Math.floor(ms / 86400000);
+      const hours = Math.floor(ms / 3600000);
+      el.innerHTML =
+        days >= 2
+          ? `deadline in <strong>${days} days</strong>`
+          : hours >= 1
+            ? `deadline in <strong>${hours} hour${hours === 1 ? '' : 's'}</strong>`
+            : 'deadline in <strong>under an hour</strong>';
+    };
+
+    const renderCdpSaveState = (opts = {}) => {
+      const statusEl = document.getElementById('cdp-save-status');
+      const saveBtn = document.getElementById('cdp-save-btn');
+      const banner = document.getElementById('cdp-unsaved-banner');
+      const dirty =
+        autocutState.playerIds.join(',') !== autocutState.savedPlayerIds.join(',');
+      if (banner) banner.hidden = !dirty || autocutState.saving;
+      if (saveBtn) {
+        saveBtn.disabled = autocutState.saving;
+        saveBtn.textContent = autocutState.saving ? 'Saving…' : 'Save cut list';
+      }
+      if (!statusEl) return;
+      if (opts.error) {
+        statusEl.dataset.state = 'error';
+        // Set role BEFORE text so role-change-with-content AT combos announce
+        // (same pattern as cdm-roster-move-error).
+        statusEl.setAttribute('role', 'alert');
+        statusEl.textContent = opts.error;
+        statusEl.setAttribute('tabindex', '-1');
+        statusEl.focus();
+        return;
+      }
+      statusEl.removeAttribute('role');
+      if (autocutState.savedUpdatedAt && autocutState.verifiedAt) {
+        statusEl.dataset.state = 'verified';
+        statusEl.innerHTML =
+          `<span class="cdp-save-status__check">✓</span> Cuts locked in — credentials verified ${fmtCdpDate(autocutState.verifiedAt)}. ` +
+          `You can change this list until ${escCdp(autocutCfg.deadlineLabel)}.`;
+      } else if (autocutState.savedUpdatedAt) {
+        statusEl.dataset.state = 'saved';
+        statusEl.innerHTML =
+          `Cut list saved ${fmtCdpDate(autocutState.savedUpdatedAt)}, but your login isn't verified.` +
+          `<span class="cdp-save-status__muted">The deadline automation may not be able to execute these cuts. Re-save to refresh.</span>`;
+      } else {
+        statusEl.dataset.state = 'none';
+        statusEl.textContent = '';
+      }
+    };
+
+    const buildCdpCapHTML = (salary, penalty) => {
+      const savings = salary - penalty.currentPenalty;
+      return (
+        `<div class="cdp-slate__cap">` +
+        `<span class="cdp-slate__cap-item">Salary <strong>${formatSalaryCompact(salary)}</strong></span>` +
+        `<span class="cdp-slate__cap-item">Dead cap <strong>${formatSalaryCompact(penalty.currentPenalty)}</strong></span>` +
+        `<span class="cdp-slate__cap-item cdp-slate__cap-item--savings">Net savings <strong>${formatSalaryCompact(savings)}</strong></span>` +
+        `</div>`
+      );
+    };
+
+    const buildCdpPlayerCell = (playerId) => {
+      const player = findAutocutPlayer(playerId);
+      if (!player) return `<span>Player ${escCdp(playerId)}</span>`;
+      return buildPlayerCellHTML({
+        name: player.name,
+        headshot: player.headshot,
+        position: player.position,
+        nflTeam: player.nflTeam,
+        size: 'compact',
+        mflId: String(player.id),
+        espnId: player.espnId,
+      });
+    };
+
+    const renderCutdownPanel = () => {
+      const panel = document.getElementById('cutdown-plan-panel');
+      if (!panel) return;
+      if (!isAutocutOwnView()) {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+
+      const slate = computeAutocutSlate();
+      const cutsNeeded = Math.max(slate.overage, 0);
+
+      // Counts live region — only rewrite on real changes so the per-minute
+      // countdown tick (separate, non-live span) never spams AT users.
+      const liveEl = document.getElementById('cdp-status-live');
+      if (liveEl) {
+        const html =
+          `<strong>${slate.activeCount}</strong> active · ` +
+          `<strong>${cutsNeeded}</strong> ${cutsNeeded === 1 ? 'cut' : 'cuts'} needed ·`;
+        if (liveEl.innerHTML !== html) liveEl.innerHTML = html;
+      }
+      renderCdpCountdown();
+
+      const collapsedEl = document.getElementById('cdp-collapsed');
+      const bodyEl = document.getElementById('cdp-body');
+
+      if (slate.overage <= 0) {
+        const markedCount = getMarkedOnRoster().length;
+        const copyEl = document.getElementById('cdp-collapsed-copy');
+        if (copyEl) {
+          copyEl.textContent =
+            markedCount > 0
+              ? `You're at the limit — nothing will be cut. Your ${markedCount} marked player${markedCount === 1 ? ' is' : 's are'} safe unless you go back over.`
+              : "You're at the limit — nothing will be cut.";
+        }
+        if (collapsedEl) collapsedEl.hidden = false;
+        if (bodyEl) bodyEl.hidden = true;
+        return;
+      }
+      if (collapsedEl) collapsedEl.hidden = true;
+      if (bodyEl) bodyEl.hidden = false;
+
+      const slateEl = document.getElementById('cdp-slate');
+      const markedCutIds = slate.cuts
+        .filter((c) => c.reason === 'marked')
+        .map((c) => c.playerId);
+      // Native HTML5 DnD is unreliable on touch — arrows are the only
+      // reorder mechanism on mobile.
+      const dragEnabled = window.matchMedia('(pointer: fine)').matches;
+      let totalSalary = 0;
+      let totalDead = 0;
+      let totalSavings = 0;
+
+      if (slateEl) {
+        slateEl.innerHTML = slate.cuts
+          .map((cut) => {
+            const player = findAutocutPlayer(cut.playerId);
+            const name = player?.name || `Player ${cut.playerId}`;
+            const salary = Number(player?.salary ?? 0);
+            const years = parseInt(player?.contractYears, 10) || 1;
+            const penalty = calculateCutPenalty(salary, years);
+            totalSalary += salary;
+            totalDead += penalty.currentPenalty;
+            totalSavings += salary - penalty.currentPenalty;
+
+            if (cut.reason === 'marked') {
+              const idx = markedCutIds.indexOf(cut.playerId);
+              const priority = idx + 1;
+              const total = markedCutIds.length;
+              return (
+                `<li class="cdp-slate__row cdp-slate__row--marked" data-player-id="${escCdp(cut.playerId)}" draggable="${dragEnabled ? 'true' : 'false'}">` +
+                `<span class="cdp-slate__priority" aria-hidden="true">${priority}</span>` +
+                `<div class="cdp-slate__reorder" role="group" aria-label="Reorder ${escCdp(name)}, priority ${priority} of ${total}">` +
+                `<button type="button" class="cdp-arrow" data-direction="up" data-player-id="${escCdp(cut.playerId)}" aria-label="Move ${escCdp(name)} up in cut priority"${idx === 0 ? ' disabled' : ''}>` +
+                `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-up"></use></svg></button>` +
+                `<button type="button" class="cdp-arrow" data-direction="down" data-player-id="${escCdp(cut.playerId)}" aria-label="Move ${escCdp(name)} down in cut priority"${idx === total - 1 ? ' disabled' : ''}>` +
+                `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-down"></use></svg></button>` +
+                `</div>` +
+                `<div class="cdp-slate__player">${buildCdpPlayerCell(cut.playerId)}</div>` +
+                `<span class="cdp-slate__reason"><strong>Marked by you</strong></span>` +
+                buildCdpCapHTML(salary, penalty) +
+                `</li>`
+              );
+            }
+
+            const addedTxt = cut.acquisitionTimestamp
+              ? `added ${fmtCdpDate(cut.acquisitionTimestamp * 1000)} · `
+              : '';
+            return (
+              `<li class="cdp-slate__row cdp-slate__row--auto" data-player-id="${escCdp(cut.playerId)}">` +
+              `<div class="cdp-slate__player">${buildCdpPlayerCell(cut.playerId)}</div>` +
+              `<span class="cdp-slate__reason"><strong>Auto-selected (last added)</strong> · ${addedTxt}mark another player to protect this one</span>` +
+              buildCdpCapHTML(salary, penalty) +
+              `</li>`
+            );
+          })
+          .join('');
+      }
+
+      const footerEl = document.getElementById('cdp-footer');
+      if (footerEl) {
+        const n = slate.cuts.length;
+        footerEl.innerHTML =
+          `These <strong>${n}</strong> cut${n === 1 ? '' : 's'} free <strong>${_capSpaceFmt.format(totalSavings)}</strong>, ` +
+          `cost <strong>${_capSpaceFmt.format(totalDead)}</strong> in dead cap`;
+      }
+
+      const cutnowBtn = document.getElementById('cdp-cutnow-btn');
+      if (cutnowBtn) {
+        cutnowBtn.disabled = markedCutIds.length === 0;
+        cutnowBtn.title =
+          markedCutIds.length === 0
+            ? 'Nothing to cut yet — this button only cuts players you marked'
+            : '';
+      }
+
+      renderCdpSaveState();
+    };
+
+    // ---- Reorder (arrows + drag) — staged, explicit Save persists ---
+    const applyMarkedOrder = (orderedOnRoster) => {
+      // Off-roster marked ids (already traded/cut) keep trailing positions;
+      // they're invisible and skipped by selectAutoCuts.
+      const offRoster = autocutState.playerIds.filter(
+        (id) => !orderedOnRoster.includes(id),
+      );
+      autocutState.playerIds = [...orderedOnRoster, ...offRoster];
+      refreshAutocutBadges();
+      renderCutdownPanel();
+    };
+
+    const reorderAutocutMarked = (playerId, direction) => {
+      const marked = getMarkedOnRoster();
+      const idx = marked.indexOf(String(playerId));
+      if (idx < 0) return;
+      const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapWith < 0 || swapWith >= marked.length) return;
+      [marked[idx], marked[swapWith]] = [marked[swapWith], marked[idx]];
+      applyMarkedOrder(marked);
+    };
+
+    // ---- Panel Save ------------------------------------------------
+    const saveCutListFromPanel = async () => {
+      if (!autocutCfg || autocutState.saving) return;
+      autocutState.saving = true;
+      renderCdpSaveState(); // disables the Save button for the flight's duration
+      const ids = [...autocutState.playerIds];
+      // postAndCommit owns the sequence token, the state commit, and clearing
+      // autocutState.saving on the winning save (commitAutocutSave → panel
+      // re-render already reflects the settled saving=false state).
+      const result = await postAndCommit(ids);
+      if (result.stale) {
+        // A newer save superseded this one — it owns the flag + final render.
+        return;
+      }
+      if (result.ok) {
+        renderCdpSaveState();
+        return;
+      }
+      if (result.requiresReauth) {
+        renderCdpSaveState();
+        openCdpReauthModal({
+          returnFocusTo: document.getElementById('cdp-save-btn'),
+          onSuccess: async () => {
+            autocutState.saving = true;
+            renderCdpSaveState();
+            const retry = await postAndCommit(ids);
+            if (retry.stale) return;
+            if (retry.ok) renderCdpSaveState();
+            else renderCdpSaveState({ error: retry.error || 'Save failed after re-login. Try again.' });
+          },
+        });
+        return;
+      }
+      renderCdpSaveState({ error: result.error || 'Save failed. Try again.' });
+    };
+
+    // ---- "Cut marked players now" (KeeperPlanner finalize port) -----
+    let cdpCutRetryIds = null; // after a partial failure, retry ONLY these
+    let cdpCutInProgress = false;
+    let cdpCutFinished = false;
+
+    const closeCutNowModal = () => {
+      if (cdpCutInProgress) return; // never close mid-batch
+      const overlay = document.getElementById('cdp-cutnow-overlay');
+      if (!overlay || overlay.hidden) return;
+      overlay.hidden = true;
+      document.getElementById('cdp-cutnow-btn')?.focus();
+    };
+
+    const openCutNowModal = () => {
+      const overlay = document.getElementById('cdp-cutnow-overlay');
+      if (!overlay) return;
+      // Fresh confirm session against the CURRENT slate — a retry subset
+      // from an earlier partial failure must not survive a reopen.
+      cdpCutRetryIds = null;
+      cdpCutFinished = false;
+
+      const slate = computeAutocutSlate();
+      const markedCuts = slate.cuts.filter((c) => c.reason === 'marked');
+      if (!markedCuts.length) return;
+
+      let totalDead = 0;
+      let totalSavings = 0;
+      const listEl = document.getElementById('cdp-cutnow-list');
+      if (listEl) {
+        listEl.innerHTML = markedCuts
+          .map((cut, i) => {
+            const player = findAutocutPlayer(cut.playerId);
+            const salary = Number(player?.salary ?? 0);
+            const years = parseInt(player?.contractYears, 10) || 1;
+            const penalty = calculateCutPenalty(salary, years);
+            totalDead += penalty.currentPenalty;
+            totalSavings += salary - penalty.currentPenalty;
+            return (
+              `<li class="cdp-slate__row cdp-slate__row--marked" data-player-id="${escCdp(cut.playerId)}">` +
+              `<span class="cdp-slate__priority" aria-hidden="true">${i + 1}</span>` +
+              `<div class="cdp-slate__player">${buildCdpPlayerCell(cut.playerId)}</div>` +
+              `<span class="cdp-slate__reason" data-row-status></span>` +
+              buildCdpCapHTML(salary, penalty) +
+              `</li>`
+            );
+          })
+          .join('');
+      }
+
+      const names = markedCuts
+        .map((c) => findAutocutPlayer(c.playerId)?.name || c.playerId)
+        .join(', ');
+      const copyEl = document.getElementById('cdp-cutnow-copy');
+      if (copyEl) {
+        copyEl.innerHTML =
+          `Cutting will release <strong>${markedCuts.length}</strong> player${markedCuts.length === 1 ? '' : 's'} from your roster on MFL: ${escCdp(names)}. ` +
+          `Together these free <strong>${_capSpaceFmt.format(totalSavings)}</strong> and cost <strong>${_capSpaceFmt.format(totalDead)}</strong> in dead cap. ` +
+          `This cannot be undone.`;
+      }
+
+      const progress = document.getElementById('cdp-cutnow-progress');
+      const errEl = document.getElementById('cdp-cutnow-error');
+      const confirmBtn = document.getElementById('cdp-cutnow-confirm');
+      const cancelBtn = document.getElementById('cdp-cutnow-cancel');
+      if (progress) progress.hidden = true;
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.innerHTML = '';
+        // A fresh confirm session must not inherit last run's alert state.
+        errEl.removeAttribute('role');
+        errEl.removeAttribute('tabindex');
+      }
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Cut these players';
+      }
+      if (cancelBtn) cancelBtn.disabled = false;
+
+      overlay.hidden = false;
+      setTimeout(() => cancelBtn?.focus(), 0);
+    };
+
+    /** Remove cut players from the local roster + local marked lists, then
+     *  full re-render — a cut crosses a table-section boundary, so a class
+     *  flip isn't enough (frontend.md multi-section-table insight). The
+     *  server list keeps the now-departed ids; every consumer skips them. */
+    const applyAutocutCuts = (playerIds) => {
+      const idSet = new Set(playerIds.map(String));
+      const td = getAutocutTeamData();
+      if (td) {
+        td.players = (td.players || []).filter((p) => !idSet.has(String(p.id)));
+      }
+      autocutState.playerIds = autocutState.playerIds.filter((id) => !idSet.has(id));
+      autocutState.savedPlayerIds = autocutState.savedPlayerIds.filter(
+        (id) => !idSet.has(id),
+      );
+      updateView();
+    };
+
+    const runCutNowBatch = async () => {
+      const overlay = document.getElementById('cdp-cutnow-overlay');
+      if (!overlay) return;
+      if (cdpCutFinished) {
+        cdpCutFinished = false;
+        closeCutNowModal();
+        return;
+      }
+
+      const slate = computeAutocutSlate();
+      const allMarkedIds = slate.cuts
+        .filter((c) => c.reason === 'marked')
+        .map((c) => c.playerId);
+      // Defensive intersect (KeeperPlanner): never cut anything outside the
+      // current marked slate, even if a stale retry subset survives.
+      const cutIds = (cdpCutRetryIds ?? allMarkedIds).filter((id) =>
+        allMarkedIds.includes(id),
+      );
+      if (!cutIds.length) {
+        closeCutNowModal();
+        return;
+      }
+
+      const progress = document.getElementById('cdp-cutnow-progress');
+      const bar = document.getElementById('cdp-cutnow-bar-fill');
+      const label = document.getElementById('cdp-cutnow-progress-label');
+      const errEl = document.getElementById('cdp-cutnow-error');
+      const confirmBtn = document.getElementById('cdp-cutnow-confirm');
+      const cancelBtn = document.getElementById('cdp-cutnow-cancel');
+      if (errEl) errEl.hidden = true;
+      if (progress) progress.hidden = false;
+      if (bar) bar.style.width = '0%';
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Cutting…';
+      }
+      if (cancelBtn) cancelBtn.disabled = true;
+      cdpCutInProgress = true;
+
+      let done = 0;
+      const failures = [];
+      // Names must be captured BEFORE applyAutocutCuts prunes the roster.
+      const nameOf = new Map(
+        cutIds.map((id) => [id, findAutocutPlayer(id)?.name || id]),
+      );
+      for (const id of cutIds) {
+        try {
+          const res = await fetch('/api/cut-player', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: String(id), year: autocutCfg.year }),
+          });
+          const data = await res.json().catch(() => ({}));
+          // 409 = already off the roster on MFL — desired end state is true,
+          // count it as done so retries converge (KeeperPlanner pattern).
+          if (res.status !== 409 && (!res.ok || !data?.success)) {
+            failures.push({ id, message: data?.message || `HTTP ${res.status}` });
+          }
+        } catch (err) {
+          failures.push({ id, message: err?.message || 'Network error' });
+        }
+        done += 1;
+        if (label) label.textContent = `Cut ${done} of ${cutIds.length}…`;
+        if (bar) bar.style.width = `${Math.round((done / cutIds.length) * 100)}%`;
+      }
+      cdpCutInProgress = false;
+
+      const failedIds = new Set(failures.map((f) => f.id));
+      const succeeded = cutIds.filter((id) => !failedIds.has(id));
+      if (succeeded.length) applyAutocutCuts(succeeded);
+
+      if (!failures.length) {
+        cdpCutRetryIds = null;
+        cdpCutFinished = true;
+        if (label) label.textContent = `All ${cutIds.length} cuts processed on MFL.`;
+        const copyEl = document.getElementById('cdp-cutnow-copy');
+        if (copyEl) {
+          copyEl.textContent =
+            'Done — the cuts went through on MFL and your roster below is updated.';
+        }
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Close';
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+      } else {
+        cdpCutRetryIds = failures.map((f) => f.id);
+        // Don't leave the aria-live progress label stale on failure — it's
+        // what AT users hear first.
+        if (label) {
+          label.textContent = `${failures.length} of ${cutIds.length} cuts failed — see details`;
+        }
+        if (errEl) {
+          // Set role BEFORE content so role-change-with-content AT combos
+          // announce (same pattern as renderCdpSaveState).
+          errEl.setAttribute('role', 'alert');
+          errEl.innerHTML =
+            `<strong>${failures.length} of ${cutIds.length} cuts failed.</strong><br/>` +
+            failures
+              .map((f) => `${escCdp(nameOf.get(f.id))}: ${escCdp(f.message)}`)
+              .join('<br/>') +
+            '<br/><br/>Any successful cuts went through. Retry runs only the failed players.';
+          errEl.hidden = false;
+          errEl.setAttribute('tabindex', '-1');
+          errEl.focus();
+        }
+        // Per-player inline failure state on the confirmation rows
+        const listEl = document.getElementById('cdp-cutnow-list');
+        failures.forEach((f) => {
+          const rowStatus = listEl?.querySelector(
+            `[data-player-id="${f.id}"] [data-row-status]`,
+          );
+          if (rowStatus) rowStatus.textContent = `❌ ${f.message}`;
+        });
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Retry failed cuts';
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+      }
+    };
+
+    // ---- One-time bindings (guarded — initRosterPage re-runs on
+    //      astro:page-load; element guards use dataset flags, the
+    //      document-level Escape handler uses a window flag) ----------
+    const initCutdownPanelBindings = () => {
+      const panel = document.getElementById('cutdown-plan-panel');
+      if (!panel) return;
+
+      if (!panel.dataset.cdpBound) {
+        panel.dataset.cdpBound = '1';
+        document.getElementById('cdp-save-btn')?.addEventListener('click', saveCutListFromPanel);
+        document.getElementById('cdp-unsaved-save')?.addEventListener('click', saveCutListFromPanel);
+        document.getElementById('cdp-cutnow-btn')?.addEventListener('click', openCutNowModal);
+
+        const slateEl = document.getElementById('cdp-slate');
+        if (slateEl) {
+          slateEl.addEventListener('click', (e) => {
+            const arrow = e.target.closest('.cdp-arrow');
+            if (!arrow || arrow.disabled) return;
+            const pid = arrow.dataset.playerId;
+            const dir = arrow.dataset.direction;
+            reorderAutocutMarked(pid, dir);
+            // Re-render destroyed the clicked button — restore keyboard focus
+            // to the same control (or its sibling when it hit an edge).
+            const same = slateEl.querySelector(
+              `.cdp-arrow[data-direction="${dir}"][data-player-id="${pid}"]`,
+            );
+            if (same && !same.disabled) same.focus();
+            else
+              slateEl
+                .querySelector(`.cdp-arrow[data-player-id="${pid}"]:not(:disabled)`)
+                ?.focus();
+          });
+
+          // Drag reorder — desktop only (rows render draggable=false on touch)
+          let cdpDragId = null;
+          slateEl.addEventListener('dragstart', (e) => {
+            const row = e.target.closest('.cdp-slate__row--marked');
+            if (!row) return;
+            cdpDragId = row.dataset.playerId;
+            try {
+              e.dataTransfer?.setData('text/plain', cdpDragId);
+              if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+            } catch {
+              /* older browsers */
+            }
+            row.classList.add('cdp-dragging');
+          });
+          slateEl.addEventListener('dragend', () => {
+            cdpDragId = null;
+            slateEl
+              .querySelectorAll('.cdp-dragging, .cdp-drop-target')
+              .forEach((el) => el.classList.remove('cdp-dragging', 'cdp-drop-target'));
+          });
+          slateEl.addEventListener('dragover', (e) => {
+            const row = e.target.closest('.cdp-slate__row--marked');
+            if (!row || !cdpDragId || row.dataset.playerId === cdpDragId) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+            slateEl
+              .querySelectorAll('.cdp-drop-target')
+              .forEach((el) => el.classList.remove('cdp-drop-target'));
+            row.classList.add('cdp-drop-target');
+          });
+          slateEl.addEventListener('drop', (e) => {
+            const row = e.target.closest('.cdp-slate__row--marked');
+            if (!row) return;
+            e.preventDefault();
+            const dragId = cdpDragId || e.dataTransfer?.getData('text/plain') || '';
+            const targetId = row.dataset.playerId;
+            if (!dragId || dragId === targetId) return;
+            const marked = getMarkedOnRoster();
+            const from = marked.indexOf(dragId);
+            const to = marked.indexOf(targetId);
+            if (from < 0 || to < 0) return;
+            marked.splice(from, 1);
+            marked.splice(to, 0, dragId);
+            applyMarkedOrder(marked);
+          });
+        }
+      }
+
+      // Re-login modal
+      const reauthOverlay = document.getElementById('cdp-reauth-overlay');
+      if (reauthOverlay && !reauthOverlay.dataset.cdpBound) {
+        reauthOverlay.dataset.cdpBound = '1';
+        document
+          .getElementById('cdp-reauth-cancel')
+          ?.addEventListener('click', () => closeCdpReauthModal(true));
+        reauthOverlay.addEventListener('click', (e) => {
+          if (e.target === reauthOverlay) closeCdpReauthModal(true);
+        });
+        // Focus trap (NavDrawer recipe): wrap Tab/Shift+Tab inside the dialog
+        reauthOverlay.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return;
+          const focusables = Array.from(
+            reauthOverlay.querySelectorAll('input, button'),
+          ).filter((el) => !el.disabled && el.offsetParent !== null);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        });
+        document.getElementById('cdp-reauth-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const username = document.getElementById('cdp-reauth-username')?.value?.trim();
+          const password = document.getElementById('cdp-reauth-password')?.value;
+          const errEl = document.getElementById('cdp-reauth-error');
+          const submitBtn = document.getElementById('cdp-reauth-submit');
+          if (!username || !password) return;
+          if (errEl) {
+            errEl.hidden = true;
+            errEl.removeAttribute('role');
+            errEl.textContent = '';
+          }
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in…';
+          }
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username,
+                password,
+                leagueId: config.authUser?.leagueId || config.defaultLeagueId,
+                year: autocutCfg?.year,
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data?.success) {
+              throw new Error(data?.message || 'Login failed. Check your password.');
+            }
+            // IDENTITY GUARD: the re-login must be for THIS franchise. If the
+            // owner logged in with an MFL account that owns a different team,
+            // re-firing the save would clobber the other franchise's cut list
+            // (and its captured credential). Abort with a clear message.
+            const normFid = (id) => {
+              const s = String(id ?? '').trim();
+              return /^\d+$/.test(s) ? s.padStart(4, '0') : s;
+            };
+            const loggedInFid = normFid(data?.user?.franchiseId);
+            if (AUTOCUT_REAL_FID && loggedInFid && loggedInFid !== normFid(AUTOCUT_REAL_FID)) {
+              throw new Error(
+                'That MFL account owns a different franchise — log in with the account for this team.',
+              );
+            }
+            // Success: close (not a cancel), then re-fire the pending save.
+            const ctx = cdpReauthCtx;
+            cdpReauthCtx = null;
+            reauthOverlay.hidden = true;
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Log in & save';
+            }
+            if (ctx?.returnFocusTo?.isConnected) ctx.returnFocusTo.focus();
+            if (ctx?.onSuccess) ctx.onSuccess();
+          } catch (err) {
+            if (errEl) {
+              errEl.setAttribute('role', 'alert');
+              errEl.textContent = err?.message || 'Login failed. Try again.';
+              errEl.hidden = false;
+            }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Log in & save';
+            }
+            document.getElementById('cdp-reauth-password')?.focus();
+          }
+        });
+      }
+
+      // Cut-now modal
+      const cutnowOverlay = document.getElementById('cdp-cutnow-overlay');
+      if (cutnowOverlay && !cutnowOverlay.dataset.cdpBound) {
+        cutnowOverlay.dataset.cdpBound = '1';
+        document
+          .getElementById('cdp-cutnow-cancel')
+          ?.addEventListener('click', closeCutNowModal);
+        document
+          .getElementById('cdp-cutnow-confirm')
+          ?.addEventListener('click', runCutNowBatch);
+        cutnowOverlay.addEventListener('click', (e) => {
+          if (e.target === cutnowOverlay) closeCutNowModal();
+        });
+        // Focus trap (same NavDrawer recipe as the reauth modal above): wrap
+        // Tab/Shift+Tab inside the dialog. Initial focus (Cancel) is set in
+        // openCutNowModal; focus is restored to #cdp-cutnow-btn in
+        // closeCutNowModal — mirroring the reauth modal's open/close approach.
+        cutnowOverlay.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return;
+          const focusables = Array.from(
+            cutnowOverlay.querySelectorAll('input, button'),
+          ).filter((el) => !el.disabled && el.offsetParent !== null);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        });
+      }
+
+      // Document-level Escape — once per document; dispatch through window
+      // refs so re-inits (astro:page-load) always hit the live closure.
+      window.__cdpCloseReauth = () => closeCdpReauthModal(true);
+      window.__cdpCloseCutNow = closeCutNowModal;
+      if (!window.__cdpEscBound) {
+        window.__cdpEscBound = true;
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Escape') return;
+          const reauth = document.getElementById('cdp-reauth-overlay');
+          if (reauth && !reauth.hidden) {
+            window.__cdpCloseReauth?.();
+            return;
+          }
+          const cutnow = document.getElementById('cdp-cutnow-overlay');
+          if (cutnow && !cutnow.hidden) window.__cdpCloseCutNow?.();
+        });
+      }
+
+      // Countdown tick — separate non-live span; per-minute is plenty.
+      if (window.__cdpCountdownTimer) clearInterval(window.__cdpCountdownTimer);
+      window.__cdpCountdownTimer = setInterval(renderCdpCountdown, 60000);
+    };
+    initCutdownPanelBindings();
 
     // ----------------------------------------------------------------
     // goToActionSelectStep — returns to step 1 action selection
@@ -10142,6 +11333,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       lastRenderedRows = rows;
       renderTableRows(rows);
 
+      // Cutdown Plan panel tracks every view change (team switch, roster
+      // move, demo enter/exit) — it hides itself off the owner's own team.
+      renderCutdownPanel();
+
       // Re-apply view mode logic after rendering
       const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
       const rosterPageEl = document.querySelector('.roster-page');
@@ -10294,7 +11489,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const demoStart = document.getElementById('cdemo-start');
     const demoOverlay = demoTutorial?.querySelector('.cdemo-tutorial__overlay');
 
-    let demoActive = false;
+    // NOTE: demoActive is declared up in the autocut section — the initial
+    // updateView() render reads it via isAutocutOwnView() before this section
+    // executes, so declaring it here would be a TDZ crash.
     let demoStep = 1;
     let demoOriginalPlayers = null; // snapshot before injection
     let demoOriginalAuthUser = null; // snapshot of auth state before demo

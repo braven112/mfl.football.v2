@@ -22,8 +22,11 @@ import type {
 const IN_SEASON_DEADLINE_MS = 24 * 60 * 60 * 1000;  // 24 hours
 const OFFSEASON_DEADLINE_MS = 48 * 60 * 60 * 1000;   // 48 hours
 
-// Transaction types that represent new player acquisitions (not trades)
-const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
+// Transaction types that represent new player acquisitions (not trades).
+// Exported so consumers that must apply the same trade-exclusion rule
+// (e.g. august-cut-selection.ts's "last added" ordering) share this list
+// instead of re-declaring it.
+export const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
 
 /**
  * Parse the MFL transaction string format into added/dropped player IDs.
@@ -192,12 +195,18 @@ export function isMFLRookie(
 
 /**
  * Calculate the 3rd Sunday in August for a given year at 8:45 PM PT.
- * Used as the rookie contract override deadline (cutdown date).
+ * Used as the rookie contract override deadline (cutdown date), and by the
+ * August cut automation as the single source of truth for the deadline.
  */
-function getAugustCutdownDate(year: number): Date {
+export function getAugustCutdownDate(year: number): Date {
   const august1 = new Date(year, 7, 1); // August is month 7
   const dayOfWeek = august1.getDay();
-  const daysToFirstSunday = (7 - dayOfWeek) % 7 || 7;
+  // (7 - dayOfWeek) % 7 is 0 when Aug 1 IS a Sunday — that's correct (the
+  // first Sunday is Aug 1). The old `|| 7` guard wrongly pushed those years
+  // (2027, 2032) to the 4th Sunday (Aug 22 instead of Aug 15).
+  // tests/august-cutdown-date.test.ts locks in the fix and cross-checks this
+  // function against the script twin in scripts/lib/august-cutdown.mjs.
+  const daysToFirstSunday = (7 - dayOfWeek) % 7;
   const thirdSunday = new Date(year, 7, 1 + daysToFirstSunday + 14);
   thirdSunday.setHours(20, 45, 0, 0); // 8:45 PM PT
   return thirdSunday;

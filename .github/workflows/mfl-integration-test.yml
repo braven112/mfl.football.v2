@@ -39,6 +39,18 @@ jobs:
           MFL_LEAGUE_ID: '36189'
         run: pnpm test:mfl-integration
 
+      - name: Owner cookie replay check (read-only)
+        # Continuous verification for the August cuts automation: the deadline
+        # job replays stored owner cookies from an Actions runner, so this
+        # canary replays the stored cookie against the cheap authenticated
+        # myleagues read on every pipeline run. Strictly read-only. Runs even
+        # when the write tests above failed (independent signal for "the
+        # cookie itself died"), and skips itself when the secret is absent.
+        if: always()
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+        run: node scripts/check-owner-cookie-replay.mjs
+
   rollback:
     needs: integration-test
     runs-on: ubuntu-latest

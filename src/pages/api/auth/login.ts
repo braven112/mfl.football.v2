@@ -4,8 +4,10 @@ import { createSessionToken, createSessionCookie, createMFLCookies } from '../..
 import { setTheLeaguePreference, setAFLPreference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { captureCredential } from '../../../utils/autocut-storage';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -82,6 +84,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const headers = new Headers({ 'Content-Type': 'application/json' });
     for (const cookie of setCookieHeaders) {
       headers.append('Set-Cookie', cookie);
+    }
+
+    // Refresh-on-login credential capture for the August cut automation
+    // (TheLeague only — the autocut job replays owner cookies). AWAITED, not
+    // fire-and-forget: on serverless (Vercel) the function can be frozen the
+    // instant the response is returned, killing an in-flight Redis write
+    // before it lands. captureCredential never throws by contract, and the
+    // try/catch is belt-and-suspenders so a degraded store can never break or
+    // meaningfully slow login.
+    if (resolvedLeagueId === THELEAGUE_ID && mflResponse.userId && mflResponse.franchiseId) {
+      try {
+        await captureCredential(mflResponse.franchiseId, mflResponse.userId);
+      } catch {
+        /* never block login on credential capture */
+      }
     }
 
     return new Response(

@@ -1,0 +1,682 @@
+---
+/**
+ * CutdownPlanPanel — August roster-cut automation, owner-facing panel.
+ *
+ * SSR shell only: static structure, headings, buttons, and the two modals
+ * (MFL re-login step-up auth + "cut marked players now" confirmation).
+ * All dynamic content (status counts, execution-order slate, cap math,
+ * save/verified state) is rendered client-side by rosters.astro's page
+ * script via `selectAutoCuts` — the same function the deadline job runs —
+ * so the preview and reality cannot drift.
+ *
+ * The panel ships `hidden` and is revealed by the client only when the
+ * viewer is looking at their own franchise during the cut window
+ * (pre-deadline privacy: another franchise's marked list is never rendered).
+ *
+ * Design spec: scratchpad cutdown-design-spec.md (§2, §3, §3b).
+ */
+interface Props {
+  /** Human deadline copy, e.g. "Aug 16, 8:45 PM PT". */
+  deadlineLabel: string;
+  /** MFL username for the re-login modal prefill ('' when unknown). */
+  username: string;
+}
+
+const { deadlineLabel, username } = Astro.props;
+---
+
+<section
+  class="cdp-panel"
+  id="cutdown-plan-panel"
+  aria-labelledby="cdp-title"
+  data-deadline-label={deadlineLabel}
+  hidden
+>
+  <header class="cdp-panel__header">
+    <h3 class="cdp-title" id="cdp-title">Cutdown Plan</h3>
+    <p class="cdp-sub">
+      What the August deadline automation will do to this roster. Marked
+      players go first, in your order; any remaining overage is filled with
+      the most recent waiver/FA pickups. Deadline: {deadlineLabel}.
+    </p>
+  </header>
+
+  <div class="cdp-status">
+    <span class="cdp-status__live" id="cdp-status-live" aria-live="polite"></span>
+    <span class="cdp-status__countdown" id="cdp-status-countdown"></span>
+  </div>
+
+  <div class="cdp-collapsed" id="cdp-collapsed" hidden>
+    <p id="cdp-collapsed-copy"></p>
+  </div>
+
+  <div class="cdp-body" id="cdp-body" hidden>
+    <ol class="cdp-slate" id="cdp-slate" aria-label="Cutdown execution order"></ol>
+    <div class="cdp-slate__footer" id="cdp-footer"></div>
+
+    <div class="cdp-actions">
+      <button type="button" class="cdp-save-btn" id="cdp-save-btn">Save cut list</button>
+      <button type="button" class="cdp-cutnow-btn" id="cdp-cutnow-btn">Cut marked players now</button>
+    </div>
+    <p class="cdp-save-status" id="cdp-save-status" data-state="none"></p>
+
+    <div class="cdp-unsaved-banner" id="cdp-unsaved-banner" role="status" aria-live="polite" hidden>
+      <span>You have unsaved changes to your cut order —</span>
+      <button type="button" class="cdp-unsaved-banner__btn" id="cdp-unsaved-save">Save now</button>
+    </div>
+  </div>
+</section>
+
+<!-- Step-up auth: inline MFL re-login (opened when a save returns requiresReauth) -->
+<div class="cdp-reauth-overlay" id="cdp-reauth-overlay" hidden>
+  <div class="cdp-reauth-modal" role="dialog" aria-modal="true" aria-labelledby="cdp-reauth-title">
+    <h2 class="cdp-modal-title" id="cdp-reauth-title">Confirm your MFL login</h2>
+    <p class="cdp-reauth-copy">
+      Saving your cut list authorizes the site to execute these cuts as you at
+      the deadline. Your saved login needs to be refreshed — enter your MFL
+      password to continue.
+    </p>
+    <form id="cdp-reauth-form" autocomplete="off">
+      <label class="cdp-reauth-field">
+        <span>Username</span>
+        <input
+          type="text"
+          id="cdp-reauth-username"
+          name="username"
+          value={username}
+          readonly={username !== ''}
+          autocomplete="username"
+        />
+      </label>
+      <label class="cdp-reauth-field">
+        <span>Password</span>
+        <input type="password" id="cdp-reauth-password" name="password" required autocomplete="current-password" />
+      </label>
+      <div class="cdp-reauth-error" id="cdp-reauth-error" hidden></div>
+      <div class="cdp-modal-actions">
+        <button type="button" class="cdp-btn-ghost" id="cdp-reauth-cancel">Cancel</button>
+        <button type="submit" class="cdp-btn-primary" id="cdp-reauth-submit">Log in &amp; save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- "Cut marked players now" confirmation (ported KeeperPlanner finalize pattern) -->
+<div class="cdp-cutnow-overlay" id="cdp-cutnow-overlay" hidden>
+  <div class="cdp-cutnow-modal" role="dialog" aria-modal="true" aria-labelledby="cdp-cutnow-title">
+    <h2 class="cdp-modal-title" id="cdp-cutnow-title">Cut marked players now</h2>
+    <p class="cdp-cutnow-copy" id="cdp-cutnow-copy"></p>
+    <ol class="cdp-slate cdp-slate--modal" id="cdp-cutnow-list" aria-label="Players to cut"></ol>
+    <div class="cdp-cutnow-progress" id="cdp-cutnow-progress" hidden>
+      <div class="cdp-cutnow-bar"><div class="cdp-cutnow-bar__fill" id="cdp-cutnow-bar-fill"></div></div>
+      <p class="cdp-cutnow-progress__label" id="cdp-cutnow-progress-label" aria-live="polite"></p>
+    </div>
+    <div class="cdp-cutnow-error" id="cdp-cutnow-error" hidden></div>
+    <div class="cdp-modal-actions">
+      <button type="button" class="cdp-btn-ghost" id="cdp-cutnow-cancel">Cancel</button>
+      <button type="button" class="cdp-btn-danger" id="cdp-cutnow-confirm">Cut these players</button>
+    </div>
+  </div>
+</div>
+
+<!--
+  Styles are global (prefixed cdp- / autocut-) because the slate rows,
+  roster-row badges, and modal internals are injected client-side via
+  innerHTML — Astro's scoped-style hashes never land on runtime markup.
+-->
+<style is:global>
+  /* Component-scoped accent (not a new global token — spec §0). */
+  #cutdown-plan-panel,
+  .cdp-reauth-overlay,
+  .cdp-cutnow-overlay {
+    --autocut-accent: var(--warning-color, #f59e0b);
+  }
+
+  .cdp-panel {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1.25rem 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+  /* Author display rules beat the UA [hidden] rule — restore it explicitly. */
+  .cdp-panel[hidden] {
+    display: none;
+  }
+
+  /* Uppercase left-border section title (editorial standard). */
+  .cdp-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+  }
+
+  .cdp-sub {
+    margin: 0.375rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdp-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    color: var(--color-gray-700, #374151);
+  }
+  .cdp-status strong {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+  }
+  .cdp-status__countdown strong {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdp-collapsed p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-gray-700, #374151);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.75rem 0.875rem;
+  }
+
+  /* ── The slate ─────────────────────────────────────────────── */
+  .cdp-slate {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .cdp-slate__row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'priority reorder player cap'
+      'priority reorder reason cap';
+    align-items: center;
+    column-gap: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    background: var(--content-bg, #fff);
+  }
+  .cdp-slate__row--marked {
+    border-color: color-mix(in srgb, var(--autocut-accent, #f59e0b) 45%, transparent);
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 5%, transparent);
+  }
+  .cdp-slate__row--marked.cdp-dragging {
+    opacity: 0.5;
+  }
+  .cdp-slate__row--marked.cdp-drop-target {
+    outline: 2px dashed var(--autocut-accent, #f59e0b);
+    outline-offset: 1px;
+  }
+  .cdp-slate__row--auto {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .cdp-slate__priority {
+    grid-area: priority;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--autocut-accent, #f59e0b) 45%, transparent);
+    color: var(--color-gray-900, #111827);
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .cdp-slate__priority--auto {
+    background: transparent;
+    border-color: var(--color-gray-200, #e5e7eb);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdp-slate__reorder {
+    grid-area: reorder;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .cdp-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.25rem;
+    padding: 0;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--content-bg, #fff);
+    color: var(--color-gray-700, #374151);
+    cursor: pointer;
+  }
+  .cdp-arrow:hover:not(:disabled) {
+    border-color: var(--autocut-accent, #f59e0b);
+    color: var(--color-gray-900, #111827);
+  }
+  .cdp-arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .cdp-arrow svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .cdp-slate__player {
+    grid-area: player;
+    min-width: 0;
+  }
+  .cdp-slate__reason {
+    grid-area: reason;
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cdp-slate__reason strong {
+    color: var(--color-gray-700, #374151);
+    font-weight: 600;
+  }
+
+  .cdp-slate__cap {
+    grid-area: cap;
+    display: flex;
+    gap: 0.875rem;
+    align-items: baseline;
+    white-space: nowrap;
+  }
+  .cdp-slate__cap-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cdp-slate__cap-item strong {
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .cdp-slate__cap-item--savings strong {
+    /* Direct hex, not var(--secondary-color): the token's #2e8743 fails
+       4.5:1 contrast on the amber-tinted marked rows; #1f6b34 passes there
+       and on white. */
+    color: #1f6b34;
+  }
+
+  .cdp-slate__footer {
+    font-size: 0.875rem;
+    color: var(--color-gray-700, #374151);
+    padding: 0.5rem 0.125rem 0;
+  }
+  .cdp-slate__footer strong {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* ── Actions / save state ──────────────────────────────────── */
+  .cdp-actions {
+    display: flex;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+    padding-top: 0.25rem;
+  }
+  .cdp-save-btn,
+  .cdp-btn-primary {
+    appearance: none;
+    border: 1px solid var(--color-primary, #1c497c);
+    background: var(--color-primary, #1c497c);
+    color: var(--color-white, #fff);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+  }
+  .cdp-save-btn:disabled,
+  .cdp-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .cdp-cutnow-btn,
+  .cdp-btn-ghost {
+    appearance: none;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    background: var(--content-bg, #fff);
+    color: var(--color-gray-700, #374151);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+  }
+  .cdp-cutnow-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .cdp-btn-danger {
+    appearance: none;
+    border: 1px solid var(--color-error, #dc2626);
+    background: var(--color-error, #dc2626);
+    color: var(--color-white, #fff);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+  }
+  .cdp-btn-danger:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .cdp-save-status {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-gray-700, #374151);
+  }
+  .cdp-save-status[data-state='none'] {
+    display: none;
+  }
+  .cdp-save-status[data-state='verified'] .cdp-save-status__check {
+    color: var(--secondary-color, #2e8743);
+    font-weight: 700;
+  }
+  .cdp-save-status[data-state='error'] {
+    color: var(--color-error, #dc2626);
+  }
+  .cdp-save-status__muted {
+    display: block;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdp-unsaved-banner {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    /* Mix over --content-bg, not --color-white: --color-white stays #ffffff
+       in dark mode (tokens-dark.css), so a white mix base never flips. */
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 12%, var(--content-bg, #fff));
+    border: 1px solid color-mix(in srgb, var(--autocut-accent, #f59e0b) 45%, transparent);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-900, #111827);
+  }
+  .cdp-unsaved-banner[hidden] {
+    display: none;
+  }
+  .cdp-unsaved-banner__btn {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--color-primary, #1c497c);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  /* ── Roster-row badge (injected into .player-cell__name) ───── */
+  .autocut-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.375rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--autocut-accent, #f59e0b) 45%, transparent);
+    color: var(--color-gray-900, #111827);
+    font-size: 0.625rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .autocut-badge svg {
+    width: 12px;
+    height: 12px;
+    color: var(--autocut-accent, #f59e0b);
+    flex-shrink: 0;
+  }
+  /* Marked but below the current cut line ("MARKED #N") — same shape,
+     muted amber, so it reads as staged rather than executing. */
+  .autocut-badge--below-line {
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 8%, transparent);
+    border-color: color-mix(in srgb, var(--autocut-accent, #f59e0b) 30%, transparent);
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* ── Modals (shared shell: frosted backdrop, mobile bottom sheet) ── */
+  .cdp-reauth-overlay,
+  .cdp-cutnow-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--color-gray-900, #0f172a) 45%, transparent);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    padding: 1rem;
+  }
+  .cdp-reauth-overlay[hidden],
+  .cdp-cutnow-overlay[hidden] {
+    display: none;
+  }
+
+  .cdp-reauth-modal,
+  .cdp-cutnow-modal {
+    background: var(--content-bg, #fff);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1.25rem;
+    width: 100%;
+    box-shadow: 0 20px 50px color-mix(in srgb, var(--color-gray-900, #0f172a) 25%, transparent);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .cdp-reauth-modal {
+    max-width: 420px;
+  }
+  .cdp-cutnow-modal {
+    max-width: 560px;
+  }
+
+  .cdp-modal-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+  .cdp-reauth-copy,
+  .cdp-cutnow-copy {
+    margin: 0 0 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-gray-700, #374151);
+  }
+  .cdp-cutnow-copy strong {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdp-reauth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .cdp-reauth-field span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cdp-reauth-field input {
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.5rem 0.625rem;
+    font-size: 0.9375rem;
+    color: var(--color-gray-900, #111827);
+    background: var(--content-bg, #fff);
+  }
+  .cdp-reauth-field input[readonly] {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdp-reauth-error,
+  .cdp-cutnow-error {
+    margin: 0 0 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-error, #dc2626);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 30%, transparent);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.5rem 0.625rem;
+  }
+  .cdp-reauth-error[hidden],
+  .cdp-cutnow-error[hidden] {
+    display: none;
+  }
+
+  .cdp-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    padding-top: 0.25rem;
+  }
+
+  .cdp-cutnow-progress {
+    margin: 0.75rem 0;
+  }
+  .cdp-cutnow-bar {
+    height: 6px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-gray-200, #e5e7eb);
+    overflow: hidden;
+  }
+  .cdp-cutnow-bar__fill {
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    background: var(--color-error, #dc2626);
+    transition: width 0.2s ease;
+  }
+  .cdp-cutnow-progress__label {
+    margin: 0.375rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Mobile (≤640px, repo's primary phone breakpoint) ──────── */
+  @media (max-width: 640px) {
+    .cdp-slate__row {
+      grid-template-columns: auto auto minmax(0, 1fr);
+      grid-template-areas:
+        'priority reorder player'
+        'priority reorder reason'
+        'priority reorder cap';
+      row-gap: 0.25rem;
+    }
+    .cdp-slate__cap {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.125rem;
+      white-space: normal;
+    }
+    .cdp-slate__cap-item {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.375rem;
+    }
+    /* Arrows become the only reorder mechanism on touch — 44px tap targets. */
+    .cdp-arrow {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+    .cdp-arrow svg {
+      width: 16px;
+      height: 16px;
+    }
+    .cdp-actions {
+      flex-direction: column;
+    }
+    .cdp-save-btn,
+    .cdp-cutnow-btn {
+      width: 100%;
+    }
+    /* Bottom-sheet modals */
+    .cdp-reauth-overlay,
+    .cdp-cutnow-overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .cdp-reauth-modal,
+    .cdp-cutnow-modal {
+      max-width: none;
+      border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+    }
+  }
+
+  /* ── Dark mode ─────────────────────────────────────────────────
+     Surfaces/text above ride the theme-flipping tokens (--content-bg,
+     inverted gray scale); these are the spots where a token flips the
+     wrong way or a literal was picked for light-surface contrast. */
+
+  /* --color-gray-900 flips to near-white in dark, turning the modal
+     scrim/shadow into a light haze — scrims stay dark in both themes. */
+  html.dark .cdp-reauth-overlay,
+  html.dark .cdp-cutnow-overlay {
+    background: color-mix(in srgb, #000 60%, transparent);
+  }
+  html.dark .cdp-reauth-modal,
+  html.dark .cdp-cutnow-modal {
+    box-shadow: 0 20px 50px color-mix(in srgb, #000 45%, transparent);
+  }
+
+  /* Savings green: #1f6b34 was chosen for 4.5:1 on white/amber-tinted
+     light rows, but it's ~2.6:1 on the dark card — brighten to the dark
+     success token (#34d399 ≈ 8.7:1 on #1e1e1e). */
+  html.dark .cdp-slate__cap-item--savings strong {
+    color: var(--color-success, #34d399);
+  }
+
+  /* --color-error flips to #f87171 in dark, and white text on it fails
+     4.5:1. Pin the danger button to the solid red (white on #dc2626 =
+     4.8:1), same treatment in both themes. */
+  html.dark .cdp-btn-danger {
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+</style>

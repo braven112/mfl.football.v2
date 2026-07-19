@@ -1,0 +1,154 @@
+name: Apply August Cuts
+
+# Deadline execution job for TheLeague's August roster cutdown (22 active by
+# the 3rd Sunday of August, 8:45pm PT). See
+# docs/features/august-roster-cuts-automation-plan.md and
+# scripts/apply-august-cuts.mjs.
+#
+# Scheduled runs use `--auto`: the script derives what to do from PT calendar
+# days until the deadline —
+#   T-7 / T-2  → --validate-only  (credential checks + GroupMe re-login nags)
+#   T-1        → --rehearse       (full run minus MFL writes; counts-only summary)
+#   ≥ deadline → live             (owner-cookie cuts, per-franchise resumability)
+#   otherwise  → no-op
+# Touch windows are never-early (fire on the target day or one day late,
+# deduped via Redis autocut:touches:{year}); live fires only at/after the
+# 8:45pm PT instant and re-enters every 15 min to retry failed franchises
+# (MAX_ATTEMPTS=8). The Redis flag autocut:paused:{year} is a kill switch
+# for every mode. No GitHub `vars.*` feature gates per CLAUDE.md — to disable
+# this job, comment out the cron line.
+#
+# Manual runs (workflow_dispatch) are dry-run by default:
+#   GitHub UI → Actions → Apply August Cuts → Run workflow
+#   - mode: auto (default) derives like the schedule; or force live /
+#     validate / rehearse.
+#   - dry_run: leave checked to log would-be actions without MFL writes or
+#     Redis state changes. Uncheck to actually execute.
+#
+# The run report (data/theleague/august-cuts/{year}-report.json) is committed
+# back to main as the permanent audit record; any failed/skipped franchise
+# makes the script exit non-zero, which files a GitHub issue below.
+
+on:
+  schedule:
+    - cron: "*/15 * * 8 *"   # every 15 min, August only (in-script gates do the real work)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode (auto derives from days-until-deadline)'
+        type: choice
+        options: [auto, live, validate, rehearse]
+        default: auto
+      dry_run:
+        description: 'Dry-run only (log, no MFL writes, no Redis state changes)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: apply-august-cuts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  cutdown:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run August cuts job
+        env:
+          TZ: America/Los_Angeles
+          AUTOCUT_CRED_KEY: ${{ secrets.AUTOCUT_CRED_KEY }}
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          # Scheduled runs have no inputs, so both are empty → --auto, live-capable.
+          MODE="${{ inputs.mode }}"
+          [ -z "$MODE" ] && MODE=auto
+          FLAGS=""
+          case "$MODE" in
+            auto)     FLAGS="--auto" ;;
+            validate) FLAGS="--validate-only" ;;
+            rehearse) FLAGS="--rehearse" ;;
+            live)     FLAGS="" ;;
+          esac
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "::notice::Running in DRY-RUN mode (no MFL writes, no Redis state changes)"
+            FLAGS="$FLAGS --dry-run"
+          fi
+          node scripts/apply-august-cuts.mjs $FLAGS
+
+      - name: Commit run report
+        # Runs even when the job failed — a partial run's report is exactly
+        # the audit record the commissioner needs.
+        if: always()
+        run: |
+          git config user.name "August Cuts Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: august cuts — run report" \
+            --files "data/theleague/august-cuts"
+
+      - name: File issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: America/Los_Angeles
+        run: |
+          YEAR=$(date +%Y)
+          REPORT="data/theleague/august-cuts/${YEAR}-report.json"
+          export RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -f "$REPORT" ]; then
+            BODY=$(node -e '
+              const r = require("./" + process.argv[1]);
+              const lines = [];
+              lines.push(`The August cuts run (mode: ${r.mode}) ended with franchises needing attention.`);
+              lines.push("");
+              const s = r.summary || {};
+              if (Array.isArray(s.failed) && s.failed.length) lines.push(`- **Failed:** ${s.failed.join(", ")}`);
+              if (Array.isArray(s.skipped) && s.skipped.length) lines.push(`- **Skipped (no credential):** ${s.skipped.join(", ")}`);
+              if (Array.isArray(s.done) && s.done.length) lines.push(`- Completed: ${s.done.join(", ")}`);
+              lines.push("");
+              lines.push("Owners with no usable credential must log in once (which recaptures it), or the commissioner finishes those cuts manually in the MFL UI.");
+              lines.push("");
+              lines.push(`Review the audit trail at /theleague/admin/cutdown-report and the committed report at \`${process.argv[1]}\`.`);
+              lines.push(`Workflow run: ${process.env.RUN_URL}`);
+              process.stdout.write(lines.join("\n"));
+            ' "$REPORT" 2>/dev/null) || BODY="The August cuts run failed before a report could be written. Workflow run: $RUN_URL"
+          else
+            BODY="The August cuts run failed before a report could be written. Workflow run: $RUN_URL"
+          fi
+          # Dedupe: the cron fires every 15 min, so a persistently-failing run
+          # would otherwise open a new issue every tick. If an OPEN issue with
+          # the august-cuts label already exists, add a comment to it instead
+          # of filing a duplicate.
+          EXISTING=$(gh issue list --label august-cuts --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::Existing open august-cuts issue #$EXISTING — commenting instead of filing a duplicate."
+            gh issue comment "$EXISTING" \
+              --body "Another failing run ($(date '+%Y-%m-%d %H:%M') PT). $RUN_URL" \
+              || echo "Issue comment failed (continuing)"
+          else
+            gh issue create \
+              --title "August cuts: run needs commissioner attention ($(date +%Y-%m-%d))" \
+              --label "august-cuts" \
+              --body "$BODY" \
+              || echo "Issue creation failed (continuing)"
+          fi
