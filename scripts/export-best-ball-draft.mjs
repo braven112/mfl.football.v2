@@ -72,7 +72,7 @@ function resolveWriteHost(league) {
   throw new Error(
     `League '${league.slug}' has no commissioner-writable MFL host yet ` +
       `(registry mflHost is '${league.mflHost}'). Commissioner imports fail on the ` +
-      `api gateway — set MFL_WRITE_HOST (e.g. https://www45.myfantasyleague.com) or ` +
+      `api gateway — set MFL_WRITE_HOST (https://wwwXX.myfantasyleague.com) or ` +
       `update the registry with the league's real wwwXX host.`,
   );
 }

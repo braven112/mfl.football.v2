@@ -304,10 +304,10 @@ leagues. Rules that keep them cheap to add and impossible to break:
   `data/best-ball-1/draft/` and imports them to MFL through the
   `mfl-api.mjs` commissioner-write plumbing. The export refuses sessions
   without the `official` flag.
-- **GOTCHA — placeholder MFL host:** the registry's `mflHost` for
-  best-ball-1 is the `api.` gateway until the league's real `wwwXX` host is
-  filled in. Public reads work; commissioner writes fail on the gateway
-  (the export script errors loudly and honors `MFL_WRITE_HOST`).
+- **MFL host:** best-ball-1 lives on `www45.myfantasyleague.com`. If a
+  future best-ball league's host isn't known yet, `api.myfantasyleague.com`
+  works as a reads-only placeholder — commissioner writes fail on the
+  gateway (the export script errors loudly and honors `MFL_WRITE_HOST`).
 - Sister leagues (#2, …) = new registry entry + copies of the five thin
   pages in `src/pages/best-ball-1/` + a `tokens.css` accent block + tagged
   nav links + guard-test literals.

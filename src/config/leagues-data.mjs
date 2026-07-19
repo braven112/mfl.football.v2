@@ -98,13 +98,7 @@ export const LEAGUES = {
     slug: 'best-ball-1',
     navSlug: 'bb1',
     name: 'Best Ball League #1',
-    /**
-     * PLACEHOLDER — the api gateway serves public JSON exports for any
-     * league, so reads work, but commissioner writes must go to the
-     * league's assigned web host (wwwXX.myfantasyleague.com — visible in
-     * the browser URL bar on the MFL site). Swap it in here when known.
-     */
-    mflHost: 'api.myfantasyleague.com',
+    mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
     /**
      * Path-only league: served at /best-ball-1 on the site's own domains

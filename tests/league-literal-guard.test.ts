@@ -29,7 +29,7 @@ const ROOT = process.cwd();
  * refactor fixed (wrong host fallback, id-based ternaries) was one of these
  * four literals, so they stay strict.
  */
-const ID_HOST_LITERALS = ['13522', '19621', '37610', 'www49.myfantasyleague', 'www44.myfantasyleague'];
+const ID_HOST_LITERALS = ['13522', '19621', '37610', 'www49.myfantasyleague', 'www44.myfantasyleague', 'www45.myfantasyleague'];
 
 /**
  * League data-directory literals. Checked only in src/ + scripts/ (not
