@@ -146,22 +146,59 @@ Existing building blocks:
   (raw Upstash REST — the `.ts` storage utils gate on `process.env.VERCEL`,
   which is unset in Actions runners; see `scripts/apply-pending-contracts.mjs:12-21`).
 
-## UI — mark players on the rosters page
+## UI — how an owner chooses cuts and sees their slate
 
-Extend the owner's own-team view in `src/pages/theleague/rosters.astro` (where
-the "Must cut N players by cutdown" MetricCard already lives, line ~2860):
+All on the owner's own-team view in `src/pages/theleague/rosters.astro`,
+visible only during the cut window (reuse the Jun-1→deadline window from
+`isCutWatch()` in `src/utils/hero-resolver.ts:742`). Two surfaces:
 
-1. **Auto-cut toggle per player** (own franchise only, visible during the cut
-   window — reuse the Jun-1→deadline window from `isCutWatch()` in
-   `src/utils/hero-resolver.ts:742`). Marked players get a visible badge and an
-   owner-orderable priority. Saving triggers the step-up auth flow above when
-   the credential isn't verifiably live.
-2. **"What happens if you do nothing" preview** — the load-bearing UX. Run
-   `selectAutoCuts` client-side against the current roster + marked list and
-   show exactly which players will be cut at the deadline, labeled *marked* vs
-   *last added*. This makes the fallback behavior legible before it's
-   irreversible.
-3. Countdown to the deadline, reusing the CutWatch hero's date math.
+### Choosing: "Mark for auto-cut" in the player action menu
+
+The page already has the interaction: click a player → detail modal → action
+options ("Cut Player", IR, taxi, trade block — `populateCdmActionOptions`,
+`rosters.astro` ~L8691, cut option at ~L8803). Add one option during the cut
+window:
+
+- **"Mark for August auto-cut"** — desc: "Cut automatically at the deadline if
+  you're over 22". Toggles to **"Unmark auto-cut"** when already marked.
+  Unlike "Cut Player" (immediate, irreversible), marking is instant, free, and
+  reversible until 8:45pm PT on deadline day.
+- Marked players get a persistent **badge on their roster row** (e.g., an
+  amber scissors chip "AUTO-CUT #2") so the slate is visible at a glance while
+  scanning the roster table, not just inside the panel.
+
+### Seeing the slate: the "Cutdown Plan" panel
+
+A card next to the existing "Must cut N players by cutdown" MetricCard
+(~L2860), showing the owner exactly what the deadline job will do to *their*
+team. Contents:
+
+1. **Status line:** active-roster count vs 22, cuts required, countdown to the
+   deadline ("27 active · 5 cuts needed · deadline in 12 days").
+2. **The slate, in execution order** — the same `selectAutoCuts` function the
+   job runs, executed client-side against the live roster + marked list, so
+   the preview and reality cannot drift:
+   - Marked players first, drag-to-reorder priority (1, 2, 3…), labeled
+     **Marked by you**.
+   - If marks don't cover the overage, the remainder is filled with
+     **Auto-selected (last added)** rows — each showing its acquisition date
+     ("added Jul 12") and a hint: "mark other players to protect this one".
+   - Players below the cut line are simply not shown — the panel lists only
+     who goes.
+3. **Save button** → step-up auth flow when the credential isn't verifiably
+   live; on success the panel header flips to a confirmed state: "✓ Cuts
+   locked in — credentials verified Aug 3. You can change this list until
+   Aug 16, 8:45 PM PT."
+4. **Under-limit state:** at ≤22 active the panel collapses to "You're at the
+   limit — nothing will be cut. Your N marked players are safe unless you go
+   back over." (Decision 2: marks are priority, not a standing drop order.)
+5. **Unsaved-marks nudge:** marks staged but not yet saved show a sticky
+   "unsaved plan" warning, since only a saved list (with its verified
+   credential) is executable.
+
+The slate is also surfaced passively where owners already look: the T-7d/T-2d
+GroupMe touches say "your plan: 3 marked + 2 auto-selected — review at
+/theleague/rosters", and the CutWatch hero deep-links to the panel.
 
 No new page → no `page-directory.json` entry needed. A What's New `new-feature`
 entry (with screenshot) is required at ship time; it's an owner tool, so ask
