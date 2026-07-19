@@ -130,11 +130,11 @@ describe('anon Style Book — tip.ts integration', () => {
     expect(tipSource).toMatch(/30 \* 24 \* 60 \* 60 \* 1000/);
   });
 
-  it('increments timeline only when topic is "commish"', () => {
+  it('increments timeline only for the frontoffice (legacy "commish") topic', () => {
     // The Beef topic is the off-topic channel by design. We don't bump on
     // trade/roster/prediction/other — those are either league-business or
     // genuinely general.
-    expect(tipSource).toMatch(/if \(topic === 'commish'\)/);
+    expect(tipSource).toMatch(/if \(normalizedTopic === 'frontoffice'\)/);
   });
 
   it('prunes entries older than the window on every write', () => {

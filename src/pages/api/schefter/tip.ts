@@ -27,7 +27,11 @@ import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { incrementNamingTarget } from '../../../../scripts/lib/schefter-naming-rate-limit.mjs';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import {
-  TIP_TOPICS,
+  normalizeTopicId,
+  getTopicIds,
+  getTopicPolicy,
+} from '../../../config/schefter-topics.mjs';
+import {
   TIP_TEXT_MIN,
   TIP_TEXT_MAX,
   LEAGUE_WIDE_HINT,
@@ -129,13 +133,16 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  if (typeof topic !== 'string' || !(TIP_TOPICS as readonly string[]).includes(topic)) {
+  const normalizedTopic =
+    typeof topic === 'string' ? normalizeTopicId(topic, DEFAULT_SCHEFTER_NAV_SLUG) : null;
+  if (!normalizedTopic) {
     return errorResponse(
       'bad_topic',
-      `Topic must be one of: ${TIP_TOPICS.join(', ')}.`,
+      `Topic must be one of: ${getTopicIds(DEFAULT_SCHEFTER_NAV_SLUG).join(', ')}.`,
       400,
     );
   }
+  const topicPolicy = getTopicPolicy(normalizedTopic, DEFAULT_SCHEFTER_NAV_SLUG);
 
   let normalizedHint: string | undefined;
   let division: string | undefined;
@@ -146,8 +153,8 @@ export const POST: APIRoute = async ({ request }) => {
     if (franchiseHint === LEAGUE_WIDE_HINT) {
       normalizedHint = LEAGUE_WIDE_HINT;
     } else if (franchiseHint === COMMISH_HINT) {
-      if (topic === 'trade') {
-        return errorResponse('bad_hint', 'The commissioner is not a valid target for trade-interest tips.', 400);
+      if (!topicPolicy.commishTargetAllowed) {
+        return errorResponse('bad_hint', 'The commissioner is not a valid target for this topic.', 400);
       }
       normalizedHint = COMMISH_HINT;
     } else if (isValidFranchiseId(franchiseHint)) {
@@ -285,7 +292,9 @@ export const POST: APIRoute = async ({ request }) => {
   // Best-effort — Redis failure never blocks enqueue; offTopicCount just
   // stays null and the LLM falls back to rule 16's default (hissy fit only).
   let offTopicCount: number | null = null;
-  if (topic === 'commish') {
+  // 'frontoffice' succeeded the legacy 'commish' ("Beef") topic — the
+  // barometer keeps counting the same behavioral lane under the new id.
+  if (normalizedTopic === 'frontoffice') {
     try {
       const nowMs = Date.now();
       const timelineKey = `${OFF_TOPIC_TIMELINE_PREFIX}${hashedOwnerId}`;
@@ -334,7 +343,7 @@ export const POST: APIRoute = async ({ request }) => {
     franchiseHint: normalizedHint,
     division,
     ...(tipsterDivision ? { tipsterDivision } : {}),
-    topic: topic as TipTopic,
+    topic: normalizedTopic as TipTopic,
     text: trimmedText,
     submittedAt: Date.now(),
     source: 'web',

@@ -13,7 +13,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { TIP_TOPICS, type TipTopic } from '../../../types/schefter-tips';
+import type { TipTopic } from '../../../types/schefter-tips';
+import { getTopicIds } from '../../../config/schefter-topics.mjs';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
@@ -38,7 +39,7 @@ export const GET: APIRoute = async () => {
   const results: Array<{ topic: TipTopic; count: number }> = [];
 
   await Promise.all(
-    (TIP_TOPICS as readonly TipTopic[]).map(async (topic) => {
+    (getTopicIds(DEFAULT_SCHEFTER_NAV_SLUG) as TipTopic[]).map(async (topic) => {
       try {
         const count = await redis.zcount(`${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'topic_timeline:')}${topic}`, windowStart, now);
         results.push({ topic, count: Math.max(0, Number.isFinite(count) ? count : 0) });

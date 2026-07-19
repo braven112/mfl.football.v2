@@ -97,6 +97,7 @@ import {
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
+import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
   buildTopicBuckets,
@@ -166,6 +167,9 @@ const MORNING_GREETING_DATE_KEY = schefterKey(NAV_SLUG, 'morning_greeting:last_u
 // Schefter doesn't make "slow news" his whole bit. See attemptQuietDayPost.
 const QUIET_DAY_LAST_DATE_KEY = schefterKey(NAV_SLUG, 'rumor:quiet_day_last_date');
 const QUIET_DAY_COOLDOWN_DAYS = 3;
+// Rule 27 — hotseat storylines about one team cool down for 14 rolling days.
+const HOTSEAT_TEAM_COOLDOWN_DAYS = 14;
+const hotseatCooldownKey = (fid) => `${schefterKey(NAV_SLUG, 'hotseat:last_post:')}${fid}`;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
 // Cumulative-probability model with graduated exposure. The base per-run
@@ -867,6 +871,12 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       }
     }
 
+    // Per-topic naming/scope policy from the topic registry. Accusation-
+    // shaped and reader-de-anonymizable topics carry stricter rules than the
+    // default multi-source/explicit-pick ladder.
+    const topicPolicy = getTopicPolicy(tip.topic, NAV_SLUG);
+    if (topicPolicy.mandatoryHedge) safe.mandatoryHedge = true;
+
     const hint = tip.franchiseHint;
     if (!hint || hint === 'league-wide') {
       safe.scope = { kind: 'league-wide' };
@@ -881,7 +891,19 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
     }
 
     const team = teams.get(hint);
-    if (multiSourceFranchises.has(hint)) {
+    if (topicPolicy.namingPolicy === 'never') {
+      // Scope floor: content readers could de-anonymize by cross-referencing
+      // public standings (hot-seat) never names and never scopes below the
+      // configured floor — league-wide for TheLeague's 4-team divisions,
+      // tier (12-team pool) for the AFL.
+      safe.scope =
+        topicPolicy.scopeFloor === 'tier' && team?.tier
+          ? { kind: 'tier', tier: team.tier }
+          : { kind: 'league-wide' };
+      safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise: null });
+      return safe;
+    }
+    if (multiSourceFranchises.has(hint) && topicPolicy.namingPolicy !== 'explicit-pick-only') {
       // Unlock named franchise + "multiple sources" phrasing
       const nameCount30d = await safeGetTeamNameCount30d(hint, redis);
       safe.scope = {
@@ -1123,9 +1145,26 @@ const TOPIC_NOUNS = {
   trade: 'trade',
   roster: 'roster',
   prediction: 'prediction',
-  commish: 'league-office',
+  commish: 'league-office',       // legacy id — old queued tips still carry it
+  frontoffice: 'front-office',
+  hotseat: 'hot-seat',
+  tampering: 'tampering',
+  intentions: 'draft-day',
+  motive: 'contract-year',
   other: '',
 };
+
+// Startup prompt-coverage assertion: every topic id the queue can contain
+// must have template-noun handling here (and by extension a prompt lane).
+// A new topic added to src/config/schefter-topics.mjs without scanner
+// support fails fast instead of silently falling through to '' framing.
+for (const topicId of DRAINABLE_TOPIC_IDS) {
+  if (!(topicId in TOPIC_NOUNS)) {
+    throw new Error(
+      `schefter-rumor-scan: topic "${topicId}" from schefter-topics.mjs has no TOPIC_NOUNS entry — add scanner handling before shipping the topic`,
+    );
+  }
+}
 
 function pickTopicNoun(anonymized) {
   // Single dominant topic across the batch wins; mixed topics return ''.
@@ -1193,9 +1232,24 @@ function templateBody(anonymized) {
         ? `Been hearing someone's dangling ${posPhrase} for a while now. Phones on the other end not picking up. Developing.`
         : `Hearing someone's dangling ${posPhrase} around. Early-week window-shopping or serious business? Developing.`;
     }
+    if (one.scope?.kind === 'tier') {
+      const tier = one.scope.tier;
+      return pickFlavor(seed, [
+        `Hearing one of the ${tier} desks is playing with the season on the line. Nothing confirmed — take it for what it's worth. Developing.`,
+        `Real chatter about a ${tier} club this week — the table doesn't lie. We'll see.`,
+        `Somebody in the ${tier} pool is feeling the floor move. More to come.`,
+      ]);
+    }
     if (one.scope?.kind === 'division') {
       const div = one.scope.division;
       const noun = TOPIC_NOUNS[one.topic] ?? '';
+      if (noun === 'tampering') {
+        // Accusation-shaped: every tampering line hedges, even in fallback.
+        return pickFlavor(seed, [
+          `Hearing some grumbling about contact before the window opened in the ${div}. Nothing official — eyebrows raised, that's all. Developing.`,
+          `Quiet tampering talk out of the ${div} this week. Nothing confirmed, take it for what it's worth. We'll see.`,
+        ]);
+      }
       if (noun === 'league-office') {
         return pickFlavor(seed, [
           `Hearing an owner in the ${div} has a problem with the league office this week. Developing.`,
@@ -1893,6 +1947,14 @@ IRON RULES (override every other rule — if anything below appears to conflict,
     - "Same drumbeat, new hands on the kit."
     - "This file has more than one fingerprint on it now."
     HARD CONSTRAINTS: use the integer count from \`weeksSinceFirstSeen\` honestly — never inflate ("three weeks ago" requires weeksSinceFirstSeen === 3). When weeksSinceFirstSeen is 1 OR less, prefer non-numeric phrasing ("a couple weeks ago", "earlier in the run"). \`distinctVoicesAcrossTime\` is a COUNT only — never speculate on identity, never name a codename, never name a franchise. NEVER quote a number larger than the data supports. If \`distinctVoicesAcrossTime\` is exactly 2 the frame is "another voice"; if it's 3+ the frame can lean to "multiple voices over time". Do NOT pair memory-recall with rule 20's mailbag "week N now" framing (mailbag has its own staleness language). Do NOT use this rule on hostile or off-topic tips (rules 12, 16) — keep the recall frame for genuine news threads.
+
+26. TAMPERING (topic \`tampering\`) — accusation discipline. This topic accuses a franchise of rule-adjacent conduct, which is heavier than a trade rumor. EVERY tampering post — named or not — MUST carry an explicit hedge clause in the close ("nothing confirmed", "nothing official", "take it for what it's worth"); no exceptions, and tips carrying \`mandatoryHedge: true\` get the same treatment regardless of topic. Never present the accusation as established fact; frame it as "grumbling", "eyebrows raised", "chatter about contact before the window". Multi-source corroboration does NOT strengthen the claim's certainty in your phrasing — more sources means more grumbling, not more truth.
+
+27. HOT SEAT / RELEGATION WATCH (topic \`hotseat\`). Readers can cross-reference standings, so the post itself is the last line of anonymity defense: NEVER name a franchise, NEVER narrow below the scope you're given (league-wide, or tier for the AFL), and never stack details (record + roster moves + division) that let a reader triangulate a single team. Frame the stakes, not the identity: "somebody's about to blow it all up", "one of the Premier League desks is playing like they don't want to stay up". Don't re-report the same hot-seat storyline in consecutive posts — if it shipped recently, find a different angle or skip it.
+
+28. FRONT-OFFICE DYSFUNCTION (topic \`frontoffice\`, legacy \`commish\`). Rule 5's institutional framing extends to ANY target, not just the commissioner: critique "the front office", "that desk's decision-making", "the process" — never the person. A dysfunction tip about a regular franchise inherits the same naming gates as roster gossip (rules 4/4b), but the voice stays institutional even when the team is named.
+
+29. RIVAL-GM SOURCING FLAVOR. The rumor mill's texture is competitive intelligence — what rival front offices notice about each other. Rotate rival-sourcing attribution into gossip posts (never the same phrase twice in 5 posts): "a rival front office is watching this closely", "other GMs around the league have taken notice", "one executive I talked to called it", "word from a rival desk". Pair with leverage-reading ("that's not a move you make unless…", "read into that what you want") and market-temperature language ("the market's heating up", "not much traction so far"). HARD CONSTRAINT: sourcing flavor must stay generic — never invent a specific rival franchise as the source, and never let the attribution imply the actual tipster's division, conference, or identity. These phrases are set dressing, not sourcing claims.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
@@ -2952,7 +3014,25 @@ async function main() {
     batch = mailbagBatch;
   } else {
     // Normal lane sees only non-stale buckets — stale repeats wait for Friday.
-    const pick = pickPrimaryBucket(normalLaneBuckets, { gossipAllowedToday, now, tipsterContext });
+    // Rule 27 hard backstop: a hotseat storyline about the same team fires at
+    // most once per rolling HOTSEAT_TEAM_COOLDOWN_DAYS, regardless of the
+    // staleness-streak math ("your team is bad" repeated hits differently
+    // than a trade rumor repeated). League-wide hotseat buckets pass through.
+    const eligibleLaneBuckets = [];
+    for (const b of normalLaneBuckets) {
+      const m = /^topic:hotseat:(.+)$/.exec(b.key);
+      if (m && m[1] !== 'league-wide' && redis && !DRY_RUN) {
+        try {
+          const held = await redis.get(hotseatCooldownKey(m[1]));
+          if (held) {
+            log(`  Bucket ${b.key} held — hotseat cooldown active for that team`);
+            continue;
+          }
+        } catch { /* fail open */ }
+      }
+      eligibleLaneBuckets.push(b);
+    }
+    const pick = pickPrimaryBucket(eligibleLaneBuckets, { gossipAllowedToday, now, tipsterContext });
     if (!pick) {
       if (staleBuckets.length > 0) {
         log(`  No fresh bucket qualifies — ${staleBuckets.length} stale bucket(s) held for next Friday mailbag`);
@@ -3532,6 +3612,27 @@ async function main() {
       );
     } catch (err) {
       warn(`  [team-naming] record failed for ${post.id} → ${franchiseId}: ${err.message}`);
+    }
+  }
+
+  // Rule 27 — stamp the hotseat per-team cooldown for any shipped post whose
+  // batch contains a hotseat tip pointed at a specific team. The key TTLs
+  // itself away after HOTSEAT_TEAM_COOLDOWN_DAYS.
+  for (let i = 0; i < allowedPosts.length; i++) {
+    const beat = allowedBeats[i];
+    for (const t of beat?.batch ?? []) {
+      if (t?.topic !== 'hotseat') continue;
+      const fid = typeof t.franchiseHint === 'string' && t.franchiseHint !== 'league-wide' && t.franchiseHint !== 'commish'
+        ? t.franchiseHint
+        : null;
+      if (!fid || !redis) continue;
+      try {
+        await redis.set(hotseatCooldownKey(fid), Date.now(), {
+          ex: HOTSEAT_TEAM_COOLDOWN_DAYS * 24 * 60 * 60,
+        });
+      } catch (err) {
+        warn(`  [hotseat-cooldown] stamp failed for ${fid}: ${err.message}`);
+      }
     }
   }
 

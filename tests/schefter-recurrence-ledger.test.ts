@@ -270,7 +270,9 @@ describe('scanner + admin integration (source guards)', () => {
 
   it('scanner skips stale buckets in the normal lane and keeps the mailbag path unfiltered', () => {
     // pickPrimaryBucket must be fed the filtered list — not the raw buckets.
-    expect(SCANNER_SRC).toMatch(/pickPrimaryBucket\(normalLaneBuckets/);
+    // eligibleLaneBuckets = normalLaneBuckets minus hotseat-cooldown holds
+    expect(SCANNER_SRC).toMatch(/pickPrimaryBucket\(eligibleLaneBuckets/);
+    expect(SCANNER_SRC).toMatch(/for \(const b of normalLaneBuckets\)/);
     // Mailbag still draws from the gossip pool (fresh tips, not buckets), so
     // stale fingerprints reach the Friday roundup as intended.
     expect(SCANNER_SRC).toMatch(/mailbagBatch = gossipPool\.slice/);

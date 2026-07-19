@@ -13,6 +13,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { getAuthUser } from '../../../utils/auth';
 import theLeagueConfig from '../../../data/theleague.config.json';
+import { getTipTopics } from '../../../config/schefter-topics.mjs';
 import { chooseTeamName } from '../../../utils/team-names';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import feedData from '../../../data/theleague/schefter-feed.json';
@@ -39,6 +40,10 @@ const lastRumorSnippet = (() => {
   const sentence = match ? match[0] : raw;
   return sentence.length > 120 ? sentence.slice(0, 117).trimEnd() + '…' : sentence;
 })();
+
+// Topic list from the single-source registry (labels, placeholders, and
+// which topics allow "The Commish" as a target all come from one place).
+const tipTopics = getTipTopics('theleague');
 
 const schefterAuthor = getAuthor('claude-schefter');
 const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/assets/claude-schefter-avatar.webp';
@@ -182,11 +187,9 @@ const preselectTeam = (() => {
         <div class="tip-field">
           <label class="tip-field__label" for="tip-topic">Topic</label>
           <select class="tip-field__select" id="tip-topic" name="topic" required>
-            <option value="trade">Trade interest</option>
-            <option value="roster">Roster gripe</option>
-            <option value="prediction">Bold prediction</option>
-            <option value="commish">Beef</option>
-            <option value="other">Other</option>
+            {tipTopics.map((t) => (
+              <option value={t.id}>{t.label}</option>
+            ))}
           </select>
         </div>
 
@@ -1297,6 +1300,10 @@ const preselectTeam = (() => {
   }
 </style>
 
+<script type="application/json" id="tip-topic-meta" set:html={JSON.stringify(
+  Object.fromEntries(tipTopics.map((t) => [t.id, { label: t.label, placeholder: t.placeholder, commishTargetAllowed: t.commishTargetAllowed }]))
+)} />
+
 <script>
   const form = document.getElementById('tip-form') as HTMLFormElement | null;
   const textarea = document.getElementById('tip-text') as HTMLTextAreaElement | null;
@@ -1309,29 +1316,25 @@ const preselectTeam = (() => {
   const remainingChip = document.getElementById('tip-remaining') as HTMLElement | null;
   const remainingText = document.getElementById('tip-remaining-text');
 
+  const TOPIC_META: Record<string, { label: string; placeholder: string; commishTargetAllowed: boolean }> =
+    JSON.parse(document.getElementById('tip-topic-meta')?.textContent ?? '{}');
+
   function syncCommishOption() {
     if (!topicSelect || !franchiseSelect || !commishOption) return;
-    const isTrade = topicSelect.value === 'trade';
-    commishOption.hidden = isTrade;
-    commishOption.disabled = isTrade;
-    if (isTrade && franchiseSelect.value === 'commish') {
+    const allowed = TOPIC_META[topicSelect.value]?.commishTargetAllowed ?? true;
+    commishOption.hidden = !allowed;
+    commishOption.disabled = !allowed;
+    if (!allowed && franchiseSelect.value === 'commish') {
       franchiseSelect.value = 'league-wide';
     }
   }
   topicSelect?.addEventListener('change', syncCommishOption);
   syncCommishOption();
 
-  // Phase 3 — rotating placeholders by topic
-  const PLACEHOLDERS: Record<string, string> = {
-    trade: "e.g. Hearing the Northwest is shopping their 1st for a vet WR…",
-    roster: "e.g. Somebody in the East just gave up on their rebuild…",
-    prediction: "e.g. Calling it now — Breece Hall isn't making it through Week 8…",
-    commish: "e.g. The Commish keeps scheduling the auction when I'm on vacation. I see you.",
-    other: "Tell me what's brewing.",
-  };
+  // Phase 3 — rotating placeholders by topic (from the registry blob)
   function syncPlaceholder() {
     if (!topicSelect || !textarea) return;
-    const next = PLACEHOLDERS[topicSelect.value] ?? PLACEHOLDERS.other;
+    const next = TOPIC_META[topicSelect.value]?.placeholder ?? TOPIC_META.other?.placeholder ?? '';
     textarea.placeholder = next;
   }
   topicSelect?.addEventListener('change', syncPlaceholder);
@@ -1566,13 +1569,9 @@ const preselectTeam = (() => {
   window.addEventListener('beforeunload', () => window.clearInterval(cookerInterval), { once: true });
 
   // Phase 9 — hot topics chips.
-  const TOPIC_LABELS: Record<string, string> = {
-    trade: 'Trade interest',
-    roster: 'Roster gripe',
-    prediction: 'Bold prediction',
-    commish: 'Beef',
-    other: 'Other',
-  };
+  const TOPIC_LABELS: Record<string, string> = Object.fromEntries(
+    Object.entries(TOPIC_META).map(([id, m]) => [id, m.label]),
+  );
   const hotChipsEl = document.querySelector('[data-hot-topics-chips]') as HTMLElement | null;
 
   async function refreshHotTopics() {

@@ -9,8 +9,30 @@
  * `${userId}${SCHEFTER_TIPSTER_SALT}` (see utils/schefter-tipster-hash.ts).
  */
 
-export const TIP_TOPICS = ['trade', 'roster', 'prediction', 'commish', 'other'] as const;
-export type TipTopic = (typeof TIP_TOPICS)[number];
+/**
+ * Modern topic ids. MUST stay in sync with src/config/schefter-topics.mjs
+ * (`ALL_TOPIC_IDS`) — tests/schefter-topics.test.ts enforces the sync.
+ * The registry module is the source of truth for labels/placeholders/
+ * per-league availability; this literal exists only to give TS a union type.
+ */
+export const TIP_TOPICS = [
+  'trade',
+  'roster',
+  'hotseat',
+  'frontoffice',
+  'tampering',
+  'intentions',
+  'motive',
+  'prediction',
+  'other',
+] as const;
+
+/**
+ * `commish` is the legacy id for what is now `frontoffice` — old queued and
+ * archived tips still carry it, so the type keeps accepting it. New
+ * submissions are normalized via LEGACY_TOPIC_ALIASES in schefter-topics.mjs.
+ */
+export type TipTopic = (typeof TIP_TOPICS)[number] | 'commish';
 
 export const LEAGUE_WIDE_HINT = 'league-wide';
 export const COMMISH_HINT = 'commish';
