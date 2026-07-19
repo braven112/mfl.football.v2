@@ -125,7 +125,7 @@ import {
   getTeamNameCount30d,
   recordTeamNaming,
 } from './lib/schefter-team-naming.mjs';
-import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
+import { checkGroupMeQuality, RELAXED_QUALITY_THRESHOLD } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
@@ -3524,9 +3524,45 @@ async function main() {
   // longer than MAX_HELD_MS get dropped at the next queue load.
   // Failure mode of the gate itself is allow-on-error (see
   // schefter-quality-gate.mjs header).
+  //
+  // Quiet-feed leniency (July 2026, per Brandon): when Schefter has been
+  // quiet, the bar for interrupting the chat drops to
+  // RELAXED_QUALITY_THRESHOLD. A beat runs against the relaxed bar when
+  // EITHER holds:
+  //   - league drought: this league's feed has no rumor-mill post in the
+  //     last RUMOR_QUIET_FEED_DAYS (or none ever — a fresh launch), or
+  //   - fresh subject: the beat's bucket fingerprint has not shipped a post
+  //     during the current ISO week. The recurrence ledger is stamped only
+  //     on delivery, so it is the source of truth for "posted about it".
+  // Scores of 1-2 (hallucinated / contradictory) still suppress either way.
+  const RUMOR_QUIET_FEED_DAYS = 7;
+  const newestRumorTs = (feedForAnonymize.posts ?? [])
+    .filter((p) => p?.transactionSubType === RUMOR_SUB_TYPE)
+    .reduce((acc, p) => Math.max(acc, new Date(p.timestamp).getTime() || 0), 0);
+  const leagueQuiet =
+    newestRumorTs === 0 ||
+    now.getTime() - newestRumorTs > RUMOR_QUIET_FEED_DAYS * 24 * 60 * 60 * 1000;
+  const relaxedThresholdFor = (beat) => {
+    if (leagueQuiet) return { threshold: RELAXED_QUALITY_THRESHOLD, why: `league quiet ${RUMOR_QUIET_FEED_DAYS}d` };
+    try {
+      const [bucket] = buildTopicBuckets(beat?.batch ?? []);
+      const fp = bucket ? bucketFingerprint(bucket) : null;
+      const weeksSeen = fp ? (recurrenceLedger?.fingerprints?.[fp]?.weeksSeen ?? []) : null;
+      if (weeksSeen && !weeksSeen.includes(currentIsoWeek)) {
+        return { threshold: RELAXED_QUALITY_THRESHOLD, why: 'fresh subject this week' };
+      }
+    } catch {
+      /* non-fingerprint lanes fall through to the standard threshold */
+    }
+    return null;
+  };
   const gateResults = await Promise.all(
     builtPosts.map((p, i) => {
       const primaryTip = beats[i]?.anonymized?.[0];
+      const relaxed = relaxedThresholdFor(beats[i]);
+      if (relaxed) {
+        log(`  [quality-gate] relaxed threshold ${relaxed.threshold} for beat ${i + 1} (${relaxed.why})`);
+      }
       return checkGroupMeQuality(
         {
           headline: p.headline,
@@ -3535,7 +3571,12 @@ async function main() {
           scope: primaryTip?.scope?.kind ?? null,
           topic: primaryTip?.topic ?? null,
         },
-        { apiKey: process.env.ANTHROPIC_API_KEY, log, warn },
+        {
+          apiKey: process.env.ANTHROPIC_API_KEY,
+          log,
+          warn,
+          ...(relaxed ? { threshold: relaxed.threshold } : {}),
+        },
       );
     }),
   );
@@ -3600,7 +3641,11 @@ async function main() {
     if (unusedTips.length > 0) {
       log(`  [dry-run] Would hold ${unusedTips.length} unchosen-bucket tip(s) for the next cycle: ${unusedTips.map((t) => t.id).join(', ')}`);
     }
-    log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''} (1 cycle = 1 slot, regardless of suppression), set last_post_ts`);
+    if (allowedPosts.length > 0) {
+      log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''}, set last_post_ts (budgets count delivered posts only)`);
+    } else {
+      log('  [dry-run] Fully-suppressed cycle — would consume NO daily budget (posts_today, gossip cap, spacing all unchanged)');
+    }
     if (hadRogerRiff) {
       log(`  [dry-run] Would set ${ROGER_LAST_RIFF_DATE_KEY}=${todayPt} (ex=48h)`);
     }
@@ -3732,37 +3777,44 @@ async function main() {
     }
   }
 
-  // Redis updates: increment counter (with TTL to midnight PT), last post ts,
-  // rewrite queue with leftovers from unchosen buckets, record processed
-  // for audit, and bump the gossip cap counter when this was a gossip post.
+  // Redis updates: bump the daily budgets when a post shipped, set last post
+  // ts, rewrite queue with leftovers from unchosen buckets, and record
+  // processed tips for audit.
   try {
-    const newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
-    if (newCount === 1) {
-      await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
-    }
-    if (postKind === 'gossip') {
-      const newGossipCount = await redis.incr(RUMOR_GOSSIP_POSTS_TODAY_KEY);
-      if (newGossipCount === 1) {
-        await redis.expire(RUMOR_GOSSIP_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
-      }
-      log(`  Gossip counter: now ${newGossipCount}/${adaptiveGossipCap}`);
-    }
-    if (postKind === 'mailbag') {
-      // Mark today's mailbag done. 48h TTL — the key naturally falls off
-      // before next Friday even if clocks skew.
-      await redis.set(FRIDAY_MAILBAG_DONE_KEY, todayPtDate, { ex: 48 * 60 * 60 });
-      log(`  [mailbag] Marked done for ${todayPtDate}`);
-    }
-    // Spacing anchor reflects DELIVERED posts only. A fully-suppressed cycle
-    // (quality gate rejected every beat) ships nothing to the chat, so it must
-    // not start the 4h spacing clock — otherwise one suppressed post silently
-    // blocks every real post for the rest of the window. That is exactly what
-    // blanked an entire morning: a ~7am suppressed beat set this anchor and
-    // every later cycle failed with "need 240m spacing". The posts_today slot
-    // is still consumed above (the LLM-rate safety valve); only the chat-cadence
-    // anchor is delivery-gated.
+    // BUDGET-ON-DELIVERY SENTINEL — every daily budget here counts DELIVERED
+    // posts only (posts_today, gossip cap, mailbag-done, spacing anchor). A
+    // fully-suppressed cycle must consume NOTHING: a ~7am suppressed beat
+    // once burned the day's gossip slot (and, earlier, the 4h spacing
+    // anchor) and silenced the rumor mill for the whole day — see the
+    // July 2026 AFL-launch post-mortem. LLM attempt-rate stays bounded
+    // without an attempt-based counter: each tip gets MAX_SUPPRESSED_STRIKES
+    // generation attempts before dropping, held tips age out at MAX_HELD_MS,
+    // and quiet hours block 8h/day. tests/schefter-gossip-budget.test.ts
+    // greps for this sentinel — do not delete it without replacing the
+    // coverage.
+    let newCount = null;
     if (allowedPosts.length > 0) {
+      newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
+      if (newCount === 1) {
+        await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+      }
+      if (postKind === 'gossip') {
+        const newGossipCount = await redis.incr(RUMOR_GOSSIP_POSTS_TODAY_KEY);
+        if (newGossipCount === 1) {
+          await redis.expire(RUMOR_GOSSIP_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+        }
+        log(`  Gossip counter: now ${newGossipCount}/${adaptiveGossipCap}`);
+      }
+      if (postKind === 'mailbag') {
+        // Mark today's mailbag done. 48h TTL — the key naturally falls off
+        // before next Friday even if clocks skew.
+        await redis.set(FRIDAY_MAILBAG_DONE_KEY, todayPtDate, { ex: 48 * 60 * 60 });
+        log(`  [mailbag] Marked done for ${todayPtDate}`);
+      }
+      // Spacing anchor — starts the 4h chat-cadence clock from this delivery.
       await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
+    } else {
+      log('  Suppressed cycle — no daily budget consumed (posts_today, gossip cap, spacing all unchanged)');
     }
 
     // Remove consumed tips from the queue while preserving (a) tips in
@@ -3820,20 +3872,19 @@ async function main() {
       }
     }
 
-    // Roger riff date stamp — approximate "end of day PT" with a 48h TTL so
-    // the key naturally falls off even if clocks skew.
-    if (hadRogerRiff) {
+    // Roger riff / morning greeting date stamps. Both ride on beat 0, so
+    // they only burn their once-a-day slot when beat 0 actually shipped —
+    // a suppressed beat never fired the greeting or the riff. 48h TTLs so
+    // clock skew can't strand the keys.
+    const beatZeroShipped = allowedIndexSet.has(0);
+    if (hadRogerRiff && beatZeroShipped) {
       await redis.set(ROGER_LAST_RIFF_DATE_KEY, todayPt, { ex: 48 * 60 * 60 });
     }
-
-    // Morning greeting date stamp — only set when we actually fired the
-    // greeting on this cycle, so a failed post doesn't burn the slot. 48h
-    // TTL mirrors the Roger pattern so clock skew can't strand the key.
-    if (morningGreeting) {
+    if (morningGreeting && beatZeroShipped) {
       await redis.set(MORNING_GREETING_DATE_KEY, todayPt, { ex: 48 * 60 * 60 });
     }
 
-    log(`  Redis updated: posts_today=${newCount}, queue drained, processed archived${hadRogerRiff ? ', roger riff date stamped' : ''}${morningGreeting ? ', morning greeting stamped' : ''}`);
+    log(`  Redis updated: posts_today=${newCount ?? 'unchanged'}, queue drained, processed archived${hadRogerRiff && beatZeroShipped ? ', roger riff date stamped' : ''}${morningGreeting && beatZeroShipped ? ', morning greeting stamped' : ''}`);
   } catch (err) {
     warn(`  Redis post-write update failed: ${err.message}`);
   }
@@ -3913,7 +3964,13 @@ async function main() {
     warn(`  [tipster-topic-counters] hook failed: ${err.message}`);
   }
 
-  return 1;
+  // Return DELIVERED posts, not generated beats — the "Posts written" line
+  // this feeds once claimed 1 on a fully-suppressed cycle, which read like a
+  // post had shipped and vanished.
+  if (builtPosts.length > allowedPosts.length) {
+    log(`  Cycle result: ${allowedPosts.length} shipped, ${builtPosts.length - allowedPosts.length} suppressed`);
+  }
+  return allowedPosts.length;
 }
 
 /**

@@ -14,6 +14,13 @@
 // Edit this value to tune strictness — 6 is the default sweet spot.
 export const QUALITY_THRESHOLD = 6;
 
+// Relaxed bar for quiet stretches — when Schefter hasn't shipped a rumor
+// post in a week (or ever, for a fresh league) or hasn't posted about the
+// beat's subject during the current ISO week, a borderline 3/10 is better
+// than silence. Callers pass this via checkGroupMeQuality's `threshold`
+// option; scores of 1-2 (hallucinated / contradictory) still suppress.
+export const RELAXED_QUALITY_THRESHOLD = 3;
+
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 
 const SCORING_PROMPT = `You score a single Schefter Report post for whether it's worth pinging an entire fantasy football GroupMe chat about.
