@@ -4,8 +4,10 @@ import { createSessionToken, createSessionCookie, createMFLCookies } from '../..
 import { setTheLeaguePreference, setAFLPreference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { captureCredential } from '../../../utils/autocut-storage';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -82,6 +84,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const headers = new Headers({ 'Content-Type': 'application/json' });
     for (const cookie of setCookieHeaders) {
       headers.append('Set-Cookie', cookie);
+    }
+
+    // Refresh-on-login credential capture for the August cut automation
+    // (TheLeague only — the autocut job replays owner cookies). Fire and
+    // forget: captureCredential never throws by contract, but the guards
+    // ensure login can never fail or slow down because of capture.
+    if (resolvedLeagueId === THELEAGUE_ID && mflResponse.userId && mflResponse.franchiseId) {
+      try {
+        void captureCredential(mflResponse.franchiseId, mflResponse.userId).catch(() => {
+          /* capture is best-effort — degraded storage must not affect login */
+        });
+      } catch {
+        /* never block login on credential capture */
+      }
     }
 
     return new Response(

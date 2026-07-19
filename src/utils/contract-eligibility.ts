@@ -22,8 +22,11 @@ import type {
 const IN_SEASON_DEADLINE_MS = 24 * 60 * 60 * 1000;  // 24 hours
 const OFFSEASON_DEADLINE_MS = 48 * 60 * 60 * 1000;   // 48 hours
 
-// Transaction types that represent new player acquisitions (not trades)
-const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
+// Transaction types that represent new player acquisitions (not trades).
+// Exported so consumers that must apply the same trade-exclusion rule
+// (e.g. august-cut-selection.ts's "last added" ordering) share this list
+// instead of re-declaring it.
+export const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
 
 /**
  * Parse the MFL transaction string format into added/dropped player IDs.
