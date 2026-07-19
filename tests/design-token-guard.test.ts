@@ -18,6 +18,13 @@
  * legitimately define tokens that child components consume via the cascade.
  * The failure mode this test targets is a token that exists NOWHERE.
  *
+ * KNOWN LIMITATION: a definition inside one component's scoped style (even a
+ * `:global(html.dark)`-only block) counts repo-wide, so a reference in an
+ * unrelated file that the cascade never reaches will pass this test. The
+ * repo convention that keeps that gap closed: define theme tokens globally
+ * in tokens.css / tokens-dark.css, never as page-local vocabularies (see
+ * CLAUDE.md "Design tokens").
+ *
  * If you add a genuinely intentional reference to a token defined outside
  * src/ (e.g. injected by a third-party script at runtime), add it to
  * ALLOWED_EXTERNAL_TOKENS with a comment explaining where it comes from.
@@ -136,8 +143,9 @@ describe('design-token guard', () => {
     // hundreds of tokens; a tiny count means the parse regressed and the
     // reference check below would pass vacuously… or flag everything.
     expect(defined.size).toBeGreaterThan(200);
-    expect(defined.has('page-text')).toBe(true);
-    expect(defined.has('card-bg')).toBe(true);
+    for (const core of ['page-text', 'card-bg', 'card-surface', 'content-border', 'content-text-muted', 'color-primary']) {
+      expect(defined.has(core), `core token --${core} missing from registry`).toBe(true);
+    }
   });
 
   it('every var(--token) reference points at a token defined somewhere in src/', () => {
