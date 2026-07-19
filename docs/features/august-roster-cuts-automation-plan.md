@@ -113,6 +113,13 @@ Rules, in order:
    order active-roster players by acquisition timestamp descending. Players with
    no acquisition record in the transactions feed are treated as oldest (cut
    last).
+   **Trades do not count as acquisitions** (league rule, decided): the
+   ordering considers only `ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT',
+   'AUCTION_WON']` — exactly what `contract-eligibility.ts:26` already
+   defines. A player traded for in July is treated as long-held (cut last);
+   assets were paid for him, unlike a waiver pickup. The auto-selection
+   therefore never targets trade acquisitions until every FA/waiver/auction
+   pickup is exhausted.
 4. Only `status === 'ROSTER'` players count toward the 22 and are eligible;
    taxi/practice-squad and IR players are excluded from both the count and the
    cut pool (they have their own limits and don't block the cutdown).
@@ -142,6 +149,14 @@ Existing building blocks:
 - **Payload:** `{ year: number, playerIds: string[], updatedAt: string }` —
   `playerIds` is ordered (cut priority). Store the league year so a stale list
   from last August is ignored, not silently executed.
+- **Pre-deadline privacy:** a marked list is strategy — if rivals can see who
+  an owner is about to cut, they'll wait for the free agent instead of
+  offering a trade. Until the deadline passes, a franchise's cut list and
+  computed slate are visible ONLY to that franchise's owner and the
+  commissioner. No public surface (pages, feeds, Schefter posts, GroupMe
+  touches to the shared channel) may name another team's marked players
+  pre-deadline — league-wide summaries stay counts-only ("6 teams over, 14
+  players will be cut"). Post-deadline, cuts are public transactions anyway.
 - The scheduled job reads these keys directly through `scripts/lib/redis.mjs`
   (raw Upstash REST — the `.ts` storage utils gate on `process.env.VERCEL`,
   which is unset in Actions runners; see `scripts/apply-pending-contracts.mjs:12-21`).
@@ -185,10 +200,28 @@ team. Contents:
      ("added Jul 12") and a hint: "mark other players to protect this one".
    - Players below the cut line are simply not shown — the panel lists only
      who goes.
+   - **Cap math on every row and in total.** Cuts aren't free (the existing
+     cut flow warns "50% cap hit + future penalties"). Each slate row shows
+     salary, dead-cap hit, and net savings, and the panel footer totals them
+     ("these 5 cuts free $8.2M, cost $3.1M in dead cap"). The last-added
+     fallback is cap-blind by design — this preview is where owners correct
+     for it, e.g. marking a cheap veteran to protect an expensive recent
+     pickup. Reuse the salary/penalty math behind the existing Cut Player
+     modal (`src/utils/salary-calculations.ts` + the CDM cut-cost copy) —
+     one source of truth, no re-derivation.
 3. **Save button** → step-up auth flow when the credential isn't verifiably
    live; on success the panel header flips to a confirmed state: "✓ Cuts
    locked in — credentials verified Aug 3. You can change this list until
    Aug 16, 8:45 PM PT."
+3b. **"Cut marked players now" button** — owners who already know their cuts
+   shouldn't have to wait for the deadline. Executes the marked list
+   immediately, owner-mode in the browser session, via the proven sequential
+   `/api/cut-player` loop (KeeperPlanner pattern:
+   `src/components/afl-fantasy/KeeperPlanner.astro:662-714` — progress bar,
+   409 = already-gone = success, per-player failure collection). Confirmation
+   modal shows the same cap math first. Every team that self-serves drops out
+   of the deadline job's blast radius; the automation becomes the backstop,
+   not the primary path.
 4. **Under-limit state:** at ≤22 active the panel collapses to "You're at the
    limit — nothing will be cut. Your N marked players are safe unless you go
    back over." (Decision 2: marks are priority, not a standing drop order.)
@@ -215,12 +248,32 @@ MFL write job"):
 - `TZ: America/Los_Angeles` on the workflow; cron every 15 minutes during August
   only (`*/15 * * 8 *` UTC is fine — the in-script gate does the real work; no
   GitHub `vars.*` feature gate per CLAUDE.md).
-- **In-script date gate:** fire only when `now >= getAugustCutdownDate(year)`
-  AND a Redis one-shot flag `autocut:executed:{year}` is unset; set the flag
-  after a successful run. Never early (same philosophy as
-  `roger-reminder-window.mjs`), naturally idempotent, and self-healing if a
-  scheduled run is missed. The same script with `--validate-only` powers the
-  T-7d/T-2d credential-check dry runs.
+- **In-script date gate + per-franchise resumability:** fire only when
+  `now >= getAugustCutdownDate(year)`. Never early (same philosophy as
+  `roger-reminder-window.mjs`). Completion is tracked **per franchise**, not
+  globally: `autocut:done:{year}` is a Redis hash, field = franchiseId, value
+  = `done` or `failed:<attemptCount>`. Every cron tick after the deadline
+  re-enters, skips `done` franchises, retries `failed` ones up to
+  `MAX_ATTEMPTS` (default 3), and marks the run fully complete only when every
+  over-limit franchise is `done` or has exhausted retries. A run that dies on
+  franchise 9 of 16 heals itself on the next tick — the audit page is the
+  exception path, not the recovery plan. (A franchise already at ≤22 when its
+  turn comes — e.g. the owner used "cut now" — is marked `done` with zero
+  cuts.)
+- **Kill switch:** before doing anything, the job checks the Redis flag
+  `autocut:paused:{year}`; if set, it logs and exits. The flag is toggled from
+  the commissioner audit page (a runtime state flag in Redis set via
+  admin-gated UI — not a GitHub Actions variable, per the CLAUDE.md
+  feature-flag rule). If something looks wrong at 8pm on deadline day, the
+  commissioner can stop the 8:45 run from a phone.
+- **Rehearsal cadence, all powered by the same script:**
+  - `--validate-only` (T-7d, T-2d): credential checks + GroupMe nags.
+  - `--rehearse` (T-1d): the full run minus MFL writes — live rosters
+    fetched, every slate computed, cap math totaled, snapshot format
+    exercised, degraded-data guards hit. Posts the league-wide, counts-only
+    summary to GroupMe ("cutdown tomorrow 8:45pm: 6 teams over, 14 players
+    will be cut") and a per-team plan DM/touch where supported. The real run
+    executes zero first-time code paths.
 - **`--dry-run` flag + `workflow_dispatch` boolean input defaulting to `true`**,
   exactly like `apply-pending-contracts.yml:24-29` — manual runs are safe by
   default, scheduled runs are live.
@@ -288,8 +341,10 @@ finish the job manually in the MFL UI.
   committed file). One card per franchise: owner's marked list vs computed
   slate vs what actually executed, with failures highlighted and a per-player
   "done manually" checkbox (stored back to the snapshot) so the commissioner
-  can track manual cleanup to completion. New page → needs a
-  `page-directory.json` entry with `visibility: "admin"`.
+  can track manual cleanup to completion. Also hosts the **pause/resume kill
+  switch** (`autocut:paused:{year}`) and shows per-franchise attempt counts
+  from `autocut:done:{year}`. New page → needs a `page-directory.json` entry
+  with `visibility: "admin"`.
 - **Failure paging:** any failed or skipped franchise triggers the GH issue
   (already in the report step) *and* a commissioner-only notification listing
   the affected teams and linking the admin page.
@@ -316,10 +371,10 @@ verify, with a throwaway test cut while stakes are zero:
 |---|---|---|
 | 0 | Owner-cookie replay spike from script context; longevity check; insights write-up | — |
 | 1 | `august-cut-selection.ts` + unit tests; `autocut` KV store + API route with save-time validation + `requiresReauth` step-up; credential capture on login + save (encrypted) | — |
-| 2 | Rosters-page UI: toggles, priority ordering, do-nothing preview, countdown | 1 |
-| 3 | `apply-august-cuts.mjs` + workflow (dry-run default), `--validate-only` mode, pre-execution snapshot, committed report, credential cleanup | 0, 1 |
-| 4 | Commissioner audit page `/theleague/admin/cutdown-report` + page-directory entry (admin) + failure notification | 3 |
-| 5 | Roger/GroupMe touches: T-7d/T-2d "log in so your cuts can run" nags + post-cut recap; What's New entry | 3 |
+| 2 | Rosters-page UI: toggles, priority ordering, do-nothing preview with cap math, "cut marked players now", countdown | 1 |
+| 3 | `apply-august-cuts.mjs` + workflow (dry-run default), `--validate-only` + `--rehearse` modes, per-franchise resumability + retries, kill-switch check, pre-execution snapshot, committed report, credential cleanup | 0, 1 |
+| 4 | Commissioner audit page `/theleague/admin/cutdown-report` (incl. kill switch, attempt counts) + page-directory entry (admin) + failure notification; integration-pipeline cookie-replay check | 3 |
+| 5 | Roger/GroupMe touches: T-7d/T-2d "log in so your cuts can run" nags, T-1d rehearsal summary (counts-only in shared channel) + post-cut recap; What's New entry | 3 |
 
 ## Tests
 
@@ -338,6 +393,17 @@ verify, with a throwaway test cut while stakes are zero:
   first-cut failure must still leave a complete snapshot of all franchises'
   slates); execution never deletes `autocut:{fid}` lists; per-franchise
   outcomes append correctly.
+- Resumability tests — a second run skips `done` franchises, retries `failed`
+  ones, stops at `MAX_ATTEMPTS`; a franchise that reached ≤22 between runs is
+  marked done with zero cuts; the paused flag short-circuits everything.
+- **Continuous live verification:** add an owner-cookie-replay check to the
+  existing MFL integration-test pipeline
+  (`.github/workflows/mfl-integration-test.yml`,
+  `docs/features/mfl-integration-test-pipeline.md`) — validate the stored
+  test-account cookie with the `myleagues` read on every pipeline run, so the
+  replay mechanism is verified continuously between build time and August,
+  not just once during the Phase 0 spike. (Keep it read-only; the write path
+  gets its one live proof in Phase 0.)
 - Script-level dry-run test asserting no MFL write is attempted with
   `--dry-run` (grep-sentinel style like `tests/schefter-quiet-day.test.ts` or a
   fetch-mock).
@@ -371,3 +437,13 @@ verify, with a throwaway test cut while stakes are zero:
    MFL write, and the snapshot is committed to the repo — so any error leaves
    the commissioner a complete, permanent record of who each owner had slated,
    viewable on the admin audit page.
+9. **Trade acquisitions are exempt from auto-selection ordering** — "last
+   added" counts only FA/waiver/auction pickups (`ACQUISITION_TYPES`); players
+   traded for are treated as long-held. Owners can still mark a trade
+   acquisition manually.
+10. **Cut lists are private until the deadline** — visible only to the owning
+    franchise and the commissioner; shared-channel messaging stays
+    counts-only.
+11. **Deadline execution is the backstop, not the primary path** — the "cut
+    marked players now" button lets owners self-serve early, shrinking the
+    automated run's blast radius.
