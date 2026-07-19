@@ -8910,10 +8910,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         // an IMMEDIATE save of the full list (append-to-end priority) through
         // the same step-up-auth path as the panel's Save button — mirrors the
         // trade-block toggle, not the two-step roster-move confirm.
+        // isOwnTeam above trusts config.authUser, which demo mode spoofs — so
+        // gate the auto-cut option on isAutocutOwnView() (real fid + not demo),
+        // never isAutocutEnabled(). Keeps the option absent in demo and on any
+        // team that isn't the authenticated owner's own.
         const autocutPid = String(cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '');
         if (
           tag === 'active' &&
-          isAutocutEnabled() &&
+          isAutocutOwnView() &&
           autocutPid &&
           !autocutPid.startsWith('DEMO_')
         ) {
@@ -9425,14 +9429,25 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       saving: false,
     };
 
-    const isAutocutEnabled = () => !!autocutCfg && !!config.authUser?.franchiseId;
-    const isAutocutOwnView = () =>
-      isAutocutEnabled() && currentTeam === config.authUser.franchiseId;
+    // Privacy anchor: snapshot the REAL authenticated franchise id at module
+    // init, BEFORE Contract Demo's startDemo() can overwrite config.authUser
+    // with { franchiseId: currentTeam, ... }. Every autocut gate reads this,
+    // never config.authUser — otherwise entering demo on another franchise
+    // would spoof ownership and render that team's real cut list pre-deadline.
+    const AUTOCUT_REAL_FID = config.authUser?.franchiseId ?? null;
 
-    // Always the CURRENT league year's bucket for the owner's franchise —
-    // the plan is year-scoped regardless of which season is being browsed.
+    const isAutocutEnabled = () => !!autocutCfg && !!AUTOCUT_REAL_FID;
+    // Own-view is false during demo (demoActive) on ANY team — demo data is
+    // fabricated and the overlay may mock rosters, so the panel + CDM option
+    // must vanish for the demo's duration and re-appear on exit (updateView →
+    // renderCutdownPanel re-renders on both enter and exit).
+    const isAutocutOwnView = () =>
+      isAutocutEnabled() && !demoActive && currentTeam === AUTOCUT_REAL_FID;
+
+    // Always the CURRENT league year's bucket for the owner's REAL franchise —
+    // the plan is year-scoped regardless of which season/team is being browsed.
     const getAutocutTeamData = () =>
-      config.seasons?.[String(autocutCfg?.year)]?.teams?.[config.authUser?.franchiseId] || null;
+      config.seasons?.[String(autocutCfg?.year)]?.teams?.[AUTOCUT_REAL_FID] || null;
 
     const findAutocutPlayer = (playerId) => {
       const td = getAutocutTeamData();
@@ -9463,7 +9478,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         activeRoster,
         markedPlayerIds: autocutState.playerIds,
         acquisitions: autocutCfg?.acquisitions || [],
-        franchiseId: config.authUser?.franchiseId,
+        franchiseId: AUTOCUT_REAL_FID,
       });
     };
 
@@ -9554,6 +9569,31 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       renderCutdownPanel();
     };
 
+    // ---- Save-race guard -------------------------------------------
+    // The CDM toggle and the panel Save both POST the full ordered list. If
+    // two overlap, the slower response used to clobber the faster one on both
+    // client and server. A monotonic token stamps each save; only the newest
+    // one in flight is allowed to commit — stale responses are discarded.
+    let autocutSaveSeq = 0;
+
+    /** Single commit path for BOTH entry points. Bumps the token, POSTs, and
+     *  only commits if this save is still the newest. Clears the in-flight
+     *  flag on the winning save (a superseded save leaves it for the newer
+     *  writer that owns it). Returns the postCutList result plus { stale }. */
+    const postAndCommit = async (newIds) => {
+      const mySeq = ++autocutSaveSeq;
+      const result = await postCutList(newIds);
+      if (mySeq !== autocutSaveSeq) {
+        // A newer save superseded this one — do not commit, do not touch
+        // state or the saving flag (the newer writer owns both).
+        console.debug('[autocut] stale save discarded', mySeq, autocutSaveSeq);
+        return { ...result, stale: true };
+      }
+      autocutState.saving = false;
+      if (result.ok) commitAutocutSave(newIds, result.data);
+      return result;
+    };
+
     // ---- Step-up auth: inline MFL re-login modal -------------------
     let cdpReauthCtx = null; // { onSuccess, onCancel, returnFocusTo }
 
@@ -9597,6 +9637,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const btn = actionOptions?.querySelector('.cdm-action-option--autocut-toggle');
       const label = btn?.querySelector('.cdm-action-option__label');
       const desc = btn?.querySelector('.cdm-action-option__desc');
+
+      // Race guard: refuse to start a second write while the panel Save (or a
+      // prior toggle) is still in flight — surface the same quiet in-place
+      // message pattern the option uses for other transient states.
+      if (autocutState.saving) {
+        if (desc) desc.textContent = 'A save is already in progress — try again in a moment.';
+        return;
+      }
+
       if (btn) btn.disabled = true;
       if (label) label.textContent = isMarked ? 'Removing…' : 'Marking…';
       if (desc) desc.textContent = 'Saving your cut list…';
@@ -9613,8 +9662,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         if (btn) btn.disabled = false;
       };
 
-      const finishSuccess = (data) => {
-        commitAutocutSave(newIds, data);
+      // State commit + re-render now live in postAndCommit; this only handles
+      // the toggle-specific announce + option re-render on a winning save.
+      const finishSuccess = () => {
         const announcer = document.getElementById('cdm-announcer');
         if (announcer) {
           const priority = getMarkedOnRoster().indexOf(playerId) + 1;
@@ -9630,9 +9680,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         if (cdmPlayerData) populateCdmActionOptions(cdmPlayerData.eligibility);
       };
 
-      const result = await postCutList(newIds);
+      autocutState.saving = true;
+      const result = await postAndCommit(newIds);
+      if (result.stale) {
+        // Superseded by a newer save — leave the newest writer's UI in place.
+        return;
+      }
       if (result.ok) {
-        finishSuccess(result.data);
+        finishSuccess();
         return;
       }
       if (result.requiresReauth) {
@@ -9645,8 +9700,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 : 'Re-login cancelled — player was not marked.',
             ),
           onSuccess: async () => {
-            const retry = await postCutList(newIds);
-            if (retry.ok) finishSuccess(retry.data);
+            autocutState.saving = true;
+            const retry = await postAndCommit(newIds);
+            if (retry.stale) return;
+            if (retry.ok) finishSuccess();
             else restore(retry.error || 'Save failed after re-login. Try again.');
           },
         });
@@ -9883,12 +9940,18 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const saveCutListFromPanel = async () => {
       if (!autocutCfg || autocutState.saving) return;
       autocutState.saving = true;
-      renderCdpSaveState();
+      renderCdpSaveState(); // disables the Save button for the flight's duration
       const ids = [...autocutState.playerIds];
-      const result = await postCutList(ids);
-      autocutState.saving = false;
+      // postAndCommit owns the sequence token, the state commit, and clearing
+      // autocutState.saving on the winning save (commitAutocutSave → panel
+      // re-render already reflects the settled saving=false state).
+      const result = await postAndCommit(ids);
+      if (result.stale) {
+        // A newer save superseded this one — it owns the flag + final render.
+        return;
+      }
       if (result.ok) {
-        commitAutocutSave(ids, result.data);
+        renderCdpSaveState();
         return;
       }
       if (result.requiresReauth) {
@@ -9898,9 +9961,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           onSuccess: async () => {
             autocutState.saving = true;
             renderCdpSaveState();
-            const retry = await postCutList(ids);
-            autocutState.saving = false;
-            if (retry.ok) commitAutocutSave(ids, retry.data);
+            const retry = await postAndCommit(ids);
+            if (retry.stale) return;
+            if (retry.ok) renderCdpSaveState();
             else renderCdpSaveState({ error: retry.error || 'Save failed after re-login. Try again.' });
           },
         });
@@ -10293,6 +10356,26 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           ?.addEventListener('click', runCutNowBatch);
         cutnowOverlay.addEventListener('click', (e) => {
           if (e.target === cutnowOverlay) closeCutNowModal();
+        });
+        // Focus trap (same NavDrawer recipe as the reauth modal above): wrap
+        // Tab/Shift+Tab inside the dialog. Initial focus (Cancel) is set in
+        // openCutNowModal; focus is restored to #cdp-cutnow-btn in
+        // closeCutNowModal — mirroring the reauth modal's open/close approach.
+        cutnowOverlay.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return;
+          const focusables = Array.from(
+            cutnowOverlay.querySelectorAll('input, button'),
+          ).filter((el) => !el.disabled && el.offsetParent !== null);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
         });
       }
 
