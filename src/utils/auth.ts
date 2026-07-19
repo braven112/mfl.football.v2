@@ -74,8 +74,11 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
   // MFL login didn't return the MFL_IS_COMMISH cookie). League-scoped: the
   // fallback list is checked for the league THIS session belongs to — an AFL
   // session for franchise 0001 must not inherit TheLeague 0001's admin bit.
-  const navSlug = getLeagueById(user.leagueId)?.navSlug === 'afl' ? 'afl' : 'theleague';
-  return isAdminFranchise(user.franchiseId, navSlug);
+  // Fail CLOSED on a missing/unknown leagueId: a session we can't attribute
+  // to a league gets no league's admin fallback.
+  const league = getLeagueById(user.leagueId);
+  if (!league) return false;
+  return isAdminFranchise(user.franchiseId, league.navSlug === 'afl' ? 'afl' : 'theleague');
 }
 
 /**
