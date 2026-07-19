@@ -41,7 +41,15 @@ export interface AutocutList {
 }
 
 interface EncryptedCredential {
-  v: 1;
+  /**
+   * Envelope version. v2 binds the ciphertext to its franchise via GCM
+   * Additional Authenticated Data (AAD = normalized franchise id), so an
+   * envelope stored under franchise A can never be decrypted as franchise B
+   * (a "transplant"). Any other version fails closed (treated as missing).
+   * No v1 envelopes exist in production — AUTOCUT_CRED_KEY is unset there — so
+   * no migration is needed.
+   */
+  v: 2;
   alg: 'aes-256-gcm';
   /** base64 12-byte IV */
   iv: string;
@@ -51,6 +59,11 @@ interface EncryptedCredential {
   data: string;
   /** ISO timestamp of capture (plaintext — needed for freshness checks). */
   capturedAt: string;
+}
+
+/** GCM Additional Authenticated Data binding an envelope to its franchise. */
+function credentialAad(franchiseId: string): Buffer {
+  return Buffer.from(normalizeFranchiseId(franchiseId), 'utf8');
 }
 
 export interface StoredCredential {
@@ -150,9 +163,12 @@ export async function captureCredential(
     const capturedAt = new Date().toISOString();
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', key, iv);
+    // Bind the envelope to its franchise (item G) — the AAD is authenticated
+    // but not encrypted; a transplant to another franchise's key fails the tag.
+    cipher.setAAD(credentialAad(franchiseId));
     const ciphertext = Buffer.concat([cipher.update(mflUserCookie, 'utf8'), cipher.final()]);
     const record: EncryptedCredential = {
-      v: 1,
+      v: 2,
       alg: 'aes-256-gcm',
       iv: iv.toString('base64'),
       tag: cipher.getAuthTag().toString('base64'),
@@ -181,11 +197,14 @@ export async function readCredential(franchiseId: string): Promise<StoredCredent
     if (!redis) return null;
 
     const record = await redis.get<EncryptedCredential>(credentialKey(franchiseId));
-    if (!record || typeof record !== 'object' || record.v !== 1 || record.alg !== 'aes-256-gcm') {
+    // Fail closed on any non-v2 envelope — a wrong/legacy version is treated as
+    // a missing credential (item G).
+    if (!record || typeof record !== 'object' || record.v !== 2 || record.alg !== 'aes-256-gcm') {
       return null;
     }
 
     const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(record.iv, 'base64'));
+    decipher.setAAD(credentialAad(franchiseId));
     decipher.setAuthTag(Buffer.from(record.tag, 'base64'));
     const cookie = Buffer.concat([
       decipher.update(Buffer.from(record.data, 'base64')),

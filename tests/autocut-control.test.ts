@@ -38,12 +38,20 @@ const fakeRedis = {
     redisStore.delete(key);
     return 1;
   }),
+  hdel: vi.fn(async (key: string, field: string) => {
+    const hash = redisStore.get(key) as Record<string, unknown> | undefined;
+    if (hash && typeof hash === 'object' && field in hash) {
+      delete hash[field];
+      return 1;
+    }
+    return 0;
+  }),
 };
 vi.mock('../src/utils/redis-client', () => ({
   getRedis: async () => (redisAvailable ? fakeRedis : null),
 }));
 
-import { GET, POST, parsePausedValue } from '../src/pages/api/admin/autocut-control';
+import { GET, POST, parsePausedValue, doneKey } from '../src/pages/api/admin/autocut-control';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,6 +60,7 @@ import { GET, POST, parsePausedValue } from '../src/pages/api/admin/autocut-cont
 const YEAR = getCurrentLeagueYear();
 const PAUSED_KEY = `autocut:paused:${YEAR}`;
 const SNAPSHOT_KEY = `autocut:snapshot:${YEAR}`;
+const DONE_KEY = `autocut:done:${YEAR}`;
 
 function makeContext(request: Request) {
   return {
@@ -129,6 +138,7 @@ beforeEach(() => {
   fakeRedis.get.mockClear();
   fakeRedis.set.mockClear();
   fakeRedis.del.mockClear();
+  fakeRedis.hdel.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -323,6 +333,55 @@ describe('/api/admin/autocut-control — manual-done', () => {
 });
 
 // ---------------------------------------------------------------------------
+// retry-franchise
+// ---------------------------------------------------------------------------
+
+describe('/api/admin/autocut-control — retry-franchise', () => {
+  it('HDELs the franchise field from the done hash so the next tick reprocesses it', async () => {
+    redisStore.set(DONE_KEY, { '0007': 'failed:8', '0008': 'done' });
+    const res = await POST(
+      makeContext(postRequest({ action: 'retry-franchise', franchiseId: '0007' }, commishCookie())),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ success: true, action: 'retry-franchise', franchiseId: '0007', year: YEAR });
+    // Only 0007 cleared; 0008 untouched.
+    expect(redisStore.get(DONE_KEY)).toEqual({ '0008': 'done' });
+    expect(fakeRedis.hdel).toHaveBeenCalledWith(DONE_KEY, '0007');
+  });
+
+  it('normalizes the franchise id ("7" clears the 0007 field)', async () => {
+    redisStore.set(DONE_KEY, { '0007': 'skipped-no-cred' });
+    const res = await POST(
+      makeContext(postRequest({ action: 'retry-franchise', franchiseId: '7' }, commishCookie())),
+    );
+    expect(res.status).toBe(200);
+    expect(redisStore.get(DONE_KEY)).toEqual({});
+  });
+
+  it('400s without a franchiseId', async () => {
+    const res = await POST(
+      makeContext(postRequest({ action: 'retry-franchise' }, commishCookie())),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('requires commissioner/admin (403 for a plain owner, nothing written)', async () => {
+    redisStore.set(DONE_KEY, { '0007': 'failed:8' });
+    const res = await POST(
+      makeContext(postRequest({ action: 'retry-franchise', franchiseId: '0007' }, ownerCookie())),
+    );
+    expect(res.status).toBe(403);
+    expect(redisStore.get(DONE_KEY)).toEqual({ '0007': 'failed:8' });
+    expect(fakeRedis.hdel).not.toHaveBeenCalled();
+  });
+
+  it('doneKey helper matches the live-year hash key', () => {
+    expect(doneKey(YEAR)).toBe(DONE_KEY);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Credential custody — the route must never go near autocut:cred:* keys
 // ---------------------------------------------------------------------------
 
@@ -341,12 +400,16 @@ describe('/api/admin/autocut-control — credential custody', () => {
           postRequest({ action: 'manual-done', franchiseId: '0007', playerId: '111' }, commishCookie()),
         ),
       ),
+      await POST(
+        makeContext(postRequest({ action: 'retry-franchise', franchiseId: '0007' }, commishCookie())),
+      ),
     ];
 
     const touchedKeys = [
       ...fakeRedis.get.mock.calls,
       ...fakeRedis.set.mock.calls,
       ...fakeRedis.del.mock.calls,
+      ...fakeRedis.hdel.mock.calls,
     ].map((args) => String(args[0]));
     expect(touchedKeys.length).toBeGreaterThan(0);
     for (const key of touchedKeys) {

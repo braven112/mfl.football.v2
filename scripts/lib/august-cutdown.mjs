@@ -16,6 +16,7 @@
  */
 
 import { createDecipheriv, scryptSync } from 'node:crypto';
+import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 
 export const AUGUST_CUTDOWN_TIME_ZONE = 'America/Los_Angeles';
 
@@ -159,22 +160,30 @@ export function deriveCredentialKey(envValue = process.env.AUTOCUT_CRED_KEY) {
 }
 
 /**
- * Decrypt a stored credential envelope ({ v:1, alg:'aes-256-gcm', iv, tag,
+ * Decrypt a stored credential envelope ({ v:2, alg:'aes-256-gcm', iv, tag,
  * data, capturedAt } with base64 fields). Returns null on any failure
- * (missing key, wrong version, tamper, wrong key) — never throws. The
- * decrypted cookie must NEVER be logged or leave the execution context.
+ * (missing key, wrong version, tamper, wrong key, franchise mismatch) — never
+ * throws. The decrypted cookie must NEVER be logged or leave the execution
+ * context.
+ *
+ * v2 binds the ciphertext to its franchise via GCM AAD (= normalized franchise
+ * id), so an envelope stored under franchise A cannot be decrypted as
+ * franchise B. `franchiseId` MUST be the id the envelope was stored under.
+ * Any non-v2 envelope fails closed (treated as missing).
  *
  * @param {unknown} record
  * @param {Buffer | null} key
+ * @param {string} franchiseId the franchise the envelope belongs to (AAD)
  * @returns {{ cookie: string, capturedAt: string } | null}
  */
-export function decryptCredentialRecord(record, key) {
+export function decryptCredentialRecord(record, key, franchiseId) {
   try {
     if (!key) return null;
     if (!record || typeof record !== 'object') return null;
-    if (record.v !== 1 || record.alg !== 'aes-256-gcm') return null;
+    if (record.v !== 2 || record.alg !== 'aes-256-gcm') return null;
 
     const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(record.iv, 'base64'));
+    decipher.setAAD(Buffer.from(normalizeFranchiseId(franchiseId), 'utf8'));
     decipher.setAuthTag(Buffer.from(record.tag, 'base64'));
     const cookie = Buffer.concat([
       decipher.update(Buffer.from(record.data, 'base64')),

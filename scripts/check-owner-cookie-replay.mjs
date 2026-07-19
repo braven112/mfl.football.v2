@@ -15,7 +15,7 @@
  * (exit 0) when MFL_USER_ID is absent so forks/PRs without secrets stay green.
  */
 
-import { mflFetch } from './lib/mfl-api.mjs';
+import { mflFetch, extractMyLeagues } from './lib/mfl-api.mjs';
 
 const cookie = process.env.MFL_USER_ID;
 if (!cookie) {
@@ -33,8 +33,9 @@ try {
     process.exit(1);
   }
   const body = await res.json().catch(() => null);
-  const leagues = body?.leagues?.league;
-  const list = Array.isArray(leagues) ? leagues : leagues ? [leagues] : [];
+  // MFL wraps this response as either `myleagues` or `leagues` depending on
+  // the host/year — extractMyLeagues tolerates both (and a bare object).
+  const list = extractMyLeagues(body);
   if (list.length === 0) {
     console.error(
       '::error::owner-cookie replay check FAILED — the stored MFL cookie no longer authenticates ' +

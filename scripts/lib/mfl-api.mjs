@@ -166,6 +166,26 @@ export function mflHostPrefix(mflHost) {
   return mflHost.split('.')[0];
 }
 
+/**
+ * Extract the league list from an `export?TYPE=myleagues` JSON body.
+ *
+ * MFL is inconsistent about the wrapper key: some hosts/years return
+ * `{"myleagues":{"league":[...]}}` and others `{"leagues":{"league":[...]}}`
+ * (docs/claude/insights/domains/mfl-api.md, myleagues entries). A single
+ * league also comes back as a bare object rather than a one-element array.
+ * Accept every shape and always return an array — empty means a dead cookie.
+ *
+ * Mirrors the app-side dual-path in src/pages/api/autocut-list.ts.
+ *
+ * @param {unknown} body parsed JSON (or null)
+ * @returns {unknown[]}
+ */
+export function extractMyLeagues(body) {
+  const leagues = body?.myleagues?.league ?? body?.leagues?.league ?? [];
+  if (Array.isArray(leagues)) return leagues;
+  return leagues ? [leagues] : [];
+}
+
 export async function fetchExport({ host, leagueId, year, type, extra = '' }, options = {}) {
   const {
     userAgent,

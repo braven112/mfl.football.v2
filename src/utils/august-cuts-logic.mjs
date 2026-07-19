@@ -14,8 +14,22 @@
 
 import { shouldFireReminder } from '../../scripts/lib/roger-reminder-window.mjs';
 
-/** Max execution attempts per franchise before it's left for the commissioner. */
-export const MAX_ATTEMPTS = 3;
+/** Max execution attempts per franchise before it's left for the commissioner.
+ * Raised from 3 → 8: the per-cut guards (already-gone detection, transaction
+ * cross-check, verify-before-advance) make a retry cheap and idempotent, so a
+ * transient MFL outage at 8:45 PM PT shouldn't exhaust a franchise in 45
+ * minutes (3 ticks). 8 ticks buys two hours of catch-up. */
+export const MAX_ATTEMPTS = 8;
+
+/**
+ * Done-hash sentinel for a franchise skipped because its owner has no usable
+ * stored credential. It is DELIBERATELY NOT a `failed:<n>` value: a missing
+ * credential is not a failed attempt — the owner just needs to log in once,
+ * which recaptures the cookie and heals it on the very next tick. Tracking it
+ * distinctly (rather than burning toward MAX_ATTEMPTS) means the franchise is
+ * re-checked every tick for the rest of the run instead of exhausting.
+ */
+export const SKIPPED_NO_CRED = 'skipped-no-cred';
 
 /**
  * The --auto touch schedule, closest-to-deadline first (priority order when
@@ -66,13 +80,15 @@ export function selectAutoMode({ now, cutdownDate, daysUntil, firedTouches = new
 // ---------------------------------------------------------------------------
 
 /**
- * Parse a done-hash value: 'done' | 'failed:<n>' | anything else = pending.
+ * Parse a done-hash value: 'done' | 'skipped-no-cred' | 'failed:<n>' |
+ * anything else = pending.
  *
  * @param {string | null | undefined} value
- * @returns {{ status: 'done' | 'failed' | 'pending', attempts: number }}
+ * @returns {{ status: 'done' | 'skipped-no-cred' | 'failed' | 'pending', attempts: number }}
  */
 export function parseDoneValue(value) {
   if (value === 'done') return { status: 'done', attempts: 0 };
+  if (value === SKIPPED_NO_CRED) return { status: 'skipped-no-cred', attempts: 0 };
   const failed = /^failed:(\d+)$/.exec(value ?? '');
   if (failed) return { status: 'failed', attempts: parseInt(failed[1], 10) };
   return { status: 'pending', attempts: 0 };
@@ -95,6 +111,10 @@ export function failedDoneValue(attempt) {
 export function decideFranchiseAction(doneValue, maxAttempts = MAX_ATTEMPTS) {
   const parsed = parseDoneValue(doneValue);
   if (parsed.status === 'done') return { action: 'skip-done' };
+  // A no-credential skip never counts as an attempt — always re-check it (a
+  // fresh login heals it), starting the attempt counter back at 1 if a real
+  // execution now runs and fails.
+  if (parsed.status === 'skipped-no-cred') return { action: 'attempt', attempt: 1 };
   if (parsed.status === 'failed' && parsed.attempts >= maxAttempts) {
     return { action: 'skip-exhausted', attempts: parsed.attempts };
   }
@@ -107,13 +127,14 @@ export function decideFranchiseAction(doneValue, maxAttempts = MAX_ATTEMPTS) {
  * @param {Record<string, string>} doneHash
  * @param {string[]} franchiseIds
  * @param {number} [maxAttempts]
- * @returns {{ done: string[], failed: string[], exhausted: string[], pending: string[] }}
+ * @returns {{ done: string[], failed: string[], exhausted: string[], pending: string[], skippedNoCred: string[] }}
  */
 export function summarizeDoneHash(doneHash, franchiseIds, maxAttempts = MAX_ATTEMPTS) {
-  const summary = { done: [], failed: [], exhausted: [], pending: [] };
+  const summary = { done: [], failed: [], exhausted: [], pending: [], skippedNoCred: [] };
   for (const fid of franchiseIds) {
     const parsed = parseDoneValue(doneHash?.[fid]);
     if (parsed.status === 'done') summary.done.push(fid);
+    else if (parsed.status === 'skipped-no-cred') summary.skippedNoCred.push(fid);
     else if (parsed.status === 'failed' && parsed.attempts >= maxAttempts) summary.exhausted.push(fid);
     else if (parsed.status === 'failed') summary.failed.push(fid);
     else summary.pending.push(fid);
@@ -122,12 +143,18 @@ export function summarizeDoneHash(doneHash, franchiseIds, maxAttempts = MAX_ATTE
 }
 
 /**
- * The run is fully complete when every over-limit franchise is done or has
- * exhausted its retries.
+ * The run is fully complete when every franchise is done or has exhausted its
+ * retries. Franchises that are still pending, retryable-failed, OR skipped for
+ * a missing credential keep the run OPEN — the last one so a "log in once"
+ * really does get re-checked on later ticks rather than being written off.
  */
 export function isRunComplete(doneHash, franchiseIds, maxAttempts = MAX_ATTEMPTS) {
   const summary = summarizeDoneHash(doneHash, franchiseIds, maxAttempts);
-  return summary.failed.length === 0 && summary.pending.length === 0;
+  return (
+    summary.failed.length === 0 &&
+    summary.pending.length === 0 &&
+    summary.skippedNoCred.length === 0
+  );
 }
 
 /**
@@ -238,4 +265,57 @@ export function snapshotHasOutcomes(snapshot) {
   return Object.values(snapshot?.franchises ?? {}).some(
     (entry) => Array.isArray(entry?.outcomes) && entry.outcomes.length > 0,
   );
+}
+
+/**
+ * Merge-before-write for a single franchise (deadline-job item K).
+ *
+ * The job reads the snapshot once at the top of a tick and processes
+ * franchises one at a time. Rewriting the WHOLE in-memory snapshot after each
+ * franchise would clobber anything an external writer changed mid-tick — in
+ * particular a manual-done the commissioner records for ANOTHER franchise via
+ * /api/admin/autocut-control. This folds only the just-processed franchise's
+ * `workingEntry` back into the CURRENTLY STORED snapshot, leaving every other
+ * franchise's stored entry untouched.
+ *
+ * `workingEntry` is authoritative for its own franchise's execution outcomes
+ * (unlike a blanket mergeSnapshot, which would DROP a retry tick's freshly
+ * appended outcomes because the stored entry already had prior-attempt
+ * outcomes). Any manual-done outcomes the commissioner appended to THIS
+ * franchise's stored entry are still folded in, matched by playerId, so a
+ * same-franchise race also survives.
+ *
+ * @param {object | null} stored the snapshot currently in Redis
+ * @param {string} franchiseId
+ * @param {object} workingEntry the job's freshly-updated entry for this franchise
+ * @param {{ year: number|string, mode: string, generatedAt: string }} meta
+ */
+export function foldFranchiseIntoStored(stored, franchiseId, workingEntry, { year, mode, generatedAt }) {
+  const franchises = { ...(stored?.franchises ?? {}) };
+  const storedEntry = franchises[franchiseId];
+  const storedOutcomes = Array.isArray(storedEntry?.outcomes) ? storedEntry.outcomes : [];
+  const externalManualDones = storedOutcomes.filter((o) => o?.type === 'manual-done');
+
+  let finalEntry = workingEntry;
+  if (externalManualDones.length > 0) {
+    const havePlayerIds = new Set(
+      (workingEntry.outcomes ?? [])
+        .filter((o) => o?.type === 'manual-done')
+        .map((o) => o.playerId),
+    );
+    const missing = externalManualDones.filter((o) => !havePlayerIds.has(o.playerId));
+    if (missing.length > 0) {
+      finalEntry = { ...workingEntry, outcomes: [...(workingEntry.outcomes ?? []), ...missing] };
+    }
+  }
+  franchises[franchiseId] = finalEntry;
+
+  return {
+    version: 1,
+    year: Number(year),
+    mode,
+    generatedAt,
+    firstWrittenAt: stored?.firstWrittenAt ?? generatedAt,
+    franchises,
+  };
 }

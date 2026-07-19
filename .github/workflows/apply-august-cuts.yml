@@ -135,8 +135,20 @@ jobs:
           else
             BODY="The August cuts run failed before a report could be written. Workflow run: $RUN_URL"
           fi
-          gh issue create \
-            --title "August cuts: run needs commissioner attention ($(date +%Y-%m-%d))" \
-            --label "august-cuts" \
-            --body "$BODY" \
-            || echo "Issue creation failed (continuing)"
+          # Dedupe: the cron fires every 15 min, so a persistently-failing run
+          # would otherwise open a new issue every tick. If an OPEN issue with
+          # the august-cuts label already exists, add a comment to it instead
+          # of filing a duplicate.
+          EXISTING=$(gh issue list --label august-cuts --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::Existing open august-cuts issue #$EXISTING — commenting instead of filing a duplicate."
+            gh issue comment "$EXISTING" \
+              --body "Another failing run ($(date '+%Y-%m-%d %H:%M') PT). $RUN_URL" \
+              || echo "Issue comment failed (continuing)"
+          else
+            gh issue create \
+              --title "August cuts: run needs commissioner attention ($(date +%Y-%m-%d))" \
+              --label "august-cuts" \
+              --body "$BODY" \
+              || echo "Issue creation failed (continuing)"
+          fi

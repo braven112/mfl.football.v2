@@ -87,14 +87,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Refresh-on-login credential capture for the August cut automation
-    // (TheLeague only — the autocut job replays owner cookies). Fire and
-    // forget: captureCredential never throws by contract, but the guards
-    // ensure login can never fail or slow down because of capture.
+    // (TheLeague only — the autocut job replays owner cookies). AWAITED, not
+    // fire-and-forget: on serverless (Vercel) the function can be frozen the
+    // instant the response is returned, killing an in-flight Redis write
+    // before it lands. captureCredential never throws by contract, and the
+    // try/catch is belt-and-suspenders so a degraded store can never break or
+    // meaningfully slow login.
     if (resolvedLeagueId === THELEAGUE_ID && mflResponse.userId && mflResponse.franchiseId) {
       try {
-        void captureCredential(mflResponse.franchiseId, mflResponse.userId).catch(() => {
-          /* capture is best-effort — degraded storage must not affect login */
-        });
+        await captureCredential(mflResponse.franchiseId, mflResponse.userId);
       } catch {
         /* never block login on credential capture */
       }

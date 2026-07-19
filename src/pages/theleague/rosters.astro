@@ -10360,6 +10360,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             if (!res.ok || !data?.success) {
               throw new Error(data?.message || 'Login failed. Check your password.');
             }
+            // IDENTITY GUARD: the re-login must be for THIS franchise. If the
+            // owner logged in with an MFL account that owns a different team,
+            // re-firing the save would clobber the other franchise's cut list
+            // (and its captured credential). Abort with a clear message.
+            const normFid = (id) => {
+              const s = String(id ?? '').trim();
+              return /^\d+$/.test(s) ? s.padStart(4, '0') : s;
+            };
+            const loggedInFid = normFid(data?.user?.franchiseId);
+            if (AUTOCUT_REAL_FID && loggedInFid && loggedInFid !== normFid(AUTOCUT_REAL_FID)) {
+              throw new Error(
+                'That MFL account owns a different franchise — log in with the account for this team.',
+              );
+            }
             // Success: close (not a cancel), then re-fire the pending save.
             const ctx = cdpReauthCtx;
             cdpReauthCtx = null;

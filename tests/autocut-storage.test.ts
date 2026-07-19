@@ -244,6 +244,22 @@ describe('autocut-storage — credential custody', () => {
     expect(await readCredential('0004')).toBeNull();
   });
 
+  it('binds the envelope to its franchise (AAD): transplanting A\'s envelope to B fails decrypt', async () => {
+    await captureCredential('0004', TEST_COOKIE);
+    const envelope = redisStore.get('autocut:cred:0004');
+    // Same key (env unchanged), but stored under a different franchise: the
+    // GCM AAD (= franchise id) no longer matches → treated as missing.
+    redisStore.set('autocut:cred:0005', envelope);
+    expect(await readCredential('0005')).toBeNull();
+    // The original franchise still decrypts fine.
+    expect((await readCredential('0004'))?.cookie).toBe(TEST_COOKIE);
+  });
+
+  it('writes a v2 (franchise-bound) envelope', async () => {
+    await captureCredential('0004', TEST_COOKIE);
+    expect((redisStore.get('autocut:cred:0004') as { v: number }).v).toBe(2);
+  });
+
   it('deleteCredential removes the stored record', async () => {
     await captureCredential('0004', TEST_COOKIE);
     await deleteCredential('0004');

@@ -10,6 +10,10 @@
  *          → appends a { type: 'manual-done', playerId, by, at } outcome to
  *            the franchise's autocut:snapshot:{year} entry (read-modify-write)
  *            so the commissioner's manual-cleanup tracking survives reloads.
+ *        { action: 'retry-franchise', franchiseId }
+ *          → HDELs the franchise's field from autocut:done:{year} so the next
+ *            deadline tick reprocesses it from scratch (recovery after a
+ *            belated owner login or an exhausted retry). Never touches cred keys.
  *
  * The paused flag's VALUE is informational only — the deadline job
  * (scripts/apply-august-cuts.mjs) treats ANY value as "halt everything",
@@ -28,17 +32,15 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { json as jsonResponse } from '../../../utils/api-response';
 import { getRedis } from '../../../utils/redis-client';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+// Shared normalization (matches auth.ts / autocut-storage.ts): '1' and '0001'
+// address the same records.
+import { normalizeFranchiseId } from '../../../utils/franchise-id.mjs';
 
 const PLAYER_ID_RE = /^\d{1,8}$/;
 
 export const pausedKey = (year: number) => `autocut:paused:${year}`;
 export const snapshotKey = (year: number) => `autocut:snapshot:${year}`;
-
-/** Match auth.ts / autocut-storage.ts normalization: '1' and '0001' agree. */
-function normalizeFranchiseId(franchiseId: string): string {
-  const trimmed = `${franchiseId ?? ''}`.trim();
-  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
-}
+export const doneKey = (year: number) => `autocut:done:${year}`;
 
 export interface PausedState {
   paused: boolean;
@@ -117,6 +119,20 @@ export const POST: APIRoute = async ({ request }) => {
   if (body.action === 'resume') {
     await redis.del(pausedKey(year));
     return jsonResponse({ success: true, paused: false, pausedBy: null, pausedAt: null, year });
+  }
+
+  if (body.action === 'retry-franchise') {
+    // Commissioner recovery (item C3): clear one franchise's done-hash field so
+    // the next deadline tick reprocesses it from scratch. Useful after the
+    // owner belatedly logs in (heals a no-credential skip) or a genuine failure
+    // exhausted its retries. Never touches autocut:cred:* — the security
+    // invariant holds — and never clears the whole hash.
+    if (typeof body.franchiseId !== 'string' || !body.franchiseId.trim()) {
+      return jsonResponse({ success: false, error: 'franchiseId is required' }, 400);
+    }
+    const fid = normalizeFranchiseId(body.franchiseId);
+    await redis.hdel(doneKey(year), fid);
+    return jsonResponse({ success: true, action: 'retry-franchise', franchiseId: fid, year });
   }
 
   if (body.action === 'manual-done') {

@@ -15,6 +15,7 @@ import path from 'node:path';
 // @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   MAX_ATTEMPTS,
+  SKIPPED_NO_CRED,
   AUTO_TOUCHES,
   touchKey,
   selectAutoMode,
@@ -28,6 +29,7 @@ import {
   appendOutcome,
   mergeSnapshot,
   snapshotHasOutcomes,
+  foldFranchiseIntoStored,
 } from '../src/utils/august-cuts-logic.mjs';
 // @ts-expect-error — sibling .mjs module, no .d.ts
 import { getAugustCutdownDate, calendarDaysUntilCutdown } from '../scripts/lib/august-cutdown.mjs';
@@ -123,9 +125,18 @@ describe('resumability — done-hash bookkeeping', () => {
   });
 
   it('retries stop at MAX_ATTEMPTS', () => {
-    expect(MAX_ATTEMPTS).toBe(3);
-    expect(decideFranchiseAction(`failed:${MAX_ATTEMPTS}`)).toEqual({ action: 'skip-exhausted', attempts: 3 });
-    expect(decideFranchiseAction('failed:7')).toEqual({ action: 'skip-exhausted', attempts: 7 });
+    expect(MAX_ATTEMPTS).toBe(8);
+    expect(decideFranchiseAction(`failed:${MAX_ATTEMPTS}`)).toEqual({ action: 'skip-exhausted', attempts: 8 });
+    expect(decideFranchiseAction('failed:12')).toEqual({ action: 'skip-exhausted', attempts: 12 });
+    // One below the cap still retries.
+    expect(decideFranchiseAction(`failed:${MAX_ATTEMPTS - 1}`)).toEqual({ action: 'attempt', attempt: 8 });
+  });
+
+  it('a no-credential skip is re-checked every tick and never counts as an attempt', () => {
+    expect(parseDoneValue(SKIPPED_NO_CRED)).toEqual({ status: 'skipped-no-cred', attempts: 0 });
+    // Always retryable (attempt resets to 1), no matter how many ticks pass —
+    // a fresh owner login heals it rather than exhausting the budget.
+    expect(decideFranchiseAction(SKIPPED_NO_CRED)).toEqual({ action: 'attempt', attempt: 1 });
   });
 
   it('garbage values are treated as pending (defensive)', () => {
@@ -138,16 +149,25 @@ describe('resumability — done-hash bookkeeping', () => {
   });
 
   it('summarizeDoneHash buckets and isRunComplete require done-or-exhausted for every franchise', () => {
-    const doneHash = { '0001': 'done', '0002': 'failed:1', '0003': 'failed:3' };
-    const fids = ['0001', '0002', '0003', '0004'];
+    const doneHash = {
+      '0001': 'done',
+      '0002': 'failed:1',
+      '0003': `failed:${MAX_ATTEMPTS}`,
+      '0005': SKIPPED_NO_CRED,
+    };
+    const fids = ['0001', '0002', '0003', '0004', '0005'];
     expect(summarizeDoneHash(doneHash, fids)).toEqual({
       done: ['0001'],
       failed: ['0002'],
       exhausted: ['0003'],
       pending: ['0004'],
+      skippedNoCred: ['0005'],
     });
     expect(isRunComplete(doneHash, fids)).toBe(false);
-    expect(isRunComplete({ '0001': 'done', '0002': 'failed:3' }, ['0001', '0002'])).toBe(true);
+    // done + exhausted only → complete.
+    expect(isRunComplete({ '0001': 'done', '0002': `failed:${MAX_ATTEMPTS}` }, ['0001', '0002'])).toBe(true);
+    // A lingering no-credential skip keeps the run OPEN so it's re-checked.
+    expect(isRunComplete({ '0001': 'done', '0002': SKIPPED_NO_CRED }, ['0001', '0002'])).toBe(false);
   });
 
   it('a franchise already at/under the limit books as done with zero cuts (no attempts consumed)', () => {
@@ -253,6 +273,71 @@ describe('snapshot shaping — plans frozen before writes, outcomes appended', (
     expect(snapshotHasOutcomes(merged)).toBe(true);
     expect(snapshotHasOutcomes(existing)).toBe(true);
     expect(snapshotHasOutcomes({ franchises: { '0002': entryB } })).toBe(false);
+  });
+});
+
+describe('foldFranchiseIntoStored — merge-before-write preserves concurrent commissioner edits (item K)', () => {
+  const meta = { year: YEAR, mode: 'live', generatedAt: 't2' };
+
+  // The job read the snapshot at tick start; it holds a stale in-memory copy.
+  const workingEntryB = appendOutcome(
+    buildSnapshotEntry({
+      franchiseId: '0002',
+      markedList: null,
+      roster: [{ id: '9', status: 'ROSTER' }],
+      slate: { cuts: [{ playerId: '9', reason: 'marked' }], activeCount: 23, overage: 1, target: 22 },
+    }),
+    { playerId: '9', status: 'cut-verified', at: 't2' },
+  );
+
+  it("does NOT clobber a manual-done the commissioner wrote to ANOTHER franchise mid-tick", () => {
+    // Stored (fresh from Redis): franchise A got a manual-done AFTER the job's
+    // tick-start read; franchise B still has its pre-execution (empty) entry.
+    const storedA = appendOutcome(
+      buildSnapshotEntry({
+        franchiseId: '0001',
+        markedList: null,
+        roster: [],
+        slate: { cuts: [{ playerId: '5', reason: 'marked' }], activeCount: 23, overage: 1, target: 22 },
+      }),
+      { type: 'manual-done', playerId: '5', by: 'The Commish', at: 't1.5' },
+    );
+    const stored = {
+      version: 1, year: YEAR, mode: 'live', generatedAt: 't1', firstWrittenAt: 't0',
+      franchises: { '0001': storedA, '0002': buildSnapshotEntry({ franchiseId: '0002', markedList: null, roster: [], slate: { cuts: [], activeCount: 0, overage: -22, target: 22 } }) },
+    };
+
+    const result = foldFranchiseIntoStored(stored, '0002', workingEntryB, meta);
+    // Franchise A's manual-done survives untouched…
+    expect(result.franchises['0001']).toEqual(storedA);
+    // …and franchise B is written with the job's authoritative entry.
+    expect(result.franchises['0002']).toEqual(workingEntryB);
+    expect(result.firstWrittenAt).toBe('t0'); // original freeze time preserved
+  });
+
+  it('writes the current franchise fresh entry even when stored had prior-attempt outcomes (retry ticks are not dropped)', () => {
+    // A blanket mergeSnapshot would SKIP the fresh entry because stored[B] has
+    // outcomes; foldFranchiseIntoStored keeps the job authoritative for B.
+    const priorAttempt = appendOutcome(
+      buildSnapshotEntry({ franchiseId: '0002', markedList: null, roster: [], slate: { cuts: [{ playerId: '9', reason: 'marked' }], activeCount: 23, overage: 1, target: 22 } }),
+      { playerId: '9', status: 'failed: timeout', at: 't1' },
+    );
+    const stored = { franchises: { '0002': priorAttempt } };
+    const result = foldFranchiseIntoStored(stored, '0002', workingEntryB, meta);
+    expect(result.franchises['0002']).toEqual(workingEntryB);
+  });
+
+  it('folds in a same-franchise manual-done the commissioner added mid-tick (matched by playerId)', () => {
+    const storedB = appendOutcome(
+      buildSnapshotEntry({ franchiseId: '0002', markedList: null, roster: [], slate: { cuts: [{ playerId: '9', reason: 'marked' }], activeCount: 23, overage: 1, target: 22 } }),
+      { type: 'manual-done', playerId: '77', by: 'The Commish', at: 't1.5' },
+    );
+    const stored = { franchises: { '0002': storedB } };
+    const result = foldFranchiseIntoStored(stored, '0002', workingEntryB, meta);
+    const outcomes = result.franchises['0002'].outcomes;
+    // Job's cut-verified for #9 AND the commissioner's manual-done for #77.
+    expect(outcomes).toContainEqual({ playerId: '9', status: 'cut-verified', at: 't2' });
+    expect(outcomes).toContainEqual({ type: 'manual-done', playerId: '77', by: 'The Commish', at: 't1.5' });
   });
 });
 

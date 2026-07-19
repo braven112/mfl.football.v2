@@ -58,7 +58,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
-import { mflFetch, fetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
+import { mflFetch, fetchExport, mflHostPrefix, extractMyLeagues } from './lib/mfl-api.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { getPtDateString } from './lib/pt-date.mjs';
 import {
@@ -71,8 +71,10 @@ import {
 } from './lib/august-cutdown.mjs';
 import {
   MAX_ATTEMPTS,
+  SKIPPED_NO_CRED,
   selectAutoMode,
   decideFranchiseAction,
+  parseDoneValue,
   failedDoneValue,
   summarizeDoneHash,
   isRunComplete,
@@ -81,6 +83,7 @@ import {
   appendOutcome,
   mergeSnapshot,
   snapshotHasOutcomes,
+  foldFranchiseIntoStored,
 } from '../src/utils/august-cuts-logic.mjs';
 import {
   selectAutoCuts,
@@ -116,7 +119,14 @@ function parseArgs(argv) {
     else if (a === '--validate-only') args.validateOnly = true;
     else if (a === '--rehearse') args.rehearse = true;
     else if (a === '--auto') args.auto = true;
-    else if (a === '--year') args.year = parseInt(argv[++i], 10);
+    else if (a === '--year') {
+      const raw = argv[++i];
+      const parsed = Number.parseInt(raw, 10);
+      if (!Number.isFinite(parsed)) {
+        throw new Error(`--year requires a numeric year (got: ${raw ?? '<missing>'})`);
+      }
+      args.year = parsed;
+    }
     else if (a === '--franchise') args.franchise = argv[++i];
     else throw new Error(`Unknown flag: ${a}`);
   }
@@ -357,9 +367,24 @@ const fmtMillions = (n) => `$${(n / 1_000_000).toFixed(1)}M`;
 // Report file (committed back by the workflow — permanent audit record)
 // ---------------------------------------------------------------------------
 
-function writeReportFile({ year, mode, snapshot, summary, cutdownDate }) {
+/** Serialize a report for comparison with `generatedAt` masked out, so a
+ * tick that changed nothing but the timestamp compares equal. */
+function reportContentSansTimestamp(report) {
+  return JSON.stringify({ ...report, generatedAt: null }, null, 2);
+}
+
+function writeReportFile({ year, mode, snapshot, summary, cutdownDate, dryRun = false }) {
   const reportDir = path.join(LEAGUE.dataPath, 'august-cuts');
   const reportPath = path.join(reportDir, `${year}-report.json`);
+
+  // DRY-RUN SENTINEL (report): a dry-run performs no persistent writes — it
+  // must never create or overwrite the committed report file (mirrors the
+  // zero-Redis-writes guarantee). Log the would-be write and bail.
+  if (dryRun) {
+    console.log(`${TAG} [dry-run] would write report: ${reportPath} (skipped — dry-run makes no persistent writes)`);
+    return reportPath;
+  }
+
   fs.mkdirSync(reportDir, { recursive: true });
   const report = {
     version: 1,
@@ -370,6 +395,23 @@ function writeReportFile({ year, mode, snapshot, summary, cutdownDate }) {
     summary,
     franchises: snapshot?.franchises ?? {},
   };
+
+  // NO-OP GUARD: every 15-min tick would otherwise rewrite this file with a
+  // fresh generatedAt and produce an empty commit downstream. Skip the write
+  // when nothing but the timestamp changed (compare serialized content with
+  // generatedAt masked out).
+  if (fs.existsSync(reportPath)) {
+    try {
+      const prior = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+      if (reportContentSansTimestamp(prior) === reportContentSansTimestamp(report)) {
+        console.log(`${TAG} report unchanged (only generatedAt would differ) — skipping write: ${reportPath}`);
+        return reportPath;
+      }
+    } catch {
+      /* unreadable/corrupt prior report — fall through and overwrite it */
+    }
+  }
+
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   console.log(`${TAG} report written: ${reportPath}`);
   return reportPath;
@@ -390,7 +432,7 @@ async function runValidateOnly({ redis, year, plans, names, daysUntil, dryRun })
     const fid = plan.franchiseId;
     const name = names.get(fid) ?? fid;
     const record = await redisGetJson(redis, credKey(fid));
-    const cred = record ? decryptCredentialRecord(record, credentialKeyBuf) : null;
+    const cred = record ? decryptCredentialRecord(record, credentialKeyBuf, fid) : null;
 
     let status;
     if (!cred) {
@@ -405,7 +447,10 @@ async function runValidateOnly({ redis, year, plans, names, daysUntil, dryRun })
           cookies: { MFL_USER_ID: cred.cookie },
         });
         const body = res.ok ? await res.json().catch(() => null) : null;
-        const leagues = toArray(body?.leagues?.league);
+        // MFL wraps this as either `myleagues` or `leagues` (host/year
+        // dependent) — extractMyLeagues tolerates both, mirroring
+        // src/pages/api/autocut-list.ts.
+        const leagues = extractMyLeagues(body);
         status = leagues.length > 0 ? 'ok' : 'dead';
       } catch (err) {
         console.warn(`${TAG} myleagues check errored for ${fid}: ${err.message}`);
@@ -476,7 +521,7 @@ async function runRehearse({ redis, year, plans, cutdownDate, dryRun }) {
     plannedCuts: totalCuts,
     plannedSalaryFreed: totalSalary,
   };
-  writeReportFile({ year, mode: 'rehearse', snapshot, summary, cutdownDate });
+  writeReportFile({ year, mode: 'rehearse', snapshot, summary, cutdownDate, dryRun });
 }
 
 async function buildAndMaybeStoreSnapshot({ redis, year, plans, names = new Map(), mode, persist }) {
@@ -510,21 +555,48 @@ async function saveSnapshot(redis, year, snapshot) {
 // Mode: live / --dry-run execution
 // ---------------------------------------------------------------------------
 
-async function runExecution({ redis, year, plans, names, acquisitions, cutdownDate, dryRun }) {
+async function runExecution({ redis, year, plans, allFranchiseIds, names, acquisitions, cutdownDate, dryRun }) {
   const runStartEpochSeconds = Math.floor(Date.now() / 1000);
   const doneKey = `autocut:done:${year}`;
   const doneHash = await redisHGetAll(redis, doneKey);
-  const franchiseIds = plans.map((p) => p.franchiseId);
+  const planIds = new Set(plans.map((p) => p.franchiseId));
 
-  if (plans.length === 0) {
-    console.log(`${TAG} no over-limit franchises — cutdown already satisfied.`);
-    return { failed: [], skipped: [], done: [] };
-  }
+  // ONE-SHOT (plan decision #5, item D): the cutdown runs ONCE, at the
+  // deadline. Completeness is measured across the WHOLE league, not just the
+  // over-limit franchises — so that (a) the run can reach a terminal complete
+  // state and (b) a franchise that drifts over the limit AFTER the deadline
+  // tick (e.g. an Aug 25 waiver add) is NOT silently auto-cut by a later tick.
+  // Every at/under-limit franchise is booked 'done' with zero cuts below.
+  const completionIds = allFranchiseIds && allFranchiseIds.length ? allFranchiseIds : [...planIds];
 
-  if (isRunComplete(doneHash, franchiseIds)) {
-    const summary = summarizeDoneHash(doneHash, franchiseIds);
+  const results = { done: [], failed: [], skipped: [] };
+
+  if (isRunComplete(doneHash, completionIds)) {
+    const summary = summarizeDoneHash(doneHash, completionIds);
     console.log(`${TAG} run already complete: ${summary.done.length} done, ${summary.exhausted.length} exhausted.`);
     return { failed: summary.exhausted, skipped: [], done: summary.done };
+  }
+
+  // Book at/under-limit franchises as done-with-zero-cuts (the one-shot mark).
+  // Skipped in dry-run (no Redis writes) and for franchises already recorded
+  // in the done hash. These are not pushed onto results.done — the report
+  // summary lists only the franchises that actually had a slate to execute.
+  for (const fid of completionIds) {
+    if (planIds.has(fid)) continue;
+    if (parseDoneValue(doneHash[fid]).status === 'done') continue;
+    if (!dryRun) {
+      for (const cmd of completionCommands({ year, franchiseId: fid, doneValue: 'done' })) {
+        await redisCommand(redis, cmd);
+      }
+      doneHash[fid] = 'done';
+    } else {
+      console.log(`${TAG} [dry-run] would book ${fid} → done (at/under limit, zero cuts)`);
+    }
+  }
+
+  if (plans.length === 0) {
+    console.log(`${TAG} no over-limit franchises — cutdown satisfied; every league franchise booked done.`);
+    return results;
   }
 
   // AUDIT TRAIL: freeze the snapshot BEFORE any MFL write. A crash on
@@ -536,8 +608,6 @@ async function runExecution({ redis, year, plans, names, acquisitions, cutdownDa
   if (!credentialKeyBuf && !dryRun) {
     console.warn(`${TAG} AUTOCUT_CRED_KEY not set — every franchise will be skipped (no-credential)`);
   }
-
-  const results = { done: [], failed: [], skipped: [] };
 
   for (const plan of plans) {
     const fid = plan.franchiseId;
@@ -574,6 +644,16 @@ async function runExecution({ redis, year, plans, names, acquisitions, cutdownDa
       for (const cmd of completionCommands({ year, franchiseId: fid, doneValue, deleteCredential })) {
         await redisCommand(redis, cmd);
       }
+      // MERGE-BEFORE-WRITE (item K): re-read the stored snapshot and fold in
+      // ONLY this franchise's entry, so a manual-done the commissioner recorded
+      // mid-tick for another franchise (via /api/admin/autocut-control) is not
+      // clobbered by our stale in-memory copy of the whole snapshot.
+      const stored = await redisGetJson(redis, `autocut:snapshot:${year}`);
+      snapshot = foldFranchiseIntoStored(stored ?? snapshot, fid, entry, {
+        year,
+        mode: 'live',
+        generatedAt: new Date().toISOString(),
+      });
       await saveSnapshot(redis, year, snapshot);
     };
 
@@ -603,10 +683,13 @@ async function runExecution({ redis, year, plans, names, acquisitions, cutdownDa
       // Decrypt the owner's stored credential. Missing/undecryptable →
       // skipped, never attempted (the commissioner handles it manually).
       const record = await redisGetJson(redis, credKey(fid));
-      const cred = record ? decryptCredentialRecord(record, credentialKeyBuf) : null;
+      const cred = record ? decryptCredentialRecord(record, credentialKeyBuf, fid) : null;
       if (!cred) {
         entry = appendOutcome(entry, { status: 'skipped: no-credential', at: new Date().toISOString() });
-        await finishFranchise(failedDoneValue(decision.attempt));
+        // NOT a failed attempt — book the distinct SKIPPED_NO_CRED sentinel so
+        // this franchise is re-checked every tick (a fresh owner login heals
+        // it) instead of burning toward MAX_ATTEMPTS exhaustion.
+        await finishFranchise(SKIPPED_NO_CRED);
         results.skipped.push(fid);
         console.warn(`${TAG} ${fid} ${name}: no usable credential — skipped (owner must log in, or commissioner cuts manually)`);
         continue;
@@ -700,7 +783,7 @@ async function runExecution({ redis, year, plans, names, acquisitions, cutdownDa
     failed: results.failed,
     skipped: results.skipped,
   };
-  writeReportFile({ year, mode: dryRun ? 'dry-run' : 'live', snapshot, summary, cutdownDate });
+  writeReportFile({ year, mode: dryRun ? 'dry-run' : 'live', snapshot, summary, cutdownDate, dryRun });
   return results;
 }
 
@@ -775,12 +858,19 @@ async function main() {
   const plans = await computePlans({ redis, year, rosters, acquisitions, franchiseFilter: args.franchise });
   console.log(`${TAG} ${plans.length} over-limit franchise(s): ${plans.map((p) => `${p.franchiseId}(+${p.slate.overage})`).join(', ') || 'none'}`);
 
+  // The full set of league franchise ids for one-shot completeness (item D).
+  // A --franchise debug run narrows to just that franchise so it never books
+  // the rest of the league done.
+  const allFranchiseIds = args.franchise
+    ? [pad4(args.franchise)]
+    : [...rosters.keys()].sort();
+
   if (mode === 'validate-only') {
     await runValidateOnly({ redis, year, plans, names, daysUntil, dryRun: args.dryRun });
   } else if (mode === 'rehearse') {
     await runRehearse({ redis, year, plans, cutdownDate, dryRun: args.dryRun });
   } else {
-    const results = await runExecution({ redis, year, plans, names, acquisitions, cutdownDate, dryRun: args.dryRun });
+    const results = await runExecution({ redis, year, plans, allFranchiseIds, names, acquisitions, cutdownDate, dryRun: args.dryRun });
     const problems = [...results.failed, ...results.skipped];
     if (!args.dryRun && problems.length > 0) {
       console.error(

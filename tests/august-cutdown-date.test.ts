@@ -155,12 +155,20 @@ describe('selectAutoCuts — .ts wrapper vs .mjs core parity', () => {
 });
 
 describe('credential envelope — script decrypt matches autocut-storage scheme', () => {
-  function encrypt(cookie: string, key: Buffer) {
+  // Mirrors autocut-storage.ts#captureCredential exactly: v2 envelope with the
+  // normalized franchise id bound as GCM AAD (item G).
+  const FID = '0007';
+  function normFid(id: string) {
+    const s = String(id ?? '').trim();
+    return /^\d+$/.test(s) ? s.padStart(4, '0') : s;
+  }
+  function encrypt(cookie: string, key: Buffer, franchiseId = FID) {
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', key, iv);
+    cipher.setAAD(Buffer.from(normFid(franchiseId), 'utf8'));
     const data = Buffer.concat([cipher.update(cookie, 'utf8'), cipher.final()]);
     return {
-      v: 1,
+      v: 2,
       alg: 'aes-256-gcm',
       iv: iv.toString('base64'),
       tag: cipher.getAuthTag().toString('base64'),
@@ -174,7 +182,7 @@ describe('credential envelope — script decrypt matches autocut-storage scheme'
     const key = deriveCredentialKey(rawKey.toString('base64'));
     expect(Buffer.compare(key, rawKey)).toBe(0);
     const record = encrypt('cookie-value-abc', rawKey);
-    expect(decryptCredentialRecord(record, key)).toEqual({
+    expect(decryptCredentialRecord(record, key, FID)).toEqual({
       cookie: 'cookie-value-abc',
       capturedAt: '2026-08-01T00:00:00.000Z',
     });
@@ -186,20 +194,36 @@ describe('credential envelope — script decrypt matches autocut-storage scheme'
     const key = deriveCredentialKey(passphrase);
     expect(Buffer.compare(key, expected)).toBe(0);
     const record = encrypt('cookie-via-scrypt', expected);
-    expect(decryptCredentialRecord(record, key)).toEqual({
+    expect(decryptCredentialRecord(record, key, FID)).toEqual({
       cookie: 'cookie-via-scrypt',
       capturedAt: '2026-08-01T00:00:00.000Z',
     });
   });
 
-  it('returns null (never throws) on wrong key, tamper, or malformed records', () => {
+  it('binds the envelope to its franchise: A\'s envelope under B\'s id fails decrypt (transplant)', () => {
+    const key = deriveCredentialKey(randomBytes(32).toString('base64'));
+    const recordForA = encrypt('cookie-for-A', key, '0001');
+    // Correct franchise → decrypts.
+    expect(decryptCredentialRecord(recordForA, key, '0001')).toEqual({
+      cookie: 'cookie-for-A',
+      capturedAt: '2026-08-01T00:00:00.000Z',
+    });
+    // Same key, different franchise AAD → GCM tag fails → treated as missing.
+    expect(decryptCredentialRecord(recordForA, key, '0002')).toBeNull();
+    // Normalization still matches: '1' addresses the same envelope as '0001'.
+    expect(decryptCredentialRecord(recordForA, key, '1')).not.toBeNull();
+  });
+
+  it('rejects non-v2 envelopes (fail-closed) and returns null on wrong key/tamper/malformed', () => {
     const key = deriveCredentialKey(randomBytes(32).toString('base64'));
     const otherKey = randomBytes(32);
     const record = encrypt('cookie', otherKey);
-    expect(decryptCredentialRecord(record, key)).toBeNull();
-    expect(decryptCredentialRecord(null, key)).toBeNull();
-    expect(decryptCredentialRecord({ v: 2, alg: 'aes-256-gcm' }, key)).toBeNull();
-    expect(decryptCredentialRecord(record, null)).toBeNull();
+    expect(decryptCredentialRecord(record, key, FID)).toBeNull(); // wrong key
+    expect(decryptCredentialRecord(null, key, FID)).toBeNull();
+    // v1 (legacy) and any other version are rejected fail-closed.
+    expect(decryptCredentialRecord({ v: 1, alg: 'aes-256-gcm' }, key, FID)).toBeNull();
+    expect(decryptCredentialRecord({ v: 3, alg: 'aes-256-gcm' }, key, FID)).toBeNull();
+    expect(decryptCredentialRecord(record, null, FID)).toBeNull();
   });
 
   it('missing env value yields no key', () => {

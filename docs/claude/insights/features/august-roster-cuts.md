@@ -223,3 +223,25 @@ window. Do it after the August 2026 deadline passes, not before.
 Note the TDZ entry above when extracting: the module boundary actually
 *fixes* that class of bug (imports hoist), which is another reason to do
 it in the offseason.
+
+## 2026-07-19 - Accepted Limitation: Stored Credentials Are Dead After AUTOCUT_CRED_KEY Rotation
+
+**Context:** PR review of the branch flagged that a previously
+"verified" stored credential silently stops decrypting the moment
+`AUTOCUT_CRED_KEY` is rotated (all envelopes are AES-256-GCM encrypted
+under that key). The credential envelope is also now bound to its
+franchise via GCM AAD (`v:2`), so the same fail-closed path swallows any
+envelope that doesn't match the current key + franchise.
+
+**Insight — accepted, not fixed:** `decryptCredentialRecord` /
+`readCredential` fail closed (return `null` → treated as a *missing*
+credential), so a rotation makes every over-limit franchise read as
+"needs to log in again" until owners re-save. This is the correct
+security posture (a rotated key SHOULD invalidate old ciphertext), and
+there are no production envelopes today (`AUTOCUT_CRED_KEY` is unset in
+prod), so there is nothing to migrate. **Do not** add a re-encrypt-on-read
+or dual-key fallback to paper over rotation — that would keep stale
+cookies alive past a deliberate key change. If a rotation is ever done
+close to the August deadline, run `--validate-only` afterward: it will
+name every team whose credential now reads as missing so they can be
+nudged to log in once (which recaptures under the new key).

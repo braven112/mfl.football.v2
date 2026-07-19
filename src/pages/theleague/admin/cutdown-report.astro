@@ -273,9 +273,24 @@ const cards = teams
     const franchiseSkipped = franchiseLevel.some((o) => `${o.status ?? ''}`.startsWith('skipped'));
     const franchiseFailed = franchiseLevel.some((o) => `${o.status ?? ''}`.startsWith('failed'));
 
+    // Render an Executed row for every player with a recorded outcome, not
+    // just the frozen slate (item J): a manual-done (or any outcome) for an
+    // off-slate player would otherwise be invisible. Slate order first, then
+    // any extra outcome-only players.
+    const slatePlayerIds = slateRows.map((r) => r.player.id);
+    const extraOutcomeIds = [
+      ...new Set(
+        outcomes
+          .map((o) => o.playerId)
+          .filter((pid): pid is string => !!pid && !slatePlayerIds.includes(pid)),
+      ),
+    ];
+    const executedPlayerIds = [...slatePlayerIds, ...extraOutcomeIds];
+
     const executedRows: ExecutedRow[] = !hasOutcomes
       ? []
-      : slateRows.map(({ player }) => {
+      : executedPlayerIds.map((pid) => {
+          const player = playerView(pid);
           const manual = manualDoneById.get(player.id) ?? null;
           const outcome = lastOutcomeFor(player.id);
           const status = `${outcome?.status ?? ''}`;
@@ -355,6 +370,11 @@ const cards = teams
     const attemptsLabel =
       done.status === 'failed' ? `Attempt ${done.attempts} of ${MAX_ATTEMPTS}` : null;
 
+    // A franchise that failed, exhausted its retries, or was skipped for a
+    // missing credential can be re-queued by the commissioner (item C3):
+    // clearing its done-hash field lets the next deadline tick reprocess it.
+    const showRetry = status.code === 'attention' || status.code === 'skipped';
+
     return {
       franchiseId: fid,
       teamName: team.name,
@@ -372,6 +392,7 @@ const cards = teams
       hasOutcomes,
       status,
       attemptsLabel,
+      showRetry,
     };
   })
   .filter((c): c is NonNullable<typeof c> => c !== null)
@@ -493,6 +514,19 @@ const pausedMetaLine = pausedState.paused
                 <span aria-hidden="true">{card.status.glyph}</span> {card.status.label}
               </span>
               {card.attemptsLabel && <span class="cdr-attempts">{card.attemptsLabel}</span>}
+              {card.showRetry && (
+                <button
+                  type="button"
+                  class="cdr-retry-btn"
+                  data-retry-franchise={card.franchiseId}
+                  disabled={!redisAvailable}
+                  title={redisAvailable
+                    ? "Clear this franchise's automation state so the next deadline tick reprocesses it"
+                    : 'Storage not configured — retry unavailable'}
+                >
+                  Retry automation
+                </button>
+              )}
               {card.activeCount !== null && (
                 <span class="cdr-roster-count" title={`Active roster vs the ${TARGET_ACTIVE_COUNT} limit`}>
                   <strong class="ops-num">{card.activeCount}</strong> / {TARGET_ACTIVE_COUNT} active
@@ -776,6 +810,28 @@ const pausedMetaLine = pausedState.paused
       }
     });
   });
+
+  // --- Retry automation: clear a franchise's done-hash state so the next
+  // --- deadline tick reprocesses it (recovery after a belated owner login or
+  // --- an exhausted retry). Never touches credentials — the route enforces it.
+  document.querySelectorAll<HTMLButtonElement>('button[data-retry-franchise]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      clearError();
+      const fid = btn.dataset.retryFranchise;
+      if (!fid) return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Retrying…';
+      try {
+        await postControl({ action: 'retry-franchise', franchiseId: fid });
+        btn.textContent = 'Queued for next tick ✓';
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = original;
+        showError(`Couldn't queue retry: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    });
+  });
 </script>
 
 <style>
@@ -879,6 +935,17 @@ const pausedMetaLine = pausedState.paused
     background: color-mix(in srgb, var(--color-error, #dc2626) 10%, transparent);
     color: var(--color-error, #dc2626);
   }
+  .cdr-retry-btn {
+    font-size: 0.72rem; font-weight: 700; cursor: pointer;
+    padding: 0.2rem 0.6rem; border-radius: 999px;
+    border: 1px solid var(--color-primary, #1c497c);
+    background: var(--color-surface, #fff); color: var(--color-primary, #1c497c);
+  }
+  .cdr-retry-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+  }
+  .cdr-retry-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .cdr-retry-btn:focus-visible { outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 2px; }
 
   /* Card status badge — text is the signal; glyph + color reinforce. */
   .cdr-status {
