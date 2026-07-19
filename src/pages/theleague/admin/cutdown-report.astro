@@ -1,0 +1,970 @@
+---
+/**
+ * August Cutdown Report (commissioner-only audit surface)
+ *
+ * One card per franchise with a saved cut list, an over-limit roster, or a
+ * snapshot entry: the owner's marked list, the computed slate frozen by the
+ * deadline job, and (post-run) per-player execution outcomes with manual-done
+ * tracking for anything that failed or was skipped. Also hosts the
+ * pause/resume kill switch (autocut:paused:{year}) and per-franchise attempt
+ * counts from the autocut:done:{year} hash.
+ *
+ * Data: Redis first (autocut:snapshot:{year}, autocut:done:{year},
+ * autocut:paused:{year}, autocut:{fid} lists), falling back to the committed
+ * report file data/<league>/august-cuts/{year}-report.json once Redis has
+ * expired or in a redis-less environment. Degrades to an explicit empty
+ * state when neither exists.
+ *
+ * PRIVACY: pre-deadline, marked lists are visible ONLY to the owner and the
+ * commissioner (plan decision #10). This page is commissioner-gated and must
+ * never be linked from a public surface before the deadline.
+ * SECURITY: never reads autocut:cred:* keys; no credential material here.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../../../components/theleague/PlayerCell.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getRedis } from '../../../utils/redis-client';
+import { getCutList, type AutocutList } from '../../../utils/autocut-storage';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getAugustCutdownDate } from '../../../utils/contract-eligibility';
+import { TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
+import { getPlayerMap } from '../../../utils/player-map';
+import { chooseTeamName } from '../../../utils/team-names';
+import { DEFAULT_LEAGUE } from '../../../config/leagues';
+import leagueConfig from '../../../data/theleague.config.json';
+// Same decision logic the deadline job runs — attempt parsing can't drift.
+import { parseDoneValue, MAX_ATTEMPTS } from '../../../../scripts/lib/august-cuts-logic.mjs';
+import { ACTIVE_ROSTER_STATUS } from '../../../utils/august-cut-selection-core.mjs';
+import { parsePausedValue } from '../../api/admin/autocut-control';
+
+export const prerender = false;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isCommissionerOrAdmin(user)) {
+  return Astro.redirect('/theleague');
+}
+
+const year = getCurrentLeagueYear();
+const deadline = getAugustCutdownDate(year);
+const now = new Date();
+
+const toArray = (value: any): any[] =>
+  Array.isArray(value) ? value : value === null || value === undefined ? [] : [value];
+const pad4 = (fid: string): string => {
+  const trimmed = `${fid ?? ''}`.trim();
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+};
+function readJsonFile(relativePath: string): any {
+  try {
+    const filePath = path.join(process.cwd(), relativePath);
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reads: Redis first, committed report file as fallback
+// ---------------------------------------------------------------------------
+
+const redis = await getRedis();
+const redisAvailable = !!redis;
+
+let snapshot: any = null;
+let snapshotSource: 'redis' | 'file' | null = null;
+if (redis) {
+  try {
+    snapshot = await redis.get(`autocut:snapshot:${year}`);
+    if (snapshot && typeof snapshot === 'object') snapshotSource = 'redis';
+    else snapshot = null;
+  } catch {
+    snapshot = null;
+  }
+}
+if (!snapshot) {
+  // Committed permanent record (may not exist yet — pre-first-run).
+  const report = readJsonFile(path.join(DEFAULT_LEAGUE.dataPath, 'august-cuts', `${year}-report.json`));
+  if (report && typeof report === 'object' && report.franchises) {
+    snapshot = report;
+    snapshotSource = 'file';
+  }
+}
+const snapshotFranchises: Record<string, any> = snapshot?.franchises ?? {};
+
+let doneHash: Record<string, string> = {};
+if (redis) {
+  try {
+    doneHash = ((await redis.hgetall<string>(`autocut:done:${year}`)) ?? {}) as Record<string, string>;
+  } catch {
+    doneHash = {};
+  }
+}
+
+let pausedState = { paused: false, pausedBy: null as string | null, pausedAt: null as string | null };
+if (redis) {
+  try {
+    pausedState = parsePausedValue(await redis.get(`autocut:paused:${year}`));
+  } catch {
+    /* leave defaults */
+  }
+}
+
+// Active-roster counts from the synced feed (same source the rosters page reads).
+const rosterData = readJsonFile(
+  path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'rosters.json'),
+);
+const activeCounts = new Map<string, number>();
+for (const fr of toArray(rosterData?.rosters?.franchise)) {
+  const players = toArray(fr?.player);
+  activeCounts.set(
+    pad4(fr.id),
+    players.filter((p: any) => `${p?.status ?? ''}` === ACTIVE_ROSTER_STATUS).length,
+  );
+}
+
+// Saved cut lists (live Redis reads; getCutList degrades to null without Redis).
+const teams = (leagueConfig.teams as any[]).map((t) => ({
+  franchiseId: pad4(t.franchiseId),
+  name: chooseTeamName({
+    fullName: t.name,
+    nameMedium: t.nameMedium,
+    nameShort: t.nameShort,
+    abbrev: t.abbrev,
+  }),
+  icon: t.icon as string | undefined,
+}));
+const teamNameByFid = new Map(teams.map((t) => [t.franchiseId, t.name]));
+
+const cutLists = new Map<string, AutocutList>();
+if (redisAvailable) {
+  for (const team of teams) {
+    const list = await getCutList(team.franchiseId);
+    // Stale lists from a previous league year are ignored, never displayed
+    // as current intent (mirrors the job's computePlans guard).
+    if (list && list.year === year && list.playerIds.length > 0) {
+      cutLists.set(team.franchiseId, list);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Card assembly
+// ---------------------------------------------------------------------------
+
+const playerMap = getPlayerMap(year);
+function playerView(pid: string) {
+  const p = playerMap.get(pid);
+  return {
+    id: pid,
+    name: p?.name ?? `Player #${pid}`,
+    position: p?.position ?? '',
+    nflTeam: p?.nflTeam ?? '',
+    headshot: p?.headshot,
+    espnId: p?.espnId ?? undefined,
+  };
+}
+
+const PT_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  month: 'short',
+  day: 'numeric',
+});
+const PT_DATETIME_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+const fmtDate = (iso: string | null | undefined): string => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? PT_DATE_FMT.format(t) : '—';
+};
+const fmtDateTime = (iso: string | null | undefined): string => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? `${PT_DATETIME_FMT.format(t)} PT` : '—';
+};
+const fmtEpochSeconds = (ts: number | undefined): string | null =>
+  Number.isFinite(ts) ? PT_DATE_FMT.format((ts as number) * 1000) : null;
+
+type Outcome = {
+  playerId?: string;
+  type?: string;
+  status?: string;
+  reason?: string;
+  by?: string;
+  at?: string;
+  activeCount?: number;
+};
+
+interface ExecutedRow {
+  player: ReturnType<typeof playerView>;
+  state: 'done' | 'manual-done' | 'failed' | 'skipped' | 'dry-run' | 'not-attempted';
+  badge: string;
+  detail: string | null;
+  showCheckbox: boolean;
+  manualBy: string | null;
+  manualAt: string | null;
+}
+
+interface CardStatus {
+  code: 'pending' | 'done' | 'attention' | 'skipped' | 'nothing';
+  label: string;
+  glyph: string;
+}
+
+const cards = teams
+  .map((team) => {
+    const fid = team.franchiseId;
+    const activeCount = activeCounts.get(fid) ?? null;
+    const overage = activeCount !== null ? activeCount - TARGET_ACTIVE_COUNT : null;
+    const overLimit = overage !== null && overage > 0;
+    const liveList = cutLists.get(fid) ?? null;
+    const entry = snapshotFranchises[fid] ?? null;
+
+    if (!liveList && !overLimit && !entry) return null;
+
+    // Marked list: live Redis copy wins; snapshot's frozen copy is the
+    // fallback (post-deadline file reads where the live keys are gone).
+    const markedSource = liveList ?? (entry?.markedList?.playerIds?.length ? entry.markedList : null);
+    const markedRows = (markedSource?.playerIds ?? []).map((pid: string, i: number) => ({
+      priority: i + 1,
+      player: playerView(pid),
+    }));
+    const markedUpdatedAt: string | null = markedSource?.updatedAt ?? null;
+
+    const slateCuts: Array<{ playerId: string; reason: string; acquisitionTimestamp?: number }> =
+      entry?.slate?.cuts ?? [];
+    const slateRows = slateCuts.map((cut) => ({
+      player: playerView(cut.playerId),
+      reason: cut.reason,
+      acquiredLabel:
+        cut.reason === 'last-added' ? fmtEpochSeconds(cut.acquisitionTimestamp) : null,
+    }));
+
+    const outcomes: Outcome[] = Array.isArray(entry?.outcomes) ? entry.outcomes : [];
+    const hasOutcomes = outcomes.length > 0;
+    const manualDoneById = new Map<string, Outcome>();
+    for (const o of outcomes) {
+      if (o?.type === 'manual-done' && o.playerId) manualDoneById.set(o.playerId, o);
+    }
+    const franchiseLevel = outcomes.filter((o) => !o.playerId && o.type !== 'manual-done');
+    const lastOutcomeFor = (pid: string): Outcome | null => {
+      for (let i = outcomes.length - 1; i >= 0; i -= 1) {
+        const o = outcomes[i];
+        if (o?.playerId === pid && o.type !== 'manual-done') return o;
+      }
+      return null;
+    };
+
+    const franchiseSkipped = franchiseLevel.some((o) => `${o.status ?? ''}`.startsWith('skipped'));
+    const franchiseFailed = franchiseLevel.some((o) => `${o.status ?? ''}`.startsWith('failed'));
+
+    const executedRows: ExecutedRow[] = !hasOutcomes
+      ? []
+      : slateRows.map(({ player }) => {
+          const manual = manualDoneById.get(player.id) ?? null;
+          const outcome = lastOutcomeFor(player.id);
+          const status = `${outcome?.status ?? ''}`;
+          let state: ExecutedRow['state'];
+          let badge: string;
+          let detail: string | null = null;
+          if (manual) {
+            state = 'manual-done';
+            badge = '✓ done manually';
+          } else if (status.startsWith('cut-verified') || status === 'already-gone') {
+            state = 'done';
+            badge = `✓ ${status}`;
+          } else if (status.startsWith('failed')) {
+            state = 'failed';
+            badge = `✗ ${status}`;
+          } else if (status.startsWith('dry-run')) {
+            state = 'dry-run';
+            badge = status;
+          } else if (franchiseSkipped) {
+            state = 'skipped';
+            badge = '✗ skipped: no-credential';
+          } else if (franchiseFailed) {
+            state = 'not-attempted';
+            badge = '✗ not attempted (franchise errored)';
+          } else {
+            state = 'not-attempted';
+            badge = 'not attempted';
+          }
+          if (outcome?.at && state !== 'manual-done') detail = fmtDateTime(outcome.at);
+          const needsManualCleanup =
+            state === 'failed' || state === 'skipped' || (state === 'not-attempted' && franchiseFailed);
+          return {
+            player,
+            state,
+            badge,
+            detail,
+            showCheckbox: needsManualCleanup,
+            manualBy: manual?.by ?? null,
+            manualAt: manual?.at ?? null,
+          };
+        });
+
+    const franchiseNotes = franchiseLevel.map((o) => ({
+      failed: `${o.status ?? ''}`.startsWith('failed') || `${o.status ?? ''}`.startsWith('skipped'),
+      text:
+        o.status === 'no-cuts-needed'
+          ? `No cuts needed — roster was already at ${o.activeCount ?? TARGET_ACTIVE_COUNT} when its turn came`
+          : `${o.status ?? 'unknown outcome'}${o.at ? ` · ${fmtDateTime(o.at)}` : ''}`,
+    }));
+
+    const done = parseDoneValue(doneHash[fid]);
+    const unresolved = executedRows.filter((r) => r.showCheckbox);
+
+    let status: CardStatus;
+    if (hasOutcomes) {
+      if (franchiseSkipped && !executedRows.some((r) => r.state === 'done')) {
+        status = unresolved.length
+          ? { code: 'skipped', label: 'NO LOGIN — SKIPPED', glyph: '—' }
+          : { code: 'done', label: 'DONE (MANUAL)', glyph: '✓' };
+      } else if (unresolved.length > 0) {
+        status = { code: 'attention', label: 'NEEDS ATTENTION', glyph: '✗' };
+      } else if (executedRows.every((r) => r.state === 'dry-run') && executedRows.length > 0) {
+        status = { code: 'pending', label: 'PENDING (DRY-RUN ONLY)', glyph: '·' };
+      } else {
+        status = { code: 'done', label: 'DONE', glyph: '✓' };
+      }
+    } else if (done.status === 'done') {
+      status = { code: 'done', label: 'DONE', glyph: '✓' };
+    } else if (done.status === 'failed') {
+      status = { code: 'attention', label: 'NEEDS ATTENTION', glyph: '✗' };
+    } else if (overLimit) {
+      status = { code: 'pending', label: 'PENDING', glyph: '·' };
+    } else {
+      status = { code: 'nothing', label: 'NOTHING TO CUT', glyph: '—' };
+    }
+
+    const attemptsLabel =
+      done.status === 'failed' ? `Attempt ${done.attempts} of ${MAX_ATTEMPTS}` : null;
+
+    return {
+      franchiseId: fid,
+      teamName: team.name,
+      icon: team.icon,
+      activeCount,
+      overage,
+      overLimit,
+      markedRows,
+      markedUpdatedAt,
+      markedIsLive: !!liveList,
+      slateRows,
+      slateComputedAt: entry ? (snapshot?.generatedAt ?? null) : null,
+      executedRows,
+      franchiseNotes,
+      hasOutcomes,
+      status,
+      attemptsLabel,
+    };
+  })
+  .filter((c): c is NonNullable<typeof c> => c !== null)
+  .sort((a, b) => {
+    const rank = (s: CardStatus['code']) =>
+      s === 'attention' ? 0 : s === 'skipped' ? 1 : s === 'pending' ? 2 : s === 'done' ? 3 : 4;
+    return rank(a.status.code) - rank(b.status.code) || a.franchiseId.localeCompare(b.franchiseId);
+  });
+
+// ---------------------------------------------------------------------------
+// Banner framing — the job having produced outcomes counts as "post" even if
+// the clock hasn't struck (dry-run/rehearsal artifacts stay clearly labeled).
+// ---------------------------------------------------------------------------
+
+const anyOutcomes = cards.some((c) => c.hasOutcomes);
+const preDeadline = now.getTime() < deadline.getTime() && !anyOutcomes;
+const deadlineLabel = fmtDateTime(deadline.toISOString());
+
+const processedCount = cards.filter((c) => c.status.code === 'done').length;
+const pendingCount = cards.filter(
+  (c) => c.status.code === 'pending' || c.status.code === 'nothing',
+).length;
+const failedCount = cards.filter(
+  (c) => c.status.code === 'attention' || c.status.code === 'skipped',
+).length;
+
+const noDataAtAll = !redisAvailable && !snapshot;
+
+const pausedMetaLine = pausedState.paused
+  ? `Paused by ${pausedState.pausedBy ?? 'unknown'} at ${fmtDateTime(pausedState.pausedAt)}`
+  : '';
+---
+
+<TheLeagueLayout title="August Cutdown Report — Admin">
+  <div class="ops-page">
+    <header class="ops-header">
+      <div>
+        <p class="ops-eyebrow"><a href="/theleague/admin">Admin</a> / Cutdown Report</p>
+        <h1 class="ops-title">August Cutdown Report</h1>
+        <p class="ops-sub">
+          Every franchise's marked cut list, computed slate, and execution outcome for the
+          <strong class="ops-num">{year}</strong> cutdown (deadline {deadlineLabel}).
+          Reads the {year} snapshot — Redis if live, the committed file once it's archived.
+        </p>
+      </div>
+      <div class="ops-header__actions">
+        <div class="cdr-kill-switch" role="group" aria-labelledby="cdr-kill-label">
+          <span id="cdr-kill-label" class="cdr-kill-label">Deadline job</span>
+          <button
+            type="button"
+            id="cdr-kill-toggle"
+            class="cdr-kill-toggle"
+            data-state={pausedState.paused ? 'paused' : 'running'}
+            aria-pressed={pausedState.paused ? 'true' : 'false'}
+            disabled={!redisAvailable}
+            title={redisAvailable ? undefined : 'Storage not configured — kill switch unavailable'}
+          >
+            <span class="cdr-kill-toggle__dot" aria-hidden="true"></span>
+            <span class="cdr-kill-toggle__text">{pausedState.paused ? 'Paused' : 'Running'}</span>
+          </button>
+          <div id="cdr-kill-confirm" class="cdr-kill-confirm" hidden>
+            <span>Pause the deadline job?</span>
+            <button type="button" id="cdr-kill-confirm-yes" class="cdr-btn cdr-btn--danger">Confirm pause</button>
+            <button type="button" id="cdr-kill-confirm-no" class="cdr-btn cdr-btn--ghost">Cancel</button>
+          </div>
+          <span id="cdr-kill-meta" class="cdr-kill-meta" aria-live="polite">{pausedMetaLine}</span>
+        </div>
+      </div>
+    </header>
+
+    {preDeadline ? (
+      <div class="cdr-banner cdr-banner--pre" role="status">
+        <strong>The deadline hasn't hit yet</strong> — this is a live preview of each franchise's
+        saved plan. Nothing has executed. Computed slates appear once the job freezes its
+        pre-execution snapshot.
+      </div>
+    ) : (
+      <div class="cdr-banner cdr-banner--post" role="status">
+        Deadline: <strong class="ops-num">{deadlineLabel}</strong> ·
+        <strong class="ops-num">{processedCount}</strong> franchises processed,
+        <strong class="ops-num">{pendingCount}</strong> pending,
+        <strong class="ops-num">{failedCount}</strong> need attention.
+        {snapshotSource === 'file' && <em> (reading the committed report file — Redis snapshot unavailable)</em>}
+      </div>
+    )}
+
+    {noDataAtAll ? (
+      <div class="cdr-empty">
+        <h2>Storage not configured</h2>
+        <p>
+          Redis is unavailable in this environment and no committed report file exists yet for
+          {year}. Live cut lists, attempt counts, and the kill switch all need Redis — check the
+          <code>UPSTASH_REDIS_REST_URL</code> / <code>TOKEN</code> env vars, or wait for the
+          deadline workflow to commit <code>{DEFAULT_LEAGUE.dataPath}/august-cuts/{year}-report.json</code>.
+        </p>
+      </div>
+    ) : cards.length === 0 ? (
+      <div class="cdr-empty">
+        <h2>Nothing to report yet</h2>
+        <p>
+          No franchise currently has a saved cut list, an over-limit roster, or a snapshot entry
+          for {year}. This page fills in as owners mark players and the deadline approaches.
+        </p>
+      </div>
+    ) : (
+      <div class="cdr-cards">
+        {cards.map((card) => (
+          <section
+            class:list={['cdr-card', card.status.code === 'attention' && 'cdr-card--attention']}
+            data-franchise-id={card.franchiseId}
+            aria-labelledby={`cdr-card-${card.franchiseId}-title`}
+          >
+            <header class="cdr-card__head">
+              {card.icon && <img class="cdr-card__icon" src={card.icon} alt="" loading="lazy" />}
+              <h2 id={`cdr-card-${card.franchiseId}-title`} class="cdr-card__title">
+                {card.teamName}
+              </h2>
+              <span class="cdr-status" data-status={card.status.code}>
+                <span aria-hidden="true">{card.status.glyph}</span> {card.status.label}
+              </span>
+              {card.attemptsLabel && <span class="cdr-attempts">{card.attemptsLabel}</span>}
+              {card.activeCount !== null && (
+                <span class="cdr-roster-count" title={`Active roster vs the ${TARGET_ACTIVE_COUNT} limit`}>
+                  <strong class="ops-num">{card.activeCount}</strong> / {TARGET_ACTIVE_COUNT} active
+                  {card.overLimit && <em class="cdr-over"> · {card.overage} over</em>}
+                </span>
+              )}
+            </header>
+
+            <div class="cdr-card__cols">
+              <div class="cdr-col">
+                <h3 class="cdr-section-title">Marked by owner</h3>
+                {card.markedRows.length === 0 ? (
+                  <p class="cdr-none">No players marked.</p>
+                ) : (
+                  <>
+                    <ol class="cdr-list" aria-label={`${card.teamName} marked cut order`}>
+                      {card.markedRows.map((row) => (
+                        <li class="cdr-row">
+                          <span class="cdr-priority ops-num" aria-hidden="true">{row.priority}</span>
+                          <PlayerCell
+                            name={row.player.name}
+                            headshot={row.player.headshot}
+                            position={row.player.position}
+                            nflTeam={row.player.nflTeam}
+                            mflId={row.player.id}
+                            espnId={row.player.espnId}
+                            size="compact"
+                          />
+                        </li>
+                      ))}
+                    </ol>
+                    <p class="cdr-meta">
+                      Saved {fmtDateTime(card.markedUpdatedAt)}
+                      {!card.markedIsLive && ' (from the frozen snapshot)'}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div class="cdr-col">
+                <h3 class="cdr-section-title">Computed slate</h3>
+                {card.slateRows.length === 0 ? (
+                  <p class="cdr-none">
+                    {card.hasOutcomes || card.slateComputedAt
+                      ? 'Snapshot computed zero cuts for this roster.'
+                      : 'Not computed yet — the slate freezes when the job takes its pre-execution snapshot.'}
+                  </p>
+                ) : (
+                  <ol class="cdr-list" aria-label={`${card.teamName} computed cut slate`}>
+                    {card.slateRows.map((row) => (
+                      <li class="cdr-row">
+                        <PlayerCell
+                          name={row.player.name}
+                          headshot={row.player.headshot}
+                          position={row.player.position}
+                          nflTeam={row.player.nflTeam}
+                          mflId={row.player.id}
+                          espnId={row.player.espnId}
+                          size="compact"
+                        />
+                        <span class="cdr-reason" data-reason={row.reason}>
+                          {row.reason === 'marked' ? 'marked' : 'last-added'}
+                          {row.acquiredLabel && ` · added ${row.acquiredLabel}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+
+              {card.hasOutcomes && (
+                <div class="cdr-col" data-executed-col>
+                  <h3 class="cdr-section-title">Executed</h3>
+                  {card.executedRows.length === 0 ? (
+                    <p class="cdr-none">No per-player attempts recorded.</p>
+                  ) : (
+                    <ol class="cdr-list" aria-label={`${card.teamName} execution outcomes`}>
+                      {card.executedRows.map((row) => (
+                        <li class:list={['cdr-row', 'cdr-outcome', `cdr-outcome--${row.state}`]}>
+                          <PlayerCell
+                            name={row.player.name}
+                            headshot={row.player.headshot}
+                            position={row.player.position}
+                            nflTeam={row.player.nflTeam}
+                            mflId={row.player.id}
+                            espnId={row.player.espnId}
+                            size="compact"
+                          />
+                          <span class="cdr-outcome-badge" data-state={row.state}>{row.badge}</span>
+                          {row.detail && <span class="cdr-meta">{row.detail}</span>}
+                          {row.state === 'manual-done' && (
+                            <span class="cdr-meta">
+                              by {row.manualBy ?? 'unknown'} · {fmtDateTime(row.manualAt)}
+                            </span>
+                          )}
+                          {row.showCheckbox && (
+                            <label class="cdr-manual-done">
+                              <input
+                                type="checkbox"
+                                data-manual-done
+                                data-player-id={row.player.id}
+                                data-franchise-id={card.franchiseId}
+                                disabled={!redisAvailable}
+                              />
+                              Done manually
+                            </label>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {card.franchiseNotes.length > 0 && (
+                    <ul class="cdr-notes">
+                      {card.franchiseNotes.map((note) => (
+                        <li class:list={['cdr-note', note.failed && 'cdr-note--failed']}>{note.text}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+    )}
+
+    <p id="cdr-error" class="cdr-error" hidden></p>
+    <p class="ops-foot">
+      Source: <code>autocut:snapshot:{year}</code> / <code>autocut:done:{year}</code> in Redis,
+      falling back to the committed <code>{year}-report.json</code>. Controls post to
+      <code>/api/admin/autocut-control</code>.
+    </p>
+  </div>
+</TheLeagueLayout>
+
+<script>
+  const CONTROL_ENDPOINT = '/api/admin/autocut-control';
+
+  const errorEl = document.getElementById('cdr-error');
+  function showError(message: string) {
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.hidden = false;
+    errorEl.setAttribute('role', 'alert');
+  }
+  function clearError() {
+    if (!errorEl) return;
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+    errorEl.removeAttribute('role');
+  }
+
+  async function postControl(body: Record<string, unknown>) {
+    const res = await fetch(CONTROL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    return data;
+  }
+
+  // --- Kill switch: pause requires a one-click inline confirm; resume is
+  // --- a single click (accidental unpause is lower stakes than accidental
+  // --- pause during the live run — see the design spec).
+  (() => {
+    const toggle = document.getElementById('cdr-kill-toggle') as HTMLButtonElement | null;
+    const confirmBox = document.getElementById('cdr-kill-confirm');
+    const confirmYes = document.getElementById('cdr-kill-confirm-yes') as HTMLButtonElement | null;
+    const confirmNo = document.getElementById('cdr-kill-confirm-no') as HTMLButtonElement | null;
+    const meta = document.getElementById('cdr-kill-meta');
+    if (!toggle || !confirmBox || !confirmYes || !confirmNo) return;
+
+    const fmt = (iso: string | null) => {
+      if (!iso) return 'unknown time';
+      const t = Date.parse(iso);
+      return Number.isFinite(t)
+        ? new Date(t).toLocaleString('en-US', {
+            timeZone: 'America/Los_Angeles',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          }) + ' PT'
+        : iso;
+    };
+
+    function render(paused: boolean, pausedBy: string | null, pausedAt: string | null) {
+      if (!toggle) return;
+      toggle.dataset.state = paused ? 'paused' : 'running';
+      toggle.setAttribute('aria-pressed', paused ? 'true' : 'false');
+      const text = toggle.querySelector('.cdr-kill-toggle__text');
+      if (text) text.textContent = paused ? 'Paused' : 'Running';
+      if (meta) {
+        meta.textContent = paused ? `Paused by ${pausedBy ?? 'unknown'} at ${fmt(pausedAt)}` : '';
+      }
+    }
+
+    function hideConfirm() {
+      if (confirmBox) confirmBox.hidden = true;
+      toggle?.focus();
+    }
+
+    toggle.addEventListener('click', async () => {
+      clearError();
+      if (toggle.dataset.state === 'running') {
+        confirmBox.hidden = false;
+        confirmYes.focus();
+        return;
+      }
+      // Resume: single click.
+      toggle.disabled = true;
+      try {
+        const data = await postControl({ action: 'resume' });
+        render(false, null, null);
+        void data;
+      } catch (err) {
+        showError(`Resume failed: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        toggle.disabled = false;
+      }
+    });
+
+    confirmYes.addEventListener('click', async () => {
+      confirmYes.disabled = true;
+      try {
+        const data = await postControl({ action: 'pause' });
+        render(true, data.pausedBy ?? null, data.pausedAt ?? null);
+        hideConfirm();
+      } catch (err) {
+        showError(`Pause failed: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        confirmYes.disabled = false;
+      }
+    });
+
+    confirmNo.addEventListener('click', hideConfirm);
+    confirmBox.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') hideConfirm();
+    });
+  })();
+
+  // --- Manual-done checkboxes: append-only audit outcomes (one-way — the
+  // --- snapshot is an audit trail, so checking is not reversible from here).
+  document.querySelectorAll<HTMLInputElement>('input[data-manual-done]').forEach((box) => {
+    box.addEventListener('change', async () => {
+      if (!box.checked) {
+        // Prevent unchecking: the outcome is already durable server-side.
+        box.checked = true;
+        return;
+      }
+      clearError();
+      box.disabled = true;
+      try {
+        await postControl({
+          action: 'manual-done',
+          franchiseId: box.dataset.franchiseId,
+          playerId: box.dataset.playerId,
+        });
+        const row = box.closest('.cdr-outcome');
+        if (row) {
+          row.classList.remove('cdr-outcome--failed', 'cdr-outcome--skipped', 'cdr-outcome--not-attempted');
+          row.classList.add('cdr-outcome--manual-done');
+        }
+        const label = box.closest('.cdr-manual-done');
+        if (label) {
+          const note = document.createElement('span');
+          note.className = 'cdr-manual-done__saved';
+          note.textContent = ' saved ✓';
+          label.appendChild(note);
+        }
+      } catch (err) {
+        box.checked = false;
+        box.disabled = false;
+        showError(`Couldn't record manual cut: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    });
+  });
+</script>
+
+<style>
+  .ops-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+
+  .ops-header {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    flex-wrap: wrap; margin-bottom: 1.5rem;
+  }
+  .ops-eyebrow { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted, #64748b); margin: 0 0 0.25rem; }
+  .ops-eyebrow a { color: inherit; text-decoration: underline; }
+  .ops-title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--color-text, #0f172a); }
+  .ops-sub { margin: 0; color: var(--color-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
+  .ops-header__actions { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .ops-foot { margin-top: 2rem; font-size: 0.78rem; color: var(--color-text-muted, #64748b); }
+  .ops-foot code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+
+  /* Every count/date figure aligns — editorial standard. */
+  .ops-num { font-variant-numeric: tabular-nums; }
+
+  /* --- Kill switch ------------------------------------------------------ */
+  .cdr-kill-switch { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
+  .cdr-kill-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--color-text-muted, #64748b);
+  }
+  .cdr-kill-toggle {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.45rem 0.9rem; border-radius: 999px; cursor: pointer;
+    font-weight: 700; font-size: 0.85rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    background: var(--color-surface, #fff); color: var(--color-text, #0f172a);
+  }
+  .cdr-kill-toggle:disabled { opacity: 0.55; cursor: not-allowed; }
+  .cdr-kill-toggle:focus-visible { outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 2px; }
+  .cdr-kill-toggle__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cdr-kill-toggle[data-state='running'] .cdr-kill-toggle__dot { background: var(--color-success, #16a34a); }
+  .cdr-kill-toggle[data-state='paused'] .cdr-kill-toggle__dot { background: var(--warning-color, #f59e0b); }
+  .cdr-kill-toggle[data-state='paused'] {
+    border-color: var(--warning-color, #f59e0b);
+    background: color-mix(in srgb, var(--warning-color, #f59e0b) 12%, transparent);
+  }
+  .cdr-kill-confirm {
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;
+    font-size: 0.82rem; color: var(--color-text, #0f172a);
+  }
+  .cdr-kill-meta { font-size: 0.75rem; color: var(--color-gray-500, #6b7280); font-variant-numeric: tabular-nums; }
+
+  .cdr-btn {
+    border: 1px solid var(--color-border, #e2e8f0); border-radius: 6px;
+    padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    background: var(--color-surface, #fff); color: var(--color-text, #0f172a);
+  }
+  .cdr-btn:focus-visible { outline: 2px solid var(--color-accent, #0ea5e9); outline-offset: 2px; }
+  .cdr-btn--danger {
+    background: var(--color-error, #dc2626); border-color: var(--color-error, #dc2626); color: #fff;
+  }
+  .cdr-btn--ghost { background: transparent; }
+
+  /* --- Banner ----------------------------------------------------------- */
+  .cdr-banner {
+    padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem;
+    margin-bottom: 1.25rem; color: var(--color-text, #0f172a);
+    background: var(--color-surface, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+  }
+  .cdr-banner--pre { border-left: 3px solid var(--warning-color, #f59e0b); }
+  .cdr-banner--post { border-left: 3px solid var(--color-primary, #1c497c); }
+  .cdr-banner em { color: var(--color-text-muted, #64748b); }
+
+  /* --- Empty states ------------------------------------------------------ */
+  .cdr-empty {
+    padding: 2rem 1.5rem; border-radius: 12px; text-align: center;
+    background: var(--color-surface, #f8fafc); border: 1px dashed var(--color-border, #e2e8f0);
+  }
+  .cdr-empty h2 { margin: 0 0 0.5rem; font-size: 1.1rem; color: var(--color-text, #0f172a); }
+  .cdr-empty p { margin: 0 auto; max-width: 60ch; font-size: 0.9rem; color: var(--color-gray-500, #6b7280); }
+  .cdr-empty code { background: var(--color-surface-alt, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+
+  /* --- Franchise cards --------------------------------------------------- */
+  .cdr-cards { display: grid; gap: 1rem; }
+  .cdr-card {
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 12px; padding: 1rem 1.1rem;
+  }
+  /* Negative-state pattern: subtle left border, never a red-flooded card. */
+  .cdr-card--attention {
+    border-left: 3px solid var(--color-error, #dc2626);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .cdr-card__head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .cdr-card__icon { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; flex-shrink: 0; }
+  .cdr-card__title { font-size: 1.05rem; margin: 0; color: var(--color-text, #0f172a); }
+  .cdr-roster-count { margin-left: auto; font-size: 0.82rem; color: var(--color-gray-500, #6b7280); }
+  .cdr-over { color: var(--color-error, #dc2626); font-style: normal; font-weight: 700; }
+  .cdr-attempts {
+    font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums;
+    padding: 0.15rem 0.5rem; border-radius: 999px;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 10%, transparent);
+    color: var(--color-error, #dc2626);
+  }
+
+  /* Card status badge — text is the signal; glyph + color reinforce. */
+  .cdr-status {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+    padding: 0.18rem 0.55rem; border-radius: 999px; white-space: nowrap;
+  }
+  .cdr-status[data-status='pending'] { background: var(--color-surface-alt, #f1f5f9); color: var(--color-gray-500, #6b7280); }
+  .cdr-status[data-status='nothing'] { background: var(--color-surface-alt, #f1f5f9); color: var(--color-gray-500, #6b7280); }
+  .cdr-status[data-status='done'] { background: #dcfce7; color: #166534; }
+  .cdr-status[data-status='attention'] { background: #fee2e2; color: #991b1b; }
+  .cdr-status[data-status='skipped'] { background: #fef3c7; color: #92400e; }
+
+  .cdr-card__cols {
+    display: grid; gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  /* Editorial section-title standard: uppercase + primary left border. */
+  .cdr-section-title {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem; border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.6rem;
+  }
+
+  .cdr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+  .cdr-row {
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    padding: 0.35rem 0.5rem; border-radius: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    background: var(--color-surface, #fff);
+  }
+  .cdr-priority {
+    width: 1.4rem; height: 1.4rem; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-size: 0.72rem; font-weight: 700;
+    background: color-mix(in srgb, var(--warning-color, #f59e0b) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warning-color, #f59e0b) 45%, transparent);
+    color: var(--color-gray-900, #111827);
+  }
+  .cdr-reason { margin-left: auto; font-size: 0.72rem; color: var(--color-gray-500, #6b7280); white-space: nowrap; }
+  .cdr-reason[data-reason='marked'] { color: var(--color-gray-900, #111827); font-weight: 600; }
+
+  /* Outcome rows — failures/skips use the subtle left-border treatment. */
+  .cdr-outcome--failed,
+  .cdr-outcome--skipped,
+  .cdr-outcome--not-attempted {
+    border-left: 2px solid var(--color-error, #dc2626);
+    background: var(--color-gray-50, #f9fafb);
+  }
+  .cdr-outcome--skipped { border-left-color: var(--warning-color, #f59e0b); }
+  .cdr-outcome--done, .cdr-outcome--manual-done { border-left: 2px solid var(--color-success, #16a34a); }
+  .cdr-outcome--dry-run { border-left: 2px dashed var(--color-border, #cbd5e1); }
+
+  .cdr-outcome-badge {
+    font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cdr-outcome-badge[data-state='done'],
+  .cdr-outcome-badge[data-state='manual-done'] { color: #166534; }
+  .cdr-outcome-badge[data-state='failed'] { color: var(--color-error, #dc2626); }
+  .cdr-outcome-badge[data-state='skipped'],
+  .cdr-outcome-badge[data-state='not-attempted'] { color: #92400e; }
+
+  .cdr-manual-done {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    margin-left: auto; font-size: 0.78rem; color: var(--color-text, #0f172a);
+    cursor: pointer;
+  }
+  .cdr-manual-done input { width: 16px; height: 16px; accent-color: var(--color-success, #16a34a); cursor: pointer; }
+  .cdr-manual-done input:disabled { cursor: default; }
+  .cdr-manual-done__saved { color: #166534; font-weight: 700; }
+
+  .cdr-meta { font-size: 0.72rem; color: var(--color-gray-500, #6b7280); font-variant-numeric: tabular-nums; margin: 0; }
+  .cdr-none { font-size: 0.82rem; color: var(--color-gray-500, #6b7280); margin: 0; }
+  .cdr-notes { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
+  .cdr-note {
+    font-size: 0.78rem; color: var(--color-gray-500, #6b7280);
+    padding: 0.3rem 0.5rem; border-radius: 6px;
+    background: var(--color-surface-alt, #f1f5f9);
+  }
+  .cdr-note--failed {
+    border-left: 2px solid var(--color-error, #dc2626);
+    color: var(--color-gray-900, #111827);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .cdr-error {
+    margin-top: 1rem; padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.85rem;
+    border-left: 2px solid var(--color-error, #dc2626);
+    background: var(--color-gray-50, #f9fafb); color: var(--color-gray-900, #111827);
+  }
+
+  @media (max-width: 640px) {
+    .ops-header__actions { width: 100%; }
+    .cdr-kill-switch { align-items: flex-start; }
+    .cdr-card__cols { grid-template-columns: 1fr; }
+    .cdr-roster-count { margin-left: 0; width: 100%; }
+  }
+</style>
