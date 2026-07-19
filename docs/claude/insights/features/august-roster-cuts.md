@@ -178,6 +178,48 @@ copy ("Your N marked players are safe unless you go back over").
 ternary near the `cdp-slate` render), selection rule #2 in
 `august-cut-selection-core.mjs`.
 
+## 2026-07-19 - Full-Slate Roster Badges + Admin Manual-Action Callout (Dead-Login Policy)
+
+**Context:** Two ship-prep enhancements to the owner + commissioner
+surfaces, plus the decided policy they encode.
+
+**Insight:**
+
+- **Roster rows badge the ENTIRE computed slate by default, not just the
+  marked players.** `buildAutocutBadgeMap()` (rosters.astro) runs the same
+  `selectAutoCuts` the deadline job runs and maps every player that earns
+  a row badge — so an owner who has marked nothing still sees exactly who
+  the automation will take: their newest waiver/FA pickups, in last-added
+  execution order (`reason: 'last-added'` → the "LAST ADDED" sub-tag),
+  vs. `reason: 'marked'` → "YOUR PICK". `AUTO-CUT #N` for players inside
+  the cut line, `MARKED #N` for marked-but-below-line insurance (see the
+  "Badge Honesty" entry above). A `#cdp-legend` nudge states the count +
+  deadline and pushes the owner to set their own order. Own-team only
+  (`isAutocutOwnView()`), suppressed in demo mode.
+- **Admin skipped/failed cards carry a plain-language manual-action
+  callout.** On `/theleague/admin/cutdown-report`, franchises that the
+  automation can't process — dead login (no verified credential) or a
+  failed execution — render a banner telling the commissioner to make the
+  slate below by hand and check each cut off. The card still shows the
+  franchise's marked + labeled slate so the manual cut mirrors what the
+  job would have done.
+
+**Decided policy (why the two paths differ):** last-added auto-fill stays
+for *working* logins — a franchise with a verified credential is executed
+automatically, filling any unmarked overage newest-first. Dead-login
+franchises are **never auto-cut** (no stored credential = no owner-mode
+MFL write is possible without locking the owner out / acting without
+authorization); they are handled **manually** via the admin page, which
+surfaces the marked + labeled slate for the commissioner to execute by
+hand. The roster-row full-slate badges exist precisely to nudge owners to
+verify a login and set an order *before* the deadline so they don't land
+in the manual bucket.
+
+**Evidence:** rosters.astro `buildAutocutBadgeMap` / `buildAutocutBadgeHTML`
+/ `#cdp-legend` render; `src/pages/theleague/admin/cutdown-report.astro`
+skipped/failed card callout; selection rules in
+`august-cut-selection-core.mjs`.
+
 ## 2026-07-19 - Deploy Prerequisites (Before August)
 
 **Context:** What must be true in the environments before the deadline
