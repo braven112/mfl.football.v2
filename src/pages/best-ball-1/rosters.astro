@@ -1,0 +1,236 @@
+---
+/**
+ * Best Ball League #1 — Rosters (/best-ball-1/rosters)
+ *
+ * Best ball has no roster management: your roster IS your draft class.
+ * Rendered server-side by grouping the official draft session's picks per
+ * franchise. Pre-draft, this shows the 12 franchises awaiting their teams.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import bb1Config from '../../../data/best-ball-1/bb1.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
+import { buildDraftPlayers } from '../../utils/build-draft-players';
+import { fetchOfficialDraftSession } from '../../utils/best-ball-draft';
+
+export const prerender = false;
+
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+const leagueYear = getLeagueYearForSlug(BB1.slug);
+const session = await fetchOfficialDraftSession(BB1, leagueYear);
+
+const madePicks = (session?.picks ?? []).filter((p) => p.playerId);
+const playersById = new Map<string, { name: string; position: string; nflTeam: string }>();
+if (madePicks.length > 0) {
+  for (const p of buildDraftPlayers(getCurrentLeagueYear(), { enrich: false })) {
+    playersById.set(p.id, { name: p.name, position: p.position, nflTeam: p.nflTeam });
+  }
+}
+
+interface RosterEntry {
+  round: number;
+  playerName: string;
+  position: string;
+  nflTeam: string;
+}
+
+const rosters = (bb1Config.teams ?? []).map((team: any) => {
+  const entries: RosterEntry[] = madePicks
+    .filter((p) => p.franchiseId === team.franchiseId)
+    .sort((a, b) => a.overallPickNumber - b.overallPickNumber)
+    .map((p) => {
+      const player = playersById.get(p.playerId!);
+      return {
+        round: p.round,
+        playerName: player?.name ?? `Player ${p.playerId}`,
+        position: player?.position ?? '',
+        nflTeam: player?.nflTeam ?? '',
+      };
+    });
+
+  // Best-ball reading order: positional groups, draft order within a group.
+  const sorted = [...entries].sort((a, b) => {
+    const posDiff = POSITION_ORDER.indexOf(a.position) - POSITION_ORDER.indexOf(b.position);
+    return posDiff !== 0 ? posDiff : a.round - b.round;
+  });
+
+  return {
+    franchiseId: team.franchiseId,
+    name: team.name,
+    abbrev: team.abbrev || '',
+    colorPrimary: team.colorPrimary || 'var(--league-accent, #0e8a5f)',
+    entries: sorted,
+  };
+});
+
+const hasAnyPicks = madePicks.length > 0;
+---
+
+<TheLeagueLayout title={`Rosters | ${BB1.name}`}>
+  <div class="bb-rosters">
+    <header class="bb-rosters__header">
+      <h1>Rosters</h1>
+      <p class="bb-rosters__sub">
+        Best ball: rosters are set on draft night — best scores start automatically, no
+        lineups, no waivers, no trades.
+      </p>
+    </header>
+
+    {
+      !hasAnyPicks && (
+        <div class="bb-rosters__empty">
+          <p>
+            Rosters appear here as the {leagueYear} startup draft unfolds — every team's
+            25 picks, grouped by position.
+          </p>
+          <a href="/best-ball-1/draft-room">Go to the Draft Room →</a>
+        </div>
+      )
+    }
+
+    <div class="bb-rosters__grid">
+      {
+        rosters.map((team) => (
+          <section class="bb-rosters__card">
+            <h2 style={`border-color: ${team.colorPrimary}`}>
+              {team.name}
+              <span class="bb-rosters__count">{team.entries.length}/25</span>
+            </h2>
+            {team.entries.length > 0 ? (
+              <ul>
+                {team.entries.map((entry) => (
+                  <li>
+                    <span class={`bb-rosters__pos bb-rosters__pos--${entry.position.toLowerCase()}`}>
+                      {entry.position}
+                    </span>
+                    <span class="bb-rosters__player">{entry.playerName}</span>
+                    <span class="bb-rosters__meta">
+                      {entry.nflTeam} · R{entry.round}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="bb-rosters__waiting">Awaiting the draft…</p>
+            )}
+          </section>
+        ))
+      }
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .bb-rosters {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem var(--spacing-lg, 1.5rem) 3rem;
+  }
+
+  .bb-rosters__header h1 {
+    margin: 0;
+  }
+
+  .bb-rosters__sub {
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0.4rem 0 1.5rem;
+  }
+
+  .bb-rosters__empty {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #dddddd);
+    border-radius: var(--radius-lg, 10px);
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .bb-rosters__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-md, 1.1rem);
+  }
+
+  .bb-rosters__card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #dddddd);
+    border-radius: var(--radius-md, 8px);
+    padding: 1rem 1.1rem;
+  }
+
+  .bb-rosters__card h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1rem;
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid;
+  }
+
+  .bb-rosters__count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bb-rosters__card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .bb-rosters__card li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .bb-rosters__pos {
+    flex-shrink: 0;
+    width: 2.4rem;
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 0.1rem 0;
+    color: #ffffff;
+    background: var(--color-gray-500, #6b7280);
+  }
+
+  .bb-rosters__pos--qb { background: var(--dr-pos-qb, #dc2626); }
+  .bb-rosters__pos--rb { background: var(--dr-pos-rb, #16a34a); }
+  .bb-rosters__pos--wr { background: var(--dr-pos-wr, #2563eb); }
+  .bb-rosters__pos--te { background: var(--dr-pos-te, #7c3aed); }
+  .bb-rosters__pos--pk { background: var(--dr-pos-pk, #d97706); }
+  .bb-rosters__pos--def { background: var(--dr-pos-def, #6b7280); }
+
+  .bb-rosters__player {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bb-rosters__meta {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--color-text-secondary, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bb-rosters__waiting {
+    color: var(--color-text-secondary, #9ca3af);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+</style>

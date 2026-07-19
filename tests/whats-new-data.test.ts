@@ -240,6 +240,7 @@ const CROSS_LEAGUE_TEXT_GRANDFATHERED_IDS = new Set(['weekly-rollup-2025-12-08']
 const LEAGUE_TEXT_PATTERNS: Record<string, RegExp> = {
   afl: /\bafl\b|afl-fantasy/i,
   theleague: /\bThe ?League\b|\btheleague\b/,
+  bb1: /\bbest[- ]ball\b|best-ball-1|\bbb1\b/i,
 };
 
 /** JSON-cast data may be malformed — coerce so tests fail with assertions, not TypeErrors. */

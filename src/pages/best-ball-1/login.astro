@@ -1,0 +1,56 @@
+---
+/**
+ * Best Ball League #1 login page — mirrors /afl-fantasy/login but scopes
+ * the MFL authentication (and resulting JWT) to the best-ball league so
+ * owners land with the right leagueId for the draft room.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import LoginForm from '../../components/theleague/LoginForm.astro';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { getLeagueBySlug } from '../../config/leagues';
+
+export const prerender = false;
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+const BB1_LOGIN_YEAR = getLeagueYearForSlug(BB1.slug);
+
+// Already signed in to this league → straight to the league home.
+const authUser = getAuthUser(Astro.request);
+if (authUser?.leagueId === BB1.id) {
+  return Astro.redirect('/best-ball-1');
+}
+
+// Honor ?next= deep links within this league only.
+const next = Astro.url.searchParams.get('next');
+const safeNext = next && next.startsWith('/best-ball-1') ? next : '/best-ball-1';
+---
+
+<TheLeagueLayout title={`Sign In — ${BB1.name}`}>
+  <div class="bb-login-page">
+    <LoginForm
+      leagueId={BB1.id}
+      seasonYear={BB1_LOGIN_YEAR}
+      redirectUrl={safeNext}
+      logoSrc="/assets/logos/bestball-logo.svg"
+      logoAlt="Best Ball League logo"
+      subtitle={`Sign in with your MFL credentials for ${BB1.name}`}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .bb-login-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 4rem var(--spacing-lg, 1.5rem) var(--spacing-2xl, 3rem);
+  }
+
+  @media (max-width: 640px) {
+    .bb-login-page {
+      padding: 2.5rem var(--spacing-md, 1rem) var(--spacing-xl, 2rem);
+    }
+  }
+</style>

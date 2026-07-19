@@ -35,7 +35,7 @@ import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, parseMyTeamFromUrl, buildNavTeamInfo } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
-import { getAFLPreference, getTheLeaguePreference } from '../utils/team-preferences';
+import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import { getLeagueBySlug } from '../config/leagues';
 import leagueConfigData from '../data/theleague.config.json';
@@ -77,8 +77,11 @@ const mflHost = (host || leagueContext.host).replace(/^https?:\/\//, '').replace
 // Determine the year — always use the smart year function (handles Feb 14 rollover automatically)
 const currentYear = (year || getCurrentLeagueYear()).toString();
 
-// Determine league slug for nav (needed early for team lookup)
-const league: LeagueSlug = leagueContext.slug === 'afl-fantasy' ? 'afl' : 'theleague';
+// Determine league slug for nav (needed early for team lookup) —
+// registry-driven so new leagues (e.g. best-ball) resolve without another
+// hardcoded ternary here.
+const league: LeagueSlug =
+	(getLeagueBySlug(leagueContext.slug)?.navSlug as LeagueSlug | undefined) ?? 'theleague';
 
 // Check for myteam in URL and set cookie if present
 const myteamParam = parseMyTeamFromUrl(Astro.url);
@@ -105,6 +108,9 @@ const layoutAuthUser = getAuthUser(Astro.request);
 // MFL league ids from the registry (never hardcode '13522' / '19621').
 const aflMflId = getLeagueBySlug('afl-fantasy')?.id;
 const theLeagueMflId = getLeagueBySlug('theleague')?.id;
+const bb1MflId = getLeagueBySlug('best-ball-1')?.id;
+const currentLeagueMflId =
+	league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : theLeagueMflId;
 
 // Get team preference based on current league context
 let myteam: string | null = null;
@@ -129,6 +135,23 @@ if (league === 'afl') {
 		// Dynamic import AFL config only when needed
 		const aflConfigData = await import('../../data/afl-fantasy/afl.config.json');
 		teamInfo = buildNavTeamInfo(navTeamId, aflConfigData.teams, 'afl' as LeagueSlug);
+	}
+} else if (league === 'bb1') {
+	// Best Ball League #1: same simple shape as TheLeague (no conference/tier)
+	const bb1Pref = getBestBall1Preference(Astro.cookies);
+	const bb1JwtFranchiseId =
+		layoutAuthUser && bb1MflId && layoutAuthUser.leagueId === bb1MflId
+			? layoutAuthUser.franchiseId
+			: null;
+	myteam = myteamParam || bb1Pref?.franchiseId || bb1JwtFranchiseId || null;
+
+	// Nav chip reflects the signed JWT session ONLY (see TheLeague branch note).
+	const navTeamId = bb1JwtFranchiseId || null;
+
+	if (navTeamId) {
+		// Dynamic import bb1 config only when needed
+		const bb1ConfigData = await import('../../data/best-ball-1/bb1.config.json');
+		teamInfo = buildNavTeamInfo(navTeamId, bb1ConfigData.teams, 'bb1' as LeagueSlug);
 	}
 } else {
 	// TheLeague: Check TheLeague preference cookie first, then fall back to generic myteam
@@ -168,7 +191,7 @@ const isCommishMode = isCommissioner && Astro.cookies.get('commish-mode')?.value
 // even without the myteam preference cookie); the preference cookie/param
 // keeps working for browse-as personalization.
 const navFranchiseId =
-	(layoutAuthUser?.leagueId === (league === 'afl' ? aflMflId : theLeagueMflId)
+	(layoutAuthUser?.leagueId === currentLeagueMflId
 		? layoutAuthUser?.franchiseId
 		: null) || myteam;
 const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds);
@@ -195,6 +218,14 @@ const themePref = getThemePreference(Astro.cookies);
 				<meta name="mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 				<meta name="apple-mobile-web-app-title" content="AFL" />
+			</>
+		) : league === 'bb1' ? (
+			<>
+				<link rel="icon" type="image/svg+xml" href="/assets/logos/bestball-logo.svg" />
+				<meta name="theme-color" content="#0b3d2e" data-theme-color-light="#0b3d2e" />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content="Best Ball" />
 			</>
 		) : (
 			<>

@@ -26,12 +26,23 @@ const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
     estYear: 2003,
     stats: '24 Teams · 2 Conferences · 9 Draft Rounds',
   },
+  'best-ball-1': {
+    logo: '/assets/logos/bestball-logo.svg',
+    logoDark: '/assets/logos/bestball-logo-dark.svg',
+    estYear: 2026,
+    stats: '12 Teams · Best Ball · 25-Round Draft',
+  },
 };
 
 const CHIP_LABELS: Record<string, string> = {
   theleague: 'The League',
   afl: 'AFL',
+  bb1: 'Best Ball #1',
 };
+
+const leagueCount = ALL_LEAGUES.length;
+const COUNT_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+const countWord = COUNT_WORDS[leagueCount] ?? String(leagueCount);
 
 const entries = getLatestWhatsNewAcrossLeagues(6);
 ---
@@ -39,7 +50,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
 <SplashLayout title="MFL Fantasy Football">
   <section class="masthead">
     <p class="eyebrow">MFL Fantasy Football</p>
-    <h1>Two Leagues. One Home.</h1>
+    <h1>{countWord} Leagues. One Home.</h1>
   </section>
 
   <section class="hero" aria-label="Choose your league">
@@ -48,7 +59,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
       return (
         <a class="panel" data-league={league.navSlug} href={`/${league.slug}`}>
           <img class="watermark" src={meta.logo} alt="" aria-hidden="true" loading="lazy" />
-          <p class="kicker">Est. {meta.estYear} · Dynasty</p>
+          <p class="kicker">Est. {meta.estYear} · {league.bestBall ? 'Best Ball' : 'Dynasty'}</p>
           <span class="lockup">
             <img class="lockup-logo" src={meta.logoDark} alt="" />
             <span class="lockup-name">{league.name}</span>
@@ -108,7 +119,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
 
   .hero {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-lg, 1.5rem);
   }
 
@@ -151,6 +162,10 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
 
   .panel[data-league='afl'] {
     background: linear-gradient(160deg, #c41e3a 0%, #002244 100%);
+  }
+
+  .panel[data-league='bb1'] {
+    background: linear-gradient(160deg, #0e8a5f 0%, #0b3d2e 100%);
   }
 
   .watermark {
@@ -292,6 +307,10 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
     background: #c41e3a;
   }
 
+  .chip--bb1 {
+    background: #0e8a5f;
+  }
+
   .wn-card h3 {
     font-size: 1rem;
     font-weight: 700;
@@ -311,6 +330,10 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
   @media (max-width: 1000px) {
     .wn-grid {
       grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero {
+      grid-template-columns: 1fr 1fr;
     }
   }
 

@@ -310,6 +310,13 @@ export interface MockDraftSession {
   rankingAssignments?: Record<string, MockRankingSource>;
   /** Source applied to any franchise not present in `rankingAssignments`. */
   defaultRankingSource?: MockRankingSource;
+  /**
+   * True for a league's OFFICIAL draft of record (best-ball startup drafts
+   * run through the same engine). Official sessions use a deterministic id
+   * (`{navSlug}-official-{year}`), are created commissioner-only, and are
+   * the only sessions the MFL export script will touch.
+   */
+  official?: boolean;
 }
 
 /** A single pick in a mock draft */

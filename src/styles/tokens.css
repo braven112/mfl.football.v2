@@ -647,6 +647,26 @@ html[data-league="afl"] {
 }
 
 /* ========================================
+   Best Ball League #1 — per-league theme overrides
+   Emerald identity: deep green for the breadcrumb strip / footer / resting
+   nav icons, brighter green for the accent + hovers. Shares TheLeague's
+   neutral surfaces otherwise — best-ball leagues are deliberately
+   light-footprint (draft-only), so the theme stays a small accent layer.
+   Sister best-ball leagues (bb2, …) should copy this block verbatim with
+   their own accent hue.
+   ======================================== */
+html[data-league="bb1"] {
+  --bb-green: #0b3d2e;                          /* deep best-ball green */
+  --breadcrumb-bar-bg: var(--bb-green);         /* top "Back to MFL" strip */
+  --inverse-bg: var(--bb-green);                /* footer (via --inverse-content-bg) */
+  --league-accent: #0e8a5f;                     /* best-ball accent — emerald */
+  --header-nav-icon-color: var(--bb-green);            /* nav icons — deep green */
+  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — emerald */
+  --header-nav-label-color: var(--league-accent);      /* nav labels — emerald */
+  --header-nav-label-hover-color: var(--league-accent);
+}
+
+/* ========================================
    Focus Visible Styles
    ======================================== */
 :focus-visible {

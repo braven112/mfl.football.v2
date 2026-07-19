@@ -6,6 +6,7 @@
 import type { AstroCookies } from 'astro';
 import leagueAssets from '../data/theleague.assets.json';
 import aflAssets from '../../data/afl-fantasy/afl.assets.json';
+import bb1Assets from '../../data/best-ball-1/bb1.assets.json';
 import { getActiveTeams } from './league-assets';
 
 /**
@@ -27,6 +28,15 @@ export interface AFLPreference {
 }
 
 /**
+ * Best Ball League #1 team preference structure (same simple shape as
+ * TheLeague — best-ball leagues have no conference/tier structure)
+ */
+export interface BestBall1Preference {
+  franchiseId: string;
+  lastUpdated: string;
+}
+
+/**
  * Cookie configuration
  */
 const COOKIE_CONFIG = {
@@ -40,6 +50,14 @@ const COOKIE_CONFIG = {
   },
   afl: {
     name: 'afl_team_pref',
+    maxAge: 365 * 24 * 60 * 60,
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: import.meta.env.PROD,
+    httpOnly: false,
+  },
+  bb1: {
+    name: 'bb1_team_pref',
     maxAge: 365 * 24 * 60 * 60,
     path: '/',
     sameSite: 'lax' as const,
@@ -67,7 +85,7 @@ function normalizeFranchiseId(franchiseId: string | number | null | undefined): 
 /**
  * Validate franchise ID exists in league
  */
-export function validateFranchiseId(franchiseId: string | number | null | undefined, league: 'theleague' | 'afl' = 'theleague'): boolean {
+export function validateFranchiseId(franchiseId: string | number | null | undefined, league: 'theleague' | 'afl' | 'bb1' = 'theleague'): boolean {
   if (franchiseId === null || franchiseId === undefined || franchiseId === '') return false;
 
   const normalized = normalizeFranchiseId(franchiseId);
@@ -77,6 +95,8 @@ export function validateFranchiseId(franchiseId: string | number | null | undefi
   // "0002, 0013") that have no rosters or per-team UI.
   if (league === 'theleague') {
     return getActiveTeams(leagueAssets).some(team => team.id === normalized);
+  } else if (league === 'bb1') {
+    return getActiveTeams(bb1Assets).some(team => team.id === normalized);
   } else {
     return getActiveTeams(aflAssets).some(team => team.id === normalized);
   }
@@ -240,6 +260,70 @@ export function setAFLPreference(
 export function clearAFLPreference(cookies: AstroCookies): void {
   cookies.delete(COOKIE_CONFIG.afl.name, {
     path: COOKIE_CONFIG.afl.path,
+  });
+}
+
+/**
+ * Get Best Ball League #1 preference from cookie
+ */
+export function getBestBall1Preference(cookies: AstroCookies): BestBall1Preference | null {
+  try {
+    const cookieValue = cookies.get(COOKIE_CONFIG.bb1.name);
+    if (!cookieValue?.value) return null;
+
+    const preference = JSON.parse(cookieValue.value) as BestBall1Preference;
+
+    if (!preference.franchiseId || !preference.lastUpdated) {
+      clearBestBall1Preference(cookies);
+      return null;
+    }
+
+    if (!validateFranchiseId(preference.franchiseId, 'bb1')) {
+      clearBestBall1Preference(cookies);
+      return null;
+    }
+
+    return {
+      franchiseId: normalizeFranchiseId(preference.franchiseId),
+      lastUpdated: preference.lastUpdated,
+    };
+  } catch (error) {
+    clearBestBall1Preference(cookies);
+    return null;
+  }
+}
+
+/**
+ * Set Best Ball League #1 preference cookie
+ */
+export function setBestBall1Preference(cookies: AstroCookies, franchiseId: string): void {
+  const normalized = normalizeFranchiseId(franchiseId);
+
+  if (!validateFranchiseId(normalized, 'bb1')) {
+    console.warn(`[team-preferences] Invalid Best Ball franchise ID: ${franchiseId}`);
+    return;
+  }
+
+  const preference: BestBall1Preference = {
+    franchiseId: normalized,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  cookies.set(COOKIE_CONFIG.bb1.name, JSON.stringify(preference), {
+    maxAge: COOKIE_CONFIG.bb1.maxAge,
+    path: COOKIE_CONFIG.bb1.path,
+    sameSite: COOKIE_CONFIG.bb1.sameSite,
+    secure: COOKIE_CONFIG.bb1.secure,
+    httpOnly: COOKIE_CONFIG.bb1.httpOnly,
+  });
+}
+
+/**
+ * Clear Best Ball League #1 preference cookie
+ */
+export function clearBestBall1Preference(cookies: AstroCookies): void {
+  cookies.delete(COOKIE_CONFIG.bb1.name, {
+    path: COOKIE_CONFIG.bb1.path,
   });
 }
 

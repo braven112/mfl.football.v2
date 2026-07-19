@@ -1,0 +1,237 @@
+---
+/**
+ * Best Ball League #1 — Draft Board (/best-ball-1/draft-board)
+ *
+ * Read-only, round-by-round record of the official startup draft, rendered
+ * server-side from the PartyKit session (no island — spectators and
+ * post-draft browsing don't need live sockets; the draft room is the live
+ * surface). Once the draft is exported to MFL and feeds are synced, this
+ * page keeps working from the same session snapshot.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import bb1Config from '../../../data/best-ball-1/bb1.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
+import { buildDraftPlayers } from '../../utils/build-draft-players';
+import { fetchOfficialDraftSession } from '../../utils/best-ball-draft';
+
+export const prerender = false;
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+const leagueYear = getLeagueYearForSlug(BB1.slug);
+const session = await fetchOfficialDraftSession(BB1, leagueYear);
+
+const teamsById = new Map<string, { name: string; abbrev: string; colorPrimary?: string }>(
+  (bb1Config.teams ?? []).map((t: any) => [
+    t.franchiseId,
+    { name: t.name, abbrev: t.abbrev || '', colorPrimary: t.colorPrimary },
+  ]),
+);
+
+// Player identity map for rendering names — built only when there are picks.
+const madePicks = (session?.picks ?? []).filter((p) => p.playerId);
+const playersById = new Map<string, { name: string; position: string; nflTeam: string }>();
+if (madePicks.length > 0) {
+  for (const p of buildDraftPlayers(getCurrentLeagueYear(), { enrich: false })) {
+    playersById.set(p.id, { name: p.name, position: p.position, nflTeam: p.nflTeam });
+  }
+}
+
+interface BoardRound {
+  round: number;
+  picks: Array<{
+    pickInRound: number;
+    overall: number;
+    teamName: string;
+    playerName: string;
+    position: string;
+    nflTeam: string;
+    isAutoPick: boolean;
+  }>;
+}
+
+const rounds: BoardRound[] = [];
+if (session) {
+  for (let r = 1; r <= session.totalRounds; r++) {
+    const picks = session.picks
+      .filter((p) => p.round === r)
+      .sort((a, b) => a.pickInRound - b.pickInRound)
+      .map((p) => {
+        const player = p.playerId ? playersById.get(p.playerId) : undefined;
+        return {
+          pickInRound: p.pickInRound,
+          overall: p.overallPickNumber,
+          teamName: teamsById.get(p.franchiseId)?.name ?? `Team ${p.franchiseId}`,
+          playerName: player?.name ?? (p.playerId ? `Player ${p.playerId}` : ''),
+          position: player?.position ?? '',
+          nflTeam: player?.nflTeam ?? '',
+          isAutoPick: !!p.isAutoPick,
+        };
+      });
+    rounds.push({ round: r, picks });
+  }
+}
+
+const draftStarted = madePicks.length > 0;
+const statusLabel = !session
+  ? 'not scheduled'
+  : session.status === 'completed'
+    ? 'final'
+    : draftStarted
+      ? 'in progress'
+      : 'not started';
+---
+
+<TheLeagueLayout title={`Draft Board | ${BB1.name}`}>
+  <div class="bb-board">
+    <header class="bb-board__header">
+      <h1>{leagueYear} Draft Board</h1>
+      <span class={`bb-board__status bb-board__status--${statusLabel.replace(/\s/g, '-')}`}>
+        {statusLabel}
+      </span>
+    </header>
+
+    {
+      !session || !draftStarted ? (
+        <div class="bb-board__empty">
+          <p>
+            {!session
+              ? `The official ${leagueYear} draft hasn't been scheduled yet.`
+              : 'The draft board fills in here, pick by pick, once the draft starts.'}
+          </p>
+          <a href="/best-ball-1/draft-room">Go to the Draft Room →</a>
+        </div>
+      ) : (
+        rounds.map((round) => (
+          <section class="bb-board__round">
+            <h2>Round {round.round}</h2>
+            <div class="bb-board__table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Pick</th>
+                    <th scope="col">Team</th>
+                    <th scope="col">Player</th>
+                    <th scope="col">Pos</th>
+                    <th scope="col">NFL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {round.picks.map((pick) => (
+                    <tr>
+                      <td class="bb-board__num">
+                        {round.round}.{String(pick.pickInRound).padStart(2, '0')}
+                      </td>
+                      <td>{pick.teamName}</td>
+                      <td>
+                        {pick.playerName || <span class="bb-board__tbd">—</span>}
+                        {pick.isAutoPick && <span class="bb-board__auto" title="Auto-pick">A</span>}
+                      </td>
+                      <td>{pick.position}</td>
+                      <td>{pick.nflTeam}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))
+      )
+    }
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .bb-board {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.5rem var(--spacing-lg, 1.5rem) 3rem;
+  }
+
+  .bb-board__header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .bb-board__header h1 {
+    margin: 0;
+  }
+
+  .bb-board__status {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f3f4f6);
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .bb-board__status--final,
+  .bb-board__status--in-progress {
+    background: var(--league-accent, #0e8a5f);
+    color: #ffffff;
+  }
+
+  .bb-board__empty {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #dddddd);
+    border-radius: var(--radius-lg, 10px);
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .bb-board__round {
+    margin-top: 1.75rem;
+  }
+
+  .bb-board__round h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-left: 3px solid var(--league-accent, #0e8a5f);
+    padding-left: 0.6rem;
+  }
+
+  .bb-board__table-wrap {
+    overflow-x: auto;
+  }
+
+  .bb-board table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .bb-board th,
+  .bb-board td {
+    text-align: left;
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
+    white-space: nowrap;
+  }
+
+  .bb-board__num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .bb-board__tbd {
+    color: var(--color-text-secondary, #9ca3af);
+  }
+
+  .bb-board__auto {
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--color-text-secondary, #6b7280);
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0 0.25rem;
+  }
+</style>

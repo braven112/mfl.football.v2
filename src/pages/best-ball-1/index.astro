@@ -1,0 +1,261 @@
+---
+/**
+ * Best Ball League #1 — League Home (/best-ball-1)
+ *
+ * A draft-first home page: this league has no lineups, waivers, or trades,
+ * so the draft is the marquee event and the page orients everything around
+ * its current state (not scheduled → lobby open → LIVE → complete).
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { getAuthUser } from '../../utils/auth';
+import { fetchOfficialDraftSession } from '../../utils/best-ball-draft';
+
+export const prerender = false;
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+const leagueYear = getLeagueYearForSlug(BB1.slug);
+
+const user = getAuthUser(Astro.request);
+const isSignedIn = user?.leagueId === BB1.id;
+
+const session = await fetchOfficialDraftSession(BB1, leagueYear);
+const madeCount = (session?.picks ?? []).filter((p) => p.playerId).length;
+const totalCount = session ? session.totalRounds * session.picksPerRound : 0;
+
+type DraftPhase = 'unscheduled' | 'lobby' | 'live' | 'completed';
+const phase: DraftPhase = !session
+  ? 'unscheduled'
+  : session.status === 'completed'
+    ? 'completed'
+    : session.status === 'lobby'
+      ? 'lobby'
+      : 'live';
+
+const HERO_COPY: Record<DraftPhase, { badge: string; title: string; body: string; cta: string; ctaHref: string }> = {
+  unscheduled: {
+    badge: 'Coming soon',
+    title: `The ${leagueYear} Startup Draft`,
+    body: '12 teams. 25 rounds. One night that decides your whole season — best ball means the roster you draft is the team you ride.',
+    cta: 'Preview the Draft Room',
+    ctaHref: '/best-ball-1/draft-room',
+  },
+  lobby: {
+    badge: 'Lobby open',
+    title: 'The Draft Room is open',
+    body: 'Take your seat — the clock starts when the commissioner kicks it off.',
+    cta: 'Enter the Draft Room',
+    ctaHref: '/best-ball-1/draft-room',
+  },
+  live: {
+    badge: 'On the clock',
+    title: 'The Draft is LIVE',
+    body: `Pick ${Math.min(madeCount + 1, totalCount)} of ${totalCount} — get in there.`,
+    cta: 'Join the Draft',
+    ctaHref: '/best-ball-1/draft-room',
+  },
+  completed: {
+    badge: 'Draft complete',
+    title: `The ${leagueYear} rosters are locked`,
+    body: 'All 300 picks are in. Your best scores start themselves every week from here — scoreboard watching only.',
+    cta: 'See the Rosters',
+    ctaHref: '/best-ball-1/rosters',
+  },
+};
+
+const hero = HERO_COPY[phase];
+---
+
+<TheLeagueLayout title={BB1.name}>
+  <div class="bb-home">
+    <section class="bb-home__hero">
+      <img class="bb-home__logo" src="/assets/logos/bestball-logo-dark.svg" alt="" aria-hidden="true" />
+      <p class="bb-home__badge">{hero.badge}</p>
+      <h1>{hero.title}</h1>
+      <p class="bb-home__body">{hero.body}</p>
+      <div class="bb-home__actions">
+        <a class="bb-home__cta" href={hero.ctaHref}>{hero.cta} →</a>
+        {!isSignedIn && <a class="bb-home__signin" href="/best-ball-1/login">Sign in</a>}
+      </div>
+    </section>
+
+    <section class="bb-home__cards" aria-label="League pages">
+      <a class="bb-home__card" href="/best-ball-1/draft-room">
+        <h2>Draft Room</h2>
+        <p>The live draft floor — board, player pool, queue, chat, and the on-the-clock timer.</p>
+      </a>
+      <a class="bb-home__card" href="/best-ball-1/draft-board">
+        <h2>Draft Board</h2>
+        <p>Every pick, round by round{madeCount > 0 ? ` — ${madeCount}/${totalCount} in the books` : ''}.</p>
+      </a>
+      <a class="bb-home__card" href="/best-ball-1/rosters">
+        <h2>Rosters</h2>
+        <p>All 12 teams, grouped by position. In best ball, the draft IS the roster.</p>
+      </a>
+    </section>
+
+    <section class="bb-home__format">
+      <h2>How this league works</h2>
+      <ul>
+        <li><strong>Draft-only.</strong> One 25-round snake startup draft, run entirely here on the site.</li>
+        <li><strong>Best ball scoring.</strong> Your top scorers count automatically each week — no lineups to set, ever.</li>
+        <li><strong>No management.</strong> No waivers, no add/drops, no trades. Draft well or wear it all season.</li>
+        <li><strong>MFL-official.</strong> When the draft wraps, results are imported to MyFantasyLeague for scoring.</li>
+      </ul>
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .bb-home {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem var(--spacing-lg, 1.5rem) 3rem;
+  }
+
+  .bb-home__hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(160deg, #0e8a5f 0%, #0b3d2e 100%);
+    color: #ffffff;
+    border-radius: var(--radius-lg, 10px);
+    padding: 2.5rem 2rem;
+  }
+
+  .bb-home__logo {
+    position: absolute;
+    top: -10%;
+    right: -4%;
+    height: 120%;
+    width: auto;
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  .bb-home__badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .bb-home__hero h1 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.7rem, 3.5vw, 2.5rem);
+    line-height: 1.15;
+  }
+
+  .bb-home__body {
+    max-width: 46ch;
+    margin: 0 0 1.25rem;
+    opacity: 0.92;
+  }
+
+  .bb-home__actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .bb-home__cta {
+    background: #ffffff;
+    color: #0b3d2e;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    padding: 0.65rem 1.4rem;
+    border-radius: var(--radius-sm, 4px);
+    text-decoration: none;
+  }
+
+  .bb-home__signin {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .bb-home__cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md, 1.1rem);
+    margin-top: 1.5rem;
+  }
+
+  .bb-home__card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #dddddd);
+    border-radius: var(--radius-md, 8px);
+    padding: 1.1rem 1.2rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .bb-home__card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg, 0 8px 24px rgba(17, 17, 17, 0.15));
+    text-decoration: none;
+  }
+
+  .bb-home__card h2 {
+    font-size: 1rem;
+    margin: 0 0 0.35rem;
+    color: var(--league-accent, #0e8a5f);
+  }
+
+  .bb-home__card p {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary, #4b5563);
+    margin: 0;
+  }
+
+  .bb-home__format {
+    margin-top: 2.5rem;
+  }
+
+  .bb-home__format h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-left: 3px solid var(--league-accent, #0e8a5f);
+    padding-left: 0.6rem;
+  }
+
+  .bb-home__format ul {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1.5rem;
+  }
+
+  .bb-home__format li {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 760px) {
+    .bb-home__cards {
+      grid-template-columns: 1fr;
+    }
+
+    .bb-home__format ul {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bb-home__card {
+      transition: none;
+    }
+  }
+</style>

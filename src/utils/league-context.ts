@@ -92,15 +92,18 @@ const AFL_TO_THELEAGUE_MAP: Record<string, string> = Object.entries(
  */
 export function hasTeamInBothLeagues(
   franchiseId: string | undefined | null,
-  currentLeague: 'theleague' | 'afl'
+  currentLeague: 'theleague' | 'afl' | 'bb1'
 ): boolean {
   if (!franchiseId) return false;
 
   if (currentLeague === 'theleague') {
     return franchiseId in CROSS_LEAGUE_TEAM_MAP;
-  } else {
+  }
+  if (currentLeague === 'afl') {
     return franchiseId in AFL_TO_THELEAGUE_MAP;
   }
+  // Best-ball leagues are standalone — no cross-league switcher pairing.
+  return false;
 }
 
 /**
@@ -111,13 +114,15 @@ export function hasTeamInBothLeagues(
  */
 export function getOtherLeagueFranchiseId(
   franchiseId: string | undefined | null,
-  currentLeague: 'theleague' | 'afl'
+  currentLeague: 'theleague' | 'afl' | 'bb1'
 ): string | null {
   if (!franchiseId) return null;
 
   if (currentLeague === 'theleague') {
     return CROSS_LEAGUE_TEAM_MAP[franchiseId] || null;
-  } else {
+  }
+  if (currentLeague === 'afl') {
     return AFL_TO_THELEAGUE_MAP[franchiseId] || null;
   }
+  return null;
 }

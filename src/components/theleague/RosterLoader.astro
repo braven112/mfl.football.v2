@@ -13,26 +13,31 @@
 import '../../styles/roster-loader.css';
 import theleagueConfig from '../../data/theleague.config.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 
 interface Props {
   /** Current league — picks which logo + lore the loader shows. */
-  league?: 'theleague' | 'afl';
+  league?: 'theleague' | 'afl' | 'bb1';
 }
 
 const { league = 'theleague' } = Astro.props;
 const logoUrl =
   league === 'afl'
     ? '/assets/logos/afl-logo.svg'
-    : '/assets/logos/theleague-logo.svg';
+    : league === 'bb1'
+      ? '/assets/logos/bestball-logo.svg'
+      : '/assets/logos/theleague-logo.svg';
 const logoDarkUrl =
   league === 'afl'
     ? '/assets/logos/afl-logo-dark.svg'
-    : '/assets/logos/theleague-logo-dark.svg';
+    : league === 'bb1'
+      ? '/assets/logos/bestball-logo-dark.svg'
+      : '/assets/logos/theleague-logo-dark.svg';
 
 // Narration comes from the OFFICIAL per-league team data file: general league
 // flavor (`loaderLines`) + one or more quips per team (`loaderQuips`). Baked at
-// SSR for the current league; the two leagues are fully independent.
-const cfg: any = league === 'afl' ? aflConfig : theleagueConfig;
+// SSR for the current league; the leagues are fully independent.
+const cfg: any = league === 'afl' ? aflConfig : league === 'bb1' ? bb1Config : theleagueConfig;
 const loaderLines: string[] = [
   ...(cfg.loaderLines ?? []),
   ...cfg.teams.flatMap((t: any) => t.loaderQuips ?? []),

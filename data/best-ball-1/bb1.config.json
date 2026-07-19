@@ -1,0 +1,26 @@
+{
+  "$comment": "Best Ball League #1 (MFL 37610). Team names/colors are placeholders until the first real franchise sync from MFL — the draft room and nav degrade gracefully to these. Mirrors the afl.config.json shape (subset: best-ball leagues carry no conference/division/tier structure).",
+  "leagueId": "37610",
+  "name": "Best Ball League #1",
+  "loaderLines": [
+    "Stacking the draft board…",
+    "Re-checking the ADP…",
+    "Sharpening the on-the-clock timer…",
+    "No lineups to set — just vibes…",
+    "Best ball means never having to say you benched him…"
+  ],
+  "teams": [
+    { "franchiseId": "0001", "name": "Franchise 01", "abbrev": "BB01", "colorPrimary": "#0e8a5f", "colorSecondary": "#d1fae5" },
+    { "franchiseId": "0002", "name": "Franchise 02", "abbrev": "BB02", "colorPrimary": "#1c497c", "colorSecondary": "#dbeafe" },
+    { "franchiseId": "0003", "name": "Franchise 03", "abbrev": "BB03", "colorPrimary": "#c41e3a", "colorSecondary": "#fee2e2" },
+    { "franchiseId": "0004", "name": "Franchise 04", "abbrev": "BB04", "colorPrimary": "#d97706", "colorSecondary": "#fef3c7" },
+    { "franchiseId": "0005", "name": "Franchise 05", "abbrev": "BB05", "colorPrimary": "#7c3aed", "colorSecondary": "#ede9fe" },
+    { "franchiseId": "0006", "name": "Franchise 06", "abbrev": "BB06", "colorPrimary": "#0e7490", "colorSecondary": "#cffafe" },
+    { "franchiseId": "0007", "name": "Franchise 07", "abbrev": "BB07", "colorPrimary": "#be185d", "colorSecondary": "#fce7f3" },
+    { "franchiseId": "0008", "name": "Franchise 08", "abbrev": "BB08", "colorPrimary": "#4d7c0f", "colorSecondary": "#ecfccb" },
+    { "franchiseId": "0009", "name": "Franchise 09", "abbrev": "BB09", "colorPrimary": "#b45309", "colorSecondary": "#ffedd5" },
+    { "franchiseId": "0010", "name": "Franchise 10", "abbrev": "BB10", "colorPrimary": "#1e293b", "colorSecondary": "#e2e8f0" },
+    { "franchiseId": "0011", "name": "Franchise 11", "abbrev": "BB11", "colorPrimary": "#9333ea", "colorSecondary": "#f3e8ff" },
+    { "franchiseId": "0012", "name": "Franchise 12", "abbrev": "BB12", "colorPrimary": "#0369a1", "colorSecondary": "#e0f2fe" }
+  ]
+}
