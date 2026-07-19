@@ -115,7 +115,7 @@ import {
   isoWeekLabel,
   markFingerprintSeen,
   getMemoryRecall,
-  LEDGER_PATH,
+  ledgerPath,
 } from './lib/schefter-recurrence-ledger.mjs';
 import {
   isOverNamingRateLimit,
@@ -2764,8 +2764,8 @@ async function main() {
 
   // Load personality + lore + bits once per run. If any file fails we fall
   // back to the legacy inline prompt inside generateAiBody.
-  const lore = await loadLore({ log, warn });
-  const history = await loadPostHistory({ log, warn });
+  const lore = await loadLore({ log, warn, navSlug: NAV_SLUG });
+  const history = await loadPostHistory({ log, warn, navSlug: NAV_SLUG });
   const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
   log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
@@ -2965,7 +2965,7 @@ async function main() {
   const seasonYear = currentSeasonYear(now);
   let recurrenceLedger;
   let ledgerReset;
-  const ledgerPathAbs = path.join(projectRoot, LEDGER_PATH);
+  const ledgerPathAbs = path.join(projectRoot, ledgerPath(NAV_SLUG));
   try {
     [recurrenceLedger, ledgerReset] = rolloverForSeason(loadLedger(ledgerPathAbs), seasonYear);
     if (ledgerReset) {
@@ -3650,7 +3650,7 @@ async function main() {
         subject,
         tipSources,
       }),
-      { log, warn },
+      { log, warn, navSlug: NAV_SLUG },
     );
   }
 

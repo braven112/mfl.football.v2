@@ -112,7 +112,7 @@ describe('mergeByPath', () => {
   it('merges post-history files by content', () => {
     const theirs = JSON.stringify({ _schema: { maxEntries: 30 }, posts: [post('a', '2026-05-23T09:00:00Z')] });
     const ours = JSON.stringify({ _schema: { maxEntries: 30 }, posts: [post('b', '2026-05-23T10:00:00Z')] });
-    const out = mergeByPath('data/schefter/post-history.json', theirs, ours);
+    const out = mergeByPath('data/schefter/theleague/post-history.json', theirs, ours);
     expect(JSON.parse(out).posts.map((p: any) => p.id)).toEqual(['b', 'a']);
   });
 

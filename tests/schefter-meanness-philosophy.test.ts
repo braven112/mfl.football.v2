@@ -160,7 +160,7 @@ describe('HARD RULE 16 — off-topic personal insults', () => {
 });
 
 describe('personality.md — hostile-tips expansion', () => {
-  const src = read('data/schefter/personality.md');
+  const src = read('data/schefter/theleague/personality.md');
 
   it('states the design principle at the top of the section', () => {
     expect(src).toMatch(/The editorial filter IS the product/);

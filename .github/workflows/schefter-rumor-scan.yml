@@ -73,4 +73,4 @@ jobs:
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter rumor-mill — new anonymous-tip post" \
-            --files "src/data/theleague/schefter-feed.json,data/schefter/post-history.json"
+            --files "src/data/theleague/schefter-feed.json,data/schefter/theleague/post-history.json,data/schefter/theleague/topic-recurrence.json"

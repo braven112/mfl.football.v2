@@ -346,7 +346,7 @@ describe('ingestGroupMeMentions — Style Book integration', () => {
 
 describe('source-level contract — scanner + prompt', () => {
   const scannerSrc = read('scripts/schefter-rumor-scan.mjs');
-  const runningBitsSrc = read('data/schefter/running-bits.md');
+  const runningBitsSrc = read('data/schefter/theleague/running-bits.md');
 
   it('anonymizeTips surfaces attackOnSchefter + styleBookCount on GroupMe tips', () => {
     // The flag and count must be surfaced on the safe object so the LLM sees them.

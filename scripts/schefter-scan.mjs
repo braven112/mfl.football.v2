@@ -1196,8 +1196,8 @@ async function scanPendingTrades(league) {
   // Load personality + lore + bits + rolling post-memory ONCE per scan cycle.
   // If anything is missing the lore loader falls back and logs a warning;
   // recentPostsBlock is an empty string when history is empty.
-  const lore = await loadLore({ log: console.log, warn: console.warn });
-  const history = await loadPostHistory({ log: console.log, warn: console.warn });
+  const lore = await loadLore({ log: console.log, warn: console.warn, navSlug: league.slug });
+  const history = await loadPostHistory({ log: console.log, warn: console.warn, navSlug: league.slug });
   const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
   console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
@@ -1315,7 +1315,7 @@ async function scanPendingTrades(league) {
             subject: `trade-pending (${team1} ↔ ${team2})`,
             tipSources: ['trade_pending'],
           }),
-          { log: console.log, warn: console.warn },
+          { log: console.log, warn: console.warn, navSlug: league.slug },
         );
       }
     } catch (err) {

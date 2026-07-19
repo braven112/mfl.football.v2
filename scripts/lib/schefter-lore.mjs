@@ -20,11 +20,21 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
-const LORE_DIR = path.join(projectRoot, 'data', 'schefter');
-const PERSONALITY_PATH = path.join(LORE_DIR, 'personality.md');
-const LEAGUE_LORE_PATH = path.join(LORE_DIR, 'league-lore.md');
-const RUNNING_BITS_PATH = path.join(LORE_DIR, 'running-bits.md');
-const POST_HISTORY_PATH = path.join(LORE_DIR, 'post-history.json');
+// Lore is per-league: data/schefter/<navSlug>/{personality,league-lore,
+// running-bits}.md + post-history.json. No legacy-path fallback on purpose —
+// silently reading the wrong league's lore is worse than a hard error.
+const LORE_ROOT = path.join(projectRoot, 'data', 'schefter');
+
+export function lorePaths(navSlug = 'theleague') {
+  const dir = path.join(LORE_ROOT, navSlug);
+  return {
+    dir,
+    personality: path.join(dir, 'personality.md'),
+    leagueLore: path.join(dir, 'league-lore.md'),
+    runningBits: path.join(dir, 'running-bits.md'),
+    postHistory: path.join(dir, 'post-history.json'),
+  };
+}
 
 const MAX_HISTORY_ENTRIES = 30;
 const RECENT_POSTS_FOR_PROMPT = 5;
@@ -244,7 +254,8 @@ const REFRAME_PATTERNS = [
 
 // ── File loading (cached) ──
 
-let _cache = null;
+// Cache keyed by navSlug — one scanner process may serve multiple leagues.
+const _cache = new Map();
 
 async function readLoreFile(filePath, label) {
   try {
@@ -263,13 +274,15 @@ async function readLoreFile(filePath, label) {
  * If ANY file fails to load we return { ok: false, warnings: [...] } so the
  * caller can fall back to their legacy inline prompt without crashing.
  */
-export async function loadLore({ log = console.log, warn = console.warn } = {}) {
-  if (_cache) return _cache;
+export async function loadLore({ log = console.log, warn = console.warn, navSlug = 'theleague' } = {}) {
+  const cached = _cache.get(navSlug);
+  if (cached) return cached;
 
+  const paths = lorePaths(navSlug);
   const [personality, lore, bits] = await Promise.all([
-    readLoreFile(PERSONALITY_PATH, 'personality.md'),
-    readLoreFile(LEAGUE_LORE_PATH, 'league-lore.md'),
-    readLoreFile(RUNNING_BITS_PATH, 'running-bits.md'),
+    readLoreFile(paths.personality, `${navSlug}/personality.md`),
+    readLoreFile(paths.leagueLore, `${navSlug}/league-lore.md`),
+    readLoreFile(paths.runningBits, `${navSlug}/running-bits.md`),
   ]);
 
   const warnings = [];
@@ -280,8 +293,9 @@ export async function loadLore({ log = console.log, warn = console.warn } = {}) 
   if (!personality.ok || !lore.ok || !bits.ok) {
     for (const w of warnings) warn(w);
     warn('[schefter-lore] falling back to legacy inline prompt (one or more lore files missing)');
-    _cache = { ok: false, warnings };
-    return _cache;
+    const failed = { ok: false, warnings };
+    _cache.set(navSlug, failed);
+    return failed;
   }
 
   const assembledSuffix =
@@ -295,7 +309,7 @@ export async function loadLore({ log = console.log, warn = console.warn } = {}) 
       `lore (${formatChars(lore.chars)}), bits (${formatChars(bits.chars)})`,
   );
 
-  _cache = {
+  const loaded = {
     ok: true,
     personality,
     lore,
@@ -303,7 +317,8 @@ export async function loadLore({ log = console.log, warn = console.warn } = {}) 
     assembledSuffix,
     totalChars: personality.chars + lore.chars + bits.chars + SALT_NOT_SUGAR_DIRECTIVE.length,
   };
-  return _cache;
+  _cache.set(navSlug, loaded);
+  return loaded;
 }
 
 function formatChars(n) {
@@ -317,9 +332,9 @@ function formatChars(n) {
  * Read post-history.json. Always returns a valid structure; if the file is
  * missing or malformed we log once and return an empty list.
  */
-export async function loadPostHistory({ log = console.log, warn = console.warn } = {}) {
+export async function loadPostHistory({ log = console.log, warn = console.warn, navSlug = 'theleague' } = {}) {
   try {
-    const raw = await fs.readFile(POST_HISTORY_PATH, 'utf8');
+    const raw = await fs.readFile(lorePaths(navSlug).postHistory, 'utf8');
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.posts)) {
       warn('[schefter-lore] post-history.json has no posts array — treating as empty');
@@ -448,9 +463,9 @@ export function tagPost(body) {
  * Never throws — on any failure, logs a warning and returns false. The
  * scanner should not crash because history couldn't be written.
  */
-export async function appendPostHistory(entry, { log = console.log, warn = console.warn } = {}) {
+export async function appendPostHistory(entry, { log = console.log, warn = console.warn, navSlug = 'theleague' } = {}) {
   try {
-    const { raw, posts } = await loadPostHistory({ log, warn });
+    const { raw, posts } = await loadPostHistory({ log, warn, navSlug });
     const next = Array.isArray(posts) ? [...posts, entry] : [entry];
     // Keep newest MAX_HISTORY_ENTRIES
     const pruned = next.slice(-MAX_HISTORY_ENTRIES);
@@ -465,7 +480,7 @@ export async function appendPostHistory(entry, { log = console.log, warn = conso
         "Rolling history of Claude Schefter's recent posts. Used to prevent repetition and enable callbacks.";
     }
 
-    await fs.writeFile(POST_HISTORY_PATH, JSON.stringify(output, null, 2) + '\n');
+    await fs.writeFile(lorePaths(navSlug).postHistory, JSON.stringify(output, null, 2) + '\n');
     log(`[history] appended post to post-history.json (total: ${pruned.length})`);
     return true;
   } catch (err) {
@@ -503,5 +518,5 @@ export const _internals = {
   MAX_HISTORY_ENTRIES,
   RECENT_POSTS_FOR_PROMPT,
   SALT_NOT_SUGAR_DIRECTIVE,
-  PATHS: { PERSONALITY_PATH, LEAGUE_LORE_PATH, RUNNING_BITS_PATH, POST_HISTORY_PATH },
+  lorePaths,
 };

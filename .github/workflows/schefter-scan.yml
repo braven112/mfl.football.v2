@@ -62,7 +62,7 @@ jobs:
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter scan — new transaction posts" \
-            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/resolved-events.json,data/afl-fantasy/resolved-events.json,data/schefter/post-history.json,data/schefter/groupme-suppressions.json"
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/resolved-events.json,data/afl-fantasy/resolved-events.json,data/schefter/theleague/post-history.json,data/schefter/groupme-suppressions.json"
 
       - name: File issue for suppressed GroupMe sends
         if: always()
