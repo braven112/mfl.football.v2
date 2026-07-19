@@ -39,6 +39,7 @@ const { deadlineLabel, username } = Astro.props;
       players go first, in your order; any remaining overage is filled with
       the most recent waiver/FA pickups. Deadline: {deadlineLabel}.
     </p>
+    <p class="cdp-legend" id="cdp-legend" role="status" hidden></p>
   </header>
 
   <div class="cdp-status">
@@ -163,6 +164,37 @@ const { deadlineLabel, username } = Astro.props;
     font-size: 0.8125rem;
     line-height: 1.45;
     color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Nudge tying the amber roster-row AUTO-CUT badges to action. */
+  .cdp-legend {
+    margin: 0.625rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-gray-900, #111827);
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 10%, var(--content-bg, #fff));
+    border: 1px solid color-mix(in srgb, var(--autocut-accent, #f59e0b) 40%, transparent);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.5rem 0.75rem;
+  }
+  .cdp-legend[hidden] {
+    display: none;
+  }
+  .cdp-legend strong {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Inline text-echo of the roster-row badge so the nudge reads unambiguously. */
+  .cdp-legend__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.02rem 0.35rem;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--autocut-accent, #f59e0b) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--autocut-accent, #f59e0b) 45%, transparent);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .cdp-status {
@@ -467,6 +499,18 @@ const { deadlineLabel, username } = Astro.props;
     height: 12px;
     color: var(--autocut-accent, #f59e0b);
     flex-shrink: 0;
+  }
+  /* Reason sub-tag ("your pick" / "last added") — the marked-vs-last-added
+     distinction is carried in TEXT, never color alone. */
+  .autocut-badge__reason {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .autocut-badge__reason::before {
+    content: '·';
+    margin: 0 0.2rem 0 0.05rem;
+    opacity: 0.7;
   }
   /* Marked but below the current cut line ("MARKED #N") — same shape,
      muted amber, so it reads as staged rather than executing. */
