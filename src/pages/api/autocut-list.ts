@@ -73,9 +73,8 @@ export const POST: APIRoute = async ({ request }) => {
   if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
   if (!user.franchiseId) return jsonResponse({ error: 'No franchise associated with session' }, 403);
 
-  const redis = await getRedis();
-  if (!redis) return jsonResponse({ success: false, error: 'Storage not configured' }, 503);
-
+  // Validate the request before checking storage so malformed input gets a
+  // 400 even when Redis is down (a bad request can never succeed anyway).
   let body: { year?: unknown; playerIds?: unknown };
   try {
     body = await request.json();
@@ -107,6 +106,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
   // Dedupe silently, preserving first-occurrence (highest-priority) position.
   const playerIds = [...new Set(body.playerIds as string[])];
+
+  const redis = await getRedis();
+  if (!redis) return jsonResponse({ success: false, error: 'Storage not configured' }, 503);
 
   // --- Step-up auth: the save persists ONLY with a live-verified MFL cookie.
   if (!user.id || !(await isMflCookieLive(user.id, currentYear))) {

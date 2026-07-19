@@ -725,7 +725,11 @@ async function main() {
 
   const redis = getRedisConfig();
   if (!redis) {
-    throw new Error('No Redis config found. Set UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN.');
+    const err = new Error(
+      'No Redis config found. Set UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN.',
+    );
+    err.expected = true;
+    throw err;
   }
 
   // Kill switch — halts every mode. Toggled from the commissioner audit page.
@@ -799,6 +803,12 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`${TAG} Fatal error:`, err);
+  // Expected config failures (e.g. missing Redis env) get a clean one-line
+  // message for ops logs; unexpected errors keep the full stack.
+  if (err && err.expected) {
+    console.error(`${TAG} Fatal error: ${err.message}`);
+  } else {
+    console.error(`${TAG} Fatal error:`, err);
+  }
   process.exit(1);
 });
