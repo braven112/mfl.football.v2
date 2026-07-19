@@ -1,0 +1,82 @@
+name: Phase 0 — Owner Cookie Spike
+
+# ONE-OFF, MANUAL-ONLY live proof for the August roster-cuts automation.
+#
+# The deadline job (scripts/apply-august-cuts.mjs) executes cuts by replaying
+# each owner's stored MFL session cookie from THIS kind of headless Actions
+# runner and POSTing to MFL's `add_drop` page handler in owner mode. That write
+# path has never been exercised end-to-end from script context. This spike
+# proves it before August by performing ONE REAL add + ONE REAL drop of an
+# obscure free agent on the account's own franchise — a NET-ZERO roster change.
+#
+# It is workflow_dispatch ONLY (no cron): it must never fire on its own.
+#   - `confirm` must equal exactly `run-live-spike` or the run refuses to write
+#     (it still does a safe --dry-run so you can see the plan).
+#   - `player` optionally pins the free-agent id (otherwise the script auto-picks
+#     a deep kicker).
+#
+# scripts/spike-owner-add-drop.mjs never logs cookie material and exits
+# non-zero on any failure. If the ADD lands but the DROP fails it shouts the
+# manual-cleanup instruction (drop the player in the MFL UI).
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type run-live-spike to perform the real add+drop. Anything else runs a dry-run."
+        type: string
+        required: true
+        default: ''
+      player:
+        description: "Optional MFL free-agent id to use instead of the auto-picked kicker."
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: phase0-owner-cookie-spike
+  cancel-in-progress: false
+
+jobs:
+  spike:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run owner-cookie add/drop spike
+        env:
+          TZ: America/Los_Angeles
+          # Path (a): decrypt a stored owner-credential envelope (the real job path).
+          AUTOCUT_CRED_KEY: ${{ secrets.AUTOCUT_CRED_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          # Path (b): fall back to a fresh login if no stored envelope decrypts.
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          # Authenticated reads (both spellings — script reads either).
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+          # Pass dispatch inputs via env (never interpolate ${{ }} straight into
+          # the shell — that's a script-injection surface).
+          CONFIRM: ${{ inputs.confirm }}
+          PLAYER: ${{ inputs.player }}
+        run: |
+          FLAGS=("--dry-run")
+          if [ "$CONFIRM" = "run-live-spike" ]; then
+            echo "::notice::confirm matched — running the LIVE spike (one real add + drop)."
+            FLAGS=("--live")
+          else
+            echo "::warning::confirm was not 'run-live-spike' — running a DRY-RUN only (no MFL writes)."
+          fi
+          if [ -n "$PLAYER" ]; then
+            FLAGS+=("--player" "$PLAYER")
+          fi
+          node scripts/spike-owner-add-drop.mjs "${FLAGS[@]}"

@@ -197,11 +197,20 @@ job can run for real.
    of the stored `MFL_USER_ID` secret) on every pipeline run, `if: always()`,
    self-skips when the secret is absent. This is the continuous signal
    that MFL still accepts replayed owner cookies from an Actions runner.
-4. **Phase 0 live spike still OUTSTANDING:** nobody has yet replayed a
-   real owner cookie for an actual `add_drop`-style WRITE from script
-   context. One real-write spike (on a test roster move) must happen
-   before August or execution night is the first-ever live test of the
-   core assumption.
+4. **Phase 0 live spike TOOLING EXISTS (run still to be recorded):**
+   `scripts/spike-owner-add-drop.mjs` + the manual-only
+   `.github/workflows/phase0-owner-cookie-spike.yml` dispatch replay one
+   real owner-cookie `add_drop` pair from a headless Actions runner — it
+   ADDs an obscure free agent to the account's own franchise, verifies,
+   then DROPs it via the identical owner-mode/no-`FRANCHISE_ID`/over-limit
+   drop the deadline job uses (net-zero). Credential preference mirrors the
+   real job: stored encrypted envelope (`autocut:cred:{fid}` +
+   `AUTOCUT_CRED_KEY`) first, fresh `MFL_USERNAME`/`MFL_PASSWORD` login as
+   fallback. It is `--dry-run` by default; live writes need the workflow's
+   `confirm=run-live-spike` input (→ `--live`). **Record the results of the
+   first live run in this file** once it has been dispatched — until then the
+   core cookie-replay-write assumption is proven only by the tooling's
+   dry-run, not a real write.
 
 **Evidence:** `.github/workflows/apply-august-cuts.yml` env block;
 `.github/workflows/mfl-integration-test.yml` canary step;
