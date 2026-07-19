@@ -16,6 +16,8 @@ import type { APIRoute } from 'astro';
 import type { TipTopic } from '../../../types/schefter-tips';
 import { getTopicIds } from '../../../config/schefter-topics.mjs';
 import { getRedis } from '../../../utils/redis-client';
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
@@ -27,7 +29,13 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url: new URL(request.url) });
+  if (!league) return json({ error: 'Unknown league.', code: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) {
+    return json({ error: 'Not available for this league.', code: 'feature_disabled' }, 404);
+  }
   const redis = await getRedis();
   if (!redis) {
     return json({ topics: [], windowDays: WINDOW_DAYS });
@@ -39,9 +47,9 @@ export const GET: APIRoute = async () => {
   const results: Array<{ topic: TipTopic; count: number }> = [];
 
   await Promise.all(
-    (getTopicIds(DEFAULT_SCHEFTER_NAV_SLUG) as TipTopic[]).map(async (topic) => {
+    (getTopicIds(league.navSlug) as TipTopic[]).map(async (topic) => {
       try {
-        const count = await redis.zcount(`${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'topic_timeline:')}${topic}`, windowStart, now);
+        const count = await redis.zcount(`${schefterKey(league.navSlug, 'topic_timeline:')}${topic}`, windowStart, now);
         results.push({ topic, count: Math.max(0, Number.isFinite(count) ? count : 0) });
       } catch (err) {
         console.warn(`[hot-topics] zcount failed for ${topic}:`, err);

@@ -87,8 +87,8 @@ describe('anon Style Book — tip.ts integration', () => {
     // The anon Style Book MUST live on its own keyspace so named and anon
     // leaderboards never mix. If these asserts fail, tips are leaking into
     // the named pool.
-    expect(tipSource).toMatch(/schefterKey\(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon:'\)/);
-    expect(tipSource).toMatch(/schefterKey\(DEFAULT_SCHEFTER_NAV_SLUG, 'style_book:anon_leaderboard:'\)/);
+    expect(tipSource).toMatch(/k\('style_book:anon:'\)/);
+    expect(tipSource).toMatch(/k\('style_book:anon_leaderboard:'\)/);
   });
 
   it('stamps attackOnSchefter + styleBookCount + tipsterCodename on the tip', () => {
@@ -98,7 +98,7 @@ describe('anon Style Book — tip.ts integration', () => {
   });
 
   it('assigns/retrieves a codename so the leaderboard has something to render', () => {
-    expect(tipSource).toMatch(/assignCodename\(redis,\s*hashedOwnerId\)/);
+    expect(tipSource).toMatch(/assignCodename\(redis,\s*hashedOwnerId,\s*navSlug\)/);
   });
 
   it('increments the anon leaderboard ZSET using the HASH (never the tip text)', () => {
@@ -122,7 +122,7 @@ describe('anon Style Book — tip.ts integration', () => {
     // improve their dial by simply not sending mean tips for a while. A
     // cumulative INCR counter would punish old behavior forever, which
     // contradicts the design intent.
-    expect(tipSource).toMatch(/schefterKey\(DEFAULT_SCHEFTER_NAV_SLUG, 'off_topic:timeline:'\)/);
+    expect(tipSource).toMatch(/k\('off_topic:timeline:'\)/);
     expect(tipSource).toMatch(/OFF_TOPIC_WINDOW_MS/);
   });
 

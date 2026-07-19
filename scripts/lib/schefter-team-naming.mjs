@@ -47,7 +47,7 @@ function buildKey(franchiseId, navSlug) {
  * @param {string} franchiseId
  * @param {string} postId
  * @param {number} postTimestampMs - epoch ms; used as the ZSET score
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  */
 export async function recordTeamNaming(franchiseId, postId, postTimestampMs, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
   if (!redis || !franchiseId || !postId) return;
@@ -66,7 +66,7 @@ export async function recordTeamNaming(franchiseId, postId, postTimestampMs, red
  * ladder (1 → light, 2-3 → "keeps coming up", 4+ → "most-named").
  *
  * @param {string} franchiseId
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @param {number} [windowDays=30]
  * @returns {Promise<number>}
  */
@@ -89,7 +89,7 @@ export async function getTeamNameCount30d(franchiseId, redis, windowDays = 30, n
  * (or this gets called more often than once-per-page-render), we could
  * materialize a top-N ZSET on each recordTeamNaming call instead.
  *
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @param {number} [days=7] - rolling window
  * @param {number} [limit=5] - max rows returned
  * @returns {Promise<Array<{franchiseId: string, count: number, lastNamedAt: number}>>}

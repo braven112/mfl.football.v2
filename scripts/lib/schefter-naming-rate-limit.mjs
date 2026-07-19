@@ -46,7 +46,7 @@ function buildKey(tipsterHash, franchiseId, navSlug) {
  *
  * @param {string} tipsterHash - hashedOwnerId of the submitting tipster
  * @param {string} franchiseId - franchise the tipster picked from the dropdown
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @returns {Promise<number>} new counter value, or 0 if redis missing / no-op
  */
 export async function incrementNamingTarget(tipsterHash, franchiseId, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
@@ -80,7 +80,7 @@ export async function incrementNamingTarget(tipsterHash, franchiseId, redis, nav
  *
  * @param {string} tipsterHash
  * @param {string} franchiseId
- * @param {import('@upstash/redis').Redis} redis
+ * @param {any} redis - Upstash Redis (or compatible wrapper)
  * @returns {Promise<boolean>}
  */
 export async function isOverNamingRateLimit(tipsterHash, franchiseId, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {

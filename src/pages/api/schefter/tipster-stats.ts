@@ -19,8 +19,9 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { resolveSchefterLeague, leagueHasSchefterTips, schefterSeasonYear } from '../../../utils/schefter-league';
 import { getCodename } from '../../../utils/schefter-codenames';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
@@ -70,6 +71,11 @@ export const GET: APIRoute = async ({ request }) => {
   if (!user) return json({ error: 'unauthorized' }, 401);
   if (!user.franchiseId) return json({ error: 'no_franchise' }, 403);
 
+  const league = resolveSchefterLeague({ user, url: new URL(request.url) });
+  if (!league) return json({ error: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) return json({ error: 'feature_disabled' }, 404);
+  const navSlug = league.navSlug;
+
   let hashedOwnerId: string;
   try {
     hashedOwnerId = hashTipsterId(user.id);
@@ -77,7 +83,7 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'server_misconfigured' }, 500);
   }
 
-  const seasonYear = getCurrentLeagueYear();
+  const seasonYear = schefterSeasonYear(league);
   const redis = await getRedis();
   if (!redis) {
     return json({
@@ -87,9 +93,9 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
-  const leaderboardKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:leaderboard:')}${seasonYear}`;
-  const totalKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:rumors_total:')}${hashedOwnerId}`;
-  const seasonKey = `${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:rumors_season:')}${seasonYear}:${hashedOwnerId}`;
+  const leaderboardKey = `${schefterKey(navSlug, 'tipster:leaderboard:')}${seasonYear}`;
+  const totalKey = `${schefterKey(navSlug, 'tipster:rumors_total:')}${hashedOwnerId}`;
+  const seasonKey = `${schefterKey(navSlug, 'tipster:rumors_season:')}${seasonYear}:${hashedOwnerId}`;
 
   let codename: string | null = null;
   let rumorsTotal = 0;
@@ -99,11 +105,11 @@ export const GET: APIRoute = async ({ request }) => {
 
   try {
     const [cn, total, season, zrangeRaw, rawBadges] = await Promise.all([
-      getCodename(redis, hashedOwnerId),
+      getCodename(redis, hashedOwnerId, navSlug),
       redis.get<string | number>(totalKey),
       redis.get<string | number>(seasonKey),
       redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
-      redis.smembers(`${schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tipster:badges:')}${hashedOwnerId}`).catch(() => []),
+      redis.smembers(`${schefterKey(navSlug, 'tipster:badges:')}${hashedOwnerId}`).catch(() => []),
     ]);
     codename = cn;
     rumorsTotal = coerceCount(total);
@@ -125,7 +131,7 @@ export const GET: APIRoute = async ({ request }) => {
   const leaderboard: Array<{ codename: string; rumorsSeason: number; isMe: boolean }> = [];
   for (const row of rows) {
     try {
-      const name = await getCodename(redis, row.member);
+      const name = await getCodename(redis, row.member, navSlug);
       if (!name) continue;
       leaderboard.push({
         codename: name,

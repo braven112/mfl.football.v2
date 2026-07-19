@@ -16,32 +16,34 @@
  */
 
 import type { APIRoute } from 'astro';
-import feedData from '../../../data/theleague/schefter-feed.json';
-import type { SchefterFeed } from '../../../types/schefter';
+import { resolveSchefterLeague, getSchefterFeed } from '../../../utils/schefter-league';
+import type { LeagueDefinition } from '../../../config/leagues';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
-import {
-  schefterKey,
-  DEFAULT_SCHEFTER_NAV_SLUG,
-} from '../../../../scripts/lib/schefter-keys.mjs';
+import { globalSchefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
-const IMPRESSION_KEY_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'rumor:impressions:');
+// postId-keyed and shared across leagues by design — see schefter-keys.mjs.
+const IMPRESSION_KEY_PREFIX = globalSchefterKey('rumorImpressions');
 const IMPRESSION_TTL_SEC = 30 * 24 * 60 * 60;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
-function isRumorPostId(postId: string): boolean {
-  const feed = feedData as SchefterFeed;
+function isRumorPostId(postId: string, league: LeagueDefinition): boolean {
+  const feed = getSchefterFeed(league);
   return feed.posts.some(
     (p) => p.id === postId && p.transactionSubType === 'rumor_mill',
   );
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url: new URL(request.url) });
+  if (!league) return json({ error: 'bad_league' }, 400);
+
   let body: { postId?: unknown };
   try {
     body = await request.json();
@@ -60,7 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'bad_post_id' }, 400);
   }
 
-  if (!isRumorPostId(postId)) {
+  if (!isRumorPostId(postId, league)) {
     // Unknown id — don't write. The feed is the authoritative registry of
     // live rumor posts.
     return json({ ok: true, recorded: false });

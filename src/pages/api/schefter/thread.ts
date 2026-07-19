@@ -10,15 +10,11 @@
  */
 
 import type { APIRoute } from 'astro';
-import feedData from '../../../data/theleague/schefter-feed.json';
-import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
+import type { SchefterPost } from '../../../types/schefter';
+import { resolveSchefterLeague, getSchefterFeed } from '../../../utils/schefter-league';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
-import {
-  schefterKey,
-  globalSchefterKey,
-  DEFAULT_SCHEFTER_NAV_SLUG,
-} from '../../../../scripts/lib/schefter-keys.mjs';
+import { globalSchefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
 
 export const prerender = false;
 
@@ -41,10 +37,14 @@ export const GET: APIRoute = async ({ request }) => {
   const threadId = url.searchParams.get('id');
   if (!threadId) return json({ error: 'id required' }, 400);
 
+  // Public route — league from ?league= (slug or navSlug), TheLeague default.
+  const league = resolveSchefterLeague({ url });
+  if (!league) return json({ error: 'bad_league' }, 400);
+
   // Fast path: if the feed JSON already has `threadId` stamped on posts we
   // can serve without touching Redis. Keeps the API usable even if the
   // Redis thread registry ever drifts.
-  const feed = feedData as SchefterFeed;
+  const feed = getSchefterFeed(league);
   const feedMatches = feed.posts
     .filter((p) => p.threadId === threadId && p.transactionSubType === 'rumor_mill')
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());

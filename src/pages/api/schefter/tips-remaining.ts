@@ -19,14 +19,11 @@ import { getAuthUser } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { getRedis } from '../../../utils/redis-client';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
-import {
-  schefterKey,
-  DEFAULT_SCHEFTER_NAV_SLUG,
-} from '../../../../scripts/lib/schefter-keys.mjs';
+import { schefterKey } from '../../../../scripts/lib/schefter-keys.mjs';
+import { resolveSchefterLeague, leagueHasSchefterTips } from '../../../utils/schefter-league';
 
 export const prerender = false;
 
-const RATE_LIMIT_PREFIX = schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, 'tips:ratelimit:');
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_TTL_SEC = 24 * 60 * 60;
 
@@ -38,6 +35,10 @@ export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'unauthorized' }, 401);
   if (!user.franchiseId) return json({ error: 'no_franchise' }, 403);
+
+  const league = resolveSchefterLeague({ user, url: new URL(request.url) });
+  if (!league) return json({ error: 'bad_league' }, 400);
+  if (!leagueHasSchefterTips(league)) return json({ error: 'feature_disabled' }, 404);
 
   let hashedOwnerId: string;
   try {
@@ -54,7 +55,7 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ used: 0, remaining: RATE_LIMIT_MAX, max: RATE_LIMIT_MAX, resetsAt: null });
   }
 
-  const key = `${RATE_LIMIT_PREFIX}${hashedOwnerId}`;
+  const key = `${schefterKey(league.navSlug, 'tips:ratelimit:')}${hashedOwnerId}`;
   let used = 0;
   let resetsAt: number | null = null;
   try {

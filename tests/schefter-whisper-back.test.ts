@@ -43,7 +43,7 @@ describe('Phase 7 — whisper-back validation at POST /api/schefter/tip', () => 
     // Guarantees whisper-backs count toward the per-owner cap: the INCR runs
     // before the queue push.
     const incrIdx = tip.indexOf('redis.incr(rateKey)');
-    const queueIdx = tip.indexOf('redis.lpush(TIPS_QUEUE_KEY');
+    const queueIdx = tip.indexOf("redis.lpush(k('tips:queue')");
     expect(incrIdx).toBeGreaterThan(-1);
     expect(queueIdx).toBeGreaterThan(-1);
     expect(incrIdx).toBeLessThan(queueIdx);
