@@ -14,7 +14,7 @@ name: Apply August Cuts
 # Touch windows are never-early (fire on the target day or one day late,
 # deduped via Redis autocut:touches:{year}); live fires only at/after the
 # 8:45pm PT instant and re-enters every 15 min to retry failed franchises
-# (MAX_ATTEMPTS=3). The Redis flag autocut:paused:{year} is a kill switch
+# (MAX_ATTEMPTS=8). The Redis flag autocut:paused:{year} is a kill switch
 # for every mode. No GitHub `vars.*` feature gates per CLAUDE.md — to disable
 # this job, comment out the cron line.
 #
