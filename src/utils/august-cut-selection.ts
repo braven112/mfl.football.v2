@@ -1,11 +1,17 @@
 /**
- * August Roster Cuts — pure cut-selection algorithm
+ * August Roster Cuts — typed wrapper around the pure cut-selection core.
  *
- * Computes exactly which players the August cutdown automation will cut for
- * one franchise. Pure and dependency-light by design: the same function is
- * called client-side (Cutdown Plan preview on /theleague/rosters), from the
- * autocut API layer, and from the deadline execution script
- * (scripts/apply-august-cuts.mjs) — so the preview and reality cannot drift.
+ * The implementation lives in ./august-cut-selection-core.mjs (the repo's
+ * established leagues-data.mjs pattern) so the deadline execution script
+ * (scripts/apply-august-cuts.mjs) and this app util share ONE algorithm —
+ * the Cutdown Plan preview on /theleague/rosters, the autocut API layer,
+ * and the deadline job cannot drift.
+ *
+ * This file adds the TypeScript types and binds the canonical constants
+ * (TARGET_ACTIVE_COUNT from salary-calculations.ts, ACQUISITION_TYPES from
+ * contract-eligibility.ts) as the defaults. The core carries mirror copies
+ * of both constants for script use; tests/august-cutdown-date.test.ts locks
+ * the mirrors to these canonical values.
  *
  * Rules (see docs/features/august-roster-cuts-automation-plan.md):
  *  1. Only `status === 'ROSTER'` players count toward the target and are
@@ -25,6 +31,7 @@
 
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { ACQUISITION_TYPES } from './contract-eligibility';
+import { selectAutoCuts as selectAutoCutsCore } from './august-cut-selection-core.mjs';
 
 /** The MFL roster status that counts toward the active-roster limit. */
 export const ACTIVE_ROSTER_STATUS = 'ROSTER';
@@ -100,97 +107,14 @@ export interface SelectAutoCutsResult {
 }
 
 /**
- * Build a map of playerId → newest qualifying acquisition timestamp.
- * Order-independent: takes the max timestamp per player, so callers don't
- * need to pre-sort their transactions feed.
- */
-function buildAcquisitionIndex(
-  acquisitions: AutoCutAcquisition[],
-  franchiseId?: string,
-): Map<string, number> {
-  const index = new Map<string, number>();
-  for (const event of acquisitions) {
-    // Trades (and anything else outside ACQUISITION_TYPES) never count.
-    if (!ACQUISITION_TYPES.includes(event.type)) continue;
-    if (franchiseId && event.franchise !== undefined && event.franchise !== franchiseId) continue;
-
-    const ts = typeof event.timestamp === 'number'
-      ? event.timestamp
-      : parseInt(event.timestamp, 10);
-    if (!Number.isFinite(ts)) continue;
-
-    for (const playerId of event.addedPlayerIds ?? []) {
-      const existing = index.get(playerId);
-      if (existing === undefined || ts > existing) index.set(playerId, ts);
-    }
-  }
-  return index;
-}
-
-/**
  * Select which players the August cutdown automation cuts for one franchise.
- * Pure — no I/O, no clock, deterministic for a given input.
+ * Pure — no I/O, no clock, deterministic for a given input. Delegates to the
+ * shared core with the canonical .ts constants bound as defaults.
  */
-export function selectAutoCuts({
-  activeRoster,
-  markedPlayerIds = [],
-  acquisitions = [],
-  target = TARGET_ACTIVE_COUNT,
-  franchiseId,
-}: SelectAutoCutsInput): SelectAutoCutsResult {
-  const activePlayers = activeRoster.filter(p => p.status === ACTIVE_ROSTER_STATUS);
-  const activeCount = activePlayers.length;
-  const overage = activeCount - target;
-
-  if (overage <= 0) {
-    return { cuts: [], activeCount, overage, target };
-  }
-
-  const acquisitionIndex = buildAcquisitionIndex(acquisitions, franchiseId);
-  const activeIds = new Set(activePlayers.map(p => p.id));
-  const cuts: AutoCutSelection[] = [];
-  const selected = new Set<string>();
-
-  // Phase 1: marked players, in owner order, skipping departed / non-active
-  // players and duplicates. Consume at most `overage`.
-  for (const playerId of markedPlayerIds) {
-    if (cuts.length >= overage) break;
-    if (!activeIds.has(playerId) || selected.has(playerId)) continue;
-
-    const acquisitionTimestamp = acquisitionIndex.get(playerId);
-    cuts.push({
-      playerId,
-      reason: 'marked',
-      ...(acquisitionTimestamp !== undefined ? { acquisitionTimestamp } : {}),
-    });
-    selected.add(playerId);
-  }
-
-  // Phase 2: fill the remainder newest-acquisition-first. Players with no
-  // acquisition record sort last (oldest / safest). Sort is stable, so
-  // ties (and the whole no-record group) keep roster order — deterministic.
-  if (cuts.length < overage) {
-    const fallbackPool = activePlayers
-      .filter(p => !selected.has(p.id))
-      .sort((a, b) => {
-        const tsA = acquisitionIndex.get(a.id) ?? Number.NEGATIVE_INFINITY;
-        const tsB = acquisitionIndex.get(b.id) ?? Number.NEGATIVE_INFINITY;
-        return tsB - tsA;
-      });
-
-    for (const player of fallbackPool) {
-      if (cuts.length >= overage) break;
-      const acquisitionTimestamp = acquisitionIndex.get(player.id);
-      cuts.push({
-        playerId: player.id,
-        reason: 'last-added',
-        ...(acquisitionTimestamp !== undefined ? { acquisitionTimestamp } : {}),
-      });
-      selected.add(player.id);
-    }
-  }
-
-  // Invariant: exactly `overage` cuts — never below target. The fallback
-  // pool always covers the remainder (marked ⊆ active), but clamp anyway.
-  return { cuts: cuts.slice(0, overage), activeCount, overage, target };
+export function selectAutoCuts(input: SelectAutoCutsInput): SelectAutoCutsResult {
+  return selectAutoCutsCore({
+    target: TARGET_ACTIVE_COUNT,
+    acquisitionTypes: ACQUISITION_TYPES,
+    ...input,
+  }) as SelectAutoCutsResult;
 }
