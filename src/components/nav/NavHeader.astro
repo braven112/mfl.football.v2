@@ -490,11 +490,13 @@ const directTarget = switchTargets[0];
 <script>
   // Fully delegated: the document listeners resolve the live DOM at event
   // time, so View Transitions replacing the drawer need no re-binding and no
-  // per-element idempotency flags. Bound at most once per session, and only
-  // after a page actually renders a switcher — the registry is constant, so
-  // in two-league mode (direct-link chevron, no dropdown markup) nothing is
+  // per-element idempotency flags. Bound at most once per session — guarded
+  // by a window sentinel (repo convention, cf. ThemeToggle) so listeners
+  // can't stack even if this module is ever re-executed — and only after a
+  // page actually renders a switcher: the registry is constant, so in
+  // two-league mode (direct-link chevron, no dropdown markup) nothing is
   // ever registered and every handler below is dead weight avoided.
-  let leagueSwitcherBound = false;
+  const BOUND_FLAG = '__leagueSwitcherBound';
 
   function openMenus(): HTMLElement[] {
     return Array.from(
@@ -569,9 +571,9 @@ const directTarget = switchTargets[0];
   }
 
   document.addEventListener('astro:page-load', () => {
-    if (leagueSwitcherBound) return;
+    if ((window as any)[BOUND_FLAG]) return;
     if (!document.querySelector('[data-league-switcher]')) return;
-    leagueSwitcherBound = true;
+    (window as any)[BOUND_FLAG] = true;
     bindLeagueSwitcher();
   });
 </script>
