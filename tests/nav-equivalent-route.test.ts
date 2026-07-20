@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getEquivalentRoute, getLeagueSwitchUrl } from '../src/utils/nav-utils';
+import {
+  getEquivalentRoute,
+  getLeagueSwitchUrl,
+  getLeagueSwitchTargets,
+} from '../src/utils/nav-utils';
+import { ALL_LEAGUES } from '../src/config/leagues';
 
 // LeagueSwitcher and NavHeader both consume getEquivalentRoute. These tests
 // lock in the cross-league deep-link behavior the 7 dual-league owners depend
@@ -152,5 +157,50 @@ describe('getLeagueSwitchUrl', () => {
     expect(
       getLeagueSwitchUrl('/theleague/standings?year=2024', 'afl', true)
     ).toBe('https://www.afl-fantasy.com/standings?year=2024');
+  });
+});
+
+// Registry-driven switch targets for the nav header. With today's two-league
+// registry each league has exactly one target (direct-link chevron); a third
+// league flips the header to dropdown mode, and these generic assertions
+// must keep holding for every league pair without edits.
+describe('getLeagueSwitchTargets', () => {
+  it('lists every league except the current one, for each league', () => {
+    for (const current of ALL_LEAGUES) {
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false);
+      expect(targets.map((t) => t.navSlug)).toEqual(
+        ALL_LEAGUES.filter((l) => l.navSlug !== current.navSlug).map((l) => l.navSlug)
+      );
+      // Registry display names label the menu entries
+      for (const t of targets) {
+        const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
+        expect(t.name).toBe(def.name);
+      }
+    }
+  });
+
+  it('resolves every target to the other league (never a same-league URL)', () => {
+    for (const current of ALL_LEAGUES) {
+      // Apex-host mode: every target must be absolute to the target's own domain
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, true);
+      for (const t of targets) {
+        const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
+        const expectedDomain = def.domains.find((d) => d.startsWith('www.')) ?? def.domains[0];
+        expect(t.href.startsWith(`https://${expectedDomain}/`)).toBe(true);
+        for (const currentDomain of current.domains) {
+          expect(t.href).not.toContain(currentDomain);
+        }
+      }
+    }
+  });
+
+  it('returns relative prefixed paths on the shared host', () => {
+    for (const current of ALL_LEAGUES) {
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false);
+      for (const t of targets) {
+        const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
+        expect(t.href.startsWith(`/${def.slug}`)).toBe(true);
+      }
+    }
   });
 });

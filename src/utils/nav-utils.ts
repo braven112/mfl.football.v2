@@ -78,12 +78,13 @@ export function buildUrlFromTemplate(
 // ============================================================================
 
 /**
- * League path prefixes for URL construction
+ * League path prefixes for URL construction, derived from the registry so a
+ * new league scales the nav routing (prefix stripping, equivalent routes,
+ * switch URLs) without touching this file.
  */
-const LEAGUE_PREFIXES: Record<LeagueSlug, string> = {
-  theleague: '/theleague',
-  afl: '/afl-fantasy',
-};
+const LEAGUE_PREFIXES: Record<LeagueSlug, string> = Object.fromEntries(
+  ALL_LEAGUES.map((l) => [l.navSlug, `/${l.slug}`])
+) as Record<LeagueSlug, string>;
 
 /**
  * Strip the active league prefix from a path when serving on the league's
@@ -449,6 +450,31 @@ export function getLeagueSwitchUrl(
   if (!domain) return equivalent;
 
   return `https://${domain}${resolveLeaguePath(equivalent, true)}`;
+}
+
+/** One selectable league in the nav header's switcher. */
+export interface LeagueSwitchTarget {
+  navSlug: LeagueSlug;
+  name: string;
+  href: string;
+}
+
+/**
+ * Every league a visitor can switch to from the current one, with resolved
+ * switch URLs, in registry order. Drives the nav header switcher: a single
+ * entry (two-league registry) renders as a direct switch link; two or more
+ * entries (3+ leagues) render as a dropdown menu.
+ */
+export function getLeagueSwitchTargets(
+  currentLeague: LeagueSlug,
+  currentPath: string,
+  hideLeaguePrefix: boolean
+): LeagueSwitchTarget[] {
+  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague).map((l) => ({
+    navSlug: l.navSlug,
+    name: l.name,
+    href: getLeagueSwitchUrl(currentPath, l.navSlug, hideLeaguePrefix),
+  }));
 }
 
 /**
