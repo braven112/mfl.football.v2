@@ -55,7 +55,9 @@ describe('league registry', () => {
     expect(bb1.features.salaryCap).toBe(false);
     expect(bb1.features.keepers).toBe(false);
     expect(bb1.features.liveLineups).toBe(false);
-    expect(bb1.features.liveScoring).toBe(false);
+    // Live scoring is results-shaped, not management-shaped — best ball is
+    // all scoreboard watching, so it stays ON.
+    expect(bb1.features.liveScoring).toBe(true);
     // Full-format leagues are NOT best-ball.
     expect(getLeagueBySlug('theleague')!.bestBall).toBeUndefined();
     expect(getLeagueBySlug('afl-fantasy')!.bestBall).toBeUndefined();

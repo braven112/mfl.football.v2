@@ -180,6 +180,12 @@ const liveScoringUrl = hasLiveScoring
                 </svg>
                 <span class="nav-label">Rosters</span>
               </a>
+              <a href={resolveLeaguePath("/best-ball-1/live-scoring", hideLeaguePrefix)} class="nav-icon-link" title="Live scoring">
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-goals`}></use>
+                </svg>
+                <span class="nav-label">Live scoring</span>
+              </a>
             </>
           ) : (
           <>

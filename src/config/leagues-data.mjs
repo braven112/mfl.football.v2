@@ -128,7 +128,11 @@ export const LEAGUES = {
       liveLineups: false,
       schefterFeed: false,
       schefterTips: false,
-      liveScoring: false,
+      /**
+       * Results-shaped, not management-shaped — with no lineups to set,
+       * scoreboard watching is the whole in-season experience here.
+       */
+      liveScoring: true,
     },
   },
 };
