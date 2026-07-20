@@ -4,11 +4,12 @@ import {
   getLeagueSwitchUrl,
   getLeagueSwitchTargets,
 } from '../src/utils/nav-utils';
-import { ALL_LEAGUES } from '../src/config/leagues';
+import { ALL_LEAGUES, leagueOrigin } from '../src/config/leagues';
 
-// LeagueSwitcher and NavHeader both consume getEquivalentRoute. These tests
-// lock in the cross-league deep-link behavior the 7 dual-league owners depend
-// on (AFL_DUPLICATION_PLAN §2.6).
+// NavHeader's league switcher consumes getEquivalentRoute (via
+// getLeagueSwitchUrl/getLeagueSwitchTargets). These tests lock in the
+// cross-league deep-link behavior the 7 dual-league owners depend on
+// (AFL_DUPLICATION_PLAN §2.6).
 
 describe('getEquivalentRoute', () => {
   // -- League home / root path --
@@ -105,6 +106,16 @@ describe('getEquivalentRoute', () => {
       '/afl-fantasy/contracts/manage'
     );
   });
+
+  // -- Prefix-strip boundary --
+
+  it('does not strip a league prefix mid-segment', () => {
+    // '/theleague-anything' is NOT a TheLeague path; a bare startsWith strip
+    // would mangle it to '-anything'. It must fall through unstripped (and
+    // then fall back to the target league home as an unknown path).
+    expect(getEquivalentRoute('/theleague-archive', 'afl')).toBe('/afl-fantasy');
+    expect(getEquivalentRoute('/afl-fantasyland/x', 'theleague')).toBe('/theleague');
+  });
 });
 
 // The nav drawer's league-switch chevron. The regression this locks in:
@@ -185,8 +196,9 @@ describe('getLeagueSwitchTargets', () => {
       const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, true);
       for (const t of targets) {
         const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
-        const expectedDomain = def.domains.find((d) => d.startsWith('www.')) ?? def.domains[0];
-        expect(t.href.startsWith(`https://${expectedDomain}/`)).toBe(true);
+        // The canonical origin is the registry's single source of truth
+        // (leagueOrigin) — the test must not re-derive domain selection.
+        expect(t.href.startsWith(`${leagueOrigin(def)}/`)).toBe(true);
         for (const currentDomain of current.domains) {
           expect(t.href).not.toContain(currentDomain);
         }

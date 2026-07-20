@@ -24,6 +24,15 @@ export const LEAGUES = {
     /** Apex domains that serve this league (bare + www) */
     domains: ['theleague.us', 'www.theleague.us'],
     /**
+     * The single canonical host for absolute URLs to this league (nav
+     * cross-league switch links, admin article links, announcements). The
+     * www variant matches what Vercel serves and what users browse; session
+     * cookies are host-only, so every generated absolute URL must agree on
+     * this host or logins appear to vanish across links. Use leagueOrigin()
+     * — don't pick from `domains` ad hoc.
+     */
+    canonicalDomain: 'www.theleague.us',
+    /**
      * Repo-relative league config + Schefter feed locations. TheLeague's
      * live under src/data (build-time imports); AFL's under its dataPath.
      * These are the single source of truth — consumers (article pipeline,
@@ -51,6 +60,8 @@ export const LEAGUES = {
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
+    /** See TheLeague entry — canonical host for absolute URLs. */
+    canonicalDomain: 'www.afl-fantasy.com',
     /** See TheLeague entry — single source of truth for these locations. */
     configPath: 'data/afl-fantasy/afl.config.json',
     schefterFeedPath: 'data/afl-fantasy/schefter-feed.json',
@@ -126,6 +137,30 @@ export function getLeagueByPath(pathname) {
  */
 export function defaultMflWriteHost(env = process.env) {
   return env.MFL_WRITE_HOST || `https://${LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost}`;
+}
+
+/**
+ * The shared app host that serves every league under its path prefix
+ * (/theleague/*, /afl-fantasy/*). Fallback target for absolute cross-league
+ * URLs when a league has no apex domain of its own.
+ */
+export const SHARED_APP_ORIGIN = 'https://mfl.football';
+
+/**
+ * Canonical absolute origin for a league (e.g. 'https://www.theleague.us'),
+ * or null when the league has no apex domain. THE way to build absolute
+ * URLs to a league — session cookies are host-only, so every producer of
+ * absolute league URLs (nav switch links, admin article links, GroupMe
+ * announcements, OG tags) must agree on one host per league.
+ *
+ * @param {{ canonicalDomain?: string, domains?: string[] }} league Registry entry.
+ */
+export function leagueOrigin(league) {
+  const domain =
+    league.canonicalDomain ??
+    league.domains?.find((d) => d.startsWith('www.')) ??
+    league.domains?.[0];
+  return domain ? `https://${domain}` : null;
 }
 
 /** Apex hostname → canonical slug map, derived from each league's domains. */
