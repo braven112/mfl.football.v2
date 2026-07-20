@@ -51,6 +51,26 @@ domain is a one-entry change in `leagues-data.mjs`.
 and .github/workflows/ for the forbidden literals and fails the build if one
 creeps back in outside its small, documented allowlist.
 
+## Design tokens — every var(--x) must reference a token that exists
+
+The theme system is `src/styles/tokens.css` (light) + `tokens-dark.css`
+(html.dark overrides). Styling against a token name that is defined nowhere
+(`var(--color-text, #0f172a)`, `--color-surface`, …) renders the hardcoded
+fallback in BOTH themes — light mode looks perfect, dark mode ships white
+cards on a black page. That's how the Admin Hub broke in July 2026, and a
+repo-wide sweep found the same pattern in ~40 files.
+`tests/design-token-guard.test.ts` now enforces this: it scans src/ and
+fails if any `var(--x)` references a custom property with no definition
+anywhere (global token files, local declarations, `define:vars`,
+`setProperty`, JSX `['--x' as any]` keys all count). Use the real tokens —
+`--page-text`, `--content-text-muted`, `--card-bg`/`--card-surface`,
+`--content-bg`/`--content-bg-muted`, `--content-border`, badge pairs — and
+check `tokens-dark.css` before hand-rolling a `:global(html.dark)` override.
+One more gotcha from the sweep: a token's light and dark values differ, so
+when swapping a hardcoded color to a token, verify the token's LIGHT value
+matches what was rendering — otherwise keep the light literal and override
+only under `html.dark` (see the admin-hub gate pills for the pattern).
+
 ## Auth — session JWT only
 
 `getAuthUser()` (src/utils/auth.ts) trusts only the signed session cookie.

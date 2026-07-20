@@ -460,10 +460,15 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     text-align: right;
   }
 
-  .hp-auc__cell-time--closing { color: var(--color-amber-700, #b45309); font-weight: 600; }
-  .hp-auc__cell-time--urgent  { color: var(--color-amber-700, #b45309); font-weight: 700; }
-  .hp-auc__cell-time--critical { color: var(--color-red-600, #dc2626); font-weight: 700; }
+  .hp-auc__cell-time--closing { color: #b45309; font-weight: 600; }
+  .hp-auc__cell-time--urgent  { color: #b45309; font-weight: 700; }
+  .hp-auc__cell-time--critical { color: var(--color-error, #dc2626); font-weight: 700; }
   .hp-auc__cell-time--ended { color: var(--color-gray-500, #6b7280); font-style: italic; }
+
+  :global(html.dark) .hp-auc__cell-time--closing,
+  :global(html.dark) .hp-auc__cell-time--urgent {
+    color: var(--color-warning-dark, #fcd34d);
+  }
 
   /* ── Primary CTA — design-system primary button (blue) ── */
   .hp-auc__cta {

@@ -788,16 +788,23 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 	}
 
 	[data-level='active'] .activity-dot {
-		background: var(--activity-green, #16a34a);
+		background: #16a34a;
 	}
 	[data-level='idle'] .activity-dot {
-		background: var(--activity-yellow, #ca8a04);
+		background: #ca8a04;
 	}
 	[data-level='dormant'] .activity-dot {
-		background: var(--activity-red, #dc2626);
+		background: var(--color-error, #dc2626);
 	}
 	[data-level='unknown'] .activity-dot {
-		background: var(--activity-gray, #6b7280);
+		background: var(--color-gray-500, #6b7280);
+	}
+
+	:global(html.dark) [data-level='active'] .activity-dot {
+		background: var(--color-success, #34d399);
+	}
+	:global(html.dark) [data-level='idle'] .activity-dot {
+		background: var(--color-warning, #fbbf24);
 	}
 
 	.activity-label {

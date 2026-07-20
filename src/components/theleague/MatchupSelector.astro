@@ -259,7 +259,7 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
   }
 
   .current-teams {
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     font-weight: 600;
   }
 
@@ -278,14 +278,14 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .dropdown-trigger:hover {
     border-color: var(--primary-color, #1c497c);
-    background: var(--primary-light-bg, #f0f4f8);
+    background: var(--table-row-bg-hover, #f0f4f8);
   }
 
   .dropdown-trigger:focus {
@@ -296,7 +296,7 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
 
   .dropdown-trigger[aria-expanded="true"] {
     border-color: var(--primary-color, #1c497c);
-    background: var(--primary-light-bg, #f0f4f8);
+    background: var(--table-row-bg-hover, #f0f4f8);
   }
 
   .dropdown-trigger[aria-expanded="true"] .dropdown-arrow {
@@ -358,17 +358,17 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
   }
 
   .matchup-option:hover {
-    background: var(--primary-light-bg, #f0f4f8);
+    background: var(--table-row-bg-hover, #f0f4f8);
   }
 
   .matchup-option:focus {
     outline: none;
-    background: var(--primary-light-bg, #f0f4f8);
+    background: var(--table-row-bg-hover, #f0f4f8);
     box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.2);
   }
 
   .matchup-option[data-current="true"] {
-    background: var(--primary-light-bg, #f0f4f8);
+    background: var(--table-row-bg-hover, #f0f4f8);
     border: 1px solid var(--primary-color, #1c497c);
   }
 
@@ -395,7 +395,7 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
   .team-name {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -417,7 +417,7 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
   }
 
   .projected-total {
-    color: var(--text-color, #1f2937);
+    color: var(--page-text, #1f2937);
     font-weight: 600;
   }
 

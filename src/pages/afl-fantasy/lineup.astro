@@ -1402,7 +1402,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--text-on-colored, #fff);
+    color: #fff;
     background: var(--color-primary, #1c497c);
     border: 1px solid var(--color-primary, #1c497c);
     border-radius: var(--radius-md, 0.5rem);
@@ -1732,7 +1732,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     background: var(--lineup-submit-ready);
     /* Rides the secondary-button text token: white in light, near-black in
        dark where the fill is the bright logo-green emerald. */
-    color: var(--btn-secondary-text, var(--text-on-colored, #fff));
+    color: var(--btn-secondary-text, #fff);
   }
   .lineup-submit--ready:hover { filter: brightness(1.05); }
   .lineup-submit--ready:active { transform: scale(0.98); }
@@ -1746,12 +1746,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-submit--error {
     background: var(--lineup-submit-error);
-    color: var(--text-on-colored, #fff);
+    color: #fff;
   }
 
   .lineup-submit--success {
     background: var(--lineup-submit-success);
-    color: var(--btn-secondary-text, var(--text-on-colored, #fff));
+    color: var(--btn-secondary-text, #fff);
     animation: lineup-submit-success 0.4s ease-out;
   }
 
@@ -2006,7 +2006,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     transform: translateX(-50%) translateY(20px);
     /* Fixed dark pill (toast/snackbar convention) — intentionally theme-independent */
     background: #1f2937;
-    color: var(--text-on-colored, #fff);
+    color: #fff;
     padding: 0.5rem 1rem;
     border-radius: var(--radius-full, 9999px);
     font-size: 0.8125rem;
@@ -2014,7 +2014,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
-    z-index: var(--z-toast, 500);
+    z-index: var(--z-modal, 500);
   }
 
   .lineup-toast--visible {
