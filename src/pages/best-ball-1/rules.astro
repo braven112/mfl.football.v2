@@ -1,0 +1,146 @@
+---
+/**
+ * Best Ball #1 — Rules (/best-ball-1/rules)
+ *
+ * The whole constitution fits on one page — that's the point of the format.
+ * Scoring specifics live in MFL's league setup (linked below), so this page
+ * states the format rules and stays evergreen. Update the sections marked
+ * "commissioner's call" once those decisions are made.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+
+export const prerender = false;
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+const leagueYear = getLeagueYearForSlug(BB1.slug);
+const mflSettingsUrl = `https://${BB1.mflHost}/${leagueYear}/options?L=${BB1.id}&O=26`;
+
+const SECTIONS = [
+  {
+    id: 'format',
+    title: 'The Format',
+    rules: [
+      '12 teams. One league, no conferences, no divisions.',
+      'Best ball scoring: your highest-scoring players fill your starting slots automatically every week. You never set a lineup.',
+      'No waivers, no free agents, no add/drops, no trades. The roster you draft is the team you ride all season.',
+      'Season standings come from weekly head-to-head matchups scored on MyFantasyLeague.',
+    ],
+  },
+  {
+    id: 'draft',
+    title: 'The Draft',
+    rules: [
+      'One startup draft per season: 25 rounds, snake order, 12 teams — 300 picks total.',
+      'The draft runs live on this site in the Draft Room, with a pick clock set by the commissioner (typically 1–2 minutes).',
+      'Draft order is randomized before draft night unless the commissioner announces a different method.',
+      "Miss your pick and the clock runs out? Auto-pick takes the best player available by ADP, so nobody's roster gets torpedoed by a bathroom break.",
+      'When the final pick is in, results are imported to MyFantasyLeague as the official rosters.',
+    ],
+  },
+  {
+    id: 'rosters',
+    title: 'Rosters & Scoring',
+    rules: [
+      'Rosters are 25 players, locked at the end of the draft. Injuries, byes, and busts are part of the game — draft depth accordingly.',
+      'Draftable positions: QB, RB, WR, TE, PK, and team defenses.',
+      'Starting-slot structure and scoring rules are configured on MyFantasyLeague — see the league settings there for the authoritative numbers.',
+      'Playoff weeks and bracket format follow the MFL league calendar.',
+    ],
+  },
+  {
+    id: 'league',
+    title: 'League Matters',
+    rules: [
+      "Entry fees, payouts, and prize structure are the commissioner's call — announced before the draft each season.",
+      'The league re-forms on MFL each summer; returning owners keep their franchise slot.',
+      'Disputes go to the commissioner, whose ruling is final. It rarely comes up — there are no moves to dispute.',
+    ],
+  },
+];
+---
+
+<TheLeagueLayout title={`Rules | ${BB1.name}`}>
+  <div class="bb-rules">
+    <header class="bb-rules__header">
+      <h1>League Rules</h1>
+      <p class="bb-rules__sub">
+        Best ball is the simplest format in fantasy football, and the rulebook shows it:
+        draft well once, then watch. Everything else is detail.
+      </p>
+    </header>
+
+    {
+      SECTIONS.map((section) => (
+        <section class="bb-rules__section" id={section.id} aria-labelledby={`${section.id}-h`}>
+          <h2 id={`${section.id}-h`}>{section.title}</h2>
+          <ul>
+            {section.rules.map((rule) => (
+              <li>{rule}</li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+
+    <section class="bb-rules__section">
+      <h2>The Fine Print</h2>
+      <p>
+        Scoring values, starting-slot counts, and the season calendar are configured on
+        MyFantasyLeague and are the source of truth wherever this page is silent.
+        <a href={mflSettingsUrl} target="_blank" rel="noopener noreferrer">
+          View the full MFL league settings →
+        </a>
+      </p>
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .bb-rules {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem var(--spacing-lg, 1.5rem) 3rem;
+  }
+
+  .bb-rules__header h1 {
+    margin: 0;
+  }
+
+  .bb-rules__sub {
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0.4rem 0 1.5rem;
+  }
+
+  .bb-rules__section {
+    margin-top: 1.75rem;
+  }
+
+  .bb-rules__section h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-left: 3px solid var(--league-accent, #0e8a5f);
+    padding-left: 0.6rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .bb-rules__section ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bb-rules__section li {
+    line-height: 1.55;
+  }
+
+  .bb-rules__section p {
+    line-height: 1.55;
+    margin: 0;
+  }
+</style>

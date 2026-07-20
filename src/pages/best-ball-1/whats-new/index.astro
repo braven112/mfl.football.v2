@@ -1,0 +1,16 @@
+---
+/**
+ * What's New (Best Ball #1) — thin route wrapper.
+ * Shared implementation lives in components/shared/whats-new/WhatsNewIndexPage.
+ */
+import WhatsNewIndexPage from '../../../components/shared/whats-new/WhatsNewIndexPage.astro';
+
+export const prerender = false;
+---
+
+<WhatsNewIndexPage
+  leagueSlug="best-ball-1"
+  title="What's New - Best Ball #1"
+  subtitle="New features, improvements, and updates to Best Ball #1."
+  emptyStateText="Nothing here yet — the league is brand new. Updates land as they ship."
+/>

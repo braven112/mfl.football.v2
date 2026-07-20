@@ -1,0 +1,322 @@
+---
+/**
+ * Best Ball #1 Mock Draft Lobby — /best-ball-1/mock-draft
+ *
+ * Deliberately leaner than TheLeague's rookie-mock lobby: no per-team
+ * ranking-source matrix or board-settings panel — a best-ball mock is a
+ * rehearsal of the 25-round startup draft, so the knobs are pick clock,
+ * rounds, and order. Sessions live in the same PartyKit engine as the
+ * official draft and are listed from this league's own registry room.
+ */
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getAuthUser } from '../../../utils/auth';
+import { partyKitHost } from '../../../utils/best-ball-draft';
+import type { MockDraftSessionSummary } from '../../../types/draft-room';
+
+export const prerender = false;
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect('/best-ball-1/login?next=/best-ball-1/mock-draft');
+}
+
+// ── Load this league's sessions from its PartyKit registry (server-side) ──
+let sessions: MockDraftSessionSummary[] = [];
+const host = partyKitHost();
+if (host) {
+  try {
+    const res = await fetch(`${host}/party/${BB1.id}-registry`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      sessions = ((data?.sessions ?? []) as MockDraftSessionSummary[])
+        // The official draft registers in the same registry — keep it out
+        // of the practice lobby; it has its own room at /draft-room.
+        .filter((s) => !s.id.includes('-official-'))
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    }
+  } catch {
+    // Registry unreachable — render the lobby with an empty list.
+  }
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  lobby: 'Waiting to start',
+  active: 'Drafting now',
+  paused: 'Paused',
+  completed: 'Finished',
+};
+---
+
+<TheLeagueLayout title={`Mock Drafts | ${BB1.name}`}>
+  <div class="bb-mock">
+    <header class="bb-mock__header">
+      <h1>Mock Drafts</h1>
+      <p class="bb-mock__sub">
+        Practice runs of the real thing — full player pool, snake order, same draft room.
+        Draft against the clock and the auto-pick AI, alone or with leaguemates.
+      </p>
+    </header>
+
+    <section class="bb-mock__create">
+      <h2>Start a new mock</h2>
+      <form id="bb-mock-create-form">
+        <label>
+          Pick clock
+          <select name="timerSeconds">
+            <option value="1">1 second (instant)</option>
+            <option value="3" selected>3 seconds (fast)</option>
+            <option value="10">10 seconds</option>
+            <option value="15">15 seconds</option>
+          </select>
+        </label>
+        <label>
+          Rounds
+          <select name="totalRounds">
+            <option value="25" selected>25 (full draft)</option>
+            <option value="15">15</option>
+            <option value="10">10</option>
+            <option value="5">5 (quick spin)</option>
+          </select>
+        </label>
+        <button type="submit">Create Mock Draft</button>
+        <p class="bb-mock__error" data-create-error hidden></p>
+      </form>
+      <p class="bb-mock__hint">
+        Tip: rank players on the <a href="/best-ball-1/import-rankings">Import Rankings</a> page
+        first — your board powers the queue and the "My Rank" auto-pick source.
+      </p>
+    </section>
+
+    <section class="bb-mock__list">
+      <h2>Sessions</h2>
+      {
+        sessions.length === 0 ? (
+          <p class="bb-mock__empty">No mock drafts yet — start the first one above.</p>
+        ) : (
+          <ul>
+            {sessions.map((s) => (
+              <li>
+                <a class="bb-mock__card" href={`/best-ball-1/mock-draft/${s.id}`}>
+                  <span class={`bb-mock__status bb-mock__status--${s.status}`}>
+                    {STATUS_LABELS[s.status] ?? s.status}
+                  </span>
+                  <span class="bb-mock__meta">
+                    {s.totalRounds} rounds · {s.timerSeconds}s clock ·
+                    {s.status === 'lobby'
+                      ? ` ${s.participantCount}/${s.totalTeams} seated`
+                      : ` Round ${s.currentRound}, pick ${s.currentPickInRound}`}
+                  </span>
+                  <span class="bb-mock__date">
+                    {new Date(s.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<script>
+  function initBbMockCreate(): void {
+    const form = document.getElementById('bb-mock-create-form') as HTMLFormElement | null;
+    if (!form || form.dataset.bound === 'true') return;
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = form.querySelector('[data-create-error]') as HTMLElement;
+      const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      btn.disabled = true;
+      errEl.hidden = true;
+      try {
+        const res = await fetch('/api/mock-draft/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            timerSeconds: parseInt((form.elements.namedItem('timerSeconds') as HTMLSelectElement).value, 10),
+            totalRounds: parseInt((form.elements.namedItem('totalRounds') as HTMLSelectElement).value, 10),
+            useRealOrder: false,
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.sessionId) {
+          window.location.href = `/best-ball-1/mock-draft/${data.sessionId}`;
+        } else {
+          errEl.textContent = data.message || 'Could not create the mock draft.';
+          errEl.hidden = false;
+          btn.disabled = false;
+        }
+      } catch {
+        errEl.textContent = 'Network error — try again.';
+        errEl.hidden = false;
+        btn.disabled = false;
+      }
+    });
+  }
+
+  initBbMockCreate();
+  document.addEventListener('astro:page-load', initBbMockCreate);
+</script>
+
+<style>
+  .bb-mock {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem var(--spacing-lg, 1.5rem) 3rem;
+  }
+
+  .bb-mock__header h1 {
+    margin: 0;
+  }
+
+  .bb-mock__sub {
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0.4rem 0 1.5rem;
+  }
+
+  .bb-mock__create,
+  .bb-mock__list {
+    margin-top: 1.5rem;
+  }
+
+  .bb-mock__create h2,
+  .bb-mock__list h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-left: 3px solid var(--league-accent, #0e8a5f);
+    padding-left: 0.6rem;
+    margin: 0 0 0.9rem;
+  }
+
+  .bb-mock__create form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #dddddd);
+    border-radius: var(--radius-md, 8px);
+    padding: 1.1rem 1.2rem;
+  }
+
+  .bb-mock__create label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .bb-mock__create select {
+    padding: 0.45rem;
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--input-bg, #ffffff);
+    color: inherit;
+  }
+
+  .bb-mock__create button {
+    background: var(--league-accent, #0e8a5f);
+    color: #ffffff;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.6rem 1.3rem;
+    cursor: pointer;
+  }
+
+  .bb-mock__create button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .bb-mock__error {
+    flex-basis: 100%;
+    color: #b91c1c;
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  .bb-mock__hint {
+    font-size: 0.82rem;
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0.6rem 0 0;
+  }
+
+  .bb-mock__list ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .bb-mock__card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #dddddd);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.8rem 1rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .bb-mock__card:hover {
+    border-color: var(--league-accent, #0e8a5f);
+    text-decoration: none;
+  }
+
+  .bb-mock__status {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f3f4f6);
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .bb-mock__status--active {
+    background: var(--league-accent, #0e8a5f);
+    color: #ffffff;
+  }
+
+  .bb-mock__status--lobby {
+    background: #d97706;
+    color: #ffffff;
+  }
+
+  .bb-mock__meta {
+    flex: 1;
+    font-size: 0.85rem;
+  }
+
+  .bb-mock__date {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bb-mock__empty {
+    color: var(--color-text-secondary, #6b7280);
+    font-size: 0.9rem;
+  }
+</style>

@@ -1,0 +1,83 @@
+---
+/**
+ * Best Ball #1 Mock Draft Room — /best-ball-1/mock-draft/[sessionId]
+ *
+ * Same DraftRoom island as the official draft room, in `mode: 'mock'` —
+ * these are full-pool 25-round practice runs of the real thing. Picks,
+ * timer, and state come from the PartyKit session; player/team data is
+ * built here exactly like the official room builds it.
+ */
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftRoom from '../../../components/theleague/draft-room/DraftRoom';
+import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../../utils/league-year';
+import { getAuthUser } from '../../../utils/auth';
+import { getBestBall1Preference } from '../../../utils/team-preferences';
+import { buildDraftPlayers } from '../../../utils/build-draft-players';
+import type { DraftRoomPageData, DraftRoomTeam } from '../../../types/draft-room';
+
+export const prerender = false;
+
+const BB1 = getLeagueBySlug('best-ball-1')!;
+
+const { sessionId } = Astro.params;
+if (!sessionId) {
+  return Astro.redirect('/best-ball-1/mock-draft');
+}
+
+// ── Auth & team preference ──
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect(`/best-ball-1/login?next=/best-ball-1/mock-draft/${sessionId}`);
+}
+
+const cookiePref = getBestBall1Preference(Astro.cookies);
+const userTeamId =
+  (user.leagueId === BB1.id ? user.franchiseId : null) || cookiePref?.franchiseId || '0001';
+
+// ── Build team configs ──
+const teams: DraftRoomTeam[] = (bb1Config.teams ?? []).map((team: any) => ({
+  franchiseId: team.franchiseId,
+  name: team.name,
+  nameMedium: team.nameMedium || team.name,
+  nameShort: team.nameShort || team.name,
+  abbrev: team.abbrev || '',
+  icon: team.icon || '',
+  colorPrimary: team.colorPrimary,
+  colorSecondary: team.colorSecondary,
+}));
+
+// ── Full veteran+rookie pool — best-ball mocks rehearse the startup draft ──
+const players = buildDraftPlayers(getCurrentLeagueYear(), {
+  rookieOnly: false,
+  viewerFranchiseId: user.franchiseId,
+});
+
+// ── Serialize page data — picks populate from the PartyKit session sync ──
+const pageData: DraftRoomPageData = {
+  leagueYear: getLeagueYearForSlug(BB1.slug),
+  draftKind: 'live',
+  draftLimitHours: '',
+  draftTimerSusp: '',
+  totalRounds: 25,
+  picksPerRound: teams.length,
+  teams,
+  picks: [],
+  players,
+  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
+  leagueId: BB1.id,
+};
+---
+
+<TheLeagueLayout title={`Mock Draft Room | ${BB1.name}`} hideMobileNavIcons>
+  <DraftRoom
+    client:load
+    pageData={JSON.stringify(pageData)}
+    userTeamId={userTeamId}
+    mode="mock"
+    mockSessionId={sessionId}
+    draftContext="general"
+  />
+</TheLeagueLayout>
