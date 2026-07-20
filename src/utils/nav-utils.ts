@@ -19,6 +19,7 @@
 import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { navConfig, getRouteEquivalence } from '../config/nav-config';
+import { ALL_LEAGUES } from '../config/leagues';
 
 // ============================================================================
 // URL Template Building
@@ -410,6 +411,44 @@ export function getEquivalentRoute(
 
   // No equivalent found, return target league home
   return targetPrefix;
+}
+
+/**
+ * Build the URL for switching to the other league.
+ *
+ * On the shared host (mfl.football, localhost, previews) the leagues live
+ * side by side under their path prefixes, so a relative prefixed path works.
+ *
+ * On a league apex host (theleague.us / afl-fantasy.com) it must be an
+ * ABSOLUTE URL to the other league's own apex domain. A relative
+ * `/afl-fantasy/*` path half-works there (the middleware serves the page),
+ * but every link that page generates strips league prefixes again — because
+ * `hideLeaguePrefix` is host-wide — so the first click lands the user back
+ * in the origin league. Worse, passing the cross-league path through
+ * `resolveLeaguePath` (the pre-fix behavior) stripped the TARGET prefix too,
+ * so the switch button reloaded the same league and never switched at all.
+ *
+ * @param currentPath - Current page path (internal, league-prefixed form)
+ * @param targetLeague - League to switch to
+ * @param hideLeaguePrefix - True when serving on a league apex host
+ * @returns Relative prefixed path (shared host) or absolute URL (apex host)
+ */
+export function getLeagueSwitchUrl(
+  currentPath: string,
+  targetLeague: LeagueSlug,
+  hideLeaguePrefix: boolean
+): string {
+  const equivalent = getEquivalentRoute(currentPath, targetLeague);
+  if (!hideLeaguePrefix) return equivalent;
+
+  const target = ALL_LEAGUES.find((l) => l.navSlug === targetLeague);
+  const domain =
+    target?.domains.find((d) => d.startsWith('www.')) ?? target?.domains[0];
+  // Defensive: a league without an apex domain can only be reached via its
+  // prefixed path on the current host.
+  if (!domain) return equivalent;
+
+  return `https://${domain}${resolveLeaguePath(equivalent, true)}`;
 }
 
 /**

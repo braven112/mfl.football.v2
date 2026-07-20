@@ -22,7 +22,7 @@
  */
 
 import type { LeagueSwitcherProps } from '../../types/nav';
-import { resolveLeaguePath, getEquivalentRoute } from '../../utils/nav-utils';
+import { resolveLeaguePath, getLeagueSwitchUrl } from '../../utils/nav-utils';
 import { hasTeamInBothLeagues } from '../../utils/league-context';
 
 interface Props extends LeagueSwitcherProps {
@@ -44,17 +44,18 @@ const shouldRender =
   franchiseId === undefined ||
   hasTeamInBothLeagues(franchiseId, currentLeague);
 
-// Calculate target URLs for both leagues
-const theLeagueUrl = resolveLeaguePath(
-  currentLeague === 'theleague'
-    ? currentPath
-    : getEquivalentRoute(currentPath, 'theleague'),
-  hideLeaguePrefix,
-);
+// Calculate target URLs for both leagues. The current league's URL is a
+// same-host path; the other league's goes through getLeagueSwitchUrl, which
+// returns an absolute URL to that league's apex domain when serving on a
+// league apex host (a same-host de-prefixed path would resolve back to the
+// current league there).
+const theLeagueUrl = currentLeague === 'theleague'
+  ? resolveLeaguePath(currentPath, hideLeaguePrefix)
+  : getLeagueSwitchUrl(currentPath, 'theleague', hideLeaguePrefix);
 
 const aflUrl = currentLeague === 'afl'
-  ? currentPath
-  : getEquivalentRoute(currentPath, 'afl');
+  ? resolveLeaguePath(currentPath, hideLeaguePrefix)
+  : getLeagueSwitchUrl(currentPath, 'afl', hideLeaguePrefix);
 
 const isTheLeagueActive = currentLeague === 'theleague';
 const isAflActive = currentLeague === 'afl';
