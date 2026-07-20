@@ -14,8 +14,10 @@ import {
   getLeagueBySlug as rawGetBySlug,
   getLeagueById as rawGetById,
   getLeagueByPath as rawGetByPath,
+  leagueOrigin as rawLeagueOrigin,
   buildHostToSlugMap,
   defaultMflWriteHost,
+  SHARED_APP_ORIGIN,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -54,6 +56,8 @@ export interface LeagueDefinition {
   mflHost: string;
   dataPath: string;
   domains: string[];
+  /** Canonical host for absolute URLs to this league — see leagueOrigin(). */
+  canonicalDomain?: string;
   /**
    * Optional per-league year-rollover date. Present for leagues whose MFL
    * season is created on a different schedule than TheLeague's Feb 14 default
@@ -104,4 +108,26 @@ export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): b
   return getLeagueBySlug(slug)?.features[feature] ?? false;
 }
 
-export { buildHostToSlugMap, defaultMflWriteHost };
+/**
+ * Resolve a league by its nav slug ('theleague' | 'afl'). The same lookup
+ * was previously hand-rolled with ALL_LEAGUES.find() at several call sites
+ * (a copy-paste pattern code review has flagged before — see DEFAULT_LEAGUE).
+ */
+export function getLeagueByNavSlug(navSlug: LeagueSlug): LeagueDefinition {
+  const league = ALL_LEAGUES.find((l) => l.navSlug === navSlug);
+  if (!league) {
+    throw new Error(`No league registered for nav slug '${navSlug}'`);
+  }
+  return league;
+}
+
+/**
+ * Canonical absolute origin for a league (e.g. 'https://www.theleague.us'),
+ * or null when the league has no apex domain. Session cookies are host-only,
+ * so every producer of absolute league URLs must agree on this host.
+ */
+export function leagueOrigin(league: LeagueDefinition): string | null {
+  return rawLeagueOrigin(league) as string | null;
+}
+
+export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN };

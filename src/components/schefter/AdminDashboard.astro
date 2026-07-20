@@ -11,15 +11,18 @@
  * committed feed JSON. No mutations here.
  */
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../utils/auth';
-import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueBySlug, getLeagueByNavSlug, leagueOrigin } from '../../config/leagues';
 import { OFFER_POST_PROBABILITY } from '../../../scripts/lib/redact-trade-offer.mjs';
 import whatsNew from '../../data/whats-new.json';
 
 // Existing What's New articles, one option per (article × league), for the
 // announcement compose dropdown. Selecting one auto-fills slug/headline/link so
 // the commish never hand-types a slug. Canonical public URL is the apex host
-// (theleague.us / afl-fantasy.com serve the de-prefixed /whats-new/<id> path).
-const ARTICLE_BASE = { theleague: 'https://www.theleague.us', afl: 'https://www.afl-fantasy.com' };
+// (from the registry — the apex domains serve the de-prefixed /whats-new/<id> path).
+const ARTICLE_BASE = {
+  theleague: leagueOrigin(getLeagueByNavSlug('theleague')),
+  afl: leagueOrigin(getLeagueByNavSlug('afl')),
+};
 const announceArticles = (Array.isArray(whatsNew) ? whatsNew : [])
   .flatMap((e) =>
     (Array.isArray(e.leagues) ? e.leagues : [])

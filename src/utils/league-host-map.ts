@@ -6,9 +6,10 @@
  * vitest.
  *
  * Adding a new league domain: add it to the league's `domains` array in
- * src/config/leagues-data.mjs. The afl-fantasy.com entries are wired in but
- * dormant — flipping live requires DNS + Vercel domain attachment
- * (AFL_DUPLICATION_PLAN §2.3, Phase 7).
+ * src/config/leagues-data.mjs (plus DNS + Vercel domain attachment). Both
+ * theleague.us and afl-fantasy.com are live — production announcement and
+ * article links have targeted afl-fantasy.com since the July 2026 AFL
+ * launch.
  */
 
 import { buildHostToSlugMap } from '../config/leagues';

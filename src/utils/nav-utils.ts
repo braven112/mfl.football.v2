@@ -19,6 +19,13 @@
 import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { navConfig, getRouteEquivalence } from '../config/nav-config';
+import {
+  ALL_LEAGUES,
+  getLeagueByNavSlug,
+  leagueOrigin,
+  SHARED_APP_ORIGIN,
+} from '../config/leagues';
+import type { LeagueDefinition } from '../config/leagues';
 
 // ============================================================================
 // URL Template Building
@@ -77,12 +84,13 @@ export function buildUrlFromTemplate(
 // ============================================================================
 
 /**
- * League path prefixes for URL construction
+ * League path prefixes for URL construction, derived from the registry so a
+ * new league scales the nav routing (prefix stripping, equivalent routes,
+ * switch URLs) without touching this file.
  */
-const LEAGUE_PREFIXES: Record<LeagueSlug, string> = {
-  theleague: '/theleague',
-  afl: '/afl-fantasy',
-};
+const LEAGUE_PREFIXES: Record<LeagueSlug, string> = Object.fromEntries(
+  ALL_LEAGUES.map((l) => [l.navSlug, `/${l.slug}`])
+) as Record<LeagueSlug, string>;
 
 /**
  * Strip the active league prefix from a path when serving on the league's
@@ -380,9 +388,15 @@ export function getEquivalentRoute(
   // Strip the current league prefix to get the page path
   let pagePath = currentPath;
 
-  // Remove league prefix if present
+  // Remove league prefix if present. Boundary-checked like resolveLeaguePath:
+  // with registry-derived prefixes, a bare startsWith would let a slug that
+  // prefixes another slug (or a path like '/theleague-foo') strip mid-segment.
   for (const prefix of Object.values(LEAGUE_PREFIXES)) {
-    if (pagePath.startsWith(prefix)) {
+    if (pagePath === prefix) {
+      pagePath = '';
+      break;
+    }
+    if (pagePath.startsWith(`${prefix}/`) || pagePath.startsWith(`${prefix}?`)) {
       pagePath = pagePath.slice(prefix.length);
       break;
     }
@@ -410,6 +424,80 @@ export function getEquivalentRoute(
 
   // No equivalent found, return target league home
   return targetPrefix;
+}
+
+/**
+ * Build the URL for switching to the other league.
+ *
+ * On the shared host (mfl.football, localhost, previews) the leagues live
+ * side by side under their path prefixes, so a relative prefixed path works.
+ *
+ * On a league apex host (theleague.us / afl-fantasy.com) it must be an
+ * ABSOLUTE URL to the other league's own apex domain. A relative
+ * `/afl-fantasy/*` path half-works there (the middleware serves the page),
+ * but every link that page generates strips league prefixes again — because
+ * `hideLeaguePrefix` is host-wide — so the first click lands the user back
+ * in the origin league. Worse, passing the cross-league path through
+ * `resolveLeaguePath` (the pre-fix behavior) stripped the TARGET prefix too,
+ * so the switch button reloaded the same league and never switched at all.
+ *
+ * @param currentPath - Current page path (internal, league-prefixed form)
+ * @param targetLeague - League to switch to
+ * @param hideLeaguePrefix - True when serving on a league apex host
+ * @returns Relative prefixed path (shared host) or absolute URL (apex host)
+ */
+export function getLeagueSwitchUrl(
+  currentPath: string,
+  targetLeague: LeagueSlug,
+  hideLeaguePrefix: boolean
+): string {
+  return buildSwitchUrl(currentPath, getLeagueByNavSlug(targetLeague), hideLeaguePrefix);
+}
+
+/** Shared body for getLeagueSwitchUrl/getLeagueSwitchTargets — takes the
+ * already-resolved registry entry so target enumeration doesn't re-look-up
+ * each league. */
+function buildSwitchUrl(
+  currentPath: string,
+  target: LeagueDefinition,
+  hideLeaguePrefix: boolean
+): string {
+  const equivalent = getEquivalentRoute(currentPath, target.navSlug);
+  if (!hideLeaguePrefix) return equivalent;
+
+  const origin = leagueOrigin(target);
+  if (origin) return `${origin}${resolveLeaguePath(equivalent, true)}`;
+
+  // A league with no apex domain of its own: link to its prefixed path on
+  // the shared host. NOT a same-host relative path — on an apex host the
+  // landed page's link generation strips prefixes host-wide and would bounce
+  // the visitor straight back (the bug this helper exists to prevent).
+  return `${SHARED_APP_ORIGIN}${equivalent}`;
+}
+
+/** One selectable league in the nav header's switcher. */
+export interface LeagueSwitchTarget {
+  navSlug: LeagueSlug;
+  name: string;
+  href: string;
+}
+
+/**
+ * Every league a visitor can switch to from the current one, with resolved
+ * switch URLs, in registry order. Drives the nav header switcher: a single
+ * entry (two-league registry) renders as a direct switch link; two or more
+ * entries (3+ leagues) render as a dropdown menu.
+ */
+export function getLeagueSwitchTargets(
+  currentLeague: LeagueSlug,
+  currentPath: string,
+  hideLeaguePrefix: boolean
+): LeagueSwitchTarget[] {
+  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague).map((l) => ({
+    navSlug: l.navSlug,
+    name: l.name,
+    href: buildSwitchUrl(currentPath, l, hideLeaguePrefix),
+  }));
 }
 
 /**

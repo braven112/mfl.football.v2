@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-07-20",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "navigation",
+      "summary": "The side menu's league-switch chevron now actually switches leagues. On theleague.us and afl-fantasy.com it used to strip the other league's address right out of its own link — so 'Switch to AFL' just reloaded the page you were already on. It now carries you straight to the same page on the other league's site, and the chevron shows for everyone instead of hiding unless you were logged in as a dual-league owner."
+    },
+    {
       "date": "2026-07-19",
       "type": "bug-fix",
       "league": "both",

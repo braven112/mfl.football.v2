@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { getEquivalentRoute } from '../src/utils/nav-utils';
+import {
+  getEquivalentRoute,
+  getLeagueSwitchUrl,
+  getLeagueSwitchTargets,
+} from '../src/utils/nav-utils';
+import { ALL_LEAGUES, leagueOrigin } from '../src/config/leagues';
 
-// LeagueSwitcher and NavHeader both consume getEquivalentRoute. These tests
-// lock in the cross-league deep-link behavior the 7 dual-league owners depend
-// on (AFL_DUPLICATION_PLAN §2.6).
+// NavHeader's league switcher consumes getEquivalentRoute (via
+// getLeagueSwitchUrl/getLeagueSwitchTargets). These tests lock in the
+// cross-league deep-link behavior the 7 dual-league owners depend on
+// (AFL_DUPLICATION_PLAN §2.6).
 
 describe('getEquivalentRoute', () => {
   // -- League home / root path --
@@ -99,5 +105,114 @@ describe('getEquivalentRoute', () => {
     expect(getEquivalentRoute('/theleague/contracts/manage', 'afl')).toBe(
       '/afl-fantasy/contracts/manage'
     );
+  });
+
+  // -- Prefix-strip boundary --
+
+  it('does not strip a league prefix mid-segment', () => {
+    // '/theleague-anything' is NOT a TheLeague path; a bare startsWith strip
+    // would mangle it to '-anything'. It must fall through unstripped (and
+    // then fall back to the target league home as an unknown path).
+    expect(getEquivalentRoute('/theleague-archive', 'afl')).toBe('/afl-fantasy');
+    expect(getEquivalentRoute('/afl-fantasyland/x', 'theleague')).toBe('/theleague');
+  });
+});
+
+// The nav drawer's league-switch chevron. The regression this locks in:
+// on a league apex host the old code passed the cross-league path through
+// resolveLeaguePath, which stripped the TARGET league's prefix too —
+// "Switch to AFL" on theleague.us linked to /rosters, which the middleware
+// rewrote straight back to TheLeague. The switch never switched.
+describe('getLeagueSwitchUrl', () => {
+  // -- Shared host (mfl.football, localhost, previews): relative prefixed paths --
+
+  it('returns a relative prefixed path on the shared host', () => {
+    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', false)).toBe(
+      '/afl-fantasy/rosters'
+    );
+    expect(getLeagueSwitchUrl('/afl-fantasy/rosters', 'theleague', false)).toBe(
+      '/theleague/rosters'
+    );
+  });
+
+  // -- League apex hosts: absolute URL to the OTHER league's domain --
+
+  it('links to the AFL apex domain when switching from theleague.us', () => {
+    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', true)).toBe(
+      'https://www.afl-fantasy.com/rosters'
+    );
+  });
+
+  it('links to the TheLeague apex domain when switching from afl-fantasy.com', () => {
+    expect(getLeagueSwitchUrl('/afl-fantasy/rosters', 'theleague', true)).toBe(
+      'https://www.theleague.us/rosters'
+    );
+  });
+
+  it('never returns a bare de-prefixed same-host path on an apex host', () => {
+    // '/rosters' on theleague.us is TheLeague's roster page — the exact
+    // regression this helper exists to prevent.
+    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', true)).not.toBe(
+      '/rosters'
+    );
+  });
+
+  it('falls back to the target league home (clean path) on an apex host', () => {
+    // /contracts has no AFL counterpart → AFL home on the AFL domain
+    expect(getLeagueSwitchUrl('/theleague/contracts', 'afl', true)).toBe(
+      'https://www.afl-fantasy.com/'
+    );
+  });
+
+  it('preserves query strings across the domain switch', () => {
+    expect(
+      getLeagueSwitchUrl('/theleague/standings?year=2024', 'afl', true)
+    ).toBe('https://www.afl-fantasy.com/standings?year=2024');
+  });
+});
+
+// Registry-driven switch targets for the nav header. With today's two-league
+// registry each league has exactly one target (direct-link chevron); a third
+// league flips the header to dropdown mode, and these generic assertions
+// must keep holding for every league pair without edits.
+describe('getLeagueSwitchTargets', () => {
+  it('lists every league except the current one, for each league', () => {
+    for (const current of ALL_LEAGUES) {
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false);
+      expect(targets.map((t) => t.navSlug)).toEqual(
+        ALL_LEAGUES.filter((l) => l.navSlug !== current.navSlug).map((l) => l.navSlug)
+      );
+      // Registry display names label the menu entries
+      for (const t of targets) {
+        const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
+        expect(t.name).toBe(def.name);
+      }
+    }
+  });
+
+  it('resolves every target to the other league (never a same-league URL)', () => {
+    for (const current of ALL_LEAGUES) {
+      // Apex-host mode: every target must be absolute to the target's own domain
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, true);
+      for (const t of targets) {
+        const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
+        // The canonical origin is the registry's single source of truth
+        // (leagueOrigin) — the test must not re-derive domain selection.
+        expect(t.href.startsWith(`${leagueOrigin(def)}/`)).toBe(true);
+        for (const currentDomain of current.domains) {
+          expect(t.href).not.toContain(currentDomain);
+        }
+      }
+    }
+  });
+
+  it('returns relative prefixed paths on the shared host', () => {
+    for (const current of ALL_LEAGUES) {
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false);
+      for (const t of targets) {
+        const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
+        expect(t.href.startsWith(`/${def.slug}`)).toBe(true);
+      }
+    }
   });
 });

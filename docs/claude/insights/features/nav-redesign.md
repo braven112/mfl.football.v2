@@ -885,3 +885,18 @@ await drawer.screenshot({
 - **Owner preference, don't re-add:** the hamburger toggle gets *no* background fill in any state or theme — future dark-mode passes should resist giving it a "button plate."
 - `public/embed/phpbb-nav.html` is a hand-synced copy of the nav CSS with a `.tl-` prefix (used on the phpBB forum). It is not generated — any visual change to `NavToggleButton.astro` / drawer styles must be manually mirrored there, and there's a "Last synced from source" date in its header comment worth bumping.
 - On touch devices `:hover` backgrounds persist after a tap until the next touch, so a hover-only background reads as a stuck highlight on mobile — prefer color shifts on the glyph itself for hover feedback on icon buttons.
+
+## 2026-07-20 - League Switch Links Must Be Absolute Cross-Domain URLs on Apex Hosts
+
+**Context:** The drawer's league-switch chevron silently reloaded the same league on theleague.us / afl-fantasy.com. Root cause: the switch URL was passed through `resolveLeaguePath`, which strips ANY league prefix — including the *target* league's — so "Switch to AFL" linked to `/rosters`, which the middleware rewrote back to the current host's league.
+
+**Insight — two traps, one rule:**
+1. Never run a cross-league URL through `resolveLeaguePath`. Its job is stripping the *current host's* prefix for clean links; on a target-league path it destroys the routing information.
+2. A same-host cross-league path (`theleague.us/afl-fantasy/rosters`) is also wrong even though the middleware serves it: `Astro.locals.hideLeaguePrefix` is **host-wide**, so every link the landed AFL page generates gets de-prefixed and resolves back to TheLeague. The only correct cross-league target on an apex host is an **absolute URL to the other league's own domain**, built from the registry's `domains` (prefer the `www.` entry — matches the canonical bases in `AdminDashboard.astro`).
+
+The rule lives in `nav-utils#getLeagueSwitchUrl` / `#getLeagueSwitchTargets`; `tests/nav-equivalent-route.test.ts` locks it (switch URLs on an apex host must be absolute, never a bare de-prefixed path).
+
+**Also decided:**
+- The switcher renders for **every** visitor, not just dual-league owners: sessions don't cross the apex domains, so a login-gated switcher vanishes the moment you switch — a one-way door.
+- With 3+ leagues in the registry the chevron becomes a dropdown (`NavHeader`), automatic because `LEAGUE_PREFIXES` and the switch targets are now registry-derived. It's a **disclosure pattern** (button + `aria-expanded` + plain links), deliberately NOT `role="menu"` — a menu role promises arrow-key navigation we don't implement. Its Escape handler runs in the capture phase and calls `stopPropagation` **only when focus is inside the switcher** (so it doesn't also close the drawer, but doesn't hijack Escape from other UI either); focus leaving the switcher closes the list. To test 3-league mode, temporarily add a fake entry to `leagues-data.mjs` — the dev server picks it up without type errors blocking render (only `astro check` complains).
+- Canonical absolute origins come from the registry: `canonicalDomain` + `leagueOrigin()` in `leagues-data.mjs`/`leagues.ts` (www hosts — session cookies are host-only, so all absolute-URL producers must agree). `getLeagueByNavSlug` replaces the hand-rolled `ALL_LEAGUES.find(l => l.navSlug === x)` scans.
