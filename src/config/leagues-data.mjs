@@ -97,7 +97,7 @@ export const LEAGUES = {
     id: '37610',
     slug: 'best-ball-1',
     navSlug: 'bb1',
-    name: 'Best Ball League #1',
+    name: 'Best Ball #1',
     mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
     /**

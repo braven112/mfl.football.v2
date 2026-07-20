@@ -560,6 +560,7 @@ html.dark[data-league="afl"] ::selection {
    ======================================== */
 html.dark[data-league="bb1"] {
   --league-accent: #34d399;                            /* emerald brightened for dark */
+  --logo-name-primary-color: #ffffff;                  /* "Best Ball" wordmark — white (html.dark's green is TheLeague's logo green) */
   --link-color-accent: #34d399;
   --link-color-accent-hover: #6ee7b7;
   --header-nav-icon-color: #ffffff;                    /* resting nav icons — white */
