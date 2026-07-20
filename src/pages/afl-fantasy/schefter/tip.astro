@@ -23,11 +23,16 @@ const user = getAuthUser(Astro.request);
 // from the JWT, and both leagues reuse 4-digit franchise ids — a foreign
 // session submitting from this page would file a tip into its own league's
 // queue against the wrong league's team. Bounce to this league's login.
+// `?next=` is the param the AFL login page honors (its component-level
+// redirect outranks LoginForm's `?redirect=` handling), and the query
+// string rides along so a whisper-back CTA's ?target= pre-selection
+// survives the login round-trip.
 if (
   !user?.franchiseId ||
   !isAuthorizedForLeague(user, getLeagueBySlug('afl-fantasy')!.id)
 ) {
-  return Astro.redirect('/afl-fantasy/login?redirect=/afl-fantasy/schefter/tip');
+  const next = encodeURIComponent(`/afl-fantasy/schefter/tip${Astro.url.search}`);
+  return Astro.redirect(`/afl-fantasy/login?next=${next}`);
 }
 
 const league = getLeagueBySlug('afl-fantasy')!;

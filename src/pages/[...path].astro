@@ -1,0 +1,28 @@
+---
+/**
+ * Root catch-all — exists for Vercel routing correctness, not for content.
+ *
+ * Clean apex-domain URLs (theleague.us/rosters, afl-fantasy.com/schefter/tip)
+ * match no explicit page route, so without this page they fall through to the
+ * Vercel adapter's fallback route (`{"src": "^/.*$", "dest": "_render",
+ * "status": 404}`), which pins HTTP 404 on the response no matter what the
+ * middleware host-rewrite renders. Full pages still *displayed* (browsers
+ * render 404 bodies), but redirects died: the Schefter tip page's login
+ * bounce came back as a dead 404, which is how every GroupMe tip link broke
+ * for logged-out owners (July 2026).
+ *
+ * With this page in the manifest, unmatched paths match a real route with no
+ * forced status, so the middleware-rewritten page's own status (200 / 302)
+ * survives. When this page actually RENDERS, the middleware has already
+ * declined to rewrite (non-league host) or rewrote to a league path that
+ * matched nothing — either way the path is genuinely unknown, so serve the
+ * styled 404 page with an honest 404 status.
+ */
+export const prerender = false;
+
+import NotFound from './404.astro';
+
+Astro.response.status = 404;
+---
+
+<NotFound />
