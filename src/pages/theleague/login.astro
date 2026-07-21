@@ -9,11 +9,26 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import LoginForm from '../../components/theleague/LoginForm.astro';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
 
-// If user is already authenticated, redirect to theleague
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
+
+// Deep-link return path — honor ?redirect= (and ?next= for symmetry with the
+// AFL login page). Validated server-side, mirroring AFL's safeNext: only
+// same-league paths, so a crafted param can't send a fresh session off-site.
+const requested =
+  Astro.url.searchParams.get('redirect') || Astro.url.searchParams.get('next');
+const safeRedirect =
+  requested && requested.startsWith('/theleague') ? requested : null;
+
+// Only short-circuit for a session already scoped to THIS league — dual-league
+// owners are real, and an AFL-scoped session must fall through so the user can
+// re-sign-in against TheLeague (mirrors afl-fantasy/login.astro). The
+// franchiseId check keeps franchise-less JWTs on the form instead of bouncing
+// them between here and pages that require a franchise.
 const authUser = getAuthUser(Astro.request);
-if (authUser) {
-  return Astro.redirect('/theleague');
+if (authUser?.leagueId === THELEAGUE_ID && authUser.franchiseId) {
+  return Astro.redirect(safeRedirect ?? '/theleague');
 }
 
 const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://api.myfantasyleague.com';

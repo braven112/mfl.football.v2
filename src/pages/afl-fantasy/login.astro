@@ -24,19 +24,23 @@ const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 // not be determined".
 const AFL_LOGIN_YEAR = getAflLeagueYear();
 
-// If already authenticated as an AFL owner, redirect into the AFL home.
-// If authenticated against a different league, fall through so the user
-// can re-sign-in against AFL (this scenario is real — same person can
-// own teams in both leagues).
-const authUser = getAuthUser(Astro.request);
-if (authUser?.leagueId === AFL_LEAGUE_ID) {
-  return Astro.redirect('/afl-fantasy');
-}
-
-// Where to redirect on successful login — honor ?next= for deep links,
-// otherwise drop them on the AFL home.
-const next = Astro.url.searchParams.get('next');
+// Where to redirect on successful login — honor ?next= (and ?redirect= for
+// symmetry with TheLeague's login) for deep links, otherwise drop them on
+// the AFL home. Must stay inside the AFL path space.
+const next =
+  Astro.url.searchParams.get('next') || Astro.url.searchParams.get('redirect');
 const safeNext = next && next.startsWith('/afl-fantasy') ? next : '/afl-fantasy';
+
+// If already authenticated as an AFL owner, follow the deep link (or land on
+// the AFL home). If authenticated against a different league, fall through so
+// the user can re-sign-in against AFL (this scenario is real — same person can
+// own teams in both leagues). The franchiseId check keeps franchise-less JWTs
+// on the form instead of bouncing them between here and pages that require a
+// franchise.
+const authUser = getAuthUser(Astro.request);
+if (authUser?.leagueId === AFL_LEAGUE_ID && authUser.franchiseId) {
+  return Astro.redirect(safeNext);
+}
 ---
 
 <TheLeagueLayout title="Sign In — AFL">

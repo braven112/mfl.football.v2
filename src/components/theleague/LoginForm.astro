@@ -228,6 +228,13 @@ const {
           catch { finalUrl = '/theleague'; }
         }
 
+        // Same-origin paths only: protocol-relative (`//evil.com`) and
+        // scheme-only (`javascript:…`) values slip past the '://' check
+        // above but both fail this one.
+        if (!finalUrl.startsWith('/') || finalUrl.startsWith('//')) {
+          finalUrl = '/theleague';
+        }
+
         sessionStorage.removeItem('loginRedirectUrl');
         window.location.href = finalUrl;
 

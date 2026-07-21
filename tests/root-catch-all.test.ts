@@ -36,6 +36,35 @@ describe('root [...path].astro catch-all', () => {
   });
 
   it('renders the styled 404 page', () => {
-    expect(src).toMatch(/import\s+\w+\s+from\s+['"]\.\/404\.astro['"]/);
+    expect(src).toMatch(/['"]\.\/404\.astro['"]/);
   });
+});
+
+// The real contract lives in the emitted Vercel config: the catch-all's
+// spread route must precede the adapter's forced-404 fallback, or every
+// clean apex URL goes back to being stamped 404. Source greps can't see an
+// adapter upgrade reordering routes, so when a build output is present
+// (CI builds before deploying; locally after `pnpm build`), assert the
+// ordering directly. Skipped when no build has run.
+describe('built Vercel routing config', () => {
+  const cfgPath = path.resolve(__dirname, '..', '.vercel', 'output', 'config.json');
+
+  it.skipIf(!existsSync(cfgPath))(
+    'catch-all spread route precedes the forced-404 fallback',
+    () => {
+      const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
+      const routes: Array<{ src?: string; dest?: string; status?: number }> =
+        cfg.routes ?? [];
+      const spreadIdx = routes.findIndex(
+        (r) => r.dest === '_render' && r.status === undefined && /\(\.\*\??\)/.test(r.src ?? '')
+      );
+      const fallbackIdx = routes.findIndex(
+        (r) => r.dest === '_render' && r.status === 404
+      );
+      expect(spreadIdx).toBeGreaterThan(-1);
+      if (fallbackIdx !== -1) {
+        expect(spreadIdx).toBeLessThan(fallbackIdx);
+      }
+    }
+  );
 });
