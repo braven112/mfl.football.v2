@@ -59,6 +59,10 @@
   border: 2px solid var(--player-avatar-border, var(--content-border, #e2e8f0));
 }
 
+/* --eligible chips are excluded ON PURPOSE in both themes: the eligibility
+   highlight keeps the neutral chip + blue pulsing ring so it reads as a
+   distinct interactive state — a blue glow over a team-color gradient would
+   fight the team ring and vary in contrast per team. */
 .player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__avatar--eligible) {
   background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
   /* Team-tinted ring in BOTH themes, set per-player by the renderers: light

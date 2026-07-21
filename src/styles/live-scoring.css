@@ -367,8 +367,11 @@ html.dark .ls-headshot {
   box-shadow: inset 0 0 0 1px var(--player-avatar-ring-dark, rgba(255, 255, 255, 0.5));
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-/* Defense "headshot" is the NFL logo centered in the chip (gray + team ring
-   in light mode, team-color spotlight in dark). */
+/* Defense "headshot" is the NFL logo centered in the chip, over the same
+   team-color spotlight as player chips in both themes. (Deliberate
+   divergence from the player-cell family, whose --def chips stay
+   transparent: here the logo sits inside a small scoreboard circle, and
+   the team backdrop is what keeps it legible on busy rows.) */
 .ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }

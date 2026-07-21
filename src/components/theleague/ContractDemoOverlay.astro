@@ -215,6 +215,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <div class="cdemo-mockrow">
           <PlayerCell
             name="Hopkins, DeAndre"
+            eligibleAvatar
             headshot={getPlayerHeadshot(undefined, '15795')}
             position="WR"
             nflTeam="BAL"
@@ -229,6 +230,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <div class="cdemo-mockrow">
           <PlayerCell
             name="Mendoza, Fernando"
+            eligibleAvatar
             headshot={getPlayerHeadshot('17462', '4837248')}
             position="QB"
             nflTeam="LVR"
@@ -245,6 +247,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <div class="cdemo-mockrow">
           <PlayerCell
             name="Hailmary, Hank"
+            eligibleAvatar
             headshot={getPlayerHeadshot('16585', '4360698')}
             position="QB"
             nflTeam="DAL"
@@ -265,6 +268,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <div class="cdemo-mockrow">
           <PlayerCell
             name="Misack, Buck"
+            eligibleAvatar
             headshot={getPlayerHeadshot('15777', '4243389')}
             position="WR"
             nflTeam="PIT"
@@ -825,14 +829,12 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     --player-avatar-size: 32px;
   }
 
-  /* Eligible glow on avatars in the mockup — mirrors live roster styling */
-  .cdemo-mockrow .player-cell__avatar {
-    border-color: #0ea5e9;
-    box-shadow:
-      0 0 0 2px rgba(14, 165, 233, 0.35),
-      0 0 0 4px rgba(14, 165, 233, 0.12);
-    animation: avatar-eligible-pulse 2.4s ease-in-out infinite;
-  }
+  /* Eligible glow on the mock avatars comes from the shared
+     player-cell__avatar--eligible class (set via PlayerCell's eligibleAvatar
+     prop) — the exact runtime treatment rosters.astro toggles. A scoped
+     descendant re-implementation here can't reach the child component's
+     internals (no scope class on them) and would lose the specificity race
+     against player-cell.css's gradient rules anyway. */
 
   /* Chip in mockup — uses the global .yrs-chip styles from rosters.astro.
      The chip is rendered as a static <span> in the mockup (not a button). */

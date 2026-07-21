@@ -24,7 +24,7 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
-import { NFL_TEAM_COLORS, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
 // Build franchise ID → short name map for auction high-bidder display
@@ -623,19 +623,10 @@ const nflTeamsJson = JSON.stringify(nflTeamsList);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
 // NFL-team gradient backdrops for player avatars (same treatment as the modal
-// band). Precomputed here so the client-side list renderer just does a lookup —
-// no color math duplicated in the browser. Keyed by ESPN team code (matches
-// p.team); FA/unknown falls back to the league-neutral blue.
-const nflAvatarBg: Record<string, string> = {};
-const nflAvatarBorder: Record<string, string> = {};
-const nflAvatarRing: Record<string, string> = {};
-const nflAvatarRingDark: Record<string, string> = {};
-for (const code of Object.keys(NFL_TEAM_COLORS)) {
-  nflAvatarBg[code] = getPlayerAvatarBackground(code);
-  nflAvatarBorder[code] = getPlayerAvatarBorder(code);
-  nflAvatarRing[code] = getPlayerAvatarRing(code);
-  nflAvatarRingDark[code] = getPlayerAvatarRingDark(code);
-}
+// band). Precomputed via the shared style maps (ESPN codes + MFL aliases) so
+// the client-side list renderer just does a lookup — no color math duplicated
+// in the browser. FA/unknown falls back to the league-neutral blue.
+const { bg: nflAvatarBg, border: nflAvatarBorder, ring: nflAvatarRing, ringDark: nflAvatarRingDark } = getPlayerAvatarStyleMaps();
 const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
 const nflAvatarBorderFallback = getPlayerAvatarBorder('FA');
 const nflAvatarRingFallback = getPlayerAvatarRing('FA');

@@ -64,6 +64,13 @@ export interface Props {
    * isn't cropped by the headshot circle.
    */
   isLogoAvatar?: boolean;
+  /**
+   * Render the avatar with the eligible-highlight treatment
+   * (`player-cell__avatar--eligible`: neutral chip, blue pulsing ring) —
+   * the same class rosters.astro toggles at runtime for declaration-eligible
+   * players. Used by demo/mock rows that need the look server-rendered.
+   */
+  eligibleAvatar?: boolean;
 }
 
 const {
@@ -79,6 +86,7 @@ const {
   contractStatus,
   class: className,
   isLogoAvatar = false,
+  eligibleAvatar = false,
 } = Astro.props;
 
 // Resolve IDs for headshot fallback chain (explicit props take priority over playerData)
@@ -124,7 +132,7 @@ const avatarStyle = avatarBg
 ---
 
 <div class:list={['player-cell', sizeClass, className]}>
-  <div class:list={['player-cell__avatar', isLogo && 'player-cell__avatar--def']} style={avatarStyle}>
+  <div class:list={['player-cell__avatar', isLogo && 'player-cell__avatar--def', eligibleAvatar && 'player-cell__avatar--eligible']} style={avatarStyle}>
     <img
       src={avatarSrc}
       alt={isDef ? `${nflTeam ?? 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`}

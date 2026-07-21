@@ -9,6 +9,8 @@ import {
   desaturateHex,
   pickBrandAccent,
   getPlayerAvatarBackground,
+  getPlayerAvatarRing,
+  getPlayerAvatarRingDark,
 } from '../src/utils/nfl-team-colors';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
 
@@ -225,5 +227,42 @@ describe('getPlayerAvatarBackground', () => {
         /^radial-gradient\(circle at 50% 30%, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 58%, #[0-9a-f]{6} 100%\)$/,
       );
     }
+  });
+});
+
+describe('getPlayerAvatarRing / getPlayerAvatarRingDark', () => {
+  it('rings echo the gradient anchor per theme: light darker, dark lighter', () => {
+    // The rings must be mixes of the SAME anchor the gradient uses — the
+    // light ring shifted toward ink (below the anchor's luminance), the dark
+    // ring toward white (above it) — for every team and the fallback.
+    for (const code of [...Object.keys(NFL_TEAM_COLORS), 'FA']) {
+      const anchor = getPlayerAvatarBackground(code).match(/#[0-9a-f]{6}/g)![1];
+      expect(getPlayerAvatarRing(code), `${code} light ring`).toMatch(HEX);
+      expect(getPlayerAvatarRingDark(code), `${code} dark ring`).toMatch(HEX);
+      expect(lum(getPlayerAvatarRing(code)), `${code} light ring not darker than anchor`).toBeLessThan(lum(anchor));
+      expect(lum(getPlayerAvatarRingDark(code)), `${code} dark ring not lighter than anchor`).toBeGreaterThan(lum(anchor));
+    }
+  });
+
+  it('derives secondary-swapped teams from the swapped anchor, not the raw primary', () => {
+    // PIT's anchor is its GOLD secondary (near-black primary swapped out) —
+    // the rings must be gold-tinted, not gray mixes of the black primary.
+    const goldRing = getPlayerAvatarRing('PIT');
+    const [, r, g, b] = /^#(..)(..)(..)$/.exec(goldRing)!.map((c) => parseInt(c, 16));
+    expect(r, 'PIT light ring should be warm (r > b)').toBeGreaterThan(b);
+    expect(g, 'PIT light ring should be warm (g > b)').toBeGreaterThan(b);
+    expect(getPlayerAvatarRing('PIT')).not.toBe(getPlayerAvatarRing('LV'));
+  });
+
+  it('exact mix contract: 35% toward ink (light) / white (dark) from the anchor', () => {
+    const anchor = getPlayerAvatarBackground('KC').match(/#[0-9a-f]{6}/g)![1];
+    expect(getPlayerAvatarRing('KC')).toBe(mixHex(anchor, '#0b0e13', 0.35));
+    expect(getPlayerAvatarRingDark('KC')).toBe(mixHex(anchor, '#ffffff', 0.35));
+  });
+
+  it('normalizes MFL codes and falls back for unknown codes like the background', () => {
+    expect(getPlayerAvatarRing('KCC')).toBe(getPlayerAvatarRing('KC'));
+    expect(getPlayerAvatarRingDark('WAS')).toBe(getPlayerAvatarRingDark('WSH'));
+    expect(getPlayerAvatarRing('FA')).toBe(getPlayerAvatarRing(''));
   });
 });
