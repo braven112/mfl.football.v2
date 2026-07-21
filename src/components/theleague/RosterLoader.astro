@@ -89,7 +89,10 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
     var armTimer = null;
     var cycleTimer = null;
     var hideTimer = null;
-    var shownAt = 0;
+    // Visibility is tracked in closure state, NOT the DOM: the view-transition
+    // swap destroys the shown overlay element before hide() runs, so a class
+    // check on the post-swap element can never see the blink that just ended.
+    var overlayVisibleSince = 0;
     var order = [];
     var idx = 0;
 
@@ -108,7 +111,7 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
       var el = node();
       if (!el) return;
       if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-      shownAt = Date.now();
+      overlayVisibleSince = Date.now();
       order = shuffle(readLines().slice());
       idx = 0;
       var line = el.querySelector('[data-roster-line]');
@@ -129,11 +132,20 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     function hide() {
       if (armTimer) { clearTimeout(armTimer); armTimer = null; }
-      // If the page landed just after the loader appeared, hold it up briefly —
-      // a sub-MIN_VISIBLE_MS blink reads as a glitch (loading-standards.md).
       var el = node();
-      var visibleFor = Date.now() - shownAt;
-      if (el && el.classList.contains('is-active') && visibleFor < MIN_VISIBLE_MS) {
+      // If the page landed just after the loader appeared, hold the overlay up
+      // briefly — a sub-MIN_VISIBLE_MS blink reads as a glitch
+      // (loading-standards.md). The swap already destroyed the shown element,
+      // so re-apply the overlay to the post-swap copy for the remainder.
+      var visibleFor = Date.now() - overlayVisibleSince;
+      if (overlayVisibleSince && visibleFor < MIN_VISIBLE_MS) {
+        if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+        if (el) {
+          var lineEl = el.querySelector('[data-roster-line]');
+          if (lineEl && order.length) lineEl.textContent = order[idx];
+          el.hidden = false;
+          el.classList.add('is-active');
+        }
         if (hideTimer) return;
         hideTimer = window.setTimeout(function () {
           hideTimer = null;
@@ -141,6 +153,7 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
         }, MIN_VISIBLE_MS - visibleFor);
         return;
       }
+      overlayVisibleSince = 0;
       if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
       if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
       if (el) { el.classList.remove('is-active'); el.hidden = true; }
