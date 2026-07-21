@@ -21,7 +21,7 @@ import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
-import { NFL_TEAM_COLORS, getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -340,13 +340,9 @@ const posCountsJson = JSON.stringify(posCounts);
 
 // NFL-team avatar backdrops (same pattern as players.astro): precomputed in
 // frontmatter so the client-side row builder just does a lookup — no color
-// math duplicated in the browser. FA/unknown falls back to league-neutral.
-const nflAvatarBg: Record<string, string> = {};
-const nflAvatarBorder: Record<string, string> = {};
-for (const code of Object.keys(NFL_TEAM_COLORS)) {
-  nflAvatarBg[code] = getPlayerAvatarBackground(code);
-  nflAvatarBorder[code] = getPlayerAvatarBorder(code);
-}
+// math duplicated in the browser. Maps include MFL aliases (WAS, KCC, …);
+// FA/unknown falls back to league-neutral.
+const { bg: nflAvatarBg, border: nflAvatarBorder } = getPlayerAvatarStyleMaps();
 const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
 const nflAvatarBorderFallback = getPlayerAvatarBorder('FA');
 const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
@@ -518,6 +514,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
 
   function getAvatarStyle(team) {
+    // Not escapeAttr'd: values are precomputed hex/gradient strings from
+    // nfl-team-colors.ts — deterministic, never contain HTML special chars.
     var bg = nflAvatarBg[team] || nflAvatarBgFallback;
     var border = nflAvatarBorder[team] || nflAvatarBorderFallback;
     return ' style="--player-avatar-bg: ' + bg + '; --player-avatar-border: ' + border + '"';

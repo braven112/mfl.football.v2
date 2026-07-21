@@ -65,11 +65,17 @@ const ALLOWLIST: Record<string, string> = {
   'src/pages/theleague/rookies-2026.astro': 'rookie hero composites',
 };
 
-function grepFiles(pattern: string): string[] {
+const INCLUDES = [
+  '--include=*.ts', '--include=*.tsx', '--include=*.astro',
+  '--include=*.mjs', '--include=*.js', '--include=*.jsx',
+];
+
+function grepFiles(pattern: string, fixedString = false): string[] {
   try {
     const out = execFileSync(
       'grep',
-      ['-rl', '--include=*.ts', '--include=*.tsx', '--include=*.astro', '--include=*.mjs', pattern, 'src/'],
+      // -e keeps patterns that start with '--' from parsing as grep options.
+      ['-rl', ...(fixedString ? ['-F'] : []), ...INCLUDES, '-e', pattern, 'src/'],
       { cwd: ROOT, encoding: 'utf8' },
     );
     return out.split('\n').filter(Boolean).sort();
@@ -103,17 +109,56 @@ describe('team-color-behind-player guard', () => {
     ).toEqual([]);
   });
 
-  it('no raw NFL_TEAM_COLORS gradient math outside the color module', () => {
+  it('no raw NFL_TEAM_COLORS color access outside the color module', () => {
     // Reaching past the helper to the raw table is the other way to reinvent
     // an unguarded backdrop. The table is exported for tests and for
-    // precompute loops over its KEYS (players/projected-free-agents pattern),
-    // so only flag files that read `.primary`/`.secondary` off the table.
-    const files = grepFiles('NFL_TEAM_COLORS\\[');
-    const offenders = files.filter((f) => f !== 'src/utils/nfl-team-colors.ts');
+    // precompute loops over its KEYS (players.astro pattern), so flag every
+    // way of reading COLORS off it: bracket/dot access, values/entries
+    // destructuring, and the exported fallback pair.
+    const patterns: Array<[pattern: string, fixed: boolean]> = [
+      ['NFL_TEAM_COLORS\\[', false],
+      ['NFL_TEAM_COLORS\\.', false],
+      ['Object.values(NFL_TEAM_COLORS', true],
+      ['Object.entries(NFL_TEAM_COLORS', true],
+      ['NFL_COLORS_FALLBACK.', true],
+    ];
+    const files = new Set<string>();
+    for (const [pattern, fixed] of patterns) {
+      for (const f of grepFiles(pattern, fixed)) files.add(f);
+    }
+    const offenders = [...files].filter((f) => f !== 'src/utils/nfl-team-colors.ts').sort();
     expect(
       offenders,
-      `Raw NFL_TEAM_COLORS indexing outside the color module: ${offenders.join(', ')}. ` +
+      `Raw NFL_TEAM_COLORS/NFL_COLORS_FALLBACK color access outside the color module: ${offenders.join(', ')}. ` +
         'Use getNflTeamColors() (allowlisted surfaces) or the avatar helpers.',
+    ).toEqual([]);
+  });
+
+  it('every file that renders .player-cell__avatar markup sets the team backdrop', () => {
+    // The bug class the allowlist can't see: REUSING the chip markup while
+    // omitting --player-avatar-bg silently ships gray chips in dark mode
+    // (how projected-free-agents and the AFL players page regressed).
+    // querySelector lookups and CSS selectors don't match these patterns —
+    // only markup construction does.
+    const markupPatterns: string[] = [
+      'class="player-cell__avatar', // template strings / .astro templates
+      "class:list={['player-cell__avatar", // PlayerCell.astro
+      'className={`player-cell__avatar', // PlayerCell.tsx
+    ];
+    const builders = new Set<string>();
+    for (const p of markupPatterns) {
+      for (const f of grepFiles(p, true)) builders.add(f);
+    }
+    const setsBackdrop = new Set([
+      ...grepFiles('--player-avatar-bg', true),
+      ...grepFiles('getPlayerAvatarBackground', true),
+    ]);
+    const offenders = [...builders].filter((f) => !setsBackdrop.has(f)).sort();
+    expect(
+      offenders,
+      `File(s) render .player-cell__avatar without setting --player-avatar-bg: ${offenders.join(', ')}. ` +
+        'Dark mode will show a gray chip instead of the team-color spotlight — use buildPlayerCellHTML, ' +
+        '<PlayerCell>, or the getPlayerAvatarStyleMaps() precompute pattern (see players.astro).',
     ).toEqual([]);
   });
 });

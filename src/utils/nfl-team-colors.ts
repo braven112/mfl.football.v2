@@ -17,7 +17,7 @@
  * ```
  */
 
-import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
+import { normalizeTeamCode, getNFLTeamName, TEAM_CODE_MAP } from './nfl-logo';
 
 export interface NflTeamColors {
   /** Dominant brand color — gradient anchor */
@@ -175,6 +175,28 @@ export function getPlayerAvatarBackground(teamCode: string): string {
  */
 export function getPlayerAvatarBorder(teamCode: string): string {
   return getNflTeamColors(teamCode).primary;
+}
+
+/**
+ * Precomputed avatar-style maps for client-side renderers that can't import
+ * at runtime (`define:vars` scripts — players.astro, projected-free-agents,
+ * AFL players). Keys cover every ESPN code AND every MFL alias (KCC, GBP,
+ * WAS, …) so a raw feed team code hits without client-side normalization.
+ * Pages pass these via `define:vars` and look up `map[team] || fallback`,
+ * with `getPlayerAvatarBackground('FA')` / `getPlayerAvatarBorder('FA')`
+ * as the fallbacks.
+ */
+export function getPlayerAvatarStyleMaps(): {
+  bg: Record<string, string>;
+  border: Record<string, string>;
+} {
+  const bg: Record<string, string> = {};
+  const border: Record<string, string> = {};
+  for (const code of [...Object.keys(NFL_TEAM_COLORS), ...Object.keys(TEAM_CODE_MAP)]) {
+    bg[code] = getPlayerAvatarBackground(code);
+    border[code] = getPlayerAvatarBorder(code);
+  }
+  return { bg, border };
 }
 
 /**

@@ -1077,17 +1077,33 @@ Key facts for future sessions:
   (TEN→secondary, DAL/LV/BUF/NYG→primary). Any future `NFL_TEAM_COLORS`
   edit that would sink a chip fails the build.
 
-## Backdrop sync sweep — live scoring + projected FA adopt the shared chip (2026-07-21)
+## Backdrop sync sweep — four stragglers adopt the shared chip (2026-07-21)
 
-Follow-up audit after the radial-spotlight change found two stragglers, both
-now fixed: `LiveScoreboard.tsx`'s `.ls-headshot` chip had its own
-`color-mix` math off the raw team primary (same near-black bug, both themes)
-— it now sets `--player-avatar-bg`/`--player-avatar-border` and
-`live-scoring.css` mirrors the player-cell light/dark split. And
-`projected-free-agents.astro` reused `.player-cell` markup without ever
-setting the property (gray chips in dark mode) — it now precomputes the
-avatar maps in frontmatter exactly like `players.astro`.
-`tests/team-color-backdrop-guard.test.ts` freezes the remaining direct
-`getNflTeamColors` consumers (the deep-ink composite family) behind a
-documented allowlist so a new surface can't hand-roll an unguarded
-team-color backdrop again; CLAUDE.md has the rule.
+Follow-up audit after the radial-spotlight change found four stragglers, all
+now fixed (the first audit claimed two — the independent PR #464 review
+caught the other two, a good reminder that "the audit found N" needs a
+second pass):
+
+- `LiveScoreboard.tsx`'s `.ls-headshot` chip had its own `color-mix` math
+  off the raw team primary (same near-black bug, both themes) — it now sets
+  `--player-avatar-bg`/`--player-avatar-border` and `live-scoring.css`
+  mirrors the player-cell light/dark split.
+- `projected-free-agents.astro` and `afl-fantasy/players.astro` reused
+  `.player-cell` markup without ever setting the property (gray chips in
+  dark mode) — both now precompute avatar maps in frontmatter via the new
+  `getPlayerAvatarStyleMaps()` helper (nfl-team-colors.ts), which covers
+  ESPN codes AND MFL aliases (WAS, KCC, GBP…) so raw feed codes hit without
+  client-side normalization.
+- `rosters.astro`'s players-by-team / players-by-college chart cards
+  hand-rolled the whole player-cell block in a module script that ALREADY
+  imported `buildPlayerCellHTML` — they now call it.
+
+`tests/team-color-backdrop-guard.test.ts` (4 checks) makes the sync
+structural: direct `getNflTeamColors` consumers frozen to a documented
+allowlist (deep-ink composite family); raw color access off
+`NFL_TEAM_COLORS`/`NFL_COLORS_FALLBACK` blocked outside the module (bracket
+AND dot access, `Object.values`/`entries`); stale allowlist entries pruned;
+and — the check that would have caught the two missed pages — any file
+whose markup renders `.player-cell__avatar` must also set
+`--player-avatar-bg`. CLAUDE.md has the rule. Grep gotcha for future guard
+tests: patterns starting with `--` need `-e` or grep parses them as options.
