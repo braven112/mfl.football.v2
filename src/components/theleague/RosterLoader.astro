@@ -69,8 +69,8 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
     if (window.__rosterLoaderInit) return;
     window.__rosterLoaderInit = true;
 
-    var DELAY_MS = 300;     // don't flash on fast/cached loads (the < 0.3s rule)
-    var CYCLE_MS = 2200;
+    var DELAY_MS = 1000;    // don't flash on fast/cached loads
+    var CYCLE_MS = 4000;
 
     // Lines come from the official per-league team data file, serialized into a
     // JSON script tag at SSR. Read at show() time so the current page's (league's)
