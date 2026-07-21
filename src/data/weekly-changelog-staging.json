@@ -7,6 +7,14 @@
     {
       "date": "2026-07-21",
       "type": "bug-fix",
+      "league": "theleague",
+      "impact": "user",
+      "area": "rosters",
+      "summary": "The Cut Watch reorder buttons were playing hide-and-seek in dark mode. The little up/down arrows and the × for un-marking a player were drawn in default-black ink on a near-black button — technically present, functionally invisible, especially on a phone where those arrows are the only way to reorder your cut list. The icons now inherit the button's actual color like every other icon on the site, so they show up crisp in both themes. The clipboard on the MARKED badge got the same treatment while we were in there."
+    },
+    {
+      "date": "2026-07-21",
+      "type": "bug-fix",
       "league": "both",
       "impact": "user",
       "area": "design-system",
