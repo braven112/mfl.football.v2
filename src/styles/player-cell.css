@@ -48,11 +48,12 @@
   border-radius: 50%;
   overflow: hidden;
   /* Light mode: light-gray chip + team-color ring (see --player-avatar-border,
-     getPlayerAvatarBorder) — the dark gradient reads too heavy against a
-     white page. Dark mode below restores the full team-color gradient
-     backdrop via --player-avatar-bg (getPlayerAvatarBackground). Falls back
-     to plain gray/border when neither property is set — DEF chips, or any
-     renderer that opts out. */
+     getPlayerAvatarBorder) — a team-color gradient reads too heavy against a
+     white page. Dark mode below applies the team-color gradient backdrop via
+     --player-avatar-bg (getPlayerAvatarBackground) — luminance-floored, so
+     dark-jerseyed headshots stay readable even for near-black team colors.
+     Falls back to plain gray/border when neither property is set — DEF chips,
+     or any renderer that opts out. */
   background: var(--content-bg-muted, #f3f4f6);
   border: 2px solid var(--player-avatar-border, var(--content-border, #e2e8f0));
 }

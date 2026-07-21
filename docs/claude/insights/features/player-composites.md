@@ -953,12 +953,12 @@ values, and use the showcase only as a proxy for the shared sizing math.
 
 ## Reusable player-avatar team-color backdrop (2026-07-08)
 
-The small circular player headshots in the player-cell lockup wear the **same
-NFL-team gradient as the player modal band** — a deep-ink→team-primary
-`linear-gradient(115deg, …)`. Single source of truth is
-`getPlayerAvatarBackground(teamCode)` in `nfl-team-colors.ts` (mirrors the
-base, no-accent stops from `applyPlayerModalBand`). Free agents / unknown codes
-fall back to the league-neutral blue.
+The small circular player headshots in the player-cell lockup wear an
+NFL-team-color `linear-gradient(115deg, …)` backdrop. Single source of truth
+is `getPlayerAvatarBackground(teamCode)` in `nfl-team-colors.ts`. Free agents
+/ unknown codes fall back to the league-neutral blue. (Historically this
+mirrored the player modal band's deep-ink→primary stops; since 2026-07-21 it
+diverges — see the dark-mode readability note below.)
 
 - **Distribution is a CSS custom property, not per-renderer color math.**
   `player-cell.css` reads `background: var(--player-avatar-bg, …gray)`. Each of
@@ -1035,3 +1035,37 @@ call site before assuming a `compact` is drift vs. intentional. None of the
 surrounding containers (`.kp-card__player`, `.tb-picker__cell`,
 `.players-team__player`) hardcode a pixel width tied to the avatar size — they
 use `flex`/`min-width: 0`, so the size bump needed no layout changes.
+
+## Dark-mode avatar backdrop lightened — anchor picker + luminance floor (2026-07-21)
+
+A third of the NFL wears near-black primaries (TEN, PIT, CHI, SEA, HOU, LV,
+NO, NE, CLE), and the avatar gradient mixed that primary a further 62% toward
+ink — so in dark mode a dark-jerseyed headshot (Cam Ward on Titans navy) was
+effectively invisible. `getPlayerAvatarBackground` no longer mirrors the
+modal band's stops; it now:
+
+1. **Picks an anchor**: the primary, unless its luminance is < 33 — then the
+   secondary takes over IF it's lighter and chromatic (chroma ≥ 25). That
+   yields Titans light blue, Steelers gold, Bears orange, Seahawks action
+   green, while DAL/BUF/NYG keep their identity navies (gray secondaries
+   never win) and LV's black just lightens to its own silver-gray.
+2. **Floors the anchor** at luminance ≥ 60 by mixing toward white (solved
+   analytically — luminance is linear under white-mixing; target floor+1 to
+   absorb per-channel rounding).
+3. Softens the ink-mix on the 0% stop from 0.62 → 0.45 so the whole chip,
+   not just the far corner, sits above the readability line.
+
+Key facts for future sessions:
+
+- **This function is dark-mode-only by construction** — `player-cell.css`
+  reads `--player-avatar-bg` under `html.dark` only; light mode uses the
+  gray chip + `--player-avatar-border` ring. So lightening it can't wash out
+  light mode.
+- **The modal band (`player-modal-band.ts`) still has the original dark
+  stops and the same near-black-team problem** — but it carries white text,
+  so it needs its own contrast treatment (lighter backdrop = dark text),
+  not a copy-paste of this anchor logic.
+- `tests/nfl-team-colors.test.ts` now asserts the ≥ 60 anchor / ≥ 35 ink
+  luminance floors for all 32 teams + the FA fallback, plus the specific
+  swap decisions (TEN→secondary, DAL/LV/BUF/NYG→primary). Any future
+  `NFL_TEAM_COLORS` edit that would sink a chip fails the build.
