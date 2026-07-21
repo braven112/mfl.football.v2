@@ -157,7 +157,7 @@ const {
 
     // ── Redirect resolution ──────────────────────────────────────
     const params = new URLSearchParams(window.location.search);
-    let redirectUrl = params.get('redirect');
+    let redirectUrl = params.get('redirect') || params.get('next');
 
     if (!redirectUrl) {
       redirectUrl = sessionStorage.getItem('loginRedirectUrl') || document.referrer;
@@ -226,6 +226,13 @@ const {
         if (finalUrl.includes('://')) {
           try { finalUrl = new URL(finalUrl).pathname; }
           catch { finalUrl = '/theleague'; }
+        }
+
+        // Same-origin paths only: protocol-relative (`//evil.com`) and
+        // scheme-only (`javascript:…`) values slip past the '://' check
+        // above but both fail this one.
+        if (!finalUrl.startsWith('/') || finalUrl.startsWith('//')) {
+          finalUrl = '/theleague';
         }
 
         sessionStorage.removeItem('loginRedirectUrl');

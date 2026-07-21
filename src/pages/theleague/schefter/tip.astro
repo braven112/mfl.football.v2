@@ -23,7 +23,10 @@ if (
   !user?.franchiseId ||
   !isAuthorizedForLeague(user, getLeagueBySlug('theleague')!.id)
 ) {
-  return Astro.redirect('/theleague/login?redirect=/theleague/schefter/tip');
+  // TheLeague's LoginForm honors `?redirect=` client-side; carry the query
+  // string so a whisper-back CTA's ?target= pre-selection survives login.
+  const redirect = encodeURIComponent(`/theleague/schefter/tip${Astro.url.search}`);
+  return Astro.redirect(`/theleague/login?redirect=${redirect}`);
 }
 
 const league = getLeagueBySlug('theleague')!;

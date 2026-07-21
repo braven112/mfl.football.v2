@@ -1,0 +1,17 @@
+---
+/**
+ * /theleague/schefter — bare "/schefter" has no page of its own; the
+ * Schefter Report feed lives at /news. People type or truncate the URL
+ * (every schefter surface links deeper: /schefter/tip, /schefter/thread/…),
+ * so send them to the feed instead of a 404. Host-aware so the apex domain
+ * gets a single clean-URL hop, and a 302 (not 301) so browsers don't cache
+ * the alias forever if /schefter ever becomes a real page.
+ */
+export const prerender = false;
+
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+
+return Astro.redirect(
+  resolveLeaguePath('/theleague/news', Astro.locals.hideLeaguePrefix ?? false)
+);
+---
