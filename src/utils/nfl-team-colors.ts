@@ -169,9 +169,10 @@ export function getPlayerAvatarBackground(teamCode: string): string {
 }
 
 /**
- * Team-primary hex for the avatar ring in light mode. Light mode keeps a
- * 2px team-primary border around the gradient chip (dark mode swaps it for
- * a half-white ring). See `--player-avatar-border` in player-cell.css.
+ * Team-primary hex for `--player-avatar-border`. Both themes now ring the
+ * gradient chip with the half-white `--player-avatar-ring` token, so this
+ * only surfaces on chips that opt out of the gradient (the base fallback in
+ * player-cell.css). Renderers still set it alongside --player-avatar-bg.
  */
 export function getPlayerAvatarBorder(teamCode: string): string {
   return getNflTeamColors(teamCode).primary;
