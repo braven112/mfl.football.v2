@@ -62,9 +62,9 @@
 .player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__avatar--eligible) {
   background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
   /* Team-tinted ring in BOTH themes, set per-player by the renderers: light
-     mode uses getPlayerAvatarRing (anchor mixed halfway to ink — a darker
+     mode uses getPlayerAvatarRing (anchor mixed toward ink — a darker
      echo that separates the chip from white rows); dark mode swaps below to
-     getPlayerAvatarRingDark (anchor mixed halfway to white). The translucent
+     getPlayerAvatarRingDark (anchor mixed toward white). The translucent
      fallbacks cover any renderer that sets the bg without the rings. */
   border: 1px solid var(--player-avatar-ring, rgba(0, 0, 0, 0.35));
 }

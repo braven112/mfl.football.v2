@@ -173,14 +173,14 @@ export function getPlayerAvatarBackground(teamCode: string): string {
   return `radial-gradient(circle at 50% 30%, ${highlight} 0%, ${anchor} 58%, ${edge} 100%)`;
 }
 
-/** Ring mix ratio — halfway between the anchor and the theme's pole. */
-const AVATAR_RING_MIX = 0.5;
+/** Ring mix ratio — how far the anchor shifts toward the theme's pole. */
+const AVATAR_RING_MIX = 0.35;
 /** Dark pole for the light-mode ring — same ink as the gradient's edge stop. */
 const AVATAR_RING_INK = '#0b0e13';
 
 /**
  * Light-mode ring color for the avatar chip: the gradient's anchor color
- * mixed halfway to ink, so the ring reads as a darker echo of the chip that
+ * mixed toward ink (AVATAR_RING_MIX), so the ring reads as a darker echo of the chip that
  * separates it from white table rows. Opaque on purpose — the translucent
  * fallback ring in player-cell.css disappears on light rows. Set as
  * `--player-avatar-ring` alongside the other avatar properties;
@@ -191,7 +191,7 @@ export function getPlayerAvatarRing(teamCode: string): string {
 }
 
 /**
- * Dark-mode ring color: the anchor mixed halfway to white — a lighter echo
+ * Dark-mode ring color: the anchor mixed toward white (AVATAR_RING_MIX) — a lighter echo
  * of the chip that pops it off dark table rows. Set as
  * `--player-avatar-ring-dark`; player-cell.css swaps to it under html.dark.
  */
