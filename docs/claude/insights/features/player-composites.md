@@ -1076,3 +1076,18 @@ Key facts for future sessions:
   anchor, anchor ≥ 60, edge ≥ 35), plus the specific swap decisions
   (TEN→secondary, DAL/LV/BUF/NYG→primary). Any future `NFL_TEAM_COLORS`
   edit that would sink a chip fails the build.
+
+## Backdrop sync sweep — live scoring + projected FA adopt the shared chip (2026-07-21)
+
+Follow-up audit after the radial-spotlight change found two stragglers, both
+now fixed: `LiveScoreboard.tsx`'s `.ls-headshot` chip had its own
+`color-mix` math off the raw team primary (same near-black bug, both themes)
+— it now sets `--player-avatar-bg`/`--player-avatar-border` and
+`live-scoring.css` mirrors the player-cell light/dark split. And
+`projected-free-agents.astro` reused `.player-cell` markup without ever
+setting the property (gray chips in dark mode) — it now precomputes the
+avatar maps in frontmatter exactly like `players.astro`.
+`tests/team-color-backdrop-guard.test.ts` freezes the remaining direct
+`getNflTeamColors` consumers (the deep-ink composite family) behind a
+documented allowlist so a new surface can't hand-roll an unguarded
+team-color backdrop again; CLAUDE.md has the rule.

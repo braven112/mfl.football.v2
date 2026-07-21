@@ -21,6 +21,7 @@ import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
+import { NFL_TEAM_COLORS, getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -336,6 +337,20 @@ const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
 // ── Serialize for client ──
 const playerDataJson = JSON.stringify(expiringPlayers);
 const posCountsJson = JSON.stringify(posCounts);
+
+// NFL-team avatar backdrops (same pattern as players.astro): precomputed in
+// frontmatter so the client-side row builder just does a lookup — no color
+// math duplicated in the browser. FA/unknown falls back to league-neutral.
+const nflAvatarBg: Record<string, string> = {};
+const nflAvatarBorder: Record<string, string> = {};
+for (const code of Object.keys(NFL_TEAM_COLORS)) {
+  nflAvatarBg[code] = getPlayerAvatarBackground(code);
+  nflAvatarBorder[code] = getPlayerAvatarBorder(code);
+}
+const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
+const nflAvatarBorderFallback = getPlayerAvatarBorder('FA');
+const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
+const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
 const franchiseListJson = JSON.stringify(franchiseEntries);
 
 function formatSalary(salary: number): string {
@@ -494,11 +509,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost }}>
+<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback }}>
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
   const players = JSON.parse(playerDataJson);
   const posCounts = JSON.parse(posCountsJson);
+  const nflAvatarBg = JSON.parse(nflAvatarBgJson);
+  const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
+
+  function getAvatarStyle(team) {
+    var bg = nflAvatarBg[team] || nflAvatarBgFallback;
+    var border = nflAvatarBorder[team] || nflAvatarBorderFallback;
+    return ' style="--player-avatar-bg: ' + bg + '; --player-avatar-border: ' + border + '"';
+  }
 
   let filteredPlayers = [...players];
   let currentSort = 'projected';
@@ -625,7 +648,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       + '<td class="cell-rank">' + (index + 1) + '</td>'
       + '<td class="cell-player">'
         + '<div class="player-cell">'
-          + '<div class="player-cell__avatar' + avatarClass + '">'
+          + '<div class="player-cell__avatar' + avatarClass + '"' + (isDef ? '' : getAvatarStyle(p.nflTeam)) + '>'
             + '<img src="' + escapeAttr(avatarSrc) + '" alt="' + escapeAttr(p.name) + '" loading="lazy" decoding="async" onerror="' + escapeAttr(buildOnerror(p.id, p.espnId)) + '" />'
           + '</div>'
           + '<div class="player-cell__info">'
