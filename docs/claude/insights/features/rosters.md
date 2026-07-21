@@ -26,4 +26,4 @@
 
 **Evidence:** Commit "Remove 'How It Works' contract demo tab from TheLeague rosters page" removed only the import and `<ContractDemoOverlay />` from `src/pages/theleague/rosters.astro`. The component file and the `cdemo-*` JS block (search `cdemo` in rosters.astro) remain.
 
-**Recommendation:** To re-enable for next declaration season, re-add the import and render — nothing else. If instead the demo is ever removed for good, delete the component file, the `cdemo` JS block, `buildDemoPlayers()`, and the `__cdemoSetStep` hook referenced by `ContractDeclarationModal.astro`'s step-2 glossary link together.
+**Recommendation:** To re-enable for next declaration season, re-add the import and render — nothing else. If instead the demo is ever removed for good, delete the component file, the `cdemo` JS block, `buildDemoPlayers()`, and the `window.__cdemoSetStep` export together. (Note: `__cdemoSetStep` is defined in rosters.astro but nothing calls it — the overlay's step-2 glossary link is wired by the component's own inline script, despite what the old comment next to the export claims.)
