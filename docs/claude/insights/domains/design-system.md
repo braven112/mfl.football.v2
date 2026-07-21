@@ -1588,3 +1588,23 @@ written into an `ownerHistory` entry instead of the top-level team. Always
 target the **top-level** team object, and audit with a JSON parse (count teams
 with `colorPrimary`, and count `colorPrimary` leaks inside `ownerHistory`)
 rather than a line-based grep.
+
+---
+
+## 2026-07-21 - Inline `style` Colors in JS-Built Markup Are Invisible to Both the Token Guard and Dark Mode
+
+The rosters-page contract-year chips (`.yrs-chip`) stayed light-mode in dark
+theme for two reasons, and only one of them is catchable by tooling:
+
+1. **Hardcoded light gradients in `:global()` page styles** (`#eff6ff`/`#dbeafe`
+   blues, `#fef3c7` ambers) with no `html.dark` overrides. The design-token
+   guard can't flag these — they're valid literals, just wrong for the theme.
+   Fix pattern: add `html.dark` overrides using the badge token pairs
+   (`--badge-info/warning/error/success-bg/-text`) — same approach as the
+   rank-tier pills in the same file.
+2. **Inline `style="color:#059669"` inside JS string-built HTML** (the approved
+   asterisk). An inline style beats any `html.dark` CSS override at specificity,
+   so no stylesheet fix can reach it — the color must move into a class rule.
+   Grep target when sweeping a page for dark-mode issues: `style="color:` and
+   `style='color:` in `.astro`/`.ts` client scripts that build markup via
+   string concatenation; the token guard test never sees these.

@@ -4227,6 +4227,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     font-size: 0.75rem;
     vertical-align: super;
     line-height: 1;
+    color: #059669;
   }
 
   /* Deadline badge */
@@ -4256,6 +4257,63 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   @keyframes yrs-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
+  }
+
+  /* Dark-mode chip states: translucent badge fills instead of light gradients */
+  :global(html.dark .yrs-chip--eligible) {
+    background: var(--badge-info-bg, rgba(59, 130, 246, 0.15));
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+
+  :global(html.dark .yrs-chip--eligible:hover) {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.45);
+    border-left-color: var(--color-primary, #3b82f6);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  :global(html.dark .yrs-chip--eligible .yrs-chip__value) {
+    color: var(--badge-info-text, #93bbfd);
+  }
+
+  :global(html.dark .yrs-chip--pending) {
+    background: var(--badge-warning-bg, rgba(245, 158, 11, 0.15));
+    border-color: rgba(245, 158, 11, 0.25);
+    border-left-color: #f59e0b;
+  }
+
+  :global(html.dark .yrs-chip--pending:hover) {
+    background: rgba(245, 158, 11, 0.25);
+    border-color: rgba(245, 158, 11, 0.45);
+    border-left-color: #f59e0b;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  :global(html.dark .yrs-chip--pending .yrs-chip__value) {
+    color: var(--badge-warning-text, #fcd34d);
+  }
+
+  :global(html.dark .yrs-chip--approved .yrs-chip__value) {
+    color: var(--badge-success-text, #6ee7b7);
+  }
+
+  :global(html.dark .yrs-chip__asterisk) {
+    color: var(--badge-success-text, #6ee7b7);
+  }
+
+  :global(html.dark .yrs-chip__deadline) {
+    background: var(--badge-warning-bg, rgba(245, 158, 11, 0.15));
+    color: var(--badge-warning-text, #fcd34d);
+  }
+
+  :global(html.dark .yrs-chip__deadline--urgent) {
+    background: rgba(249, 115, 22, 0.2);
+    color: #fdba74;
+  }
+
+  :global(html.dark .yrs-chip__deadline--critical) {
+    background: var(--badge-error-bg, rgba(220, 38, 38, 0.15));
+    color: var(--badge-error-text, #fca5a5);
   }
 
   :global(.salary-cell--future-ufa) {
@@ -5434,7 +5492,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return '<button class="yrs-chip ' + statusClass + ' yrs-chip--eligible" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + declYears + '</span>' + badge + '</button>';
       }
       if (localDecl.status === 'approved') {
-        return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + localDecl.years + '</span><span class="yrs-chip__asterisk" style="color:#059669">*</span></span>';
+        return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + localDecl.years + '</span><span class="yrs-chip__asterisk">*</span></span>';
       }
       // Pending: editable chip with deadline
       const badge = buildDeadlineBadge(elig);
@@ -5452,7 +5510,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return '<button class="yrs-chip ' + statusClass + ' yrs-chip--eligible" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + declYears + '</span>' + badge + '</button>';
       }
       if (serverDecl.status === 'approved') {
-        return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + serverDecl.requestedYears + '</span><span class="yrs-chip__asterisk" style="color:#059669">*</span></span>';
+        return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + serverDecl.requestedYears + '</span><span class="yrs-chip__asterisk">*</span></span>';
       }
       // Pending: editable chip with deadline
       const badge = buildDeadlineBadge(elig);
