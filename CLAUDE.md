@@ -299,6 +299,11 @@ leagues. Rules that keep them cheap to add and impossible to break:
   commissioner-only via `/api/best-ball-draft/create` with `official: true`,
   full veteran player pool, 25 rounds, human pick clocks. Zero party-server
   changes — don't fork `party/draft-room.ts` for it.
+- **Redraft ADP, not dynasty.** Best-ball leagues re-form every season, so
+  every ADP surface (player-pool sort/badges via `adpSource: 'redraft'`,
+  auto-pick lists via the `mfl-redraft` ranking source) uses
+  `adp-redraft.json`. Dynasty ADP is only a fallback source — it overrates
+  youth for a one-season roster.
 - **No live MFL syncing by design.** The draft runs entirely on-site; after
   completion `pnpm export:bb-draft --commit` snapshots the results to
   `data/best-ball-1/draft/` and imports them to MFL through the

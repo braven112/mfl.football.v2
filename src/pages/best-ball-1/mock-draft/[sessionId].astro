@@ -50,9 +50,11 @@ const teams: DraftRoomTeam[] = (bb1Config.teams ?? []).map((team: any) => ({
 }));
 
 // ── Full veteran+rookie pool — best-ball mocks rehearse the startup draft ──
+// Redraft ADP: the league redrafts every season, so dynasty ranks mislead.
 const players = buildDraftPlayers(getCurrentLeagueYear(), {
   rookieOnly: false,
   viewerFranchiseId: user.franchiseId,
+  adpSource: 'redraft',
 });
 
 // ── Serialize page data — picks populate from the PartyKit session sync ──

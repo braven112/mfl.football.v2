@@ -305,6 +305,26 @@ export const POST: APIRoute = async ({ request }) => {
       if (deduped.length > 0) rankedLists['mfl-dynasty'] = topUp(deduped);
     }
 
+    // MFL redraft ADP (local feed) — best-ball mocks only. These leagues are
+    // seasonal redrafts, so this is their PRIMARY board (dynasty ADP
+    // overrates youth/longevity for a one-season roster).
+    if (isBestBall) {
+      const redraft = loadJsonFile(
+        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${leagueYearStr}/adp-redraft.json`,
+      );
+      const raw = redraft?.adp?.player;
+      const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      const ordered = arr
+        .filter((p: any) => rookieIdSet.has(p.id))
+        .sort(
+          (a: any, b: any) =>
+            parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'),
+        )
+        .map((p: any) => p.id as string);
+      const deduped = dedupe(ordered);
+      if (deduped.length > 0) rankedLists['mfl-redraft'] = topUp(deduped);
+    }
+
     // Sleeper (cached) — a rookie board; useless against a full startup pool
     if (!isBestBall) {
       const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${leagueYearStr}.json`);
@@ -356,14 +376,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Pick a usable default in priority order so if the caller doesn't
     // specify one, we use the freshest/most-authoritative source that loaded.
     const availableSources = Object.keys(rankedLists) as MockRankingSource[];
-    const defaultPriority: MockRankingSource[] = [
-      'mfl-rookie',
-      'mfl-dynasty',
-      'sleeper',
-      'ktc',
-      'my-rank',
-      'random',
-    ];
+    const defaultPriority: MockRankingSource[] = isBestBall
+      ? ['mfl-redraft', 'mfl-dynasty', 'my-rank', 'random']
+      : ['mfl-rookie', 'mfl-dynasty', 'sleeper', 'ktc', 'my-rank', 'random'];
     const fallbackDefault: MockRankingSource =
       defaultPriority.find((s) => rankedLists[s] && rankedLists[s]!.length > 0) ?? 'random';
 

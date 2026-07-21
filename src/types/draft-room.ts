@@ -266,6 +266,7 @@ export type MockTimerPreset = 60 | 120 | 300;
 export type MockRankingSource =
   | 'mfl-rookie'
   | 'mfl-dynasty'
+  | 'mfl-redraft'
   | 'sleeper'
   | 'ktc'
   | 'my-rank'
@@ -275,6 +276,7 @@ export type MockRankingSource =
 export const MOCK_RANKING_LABELS: Record<MockRankingSource, string> = {
   'mfl-rookie': 'MFL Rookie ADP',
   'mfl-dynasty': 'MFL Dynasty ADP',
+  'mfl-redraft': 'MFL Redraft ADP',
   sleeper: 'Sleeper',
   ktc: 'KeepTradeCut',
   'my-rank': 'My Rank',

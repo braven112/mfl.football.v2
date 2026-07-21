@@ -66,10 +66,12 @@ if (session) {
 
   // FULL veteran+rookie pool — a best-ball startup drafts the whole roster.
   // The player catalog feed is shared (see create route note); its directory
-  // is keyed by the default league's year clock.
+  // is keyed by the default league's year clock. Redraft ADP: this league
+  // redrafts every season, so dynasty ranks would mislead the pool sort.
   const players = buildDraftPlayers(getCurrentLeagueYear(), {
     rookieOnly: false,
     viewerFranchiseId: user.franchiseId,
+    adpSource: 'redraft',
   });
 
   pageData = {

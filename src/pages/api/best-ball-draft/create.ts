@@ -149,30 +149,38 @@ export const POST: APIRoute = async ({ request }) => {
     const poolIdSet = new Set(draftPool.map((p: any) => p.id));
 
     // ── Ranked lists for the auto-pick engine ──
-    // Best-ball startup uses the FULL dynasty ADP (no rookie filter) so a
-    // disconnected team still drafts a sane roster, plus random as the
-    // always-available fallback. Rookie-mock sources (Sleeper/KTC rookie
-    // boards, my-rank) don't apply to a 25-round veteran draft.
+    // Best-ball leagues are seasonal REDRAFTS, so the primary board is the
+    // full redraft ADP (dynasty ADP overrates youth/longevity here). Dynasty
+    // stays available as a fallback source, and random is the always-there
+    // last resort. Rookie-mock sources (Sleeper/KTC rookie boards, my-rank)
+    // don't apply to a 25-round veteran draft.
     const rankedLists: Partial<Record<MockRankingSource, string[]>> = {};
-    {
-      const dynasty = loadJsonFile(
-        `${defaultLeague.dataPath}/mfl-feeds/${leagueYearStr}/adp-dynasty.json`,
+    const buildAdpList = (feedKey: 'adp-redraft' | 'adp-dynasty'): string[] | null => {
+      const feed = loadJsonFile(
+        `${defaultLeague.dataPath}/mfl-feeds/${leagueYearStr}/${feedKey}.json`,
       );
-      const raw = dynasty?.adp?.player;
+      const raw = feed?.adp?.player;
       const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
       const ordered = arr
         .filter((p: any) => poolIdSet.has(p.id))
         .sort((a: any, b: any) => parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'))
         .map((p: any) => p.id as string);
-      if (ordered.length > 0) {
-        // Top up with the rest of the pool so 300 picks never run dry.
-        const covered = new Set(ordered);
-        const tail = draftPool.filter((p: any) => !covered.has(p.id)).map((p: any) => p.id as string);
-        rankedLists['mfl-dynasty'] = ordered.concat(tail);
-      }
-    }
+      if (ordered.length === 0) return null;
+      // Top up with the rest of the pool so 300 picks never run dry.
+      const covered = new Set(ordered);
+      const tail = draftPool.filter((p: any) => !covered.has(p.id)).map((p: any) => p.id as string);
+      return ordered.concat(tail);
+    };
+    const redraftList = buildAdpList('adp-redraft');
+    if (redraftList) rankedLists['mfl-redraft'] = redraftList;
+    const dynastyList = buildAdpList('adp-dynasty');
+    if (dynastyList) rankedLists['mfl-dynasty'] = dynastyList;
     rankedLists.random = shuffle(draftPool.map((p: any) => p.id as string));
-    const defaultRankingSource: MockRankingSource = rankedLists['mfl-dynasty'] ? 'mfl-dynasty' : 'random';
+    const defaultRankingSource: MockRankingSource = rankedLists['mfl-redraft']
+      ? 'mfl-redraft'
+      : rankedLists['mfl-dynasty']
+        ? 'mfl-dynasty'
+        : 'random';
 
     // ── Deterministic official session id ──
     const sessionId = `${league.navSlug}-official-${leagueYearStr}`;
