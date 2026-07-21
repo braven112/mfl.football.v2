@@ -296,3 +296,32 @@ cookies alive past a deliberate key change. If a rotation is ever done
 close to the August deadline, run `--validate-only` afterward: it will
 name every team whose credential now reads as missing so they can be
 nudged to log in once (which recaptures under the new key).
+
+## 2026-07-21 - Panel Auto-Save Architecture + the Unmark-Undo Trap in applyMarkedOrder
+
+**Context:** Owner-approved UX round: the explicit Save button is gone.
+Every panel edit (arrow, drag, Mark, ×/unmark) funnels through
+`applyMarkedOrder` → `scheduleAutocutAutoSave` (900ms debounce) →
+`runAutocutSaveNow` → `postAndCommit`. `postAndCommit` prunes genuinely
+departed players before POSTing; a pending debounce is flushed on
+`pagehide`/`visibilitychange`; the status line's "Verify login"/"Retry
+now" actions call `runAutocutSaveNow(true)` (force), which exists to
+re-verify the MFL credential even when the list is unchanged — don't
+"optimize" the force path away behind the dirty check.
+
+**Trap (real bug caught by live Playwright verification, not unit
+tests):** `applyMarkedOrder` preserves ids missing from the new order as
+"off-roster trailing" entries so departed players keep their slot until
+save-time pruning. Its original filter kept ANY missing id — so unmarking
+an on-roster player re-appended him immediately and the unmark silently
+undid itself (and the dirty check then suppressed the save entirely). The
+preservation filter must also require `!activeRosterIds.has(id)`. If you
+touch the marked-list plumbing, re-run the E2E flow: the failure mode is
+invisible to assertions that only inspect POST payloads that never fire.
+
+**Verification recipe that caught it:** forge a session JWT (verify
+skill), `page.route` `/api/autocut-list` POSTs to a success stub that
+echoes `playerIds`, then assert the exact payload after each edit path
+(panel mark, arrows, synthetic HTML5 drag with a real `DataTransfer`, CDM
+toggle, unmark). Dark-mode screenshots need the `theme_pref=dark` cookie +
+reload — toggling `html.dark` via `classList` mid-page renders wrong.

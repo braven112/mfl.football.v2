@@ -883,3 +883,31 @@ randomization; templates/css-customization diverged only at the footer chrome
 **Evidence:** `src/components/schefter/{TipPage,AdminDashboard}.astro` extraction (branch `claude/afl-tips-schefter-alignment-04jzfx`); the whats-new.json import broke exactly this way and was caught by a live page fetch, not by tests.
 
 **Recommendation:** For any page-to-component extraction: move body+style+script wholesale, add a single JSON config blob for client-script parameters, then verify every changed import with a live render of BOTH consuming pages before committing — the unit suite does not import .astro files and will stay green through a broken import.
+
+## 2026-07-21 - Initial-Load Double-Init + Bind-Once Element Guards = Stale-Closure State Split
+
+**Context:** The Cutdown Plan panel's Save posted the owner's ORIGINAL cut
+list and wiped their marks, even though every edit rendered correctly.
+
+**Insight:** The 2026-06-27 recommendation ("element-scoped listeners are
+free to re-bind on `astro:page-load` because the swapped DOM discards
+them") has a blind spot: on the INITIAL load the DOM is *not* swapped, and
+a page that registers `init()` both directly at module eval AND on
+`astro:page-load` (ClientRouter fires it on first load too) runs `init()`
+twice on the SAME DOM. If `init()` creates per-run closure state and binds
+element listeners once behind `dataset` flags, the listeners freeze the
+FIRST run's state while everything rebuilt per-run (roster rows, modal
+options) reads/writes the SECOND run's state — two divergent copies, and
+which one a control touches depends on when it was bound. The user-visible
+symptom is "the display updates but acting on it uses old data."
+
+**Fix pattern:** keep the bind-once guards, but have every once-bound
+listener dispatch through a `window.__<ns>` live-ref object that each
+`init()` run reassigns to its own closures (`window.__cdpH` in
+rosters.astro). The newest run then owns ALL entry points. The root cause
+(dedup `init()` itself per DOM) is tracked as follow-up work on branch
+`claude/rosters-init-dedup`.
+
+**Evidence:** src/pages/theleague/rosters.astro `initCutdownPanelBindings`
+(window.__cdpH), verified with a Playwright run asserting the exact POST
+payload after each edit path.
