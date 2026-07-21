@@ -313,12 +313,35 @@ export interface MockDraftSession {
   /** Source applied to any franchise not present in `rankingAssignments`. */
   defaultRankingSource?: MockRankingSource;
   /**
+   * Per-franchise auto-draft overrides, editable mid-draft by the creator
+   * via the `set-auto-draft` socket message. Missing entries fall back to
+   * the legacy default: every team except the creator's is CPU-drafted.
+   * A `false` entry makes that team creator-controlled — its picks run the
+   * full clock and the creator may pick for it manually.
+   */
+  autoDraft?: Record<string, boolean>;
+  /**
    * True for a league's OFFICIAL draft of record (best-ball startup drafts
    * run through the same engine). Official sessions use a deterministic id
    * (`{navSlug}-official-{year}`), are created commissioner-only, and are
    * the only sessions the MFL export script will touch.
    */
   official?: boolean;
+}
+
+/**
+ * Client mirror of the party server's auto-draft resolution: explicit
+ * per-team overrides win; the legacy default is that every team except the
+ * creator's is auto-drafted. Keep in sync with `isAutoDrafted` in
+ * party/draft-room.ts (which can't import from src/).
+ */
+export function isFranchiseAutoDrafted(
+  session: Pick<MockDraftSession, 'createdBy' | 'autoDraft'>,
+  franchiseId: string,
+): boolean {
+  const override = session.autoDraft?.[franchiseId];
+  if (typeof override === 'boolean') return override;
+  return franchiseId !== session.createdBy;
 }
 
 /** A single pick in a mock draft */

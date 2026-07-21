@@ -15,6 +15,12 @@ interface DraftTimerBannerProps {
   actions?: React.ReactNode;
   /** True when the current pick belongs to the user — changes banner state to "you" */
   isUserTurn?: boolean;
+  /**
+   * Mock mode: the user (session creator) is picking on behalf of another
+   * team they control — banner says "Pick for {team}" instead of
+   * "Make Your Pick".
+   */
+  pickingForOtherTeam?: boolean;
 }
 
 type TimerDataState = 'idle' | 'other' | 'you' | 'warning' | 'danger' | 'complete' | 'suspended';
@@ -160,6 +166,7 @@ export function DraftTimerBanner({
   mockClockSeconds,
   actions,
   isUserTurn = false,
+  pickingForOtherTeam = false,
 }: DraftTimerBannerProps) {
   const isMockTimer = mockClockSeconds !== undefined;
   const internalTimer = useTimer(currentPick, draftKind, draftLimitHours, draftTimerSusp, draftComplete);
@@ -226,7 +233,11 @@ export function DraftTimerBanner({
             {isUserTurn ? "You're Up · " : 'On the Clock · '}{pickLabel}
           </div>
           <div className="dr-team-name">
-            {isUserTurn ? 'Make Your Pick' : teamLabel}
+            {isUserTurn
+              ? pickingForOtherTeam
+                ? `Pick for ${teamLabel}`
+                : 'Make Your Pick'
+              : teamLabel}
           </div>
         </div>
       </div>

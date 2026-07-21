@@ -11,7 +11,8 @@
  *
  * ── Mock Draft ──
  * Room keys: `mock-{sessionId}` or `{leagueId}-registry`
- * Client → Server: join, pick, toggle-auto, start, pause, resume, skip, reset
+ * Client → Server: join, pick, toggle-auto, start, pause, resume, skip, reset,
+ *                  undo, set-timer, set-auto-draft
  * Server → Client: session, pick-made, pick-clock, error, participant-joined/left
  */
 
@@ -57,6 +58,14 @@ interface MockDraftSession {
   picks: MockPick[];
   participants: MockParticipant[];
   useRealOrder: boolean;
+  /**
+   * Per-franchise auto-draft overrides, editable mid-draft by the creator.
+   * Missing entries fall back to the legacy default: every team except the
+   * creator's is CPU-drafted. A `false` entry makes that team creator-
+   * controlled — its picks run the full clock and the creator may pick for
+   * it manually.
+   */
+  autoDraft?: Record<string, boolean>;
 }
 
 interface MockPick {
@@ -85,10 +94,18 @@ interface ResumeMessage { type: 'resume'; franchiseId: string; }
 interface SkipMessage { type: 'skip'; franchiseId: string; }
 interface ResetMessage { type: 'reset'; franchiseId: string; }
 interface UndoMessage { type: 'undo'; franchiseId: string; }
+interface SetTimerMessage { type: 'set-timer'; franchiseId: string; timerSeconds: number; }
+interface SetAutoDraftMessage {
+  type: 'set-auto-draft';
+  franchiseId: string;
+  targetFranchiseId: string;
+  autoDraft: boolean;
+}
 
 type MockClientMessage =
   | JoinMessage | PickMessage | ToggleAutoMessage
-  | StartMessage | PauseMessage | ResumeMessage | SkipMessage | ResetMessage | UndoMessage;
+  | StartMessage | PauseMessage | ResumeMessage | SkipMessage | ResetMessage | UndoMessage
+  | SetTimerMessage | SetAutoDraftMessage;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Constants
@@ -280,6 +297,10 @@ export default class DraftRoomServer implements Party.Server {
         return this.handleReset(msg);
       case 'undo':
         return this.handleUndo(msg);
+      case 'set-timer':
+        return this.handleSetTimer(msg);
+      case 'set-auto-draft':
+        return this.handleSetAutoDraft(msg);
     }
   }
 
@@ -356,12 +377,17 @@ export default class DraftRoomServer implements Party.Server {
       return;
     }
 
-    // Only the on-clock franchise's owner can submit a pick. Other teams are
-    // AI-driven via autoPick — letting a connected user (even the creator)
-    // pick for them races with the auto-pick microtask and can leave a slot
-    // with a synthetic playerId that renders blank on the board.
+    // A pick may come from the on-clock franchise's own owner, or from the
+    // creator when the on-clock team is one they control (auto-draft off).
+    // Auto-drafted teams stay locked: letting a user pick for them races
+    // with the auto-pick microtask and can leave a slot with a synthetic
+    // playerId that renders blank on the board.
     const currentFranchise = session.draftOrder[session.currentPickIndex];
-    if (currentFranchise !== msg.franchiseId) {
+    const isOwnPick = currentFranchise === msg.franchiseId;
+    const isCreatorControlledPick =
+      msg.franchiseId === session.createdBy &&
+      !this.isAutoDrafted(session, currentFranchise);
+    if (!isOwnPick && !isCreatorControlledPick) {
       sender.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
       return;
     }
@@ -527,16 +553,88 @@ export default class DraftRoomServer implements Party.Server {
     await this.saveSession(session);
     this.broadcastSession(session);
 
-    // Start the clock if the creator is on-clock after the rollback;
-    // otherwise stay paused so the user can decide what to do next.
+    // Start the clock if a creator-controlled team is on-clock after the
+    // rollback; otherwise stay paused so the user can decide what to do next.
     const onClock = session.draftOrder[session.currentPickIndex];
-    if (onClock === session.createdBy) {
+    if (!this.isAutoDrafted(session, onClock)) {
       this.startTimer(session);
     } else {
       this.room.broadcast(
         JSON.stringify({ type: 'pick-clock', secondsRemaining: 0 }),
       );
     }
+  }
+
+  /**
+   * Change the pick clock mid-draft. Creator-only. If a clock is currently
+   * running it restarts at the new duration, so a lower value takes effect
+   * on the pick that's on the board right now — no new session needed.
+   */
+  private async handleSetTimer(msg: SetTimerMessage) {
+    const session = await this.getSession();
+    if (!session) return;
+
+    if (msg.franchiseId !== session.createdBy) {
+      this.sendMockError(msg.franchiseId, 'Only the session creator can change the timer');
+      return;
+    }
+
+    const seconds = msg.timerSeconds;
+    if (!Number.isInteger(seconds) || seconds < 1 || seconds > 600) {
+      this.sendMockError(msg.franchiseId, 'Timer must be between 1 and 600 seconds');
+      return;
+    }
+
+    session.timerSeconds = seconds;
+    await this.saveSession(session);
+    this.broadcastSession(session);
+
+    if (this.timerInterval && session.status === 'active') {
+      this.startTimer(session);
+    }
+  }
+
+  /**
+   * Flip a team between CPU auto-draft and creator control mid-draft.
+   * Creator-only. If the toggled team is currently on the clock the change
+   * applies immediately: flipping to auto hands the pick to the CPU,
+   * flipping to manual starts the pick clock.
+   */
+  private async handleSetAutoDraft(msg: SetAutoDraftMessage) {
+    const session = await this.getSession();
+    if (!session) return;
+
+    if (msg.franchiseId !== session.createdBy) {
+      this.sendMockError(msg.franchiseId, 'Only the session creator can change auto-draft');
+      return;
+    }
+
+    const target = msg.targetFranchiseId;
+    if (typeof target !== 'string' || !session.draftOrder.includes(target)) {
+      this.sendMockError(msg.franchiseId, 'Unknown team');
+      return;
+    }
+
+    session.autoDraft = { ...(session.autoDraft ?? {}), [target]: msg.autoDraft === true };
+    await this.saveSession(session);
+    this.broadcastSession(session);
+
+    const onClock = session.draftOrder[session.currentPickIndex];
+    if (session.status === 'active' && onClock === target) {
+      this.stopTimer();
+      this.scheduleNextPick(session);
+    }
+  }
+
+  /**
+   * Should the CPU pick for this franchise? Explicit per-team overrides
+   * (creator-editable mid-draft) win; the legacy default is that every team
+   * except the creator's is auto-drafted.
+   */
+  private isAutoDrafted(session: MockDraftSession, franchiseId: string): boolean {
+    const override = session.autoDraft?.[franchiseId];
+    if (typeof override === 'boolean') return override;
+    return franchiseId !== session.createdBy;
   }
 
   // ── Pick logic ──
@@ -637,8 +735,9 @@ export default class DraftRoomServer implements Party.Server {
   /**
    * After a pick lands (or at draft start/resume/reset), decide what
    * happens next:
-   *   - Creator's team on the clock → run the full user-configured timer.
-   *   - Anyone else (AI) → no timer; auto-pick immediately.
+   *   - Creator-controlled team on the clock (the creator's own team, or
+   *     any team with auto-draft toggled off) → run the full timer.
+   *   - Auto-drafted team (AI) → no timer; auto-pick immediately.
    *
    * AI picks chain through makePick → scheduleNextPick → autoPick with
    * zero delay — the Promise microtask lets the current broadcast flush
@@ -649,7 +748,7 @@ export default class DraftRoomServer implements Party.Server {
     if (session.status !== 'active') return;
 
     const onClockFranchise = session.draftOrder[session.currentPickIndex];
-    if (onClockFranchise === session.createdBy) {
+    if (!this.isAutoDrafted(session, onClockFranchise)) {
       this.startTimer(session);
       return;
     }
@@ -669,7 +768,7 @@ export default class DraftRoomServer implements Party.Server {
     const session = await this.getSession();
     if (!session || session.status !== 'active') return;
     const onClockFranchise = session.draftOrder[session.currentPickIndex];
-    if (onClockFranchise === session.createdBy) return;
+    if (!this.isAutoDrafted(session, onClockFranchise)) return;
     await this.autoPick(session);
   }
 

@@ -11,7 +11,9 @@ import type {
   DraftContext,
   DraftRoomMode,
 } from '../../../types/draft-room';
+import { isFranchiseAutoDrafted } from '../../../types/draft-room';
 import { ConfirmDialog } from './ConfirmDialog';
+import { MockDraftSettingsDialog } from './MockDraftSettingsDialog';
 import { DraftTimerBanner } from './DraftTimerBanner';
 import { DraftBoardPanel } from './DraftBoardPanel';
 import { PlayerPoolPanel } from './PlayerPoolPanel';
@@ -252,16 +254,26 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   const currentTeam = currentPick ? teamMap.get(currentPick.franchiseId) || null : null;
 
   // Is it the user's turn?
-  // Both live and mock drafts: only when the on-clock pick is for the user's
-  // own franchise. AI teams are picked by the server's auto-pick — letting
-  // the user click for them just confuses the UI ("Make Your Pick" while
-  // someone else is on the clock) and races the auto-pick microtask.
-  const isUserTurn = !!(
+  // Live drafts: only when the on-clock pick is for the user's own franchise.
+  // Mock drafts: additionally when the user created the session and the
+  // on-clock team has auto-draft toggled off (creator-controlled) — the
+  // server accepts the creator's pick for those teams and never races them
+  // with the auto-pick microtask. Auto-drafted teams stay hands-off.
+  const isMockCreator = !!(
+    isMock && state.mockSession && state.mockSession.createdBy === userTeamId
+  );
+  const controlsCurrentPick = !!(
+    isMockCreator &&
+    currentPick &&
+    !isFranchiseAutoDrafted(state.mockSession!, currentPick.franchiseId)
+  );
+  const isOwnTurn = !!(
     currentPick &&
     userTeamId &&
     currentPick.franchiseId === userTeamId &&
     !state.draftComplete
   );
+  const isUserTurn = isOwnTurn || (controlsCurrentPick && !state.draftComplete);
 
   // Previous pick for timer calculation
   const previousPick = useMemo(() => {
@@ -279,6 +291,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   // Which destructive action is currently awaiting confirmation. Null when
   // nothing is pending. Only used in mock mode.
   const [pendingAction, setPendingAction] = useState<null | 'reset' | 'goback'>(null);
+
+  // Mid-draft settings dialog (timer + per-team auto-draft). Creator-only.
+  const [showSettings, setShowSettings] = useState(false);
 
   const hasUndoablePick = state.picks.some((p) => !!p.playerId);
   const isMockPaused = isMock && state.mockSession?.status === 'paused';
@@ -433,11 +448,14 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Auto-submit: when user is on clock + autoSubmit on + queue non-empty.
-  // Mock mode only — live drafts use the MFL deep-link instead.
+  // Auto-submit: when the user's OWN team is on clock + autoSubmit on +
+  // queue non-empty. Mock mode only — live drafts use the MFL deep-link
+  // instead. Deliberately keyed to isOwnTurn, not isUserTurn: the queue is
+  // the user's board for their own team and must not drain into teams the
+  // creator merely controls.
   useEffect(() => {
     if (!isMock) return;
-    if (!state.autoSubmit || !isUserTurn || state.queue.length === 0 || state.isSubmittingPick || state.draftComplete) return;
+    if (!state.autoSubmit || !isOwnTurn || state.queue.length === 0 || state.isSubmittingPick || state.draftComplete) return;
 
     const draftedIds = new Set(state.picks.filter((p) => p.playerId).map((p) => p.playerId));
     const topItem = state.queue.find((i) => !draftedIds.has(i.playerId));
@@ -445,7 +463,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
 
     mockSend({ type: 'pick', franchiseId: userTeamId, playerId: topItem.playerId });
     dispatch({ type: 'REMOVE_FROM_QUEUE', id: topItem.id });
-  }, [state.autoSubmit, isUserTurn, state.queue, state.isSubmittingPick, state.draftComplete, state.picks, isMock, mockSend, userTeamId]);
+  }, [state.autoSubmit, isOwnTurn, state.queue, state.isSubmittingPick, state.draftComplete, state.picks, isMock, mockSend, userTeamId]);
 
   // Sync queue to MFL — not yet implemented for live drafts (would require
   // MFL auth + the rankings/queue write endpoint). Mock mode keeps its queue
@@ -558,6 +576,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         draftTimerSusp={state.draftTimerSusp}
         draftComplete={state.draftComplete}
         isUserTurn={isUserTurn}
+        pickingForOtherTeam={controlsCurrentPick && currentPick?.franchiseId !== userTeamId}
         mockClockSeconds={isMock ? state.mockClockSeconds : undefined}
         actions={!isMock && isUserTurn && data.mflPickUrl ? (
           <a
@@ -570,6 +589,16 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           </a>
         ) : isMock ? (
           <>
+            {isMockCreator && (
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                className="dr-reset-btn"
+                title="Change the pick clock or team auto-draft"
+              >
+                Settings
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setPendingAction('goback')}
@@ -602,6 +631,26 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
           </>
         ) : undefined}
       />
+
+      {showSettings && state.mockSession && (
+        <MockDraftSettingsDialog
+          session={state.mockSession}
+          teams={teamMap}
+          onClockFranchiseId={currentPick?.franchiseId ?? null}
+          onSetTimer={(seconds) =>
+            mockSend({ type: 'set-timer', franchiseId: userTeamId, timerSeconds: seconds })
+          }
+          onSetAutoDraft={(franchiseId, autoDraft) =>
+            mockSend({
+              type: 'set-auto-draft',
+              franchiseId: userTeamId,
+              targetFranchiseId: franchiseId,
+              autoDraft,
+            })
+          }
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
       {pendingAction === 'reset' && (
         <ConfirmDialog
