@@ -125,8 +125,9 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
   const lum = luminance(hex);
   if (lum >= floor) return hex;
   // Luminance is linear under mixing toward white, so solve for the exact mix.
-  // Target floor+1 so per-channel rounding can't land a hair under the floor.
-  return mixHex(hex, '#ffffff', (floor + 1 - lum) / (255 - lum));
+  // Target floor+1 so per-channel rounding can't land a hair under the floor;
+  // clamp so a floor near 255 can't extrapolate past white into invalid hex.
+  return mixHex(hex, '#ffffff', Math.min(1, (floor + 1 - lum) / (255 - lum)));
 }
 
 /**

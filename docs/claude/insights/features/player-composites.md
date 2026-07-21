@@ -954,11 +954,13 @@ values, and use the showcase only as a proxy for the shared sizing math.
 ## Reusable player-avatar team-color backdrop (2026-07-08)
 
 The small circular player headshots in the player-cell lockup wear an
-NFL-team-color `linear-gradient(115deg, …)` backdrop. Single source of truth
-is `getPlayerAvatarBackground(teamCode)` in `nfl-team-colors.ts`. Free agents
+NFL-team-color gradient backdrop — today a `radial-gradient(circle at 50%
+30%, …)` head spotlight. Single source of truth is
+`getPlayerAvatarBackground(teamCode)` in `nfl-team-colors.ts`. Free agents
 / unknown codes fall back to the league-neutral blue. (Historically this
-mirrored the player modal band's deep-ink→primary stops; since 2026-07-21 it
-diverges — see the dark-mode readability note below.)
+was a linear gradient mirroring the player modal band's deep-ink→primary
+stops; since 2026-07-21 it diverges — see the dark-mode readability note
+below.)
 
 - **Distribution is a CSS custom property, not per-renderer color math.**
   `player-cell.css` reads `background: var(--player-avatar-bg, …gray)`. Each of

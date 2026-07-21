@@ -219,8 +219,8 @@ describe('getPlayerAvatarBackground', () => {
     expect(fa).toContain(NFL_COLORS_FALLBACK.primary);
   });
 
-  it('always returns a valid CSS radial-gradient for every team', () => {
-    for (const code of Object.keys(NFL_TEAM_COLORS)) {
+  it('always returns a valid CSS radial-gradient for every team and the fallback', () => {
+    for (const code of [...Object.keys(NFL_TEAM_COLORS), 'FA']) {
       expect(getPlayerAvatarBackground(code)).toMatch(
         /^radial-gradient\(circle at 50% 30%, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 58%, #[0-9a-f]{6} 100%\)$/,
       );
