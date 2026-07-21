@@ -131,9 +131,10 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
 }
 
 /**
- * CSS `background` for a circular player avatar chip. **Dark-mode only** —
- * `player-cell.css` applies `--player-avatar-bg` under `html.dark`; light mode
- * uses a gray chip with a team-color ring instead (getPlayerAvatarBorder).
+ * CSS `background` for a circular player avatar chip, applied in BOTH themes
+ * by `player-cell.css` via `--player-avatar-bg` (light mode formerly used a
+ * gray chip and only kept the team-color ring from getPlayerAvatarBorder —
+ * running the gradient in light mode too is a July 2026 experiment).
  *
  * A radial spotlight, brightest behind the player's head: the headshot's face
  * sits at top-center of the chip (`object-position: top` + `scale(1.18)` in
@@ -168,10 +169,9 @@ export function getPlayerAvatarBackground(teamCode: string): string {
 }
 
 /**
- * Team-primary hex for the avatar ring in light mode. Light mode swaps the
- * dark gradient backdrop (too heavy against a white page) for a light-gray
- * chip with this color as the border — same team identity, lighter weight.
- * See `--player-avatar-border` in player-cell.css.
+ * Team-primary hex for the avatar ring in light mode. Light mode keeps a
+ * 2px team-primary border around the gradient chip (dark mode swaps it for
+ * a half-white ring). See `--player-avatar-border` in player-cell.css.
  */
 export function getPlayerAvatarBorder(teamCode: string): string {
   return getNflTeamColors(teamCode).primary;
