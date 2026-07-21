@@ -9,6 +9,8 @@
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isCutWindow } from '../article-utils/season-guards.mjs';
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
+import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../lib/august-cutdown.mjs';
 
 const ACTIVE_ROSTER_LIMIT = 22;
 
@@ -130,7 +132,15 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     lines.push('');
   }
 
-  return { factSheet: lines.join('\n'), enrichment: {} };
+  return {
+    factSheet: lines.join('\n'),
+    enrichment: {
+      // Worst offenders first — buildGroupMePromo leads with overLimit[0].
+      overLimit: [...overLimit]
+        .sort((a, b) => b.over - a.over)
+        .map(({ name, count, over }) => ({ name, count, over })),
+    },
+  };
 }
 
 export function getSystemPrompt() {
@@ -165,6 +175,42 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * One teaser stat + the article link — never a summary (same contract as
+ * schedule-strength.mjs; a falsy return skips the promo). Fires only when at
+ * least one team is over the limit: the article itself runs every day of the
+ * Jul 15 – Aug 16 window, but an "everyone is compliant" ping would buzz the
+ * whole chat for a non-story.
+ *
+ * `now` is injectable for tests only — the runner never passes it.
+ */
+export function buildGroupMePromo(post, enrichment, { league = 'theleague', now = new Date() } = {}) {
+  const overLimit = enrichment?.overLimit ?? [];
+  if (overLimit.length === 0) return null;
+
+  const publicOrigin = `https://${LEAGUES[league].domains[0]}`;
+  const worst = overLimit[0];
+  const totalExcess = overLimit.reduce((sum, t) => sum + t.over, 0);
+
+  const { year } = ptDateParts(now);
+  const deadlineDay = getAugustCutdownDay(year);
+  const daysLeft = calendarDaysUntilCutdown(year, now);
+  const countdown = daysLeft > 0
+    ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to comply`
+    : 'deadline day';
+
+  const spread = overLimit.length > 1
+    ? ` ${overLimit.length} teams still need to shed ${totalExcess} players combined.`
+    : '';
+
+  return (
+    `🚨 CUT WATCH — ${worst.name}: ${worst.over} over the ${ACTIVE_ROSTER_LIMIT}-man limit` +
+    `${overLimit.length > 1 ? ', the deepest hole in the league' : ''}.${spread} ` +
+    `Cutdown is Aug ${deadlineDay} (${countdown}). Today's chopping block:\n` +
+    `${publicOrigin}${post.link}`
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId) {

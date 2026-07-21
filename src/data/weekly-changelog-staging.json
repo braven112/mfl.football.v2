@@ -9,6 +9,14 @@
       "type": "bug-fix",
       "league": "theleague",
       "impact": "user",
+      "area": "schefter",
+      "summary": "Schefter's daily Cut Watch dispatches were going straight to the website and skipping the group chat entirely — he'd type up 'Midwestside Connection faces the guillotine, 6 over the limit' for the site feed and then just... not hit send on GroupMe. Turns out the article pipeline only pings the chat for story types that define a promo, and Cut Watch never got one. Fixed: whenever at least one team is over the 22-man limit, the chat now gets the headline stat, how many players the league still needs to shed, the countdown to the August cutdown deadline, and a link to the full chopping block. On days when everyone's compliant, he keeps it to himself — no buzz for a non-story."
+    },
+    {
+      "date": "2026-07-21",
+      "type": "bug-fix",
+      "league": "theleague",
+      "impact": "user",
       "area": "rosters",
       "summary": "The contract-year chips on the Rosters page — the little blue '4' with its ticking '27d' deadline badge — were still dressed for daylight in dark mode, glowing like sticky notes on a midnight desk. They now wear proper dark-mode colors: translucent fills, readable text, and a deadline badge that shifts from amber to orange to red as the clock runs down without searing your retinas on the way."
     },
