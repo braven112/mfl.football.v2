@@ -69,8 +69,9 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
     if (window.__rosterLoaderInit) return;
     window.__rosterLoaderInit = true;
 
-    var DELAY_MS = 300;     // don't flash on fast/cached loads (the < 0.3s rule)
-    var CYCLE_MS = 2200;
+    var DELAY_MS = 1000;       // give fast/cached loads a full second to land before showing
+    var CYCLE_MS = 5000;
+    var MIN_VISIBLE_MS = 400;  // once shown, stay up long enough to not read as a glitch
 
     // Lines come from the official per-league team data file, serialized into a
     // JSON script tag at SSR. Read at show() time so the current page's (league's)
@@ -87,6 +88,11 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     var armTimer = null;
     var cycleTimer = null;
+    var hideTimer = null;
+    // Visibility is tracked in closure state, NOT the DOM: the view-transition
+    // swap destroys the shown overlay element before hide() runs, so a class
+    // check on the post-swap element can never see the blink that just ended.
+    var overlayVisibleSince = 0;
     var order = [];
     var idx = 0;
 
@@ -104,6 +110,8 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
     function show() {
       var el = node();
       if (!el) return;
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      overlayVisibleSince = Date.now();
       order = shuffle(readLines().slice());
       idx = 0;
       var line = el.querySelector('[data-roster-line]');
@@ -124,8 +132,31 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     function hide() {
       if (armTimer) { clearTimeout(armTimer); armTimer = null; }
-      if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
       var el = node();
+      // If the page landed just after the loader appeared, hold the overlay up
+      // briefly — a sub-MIN_VISIBLE_MS blink reads as a glitch
+      // (loading-standards.md). The swap already destroyed the shown element,
+      // so re-apply the overlay to the post-swap copy for the remainder.
+      var visibleFor = Date.now() - overlayVisibleSince;
+      if (overlayVisibleSince && visibleFor < MIN_VISIBLE_MS) {
+        if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+        if (el) {
+          var lineEl = el.querySelector('[data-roster-line]');
+          if (lineEl && order.length) lineEl.textContent = order[idx];
+          if (order.length) el.setAttribute('aria-label', 'Loading your roster. ' + order[idx]);
+          el.hidden = false;
+          el.classList.add('is-active');
+        }
+        if (hideTimer) return;
+        hideTimer = window.setTimeout(function () {
+          hideTimer = null;
+          hide();
+        }, MIN_VISIBLE_MS - visibleFor);
+        return;
+      }
+      overlayVisibleSince = 0;
+      if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
       if (el) { el.classList.remove('is-active'); el.hidden = true; }
     }
 
@@ -142,6 +173,7 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     // Instant arm on link click (fires before the router prepares).
     document.addEventListener('click', function (e) {
+      if (e.defaultPrevented) return;
       var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
       if (!a) return;
       if (a.target === '_blank' || a.origin !== location.origin) return;
