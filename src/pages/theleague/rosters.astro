@@ -6473,8 +6473,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const playerCell = row?.querySelector('[data-column="player"]');
       const nameEl = playerCell?.querySelector('.player-cell__name');
       const imgEl = playerCell?.querySelector('.player-cell__avatar img');
-      const metaLogoEl = playerCell?.querySelector('.player-cell__meta-logo');
-      const posEl = playerCell?.querySelector('.player-cell__position');
+      const metaLogoEl = playerCell?.querySelector('.player-meta__logo');
+      const posEl = playerCell?.querySelector('.player-meta__pos');
       const birthdateRaw = row?.dataset?.birthdate;
 
       // PlayerCell serializes the full payload onto its name element via
@@ -6493,7 +6493,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         name: nameEl?.textContent ?? '',
         headshot: imgEl?.src ?? DEFAULT_HEADSHOT_URL,
         nflLogo: metaLogoEl?.src ?? '',
-        position: posEl?.textContent ?? '',
+        // Serialized payload first — the rendered .player-meta__pos text can
+        // carry a contract-status suffix ("QB - RC") that must not leak into
+        // the hero meta line or the DEF check.
+        position: modalData.position ?? (posEl?.textContent ?? '').split(' - ')[0].trim(),
         nflTeam: modalData.nflTeam ?? null,
         birthdate: birthdateRaw ? Number(birthdateRaw) : (modalData.birthdate ?? null),
         college: modalData.college ?? null,
@@ -8273,9 +8276,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // Team-color chip behind the headshot — same treatment as PlayerCell.
       const cdmAvatarEl = document.getElementById('cdm-avatar');
       if (cdmAvatarEl) {
-        cdmAvatarEl.classList.toggle('cdm-hero__avatar--def', (data.position || '').toUpperCase() === 'DEF');
+        const cdmAvatarIsDef = (data.position || '').toUpperCase() === 'DEF';
+        cdmAvatarEl.classList.toggle('cdm-hero__avatar--def', cdmAvatarIsDef);
         cdmAvatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
         cdmAvatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
+        cdmHeadshotImg.alt = cdmAvatarIsDef
+          ? `${data.nflTeam || 'Team'} logo`
+          : `${data.name || 'Player'} headshot`;
       }
       document.getElementById('cdm-player-name').textContent = data.name;
       document.getElementById('cdm-nfl-logo').src = data.nflLogo || '/assets/nfl-logos/NFL.svg';

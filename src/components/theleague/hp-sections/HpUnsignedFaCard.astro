@@ -673,9 +673,15 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       // Team-color chip behind the headshot — same treatment as PlayerCell.
       const avatarEl = document.getElementById('cdm-avatar');
       if (avatarEl) {
-        avatarEl.classList.toggle('cdm-hero__avatar--def', (data.position || '').toUpperCase() === 'DEF');
+        const avatarIsDef = (data.position || '').toUpperCase() === 'DEF';
+        avatarEl.classList.toggle('cdm-hero__avatar--def', avatarIsDef);
         avatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
         avatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
+        if (headshotImg) {
+          headshotImg.alt = avatarIsDef
+            ? `${data.nflTeam || 'Team'} logo`
+            : `${data.name || 'Player'} headshot`;
+        }
       }
       const logoEl = document.getElementById('cdm-nfl-logo') as HTMLImageElement | null;
       if (logoEl) logoEl.src = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '/assets/nfl-logos/NFL.svg';

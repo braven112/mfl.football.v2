@@ -497,7 +497,9 @@ import '../../styles/loading.css';
 
   :global(html.dark) .cdm-hero__avatar:not(.cdm-hero__avatar--def) {
     background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    /* Half-opacity white ring pops the chip off the dark sheet regardless of
+       the team color behind the headshot — same token as player-cell.css. */
+    border: 1px solid var(--player-avatar-ring, rgba(255, 255, 255, 0.5));
   }
 
   .cdm-hero__avatar img {
@@ -511,11 +513,15 @@ import '../../styles/loading.css';
     transform-origin: top center;
   }
 
-  /* Team defenses show a logo, not a headshot: full-bleed, no crop, no chip. */
+  /* Team defenses show a logo, not a headshot: full-bleed, no crop, no chip.
+     Square + overflow visible so the logo isn't circle-clipped (mirrors
+     .player-cell__avatar--def). */
   .cdm-hero__avatar--def {
     background: transparent;
     border: 0;
     box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
   }
 
   .cdm-hero__avatar--def img {
