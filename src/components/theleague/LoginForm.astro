@@ -157,7 +157,7 @@ const {
 
     // ── Redirect resolution ──────────────────────────────────────
     const params = new URLSearchParams(window.location.search);
-    let redirectUrl = params.get('redirect');
+    let redirectUrl = params.get('redirect') || params.get('next');
 
     if (!redirectUrl) {
       redirectUrl = sessionStorage.getItem('loginRedirectUrl') || document.referrer;
