@@ -5,14 +5,6 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
-      "date": "2026-07-21",
-      "type": "bug-fix",
-      "league": "theleague",
-      "impact": "user",
-      "area": "rosters",
-      "summary": "The Cutdown Plan panel stopped gaslighting you. Mark a few August cuts, watch the slate below update, hit Save — and the panel would quietly post your ORIGINAL list and reset all your work, because the page was secretly running two copies of the cut-list state and the Save button was wired to the stale one. There's one copy now — and no Save button at all, because edits save themselves about a second after you stop fiddling. The whole slate got a management upgrade while we were in there: every row is draggable (pull an auto-selected 'last added' player into your order and he becomes your pick at that exact spot), auto rows have a Mark button for phones, marked rows have an × to unmark without opening the player card, and if you've marked more players than the deadline needs they show up under a red dashed cut line so there's no doubt about who goes and who's safe. Even at the roster limit your marked order stays visible and reorderable, waiting for the day you go back over."
-    },
-    {
       "date": "2026-07-20",
       "type": "bug-fix",
       "league": "both",
