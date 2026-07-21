@@ -1036,13 +1036,13 @@ surrounding containers (`.kp-card__player`, `.tb-picker__cell`,
 `.players-team__player`) hardcode a pixel width tied to the avatar size — they
 use `flex`/`min-width: 0`, so the size bump needed no layout changes.
 
-## Dark-mode avatar backdrop lightened — anchor picker + luminance floor (2026-07-21)
+## Dark-mode avatar backdrop lightened — anchor picker + head spotlight (2026-07-21)
 
 A third of the NFL wears near-black primaries (TEN, PIT, CHI, SEA, HOU, LV,
 NO, NE, CLE), and the avatar gradient mixed that primary a further 62% toward
 ink — so in dark mode a dark-jerseyed headshot (Cam Ward on Titans navy) was
 effectively invisible. `getPlayerAvatarBackground` no longer mirrors the
-modal band's stops; it now:
+modal band's stops (and is radial now, not linear); it:
 
 1. **Picks an anchor**: the primary, unless its luminance is < 33 — then the
    secondary takes over IF it's lighter and chromatic (chroma ≥ 25). That
@@ -1052,8 +1052,12 @@ modal band's stops; it now:
 2. **Floors the anchor** at luminance ≥ 60 by mixing toward white (solved
    analytically — luminance is linear under white-mixing; target floor+1 to
    absorb per-channel rounding).
-3. Softens the ink-mix on the 0% stop from 0.62 → 0.45 so the whole chip,
-   not just the far corner, sits above the readability line.
+3. **Builds a radial spotlight behind the head**: `radial-gradient(circle at
+   50% 30%, anchor+35%-white 0%, anchor 58%, anchor+45%-ink 100%)`. The
+   center sits where `object-position: top` pins the face, and the fixed
+   white-mix means it's ALWAYS visibly lighter than the anchor (never below
+   ~128 luminance) — a Brandon follow-up after the first linear version
+   still read too dark right behind the head on mid-dark teams.
 
 Key facts for future sessions:
 
@@ -1065,7 +1069,8 @@ Key facts for future sessions:
   stops and the same near-black-team problem** — but it carries white text,
   so it needs its own contrast treatment (lighter backdrop = dark text),
   not a copy-paste of this anchor logic.
-- `tests/nfl-team-colors.test.ts` now asserts the ≥ 60 anchor / ≥ 35 ink
-  luminance floors for all 32 teams + the FA fallback, plus the specific
-  swap decisions (TEN→secondary, DAL/LV/BUF/NYG→primary). Any future
-  `NFL_TEAM_COLORS` edit that would sink a chip fails the build.
+- `tests/nfl-team-colors.test.ts` now asserts per-stop luminance floors for
+  all 32 teams + the FA fallback (head spotlight ≥ 125 and lighter than the
+  anchor, anchor ≥ 60, edge ≥ 35), plus the specific swap decisions
+  (TEN→secondary, DAL/LV/BUF/NYG→primary). Any future `NFL_TEAM_COLORS`
+  edit that would sink a chip fails the build.

@@ -158,9 +158,11 @@ function lum(hex: string): number {
 }
 
 describe('getPlayerAvatarBackground', () => {
-  it('builds a 115° gradient ending in the team primary when it is already readable', () => {
+  it('builds a head-spotlight radial anchored on the team primary when it is already readable', () => {
     const bg = getPlayerAvatarBackground('KC');
-    expect(bg).toBe(`linear-gradient(115deg, ${mixHex('#e31837', '#0b0e13', 0.45)} 0%, #e31837 100%)`);
+    expect(bg).toBe(
+      `radial-gradient(circle at 50% 30%, ${mixHex('#e31837', '#ffffff', 0.35)} 0%, #e31837 58%, ${mixHex('#e31837', '#0b0e13', 0.45)} 100%)`,
+    );
   });
 
   it('swaps near-black primaries to the lighter chromatic secondary', () => {
@@ -188,16 +190,19 @@ describe('getPlayerAvatarBackground', () => {
     expect(getPlayerAvatarBackground('NYG')).not.toContain(NFL_TEAM_COLORS.NYG.secondary);
   });
 
-  it('meets the dark-mode luminance floor for every team and the fallback', () => {
+  it('meets the dark-mode luminance floors for every team and the fallback', () => {
     // The guard this change exists for: no team's chip may ever again render
-    // a near-black backdrop behind a dark headshot in dark mode.
+    // a near-black backdrop behind a dark headshot in dark mode. The center
+    // stop sits behind the player's head and carries the strictest floor.
     for (const code of [...Object.keys(NFL_TEAM_COLORS), 'FA']) {
       const bg = getPlayerAvatarBackground(code);
       const stops = bg.match(/#[0-9a-f]{6}/g)!;
-      expect(stops, `${code} gradient stops`).toHaveLength(2);
-      const [inkStop, anchorStop] = stops;
+      expect(stops, `${code} gradient stops`).toHaveLength(3);
+      const [headStop, anchorStop, edgeStop] = stops;
+      expect(lum(headStop), `${code} head spotlight too dark (${headStop})`).toBeGreaterThanOrEqual(125);
+      expect(lum(headStop), `${code} head spotlight not lighter than anchor`).toBeGreaterThan(lum(anchorStop));
       expect(lum(anchorStop), `${code} anchor stop too dark (${anchorStop})`).toBeGreaterThanOrEqual(60);
-      expect(lum(inkStop), `${code} ink stop too dark (${inkStop})`).toBeGreaterThanOrEqual(35);
+      expect(lum(edgeStop), `${code} edge stop too dark (${edgeStop})`).toBeGreaterThanOrEqual(35);
     }
   });
 
@@ -214,10 +219,10 @@ describe('getPlayerAvatarBackground', () => {
     expect(fa).toContain(NFL_COLORS_FALLBACK.primary);
   });
 
-  it('always returns a valid CSS linear-gradient for every team', () => {
+  it('always returns a valid CSS radial-gradient for every team', () => {
     for (const code of Object.keys(NFL_TEAM_COLORS)) {
       expect(getPlayerAvatarBackground(code)).toMatch(
-        /^linear-gradient\(115deg, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 100%\)$/,
+        /^radial-gradient\(circle at 50% 30%, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 58%, #[0-9a-f]{6} 100%\)$/,
       );
     }
   });

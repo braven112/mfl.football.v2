@@ -112,6 +112,14 @@ function pickDarkAvatarAnchor({ primary, secondary }: NflTeamColors): string {
   return primary;
 }
 
+/**
+ * White-mix applied to the anchor for the radial spotlight behind the head.
+ * A fixed mix (not a floor) so the center is ALWAYS visibly lighter than the
+ * anchor, even for already-bright anchors like PIT gold. Combined with the
+ * anchor's luminance floor of 60, the center never drops below ~128.
+ */
+const AVATAR_HEAD_HIGHLIGHT_MIX = 0.35;
+
 /** Lighten `hex` toward white until its perceived luminance reaches `floor`. */
 function raiseToLuminanceFloor(hex: string, floor: number): string {
   const lum = luminance(hex);
@@ -126,12 +134,15 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
  * `player-cell.css` applies `--player-avatar-bg` under `html.dark`; light mode
  * uses a gray chip with a team-color ring instead (getPlayerAvatarBorder).
  *
+ * A radial spotlight, brightest behind the player's head: the headshot's face
+ * sits at top-center of the chip (`object-position: top` + `scale(1.18)` in
+ * player-cell.css), so the light pools at 50% 30% and deepens toward the rim.
  * The gradient anchors on the team color best readable against a dark page:
  * the primary, lightened to a luminance floor when it's dark (SF, DAL), or
  * the lighter secondary when the primary is near-black (TEN light blue,
  * PIT gold, SEA action green). Guarded by tests/nfl-team-colors.test.ts,
- * which asserts the floor for all 32 teams — dark headshots must never sink
- * into a near-black chip again.
+ * which asserts per-stop luminance floors for all 32 teams — dark headshots
+ * must never sink into a near-black chip again.
  *
  * This is the single source of truth for the colored headshot backdrop across
  * every player-cell renderer (PlayerCell.tsx / PlayerCell.astro /
@@ -141,7 +152,8 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
  *
  * @example
  * ```typescript
- * getPlayerAvatarBackground('KC'); // 'linear-gradient(115deg, #821427 0%, #e31837 100%)'
+ * getPlayerAvatarBackground('KC');
+ * // 'radial-gradient(circle at 50% 30%, #ed697d 0%, #e31837 58%, #821427 100%)'
  * ```
  */
 export function getPlayerAvatarBackground(teamCode: string): string {
@@ -149,7 +161,9 @@ export function getPlayerAvatarBackground(teamCode: string): string {
     pickDarkAvatarAnchor(getNflTeamColors(teamCode)),
     AVATAR_ANCHOR_MIN_LUMINANCE,
   );
-  return `linear-gradient(115deg, ${mixHex(anchor, '#0b0e13', 0.45)} 0%, ${anchor} 100%)`;
+  const highlight = mixHex(anchor, '#ffffff', AVATAR_HEAD_HIGHLIGHT_MIX);
+  const edge = mixHex(anchor, '#0b0e13', 0.45);
+  return `radial-gradient(circle at 50% 30%, ${highlight} 0%, ${anchor} 58%, ${edge} 100%)`;
 }
 
 /**
