@@ -173,18 +173,30 @@ export function getPlayerAvatarBackground(teamCode: string): string {
   return `radial-gradient(circle at 50% 30%, ${highlight} 0%, ${anchor} 58%, ${edge} 100%)`;
 }
 
-/** White-mix for the chip ring — half white, half the gradient's anchor. */
-const AVATAR_RING_WHITE_MIX = 0.5;
+/** Ring mix ratio — halfway between the anchor and the theme's pole. */
+const AVATAR_RING_MIX = 0.5;
+/** Dark pole for the light-mode ring — same ink as the gradient's edge stop. */
+const AVATAR_RING_INK = '#0b0e13';
 
 /**
- * Team-tinted ring color for the avatar chip: the gradient's anchor color
- * mixed halfway to white, so the ring reads as a lighter echo of the chip
- * rather than a flat white line. Opaque on purpose — the translucent
+ * Light-mode ring color for the avatar chip: the gradient's anchor color
+ * mixed halfway to ink, so the ring reads as a darker echo of the chip that
+ * separates it from white table rows. Opaque on purpose — the translucent
  * fallback ring in player-cell.css disappears on light rows. Set as
- * `--player-avatar-ring` alongside the other two properties.
+ * `--player-avatar-ring` alongside the other avatar properties;
+ * `getPlayerAvatarRingDark` supplies the dark-mode counterpart.
  */
 export function getPlayerAvatarRing(teamCode: string): string {
-  return mixHex(avatarAnchor(teamCode), '#ffffff', AVATAR_RING_WHITE_MIX);
+  return mixHex(avatarAnchor(teamCode), AVATAR_RING_INK, AVATAR_RING_MIX);
+}
+
+/**
+ * Dark-mode ring color: the anchor mixed halfway to white — a lighter echo
+ * of the chip that pops it off dark table rows. Set as
+ * `--player-avatar-ring-dark`; player-cell.css swaps to it under html.dark.
+ */
+export function getPlayerAvatarRingDark(teamCode: string): string {
+  return mixHex(avatarAnchor(teamCode), '#ffffff', AVATAR_RING_MIX);
 }
 
 /**
@@ -209,16 +221,19 @@ export function getPlayerAvatarStyleMaps(): {
   bg: Record<string, string>;
   border: Record<string, string>;
   ring: Record<string, string>;
+  ringDark: Record<string, string>;
 } {
   const bg: Record<string, string> = {};
   const border: Record<string, string> = {};
   const ring: Record<string, string> = {};
+  const ringDark: Record<string, string> = {};
   for (const code of [...Object.keys(NFL_TEAM_COLORS), ...Object.keys(TEAM_CODE_MAP)]) {
     bg[code] = getPlayerAvatarBackground(code);
     border[code] = getPlayerAvatarBorder(code);
     ring[code] = getPlayerAvatarRing(code);
+    ringDark[code] = getPlayerAvatarRingDark(code);
   }
-  return { bg, border, ring };
+  return { bg, border, ring, ringDark };
 }
 
 /**

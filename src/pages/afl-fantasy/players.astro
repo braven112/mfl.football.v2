@@ -17,7 +17,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug } from '../../config/leagues';
 import { positionOrder } from '../../constants/roster-constants';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
@@ -112,13 +112,15 @@ const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 // NFL-team avatar backdrops (same pattern as players.astro / projected-free-
 // agents): precomputed maps (ESPN codes + MFL aliases) so the client-side
 // row builder just does a lookup. FA/unknown falls back to league-neutral.
-const { bg: nflAvatarBg, border: nflAvatarBorder, ring: nflAvatarRing } = getPlayerAvatarStyleMaps();
+const { bg: nflAvatarBg, border: nflAvatarBorder, ring: nflAvatarRing, ringDark: nflAvatarRingDark } = getPlayerAvatarStyleMaps();
 const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
 const nflAvatarBorderFallback = getPlayerAvatarBorder('FA');
 const nflAvatarRingFallback = getPlayerAvatarRing('FA');
+const nflAvatarRingDarkFallback = getPlayerAvatarRingDark('FA');
 const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
 const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
 const nflAvatarRingJson = JSON.stringify(nflAvatarRing);
+const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
@@ -330,11 +332,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
   const players = JSON.parse(playerDataJson);
   const nflAvatarBg = JSON.parse(nflAvatarBgJson);
   const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
   const nflAvatarRing = JSON.parse(nflAvatarRingJson);
+  const nflAvatarRingDark = JSON.parse(nflAvatarRingDarkJson);
 
   function getAvatarStyle(team) {
     // Not escapeAttr'd: values are precomputed hex/gradient strings from
@@ -342,7 +345,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const bg = nflAvatarBg[team] || nflAvatarBgFallback;
     const border = nflAvatarBorder[team] || nflAvatarBorderFallback;
     const ring = nflAvatarRing[team] || nflAvatarRingFallback;
-    return ` style="--player-avatar-bg: ${bg}; --player-avatar-border: ${border}; --player-avatar-ring: ${ring}"`;
+    const ringDark = nflAvatarRingDark[team] || nflAvatarRingDarkFallback;
+    return ` style="--player-avatar-bg: ${bg}; --player-avatar-border: ${border}; --player-avatar-ring: ${ring}; --player-avatar-ring-dark: ${ringDark}"`;
   }
 
   // State

@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/player-cell.css';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import {
   DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
@@ -62,6 +62,7 @@ export function PlayerCell({
         '--player-avatar-bg': getPlayerAvatarBackground(nflTeam ?? ''),
         '--player-avatar-border': getPlayerAvatarBorder(nflTeam ?? ''),
         '--player-avatar-ring': getPlayerAvatarRing(nflTeam ?? ''),
+        '--player-avatar-ring-dark': getPlayerAvatarRingDark(nflTeam ?? ''),
       } as React.CSSProperties);
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {

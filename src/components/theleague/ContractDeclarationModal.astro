@@ -497,9 +497,13 @@ import '../../styles/loading.css';
 
   .cdm-hero__avatar:not(.cdm-hero__avatar--def) {
     background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
-    /* Team-tinted ring (getPlayerAvatarRing) set by the modal openers —
-       same treatment as player-cell.css, translucent-white fallback. */
-    border: 1px solid var(--player-avatar-ring, rgba(255, 255, 255, 0.5));
+    /* Team-tinted rings (getPlayerAvatarRing / getPlayerAvatarRingDark) set
+       by the modal openers — same theme split as player-cell.css. */
+    border: 1px solid var(--player-avatar-ring, rgba(0, 0, 0, 0.35));
+  }
+
+  :global(html.dark) .cdm-hero__avatar:not(.cdm-hero__avatar--def) {
+    border-color: var(--player-avatar-ring-dark, rgba(255, 255, 255, 0.5));
   }
 
   .cdm-hero__avatar img {

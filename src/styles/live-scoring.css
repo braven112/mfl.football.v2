@@ -356,11 +356,15 @@ html.dark .ls-detail {
   position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
   /* Same treatment as the shared player-cell chip (player-cell.css): both
      themes use the luminance-floored radial head-spotlight from
-     getPlayerAvatarBackground plus the team-tinted ring (getPlayerAvatarRing,
-     anchor mixed halfway to white), so dark-jerseyed headshots never sink
-     into a near-black team color. */
+     getPlayerAvatarBackground plus the team-tinted ring — darker ink mix in
+     light mode (getPlayerAvatarRing), lighter white mix in dark
+     (getPlayerAvatarRingDark) — so dark-jerseyed headshots never sink into
+     a near-black team color. */
   background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
-  box-shadow: inset 0 0 0 1px var(--player-avatar-ring, rgba(255, 255, 255, 0.5));
+  box-shadow: inset 0 0 0 1px var(--player-avatar-ring, rgba(0, 0, 0, 0.35));
+}
+html.dark .ls-headshot {
+  box-shadow: inset 0 0 0 1px var(--player-avatar-ring-dark, rgba(255, 255, 255, 0.5));
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 /* Defense "headshot" is the NFL logo centered in the chip (gray + team ring

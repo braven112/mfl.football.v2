@@ -31,7 +31,7 @@
 import '../../styles/player-cell.css';
 import { buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
 
 export interface Props {
@@ -115,10 +115,11 @@ const showNflLogo = !!nflLogoUrl;
 const avatarBg = isLogo ? undefined : getPlayerAvatarBackground(nflTeam ?? '');
 const avatarBorder = isLogo ? undefined : getPlayerAvatarBorder(nflTeam ?? '');
 const avatarRing = isLogo ? undefined : getPlayerAvatarRing(nflTeam ?? '');
+const avatarRingDark = isLogo ? undefined : getPlayerAvatarRingDark(nflTeam ?? '');
 
 const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
 const avatarStyle = avatarBg
-  ? `--player-avatar-bg: ${avatarBg}; --player-avatar-border: ${avatarBorder}; --player-avatar-ring: ${avatarRing}`
+  ? `--player-avatar-bg: ${avatarBg}; --player-avatar-border: ${avatarBorder}; --player-avatar-ring: ${avatarRing}; --player-avatar-ring-dark: ${avatarRingDark}`
   : undefined;
 ---
 
