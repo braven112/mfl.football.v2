@@ -200,10 +200,12 @@ export function getPlayerAvatarRingDark(teamCode: string): string {
 }
 
 /**
- * Team-primary hex for `--player-avatar-border`. Both themes now ring the
- * gradient chip with the half-white `--player-avatar-ring` token, so this
- * only surfaces on chips that opt out of the gradient (the base fallback in
- * player-cell.css). Renderers still set it alongside --player-avatar-bg.
+ * Team-primary hex for `--player-avatar-border`. Gradient chips ring with
+ * the theme-split team-tinted pair instead (`--player-avatar-ring` light /
+ * `--player-avatar-ring-dark` dark — see getPlayerAvatarRing/RingDark), so
+ * this only surfaces on chips that opt out of the gradient (the base
+ * fallback in player-cell.css, e.g. the --eligible highlight state).
+ * Renderers still set it alongside the other avatar properties.
  */
 export function getPlayerAvatarBorder(teamCode: string): string {
   return getNflTeamColors(teamCode).primary;
