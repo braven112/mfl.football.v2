@@ -1,7 +1,15 @@
 import React, { useEffect, useRef, useCallback } from 'react';
+import '../../../styles/player-cell.css';
 import type { DraftRoomPlayer, DraftRoomPick } from '../../../types/draft-room';
 import { POSITION_COLORS } from '../../../types/draft-room';
 import { calculateDraftPickSalary } from '../../../utils/draft-pick-cap-impact';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import {
+  getPlayerAvatarBackground,
+  getPlayerAvatarBorder,
+  getPlayerAvatarRing,
+  getPlayerAvatarRingDark,
+} from '../../../utils/nfl-team-colors';
 
 interface PlayerDetailModalProps {
   player: DraftRoomPlayer | null;
@@ -79,6 +87,22 @@ export function PlayerDetailModal({
   const posColor = POSITION_COLORS[player.position] || POSITION_COLORS.DEF;
   const adpDelta = computeAdpDelta(player, currentPick?.overallPickNumber);
 
+  const isDef = player.position?.toUpperCase() === 'DEF';
+  const normalizedTeam = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
+  const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
+  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : player.headshot;
+  const avatarStyle = {
+    '--player-avatar-size': '64px',
+    ...(isDef
+      ? {}
+      : {
+          '--player-avatar-bg': getPlayerAvatarBackground(player.nflTeam ?? ''),
+          '--player-avatar-border': getPlayerAvatarBorder(player.nflTeam ?? ''),
+          '--player-avatar-ring': getPlayerAvatarRing(player.nflTeam ?? ''),
+          '--player-avatar-ring-dark': getPlayerAvatarRingDark(player.nflTeam ?? ''),
+        }),
+  } as React.CSSProperties;
+
   // Y1 slot salary preview (only meaningful for rookies at current pick)
   const y1Salary = currentPick && player.isRookie
     ? calculateDraftPickSalary(currentPick.round, currentPick.overallPickNumber, player.position)
@@ -108,21 +132,17 @@ export function PlayerDetailModal({
             flexShrink: 0,
           }}
         >
-          <img
-            src={player.headshot}
-            alt=""
-            loading="lazy"
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              objectPosition: 'top',
-              flexShrink: 0,
-              background: 'var(--color-gray-100, #f3f4f6)',
-              border: `2px solid ${posColor}`,
-            }}
-          />
+          <div
+            className={`player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}`}
+            style={avatarStyle}
+          >
+            <img
+              src={avatarSrc}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2
               id="dr-modal-title"
