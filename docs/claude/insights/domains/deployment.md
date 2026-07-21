@@ -213,3 +213,35 @@ same because the job names match — grep for `actions/setup-node` across
 missing `pnpm/action-setup` or using `npm` instead are signals of intentional
 divergence; leave them out of the composite and note why, rather than
 "fixing" them to match the majority pattern.
+
+## 2026-07-21 - The Vercel Adapter's Fallback Route Forces `status: 404` Onto Every Clean Apex URL
+
+**Context:** Schefter's GroupMe tip link (`afl-fantasy.com/schefter/tip?target=0014`)
+dead-ended for every logged-out owner. Runtime logs showed the smoking gun:
+`GET /rosters 404` entries whose attached render logs proved the full rosters
+page had rendered (roster cache fills, trade-bait fetches) — correct body,
+wrong status. Clean apex URLs match no explicit route in
+`.vercel/output/config.json`, so they fall through to the adapter-generated
+fallback `{"src": "^/.*$", "dest": "_render", "status": 404}`, and that
+route-level `status` **overrides whatever the function returns**. Astro's
+`context.rewrite()` sets `this.status = 200` internally, so the middleware
+host-rewrite was blameless — Vercel's edge stamped 404 on the way out.
+
+**Insight:** A route-level `status` in the Build Output config wins over the
+lambda's response status. Pages "worked" for browsing because browsers render
+404 bodies, so the whole site ran on 404s invisibly (and un-SEO-ably) for
+weeks. The failure only became user-visible where the response had no body to
+fall back on: `Astro.redirect()` (302 + Location + empty body) clobbered to
+404 = dead page. If a redirect-on-load page 404s on the apex domain but works
+league-prefixed, check which Vercel route the path actually matches before
+debugging the middleware.
+
+**Recommendation:** Keep `src/pages/[...path].astro` (root catch-all,
+`prerender = false`). Its presence puts a real `^(?:/(.*?))?/?$` route with no
+forced status into the manifest ahead of the fallback, so middleware-rewritten
+pages keep their true 200/302, and genuinely unknown paths render the styled
+404 page with an explicit `Astro.response.status = 404`. `tests/root-catch-all.test.ts`
+locks this contract — don't delete the page or flip it to prerender (a
+prerendered catch-all leaves the SSR manifest and resurrects the bug). To
+verify after routing changes: `pnpm build`, then confirm the spread route
+precedes the `status: 404` fallback in `.vercel/output/config.json`.
