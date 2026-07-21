@@ -349,6 +349,9 @@ const { deadlineLabel, username } = Astro.props;
   .cdp-arrow svg {
     width: 12px;
     height: 12px;
+    /* Sprite <use> paths carry no fill — without this they render UA-default
+       black, invisible on the dark-mode button surface. */
+    fill: currentColor;
   }
   /* Unmark (×) — third button in the reorder column on marked rows. */
   .cdp-arrow--remove:hover:not(:disabled) {
@@ -379,6 +382,7 @@ const { deadlineLabel, username } = Astro.props;
   .cdp-mark-btn svg {
     width: 12px;
     height: 12px;
+    fill: currentColor;
   }
 
   .cdp-slate__player {
@@ -544,6 +548,7 @@ const { deadlineLabel, username } = Astro.props;
     width: 12px;
     height: 12px;
     color: var(--autocut-accent, #f59e0b);
+    fill: currentColor;
     flex-shrink: 0;
   }
   /* Reason sub-tag ("your pick" / "last added") — the marked-vs-last-added
