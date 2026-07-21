@@ -1109,3 +1109,34 @@ whose markup renders `.player-cell__avatar` must also set
 (readdir + substring match, like design-token-guard) — an earlier version
 shelled out to grep, which Copilot flagged as non-portable; prefer the Node
 scan for future guard tests.
+
+## Light-mode team-color chips + theme-split ring (experiment, 2026-07-21)
+
+The player-cell avatar chip now runs the team-color radial gradient in BOTH
+themes (light mode previously used a gray chip + team-primary ring). What a
+future session needs to know before touching the chip treatment again:
+
+- **The chip look is gated in THREE stylesheets, not one:** `player-cell.css`
+  (all shared renderers), `live-scoring.css` (`.ls-headshot`, box-shadow
+  ring instead of border), and `ContractDeclarationModal.astro`
+  (`.cdm-hero__avatar`, scoped styles). A treatment change that only edits
+  player-cell.css silently leaves the other two on the old look.
+- **The ring is per-theme via TWO inline custom properties**, both set by
+  every renderer alongside the bg/border: `--player-avatar-ring` (light:
+  anchor mixed toward ink) and `--player-avatar-ring-dark` (dark: anchor
+  mixed toward white); `html.dark` rules swap `border-color` between them.
+  The mix ratio and ink pole are single constants in `nfl-team-colors.ts`
+  (`AVATAR_RING_MIX` = 0.35, `AVATAR_RING_INK`). Both ring helpers reuse the
+  same `avatarAnchor()` as the gradient, so the ring is always an echo of
+  the actual chip color — including secondary-swapped teams (PIT gold ring,
+  not black), which `--player-avatar-border` (raw primary) would get wrong.
+- **Adding a new avatar custom property = nine renderer touch points:**
+  PlayerCell.astro, PlayerCell.tsx, player-cell-html.ts, LiveScoreboard.tsx,
+  HpUnsignedFaCard.astro + rosters.astro (contract-modal openers via
+  setProperty), and the three define:vars map pages (theleague players, afl
+  players, projected-free-agents — extend `getPlayerAvatarStyleMaps` and
+  thread map + fallback through define:vars). The backdrop guard test only
+  enforces `--player-avatar-bg`, so a missed ring property fails silently to
+  the CSS fallback rather than failing the build.
+- `--player-avatar-border` (team primary) is now only the base-rule fallback
+  for chips that opt out of the gradient; renderers still set it.
