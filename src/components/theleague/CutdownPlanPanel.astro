@@ -124,7 +124,11 @@ const { deadlineLabel, username } = Astro.props;
   /* Component-scoped accent (not a new global token — spec §0). */
   #cutdown-plan-panel,
   .cdp-reauth-overlay,
-  .cdp-cutnow-overlay {
+  .cdp-cutnow-overlay,
+  .autocut-badge {
+    /* .autocut-badge is in the list because it's injected into roster rows
+       OUTSIDE the panel — without its own declaration it silently renders
+       the fallback in both themes instead of the theme-aware token. */
     --autocut-accent: var(--warning-color, #f59e0b);
   }
 
@@ -382,7 +386,7 @@ const { deadlineLabel, username } = Astro.props;
   .cdp-mark-btn svg {
     width: 12px;
     height: 12px;
-    fill: currentColor;
+    fill: currentColor; /* sprite paths carry no fill — see .cdp-arrow svg */
   }
 
   .cdp-slate__player {
@@ -548,7 +552,7 @@ const { deadlineLabel, username } = Astro.props;
     width: 12px;
     height: 12px;
     color: var(--autocut-accent, #f59e0b);
-    fill: currentColor;
+    fill: currentColor; /* sprite paths carry no fill — see .cdp-arrow svg */
     flex-shrink: 0;
   }
   /* Reason sub-tag ("your pick" / "last added") — the marked-vs-last-added
