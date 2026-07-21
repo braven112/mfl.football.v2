@@ -21,7 +21,7 @@ import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -342,11 +342,13 @@ const posCountsJson = JSON.stringify(posCounts);
 // frontmatter so the client-side row builder just does a lookup — no color
 // math duplicated in the browser. Maps include MFL aliases (WAS, KCC, …);
 // FA/unknown falls back to league-neutral.
-const { bg: nflAvatarBg, border: nflAvatarBorder } = getPlayerAvatarStyleMaps();
+const { bg: nflAvatarBg, border: nflAvatarBorder, ring: nflAvatarRing } = getPlayerAvatarStyleMaps();
 const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
 const nflAvatarBorderFallback = getPlayerAvatarBorder('FA');
+const nflAvatarRingFallback = getPlayerAvatarRing('FA');
 const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
 const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
+const nflAvatarRingJson = JSON.stringify(nflAvatarRing);
 const franchiseListJson = JSON.stringify(franchiseEntries);
 
 function formatSalary(salary: number): string {
@@ -505,20 +507,22 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback }}>
+<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback }}>
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
   const players = JSON.parse(playerDataJson);
   const posCounts = JSON.parse(posCountsJson);
   const nflAvatarBg = JSON.parse(nflAvatarBgJson);
   const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
+  const nflAvatarRing = JSON.parse(nflAvatarRingJson);
 
   function getAvatarStyle(team) {
     // Not escapeAttr'd: values are precomputed hex/gradient strings from
     // nfl-team-colors.ts — deterministic, never contain HTML special chars.
     var bg = nflAvatarBg[team] || nflAvatarBgFallback;
     var border = nflAvatarBorder[team] || nflAvatarBorderFallback;
-    return ' style="--player-avatar-bg: ' + bg + '; --player-avatar-border: ' + border + '"';
+    var ring = nflAvatarRing[team] || nflAvatarRingFallback;
+    return ' style="--player-avatar-bg: ' + bg + '; --player-avatar-border: ' + border + '; --player-avatar-ring: ' + ring + '"';
   }
 
   let filteredPlayers = [...players];

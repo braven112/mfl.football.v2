@@ -5374,7 +5374,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
-  import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
+  import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing } from '../../utils/nfl-team-colors';
   // Same selection function the deadline job runs — the Cutdown Plan preview
   // and the automation's reality cannot drift (plan requirement).
   import { selectAutoCuts } from '../../utils/august-cut-selection';
@@ -8280,6 +8280,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         cdmAvatarEl.classList.toggle('cdm-hero__avatar--def', cdmAvatarIsDef);
         cdmAvatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
         cdmAvatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
+        cdmAvatarEl.style.setProperty('--player-avatar-ring', getPlayerAvatarRing(data.nflTeam || ''));
         cdmHeadshotImg.alt = cdmAvatarIsDef
           ? `${data.nflTeam || 'Team'} logo`
           : `${data.name || 'Player'} headshot`;

@@ -31,7 +31,7 @@
 import '../../styles/player-cell.css';
 import { buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing } from '../../utils/nfl-team-colors';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
 
 export interface Props {
@@ -114,10 +114,11 @@ const showNflLogo = !!nflLogoUrl;
 // Team-color backdrop behind the headshot (logo chips keep transparent).
 const avatarBg = isLogo ? undefined : getPlayerAvatarBackground(nflTeam ?? '');
 const avatarBorder = isLogo ? undefined : getPlayerAvatarBorder(nflTeam ?? '');
+const avatarRing = isLogo ? undefined : getPlayerAvatarRing(nflTeam ?? '');
 
 const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
 const avatarStyle = avatarBg
-  ? `--player-avatar-bg: ${avatarBg}; --player-avatar-border: ${avatarBorder}`
+  ? `--player-avatar-bg: ${avatarBg}; --player-avatar-border: ${avatarBorder}; --player-avatar-ring: ${avatarRing}`
   : undefined;
 ---
 

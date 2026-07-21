@@ -21,7 +21,7 @@
 import type { PlayerModalData } from './player-modal-trigger';
 import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder } from './nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing } from './nfl-team-colors';
 
 export interface PlayerCellOptions {
   name: string;
@@ -95,7 +95,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   // Team-color backdrop behind the headshot (logo chips keep transparent).
   const avatarStyle = isLogo
     ? ''
-    : ` style="--player-avatar-bg: ${getPlayerAvatarBackground(nflTeam ?? '')}; --player-avatar-border: ${getPlayerAvatarBorder(nflTeam ?? '')}"`;
+    : ` style="--player-avatar-bg: ${getPlayerAvatarBackground(nflTeam ?? '')}; --player-avatar-border: ${getPlayerAvatarBorder(nflTeam ?? '')}; --player-avatar-ring: ${getPlayerAvatarRing(nflTeam ?? '')}"`;
 
   // Name element — clickable if playerData provided
   let nameHtml: string;

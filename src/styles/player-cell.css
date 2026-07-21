@@ -61,10 +61,11 @@
 
 .player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__avatar--eligible) {
   background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
-  /* Half-opacity white ring (not --content-border) in BOTH themes: pops the
-     chip off dark table rows regardless of the team color behind the
-     headshot, and reads as a subtle edge on light rows since the gradient's
-     rim stop is dark. */
+  /* Team-tinted ring in BOTH themes: --player-avatar-ring is set per-player
+     by the renderers (getPlayerAvatarRing — the gradient's anchor color mixed
+     halfway to white), so the ring reads as a lighter echo of the chip color
+     rather than a flat white line. The translucent-white fallback covers any
+     renderer that sets the bg without the ring. */
   border: 1px solid var(--player-avatar-ring, rgba(255, 255, 255, 0.5));
 }
 

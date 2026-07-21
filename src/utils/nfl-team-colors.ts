@@ -158,14 +158,33 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
  * // 'radial-gradient(circle at 50% 30%, #ed697d 0%, #e31837 58%, #821427 100%)'
  * ```
  */
-export function getPlayerAvatarBackground(teamCode: string): string {
-  const anchor = raiseToLuminanceFloor(
+/** The readable team color anchoring both the chip gradient and the ring. */
+function avatarAnchor(teamCode: string): string {
+  return raiseToLuminanceFloor(
     pickDarkAvatarAnchor(getNflTeamColors(teamCode)),
     AVATAR_ANCHOR_MIN_LUMINANCE,
   );
+}
+
+export function getPlayerAvatarBackground(teamCode: string): string {
+  const anchor = avatarAnchor(teamCode);
   const highlight = mixHex(anchor, '#ffffff', AVATAR_HEAD_HIGHLIGHT_MIX);
   const edge = mixHex(anchor, '#0b0e13', 0.45);
   return `radial-gradient(circle at 50% 30%, ${highlight} 0%, ${anchor} 58%, ${edge} 100%)`;
+}
+
+/** White-mix for the chip ring — half white, half the gradient's anchor. */
+const AVATAR_RING_WHITE_MIX = 0.5;
+
+/**
+ * Team-tinted ring color for the avatar chip: the gradient's anchor color
+ * mixed halfway to white, so the ring reads as a lighter echo of the chip
+ * rather than a flat white line. Opaque on purpose — the translucent
+ * fallback ring in player-cell.css disappears on light rows. Set as
+ * `--player-avatar-ring` alongside the other two properties.
+ */
+export function getPlayerAvatarRing(teamCode: string): string {
+  return mixHex(avatarAnchor(teamCode), '#ffffff', AVATAR_RING_WHITE_MIX);
 }
 
 /**
@@ -184,20 +203,22 @@ export function getPlayerAvatarBorder(teamCode: string): string {
  * AFL players). Keys cover every ESPN code AND every MFL alias (KCC, GBP,
  * WAS, …) so a raw feed team code hits without client-side normalization.
  * Pages pass these via `define:vars` and look up `map[team] || fallback`,
- * with `getPlayerAvatarBackground('FA')` / `getPlayerAvatarBorder('FA')`
- * as the fallbacks.
+ * with the `'FA'` result from each getter as the fallback.
  */
 export function getPlayerAvatarStyleMaps(): {
   bg: Record<string, string>;
   border: Record<string, string>;
+  ring: Record<string, string>;
 } {
   const bg: Record<string, string> = {};
   const border: Record<string, string> = {};
+  const ring: Record<string, string> = {};
   for (const code of [...Object.keys(NFL_TEAM_COLORS), ...Object.keys(TEAM_CODE_MAP)]) {
     bg[code] = getPlayerAvatarBackground(code);
     border[code] = getPlayerAvatarBorder(code);
+    ring[code] = getPlayerAvatarRing(code);
   }
-  return { bg, border };
+  return { bg, border, ring };
 }
 
 /**

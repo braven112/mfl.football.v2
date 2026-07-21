@@ -578,7 +578,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   // trimmed clone of the year-select branch of rosters.astro's CDM wiring —
   // no action-select, franchise-tag, extension, or cut flows apply here.
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../../utils/nfl';
-  import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../../utils/nfl-team-colors';
+  import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing } from '../../../utils/nfl-team-colors';
   import { DEFAULT_HEADSHOT_URL } from '../../../constants/roster-constants';
   import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
@@ -677,6 +677,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
         avatarEl.classList.toggle('cdm-hero__avatar--def', avatarIsDef);
         avatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
         avatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
+        avatarEl.style.setProperty('--player-avatar-ring', getPlayerAvatarRing(data.nflTeam || ''));
         if (headshotImg) {
           headshotImg.alt = avatarIsDef
             ? `${data.nflTeam || 'Team'} logo`
