@@ -52,14 +52,23 @@ const writeJson = (filePath, data) => {
 
 // ── ADP endpoints ───────────────────────────────────────────────────────────
 
+// IS_KEEPER takes league-type letter codes (per MFL api_info for TYPE=adp):
+// N = redraft (non-keeper), K = keeper, D = dynasty, R = rookie-only.
+// Letter codes were confirmed from behavior (numeric values = unfiltered),
+// not verified live (dev-sandbox egress to MFL is proxy-blocked) — the
+// identical-payload guard below is the tripwire if they're wrong.
+// The old numeric values (IS_KEEPER=0 / omitted) were silently ignored, so
+// both files carried the SAME unfiltered dataset — every "dynasty ADP"
+// consumer was actually reading redraft-ish data. The identical-payload
+// guard below keeps that regression from going unnoticed again.
 const adpEndpoints = (yr) => [
   {
     key: 'adp-redraft',
-    url: `${host}/${yr}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=0&IS_MOCK=0&JSON=1`,
+    url: `${host}/${yr}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=N&IS_MOCK=0&JSON=1`,
   },
   {
     key: 'adp-dynasty',
-    url: `${host}/${yr}/export?TYPE=adp&IS_PPR=1&IS_MOCK=0&JSON=1`,
+    url: `${host}/${yr}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=D&IS_MOCK=0&JSON=1`,
   },
 ];
 
@@ -70,16 +79,39 @@ const run = async () => {
 
   // 1. Fetch current-year ADP
   console.log(`Fetching ${currentYear} ADP data...`);
+  const payloads = {};
   for (const { key, url } of adpEndpoints(currentYear)) {
     try {
       const data = await fetchJson(url);
       const file = path.join(outDir, String(currentYear), `${key}.json`);
       writeJson(file, data);
+      payloads[key] = data;
       const count = Array.isArray(data?.adp?.player) ? data.adp.player.length : 0;
       console.log(`  ${key} → ${count} players`);
     } catch (err) {
       console.error(`  Failed ${key}: ${err.message}`);
     }
+  }
+
+  // Identical-payload guard: redraft and dynasty are DIFFERENT populations of
+  // leagues; byte-identical player data means the IS_KEEPER filter regressed
+  // (that's exactly how the pre-July-2026 bug shipped). Warn loudly — don't
+  // fail, this also runs in prebuild and a deploy shouldn't die over ADP.
+  const adpPlayers = (data) => data?.adp?.player ?? [];
+  const adpFingerprint = (data) =>
+    JSON.stringify(adpPlayers(data).map((p) => [p.id, p.averagePick]).sort());
+  if (
+    payloads['adp-redraft'] && payloads['adp-dynasty'] &&
+    // Two legitimately-empty feeds (early offseason) are not a filter
+    // regression — only warn when identical AND non-empty.
+    adpPlayers(payloads['adp-redraft']).length > 0 &&
+    adpFingerprint(payloads['adp-redraft']) === adpFingerprint(payloads['adp-dynasty'])
+  ) {
+    console.warn(
+      '::warning::adp-redraft and adp-dynasty returned IDENTICAL data — the ' +
+      'IS_KEEPER league-type filter is likely being ignored again. Dynasty ' +
+      'ADP consumers (cut-watch blend, hero casting) are degraded to redraft data.',
+    );
   }
 
   console.log('ADP fetch complete.');

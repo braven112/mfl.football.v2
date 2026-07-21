@@ -490,14 +490,20 @@ const endpoints = [
     url: withWeek(`${host}/${year}/export?TYPE=projectedScores&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
+  // IS_KEEPER takes league-type LETTER codes (N=redraft, D=dynasty) — numeric
+  // or omitted values are silently ignored and return the unfiltered
+  // aggregate, making both files identical. Keep these in lockstep with
+  // scripts/fetch-adp.mjs (which carries the identical-payload guard): this
+  // duplicate fetch runs every 5 min via roster-sync and overwrites the same
+  // committed files, so a fix applied only there is reverted here.
   {
     key: 'adp-redraft',
-    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=0&IS_MOCK=0&JSON=1`,
+    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=N&IS_MOCK=0&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
   {
     key: 'adp-dynasty',
-    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_MOCK=0&JSON=1`,
+    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=D&IS_MOCK=0&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
   {

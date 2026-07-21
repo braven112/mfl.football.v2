@@ -1497,3 +1497,13 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 **Recommendation:** Always read `data?.myleagues?.league ?? data?.leagues?.league ?? []`. Also remember the single-league case may be an object, not an array — normalize before iterating.
 
 **Evidence:** `src/pages/api/autocut-list.ts` (credential verification read, ~line 52); prior entries "The `myleagues` API Returns Franchise ID" and "MFL Custom Pages Can Run JavaScript" (point 3) in this file.
+
+## 2026-07-21 - ADP `IS_KEEPER` Takes League-Type LETTER Codes — Numeric Values Are Silently Ignored
+
+**Context:** The cut-watch combined-value blend needed genuinely different redraft and dynasty ADP. Diffing the committed feeds revealed `adp-redraft.json` and `adp-dynasty.json` were data-identical (all 341 rows, same `averagePick`), and had been since the fetch was written.
+
+**Insight:** `export?TYPE=adp` filters league type via `IS_KEEPER` with letter codes — `N` (redraft/non-keeper), `K` (keeper), `D` (dynasty), `R` (rookie-only) — NOT `0`/`1`. A numeric value or an omitted param is silently ignored and returns the unfiltered all-leagues aggregate, so both "slices" were the same dataset and every dynasty-ADP consumer (hero casting, best-available, cut-watch blend) was actually reading mixed data. MFL rejects nothing — there is no error signal at all.
+
+**Recommendation:** `scripts/fetch-adp.mjs` now sends `IS_KEEPER=N` / `IS_KEEPER=D` and warns loudly (`::warning::`) when both payloads fingerprint identical — treat that warning as "the filter regressed again," not noise. Letter codes were confirmed from behavior (numeric = unfiltered) but NOT verified live from the dev sandbox (MFL egress is proxy-blocked); the first post-fix scheduled fetch proves them out. Related endpoint worth knowing: `TYPE=aav` returns average AUCTION values with the same filter params — arguably the better value signal for a salary-cap auction league.
+
+**Evidence:** `scripts/fetch-adp.mjs` (endpoints + identical-payload guard), byte-equal committed feeds at `data/theleague/mfl-feeds/2026/adp-{redraft,dynasty}.json` pre-fix.

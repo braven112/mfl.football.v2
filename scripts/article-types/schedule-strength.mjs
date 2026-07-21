@@ -16,7 +16,7 @@ import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
-import { LEAGUES } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, leagueOrigin } from '../../src/config/leagues-data.mjs';
 
 function leagueMeta(league) {
   const reg = LEAGUES[league];
@@ -25,8 +25,9 @@ function leagueMeta(league) {
     dataRoot: reg.dataPath,
     baseUrl: `/${reg.slug}`,
     displayName: reg.name,
-    // Apex domain for the absolute GroupMe link.
-    publicOrigin: `https://${reg.domains[0]}`,
+    // Canonical (cookie-safe) host for the absolute GroupMe link — session
+    // cookies are host-only, so domains[0] (bare apex) opens logged-out.
+    publicOrigin: leagueOrigin(reg),
   };
 }
 

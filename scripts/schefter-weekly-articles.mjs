@@ -16,7 +16,7 @@
  *   waiver-pickups      BBID waiver claims (Wednesday)
  *   weekend-preview     Upcoming NFL weekend (Friday)
  *   matchup-preview     Fantasy matchups + broadcast guide (Saturday)
- *   cut-watch           Teams over roster limit (daily, Jul 15–Aug 16)
+ *   cut-watch           Teams over roster limit (Sundays, Jul 15–Aug 16)
  *   championship-recap  Season champion (manual)
  *   draft-grades        Rookie draft grade cards (manual)
  *   team-grades         Pre-season roster grades (manual)

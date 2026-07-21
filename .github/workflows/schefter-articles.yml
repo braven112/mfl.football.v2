@@ -10,11 +10,12 @@ on:
     - cron: "0 15 * * 5"
     # Saturday 9am PT (16:00 UTC) — matchup-preview
     - cron: "0 16 * * 6"
-    # Daily 8am PT (15:00 UTC) — cut-watch (self-guards to Jul 15–Aug 16)
-    - cron: "0 15 * * *"
+    # Sunday 8am PT (15:00 UTC) — cut-watch (weekly during the Jul 15–Aug 16
+    # window; self-guards outside it)
+    - cron: "0 15 * * 0"
     # Wednesday 9am PT (16:00 UTC) — schedule-strength (The Gauntlet, both
-    # leagues). 16:00 rather than 15:00 so the daily cut-watch mapping isn't
-    # shadowed on Wednesdays.
+    # leagues). Stays at 16:00 from when cut-watch ran daily at 15:00 and
+    # would have shadowed a Wednesday mapping; no reason to churn it back.
     - cron: "0 16 * * 3"
   workflow_dispatch:
     inputs:
@@ -70,9 +71,9 @@ jobs:
           else
             # Map the TRIGGERING cron expression (github.event.schedule) to an
             # article type. Never derive the type from wall-clock time — GitHub
-            # schedule delays of 10-60 min are routine, and a delayed daily
-            # 15:00 run crossing into 16:00 on a Wednesday would otherwise be
-            # misrouted to schedule-strength instead of cut-watch.
+            # schedule delays of 10-60 min are routine, and a delayed run
+            # crossing into another slot's hour would otherwise be misrouted
+            # to the wrong article type.
             TYPE=""
             case "$CRON_EXPR" in
               "0 13 * * 2") TYPE="weekly-recap" ;;
@@ -80,7 +81,7 @@ jobs:
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
               "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;
-              "0 15 * * *") TYPE="cut-watch" ;;
+              "0 15 * * 0") TYPE="cut-watch" ;;
             esac
             echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
           fi
@@ -93,6 +94,13 @@ jobs:
           WEEK_OVERRIDE: ${{ github.event.inputs.week }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # cut-watch reads autocut:{fid} cutdown-plan status (counts only)
+          # so Schefter can credit owners who already made their picks and
+          # call out over-limit teams with no plan on file.
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: |
           WEEK_ARG=""
           if [ -n "$WEEK_OVERRIDE" ]; then
