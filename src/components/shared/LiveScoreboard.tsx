@@ -27,7 +27,7 @@ import {
   winProbability,
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import { resolveTeamColorPair } from '../../utils/team-color-contrast';
 
 const POLL_LIVE = 60_000;
@@ -360,6 +360,8 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
       style={{
         ['--player-avatar-bg' as any]: getPlayerAvatarBackground(team),
         ['--player-avatar-border' as any]: getPlayerAvatarBorder(team),
+        ['--player-avatar-ring' as any]: getPlayerAvatarRing(team),
+        ['--player-avatar-ring-dark' as any]: getPlayerAvatarRingDark(team),
       }}
     >
       {meta?.headshot && !isDef && (

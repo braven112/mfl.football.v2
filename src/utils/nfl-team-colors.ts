@@ -131,9 +131,10 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
 }
 
 /**
- * CSS `background` for a circular player avatar chip. **Dark-mode only** —
- * `player-cell.css` applies `--player-avatar-bg` under `html.dark`; light mode
- * uses a gray chip with a team-color ring instead (getPlayerAvatarBorder).
+ * CSS `background` for a circular player avatar chip, applied in BOTH themes
+ * by `player-cell.css` via `--player-avatar-bg` (light mode formerly used a
+ * gray chip and only kept the team-color ring from getPlayerAvatarBorder —
+ * running the gradient in light mode too is a July 2026 experiment).
  *
  * A radial spotlight, brightest behind the player's head: the headshot's face
  * sits at top-center of the chip (`object-position: top` + `scale(1.18)` in
@@ -157,21 +158,54 @@ function raiseToLuminanceFloor(hex: string, floor: number): string {
  * // 'radial-gradient(circle at 50% 30%, #ed697d 0%, #e31837 58%, #821427 100%)'
  * ```
  */
-export function getPlayerAvatarBackground(teamCode: string): string {
-  const anchor = raiseToLuminanceFloor(
+/** The readable team color anchoring both the chip gradient and the ring. */
+function avatarAnchor(teamCode: string): string {
+  return raiseToLuminanceFloor(
     pickDarkAvatarAnchor(getNflTeamColors(teamCode)),
     AVATAR_ANCHOR_MIN_LUMINANCE,
   );
+}
+
+export function getPlayerAvatarBackground(teamCode: string): string {
+  const anchor = avatarAnchor(teamCode);
   const highlight = mixHex(anchor, '#ffffff', AVATAR_HEAD_HIGHLIGHT_MIX);
   const edge = mixHex(anchor, '#0b0e13', 0.45);
   return `radial-gradient(circle at 50% 30%, ${highlight} 0%, ${anchor} 58%, ${edge} 100%)`;
 }
 
+/** Ring mix ratio — how far the anchor shifts toward the theme's pole. */
+const AVATAR_RING_MIX = 0.35;
+/** Dark pole for the light-mode ring — same ink as the gradient's edge stop. */
+const AVATAR_RING_INK = '#0b0e13';
+
 /**
- * Team-primary hex for the avatar ring in light mode. Light mode swaps the
- * dark gradient backdrop (too heavy against a white page) for a light-gray
- * chip with this color as the border — same team identity, lighter weight.
- * See `--player-avatar-border` in player-cell.css.
+ * Light-mode ring color for the avatar chip: the gradient's anchor color
+ * mixed toward ink (AVATAR_RING_MIX), so the ring reads as a darker echo of the chip that
+ * separates it from white table rows. Opaque on purpose — the translucent
+ * fallback ring in player-cell.css disappears on light rows. Set as
+ * `--player-avatar-ring` alongside the other avatar properties;
+ * `getPlayerAvatarRingDark` supplies the dark-mode counterpart.
+ */
+export function getPlayerAvatarRing(teamCode: string): string {
+  return mixHex(avatarAnchor(teamCode), AVATAR_RING_INK, AVATAR_RING_MIX);
+}
+
+/**
+ * Dark-mode ring color: the anchor mixed toward white (AVATAR_RING_MIX) — a lighter echo
+ * of the chip that pops it off dark table rows. Set as
+ * `--player-avatar-ring-dark`; player-cell.css swaps to it under html.dark.
+ */
+export function getPlayerAvatarRingDark(teamCode: string): string {
+  return mixHex(avatarAnchor(teamCode), '#ffffff', AVATAR_RING_MIX);
+}
+
+/**
+ * Team-primary hex for `--player-avatar-border`. Gradient chips ring with
+ * the theme-split team-tinted pair instead (`--player-avatar-ring` light /
+ * `--player-avatar-ring-dark` dark — see getPlayerAvatarRing/RingDark), so
+ * this only surfaces on chips that opt out of the gradient (the base
+ * fallback in player-cell.css, e.g. the --eligible highlight state).
+ * Renderers still set it alongside the other avatar properties.
  */
 export function getPlayerAvatarBorder(teamCode: string): string {
   return getNflTeamColors(teamCode).primary;
@@ -183,20 +217,25 @@ export function getPlayerAvatarBorder(teamCode: string): string {
  * AFL players). Keys cover every ESPN code AND every MFL alias (KCC, GBP,
  * WAS, …) so a raw feed team code hits without client-side normalization.
  * Pages pass these via `define:vars` and look up `map[team] || fallback`,
- * with `getPlayerAvatarBackground('FA')` / `getPlayerAvatarBorder('FA')`
- * as the fallbacks.
+ * with the `'FA'` result from each getter as the fallback.
  */
 export function getPlayerAvatarStyleMaps(): {
   bg: Record<string, string>;
   border: Record<string, string>;
+  ring: Record<string, string>;
+  ringDark: Record<string, string>;
 } {
   const bg: Record<string, string> = {};
   const border: Record<string, string> = {};
+  const ring: Record<string, string> = {};
+  const ringDark: Record<string, string> = {};
   for (const code of [...Object.keys(NFL_TEAM_COLORS), ...Object.keys(TEAM_CODE_MAP)]) {
     bg[code] = getPlayerAvatarBackground(code);
     border[code] = getPlayerAvatarBorder(code);
+    ring[code] = getPlayerAvatarRing(code);
+    ringDark[code] = getPlayerAvatarRingDark(code);
   }
-  return { bg, border };
+  return { bg, border, ring, ringDark };
 }
 
 /**

@@ -52,15 +52,16 @@ const writeJson = (filePath, data) => {
 
 // ── ADP endpoints ───────────────────────────────────────────────────────────
 
-// IS_KEEPER takes league-type letter codes (per MFL api_info for TYPE=adp):
-// N = redraft (non-keeper), K = keeper, D = dynasty, R = rookie-only.
-// Letter codes were confirmed from behavior (numeric values = unfiltered),
-// not verified live (dev-sandbox egress to MFL is proxy-blocked) — the
-// identical-payload guard below is the tripwire if they're wrong.
-// The old numeric values (IS_KEEPER=0 / omitted) were silently ignored, so
-// both files carried the SAME unfiltered dataset — every "dynasty ADP"
-// consumer was actually reading redraft-ish data. The identical-payload
-// guard below keeps that regression from going unnoticed again.
+// IS_KEEPER takes league-type letter codes. Production verdict (2026-07-21):
+// N (redraft) is ACCEPTED and returns data; D was REJECTED with
+// `{"error":{"$t":"Invalid value for IS_KEEPER"}}` — and the crons committed
+// that error payload over both leagues' adp-dynasty.json, which is why the
+// error-payload guard below now refuses to write a payload with no players.
+// The old numeric values (IS_KEEPER=0 / omitted) were silently ignored
+// (both files carried the SAME unfiltered dataset), so DO NOT revert to
+// numbers. The dynasty letter code still needs live verification against
+// MFL (dev-sandbox egress to MFL is proxy-blocked) — until then the dynasty
+// fetch fails loudly and the committed file stays at its last good state.
 const adpEndpoints = (yr) => [
   {
     key: 'adp-redraft',
@@ -83,10 +84,20 @@ const run = async () => {
   for (const { key, url } of adpEndpoints(currentYear)) {
     try {
       const data = await fetchJson(url);
+      // Error-payload guard: MFL returns HTTP 200 with an `error` body for a
+      // rejected param (seen live: "Invalid value for IS_KEEPER"). Writing
+      // that over a good feed breaks every ADP consumer AND the test suite —
+      // keep the last good file instead and surface the failure loudly.
+      const players = data?.adp?.player;
+      if (data?.error || !players) {
+        const reason = data?.error?.$t ?? 'no adp.player in response';
+        console.warn(`::warning::${key} fetch returned no usable data (${reason}) — keeping the existing file.`);
+        continue;
+      }
       const file = path.join(outDir, String(currentYear), `${key}.json`);
       writeJson(file, data);
       payloads[key] = data;
-      const count = Array.isArray(data?.adp?.player) ? data.adp.player.length : 0;
+      const count = Array.isArray(players) ? players.length : 1;
       console.log(`  ${key} → ${count} players`);
     } catch (err) {
       console.error(`  Failed ${key}: ${err.message}`);

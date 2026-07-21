@@ -168,4 +168,25 @@ describe('team-color-behind-player guard', () => {
         '<PlayerCell>, or the getPlayerAvatarStyleMaps() precompute pattern (see players.astro).',
     ).toEqual([]);
   });
+
+  it('every file that sets --player-avatar-bg also sets both ring properties', () => {
+    // The ring is theme-split across TWO per-player properties
+    // (--player-avatar-ring light / --player-avatar-ring-dark dark). Missing
+    // one fails SILENTLY to the translucent CSS fallback — a PIT chip gets a
+    // generic gray ring instead of its gold-tinted one, and nobody notices.
+    // Any renderer painting the backdrop must set the full ring pair too.
+    const setters = grepFiles('--player-avatar-bg');
+    const offenders = setters
+      .filter(
+        (f) =>
+          !grepFiles('--player-avatar-ring').includes(f) ||
+          !grepFiles('--player-avatar-ring-dark').includes(f),
+      )
+      .sort();
+    expect(
+      offenders,
+      `File(s) set --player-avatar-bg without the full ring pair (--player-avatar-ring + --player-avatar-ring-dark): ${offenders.join(', ')}. ` +
+        'Set both via getPlayerAvatarRing/getPlayerAvatarRingDark (or the ring/ringDark maps on getPlayerAvatarStyleMaps).',
+    ).toEqual([]);
+  });
 });

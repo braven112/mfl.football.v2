@@ -24,7 +24,7 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
-import { NFL_TEAM_COLORS, getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
 // Build franchise ID → short name map for auction high-bidder display
@@ -623,19 +623,18 @@ const nflTeamsJson = JSON.stringify(nflTeamsList);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
 // NFL-team gradient backdrops for player avatars (same treatment as the modal
-// band). Precomputed here so the client-side list renderer just does a lookup —
-// no color math duplicated in the browser. Keyed by ESPN team code (matches
-// p.team); FA/unknown falls back to the league-neutral blue.
-const nflAvatarBg: Record<string, string> = {};
-const nflAvatarBorder: Record<string, string> = {};
-for (const code of Object.keys(NFL_TEAM_COLORS)) {
-  nflAvatarBg[code] = getPlayerAvatarBackground(code);
-  nflAvatarBorder[code] = getPlayerAvatarBorder(code);
-}
+// band). Precomputed via the shared style maps (ESPN codes + MFL aliases) so
+// the client-side list renderer just does a lookup — no color math duplicated
+// in the browser. FA/unknown falls back to the league-neutral blue.
+const { bg: nflAvatarBg, border: nflAvatarBorder, ring: nflAvatarRing, ringDark: nflAvatarRingDark } = getPlayerAvatarStyleMaps();
 const nflAvatarBgFallback = getPlayerAvatarBackground('FA');
 const nflAvatarBorderFallback = getPlayerAvatarBorder('FA');
+const nflAvatarRingFallback = getPlayerAvatarRing('FA');
+const nflAvatarRingDarkFallback = getPlayerAvatarRingDark('FA');
 const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
 const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
+const nflAvatarRingJson = JSON.stringify(nflAvatarRing);
+const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
 
 // Admin gate: Value view is only visible to admin franchises (same auth as nav sidebar)
 const authUser = getAuthUser(Astro.request);
@@ -995,7 +994,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1296,8 +1295,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // construction (a mismatch would break the team logo first).
   const nflAvatarBg = JSON.parse(nflAvatarBgJson);
   const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
+  const nflAvatarRing = JSON.parse(nflAvatarRingJson);
+  const nflAvatarRingDark = JSON.parse(nflAvatarRingDarkJson);
   function getAvatarBg(team) {
     return nflAvatarBg[team] || nflAvatarBgFallback;
+  }
+  function getAvatarRing(team) {
+    return nflAvatarRing[team] || nflAvatarRingFallback;
+  }
+  function getAvatarRingDark(team) {
+    return nflAvatarRingDark[team] || nflAvatarRingDarkFallback;
   }
   function getAvatarBorder(team) {
     return nflAvatarBorder[team] || nflAvatarBorderFallback;
@@ -1868,7 +1875,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <td class="cell-rank">${rank}</td>
         <td class="cell-player">
           <div class="player-cell">
-            <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}"${isDef ? '' : ` style="--player-avatar-bg: ${getAvatarBg(p.team)}; --player-avatar-border: ${getAvatarBorder(p.team)}"`}>
+            <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}"${isDef ? '' : ` style="--player-avatar-bg: ${getAvatarBg(p.team)}; --player-avatar-border: ${getAvatarBorder(p.team)}; --player-avatar-ring: ${getAvatarRing(p.team)}; --player-avatar-ring-dark: ${getAvatarRingDark(p.team)}"`}>
               <img src="${headshot}" alt="" loading="lazy" decoding="async"
                 onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
