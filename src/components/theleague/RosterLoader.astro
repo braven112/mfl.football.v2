@@ -143,6 +143,7 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
         if (el) {
           var lineEl = el.querySelector('[data-roster-line]');
           if (lineEl && order.length) lineEl.textContent = order[idx];
+          if (order.length) el.setAttribute('aria-label', 'Loading your roster. ' + order[idx]);
           el.hidden = false;
           el.classList.add('is-active');
         }
