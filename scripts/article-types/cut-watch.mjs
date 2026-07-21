@@ -1,6 +1,6 @@
 /**
  * Cut Watch — Teams over the 22-man active roster limit.
- * Runs daily 8am PT during the cut window (Jul 15 – Aug 16).
+ * Runs Sundays 8am PT during the cut window (Jul 15 – Aug 16).
  *
  * Fact sheet: Teams over limit with player-level cut candidates.
  * AI output: { headline, excerpt, content: string[] }
@@ -11,6 +11,8 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isCutWindow } from '../article-utils/season-guards.mjs';
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../lib/august-cutdown.mjs';
+import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
+import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 
 const ACTIVE_ROSTER_LIMIT = 22;
 
@@ -31,7 +33,42 @@ export function guardSeason(week, year, now) {
   return isCutWindow(now);
 }
 
-export async function buildFactSheet(data, week, year, projectRoot) {
+/**
+ * Cutdown-plan status for the over-limit franchises, read from the autocut
+ * Redis keys (autocut:{fid} — the same contract apply-august-cuts.mjs
+ * executes at the deadline). Returns Map<fid, markedCount>, or null when
+ * Redis is unreachable — plan intel is additive, the article runs without it.
+ *
+ * PRIVACY (august-cuts plan decision #10): counts only. The marked player
+ * ids NEVER enter the fact sheet, so the AI cannot leak an owner's actual
+ * cut list into a league-visible article.
+ */
+async function loadCutdownPlans(fids) {
+  const redis = getRedisConfig();
+  if (!redis) return null;
+  const planYear = ptDateParts().year;
+  const plans = new Map();
+  try {
+    for (const fid of fids) {
+      const raw = await redisCommand(redis, ['GET', `autocut:${normalizeFranchiseId(fid)}`]);
+      let list = raw;
+      if (typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = null; }
+      }
+      const marked =
+        list && typeof list === 'object' && list.year === planYear && Array.isArray(list.playerIds)
+          ? list.playerIds.length
+          : 0;
+      plans.set(fid, marked);
+    }
+  } catch (err) {
+    console.warn(`  [cut-watch] could not read cutdown plans (${err.message}) — omitting plan intel`);
+    return null;
+  }
+  return plans;
+}
+
+export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   const players = new Map();
   for (const p of data.players.players.player) {
     if (p.id) {
@@ -98,12 +135,24 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     else underLimit.push(entry);
   }
 
+  // Cutdown-plan intel for over-limit teams (opts.cutdownPlans is a test
+  // seam — pass a Map or null to bypass the live Redis read).
+  const plans = opts.cutdownPlans !== undefined
+    ? opts.cutdownPlans
+    : await loadCutdownPlans(overLimit.map((e) => e.fid));
+
   if (overLimit.length > 0) {
     lines.push('=== TEAMS OVER THE LIMIT ===');
     for (const e of overLimit.sort((a, b) => b.over - a.over)) {
       lines.push(`── ${e.name}: ${e.count} active players (${e.over} over limit) ──`);
       const posParts = Object.entries(e.positionCounts).map(([p, c]) => `${c} ${p}`).join(', ');
       lines.push(`  Positions: ${posParts}`);
+      if (plans) {
+        const marked = plans.get(e.fid) ?? 0;
+        lines.push(marked > 0
+          ? `  Cutdown plan: FILED — this owner has already marked ${marked} player${marked === 1 ? '' : 's'} for auto-cut (plans made)`
+          : `  Cutdown plan: NONE ON FILE — this owner has not made their picks yet`);
+      }
       lines.push(`  Likely cut candidates (lowest salary):`);
       for (const c of e.cutCandidates) {
         lines.push(`    - ${c.position} ${c.name} (${formatSalary(c.salary)}, ${c.contractYear}yr)`);
@@ -135,10 +184,17 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   return {
     factSheet: lines.join('\n'),
     enrichment: {
-      // Worst offenders first — buildGroupMePromo leads with overLimit[0].
+      // Worst offenders first — buildGroupMePromo prefers the worst offender
+      // WITHOUT a filed plan. hasPlan is null when plan intel was unavailable.
       overLimit: [...overLimit]
         .sort((a, b) => b.over - a.over)
-        .map(({ name, count, over }) => ({ name, count, over })),
+        .map(({ fid, name, count, over }) => ({
+          name,
+          count,
+          over,
+          hasPlan: plans ? (plans.get(fid) ?? 0) > 0 : null,
+          markedCount: plans ? (plans.get(fid) ?? 0) : null,
+        })),
     },
   };
 }
@@ -163,6 +219,15 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 INSTRUCTIONS:
 - Write 3-5 content paragraphs.
 - Focus on teams that are over the roster limit.
+- If the fact sheet shows cutdown-plan status, LEAD with the over-limit teams
+  marked "NONE ON FILE" — those owners haven't made their picks yet, and they
+  are the story. Call them out by team name for procrastinating with the
+  deadline looming.
+- Teams marked "FILED" have already made their plans — give them credit for
+  having their affairs in order and shift the heat to the procrastinators.
+- NEVER name or guess which players are in a FILED plan — plans are private.
+  Your "likely cut candidates" list is salary-based speculation and fair
+  game, but never present it as an owner's actual list.
 - Name specific players who could be cut and why.
 - Discuss which cuts are easy (low salary, redundant) vs. painful.
 - If no teams are over the limit, write about who's cutting it close.
@@ -180,9 +245,9 @@ export function validate(aiOutput) {
 /**
  * One teaser stat + the article link — never a summary (same contract as
  * schedule-strength.mjs; a falsy return skips the promo). Fires only when at
- * least one team is over the limit: the article itself runs every day of the
- * Jul 15 – Aug 16 window, but an "everyone is compliant" ping would buzz the
- * whole chat for a non-story.
+ * least one team is over the limit: the article itself runs every Sunday of
+ * the Jul 15 – Aug 16 window, but an "everyone is compliant" ping would buzz
+ * the whole chat for a non-story.
  *
  * `now` is injectable for tests only — the runner never passes it.
  */
@@ -191,8 +256,19 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
   if (overLimit.length === 0) return null;
 
   const publicOrigin = `https://${LEAGUES[league].domains[0]}`;
-  const worst = overLimit[0];
   const totalExcess = overLimit.reduce((sum, t) => sum + t.over, 0);
+
+  // Prefer to call out the worst offender WITHOUT a filed cutdown plan —
+  // owners who already made their picks get credit, not the spotlight.
+  // hasPlan is null when plan intel was unavailable (falls back to worst
+  // offender overall, pre-plan-intel behavior).
+  const noPlan = overLimit.filter((t) => t.hasPlan === false);
+  const planned = overLimit.filter((t) => t.hasPlan === true);
+  const worst = noPlan[0] ?? overLimit[0];
+
+  const descriptor = worst.hasPlan === false
+    ? ' with NO cutdown plan on file'
+    : (overLimit.length > 1 && worst === overLimit[0] ? ', the deepest hole in the league' : '');
 
   const { year } = ptDateParts(now);
   const deadlineDay = getAugustCutdownDay(year);
@@ -201,13 +277,20 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
     ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to comply`
     : 'deadline day';
 
-  const spread = overLimit.length > 1
-    ? ` ${overLimit.length} teams still need to shed ${totalExcess} players combined.`
-    : '';
+  let spread = '';
+  if (overLimit.length > 1) {
+    spread = ` ${overLimit.length} teams still need to shed ${totalExcess} players combined`;
+    if (planned.length > 0) {
+      spread += ` — ${planned.length} ${planned.length === 1 ? 'has' : 'have'} already made their picks`;
+    }
+    spread += '.';
+  } else if (worst.hasPlan === true) {
+    spread = ' The cutdown plan is already filed — the guillotine drops itself at the deadline.';
+  }
 
   return (
     `🚨 CUT WATCH — ${worst.name}: ${worst.over} over the ${ACTIVE_ROSTER_LIMIT}-man limit` +
-    `${overLimit.length > 1 ? ', the deepest hole in the league' : ''}.${spread} ` +
+    `${descriptor}.${spread} ` +
     `Cutdown is Aug ${deadlineDay} (${countdown}). Today's chopping block:\n` +
     `${publicOrigin}${post.link}`
   );
