@@ -212,7 +212,15 @@ async function main() {
 
   console.log(`Capturing ${targets.length} screenshot(s)...`);
 
-  const browser = await chromium.launch();
+  // PLAYWRIGHT_CHROMIUM_PATH: cloud sessions ship a pre-installed chromium
+  // whose revision may not match this repo's pinned playwright — point the
+  // launch at it explicitly (e.g. /opt/pw-browsers/chromium) instead of
+  // re-downloading browsers.
+  const browser = await chromium.launch(
+    process.env.PLAYWRIGHT_CHROMIUM_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+      : {},
+  );
   const context = await browser.newContext({
     viewport: VIEWPORT,
     deviceScaleFactor: 1,

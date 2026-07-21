@@ -16,6 +16,7 @@ const hideLeaguePrefix = Astro.props.hideLeaguePrefix ?? false;
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
+const isBB1 = league.slug === 'best-ball-1';
 
 // Dynamically resolve the defending champion from playoff bracket data
 // Try current season first; if no champion yet (mid-season), fall back to previous season
@@ -43,7 +44,7 @@ if (!champion.teamId) {
 const championTeamId = champion.teamId;
 const championYear = champion.year;
 
-const championTeam = (!isAFL && championTeamId)
+const championTeam = (!isAFL && !isBB1 && championTeamId)
 	? getActiveTeams(leagueAssets).find(team => team.id === championTeamId)
 	: null;
 const championBanner = getCurrentBannerPath(championTeam);
@@ -70,6 +71,30 @@ const championBanner = getCurrentBannerPath(championTeam);
 			)}
 
 		<!-- Footer Navigation Columns -->
+		{isBB1 ? (
+			<!-- Best-ball footer: draft-first link set — no salary/draft-order/
+			     champion content, which is all TheLeague's world. -->
+			<div class="footer-nav">
+				<div class="footer-column">
+					<h4>The Draft</h4>
+					<ul>
+						<li><a href={resolveLeaguePath("/best-ball-1/draft-room", hideLeaguePrefix)}>Draft Room</a></li>
+						<li><a href={resolveLeaguePath("/best-ball-1/draft-board", hideLeaguePrefix)}>Draft Board</a></li>
+						<li><a href={resolveLeaguePath("/best-ball-1/mock-draft", hideLeaguePrefix)}>Mock Drafts</a></li>
+						<li><a href={resolveLeaguePath("/best-ball-1/import-rankings", hideLeaguePrefix)}>Import Rankings</a></li>
+					</ul>
+				</div>
+				<div class="footer-column">
+					<h4>League</h4>
+					<ul>
+						<li><a href={resolveLeaguePath("/best-ball-1/rosters", hideLeaguePrefix)}>Rosters</a></li>
+						<li><a href={resolveLeaguePath("/best-ball-1/live-scoring", hideLeaguePrefix)}>Live Scoring</a></li>
+						<li><a href={resolveLeaguePath("/best-ball-1/rules", hideLeaguePrefix)}>Rules</a></li>
+						<li><a href={resolveLeaguePath("/best-ball-1/whats-new", hideLeaguePrefix)}>What's New</a></li>
+					</ul>
+				</div>
+			</div>
+		) : (
 		<div class="footer-nav">
 			<div class="footer-column">
 				<h4>Rules</h4>
@@ -108,6 +133,7 @@ const championBanner = getCurrentBannerPath(championTeam);
 				</ul>
 			</div>
 		</div>
+		)}
 
 	</div>
 	</div>

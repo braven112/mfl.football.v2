@@ -27,6 +27,26 @@ import {
 } from '../config/leagues';
 import type { LeagueDefinition } from '../config/leagues';
 
+/**
+ * navSlugs of draft-only best-ball leagues. Their nav is OPT-IN: only links
+ * explicitly tagged `leagueOnly: <navSlug>` render, because the untagged
+ * default link set (rosters, lineups, trades, …) is management UI those
+ * leagues deliberately don't have — every untagged link would be a 404.
+ */
+const BEST_BALL_NAV_SLUGS = new Set<LeagueSlug>(
+  ALL_LEAGUES.filter((l) => l.bestBall).map((l) => l.navSlug),
+);
+
+/**
+ * Whether a link belongs in the given league's nav. Untagged links are
+ * implicitly "every full-format league"; best-ball leagues only get links
+ * tagged for them.
+ */
+function linkMatchesLeague(link: NavLink, league: LeagueSlug): boolean {
+  if (link.leagueOnly) return link.leagueOnly === league;
+  return !BEST_BALL_NAV_SLUGS.has(league);
+}
+
 // ============================================================================
 // URL Template Building
 // ============================================================================
@@ -91,6 +111,15 @@ export function buildUrlFromTemplate(
 const LEAGUE_PREFIXES: Record<LeagueSlug, string> = Object.fromEntries(
   ALL_LEAGUES.map((l) => [l.navSlug, `/${l.slug}`])
 ) as Record<LeagueSlug, string>;
+
+/**
+ * Path prefix for a league's pages. THE shared source for navSlug → path
+ * mapping — NavLinks once had a private copy of this that never learned new
+ * leagues, which 404'd every drawer link on best-ball pages. Don't fork it.
+ */
+export function getLeaguePrefix(league: LeagueSlug): string {
+  return LEAGUE_PREFIXES[league] ?? '/theleague';
+}
 
 /**
  * Strip the active league prefix from a path when serving on the league's
@@ -300,8 +329,7 @@ export function isSectionVisible(
 
   // Check if at least one link is visible
   const hasVisibleLinks = section.links.some(link => {
-    // Check link's league restriction
-    if (link.leagueOnly && link.leagueOnly !== league) {
+    if (!linkMatchesLeague(link, league)) {
       return false;
     }
     return isLinkVisible(link, franchiseId, adminFranchiseIds);
@@ -328,8 +356,7 @@ export function getVisibleLinks(
   adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
 ): NavLink[] {
   return section.links.filter(link => {
-    // Check link's league restriction
-    if (link.leagueOnly && link.leagueOnly !== league) {
+    if (!linkMatchesLeague(link, league)) {
       return false;
     }
     return isLinkVisible(link, franchiseId, adminFranchiseIds);
@@ -642,7 +669,7 @@ export function clearMyTeamCookie(): void {
  */
 export function getMyTeamLeagueCookie(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.MY_TEAM_LEAGUE);
-  if (value === 'theleague' || value === 'afl') {
+  if (value === 'theleague' || value === 'afl' || value === 'bb1') {
     return value;
   }
   return null;
@@ -685,7 +712,7 @@ export function parseMyTeamFromUrl(url: URL): string | null {
  */
 export function getLastViewedLeague(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.NAV_LEAGUE);
-  if (value === 'theleague' || value === 'afl') {
+  if (value === 'theleague' || value === 'afl' || value === 'bb1') {
     return value;
   }
   return null;

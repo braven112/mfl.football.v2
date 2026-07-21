@@ -1,6 +1,87 @@
 {
   "sections": [
     {
+      "id": "best-ball",
+      "label": "Best Ball",
+      "leagueOnly": "bb1",
+      "phaseOrder": { "inSeason": 1, "offSeason": 1 },
+      "defaultOpen": "always",
+      "links": [
+        {
+          "id": "bb-draft-room",
+          "label": "Draft Room",
+          "icon": "draft-podium",
+          "path": "/draft-room",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "The live startup draft — the main event"
+        },
+        {
+          "id": "bb-draft-board",
+          "label": "Draft Board",
+          "icon": "chalkboard",
+          "path": "/draft-board",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "Every pick of the draft, round by round"
+        },
+        {
+          "id": "bb-rosters",
+          "label": "Rosters",
+          "icon": "users",
+          "path": "/rosters",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "Post-draft rosters for all 12 teams"
+        },
+        {
+          "id": "bb-live-scoring",
+          "label": "Live Scoring",
+          "icon": "goals",
+          "path": "/live-scoring",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "Real-time scoreboard — in best ball, watching is the whole game"
+        },
+        {
+          "id": "bb-mock-draft",
+          "label": "Mock Drafts",
+          "icon": "podium-persona",
+          "path": "/mock-draft",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "Practice the 25-round startup draft against the clock"
+        },
+        {
+          "id": "bb-import-rankings",
+          "label": "Import Rankings",
+          "icon": "upload",
+          "path": "/import-rankings",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "Pull your rankings in from FantasyPros, FBG, and more — powers your draft queue"
+        },
+        {
+          "id": "bb-rules",
+          "label": "Rules",
+          "icon": "gavel",
+          "path": "/rules",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "The whole constitution on one page — that's the point of best ball"
+        },
+        {
+          "id": "bb-whats-new",
+          "label": "What's New",
+          "icon": "star",
+          "path": "/whats-new",
+          "external": false,
+          "leagueOnly": "bb1",
+          "description": "See the latest features and improvements"
+        }
+      ]
+    },
+    {
       "id": "news-updates",
       "label": "News & Updates",
       "phaseOrder": { "inSeason": 2, "offSeason": 1 },
@@ -357,7 +438,8 @@
   ],
   "adminFranchiseIds": {
     "theleague": ["0001", "0000"],
-    "afl": ["0001"]
+    "afl": ["0001"],
+    "bb1": ["0001", "0000"]
   },
   "footerLinks": [
     {
@@ -401,6 +483,7 @@
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
-    "afl": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
+    "afl": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
+    "bb1": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
   }
 }

@@ -1,0 +1,14 @@
+---
+/**
+ * Import Rankings (Best Ball #1) — thin route wrapper.
+ * Shared implementation lives in components/shared/rankings-import/ImportRankingsPage.
+ * Rankings live in league-agnostic localStorage, so anything imported here
+ * (or on TheLeague's copy) feeds this league's draft-room queue and the
+ * "My Rank" auto-pick source alike.
+ */
+import ImportRankingsPage from '../../components/shared/rankings-import/ImportRankingsPage.astro';
+
+export const prerender = false;
+---
+
+<ImportRankingsPage title="Import Rankings | Best Ball #1" />

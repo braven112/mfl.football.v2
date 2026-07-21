@@ -266,6 +266,7 @@ export type MockTimerPreset = 60 | 120 | 300;
 export type MockRankingSource =
   | 'mfl-rookie'
   | 'mfl-dynasty'
+  | 'mfl-redraft'
   | 'sleeper'
   | 'ktc'
   | 'my-rank'
@@ -275,6 +276,7 @@ export type MockRankingSource =
 export const MOCK_RANKING_LABELS: Record<MockRankingSource, string> = {
   'mfl-rookie': 'MFL Rookie ADP',
   'mfl-dynasty': 'MFL Dynasty ADP',
+  'mfl-redraft': 'MFL Redraft ADP',
   sleeper: 'Sleeper',
   ktc: 'KeepTradeCut',
   'my-rank': 'My Rank',
@@ -310,6 +312,13 @@ export interface MockDraftSession {
   rankingAssignments?: Record<string, MockRankingSource>;
   /** Source applied to any franchise not present in `rankingAssignments`. */
   defaultRankingSource?: MockRankingSource;
+  /**
+   * True for a league's OFFICIAL draft of record (best-ball startup drafts
+   * run through the same engine). Official sessions use a deterministic id
+   * (`{navSlug}-official-{year}`), are created commissioner-only, and are
+   * the only sessions the MFL export script will touch.
+   */
+  official?: boolean;
 }
 
 /** A single pick in a mock draft */

@@ -13,7 +13,7 @@ import type { APIRoute } from 'astro';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getAuthUser } from '../../../utils/auth';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForMflId, getCurrentLeagueYear } from '../../../utils/league-year';
 import type { MockRankingSource } from '../../../types/draft-room';
 import {
   buildMflNameLookup,
@@ -23,11 +23,13 @@ import {
 import { isDraftablePosition } from '../../../utils/build-draft-players';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
-import { DEFAULT_LEAGUE_ID, getLeagueBySlug } from '../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueBySlug, getLeagueById } from '../../../config/leagues';
+import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
   'mfl-dynasty',
+  'mfl-redraft',
   'sleeper',
   'ktc',
   'my-rank',
@@ -96,27 +98,54 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    if (totalRounds < 1 || totalRounds > 5) {
+    // Best-ball leagues mock the 25-round full-pool startup draft; the
+    // dynasty leagues mock the 1–5 round rookie draft.
+    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
+    const userLeague = getLeagueById(leagueId);
+    const isBestBall = !!userLeague?.bestBall;
+    const maxRounds = isBestBall ? 25 : 5;
+    if (totalRounds < 1 || totalRounds > maxRounds) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Rounds must be between 1 and 5.' }),
+        JSON.stringify({ success: false, message: `Rounds must be between 1 and ${maxRounds}.` }),
         { status: 400, headers: JSON_HEADERS },
       );
     }
 
-    const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
-    const leagueYear = getCurrentLeagueYear();
+    const leagueYear = getLeagueYearForMflId(leagueId);
     const leagueYearStr = String(leagueYear);
+    // Committed MFL feed directories are keyed by the DEFAULT league's
+    // Feb-14 clock — a June-rollover league (AFL/best-ball) would look in a
+    // stale-year directory between Feb 14 and June 1 if we used its own
+    // clock for file lookups. Session metadata keeps the league's clock.
+    const feedYearStr = String(getCurrentLeagueYear());
+
+    // Best-ball config is per-league; only bb1's is wired so far. Fail loudly
+    // for a future sister league rather than silently drafting bb1's teams.
+    if (isBestBall && userLeague?.slug !== 'best-ball-1') {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Mock drafts are not configured for league '${userLeague?.slug}' yet — its team config needs wiring in mock-draft/create.`,
+        }),
+        { status: 500, headers: JSON_HEADERS },
+      );
+    }
 
     // ── Load draft order from draftResults ──
-    // Dynamic import of the MFL feed data for this year
+    // Dynamic import of the MFL feed data for this year.
+    // Best-ball leagues have no rookie draftResults to mirror — their order
+    // comes straight from the league config (shuffled below unless the
+    // caller asked for config order).
     let franchiseOrder: string[] = [];
-    try {
+    if (isBestBall) {
+      franchiseOrder = (bb1Config.teams ?? []).map((t: any) => t.franchiseId as string);
+    } else try {
       const draftResultsFeeds = import.meta.glob(
         '../../../../data/theleague/mfl-feeds/*/draftResults.json',
         { eager: true },
       );
       const draftResultsKey = Object.keys(draftResultsFeeds).find(
-        (path) => path.includes(`/${leagueYearStr}/`),
+        (path) => path.includes(`/${feedYearStr}/`),
       );
       if (draftResultsKey) {
         const mod = draftResultsFeeds[draftResultsKey] as any;
@@ -165,7 +194,7 @@ export const POST: APIRoute = async ({ request }) => {
       { eager: true },
     );
     const playersKey = Object.keys(playersFeeds).find(
-      (p) => p.includes(`/${leagueYearStr}/`),
+      (p) => p.includes(`/${feedYearStr}/`),
     );
     const playersMod = playersKey ? (playersFeeds[playersKey] as any) : null;
     const playersData = playersMod && typeof playersMod === 'object' && 'default' in playersMod
@@ -181,9 +210,12 @@ export const POST: APIRoute = async ({ request }) => {
     // build-draft-players → DRAFTABLE_POSITIONS) excludes them, so those
     // slots render blank ("—") on the board even though the server thinks
     // the pick was made.
+    // NOTE: despite the name, this is the league's draftable MOCK POOL —
+    // rookies-only for the dynasty leagues' rookie-draft mocks, the full
+    // veteran+rookie pool for best-ball startup-draft mocks.
     const rookiePool = allPlayers.filter(
       (p: any) =>
-        (p.status === 'R' || p.draft_year === leagueYearStr) &&
+        (isBestBall || p.status === 'R' || p.draft_year === feedYearStr) &&
         isDraftablePosition(p.position || ''),
     );
     const rookieIdSet = new Set(rookiePool.map((p: any) => p.id));
@@ -246,12 +278,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     const rankedLists: Partial<Record<MockRankingSource, string[]>> = {};
 
-    // MFL rookie ADP (live, pre-draft cutoff 3)
-    try {
+    // MFL rookie ADP (live, pre-draft cutoff 3) — rookie mocks only
+    if (!isBestBall) try {
       const adpUrl = buildMflExportUrl({
         type: 'adp',
         leagueId,
-        year: leagueYearStr,
+        year: feedYearStr,
         host: 'https://www55.myfantasyleague.com',
         params: { FCOUNT: 12, IS_PPR: 3, IS_KEEPER: 3, IS_MOCK: 0, CUTOFF: 3, ROOKIES: 1 },
       });
@@ -276,7 +308,7 @@ export const POST: APIRoute = async ({ request }) => {
     // MFL dynasty ADP (local feed, filter to rookies)
     {
       const dynasty = loadJsonFile(
-        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${leagueYearStr}/adp-dynasty.json`,
+        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${feedYearStr}/adp-dynasty.json`,
       );
       const raw = dynasty?.adp?.player;
       const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
@@ -291,9 +323,29 @@ export const POST: APIRoute = async ({ request }) => {
       if (deduped.length > 0) rankedLists['mfl-dynasty'] = topUp(deduped);
     }
 
-    // Sleeper (cached)
-    {
-      const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${leagueYearStr}.json`);
+    // MFL redraft ADP (local feed) — best-ball mocks only. These leagues are
+    // seasonal redrafts, so this is their PRIMARY board (dynasty ADP
+    // overrates youth/longevity for a one-season roster).
+    if (isBestBall) {
+      const redraft = loadJsonFile(
+        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${feedYearStr}/adp-redraft.json`,
+      );
+      const raw = redraft?.adp?.player;
+      const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      const ordered = arr
+        .filter((p: any) => rookieIdSet.has(p.id))
+        .sort(
+          (a: any, b: any) =>
+            parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'),
+        )
+        .map((p: any) => p.id as string);
+      const deduped = dedupe(ordered);
+      if (deduped.length > 0) rankedLists['mfl-redraft'] = topUp(deduped);
+    }
+
+    // Sleeper (cached) — a rookie board; useless against a full startup pool
+    if (!isBestBall) {
+      const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${feedYearStr}.json`);
       if (sleeper?.players?.length) {
         const ids = (sleeper.players as any[])
           .map((p) =>
@@ -305,9 +357,9 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // KTC (cached, 1QB)
-    {
-      const ktc = loadJsonFile(`data/adp/ktc-rookies-${leagueYearStr}.json`);
+    // KTC (cached, 1QB) — also a rookie board; skip for best-ball mocks
+    if (!isBestBall) {
+      const ktc = loadJsonFile(`data/adp/ktc-rookies-${feedYearStr}.json`);
       if (ktc?.players?.length) {
         const ids = (ktc.players as any[])
           .map((p) =>
@@ -342,14 +394,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Pick a usable default in priority order so if the caller doesn't
     // specify one, we use the freshest/most-authoritative source that loaded.
     const availableSources = Object.keys(rankedLists) as MockRankingSource[];
-    const defaultPriority: MockRankingSource[] = [
-      'mfl-rookie',
-      'mfl-dynasty',
-      'sleeper',
-      'ktc',
-      'my-rank',
-      'random',
-    ];
+    const defaultPriority: MockRankingSource[] = isBestBall
+      ? ['mfl-redraft', 'mfl-dynasty', 'my-rank', 'random']
+      : ['mfl-rookie', 'mfl-dynasty', 'sleeper', 'ktc', 'my-rank', 'random'];
     const fallbackDefault: MockRankingSource =
       defaultPriority.find((s) => rankedLists[s] && rankedLists[s]!.length > 0) ?? 'random';
 

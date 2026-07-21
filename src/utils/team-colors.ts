@@ -19,8 +19,11 @@
 
 import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import bb1Config from '../../data/best-ball-1/bb1.config.json';
+import type { LeagueSlug } from '../types/nav';
 
-export type LeagueSlug = 'theleague' | 'afl';
+// Re-exported for existing importers; the union itself lives in types/nav.
+export type { LeagueSlug };
 
 export interface TeamColors {
   /** Chart/graph color (owner-activity page). May be undefined (e.g. AFL). */
@@ -51,6 +54,7 @@ function buildMap(teams: any[]): Record<string, TeamColors> {
 const MAPS: Record<LeagueSlug, Record<string, TeamColors>> = {
   theleague: buildMap(theleagueConfig.teams),
   afl: buildMap(aflConfig.teams),
+  bb1: buildMap(bb1Config.teams),
 };
 
 function entry(franchiseId: string, league: LeagueSlug): TeamColors {

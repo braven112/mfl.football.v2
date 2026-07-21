@@ -1,13 +1,14 @@
 import type { APIRoute } from 'astro';
 import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
-import { setTheLeaguePreference, setAFLPreference, getAFLTeamData } from '../../../utils/team-preferences';
+import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
+const BB1_LEAGUE_ID = getLeagueBySlug('best-ball-1')!.id;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -69,6 +70,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       if (teamData) {
         setAFLPreference(cookies, mflResponse.franchiseId, teamData.conference, teamData.tier);
       }
+    } else if (resolvedLeagueId === BB1_LEAGUE_ID) {
+      setBestBall1Preference(cookies, mflResponse.franchiseId);
     } else {
       setTheLeaguePreference(cookies, mflResponse.franchiseId);
     }

@@ -39,6 +39,9 @@ const isAfl = leagueSlug === 'afl-fantasy';
 const CLASS_PREFIX: Record<CanonicalLeagueSlug, string> = {
   'afl-fantasy': 'afl-links',
   theleague: 'hp-links',
+  // Best-ball reuses TheLeague's neutral link styling if this section is
+  // ever rendered there (no bb1 page uses QuickLinks today).
+  'best-ball-1': 'hp-links',
 };
 const cls = CLASS_PREFIX[leagueSlug];
 

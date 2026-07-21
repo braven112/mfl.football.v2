@@ -11,7 +11,9 @@ import '../../styles/schefter-feed.css';
 
 interface Props {
   posts: SchefterPost[];
-  league: 'theleague' | 'afl';
+  /** bb1 is accepted for type soundness (its feed is empty, so callers
+      never actually render the widget there today). */
+  league: 'theleague' | 'afl' | 'bb1';
   allNewsLink: string;
 }
 

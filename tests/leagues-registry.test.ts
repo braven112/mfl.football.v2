@@ -38,10 +38,29 @@ describe('league registry', () => {
   it('resolves known leagues', () => {
     expect(getLeagueBySlug('theleague')?.id).toBe('13522');
     expect(getLeagueBySlug('afl-fantasy')?.id).toBe('19621');
+    expect(getLeagueBySlug('best-ball-1')?.id).toBe('37610');
     expect(getLeagueById('13522')?.slug).toBe('theleague');
     expect(getLeagueById('19621')?.slug).toBe('afl-fantasy');
+    expect(getLeagueById('37610')?.slug).toBe('best-ball-1');
     expect(getLeagueBySlug('nope')).toBeNull();
     expect(getLeagueById('0000')).toBeNull();
+  });
+
+  it('marks best-ball leagues and keeps management features off for them', () => {
+    const bb1 = getLeagueBySlug('best-ball-1')!;
+    expect(bb1.bestBall).toBe(true);
+    expect(bb1.navSlug).toBe('bb1');
+    // Draft-only league: every management-shaped feature must stay off.
+    expect(bb1.features.contracts).toBe(false);
+    expect(bb1.features.salaryCap).toBe(false);
+    expect(bb1.features.keepers).toBe(false);
+    expect(bb1.features.liveLineups).toBe(false);
+    // Live scoring is results-shaped, not management-shaped — best ball is
+    // all scoreboard watching, so it stays ON.
+    expect(bb1.features.liveScoring).toBe(true);
+    // Full-format leagues are NOT best-ball.
+    expect(getLeagueBySlug('theleague')!.bestBall).toBeUndefined();
+    expect(getLeagueBySlug('afl-fantasy')!.bestBall).toBeUndefined();
   });
 
   it('resolves paths with prefix-boundary safety', () => {
@@ -49,6 +68,7 @@ describe('league registry', () => {
     expect(getLeagueByPath('/afl-fantasy').slug).toBe('afl-fantasy');
     expect(getLeagueByPath('/afl-fantasyX').slug).toBe(DEFAULT_LEAGUE_SLUG);
     expect(getLeagueByPath('/theleague/rosters').slug).toBe('theleague');
+    expect(getLeagueByPath('/best-ball-1/draft-room').slug).toBe('best-ball-1');
     expect(getLeagueByPath('/').slug).toBe(DEFAULT_LEAGUE_SLUG);
   });
 

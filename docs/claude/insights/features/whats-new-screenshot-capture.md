@@ -174,3 +174,9 @@ clone (no `.env`, project pins a newer Playwright than the image ships).
    its `imageAlt` as broken-image text. Re-run once after the file is written
    and the card shows a real (one-level-nested) thumbnail. Always eyeball the
    result — a broken-alt card is the tell you only ran it once.
+5. **The batch script now honors `PLAYWRIGHT_CHROMIUM_PATH`** (added during
+   the best-ball launch capture): set it to `/opt/pw-browsers/chromium` in
+   cloud sessions and `capture-whats-new-screenshots.mjs` launches the
+   pre-installed browser instead of dying on the revision mismatch. Insight
+   #2 (cwebp absent → convert the kept PNGs with `sharp`) still applies —
+   the script writes `.png` fallbacks and you finish the pair manually.

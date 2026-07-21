@@ -93,6 +93,48 @@ export const LEAGUES = {
       liveScoring: false,
     },
   },
+  'best-ball-1': {
+    id: '37610',
+    slug: 'best-ball-1',
+    navSlug: 'bb1',
+    name: 'Best Ball #1',
+    mflHost: 'www45.myfantasyleague.com',
+    dataPath: 'data/best-ball-1',
+    /**
+     * Path-only league: served at /best-ball-1 on the site's own domains
+     * (mfl.football), no dedicated apex. Best-ball sister leagues
+     * (#2, #3, …) will follow the same pattern.
+     */
+    domains: [],
+    configPath: 'data/best-ball-1/bb1.config.json',
+    schefterFeedPath: 'data/best-ball-1/schefter-feed.json',
+    /**
+     * Best-ball leagues are re-created on MFL each summer ahead of the
+     * startup draft, so the league year rolls with the new-league
+     * creation window (same clock as AFL), not TheLeague's Feb 14.
+     */
+    leagueYearRollover: { month: 6, day: 1 },
+    /**
+     * Draft-only best-ball league: the startup draft is the whole game.
+     * No lineups, no add/drops, no in-season roster management — UI that
+     * offers any of those must be skipped for leagues with this flag.
+     */
+    bestBall: true,
+    features: {
+      contracts: false,
+      salaryCap: false,
+      keepers: false,
+      powerRankings: false,
+      liveLineups: false,
+      schefterFeed: false,
+      schefterTips: false,
+      /**
+       * Results-shaped, not management-shaped — with no lineups to set,
+       * scoreboard watching is the whole in-season experience here.
+       */
+      liveScoring: true,
+    },
+  },
 };
 
 export const DEFAULT_LEAGUE_SLUG = 'theleague';

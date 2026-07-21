@@ -40,7 +40,10 @@ interface Props {
 const { leagueSlug, entry, prev, next, schefterPosts } = Astro.props as Props;
 
 const league = getLeagueBySlug(leagueSlug)!;
-const apexDomain = league.domains[0];
+// Path-only leagues (best-ball: domains: []) have no apex — fall back to the
+// site host and keep the league-prefixed path in the fake URL bar.
+const hasApex = league.domains.length > 0;
+const apexDomain = league.domains[0] ?? 'mfl.football';
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
@@ -75,7 +78,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
                   <span class="browser-frame__dot browser-frame__dot--red"></span>
                   <span class="browser-frame__dot browser-frame__dot--yellow"></span>
                   <span class="browser-frame__dot browser-frame__dot--green"></span>
-                  <span class="browser-frame__url">{entry.link ? `${apexDomain}${entry.link.replace(`/${league.slug}`, '')}` : apexDomain}</span>
+                  <span class="browser-frame__url">{entry.link ? `${apexDomain}${hasApex ? entry.link.replace(`/${league.slug}`, '') : entry.link}` : apexDomain}</span>
                 </div>
                 <img
                   src={imagePath}

@@ -13,7 +13,7 @@
 
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getLeagueYearForSlug } from '../../utils/league-year';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import NavToggleButton from '../nav/NavToggleButton.astro';
@@ -35,11 +35,15 @@ const hideMobileNavIcons = Astro.props.hideMobileNavIcons ?? false;
 // but unused below — leagueHome etc. derive host/id from getLeagueContext(),
 // which is registry-backed and per-league-correct (unlike the removed
 // env-var-with-www49-literal-fallback that used to live here).
-const envYear = getCurrentLeagueYear().toString();
+// Per-league year clock: AFL and best-ball roll June 1, not Feb 14 — a
+// Feb-clock year here would point their MFL links at a league year that
+// doesn't exist yet between the two rollover dates.
+const envYear = getLeagueYearForSlug(getLeagueContext(Astro.url).slug).toString();
 
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
+const isBB1 = league.slug === 'best-ball-1';
 
 // Use the year passed from the page, or fall back to the environment variable/current year.
 const year = (Astro.props.year || envYear).toString();
@@ -101,13 +105,20 @@ const liveScoringUrl = hasLiveScoring
   <div class="container">
     <div class="row">
       <div class="col left">
-        <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : "/theleague", hideLeaguePrefix)}>
+        <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : isBB1 ? "/best-ball-1" : "/theleague", hideLeaguePrefix)}>
           <div class="league_logo" id="league_logo">
             {isAFL ? (
               <!-- AFL Logo — dual variant, CSS-swapped on html.dark -->
               <>
                 <img src="/assets/logos/afl-logo.svg" alt="AFL Logo" class="header-logo-img header-logo-img--light" />
                 <img src="/assets/logos/afl-logo-dark.svg" alt="AFL Logo" class="header-logo-img header-logo-img--dark" />
+              </>
+            ) : isBB1 ? (
+              <!-- Best Ball logo — the football sprite glyph, emerald/white
+                   variants CSS-swapped on html.dark like the others -->
+              <>
+                <img src="/assets/logos/bestball-logo.svg" alt="Best Ball #1 Logo" class="header-logo-img header-logo-img--light" />
+                <img src="/assets/logos/bestball-logo-dark.svg" alt="Best Ball #1 Logo" class="header-logo-img header-logo-img--dark" />
               </>
             ) : (
               <!-- The League Logo — both variants rendered; CSS swaps on
@@ -132,6 +143,10 @@ const liveScoringUrl = hasLiveScoring
               <>
                 <span class="leaguename--afl-name">AFL</span>
               </>
+            ) : isBB1 ? (
+              <>
+                <span class="leaguename--bb-name">Best Ball</span><span class="leaguename--bb-num">#1</span>
+              </>
             ) : (
               <>
                 <span class="leaguename--the">The</span><span
@@ -146,6 +161,37 @@ const liveScoringUrl = hasLiveScoring
       <div class="col right">
         <!-- Desktop Navigation Icons -->
         <nav class:list={["desktop-nav", { "desktop-nav--hide-mobile": hideMobileNavIcons }]} aria-label="Main navigation">
+          {isBB1 ? (
+            <!-- Best-ball leagues are draft-only: no lineups or free agents —
+                 the draft surfaces plus the scoreboard ARE the nav. -->
+            <>
+              <a href={resolveLeaguePath("/best-ball-1/draft-room", hideLeaguePrefix)} class="nav-icon-link" title="Draft Room">
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-draft-podium`}></use>
+                </svg>
+                <span class="nav-label">Draft Room</span>
+              </a>
+              <a href={resolveLeaguePath("/best-ball-1/draft-board", hideLeaguePrefix)} class="nav-icon-link" title="Draft Board">
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-chalkboard`}></use>
+                </svg>
+                <span class="nav-label">Draft Board</span>
+              </a>
+              <a href={resolveLeaguePath("/best-ball-1/rosters", hideLeaguePrefix)} class="nav-icon-link" title="Rosters">
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-users`}></use>
+                </svg>
+                <span class="nav-label">Rosters</span>
+              </a>
+              <a href={resolveLeaguePath("/best-ball-1/live-scoring", hideLeaguePrefix)} class="nav-icon-link" title="Live scoring">
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-goals`}></use>
+                </svg>
+                <span class="nav-label">Live scoring</span>
+              </a>
+            </>
+          ) : (
+          <>
           {!isAFL && (
             <a href="/theleague/schefter/tip" class="nav-icon-link" title="Tip Schefter">
               <svg class="nav-icon" aria-hidden="true">
@@ -190,6 +236,8 @@ const liveScoringUrl = hasLiveScoring
             </svg>
             <span class="nav-label">Playoffs</span>
           </a>
+          </>
+          )}
         </nav>
       </div>
     </div>
@@ -472,6 +520,17 @@ const liveScoringUrl = hasLiveScoring
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .leaguename--bb-name {
+    font-weight: 700;
+    color: var(--logo-name-primary-color, #0b3d2e);
+  }
+
+  .leaguename--bb-num {
+    font-weight: 700;
+    color: var(--league-accent, #0e8a5f);
+    margin-left: 0.3rem;
   }
 
   .leaguename--the {

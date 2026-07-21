@@ -46,7 +46,14 @@ interface RspIdMap {
 }
 
 let rspCache: Map<string, RspPlayer> | null = null;
-let adpCache: Map<string, any> | null = null;
+const adpCaches: Partial<Record<AdpSource, Map<string, any>>> = {};
+
+/**
+ * Which MFL ADP feed to join. Dynasty is the default (TheLeague/AFL are
+ * dynasty leagues); best-ball leagues are seasonal redrafts and must show
+ * redraft ADP — a dynasty board materially misranks aging veterans there.
+ */
+export type AdpSource = 'dynasty' | 'redraft';
 
 function loadRsp(leagueYear: number): Map<string, RspPlayer> {
   if (rspCache) return rspCache;
@@ -78,13 +85,14 @@ function loadRsp(leagueYear: number): Map<string, RspPlayer> {
   return result;
 }
 
-function loadAdp(leagueYear: number): Map<string, any> {
-  if (adpCache) return adpCache;
+function loadAdp(leagueYear: number, source: AdpSource): Map<string, any> {
+  const cached = adpCaches[source];
+  if (cached) return cached;
   const result = new Map<string, any>();
   try {
     const raw = JSON.parse(
       readFileSync(
-        join(process.cwd(), `data/theleague/mfl-feeds/${leagueYear}/adp-dynasty.json`),
+        join(process.cwd(), `data/theleague/mfl-feeds/${leagueYear}/adp-${source}.json`),
         'utf-8'
       )
     );
@@ -96,20 +104,20 @@ function loadAdp(leagueYear: number): Map<string, any> {
   } catch {
     // ADP data unavailable
   }
-  adpCache = result;
+  adpCaches[source] = result;
   return result;
 }
 
 export function enrichDraftPlayers(
   players: DraftRoomPlayer[],
   leagueYear: number,
-  options: { includeRsp?: boolean } = {}
+  options: { includeRsp?: boolean; adpSource?: AdpSource } = {}
 ): DraftRoomPlayer[] {
   // RSP scouting is licensed content — only surfaced to the owner who pays
   // for the subscription. ADP is public league data and always enriched.
   const includeRsp = options.includeRsp === true;
   const rsp = includeRsp ? loadRsp(leagueYear) : null;
-  const adp = loadAdp(leagueYear);
+  const adp = loadAdp(leagueYear, options.adpSource ?? 'dynasty');
 
   return players.map((p) => {
     const enrichment: DraftPlayerEnrichment = {};
@@ -151,5 +159,6 @@ export function enrichDraftPlayers(
 
 export function clearEnrichmentCache() {
   rspCache = null;
-  adpCache = null;
+  delete adpCaches.dynasty;
+  delete adpCaches.redraft;
 }

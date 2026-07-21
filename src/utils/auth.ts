@@ -78,7 +78,10 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
   // to a league gets no league's admin fallback.
   const league = getLeagueById(user.leagueId);
   if (!league) return false;
-  return isAdminFranchise(user.franchiseId, league.navSlug === 'afl' ? 'afl' : 'theleague');
+  // Pass the session league's OWN navSlug — collapsing unknown slugs to
+  // 'theleague' would check a new league's franchise against TheLeague's
+  // admin list (the exact cross-league admin footgun CLAUDE.md warns about).
+  return isAdminFranchise(user.franchiseId, league.navSlug);
 }
 
 /**

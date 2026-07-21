@@ -52,7 +52,7 @@ const leagueHome = resolveLeaguePath(`/${currentLeagueDef.slug}`, hideLeaguePref
 const leagueName = currentLeagueDef.name;
 
 // Logo alt text
-const logoAlt = league === 'afl' ? 'AFL Logo' : 'TheLeague Logo';
+const logoAlt = `${leagueName} Logo`;
 
 // Single chevron glyph shared by both switcher modes (direct link + dropdown
 // toggle) so the icon can't drift between them.
@@ -93,7 +93,7 @@ const directTarget = switchTargets[0];
         height="48"
       />
       <img
-        src={league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
+        src={league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : league === 'bb1' ? '/assets/logos/bestball-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
         alt={logoAlt}
         class="nav-header__logo nav-header__logo--dark"
         width="48"
@@ -102,6 +102,8 @@ const directTarget = switchTargets[0];
       <span class="nav-header__league-name">
         {league === 'afl' ? (
           <span class="nav-header__league-name--afl">AFL</span>
+        ) : league === 'bb1' ? (
+          <span class="nav-header__league-name--league">Best Ball</span>
         ) : (
           <>
             <span class="nav-header__league-name--the">The</span>

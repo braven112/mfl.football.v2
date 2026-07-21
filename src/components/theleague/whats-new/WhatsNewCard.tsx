@@ -25,8 +25,12 @@ function browserFrameUrl(entry: EnrichedWhatsNewEntry, pageLeague?: LeagueSlug):
   // tests), so the page's own league is the right chrome context for them.
   const fromPage = pageLeague ? ALL_LEAGUES.find((l) => l.navSlug === pageLeague) : undefined;
   const league = tagged ?? fromPage ?? getLeagueByPath(entry.link ?? '/');
+  // Path-only leagues (best-ball: domains: []) have no apex — show the site
+  // host with the league-prefixed path instead of stripping the prefix.
+  const apex = league.domains[0];
+  if (!apex) return `mfl.football${entry.link ?? `/${league.slug}`}`;
   const path = entry.link ? entry.link.replace(`/${league.slug}`, '') : '';
-  return `${league.domains[0]}${path}`;
+  return `${apex}${path}`;
 }
 
 interface Props {

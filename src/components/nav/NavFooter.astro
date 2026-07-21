@@ -43,7 +43,7 @@ const {
 } = Astro.props;
 
 // Build the roster GM page URL
-const leagueBase = league === 'afl' ? '/afl-fantasy' : '/theleague';
+const leagueBase = league === 'afl' ? '/afl-fantasy' : league === 'bb1' ? '/best-ball-1' : '/theleague';
 const rosterUrl = `${leagueBase}/rosters`;
 
 /**

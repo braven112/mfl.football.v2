@@ -9,9 +9,12 @@ const PRERENDER_TRUE_EXPORT = /^\s*export const prerender\s*=\s*true\b/m;
 const LEAGUE_PAGE_DIRS: Record<LeagueSlug, string> = {
   theleague: path.join(REPO_ROOT, 'src/pages/theleague'),
   afl: path.join(REPO_ROOT, 'src/pages/afl-fantasy'),
+  bb1: path.join(REPO_ROOT, 'src/pages/best-ball-1'),
 };
 
 function getTargetLeagues(link: NavLink, sectionLeagueOnly?: LeagueSlug): LeagueSlug[] {
+  // Untagged links belong to the full-format leagues only — best-ball
+  // leagues get an opt-in nav (see linkMatchesLeague in nav-utils).
   const sectionLeagues: LeagueSlug[] = sectionLeagueOnly ? [sectionLeagueOnly] : ['theleague', 'afl'];
   if (!link.leagueOnly) return sectionLeagues;
   return sectionLeagues.filter((league) => league === link.leagueOnly);
@@ -49,7 +52,7 @@ describe('Nav drawer link integrity', () => {
     for (const section of navConfig.sections) {
       for (const link of section.links) {
         if (!link.path) continue;
-        if (link.leagueOnly === 'afl') continue;
+        if (link.leagueOnly && link.leagueOnly !== 'theleague') continue;
 
         const sourceFile = getPageSourceFile('theleague', link.path);
         expect(sourceFile, `Expected TheLeague page for nav link "${link.id}"`).not.toBeNull();

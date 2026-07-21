@@ -29,7 +29,7 @@ const ROOT = process.cwd();
  * refactor fixed (wrong host fallback, id-based ternaries) was one of these
  * four literals, so they stay strict.
  */
-const ID_HOST_LITERALS = ['13522', '19621', 'www49.myfantasyleague', 'www44.myfantasyleague'];
+const ID_HOST_LITERALS = ['13522', '19621', '37610', 'www49.myfantasyleague', 'www44.myfantasyleague', 'www45.myfantasyleague'];
 
 /**
  * League data-directory literals. Checked only in src/ + scripts/ (not
@@ -47,6 +47,7 @@ const DATA_PATH_LITERALS: Array<{ name: string; regex: RegExp }> = [
   // Bare 'data/afl' (no '-fantasy'), e.g. a typo'd or legacy directory.
   // Negative lookahead so this doesn't double-count data/afl-fantasy hits.
   { name: 'data/afl (bare)', regex: /data\/afl(?!-fantasy)/g },
+  { name: 'data/best-ball-1', regex: /data\/best-ball-1/g },
 ];
 
 /** The registry itself — the only unconditionally allowed source. */

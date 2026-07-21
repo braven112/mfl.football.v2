@@ -21,7 +21,7 @@ import {
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy';
+export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1';
 
 export interface LeagueFeatures {
   contracts: boolean;
@@ -72,6 +72,13 @@ export interface LeagueDefinition {
    * roster" must be skipped for these leagues.
    */
   duplicatePlayers?: boolean;
+  /**
+   * True for draft-only best-ball leagues: the startup draft is the whole
+   * game — no lineups, no add/drops, no in-season management UI. Nav and
+   * shared components must not offer roster-management actions for these
+   * leagues, and their nav links are opt-in (see nav-utils).
+   */
+  bestBall?: boolean;
   features: LeagueFeatures;
 }
 

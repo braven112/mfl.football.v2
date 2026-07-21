@@ -1,0 +1,109 @@
+---
+/**
+ * Best Ball #1 — Live Scoring (/best-ball-1/live-scoring)
+ *
+ * Imported from TheLeague's live-scoring page, minus the parts that don't
+ * apply here: no Throwback Week (TheLeague-only), and no offseason sample
+ * replay (the bundled sample is TheLeague's teams — a brand-new best-ball
+ * league has no season to replay, so pre-season the scoreboard island shows
+ * its own honest empty state instead).
+ *
+ * In best ball this page matters MORE than in the other leagues: with no
+ * lineups to set, scoreboard watching is the entire in-season experience.
+ * The data plumbing (assembleLiveScoringData / LiveScoreboard) is already
+ * league-agnostic — everything is keyed off this league's registry entry.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import bb1Config from '../../../data/best-ball-1/bb1.config.json';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueContext } from '../../utils/league-context';
+import { leagueHasFeature } from '../../config/leagues';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentNFLWeek } from '../../utils/current-week';
+import { getDailySlot } from '../../utils/hero-resolver';
+import { assembleLiveScoringData, type ConfigTeam } from '../../utils/live-scoring-data';
+import LiveScoreboard from '../../components/shared/LiveScoreboard';
+import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import type { LiveScoringPageProps } from '../../types/live-scoring';
+import '../../styles/live-scoring.css';
+import '../../styles/nfl-games-strip.css';
+
+// Live-fetch on every request — scores must never be cached.
+export const prerender = false;
+
+const league = getLeagueContext(Astro.url);
+
+// Gate on the registry feature flag.
+if (!leagueHasFeature(league.slug, 'liveScoring')) {
+  return Astro.redirect('/best-ball-1');
+}
+
+const now = new Date();
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+  ? parsedWeek
+  : (getCurrentNFLWeek(now) ?? 1);
+
+// Same game-day clock as the homepage hero: Thu/Sun/Mon windows drive whether
+// the island polls for live updates and which game-window label to show.
+const daily = getDailySlot(now);
+const isLive = daily.slot === 'live-scoring';
+
+const authUser = getAuthUser(Astro.request);
+const userFranchiseId =
+  authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;
+
+const configTeams = ((bb1Config as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+const data = await assembleLiveScoringData({
+  siteUrl: Astro.url,
+  week,
+  year,
+  leagueId: league.leagueId,
+  host: league.host,
+  dataPath: league.dataPath,
+  configTeams,
+  userFranchiseId,
+});
+
+const islandProps: LiveScoringPageProps = {
+  week,
+  year,
+  leagueId: league.leagueId,
+  host: league.host,
+  slug: league.slug,
+  isLive,
+  gameWindow: daily.gameWindow,
+  userFranchiseId,
+  matchups: data.matchups,
+  teams: data.teams,
+  playerMeta: data.playerMeta,
+  initialScores: data.scores,
+  initialRemaining: data.remaining,
+  initialPlayers: data.players,
+  initialYetToPlay: data.playersYetToPlay,
+};
+---
+
+<TheLeagueLayout title="Live Scoring | Best Ball #1">
+  <div class="ls-page">
+    <LiveScoreboard client:load {...islandProps} />
+    <div class="ls-page-strip">
+      <NflGamesStrip client:visible week={week} year={year} isLive={isLive} />
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .ls-page {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+  }
+  .ls-page-strip {
+    margin-top: var(--spacing-2xl);
+  }
+</style>

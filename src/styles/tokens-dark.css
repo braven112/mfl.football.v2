@@ -553,6 +553,28 @@ html.dark[data-league="afl"] ::selection {
 }
 
 /* ========================================
+   Best Ball League #1 — dark-mode per-league overrides
+   Unlike AFL, bb1 keeps the neutral dark surface ramp and only swaps the
+   accent voice to emerald — the draft-only league doesn't carry enough
+   chrome to justify its own elevation ramp.
+   ======================================== */
+html.dark[data-league="bb1"] {
+  --league-accent: #34d399;                            /* emerald brightened for dark */
+  --logo-name-primary-color: #ffffff;                  /* "Best Ball" wordmark — white (html.dark's green is TheLeague's logo green) */
+  --link-color-accent: #34d399;
+  --link-color-accent-hover: #6ee7b7;
+  --header-nav-icon-color: #ffffff;                    /* resting nav icons — white */
+  --header-nav-icon-hover-color: var(--league-accent);
+  --header-nav-label-color: var(--league-accent);
+  --header-nav-label-hover-color: var(--league-accent);
+}
+
+html.dark[data-league="bb1"] ::selection {
+  background: rgba(14, 138, 95, 0.55);
+  color: #ffffff;
+}
+
+/* ========================================
    Focus Visible Styles (Dark Mode)
    ======================================== */
 html.dark :focus-visible {
