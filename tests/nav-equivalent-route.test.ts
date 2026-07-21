@@ -4,7 +4,7 @@ import {
   getLeagueSwitchUrl,
   getLeagueSwitchTargets,
 } from '../src/utils/nav-utils';
-import { ALL_LEAGUES, leagueOrigin } from '../src/config/leagues';
+import { ALL_LEAGUES, leagueOrigin, SHARED_APP_ORIGIN } from '../src/config/leagues';
 
 // NavHeader's league switcher consumes getEquivalentRoute (via
 // getLeagueSwitchUrl/getLeagueSwitchTargets). These tests lock in the
@@ -198,7 +198,14 @@ describe('getLeagueSwitchTargets', () => {
         const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
         // The canonical origin is the registry's single source of truth
         // (leagueOrigin) — the test must not re-derive domain selection.
-        expect(t.href.startsWith(`${leagueOrigin(def)}/`)).toBe(true);
+        // Domain-less leagues (best-ball: domains: []) resolve to their
+        // prefixed path on the shared host, per buildSwitchUrl's contract.
+        const origin = leagueOrigin(def);
+        if (origin) {
+          expect(t.href.startsWith(`${origin}/`)).toBe(true);
+        } else {
+          expect(t.href.startsWith(`${SHARED_APP_ORIGIN}/${def.slug}`)).toBe(true);
+        }
         for (const currentDomain of current.domains) {
           expect(t.href).not.toContain(currentDomain);
         }
