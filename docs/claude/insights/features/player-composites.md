@@ -1105,5 +1105,7 @@ allowlist (deep-ink composite family); raw color access off
 AND dot access, `Object.values`/`entries`); stale allowlist entries pruned;
 and — the check that would have caught the two missed pages — any file
 whose markup renders `.player-cell__avatar` must also set
-`--player-avatar-bg`. CLAUDE.md has the rule. Grep gotcha for future guard
-tests: patterns starting with `--` need `-e` or grep parses them as options.
+`--player-avatar-bg`. CLAUDE.md has the rule. The scan is pure Node
+(readdir + substring match, like design-token-guard) — an earlier version
+shelled out to grep, which Copilot flagged as non-portable; prefer the Node
+scan for future guard tests.

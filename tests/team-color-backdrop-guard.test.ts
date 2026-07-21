@@ -22,7 +22,7 @@
  * belongs to the composite family — add it to the allowlist with a reason.
  */
 import { describe, it, expect } from 'vitest';
-import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = join(__dirname, '..');
@@ -65,25 +65,32 @@ const ALLOWLIST: Record<string, string> = {
   'src/pages/theleague/rookies-2026.astro': 'rookie hero composites',
 };
 
-const INCLUDES = [
-  '--include=*.ts', '--include=*.tsx', '--include=*.astro',
-  '--include=*.mjs', '--include=*.js', '--include=*.jsx',
-];
+// Pure-Node scan (no shelling out to grep — portable across dev platforms,
+// same approach as tests/design-token-guard.test.ts). Every pattern below is
+// a plain substring, so no regex escaping to get wrong either.
+const SOURCE_EXT = /\.(ts|tsx|astro|mjs|js|jsx)$/;
 
-function grepFiles(pattern: string, fixedString = false): string[] {
-  try {
-    const out = execFileSync(
-      'grep',
-      // -e keeps patterns that start with '--' from parsing as grep options.
-      ['-rl', ...(fixedString ? ['-F'] : []), ...INCLUDES, '-e', pattern, 'src/'],
-      { cwd: ROOT, encoding: 'utf8' },
-    );
-    return out.split('\n').filter(Boolean).sort();
-  } catch (err: unknown) {
-    // grep exits 1 on zero matches — that's an empty result, not an error.
-    if ((err as { status?: number }).status === 1) return [];
-    throw err;
+function listSourceFiles(relDir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(join(ROOT, relDir), { withFileTypes: true })) {
+    const rel = `${relDir}/${entry.name}`;
+    if (entry.isDirectory()) out.push(...listSourceFiles(rel));
+    else if (SOURCE_EXT.test(entry.name)) out.push(rel);
   }
+  return out;
+}
+
+const sourceFiles = listSourceFiles('src').map((f) => ({
+  path: f,
+  content: readFileSync(join(ROOT, f), 'utf8'),
+}));
+
+/** Repo-relative paths of source files whose content contains `substring`. */
+function grepFiles(substring: string): string[] {
+  return sourceFiles
+    .filter((f) => f.content.includes(substring))
+    .map((f) => f.path)
+    .sort();
 }
 
 describe('team-color-behind-player guard', () => {
@@ -115,16 +122,16 @@ describe('team-color-behind-player guard', () => {
     // precompute loops over its KEYS (players.astro pattern), so flag every
     // way of reading COLORS off it: bracket/dot access, values/entries
     // destructuring, and the exported fallback pair.
-    const patterns: Array<[pattern: string, fixed: boolean]> = [
-      ['NFL_TEAM_COLORS\\[', false],
-      ['NFL_TEAM_COLORS\\.', false],
-      ['Object.values(NFL_TEAM_COLORS', true],
-      ['Object.entries(NFL_TEAM_COLORS', true],
-      ['NFL_COLORS_FALLBACK.', true],
+    const patterns = [
+      'NFL_TEAM_COLORS[',
+      'NFL_TEAM_COLORS.',
+      'Object.values(NFL_TEAM_COLORS',
+      'Object.entries(NFL_TEAM_COLORS',
+      'NFL_COLORS_FALLBACK.',
     ];
     const files = new Set<string>();
-    for (const [pattern, fixed] of patterns) {
-      for (const f of grepFiles(pattern, fixed)) files.add(f);
+    for (const pattern of patterns) {
+      for (const f of grepFiles(pattern)) files.add(f);
     }
     const offenders = [...files].filter((f) => f !== 'src/utils/nfl-team-colors.ts').sort();
     expect(
@@ -147,11 +154,11 @@ describe('team-color-behind-player guard', () => {
     ];
     const builders = new Set<string>();
     for (const p of markupPatterns) {
-      for (const f of grepFiles(p, true)) builders.add(f);
+      for (const f of grepFiles(p)) builders.add(f);
     }
     const setsBackdrop = new Set([
-      ...grepFiles('--player-avatar-bg', true),
-      ...grepFiles('getPlayerAvatarBackground', true),
+      ...grepFiles('--player-avatar-bg'),
+      ...grepFiles('getPlayerAvatarBackground'),
     ]);
     const offenders = [...builders].filter((f) => !setsBackdrop.has(f)).sort();
     expect(
