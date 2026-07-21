@@ -97,10 +97,14 @@ const run = async () => {
   // leagues; byte-identical player data means the IS_KEEPER filter regressed
   // (that's exactly how the pre-July-2026 bug shipped). Warn loudly — don't
   // fail, this also runs in prebuild and a deploy shouldn't die over ADP.
+  const adpPlayers = (data) => data?.adp?.player ?? [];
   const adpFingerprint = (data) =>
-    JSON.stringify((data?.adp?.player ?? []).map((p) => [p.id, p.averagePick]).sort());
+    JSON.stringify(adpPlayers(data).map((p) => [p.id, p.averagePick]).sort());
   if (
     payloads['adp-redraft'] && payloads['adp-dynasty'] &&
+    // Two legitimately-empty feeds (early offseason) are not a filter
+    // regression — only warn when identical AND non-empty.
+    adpPlayers(payloads['adp-redraft']).length > 0 &&
     adpFingerprint(payloads['adp-redraft']) === adpFingerprint(payloads['adp-dynasty'])
   ) {
     console.warn(

@@ -206,7 +206,9 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
       return {
         name: info?.name ?? `Player ${p.id}`,
         position: pos,
-        salary: parseInt(parseFloat(p.salary || 0), 10),
+        // `|| 0` also catches NaN from a malformed salary string, which
+        // would otherwise poison the sort comparators.
+        salary: parseInt(parseFloat(p.salary || 0), 10) || 0,
         contractYear,
         value,
       };
@@ -240,9 +242,14 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   // seam — pass a Map or null to bypass the live Redis read). The autocut:*
   // keys are TheLeague-only and unprefixed, so any other league skips plan
   // intel entirely rather than reading TheLeague's plans for its own fids.
+  // Also gated to the cut window: outside it (manual --week dispatch) the
+  // calendar-year vs league-year clocks can disagree and every owner would
+  // read as "NONE ON FILE" against a not-yet-written plan year.
   const plans = opts.cutdownPlans !== undefined
     ? opts.cutdownPlans
-    : (league === DEFAULT_LEAGUE_SLUG ? await loadCutdownPlans(overLimit.map((e) => e.fid)) : null);
+    : (league === DEFAULT_LEAGUE_SLUG && isCutWindow(now)
+        ? await loadCutdownPlans(overLimit.map((e) => e.fid))
+        : null);
 
   if (overLimit.length > 0) {
     lines.push('=== TEAMS OVER THE LIMIT ===');
@@ -258,9 +265,13 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
       lines.push(`  Positions: ${posParts}`);
       if (plans) {
         const marked = plans.get(e.fid) ?? 0;
-        lines.push(marked > 0
-          ? `  Cutdown plan: FILED — this owner has already marked ${marked} player${marked === 1 ? '' : 's'} for auto-cut (plans made)`
-          : `  Cutdown plan: NONE ON FILE — this owner has not made their picks yet`);
+        if (marked >= e.over) {
+          lines.push(`  Cutdown plan: FILED — this owner has already marked ${marked} player${marked === 1 ? '' : 's'} for auto-cut (plans made, covers the overage)`);
+        } else if (marked > 0) {
+          lines.push(`  Cutdown plan: PARTIAL — ${marked} of ${e.over} needed cuts marked; auto-cut picks the remaining ${e.over - marked} newest-acquisition-first at the deadline`);
+        } else {
+          lines.push(`  Cutdown plan: NONE ON FILE — this owner has not made their picks; all ${e.over} cuts would be auto-chosen at the deadline`);
+        }
       }
       lines.push(adp
         ? `  Likely cut candidates (weakest combined value first):`
@@ -299,11 +310,14 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
       // WITHOUT a filed plan. hasPlan is null when plan intel was unavailable.
       overLimit: [...overLimit]
         .sort((a, b) => b.over - a.over)
+        // hasPlan means the plan COVERS the overage — a token 1-of-6 plan
+        // still leaves 5 cuts to the newest-first auto-picker, so the owner
+        // hasn't really "made their picks" and stays call-out eligible.
         .map(({ fid, name, count, over }) => ({
           name,
           count,
           over,
-          hasPlan: plans ? (plans.get(fid) ?? 0) > 0 : null,
+          hasPlan: plans ? (plans.get(fid) ?? 0) >= over : null,
           markedCount: plans ? (plans.get(fid) ?? 0) : null,
         })),
     },
@@ -393,6 +407,10 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
   const { year } = ptDateParts(now);
   const deadlineDay = getAugustCutdownDay(year);
   const daysLeft = calendarDaysUntilCutdown(year, now);
+  // Deadline already passed (reachable only via manual dispatch / --week
+  // override outside the window): a "deadline day" ping would be flatly
+  // wrong — skip the promo rather than buzz the chat with stale urgency.
+  if (daysLeft < 0) return null;
   const countdown = daysLeft > 0
     ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to comply`
     : 'deadline day';

@@ -18,6 +18,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // @ts-expect-error — plain .mjs module without type declarations
 import { buildGroupMePromo, buildFactSheet, buildPost, blendedCutValue } from '../scripts/article-types/cut-watch.mjs';
+// @ts-expect-error — plain .mjs module without type declarations
+import { isCutWindow } from '../scripts/article-utils/season-guards.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -123,23 +125,47 @@ describe('buildGroupMePromo (cut-watch)', () => {
     expect(text).toContain('Midwestside Connection: 3 over the 22-man limit.');
     expect(text).toContain('plan is already filed');
   });
+
+  it('skips the promo entirely when the deadline has already passed', () => {
+    const afterDeadline = new Date('2026-08-20T15:05:00Z'); // cutdown was Aug 16
+    const text = buildGroupMePromo(post, {
+      overLimit: [{ name: 'Midwestside Connection', count: 25, over: 3 }],
+    }, { league: 'theleague', now: afterDeadline });
+
+    expect(text).toBeNull();
+  });
 });
 
 describe('buildFactSheet (cut-watch)', () => {
   it('surfaces over-limit teams sorted worst-first with plan status', async () => {
+    // 9902 is 6 over with all 6 marked (FILED); 9901 is 3 over with only 2
+    // marked (PARTIAL — hasPlan false: a plan that doesn't cover the overage
+    // still leaves cuts to the auto-picker, so the owner stays call-out
+    // eligible).
     const { factSheet, enrichment } = await buildFactSheet(factSheetData(), null, 2026, repoRoot, {
-      cutdownPlans: new Map([['9902', 3], ['9901', 0]]),
+      cutdownPlans: new Map([['9902', 6], ['9901', 2]]),
       adp: null,
     });
 
     expect(enrichment.overLimit).toEqual([
-      { name: 'Team 9902', count: 28, over: 6, hasPlan: true, markedCount: 3 },
-      { name: 'Team 9901', count: 25, over: 3, hasPlan: false, markedCount: 0 },
+      { name: 'Team 9902', count: 28, over: 6, hasPlan: true, markedCount: 6 },
+      { name: 'Team 9901', count: 25, over: 3, hasPlan: false, markedCount: 2 },
     ]);
 
     // Counts only, never marked player ids (privacy decision #10).
-    expect(factSheet).toContain('Cutdown plan: FILED — this owner has already marked 3 players');
-    expect(factSheet).toContain('Cutdown plan: NONE ON FILE — this owner has not made their picks yet');
+    expect(factSheet).toContain('Cutdown plan: FILED — this owner has already marked 6 players');
+    expect(factSheet).toContain('covers the overage');
+    expect(factSheet).toContain('Cutdown plan: PARTIAL — 2 of 3 needed cuts marked');
+  });
+
+  it('reports NONE ON FILE when an over-limit owner has marked nothing', async () => {
+    const { factSheet, enrichment } = await buildFactSheet(factSheetData(), null, 2026, repoRoot, {
+      cutdownPlans: new Map([['9902', 0], ['9901', 0]]),
+      adp: null,
+    });
+
+    expect(enrichment.overLimit.every((t: { hasPlan: boolean }) => t.hasPlan === false)).toBe(true);
+    expect(factSheet).toContain('Cutdown plan: NONE ON FILE — this owner has not made their picks; all 6 cuts would be auto-chosen');
   });
 
   it('runs cleanly without plan intel (Redis unavailable)', async () => {
@@ -189,6 +215,17 @@ describe('buildFactSheet (cut-watch)', () => {
     expect(factSheet).not.toMatch(/- .*Player p0 /);
     expect(factSheet).toContain('Likely cut candidates (weakest combined value first):');
     expect(factSheet).toContain('blended by contract length');
+  });
+});
+
+describe('isCutWindow', () => {
+  it('runs through the actual cutdown day (3rd Sunday of August), not a fixed Aug 16', () => {
+    expect(isCutWindow(new Date(2028, 7, 20))).toBe(true);  // 2028 cutdown = Aug 20
+    expect(isCutWindow(new Date(2028, 7, 21))).toBe(false);
+    expect(isCutWindow(new Date(2026, 7, 16))).toBe(true);  // 2026 cutdown = Aug 16
+    expect(isCutWindow(new Date(2026, 7, 17))).toBe(false);
+    expect(isCutWindow(new Date(2026, 6, 15))).toBe(true);  // opens Jul 15
+    expect(isCutWindow(new Date(2026, 6, 14))).toBe(false);
   });
 });
 

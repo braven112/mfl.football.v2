@@ -3,6 +3,8 @@
  * Each guard returns true if the article should be generated, false to skip.
  */
 
+import { getAugustCutdownDay } from '../lib/august-cutdown.mjs';
+
 /**
  * Regular season + playoffs guard (weeks 1-17).
  * Used by: weekly-recap, waiver-pickups, weekend-preview, matchup-preview
@@ -12,15 +14,18 @@ export function isRegularSeasonOrPlayoffs(week) {
 }
 
 /**
- * Cut watch window: July 15 – August 16.
- * Teams must trim to 22-man active rosters before the season.
+ * Cut watch window: July 15 through the August cutdown deadline (3rd Sunday
+ * of August — day 15-21 depending on the year, NOT a fixed Aug 16; a fixed
+ * end date ends the window before the deadline in most years, silencing the
+ * deadline-week and deadline-day articles). Teams must trim to 22-man
+ * active rosters by the cutdown.
  */
 export function isCutWindow(now = new Date()) {
   const month = now.getMonth(); // 0-indexed
   const day = now.getDate();
   // July = 6, August = 7
   if (month === 6 && day >= 15) return true;
-  if (month === 7 && day <= 16) return true;
+  if (month === 7 && day <= getAugustCutdownDay(now.getFullYear())) return true;
   return false;
 }
 
