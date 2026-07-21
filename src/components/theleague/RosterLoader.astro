@@ -69,8 +69,9 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
     if (window.__rosterLoaderInit) return;
     window.__rosterLoaderInit = true;
 
-    var DELAY_MS = 1000;    // don't flash on fast/cached loads
+    var DELAY_MS = 1000;       // give fast/cached loads a full second to land before showing
     var CYCLE_MS = 5000;
+    var MIN_VISIBLE_MS = 400;  // once shown, stay up long enough to not read as a glitch
 
     // Lines come from the official per-league team data file, serialized into a
     // JSON script tag at SSR. Read at show() time so the current page's (league's)
@@ -87,6 +88,8 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     var armTimer = null;
     var cycleTimer = null;
+    var hideTimer = null;
+    var shownAt = 0;
     var order = [];
     var idx = 0;
 
@@ -104,6 +107,8 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
     function show() {
       var el = node();
       if (!el) return;
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      shownAt = Date.now();
       order = shuffle(readLines().slice());
       idx = 0;
       var line = el.querySelector('[data-roster-line]');
@@ -124,8 +129,20 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     function hide() {
       if (armTimer) { clearTimeout(armTimer); armTimer = null; }
-      if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+      // If the page landed just after the loader appeared, hold it up briefly —
+      // a sub-MIN_VISIBLE_MS blink reads as a glitch (loading-standards.md).
       var el = node();
+      var visibleFor = Date.now() - shownAt;
+      if (el && el.classList.contains('is-active') && visibleFor < MIN_VISIBLE_MS) {
+        if (hideTimer) return;
+        hideTimer = window.setTimeout(function () {
+          hideTimer = null;
+          hide();
+        }, MIN_VISIBLE_MS - visibleFor);
+        return;
+      }
+      if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
       if (el) { el.classList.remove('is-active'); el.hidden = true; }
     }
 
@@ -142,6 +159,7 @@ const firstLine = loaderLines[0] ?? 'Loading your roster…';
 
     // Instant arm on link click (fires before the router prepares).
     document.addEventListener('click', function (e) {
+      if (e.defaultPrevented) return;
       var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
       if (!a) return;
       if (a.target === '_blank' || a.origin !== location.origin) return;
