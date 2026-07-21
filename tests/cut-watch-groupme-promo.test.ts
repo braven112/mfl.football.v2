@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // @ts-expect-error — plain .mjs module without type declarations
-import { buildGroupMePromo, buildFactSheet } from '../scripts/article-types/cut-watch.mjs';
+import { buildGroupMePromo, buildFactSheet, blendedCutValue } from '../scripts/article-types/cut-watch.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -117,6 +117,7 @@ describe('buildFactSheet (cut-watch)', () => {
   it('surfaces over-limit teams sorted worst-first with plan status', async () => {
     const { factSheet, enrichment } = await buildFactSheet(factSheetData(), null, 2026, repoRoot, {
       cutdownPlans: new Map([['9902', 3], ['9901', 0]]),
+      adp: null,
     });
 
     expect(enrichment.overLimit).toEqual([
@@ -132,6 +133,7 @@ describe('buildFactSheet (cut-watch)', () => {
   it('runs cleanly without plan intel (Redis unavailable)', async () => {
     const { factSheet, enrichment } = await buildFactSheet(factSheetData(), null, 2026, repoRoot, {
       cutdownPlans: null,
+      adp: null,
     });
 
     expect(factSheet).not.toContain('Cutdown plan:');
@@ -139,5 +141,70 @@ describe('buildFactSheet (cut-watch)', () => {
       { name: 'Team 9902', count: 28, over: 6, hasPlan: null, markedCount: null },
       { name: 'Team 9901', count: 25, over: 3, hasPlan: null, markedCount: null },
     ]);
+  });
+
+  it('ranks cut candidates by weakest combined value, not salary', async () => {
+    const data = {
+      players: { players: { player: [] } },
+      rosters: {
+        rosters: {
+          // 23 active = 1 over → 3 candidates surfaced.
+          franchise: [{ id: '9901', player: rosterPlayers(23) }],
+        },
+      },
+    };
+    // p22 = highest salary but in NO ADP list (unranked → most cuttable).
+    // p0 = cheapest player but a stud (ADP 5) → must NOT be a candidate.
+    // Everyone else sits at ADP 120 except p10 (ADP 200, next-weakest).
+    const redraft = new Map<string, number>();
+    const dynasty = new Map<string, number>();
+    for (let i = 0; i < 22; i++) {
+      const pick = i === 0 ? 5 : i === 10 ? 200 : 120;
+      redraft.set(`p${i}`, pick);
+      dynasty.set(`p${i}`, pick);
+    }
+
+    const { factSheet } = await buildFactSheet(data, null, 2026, repoRoot, {
+      cutdownPlans: null,
+      adp: { redraft, dynasty },
+    });
+
+    const candidateLines = factSheet.split('\n').filter((l: string) => l.trim().startsWith('- '));
+    expect(candidateLines[0]).toContain('Player p22');
+    expect(candidateLines[0]).toContain('UNRANKED');
+    expect(candidateLines[1]).toContain('Player p10');
+    expect(candidateLines[1]).toContain('combined ADP 200.0');
+    expect(factSheet).not.toMatch(/- .*Player p0 /);
+    expect(factSheet).toContain('Likely cut candidates (weakest combined value first):');
+    expect(factSheet).toContain('blended by contract length');
+  });
+});
+
+describe('blendedCutValue', () => {
+  it('is pure redraft at 1 year and pure dynasty at 5 years', () => {
+    expect(blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 1 }).blended).toBe(100);
+    expect(blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 5 }).blended).toBe(200);
+  });
+
+  it('mixes linearly in between (3yr = 50/50)', () => {
+    const v = blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 3 });
+    expect(v.blended).toBe(150);
+    expect(v.dynastyWeight).toBe(0.5);
+    expect(blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 2 }).blended).toBe(125);
+    expect(blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 4 }).blended).toBe(175);
+  });
+
+  it('clamps contract years outside 1-5', () => {
+    expect(blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 0 }).blended).toBe(100);
+    expect(blendedCutValue({ redraftAdp: 100, dynastyAdp: 200, contractYears: 9 }).blended).toBe(200);
+  });
+
+  it('falls back to the available list when one side is missing', () => {
+    expect(blendedCutValue({ redraftAdp: 80, dynastyAdp: undefined, contractYears: 5 }).blended).toBe(80);
+    expect(blendedCutValue({ redraftAdp: undefined, dynastyAdp: 90, contractYears: 1 }).blended).toBe(90);
+  });
+
+  it('returns null blended when the player is in neither list', () => {
+    expect(blendedCutValue({ redraftAdp: undefined, dynastyAdp: undefined, contractYears: 3 }).blended).toBeNull();
   });
 });
