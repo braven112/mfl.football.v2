@@ -17,3 +17,13 @@
 **Evidence:** `src/pages/theleague/rosters.astro` now tags both `?testEligibility=true` fixtures and `buildDemoPlayers()` fixtures with `isMock: true`, and `applyEligibilityStyling()` no longer adds `player-cell__avatar--eligible` to live roster rows.
 
 **Recommendation:** If future roster walkthroughs need extra visual emphasis, attach it to explicit demo/mock markers rather than auth state or generic eligibility checks. Keep real-owner flows limited to actionable controls like chips, buttons, and modal entry points.
+
+## 2026-07-21 - Contract Demo Overlay Retired; Its JS Deliberately Remains Inert
+
+**Context:** Disabling the "How It Works" contract-declaration walkthrough tab on `/theleague/rosters` after declaration season ended.
+
+**Insight:** The overlay's DOM lives in `src/components/theleague/ContractDemoOverlay.astro`, but ALL of its interactivity (~500 lines: tutorial stepper, demo mode, mock player injection via `buildDemoPlayers()`) lives inline in `rosters.astro` and is fully null-guarded (`if (demoTrigger) ...`, `demoTutorial?.`). Removing just the component render + import disables the whole feature cleanly — the demo JS goes inert without its DOM and was intentionally left in place.
+
+**Evidence:** Commit "Remove 'How It Works' contract demo tab from TheLeague rosters page" removed only the import and `<ContractDemoOverlay />` from `src/pages/theleague/rosters.astro`. The component file and the `cdemo-*` JS block (search `cdemo` in rosters.astro) remain.
+
+**Recommendation:** To re-enable for next declaration season, re-add the import and render — nothing else. If instead the demo is ever removed for good, delete the component file, the `cdemo` JS block, `buildDemoPlayers()`, and the `window.__cdemoSetStep` export together. (Note: `__cdemoSetStep` is defined in rosters.astro but nothing calls it — the overlay's step-2 glossary link is wired by the component's own inline script, despite what the old comment next to the export claims.)

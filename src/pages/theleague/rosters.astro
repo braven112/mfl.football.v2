@@ -15,7 +15,6 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
 import ContractDeclarationModal from '../../components/theleague/ContractDeclarationModal.astro';
-import ContractDemoOverlay from '../../components/theleague/ContractDemoOverlay.astro';
 import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
 import FreeAgentNeedsCard from '../../components/theleague/FreeAgentNeedsCard.astro';
@@ -5352,7 +5351,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 <PlayerInjuryModal />
 
 <ContractDeclarationModal />
-<ContractDemoOverlay />
 
 <script
   type="application/json"
@@ -12310,7 +12308,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       demoBanner?.classList.remove('active');
     };
 
-    // Expose setDemoStep for ContractDemoOverlay's inline script (step 2 glossary link)
+    // Legacy export — nothing calls this (the overlay's glossary link is wired by
+    // the component's own inline script); kept while the inert demo block remains
     (window as any).__cdemoSetStep = setDemoStep;
 
     // Wire up demo handlers using onclick to prevent duplicate listeners
