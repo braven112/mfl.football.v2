@@ -6780,27 +6780,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const teamsHtml = sortedTeams.map((team) => {
         const teamPlayers = playersByTeam[team];
         const playersHtml = teamPlayers.map((player) => {
-          const nflLogo = getNflLogoUrl(player.nflTeam);
-          const headshot = player.headshot || getPlayerHeadshot(player.id, player.espnId);
-          const position = player.position || 'UNK';
           // All salaries increase by 10% per year (year 0 = current year)
           const baseSalary = Number(player.salary || 0);
           const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
           const salary = _capSpaceFmt.format(salaryForYear);
+          // Shared builder = shared team-color avatar backdrop + fallbacks.
+          const cellHtml = buildPlayerCellHTML({
+            name: player.name,
+            headshot: player.headshot,
+            position: player.position || 'UNK',
+            nflTeam: player.nflTeam,
+            mflId: player.id,
+            espnId: player.espnId,
+          });
           return `
             <div class="players-team__player">
-              <div class="player-cell">
-                <div class="player-cell__avatar">
-                  <img src="${headshot}" alt="${player.name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
-                </div>
-                <div>
-                  <strong>${player.name}</strong>
-                  <div class="player-meta">
-                    ${position === 'DEF' ? '' : `<img src="${nflLogo}" alt="${player.nflTeam}" class="player-meta__logo" loading="lazy" />`}
-                    <span class="player-meta__pos">${position}</span>
-                  </div>
-                </div>
-              </div>
+              ${cellHtml}
               <div class="players-team__salary">${salary}</div>
             </div>
           `;
@@ -6844,24 +6839,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const collegesHtml = sortedColleges.map((college) => {
         const collegePlayers = playersByCollege[college];
         const playersHtml = collegePlayers.map((player) => {
-          const headshot = player.headshot || getPlayerHeadshot(player.id, player.espnId);
-          const position = player.position || 'UNK';
           const baseSalary = Number(player.salary || 0);
           const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
           const salary = _capSpaceFmt.format(salaryForYear);
+          // Shared builder = shared team-color avatar backdrop + fallbacks.
+          // (Adds the NFL-logo meta the by-team cards already show.)
+          const cellHtml = buildPlayerCellHTML({
+            name: player.name,
+            headshot: player.headshot,
+            position: player.position || 'UNK',
+            nflTeam: player.nflTeam,
+            mflId: player.id,
+            espnId: player.espnId,
+          });
           return `
             <div class="players-team__player">
-              <div class="player-cell">
-                <div class="player-cell__avatar">
-                  <img src="${headshot}" alt="${player.name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
-                </div>
-                <div>
-                  <strong>${player.name}</strong>
-                  <div class="player-meta">
-                    <span class="player-meta__pos">${position}</span>
-                  </div>
-                </div>
-              </div>
+              ${cellHtml}
               <div class="players-team__salary">${salary}</div>
             </div>
           `;

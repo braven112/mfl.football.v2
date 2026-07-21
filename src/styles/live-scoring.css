@@ -4,8 +4,10 @@
  * Styles the standalone live-scoring page + island. Built entirely on the
  * design tokens in tokens.css / tokens-dark.css, so light/dark and the AFL
  * per-league theme (html[data-league="afl"]) all resolve automatically —
- * franchise team-color washes come from inline --th/--ta/--team vars set per
- * element. Locked art direction: art-direction gallery, direction C.
+ * franchise team-color washes come from inline --th/--ta vars set per
+ * element; player-headshot chips use the shared --player-avatar-bg/border
+ * pattern from nfl-team-colors.ts. Locked art direction: art-direction
+ * gallery, direction C.
  */
 
 .ls-root {
@@ -352,13 +354,21 @@ html.dark .ls-detail {
 .ls-ppos[data-pos="FLEX"] { --posc: #c0a04a; }
 .ls-headshot {
   position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
-  background: radial-gradient(120% 120% at 50% 15%,
-    color-mix(in srgb, var(--team, #1c497c) 78%, #000 4%),
-    color-mix(in srgb, var(--team, #1c497c) 55%, #000 34%));
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--team, #1c497c) 40%, transparent);
+  /* Same treatment as the shared player-cell chip (player-cell.css): light
+     mode = muted chip + team-color ring; dark mode override below = the
+     luminance-floored radial head-spotlight from getPlayerAvatarBackground,
+     so dark-jerseyed headshots never sink into a near-black team color. */
+  background: var(--content-bg-muted, #f3f4f6);
+  box-shadow: inset 0 0 0 2px var(--player-avatar-border, var(--content-border, #e2e8f0));
+}
+html.dark .ls-headshot {
+  background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
+  /* Same half-opacity white ring as the player-cell chip in dark mode. */
+  box-shadow: inset 0 0 0 1px var(--player-avatar-ring, rgba(255, 255, 255, 0.5));
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-/* Defense "headshot" is the NFL logo centered in the team-color disc. */
+/* Defense "headshot" is the NFL logo centered in the chip (gray + team ring
+   in light mode, team-color spotlight in dark). */
 .ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }

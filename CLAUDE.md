@@ -71,6 +71,23 @@ when swapping a hardcoded color to a token, verify the token's LIGHT value
 matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
+## Player headshots on team colors — use the shared avatar helpers
+
+A player headshot on a team-color backdrop must go through
+`getPlayerAvatarBackground` / `getPlayerAvatarBorder`
+(`src/utils/nfl-team-colors.ts`) — usually via `<PlayerCell>` or
+`buildPlayerCellHTML`, which set the `--player-avatar-bg`/`--player-avatar-border`
+properties consumed by `player-cell.css`. Don't hand-roll gradients from
+`getNflTeamColors`: a third of the NFL wears near-black primaries, and a raw
+primary behind a dark-jerseyed headshot is invisible in dark mode (July 2026,
+Cam Ward on Titans navy). The helpers pick a readable anchor (lighter
+secondary for near-black primaries), floor its luminance, and add the radial
+head-spotlight. The one sanctioned exception is the deep-ink composite family
+(hero panels, player modal band, OG images, pick-reveal, dead-money) — dark
+full-bleed surfaces with white text on the colored area, allowlisted in
+`tests/team-color-backdrop-guard.test.ts`, which fails the build for any new
+direct `getNflTeamColors` consumer.
+
 ## Auth — session JWT only
 
 `getAuthUser()` (src/utils/auth.ts) trusts only the signed session cookie.

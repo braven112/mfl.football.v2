@@ -27,7 +27,7 @@ import {
   winProbability,
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
 import { resolveTeamColorPair } from '../../utils/team-color-contrast';
 
 const POLL_LIVE = 60_000;
@@ -118,7 +118,6 @@ function clockLabel(state: NflGameState, sec: number): string {
 }
 
 const nflLogoUrl = (team: string) => (team ? `/assets/nfl-logos/${normalizeTeamCode(team)}.svg` : '');
-const teamColor = (team: string) => getNflTeamColors(team).primary;
 
 const fmt = (n: number) => n.toFixed(1);
 
@@ -356,7 +355,13 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
   const isDef = pos === 'DEF';
 
   const face = (
-    <span className="ls-headshot" style={{ ['--team' as any]: teamColor(team) }}>
+    <span
+      className="ls-headshot"
+      style={{
+        ['--player-avatar-bg' as any]: getPlayerAvatarBackground(team),
+        ['--player-avatar-border' as any]: getPlayerAvatarBorder(team),
+      }}
+    >
       {meta?.headshot && !isDef && (
         <img src={meta.headshot} alt="" loading="lazy"
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
