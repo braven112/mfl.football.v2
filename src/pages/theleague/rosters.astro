@@ -9987,10 +9987,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             const addedTxt = cut.acquisitionTimestamp
               ? `added ${fmtCdpDate(cut.acquisitionTimestamp * 1000)} · `
               : '';
+            const dragHint = dragEnabled ? ', or drag this row into your order' : '';
             return (
-              `<li class="cdp-slate__row cdp-slate__row--auto" data-player-id="${escCdp(cut.playerId)}">` +
+              `<li class="cdp-slate__row cdp-slate__row--auto" data-player-id="${escCdp(cut.playerId)}" draggable="${dragEnabled ? 'true' : 'false'}">` +
               `<div class="cdp-slate__player">${buildCdpPlayerCell(cut.playerId)}</div>` +
-              `<span class="cdp-slate__reason"><strong>Auto-selected (last added)</strong> · ${addedTxt}mark another player to protect this one</span>` +
+              `<span class="cdp-slate__reason"><strong>Auto-selected (last added)</strong> · ${addedTxt}mark another player to protect this one${dragHint}</span>` +
               buildCdpCapHTML(salary, penalty) +
               `</li>`
             );
@@ -10037,6 +10038,99 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const swapWith = direction === 'up' ? idx - 1 : idx + 1;
       if (swapWith < 0 || swapWith >= marked.length) return;
       [marked[idx], marked[swapWith]] = [marked[swapWith], marked[idx]];
+      applyMarkedOrder(marked);
+    };
+
+    // ---- Slate interaction handlers (arrows + drag) -----------------
+    // Named, and dispatched through window.__cdpH (reassigned on every
+    // init) rather than bound directly: the slate's listeners bind once
+    // per DOM, but initRosterPage runs more than once on the SAME DOM
+    // (direct call at module eval + astro:page-load, which ClientRouter
+    // also fires on the initial load), and each run builds its own
+    // autocutState. The refs keep the once-bound listeners pointed at
+    // the newest run's state.
+    let cdpDragId = null;
+
+    const cdpSlateClick = (e) => {
+      const slateEl = e.currentTarget;
+      const arrow = e.target.closest('.cdp-arrow');
+      if (!arrow || arrow.disabled) return;
+      const pid = arrow.dataset.playerId;
+      const dir = arrow.dataset.direction;
+      reorderAutocutMarked(pid, dir);
+      // Re-render destroyed the clicked button — restore keyboard focus
+      // to the same control (or its sibling when it hit an edge).
+      const same = slateEl.querySelector(
+        `.cdp-arrow[data-direction="${dir}"][data-player-id="${pid}"]`,
+      );
+      if (same && !same.disabled) same.focus();
+      else
+        slateEl
+          .querySelector(`.cdp-arrow[data-player-id="${pid}"]:not(:disabled)`)
+          ?.focus();
+    };
+
+    // Drag reorder — desktop only (rows render draggable=false on touch).
+    // EVERY slate row drags: marked rows reorder, and dragging an
+    // auto-selected ("last added") row marks it at the dropped position —
+    // an explicit owner pick — so the whole slate can be ordered directly.
+    const cdpSlateDragStart = (e) => {
+      const row = e.target.closest('.cdp-slate__row[draggable="true"]');
+      if (!row) return;
+      cdpDragId = row.dataset.playerId;
+      try {
+        e.dataTransfer?.setData('text/plain', cdpDragId);
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      } catch {
+        /* older browsers */
+      }
+      row.classList.add('cdp-dragging');
+    };
+
+    const cdpSlateDragEnd = (e) => {
+      cdpDragId = null;
+      e.currentTarget
+        .querySelectorAll('.cdp-dragging, .cdp-drop-target')
+        .forEach((el) => el.classList.remove('cdp-dragging', 'cdp-drop-target'));
+    };
+
+    const cdpSlateDragOver = (e) => {
+      const row = e.target.closest('.cdp-slate__row');
+      if (!row || !cdpDragId || row.dataset.playerId === cdpDragId) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      e.currentTarget
+        .querySelectorAll('.cdp-drop-target')
+        .forEach((el) => el.classList.remove('cdp-drop-target'));
+      row.classList.add('cdp-drop-target');
+    };
+
+    const cdpSlateDrop = (e) => {
+      const row = e.target.closest('.cdp-slate__row');
+      if (!row) return;
+      e.preventDefault();
+      const dragId = cdpDragId || e.dataTransfer?.getData('text/plain') || '';
+      const targetId = row.dataset.playerId;
+      if (!dragId || dragId === targetId) return;
+      const marked = getMarkedOnRoster();
+      const from = marked.indexOf(dragId);
+      const to = marked.indexOf(targetId);
+      if (from >= 0 && to >= 0) {
+        // Marked → marked: plain reorder.
+        marked.splice(from, 1);
+        marked.splice(to, 0, dragId);
+      } else if (to >= 0) {
+        // Auto-selected row dragged into the marked order: mark it there.
+        marked.splice(to, 0, dragId);
+      } else if (from >= 0) {
+        // Marked row dropped onto an auto-selected row: lowest priority,
+        // still marked — the closest legal spot (marked always precede fill).
+        marked.splice(from, 1);
+        marked.push(dragId);
+      } else {
+        // Auto → auto: mark the dragged player at lowest priority.
+        marked.push(dragId);
+      }
       applyMarkedOrder(marked);
     };
 
@@ -10297,84 +10391,130 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
     };
 
+    // Re-login form submit — named so the once-bound listener dispatches
+    // into the newest run's closures (it reads cdpReauthCtx, which is
+    // per-run state; a stale closure would read null and silently drop
+    // the post-relogin retry save).
+    const cdpReauthSubmit = async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('cdp-reauth-username')?.value?.trim();
+      const password = document.getElementById('cdp-reauth-password')?.value;
+      const errEl = document.getElementById('cdp-reauth-error');
+      const submitBtn = document.getElementById('cdp-reauth-submit');
+      if (!username || !password) return;
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.removeAttribute('role');
+        errEl.textContent = '';
+      }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Logging in…';
+      }
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            password,
+            leagueId: config.authUser?.leagueId || config.defaultLeagueId,
+            year: autocutCfg?.year,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.message || 'Login failed. Check your password.');
+        }
+        // IDENTITY GUARD: the re-login must be for THIS franchise. If the
+        // owner logged in with an MFL account that owns a different team,
+        // re-firing the save would clobber the other franchise's cut list
+        // (and its captured credential). Abort with a clear message.
+        const normFid = (id) => {
+          const s = String(id ?? '').trim();
+          return /^\d+$/.test(s) ? s.padStart(4, '0') : s;
+        };
+        const loggedInFid = normFid(data?.user?.franchiseId);
+        if (AUTOCUT_REAL_FID && loggedInFid && loggedInFid !== normFid(AUTOCUT_REAL_FID)) {
+          throw new Error(
+            'That MFL account owns a different franchise — log in with the account for this team.',
+          );
+        }
+        // Success: close (not a cancel), then re-fire the pending save.
+        const ctx = cdpReauthCtx;
+        cdpReauthCtx = null;
+        const reauthOverlay = document.getElementById('cdp-reauth-overlay');
+        if (reauthOverlay) reauthOverlay.hidden = true;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Log in & save';
+        }
+        if (ctx?.returnFocusTo?.isConnected) ctx.returnFocusTo.focus();
+        if (ctx?.onSuccess) ctx.onSuccess();
+      } catch (err) {
+        if (errEl) {
+          errEl.setAttribute('role', 'alert');
+          errEl.textContent = err?.message || 'Login failed. Try again.';
+          errEl.hidden = false;
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Log in & save';
+        }
+        document.getElementById('cdp-reauth-password')?.focus();
+      }
+    };
+
     // ---- One-time bindings (guarded — initRosterPage re-runs on
     //      astro:page-load; element guards use dataset flags, the
-    //      document-level Escape handler uses a window flag) ----------
+    //      document-level Escape handler uses a window flag).
+    //
+    //      IMPORTANT: every listener dispatches through window.__cdpH,
+    //      which is reassigned on EVERY init. initRosterPage runs more
+    //      than once on the same DOM (direct call + astro:page-load on
+    //      the initial load), and each run creates a fresh autocutState.
+    //      Binding closures directly froze the FIRST run's state into
+    //      Save/reorder while the roster-row + CDM handlers (rebuilt by
+    //      every run's updateView) wrote the newest — so Save posted the
+    //      stale original list and wiped the owner's marks. ----------
     const initCutdownPanelBindings = () => {
       const panel = document.getElementById('cutdown-plan-panel');
       if (!panel) return;
 
+      // Live-closure refs — always point at THIS (newest) run's state.
+      window.__cdpH = {
+        save: saveCutListFromPanel,
+        openCutNow: openCutNowModal,
+        closeCutNow: closeCutNowModal,
+        runCutNow: runCutNowBatch,
+        closeReauth: () => closeCdpReauthModal(true),
+        reauthSubmit: cdpReauthSubmit,
+        slateClick: cdpSlateClick,
+        slateDragStart: cdpSlateDragStart,
+        slateDragEnd: cdpSlateDragEnd,
+        slateDragOver: cdpSlateDragOver,
+        slateDrop: cdpSlateDrop,
+      };
+
       if (!panel.dataset.cdpBound) {
         panel.dataset.cdpBound = '1';
-        document.getElementById('cdp-save-btn')?.addEventListener('click', saveCutListFromPanel);
-        document.getElementById('cdp-unsaved-save')?.addEventListener('click', saveCutListFromPanel);
-        document.getElementById('cdp-cutnow-btn')?.addEventListener('click', openCutNowModal);
+        document
+          .getElementById('cdp-save-btn')
+          ?.addEventListener('click', () => window.__cdpH.save());
+        document
+          .getElementById('cdp-unsaved-save')
+          ?.addEventListener('click', () => window.__cdpH.save());
+        document
+          .getElementById('cdp-cutnow-btn')
+          ?.addEventListener('click', () => window.__cdpH.openCutNow());
 
         const slateEl = document.getElementById('cdp-slate');
         if (slateEl) {
-          slateEl.addEventListener('click', (e) => {
-            const arrow = e.target.closest('.cdp-arrow');
-            if (!arrow || arrow.disabled) return;
-            const pid = arrow.dataset.playerId;
-            const dir = arrow.dataset.direction;
-            reorderAutocutMarked(pid, dir);
-            // Re-render destroyed the clicked button — restore keyboard focus
-            // to the same control (or its sibling when it hit an edge).
-            const same = slateEl.querySelector(
-              `.cdp-arrow[data-direction="${dir}"][data-player-id="${pid}"]`,
-            );
-            if (same && !same.disabled) same.focus();
-            else
-              slateEl
-                .querySelector(`.cdp-arrow[data-player-id="${pid}"]:not(:disabled)`)
-                ?.focus();
-          });
-
-          // Drag reorder — desktop only (rows render draggable=false on touch)
-          let cdpDragId = null;
-          slateEl.addEventListener('dragstart', (e) => {
-            const row = e.target.closest('.cdp-slate__row--marked');
-            if (!row) return;
-            cdpDragId = row.dataset.playerId;
-            try {
-              e.dataTransfer?.setData('text/plain', cdpDragId);
-              if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
-            } catch {
-              /* older browsers */
-            }
-            row.classList.add('cdp-dragging');
-          });
-          slateEl.addEventListener('dragend', () => {
-            cdpDragId = null;
-            slateEl
-              .querySelectorAll('.cdp-dragging, .cdp-drop-target')
-              .forEach((el) => el.classList.remove('cdp-dragging', 'cdp-drop-target'));
-          });
-          slateEl.addEventListener('dragover', (e) => {
-            const row = e.target.closest('.cdp-slate__row--marked');
-            if (!row || !cdpDragId || row.dataset.playerId === cdpDragId) return;
-            e.preventDefault();
-            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-            slateEl
-              .querySelectorAll('.cdp-drop-target')
-              .forEach((el) => el.classList.remove('cdp-drop-target'));
-            row.classList.add('cdp-drop-target');
-          });
-          slateEl.addEventListener('drop', (e) => {
-            const row = e.target.closest('.cdp-slate__row--marked');
-            if (!row) return;
-            e.preventDefault();
-            const dragId = cdpDragId || e.dataTransfer?.getData('text/plain') || '';
-            const targetId = row.dataset.playerId;
-            if (!dragId || dragId === targetId) return;
-            const marked = getMarkedOnRoster();
-            const from = marked.indexOf(dragId);
-            const to = marked.indexOf(targetId);
-            if (from < 0 || to < 0) return;
-            marked.splice(from, 1);
-            marked.splice(to, 0, dragId);
-            applyMarkedOrder(marked);
-          });
+          slateEl.addEventListener('click', (e) => window.__cdpH.slateClick(e));
+          slateEl.addEventListener('dragstart', (e) => window.__cdpH.slateDragStart(e));
+          slateEl.addEventListener('dragend', (e) => window.__cdpH.slateDragEnd(e));
+          slateEl.addEventListener('dragover', (e) => window.__cdpH.slateDragOver(e));
+          slateEl.addEventListener('drop', (e) => window.__cdpH.slateDrop(e));
         }
       }
 
@@ -10384,9 +10524,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         reauthOverlay.dataset.cdpBound = '1';
         document
           .getElementById('cdp-reauth-cancel')
-          ?.addEventListener('click', () => closeCdpReauthModal(true));
+          ?.addEventListener('click', () => window.__cdpH.closeReauth());
         reauthOverlay.addEventListener('click', (e) => {
-          if (e.target === reauthOverlay) closeCdpReauthModal(true);
+          if (e.target === reauthOverlay) window.__cdpH.closeReauth();
         });
         // Focus trap (NavDrawer recipe): wrap Tab/Shift+Tab inside the dialog
         reauthOverlay.addEventListener('keydown', (e) => {
@@ -10405,74 +10545,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             first.focus();
           }
         });
-        document.getElementById('cdp-reauth-form')?.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const username = document.getElementById('cdp-reauth-username')?.value?.trim();
-          const password = document.getElementById('cdp-reauth-password')?.value;
-          const errEl = document.getElementById('cdp-reauth-error');
-          const submitBtn = document.getElementById('cdp-reauth-submit');
-          if (!username || !password) return;
-          if (errEl) {
-            errEl.hidden = true;
-            errEl.removeAttribute('role');
-            errEl.textContent = '';
-          }
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Logging in…';
-          }
-          try {
-            const res = await fetch('/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                username,
-                password,
-                leagueId: config.authUser?.leagueId || config.defaultLeagueId,
-                year: autocutCfg?.year,
-              }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data?.success) {
-              throw new Error(data?.message || 'Login failed. Check your password.');
-            }
-            // IDENTITY GUARD: the re-login must be for THIS franchise. If the
-            // owner logged in with an MFL account that owns a different team,
-            // re-firing the save would clobber the other franchise's cut list
-            // (and its captured credential). Abort with a clear message.
-            const normFid = (id) => {
-              const s = String(id ?? '').trim();
-              return /^\d+$/.test(s) ? s.padStart(4, '0') : s;
-            };
-            const loggedInFid = normFid(data?.user?.franchiseId);
-            if (AUTOCUT_REAL_FID && loggedInFid && loggedInFid !== normFid(AUTOCUT_REAL_FID)) {
-              throw new Error(
-                'That MFL account owns a different franchise — log in with the account for this team.',
-              );
-            }
-            // Success: close (not a cancel), then re-fire the pending save.
-            const ctx = cdpReauthCtx;
-            cdpReauthCtx = null;
-            reauthOverlay.hidden = true;
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Log in & save';
-            }
-            if (ctx?.returnFocusTo?.isConnected) ctx.returnFocusTo.focus();
-            if (ctx?.onSuccess) ctx.onSuccess();
-          } catch (err) {
-            if (errEl) {
-              errEl.setAttribute('role', 'alert');
-              errEl.textContent = err?.message || 'Login failed. Try again.';
-              errEl.hidden = false;
-            }
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Log in & save';
-            }
-            document.getElementById('cdp-reauth-password')?.focus();
-          }
-        });
+        document
+          .getElementById('cdp-reauth-form')
+          ?.addEventListener('submit', (e) => window.__cdpH.reauthSubmit(e));
       }
 
       // Cut-now modal
@@ -10481,12 +10556,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         cutnowOverlay.dataset.cdpBound = '1';
         document
           .getElementById('cdp-cutnow-cancel')
-          ?.addEventListener('click', closeCutNowModal);
+          ?.addEventListener('click', () => window.__cdpH.closeCutNow());
         document
           .getElementById('cdp-cutnow-confirm')
-          ?.addEventListener('click', runCutNowBatch);
+          ?.addEventListener('click', () => window.__cdpH.runCutNow());
         cutnowOverlay.addEventListener('click', (e) => {
-          if (e.target === cutnowOverlay) closeCutNowModal();
+          if (e.target === cutnowOverlay) window.__cdpH.closeCutNow();
         });
         // Focus trap (same NavDrawer recipe as the reauth modal above): wrap
         // Tab/Shift+Tab inside the dialog. Initial focus (Cancel) is set in
@@ -10510,21 +10585,19 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         });
       }
 
-      // Document-level Escape — once per document; dispatch through window
-      // refs so re-inits (astro:page-load) always hit the live closure.
-      window.__cdpCloseReauth = () => closeCdpReauthModal(true);
-      window.__cdpCloseCutNow = closeCutNowModal;
+      // Document-level Escape — once per document; dispatches through the
+      // same window.__cdpH refs as every other binding above.
       if (!window.__cdpEscBound) {
         window.__cdpEscBound = true;
         document.addEventListener('keydown', (e) => {
           if (e.key !== 'Escape') return;
           const reauth = document.getElementById('cdp-reauth-overlay');
           if (reauth && !reauth.hidden) {
-            window.__cdpCloseReauth?.();
+            window.__cdpH?.closeReauth();
             return;
           }
           const cutnow = document.getElementById('cdp-cutnow-overlay');
-          if (cutnow && !cutnow.hidden) window.__cdpCloseCutNow?.();
+          if (cutnow && !cutnow.hidden) window.__cdpH?.closeCutNow();
         });
       }
 

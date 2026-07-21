@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-07-21",
+      "type": "bug-fix",
+      "league": "theleague",
+      "impact": "user",
+      "area": "rosters",
+      "summary": "The Cutdown Plan panel stopped gaslighting you. Mark a few August cuts, watch the slate below update, hit Save — and the panel would quietly post your ORIGINAL list and reset all your work, because the page was secretly running two copies of the cut-list state and the Save button was wired to the stale one. There's one copy now, so what you see below the roster is exactly what saves. And while we were in there: every row in the cut slate is draggable, not just the ones you marked — drag an auto-selected 'last added' player into your order and he becomes your pick at that exact spot."
+    },
+    {
       "date": "2026-07-20",
       "type": "bug-fix",
       "league": "both",
