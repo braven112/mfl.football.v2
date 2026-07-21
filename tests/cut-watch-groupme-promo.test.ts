@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // @ts-expect-error — plain .mjs module without type declarations
-import { buildGroupMePromo, buildFactSheet, blendedCutValue } from '../scripts/article-types/cut-watch.mjs';
+import { buildGroupMePromo, buildFactSheet, buildPost, blendedCutValue } from '../scripts/article-types/cut-watch.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -69,7 +69,19 @@ describe('buildGroupMePromo (cut-watch)', () => {
     expect(text).toContain('2 teams still need to shed 8 players combined');
     // Deadline is data-driven (3rd Sunday of August = Aug 16 in 2026).
     expect(text).toContain('Cutdown is Aug 16');
-    expect(text).toMatch(/https:\/\/[a-z0-9.-]+\/theleague\/news\/sf_2026_cut_watch_0720/);
+    // Canonical (cookie-safe) host — leagueOrigin, never bare domains[0].
+    expect(text).toContain('https://www.theleague.us/theleague/news/sf_2026_cut_watch_0720');
+  });
+
+  it('picks the worst offender even when enrichment arrives unsorted', () => {
+    const text = buildGroupMePromo(post, {
+      overLimit: [
+        { name: 'Small Fry', count: 24, over: 2 },
+        { name: 'Midwestside Connection', count: 28, over: 6 },
+      ],
+    }, opts);
+
+    expect(text).toContain('Midwestside Connection: 6 over the 22-man limit, the deepest hole in the league');
   });
 
   it('drops the multi-team spread line when only one team is over', () => {
@@ -177,6 +189,22 @@ describe('buildFactSheet (cut-watch)', () => {
     expect(factSheet).not.toMatch(/- .*Player p0 /);
     expect(factSheet).toContain('Likely cut candidates (weakest combined value first):');
     expect(factSheet).toContain('blended by contract length');
+  });
+});
+
+describe('buildPost (cut-watch)', () => {
+  const aiOutput = { headline: 'H', excerpt: 'E', content: ['<p>x</p>'] };
+
+  it('derives link and league from the passed league (runner passes { league })', () => {
+    const post = buildPost(aiOutput, {}, 'sf_2026_cut_watch_0726', { league: 'afl-fantasy' });
+    expect(post.link).toBe('/afl-fantasy/news/sf_2026_cut_watch_0726');
+    expect(post.league).toBe('afl-fantasy');
+  });
+
+  it('defaults to TheLeague when no league is passed', () => {
+    const post = buildPost(aiOutput, {}, 'sf_2026_cut_watch_0726');
+    expect(post.link).toBe('/theleague/news/sf_2026_cut_watch_0726');
+    expect(post.league).toBe('theleague');
   });
 });
 

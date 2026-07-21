@@ -54,6 +54,9 @@ const writeJson = (filePath, data) => {
 
 // IS_KEEPER takes league-type letter codes (per MFL api_info for TYPE=adp):
 // N = redraft (non-keeper), K = keeper, D = dynasty, R = rookie-only.
+// Letter codes were confirmed from behavior (numeric values = unfiltered),
+// not verified live (dev-sandbox egress to MFL is proxy-blocked) — the
+// identical-payload guard below is the tripwire if they're wrong.
 // The old numeric values (IS_KEEPER=0 / omitted) were silently ignored, so
 // both files carried the SAME unfiltered dataset — every "dynasty ADP"
 // consumer was actually reading redraft-ish data. The identical-payload

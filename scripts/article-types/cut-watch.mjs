@@ -14,11 +14,14 @@ import path from 'node:path';
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary, resolveDataDir } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isCutWindow } from '../article-utils/season-guards.mjs';
-import { LEAGUES } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, leagueOrigin, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../lib/august-cutdown.mjs';
 import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 
+// TheLeague's active-roster cap. Cut-watch is TheLeague-only today (the
+// August cutdown machinery it reports on doesn't exist for AFL); if that
+// changes, this limit must come from the league config, not a const.
 const ACTIVE_ROSTER_LIMIT = 22;
 
 // Sort score for players absent from both ADP lists — nobody drafts them
@@ -69,9 +72,9 @@ function describeValue(value) {
   return ` — combined ADP ${value.blended.toFixed(1)} (${pct}% dynasty weight; redraft ${fmt(value.redraftAdp)}, dynasty ${fmt(value.dynastyAdp)})`;
 }
 
-async function loadAdpMaps(projectRoot, year) {
+async function loadAdpMaps(projectRoot, year, league) {
   try {
-    const dir = resolveDataDir(projectRoot, year);
+    const dir = resolveDataDir(projectRoot, year, league);
     const read = async (name) => {
       const raw = JSON.parse(await fs.readFile(path.join(dir, `${name}.json`), 'utf8'));
       const map = new Map();
@@ -109,9 +112,12 @@ export function guardSeason(week, year, now) {
 
 /**
  * Cutdown-plan status for the over-limit franchises, read from the autocut
- * Redis keys (autocut:{fid} — the same contract apply-august-cuts.mjs
- * executes at the deadline). Returns Map<fid, markedCount>, or null when
- * Redis is unreachable — plan intel is additive, the article runs without it.
+ * Redis keys. Key format: autocut:{fid} = JSON { year, playerIds, updatedAt }
+ * — the same contract src/utils/autocut-storage.ts writes and
+ * apply-august-cuts.mjs executes at the deadline. These keys are
+ * TheLeague-only (no league prefix); callers must not use this for other
+ * leagues. Returns Map<fid, markedCount>, or null when Redis is
+ * unreachable — plan intel is additive, the article runs without it.
  *
  * PRIVACY (august-cuts plan decision #10): counts only. The marked player
  * ids NEVER enter the fact sheet, so the AI cannot leak an owner's actual
@@ -156,15 +162,16 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
     }
   }
 
-  const teams = await loadTeams(projectRoot);
+  const league = opts.league ?? DEFAULT_LEAGUE_SLUG;
+  const teams = await loadTeams(projectRoot, league);
 
   // Combined-value rankings (opts.adp is a test seam — pass { redraft, dynasty }
   // Maps or null to bypass the feed read).
-  const adp = opts.adp !== undefined ? opts.adp : await loadAdpMaps(projectRoot, year);
+  const adp = opts.adp !== undefined ? opts.adp : await loadAdpMaps(projectRoot, year, league);
 
   const lines = [];
   const now = new Date();
-  lines.push(`CUT WATCH — TheLeague (${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })})`);
+  lines.push(`CUT WATCH — ${LEAGUES[league].name} (${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })})`);
   lines.push(`Active roster limit: ${ACTIVE_ROSTER_LIMIT} players`);
   lines.push('');
 
@@ -230,10 +237,12 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   }
 
   // Cutdown-plan intel for over-limit teams (opts.cutdownPlans is a test
-  // seam — pass a Map or null to bypass the live Redis read).
+  // seam — pass a Map or null to bypass the live Redis read). The autocut:*
+  // keys are TheLeague-only and unprefixed, so any other league skips plan
+  // intel entirely rather than reading TheLeague's plans for its own fids.
   const plans = opts.cutdownPlans !== undefined
     ? opts.cutdownPlans
-    : await loadCutdownPlans(overLimit.map((e) => e.fid));
+    : (league === DEFAULT_LEAGUE_SLUG ? await loadCutdownPlans(overLimit.map((e) => e.fid)) : null);
 
   if (overLimit.length > 0) {
     lines.push('=== TEAMS OVER THE LIMIT ===');
@@ -362,20 +371,24 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
   const overLimit = enrichment?.overLimit ?? [];
   if (overLimit.length === 0) return null;
 
-  const publicOrigin = `https://${LEAGUES[league].domains[0]}`;
+  // Canonical host (cookie-safe) via leagueOrigin — never domains[0] ad hoc,
+  // or links in GroupMe open logged-out (session cookies are host-only).
+  const publicOrigin = leagueOrigin(LEAGUES[league]);
   const totalExcess = overLimit.reduce((sum, t) => sum + t.over, 0);
 
   // Prefer to call out the worst offender WITHOUT a filed cutdown plan —
   // owners who already made their picks get credit, not the spotlight.
   // hasPlan is null when plan intel was unavailable (falls back to worst
-  // offender overall, pre-plan-intel behavior).
-  const noPlan = overLimit.filter((t) => t.hasPlan === false);
-  const planned = overLimit.filter((t) => t.hasPlan === true);
-  const worst = noPlan[0] ?? overLimit[0];
+  // offender overall, pre-plan-intel behavior). Sorted defensively — don't
+  // rely on the enrichment already being worst-first.
+  const sorted = [...overLimit].sort((a, b) => b.over - a.over);
+  const noPlan = sorted.filter((t) => t.hasPlan === false);
+  const planned = sorted.filter((t) => t.hasPlan === true);
+  const worst = noPlan[0] ?? sorted[0];
 
   const descriptor = worst.hasPlan === false
     ? ' with NO cutdown plan on file'
-    : (overLimit.length > 1 && worst === overLimit[0] ? ', the deepest hole in the league' : '');
+    : (sorted.length > 1 && worst === sorted[0] ? ', the deepest hole in the league' : '');
 
   const { year } = ptDateParts(now);
   const deadlineDay = getAugustCutdownDay(year);
@@ -403,7 +416,8 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
   );
 }
 
-export function buildPost(aiOutput, enrichment, articleId) {
+export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+  const slug = LEAGUES[league].slug;
   return {
     id: articleId,
     timestamp: new Date().toISOString(),
@@ -413,9 +427,9 @@ export function buildPost(aiOutput, enrichment, articleId) {
     headline: aiOutput.headline,
     body: aiOutput.excerpt,
     franchiseIds: [],
-    link: `/theleague/news/${articleId}`,
+    link: `/${slug}/news/${articleId}`,
     linkLabel: 'Read cut watch',
-    league: 'theleague',
+    league: slug,
     authorId: 'claude',
     content: aiOutput.content,
   };
