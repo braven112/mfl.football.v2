@@ -490,12 +490,15 @@ const endpoints = [
     url: withWeek(`${host}/${year}/export?TYPE=projectedScores&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
-  // IS_KEEPER takes league-type LETTER codes (N=redraft, D=dynasty) — numeric
-  // or omitted values are silently ignored and return the unfiltered
-  // aggregate, making both files identical. Keep these in lockstep with
-  // scripts/fetch-adp.mjs (which carries the identical-payload guard): this
-  // duplicate fetch runs every 5 min via roster-sync and overwrites the same
-  // committed files, so a fix applied only there is reverted here.
+  // IS_KEEPER takes league-type LETTER codes — numeric or omitted values are
+  // silently ignored and return the unfiltered aggregate. Production verdict
+  // (2026-07-21): N (redraft) is accepted; D (dynasty) is REJECTED with
+  // "Invalid value for IS_KEEPER" — the writeOut error-payload guard keeps
+  // that from overwriting the committed feed while the correct dynasty code
+  // awaits live verification. Keep these in lockstep with
+  // scripts/fetch-adp.mjs: this duplicate fetch runs every 5 min via
+  // roster-sync and overwrites the same committed files, so a fix applied
+  // only there is reverted here.
   {
     key: 'adp-redraft',
     url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=N&IS_MOCK=0&JSON=1`,
@@ -535,6 +538,19 @@ const fetchTextWithRetry = (url, retries = 3, baseDelayMs = 1500) =>
   });
 
 const writeOut = (key, data) => {
+  // Error-payload guard: MFL returns HTTP 200 with an `error` body for a
+  // rejected param (seen live 2026-07-21: adp-dynasty's IS_KEEPER=D →
+  // "Invalid value for IS_KEEPER", which this cron then committed over both
+  // leagues' good feeds and broke every ADP consumer + CI). Never overwrite
+  // a committed feed with an error payload — keep the last good file and
+  // warn loudly. ADP feeds additionally require actual player rows.
+  const errText = typeof data === 'object' ? data?.error?.$t : undefined;
+  if (errText || (key.startsWith('adp-') && !data?.adp?.player)) {
+    console.warn(
+      `::warning::${key} returned no usable data (${errText ?? 'no adp.player in response'}) — keeping the existing file.`,
+    );
+    return;
+  }
   const file = path.join(outDir, `${key}.json`);
   fs.writeFileSync(
     file,
