@@ -23,6 +23,12 @@ const user = getAuthUser(Astro.request);
 if (!user) {
   return Astro.redirect('/best-ball-1/login?next=/best-ball-1/mock-draft');
 }
+// The create API keys everything off the session's leagueId — a session for
+// another league would create THAT league's mock (5-round rookie format)
+// and register it in the wrong registry. Require a bb1 sign-in here.
+if (user.leagueId !== BB1.id) {
+  return Astro.redirect('/best-ball-1/login?next=/best-ball-1/mock-draft');
+}
 
 // ── Load this league's sessions from its PartyKit registry (server-side) ──
 let sessions: MockDraftSessionSummary[] = [];
@@ -244,7 +250,7 @@ const STATUS_LABELS: Record<string, string> = {
 
   .bb-mock__error {
     flex-basis: 100%;
-    color: #b91c1c;
+    color: var(--color-danger, #b91c1c);
     font-size: 0.85rem;
     margin: 0;
   }
@@ -299,7 +305,7 @@ const STATUS_LABELS: Record<string, string> = {
   }
 
   .bb-mock__status--lobby {
-    background: #d97706;
+    background: var(--color-warning, #d97706);
     color: #ffffff;
   }
 

@@ -30,7 +30,7 @@ import { getThemePreference } from '../utils/theme-preference';
 import TradeAlertModal from '../components/theleague/TradeAlertModal.astro';
 import RosterLoader from '../components/theleague/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
-import { getCurrentLeagueYear } from '../utils/league-year';
+import { getLeagueYearForSlug } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, parseMyTeamFromUrl, buildNavTeamInfo } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
@@ -75,13 +75,18 @@ const leagueContext = getLeagueContext(Astro.url);
 const mflHost = (host || leagueContext.host).replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
 // Determine the year — always use the smart year function (handles Feb 14 rollover automatically)
-const currentYear = (year || getCurrentLeagueYear()).toString();
+// Per-league year clock (Feb 14 for TheLeague, June 1 for AFL/best-ball) so
+// nav MFL links target a league year that actually exists on MFL.
+const currentYear = (year || getLeagueYearForSlug(leagueContext.slug)).toString();
 
 // Determine league slug for nav (needed early for team lookup) —
 // registry-driven so new leagues (e.g. best-ball) resolve without another
 // hardcoded ternary here.
 const league: LeagueSlug =
 	(getLeagueBySlug(leagueContext.slug)?.navSlug as LeagueSlug | undefined) ?? 'theleague';
+// Draft-only best-ball leagues have no trades — management chrome like the
+// trade-alert modal must not render (its links would point cross-league).
+const isBestBallLeague = !!getLeagueBySlug(leagueContext.slug)?.bestBall;
 
 // Check for myteam in URL and set cookie if present
 const myteamParam = parseMyTeamFromUrl(Astro.url);
@@ -373,7 +378,7 @@ const themePref = getThemePreference(Astro.cookies);
 		/>
 
 		<!-- Trade Alert Modal — global notification for pending received trades -->
-		<TradeAlertModal hideLeaguePrefix={hideLeaguePrefix} />
+		{!isBestBallLeague && <TradeAlertModal hideLeaguePrefix={hideLeaguePrefix} />}
 		<script src="../scripts/trade-alert.ts"></script>
 
 		<!-- Navigation progress bar trigger -->

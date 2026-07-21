@@ -52,8 +52,13 @@ const rosters = (bb1Config.teams ?? []).map((team: any) => {
     });
 
   // Best-ball reading order: positional groups, draft order within a group.
+  // Unknown/unresolvable positions sort LAST (indexOf would put them first).
+  const posRank = (pos: string) => {
+    const idx = POSITION_ORDER.indexOf(pos);
+    return idx === -1 ? POSITION_ORDER.length : idx;
+  };
   const sorted = [...entries].sort((a, b) => {
-    const posDiff = POSITION_ORDER.indexOf(a.position) - POSITION_ORDER.indexOf(b.position);
+    const posDiff = posRank(a.position) - posRank(b.position);
     return posDiff !== 0 ? posDiff : a.round - b.round;
   });
 

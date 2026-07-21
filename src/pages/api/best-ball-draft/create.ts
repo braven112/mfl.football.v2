@@ -27,7 +27,7 @@ import type { APIRoute } from 'astro';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getAuthUser } from '../../../utils/auth';
-import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../../utils/league-year';
 import { isAdminFranchise } from '../../../config/nav-config';
 import { isDraftablePosition } from '../../../utils/build-draft-players';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
@@ -83,6 +83,18 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
+  // Team config is per-league; only bb1's is wired so far. Fail loudly for a
+  // future sister league rather than silently drafting bb1's franchises.
+  if (league.slug !== 'best-ball-1') {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: `Official drafts are not configured for league '${league.slug}' yet — wire its team config into best-ball-draft/create.`,
+      }),
+      { status: 500, headers: JSON_HEADERS },
+    );
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const timerSeconds = body.timerSeconds ?? 120;
@@ -95,6 +107,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     const leagueYear = getLeagueYearForSlug(league.slug);
     const leagueYearStr = String(leagueYear);
+    // Committed MFL feed dirs are keyed by the DEFAULT league's Feb-14 clock;
+    // this league rolls June 1 — using its own clock here would read a
+    // stale-year directory between Feb 14 and June 1.
+    const feedYearStr = String(getCurrentLeagueYear());
 
     // ── Franchise order ──
     // Explicit order wins (commissioner ran a draft-slot lottery elsewhere);
@@ -136,7 +152,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     };
 
-    const playersData = loadJsonFile(`${defaultLeague.dataPath}/mfl-feeds/${leagueYearStr}/players.json`);
+    const playersData = loadJsonFile(`${defaultLeague.dataPath}/mfl-feeds/${feedYearStr}/players.json`);
     const rawPlayers = playersData?.players?.player;
     const allPlayers: any[] = rawPlayers ? (Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers]) : [];
     const draftPool = allPlayers.filter((p: any) => isDraftablePosition(p.position || ''));
@@ -157,7 +173,7 @@ export const POST: APIRoute = async ({ request }) => {
     const rankedLists: Partial<Record<MockRankingSource, string[]>> = {};
     const buildAdpList = (feedKey: 'adp-redraft' | 'adp-dynasty'): string[] | null => {
       const feed = loadJsonFile(
-        `${defaultLeague.dataPath}/mfl-feeds/${leagueYearStr}/${feedKey}.json`,
+        `${defaultLeague.dataPath}/mfl-feeds/${feedYearStr}/${feedKey}.json`,
       );
       const raw = feed?.adp?.player;
       const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];

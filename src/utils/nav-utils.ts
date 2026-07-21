@@ -113,6 +113,15 @@ const LEAGUE_PREFIXES: Record<LeagueSlug, string> = Object.fromEntries(
 ) as Record<LeagueSlug, string>;
 
 /**
+ * Path prefix for a league's pages. THE shared source for navSlug → path
+ * mapping — NavLinks once had a private copy of this that never learned new
+ * leagues, which 404'd every drawer link on best-ball pages. Don't fork it.
+ */
+export function getLeaguePrefix(league: LeagueSlug): string {
+  return LEAGUE_PREFIXES[league] ?? '/theleague';
+}
+
+/**
  * Strip the active league prefix from a path when serving on the league's
  * apex domain (theleague.us, afl-fantasy.com).
  *

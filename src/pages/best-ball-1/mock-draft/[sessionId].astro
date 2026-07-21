@@ -33,9 +33,11 @@ if (!user) {
   return Astro.redirect(`/best-ball-1/login?next=/best-ball-1/mock-draft/${sessionId}`);
 }
 
+// No franchise fallback: a visitor with no bb1 identity spectates rather
+// than silently occupying franchise 0001's seat.
 const cookiePref = getBestBall1Preference(Astro.cookies);
 const userTeamId =
-  (user.leagueId === BB1.id ? user.franchiseId : null) || cookiePref?.franchiseId || '0001';
+  (user.leagueId === BB1.id ? user.franchiseId : null) || cookiePref?.franchiseId || '';
 
 // ── Build team configs ──
 const teams: DraftRoomTeam[] = (bb1Config.teams ?? []).map((team: any) => ({

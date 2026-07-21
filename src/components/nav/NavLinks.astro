@@ -20,7 +20,7 @@
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug, LeaguePhase, NavSectionDefaultOpen } from '../../types/nav';
 import { NAV_COOKIES } from '../../types/nav';
 import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
-import { resolveLeaguePath } from '../../utils/nav-utils';
+import { resolveLeaguePath, getLeaguePrefix } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeaguePhase } from '../../utils/league-phase';
 
@@ -59,9 +59,8 @@ const AFL_TIER_LINKS = {
   },
 } as const;
 
-function getLeaguePrefix(leagueSlug: LeagueSlug): string {
-  return leagueSlug === 'afl' ? '/afl-fantasy' : '/theleague';
-}
+// Shared navSlug → path-prefix mapping (nav-utils LEAGUE_PREFIXES). A local
+// copy of this once missed the best-ball league and 404'd its entire drawer.
 
 function isLinkVisible(link: NavLink, fid?: string, adminIds: string[] = []): boolean {
   if (link.visibility === 'admin') return !!fid && adminIds.includes(fid);

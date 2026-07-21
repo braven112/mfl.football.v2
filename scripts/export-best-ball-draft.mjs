@@ -77,6 +77,20 @@ function resolveWriteHost(league) {
   );
 }
 
+/**
+ * Default league year from the registry's rollover date (bb1 rolls June 1) —
+ * a bare calendar-year default would target the wrong official session for
+ * part of the year (e.g. next January–May still belongs to this season's
+ * league year).
+ */
+function defaultLeagueYear(league, now = new Date()) {
+  const rollover = league.leagueYearRollover;
+  const y = now.getFullYear();
+  if (!rollover) return String(y);
+  const rolled = now >= new Date(y, rollover.month - 1, rollover.day);
+  return String(rolled ? y : y - 1);
+}
+
 async function resolveCookies() {
   const envUserId = process.env.MFL_USER_ID;
   const envCommish = process.env.MFL_IS_COMMISH;
@@ -122,7 +136,7 @@ async function main() {
   if (!league.bestBall) {
     throw new Error(`League '${league.slug}' is not a best-ball league — refusing to export.`);
   }
-  const year = args.year || String(new Date().getFullYear());
+  const year = args.year || defaultLeagueYear(league);
 
   // ── 1. Load the session ──
   const session = args.sessionFile

@@ -13,7 +13,7 @@
 
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getLeagueYearForSlug } from '../../utils/league-year';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import NavToggleButton from '../nav/NavToggleButton.astro';
@@ -35,7 +35,10 @@ const hideMobileNavIcons = Astro.props.hideMobileNavIcons ?? false;
 // but unused below — leagueHome etc. derive host/id from getLeagueContext(),
 // which is registry-backed and per-league-correct (unlike the removed
 // env-var-with-www49-literal-fallback that used to live here).
-const envYear = getCurrentLeagueYear().toString();
+// Per-league year clock: AFL and best-ball roll June 1, not Feb 14 — a
+// Feb-clock year here would point their MFL links at a league year that
+// doesn't exist yet between the two rollover dates.
+const envYear = getLeagueYearForSlug(getLeagueContext(Astro.url).slug).toString();
 
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);
@@ -159,8 +162,8 @@ const liveScoringUrl = hasLiveScoring
         <!-- Desktop Navigation Icons -->
         <nav class:list={["desktop-nav", { "desktop-nav--hide-mobile": hideMobileNavIcons }]} aria-label="Main navigation">
           {isBB1 ? (
-            <!-- Best-ball leagues are draft-only: no lineups, free agents,
-                 or live scoring — the draft surfaces ARE the nav. -->
+            <!-- Best-ball leagues are draft-only: no lineups or free agents —
+                 the draft surfaces plus the scoreboard ARE the nav. -->
             <>
               <a href={resolveLeaguePath("/best-ball-1/draft-room", hideLeaguePrefix)} class="nav-icon-link" title="Draft Room">
                 <svg class="nav-icon" aria-hidden="true">
