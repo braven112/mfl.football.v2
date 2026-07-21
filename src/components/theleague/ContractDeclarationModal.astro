@@ -478,9 +478,11 @@ import '../../styles/loading.css';
   }
 
   /* Same chip treatment as .player-cell__avatar (player-cell.css): both
-     themes run the team-color radial gradient via --player-avatar-bg with
-     the half-opacity white ring. Both custom properties are set by the modal
-     openers via getPlayerAvatarBackground/getPlayerAvatarBorder. */
+     themes run the team-color radial gradient via --player-avatar-bg, with
+     per-theme rings — light uses --player-avatar-ring (anchor mixed toward
+     ink), dark swaps to --player-avatar-ring-dark (toward white). All four
+     custom properties (bg, border, ring, ring-dark) are set by the modal
+     openers via the getPlayerAvatar* helpers in nfl-team-colors.ts. */
   .cdm-hero__avatar {
     display: flex;
     align-items: center;
