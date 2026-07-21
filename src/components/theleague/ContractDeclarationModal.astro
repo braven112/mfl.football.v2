@@ -46,7 +46,7 @@ import '../../styles/loading.css';
            modals share the same identity block (name + age, team city · position,
            college · draft). -->
       <div class="cdm-hero">
-        <div class="cdm-hero__avatar">
+        <div class="cdm-hero__avatar" id="cdm-avatar">
           <img id="cdm-headshot" src="" alt="Player headshot" />
         </div>
         <div class="cdm-hero__info">
@@ -477,21 +477,52 @@ import '../../styles/loading.css';
     gap: 1rem;
   }
 
+  /* Same chip treatment as .player-cell__avatar (player-cell.css): light mode
+     is a gray chip with a team-color ring; dark mode swaps in the team-color
+     radial gradient via --player-avatar-bg. Both custom properties are set by
+     the modal openers via getPlayerAvatarBackground/getPlayerAvatarBorder. */
   .cdm-hero__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 72px;
     height: 72px;
-    border-radius: var(--radius-lg, 1rem);
+    border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    background: var(--color-gray-100, #f3f4f6);
+    background: var(--content-bg-muted, #f3f4f6);
+    border: 2px solid var(--player-avatar-border, var(--content-border, #e2e8f0));
     box-shadow: var(--shadow-md);
   }
 
+  :global(html.dark) .cdm-hero__avatar:not(.cdm-hero__avatar--def) {
+    background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
   .cdm-hero__avatar img {
-    width: 100%;
+    width: 150%;
     height: 100%;
     object-fit: cover;
-    object-position: center top;
+    object-position: top;
+    /* ESPN cutouts carry transparent padding — scale up so the player fills
+       the circle instead of floating small on the team-color backdrop. */
+    transform: scale(1.18);
+    transform-origin: top center;
+  }
+
+  /* Team defenses show a logo, not a headshot: full-bleed, no crop, no chip. */
+  .cdm-hero__avatar--def {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .cdm-hero__avatar--def img {
+    width: 100%;
+    object-fit: contain;
+    object-position: center;
+    transform: none;
   }
 
   .cdm-hero__info {
@@ -1635,7 +1666,6 @@ import '../../styles/loading.css';
     .cdm-hero__avatar {
       width: 56px;
       height: 56px;
-      border-radius: var(--radius-md, 0.5rem);
     }
 
     .cdm-hero__name {

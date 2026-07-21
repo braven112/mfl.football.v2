@@ -5374,6 +5374,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+  import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../utils/nfl-team-colors';
   // Same selection function the deadline job runs — the Cutdown Plan preview
   // and the automation's reality cannot drift (plan requirement).
   import { selectAutoCuts } from '../../utils/august-cut-selection';
@@ -8268,6 +8269,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         cdmHeadshotImg.onerror = function() { this.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; }; this.src = cdmCollege; };
       } else {
         cdmHeadshotImg.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; };
+      }
+      // Team-color chip behind the headshot — same treatment as PlayerCell.
+      const cdmAvatarEl = document.getElementById('cdm-avatar');
+      if (cdmAvatarEl) {
+        cdmAvatarEl.classList.toggle('cdm-hero__avatar--def', (data.position || '').toUpperCase() === 'DEF');
+        cdmAvatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
+        cdmAvatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
       }
       document.getElementById('cdm-player-name').textContent = data.name;
       document.getElementById('cdm-nfl-logo').src = data.nflLogo || '/assets/nfl-logos/NFL.svg';

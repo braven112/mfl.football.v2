@@ -578,6 +578,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   // trimmed clone of the year-select branch of rosters.astro's CDM wiring —
   // no action-select, franchise-tag, extension, or cut flows apply here.
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../../utils/nfl';
+  import { getPlayerAvatarBackground, getPlayerAvatarBorder } from '../../../utils/nfl-team-colors';
   import { DEFAULT_HEADSHOT_URL } from '../../../constants/roster-constants';
   import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
@@ -669,6 +670,13 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       const nameEl = document.getElementById('cdm-player-name');
       if (nameEl) nameEl.textContent = data.name;
       const normalizedTeam = data.nflTeam ? normalizeTeamCode(data.nflTeam) : '';
+      // Team-color chip behind the headshot — same treatment as PlayerCell.
+      const avatarEl = document.getElementById('cdm-avatar');
+      if (avatarEl) {
+        avatarEl.classList.toggle('cdm-hero__avatar--def', (data.position || '').toUpperCase() === 'DEF');
+        avatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
+        avatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
+      }
       const logoEl = document.getElementById('cdm-nfl-logo') as HTMLImageElement | null;
       if (logoEl) logoEl.src = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '/assets/nfl-logos/NFL.svg';
       const teamCity = normalizedTeam ? (NFL_TEAM_CITIES[normalizedTeam] || normalizedTeam) : 'Free Agent';
