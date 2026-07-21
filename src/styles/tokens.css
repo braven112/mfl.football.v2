@@ -281,6 +281,11 @@
   --draft-pick-bg: var(--content-bg-muted);
   --draft-pick-border: transparent;
 
+  /* Ring around player-headshot chips on team-color backdrops (dark-mode
+     avatar treatment — player-cell.css, live-scoring.css). Half-opacity
+     white pops the chip off dark rows regardless of the team color. */
+  --player-avatar-ring: rgba(255, 255, 255, 0.5);
+
   /* ========================================
      Component Tokens - Cards
      ======================================== */

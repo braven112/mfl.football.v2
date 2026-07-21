@@ -363,7 +363,8 @@ html.dark .ls-detail {
 }
 html.dark .ls-headshot {
   background: var(--player-avatar-bg, var(--content-bg-muted, #f3f4f6));
-  box-shadow: inset 0 0 0 1px var(--content-border, #2a3546);
+  /* Same half-opacity white ring as the player-cell chip in dark mode. */
+  box-shadow: inset 0 0 0 1px var(--player-avatar-ring, rgba(255, 255, 255, 0.5));
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 /* Defense "headshot" is the NFL logo centered in the team-color disc. */
