@@ -151,10 +151,59 @@ describe('pickBrandAccent', () => {
   });
 });
 
+/** Perceived luminance (0–255), same weights as the module's private helper. */
+function lum(hex: string): number {
+  const v = parseInt(hex.slice(1), 16);
+  return 0.299 * ((v >> 16) & 0xff) + 0.587 * ((v >> 8) & 0xff) + 0.114 * (v & 0xff);
+}
+
 describe('getPlayerAvatarBackground', () => {
-  it('builds a 115° gradient ending in the team primary (matches the modal band)', () => {
+  it('builds a head-spotlight radial anchored on the team primary when it is already readable', () => {
     const bg = getPlayerAvatarBackground('KC');
-    expect(bg).toBe(`linear-gradient(115deg, ${mixHex('#e31837', '#0b0e13', 0.62)} 0%, #e31837 100%)`);
+    expect(bg).toBe(
+      `radial-gradient(circle at 50% 30%, ${mixHex('#e31837', '#ffffff', 0.35)} 0%, #e31837 58%, ${mixHex('#e31837', '#0b0e13', 0.45)} 100%)`,
+    );
+  });
+
+  it('swaps near-black primaries to the lighter chromatic secondary', () => {
+    // Titans navy behind a dark headshot was unreadable in dark mode — the
+    // chip must anchor on their light blue instead. Same for Steelers gold,
+    // Bears orange, Seahawks action green.
+    expect(getPlayerAvatarBackground('TEN')).toContain(NFL_TEAM_COLORS.TEN.secondary);
+    expect(getPlayerAvatarBackground('TEN')).not.toContain(NFL_TEAM_COLORS.TEN.primary);
+    expect(getPlayerAvatarBackground('PIT')).toContain(NFL_TEAM_COLORS.PIT.secondary);
+    expect(getPlayerAvatarBackground('CHI')).toContain(NFL_TEAM_COLORS.CHI.secondary);
+    expect(getPlayerAvatarBackground('SEA')).toContain(NFL_TEAM_COLORS.SEA.secondary);
+  });
+
+  it('never swaps to a near-gray secondary — lightens the primary instead', () => {
+    // Cowboys navy must not lose to their silver; Raiders black lightens to
+    // its own silver-gray rather than adopting the low-chroma secondary.
+    expect(getPlayerAvatarBackground('DAL')).not.toContain(NFL_TEAM_COLORS.DAL.secondary);
+    expect(getPlayerAvatarBackground('LV')).not.toContain(NFL_TEAM_COLORS.LV.secondary);
+  });
+
+  it('keeps a dark-but-chromatic primary (lightened) instead of jumping to the secondary', () => {
+    // Bills royal blue and Giants blue are identity colors that survive a
+    // lightness lift — they must not swap to their red secondaries.
+    expect(getPlayerAvatarBackground('BUF')).not.toContain(NFL_TEAM_COLORS.BUF.secondary);
+    expect(getPlayerAvatarBackground('NYG')).not.toContain(NFL_TEAM_COLORS.NYG.secondary);
+  });
+
+  it('meets the dark-mode luminance floors for every team and the fallback', () => {
+    // The guard this change exists for: no team's chip may ever again render
+    // a near-black backdrop behind a dark headshot in dark mode. The center
+    // stop sits behind the player's head and carries the strictest floor.
+    for (const code of [...Object.keys(NFL_TEAM_COLORS), 'FA']) {
+      const bg = getPlayerAvatarBackground(code);
+      const stops = bg.match(/#[0-9a-f]{6}/g)!;
+      expect(stops, `${code} gradient stops`).toHaveLength(3);
+      const [headStop, anchorStop, edgeStop] = stops;
+      expect(lum(headStop), `${code} head spotlight too dark (${headStop})`).toBeGreaterThanOrEqual(125);
+      expect(lum(headStop), `${code} head spotlight not lighter than anchor`).toBeGreaterThan(lum(anchorStop));
+      expect(lum(anchorStop), `${code} anchor stop too dark (${anchorStop})`).toBeGreaterThanOrEqual(60);
+      expect(lum(edgeStop), `${code} edge stop too dark (${edgeStop})`).toBeGreaterThanOrEqual(35);
+    }
   });
 
   it('normalizes MFL-format codes to the same team gradient as the ESPN code', () => {
@@ -170,10 +219,10 @@ describe('getPlayerAvatarBackground', () => {
     expect(fa).toContain(NFL_COLORS_FALLBACK.primary);
   });
 
-  it('always returns a valid CSS linear-gradient for every team', () => {
-    for (const code of Object.keys(NFL_TEAM_COLORS)) {
+  it('always returns a valid CSS radial-gradient for every team and the fallback', () => {
+    for (const code of [...Object.keys(NFL_TEAM_COLORS), 'FA']) {
       expect(getPlayerAvatarBackground(code)).toMatch(
-        /^linear-gradient\(115deg, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 100%\)$/,
+        /^radial-gradient\(circle at 50% 30%, #[0-9a-f]{6} 0%, #[0-9a-f]{6} 58%, #[0-9a-f]{6} 100%\)$/,
       );
     }
   });

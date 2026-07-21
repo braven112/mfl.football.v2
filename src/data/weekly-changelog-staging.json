@@ -15,6 +15,14 @@
     {
       "date": "2026-07-21",
       "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "design-system",
+      "summary": "Dark mode stopped hiding half the league's rookies. The little circular player headshots wear their NFL team's colors behind them — great in theory, except a third of the league (Titans, Steelers, Bears, Seahawks, Texans...) wears colors that are basically midnight, so a guy like Cam Ward in a navy jersey on a navy chip on a dark page was just a rumor of a face. The chips now reach for each team's lighter brand color when the main one is too dark — Titans light blue, Steelers gold, Bears orange — and every chip puts a soft spotlight right where the player's head sits, brightest behind the face and deepening toward the rim. Every team's backdrop is held to a minimum brightness, enforced by a build-time guard so no future team-color tweak can sink a headshot back into the void. Light mode untouched; it was never the problem."
+    },
+    {
+      "date": "2026-07-21",
+      "type": "bug-fix",
       "league": "theleague",
       "impact": "user",
       "area": "schefter",
