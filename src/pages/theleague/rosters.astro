@@ -9629,6 +9629,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ year: autocutCfg.year, playerIds }),
+          // Survive document teardown — the pagehide flush is a no-op
+          // without this (browsers abort non-keepalive fetches on exit).
+          // Payload is tiny (year + ≤40 ids), far under the 64KB cap.
+          keepalive: true,
         });
         const data = await res.json().catch(() => ({}));
         if (data?.requiresReauth) return { ok: false, requiresReauth: true };
@@ -9641,8 +9645,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
     };
 
-    const commitAutocutSave = (playerIds, data) => {
-      autocutState.playerIds = [...playerIds];
+    /** Commit a winning save. `preFlightJoin` is the working list as it was
+     *  when the POST left — the working list is synced to the posted (pruned)
+     *  list ONLY if no edit landed during the flight. Saves are slow by
+     *  design (the server does a live MFL cookie check), so an owner can
+     *  easily edit mid-flight; overwriting their newer order with this
+     *  flight's snapshot would silently lose the edit (the pending debounce
+     *  would then see "no change" and never persist it). */
+    const commitAutocutSave = (playerIds, data, preFlightJoin) => {
+      if (
+        preFlightJoin === undefined ||
+        autocutState.playerIds.join(',') === preFlightJoin
+      ) {
+        autocutState.playerIds = [...playerIds];
+      }
       autocutState.savedPlayerIds = [...playerIds];
       autocutState.savedUpdatedAt = data?.data?.updatedAt || new Date().toISOString();
       if (data?.credentialStored && data?.credentialCapturedAt) {
@@ -9665,9 +9681,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     // Auto-save debounce (panel reorder/mark/unmark) — declared up here,
     // next to the seq token, because renderCdpSaveState reads it and runs
-    // before the auto-save section's declarations execute.
+    // before the auto-save section's declarations execute. Same for the
+    // drag id, which renderCutdownPanel resets on every slate rebuild.
     const AUTOCUT_AUTOSAVE_DELAY_MS = 900;
     let cdpAutoSaveTimer = null;
+    let cdpDragId = null;
 
     /** Single commit path for BOTH entry points. Prunes departed players,
      *  bumps the token, POSTs, and only commits if this save is still the
@@ -9678,9 +9696,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // Prune off-roster ids at save time: a marked player who has since
       // been traded or cut keeps a harmless trailing slot locally, but
       // persisting him would let the stored list drift toward the server's
-      // 40-entry cap.
+      // 40-entry cap. GUARD: an empty active set means the roster bucket is
+      // missing/malformed — pruning against it would wipe the whole stored
+      // list, so save unpruned instead (the server skips unknown ids anyway).
       const active = getActiveAutocutIds();
-      const ids = newIds.filter((id) => active.has(String(id)));
+      const ids = active.size
+        ? newIds.filter((id) => active.has(String(id)))
+        : [...newIds];
+      // Working-list snapshot at flight start — see commitAutocutSave.
+      const preFlightJoin = autocutState.playerIds.join(',');
       const mySeq = ++autocutSaveSeq;
       const result = await postCutList(ids);
       if (mySeq !== autocutSaveSeq) {
@@ -9690,7 +9714,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return { ...result, stale: true };
       }
       autocutState.saving = false;
-      if (result.ok) commitAutocutSave(ids, result.data);
+      if (result.ok) commitAutocutSave(ids, result.data, preFlightJoin);
       return result;
     };
 
@@ -10019,6 +10043,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       };
 
       if (slateEl) {
+        // Rebuilding the slate detaches any in-progress drag's source node —
+        // its dragend never bubbles here, so reset the drag state or a stale
+        // cdpDragId would let a later unrelated drag pass the dragover gate.
+        cdpDragId = null;
         let slateHtml = slate.cuts
           .map((cut) => {
             const player = findAutocutPlayer(cut.playerId);
@@ -10079,7 +10107,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         cutnowBtn.disabled = markedCutIds.length === 0;
         cutnowBtn.title =
           markedCutIds.length === 0
-            ? 'Nothing to cut yet — this button only cuts players you marked'
+            ? belowLineIds.length
+              ? 'Nothing to cut — this button only cuts marked players above the cut line'
+              : 'Nothing to cut yet — this button only cuts players you marked'
             : '';
       }
 
@@ -10122,8 +10152,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // (direct call at module eval + astro:page-load, which ClientRouter
     // also fires on the initial load), and each run builds its own
     // autocutState. The refs keep the once-bound listeners pointed at
-    // the newest run's state.
-    let cdpDragId = null;
+    // the newest run's state. (cdpDragId lives up by the debounce timer —
+    // renderCutdownPanel resets it on every slate rebuild.)
 
     const cdpSlateClick = (e) => {
       const slateEl = e.currentTarget;
@@ -10245,7 +10275,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (!autocutCfg) return;
       if (autocutState.saving) {
         // Another save is in flight (e.g. the CDM toggle) — retry shortly.
-        scheduleAutocutAutoSave();
+        scheduleAutocutAutoSave(force);
+        return;
+      }
+      const reauthOverlay = document.getElementById('cdp-reauth-overlay');
+      if (cdpReauthCtx || (reauthOverlay && !reauthOverlay.hidden)) {
+        // The re-login modal is up — a save now would just bounce off the
+        // dead cookie and reopen/reset the form under the user's fingers
+        // (wiping a half-typed password and the modal's pending retry).
+        // Defer; the modal's own onSuccess/onCancel resumes persistence.
+        scheduleAutocutAutoSave(force);
         return;
       }
       if (
@@ -10270,10 +10309,17 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         renderCdpSaveState();
         openCdpReauthModal({
           returnFocusTo: document.getElementById('cdp-slate'),
-          onCancel: () =>
+          onCancel: () => {
+            // Cancel is a resting state: kill any deferred timer so the
+            // modal doesn't immediately reopen off the still-dead cookie.
+            // "Retry now" (or the next edit) resumes persistence.
+            if (cdpAutoSaveTimer) clearTimeout(cdpAutoSaveTimer);
+            cdpAutoSaveTimer = null;
             renderCdpSaveState({
-              error: 'Re-login cancelled — your latest changes are not saved.',
-            }),
+              error:
+                'Re-login cancelled — your changes are kept on this page but not saved yet.',
+            });
+          },
           onSuccess: async () => {
             autocutState.saving = true;
             renderCdpSaveState();
@@ -10293,15 +10339,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       renderCdpSaveState({ error: result.error || 'Save failed.' });
     };
 
-    const scheduleAutocutAutoSave = () => {
+    const scheduleAutocutAutoSave = (force = false) => {
       if (cdpAutoSaveTimer) clearTimeout(cdpAutoSaveTimer);
-      cdpAutoSaveTimer = setTimeout(() => runAutocutSaveNow(false), AUTOCUT_AUTOSAVE_DELAY_MS);
+      cdpAutoSaveTimer = setTimeout(() => runAutocutSaveNow(force), AUTOCUT_AUTOSAVE_DELAY_MS);
       renderCdpSaveState(); // show "Saving…" from the moment of the edit
     };
 
-    /** Fire a pending debounce immediately (page hide/leave) — best effort. */
+    /** Persist NOW if anything is unsaved (page hide/leave) — best effort.
+     *  Keys off dirtiness, not just a pending timer: after a failed save or
+     *  cancelled re-login the list is dirty with NO timer scheduled, and
+     *  those edits must not be silently dropped on exit. */
     const flushAutocutAutoSave = () => {
-      if (!cdpAutoSaveTimer) return;
+      const dirty =
+        autocutState.playerIds.join(',') !== autocutState.savedPlayerIds.join(',');
+      if (!cdpAutoSaveTimer && !dirty) return;
       runAutocutSaveNow(false);
     };
 
