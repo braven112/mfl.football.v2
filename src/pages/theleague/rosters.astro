@@ -9751,6 +9751,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       overlay.hidden = true;
       const ctx = cdpReauthCtx;
       cdpReauthCtx = null;
+      if (cancelled) {
+        // Cancel is a resting state for EVERY modal origin (panel auto-save
+        // AND the CDM toggle): kill any deferred auto-save here centrally,
+        // or it would fire, bounce off the still-dead cookie, and reopen
+        // this modal uninvited. "Retry now" / the next edit resumes.
+        if (cdpAutoSaveTimer) clearTimeout(cdpAutoSaveTimer);
+        cdpAutoSaveTimer = null;
+      }
       if (ctx?.returnFocusTo?.isConnected) ctx.returnFocusTo.focus();
       if (cancelled && ctx?.onCancel) ctx.onCancel();
     };
@@ -10309,17 +10317,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         renderCdpSaveState();
         openCdpReauthModal({
           returnFocusTo: document.getElementById('cdp-slate'),
-          onCancel: () => {
-            // Cancel is a resting state: kill any deferred timer so the
-            // modal doesn't immediately reopen off the still-dead cookie.
-            // "Retry now" (or the next edit) resumes persistence.
-            if (cdpAutoSaveTimer) clearTimeout(cdpAutoSaveTimer);
-            cdpAutoSaveTimer = null;
+          onCancel: () =>
+            // Timer teardown happens centrally in closeCdpReauthModal —
+            // this just surfaces the resting-state copy + Retry action.
             renderCdpSaveState({
               error:
                 'Re-login cancelled — your changes are kept on this page but not saved yet.',
-            });
-          },
+            }),
           onSuccess: async () => {
             autocutState.saving = true;
             renderCdpSaveState();
