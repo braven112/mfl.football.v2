@@ -9945,6 +9945,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const markedCutIds = slate.cuts
         .filter((c) => c.reason === 'marked')
         .map((c) => c.playerId);
+      // Marked players PAST the cut line render too, under a visible cut-line
+      // divider, so the owner's whole ordered list lives in one place. They
+      // never coexist with auto-fill rows: fill happens only when marked <
+      // overage, below-line only when marked > overage — so the divider
+      // always sits cleanly after the executing cuts.
+      const markedOnRoster = getMarkedOnRoster();
+      const belowLineIds = markedOnRoster.filter((id) => !markedCutIds.includes(id));
       // Native HTML5 DnD is unreliable on touch — arrows are the only
       // reorder mechanism on mobile.
       const dragEnabled = window.matchMedia('(pointer: fine)').matches;
@@ -9952,11 +9959,49 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       let totalDead = 0;
       let totalSavings = 0;
 
+      // Shared marked-row template — above- and below-line rows are the same
+      // control (arrows/drag reorder across the WHOLE marked list, so a row
+      // can cross the line); only styling and reason copy differ. Priority
+      // numbers continue across the line, matching the roster badges
+      // (AUTO-CUT #2 above, MARKED #4 below).
+      const buildMarkedRowHTML = (playerId, belowLine) => {
+        const player = findAutocutPlayer(playerId);
+        const name = player?.name || `Player ${playerId}`;
+        const salary = Number(player?.salary ?? 0);
+        const years = parseInt(player?.contractYears, 10) || 1;
+        const penalty = calculateCutPenalty(salary, years);
+        const idx = markedOnRoster.indexOf(playerId);
+        const priority = idx + 1;
+        const total = markedOnRoster.length;
+        const rowClass = belowLine
+          ? 'cdp-slate__row cdp-slate__row--marked cdp-slate__row--below-line'
+          : 'cdp-slate__row cdp-slate__row--marked';
+        const prioClass = belowLine
+          ? 'cdp-slate__priority cdp-slate__priority--below'
+          : 'cdp-slate__priority';
+        const reason = belowLine
+          ? `<strong>Marked by you</strong> · below the line — safe unless your roster grows`
+          : `<strong>Marked by you</strong>`;
+        return (
+          `<li class="${rowClass}" data-player-id="${escCdp(playerId)}" draggable="${dragEnabled ? 'true' : 'false'}">` +
+          `<span class="${prioClass}" aria-hidden="true">${priority}</span>` +
+          `<div class="cdp-slate__reorder" role="group" aria-label="Reorder ${escCdp(name)}, priority ${priority} of ${total}">` +
+          `<button type="button" class="cdp-arrow" data-direction="up" data-player-id="${escCdp(playerId)}" aria-label="Move ${escCdp(name)} up in cut priority"${idx === 0 ? ' disabled' : ''}>` +
+          `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-up"></use></svg></button>` +
+          `<button type="button" class="cdp-arrow" data-direction="down" data-player-id="${escCdp(playerId)}" aria-label="Move ${escCdp(name)} down in cut priority"${idx === total - 1 ? ' disabled' : ''}>` +
+          `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-down"></use></svg></button>` +
+          `</div>` +
+          `<div class="cdp-slate__player">${buildCdpPlayerCell(playerId)}</div>` +
+          `<span class="cdp-slate__reason">${reason}</span>` +
+          buildCdpCapHTML(salary, penalty) +
+          `</li>`
+        );
+      };
+
       if (slateEl) {
-        slateEl.innerHTML = slate.cuts
+        let slateHtml = slate.cuts
           .map((cut) => {
             const player = findAutocutPlayer(cut.playerId);
-            const name = player?.name || `Player ${cut.playerId}`;
             const salary = Number(player?.salary ?? 0);
             const years = parseInt(player?.contractYears, 10) || 1;
             const penalty = calculateCutPenalty(salary, years);
@@ -9965,23 +10010,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             totalSavings += salary - penalty.currentPenalty;
 
             if (cut.reason === 'marked') {
-              const idx = markedCutIds.indexOf(cut.playerId);
-              const priority = idx + 1;
-              const total = markedCutIds.length;
-              return (
-                `<li class="cdp-slate__row cdp-slate__row--marked" data-player-id="${escCdp(cut.playerId)}" draggable="${dragEnabled ? 'true' : 'false'}">` +
-                `<span class="cdp-slate__priority" aria-hidden="true">${priority}</span>` +
-                `<div class="cdp-slate__reorder" role="group" aria-label="Reorder ${escCdp(name)}, priority ${priority} of ${total}">` +
-                `<button type="button" class="cdp-arrow" data-direction="up" data-player-id="${escCdp(cut.playerId)}" aria-label="Move ${escCdp(name)} up in cut priority"${idx === 0 ? ' disabled' : ''}>` +
-                `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-up"></use></svg></button>` +
-                `<button type="button" class="cdp-arrow" data-direction="down" data-player-id="${escCdp(cut.playerId)}" aria-label="Move ${escCdp(name)} down in cut priority"${idx === total - 1 ? ' disabled' : ''}>` +
-                `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-down"></use></svg></button>` +
-                `</div>` +
-                `<div class="cdp-slate__player">${buildCdpPlayerCell(cut.playerId)}</div>` +
-                `<span class="cdp-slate__reason"><strong>Marked by you</strong></span>` +
-                buildCdpCapHTML(salary, penalty) +
-                `</li>`
-              );
+              return buildMarkedRowHTML(cut.playerId, false);
             }
 
             const addedTxt = cut.acquisitionTimestamp
@@ -9997,6 +10026,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             );
           })
           .join('');
+
+        if (belowLineIds.length) {
+          slateHtml +=
+            `<li class="cdp-cutline">` +
+            `<span class="cdp-cutline__label">Cut line — the ${cutsNeeded} player${cutsNeeded === 1 ? '' : 's'} above ${cutsNeeded === 1 ? 'is' : 'are'} cut at the deadline; players below are safe</span>` +
+            `</li>` +
+            belowLineIds.map((id) => buildMarkedRowHTML(id, true)).join('');
+        }
+        slateEl.innerHTML = slateHtml;
       }
 
       const footerEl = document.getElementById('cdp-footer');
