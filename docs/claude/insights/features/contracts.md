@@ -42,3 +42,14 @@ same shared markup/API. Only extract the shared state machine into a real
 module if three-plus pages need the *same* multi-flow behavior; until then,
 narrow clones are lower risk than a shared abstraction spanning a script that
 size.
+
+**Addendum (2026-07-21):** the flip side of the dual-opener design: any
+hero/presentation state the modal expects to be set at open time (not baked
+into the static shell) must be wired in BOTH openers. The team-color avatar
+chip is the example — `.cdm-hero__avatar` consumes
+`--player-avatar-bg`/`--player-avatar-border`, and both
+`rosters.astro#openDeclarationModal` and `HpUnsignedFaCard`'s `openModal`
+independently call `getPlayerAvatarBackground`/`getPlayerAvatarBorder` and
+`setProperty` them (plus toggle `cdm-hero__avatar--def`). Grep for
+`getElementById('cdm-headshot')` to find every opener before changing what
+the hero needs.
