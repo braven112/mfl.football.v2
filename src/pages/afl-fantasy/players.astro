@@ -329,7 +329,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       <p>No player data available yet.</p>
     </div>
   </div>
-  <PlayerDetailsModal hideContract={true} />
+  <PlayerDetailsModal hideContract={true} league="afl-fantasy" />
 </TheLeagueLayout>
 
 <script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>

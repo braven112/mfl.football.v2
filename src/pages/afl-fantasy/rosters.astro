@@ -1253,7 +1253,7 @@ const pageConfig = {
     </section>
   </main>
 
-  <PlayerDetailsModal hideContract />
+  <PlayerDetailsModal hideContract league="afl-fantasy" />
   {isOwner && <AFLActionModal />}
 
   <script id="afl-roster-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>

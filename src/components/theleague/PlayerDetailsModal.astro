@@ -10,6 +10,8 @@
  * 4. Supporting details (physical, status, draft, contract breakdown)
  */
 import '../../styles/player-modal-band.css';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+import { publicLeagueQs } from '../../utils/schefter-league';
 
 export interface Props {
   class?: string;
@@ -18,12 +20,26 @@ export interface Props {
    * showing the "Free Agent" fallback is misleading there.
    */
   hideContract?: boolean;
+  /**
+   * League slug for the Schefter Report mentions section (feed lookup +
+   * news-page permalinks). Defaults to TheLeague.
+   */
+  league?: string;
 }
 
-const { class: className, hideContract = false } = Astro.props;
+const { class: className, hideContract = false, league = DEFAULT_LEAGUE_SLUG } = Astro.props;
+const leagueDef = LEAGUES[league] ?? LEAGUES[DEFAULT_LEAGUE_SLUG];
+// Query string for public schefter API calls ('' for the default league)
+const leagueQs = publicLeagueQs(leagueDef.navSlug);
+// Page routes live under /<slug>/ for both leagues
+const newsBase = `/${leagueDef.slug}`;
 ---
 
-<div class:list={['player-details-modal', className]}>
+<div
+  class:list={['player-details-modal', className]}
+  data-league-qs={leagueQs}
+  data-news-base={newsBase}
+>
   <div class="player-details-modal__overlay"></div>
   <div class="player-details-modal__content">
     <button class="pdm-close" aria-label="Close" title="Close (ESC)">
@@ -133,6 +149,22 @@ const { class: className, hideContract = false } = Astro.props;
             <span class="pdm-detail__value" id="detail-bye-value">&mdash;</span>
           </div>
         </div>
+      </div>
+
+      <!-- Latest News (ESPN, fetched on open; hidden until articles arrive) -->
+      <div class="pdm-section pdm-news" id="section-player-news" style="display: none;">
+        <h4 class="pdm-section__title">
+          Latest News
+          <span class="pdm-news__scope" id="player-news-scope"></span>
+        </h4>
+        <div class="pdm-news__list" id="player-news-list"></div>
+        <p class="pdm-news__attribution">Source: ESPN</p>
+      </div>
+
+      <!-- Schefter Report mentions (league feed, fetched on open) -->
+      <div class="pdm-section pdm-news" id="section-schefter-mentions" style="display: none;">
+        <h4 class="pdm-section__title">Schefter Report</h4>
+        <div class="pdm-news__list" id="schefter-mentions-list"></div>
       </div>
     </div>
   </div>
@@ -598,6 +630,84 @@ const { class: className, hideContract = false } = Astro.props;
   }
 
   /* ================================================================
+     News Sections (ESPN latest news + Schefter Report mentions)
+     ================================================================ */
+  .pdm-news__scope {
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .pdm-news__list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+  }
+
+  .pdm-news__list :global(.pdm-news-item) {
+    display: block;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+
+  .pdm-news__list :global(.pdm-news-item:last-child) {
+    border-bottom: none;
+  }
+
+  .pdm-news__list :global(a.pdm-news-item:hover) {
+    background: var(--color-gray-50, #f9fafb);
+    text-decoration: none;
+  }
+
+  .pdm-news__list :global(.pdm-news-item__meta) {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .pdm-news__list :global(.pdm-news-item__headline) {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .pdm-news__list :global(a.pdm-news-item:hover .pdm-news-item__headline) {
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+
+  .pdm-news__list :global(.pdm-news-item__excerpt) {
+    margin: 0.2rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-gray-700, #374151);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .pdm-news__attribution {
+    margin: 0.375rem 0 0;
+    font-size: 0.6875rem;
+    font-style: italic;
+    text-align: right;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ================================================================
      Mobile
      ================================================================ */
   @media (max-width: 640px) {
@@ -710,6 +820,226 @@ const { class: className, hideContract = false } = Astro.props;
         .filter(Boolean)
         .join(' · ');
     }
+  }
+
+  // ── News sections (ESPN latest news + Schefter Report mentions) ──
+  // Both load async after the modal opens; a section stays hidden until its
+  // request returns items, and a monotonic token drops stale responses when
+  // the user opens another player before the first fetch lands.
+
+  // ESPN's news API uses its own team ids (same map as fetch-player-news.mjs)
+  const ESPN_NEWS_TEAM_IDS: Record<string, number> = {
+    ARI: 22, ATL: 1, BAL: 33, BUF: 2, CAR: 29, CHI: 3,
+    CIN: 4, CLE: 5, DAL: 6, DEN: 7, DET: 8, GB: 9,
+    HOU: 34, IND: 11, JAX: 30, KC: 12, LV: 13, LAC: 24,
+    LAR: 14, MIA: 15, MIN: 16, NE: 17, NO: 18, NYG: 19,
+    NYJ: 20, PHI: 21, PIT: 23, SF: 25, SEA: 26, TB: 27,
+    TEN: 10, WSH: 28,
+  };
+
+  const MENTION_TYPE_LABELS: Record<string, string> = {
+    rumor_mill: 'Rumor Mill',
+    transaction: 'Transaction',
+    external: 'NFL Wire',
+    article: 'Article',
+  };
+
+  interface NewsItem {
+    headline: string;
+    excerpt: string;
+    published: string | null;
+    link: string | null;
+    label: string;
+  }
+
+  let newsRequestSeq = 0;
+  const espnNewsCache = new Map<string, { items: NewsItem[]; scope: string }>();
+  const mentionsCache = new Map<string, NewsItem[]>();
+
+  function escapeHtml(value: unknown): string {
+    return String(value ?? '').replace(/[&<>"']/g, (c) =>
+      c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '"' ? '&quot;' : '&#39;'
+    );
+  }
+
+  function safeHttpUrl(url: unknown): string | null {
+    return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null;
+  }
+
+  function formatNewsDate(iso: string | null): string {
+    if (!iso) return 'Recent';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return 'Recent';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function hideNewsSections() {
+    for (const [sectionId, listId] of [
+      ['section-player-news', 'player-news-list'],
+      ['section-schefter-mentions', 'schefter-mentions-list'],
+    ]) {
+      const section = document.getElementById(sectionId);
+      const list = document.getElementById(listId);
+      if (section) section.style.display = 'none';
+      if (list) list.innerHTML = '';
+    }
+  }
+
+  function renderNewsItems(listEl: HTMLElement, items: NewsItem[]) {
+    listEl.innerHTML = items
+      .map((item) => {
+        const meta =
+          '<div class="pdm-news-item__meta">' +
+          '<span>' + escapeHtml(item.label) + '</span>' +
+          '<span>' + escapeHtml(formatNewsDate(item.published)) + '</span>' +
+          '</div>';
+        const headline = '<p class="pdm-news-item__headline">' + escapeHtml(item.headline) + '</p>';
+        const excerpt = item.excerpt
+          ? '<p class="pdm-news-item__excerpt">' + escapeHtml(item.excerpt) + '</p>'
+          : '';
+        const inner = meta + headline + excerpt;
+        if (item.link) {
+          const external = /^https?:\/\//i.test(item.link) && !item.link.startsWith(window.location.origin);
+          const target = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+          return '<a class="pdm-news-item" href="' + escapeHtml(item.link) + '"' + target + '>' + inner + '</a>';
+        }
+        return '<div class="pdm-news-item">' + inner + '</div>';
+      })
+      .join('');
+  }
+
+  function parseEspnNewsItems(payload: any): NewsItem[] {
+    const raw = Array.isArray(payload?.feed)
+      ? payload.feed
+      : Array.isArray(payload?.articles)
+        ? payload.articles
+        : [];
+    return raw
+      .map((a: any): NewsItem => ({
+        headline: typeof a?.headline === 'string' ? a.headline : typeof a?.title === 'string' ? a.title : '',
+        excerpt: typeof a?.description === 'string' ? a.description : '',
+        published: a?.published || a?.lastModified || null,
+        link: safeHttpUrl(a?.links?.web?.href) || safeHttpUrl(a?.link),
+        label: typeof a?.type === 'string' && a.type ? a.type : 'Story',
+      }))
+      .filter((item: NewsItem) => item.headline);
+  }
+
+  async function fetchNewsJson(url: string): Promise<any> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('news fetch ' + res.status);
+    return res.json();
+  }
+
+  /**
+   * Player-specific stories via ESPN's fantasy news endpoint, falling back
+   * to team-level news (also for DEF, which has no athlete id).
+   */
+  async function loadEspnNews(
+    espnId: string | undefined,
+    teamCode: string | null,
+    isDefense: boolean,
+  ): Promise<{ items: NewsItem[]; scope: string }> {
+    const usePlayer = !!espnId && !isDefense;
+    const cacheKey = usePlayer ? 'p:' + espnId : 't:' + (teamCode || '');
+    const cached = espnNewsCache.get(cacheKey);
+    if (cached) return cached;
+
+    let items: NewsItem[] = [];
+    let scope = '';
+
+    if (usePlayer) {
+      try {
+        const payload = await fetchNewsJson(
+          'https://site.api.espn.com/apis/fantasy/v2/games/ffl/news/players?playerId=' +
+            encodeURIComponent(espnId as string) + '&limit=6'
+        );
+        items = parseEspnNewsItems(payload);
+      } catch (_e) { /* fall through to team news */ }
+    }
+
+    if (items.length === 0 && teamCode && ESPN_NEWS_TEAM_IDS[teamCode]) {
+      try {
+        const payload = await fetchNewsJson(
+          'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?team=' +
+            ESPN_NEWS_TEAM_IDS[teamCode]
+        );
+        items = parseEspnNewsItems(payload);
+        // Team-level fallback — label the section so team-wide stories
+        // aren't mistaken for player-specific coverage
+        if (items.length > 0 && !isDefense) {
+          scope = ' · ' + (NFL_TEAM_CITIES[teamCode] || teamCode);
+        }
+      } catch (_e) { /* section stays hidden */ }
+    }
+
+    const result = { items: items.slice(0, 4), scope };
+    espnNewsCache.set(cacheKey, result);
+    return result;
+  }
+
+  /** Feed posts mentioning this player, via /api/schefter/player-mentions. */
+  async function loadSchefterMentions(
+    playerId: string | undefined,
+    playerName: string | undefined,
+  ): Promise<NewsItem[]> {
+    const modalEl = document.querySelector<HTMLElement>('.player-details-modal');
+    const leagueQs = modalEl?.dataset.leagueQs || '';
+    const newsBase = modalEl?.dataset.newsBase || '/theleague';
+
+    const cacheKey = (playerId || '') + '|' + (playerName || '');
+    const cached = mentionsCache.get(cacheKey);
+    if (cached) return cached;
+
+    const params = new URLSearchParams(leagueQs.replace(/^\?/, ''));
+    if (playerId) params.set('id', playerId);
+    if (playerName) params.set('name', playerName);
+
+    const payload = await fetchNewsJson('/api/schefter/player-mentions?' + params.toString());
+    const posts = Array.isArray(payload?.posts) ? payload.posts : [];
+    const items = posts.map((post: any): NewsItem => ({
+      headline: post.headline || '',
+      excerpt: post.excerpt || '',
+      published: post.timestamp || null,
+      link: safeHttpUrl(post.link) || (post.id ? newsBase + '/news#post-' + encodeURIComponent(post.id) : null),
+      label: MENTION_TYPE_LABELS[post.type] || 'Report',
+    })).filter((item: NewsItem) => item.headline);
+
+    mentionsCache.set(cacheKey, items);
+    return items;
+  }
+
+  function loadNewsSections(
+    playerData: { id?: string; espnId?: string; name?: string },
+    teamCode: string | null,
+    isDefense: boolean,
+  ) {
+    const token = ++newsRequestSeq;
+    hideNewsSections();
+
+    loadEspnNews(playerData.espnId, teamCode, isDefense)
+      .then(({ items, scope }) => {
+        if (token !== newsRequestSeq || items.length === 0) return;
+        const section = document.getElementById('section-player-news');
+        const list = document.getElementById('player-news-list');
+        const scopeEl = document.getElementById('player-news-scope');
+        if (!section || !list) return;
+        if (scopeEl) scopeEl.textContent = scope;
+        renderNewsItems(list, items);
+        section.style.display = '';
+      })
+      .catch(() => { /* section stays hidden */ });
+
+    loadSchefterMentions(playerData.id, playerData.name)
+      .then((items) => {
+        if (token !== newsRequestSeq || items.length === 0) return;
+        const section = document.getElementById('section-schefter-mentions');
+        const list = document.getElementById('schefter-mentions-list');
+        if (!section || !list) return;
+        renderNewsItems(list, items);
+        section.style.display = '';
+      })
+      .catch(() => { /* section stays hidden */ });
   }
 
   function initPlayerDetailsModal() {
@@ -1113,6 +1443,10 @@ const { class: className, hideContract = false } = Astro.props;
           if (weeklyFoot) weeklyFoot.style.display = 'none';
         }
       }
+
+      // ── News (async — sections reveal themselves when items arrive) ──
+
+      loadNewsSections(playerData, teamCode, isDefense);
 
       // ── Open ──
 
