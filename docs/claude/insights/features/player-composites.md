@@ -1140,3 +1140,37 @@ future session needs to know before touching the chip treatment again:
   the CSS fallback rather than failing the build.
 - `--player-avatar-border` (team primary) is now only the base-rule fallback
   for chips that opt out of the gradient; renderers still set it.
+
+## Standalone avatar chip — use `.player-cell__avatar` without the full lockup (2026-07-22)
+
+When a surface needs the team-color headshot chip but has its own name/meta
+layout (modal headers, hero strips), don't hand-roll scoped avatar CSS (the
+`ContractDeclarationModal` `.cdm-hero__avatar` route — a third stylesheet to
+keep in sync). Render just the chip element with the shared classes:
+
+```tsx
+<div className={`player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}`}
+     style={{ '--player-avatar-size': '64px', ...avatarProps }}>
+  <img src={src} alt="" />
+</div>
+```
+
+- `.player-cell__avatar` reads `--player-avatar-size` directly, so setting it
+  inline on the chip works without a `.player-cell` ancestor — and inline
+  wins over the mobile-breakpoint size overrides (those target `.player-cell`,
+  which isn't present).
+- For non-DEF chips, set all four custom properties (`--player-avatar-bg`,
+  `-border`, `-ring`, `-ring-dark`) and import `styles/player-cell.css`; the
+  backdrop guard test requires `--player-avatar-bg` in any file rendering the
+  class. DEF chips opt out of the four color properties on purpose (mirroring
+  `PlayerCell.tsx`) — the `--def` class renders a transparent, borderless
+  team-logo chip, so team-color vars would be dead weight. Keep
+  `--player-avatar-size` in BOTH branches: the base rule's
+  `width: var(--player-avatar-size)` has no fallback.
+- Also wire the shared img `onError` recovery chain (college → MFL photo →
+  `DEFAULT_HEADSHOT_URL`, see `PlayerCell.tsx`/`BoardCell.tsx`) — the chip
+  makes a broken headshot MORE visible (broken-image glyph scaled 1.18x on a
+  team-color gradient), and skip `loading="lazy"` on modal heroes (always
+  in-viewport on mount).
+- First consumer: draft-room `PlayerDetailModal.tsx` header (replaced a raw
+  64px `<img>` with a position-color border).
