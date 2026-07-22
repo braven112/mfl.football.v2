@@ -108,23 +108,23 @@ const liveScoringUrl = hasLiveScoring
         <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : isBB1 ? "/best-ball-1" : "/theleague", hideLeaguePrefix)}>
           <div class="league_logo" id="league_logo">
             {isAFL ? (
-              <!-- AFL Logo — dual variant, CSS-swapped on html.dark -->
               <>
+                <!-- AFL Logo — dual variant, CSS-swapped on html.dark -->
                 <img src="/assets/logos/afl-logo.svg" alt="AFL Logo" class="header-logo-img header-logo-img--light" />
                 <img src="/assets/logos/afl-logo-dark.svg" alt="AFL Logo" class="header-logo-img header-logo-img--dark" />
               </>
             ) : isBB1 ? (
-              <!-- Best Ball logo — the football sprite glyph, emerald/white
-                   variants CSS-swapped on html.dark like the others -->
               <>
+                <!-- Best Ball logo — the football sprite glyph, emerald/white
+                     variants CSS-swapped on html.dark like the others -->
                 <img src="/assets/logos/bestball-logo.svg" alt="Best Ball #1 Logo" class="header-logo-img header-logo-img--light" />
                 <img src="/assets/logos/bestball-logo-dark.svg" alt="Best Ball #1 Logo" class="header-logo-img header-logo-img--dark" />
               </>
             ) : (
-              <!-- The League Logo — both variants rendered; CSS swaps on
-                   html.dark so the logo tracks the LIVE theme (cookie 'auto'
-                   + client toggles), which a server-side pick cannot. -->
               <>
+                <!-- The League Logo — both variants rendered; CSS swaps on
+                     html.dark so the logo tracks the LIVE theme (cookie 'auto'
+                     + client toggles), which a server-side pick cannot. -->
                 <img
                   src="/assets/logos/theleague-logo.svg"
                   alt="The League Logo"
@@ -162,9 +162,9 @@ const liveScoringUrl = hasLiveScoring
         <!-- Desktop Navigation Icons -->
         <nav class:list={["desktop-nav", { "desktop-nav--hide-mobile": hideMobileNavIcons }]} aria-label="Main navigation">
           {isBB1 ? (
-            <!-- Best-ball leagues are draft-only: no lineups or free agents —
-                 the draft surfaces plus the scoreboard ARE the nav. -->
             <>
+              <!-- Best-ball leagues are draft-only: no lineups or free agents —
+                   the draft surfaces plus the scoreboard ARE the nav. -->
               <a href={resolveLeaguePath("/best-ball-1/draft-room", hideLeaguePrefix)} class="nav-icon-link" title="Draft Room">
                 <svg class="nav-icon" aria-hidden="true">
                   <use href={`${spriteUrl}#icon-draft-podium`}></use>

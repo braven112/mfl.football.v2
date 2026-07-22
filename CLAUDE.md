@@ -11,6 +11,28 @@ entries for gotchas that have bitten us and would bite a future session too.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
 
+## Astro 7 — strict Rust compiler, pinned compressHTML
+
+Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.
+Gotchas the new compiler enforces that the old Go compiler silently fixed:
+
+- **No HTML comments directly inside template expressions** — `{cond && (
+  <!-- x --> <div>...` is a hard CompilerError. Put the comment above the
+  expression or inside the element/fragment.
+- **Tags must balance exactly** (no auto-closing at EOF, no tolerating a
+  mismatched closer). Errors surface one file per build; to see them all at
+  once, run `@astrojs/compiler-rs#transform` over `src/**/*.astro` and
+  collect `diagnostics` where `severity === 'error'`.
+- `compressHTML: true` is pinned in `astro.config.ts` because v7's new
+  default `'jsx'` strips whitespace between inline elements site-wide.
+  Don't remove it without a visual audit.
+- Known dead CSS (predates v7, now warned on by lightningcss at build):
+  `:global()` inside `<style is:global>` blocks (both lineup pages +
+  cr-list) ships literally and browsers drop those rules. Fixing it will
+  *activate* previously-dead rules — do it deliberately, with screenshots.
+- vitest 1.x + root `vite@^5` are intentionally separate from Astro's
+  vite 8 (pnpm isolates them; vitest.config doesn't use astro/config).
+
 ## Local env — `vercel env pull`, and worktrees don't inherit it
 
 Server code reads `process.env` (auth JWT, every Upstash storage util), but

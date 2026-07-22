@@ -16,6 +16,10 @@ for (const [key, value] of Object.entries(fileEnv)) {
 
 export default defineConfig({
   output: 'server',
+  // Astro 7 changed the default to 'jsx', which strips whitespace between
+  // inline elements the way React does. Keep the HTML-preserving v6 behavior
+  // rather than visually auditing every page for lost spaces.
+  compressHTML: true,
   adapter: vercel({
     imageService: true,
     webAnalytics: {
@@ -46,5 +50,4 @@ export default defineConfig({
       fallbacks: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
     },
   ],
-  experimental: {},
 });
