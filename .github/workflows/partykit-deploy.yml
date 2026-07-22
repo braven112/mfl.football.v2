@@ -34,6 +34,11 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # A healthy `partykit deploy` finishes in ~2 minutes. Every hung run so
+    # far has been the CLI waiting forever for an interactive login because
+    # the PARTYKIT_LOGIN/PARTYKIT_TOKEN secrets were missing or stale —
+    # fail fast and loudly instead of idling for the 6-hour runner default.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
