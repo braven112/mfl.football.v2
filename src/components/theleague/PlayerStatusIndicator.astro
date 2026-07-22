@@ -34,7 +34,7 @@ const badgeClasses = [
 ---
 
 <div class={`player-status-container ${className}`}>
-  <!-- Starting/Bench Badge (only shown when not in compact-clean mode) -->
+  {/* Starting/Bench Badge (only shown when not in compact-clean mode) */}
   {!isCompactClean && (
     <div class={badgeClasses}>
       <span class="badge-text">
@@ -46,7 +46,7 @@ const badgeClasses = [
     </div>
   )}
 
-  <!-- Injury Status Indicator - Simple red text (only when not compact-clean) -->
+  {/* Injury Status Indicator - Simple red text (only when not compact-clean) */}
   {!isCompactClean && hasInjury && (
     <span class="injury-status-simple" title={`${player.name} is ${player.injuryStatus}`}>
       ({player.injuryStatus === 'Out' && 'O'})
@@ -56,7 +56,7 @@ const badgeClasses = [
     </span>
   )}
 
-  <!-- Bench Upgrade Indicator (only when not compact-clean) -->
+  {/* Bench Upgrade Indicator (only when not compact-clean) */}
   {!isCompactClean && showOptimization && hasUpgrade && !isStarting && (
     <div class="upgrade-indicator" title={`Better option available: +${player.benchUpgrade?.pointsDifference?.toFixed(1)} pts`}>
       <span class="upgrade-icon">📈</span>
@@ -64,7 +64,7 @@ const badgeClasses = [
     </div>
   )}
 
-  <!-- IR Eligible Indicator (only when not compact-clean) -->
+  {/* IR Eligible Indicator (only when not compact-clean) */}
   {!isCompactClean && player.isIReligible && (
     <div class="ir-eligible-indicator" title={`${player.name} is eligible for IR`}>
       <span class="ir-icon">🏥</span>
