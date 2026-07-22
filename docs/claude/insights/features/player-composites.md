@@ -1159,8 +1159,18 @@ keep in sync). Render just the chip element with the shared classes:
   inline on the chip works without a `.player-cell` ancestor — and inline
   wins over the mobile-breakpoint size overrides (those target `.player-cell`,
   which isn't present).
-- Still set all four custom properties (`--player-avatar-bg`, `-border`,
-  `-ring`, `-ring-dark`) and import `styles/player-cell.css`; the backdrop
-  guard test requires `--player-avatar-bg` in any file rendering the class.
+- For non-DEF chips, set all four custom properties (`--player-avatar-bg`,
+  `-border`, `-ring`, `-ring-dark`) and import `styles/player-cell.css`; the
+  backdrop guard test requires `--player-avatar-bg` in any file rendering the
+  class. DEF chips opt out of the four color properties on purpose (mirroring
+  `PlayerCell.tsx`) — the `--def` class renders a transparent, borderless
+  team-logo chip, so team-color vars would be dead weight. Keep
+  `--player-avatar-size` in BOTH branches: the base rule's
+  `width: var(--player-avatar-size)` has no fallback.
+- Also wire the shared img `onError` recovery chain (college → MFL photo →
+  `DEFAULT_HEADSHOT_URL`, see `PlayerCell.tsx`/`BoardCell.tsx`) — the chip
+  makes a broken headshot MORE visible (broken-image glyph scaled 1.18x on a
+  team-color gradient), and skip `loading="lazy"` on modal heroes (always
+  in-viewport on mount).
 - First consumer: draft-room `PlayerDetailModal.tsx` header (replaced a raw
   64px `<img>` with a position-color border).

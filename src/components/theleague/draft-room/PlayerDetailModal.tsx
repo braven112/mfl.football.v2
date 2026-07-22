@@ -5,6 +5,11 @@ import { POSITION_COLORS } from '../../../types/draft-room';
 import { calculateDraftPickSalary } from '../../../utils/draft-pick-cap-impact';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import {
+  DEFAULT_HEADSHOT_URL,
+  getCollegeHeadshot,
+  getPlayerImageUrl,
+} from '../../../constants/roster-constants';
+import {
   getPlayerAvatarBackground,
   getPlayerAvatarBorder,
   getPlayerAvatarRing,
@@ -103,6 +108,33 @@ export function PlayerDetailModal({
         }),
   } as React.CSSProperties;
 
+  // Same college → MFL photo → default silhouette recovery chain as
+  // PlayerCell.tsx and BoardCell.tsx — pre-draft rookies often carry a
+  // college ESPN headshot URL that 404s.
+  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    img.onerror = null;
+    if (player.espnId) {
+      const college = getCollegeHeadshot(player.espnId);
+      if (player.mflId) {
+        const mfl = getPlayerImageUrl(player.mflId);
+        img.onerror = () => {
+          img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+          img.src = mfl;
+        };
+        img.src = college;
+      } else {
+        img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+        img.src = college;
+      }
+    } else if (player.mflId) {
+      img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+      img.src = getPlayerImageUrl(player.mflId);
+    } else {
+      img.src = DEFAULT_HEADSHOT_URL;
+    }
+  };
+
   // Y1 slot salary preview (only meaningful for rookies at current pick)
   const y1Salary = currentPick && player.isRookie
     ? calculateDraftPickSalary(currentPick.round, currentPick.overallPickNumber, player.position)
@@ -139,8 +171,8 @@ export function PlayerDetailModal({
             <img
               src={avatarSrc}
               alt=""
-              loading="lazy"
               decoding="async"
+              onError={handleImgError}
             />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
