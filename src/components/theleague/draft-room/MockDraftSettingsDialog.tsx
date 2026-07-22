@@ -64,8 +64,11 @@ export function MockDraftSettingsDialog({
     };
   }, [onClose]);
 
-  // First-round order = one entry per franchise, in draft-slot order
-  const franchiseIds = session.draftOrder.slice(0, session.picksPerRound);
+  // One row per franchise, in first-pick order. Don't slice round 1 by
+  // picksPerRound: traded and compensatory picks mean a round can hold the
+  // same franchise twice (and more slots than teams), which rendered
+  // duplicate rows with colliding React keys.
+  const franchiseIds = Array.from(new Set(session.draftOrder));
 
   return (
     <div
