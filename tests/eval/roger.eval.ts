@@ -34,6 +34,12 @@ import {
   RULEBOOK_ANCHORS,
 } from '../../src/data/rules-qa-system-prompt';
 import { LEAGUE_CONSTITUTION } from '../../src/data/league-constitution';
+import {
+  runFormatChecks,
+  runRegexChecks,
+  parseJudgeJson,
+  type CheckResult,
+} from '../../scripts/lib/roger-graders';
 
 interface EvalCase {
   id: string;
@@ -45,12 +51,6 @@ interface EvalCase {
   judge?: boolean;
   reference?: string;
   now?: string;
-}
-
-interface CheckResult {
-  name: string;
-  pass: boolean;
-  detail?: string;
 }
 
 interface CaseResult {
@@ -66,10 +66,6 @@ const cases = fixture.cases as EvalCase[];
 const results: CaseResult[] = [];
 
 const JUDGE_MODEL = 'claude-opus-5';
-// The answer's 300-word contract, with a small grace margin so borderline
-// counts don't produce flaky failures.
-const WORD_LIMIT = 320;
-const LINK_RE = /\[Read the full rule(?:book)?\]\(\/theleague\/rules(#[a-z0-9-]+)?\)/;
 
 /** 20:00 UTC = noon PST / 1pm PDT — safely mid-day on the intended PT calendar date. */
 function ptNoon(isoDate: string): Date {
@@ -77,54 +73,10 @@ function ptNoon(isoDate: string): Date {
 }
 
 function runDeterministicChecks(c: EvalCase, answer: string): CheckResult[] {
-  const checks: CheckResult[] = [];
-
-  const lines = answer.trim().split('\n');
-  const lastLine = (lines[lines.length - 1] ?? '').trim();
-  const linkMatch = lastLine.match(LINK_RE);
-  checks.push({
-    name: 'format:link-on-last-line',
-    pass: Boolean(linkMatch),
-    detail: linkMatch ? undefined : `last line was: ${JSON.stringify(lastLine)}`,
-  });
-
-  const anchor = linkMatch?.[1];
-  if (anchor) {
-    checks.push({
-      name: 'format:anchor-in-whitelist',
-      pass: (RULEBOOK_ANCHORS as readonly string[]).includes(anchor),
-      detail: `anchor: ${anchor}`,
-    });
-  }
-  if (c.expectedAnchor) {
-    checks.push({
-      name: 'format:expected-anchor',
-      pass: anchor === c.expectedAnchor,
-      detail: `expected ${c.expectedAnchor}, got ${anchor ?? '(none)'}`,
-    });
-  }
-
-  const wordCount = answer.trim().split(/\s+/).length;
-  checks.push({
-    name: 'format:word-budget',
-    pass: wordCount <= WORD_LIMIT,
-    detail: `${wordCount} words (limit ${WORD_LIMIT})`,
-  });
-
-  for (const pattern of c.mustMatch ?? []) {
-    checks.push({
-      name: `mustMatch:${pattern}`,
-      pass: new RegExp(pattern, 'im').test(answer),
-    });
-  }
-  for (const pattern of c.mustNotMatch ?? []) {
-    checks.push({
-      name: `mustNotMatch:${pattern}`,
-      pass: !new RegExp(pattern, 'im').test(answer),
-    });
-  }
-
-  return checks;
+  return [
+    ...runFormatChecks(answer, RULEBOOK_ANCHORS, c.expectedAnchor),
+    ...runRegexChecks(answer, c.mustMatch, c.mustNotMatch),
+  ];
 }
 
 const JUDGE_SYSTEM = `You are a strict grader for "Roger", a rules Q&A chatbot for a fantasy football dynasty league. You will be given the league constitution, an owner's question, Roger's answer, and a REFERENCE describing what a correct answer must (and must not) do.
@@ -164,13 +116,11 @@ async function judgeAnswer(c: EvalCase, answer: string): Promise<CheckResult> {
 
   const block = 'content' in response ? response.content.find((b) => b.type === 'text') : undefined;
   const raw = block && 'text' in block ? block.text.trim() : '';
-  try {
-    const jsonText = raw.replace(/^```(?:json)?/m, '').replace(/```$/m, '').trim();
-    const verdict = JSON.parse(jsonText) as { pass: boolean; reason: string };
-    return { name: 'judge', pass: verdict.pass === true, detail: verdict.reason };
-  } catch {
+  const verdict = parseJudgeJson<{ pass: boolean; reason: string }>(raw);
+  if (!verdict) {
     return { name: 'judge', pass: false, detail: `unparseable judge output: ${raw.slice(0, 200)}` };
   }
+  return { name: 'judge', pass: verdict.pass === true, detail: verdict.reason };
 }
 
 if (!process.env.ANTHROPIC_API_KEY) {

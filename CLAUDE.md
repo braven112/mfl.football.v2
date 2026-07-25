@@ -170,6 +170,17 @@ constitution, or the answering model, and compare per-category pass rates.
 - New Roger bug report → add a fixture case reproducing it, then fix.
   Details + methodology write-up: `docs/evals-explained.md`.
 
+**Improvement loop** (`pnpm improve:roger`, weekly via
+`roger-improvement-loop.yml`): rubric-audits real owner questions from
+Redis with an Opus judge, ledgers results in `data/roger-improvement/`,
+and drafts failures as eval cases in `proposed-cases.json`. Ground truth
+is human-gated on purpose: review a proposal, edit its `reference`, set
+`"reviewed": true`, then `pnpm improve:roger --promote <id,...>` to grow
+the golden dataset — promotion mechanically refuses unreviewed cases.
+Never auto-promote or let the judge author ground truth. Prompt
+suggestions land in `latest-report.md`; after applying one, run
+`pnpm eval:roger`.
+
 ## NFL Draft date source of truth
 
 - **Authoritative:** `src/data/theleague/nfl-draft-dates-fetched.json` —

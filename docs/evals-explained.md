@@ -125,6 +125,19 @@ Once the loop exists, it changes how you work on the feature. A user reports tha
 
 It also makes previously scary changes cheap. "Would the newer model be better for Roger?" is no longer a debate — it's a one-line change and a dollar of API calls, answered with a table.
 
+## Closing the loop: continuous improvement from production traffic
+
+A static eval only knows about the failures you imagined when you wrote it. Production knows about the rest. The final maturity step is a **rubric audit loop** that feeds real traffic back into the eval — Roger's runs weekly, and the mechanism generalizes to any LLM feature:
+
+1. **Harvest.** Every real owner question and Roger's actual answer are already stored. The loop pulls the ones it hasn't seen, oldest first, capped per run to bound spend. A committed ledger tracks what's been graded so nothing is ever judged twice.
+2. **Audit against the rubric.** Each stored answer gets the same two-layer treatment as the eval: the deterministic format graders, plus an Opus judge grading four rubric dimensions — factual accuracy, grounding (no invented rules), scope discipline, and date handling. Because every stored answer carries its creation timestamp, the judge is told what "today" was when the answer was generated, so even date bugs are auditable after the fact.
+3. **Propose, don't promote.** Every failure is automatically drafted into a candidate eval case — question, suggested category, a judge-written draft of the correct answer, and (when the failure pattern suggests one) a concrete prompt-change suggestion. Crucially, the draft lands in a review queue marked `reviewed: false`. The promotion command *mechanically refuses* unreviewed cases: a human must verify the reference against the constitution and flip the flag first. This is the line that keeps the loop honest — an LLM judge proposing ground truth is fine; an LLM judge *ratifying its own* ground truth is how eval datasets quietly fill with confident nonsense.
+4. **Promote and verify.** Reviewed cases get promoted into the golden dataset by a command that enforces the same schema invariants CI checks, so a promotion can never break the suite. Then the loop closes: apply the suggested prompt fix, rerun the eval — the newly promoted cases prove the fix worked, and the other fifty-odd prove nothing else broke.
+
+The compounding effect is the point. Month one, the dataset is what you imagined. Month six, it's dominated by the ways real users actually stress the system — phrasings you never predicted, rule interactions you never considered, and a regression test for every bug that ever shipped. The bot doesn't literally retrain itself; the *system* self-improves: traffic → rubric audit → dataset growth + prompt fixes → eval-verified deployment → better traffic outcomes. Each pass around the loop raises the floor.
+
+Two safeguards worth stating in an interview because they're the difference between a flywheel and a doom loop: **bounded spend** (per-run caps and a dedup ledger keep the audit from being a runaway bill) and **human-owned ground truth** (the judge drafts, the domain expert ratifies — the same asymmetry as code review).
+
 ## Pitfalls worth naming
 
 - **Overfitting to the eval.** Iterate on the prompt against the same 46 cases long enough and you optimize for the cases, not the capability. Rotate in fresh real-traffic cases; treat a suspiciously perfect score as a question, not an achievement.
@@ -135,4 +148,4 @@ It also makes previously scary changes cheap. "Would the newer model be better f
 
 ## The 30-second summary
 
-An eval is a test suite for a nondeterministic system. Decompose the feature into independent behavioral contracts. Build a golden dataset from the spec, real traffic, and adversarial imagination, with ground truth owned by a domain authority. Grade in layers — deterministic code for everything regexable, a stronger reference-guided LLM judge for nuance, humans to calibrate the judge. Evaluate the real production code path, not a copy. Report per-category pass rates with saved transcripts, tolerate sampling noise, and run the eval as a gate on prompt and model changes. Then let it drive development: every bug becomes a case, and every change ships with evidence instead of hope.
+An eval is a test suite for a nondeterministic system. Decompose the feature into independent behavioral contracts. Build a golden dataset from the spec, real traffic, and adversarial imagination, with ground truth owned by a domain authority. Grade in layers — deterministic code for everything regexable, a stronger reference-guided LLM judge for nuance, humans to calibrate the judge. Evaluate the real production code path, not a copy. Report per-category pass rates with saved transcripts, tolerate sampling noise, and run the eval as a gate on prompt and model changes. Then close the loop on production: rubric-audit real traffic on a schedule, draft failures into human-reviewed eval cases and prompt fixes, and let the dataset compound. Every bug becomes a case, every change ships with evidence instead of hope, and the system gets measurably better every week it runs.
