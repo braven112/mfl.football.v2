@@ -6,46 +6,46 @@
         "id": "1",
         "startWeek": "17",
         "teamsInvolved": "2",
-        "bracketWinnerTitle": "AFL Champion ($300)",
-        "name": "AFL Championship"
+        "name": "AFL Championship",
+        "bracketWinnerTitle": "AFL Champion ($300)"
       },
       {
-        "startWeekGames": "2",
-        "id": "2",
-        "teamsInvolved": "4",
-        "startWeek": "15",
         "bracketWinnerTitle": "AL Champion ($150)",
-        "name": "AL Championship"
+        "name": "AL Championship",
+        "teamsInvolved": "4",
+        "startWeek": "15",
+        "id": "2",
+        "startWeekGames": "2"
       },
       {
-        "startWeek": "15",
         "teamsInvolved": "4",
+        "startWeek": "15",
         "name": "NL Championship",
         "bracketWinnerTitle": "NL Champion ($150)",
         "startWeekGames": "2",
         "id": "3"
       },
       {
-        "startWeekGames": "1",
-        "id": "4",
         "teamsInvolved": "2",
         "startWeek": "17",
         "bracketWinnerTitle": "AFL 3rd Place (Pride)",
-        "name": "AFL 3rd Place Game"
+        "name": "AFL 3rd Place Game",
+        "startWeekGames": "1",
+        "id": "4"
       },
       {
-        "name": "AFL 5th Place Game",
-        "bracketWinnerTitle": "AFL 5th Place (Pride)",
-        "teamsInvolved": "4",
         "startWeek": "16",
-        "id": "5",
-        "startWeekGames": "2"
+        "teamsInvolved": "4",
+        "bracketWinnerTitle": "AFL 5th Place (Pride)",
+        "name": "AFL 5th Place Game",
+        "startWeekGames": "2",
+        "id": "5"
       },
       {
         "name": "NIT Championship",
         "bracketWinnerTitle": "*NIT Champion (+1 Draft position in 1st round)",
-        "teamsInvolved": "16",
         "startWeek": "15",
+        "teamsInvolved": "16",
         "id": "6",
         "startWeekGames": "8"
       },
@@ -58,48 +58,46 @@
         "startWeekGames": "1"
       },
       {
+        "startWeek": "17",
+        "teamsInvolved": "4",
         "name": "NIT 4th Place Game",
         "bracketWinnerTitle": "*NIT 4th Place (+1 Draft position in 1st round)",
-        "teamsInvolved": "4",
-        "startWeek": "17",
-        "id": "8",
-        "startWeekGames": "2"
+        "startWeekGames": "2",
+        "id": "8"
       },
       {
-        "teamsInvolved": "8",
-        "startWeek": "16",
-        "bracketWinnerTitle": "*NIT 5th Place (+1 Draft position in 1st round)",
-        "name": "NIT 5th Place Game",
         "startWeekGames": "4",
-        "id": "9"
+        "id": "9",
+        "startWeek": "16",
+        "teamsInvolved": "8",
+        "name": "NIT 5th Place Game",
+        "bracketWinnerTitle": "*NIT 5th Place (+1 Draft position in 1st round)"
       }
     ]
   },
   "brackets": {
     "1": {
       "version": "1.0",
-      "encoding": "utf-8",
       "playoffBracket": {
-        "bracket_id": "1",
         "playoffRound": {
           "week": "17",
           "playoffGame": {
             "home": {
-              "bracket": "3",
-              "winner_of_game": "3"
+              "winner_of_game": "3",
+              "bracket": "3"
             },
+            "game_id": "1",
             "away": {
               "bracket": "2",
               "winner_of_game": "3"
-            },
-            "game_id": "1"
+            }
           }
-        }
-      }
+        },
+        "bracket_id": "1"
+      },
+      "encoding": "utf-8"
     },
     "2": {
-      "version": "1.0",
-      "encoding": "utf-8",
       "playoffBracket": {
         "playoffRound": [
           {
@@ -126,22 +124,25 @@
             "week": "15"
           },
           {
-            "week": "16",
             "playoffGame": {
-              "home": {
-                "winner_of_game": "2"
-              },
+              "game_id": "3",
               "away": {
                 "winner_of_game": "1"
               },
-              "game_id": "3"
-            }
+              "home": {
+                "winner_of_game": "2"
+              }
+            },
+            "week": "16"
           }
         ],
         "bracket_id": "2"
-      }
+      },
+      "encoding": "utf-8",
+      "version": "1.0"
     },
     "3": {
+      "version": "1.0",
       "encoding": "utf-8",
       "playoffBracket": {
         "bracket_id": "3",
@@ -162,15 +163,14 @@
                 "home": {
                   "seed": "2"
                 },
-                "game_id": "2",
                 "away": {
                   "seed": "3"
-                }
+                },
+                "game_id": "2"
               }
             ]
           },
           {
-            "week": "16",
             "playoffGame": {
               "game_id": "3",
               "away": {
@@ -179,35 +179,36 @@
               "home": {
                 "winner_of_game": "2"
               }
-            }
+            },
+            "week": "16"
           }
         ]
-      },
-      "version": "1.0"
+      }
     },
     "4": {
+      "version": "1.0",
       "encoding": "utf-8",
       "playoffBracket": {
         "playoffRound": {
+          "week": "17",
           "playoffGame": {
-            "away": {
-              "bracket": "3",
+            "home": {
+              "bracket": "2",
               "loser_of_game": "3"
             },
             "game_id": "1",
-            "home": {
-              "loser_of_game": "3",
-              "bracket": "2"
+            "away": {
+              "bracket": "3",
+              "loser_of_game": "3"
             }
-          },
-          "week": "17"
+          }
         },
         "bracket_id": "4"
-      },
-      "version": "1.0"
+      }
     },
     "5": {
       "playoffBracket": {
+        "bracket_id": "5",
         "playoffRound": [
           {
             "playoffGame": [
@@ -216,57 +217,55 @@
                   "loser_of_game": "2",
                   "bracket": "3"
                 },
+                "game_id": "1",
                 "away": {
                   "bracket": "2",
                   "loser_of_game": "1"
-                },
-                "game_id": "1"
+                }
               },
               {
-                "game_id": "2",
-                "away": {
-                  "bracket": "3",
-                  "loser_of_game": "1"
-                },
                 "home": {
                   "loser_of_game": "2",
                   "bracket": "2"
-                }
+                },
+                "away": {
+                  "loser_of_game": "1",
+                  "bracket": "3"
+                },
+                "game_id": "2"
               }
             ],
             "week": "16"
           },
           {
             "playoffGame": {
+              "game_id": "3",
               "away": {
                 "winner_of_game": "1"
               },
-              "game_id": "3",
               "home": {
                 "winner_of_game": "2"
               }
             },
             "week": "17"
           }
-        ],
-        "bracket_id": "5"
+        ]
       },
       "encoding": "utf-8",
       "version": "1.0"
     },
     "6": {
       "playoffBracket": {
-        "bracket_id": "6",
         "playoffRound": [
           {
             "playoffGame": [
               {
+                "home": {
+                  "seed": "1"
+                },
                 "game_id": "1",
                 "away": {
                   "seed": "16"
-                },
-                "home": {
-                  "seed": "1"
                 }
               },
               {
@@ -279,40 +278,40 @@
                 "game_id": "2"
               },
               {
-                "home": {
-                  "seed": "3"
-                },
                 "away": {
                   "seed": "14"
                 },
-                "game_id": "3"
+                "game_id": "3",
+                "home": {
+                  "seed": "3"
+                }
               },
               {
-                "home": {
-                  "seed": "6"
-                },
                 "game_id": "4",
                 "away": {
                   "seed": "11"
+                },
+                "home": {
+                  "seed": "6"
                 }
               },
               {
-                "home": {
-                  "seed": "2"
-                },
                 "game_id": "5",
                 "away": {
                   "seed": "15"
+                },
+                "home": {
+                  "seed": "2"
                 }
               },
               {
-                "home": {
-                  "seed": "7"
-                },
+                "game_id": "6",
                 "away": {
                   "seed": "10"
                 },
-                "game_id": "6"
+                "home": {
+                  "seed": "7"
+                }
               },
               {
                 "home": {
@@ -324,12 +323,12 @@
                 "game_id": "7"
               },
               {
-                "away": {
-                  "seed": "13"
-                },
-                "game_id": "8",
                 "home": {
                   "seed": "4"
+                },
+                "game_id": "8",
+                "away": {
+                  "seed": "13"
                 }
               }
             ],
@@ -338,40 +337,40 @@
           {
             "playoffGame": [
               {
+                "game_id": "9",
                 "away": {
                   "winner_of_game": "1"
                 },
-                "game_id": "9",
                 "home": {
                   "winner_of_game": "2"
                 }
               },
               {
-                "away": {
-                  "winner_of_game": "3"
-                },
-                "game_id": "10",
                 "home": {
                   "winner_of_game": "4"
+                },
+                "game_id": "10",
+                "away": {
+                  "winner_of_game": "3"
                 }
               },
               {
-                "away": {
-                  "winner_of_game": "5"
-                },
-                "game_id": "11",
                 "home": {
                   "winner_of_game": "6"
+                },
+                "game_id": "11",
+                "away": {
+                  "winner_of_game": "5"
                 }
               },
               {
-                "home": {
-                  "winner_of_game": "8"
-                },
                 "away": {
                   "winner_of_game": "7"
                 },
-                "game_id": "12"
+                "game_id": "12",
+                "home": {
+                  "winner_of_game": "8"
+                }
               }
             ],
             "week": "16"
@@ -382,19 +381,19 @@
                 "home": {
                   "winner_of_game": "10"
                 },
+                "game_id": "13",
                 "away": {
                   "winner_of_game": "9"
-                },
-                "game_id": "13"
+                }
               },
               {
-                "game_id": "14",
+                "home": {
+                  "winner_of_game": "12"
+                },
                 "away": {
                   "winner_of_game": "11"
                 },
-                "home": {
-                  "winner_of_game": "12"
-                }
+                "game_id": "14"
               }
             ],
             "week": "17"
@@ -402,101 +401,104 @@
           {
             "week": "18",
             "playoffGame": {
-              "home": {
-                "winner_of_game": "14"
-              },
               "game_id": "15",
               "away": {
                 "winner_of_game": "13"
+              },
+              "home": {
+                "winner_of_game": "14"
               }
             }
           }
-        ]
+        ],
+        "bracket_id": "6"
       },
       "encoding": "utf-8",
       "version": "1.0"
     },
     "7": {
-      "encoding": "utf-8",
       "playoffBracket": {
         "playoffRound": {
-          "week": "18",
           "playoffGame": {
             "home": {
               "bracket": "6",
               "loser_of_game": "14"
             },
-            "game_id": "1",
             "away": {
-              "loser_of_game": "13",
-              "bracket": "6"
-            }
-          }
+              "bracket": "6",
+              "loser_of_game": "13"
+            },
+            "game_id": "1"
+          },
+          "week": "18"
         },
         "bracket_id": "7"
       },
+      "encoding": "utf-8",
       "version": "1.0"
     },
     "8": {
-      "version": "1.0",
-      "encoding": "utf-8",
       "playoffBracket": {
-        "bracket_id": "8",
         "playoffRound": [
           {
-            "week": "17",
             "playoffGame": [
               {
-                "away": {
-                  "loser_of_game": "9",
-                  "bracket": "6"
-                },
-                "game_id": "1",
                 "home": {
                   "bracket": "6",
                   "loser_of_game": "10"
+                },
+                "game_id": "1",
+                "away": {
+                  "bracket": "6",
+                  "loser_of_game": "9"
                 }
               },
               {
-                "game_id": "2",
                 "away": {
-                  "bracket": "6",
-                  "loser_of_game": "11"
-                },
-                "home": {
-                  "loser_of_game": "12",
+                  "loser_of_game": "11",
                   "bracket": "6"
+                },
+                "game_id": "2",
+                "home": {
+                  "bracket": "6",
+                  "loser_of_game": "12"
                 }
               }
-            ]
+            ],
+            "week": "17"
           },
           {
             "playoffGame": {
+              "game_id": "3",
               "away": {
                 "winner_of_game": "1"
               },
-              "game_id": "3",
               "home": {
                 "winner_of_game": "2"
               }
             },
             "week": "18"
           }
-        ]
-      }
+        ],
+        "bracket_id": "8"
+      },
+      "encoding": "utf-8",
+      "version": "1.0"
     },
     "9": {
+      "version": "1.0",
       "encoding": "utf-8",
       "playoffBracket": {
         "bracket_id": "9",
         "playoffRound": [
           {
+            "week": "16",
             "playoffGame": [
               {
                 "game_id": "1",
                 "away": {
-                  "loser_of_game": "1",
-                  "bracket": "6"
+                  "bracket": "6",
+                  "loser_of_game": "1"
                 },
                 "home": {
                   "bracket": "6",
@@ -505,39 +507,38 @@
               },
               {
                 "home": {
-                  "bracket": "6",
-                  "loser_of_game": "4"
+                  "loser_of_game": "4",
+                  "bracket": "6"
                 },
+                "game_id": "2",
                 "away": {
                   "loser_of_game": "3",
                   "bracket": "6"
-                },
-                "game_id": "2"
+                }
               },
               {
+                "away": {
+                  "bracket": "6",
+                  "loser_of_game": "5"
+                },
+                "game_id": "3",
                 "home": {
                   "loser_of_game": "6",
                   "bracket": "6"
-                },
-                "away": {
-                  "loser_of_game": "5",
-                  "bracket": "6"
-                },
-                "game_id": "3"
+                }
               },
               {
                 "home": {
-                  "loser_of_game": "8",
-                  "bracket": "6"
+                  "bracket": "6",
+                  "loser_of_game": "8"
                 },
                 "game_id": "4",
                 "away": {
-                  "bracket": "6",
-                  "loser_of_game": "7"
+                  "loser_of_game": "7",
+                  "bracket": "6"
                 }
               }
-            ],
-            "week": "16"
+            ]
           },
           {
             "playoffGame": [
@@ -563,21 +564,20 @@
             "week": "17"
           },
           {
+            "week": "18",
             "playoffGame": {
-              "home": {
-                "winner_of_game": "6"
-              },
               "away": {
                 "winner_of_game": "5"
               },
-              "game_id": "7"
-            },
-            "week": "18"
+              "game_id": "7",
+              "home": {
+                "winner_of_game": "6"
+              }
+            }
           }
         ]
-      },
-      "version": "1.0"
+      }
     }
   },
-  "lastFetched": "2026-07-25T04:36:15.834Z"
+  "lastFetched": "2026-07-25T06:47:05.345Z"
 }
