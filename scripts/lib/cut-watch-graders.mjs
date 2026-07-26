@@ -74,6 +74,16 @@ const NEGATED_VALUE_RE = new RegExp(
   'i'
 );
 
+// Negator sitting DIRECTLY on a mechanism term ("…, not the auto-cut
+// order") — the advisory-label pattern that names the mechanism only to
+// disclaim it. Gap is {0,1} on purpose: a looser gap would exempt real
+// violations like "no plan means the algorithm grabs your least valuable
+// guys" (the negator there belongs to "no plan", not to the mechanism).
+const NEGATED_MECHANISM_RE = new RegExp(
+  `\\b${NEGATORS}\\b(?:\\s+\\S+){0,1}?\\s*\\b(?:${MECHANISM_PATTERNS.join('|')})\\b`,
+  'i'
+);
+
 /** Strip HTML tags and collapse whitespace. */
 export function stripHtml(html) {
   return String(html ?? '')
@@ -108,6 +118,7 @@ export function findValueBasedAutoCutClaims(text) {
     const mechanism = sentence.match(MECHANISM_RE);
     if (!action || !value || !mechanism) continue;
     if (NEGATED_VALUE_RE.test(sentence)) continue;
+    if (NEGATED_MECHANISM_RE.test(sentence)) continue;
     violations.push({
       sentence,
       action: action[0],

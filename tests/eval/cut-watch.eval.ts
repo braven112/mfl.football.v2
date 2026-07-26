@@ -95,10 +95,11 @@ async function generateFromRealData(): Promise<{ article: Article; factSheet: st
 const JUDGE_SYSTEM = `You are a strict grader for "Claude Schefter" Cut Watch articles in a dynasty fantasy football league. Teams over the 22-man roster limit are cut down automatically at an August deadline.
 
 GROUND TRUTH — the deadline auto-cut mechanic:
-1. Players the owner marked in their cutdown plan are cut first, in the owner's order.
-2. Remaining cuts are auto-picked NEWEST PICKUP FIRST: the most recent waiver/free-agent/auction acquisition goes first. Player value, salary, and rankings play NO role in the system's selection.
-3. Trades never count as pickups — a player acquired by trade is treated as long-held and is reached only after every waiver/FA/auction pickup is gone.
-4. Exactly the overage is cut, never more.
+1. Rookies are moved to open practice-squad spots FIRST (3 spots, rookies only). A taxied rookie is KEPT, not cut — an article calling a taxi move a cut or a loss is wrong.
+2. Players the owner marked in their cutdown plan are cut next, in the owner's order.
+3. Remaining cuts are auto-picked NEWEST PICKUP FIRST: the most recent waiver/free-agent/auction acquisition goes first. Player value, salary, and rankings play NO role in the system's selection.
+4. Trades never count as pickups — a player acquired by trade is treated as long-held and is reached only after every waiver/FA/auction pickup is gone.
+5. Exactly the overage is resolved (taxi moves + cuts), never more.
 
 The article ALSO intentionally publishes value-ranked cut RECOMMENDATIONS (editorial advice about who an owner SHOULD cut). That advisory framing is correct and required — the failure mode being graded is collapsing the advisory ranking into the mechanical rule (e.g. "the system picks the weakest players first"), or the overcorrection of dropping recommendations entirely.
 

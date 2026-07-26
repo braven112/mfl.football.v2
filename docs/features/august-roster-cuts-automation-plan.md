@@ -101,6 +101,15 @@ selectAutoCuts({ activeRoster, markedPlayerIds, acquisitions, target = 22 })
   → { cuts: PlayerId[], reason: Map<PlayerId, 'marked' | 'last-added'> }
 ```
 
+> **Amendment (July 2026, decided):** rookie taxi moves come BEFORE any cut.
+> Active-roster rookies (MFL `status === 'R'`) fill open practice-squad
+> spots (limit 3, rookies-only per the constitution) first, in league-draft
+> order, and only the remaining overage is cut. Owner-marked players are
+> never taxied — marking a rookie means "cut him". Implemented as
+> `selectAutoTaxiMoves` / `selectAutoMoves` in the same core module; the
+> execution job posts owner-mode `import TYPE=taxi_squad DEMOTE=<pid>`
+> writes before its add/drop cuts.
+
 Rules, in order:
 
 1. `overage = activeRoster.length - target`. If `overage <= 0`, return no cuts —

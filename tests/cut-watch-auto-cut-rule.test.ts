@@ -34,7 +34,7 @@ import { findValueBasedAutoCutClaims, findValueBasedAutoCutClaimsInPost, stripHt
 // @ts-expect-error — plain .mjs module without type declarations
 import { buildFactSheet, getUserPrompt } from '../scripts/article-types/cut-watch.mjs';
 // @ts-expect-error — plain .mjs module without type declarations
-import { selectAutoCuts, parseAcquisitionEvents } from '../src/utils/august-cut-selection-core.mjs';
+import { selectAutoMoves, parseAcquisitionEvents } from '../src/utils/august-cut-selection-core.mjs';
 import { fixtureData, fixtureAdp } from './fixtures/cut-watch-fixture';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -154,10 +154,22 @@ describe('fact sheet — mechanical rule is stated and computed (Layer 1 source)
   it('states the real rule in a dedicated block', async () => {
     const sheet = await buildFixtureFactSheet();
     expect(sheet).toContain('HOW THE DEADLINE AUTO-CUT ACTUALLY WORKS');
+    expect(sheet).toContain('Rookies are moved to open practice-squad spots FIRST');
     expect(sheet).toContain('NEWEST PICKUP FIRST');
     expect(sheet).toContain('Player value plays NO role');
     expect(sheet).toContain('Trades never count as pickups');
-    expect(sheet).toContain('Exactly the overage is cut');
+    expect(sheet).toContain('Exactly the overage is resolved');
+  });
+
+  it('previews the taxi phase: the earlier draft pick gets the one open practice-squad spot', async () => {
+    const sheet = await buildFixtureFactSheet();
+    const lines = sheet.split('\n');
+    const start = lines.findIndex((l: string) => l.includes('Rookies the SYSTEM will move to open practice-squad spots'));
+    expect(start).toBeGreaterThan(-1);
+    // One open spot (2 of 3 taxi slots used), two active rookies — the
+    // earlier league draft pick (Restrepo, 1.01) wins it. He is KEPT.
+    expect(lines[start + 1]).toContain('Kai Restrepo');
+    expect(lines[start + 2] ?? '').not.toMatch(/^\s+2\./);
   });
 
   it('computes the system auto-cut order with the real selection code: pickups newest-first, trades long-held', async () => {
@@ -165,32 +177,31 @@ describe('fact sheet — mechanical rule is stated and computed (Layer 1 source)
     const lines = sheet.split('\n');
     const start = lines.findIndex((l: string) => l.includes('What the SYSTEM will cut if nothing is marked'));
     expect(start).toBeGreaterThan(-1);
-    const preview = lines.slice(start + 1, start + 7);
+    const preview = lines.slice(start + 1, start + 6);
 
     // Newest pickup first: Okoye (Jul 22) → Brennan (Jul 15) → Whitlock
-    // (Jul 11) → Aduba (Jul 8), then long-held filler in roster order.
+    // (Jul 11) → Aduba (Jul 8), then the long-held pool in roster order —
+    // Halvorsen, the rookie who missed the last taxi spot.
     expect(preview[0]).toContain('Daniel Okoye');
     expect(preview[0]).toContain('waiver add Jul 22');
     expect(preview[1]).toContain('Tom Brennan');
     expect(preview[1]).toContain('FA add Jul 15');
     expect(preview[2]).toContain('James Whitlock');
     expect(preview[3]).toContain('Chike Aduba');
-    // Slots 5–6 come from the long-held pool (roster order) and must say so.
-    expect(preview[4]).toContain('Kai Restrepo');
+    expect(preview[4]).toContain('Gus Halvorsen');
     expect(preview[4]).toContain('long-held');
-    expect(preview[5]).toContain('Gus Halvorsen');
-    expect(preview[5]).toContain('long-held');
 
-    // The trade acquisitions never appear in the mechanical list — Traore is
-    // the single discriminating datapoint: value logic cuts him (worst
-    // value), recency-without-trade-scoping cuts him (newest acquisition),
-    // the real rule reaches him last.
+    // Restrepo was taxied, not cut; the trade acquisitions never appear —
+    // Traore is the single discriminating datapoint: value logic cuts him
+    // (worst value), recency-without-trade-scoping cuts him (newest
+    // acquisition), the real rule reaches him last.
     const previewText = preview.join('\n');
+    expect(previewText).not.toContain('Restrepo');
     expect(previewText).not.toContain('Traore');
     expect(previewText).not.toContain('Salas');
 
-    // Exactly the overage (6), never more.
-    expect(lines[start + 7] ?? '').not.toMatch(/^\s+7\./);
+    // Taxi (1) + cuts (5) resolve exactly the overage (6), never more.
+    expect(lines[start + 6] ?? '').not.toMatch(/^\s+6\./);
   });
 
   it('keeps the advisory list, labeled as editorial, with Traore on top (Layer 2 preserved)', async () => {
@@ -217,6 +228,7 @@ describe('fact sheet — mechanical rule is stated and computed (Layer 1 source)
     const sheet = await buildFixtureFactSheet(new Map([['9901', 6]]));
     expect(sheet).toContain('FILED');
     expect(sheet).not.toContain('What the SYSTEM will cut');
+    expect(sheet).not.toContain('Rookies the SYSTEM will move');
   });
 
   it('flags NONE ON FILE with the newest-pickup-first mechanic', async () => {
@@ -225,9 +237,14 @@ describe('fact sheet — mechanical rule is stated and computed (Layer 1 source)
     expect(sheet).toContain('auto-chosen newest-pickup-first at the deadline');
   });
 
-  it('the fact sheet itself contains no value-based auto-cut claim', async () => {
+  it('the fact sheet itself contains no value-based auto-cut claim (per line — its sentence unit)', async () => {
     const sheet = await buildFixtureFactSheet();
-    expect(findValueBasedAutoCutClaims(stripHtml(sheet))).toHaveLength(0);
+    // The fact sheet is line-structured, not prose: scanning it collapsed
+    // fuses unrelated lines into pseudo-sentences and false-positives.
+    const violations = sheet
+      .split('\n')
+      .flatMap((line: string) => findValueBasedAutoCutClaims(stripHtml(line)));
+    expect(violations, JSON.stringify(violations, null, 2)).toHaveLength(0);
   });
 
   it('degrades to all-long-held (never crashes) when the transactions feed is missing', async () => {
@@ -248,12 +265,13 @@ describe('user prompt — instruction contract (Layer 1 + Layer 2)', () => {
 
   it('forbids value-based mechanic claims outright', () => {
     expect(prompt).toContain('NEVER based on value');
-    expect(prompt).toMatch(/never say or imply the system targets the weakest/i);
+    expect(prompt).toMatch(/never\s+say or imply the system targets the weakest/i);
   });
 
   it('states the real mechanic for the model to repeat', () => {
     expect(prompt).toMatch(/NEWEST waiver\/FA\/auction pickups, newest first/);
-    expect(prompt).toMatch(/acquired by trade\s+are treated as long-held/);
+    expect(prompt).toMatch(/acquired by\s+trade are treated as long-held/);
+    expect(prompt).toMatch(/moves rookies into open\s+practice-squad spots/);
   });
 
   it('demands the two framings stay separate (no welded clause)', () => {
@@ -268,23 +286,29 @@ describe('user prompt — instruction contract (Layer 1 + Layer 2)', () => {
 });
 
 describe('fact-sheet preview matches the deadline job byte-for-byte (shared implementation)', () => {
-  it('selectAutoCuts on the fixture returns the exact preview set', () => {
+  it('selectAutoMoves on the fixture returns the exact taxi + cut sets', () => {
     const data = fixtureData();
     const events = data.transactions.transactions.transaction;
-    // Same parse path the fact sheet uses lives in the core module — assert
-    // the ground truth directly against selectAutoCuts so a drift in either
-    // caller shows up here.
+    // Same code the fact sheet AND the deadline job run — assert the ground
+    // truth directly against the core so a drift in either caller shows up.
     const roster = data.rosters.rosters.franchise[0];
-    const result = selectAutoCuts({
-      activeRoster: roster.player,
+    const rookieIds = ['9007', '9008']; // league draft order (1.01, 1.02)
+    const result = selectAutoMoves({
+      roster: roster.player,
+      rookieIds,
       markedPlayerIds: [],
       acquisitions: parseAcquisitionEvents(events),
       franchiseId: '9901',
     });
-    expect(result.cuts.map((c: any) => c.playerId).slice(0, 4)).toEqual([
-      '9002', '9004', '9005', '9006',
+    // One open taxi spot (2 of 3 used) → the earlier pick is saved.
+    expect(result.openTaxiSpots).toBe(1);
+    expect(result.taxiMoves.map((m: any) => m.playerId)).toEqual(['9007']);
+    // Cuts: the 4 pickups newest-first, then Halvorsen from the long-held
+    // pool. Taxi + cuts === overage (6).
+    expect(result.cuts.map((c: any) => c.playerId)).toEqual([
+      '9002', '9004', '9005', '9006', '9008',
     ]);
-    expect(result.cuts).toHaveLength(6);
+    expect(result.taxiMoves.length + result.cuts.length).toBe(result.overage);
     const cutIds = result.cuts.map((c: any) => c.playerId);
     expect(cutIds).not.toContain('9001'); // Traore — trade, long-held
     expect(cutIds).not.toContain('9003'); // Salas — trade, long-held

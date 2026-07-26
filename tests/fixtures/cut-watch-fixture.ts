@@ -23,9 +23,16 @@
  *     deadline job won't touch — the cleanest illustration of the
  *     advisory/mechanical split.
  *
- * Ground truth (team 9901, 28 active, limit 22, shed 6, nothing marked):
+ * The taxi dimension (July 2026 rule: rookies fill open practice-squad
+ * spots BEFORE anyone is cut): Restrepo and Halvorsen are ROOKIES (MFL
+ * status 'R'; league draft picks 1.01 / 1.02), and the roster carries two
+ * TAXI_SQUAD players already — exactly ONE open spot. So one rookie is
+ * saved (Restrepo, the earlier pick) and the other stays in the cut pool.
+ *
+ * Ground truth (team 9901, 28 active, limit 22, overage 6, nothing marked):
+ *   taxi     = Restrepo (rookie → the one open practice-squad spot; KEPT)
  *   auto-cut = Okoye, Brennan, Whitlock, Aduba (pickups, newest first),
- *              then Restrepo, Halvorsen (long-held pool, roster order).
+ *              then Halvorsen (long-held pool, roster order).
  *   Traore & Salas: never reached. NOTE: that holds because they sit at the
  *   END of the roster array — trades are long-held, not absolutely exempt.
  */
@@ -39,8 +46,8 @@ export function fixturePlayers() {
     { id: '9004', name: 'Brennan, Tom', position: 'TE' }, // FA Jul 15
     { id: '9005', name: 'Whitlock, James', position: 'RB' }, // waiver Jul 11
     { id: '9006', name: 'Aduba, Chike', position: 'WR' }, // FA Jul 8
-    { id: '9007', name: 'Restrepo, Kai', position: 'WR' }, // long-held
-    { id: '9008', name: 'Halvorsen, Gus', position: 'RB' }, // long-held
+    { id: '9007', name: 'Restrepo, Kai', position: 'WR', status: 'R' }, // ROOKIE (pick 1.01)
+    { id: '9008', name: 'Halvorsen, Gus', position: 'RB', status: 'R' }, // ROOKIE (pick 1.02)
     { id: '9009', name: 'Lindqvist, Per', position: 'TE' }, // long-held dead weight
     { id: '9010', name: 'Mbeki, Sam', position: 'WR' }, // long-held dead weight
   ];
@@ -66,15 +73,21 @@ export function fixtureData() {
         franchise: [
           {
             id: '9901',
-            player: fixturePlayers().map((p) => ({
-              id: p.id,
-              status: 'ROSTER',
-              // Traore is the cheapest roster spot so the salary tiebreak
-              // puts him at the top of the unranked advisory pile — the #1
-              // "should cut" while being a player the system never reaches.
-              salary: p.id === '9001' ? '425000' : '450000',
-              contractYear: '1',
-            })),
+            player: [
+              ...fixturePlayers().map((p) => ({
+                id: p.id,
+                status: 'ROSTER',
+                // Traore is the cheapest roster spot so the salary tiebreak
+                // puts him at the top of the unranked advisory pile — the #1
+                // "should cut" while being a player the system never reaches.
+                salary: p.id === '9001' ? '425000' : '450000',
+                contractYear: '1',
+              })),
+              // Two practice-squad players already — leaves ONE open taxi
+              // spot, so only one of the two active rookies can be saved.
+              { id: '9051', status: 'TAXI_SQUAD', salary: '225000', contractYear: '5' },
+              { id: '9052', status: 'TAXI_SQUAD', salary: '225000', contractYear: '5' },
+            ],
           },
         ],
       },
@@ -94,6 +107,17 @@ export function fixtureData() {
           // must NOT count as 9901's acquisition.
           { type: 'FREE_AGENT', timestamp: jul(2), franchise: '9902', transaction: '9003|,' },
         ],
+      },
+    },
+    draftResults: {
+      draftResults: {
+        draftUnit: {
+          draftType: 'SAME',
+          draftPick: [
+            { round: '01', pick: '01', player: '9007', franchise: '9901', timestamp: jul(1) },
+            { round: '01', pick: '02', player: '9008', franchise: '9901', timestamp: jul(1) },
+          ],
+        },
       },
     },
   };

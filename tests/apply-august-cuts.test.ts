@@ -363,6 +363,21 @@ describe('apply-august-cuts.mjs — source contracts (grep sentinels)', () => {
     expect(sentinelIndex).toBeLessThan(writeIndex);
   });
 
+  it('rookie taxi phase: runs before the cut loop, with its own dry-run guard', () => {
+    const taxiWriteIndex = source.indexOf('await postTaxiMove(');
+    const cutWriteIndex = source.indexOf('await postAddDrop(');
+    expect(taxiWriteIndex).toBeGreaterThan(-1);
+    expect(cutWriteIndex).toBeGreaterThan(-1);
+    // Rookies reach open practice-squad spots BEFORE anyone is cut.
+    expect(taxiWriteIndex).toBeLessThan(cutWriteIndex);
+    // Dry-run stops before the taxi write, same contract as the cut loop.
+    const taxiSentinel = source.indexOf('would POST taxi_squad');
+    expect(taxiSentinel).toBeGreaterThan(-1);
+    expect(taxiSentinel).toBeLessThan(taxiWriteIndex);
+    // The taxi write posts the owner-mode DEMOTE param, never PROMOTE.
+    expect(source).toContain("DEMOTE: `${playerId}`");
+  });
+
   it('never deletes autocut:{fid} cut lists — only completionCommands touches completion state', () => {
     expect(source).toContain('cut lists are never deleted');
     // No raw DEL of a cut-list key anywhere in the orchestrator.
