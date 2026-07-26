@@ -97,9 +97,15 @@ credential. Handling:
 New pure module `src/utils/august-cut-selection.ts`:
 
 ```
-selectAutoCuts({ activeRoster, markedPlayerIds, acquisitions, target = 22 })
-  → { cuts: PlayerId[], reason: Map<PlayerId, 'marked' | 'last-added'> }
+selectAutoMoves({ activeRoster, rookieIds, markedPlayerIds, acquisitions, target = 22, taxiLimit = 3 })
+  → { taxiMoves: [{ playerId, reason: 'rookie-taxi' }],
+      cuts: [{ playerId, reason: 'marked' | 'last-added', acquisitionTimestamp? }],
+      activeCount, overage, openTaxiSpots, target }
 ```
+
+(`selectAutoCuts` remains as the cut-only inner phase; every consumer —
+deadline job, Cutdown Plan panel, admin report, Cut Watch fact sheet —
+calls `selectAutoMoves` so the rookie taxi phase is never skipped.)
 
 > **Amendment (July 2026, decided):** rookie taxi moves come BEFORE any cut.
 > Active-roster rookies (MFL `status === 'R'`) fill open practice-squad

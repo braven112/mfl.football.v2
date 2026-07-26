@@ -35,6 +35,12 @@
  *              then Halvorsen (long-held pool, roster order).
  *   Traore & Salas: never reached. NOTE: that holds because they sit at the
  *   END of the roster array — trades are long-held, not absolutely exempt.
+ *
+ * Not exercised here (covered by tests/august-cut-selection.test.ts): an
+ * owner MARKING a rookie removes him from taxi eligibility — marked means
+ * "cut him", so with marked=['9007'] the taxi spot would go to Halvorsen
+ * and Restrepo would be the first cut. This fixture keeps marked empty on
+ * purpose (the NONE-ON-FILE branch is the one the bug shipped under).
  */
 
 // Mid-day UTC so the PT calendar date is stable.

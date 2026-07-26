@@ -11,8 +11,9 @@
  * 2026 regression: a shipped article claimed "the system picks the weakest
  * combined-value players first"):
  *   - ADVISORY: the combined-value cut candidates (editorial — who SHOULD go)
- *   - MECHANICAL: the deadline auto-cut order, computed by the same
- *     selectAutoCuts the deadline job runs (newest waiver/FA/auction pickup
+ *   - MECHANICAL: the deadline auto-move plan, computed by the same
+ *     selectAutoMoves the deadline job runs (rookies to open practice-squad
+ *     spots first — kept, not cut; then cuts newest waiver/FA/auction pickup
  *     first; trades treated as long-held; value plays no role)
  * tests/cut-watch-auto-cut-rule.test.ts locks the prompt language and scans
  * the shipped feed with a value-claim detector; tests/eval/cut-watch.eval.ts
