@@ -24,6 +24,7 @@ import {
   type FixtureCase,
 } from '../scripts/lib/roger-improvement';
 import { runFormatChecks, runRegexChecks, parseJudgeJson } from '../scripts/lib/roger-graders';
+import { RULEBOOK_ANCHORS } from '../src/data/rules-qa-system-prompt';
 
 function qa(id: string, overrides: Partial<RulesQA> = {}): RulesQA {
   return {
@@ -167,7 +168,7 @@ describe('promoteCases', () => {
   };
 
   it('promotes a reviewed proposal and removes it from the queue', () => {
-    const result = promoteCases([reviewedProposal], ['live-qa_ok'], []);
+    const result = promoteCases([reviewedProposal], ['live-qa_ok'], [], RULEBOOK_ANCHORS);
     expect(result.errors).toEqual([]);
     expect(result.promoted.map((c) => c.id)).toEqual(['live-qa_ok']);
     expect(result.remainingProposals).toEqual([]);
@@ -175,7 +176,7 @@ describe('promoteCases', () => {
 
   it('refuses unreviewed proposals — the human gate is mechanical', () => {
     const unreviewed = { ...reviewedProposal, reviewed: false };
-    const result = promoteCases([unreviewed], ['live-qa_ok'], []);
+    const result = promoteCases([unreviewed], ['live-qa_ok'], [], RULEBOOK_ANCHORS);
     expect(result.promoted).toEqual([]);
     expect(result.errors[0]).toContain('not reviewed');
     expect(result.remainingProposals).toHaveLength(1);
@@ -183,7 +184,7 @@ describe('promoteCases', () => {
 
   it('refuses id collisions with the existing fixture', () => {
     const existing: FixtureCase[] = [{ id: 'live-qa_ok', category: 'fact-lookup', question: 'q?', judge: false }];
-    const result = promoteCases([reviewedProposal], ['live-qa_ok'], existing);
+    const result = promoteCases([reviewedProposal], ['live-qa_ok'], existing, RULEBOOK_ANCHORS);
     expect(result.promoted).toEqual([]);
     expect(result.errors[0]).toContain('already has a case');
   });
@@ -193,30 +194,30 @@ describe('promoteCases', () => {
       ...reviewedProposal,
       case: { ...reviewedProposal.case, reference: '  ' },
     };
-    expect(promoteCases([noRef], ['live-qa_ok'], []).errors[0]).toContain('needs a reference');
+    expect(promoteCases([noRef], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('needs a reference');
 
     const noNow = {
       ...reviewedProposal,
       case: { ...reviewedProposal.case, category: 'date-sensitive' },
     };
-    expect(promoteCases([noNow], ['live-qa_ok'], []).errors[0]).toContain('needs "now"');
+    expect(promoteCases([noNow], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('needs "now"');
   });
 
   it('reports unknown proposal ids', () => {
-    expect(promoteCases([], ['ghost'], []).errors[0]).toContain('no such proposal');
+    expect(promoteCases([], ['ghost'], [], RULEBOOK_ANCHORS).errors[0]).toContain('no such proposal');
   });
 
   // These mirror tests/roger-eval-cases.test.ts. A human edits proposals before
   // promoting, so without these a promotion could red the CI suite.
   it('refuses a question outside the 10-500 character range', () => {
     const short = { ...reviewedProposal, case: { ...reviewedProposal.case, question: 'short?' } };
-    expect(promoteCases([short], ['live-qa_ok'], []).errors[0]).toContain('10-500 characters');
+    expect(promoteCases([short], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('10-500 characters');
 
     const long = {
       ...reviewedProposal,
       case: { ...reviewedProposal.case, question: `${'x'.repeat(501)}?` },
     };
-    expect(promoteCases([long], ['live-qa_ok'], []).errors[0]).toContain('10-500 characters');
+    expect(promoteCases([long], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('10-500 characters');
   });
 
   it('refuses an uncompilable regex grader', () => {
@@ -224,7 +225,7 @@ describe('promoteCases', () => {
       ...reviewedProposal,
       case: { ...reviewedProposal.case, mustMatch: ['unclosed(group'] },
     };
-    expect(promoteCases([bad], ['live-qa_ok'], []).errors[0]).toContain('invalid regex');
+    expect(promoteCases([bad], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('invalid regex');
   });
 
   it('refuses an expectedAnchor outside the whitelist', () => {
@@ -247,13 +248,13 @@ describe('promoteCases', () => {
       ...reviewedProposal,
       case: { ...reviewedProposal.case, judge: false, reference: undefined },
     };
-    expect(promoteCases([noGraders], ['live-qa_ok'], []).errors[0]).toContain('at least one');
+    expect(promoteCases([noGraders], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('at least one');
 
     const badNow = {
       ...reviewedProposal,
       case: { ...reviewedProposal.case, category: 'date-sensitive', now: '07/04/2026' },
     };
-    expect(promoteCases([badNow], ['live-qa_ok'], []).errors[0]).toContain('YYYY-MM-DD');
+    expect(promoteCases([badNow], ['live-qa_ok'], [], RULEBOOK_ANCHORS).errors[0]).toContain('YYYY-MM-DD');
   });
 });
 

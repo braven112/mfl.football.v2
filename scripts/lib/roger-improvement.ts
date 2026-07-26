@@ -201,7 +201,12 @@ export function promoteCases(
   proposals: ProposedCase[],
   ids: string[],
   fixtureCases: FixtureCase[],
-  anchors: readonly string[] = []
+  /**
+   * The RULEBOOK_ANCHORS whitelist. Required, not defaulted: an accidental
+   * empty list would silently reject every valid `expectedAnchor`, and a
+   * "safe" default is exactly how that regression would go unnoticed.
+   */
+  anchors: readonly string[]
 ): PromotionResult {
   const promoted: FixtureCase[] = [];
   const errors: string[] = [];
