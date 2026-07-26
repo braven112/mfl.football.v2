@@ -16,7 +16,18 @@ export interface CheckResult {
 // counts don't produce flaky failures.
 export const WORD_LIMIT = 320;
 
-export const LINK_RE = /\[Read the full rule(?:book)?\]\(\/theleague\/rules(#[a-z0-9-]+)?\)/;
+/**
+ * The two link forms the prompt permits, anchored to the WHOLE last line —
+ * the contract is "a rulebook link on its own line", so trailing prose or a
+ * sentence wrapped around the link is a violation, not a pass.
+ *
+ * The two forms are not interchangeable: a section link must carry an anchor
+ * ("Read the full rule"), and the no-match fallback must not ("Read the full
+ * rulebook"). An unanchored `[Read the full rule](/theleague/rules)` is
+ * neither and fails.
+ */
+export const SECTION_LINK_RE = /^\[Read the full rule\]\(\/theleague\/rules(#[a-z0-9-]+)\)$/;
+export const FALLBACK_LINK_RE = /^\[Read the full rulebook\]\(\/theleague\/rules\)$/;
 
 /**
  * Format-contract checks every Roger answer must satisfy: rulebook link on
@@ -32,14 +43,16 @@ export function runFormatChecks(
 
   const lines = answer.trim().split('\n');
   const lastLine = (lines[lines.length - 1] ?? '').trim();
-  const linkMatch = lastLine.match(LINK_RE);
+  const sectionMatch = lastLine.match(SECTION_LINK_RE);
+  const isFallback = FALLBACK_LINK_RE.test(lastLine);
   checks.push({
     name: 'format:link-on-last-line',
-    pass: Boolean(linkMatch),
-    detail: linkMatch ? undefined : `last line was: ${JSON.stringify(lastLine)}`,
+    pass: Boolean(sectionMatch) || isFallback,
+    detail:
+      sectionMatch || isFallback ? undefined : `last line was: ${JSON.stringify(lastLine)}`,
   });
 
-  const anchor = linkMatch?.[1];
+  const anchor = sectionMatch?.[1];
   if (anchor) {
     checks.push({
       name: 'format:anchor-in-whitelist',

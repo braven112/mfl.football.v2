@@ -264,6 +264,41 @@ describe('shared graders', () => {
     expect(checks.every((c) => c.pass)).toBe(true);
   });
 
+  it('requires the link to be the ENTIRE last line', () => {
+    const trailing = 'x\n\n[Read the full rule](/theleague/rules#trades) — good luck!';
+    expect(
+      runFormatChecks(trailing, ['#trades']).find((c) => c.name === 'format:link-on-last-line')?.pass
+    ).toBe(false);
+
+    const leading = 'x\n\nMore info here: [Read the full rule](/theleague/rules#trades)';
+    expect(
+      runFormatChecks(leading, ['#trades']).find((c) => c.name === 'format:link-on-last-line')?.pass
+    ).toBe(false);
+  });
+
+  it('enforces the rule/rulebook pairing with the anchor', () => {
+    // Fallback form: "rulebook", no anchor.
+    const fallback = 'x\n\n[Read the full rulebook](/theleague/rules)';
+    expect(
+      runFormatChecks(fallback, ['#trades']).every((c) => c.pass)
+    ).toBe(true);
+
+    // "rule" (singular) without an anchor is neither permitted form.
+    const unanchored = 'x\n\n[Read the full rule](/theleague/rules)';
+    expect(
+      runFormatChecks(unanchored, ['#trades']).find((c) => c.name === 'format:link-on-last-line')
+        ?.pass
+    ).toBe(false);
+
+    // "rulebook" WITH an anchor is also not a permitted form.
+    const rulebookAnchored = 'x\n\n[Read the full rulebook](/theleague/rules#trades)';
+    expect(
+      runFormatChecks(rulebookAnchored, ['#trades']).find(
+        (c) => c.name === 'format:link-on-last-line'
+      )?.pass
+    ).toBe(false);
+  });
+
   it('fails a missing link, a non-whitelisted anchor, and a busted word budget', () => {
     expect(
       runFormatChecks('No link here.', ['#trades']).find((c) => c.name === 'format:link-on-last-line')?.pass
