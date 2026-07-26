@@ -401,6 +401,14 @@ const cards = teams
           } else if (status.startsWith('cut-verified') || status === 'already-gone') {
             state = 'done';
             badge = `✓ ${status}`;
+          } else if (status.startsWith('taxi-') || status === 'already-moved') {
+            // Rookie taxi outcomes — this player was KEPT (moved to the
+            // practice squad), the opposite of a cut. Without this branch a
+            // taxied rookie under a failed franchise reads "not attempted"
+            // and the manual-cleanup callout tells the commissioner to cut
+            // a player the automation deliberately saved.
+            state = 'done';
+            badge = '✓ moved to practice squad (kept)';
           } else if (status.startsWith('failed')) {
             state = 'failed';
             badge = `✗ ${status}`;

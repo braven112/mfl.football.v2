@@ -83,6 +83,7 @@ async function generateFromRealData(): Promise<{ article: Article; factSheet: st
     players: load('players'),
     league: load('league'),
     transactions: load('transactions'),
+    draftResults: load('draftResults'),
   };
   const { factSheet } = await buildFactSheet(data, 0, 2026, repoRoot, {
     league: 'theleague',

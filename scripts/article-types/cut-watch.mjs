@@ -136,21 +136,25 @@ export function guardSeason(week, year, now) {
  * ids NEVER enter the fact sheet, so the AI cannot leak an owner's actual
  * cut list into a league-visible article.
  */
-async function loadCutdownPlans(fids) {
+async function loadCutdownPlans(franchises) {
   const redis = getRedisConfig();
   if (!redis) return null;
   const planYear = ptDateParts().year;
   const plans = new Map();
   try {
-    for (const fid of fids) {
+    for (const { fid, activeIds } of franchises) {
       const raw = await redisCommand(redis, ['GET', `autocut:${normalizeFranchiseId(fid)}`]);
       let list = raw;
       if (typeof raw === 'string') {
         try { list = JSON.parse(raw); } catch { list = null; }
       }
+      // Count only marked ids still on the ACTIVE roster — a marked player
+      // since traded/cut/taxied no longer covers any of the overage (the
+      // deadline job prunes them the same way), so counting them would
+      // credit a plan that no longer covers.
       const marked =
         list && typeof list === 'object' && list.year === planYear && Array.isArray(list.playerIds)
-          ? list.playerIds.length
+          ? list.playerIds.filter((id) => activeIds.has(`${id}`)).length
           : 0;
       plans.set(fid, marked);
     }
@@ -317,6 +321,7 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
       cutCandidates: cutCandidates.slice(0, Math.max(over + 2, 3)),
       autoTaxiPreview,
       autoCutPreview,
+      activeIds: new Set(activeRoster.map((p) => `${p.id}`)),
     };
 
     if (over > 0) overLimit.push(entry);
@@ -334,7 +339,7 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   const plans = opts.cutdownPlans !== undefined
     ? opts.cutdownPlans
     : (league === DEFAULT_LEAGUE_SLUG && isCutWindow(now)
-        ? await loadCutdownPlans(overLimit.map((e) => e.fid))
+        ? await loadCutdownPlans(overLimit.map((e) => ({ fid: e.fid, activeIds: e.activeIds })))
         : null);
 
   if (overLimit.length > 0) {
@@ -366,7 +371,11 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
         if (marked >= e.over) {
           lines.push(`  Cutdown plan: FILED — this owner has already marked ${marked} player${marked === 1 ? '' : 's'} for auto-cut (plans made, covers the overage)`);
         } else if (marked > 0) {
-          lines.push(`  Cutdown plan: PARTIAL — ${marked} of ${e.over} needed cuts marked; auto-cut picks the remaining ${e.over - marked} newest-acquisition-first at the deadline`);
+          // No precise split here: marked ids are private, so the taxi/cut
+          // interplay with the owner's actual list can't be computed.
+          lines.push(`  Cutdown plan: PARTIAL — ${marked} of ${e.over} needed moves marked; the automation resolves the rest at the deadline (rookies to open practice-squad spots first, then newest pickups)`);
+        } else if (e.autoTaxiPreview.length > 0) {
+          lines.push(`  Cutdown plan: NONE ON FILE — this owner has not made their picks; at the deadline the automation would move ${e.autoTaxiPreview.length} rookie${e.autoTaxiPreview.length === 1 ? '' : 's'} to the practice squad and auto-choose ${e.autoCutPreview.length} cut${e.autoCutPreview.length === 1 ? '' : 's'} newest-pickup-first`);
         } else {
           lines.push(`  Cutdown plan: NONE ON FILE — this owner has not made their picks; all ${e.over} cuts would be auto-chosen newest-pickup-first at the deadline`);
         }

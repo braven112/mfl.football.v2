@@ -67,6 +67,30 @@ describe('value-based auto-cut detector (Layer 1)', () => {
     }
   });
 
+  it('fires on salary-based mechanic claims — the likely phrasing when ADP feeds are down', () => {
+    const salaryClaims = [
+      'The system automatically cuts your cheapest contracts and lowest-salary players first.',
+      "If you don't file, the machine sheds the lowest-paid guys on the roster.",
+    ];
+    for (const s of salaryClaims) {
+      expect(findValueBasedAutoCutClaims(s), s).toHaveLength(1);
+    }
+  });
+
+  it('fires when a negator in the sentence does not actually bind the value claim', () => {
+    // "regardless of your roster" negates roster context, not the value
+    // logic — the trailing negation escape must not be fooled by it.
+    const s = "If you don't file a plan, the system cuts your weakest players regardless of your roster.";
+    expect(findValueBasedAutoCutClaims(s), s).toHaveLength(1);
+  });
+
+  it('normalizes curly apostrophes — correct negated copy stays clean either way', () => {
+    // LLMs routinely emit typographic apostrophes; "doesn’t" must negate
+    // exactly like "doesn't" or correct shipped copy fails the feed gate.
+    const curly = 'The system doesn’t shop by value — it cuts your newest pickups first.';
+    expect(findValueBasedAutoCutClaims(curly), curly).toHaveLength(0);
+  });
+
   it('does not fire on advisory value framing without a mechanism (Layer 2 preserved)', () => {
     const advisory = [
       'Likely cut candidates, weakest combined value first: Lindqvist, Mbeki, Ferraro.',
@@ -231,10 +255,16 @@ describe('fact sheet — mechanical rule is stated and computed (Layer 1 source)
     expect(sheet).not.toContain('Rookies the SYSTEM will move');
   });
 
-  it('flags NONE ON FILE with the newest-pickup-first mechanic', async () => {
+  it('flags NONE ON FILE with the taxi-aware mechanic counts', async () => {
     const sheet = await buildFixtureFactSheet();
     expect(sheet).toContain('NONE ON FILE');
-    expect(sheet).toContain('auto-chosen newest-pickup-first at the deadline');
+    // 6 over, 1 open taxi spot → 1 rookie saved, 5 cuts. The old copy said
+    // "all 6 cuts would be auto-chosen" — a false mechanical claim for a
+    // team with taxi-eligible rookies (the class of bug this suite exists
+    // to kill).
+    expect(sheet).toContain(
+      'move 1 rookie to the practice squad and auto-choose 5 cuts newest-pickup-first'
+    );
   });
 
   it('the fact sheet itself contains no value-based auto-cut claim (per line — its sentence unit)', async () => {

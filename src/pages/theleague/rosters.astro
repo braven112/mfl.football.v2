@@ -10236,7 +10236,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const n = slate.cuts.length;
         footerEl.innerHTML =
           n === 0
-            ? `You're at the limit — nothing will be cut. Your marked order is kept in case your roster grows.`
+            ? taxiCount > 0
+              ? `Your ${taxiCount} rookie${taxiCount === 1 ? '' : 's'} cover${taxiCount === 1 ? 's' : ''} the overage — ` +
+                `moved to the practice squad at the deadline, nothing is cut.`
+              : `You're at the limit — nothing will be cut. Your marked order is kept in case your roster grows.`
             : `These <strong>${n}</strong> cut${n === 1 ? '' : 's'} free <strong>${_capSpaceFmt.format(totalSavings)}</strong>, ` +
               `cost <strong>${_capSpaceFmt.format(totalDead)}</strong> in dead cap`;
       }

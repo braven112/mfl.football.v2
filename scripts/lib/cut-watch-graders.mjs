@@ -41,6 +41,9 @@ const VALUE_PATTERNS = [
   'lowest[- ]rated', 'lowest[- ]valued?', 'least valuable', 'dead weight',
   'deadweight', 'rated', 'ratings?', 'unranked', 'worth(?:less)?', 'projections?',
   'adp', 'bottom[- ]of[- ]the[- ]roster', 'scrubs?', 'bench fodder',
+  // Salary is a value proxy — and the LIKELY phrasing when the ADP feeds are
+  // down, because the advisory fallback is salary-ordered.
+  'salar(?:y|ies)', 'cheapest', 'lowest[- ]paid', 'priciest',
 ];
 
 const MECHANISM_PATTERNS = [
@@ -65,12 +68,22 @@ const ACTION_RE = group(ACTION_PATTERNS);
 const VALUE_RE = group(VALUE_PATTERNS);
 const MECHANISM_RE = group(MECHANISM_PATTERNS);
 
-// Negator within 3 words BEFORE a value term ("not the weakest",
-// "regardless of value") or a value term within 3 words before a negator
-// ("value plays no role", "value doesn't matter").
+// Negation that actually BINDS the value claim, in either direction:
+//  - negator within 3 words before a value term ("not the weakest",
+//    "regardless of value", "ignores value");
+//  - value term followed by a value-negating VERB PHRASE ("value plays no
+//    role", "value doesn't matter", "salary is irrelevant"). The trailing
+//    direction deliberately uses this narrow verb list, not the full
+//    negator set — "cuts your weakest players regardless of your roster"
+//    pairs a value term with a negator that negates something else, and
+//    must still be flagged.
+const VALUE_NEGATING_PHRASE =
+  "(?:plays? no|matters? not|doesn'?t matter|does not matter|is irrelevant|" +
+  "isn'?t (?:a factor|considered|part)|has nothing to do|has no (?:role|say|bearing)|" +
+  'means nothing|carries no weight|is (?:ignored|not considered)|be damned)';
 const NEGATED_VALUE_RE = new RegExp(
   `\\b${NEGATORS}\\b(?:\\s+\\S+){0,3}?\\s*\\b(?:${VALUE_PATTERNS.join('|')})\\b` +
-    `|\\b(?:${VALUE_PATTERNS.join('|')})\\b(?:\\s+\\S+){0,3}?\\s*\\b${NEGATORS}\\b`,
+    `|\\b(?:${VALUE_PATTERNS.join('|')})\\b(?:\\s+\\S+){0,3}?\\s*\\b${VALUE_NEGATING_PHRASE}\\b`,
   'i'
 );
 
@@ -84,9 +97,21 @@ const NEGATED_MECHANISM_RE = new RegExp(
   'i'
 );
 
-/** Strip HTML tags and collapse whitespace. */
+/**
+ * Normalize typography the lexicons assume: LLMs routinely emit curly
+ * apostrophes/quotes, and `doesn’t` must negate exactly like `doesn't` —
+ * otherwise correct copy trips the CI feed gate on a smart quote.
+ */
+function normalizeTypography(text) {
+  return String(text ?? '')
+    .replace(/[‘’ʼ]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/&#8217;|&#39;|&rsquo;/g, "'");
+}
+
+/** Strip HTML tags, decode common entities, collapse whitespace. */
 export function stripHtml(html) {
-  return String(html ?? '')
+  return normalizeTypography(html)
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -112,7 +137,7 @@ export function splitSentences(text) {
  */
 export function findValueBasedAutoCutClaims(text) {
   const violations = [];
-  for (const sentence of splitSentences(text)) {
+  for (const sentence of splitSentences(normalizeTypography(text))) {
     const action = sentence.match(ACTION_RE);
     const value = sentence.match(VALUE_RE);
     const mechanism = sentence.match(MECHANISM_RE);

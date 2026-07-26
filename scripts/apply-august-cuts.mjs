@@ -594,6 +594,7 @@ async function runRehearse({ redis, year, plans, cutdownDate, dryRun }) {
 
   const summary = {
     overLimit: plans.length,
+    plannedTaxiMoves: totalTaxi,
     plannedCuts: totalCuts,
     plannedSalaryFreed: totalSalary,
   };
@@ -740,9 +741,18 @@ async function runExecution({ redis, year, plans, allFranchiseIds, names, acquis
       const freshPlayers = freshRosters.get(fid);
       if (!freshPlayers) throw new Error('degraded roster read (franchise missing)');
 
+      // LAST-ATTEMPT DEGRADATION: if earlier ticks failed (e.g. MFL keeps
+      // rejecting the taxi write), the final attempt drops the taxi phase
+      // (rookieIds: []) and runs pure cuts — the pre-taxi-rule behavior that
+      // is known to work. A stuck taxi move must never leave a roster over
+      // the limit when cutting alone could have fixed it.
+      const finalAttempt = decision.attempt >= MAX_ATTEMPTS;
+      if (finalAttempt) {
+        console.warn(`${TAG} ${fid} ${name}: final attempt — skipping taxi phase, cuts only`);
+      }
       const slate = selectAutoMoves({
         roster: freshPlayers,
-        rookieIds,
+        rookieIds: finalAttempt ? [] : rookieIds,
         markedPlayerIds: plan.markedList?.playerIds ?? [],
         acquisitions,
         franchiseId: fid,
@@ -810,15 +820,21 @@ async function runExecution({ redis, year, plans, allFranchiseIds, names, acquis
         await sleep(750);
 
         // Verify by re-reading the roster: the player must now be TAXI_SQUAD
-        // (or off the active roster entirely, if the owner raced us).
+        // (or off the active roster entirely, if the owner raced us). The
+        // rosters endpoint can lag writes (documented for drops in
+        // docs/claude/insights/domains/mfl-api.md), so retry the read once
+        // before burning an attempt on a stale response.
         let verified = false;
-        try {
-          const afterRosters = await fetchRosters(year, fid);
-          const after = afterRosters.get(fid) ?? [];
-          const afterStatus = after.find((p) => p.id === pid)?.status;
-          verified = afterStatus !== ACTIVE_ROSTER_STATUS;
-        } catch (err) {
-          console.warn(`${TAG} verify roster read failed for ${fid}: ${err.message}`);
+        for (let read = 0; read < 2 && !verified; read += 1) {
+          if (read > 0) await sleep(2_000);
+          try {
+            const afterRosters = await fetchRosters(year, fid);
+            const after = afterRosters.get(fid) ?? [];
+            const afterStatus = after.find((p) => p.id === pid)?.status;
+            verified = afterStatus !== ACTIVE_ROSTER_STATUS;
+          } catch (err) {
+            console.warn(`${TAG} verify roster read failed for ${fid}: ${err.message}`);
+          }
         }
 
         if (verified) {
