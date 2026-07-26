@@ -74,9 +74,24 @@ export interface ProposedCase {
  * deterministically, capped at `limit` to bound per-run spend.
  */
 export function selectAuditTargets(qas: RulesQA[], ledger: AuditLedger, limit: number): RulesQA[] {
+  const audited = ledger.audited ?? {};
+  const sortKey = (iso: string): number => {
+    const t = new Date(iso).getTime();
+    // Undated/garbage records sort last rather than poisoning the comparator.
+    return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+  };
   return qas
-    .filter((qa) => !qa.isPreSeeded && !ledger.audited[qa.id])
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .filter(
+      (qa) =>
+        qa &&
+        typeof qa.id === 'string' &&
+        typeof qa.question === 'string' &&
+        typeof qa.answer === 'string' &&
+        !qa.isPreSeeded &&
+        // Own-property check: a Q&A id of "constructor" must not read as audited.
+        !Object.hasOwn(audited, qa.id)
+    )
+    .sort((a, b) => sortKey(a.createdAt) - sortKey(b.createdAt))
     .slice(0, Math.max(0, limit));
 }
 
@@ -97,14 +112,21 @@ export function recordAudit(
   };
 }
 
-/** PT calendar date (YYYY-MM-DD) for an ISO timestamp — the "today" Roger saw. */
-export function ptDateOf(isoTimestamp: string): string {
+/**
+ * PT calendar date (YYYY-MM-DD) for an ISO timestamp — the "today" Roger saw.
+ * Returns null for a missing/garbage timestamp: `Intl.format` throws a
+ * RangeError on an invalid Date, and one bad Redis record must not take down
+ * a whole audit run.
+ */
+export function ptDateOf(isoTimestamp: string): string | null {
+  const d = new Date(isoTimestamp);
+  if (Number.isNaN(d.getTime())) return null;
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Los_Angeles',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date(isoTimestamp));
+  }).format(d);
 }
 
 /**
@@ -126,9 +148,14 @@ export function draftProposedCase(qa: RulesQA, finding: JudgeFinding, proposedAt
     reference: finding.suggestedReference,
   };
   // Date-sensitive behavior only reproduces with the clock Roger actually had.
+  // Without a usable timestamp the case can't be date-sensitive (promotion
+  // would reject it), so leave it in its content category for human triage.
   if (category === 'date-sensitive' || finding.failedDimensions.includes('date-handling')) {
-    fixtureCase.category = 'date-sensitive';
-    fixtureCase.now = ptDateOf(qa.createdAt);
+    const now = ptDateOf(qa.createdAt);
+    if (now) {
+      fixtureCase.category = 'date-sensitive';
+      fixtureCase.now = now;
+    }
   }
 
   return {
@@ -173,7 +200,8 @@ export interface PromotionResult {
 export function promoteCases(
   proposals: ProposedCase[],
   ids: string[],
-  fixtureCases: FixtureCase[]
+  fixtureCases: FixtureCase[],
+  anchors: readonly string[] = []
 ): PromotionResult {
   const promoted: FixtureCase[] = [];
   const errors: string[] = [];
@@ -203,6 +231,39 @@ export function promoteCases(
     }
     if (proposal.case.category === 'date-sensitive' && !proposal.case.now) {
       errors.push(`${id}: date-sensitive case needs "now"`);
+      continue;
+    }
+    // The remaining checks mirror tests/roger-eval-cases.test.ts. A human edits
+    // the reference (and sometimes the graders) before promoting, so these can
+    // genuinely be violated — without them a promotion could red the CI suite.
+    const q = proposal.case.question?.trim() ?? '';
+    if (q.length < 10 || proposal.case.question.length > 500) {
+      errors.push(`${id}: question must be 10-500 characters (got ${proposal.case.question.length})`);
+      continue;
+    }
+    const patterns = [...(proposal.case.mustMatch ?? []), ...(proposal.case.mustNotMatch ?? [])];
+    const badPattern = patterns.find((p) => {
+      try {
+        new RegExp(p, 'im');
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    if (badPattern !== undefined) {
+      errors.push(`${id}: invalid regex ${JSON.stringify(badPattern)}`);
+      continue;
+    }
+    if (proposal.case.expectedAnchor && !anchors.includes(proposal.case.expectedAnchor)) {
+      errors.push(`${id}: expectedAnchor "${proposal.case.expectedAnchor}" is not in RULEBOOK_ANCHORS`);
+      continue;
+    }
+    if (!proposal.case.judge && patterns.length === 0) {
+      errors.push(`${id}: non-judged case needs at least one mustMatch/mustNotMatch grader`);
+      continue;
+    }
+    if (proposal.case.now && !/^\d{4}-\d{2}-\d{2}$/.test(proposal.case.now)) {
+      errors.push(`${id}: "now" must be YYYY-MM-DD`);
       continue;
     }
     promoted.push(proposal.case);

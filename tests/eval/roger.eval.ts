@@ -136,11 +136,28 @@ if (!process.env.ANTHROPIC_API_KEY) {
   describe('roger eval', () => {
     for (const c of cases) {
       it.concurrent(`${c.category} › ${c.id}`, async () => {
-        const answer = await generateRulesAnswer(c.question, {
-          systemPrompt: THELEAGUE_RULES_QA_SYSTEM_PROMPT,
-          dateBlockSuffix: THELEAGUE_RULES_QA_DATE_SUFFIX,
-          now: c.now ? ptNoon(c.now) : undefined,
-        });
+        // Record an API/judge failure as a failed case instead of letting the
+        // throw skip the push below — otherwise the case vanishes from
+        // `results` and the summary divides by a shrunken denominator,
+        // printing e.g. 36/36 (100%) when 10 of 46 cases never ran.
+        let answer: string;
+        try {
+          answer = await generateRulesAnswer(c.question, {
+            systemPrompt: THELEAGUE_RULES_QA_SYSTEM_PROMPT,
+            dateBlockSuffix: THELEAGUE_RULES_QA_DATE_SUFFIX,
+            now: c.now ? ptNoon(c.now) : undefined,
+          });
+        } catch (err) {
+          results.push({
+            id: c.id,
+            category: c.category,
+            question: c.question,
+            answer: '',
+            checks: [{ name: 'answer:generation', pass: false, detail: (err as Error).message }],
+            pass: false,
+          });
+          throw err;
+        }
 
         const checks = runDeterministicChecks(c, answer);
         if (c.judge) checks.push(await judgeAnswer(c, answer));
@@ -169,13 +186,19 @@ if (!process.env.ANTHROPIC_API_KEY) {
     afterAll(() => {
       if (results.length === 0) return;
 
+      // Seed every category from the fixture so a case that never reported
+      // (vitest timeout, worker crash) still counts against its denominator.
       const byCategory = new Map<string, { pass: number; total: number }>();
-      for (const r of results) {
-        const row = byCategory.get(r.category) ?? { pass: 0, total: 0 };
+      for (const c of cases) {
+        const row = byCategory.get(c.category) ?? { pass: 0, total: 0 };
         row.total += 1;
-        if (r.pass) row.pass += 1;
-        byCategory.set(r.category, row);
+        byCategory.set(c.category, row);
       }
+      for (const r of results) {
+        const row = byCategory.get(r.category);
+        if (row && r.pass) row.pass += 1;
+      }
+      const unreported = cases.length - results.length;
 
       const summary = [...byCategory.entries()].map(([category, { pass, total }]) => ({
         category,
@@ -189,7 +212,14 @@ if (!process.env.ANTHROPIC_API_KEY) {
       // eslint-disable-next-line no-console
       console.table(summary);
       // eslint-disable-next-line no-console
-      console.log(`Overall: ${overall}/${results.length} (${Math.round((overall / results.length) * 100)}%)`);
+      console.log(`Overall: ${overall}/${cases.length} (${Math.round((overall / cases.length) * 100)}%)`);
+      if (unreported > 0) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `WARNING: ${unreported} case(s) never reported a result and are counted as failures. ` +
+            'Pass rates are a floor, not a measurement — investigate before comparing runs.'
+        );
+      }
 
       const here = dirname(fileURLToPath(import.meta.url));
       const reportPath = join(here, 'report-latest.json');
@@ -201,7 +231,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
             generatedAt: new Date().toISOString(),
             model: 'claude-haiku-4-5-20251001',
             judgeModel: JUDGE_MODEL,
-            overall: { pass: overall, total: results.length },
+            overall: { pass: overall, total: cases.length, unreported },
             categories: Object.fromEntries(byCategory),
             results,
           },

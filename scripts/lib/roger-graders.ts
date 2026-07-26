@@ -55,7 +55,14 @@ export function runFormatChecks(
     });
   }
 
-  const wordCount = answer.trim().split(/\s+/).length;
+  // `''.split(/\s+/)` yields [''] — length 1 — so count words explicitly or an
+  // empty answer looks like a 1-word answer that passes the budget.
+  const trimmed = answer.trim();
+  const wordCount = trimmed === '' ? 0 : trimmed.split(/\s+/).length;
+  checks.push({
+    name: 'format:non-empty',
+    pass: wordCount > 0,
+  });
   checks.push({
     name: 'format:word-budget',
     pass: wordCount <= WORD_LIMIT,
@@ -87,15 +94,32 @@ export function runRegexChecks(
   return checks;
 }
 
-/** Parse a model's JSON verdict, tolerating stray code fences. Null on failure. */
+/**
+ * Parse a model's JSON verdict, tolerating a wrapping code fence and any
+ * prose the model put around it. Null on failure.
+ *
+ * Anchored to the whole string (no `m` flag) so a fence appearing *inside* a
+ * field can't be stripped mid-payload, then falls back to the outermost
+ * {...} span so leading prose ("Here's my verdict:") still parses.
+ */
 export function parseJudgeJson<T>(raw: string): T | null {
+  const unfenced = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/, '')
+    .replace(/\s*```$/, '')
+    .trim();
+
   try {
-    const jsonText = raw
-      .trim()
-      .replace(/^```(?:json)?/m, '')
-      .replace(/```$/m, '')
-      .trim();
-    return JSON.parse(jsonText) as T;
+    return JSON.parse(unfenced) as T;
+  } catch {
+    // Fall through to the brace-span heuristic.
+  }
+
+  const start = unfenced.indexOf('{');
+  const end = unfenced.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try {
+    return JSON.parse(unfenced.slice(start, end + 1)) as T;
   } catch {
     return null;
   }

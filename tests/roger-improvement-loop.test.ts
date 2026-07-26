@@ -67,6 +67,23 @@ describe('selectAuditTargets', () => {
     expect(selectAuditTargets([], ledger, 10)).toEqual([]);
     expect(selectAuditTargets([qa('x')], ledger, 0)).toEqual([]);
   });
+
+  it('drops malformed records and sorts undated ones last', () => {
+    const qas = [
+      qa('undated', { createdAt: 'garbage' }),
+      qa('good', { createdAt: '2026-06-01T00:00:00Z' }),
+      { id: 'no-answer', question: 'q', isPreSeeded: false } as unknown as RulesQA,
+    ];
+    expect(selectAuditTargets(qas, ledger, 10).map((t) => t.id)).toEqual(['good', 'undated']);
+  });
+
+  it('does not treat inherited Object properties as audited ids', () => {
+    // `ledger.audited['constructor']` is truthy via the prototype chain — a
+    // plain `!ledger.audited[id]` check would silently skip this Q&A forever.
+    expect(selectAuditTargets([qa('constructor')], { audited: {} }, 10).map((t) => t.id)).toEqual([
+      'constructor',
+    ]);
+  });
 });
 
 describe('recordAudit', () => {
@@ -83,6 +100,13 @@ describe('ptDateOf', () => {
     // 2026-07-02T02:00Z is still July 1 in Pacific Time.
     expect(ptDateOf('2026-07-02T02:00:00.000Z')).toBe('2026-07-01');
     expect(ptDateOf('2026-07-02T20:00:00.000Z')).toBe('2026-07-02');
+  });
+
+  it('returns null instead of throwing on a garbage timestamp', () => {
+    // Intl.format throws RangeError on an invalid Date; one bad Redis record
+    // must not take down a whole audit run.
+    expect(ptDateOf('not-a-date')).toBeNull();
+    expect(ptDateOf('')).toBeNull();
   });
 });
 
@@ -181,6 +205,56 @@ describe('promoteCases', () => {
   it('reports unknown proposal ids', () => {
     expect(promoteCases([], ['ghost'], []).errors[0]).toContain('no such proposal');
   });
+
+  // These mirror tests/roger-eval-cases.test.ts. A human edits proposals before
+  // promoting, so without these a promotion could red the CI suite.
+  it('refuses a question outside the 10-500 character range', () => {
+    const short = { ...reviewedProposal, case: { ...reviewedProposal.case, question: 'short?' } };
+    expect(promoteCases([short], ['live-qa_ok'], []).errors[0]).toContain('10-500 characters');
+
+    const long = {
+      ...reviewedProposal,
+      case: { ...reviewedProposal.case, question: `${'x'.repeat(501)}?` },
+    };
+    expect(promoteCases([long], ['live-qa_ok'], []).errors[0]).toContain('10-500 characters');
+  });
+
+  it('refuses an uncompilable regex grader', () => {
+    const bad = {
+      ...reviewedProposal,
+      case: { ...reviewedProposal.case, mustMatch: ['unclosed(group'] },
+    };
+    expect(promoteCases([bad], ['live-qa_ok'], []).errors[0]).toContain('invalid regex');
+  });
+
+  it('refuses an expectedAnchor outside the whitelist', () => {
+    const bad = {
+      ...reviewedProposal,
+      case: { ...reviewedProposal.case, expectedAnchor: '#not-a-real-section' },
+    };
+    expect(promoteCases([bad], ['live-qa_ok'], [], ['#trades']).errors[0]).toContain(
+      'not in RULEBOOK_ANCHORS'
+    );
+    const good = {
+      ...reviewedProposal,
+      case: { ...reviewedProposal.case, expectedAnchor: '#trades' },
+    };
+    expect(promoteCases([good], ['live-qa_ok'], [], ['#trades']).errors).toEqual([]);
+  });
+
+  it('refuses a non-judged case with no graders and a malformed now', () => {
+    const noGraders = {
+      ...reviewedProposal,
+      case: { ...reviewedProposal.case, judge: false, reference: undefined },
+    };
+    expect(promoteCases([noGraders], ['live-qa_ok'], []).errors[0]).toContain('at least one');
+
+    const badNow = {
+      ...reviewedProposal,
+      case: { ...reviewedProposal.case, category: 'date-sensitive', now: '07/04/2026' },
+    };
+    expect(promoteCases([badNow], ['live-qa_ok'], []).errors[0]).toContain('YYYY-MM-DD');
+  });
 });
 
 describe('shared graders', () => {
@@ -216,5 +290,23 @@ describe('shared graders', () => {
     expect(parseJudgeJson<{ pass: boolean }>('{"pass": true}')).toEqual({ pass: true });
     expect(parseJudgeJson<{ pass: boolean }>('```json\n{"pass": false}\n```')).toEqual({ pass: false });
     expect(parseJudgeJson('not json')).toBeNull();
+  });
+
+  it('survives fences inside a field and prose around the payload', () => {
+    // Fence-stripping must be anchored to the whole string, not per-line, or a
+    // fence quoted inside `reasoning` gets gutted mid-payload.
+    const quoted = JSON.stringify({ pass: false, reason: 'owner wrote:\n```\nhi\n```' });
+    expect(parseJudgeJson<{ pass: boolean }>(quoted)).toEqual({
+      pass: false,
+      reason: 'owner wrote:\n```\nhi\n```',
+    });
+    expect(parseJudgeJson<{ pass: boolean }>('Here is my verdict:\n{"pass": true}\nDone.')).toEqual({
+      pass: true,
+    });
+  });
+
+  it('flags an empty answer as empty rather than as a 1-word answer', () => {
+    const checks = runFormatChecks('', ['#trades']);
+    expect(checks.find((c) => c.name === 'format:non-empty')?.pass).toBe(false);
   });
 });
