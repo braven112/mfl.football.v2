@@ -27,14 +27,27 @@
  *     ACQUISITION_TYPES (BBID_WAIVER / FREE_AGENT / AUCTION_WON).
  *  5. Never cut below target: the result always contains exactly `overage`
  *     players.
+ *  6. Rookie taxi moves come BEFORE cuts (selectAutoMoves): active-roster
+ *     rookies fill open practice-squad spots (limit 3, rookies-only) first,
+ *     and only the remaining overage is cut. Owner-marked players are never
+ *     taxied — marking a rookie means "cut him", not "save him".
  */
 
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { ACQUISITION_TYPES } from './contract-eligibility';
-import { selectAutoCuts as selectAutoCutsCore } from './august-cut-selection-core.mjs';
+import {
+  selectAutoCuts as selectAutoCutsCore,
+  selectAutoMoves as selectAutoMovesCore,
+} from './august-cut-selection-core.mjs';
 
 /** The MFL roster status that counts toward the active-roster limit. */
 export const ACTIVE_ROSTER_STATUS = 'ROSTER';
+
+/** The MFL roster status for practice-squad (taxi) players. */
+export const TAXI_SQUAD_STATUS = 'TAXI_SQUAD';
+
+/** Practice-squad capacity (constitution: 3 spots, rookies only). */
+export const TAXI_SQUAD_LIMIT = 3;
 
 /**
  * Minimal roster-player shape. `RosterPlayer` from types/contract-eligibility
@@ -117,4 +130,46 @@ export function selectAutoCuts(input: SelectAutoCutsInput): SelectAutoCutsResult
     acquisitionTypes: ACQUISITION_TYPES,
     ...input,
   }) as SelectAutoCutsResult;
+}
+
+export interface AutoTaxiMove {
+  playerId: string;
+  reason: 'rookie-taxi';
+}
+
+export interface SelectAutoMovesInput extends SelectAutoCutsInput {
+  /**
+   * Rookie player ids (MFL `status === 'R'`), in PRIORITY order — first gets
+   * a practice-squad spot first. Callers pass league-draft order so premium
+   * picks win the spots when rookies outnumber the room.
+   */
+  rookieIds?: string[];
+  /** Practice-squad capacity. Defaults to TAXI_SQUAD_LIMIT (3). */
+  taxiLimit?: number;
+}
+
+export interface SelectAutoMovesResult extends SelectAutoCutsResult {
+  /** Rookies to move to the practice squad, before any cut. */
+  taxiMoves: AutoTaxiMove[];
+  /** taxiLimit − current TAXI_SQUAD count (floor 0). */
+  openTaxiSpots: number;
+}
+
+/**
+ * The full deadline decision for one franchise: rookie taxi moves first,
+ * then cuts for whatever overage remains. Prefer this over selectAutoCuts
+ * anywhere the roster (with taxi statuses) and rookie ids are available —
+ * calling selectAutoCuts alone overstates the cuts for a team with rookies
+ * and open practice-squad spots. `overage` is the PRE-taxi overage:
+ * taxiMoves.length + cuts.length === overage whenever it is positive.
+ */
+export function selectAutoMoves(input: SelectAutoMovesInput): SelectAutoMovesResult {
+  const { activeRoster, ...rest } = input;
+  return selectAutoMovesCore({
+    target: TARGET_ACTIVE_COUNT,
+    acquisitionTypes: ACQUISITION_TYPES,
+    taxiLimit: TAXI_SQUAD_LIMIT,
+    roster: activeRoster,
+    ...rest,
+  }) as SelectAutoMovesResult;
 }

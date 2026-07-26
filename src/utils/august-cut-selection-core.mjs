@@ -37,6 +37,16 @@
 /** The MFL roster status that counts toward the active-roster limit. */
 export const ACTIVE_ROSTER_STATUS = 'ROSTER';
 
+/** The MFL roster status for practice-squad (taxi) players. */
+export const TAXI_SQUAD_STATUS = 'TAXI_SQUAD';
+
+/**
+ * Practice-squad capacity. Mirror of the constitution ("up to 3 practice
+ * squad (taxi squad) spots", rookies only) and TAXI_SQUAD_LIMIT in
+ * src/pages/api/move-to-practice.ts.
+ */
+export const AUGUST_TAXI_LIMIT = 3;
+
 /**
  * Transaction types that count as acquisitions for "last added" ordering.
  * Mirror of contract-eligibility.ts#ACQUISITION_TYPES — trades are excluded
@@ -159,6 +169,173 @@ export function selectAutoCuts({
   // Invariant: exactly `overage` cuts — never below target. The fallback
   // pool always covers the remainder (marked ⊆ active), but clamp anyway.
   return { cuts: cuts.slice(0, overage), activeCount, overage, target };
+}
+
+/**
+ * Select which active-roster rookies the August cutdown automation moves to
+ * the practice squad BEFORE cutting anyone (league rule, decided July 2026):
+ * a rookie in an open taxi spot is a free compliance move — the owner keeps
+ * the player — so the automation never cuts a player while a taxi-eligible
+ * rookie and an open spot both exist. Pure — no I/O, deterministic.
+ *
+ * Rules:
+ *  1. Only rookies (MFL `status === 'R'`, passed in as `rookieIds`) are
+ *     eligible — the practice squad is rookies-only per the constitution.
+ *  2. Moves are capped by ALL of: the overage (never taxi more than
+ *     compliance requires — minimal intervention, mirroring "never cut below
+ *     target"), the open taxi spots (taxiLimit − current TAXI_SQUAD count),
+ *     and the eligible rookies on the active roster.
+ *  3. `rookieIds` is a PRIORITY order (first = first to protect) — callers
+ *     pass league-draft order so the owner's premium picks get the spots
+ *     when there are more rookies than room.
+ *  4. Owner-marked players are never taxied: a rookie on the owner's own cut
+ *     list is explicitly slated to be cut, not saved.
+ *
+ * @param {{
+ *   roster: Array<{id: string, status: string}>,
+ *   rookieIds?: string[],
+ *   markedPlayerIds?: string[],
+ *   target?: number,
+ *   taxiLimit?: number,
+ * }} input
+ * @returns {{
+ *   taxiMoves: Array<{playerId: string, reason: 'rookie-taxi'}>,
+ *   activeCount: number,
+ *   overage: number,
+ *   openTaxiSpots: number,
+ * }}
+ */
+export function selectAutoTaxiMoves({
+  roster,
+  rookieIds = [],
+  markedPlayerIds = [],
+  target = AUGUST_CUT_TARGET,
+  taxiLimit = AUGUST_TAXI_LIMIT,
+}) {
+  const activePlayers = roster.filter((p) => p.status === ACTIVE_ROSTER_STATUS);
+  const activeCount = activePlayers.length;
+  const overage = activeCount - target;
+  const taxiCount = roster.filter((p) => p.status === TAXI_SQUAD_STATUS).length;
+  const openTaxiSpots = Math.max(0, taxiLimit - taxiCount);
+
+  if (overage <= 0 || openTaxiSpots === 0) {
+    return { taxiMoves: [], activeCount, overage, openTaxiSpots };
+  }
+
+  const activeIds = new Set(activePlayers.map((p) => p.id));
+  const marked = new Set(markedPlayerIds);
+  const budget = Math.min(overage, openTaxiSpots);
+  const taxiMoves = [];
+  const selected = new Set();
+
+  for (const playerId of rookieIds) {
+    if (taxiMoves.length >= budget) break;
+    if (!activeIds.has(playerId) || marked.has(playerId) || selected.has(playerId)) continue;
+    taxiMoves.push({ playerId, reason: 'rookie-taxi' });
+    selected.add(playerId);
+  }
+
+  return { taxiMoves, activeCount, overage, openTaxiSpots };
+}
+
+/**
+ * The full deadline decision for one franchise: rookie taxi moves first,
+ * then cuts for whatever overage remains. This is the function every
+ * consumer (deadline job, cut-watch preview, admin report) should call —
+ * calling selectAutoCuts directly overstates the cuts for a team with
+ * rookies and open practice-squad spots.
+ *
+ * `overage` in the result is the PRE-taxi overage;
+ * `taxiMoves.length + cuts.length === overage` whenever overage > 0.
+ *
+ * @param {{
+ *   roster: Array<{id: string, status: string}>,
+ *   rookieIds?: string[],
+ *   markedPlayerIds?: string[],
+ *   acquisitions?: Array<{type: string, timestamp: number|string, addedPlayerIds: string[], franchise?: string}>,
+ *   target?: number,
+ *   franchiseId?: string,
+ *   acquisitionTypes?: string[],
+ *   taxiLimit?: number,
+ * }} input
+ * @returns {{
+ *   taxiMoves: Array<{playerId: string, reason: 'rookie-taxi'}>,
+ *   cuts: Array<{playerId: string, reason: 'marked'|'last-added', acquisitionTimestamp?: number}>,
+ *   activeCount: number,
+ *   overage: number,
+ *   openTaxiSpots: number,
+ *   target: number,
+ * }}
+ */
+export function selectAutoMoves({
+  roster,
+  rookieIds = [],
+  markedPlayerIds = [],
+  acquisitions = [],
+  target = AUGUST_CUT_TARGET,
+  franchiseId,
+  acquisitionTypes = AUGUST_CUT_ACQUISITION_TYPES,
+  taxiLimit = AUGUST_TAXI_LIMIT,
+}) {
+  const taxi = selectAutoTaxiMoves({ roster, rookieIds, markedPlayerIds, target, taxiLimit });
+  const taxied = new Set(taxi.taxiMoves.map((m) => m.playerId));
+  const { cuts, target: cutTarget } = selectAutoCuts({
+    activeRoster: roster.filter((p) => !taxied.has(p.id)),
+    markedPlayerIds,
+    acquisitions,
+    target,
+    franchiseId,
+    acquisitionTypes,
+  });
+  return {
+    taxiMoves: taxi.taxiMoves,
+    cuts,
+    activeCount: taxi.activeCount,
+    overage: taxi.overage,
+    openTaxiSpots: taxi.openTaxiSpots,
+    target: cutTarget,
+  };
+}
+
+/**
+ * League-wide rookie ids in taxi-priority order, from raw MFL feed objects
+ * (players export with DETAILS, draftResults export). Rookies are MFL's own
+ * classification (`status === 'R'` — the same gate MFL enforces on the
+ * taxi_squad import); priority is league rookie-draft order so an owner's
+ * premium picks win the practice-squad spots, with undrafted rookies after.
+ * Shared by the deadline job, the cut-watch fact sheet, and the admin
+ * report so all three agree byte-for-byte.
+ *
+ * @param {{ playersFeed?: any, draftResultsFeed?: any }} feeds — raw parsed
+ *   JSON of the two exports (either may be null/undefined; missing players
+ *   feed → empty list → zero taxi moves, never a crash).
+ * @returns {string[]}
+ */
+export function buildRookiePriorityFromFeeds({ playersFeed, draftResultsFeed }) {
+  const toList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+
+  const rookies = new Set(
+    toList(playersFeed?.players?.player)
+      .filter((p) => p?.status === 'R' && p.id)
+      .map((p) => `${p.id}`),
+  );
+  if (rookies.size === 0) return [];
+
+  const ordered = [];
+  const seen = new Set();
+  for (const unit of toList(draftResultsFeed?.draftResults?.draftUnit)) {
+    for (const pick of toList(unit?.draftPick)) {
+      const pid = `${pick?.player ?? ''}`;
+      if (pid && rookies.has(pid) && !seen.has(pid)) {
+        ordered.push(pid);
+        seen.add(pid);
+      }
+    }
+  }
+  for (const pid of rookies) {
+    if (!seen.has(pid)) ordered.push(pid);
+  }
+  return ordered;
 }
 
 /**

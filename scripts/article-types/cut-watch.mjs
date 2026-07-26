@@ -6,6 +6,18 @@
  * are ranked by combined value — redraft/dynasty ADP blended by contract
  * length (1yr = pure redraft … 5yr = pure dynasty) — with salary as the
  * fallback when the ADP feeds are unavailable.
+ *
+ * The fact sheet carries TWO framings that must never be conflated (July
+ * 2026 regression: a shipped article claimed "the system picks the weakest
+ * combined-value players first"):
+ *   - ADVISORY: the combined-value cut candidates (editorial — who SHOULD go)
+ *   - MECHANICAL: the deadline auto-move plan, computed by the same
+ *     selectAutoMoves the deadline job runs (rookies to open practice-squad
+ *     spots first — kept, not cut; then cuts newest waiver/FA/auction pickup
+ *     first; trades treated as long-held; value plays no role)
+ * tests/cut-watch-auto-cut-rule.test.ts locks the prompt language and scans
+ * the shipped feed with a value-claim detector; tests/eval/cut-watch.eval.ts
+ * is the live generation eval.
  * AI output: { headline, excerpt, content: string[] }
  */
 
@@ -18,6 +30,7 @@ import { LEAGUES, leagueOrigin, DEFAULT_LEAGUE_SLUG } from '../../src/config/lea
 import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../lib/august-cutdown.mjs';
 import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
+import { selectAutoMoves, parseAcquisitionEvents, buildRookiePriorityFromFeeds } from '../../src/utils/august-cut-selection-core.mjs';
 
 // TheLeague's active-roster cap. Cut-watch is TheLeague-only today (the
 // August cutdown machinery it reports on doesn't exist for AFL); if that
@@ -100,7 +113,7 @@ export const config = {
     const dd = String(now.getDate()).padStart(2, '0');
     return `sf_${year}_cut_watch_${mm}${dd}`;
   },
-  requiredData: ['rosters', 'players', 'league'],
+  requiredData: ['rosters', 'players', 'league', 'transactions', 'draftResults'],
   postType: 'article',
   tier: 'standard',
   maxTokens: 4000,
@@ -123,21 +136,25 @@ export function guardSeason(week, year, now) {
  * ids NEVER enter the fact sheet, so the AI cannot leak an owner's actual
  * cut list into a league-visible article.
  */
-async function loadCutdownPlans(fids) {
+async function loadCutdownPlans(franchises) {
   const redis = getRedisConfig();
   if (!redis) return null;
   const planYear = ptDateParts().year;
   const plans = new Map();
   try {
-    for (const fid of fids) {
+    for (const { fid, activeIds } of franchises) {
       const raw = await redisCommand(redis, ['GET', `autocut:${normalizeFranchiseId(fid)}`]);
       let list = raw;
       if (typeof raw === 'string') {
         try { list = JSON.parse(raw); } catch { list = null; }
       }
+      // Count only marked ids still on the ACTIVE roster — a marked player
+      // since traded/cut/taxied no longer covers any of the overage (the
+      // deadline job prunes them the same way), so counting them would
+      // credit a plan that no longer covers.
       const marked =
         list && typeof list === 'object' && list.year === planYear && Array.isArray(list.playerIds)
-          ? list.playerIds.length
+          ? list.playerIds.filter((id) => activeIds.has(`${id}`)).length
           : 0;
       plans.set(fid, marked);
     }
@@ -168,6 +185,48 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   // Combined-value rankings (opts.adp is a test seam — pass { redraft, dynasty }
   // Maps or null to bypass the feed read).
   const adp = opts.adp !== undefined ? opts.adp : await loadAdpMaps(projectRoot, year, league);
+
+  // Acquisition events for the REAL auto-cut ordering — parsed with the same
+  // code the deadline job runs (parseAcquisitionEvents: waiver/FA/auction
+  // adds only; trades never count). Missing feed → empty (previews degrade
+  // to "long-held" for everyone rather than failing the article).
+  const rawTxns = data.transactions?.transactions?.transaction;
+  const acquisitionEvents = parseAcquisitionEvents(
+    Array.isArray(rawTxns) ? rawTxns : rawTxns ? [rawTxns] : []
+  );
+  // playerId → newest qualifying pickup FOR a given franchise (mirrors the
+  // franchise scoping inside selectAutoCuts: an event without a franchise
+  // field counts for everyone; another team's pickup never counts).
+  const acquisitionInfo = new Map();
+  for (const ev of acquisitionEvents) {
+    for (const pid of ev.addedPlayerIds) {
+      const list = acquisitionInfo.get(pid) ?? [];
+      list.push({ timestamp: ev.timestamp, type: ev.type, franchise: ev.franchise });
+      acquisitionInfo.set(pid, list);
+    }
+  }
+  // Rookie taxi priority for the auto-move preview — the same shared builder
+  // the deadline job uses (MFL rookie flag in league-draft order), so the
+  // preview matches the job.
+  const rookieIds = buildRookiePriorityFromFeeds({
+    playersFeed: data.players,
+    draftResultsFeed: data.draftResults,
+  });
+
+  const ACQUISITION_LABELS = { BBID_WAIVER: 'waiver add', FREE_AGENT: 'FA add', AUCTION_WON: 'auction win' };
+  const formatAcquisition = (fid, pid) => {
+    const candidates = (acquisitionInfo.get(pid) ?? []).filter(
+      (info) => info.franchise === undefined || info.franchise === fid
+    );
+    if (candidates.length === 0) {
+      return 'long-held (no pickup on record this year — drafted, traded for, or carried over)';
+    }
+    const newest = candidates.reduce((a, b) => (b.timestamp > a.timestamp ? b : a));
+    const when = new Date(newest.timestamp * 1000).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles',
+    });
+    return `${ACQUISITION_LABELS[newest.type] ?? 'pickup'} ${when}`;
+  };
 
   const lines = [];
   const now = new Date();
@@ -224,6 +283,35 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
           a.contractYear - b.contractYear)
       : [...rosterDetails].sort((a, b) => a.salary - b.salary || a.contractYear - b.contractYear);
 
+    // What the deadline job would ACTUALLY do if this owner marks nothing —
+    // computed by the same selectAutoMoves the job runs: rookies fill open
+    // practice-squad spots first (kept, not lost), then cuts go newest
+    // waiver/FA/auction pickup first; trades and other no-record players are
+    // long-held, reached last. Empty marked list on purpose: cutdown plans
+    // are private (august-cuts decision #10), so the preview must never
+    // incorporate them.
+    const describePlayer = (playerId) => {
+      const info = players.get(playerId);
+      return {
+        name: info?.name ?? `Player ${playerId}`,
+        position: info?.position ?? '??',
+        acquisition: formatAcquisition(fid, playerId),
+      };
+    };
+    const autoMoves = over > 0
+      ? selectAutoMoves({
+          roster: playerList,
+          rookieIds,
+          markedPlayerIds: [],
+          acquisitions: acquisitionEvents,
+          franchiseId: fid,
+        })
+      : null;
+    const autoTaxiPreview = autoMoves
+      ? autoMoves.taxiMoves.map((m) => describePlayer(m.playerId))
+      : [];
+    const autoCutPreview = autoMoves ? autoMoves.cuts.map((c) => describePlayer(c.playerId)) : [];
+
     const entry = {
       fid,
       name: teamInfo?.name ?? `Team ${fid}`,
@@ -231,6 +319,9 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
       over,
       positionCounts,
       cutCandidates: cutCandidates.slice(0, Math.max(over + 2, 3)),
+      autoTaxiPreview,
+      autoCutPreview,
+      activeIds: new Set(activeRoster.map((p) => `${p.id}`)),
     };
 
     if (over > 0) overLimit.push(entry);
@@ -248,7 +339,7 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   const plans = opts.cutdownPlans !== undefined
     ? opts.cutdownPlans
     : (league === DEFAULT_LEAGUE_SLUG && isCutWindow(now)
-        ? await loadCutdownPlans(overLimit.map((e) => e.fid))
+        ? await loadCutdownPlans(overLimit.map((e) => ({ fid: e.fid, activeIds: e.activeIds })))
         : null);
 
   if (overLimit.length > 0) {
@@ -259,6 +350,18 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
       lines.push('Higher blended ADP = weaker hold; "unranked" = drafted in no leagues anywhere.');
       lines.push('');
     }
+    lines.push('HOW THE DEADLINE AUTO-CUT ACTUALLY WORKS (mechanical rule — NOT the value ranking):');
+    lines.push('1. Rookies are moved to open practice-squad spots FIRST (3 spots, rookies only) —');
+    lines.push('   a taxied rookie is KEPT, not lost, and each move erases one needed cut.');
+    lines.push('2. Players the owner marked in their cutdown plan are cut next, in the owner\'s order.');
+    lines.push('3. Remaining cuts are auto-picked NEWEST PICKUP FIRST — the most recent');
+    lines.push('   waiver/free-agent/auction acquisition goes first. Player value plays NO role.');
+    lines.push('4. Trades never count as pickups: a player traded for is treated as long-held');
+    lines.push('   and is only reached after every waiver/FA/auction pickup is gone.');
+    lines.push('5. Exactly the overage is resolved (taxi moves + cuts) — never more.');
+    lines.push('The combined-value candidate list is EDITORIAL (who an owner SHOULD consider');
+    lines.push('cutting). Never present it as how the system decides.');
+    lines.push('');
     for (const e of overLimit.sort((a, b) => b.over - a.over)) {
       lines.push(`── ${e.name}: ${e.count} active players (${e.over} over limit) ──`);
       const posParts = Object.entries(e.positionCounts).map(([p, c]) => `${c} ${p}`).join(', ');
@@ -268,16 +371,35 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
         if (marked >= e.over) {
           lines.push(`  Cutdown plan: FILED — this owner has already marked ${marked} player${marked === 1 ? '' : 's'} for auto-cut (plans made, covers the overage)`);
         } else if (marked > 0) {
-          lines.push(`  Cutdown plan: PARTIAL — ${marked} of ${e.over} needed cuts marked; auto-cut picks the remaining ${e.over - marked} newest-acquisition-first at the deadline`);
+          // No precise split here: marked ids are private, so the taxi/cut
+          // interplay with the owner's actual list can't be computed.
+          lines.push(`  Cutdown plan: PARTIAL — ${marked} of ${e.over} needed moves marked; the automation resolves the rest at the deadline (rookies to open practice-squad spots first, then newest pickups)`);
+        } else if (e.autoTaxiPreview.length > 0) {
+          lines.push(`  Cutdown plan: NONE ON FILE — this owner has not made their picks; at the deadline the automation would move ${e.autoTaxiPreview.length} rookie${e.autoTaxiPreview.length === 1 ? '' : 's'} to the practice squad and auto-choose ${e.autoCutPreview.length} cut${e.autoCutPreview.length === 1 ? '' : 's'} newest-pickup-first`);
         } else {
-          lines.push(`  Cutdown plan: NONE ON FILE — this owner has not made their picks; all ${e.over} cuts would be auto-chosen at the deadline`);
+          lines.push(`  Cutdown plan: NONE ON FILE — this owner has not made their picks; all ${e.over} cuts would be auto-chosen newest-pickup-first at the deadline`);
         }
       }
       lines.push(adp
-        ? `  Likely cut candidates (weakest combined value first):`
-        : `  Likely cut candidates (lowest salary):`);
+        ? `  Likely cut candidates (weakest combined value first — EDITORIAL ranking, not the auto-cut order):`
+        : `  Likely cut candidates (lowest salary — EDITORIAL ranking, not the auto-cut order):`);
       for (const c of e.cutCandidates) {
         lines.push(`    - ${c.position} ${c.name} (${formatSalary(c.salary)}, ${c.contractYear}yr)${describeValue(c.value)}`);
+      }
+      // The mechanical outcome — omitted for owners whose filed plan already
+      // covers the overage (their marked list is private and supersedes this).
+      const planCovers = plans ? (plans.get(e.fid) ?? 0) >= e.over : false;
+      if (!planCovers && e.autoTaxiPreview.length > 0) {
+        lines.push(`  Rookies the SYSTEM will move to open practice-squad spots first (kept, not cut):`);
+        e.autoTaxiPreview.forEach((c, i) => {
+          lines.push(`    ${i + 1}. ${c.position} ${c.name}`);
+        });
+      }
+      if (!planCovers && e.autoCutPreview.length > 0) {
+        lines.push(`  What the SYSTEM will cut if nothing is marked (newest pickup first — value plays no role):`);
+        e.autoCutPreview.forEach((c, i) => {
+          lines.push(`    ${i + 1}. ${c.position} ${c.name} — ${c.acquisition}`);
+        });
       }
       lines.push('');
     }
@@ -358,7 +480,21 @@ INSTRUCTIONS:
   (1-year players are judged purely on redraft value, 5-year players purely
   on dynasty value). Lean on it: a player UNRANKED in league-wide ADP is dead
   weight nobody would draft; a strong blended ADP means that roster spot is
-  probably safe.
+  probably safe. But frame it as YOUR advice about who an owner SHOULD cut —
+  it is never how the system picks.
+- THE MECHANIC, GET IT RIGHT: deadline auto-cuts are NEVER based on value,
+  salary, or weakness. The system first moves rookies into open
+  practice-squad spots (those players are KEPT — never call a taxi move a
+  cut or a loss), then cuts owner-marked players in the owner's order, then
+  the NEWEST waiver/FA/auction pickups, newest first; players acquired by
+  trade are treated as long-held and go last. If you describe what happens
+  to an owner who does nothing, use the fact sheet's system lists — never
+  say or imply the system targets the weakest or lowest-value players.
+- Keep the two lists separate: "should cut" = the combined-value candidates
+  (your editorial advice); "will lose by doing nothing" = the system's
+  auto-cut order. Never fuse them into one sentence as if the value ranking
+  drives the system. The gap BETWEEN them is often the real story — the
+  system takes recent pickups while untouchable dead weight survives.
 - Discuss which cuts are easy (unranked, low salary, redundant) vs. painful.
 - If no teams are over the limit, write about who's cutting it close.
 - Every name and number must come from the fact sheet.`;

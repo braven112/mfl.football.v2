@@ -10,7 +10,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   selectAutoCuts,
+  selectAutoMoves,
   ACTIVE_ROSTER_STATUS,
+  TAXI_SQUAD_STATUS,
   type AutoCutAcquisition,
   type AutoCutRosterPlayer,
 } from '../src/utils/august-cut-selection';
@@ -283,6 +285,38 @@ describe('selectAutoCuts — trades never count as acquisitions', () => {
     expect(result.cuts.map(c => c.playerId)).toEqual(['3', '2', '1']);
   });
 
+  it('after every pickup is exhausted, trade acquisitions ARE cuttable — long-held pool, roster order (no absolute exemption)', () => {
+    // Pins the "exhaustion" semantics: the trade rule is an ORDERING rule
+    // (long-held, reached last), not an exemption. When the overage exceeds
+    // the recorded pickups, the remainder comes from the long-held pool in
+    // roster order, and a trade-acquired player is in that pool like any
+    // draftee or carryover. The result always reaches exactly `overage` —
+    // auto-cut never comes up short.
+    const result = selectAutoCuts({
+      activeRoster: roster(8), // overage 3
+      acquisitions: [
+        acquisition('3', 9_000, 'TRADE'), // newest acquisition — but a trade
+        acquisition('5', 100, 'FREE_AGENT'), // the only real pickup
+      ],
+      target: TARGET,
+    });
+    // Pickup '5' first, then the long-held pool in roster order: '1', '2' —
+    // and had the overage been larger, '3' (the trade) would be next, not
+    // skipped.
+    expect(result.cuts.map(c => c.playerId)).toEqual(['5', '1', '2']);
+    expect(result.cuts).toHaveLength(result.overage);
+
+    const deeper = selectAutoCuts({
+      activeRoster: roster(9), // overage 4 — deep enough to reach the trade
+      acquisitions: [
+        acquisition('3', 9_000, 'TRADE'),
+        acquisition('5', 100, 'FREE_AGENT'),
+      ],
+      target: TARGET,
+    });
+    expect(deeper.cuts.map(c => c.playerId)).toEqual(['5', '1', '2', '3']);
+  });
+
   it('a trade re-acquisition does not refresh an older pickup timestamp', () => {
     const result = selectAutoCuts({
       activeRoster: roster(6), // overage 1
@@ -400,5 +434,133 @@ describe('selectAutoCuts — franchise scoping of acquisition events', () => {
       franchiseId: '0001',
     });
     expect(result.cuts.map(c => c.playerId)).toEqual(['3']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rookie taxi moves before cuts (selectAutoMoves)
+// ---------------------------------------------------------------------------
+
+/** Roster of `active` ROSTER players ('1'…) plus `taxi` TAXI_SQUAD players ('t1'…). */
+function mixedRoster(active: number, taxi: number): AutoCutRosterPlayer[] {
+  return [
+    ...roster(active),
+    ...Array.from({ length: taxi }, (_, i) => ({ id: `t${i + 1}`, status: TAXI_SQUAD_STATUS })),
+  ];
+}
+
+describe('selectAutoMoves — rookies fill open practice-squad spots before anyone is cut', () => {
+  it('taxis rookies first, then cuts only the remaining overage', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(8, 0), // overage 3, all 3 taxi spots open
+      rookieIds: ['1', '2'],
+      acquisitions: [acquisition('5', 9_000)],
+      target: TARGET,
+    });
+    expect(result.taxiMoves.map(m => m.playerId)).toEqual(['1', '2']);
+    expect(result.cuts.map(c => c.playerId)).toEqual(['5']);
+    expect(result.overage).toBe(3);
+    expect(result.taxiMoves.length + result.cuts.length).toBe(result.overage);
+  });
+
+  it('caps taxi moves at the open spots (limit 3 minus current taxi squad)', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(8, 2), // overage 3, only 1 open spot
+      rookieIds: ['1', '2', '3'],
+      acquisitions: [acquisition('5', 9_000)],
+      target: TARGET,
+    });
+    expect(result.openTaxiSpots).toBe(1);
+    expect(result.taxiMoves.map(m => m.playerId)).toEqual(['1']);
+    expect(result.cuts).toHaveLength(2);
+    expect(result.cuts.map(c => c.playerId)).toEqual(['5', '2']);
+  });
+
+  it('a full practice squad means zero taxi moves — pure cut behavior', () => {
+    const withTaxi = selectAutoMoves({
+      activeRoster: mixedRoster(7, 3), // overage 2, no open spots
+      rookieIds: ['1', '2'],
+      acquisitions: [acquisition('5', 9_000)],
+      target: TARGET,
+    });
+    const cutsOnly = selectAutoCuts({
+      activeRoster: roster(7),
+      acquisitions: [acquisition('5', 9_000)],
+      target: TARGET,
+    });
+    expect(withTaxi.taxiMoves).toEqual([]);
+    expect(withTaxi.cuts).toEqual(cutsOnly.cuts);
+  });
+
+  it('never taxis more rookies than the overage (minimal intervention)', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(6, 0), // overage 1, 3 open spots, 3 rookies
+      rookieIds: ['1', '2', '3'],
+      target: TARGET,
+    });
+    expect(result.taxiMoves.map(m => m.playerId)).toEqual(['1']);
+    expect(result.cuts).toEqual([]);
+  });
+
+  it('rookieIds is a priority order — first ids win the spots', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(8, 2), // 1 open spot
+      rookieIds: ['4', '1', '2'],
+      acquisitions: [acquisition('5', 9_000)],
+      target: TARGET,
+    });
+    expect(result.taxiMoves.map(m => m.playerId)).toEqual(['4']);
+  });
+
+  it('owner-marked rookies are cut, never taxied (marking means "cut him")', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(7, 0), // overage 2
+      rookieIds: ['1', '2'],
+      markedPlayerIds: ['1'],
+      target: TARGET,
+    });
+    expect(result.taxiMoves.map(m => m.playerId)).toEqual(['2']);
+    expect(result.cuts.map(c => c.playerId)).toEqual(['1']);
+    expect(result.cuts[0].reason).toBe('marked');
+  });
+
+  it('skips rookie ids not on the active roster (already taxied, other team, league-wide list)', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(6, 1), // overage 1; 't1' is already TAXI_SQUAD
+      rookieIds: ['t1', '999', '2'],
+      target: TARGET,
+    });
+    expect(result.taxiMoves.map(m => m.playerId)).toEqual(['2']);
+    expect(result.cuts).toEqual([]);
+  });
+
+  it('at/under the limit: no taxi moves, no cuts — marked rookies stay put', () => {
+    const result = selectAutoMoves({
+      activeRoster: mixedRoster(5, 0),
+      rookieIds: ['1', '2'],
+      markedPlayerIds: ['3'],
+      target: TARGET,
+    });
+    expect(result.taxiMoves).toEqual([]);
+    expect(result.cuts).toEqual([]);
+  });
+
+  it('with no rookies, selectAutoMoves matches selectAutoCuts exactly (base-case guard)', () => {
+    const acquisitions = [acquisition('3', 9_000), acquisition('6', 5_000)];
+    const moves = selectAutoMoves({
+      activeRoster: mixedRoster(8, 1),
+      acquisitions,
+      markedPlayerIds: ['2'],
+      target: TARGET,
+    });
+    const cuts = selectAutoCuts({
+      activeRoster: roster(8),
+      acquisitions,
+      markedPlayerIds: ['2'],
+      target: TARGET,
+    });
+    expect(moves.taxiMoves).toEqual([]);
+    expect(moves.cuts).toEqual(cuts.cuts);
+    expect(moves.overage).toBe(cuts.overage);
   });
 });

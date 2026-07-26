@@ -86,8 +86,9 @@ import {
   foldFranchiseIntoStored,
 } from '../src/utils/august-cuts-logic.mjs';
 import {
-  selectAutoCuts,
+  selectAutoMoves,
   parseAcquisitionEvents,
+  buildRookiePriorityFromFeeds,
   ACTIVE_ROSTER_STATUS,
 } from '../src/utils/august-cut-selection-core.mjs';
 import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
@@ -221,6 +222,34 @@ async function fetchAcquisitions(year) {
   return parseAcquisitionEvents(toArray(data?.transactions?.transaction));
 }
 
+/**
+ * League-wide rookie ids in taxi-priority order (first = first to get a
+ * practice-squad spot). Rookies are MFL's own classification (`status: 'R'`
+ * in the players export — same gate as /api/move-to-practice, and the gate
+ * MFL itself enforces on the taxi_squad import). Priority is this year's
+ * league rookie-draft order, so an owner's premium picks win the spots when
+ * rookies outnumber the room; undrafted rookies (FA/waiver adds) follow.
+ *
+ * Failure here degrades gracefully: an empty list means zero taxi moves and
+ * pure cut behavior — never a blocked run.
+ */
+async function fetchRookiePriority(year) {
+  let playersFeed = null;
+  try {
+    playersFeed = await fetchLeagueExport(year, 'players', '&DETAILS=1');
+  } catch (err) {
+    console.warn(`${TAG} could not fetch player rookie flags (${err.message}) — skipping taxi moves this run`);
+    return [];
+  }
+  let draftResultsFeed = null;
+  try {
+    draftResultsFeed = await fetchLeagueExport(year, 'draftResults');
+  } catch (err) {
+    console.warn(`${TAG} could not fetch draft results (${err.message}) — rookie priority falls back to feed order`);
+  }
+  return buildRookiePriorityFromFeeds({ playersFeed, draftResultsFeed });
+}
+
 async function fetchFranchiseNames(year) {
   const names = new Map();
   try {
@@ -303,6 +332,43 @@ async function postAddDrop({ year, playerId, ownerCookie }) {
   return { ok: true };
 }
 
+/**
+ * Move an active-roster rookie to the practice squad with the owner's own
+ * cookie. Same endpoint + parameter names as the app's working owner-mode
+ * move (src/utils/mfl-matchup-api.ts#movePlayerToTaxi, verified 2026-05-07
+ * against MFL's api_info spec): POST import, TYPE=taxi_squad, DEMOTE=pid.
+ * FRANCHISE_ID is deliberately NOT sent — owner-mode implies the franchise,
+ * and sending it under league lockout is the impersonation failure class.
+ */
+async function postTaxiMove({ year, playerId, ownerCookie }) {
+  const params = new URLSearchParams({
+    TYPE: 'taxi_squad',
+    L: LEAGUE_ID,
+    DEMOTE: `${playerId}`,
+  });
+
+  const res = await mflFetch({
+    url: `https://api.myfantasyleague.com/${year}/import`,
+    method: 'POST',
+    cookies: { MFL_USER_ID: ownerCookie },
+    body: params.toString(),
+    timeoutMs: 15_000,
+  });
+  const text = await res.text();
+  if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+
+  const errMatch =
+    text.match(/<error[^>]*>(.*?)<\/error>/s) ||
+    text.match(/"error"\s*:\s*"([^"]+)"/);
+  if (errMatch) {
+    return { ok: false, error: (errMatch[1] || '').trim() || 'MFL rejected the taxi move' };
+  }
+  if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+    return { ok: false, error: 'MFL did not process the taxi move' };
+  }
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // GroupMe (Roger touch machinery — bot id from env)
 // ---------------------------------------------------------------------------
@@ -330,15 +396,18 @@ async function postRogerTouch(text, dryRun) {
  * Marked lists from a different league year are ignored (stale — never
  * silently executed).
  */
-async function computePlans({ redis, year, rosters, acquisitions, franchiseFilter }) {
+async function computePlans({ redis, year, rosters, acquisitions, rookieIds = [], franchiseFilter }) {
   const plans = [];
   for (const [fid, players] of rosters) {
     if (franchiseFilter && pad4(franchiseFilter) !== fid) continue;
     const activeCount = players.filter((p) => p.status === ACTIVE_ROSTER_STATUS).length;
     const list = await redisGetJson(redis, cutListKey(fid));
     const markedList = list && typeof list === 'object' && list.year === year ? list : null;
-    const slate = selectAutoCuts({
-      activeRoster: players,
+    // Taxi moves first, cuts for the remainder — the slate carries both
+    // (slate.taxiMoves + slate.cuts), and the snapshot stores it verbatim.
+    const slate = selectAutoMoves({
+      roster: players,
+      rookieIds,
       markedPlayerIds: markedList?.playerIds ?? [],
       acquisitions,
       franchiseId: fid,
@@ -487,18 +556,22 @@ async function runValidateOnly({ redis, year, plans, names, daysUntil, dryRun })
 
 async function runRehearse({ redis, year, plans, cutdownDate, dryRun }) {
   let totalCuts = 0;
+  let totalTaxi = 0;
   let totalSalary = 0;
   for (const plan of plans) {
     const salary = slateSalaryTotal(plan);
+    const taxiMoves = plan.slate.taxiMoves ?? [];
     totalCuts += plan.slate.cuts.length;
+    totalTaxi += taxiMoves.length;
     totalSalary += salary;
     console.log(
       `${TAG} rehearse ${plan.franchiseId}: ${plan.slate.activeCount} active, ` +
+        `${taxiMoves.length} taxi move(s) [${taxiMoves.map((m) => m.playerId).join(', ')}], ` +
         `${plan.slate.cuts.length} cut(s) [${plan.slate.cuts.map((c) => `${c.playerId}(${c.reason})`).join(', ')}] ` +
         `freeing ${fmtMillions(salary)}`,
     );
   }
-  console.log(`${TAG} rehearse totals: ${plans.length} team(s) over, ${totalCuts} cut(s), ${fmtMillions(totalSalary)} in salary`);
+  console.log(`${TAG} rehearse totals: ${plans.length} team(s) over, ${totalTaxi} taxi move(s), ${totalCuts} cut(s), ${fmtMillions(totalSalary)} in salary`);
 
   // Exercise the snapshot format end-to-end (minus MFL writes + credential
   // deletes). Never clobber a snapshot that already has real outcomes.
@@ -507,9 +580,12 @@ async function runRehearse({ redis, year, plans, cutdownDate, dryRun }) {
   // PRIVACY (plan decision #10): the shared channel gets COUNTS ONLY — never
   // another team's marked players.
   if (plans.length > 0) {
+    const taxiNote = totalTaxi > 0
+      ? `${totalTaxi} rookie(s) will be moved to open practice-squad spots and ${totalCuts} player(s) cut automatically at the deadline. `
+      : `${totalCuts} player(s) will be cut automatically at the deadline. `;
     const text =
       `📋 Roster cutdown is tomorrow at 8:45pm PT. ${plans.length} team(s) are over the 22-man limit — ` +
-      `${totalCuts} player(s) will be cut automatically at the deadline. ` +
+      taxiNote +
       `Check your Cutdown Plan at theleague.us/theleague/rosters before then.`;
     await postRogerTouch(text, dryRun);
   } else {
@@ -518,6 +594,7 @@ async function runRehearse({ redis, year, plans, cutdownDate, dryRun }) {
 
   const summary = {
     overLimit: plans.length,
+    plannedTaxiMoves: totalTaxi,
     plannedCuts: totalCuts,
     plannedSalaryFreed: totalSalary,
   };
@@ -555,7 +632,7 @@ async function saveSnapshot(redis, year, snapshot) {
 // Mode: live / --dry-run execution
 // ---------------------------------------------------------------------------
 
-async function runExecution({ redis, year, plans, allFranchiseIds, names, acquisitions, cutdownDate, dryRun }) {
+async function runExecution({ redis, year, plans, allFranchiseIds, names, acquisitions, rookieIds = [], cutdownDate, dryRun }) {
   const runStartEpochSeconds = Math.floor(Date.now() / 1000);
   const doneKey = `autocut:done:${year}`;
   const doneHash = await redisHGetAll(redis, doneKey);
@@ -664,8 +741,18 @@ async function runExecution({ redis, year, plans, allFranchiseIds, names, acquis
       const freshPlayers = freshRosters.get(fid);
       if (!freshPlayers) throw new Error('degraded roster read (franchise missing)');
 
-      const slate = selectAutoCuts({
-        activeRoster: freshPlayers,
+      // LAST-ATTEMPT DEGRADATION: if earlier ticks failed (e.g. MFL keeps
+      // rejecting the taxi write), the final attempt drops the taxi phase
+      // (rookieIds: []) and runs pure cuts — the pre-taxi-rule behavior that
+      // is known to work. A stuck taxi move must never leave a roster over
+      // the limit when cutting alone could have fixed it.
+      const finalAttempt = decision.attempt >= MAX_ATTEMPTS;
+      if (finalAttempt) {
+        console.warn(`${TAG} ${fid} ${name}: final attempt — skipping taxi phase, cuts only`);
+      }
+      const slate = selectAutoMoves({
+        roster: freshPlayers,
+        rookieIds: finalAttempt ? [] : rookieIds,
         markedPlayerIds: plan.markedList?.playerIds ?? [],
         acquisitions,
         franchiseId: fid,
@@ -697,6 +784,75 @@ async function runExecution({ redis, year, plans, allFranchiseIds, names, acquis
 
       let rosterIds = new Set(freshPlayers.map((p) => p.id));
       let franchiseFailed = false;
+
+      // Phase 0 — rookie taxi moves (league rule, July 2026): every open
+      // practice-squad spot filled by an active-roster rookie is a player
+      // the owner KEEPS instead of losing, so these run before any cut. A
+      // failed taxi move aborts the franchise for this tick — the cut slate
+      // assumed the move succeeded, and cutting anyway would leave the
+      // roster over the limit.
+      const activeStatusById = new Map(freshPlayers.map((p) => [p.id, p.status]));
+      for (const move of slate.taxiMoves) {
+        const pid = move.playerId;
+
+        if (activeStatusById.get(pid) !== ACTIVE_ROSTER_STATUS) {
+          // Owner self-served (taxied or cut him) between reads — the goal
+          // state is already true.
+          entry = appendOutcome(entry, { playerId: pid, reason: move.reason, status: 'already-moved', at: new Date().toISOString() });
+          continue;
+        }
+
+        if (dryRun) {
+          // DRY-RUN SENTINEL: no MFL write is ever attempted with --dry-run.
+          console.log(`${TAG} [dry-run] would POST taxi_squad DEMOTE=${pid} (${move.reason}) for ${fid} ${name}`);
+          entry = appendOutcome(entry, { playerId: pid, reason: move.reason, status: 'dry-run: would taxi', at: new Date().toISOString() });
+          continue;
+        }
+
+        console.log(`${TAG} ${fid} ${name}: taxiing rookie ${pid} (${move.reason})`);
+        const write = await postTaxiMove({ year, playerId: pid, ownerCookie: cred.cookie });
+        if (!write.ok) {
+          entry = appendOutcome(entry, { playerId: pid, reason: move.reason, status: `failed: ${write.error}`, at: new Date().toISOString() });
+          franchiseFailed = true;
+          break;
+        }
+
+        await sleep(750);
+
+        // Verify by re-reading the roster: the player must now be TAXI_SQUAD
+        // (or off the active roster entirely, if the owner raced us). The
+        // rosters endpoint can lag writes (documented for drops in
+        // docs/claude/insights/domains/mfl-api.md), so retry the read once
+        // before burning an attempt on a stale response.
+        let verified = false;
+        for (let read = 0; read < 2 && !verified; read += 1) {
+          if (read > 0) await sleep(2_000);
+          try {
+            const afterRosters = await fetchRosters(year, fid);
+            const after = afterRosters.get(fid) ?? [];
+            const afterStatus = after.find((p) => p.id === pid)?.status;
+            verified = afterStatus !== ACTIVE_ROSTER_STATUS;
+          } catch (err) {
+            console.warn(`${TAG} verify roster read failed for ${fid}: ${err.message}`);
+          }
+        }
+
+        if (verified) {
+          entry = appendOutcome(entry, { playerId: pid, reason: move.reason, status: 'taxi-verified', at: new Date().toISOString() });
+        } else {
+          entry = appendOutcome(entry, { playerId: pid, reason: move.reason, status: 'failed: MFL did not confirm the taxi move', at: new Date().toISOString() });
+          franchiseFailed = true;
+          break;
+        }
+      }
+
+      if (franchiseFailed) {
+        await finishFranchise(failedDoneValue(decision.attempt));
+        results.failed.push(fid);
+        console.error(`${TAG} ${fid} ${name}: attempt ${decision.attempt} failed during taxi phase — will retry next tick (up to ${MAX_ATTEMPTS})`);
+        await sleep(1_000);
+        continue;
+      }
 
       for (const cut of slate.cuts) {
         const pid = cut.playerId;
@@ -765,7 +921,7 @@ async function runExecution({ redis, year, plans, allFranchiseIds, names, acquis
         // credential — cut lists are never deleted by this job).
         await finishFranchise('done', { deleteCredential: true });
         results.done.push(fid);
-        console.log(`${TAG} ${fid} ${name}: complete (${slate.cuts.length} cut(s)) — credential deleted`);
+        console.log(`${TAG} ${fid} ${name}: complete (${slate.taxiMoves.length} taxi move(s), ${slate.cuts.length} cut(s)) — credential deleted`);
       }
     } catch (err) {
       entry = appendOutcome(entry, { status: `failed: ${err.message}`, at: new Date().toISOString() });
@@ -855,7 +1011,8 @@ async function main() {
   const rosters = await fetchRosters(year);
   const acquisitions = await fetchAcquisitions(year);
   const names = await fetchFranchiseNames(year);
-  const plans = await computePlans({ redis, year, rosters, acquisitions, franchiseFilter: args.franchise });
+  const rookieIds = await fetchRookiePriority(year);
+  const plans = await computePlans({ redis, year, rosters, acquisitions, rookieIds, franchiseFilter: args.franchise });
   console.log(`${TAG} ${plans.length} over-limit franchise(s): ${plans.map((p) => `${p.franchiseId}(+${p.slate.overage})`).join(', ') || 'none'}`);
 
   // The full set of league franchise ids for one-shot completeness (item D).
@@ -870,7 +1027,7 @@ async function main() {
   } else if (mode === 'rehearse') {
     await runRehearse({ redis, year, plans, cutdownDate, dryRun: args.dryRun });
   } else {
-    const results = await runExecution({ redis, year, plans, allFranchiseIds, names, acquisitions, cutdownDate, dryRun: args.dryRun });
+    const results = await runExecution({ redis, year, plans, allFranchiseIds, names, acquisitions, rookieIds, cutdownDate, dryRun: args.dryRun });
     const problems = [...results.failed, ...results.skipped];
     if (!args.dryRun && problems.length > 0) {
       console.error(

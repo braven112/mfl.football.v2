@@ -155,7 +155,7 @@ describe('buildFactSheet (cut-watch)', () => {
     // Counts only, never marked player ids (privacy decision #10).
     expect(factSheet).toContain('Cutdown plan: FILED — this owner has already marked 6 players');
     expect(factSheet).toContain('covers the overage');
-    expect(factSheet).toContain('Cutdown plan: PARTIAL — 2 of 3 needed cuts marked');
+    expect(factSheet).toContain('Cutdown plan: PARTIAL — 2 of 3 needed moves marked');
   });
 
   it('reports NONE ON FILE when an over-limit owner has marked nothing', async () => {
@@ -213,7 +213,7 @@ describe('buildFactSheet (cut-watch)', () => {
     expect(candidateLines[1]).toContain('Player p10');
     expect(candidateLines[1]).toContain('combined ADP 200.0');
     expect(factSheet).not.toMatch(/- .*Player p0 /);
-    expect(factSheet).toContain('Likely cut candidates (weakest combined value first):');
+    expect(factSheet).toContain('Likely cut candidates (weakest combined value first — EDITORIAL ranking, not the auto-cut order):');
     expect(factSheet).toContain('blended by contract length');
   });
 });

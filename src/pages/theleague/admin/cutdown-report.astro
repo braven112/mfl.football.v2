@@ -30,14 +30,17 @@ import { getCutList, type AutocutList } from '../../../utils/autocut-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getAugustCutdownDate, parseTransactions } from '../../../utils/contract-eligibility';
 import { TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
-import { selectAutoCuts } from '../../../utils/august-cut-selection';
+import { selectAutoMoves } from '../../../utils/august-cut-selection';
 import { getPlayerMap } from '../../../utils/player-map';
 import { chooseTeamName } from '../../../utils/team-names';
 import { DEFAULT_LEAGUE } from '../../../config/leagues';
 import leagueConfig from '../../../data/theleague.config.json';
 // Same decision logic the deadline job runs — attempt parsing can't drift.
 import { parseDoneValue, MAX_ATTEMPTS } from '../../../utils/august-cuts-logic.mjs';
-import { ACTIVE_ROSTER_STATUS } from '../../../utils/august-cut-selection-core.mjs';
+import {
+  ACTIVE_ROSTER_STATUS,
+  buildRookiePriorityFromFeeds,
+} from '../../../utils/august-cut-selection-core.mjs';
 import { normalizeFranchiseId as pad4 } from '../../../utils/franchise-id.mjs';
 import { parsePausedValue } from '../../api/admin/autocut-control';
 
@@ -154,6 +157,18 @@ for (const txn of parsedTransactions ?? []) {
   if (bucket) bucket.push(txn);
   else acquisitionsByFranchise.set(fid, [txn]);
 }
+
+// Rookie taxi priority (July 2026 rule: rookies fill open practice-squad
+// spots before anyone is cut). Missing feeds → empty list → the live slate
+// degrades to pure cut behavior rather than failing the page.
+const rookiePriority = buildRookiePriorityFromFeeds({
+  playersFeed: readJsonFile(
+    path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'players.json'),
+  ),
+  draftResultsFeed: readJsonFile(
+    path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'draftResults.json'),
+  ),
+});
 
 // Live slate computation requires both feeds: the roster (activeRoster + the
 // over-limit signal) and parsed transactions (acquisition ordering). Either
@@ -294,9 +309,11 @@ const cards = teams
     const hasOutcomes = outcomes.length > 0;
     let slateSource: 'frozen' | 'live' | null = null;
     let slateCuts: Array<{ playerId: string; reason: string; acquisitionTimestamp?: number }> = [];
+    let slateTaxi: Array<{ playerId: string }> = [];
     let slateComputeFailed = false;
-    if (entry?.slate?.cuts?.length) {
-      slateCuts = entry.slate.cuts;
+    if (entry?.slate?.cuts?.length || entry?.slate?.taxiMoves?.length) {
+      slateCuts = entry.slate.cuts ?? [];
+      slateTaxi = entry.slate.taxiMoves ?? []; // pre-taxi-rule snapshots simply have none
       slateSource = 'frozen';
     } else if (overLimit && feedsReady && !hasOutcomes) {
       // Defense-in-depth: a job-produced snapshot always co-writes slate with
@@ -304,15 +321,17 @@ const cards = teams
       // entry (outcomes but no slate.cuts) falsely rendering a live preview
       // next to real Executed rows.
       try {
-        const selection = selectAutoCuts({
+        const selection = selectAutoMoves({
           activeRoster: rosterByFranchise.get(fid) ?? [],
+          rookieIds: rookiePriority,
           markedPlayerIds: liveList?.playerIds ?? [],
           acquisitions: acquisitionsByFranchise.get(fid) ?? [],
           target: TARGET_ACTIVE_COUNT,
           franchiseId: fid,
         });
-        if (selection.cuts.length) {
+        if (selection.cuts.length || selection.taxiMoves.length) {
           slateCuts = selection.cuts;
+          slateTaxi = selection.taxiMoves;
           slateSource = 'live';
         }
       } catch {
@@ -320,12 +339,21 @@ const cards = teams
         slateComputeFailed = true;
       }
     }
-    const slateRows = slateCuts.map((cut) => ({
-      player: playerView(cut.playerId),
-      reason: cut.reason,
-      acquiredLabel:
-        cut.reason === 'last-added' ? fmtEpochSeconds(cut.acquisitionTimestamp) : null,
-    }));
+    const slateRows = [
+      // Rookie taxi moves lead the slate — these players are KEPT (moved to
+      // the practice squad), not cut; each one erases a needed cut.
+      ...slateTaxi.map((move) => ({
+        player: playerView(move.playerId),
+        reason: 'rookie-taxi',
+        acquiredLabel: null as string | null,
+      })),
+      ...slateCuts.map((cut) => ({
+        player: playerView(cut.playerId),
+        reason: cut.reason,
+        acquiredLabel:
+          cut.reason === 'last-added' ? fmtEpochSeconds(cut.acquisitionTimestamp) : null,
+      })),
+    ];
 
     const manualDoneById = new Map<string, Outcome>();
     for (const o of outcomes) {
@@ -373,6 +401,17 @@ const cards = teams
           } else if (status.startsWith('cut-verified') || status === 'already-gone') {
             state = 'done';
             badge = `✓ ${status}`;
+          } else if (status === 'taxi-verified' || status === 'already-moved') {
+            // Exact matches on purpose: a hypothetical future 'taxi-failed…'
+            // status must fall through to the failed branch, never render
+            // as done/kept.
+            // Rookie taxi outcomes — this player was KEPT (moved to the
+            // practice squad), the opposite of a cut. Without this branch a
+            // taxied rookie under a failed franchise reads "not attempted"
+            // and the manual-cleanup callout tells the commissioner to cut
+            // a player the automation deliberately saved.
+            state = 'done';
+            badge = '✓ moved to practice squad (kept)';
           } else if (status.startsWith('failed')) {
             state = 'failed';
             badge = `✗ ${status}`;
@@ -707,7 +746,11 @@ const pausedMetaLine = pausedState.paused
                           size="compact"
                         />
                         <span class="cdr-reason" data-reason={row.reason}>
-                          {row.reason === 'marked' ? 'marked' : 'last-added'}
+                          {row.reason === 'marked'
+                            ? 'marked'
+                            : row.reason === 'rookie-taxi'
+                              ? 'rookie → practice squad (kept)'
+                              : 'last-added'}
                           {row.acquiredLabel && ` · added ${row.acquiredLabel}`}
                         </span>
                       </li>
@@ -1109,6 +1152,7 @@ const pausedMetaLine = pausedState.paused
   }
   .cdr-reason { margin-left: auto; font-size: 0.72rem; color: var(--color-gray-500, #6b7280); white-space: nowrap; }
   .cdr-reason[data-reason='marked'] { color: var(--color-gray-900, #111827); font-weight: 600; }
+  .cdr-reason[data-reason='rookie-taxi'] { color: var(--content-text-muted); font-style: italic; }
 
   /* Slate provenance caption — tells the commissioner whether the slate below
      is a live server-side preview or the value frozen by the deadline job. */
