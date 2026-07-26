@@ -149,6 +149,38 @@ Historical note: both bugs fired together in April 2026 — Roger posted
 "TODAY: NFL Draft" on Wednesday when the draft was Thursday. The post-mortem
 is the reason this section exists.
 
+## Ask Roger eval — run before prompt/model/constitution changes
+
+`pnpm eval:roger` grades the live TheLeague Q&A pipeline against
+`tests/fixtures/roger-eval-cases.json` (46 cases: facts, multi-rule,
+date-sensitivity, strategy/calc refusals, not-in-constitution honesty,
+injection). Costs ~$1 of API calls (needs `ANTHROPIC_API_KEY`, so
+`vercel env pull` first) — deliberately NOT part of `pnpm test:unit`.
+Run it before merging any change to the Roger system prompt, the
+constitution, or the answering model, and compare per-category pass rates.
+
+- The production system prompt lives in
+  `src/data/rules-qa-system-prompt.ts` (imported by the endpoint AND the
+  eval) so the eval always tests the real prompt — don't re-inline it into
+  the endpoint. The exported `RULEBOOK_ANCHORS` whitelist must match the
+  prompt's section list; `tests/roger-eval-cases.test.ts` (normal CI, no
+  API) enforces the sync and validates the fixture.
+- The LLM call is `generateRulesAnswer` in `src/utils/rules-qa-handlers.ts`
+  with an injectable `now` for date-sensitive cases.
+- New Roger bug report → add a fixture case reproducing it, then fix.
+  Details + methodology write-up: `docs/evals-explained.md`.
+
+**Improvement loop** (`pnpm improve:roger`, weekly via
+`roger-improvement-loop.yml`): rubric-audits real owner questions from
+Redis with an Opus judge, ledgers results in `data/roger-improvement/`,
+and drafts failures as eval cases in `proposed-cases.json`. Ground truth
+is human-gated on purpose: review a proposal, edit its `reference`, set
+`"reviewed": true`, then `pnpm improve:roger --promote <id,...>` to grow
+the golden dataset — promotion mechanically refuses unreviewed cases.
+Never auto-promote or let the judge author ground truth. Prompt
+suggestions land in `latest-report.md`; after applying one, run
+`pnpm eval:roger`.
+
 ## NFL Draft date source of truth
 
 - **Authoritative:** `src/data/theleague/nfl-draft-dates-fetched.json` —

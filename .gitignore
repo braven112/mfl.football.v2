@@ -54,3 +54,6 @@ src/data/salary-history/**/summary-2*.json
 # One-shot Redis migration cursor checkpoint (scripts/migrate-redis.mjs)
 .migrate-redis.state.json
 .env*
+
+# Ask Roger eval run output (pnpm eval:roger)
+tests/eval/report-latest.json

@@ -1,0 +1,57 @@
+name: Roger Improvement Loop
+
+# Weekly rubric audit of real Ask Roger traffic (see CLAUDE.md → "Ask Roger
+# eval"). scripts/roger-improvement-loop.ts pulls owner questions from Redis,
+# grades each answer (deterministic format graders + Claude Opus rubric
+# judge), and commits:
+#   - data/roger-improvement/audit-ledger.json    (what's been graded)
+#   - data/roger-improvement/proposed-cases.json  (failures drafted as eval
+#     cases, awaiting HUMAN review — never auto-promoted)
+#   - data/roger-improvement/latest-report.md     (failures + prompt
+#     improvement suggestions)
+#
+# Closing the loop is deliberately manual: review a proposal, set
+# "reviewed": true, run `pnpm improve:roger --promote <id,...>`, apply any
+# prompt suggestion, then `pnpm eval:roger` to verify fix + no regression.
+
+on:
+  schedule:
+    # 16:23 UTC Monday = ~8:23am Pacific. Avoid the top-of-hour cron stampede.
+    - cron: "23 16 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: roger-improvement-loop
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Audit new Ask Roger traffic
+        run: pnpm improve:roger --limit 25
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+
+      - name: Commit and push updates
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: 'data/roger-improvement'
+          commit-message: 'chore: roger improvement loop audit'
+          no-changes-message: 'No new Ask Roger traffic to audit.'
+          git-user-name: 'Roger Improvement Bot'

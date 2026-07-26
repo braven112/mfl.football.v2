@@ -61,6 +61,8 @@
     "update:salary:all": "pnpm run update:salary && pnpm run update:salary:afl",
     "test": "pnpm run test:unit && pnpm run test:e2e",
     "test:unit": "vitest run",
+    "eval:roger": "vitest run --config vitest.eval.config.ts",
+    "improve:roger": "tsx scripts/roger-improvement-loop.ts",
     "test:e2e": "node tests/e2e-cookie-test.mjs",
     "test:watch": "vitest",
     "test:mfl-integration": "tsx tests/mfl-write-integration.test.ts",
