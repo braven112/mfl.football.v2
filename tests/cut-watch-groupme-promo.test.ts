@@ -213,7 +213,7 @@ describe('buildFactSheet (cut-watch)', () => {
     expect(candidateLines[1]).toContain('Player p10');
     expect(candidateLines[1]).toContain('combined ADP 200.0');
     expect(factSheet).not.toMatch(/- .*Player p0 /);
-    expect(factSheet).toContain('Likely cut candidates (weakest combined value first):');
+    expect(factSheet).toContain('Likely cut candidates (weakest combined value first — EDITORIAL ranking, not the auto-cut order):');
     expect(factSheet).toContain('blended by contract length');
   });
 });

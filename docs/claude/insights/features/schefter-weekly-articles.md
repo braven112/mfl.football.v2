@@ -2,6 +2,14 @@
 
 Insights for the article pipeline: runner → article-type module → feed append → optional GroupMe promo.
 
+## 2026-07-26 - Cut Watch Carries Two Framings That the LLM Will Weld Together Unless the Mechanic Is Stated
+
+**Context:** The 7/26 cut-watch article shipped a false league rule: "When you don't pick, the system picks the weakest combined-value players first." The real deadline auto-cut (august-cut-selection-core.mjs) is marked-players-first, then newest waiver/FA/auction pickup first — trades treated as long-held, value plays no role.
+
+**Insight:** Root cause was category confusion, not a hallucinated fact: the fact sheet intentionally leads with value-ranked cut CANDIDATES (editorial advice), and the only mechanic hint ("auto-chosen at the deadline") gave the model an actor with no rule — so it welded the advisory ranking to the mechanism, in a single sentence with no cut verb (a cut-verb regex misses it). The fix is supply-side + guard-side: the fact sheet now states the mechanic in its own block AND computes each over-limit team's actual auto-cut order with the same `selectAutoCuts` the deadline job runs (empty marked list — plans stay private per decision #10; skipped for owners whose filed plan covers the overage). The guard is a per-sentence ACTION+VALUE+MECHANISM lexicon detector (`scripts/lib/cut-watch-graders.mjs`) with a narrow negated-value escape, run over every shipped cut-watch post in `tests/cut-watch-auto-cut-rule.test.ts` and over live generations in `pnpm eval:cutwatch`. Both directions matter: the suite also asserts the value-ranked advisory list SURVIVES — a "fix" that stops recommending entirely breaks the feature.
+
+**Evidence:** `sf_2026_cut_watch_0726` (corrected in-place in the feed); `scripts/article-types/cut-watch.mjs`; `tests/fixtures/cut-watch-fixture.ts` (value/recency inverted so the two lists share zero names); the real-data fact sheet showing the system's actual first cuts for Midwestside are Justin Herbert and Amon-Ra St. Brown (March auction wins = newest pickups) while unranked dead weight survives.
+
 ## 2026-07-21 - GroupMe Promos Are OPT-IN Per Article Type — No Export, No Ping (Feed Still Publishes)
 
 **Context:** The daily cut-watch article published to the site feed for days but never reached GroupMe. Nothing errored; owners just never got pinged.

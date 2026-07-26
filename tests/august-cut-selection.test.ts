@@ -283,6 +283,38 @@ describe('selectAutoCuts — trades never count as acquisitions', () => {
     expect(result.cuts.map(c => c.playerId)).toEqual(['3', '2', '1']);
   });
 
+  it('after every pickup is exhausted, trade acquisitions ARE cuttable — long-held pool, roster order (no absolute exemption)', () => {
+    // Pins the "exhaustion" semantics: the trade rule is an ORDERING rule
+    // (long-held, reached last), not an exemption. When the overage exceeds
+    // the recorded pickups, the remainder comes from the long-held pool in
+    // roster order, and a trade-acquired player is in that pool like any
+    // draftee or carryover. The result always reaches exactly `overage` —
+    // auto-cut never comes up short.
+    const result = selectAutoCuts({
+      activeRoster: roster(8), // overage 3
+      acquisitions: [
+        acquisition('3', 9_000, 'TRADE'), // newest acquisition — but a trade
+        acquisition('5', 100, 'FREE_AGENT'), // the only real pickup
+      ],
+      target: TARGET,
+    });
+    // Pickup '5' first, then the long-held pool in roster order: '1', '2' —
+    // and had the overage been larger, '3' (the trade) would be next, not
+    // skipped.
+    expect(result.cuts.map(c => c.playerId)).toEqual(['5', '1', '2']);
+    expect(result.cuts).toHaveLength(result.overage);
+
+    const deeper = selectAutoCuts({
+      activeRoster: roster(9), // overage 4 — deep enough to reach the trade
+      acquisitions: [
+        acquisition('3', 9_000, 'TRADE'),
+        acquisition('5', 100, 'FREE_AGENT'),
+      ],
+      target: TARGET,
+    });
+    expect(deeper.cuts.map(c => c.playerId)).toEqual(['5', '1', '2', '3']);
+  });
+
   it('a trade re-acquisition does not refresh an older pickup timestamp', () => {
     const result = selectAutoCuts({
       activeRoster: roster(6), // overage 1
