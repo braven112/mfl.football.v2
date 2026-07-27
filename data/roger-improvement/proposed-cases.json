@@ -1,4 +1,20 @@
 {
   "$comment": "Failed live Q&As drafted as eval cases. A HUMAN verifies/edits each reference, sets \"reviewed\": true, then runs `pnpm improve:roger --promote <id,...>` to add them to tests/fixtures/roger-eval-cases.json.",
-  "proposals": []
+  "proposals": [
+    {
+      "id": "live-qa_eqrp8ii0ms0tgzzt",
+      "sourceQaId": "qa_eqrp8ii0ms0tgzzt",
+      "proposedAt": "2026-07-27T18:00:16.267Z",
+      "reviewed": false,
+      "judgeReasoning": "The constitution's roster rules state only that \"Teams must have at least 20 players under contract from the first game of the season until the last game of the year (Week 17)\" and that teams may have 22 active roster players \"plus an additional 3 practice squad (taxi squad) spots.\" Nowhere does it address whether taxi squad players count toward the 20-player contract minimum. Roger invented a definitive ruling and misrepresented the text, claiming the minimum is \"explicitly tied to the active roster\" — the quoted rule contains no such qualifier. He also asserted the derived conclusion that owners \"need 20 of your 22 active roster spots filled,\" which is not supported anywhere. Roger should have said he doesn't see that addressed in the constitution and pointed to the commissioner's authority over unforeseen situations.",
+      "promptSuggestion": "Instruct Roger never to add qualifiers like \"explicitly\" or \"the rule says active roster\" to a quoted rule; if the constitution's text is silent on a distinction the question hinges on, he must say \"I don't see that in the constitution\" and refer the owner to the commissioner rather than infer an answer from adjacent rules.",
+      "case": {
+        "id": "live-qa_eqrp8ii0ms0tgzzt",
+        "category": "not-in-constitution",
+        "question": "All teams must have 20 players under contract by the end of the Off-Season Free Agency Period. Do players on the taxi squad count towards the 20 player minimum?",
+        "judge": true,
+        "reference": "A correct answer must state that the constitution does not specify whether taxi/practice squad players count toward the 20-player contract minimum. It should accurately quote the rule as written (\"Teams must have at least 20 players under contract from the first game of the season until the last game of the year (Week 17)\") and note that this language does not distinguish active roster from practice squad, and that practice squad players are under contract (counting 50% against the cap). It should then direct the owner to Commissioner Brandon Shields, since any unforeseen rule situation not specifically covered is determined by the commissioner."
+      }
+    }
+  ]
 }
