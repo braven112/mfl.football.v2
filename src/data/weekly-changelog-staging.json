@@ -8,6 +8,14 @@
       "impact": "user",
       "area": "search",
       "league": "both"
+    },
+    {
+      "date": "2026-07-28",
+      "type": "bug-fix",
+      "summary": "Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net)",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
     }
   ]
 }

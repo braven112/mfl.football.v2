@@ -31,6 +31,8 @@ import {
 } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import ThemeImage from '../../components/ThemeImage.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -38,6 +40,10 @@ const baseUrl = getLeagueBaseUrl(league);
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+
+const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/fetch.meta.json', {
   eager: true,
 });
 
@@ -74,15 +80,35 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
 }
 
-// Get standings data for selected year
-const selectedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
-  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
+// Get standings data for selected year: the committed snapshot, refreshed
+// with a live MFL fetch when viewing the current season (60s TTL cache,
+// falls back to the committed feed on any error/timeout).
+const committedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
+  | StandingsFeed
   | undefined;
+
+const { feed: selectedFeed, live: isLiveStandings, fetchedAt: liveFetchedAt } =
+  await getStandingsFeedWithLiveRefresh({
+    league: getLeagueBySlug('afl-fantasy')!,
+    year: selectedYear,
+    committedFeed,
+  });
 
 // Check if data is valid (has leagueStandings and no error)
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
   return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
 }
+
+// "Last updated" line: live fetch time when live data is in play, otherwise
+// the committed snapshot's fetch timestamp (mirrors TheLeague standings page).
+const fetchMeta = fetchMetaFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/fetch.meta.json`] as
+  | { lastFetched?: string }
+  | undefined;
+const lastFetched = isLiveStandings
+  ? liveFetchedAt
+  : fetchMeta?.lastFetched
+    ? new Date(fetchMeta.lastFetched)
+    : null;
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
@@ -516,6 +542,12 @@ function divisionHeader(name: string, confId?: '00' | '01') {
           </div>
         </div>
       )}
+
+      {lastFetched && (
+        <p class="data-disclaimer">
+          Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+        </p>
+      )}
     </div>
 
   </div>
@@ -667,6 +699,12 @@ function divisionHeader(name: string, confId?: '00' | '01') {
        stretched the whole page and forced horizontal scroll on phones. Letting
        it shrink lets each table's own `overflow-x` wrapper contain the width. */
     min-width: 0;
+  }
+
+  .data-disclaimer {
+    margin: 1rem 0 0;
+    color: var(--content-text-muted, #64748b);
+    font-size: 0.95rem;
   }
 
   .section-title {

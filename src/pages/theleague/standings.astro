@@ -19,6 +19,8 @@ import {
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear, HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -50,10 +52,19 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
 }
 
-// Get standings data for selected year
-const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
-  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
+// Get standings data for selected year: the committed snapshot, refreshed
+// with a live MFL fetch when viewing the current season (60s TTL cache,
+// falls back to the committed feed on any error/timeout).
+const committedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
+  | StandingsFeed
   | undefined;
+
+const { feed: selectedFeed, live: isLiveStandings, fetchedAt: liveFetchedAt } =
+  await getStandingsFeedWithLiveRefresh({
+    league: getLeagueBySlug('theleague')!,
+    year: selectedYear,
+    committedFeed,
+  });
 
 // Check if data is valid (has leagueStandings and no error)
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
@@ -63,7 +74,13 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 const fetchMeta = fetchMetaFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/fetch.meta.json`] as
   | { lastFetched?: string }
   | undefined;
-const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
+// When live data is in play, "last updated" is the live fetch time; otherwise
+// it's the committed snapshot's fetch timestamp.
+const lastFetched = isLiveStandings
+  ? liveFetchedAt
+  : fetchMeta?.lastFetched
+    ? new Date(fetchMeta.lastFetched)
+    : null;
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
