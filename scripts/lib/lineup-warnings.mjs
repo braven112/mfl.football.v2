@@ -207,6 +207,7 @@ const FLAGGED_STATUSES = new Map([
   ['IR', 'IR'],
   ['Suspended', 'SUSPENDED'],
   ['Retired', 'RETIRED'],
+  ['Holdout', 'HOLDOUT'],
 ]);
 
 /**
@@ -282,6 +283,7 @@ const TYPE_LABELS = {
   IR: 'on IR',
   SUSPENDED: 'suspended',
   RETIRED: 'retired',
+  HOLDOUT: 'holding out',
   BYE: 'on BYE',
 };
 

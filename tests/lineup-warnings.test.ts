@@ -315,6 +315,20 @@ describe('buildLineupWarnings', () => {
     expect(warnings[0].problems[0].type).toBe('SUSPENDED');
   });
 
+  it('flags Holdout starters (they cannot play either)', () => {
+    const warnings = buildLineupWarnings({
+      lineups: lineupsOf(['0001', ['400']]),
+      players,
+      injuries: new Map([['400', 'Holdout']]),
+      byeTeams: new Set(),
+      franchiseNames,
+      requiredStarters: 1,
+    });
+    expect(warnings[0].problems[0].type).toBe('HOLDOUT');
+    // And the formatter prints a human label, not the raw enum.
+    expect(formatWarningLine(warnings[0])).toBe('• Pacific Pigskins: Travis Kelce (TE) holding out');
+  });
+
   it('counts empty starting slots', () => {
     const warnings = buildLineupWarnings({
       lineups: lineupsOf(['0002', ['300']]),

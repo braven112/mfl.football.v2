@@ -5,8 +5,9 @@
  *
  * Scans every franchise's submitted starting lineup in each lineup-playing
  * league (registry leagues without `bestBall: true`) and posts ONE GroupMe
- * message per league flagging teams starting players who are OUT / on IR /
- * suspended / on bye, or with empty starting slots. If every lineup in a
+ * message per league flagging teams starting players who cannot play — OUT,
+ * on IR, suspended, retired, holding out, or on bye — plus teams with empty
+ * starting slots or no submitted lineup at all. If every lineup in a
  * league is clean, that league gets no post — silence is the good outcome.
  *
  * Flagging logic is pure and unit-tested in scripts/lib/lineup-warnings.mjs
@@ -65,6 +66,12 @@ const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const leagueArgIdx = args.indexOf('--league');
 const LEAGUE_FILTER = leagueArgIdx !== -1 ? args[leagueArgIdx + 1] : null;
+// Fail-safe: `--league` with a missing value must error out, never silently
+// widen the run to every league.
+if (leagueArgIdx !== -1 && (!LEAGUE_FILTER || LEAGUE_FILTER.startsWith('--'))) {
+  console.error('--league requires a value (e.g. --league theleague)');
+  process.exit(1);
+}
 const weekArgIdx = args.indexOf('--week');
 const WEEK_OVERRIDE = weekArgIdx !== -1 ? parseInt(args[weekArgIdx + 1], 10) : null;
 
