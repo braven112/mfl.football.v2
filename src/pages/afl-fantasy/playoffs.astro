@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import { getConferenceStandings, getTierAllPlayStandings } from '../../utils/standings';
+import '../../styles/loading.css';
 import {
   // fetchLiveScoring, // moved to lazy client fetch (disabled for SSR perf)
   // fetchPlayoffBracket,
@@ -1324,7 +1325,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
       </p>
       {hasBrackets && (
         <p class="data-disclaimer" id="live-scores-timestamp">
-          Scores updated: <span id="last-updated-time">Loading...</span>
+          Scores updated: <span id="last-updated-time"><span class="loading-skeleton loading-skeleton--text" style="width: 4.5rem; display: inline-block; vertical-align: middle;" role="status" aria-busy="true" aria-live="polite" aria-label="Loading update time"></span></span>
         </p>
       )}
     </div>

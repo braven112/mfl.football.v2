@@ -10,6 +10,7 @@
  */
 
 import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
+import '../../styles/loading.css';
 
 export interface Props {
   /** Compact mode reduces spacing for modal embedding */
@@ -126,7 +127,7 @@ const {
       type="submit"
       id="login-submit"
     >
-      <span class="login-form__spinner" aria-hidden="true"></span>
+      <span class="login-form__spinner loading-spinner loading-spinner--compact loading-spinner--on-accent" aria-hidden="true"></span>
       <span class="login-form__submit-text">Sign In</span>
     </button>
 
@@ -474,25 +475,17 @@ const {
     cursor: not-allowed;
   }
 
-  /* ── Loading Spinner ───────────────────────────────────────── */
-  .login-form__spinner {
+  /* ── Loading Spinner (shared .loading-spinner system, loading.css) ──
+     Scoped selectors out-rank the shared `.loading-spinner { display }`
+     regardless of stylesheet order. */
+  .login-form__submit .login-form__spinner {
     display: none;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: var(--btn-primary-text, #fff);
-    border-radius: var(--radius-full, 9999px);
-    animation: login-spin 0.6s linear infinite;
     margin-right: 0.5rem;
     flex-shrink: 0;
   }
 
   .login-form__submit--loading .login-form__spinner {
-    display: block;
-  }
-
-  @keyframes login-spin {
-    to { transform: rotate(360deg); }
+    display: inline-block;
   }
 
   /* ── Security Note ─────────────────────────────────────────── */

@@ -2088,12 +2088,7 @@ html.dark .dr-side-panel {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Panel loading + chat-missing fallback */
-.dr-panel-loading {
-  padding: 1rem;
-  color: var(--color-gray-500, #6b7280);
-  font-size: 0.8125rem;
-}
+/* Panel loading uses the shared .loading-skeleton system (loading.css). */
 .dr-chat-missing {
   display: flex;
   align-items: center;

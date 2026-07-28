@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import { getLeagueStandings } from '../../utils/standings';
+import '../../styles/loading.css';
 import {
   buildSeedMaps,
   // fetchLiveScoring, // moved to lazy client fetch (disabled for SSR perf)
@@ -878,7 +879,7 @@ const grandTotal =
       </p>
       {hasBrackets && (
         <p class="data-disclaimer" id="live-scores-timestamp">
-          Scores updated: <span id="last-updated-time">Loading...</span>
+          Scores updated: <span id="last-updated-time"><span class="loading-skeleton loading-skeleton--text" style="width: 4.5rem; display: inline-block; vertical-align: middle;" role="status" aria-busy="true" aria-live="polite" aria-label="Loading update time"></span></span>
         </p>
       )}
     </div>

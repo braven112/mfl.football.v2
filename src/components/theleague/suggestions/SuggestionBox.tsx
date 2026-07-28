@@ -377,7 +377,17 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
       )}
 
       {isLoading ? (
-        <div className="sb-loading">Loading ideas...</div>
+        <div
+          className="loading-skeleton-group"
+          role="status"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label="Loading ideas"
+        >
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '5.5rem' }} />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '5.5rem' }} />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '5.5rem' }} />
+        </div>
       ) : ideas.length === 0 ? (
         <div className="sb-empty">
           No ideas yet. Be the first to suggest something!

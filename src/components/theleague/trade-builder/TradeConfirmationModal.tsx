@@ -10,6 +10,7 @@ import type {
 } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
 import TradeCompositeStrip, { isCompositableTradePlayer } from './TradeCompositeStrip';
+import '../../../styles/loading.css';
 
 interface Props {
   teamA: TradeBuilderTeam;
@@ -321,12 +322,14 @@ export default function TradeConfirmationModal({
                   Cancel
                 </button>
                 <button
-                  className="tcm-btn-submit"
+                  className={`tcm-btn-submit loading-btn loading-btn--on-accent${isSubmitting ? ' is-loading' : ''}`}
                   onClick={() => onSubmit(message)}
                   disabled={isSubmitting || !userIsPartOfTrade}
                   aria-describedby={!userIsPartOfTrade ? 'tcm-not-participant-error' : undefined}
+                  aria-busy={isSubmitting || undefined}
+                  aria-label={isSubmitting ? 'Sending trade proposal' : undefined}
                 >
-                  {!userIsPartOfTrade ? 'Not Your Trade' : isSubmitting ? 'Sending...' : submissionStatus.status === 'error' ? 'Retry' : 'Send Proposal'}
+                  {!userIsPartOfTrade ? 'Not Your Trade' : submissionStatus.status === 'error' && !isSubmitting ? 'Retry' : 'Send Proposal'}
                 </button>
               </>
             )}

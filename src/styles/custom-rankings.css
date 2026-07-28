@@ -46,12 +46,7 @@
   gap: 0.5rem;
 }
 
-.cr-page__loading {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--content-text-muted, #64748b);
-  font-size: 0.95rem;
-}
+/* Loading state uses the shared .loading-skeleton system (src/styles/loading.css). */
 
 .cr-page__empty {
   text-align: center;

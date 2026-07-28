@@ -116,6 +116,14 @@ html.dark .player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__
   animation: avatar-eligible-pulse 2.4s ease-in-out infinite;
 }
 
+/* Reduced motion: keep the static eligible ring, drop the pulse
+   (docs/claude/loading-standards.md — the guard is non-negotiable). */
+@media (prefers-reduced-motion: reduce) {
+  .player-cell__avatar--eligible {
+    animation: none;
+  }
+}
+
 @keyframes avatar-eligible-pulse {
   0%, 100% {
     box-shadow:

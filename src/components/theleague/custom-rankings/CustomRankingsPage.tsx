@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
+import '../../../styles/loading.css';
 import RankingList from './RankingList';
 import PositionFilter from './PositionFilter';
 import SaveIndicator from './SaveIndicator';
@@ -339,7 +340,20 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMa
   if (loading) {
     return (
       <div className="cr-page">
-        <div className="cr-page__loading">Loading rankings...</div>
+        <div
+          className="loading-skeleton-group"
+          role="status"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label="Loading rankings"
+        >
+          <span className="loading-skeleton loading-skeleton--title" />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '3rem' }} />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '3rem' }} />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '3rem' }} />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '3rem' }} />
+          <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '3rem' }} />
+        </div>
       </div>
     );
   }

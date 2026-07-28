@@ -19,6 +19,7 @@ import { getTipTopics } from '../../config/schefter-topics.mjs';
 import { publicLeagueQs } from '../../utils/schefter-league';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
+import '../../styles/loading.css';
 
 export type TipPageTeam = {
   franchiseId: string;
@@ -291,7 +292,19 @@ const preselectTeam = (() => {
           <p class="section-header__sub" data-tipster-leaderboard-sub>By rumors seeded.</p>
         </div>
         <ol class="tip-rail-leaderboard__list" data-tipster-leaderboard-list>
-          <li class="tip-rail-leaderboard__loading" data-tipster-leaderboard-loading>Loading the board…</li>
+          <li class="tip-rail-leaderboard__loading" data-tipster-leaderboard-loading>
+            <span
+              class="loading-skeleton-group"
+              role="status"
+              aria-busy="true"
+              aria-live="polite"
+              aria-label="Loading the board"
+            >
+              <span class="loading-skeleton loading-skeleton--text" style="width: 85%"></span>
+              <span class="loading-skeleton loading-skeleton--text" style="width: 70%"></span>
+              <span class="loading-skeleton loading-skeleton--text" style="width: 75%"></span>
+            </span>
+          </li>
         </ol>
       </section>
 
@@ -472,7 +485,17 @@ const preselectTeam = (() => {
           <p class="section-header__sub">Every tip is anonymous — this is between you and the hash.</p>
         </div>
         <div class="tip-rail-record__body" data-tipster-record-body>
-          <p class="tip-rail-record__loading" data-tipster-record-loading>Checking the Rolodex…</p>
+          <span
+            class="tip-rail-record__loading loading-skeleton-group"
+            data-tipster-record-loading
+            role="status"
+            aria-busy="true"
+            aria-live="polite"
+            aria-label="Checking the Rolodex"
+          >
+            <span class="loading-skeleton loading-skeleton--text" style="width: 60%"></span>
+            <span class="loading-skeleton loading-skeleton--text" style="width: 80%"></span>
+          </span>
         </div>
       </section>
 
@@ -1148,12 +1171,10 @@ const preselectTeam = (() => {
     font-size: 0.8125rem;
     line-height: 1.4;
   }
+  /* Loading placeholders use the shared .loading-skeleton system (loading.css) */
   .tip-rail-record__loading,
   .tip-rail-leaderboard__loading {
     margin: 0;
-    font-size: 0.75rem;
-    font-style: italic;
-    color: var(--color-gray-500, #6b7280);
   }
   .tip-rail-record__codename {
     display: inline-flex;

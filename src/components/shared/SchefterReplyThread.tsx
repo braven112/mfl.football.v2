@@ -7,6 +7,17 @@
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SchefterReply } from '../../types/schefter-replies';
+import { LOADING_THRESHOLDS } from '../../utils/loading-tier';
+
+/**
+ * Tier-5 narration for a 10s+ AI-reply wait (docs/claude/loading-standards.md).
+ * Rendered as "<name> <line>", cycling inside the existing polite live region.
+ */
+const TYPING_NARRATION = [
+  'is still working the phones…',
+  'is confirming with a second source…',
+  'is polishing the copy…',
+];
 
 interface Props {
   postId: string;
@@ -57,6 +68,28 @@ export default function SchefterReplyThread({
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Past the 10s branded threshold, the typing line escalates to narration.
+  const [typingLine, setTypingLine] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!aiTyping) {
+      setTypingLine(null);
+      return;
+    }
+    let idx = 0;
+    let cycle: number | undefined;
+    const escalate = window.setTimeout(() => {
+      setTypingLine(TYPING_NARRATION[0]);
+      cycle = window.setInterval(() => {
+        idx = (idx + 1) % TYPING_NARRATION.length;
+        setTypingLine(TYPING_NARRATION[idx]);
+      }, 2500);
+    }, LOADING_THRESHOLDS.branded);
+    return () => {
+      window.clearTimeout(escalate);
+      if (cycle !== undefined) window.clearInterval(cycle);
+    };
+  }, [aiTyping]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const repliesRegionRef = useRef<HTMLDivElement>(null);
@@ -234,7 +267,12 @@ export default function SchefterReplyThread({
 
           {/* Typing indicator */}
           {aiTyping && (
-            <div className="sfc-typing" role="status" aria-live="polite">
+            <div
+              className="sfc-typing"
+              role="status"
+              aria-live="polite"
+              aria-label={`${aiTypingName} ${typingLine ?? 'is typing'}`}
+            >
               <img
                 className="sfc-reply__avatar"
                 src={aiTypingAvatar}
@@ -243,7 +281,7 @@ export default function SchefterReplyThread({
                 height="24"
               />
               <div className="sfc-typing__content">
-                <span className="sfc-typing__text">{aiTypingName} is typing</span>
+                <span className="sfc-typing__text">{aiTypingName} {typingLine ?? 'is typing'}</span>
                 <span className="sfc-typing__dots" aria-hidden="true">
                   <span className="sfc-typing__dot" />
                   <span className="sfc-typing__dot" />

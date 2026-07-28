@@ -95,8 +95,15 @@ export default function PollCreator({ onCreatePoll, onCancel }: Props) {
         <button className="sb-btn sb-btn--ghost" onClick={onCancel} type="button" disabled={isSubmitting}>
           Cancel
         </button>
-        <button className="sb-btn sb-btn--primary" onClick={handleSubmit} disabled={!canSubmit} type="button">
-          {isSubmitting ? 'Creating...' : 'Create Poll'}
+        <button
+          className={`sb-btn sb-btn--primary loading-btn loading-btn--on-accent${isSubmitting ? ' is-loading' : ''}`}
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          type="button"
+          aria-busy={isSubmitting || undefined}
+          aria-label={isSubmitting ? 'Creating poll' : undefined}
+        >
+          Create Poll
         </button>
       </div>
     </div>
