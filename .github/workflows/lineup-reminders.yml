@@ -1,0 +1,65 @@
+name: Schefter Lineup Reminders
+
+# Sunday-morning pre-kickoff lineup check: one GroupMe warning per league
+# flagging teams starting OUT / IR / suspended / bye players or with empty
+# starting slots. Clean lineups = no post. Logic: scripts/schefter-lineup-check.mjs.
+#
+# Schedule: Sundays ~9:15am Pacific, September through January (the script
+# itself also no-ops outside Sep–Jan, so an off-season dispatch is safe).
+# Two cron lines because PT shifts against UTC at the November DST change:
+#   Sep–Oct  9:15 PDT = 16:15 UTC
+#   Nov–Jan  9:15 PST = 17:15 UTC
+# (On the DST-change Sunday itself, clocks fall back at 2am — 17:15 UTC is
+# already 9:15 PST, so the Nov line is correct that day too.)
+on:
+  schedule:
+    - cron: "15 16 * 9,10 0"
+    - cron: "15 17 * 11,12,1 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print would-be posts without Redis/GroupMe"
+        required: false
+        default: "false"
+
+concurrency:
+  group: lineup-reminders
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
+
+      # One invocation covers every lineup-playing league in the registry
+      # (best-ball leagues are skipped by the bestBall flag). Per-league
+      # once-per-PT-day Redis guards make accidental re-runs safe.
+      - name: Run Schefter lineup check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN_INPUT" = "true" ]; then
+            node scripts/schefter-lineup-check.mjs --dry-run
+          else
+            node scripts/schefter-lineup-check.mjs
+          fi
