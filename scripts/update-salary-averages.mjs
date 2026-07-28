@@ -20,8 +20,8 @@ const calculateCurrentLeagueYear = (date = new Date()) => {
   // cutoff advances it. A base that advanced at Labor Day would be +1'd
   // twice from Labor Day through Dec 31. Mirrors src/utils/league-year.ts.
   const baseYear = calendarYear - 1;
-  // Feb 14th @ 8:45 PT = 16:45 UTC
-  const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+  // Feb 14th @ 8:45 PM PST = Feb 15 04:45 UTC
+  const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
   return date >= febCutoff ? baseYear + 1 : baseYear;
 };
 

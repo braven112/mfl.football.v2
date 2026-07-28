@@ -36,7 +36,7 @@ const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.c
 // Determine year (same logic as fetch-mfl-feeds.mjs)
 const now = new Date();
 const manualYear = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SEASON);
-const febCutoff = new Date(now.getFullYear(), 1, 14, 16, 45, 0, 0);
+const febCutoff = new Date(Date.UTC(now.getFullYear(), 1, 15, 4, 45, 0, 0));
 // A manual MFL_YEAR is the target year itself — never run it through the
 // cutoff math (the old code +1'd the override past Feb 14).
 const baseYear = calculateBaseYear(now);

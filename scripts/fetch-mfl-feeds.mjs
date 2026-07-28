@@ -79,8 +79,8 @@ const getYearsToFetch = () => {
     ? Math.max(parsedEnvYear, autoBaseYear)
     : autoBaseYear;
 
-  // Feb 14th @ 8:45 PT cutoff (16:45 UTC in PST)
-  const febCutoff = new Date(now.getFullYear(), 1, 14, 16, 45, 0, 0);
+  // Feb 14th @ 8:45 PM PT cutoff (Feb 15 04:45 UTC in PST)
+  const febCutoff = new Date(Date.UTC(now.getFullYear(), 1, 15, 4, 45, 0, 0));
 
   // Labor Day cutoff (first Monday in September)
   const laborDay = getLaborDay(now.getFullYear());

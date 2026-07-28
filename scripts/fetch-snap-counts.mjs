@@ -73,7 +73,7 @@ const NFLVERSE_URL = `https://github.com/nflverse/nflverse-data/releases/downloa
 
 // MFL data — use current league year for player ID matching
 const getCurrentLeagueYear = () => {
-  const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+  const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
   const baseYear = now >= laborDay ? calendarYear : calendarYear - 1;
   return now >= febCutoff ? baseYear + 1 : baseYear;
 };
