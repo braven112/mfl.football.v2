@@ -1,0 +1,369 @@
+---
+/**
+ * NotificationSettingsCard — per-device web push opt-in card.
+ *
+ * Shared by both leagues' /notifications pages. All league/franchise
+ * scoping happens server-side from the session JWT (the subscribe API
+ * ignores any client-supplied identity), so this card is identical for
+ * every league.
+ *
+ * The subscription is per-BROWSER: enabling here only covers this device;
+ * owners enable each phone/laptop separately (up to a small per-team cap).
+ */
+
+const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? '';
+---
+
+<section
+  class="push-card"
+  id="push-settings"
+  data-vapid-key={vapidPublicKey}
+  aria-labelledby="push-card-title"
+>
+  <div class="push-card__head">
+    <div class="push-card__head-text">
+      <h2 id="push-card-title">Push Notifications</h2>
+      <p class="push-card__desc">
+        Get a heads-up on this device the moment another owner sends you a
+        trade offer — no more finding week-old offers by accident.
+      </p>
+    </div>
+  </div>
+
+  <div class="push-card__body">
+    <div class="push-card__row">
+      <div class="push-card__state">
+        <span class="push-card__state-label">This device</span>
+        <span class="push-card__state-value" id="push-state">Checking&hellip;</span>
+      </div>
+      <div class="push-card__actions">
+        <button class="push-btn push-btn--primary" id="push-toggle" disabled>
+          Enable notifications
+        </button>
+        <button class="push-btn push-btn--ghost" id="push-test" disabled>
+          Send test
+        </button>
+      </div>
+    </div>
+    <p class="push-card__status" id="push-status" role="status" aria-live="polite"></p>
+    <p class="push-card__hint">
+      Notifications are per device — enable them on each phone or computer
+      you want buzzed. On iPhone/iPad, first add the site to your Home
+      Screen (Share &rarr; Add to Home Screen), then enable here from the
+      installed app.
+    </p>
+  </div>
+</section>
+
+<script>
+  // Bind on astro:page-load so the card survives ClientRouter navigations
+  // (same pattern as throwback-settings).
+  function initPushSettings() {
+    const root = document.getElementById('push-settings');
+    if (!root || root.dataset.pushBound === '1') return;
+    root.dataset.pushBound = '1';
+
+    const publicKey = root.dataset.vapidKey || '';
+    const stateEl = document.getElementById('push-state');
+    const statusEl = document.getElementById('push-status');
+    const toggleBtn = document.getElementById('push-toggle') as HTMLButtonElement | null;
+    const testBtn = document.getElementById('push-test') as HTMLButtonElement | null;
+    if (!stateEl || !statusEl || !toggleBtn || !testBtn) return;
+
+    let subscribed = false;
+
+    const setState = (text: string) => {
+      stateEl.textContent = text;
+    };
+    const setStatus = (text: string) => {
+      statusEl.textContent = text;
+    };
+    const render = () => {
+      subscribedClass();
+      toggleBtn.textContent = subscribed ? 'Disable notifications' : 'Enable notifications';
+      testBtn.disabled = !subscribed;
+    };
+    const subscribedClass = () => {
+      setState(subscribed ? 'Notifications on' : 'Notifications off');
+      root.classList.toggle('push-card--on', subscribed);
+    };
+    const disableAll = (reason: string) => {
+      setState(reason);
+      toggleBtn.disabled = true;
+      testBtn.disabled = true;
+    };
+
+    // Convert a base64url VAPID key to the Uint8Array subscribe() expects.
+    const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      const output = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; i += 1) {
+        output[i] = rawData.charCodeAt(i);
+      }
+      return output;
+    };
+
+    const getRegistration = () => navigator.serviceWorker.getRegistration();
+
+    async function refresh() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        disableAll('Not supported in this browser');
+        return;
+      }
+      if (!publicKey) {
+        disableAll('Not configured on this server yet');
+        return;
+      }
+      const reg = await getRegistration();
+      if (!reg) {
+        // Dev mode unregisters the SW; production registers it on every load.
+        disableAll('Unavailable (no service worker — production only)');
+        return;
+      }
+      const sub = await reg.pushManager.getSubscription();
+      subscribed = !!sub;
+      toggleBtn.disabled = false;
+      render();
+      if (Notification.permission === 'denied') {
+        setStatus('Notifications are blocked in your browser settings for this site.');
+      }
+    }
+
+    async function enable() {
+      setStatus('');
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setStatus('Permission not granted — allow notifications for this site and try again.');
+        return;
+      }
+      const reg = await getRegistration();
+      if (!reg) {
+        setStatus('Service worker not available.');
+        return;
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      let res: Response;
+      try {
+        res = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: sub.toJSON() }),
+        });
+      } catch {
+        // Network failure — the server never stored the subscription, so a
+        // locally-active one would read "on" forever while no pushes arrive.
+        await sub.unsubscribe().catch(() => {});
+        setStatus('Could not reach the server to save the subscription — check your connection and try again.');
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        // Server refused — drop the local subscription so state stays honest.
+        await sub.unsubscribe().catch(() => {});
+        setStatus(data.message || 'Could not save the subscription — try again later.');
+        return;
+      }
+      subscribed = true;
+      render();
+      setStatus('Enabled. Send yourself a test to confirm.');
+    }
+
+    async function disable() {
+      setStatus('');
+      const reg = await getRegistration();
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      if (sub) {
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        }).catch(() => {});
+        await sub.unsubscribe().catch(() => {});
+      }
+      subscribed = false;
+      render();
+      setStatus('Notifications disabled on this device.');
+    }
+
+    toggleBtn.addEventListener('click', async () => {
+      toggleBtn.disabled = true;
+      try {
+        await (subscribed ? disable() : enable());
+      } catch (e) {
+        console.warn('[push-settings] toggle failed:', e);
+        setStatus('Something went wrong — try again.');
+      } finally {
+        toggleBtn.disabled = false;
+      }
+    });
+
+    testBtn.addEventListener('click', async () => {
+      testBtn.disabled = true;
+      setStatus('Sending test notification…');
+      try {
+        const res = await fetch('/api/push/test', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setStatus(
+            `Test sent to ${data.sent} device${data.sent === 1 ? '' : 's'} — it should arrive within a few seconds.`,
+          );
+        } else {
+          setStatus(data.message || 'Test failed — try again later.');
+        }
+      } catch {
+        setStatus('Test failed — check your connection.');
+      } finally {
+        testBtn.disabled = !subscribed;
+      }
+    });
+
+    refresh().catch((e) => {
+      console.warn('[push-settings] init failed:', e);
+      disableAll('Unavailable');
+    });
+  }
+
+  document.addEventListener('astro:page-load', initPushSettings);
+</script>
+
+<style>
+  .push-card {
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    background: var(--card-surface);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .push-card__head {
+    padding: 1.25rem 1.5rem 0.75rem;
+  }
+
+  .push-card__head h2 {
+    margin: 0 0 0.35rem;
+    font-size: var(--font-size-lg);
+  }
+
+  .push-card__desc {
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    max-width: 60ch;
+  }
+
+  .push-card__body {
+    padding: 0.75rem 1.5rem 1.25rem;
+  }
+
+  .push-card__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    background: var(--content-bg-muted);
+  }
+
+  .push-card__state {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .push-card__state-label {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+  }
+
+  .push-card__state-value {
+    font-weight: 600;
+  }
+
+  .push-card--on .push-card__state-value {
+    color: var(--color-accent);
+  }
+
+  .push-card__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .push-btn {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.55rem 1rem;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .push-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .push-btn--primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .push-btn--primary:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+  }
+
+  .push-btn--ghost {
+    background: transparent;
+    border: 1px solid var(--content-border);
+    color: var(--page-text);
+  }
+
+  .push-btn--ghost:hover:not(:disabled) {
+    background: var(--content-bg-muted);
+  }
+
+  .push-card__status {
+    margin: 0.75rem 0 0;
+    min-height: 1.2em;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  .push-card__hint {
+    margin: 0.5rem 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted);
+    max-width: 68ch;
+  }
+
+  @media (max-width: 600px) {
+    .push-card__head,
+    .push-card__body {
+      padding-inline: 1rem;
+    }
+
+    .push-card__row {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .push-btn--primary {
+      flex: 1;
+    }
+  }
+</style>

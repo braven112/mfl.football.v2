@@ -1,0 +1,60 @@
+---
+/**
+ * Notification settings — /theleague/notifications
+ *
+ * Owner-facing web push opt-in: enable trade-offer alerts on this device,
+ * send yourself a test. Auth-required; scoped to the session's own
+ * franchise (the push APIs only ever act on the JWT identity).
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import NotificationSettingsCard from '../../components/shared/NotificationSettingsCard.astro';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId) {
+  return Astro.redirect('/theleague/login?redirect=/theleague/notifications');
+}
+
+// League scoping: AFL franchise ids fully overlap TheLeague's — a session
+// from the other league must not manage subscriptions under this path.
+if (user.leagueId !== getLeagueBySlug('theleague')?.id) {
+  return Astro.redirect('/theleague');
+}
+---
+
+<TheLeagueLayout title="Notification Settings | The League">
+  <div class="notif-page">
+    <header class="notif-header">
+      <h1>Notifications</h1>
+      <p>
+        Turn on push notifications and The League will tap you on the
+        shoulder when something needs your attention. First up: trade
+        offers — more alert types will land here as they ship.
+      </p>
+    </header>
+
+    <NotificationSettingsCard />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .notif-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1.5rem 0;
+  }
+
+  .notif-header h1 {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-2xl);
+  }
+
+  .notif-header p {
+    color: var(--content-text-muted);
+    max-width: 60ch;
+    margin: 0 0 1.5rem;
+  }
+</style>

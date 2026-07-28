@@ -163,6 +163,18 @@ export const POST: APIRoute = async ({ request }) => {
       }
     })();
 
+    // Web push: nudge the receiving franchise's subscribed devices about the
+    // new offer. Fire-and-forget — push problems must never fail the submit.
+    // League + proposer identity come from the session JWT (never the body).
+    void (async () => {
+      try {
+        const { notifyTradeOfferPush } = await import('../../../utils/push-notify-trade');
+        await notifyTradeOfferPush(leagueId, user.franchiseId!, String(offeredTo));
+      } catch {
+        // swallow — notification is best-effort
+      }
+    })();
+
     return new Response(
       JSON.stringify({ success: true, message: 'Trade proposal submitted' }),
       { status: 200, headers: JSON_HEADERS }

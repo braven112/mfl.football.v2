@@ -5,9 +5,10 @@
  * - Static assets (CSS, JS, images, fonts): Cache-first
  * - HTML pages (SSR): Network-first with offline fallback
  * - Offline page cached on install
+ * - Web push: show notification, focus/open the target URL on click
  */
 
-const CACHE_NAME = 'theleague-v2';
+const CACHE_NAME = 'theleague-v3';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to pre-cache on install
@@ -124,3 +125,78 @@ async function networkFirstWithOfflineFallback(request) {
     });
   }
 }
+
+/* =========================================================================
+ * Web Push
+ *
+ * Payload contract (JSON, built server-side by src/utils/push-sender.ts
+ * consumers — see docs/features/web-push.md):
+ *   { title, body, url?, tag?, icon? }
+ * ========================================================================= */
+
+const DEFAULT_NOTIFICATION_ICON = '/assets/icons/pwa/icon-192.png';
+
+// Show a notification for every push. userVisibleOnly is promised at
+// subscribe time, so always render something even if the payload is
+// malformed — a silent handler gets the subscription revoked by browsers.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    // Non-JSON payload — fall through to defaults.
+  }
+
+  const title = typeof data.title === 'string' && data.title ? data.title : 'The League';
+  const options = {
+    body: typeof data.body === 'string' ? data.body : '',
+    icon: typeof data.icon === 'string' && data.icon ? data.icon : DEFAULT_NOTIFICATION_ICON,
+    badge: DEFAULT_NOTIFICATION_ICON,
+    data: { url: typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/' },
+  };
+  if (typeof data.tag === 'string' && data.tag) {
+    options.tag = data.tag;
+  }
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Click: focus an existing tab on our origin (navigating it to the target
+// URL), otherwise open a new window.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    (async () => {
+      const windowClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+
+      // Prefer a tab already showing the target URL, else any tab.
+      const target = new URL(url, self.location.origin);
+      const exact = windowClients.find((c) => {
+        try {
+          return new URL(c.url).pathname === target.pathname;
+        } catch {
+          return false;
+        }
+      });
+      const client = exact || windowClients[0];
+
+      if (client) {
+        try {
+          await client.focus();
+          if (!exact && 'navigate' in client) {
+            await client.navigate(target.href);
+          }
+          return;
+        } catch {
+          // Fall through to opening a new window.
+        }
+      }
+      await self.clients.openWindow(target.href);
+    })()
+  );
+});
