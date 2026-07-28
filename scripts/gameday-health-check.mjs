@@ -80,7 +80,7 @@ async function checkMflExport(league, year) {
   try {
     const data = await fetchExport(
       { host: mflHostPrefix(league.mflHost), leagueId: league.id, year, type: 'league' },
-      { userAgent: USER_AGENT, retries: 2, sleepMs: 2000 },
+      { userAgent: USER_AGENT, retries: 2, sleepMs: 2000, timeoutMs: FETCH_TIMEOUT_MS },
     );
     const verdict = evaluateJsonValue(data);
     if (!verdict.ok) return { name, ok: false, detail: verdict.reason };
