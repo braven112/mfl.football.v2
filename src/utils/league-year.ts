@@ -86,22 +86,18 @@ export function getTestDateFromSearchParams(params: URLSearchParams): Date | nul
 }
 
 /**
- * Calculate base year automatically based on current date
- * Base year = last completed NFL season
+ * Calculate the base (pivot) year automatically based on current date.
  *
- * Logic:
- * - If today is before Labor Day: base year = previous calendar year
- * - If today is after Labor Day: base year = current calendar year
- *
- * This eliminates the need for manual updates!
+ * The base year is ALWAYS the previous calendar year, because getLeagueYear's
+ * cutoff checks (Feb 14 for league year, Labor Day for season year) are what
+ * advance it to the current calendar year. A base year that itself advanced at
+ * Labor Day would get +1'd twice from Labor Day through Dec 31 — that exact
+ * double-advance shipped here until July 2026 and made the unpinned path
+ * compute season 2027 during the 2026 season. tests/league-year-rollover.test.ts
+ * locks the timeline in.
  */
 function calculateBaseYear(date: Date): number {
-  const calendarYear = date.getFullYear();
-  const laborDay = getLaborDay(calendarYear);
-
-  // If we're before Labor Day this year, the last completed season is previous year
-  // If we're after Labor Day this year, the last completed season is this year
-  return date >= laborDay ? calendarYear : calendarYear - 1;
+  return date.getFullYear() - 1;
 }
 
 /**
@@ -114,11 +110,19 @@ export function getLeagueYear(referenceDate?: Date): LeagueYearConfig {
   // Priority: explicit param > URL testDate param > current date
   const date = referenceDate || getTestDateFromUrl() || new Date();
 
-  // Get base year - either from env var (for manual override) or auto-calculate
+  // Get base year - either from env var (for manual override) or auto-calculate.
+  // The env pin can only push the base year FORWARD, never hold it back: a
+  // stale pin (e.g. PUBLIC_BASE_YEAR=2025 left over into calendar 2027) would
+  // otherwise regress every year calculation on Jan 1, because the Feb/Labor
+  // Day cutoffs are computed in the current calendar year while the base stays
+  // frozen. Clamping to the auto-calculated floor makes rollovers self-healing
+  // with no manual env bump required.
   const envBaseYear = import.meta.env.PUBLIC_BASE_YEAR || import.meta.env.PUBLIC_MFL_YEAR;
-  const baseYear = envBaseYear
-    ? parseInt(envBaseYear, 10)
-    : calculateBaseYear(date);
+  const autoBaseYear = calculateBaseYear(date);
+  const parsedEnvYear = envBaseYear ? parseInt(envBaseYear, 10) : NaN;
+  const baseYear = Number.isFinite(parsedEnvYear)
+    ? Math.max(parsedEnvYear, autoBaseYear)
+    : autoBaseYear;
 
   // Feb 14th @ 8:45 PM PT cutoff
   // PT timezone: PST (UTC-8) in winter, PDT (UTC-7) in summer

@@ -52,11 +52,12 @@ const getLaborDay = (year) => {
  * - If today is before Labor Day: base year = previous calendar year
  * - If today is after Labor Day: base year = current calendar year
  */
-const calculateBaseYear = (date) => {
-  const calendarYear = date.getFullYear();
-  const laborDay = getLaborDay(calendarYear);
-  return date >= laborDay ? calendarYear : calendarYear - 1;
-};
+// Base (pivot) year is ALWAYS the previous calendar year — the Feb 14 / Labor
+// Day cutoff checks below are what advance it. A base that itself advanced at
+// Labor Day would be +1'd twice from Labor Day through Dec 31 (the script
+// would fetch next year's empty feeds all season). Mirrors
+// src/utils/league-year.ts; see tests/league-year-rollover.test.ts.
+const calculateBaseYear = (date) => date.getFullYear() - 1;
 
 /**
  * Get years to fetch based on current date and league calendar
@@ -70,9 +71,13 @@ const getYearsToFetch = () => {
     getNonEmpty(process.env.MFL_YEAR) ||
     getNonEmpty(process.env.MFL_SEASON);
 
-  const baseYear = envYear
-    ? parseInt(envYear, 10)
-    : calculateBaseYear(now);
+  // Env pin only pushes the base year forward — a stale pin must not drag the
+  // calculation back after Jan 1 (mirrors src/utils/league-year.ts).
+  const autoBaseYear = calculateBaseYear(now);
+  const parsedEnvYear = envYear ? parseInt(envYear, 10) : NaN;
+  const baseYear = Number.isFinite(parsedEnvYear)
+    ? Math.max(parsedEnvYear, autoBaseYear)
+    : autoBaseYear;
 
   // Feb 14th @ 8:45 PT cutoff (16:45 UTC in PST)
   const febCutoff = new Date(now.getFullYear(), 1, 14, 16, 45, 0, 0);

@@ -405,6 +405,19 @@ new page silently shows last/next year's data for ~6 months of the calendar
 (the gap between the two rollover dates). Test date-dependent features with
 the `?testDate=YYYY-MM-DD` URL param rather than changing the system clock.
 
+Year math gotchas fixed July 2026 — don't reintroduce them:
+
+- The auto-calculated base (pivot) year is ALWAYS `calendarYear - 1`; the
+  Feb 14 / Labor Day cutoff checks are what advance it. A base year that
+  itself advances at Labor Day gets +1'd twice from Labor Day through
+  Dec 31 (that bug shipped in five files). Copy the formula from
+  `league-year.ts`, or better, don't re-port it into new scripts.
+- `PUBLIC_BASE_YEAR` / `PUBLIC_MFL_YEAR` env pins are floor-only: the code
+  clamps to `max(pin, calendarYear - 1)`, so a stale pin self-heals and NO
+  manual bump is needed at rollover — never bump the pin at Labor Day (a
+  pin equal to the current calendar year during the season double-advances
+  the math). `tests/league-year-rollover.test.ts` locks the timeline.
+
 ## Draft order framing — "predictor" in-season, "official" after playoffs
 
 Both leagues' draft order stops being a prediction the moment its deciding

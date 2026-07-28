@@ -70,9 +70,12 @@ function getLaborDay(year) {
   const daysUntilMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7;
   return new Date(year, 8, 1 + daysUntilMonday);
 }
+// Base (pivot) year is ALWAYS the previous calendar year — the Labor Day check
+// in getCurrentSeasonYear is what advances it. A base that itself advanced at
+// Labor Day would be +1'd twice from Labor Day through Dec 31. Mirrors
+// src/utils/league-year.ts; see tests/league-year-rollover.test.ts.
 function calculateBaseYear(date) {
-  const calendarYear = date.getFullYear();
-  return date >= getLaborDay(calendarYear) ? calendarYear : calendarYear - 1;
+  return date.getFullYear() - 1;
 }
 // getCurrentSeasonYear(): the last completed NFL season, advancing on Labor Day.
 // Honors the same PUBLIC_BASE_YEAR / PUBLIC_MFL_YEAR overrides the app reads via
@@ -80,7 +83,13 @@ function calculateBaseYear(date) {
 // script and the page resolve the same year.
 function getCurrentSeasonYear(date = new Date()) {
   const envBaseYear = process.env.PUBLIC_BASE_YEAR || process.env.PUBLIC_MFL_YEAR;
-  const baseYear = envBaseYear ? parseInt(envBaseYear, 10) : calculateBaseYear(date);
+  // Env pin only pushes the base year forward — a stale pin must not drag the
+  // calculation back after Jan 1 (mirrors src/utils/league-year.ts).
+  const autoBaseYear = calculateBaseYear(date);
+  const parsedEnvYear = envBaseYear ? parseInt(envBaseYear, 10) : NaN;
+  const baseYear = Number.isFinite(parsedEnvYear)
+    ? Math.max(parsedEnvYear, autoBaseYear)
+    : autoBaseYear;
   return date >= getLaborDay(date.getFullYear()) ? baseYear + 1 : baseYear;
 }
 
