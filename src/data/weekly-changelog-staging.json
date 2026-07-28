@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-08-03",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-07-28",
+      "type": "bug-fix",
+      "summary": "Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",
+      "impact": "user",
+      "area": "search",
+      "league": "both"
+    }
+  ]
 }

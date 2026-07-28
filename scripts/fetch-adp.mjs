@@ -31,7 +31,7 @@ const laborDay = getLaborDay(calendarYear);
 const baseYear = now >= laborDay ? calendarYear : calendarYear - 1;
 
 // After Feb 14 @ 8:45 PT the league year advances
-const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
 const currentYear = now >= febCutoff ? baseYear + 1 : baseYear;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

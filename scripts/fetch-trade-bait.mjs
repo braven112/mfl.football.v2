@@ -17,21 +17,10 @@ import path from 'node:path';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
-const getLaborDay = (year) => {
-  const septemberFirst = new Date(year, 8, 1);
-  const dayOfWeek = septemberFirst.getDay();
-  let daysUntilMonday;
-  if (dayOfWeek === 1) daysUntilMonday = 0;
-  else if (dayOfWeek === 0) daysUntilMonday = 1;
-  else daysUntilMonday = 8 - dayOfWeek;
-  return new Date(year, 8, 1 + daysUntilMonday, 0, 0, 0, 0);
-};
-
-const calculateBaseYear = (date) => {
-  const calendarYear = date.getFullYear();
-  const laborDay = getLaborDay(calendarYear);
-  return date >= laborDay ? calendarYear : calendarYear - 1;
-};
+// Base (pivot) year is ALWAYS the previous calendar year — the Feb 14 cutoff
+// below advances it. A base that advanced at Labor Day would be +1'd twice
+// from Labor Day through Dec 31. Mirrors src/utils/league-year.ts.
+const calculateBaseYear = (date) => date.getFullYear() - 1;
 
 const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID);
 if (!leagueId) {
@@ -47,9 +36,11 @@ const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.c
 // Determine year (same logic as fetch-mfl-feeds.mjs)
 const now = new Date();
 const manualYear = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SEASON);
-const baseYear = manualYear ? parseInt(manualYear, 10) : calculateBaseYear(now);
-const febCutoff = new Date(now.getFullYear(), 1, 14, 16, 45, 0, 0);
-const year = String(now >= febCutoff ? Math.max(baseYear + 1, now.getFullYear()) : baseYear);
+const febCutoff = new Date(Date.UTC(now.getFullYear(), 1, 15, 4, 45, 0, 0));
+// A manual MFL_YEAR is the target year itself — never run it through the
+// cutoff math (the old code +1'd the override past Feb 14).
+const baseYear = calculateBaseYear(now);
+const year = manualYear || String(now >= febCutoff ? baseYear + 1 : baseYear);
 
 const outDir = path.join('data', leagueName, 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });

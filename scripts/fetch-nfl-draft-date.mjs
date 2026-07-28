@@ -50,7 +50,7 @@ function getCurrentLeagueYear() {
   const calendarYear = now.getFullYear();
   const laborDay = getLaborDay(calendarYear);
   const baseYear = now >= laborDay ? calendarYear : calendarYear - 1;
-  const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+  const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
   return now >= febCutoff ? baseYear + 1 : baseYear;
 }
 

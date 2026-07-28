@@ -16,14 +16,12 @@ const env = process.env;
  */
 const calculateCurrentLeagueYear = (date = new Date()) => {
   const calendarYear = date.getFullYear();
-  // Labor Day: first Monday in September
-  const septFirst = new Date(calendarYear, 8, 1);
-  const dayOfWeek = septFirst.getDay();
-  const laborDayOffset = dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
-  const laborDay = new Date(calendarYear, 8, 1 + laborDayOffset);
-  const baseYear = date >= laborDay ? calendarYear : calendarYear - 1;
-  // Feb 14th @ 8:45 PT = 16:45 UTC
-  const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+  // Base (pivot) year is ALWAYS the previous calendar year — the Feb 14
+  // cutoff advances it. A base that advanced at Labor Day would be +1'd
+  // twice from Labor Day through Dec 31. Mirrors src/utils/league-year.ts.
+  const baseYear = calendarYear - 1;
+  // Feb 14th @ 8:45 PM PST = Feb 15 04:45 UTC
+  const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
   return date >= febCutoff ? baseYear + 1 : baseYear;
 };
 

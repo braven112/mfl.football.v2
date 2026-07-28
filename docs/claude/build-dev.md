@@ -79,7 +79,9 @@ MFL_YEAR=2025
 MFL_LEAGUE_ID=13522
 MFL_API_KEY=your_api_key
 
-# Optional: Override base year for testing
+# Optional: Override base year for testing. Floor-only — the code clamps to
+# max(pin, calendarYear - 1), so a stale pin self-heals and rollovers need no
+# manual bump. Never set it to the current calendar year during the season.
 PUBLIC_BASE_YEAR=2025
 ```
 

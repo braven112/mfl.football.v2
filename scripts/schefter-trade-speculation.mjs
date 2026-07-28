@@ -179,7 +179,7 @@ function detectCurrentSeason(now = new Date()) {
   // Mirrors scripts/fetch-trade-bait.mjs season-detection logic so we read
   // the same year's feeds.
   const calendarYear = now.getFullYear();
-  const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+  const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
   return now >= febCutoff ? calendarYear : calendarYear - 1;
 }
 
