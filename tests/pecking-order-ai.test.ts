@@ -8,7 +8,7 @@ import {
   LEDE_MAX,
   BLURB_MAX,
 // @ts-expect-error — sibling .mjs module, no .d.ts
-} from '../scripts/lib/power-rankings-ai.mjs';
+} from '../scripts/lib/pecking-order-ai.mjs';
 
 const pigskins = {
   franchiseId: '0001',

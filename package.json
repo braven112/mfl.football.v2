@@ -29,7 +29,7 @@
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
     "compute:afl-free-agents": "node scripts/compute-afl-free-agents.mjs",
     "compute:schedule-strength": "node scripts/compute-schedule-strength.mjs",
-    "generate:power-rankings": "node scripts/generate-power-rankings.mjs",
+    "generate:pecking-order": "node scripts/generate-pecking-order.mjs",
     "backfill:historical-feeds": "node scripts/backfill-historical-feeds.mjs",
     "backfill:afl-champions": "node scripts/backfill-afl-championship-history.mjs",
     "backfill:afl-champions:online": "node scripts/backfill-afl-championship-history.mjs --online",

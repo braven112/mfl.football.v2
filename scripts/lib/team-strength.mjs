@@ -1,8 +1,8 @@
 /**
  * Shared team-strength math for weekly analytics.
  *
- * Extracted from scripts/generate-power-rankings.mjs so the power rankings
- * and the schedule-strength ("Gauntlet") pipelines compute opponent/team
+ * Shared by the Pecking Order (scripts/generate-pecking-order.mjs) and the
+ * schedule-strength ("Gauntlet") pipelines so both compute opponent/team
  * strength from one implementation. Pure functions — no file I/O.
  *
  * Data shapes (MFL feeds on disk):

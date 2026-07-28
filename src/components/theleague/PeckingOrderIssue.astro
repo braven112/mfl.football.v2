@@ -1,11 +1,13 @@
 ---
 /**
- * PowerRankingsIssue — renders a single weekly power-rankings issue.
+ * PeckingOrderIssue — renders a single weekly issue of The Pecking Order,
+ * TheLeague's Tuesday-morning power-rankings column.
  *
  * Driven entirely by the JSON document at
- * src/data/theleague/power-rankings/<year>-w<week>.json.
- * Phase 1 ships templated blurbs; Phase 2 will swap in LLM-generated copy
- * without changing the data shape this component reads.
+ * data/theleague/pecking-order/<year>-<week>.json (written by
+ * scripts/generate-pecking-order.mjs). Blurbs arrive Schefter-voiced when
+ * the generator ran with an API key, templated otherwise — the shape is
+ * identical either way.
  */
 import leagueConfig from '../../data/theleague.config.json';
 
@@ -19,9 +21,12 @@ export interface RankingRow {
     composite: number | null;
     rolling3Ppg: number | null;
     seasonPpg: number | null;
-    ppgScore: number | null;
-    recordScore: number | null;
-    allPlayScore: number | null;
+    avgMargin?: number | null;
+    formScore?: number | null;
+    recordScore?: number | null;
+    allPlayScore?: number | null;
+    seasonPpgScore?: number | null;
+    marginScore?: number | null;
   };
 }
 
@@ -49,12 +54,13 @@ export interface StandingsTeamRow {
   allPlayWLT: string;
 }
 
-export interface PowerRankingsData {
+export interface PeckingOrderData {
   year: number;
   week: number;
   publishedAt: string;
   generatedAt: string;
   voiceMode: string;
+  methodology?: string;
   headline: string;
   lede: string;
   rankings: RankingRow[];
@@ -74,7 +80,7 @@ export interface PowerRankingsData {
 }
 
 export interface Props {
-  issue: PowerRankingsData;
+  issue: PeckingOrderData;
 }
 
 const { issue } = Astro.props as Props;
@@ -101,12 +107,15 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   { key: 'tradeOfWeek',    card: issue.awards.tradeOfWeek },
   { key: 'cutOfShame',     card: issue.awards.cutOfShame },
 ];
+
+const methodology = issue.methodology
+  ?? '35% recent form (rolling-3wk PPG) · 25% record · 20% all-play % · 10% season PPG · 10% avg margin';
 ---
 
 <article class="pr-issue">
   <header class="pr-hero">
     <div class="pr-hero__eyebrow">
-      <span class="pr-hero__badge">Power Rankings</span>
+      <span class="pr-hero__badge">The Pecking Order</span>
       <span class="pr-hero__dot" aria-hidden="true"></span>
       <span>Week {issue.week} · {issue.year}</span>
       <span class="pr-hero__dot" aria-hidden="true"></span>
@@ -116,7 +125,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
     <p class="pr-hero__lede">{issue.lede}</p>
   </header>
 
-  <section class="pr-section" aria-label="Power rankings 1-16">
+  <section class="pr-section" aria-label="The Pecking Order 1-16">
     <h2 class="pr-section__title pr-section__title--brand">
       <img
         class="pr-section__avatar"
@@ -127,7 +136,7 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
         height="36"
         loading="lazy"
       />
-      <span>Power Rankings</span>
+      <span>The Pecking Order</span>
     </h2>
     <ol class="pr-rankings">
       {issue.rankings.map(row => {
@@ -160,6 +169,9 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
                 )}
                 {row.metrics.seasonPpg != null && (
                   <span class="pr-card__metric"><span>Season PPG</span><strong>{row.metrics.seasonPpg.toFixed(1)}</strong></span>
+                )}
+                {row.metrics.avgMargin != null && (
+                  <span class="pr-card__metric"><span>Avg margin</span><strong>{row.metrics.avgMargin > 0 ? '+' : ''}{row.metrics.avgMargin.toFixed(1)}</strong></span>
                 )}
                 {row.metrics.composite != null && (
                   <span class="pr-card__metric"><span>Score</span><strong>{row.metrics.composite.toFixed(1)}</strong></span>
@@ -201,10 +213,64 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
     </div>
   </section>
 
+  {issue.standings && (
+    <section class="pr-section" aria-label="Standings snapshot">
+      <h2 class="pr-section__title">Standings Snapshot</h2>
+      <div class="pr-standings">
+        <div class="pr-standings__col">
+          {issue.standings.divisions.map(div => (
+            <div class="pr-table-block">
+              <h3 class="pr-table-block__title">{div.name}</h3>
+              <div class="pr-table-wrap">
+                <table class="pr-table">
+                  <thead>
+                    <tr><th class="pr-table__team">Team</th><th>W-L</th><th>PF</th><th>PPG</th></tr>
+                  </thead>
+                  <tbody>
+                    {div.teams.map(t => (
+                      <tr>
+                        <td class="pr-table__team">{t.nameMedium}</td>
+                        <td>{t.wins}-{t.losses}{t.ties ? `-${t.ties}` : ''}</td>
+                        <td>{t.pf.toFixed(1)}</td>
+                        <td>{t.ppg.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div class="pr-standings__col">
+          <div class="pr-table-block">
+            <h3 class="pr-table-block__title">All-Play</h3>
+            <div class="pr-table-wrap">
+              <table class="pr-table">
+                <thead>
+                  <tr><th class="pr-table__team">Team</th><th>All-Play</th><th>Pct</th><th>PF</th></tr>
+                </thead>
+                <tbody>
+                  {issue.standings.allPlay.map(t => (
+                    <tr>
+                      <td class="pr-table__team">{t.nameMedium}</td>
+                      <td>{t.allPlayWLT || '—'}</td>
+                      <td>{(t.allPlayPct * 100).toFixed(1)}%</td>
+                      <td>{t.pf.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
   <footer class="pr-footnote">
     <p>
-      Phase 1 issue — blurbs are templated from on-disk feeds (no LLM voice yet).
-      Composite score: 50% rolling-3wk PPG · 30% H2H record · 20% all-play %.
+      Composite score: {methodology}. Rankings and awards are computed from the
+      week's final MFL feeds; commentary is Claude Schefter's.
     </p>
   </footer>
 </article>
@@ -399,6 +465,52 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   line-height: 1.4;
   color: var(--content-text-muted, #4b5563);
 }
+
+.pr-standings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .pr-standings { grid-template-columns: 1fr; }
+}
+.pr-standings__col {
+  display: grid;
+  gap: 1rem;
+}
+.pr-table-block__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--content-text-muted, #6b7280);
+  margin: 0 0 0.4rem;
+}
+.pr-table-wrap { overflow-x: auto; }
+.pr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--content-border, #e5e7eb);
+  border-radius: 0.5rem;
+}
+.pr-table th,
+.pr-table td {
+  padding: 0.4rem 0.6rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--content-border, #e5e7eb);
+  color: var(--page-text, #111827);
+}
+.pr-table th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--content-text-muted, #6b7280);
+}
+.pr-table tbody tr:last-child td { border-bottom: none; }
+.pr-table__team { text-align: left; font-weight: 600; }
 
 .pr-footnote {
   margin-top: 2rem;
