@@ -12,7 +12,7 @@
     {
       "date": "2026-07-28",
       "type": "bug-fix",
-      "summary": "Standings now refresh live from MFL on game days instead of waiting for the next data sync, so Sunday records and points update within about a minute (with the committed snapshot as a safety net)",
+      "summary": "Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net)",
       "impact": "user",
       "area": "standings",
       "league": "both"

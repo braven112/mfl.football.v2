@@ -92,11 +92,17 @@ export async function getStandingsFeedWithLiveRefresh(options: {
   }
 
   try {
+    // PUBLIC_MFL_HOST overrides the registry host for all leagues — the same
+    // legacy-override semantics as getLeagueContext() in league-context.ts.
+    // Normalize so the env value works with or without a protocol prefix.
+    const rawHost =
+      (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || league.mflHost;
+    const host = rawHost.replace(/^https?:\/\//, '').replace(/\/+$/, '');
     const url = buildMflExportUrl({
       type: 'leagueStandings',
       leagueId: league.id,
       year,
-      host: `https://${league.mflHost}`,
+      host: `https://${host}`,
     });
     const response = await fetchWithTimeout(url, {
       timeoutMs: FETCH_TIMEOUT_MS,
@@ -134,7 +140,7 @@ export async function getStandingsFeedWithLiveRefresh(options: {
     failureAtMs.set(key, nowMs);
     console.error(
       `[live-standings] live fetch failed for ${league.slug} ${year}; serving committed feed:`,
-      err instanceof Error ? err.message : err
+      err
     );
     return fallback;
   }

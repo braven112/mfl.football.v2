@@ -40,6 +40,7 @@ describe('getStandingsFeedWithLiveRefresh', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -138,6 +139,26 @@ describe('getStandingsFeedWithLiveRefresh', () => {
     expect(url).toContain('TYPE=leagueStandings');
     expect(url).toContain(`L=${league.id}`);
     expect(url).toContain('JSON=1');
+  });
+
+  it('honors the PUBLIC_MFL_HOST override like getLeagueContext() does', async () => {
+    vi.stubEnv('PUBLIC_MFL_HOST', 'https://override.myfantasyleague.example/');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(okJsonResponse({ leagueStandings: { franchise: liveFranchises } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getStandingsFeedWithLiveRefresh({
+      league,
+      year: currentYear,
+      committedFeed,
+    });
+
+    expect(result.live).toBe(true);
+    const url = String(fetchMock.mock.calls[0][0]);
+    // Protocol and trailing slash are normalized off the env value.
+    expect(url).toContain(`https://override.myfantasyleague.example/${currentYear}/export`);
+    expect(url).not.toContain(league.mflHost);
   });
 
   it('serves the TTL cache on a second call and refetches after expiry', async () => {
