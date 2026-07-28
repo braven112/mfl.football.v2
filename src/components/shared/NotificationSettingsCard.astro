@@ -147,11 +147,20 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub.toJSON() }),
-      });
+      let res: Response;
+      try {
+        res = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: sub.toJSON() }),
+        });
+      } catch {
+        // Network failure — the server never stored the subscription, so a
+        // locally-active one would read "on" forever while no pushes arrive.
+        await sub.unsubscribe().catch(() => {});
+        setStatus('Could not reach the server to save the subscription — check your connection and try again.');
+        return;
+      }
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         // Server refused — drop the local subscription so state stays honest.
