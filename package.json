@@ -26,6 +26,7 @@
     "fetch:adp:ktc:sf": "node scripts/fetch-ktc-rookie-rankings.mjs --sf",
     "fetch:adp:rookies": "pnpm run fetch:adp:sleeper && pnpm run fetch:adp:ktc",
     "fetch:nfl-draft-date": "node scripts/fetch-nfl-draft-date.mjs",
+    "generate:vapid": "node scripts/generate-vapid-keys.mjs",
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
     "compute:afl-free-agents": "node scripts/compute-afl-free-agents.mjs",
     "compute:schedule-strength": "node scripts/compute-schedule-strength.mjs",
@@ -91,6 +92,7 @@
     "@playwright/test": "^1.57.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/web-push": "^3.6.4",
     "astro": "^7.1.3",
     "autoprefixer": "^10.4.14",
     "baseline-browser-mapping": "^2.10.0",
@@ -122,6 +124,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "satori": "^0.26.0",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   }
 }
