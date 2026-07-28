@@ -1,31 +1,31 @@
 ---
 /**
- * Power Rankings — current week (latest published issue).
+ * The Pecking Order — current week (latest published issue).
  *
- * Reads all power-rankings JSON files via Vite glob and picks the highest
+ * Reads all pecking-order JSON issues via Vite glob and picks the highest
  * (year, week) combination. Permalink to a specific issue lives at
- * /theleague/power-rankings/[year]/[week].
+ * /theleague/pecking-order/[year]/[week].
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
-import PowerRankingsIssue, { type PowerRankingsData } from '../../../components/theleague/PowerRankingsIssue.astro';
+import PeckingOrderIssue, { type PeckingOrderData } from '../../../components/theleague/PeckingOrderIssue.astro';
 
-const issueFiles = import.meta.glob<PowerRankingsData>(
-  '../../../data/theleague/power-rankings/*.json',
+const issueFiles = import.meta.glob<PeckingOrderData>(
+  '../../../../data/theleague/pecking-order/*.json',
   { eager: true, import: 'default' }
 );
 
 const issues = Object.entries(issueFiles)
   .map(([file, data]) => {
-    const m = file.match(/(\d{4})-w(\d{1,2})\.json$/);
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
     if (!m) return null;
     return {
       year: parseInt(m[1], 10),
       week: parseInt(m[2], 10),
-      data: data as PowerRankingsData,
+      data: data as PeckingOrderData,
     };
   })
-  .filter((x): x is { year: number; week: number; data: PowerRankingsData } => x !== null)
+  .filter((x): x is { year: number; week: number; data: PeckingOrderData } => x !== null)
   .sort((a, b) => b.year - a.year || b.week - a.week);
 
 const latest = issues[0] ?? null;
@@ -33,23 +33,23 @@ const latest = issues[0] ?? null;
 const olderIssues = issues.slice(1);
 ---
 
-<TheLeagueLayout title={latest ? `${latest.data.headline} · Week ${latest.week} Power Rankings` : 'Power Rankings'}>
+<TheLeagueLayout title={latest ? `${latest.data.headline} · The Pecking Order · Week ${latest.week}` : 'The Pecking Order'}>
   <div class="pr-page">
     <Breadcrumbs items={[
       { label: 'The League', href: '/theleague' },
-      { label: 'Power Rankings' },
+      { label: 'The Pecking Order' },
     ]} />
 
     {latest ? (
       <>
-        <PowerRankingsIssue issue={latest.data} />
+        <PeckingOrderIssue issue={latest.data} />
         {olderIssues.length > 0 && (
           <aside class="pr-archive">
             <h2 class="pr-archive__title">Past Issues</h2>
             <ul class="pr-archive__list">
               {olderIssues.map(i => (
                 <li>
-                  <a href={`/theleague/power-rankings/${i.year}/${i.week}`}>
+                  <a href={`/theleague/pecking-order/${i.year}/${i.week}`}>
                     Week {i.week} · {i.year} — {i.data.headline}
                   </a>
                 </li>
@@ -60,10 +60,10 @@ const olderIssues = issues.slice(1);
       </>
     ) : (
       <section class="pr-empty">
-        <h1>Power Rankings — Coming Soon</h1>
+        <h1>The Pecking Order — Coming Soon</h1>
         <p>
           The first weekly issue publishes Tuesday morning during the season.
-          Run <code>pnpm generate:power-rankings --year YYYY --week N</code> to seed an issue.
+          Run <code>pnpm generate:pecking-order --year YYYY --week N</code> to seed an issue.
         </p>
       </section>
     )}

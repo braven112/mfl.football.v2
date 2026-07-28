@@ -1,8 +1,8 @@
 /**
- * Power Rankings — Phase 2 AI voice helpers.
+ * The Pecking Order — AI voice helpers.
  *
  * Builds the fact sheet, defines the prompt, and validates the AI's
- * structured output. The main generate-power-rankings.mjs orchestrates
+ * structured output. The main generate-pecking-order.mjs orchestrates
  * the call to callAnthropic; this module is the deterministic surface
  * around it (so the unit tests don't need an API key).
  */
@@ -47,7 +47,7 @@ const CURLY_QUOTE_RE = /[‘’“”]/;
  */
 export function buildFactSheet({ issue, teams }) {
   const lines = [];
-  lines.push(`POWER RANKINGS FACT SHEET — ${issue.year} Week ${issue.week}`);
+  lines.push(`THE PECKING ORDER FACT SHEET — ${issue.year} Week ${issue.week}`);
   lines.push('');
   lines.push('League: TheLeague (16 dynasty franchises). Voice: Claude Schefter.');
   lines.push('');
@@ -105,7 +105,7 @@ export function buildFactSheet({ issue, teams }) {
 
 const TYPE_SPECIFIC_PROMPT = `
 
-ARTICLE TYPE: Tuesday Power Rankings issue.
+ARTICLE TYPE: The Pecking Order — the Tuesday-morning power-rankings column.
 
 Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for each of the 16 franchises in Schefter voice. Re-voice the AWARD blurbs in the same style.
 
@@ -131,7 +131,7 @@ export function getSystemPrompt() {
 }
 
 export function getUserPrompt(factSheet) {
-  return `Rewrite the power rankings issue using ONLY data from the fact sheet below.
+  return `Rewrite this week's Pecking Order issue using ONLY data from the fact sheet below.
 
 ${factSheet}
 

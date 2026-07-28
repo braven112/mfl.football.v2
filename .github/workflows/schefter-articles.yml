@@ -4,6 +4,9 @@ on:
   schedule:
     # Tuesday 6am PT (13:00 UTC) — weekly-recap
     - cron: "0 13 * * 2"
+    # Tuesday 7am PT (14:00 UTC) — pecking-order (The Pecking Order weekly
+    # column; self-guards in the offseason and dedups on the issue file)
+    - cron: "0 14 * * 2"
     # Wednesday 10pm PT (05:00 UTC Thursday) — waiver-pickups
     - cron: "0 5 * * 4"
     # Friday 8am PT (15:00 UTC) — weekend-preview
@@ -33,6 +36,7 @@ on:
           - draft-grades
           - team-grades
           - schedule-strength
+          - pecking-order
       week:
         description: "Override week number (optional)"
         required: false
@@ -77,6 +81,7 @@ jobs:
             TYPE=""
             case "$CRON_EXPR" in
               "0 13 * * 2") TYPE="weekly-recap" ;;
+              "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
               "0 15 * * 5") TYPE="weekend-preview" ;;
@@ -107,7 +112,13 @@ jobs:
             WEEK_ARG="--week $WEEK_OVERRIDE"
           fi
           echo "Generating: $ARTICLE_TYPE"
-          if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
+          if [ "$ARTICLE_TYPE" = "pecking-order" ]; then
+            # The Pecking Order writes a standalone JSON issue (not a feed
+            # post) and posts its own GroupMe announcement on a fresh write.
+            # It self-skips in the offseason and when the week's issue file
+            # already exists, so the year-round Tuesday cron is safe.
+            node scripts/generate-pecking-order.mjs --publish $WEEK_ARG
+          elif [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             # The Gauntlet runs for BOTH leagues: compute fresh derived data
             # first (the article reads the derived JSON, never raw feeds), then
             # generate per league. GroupMe promo fires inside the script, only
@@ -144,6 +155,8 @@ jobs:
           FILES="src/data/theleague/schefter-feed.json"
           if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
+          elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
+            FILES="data/theleague/pecking-order"
           fi
           node scripts/commit-feed-and-push.mjs \
             --branch main \

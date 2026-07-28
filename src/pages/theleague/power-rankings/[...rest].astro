@@ -1,0 +1,12 @@
+---
+/**
+ * Legacy route: /theleague/power-rankings[/...] → /theleague/pecking-order[/...].
+ *
+ * The weekly rankings column shipped as "The Pecking Order" (renamed from the
+ * working title "Tuesday Power Rankings" to avoid colliding with MFL's
+ * official Power Rank feature). This catch-all permanently redirects the old
+ * path — including any [year]/[week] permalink shape — to the new home.
+ */
+const rest = Astro.params.rest;
+return Astro.redirect(rest ? `/theleague/pecking-order/${rest}` : '/theleague/pecking-order', 301);
+---

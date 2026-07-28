@@ -1,60 +1,70 @@
 #!/usr/bin/env node
 /**
- * Power Rankings Generator — Phase 1 (templated, no LLM)
+ * The Pecking Order — Tuesday-morning weekly column generator (TheLeague).
  *
- * Reads weekly results + standings + schedule for the target year/week and writes
- * a structured JSON document to src/data/theleague/power-rankings/<year>-w<week>.json
- * that the /theleague/power-rankings page renders.
+ * Reads committed MFL feeds (weekly results + standings + schedule) for the
+ * target year/week and writes a structured JSON issue to
+ * <dataPath>/pecking-order/<year>-<week>.json that the
+ * /theleague/pecking-order pages render.
  *
  * Usage:
- *   pnpm generate:power-rankings --year 2025 --week 14
- *   pnpm generate:power-rankings --year 2025 --week 14 --regenerate
- *   pnpm generate:power-rankings --dry-run --year 2025 --week 14
+ *   pnpm generate:pecking-order                        # auto year/week (Labor Day season clock + last completed week)
+ *   pnpm generate:pecking-order --year 2025 --week 14
+ *   pnpm generate:pecking-order --year 2025 --week 14 --regenerate
+ *   pnpm generate:pecking-order --dry-run --year 2025 --week 14
+ *   pnpm generate:pecking-order --publish              # also post the GroupMe announcement on a fresh write
  *
- * Phase 1 scope:
- *  - Composite ranking algorithm (rolling-3wk PF + record + all-play)
- *  - Award detection (statOfWeek, benchBlunder, heater, cooler, matchupOfWeek)
- *  - Templated blurbs — no Claude API calls
+ * Voice: Schefter-voiced headline/lede/blurbs via ANTHROPIC_API_KEY, with a
+ * deterministic templated fallback when the key is unset or the AI output
+ * fails the quality gate (per-blurb fallback — see lib/pecking-order-ai.mjs).
  *
- * Phase 2 will swap templated blurbs for AI-generated ones via the article-utils
- * AI client. The JSON shape is identical so the page renderer doesn't change.
+ * Offseason: when the target year's feeds have no completed week, exits
+ * cleanly so the Tuesday cron can run year-round.
  */
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LEAGUES, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
+import { getCompletedWeek } from './article-utils/week-resolver.mjs';
+import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
+import { postToGroupMe } from './lib/groupme.mjs';
 import {
   buildFactSheet,
   getSystemPrompt,
   getUserPrompt,
   applyAIVoice,
-} from './lib/power-rankings-ai.mjs';
-import { rollingAvgPF, minMax01 } from './lib/team-strength.mjs';
+} from './lib/pecking-order-ai.mjs';
+import {
+  computePeckingOrder,
+  attachTrend,
+  parseStreak,
+  describeMethodology,
+} from './lib/pecking-order-math.mjs';
+import { num, int } from './lib/team-strength.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
-// ─── Algorithm weights (composite ranking score) ───────────────────
-//   50% — rolling-3wk PPG (form)
-//   30% — head-to-head record (results)
-//   20% — all-play % (luck-adjusted strength)
-// Cap-health weight from the design doc is deferred to Phase 2 (needs salary
-// pipeline plumbed in). Total still sums to 1.0 by upweighting form.
-const W_FORM = 0.50;
-const W_RECORD = 0.30;
-const W_ALL_PLAY = 0.20;
+// The Pecking Order is TheLeague-only for v1. An AFL edition would need its
+// own voice/lore pass plus tier-aware framing (Premier/Championship), but the
+// math + page component are league-agnostic already.
+const LEAGUE = LEAGUES.theleague;
+
+const COLUMN_NAME = 'The Pecking Order';
 
 // ─── CLI ───────────────────────────────────────────────────────────
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { year: null, week: null, dryRun: false, regenerate: false, ai: null };
+  const opts = { year: null, week: null, dryRun: false, regenerate: false, ai: null, publish: false };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--year': opts.year = parseInt(args[++i], 10); break;
       case '--week': opts.week = parseInt(args[++i], 10); break;
       case '--dry-run': opts.dryRun = true; break;
       case '--regenerate': opts.regenerate = true; break;
+      case '--publish': opts.publish = true; break;
       case '--ai': opts.ai = true; break;
       case '--no-ai': opts.ai = false; break;
       case '-h':
@@ -67,10 +77,11 @@ function parseArgs() {
 }
 
 function printUsage() {
-  console.log(`Usage: node scripts/generate-power-rankings.mjs --year YYYY --week N [--dry-run] [--regenerate] [--ai|--no-ai]`);
-  console.log(`  --ai       Force Claude voice (requires ANTHROPIC_API_KEY)`);
+  console.log(`Usage: node scripts/generate-pecking-order.mjs [--year YYYY] [--week N] [--dry-run] [--regenerate] [--publish] [--ai|--no-ai]`);
+  console.log(`  default    year = current season (Labor Day clock), week = last completed week`);
+  console.log(`  --publish  Post the GroupMe announcement when a new issue is written`);
+  console.log(`  --ai       Force Schefter voice (requires ANTHROPIC_API_KEY)`);
   console.log(`  --no-ai    Force templated voice (no API call)`);
-  console.log(`  default    AI when ANTHROPIC_API_KEY is set, templated otherwise`);
 }
 
 // ─── Loaders ───────────────────────────────────────────────────────
@@ -79,8 +90,12 @@ async function loadJSON(p) {
   return JSON.parse(await fs.readFile(p, 'utf8'));
 }
 
+async function tryLoadJSON(p) {
+  try { return await loadJSON(p); } catch { return null; }
+}
+
 async function loadTeamsConfig() {
-  const cfg = await loadJSON(path.join(projectRoot, 'src', 'data', 'theleague.config.json'));
+  const cfg = await loadJSON(path.join(projectRoot, ...LEAGUE.configPath.split('/')));
   const teams = new Map();
   for (const t of cfg.teams) {
     teams.set(t.franchiseId, {
@@ -89,6 +104,7 @@ async function loadTeamsConfig() {
       nameMedium: t.nameMedium ?? t.name,
       nameShort: t.nameShort ?? t.name,
       abbrev: t.abbrev,
+      aliases: t.aliases,
       color: t.color,
       division: t.division,
       icon: t.icon,
@@ -99,41 +115,18 @@ async function loadTeamsConfig() {
 }
 
 function feedDir(year) {
-  return path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year));
+  return path.join(projectRoot, ...LEAGUE.dataPath.split('/'), 'mfl-feeds', String(year));
 }
 
-function powerRankingsDir() {
-  return path.join(projectRoot, 'src', 'data', 'theleague', 'power-rankings');
+function peckingOrderDir() {
+  return path.join(projectRoot, ...LEAGUE.dataPath.split('/'), 'pecking-order');
 }
 
-function rankingsFilePath(year, week) {
-  return path.join(powerRankingsDir(), `${year}-w${String(week).padStart(2, '0')}.json`);
-}
-
-async function tryLoadJSON(p) {
-  try { return await loadJSON(p); } catch { return null; }
+function issueFilePath(year, week) {
+  return path.join(peckingOrderDir(), `${year}-${String(week).padStart(2, '0')}.json`);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
-
-function num(v, fallback = 0) {
-  const n = typeof v === 'number' ? v : parseFloat(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function int(v, fallback = 0) {
-  const n = typeof v === 'number' ? v : parseInt(v, 10);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-/** Parse MFL streak string "W3" / "L4" / "" → { type: 'W'|'L'|null, length: number } */
-export function parseStreak(strk) {
-  if (!strk || typeof strk !== 'string') return { type: null, length: 0 };
-  const m = strk.trim().match(/^([WL])(\d+)$/i);
-  if (!m) return { type: null, length: 0 };
-  return { type: m[1].toUpperCase(), length: parseInt(m[2], 10) };
-}
-
 
 /** Last-N record from H2H: { wins, losses, ties }. Reads schedule + weekly-results. */
 function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3) {
@@ -142,7 +135,6 @@ function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3)
   for (const w of (weeklyResults?.weeks || [])) {
     weekScores.set(int(w.week), w.scores || {});
   }
-  // Walk completed weeks descending, record per-game outcomes for this franchise
   const games = [];
   for (const w of ws) {
     const wk = int(w.week);
@@ -172,84 +164,17 @@ function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3)
   return { wins, losses, ties, gamesCounted: slice.length };
 }
 
-
-// ─── Composite ranking ─────────────────────────────────────────────
-
-export function computeRankings({ teams, standingsByFid, weeklyResults, schedule, week }) {
-  const franchiseIds = [...teams.keys()];
-
-  // Compute per-team rolling averages
-  const rolling = franchiseIds.map(fid => ({
-    fid,
-    ppg: rollingAvgPF(weeklyResults, fid, week, 3),
-    seasonPpg: num(standingsByFid.get(fid)?.avgpf, 0),
-  }));
-
-  const ppgRaw = rolling.map(r => r.ppg ?? r.seasonPpg);
-  const ppgScores = minMax01(ppgRaw);
-
-  // Record: H2H pct from standings (.000 to 1.000) → 0-100
-  const recordScores = franchiseIds.map(fid => {
-    const s = standingsByFid.get(fid);
-    return num(s?.h2hpct, 0.5) * 100;
-  });
-
-  // All-play %: from standings → 0-100
-  const allPlayScores = franchiseIds.map(fid => {
-    const s = standingsByFid.get(fid);
-    return num(s?.all_play_pct, 0.5) * 100;
-  });
-
-  const composite = franchiseIds.map((fid, i) =>
-    W_FORM * ppgScores[i] + W_RECORD * recordScores[i] + W_ALL_PLAY * allPlayScores[i]
-  );
-
-  // Rank by composite descending
-  const indexed = franchiseIds.map((fid, i) => ({
-    fid,
-    composite: composite[i],
-    ppgScore: ppgScores[i],
-    recordScore: recordScores[i],
-    allPlayScore: allPlayScores[i],
-    rolling3Ppg: rolling[i].ppg,
-    seasonPpg: rolling[i].seasonPpg,
-  }));
-  indexed.sort((a, b) => {
-    if (b.composite !== a.composite) return b.composite - a.composite;
-    return b.seasonPpg - a.seasonPpg; // tiebreak
-  });
-
-  return indexed.map((row, idx) => ({ rank: idx + 1, ...row }));
-}
-
 // ─── Trend (vs. previous week) ──────────────────────────────────────
 
 async function loadPreviousRankings(year, week) {
-  // First try same-year previous week, then previous week's playoffs etc.
   for (let w = week - 1; w >= 1; w--) {
-    const prior = await tryLoadJSON(rankingsFilePath(year, w));
+    const prior = await tryLoadJSON(issueFilePath(year, w));
     if (prior?.rankings?.length) return { week: w, rankings: prior.rankings };
   }
   return null;
 }
 
-export function attachTrend(rankings, previous) {
-  if (!previous) {
-    return rankings.map(r => ({ ...r, previousRank: null, trend: 'flat' }));
-  }
-  const priorMap = new Map(previous.rankings.map(r => [r.franchiseId, r.rank]));
-  return rankings.map(r => {
-    const prev = priorMap.get(r.fid) ?? null;
-    let trend = 'flat';
-    if (prev != null) {
-      if (prev > r.rank) trend = 'up';
-      else if (prev < r.rank) trend = 'down';
-    }
-    return { ...r, previousRank: prev, trend };
-  });
-}
-
-// ─── Awards (deterministic; templated blurbs in Phase 1) ────────────
+// ─── Awards (deterministic; templated blurbs as fallback) ───────────
 
 function findStatOfWeek({ teams, weeklyResults, week }) {
   const wk = (weeklyResults?.weeks || []).find(w => int(w.week) === week);
@@ -270,7 +195,7 @@ function findStatOfWeek({ teams, weeklyResults, week }) {
 }
 
 function findBenchBlunder({ teams, rawWeekly, week }) {
-  const wk = rawWeekly.find(w => int(w?.weeklyResults?.week) === week);
+  const wk = (rawWeekly || []).find(w => int(w?.weeklyResults?.week) === week);
   if (!wk) return null;
   let worstFid = null, worstGap = -Infinity, worstActual = 0, worstOptimal = 0;
   for (const m of (wk.weeklyResults?.matchup || [])) {
@@ -339,7 +264,7 @@ function findMatchupOfWeek({ teams, schedule, rankings, week }) {
     const score = avg + diff * 0.25;
     if (score < pickScore) {
       pickScore = score;
-      pick = { homeId: a.isHome === '1' ? a.id : b.id, awayId: a.isHome === '1' ? b.id : a.id, ra, rb };
+      pick = { homeId: a.isHome === '1' ? a.id : b.id, awayId: a.isHome === '1' ? b.id : a.id };
     }
   }
   if (!pick) return null;
@@ -356,13 +281,12 @@ function findMatchupOfWeek({ teams, schedule, rankings, week }) {
   };
 }
 
-// ─── Templated blurbs for individual rankings (Phase 1) ─────────────
+// ─── Templated blurbs (deterministic fallback voice) ────────────────
 
-function rankingBlurb(row, teams, standingsByFid, schedule, weeklyResults, week) {
-  const team = teams.get(row.franchiseId);
+function rankingBlurb(row, standingsByFid) {
   const standing = standingsByFid.get(row.franchiseId);
-  const rec = rollingRecord(schedule, weeklyResults, row.franchiseId, week, 3);
-  const ppg = row.rolling3Ppg ?? row.seasonPpg;
+  const rec = row.factsForBlurb.last3Record;
+  const ppg = row.metrics.rolling3Ppg ?? row.metrics.seasonPpg;
   const ppgStr = Number.isFinite(ppg) ? `${ppg.toFixed(1)} PPG` : null;
   const recStr = rec.gamesCounted > 0 ? `${rec.wins}-${rec.losses}${rec.ties ? `-${rec.ties}` : ''} over their last ${rec.gamesCounted}` : null;
   const trendStr = (() => {
@@ -381,7 +305,7 @@ function rankingBlurb(row, teams, standingsByFid, schedule, weeklyResults, week)
   if (recStr && ppgStr) parts.push(`${recStr} at ${ppgStr}.`);
   else if (ppgStr) parts.push(`Averaging ${ppgStr} over recent weeks.`);
   if (streakStr) parts.push(`Riding a ${streakStr}.`);
-  if (trendStr) parts.push(`Rankings: ${trendStr}.`);
+  if (trendStr) parts.push(`Pecking order: ${trendStr}.`);
   if (parts.length === 0) parts.push(`Reset week — limited data.`);
   return parts.join(' ');
 }
@@ -429,9 +353,9 @@ function buildStandingsSnapshot({ teams, divisions, standingsByFid }) {
   return { divisions: divisionsOut, allPlay };
 }
 
-// ─── Lede headline (Phase 1 templated) ──────────────────────────────
+// ─── Headline + lede (deterministic fallback voice) ─────────────────
 
-function buildHeadlineAndLede({ teams, rankings, awards, week, year }) {
+function buildHeadlineAndLede({ teams, rankings, awards, week }) {
   const top = rankings[0];
   const topTeam = teams.get(top.franchiseId);
   const moverUp = rankings
@@ -444,12 +368,12 @@ function buildHeadlineAndLede({ teams, rankings, awards, week, year }) {
   const headline = (() => {
     if (moverUp && (moverUp.previousRank - moverUp.rank) >= 3) {
       const team = teams.get(moverUp.franchiseId);
-      return `${team?.nameShort ?? moverUp.franchiseId} surges to #${moverUp.rank}`;
+      return `${team?.nameShort ?? moverUp.franchiseId} climb the pecking order to #${moverUp.rank}`;
     }
-    return `${topTeam?.nameShort ?? top.franchiseId} hold #1 entering Week ${week + 1}`;
+    return `${topTeam?.nameShort ?? top.franchiseId} rule the roost after Week ${week}`;
   })();
 
-  const ledeParts = [`Through Week ${week}, ${topTeam?.name ?? top.franchiseId} sit atop the rankings.`];
+  const ledeParts = [`Through Week ${week}, ${topTeam?.name ?? top.franchiseId} sit atop the pecking order.`];
   if (awards.statOfWeek) ledeParts.push(awards.statOfWeek.blurb);
   if (moverUp && (moverUp.previousRank - moverUp.rank) >= 2) {
     const team = teams.get(moverUp.franchiseId);
@@ -465,15 +389,15 @@ function buildHeadlineAndLede({ teams, rankings, awards, week, year }) {
 
 // ─── Main ──────────────────────────────────────────────────────────
 
-export async function generatePowerRankings({ year, week, useAI = false }) {
+export async function generatePeckingOrder({ year, week, useAI = false }) {
   const dir = feedDir(year);
   const teamsConfig = await loadTeamsConfig();
 
   const [weeklyResults, rawWeekly, standings, schedule] = await Promise.all([
     loadJSON(path.join(dir, 'weekly-results.json')),
-    loadJSON(path.join(dir, 'weekly-results-raw.json')),
+    tryLoadJSON(path.join(dir, 'weekly-results-raw.json')),
     loadJSON(path.join(dir, 'standings.json')),
-    loadJSON(path.join(dir, 'schedule.json')),
+    tryLoadJSON(path.join(dir, 'schedule.json')),
   ]);
 
   const standingsByFid = new Map();
@@ -481,16 +405,15 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
     standingsByFid.set(f.id, f);
   }
 
-  // Composite rankings
-  const rawRankings = computeRankings({
-    teams: teamsConfig.teams,
+  // Composite rankings (pure math — lib/pecking-order-math.mjs)
+  const rawRankings = computePeckingOrder({
+    franchiseIds: [...teamsConfig.teams.keys()],
     standingsByFid,
     weeklyResults,
-    schedule,
     week,
   });
 
-  // Trend vs previous week
+  // Trend vs previous published issue
   const previous = await loadPreviousRankings(year, week);
   const ranked = attachTrend(rawRankings, previous);
 
@@ -499,7 +422,6 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
   const benchBlunder = findBenchBlunder({ teams: teamsConfig.teams, rawWeekly, week });
   const { heater, cooler } = findHeaterAndCooler({ teams: teamsConfig.teams, standingsByFid });
 
-  // We need a temporary rankings shape with franchiseId set for matchup lookup
   const namedRankings = ranked.map(r => ({
     rank: r.rank,
     franchiseId: r.fid,
@@ -509,9 +431,12 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
       composite: round2(r.composite),
       rolling3Ppg: r.rolling3Ppg == null ? null : round2(r.rolling3Ppg),
       seasonPpg: round2(r.seasonPpg),
-      ppgScore: round2(r.ppgScore),
+      avgMargin: r.avgMargin == null ? null : round2(r.avgMargin),
+      formScore: round2(r.formScore),
       recordScore: round2(r.recordScore),
       allPlayScore: round2(r.allPlayScore),
+      seasonPpgScore: round2(r.seasonPpgScore),
+      marginScore: round2(r.marginScore),
     },
   }));
 
@@ -522,31 +447,20 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
     week,
   });
 
-  // Build blurbs (templated baseline). We also stash the structured facts
-  // (last3 record, streak) on each row so the AI fact sheet can reference them.
+  // Templated blurbs (deterministic fallback voice). Structured facts ride
+  // along so the AI fact sheet can reference them; stripped before write.
   const rankings = namedRankings.map(r => {
     const last3Record = rollingRecord(schedule, weeklyResults, r.franchiseId, week, 3);
-    const streak = parseStreak(standingsByFid.get(r.franchiseId)?.strk);
-    const factsForBlurb = { last3Record, streak };
-    return {
-      ...r,
-      blurb: rankingBlurb(
-        { ...r, rolling3Ppg: r.metrics.rolling3Ppg, seasonPpg: r.metrics.seasonPpg },
-        teamsConfig.teams,
-        standingsByFid,
-        schedule,
-        weeklyResults,
-        week
-      ),
-      factsForBlurb,
-    };
+    const factsForBlurb = { last3Record, streak: parseStreak(standingsByFid.get(r.franchiseId)?.strk) };
+    const withFacts = { ...r, factsForBlurb };
+    return { ...withFacts, blurb: rankingBlurb(withFacts, standingsByFid) };
   });
 
   const awards = {
     statOfWeek,
     benchBlunder,
-    tradeOfWeek: null,    // Phase 1: deferred (needs transactions parsing + dynasty model)
-    cutOfShame: null,     // Phase 1: deferred (needs salary delta on cut player)
+    tradeOfWeek: null,    // deferred: needs transactions parsing + dynasty value model
+    cutOfShame: null,     // deferred: needs salary delta on the cut player
     heaterOfWeek: heater,
     coolerOfWeek: cooler,
     matchupOfWeek,
@@ -563,7 +477,6 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
     rankings,
     awards,
     week,
-    year,
   });
 
   const generatedAt = new Date().toISOString();
@@ -574,6 +487,7 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
     publishedAt: generatedAt,
     generatedAt,
     voiceMode: 'templated',
+    methodology: describeMethodology(),
     headline,
     lede,
     rankings,
@@ -588,7 +502,7 @@ export async function generatePowerRankings({ year, week, useAI = false }) {
   // Strip transient fact-bag from output rows
   issue.rankings = issue.rankings.map(({ factsForBlurb, ...rest }) => rest);
 
-  return issue;
+  return { issue, teams: teamsConfig.teams };
 }
 
 async function applySchefterVoice(issue, teams) {
@@ -624,16 +538,62 @@ function round2(x) {
   return Math.round(x * 100) / 100;
 }
 
+// ─── GroupMe announcement ──────────────────────────────────────────
+
+export function buildGroupMeAnnouncement(issue, teams) {
+  const top = issue.rankings[0];
+  const topTeam = teams.get(top.franchiseId);
+  const arrow = top.previousRank == null || top.previousRank === top.rank
+    ? ''
+    : top.previousRank > top.rank
+      ? ` (↑${top.previousRank - top.rank})`
+      : ` (↓${top.rank - top.previousRank})`;
+  const lines = [
+    `🐔 THE PECKING ORDER — Week ${issue.week}`,
+    `#1 ${topTeam?.nameMedium ?? top.franchiseId}${arrow} — "${top.blurb}"`,
+  ];
+  if (issue.awards?.statOfWeek) lines.push(`🏆 ${issue.awards.statOfWeek.blurb}`);
+  if (issue.awards?.benchBlunder) lines.push(`🪑 ${issue.awards.benchBlunder.blurb}`);
+  const origin = leagueOrigin(LEAGUE);
+  lines.push(`Full rankings, awards, and standings ▸ ${origin}/pecking-order`);
+  return lines.join('\n');
+}
+
+async function postAnnouncement(issue, teams) {
+  const text = buildGroupMeAnnouncement(issue, teams);
+  const { posted } = await postToGroupMe({
+    botId: process.env.GROUPME_SCHEFTER_BOT_ID,
+    text,
+    checkStatus: true,
+    onMissingBotId: () => console.log('  [groupme] GROUPME_SCHEFTER_BOT_ID not set — skipping announcement.'),
+    onPosted: () => console.log('  [groupme] announcement posted.'),
+    onHttpError: (status) => console.warn(`  [groupme] announcement failed: HTTP ${status}`),
+    onFetchError: (err) => console.warn(`  [groupme] announcement failed: ${err.message}`),
+  });
+  if (!posted) console.log('  [groupme] announcement not delivered (see above).');
+}
+
 async function main() {
   const opts = parseArgs();
-  if (opts.year == null || opts.week == null) {
-    printUsage();
-    process.exit(1);
+
+  const year = opts.year ?? currentSeasonYear();
+
+  // Resolve the target week: explicit flag wins, else last completed week
+  // from the feeds. No completed week (offseason / pre-Week-1) → clean exit.
+  let week = opts.week;
+  if (week == null) {
+    const weeklyResults = await tryLoadJSON(path.join(feedDir(year), 'weekly-results.json'));
+    const teamsConfig = await loadTeamsConfig();
+    week = getCompletedWeek(weeklyResults ?? { weeks: [] }, teamsConfig.teams.size || 16);
+    if (!week) {
+      console.log(`  [skip] No completed week in ${year} feeds yet (offseason). Exiting cleanly.`);
+      return;
+    }
   }
 
-  console.log(`📊 Power Rankings — ${opts.year} Week ${opts.week}\n`);
+  console.log(`🐔 ${COLUMN_NAME} — ${year} Week ${week}\n`);
 
-  const outPath = rankingsFilePath(opts.year, opts.week);
+  const outPath = issueFilePath(year, week);
   if (!opts.regenerate && !opts.dryRun) {
     const existing = await tryLoadJSON(outPath);
     if (existing) {
@@ -650,21 +610,29 @@ async function main() {
       : Boolean(process.env.ANTHROPIC_API_KEY);
   console.log(`  Voice: ${useAI ? 'schefter (AI)' : 'templated'}`);
 
-  const issue = await generatePowerRankings({ year: opts.year, week: opts.week, useAI });
+  const { issue, teams } = await generatePeckingOrder({ year, week, useAI });
 
   if (opts.dryRun) {
     console.log('--- DRY RUN ---');
     console.log(JSON.stringify(issue, null, 2));
+    console.log('--- GROUPME PREVIEW ---');
+    console.log(buildGroupMeAnnouncement(issue, teams));
     return;
   }
 
-  await fs.mkdir(powerRankingsDir(), { recursive: true });
+  await fs.mkdir(peckingOrderDir(), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
   console.log(`  ✓ Wrote ${path.relative(projectRoot, outPath)}`);
   console.log(`  Headline: ${issue.headline}`);
   console.log(`  Top 3:`);
   for (const r of issue.rankings.slice(0, 3)) {
     console.log(`    #${r.rank} ${r.franchiseId} — ${r.blurb}`);
+  }
+
+  // Announce only on a fresh write (dedup above guarantees this) so a re-run
+  // can never re-buzz the chat. Missing bot id skips silently by design.
+  if (opts.publish) {
+    await postAnnouncement(issue, teams);
   }
 }
 
