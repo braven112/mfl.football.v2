@@ -1,0 +1,48 @@
+name: Gameday Health Check
+
+# Pre-kickoff smoke test of live-game infrastructure (app live-scoring +
+# NFL scoreboard endpoints on each league's apex domain, and each league's
+# MFL export API). Fails the run — and pings GroupMe when the Roger bot id
+# secret is set — so breakage surfaces before owners hit it mid-game.
+#
+# Cron is UTC and can't follow the PT DST flip, so each entry pins one UTC
+# time chosen to err EARLY in PT (a pre-kickoff check that runs an hour
+# earlier in winter is still pre-kickoff; an hour later would defeat it):
+#   - Sundays 16:30 UTC  = 9:30am PDT (Sep-Oct) / 8:30am PST (Nov-Jan),
+#     ahead of the 10:00am PT early window.
+#   - Mon + Thu 21:30 UTC = 2:30pm PDT / 1:30pm PST, ahead of ~5:15pm PT
+#     MNF/TNF kickoffs.
+# Season months only (Sep-Jan). To disable, comment out the cron lines —
+# no vars.* feature gates (CLAUDE.md rule).
+
+on:
+  schedule:
+    - cron: "30 16 * 1,9-12 0"
+    - cron: "30 21 * 1,9-12 1,4"
+  workflow_dispatch:
+
+concurrency:
+  group: gameday-health-check
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run gameday health check
+        env:
+          TZ: America/Los_Angeles
+          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+        run: node scripts/gameday-health-check.mjs

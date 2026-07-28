@@ -191,6 +191,7 @@ export async function fetchExport({ host, leagueId, year, type, extra = '' }, op
     userAgent,
     retries = 0,
     sleepMs = 0,
+    timeoutMs = 0,
     onFetch,
     onRetry,
     formatError = (url, status) => `${url} → ${status}`,
@@ -201,7 +202,12 @@ export async function fetchExport({ host, leagueId, year, type, extra = '' }, op
   for (let attempt = 0; ; attempt++) {
     if (sleepMs) await sleep(sleepMs * (attempt + 1));
     onFetch?.(url);
-    const res = await fetch(url, { headers });
+    // Per-attempt abort bound (0 = no timeout, the historical behavior).
+    // A stalled MFL host otherwise hangs the caller until its own timeout.
+    const res = await fetch(url, {
+      headers,
+      signal: timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined,
+    });
     if (res.ok) return res.json();
     if (res.status === 429 && attempt < retries) {
       onRetry?.(url, attempt);
