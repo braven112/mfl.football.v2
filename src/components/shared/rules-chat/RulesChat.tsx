@@ -167,7 +167,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
       )}
 
       <div className="rqa-list">
-        {isLoading && (
+        {isLoading && tier !== 'none' && (
           <div className="rqa-empty">
             {tier === 'branded' ? (
               <BrandedMoment
