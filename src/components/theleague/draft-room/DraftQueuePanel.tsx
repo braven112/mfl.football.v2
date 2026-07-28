@@ -200,13 +200,11 @@ export function DraftQueuePanel({
             type="button"
             onClick={() => topItem && onSubmitPick(topItem.playerId)}
             disabled={isSubmittingPick || !topItem}
-            className="dr-submit-pick-btn"
+            className={`dr-submit-pick-btn loading-btn loading-btn--on-accent${isSubmittingPick ? ' is-loading' : ''}`}
+            aria-busy={isSubmittingPick || undefined}
+            aria-label={isSubmittingPick ? 'Submitting pick' : undefined}
           >
-            {isSubmittingPick
-              ? 'Submitting…'
-              : topPlayer
-                ? `Draft ${topPlayer.name}`
-                : 'No player in queue'}
+            {topPlayer ? `Draft ${topPlayer.name}` : 'No player in queue'}
           </button>
         </div>
       )}

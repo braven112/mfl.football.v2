@@ -1,6 +1,9 @@
 # Loading State Roadmap
 
-**Status:** Phase 0 complete (this doc, the [standard](loading-standards.md), and the [inventory](loading-inventory.md)). Phases 1+ are not yet started.
+**Status:** Phases 0–3 complete. Phase 4 shipped for the two live user-facing
+AI waits (Ask Roger question submit, Schefter reply-thread typing); the news
+digest has no user-facing wait to wire. Phase 5 (delete legacy + enforce)
+remains.
 
 The migration is **purely additive until the final wave** — new components ship alongside the old ones, screens move over one at a time, and legacy code is deleted only after its replacements are proven. There is no risky cutover, so there's no rollback playbook to write; the safety mechanism is "the old path still exists until the new one is verified."
 
@@ -14,7 +17,7 @@ The migration is **purely additive until the final wave** — new components shi
 
 ---
 
-## Phase 1 — Build the shared primitives
+## Phase 1 — Build the shared primitives ✅
 
 Build the components described in [loading-standards.md](loading-standards.md) "Planned component API," mirroring the `PlayerCell` dual Astro + JS pattern. **No screen migrations yet** — just the toolkit plus a demo/reference.
 
@@ -28,7 +31,7 @@ Build the components described in [loading-standards.md](loading-standards.md) "
 
 ---
 
-## Phase 2 — Migrate low-risk leaves
+## Phase 2 — Migrate low-risk leaves ✅
 
 Replace the safest, most isolated implementations first to prove the components in production with minimal blast radius.
 
@@ -40,7 +43,15 @@ Replace the safest, most isolated implementations first to prove the components 
 
 ---
 
-## Phase 3 — Migrate high-traffic content & actions
+## Phase 3 — Migrate high-traffic content & actions ✅
+
+> Note: the roster / free-agent / results tables turned out to be fully
+> SSR-rendered (no client-side wait), so per the duration ladder they get no
+> indicator; the genuine client-loaded content areas (draft-room queue, mock
+> lobby sessions, tip-page board/record, playoffs timestamp, suggestions,
+> custom rankings) got skeletons instead. The playoffs "shimmer" was
+> reclassified as a live progress bar (see inventory §8) and its
+> reduced-motion guard is in place on both leagues' pages.
 
 - Roster / free-agent / results tables → `Skeleton`.
 - The playoffs shimmer (both leagues) → `Skeleton` **with the reduced-motion guard it currently lacks**.
@@ -50,7 +61,7 @@ Replace the safest, most isolated implementations first to prove the components 
 
 ---
 
-## Phase 4 — Branded 10s+ tier for AI endpoints
+## Phase 4 — Branded 10s+ tier for AI endpoints ✅ (live surfaces)
 
 Build the tier-5 narrated moment and wire it to the LLM-backed touchpoints (Schefter generation, Ask Roger, news digest, rules-chat). This is the one tier that carries league character — design the motif/voice per league via `--league-accent` and brand copy.
 

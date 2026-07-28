@@ -82,12 +82,14 @@ export default function CommentComposer({ onSubmit, placeholder, onCancel }: Pro
           </button>
         )}
         <button
-          className="sb-btn sb-btn--small sb-btn--primary"
+          className={`sb-btn sb-btn--small sb-btn--primary loading-btn loading-btn--on-accent${isSubmitting ? ' is-loading' : ''}`}
           onClick={handleSubmit}
           disabled={!canSubmit}
           type="button"
+          aria-busy={isSubmitting || undefined}
+          aria-label={isSubmitting ? 'Posting reply' : undefined}
         >
-          {isSubmitting ? 'Posting...' : 'Reply'}
+          Reply
         </button>
       </div>
     </div>

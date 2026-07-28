@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { TradeBuilderAuthUser } from '../../../types/trade-builder';
 import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+import '../../../styles/loading.css';
 
 interface Props {
   onClose: () => void;
@@ -191,10 +192,12 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
                 </button>
                 <button
                   type="submit"
-                  className="lm-submit"
+                  className={`lm-submit loading-btn loading-btn--on-accent${isSubmitting ? ' is-loading' : ''}`}
                   disabled={isSubmitting || !username.trim() || !password.trim()}
+                  aria-busy={isSubmitting || undefined}
+                  aria-label={isSubmitting ? 'Signing in' : undefined}
                 >
-                  {isSubmitting ? 'Signing in...' : 'Sign In'}
+                  Sign In
                 </button>
               </div>
             </div>

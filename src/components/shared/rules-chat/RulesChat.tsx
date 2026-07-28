@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { RulesQA } from '../../../types/rules-qa';
 import { filterByRelevance, wordOverlapScore } from '../../../utils/rules-qa-matching';
+import { useLoadingState } from '../../../hooks/useLoadingState';
+import { ThinkingDots, BrandedMoment } from '../loading/loading-react';
 import QACard from './QACard';
 import AskInput from './AskInput';
+
+/** Tier-5 narration for the 10s+ Ask Roger wait (docs/claude/loading-standards.md). */
+const ROGER_NARRATION = [
+  'Flipping to the relevant bylaws…',
+  'Cross-checking precedent…',
+  'Roger reads every footnote. Every one.',
+  'Drafting a ruling…',
+];
 
 interface TeamIcon {
   franchiseId: string;
@@ -20,7 +30,7 @@ interface Props {
 export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIcons, apiEndpoint = '/api/rules-qa' }: Props) {
   const [allQAs, setAllQAs] = useState<RulesQA[]>(preSeeded);
   const [searchText, setSearchText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, tier, start: startLoading, stop: stopLoading } = useLoadingState('content');
   const [error, setError] = useState<string | null>(null);
   const [newId, setNewId] = useState<string | null>(null);
   const [dynamicLoaded, setDynamicLoaded] = useState(false);
@@ -69,7 +79,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
       return;
     }
 
-    setIsLoading(true);
+    startLoading();
     setError(null);
 
     try {
@@ -101,9 +111,9 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     } catch {
       setError('Failed to submit question. Please try again.');
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
-  }, [isAuthenticated, apiEndpoint]);
+  }, [isAuthenticated, apiEndpoint, startLoading, stopLoading]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('Delete this Q&A? This cannot be undone.')) return;
@@ -157,6 +167,18 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
       )}
 
       <div className="rqa-list">
+        {isLoading && tier !== 'none' && (
+          <div className="rqa-empty">
+            {tier === 'branded' ? (
+              <BrandedMoment
+                title="Roger is deep in the constitution"
+                narration={ROGER_NARRATION}
+              />
+            ) : (
+              <ThinkingDots label="Roger is checking the constitution" />
+            )}
+          </div>
+        )}
         {displayedQAs.length === 0 && searchText.trim().length >= 3 ? (
           <div className="rqa-empty">
             No matching questions found. {isAuthenticated ? 'Ask a new one above!' : ''}

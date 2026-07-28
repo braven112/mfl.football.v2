@@ -1,6 +1,6 @@
 # Loading State Standard
 
-**Status:** Phase 0 — standard adopted, components not yet built. This document is the contract; [loading-inventory.md](loading-inventory.md) is the migration map; [loading-roadmap.md](loading-roadmap.md) is the build plan.
+**Status:** adopted and built — the primitives live in `src/components/shared/loading/*` (Astro), `src/components/shared/loading/loading-react.tsx` (React), `src/styles/loading.css`, `src/utils/loading-html.ts`, `src/utils/loading-tier.ts`, and `src/hooks/useLoadingState.ts`; the reference gallery is the Loading States section of `src/pages/theleague/design-system.astro`. This document is the contract; [loading-inventory.md](loading-inventory.md) is the migration map; [loading-roadmap.md](loading-roadmap.md) is the build plan.
 
 The single visual standard for every loading state on the site. Like the [Editorial Design Standard](insights/domains/design-system.md) and the [Player Lockup](../../CLAUDE.md), loading feedback is now a shared system rather than something each screen reinvents. Adapted from the cross-platform loading framework developed for the Alaska + Hawaiian guest apps and re-grounded in this repo's tokens, two-league theming, and component conventions.
 

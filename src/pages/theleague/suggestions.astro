@@ -426,8 +426,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
   }
 
-  /* ── Loading / Empty ── */
-  .sb-loading,
+  /* ── Empty (loading is the shared .loading-skeleton system) ── */
   .sb-empty {
     text-align: center;
     padding: 2rem 1rem;

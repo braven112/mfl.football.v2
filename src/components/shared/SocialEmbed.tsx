@@ -10,6 +10,7 @@
  * even if the widget script fails (common on Twitter post-2023).
  */
 import { useEffect, useRef, useState } from 'react';
+import '../../styles/loading.css';
 
 type EmbedType = 'x' | 'instagram';
 
@@ -145,7 +146,18 @@ export default function SocialEmbed({ type, url, tweetId, username }: Props) {
           <div className="social-embed__fallback-info">
             <span className="social-embed__fallback-domain">@{username ?? 'X'}</span>
             <span className="social-embed__fallback-cta">
-              {state === 'loading' ? 'Loading tweet…' : 'View on X'}
+              {state === 'loading' ? (
+                <span
+                  className="loading-skeleton loading-skeleton--text"
+                  style={{ width: '5.5rem', display: 'inline-block', verticalAlign: 'middle' }}
+                  role="status"
+                  aria-busy="true"
+                  aria-live="polite"
+                  aria-label="Loading tweet"
+                />
+              ) : (
+                'View on X'
+              )}
             </span>
           </div>
         </a>
@@ -179,7 +191,18 @@ export default function SocialEmbed({ type, url, tweetId, username }: Props) {
           <div className="social-embed__fallback-info">
             <span className="social-embed__fallback-domain">Instagram</span>
             <span className="social-embed__fallback-cta">
-              {state === 'loading' ? 'Loading post…' : 'View on Instagram'}
+              {state === 'loading' ? (
+                <span
+                  className="loading-skeleton loading-skeleton--text"
+                  style={{ width: '5.5rem', display: 'inline-block', verticalAlign: 'middle' }}
+                  role="status"
+                  aria-busy="true"
+                  aria-live="polite"
+                  aria-label="Loading post"
+                />
+              ) : (
+                'View on Instagram'
+              )}
             </span>
           </div>
         </a>

@@ -7,6 +7,7 @@
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import '../../../styles/loading.css';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import leagueConfigData from '../../../data/theleague.config.json';
 import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
@@ -143,7 +144,16 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
           </div>
 
           <div id="sessions-list" class="mock-lobby__sessions-list">
-            <p class="mock-lobby__loading">Loading sessions…</p>
+            <div
+              class="loading-skeleton-group"
+              role="status"
+              aria-busy="true"
+              aria-live="polite"
+              aria-label="Loading sessions"
+            >
+              <span class="loading-skeleton" style="--skeleton-height: 3.5rem"></span>
+              <span class="loading-skeleton" style="--skeleton-height: 3.5rem"></span>
+            </div>
           </div>
         </section>
       </>
@@ -994,7 +1004,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     gap: 0.75rem;
   }
 
-  .mock-lobby__loading,
+  /* Loading uses the shared .loading-skeleton system (loading.css) */
   .mock-lobby__empty {
     font-size: 0.875rem;
     color: var(--color-gray-400, #9ca3af);

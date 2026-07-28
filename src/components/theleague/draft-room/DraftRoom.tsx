@@ -24,6 +24,7 @@ import { getQueue, saveQueue } from '../../../utils/draft-queue-storage';
 import { collectFreshPicks, buildSplashItem, type PickSplashItem } from '../../../utils/pick-reveal';
 import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
 import '../../../styles/draft-room.css';
+import '../../../styles/loading.css';
 
 // DraftQueuePanel lazy-loaded — @dnd-kit (~40 KB gzipped) only pulled in when
 // the queue tab is opened. Most users never open it.
@@ -776,7 +777,21 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             className="dr-panel-queue"
           >
             {queueVisited ? (
-              <Suspense fallback={<div className="dr-panel-loading">Loading queue…</div>}>
+              <Suspense
+                fallback={
+                  <div
+                    className="loading-skeleton-group"
+                    role="status"
+                    aria-busy="true"
+                    aria-live="polite"
+                    aria-label="Loading queue"
+                  >
+                    <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '2.5rem' }} />
+                    <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '2.5rem' }} />
+                    <span className="loading-skeleton" style={{ ['--skeleton-height' as any]: '2.5rem' }} />
+                  </div>
+                }
+              >
                 <DraftQueuePanel
                   queue={state.queue}
                   players={playerMap}

@@ -2393,11 +2393,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             Clear All Tags
           </button>
 
-          <button class="submit-franchise-tags-btn" id="submitFranchiseTagsBtn" style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
+          <button class="submit-franchise-tags-btn loading-btn loading-btn--on-accent" id="submitFranchiseTagsBtn" style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
-            Submit Tags/Extensions
+            <span class="submit-franchise-tags-btn__label">Submit Tags/Extensions</span>
           </button>
 
           <div class="mode-toggle">
@@ -5975,8 +5975,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
 
     submitFranchiseTagsBtn.disabled = true;
-    const origText = submitFranchiseTagsBtn.textContent.trim();
-    submitFranchiseTagsBtn.textContent = 'Submitting...';
+    // Update only the label span — replacing the button's textContent would
+    // wipe the SVG icon permanently.
+    const tagsBtnLabel = submitFranchiseTagsBtn.querySelector('.submit-franchise-tags-btn__label');
+    const setTagsBtnLabel = (text) => {
+      if (tagsBtnLabel) tagsBtnLabel.textContent = text;
+    };
+    const origText = (tagsBtnLabel?.textContent ?? '').trim();
+    submitFranchiseTagsBtn.classList.add('is-loading');
+    submitFranchiseTagsBtn.setAttribute('aria-busy', 'true');
+    submitFranchiseTagsBtn.setAttribute('aria-label', 'Submitting declarations');
 
     try {
       for (const action of actionsToSubmit) {
@@ -6017,18 +6025,24 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       recalculateRoster();
       updateClearAllButton();
-      submitFranchiseTagsBtn.textContent = 'Submitted!';
+      submitFranchiseTagsBtn.classList.remove('is-loading');
+      submitFranchiseTagsBtn.removeAttribute('aria-busy');
+      submitFranchiseTagsBtn.removeAttribute('aria-label');
+      setTagsBtnLabel('Submitted!');
       setTimeout(() => {
-        submitFranchiseTagsBtn.textContent = origText;
+        setTagsBtnLabel(origText);
         submitFranchiseTagsBtn.disabled = false;
       }, 2000);
     } catch (err) {
       console.error('Tags/extensions submission failed:', err);
-      submitFranchiseTagsBtn.textContent = err.message || 'Error — try again';
+      submitFranchiseTagsBtn.classList.remove('is-loading');
+      submitFranchiseTagsBtn.removeAttribute('aria-busy');
+      submitFranchiseTagsBtn.removeAttribute('aria-label');
+      setTagsBtnLabel(err.message || 'Error — try again');
       submitFranchiseTagsBtn.style.background = '#dc2626';
       submitFranchiseTagsBtn.style.borderColor = '#dc2626';
       setTimeout(() => {
-        submitFranchiseTagsBtn.textContent = origText;
+        setTagsBtnLabel(origText);
         submitFranchiseTagsBtn.disabled = false;
         submitFranchiseTagsBtn.style.background = '';
         submitFranchiseTagsBtn.style.borderColor = '';

@@ -2,6 +2,10 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import HeroBanner from '../../components/theleague/HeroBanner.astro';
+import Spinner from '../../components/shared/loading/Spinner.astro';
+import Skeleton from '../../components/shared/loading/Skeleton.astro';
+import ThinkingDots from '../../components/shared/loading/ThinkingDots.astro';
+import BrandedLoader from '../../components/shared/loading/BrandedLoader.astro';
 import '../../styles/player-cell.css';
 
 export const prerender = false;
@@ -1050,6 +1054,104 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
             <span class="ds-detail-label">Transitions</span>
             <span class="ds-detail-value"><code>0.3s cubic-bezier(0.4, 0, 0.2, 1)</code> for interactive state changes (hover, focus)</span>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Loading States ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Loading States</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">The Duration Ladder</h3>
+        <p class="ds-card__desc">
+          Loading indicators are chosen by how long the user actually waits, not by page.
+          The full contract lives in <code>docs/claude/loading-standards.md</code>; the shared
+          primitives are <code>src/components/shared/loading/*</code> +
+          <code>src/styles/loading.css</code>, with string builders in
+          <code>src/utils/loading-html.ts</code> and the React hook
+          <code>useLoadingState()</code> driving tier escalation via
+          <code>resolveLoadingTier()</code>.
+        </p>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">&lt; 0.3s</span>
+          <span class="ds-detail-value">Nothing — a loader that flashes reads as a glitch</span>
+        </div>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">0.3–1s</span>
+          <span class="ds-detail-value">Optimistic — show the result, reconcile in background</span>
+        </div>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">1–10s</span>
+          <span class="ds-detail-value">Skeleton for content, inline button spinner for discrete actions</span>
+        </div>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">10s+</span>
+          <span class="ds-detail-value">Branded "on the wire" moment with narration (AI endpoints)</span>
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Spinner (tier 2/3)</h3>
+        <p class="ds-card__desc">Accent from <code>var(--league-accent)</code> — skins per league with no code branch. Sizes: compact / default / large.</p>
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+          <Spinner size="compact" label="Loading (compact)" />
+          <Spinner label="Loading (default)" />
+          <Spinner size="large" label="Loading (large)" />
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Button Loading (tier 3)</h3>
+        <p class="ds-card__desc">Add <code>loading-btn</code> + <code>is-loading</code> to a button: spinner replaces the label and the button disables — double-submit prevention comes free. Use <code>loading-btn--on-accent</code> on solid accent fills.</p>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="ds-btn ds-btn--primary loading-btn loading-btn--on-accent is-loading" disabled aria-busy="true" aria-label="Submitting lineup">Submit Lineup</button>
+          <button class="ds-btn ds-btn--ghost loading-btn is-loading" disabled aria-busy="true" aria-label="Saving">Save</button>
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Skeleton (tier 4)</h3>
+        <p class="ds-card__desc">Gray shimmer blocks mirroring the final layout. Brand-neutral by design. Variants: title / text / block / circle; <code>count</code> renders a stacked list.</p>
+        <div style="display: flex; gap: 1rem; align-items: flex-start;">
+          <Skeleton variant="circle" height="40px" label="Loading avatar" />
+          <div style="flex: 1;">
+            <Skeleton variant="title" label="Loading title" />
+            <div style="margin-top: 0.6rem;">
+              <Skeleton variant="text" count={3} label="Loading content" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Thinking Dots (tier 5, AI)</h3>
+        <p class="ds-card__desc">Extracted from the Schefter typing indicator. For AI waits under the branded threshold.</p>
+        <ThinkingDots label="Roger is checking the constitution" />
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Branded Moment (tier 5, 10s+)</h3>
+        <p class="ds-card__desc">The one tier that carries league character. Narration cycles via <code>aria-label</code> updates; reduced-motion collapses the pulse to a static ring. Fires only above the 10s threshold — never on routine loads.</p>
+        <BrandedLoader
+          title="Roger is deep in the constitution"
+          narration={['Flipping to the relevant bylaws…', 'Cross-checking precedent…', 'Drafting a ruling…']}
+        />
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Rules</h3>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">Reduced motion</span>
+          <span class="ds-detail-value">Every loader collapses to a static-but-present state with the same ARIA label — the guard ships in <code>loading.css</code></span>
+        </div>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">Tokens</span>
+          <span class="ds-detail-value">Zero hex in loader code — accent is <code>--league-accent</code>, fills are <code>--color-gray-100/200</code></span>
+        </div>
+        <div class="ds-detail-row">
+          <span class="ds-detail-label">ARIA</span>
+          <span class="ds-detail-value"><code>role="status"</code> + <code>aria-busy</code> + polite live region on every surface; button spinners add <code>disabled</code></span>
         </div>
       </div>
     </section>
