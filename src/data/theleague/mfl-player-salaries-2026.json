@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-01T07:11:04.055Z"
+    "fetchedAt": "2026-08-01T09:22:08.622Z"
   },
   "players": [
     {
@@ -1710,17 +1710,39 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "FA",
+      "team": "SF",
       "draftYear": 2019,
       "draftTeam": "SFO",
       "birthdate": 821682000,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14136_thumb.jpg",
       "externalIds": {
         "mfl": "14136",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5872",
+        "gsis": " 00-0035719"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5872",
+        "fullName": "Deebo Samuel",
+        "team": "SF",
+        "age": 30,
+        "height": "72",
+        "weight": "215",
+        "number": 1,
+        "college": "South Carolina",
+        "birthDate": "1996-01-15",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035719"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -2882,6 +2904,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
+        },
         {
           "id": "11671",
           "name": "Evans, Mike"
@@ -8067,7 +8093,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
+        }
+      ]
     },
     {
       "id": "14860",
@@ -10897,6 +10928,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
+        },
         {
           "id": "11671",
           "name": "Evans, Mike"
@@ -16602,6 +16637,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
+        },
         {
           "id": "11671",
           "name": "Evans, Mike"
