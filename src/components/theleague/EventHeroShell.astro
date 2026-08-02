@@ -496,6 +496,24 @@ const countAriaLabel = hasCount
   }
 
   /* ── Responsive ── */
+  /* The footer wraps at narrow widths (CTA drops to its own row), which
+     orphans the count/CTA divider as a floating vertical line over the card.
+     em-based so the hide tracks user font scaling — the footer is rem-sized,
+     so a larger default font wraps it above the 640px device breakpoint. */
+  @media (max-width: 40em) {
+    .tl-event-hero__divider {
+      display: none;
+    }
+  }
+  /* Paneled variant: the 264px side panel narrows the content column well
+     above the phone breakpoint, so the footer can wrap (and orphan the
+     divider) through tablet widths. Hide until the column comfortably fits. */
+  @media (max-width: 55em) {
+    .tl-event-hero--paneled .tl-event-hero__divider {
+      display: none;
+    }
+  }
+
   @media (max-width: 640px) {
     .tl-event-hero__player {
       width: 42%;

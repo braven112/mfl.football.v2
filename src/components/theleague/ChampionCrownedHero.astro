@@ -277,6 +277,15 @@ const summary = isUserChampion
     }
   }
 
+  /* The footer wraps at narrow widths (CTA drops to its own row), which
+     orphans the count/CTA divider as a floating vertical line over the
+     background art. em-based so the hide tracks user font scaling. */
+  @media (max-width: 40em) {
+    .champ-hero__divider {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .champ-hero__cta,
     .champ-hero__cta-arrow {
