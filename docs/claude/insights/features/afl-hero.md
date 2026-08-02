@@ -170,11 +170,19 @@ phones. **Cause:** the footer (`count · divider · CTA`) is `flex-wrap: wrap`
 with a fixed-size 1px × 54px divider; when the CTA wraps to its own row, the
 divider stays at the end of the count row as a floating line over the player
 art (content z-index sits above the photo). Fix: `display: none` the divider
-under 640px. Applies to BOTH twins — `AflEventHero.astro` and TheLeague's
-`EventHeroShell.astro` share the identical footer markup/CSS; fix them
-together. General rule: a decorative separator inside a wrapping flex row
-needs a wrap-breakpoint hide (or `align-self: stretch` + row layout), since
-flexbox gives no "hide me when the row wraps" primitive.
+below a wrap breakpoint — **em-based (`40em`), not `640px`**, because the
+footer is rem-sized: user font scaling >100% wraps it above the px
+breakpoint while a px media query stays put. Three components share the
+pattern and were all fixed: `AflEventHero.astro`, TheLeague's
+`EventHeroShell.astro`, and `ChampionCrownedHero.astro`. The shell's
+**paneled variant needs a wider hide (`55em`)** — its 264px side panel
+narrows the content column so the footer wraps through tablet widths, not
+just phones. The composite heroes (Preseason/Auction/Recap) are immune: their
+footers don't `flex-wrap` and their dividers are `align-self: stretch`.
+General rule: a decorative separator inside a wrapping flex row needs a
+wrap-breakpoint hide, since flexbox gives no "hide me when the row wraps"
+primitive — and the breakpoint must account for every layout that narrows
+the row's container, not just the viewport.
 
 ---
 

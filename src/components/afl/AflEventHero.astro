@@ -653,15 +653,20 @@ const countAriaLabel = hasCount
   }
 
   /* ── Responsive ── */
+  /* The footer wraps at narrow widths (CTA drops to its own row), which
+     orphans the count/CTA divider as a floating vertical line over the
+     player photo. em-based so the hide tracks user font scaling — the footer
+     is rem-sized, so a larger default font wraps it above the 640px device
+     breakpoint. */
+  @media (max-width: 40em) {
+    .afl-event-hero__divider {
+      display: none;
+    }
+  }
   @media (max-width: 640px) {
     .afl-event-hero__player {
       width: 42%;
       opacity: 0.5;
-    }
-    /* The footer wraps here (CTA drops to its own row), which orphans the
-       count/CTA divider as a floating vertical line over the player photo. */
-    .afl-event-hero__divider {
-      display: none;
     }
     .afl-event-hero__model {
       width: 52%;
