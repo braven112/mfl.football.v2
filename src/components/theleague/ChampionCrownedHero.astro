@@ -275,6 +275,11 @@ const summary = isUserChampion
     .champ-hero__content {
       max-width: none;
     }
+    /* The footer wraps here (CTA drops to its own row), which orphans the
+       count/CTA divider as a floating vertical line over the background art. */
+    .champ-hero__divider {
+      display: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
