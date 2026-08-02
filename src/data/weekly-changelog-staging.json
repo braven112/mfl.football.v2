@@ -2,6 +2,14 @@
   "weekOf": "2026-08-03",
   "changes": [
     {
+      "date": "2026-08-02",
+      "type": "bug-fix",
+      "summary": "On phones, the homepage event hero no longer draws a stray vertical line through the featured player's face — the countdown/CTA divider was sticking around after the button wrapped to its own row.",
+      "impact": "user",
+      "area": "homepage hero",
+      "league": "both"
+    },
+    {
       "date": "2026-07-28",
       "type": "bug-fix",
       "summary": "Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",

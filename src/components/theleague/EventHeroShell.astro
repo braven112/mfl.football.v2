@@ -501,6 +501,11 @@ const countAriaLabel = hasCount
       width: 42%;
       opacity: 0.5;
     }
+    /* The footer wraps here (CTA drops to its own row), which orphans the
+       count/CTA divider as a floating vertical line over the player photo. */
+    .tl-event-hero__divider {
+      display: none;
+    }
     .tl-event-hero__fade--left {
       background: linear-gradient(90deg, var(--ev-surface) 0%, color-mix(in srgb, var(--ev-surface) 75%, transparent) 45%, color-mix(in srgb, var(--ev-surface) 20%, transparent) 100%);
     }
