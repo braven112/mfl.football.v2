@@ -163,6 +163,21 @@ Regression suite: `tests/afl-conference-draft-pills.test.ts` (sweeps Aug 26/29/3
 
 ---
 
+## 2026-08-02 - Wrapping footer orphans the count/CTA divider on mobile
+
+**Symptom:** a stray 1px vertical line through the hero player's face on
+phones. **Cause:** the footer (`count · divider · CTA`) is `flex-wrap: wrap`
+with a fixed-size 1px × 54px divider; when the CTA wraps to its own row, the
+divider stays at the end of the count row as a floating line over the player
+art (content z-index sits above the photo). Fix: `display: none` the divider
+under 640px. Applies to BOTH twins — `AflEventHero.astro` and TheLeague's
+`EventHeroShell.astro` share the identical footer markup/CSS; fix them
+together. General rule: a decorative separator inside a wrapping flex row
+needs a wrap-breakpoint hide (or `align-self: stretch` + row layout), since
+flexbox gives no "hide me when the row wraps" primitive.
+
+---
+
 ## 2026-06-23 - Hero player images: explicit list, day-seeded random, optimize on add
 
 **Context:** Hero player cut-outs in `public/assets/hero-players/`.
