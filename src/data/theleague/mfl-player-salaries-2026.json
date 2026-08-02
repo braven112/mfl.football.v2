@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-02T09:29:16.862Z"
+    "fetchedAt": "2026-08-02T11:04:10.261Z"
   },
   "players": [
     {
@@ -1734,7 +1734,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -1745,7 +1745,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11671",
+          "name": "Evans, Mike"
+        }
+      ]
     },
     {
       "id": "12956",
@@ -8073,7 +8078,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -8084,12 +8089,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14136",
-          "name": "Samuel, Deebo"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "14860",
@@ -10920,12 +10920,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14136",
-          "name": "Samuel, Deebo"
-        },
-        {
           "id": "11671",
           "name": "Evans, Mike"
+        },
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
         }
       ]
     },
@@ -16625,12 +16625,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14136",
-          "name": "Samuel, Deebo"
-        },
-        {
           "id": "11671",
           "name": "Evans, Mike"
+        },
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
         },
         {
           "id": "17514",
