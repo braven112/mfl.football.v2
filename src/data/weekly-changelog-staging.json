@@ -1,37 +1,4 @@
 {
-  "weekOf": "2026-08-03",
-  "changes": [
-    {
-      "date": "2026-08-02",
-      "type": "bug-fix",
-      "summary": "On phones, the homepage event hero no longer draws a stray vertical line through the featured player's face — the countdown/CTA divider was sticking around after the button wrapped to its own row.",
-      "impact": "user",
-      "area": "homepage hero",
-      "league": "both"
-    },
-    {
-      "date": "2026-07-28",
-      "type": "bug-fix",
-      "summary": "Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",
-      "impact": "user",
-      "area": "search",
-      "league": "both"
-    },
-    {
-      "date": "2026-07-28",
-      "type": "bug-fix",
-      "summary": "Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net)",
-      "impact": "user",
-      "area": "standings",
-      "league": "both"
-    },
-    {
-      "date": "2026-07-28",
-      "type": "style-tweak",
-      "summary": "Loading feedback got a site-wide tune-up before kickoff: tables and lists now show shimmer placeholders instead of \"Loading...\" text, submit buttons show an inline spinner while they work, and long Ask Roger waits get a proper \"Roger is deep in the constitution\" moment with live narration. All of it respects reduced-motion settings.",
-      "impact": "user",
-      "area": "loading experience",
-      "league": "both"
-    }
-  ]
+  "weekOf": "2026-08-10",
+  "changes": []
 }

@@ -1,5 +1,68 @@
 [
   {
+    "id": "weekly-rollup-2026-08-03",
+    "date": "2026-08-03",
+    "title": "Weekly Fixes & Polish (Jul 28-Aug 2)",
+    "summary": "4 bug fixes and style improvements across homepage hero, search, standings, loading experience.",
+    "description": [
+      "This week's 4 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>homepage hero</strong> — On phones, the homepage event hero no longer draws a stray vertical line through the featured player's face — the countdown/CTA divider was sticking around after the button wrapped to its own row.",
+      "<strong>search</strong> — Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",
+      "<strong>Standings</strong> — Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net).",
+      "<strong>loading experience</strong> — Loading feedback got a site-wide tune-up before kickoff: tables and lists now show shimmer placeholders instead of \"Loading...\" text, submit buttons show an inline spinner while they work, and long Ask Roger waits get a proper \"Roger is deep in the constitution\" moment with live narration. All of it respects reduced-motion settings."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-08-03-afl",
+    "date": "2026-08-03",
+    "title": "Weekly Fixes & Polish (Jul 28-Aug 2)",
+    "summary": "4 bug fixes and style improvements across homepage hero, search, standings, loading experience.",
+    "description": [
+      "This week's 4 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>homepage hero</strong> — On phones, the homepage event hero no longer draws a stray vertical line through the featured player's face — the countdown/CTA divider was sticking around after the button wrapped to its own row.",
+      "<strong>search</strong> — Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",
+      "<strong>Standings</strong> — Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net).",
+      "<strong>loading experience</strong> — Loading feedback got a site-wide tune-up before kickoff: tables and lists now show shimmer placeholders instead of \"Loading...\" text, submit buttons show an inline spinner while they work, and long Ask Roger waits get a proper \"Roger is deep in the constitution\" moment with live narration. All of it respects reduced-motion settings."
+    ],
+    "category": "bug-fix",
+    "link": "/afl-fantasy/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-08-03-bb1",
+    "date": "2026-08-03",
+    "title": "Weekly Fixes & Polish (Jul 28-Aug 2)",
+    "summary": "4 bug fixes and style improvements across homepage hero, search, standings, loading experience.",
+    "description": [
+      "This week's 4 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>homepage hero</strong> — On phones, the homepage event hero no longer draws a stray vertical line through the featured player's face — the countdown/CTA divider was sticking around after the button wrapped to its own row.",
+      "<strong>search</strong> — Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",
+      "<strong>Standings</strong> — Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net).",
+      "<strong>loading experience</strong> — Loading feedback got a site-wide tune-up before kickoff: tables and lists now show shimmer placeholders instead of \"Loading...\" text, submit buttons show an inline spinner while they work, and long Ask Roger waits get a proper \"Roger is deep in the constitution\" moment with live narration. All of it respects reduced-motion settings."
+    ],
+    "category": "bug-fix",
+    "link": "/best-ball-1/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "bb1"
+    ]
+  },
+  {
     "id": "weekly-rollup-2026-07-27",
     "date": "2026-07-27",
     "title": "Weekly Fixes & Polish (Jul 15-26)",
