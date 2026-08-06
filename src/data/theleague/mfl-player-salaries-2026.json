@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-06T07:13:17.505Z"
+    "fetchedAt": "2026-08-06T09:54:42.840Z"
   },
   "players": [
     {
@@ -1305,7 +1305,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -4080,7 +4080,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -13796,20 +13796,59 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "FA",
+      "team": "WAS",
       "draftYear": 2015,
       "draftTeam": "MIN",
       "birthdate": 754549200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/12186_thumb.jpg",
       "externalIds": {
         "mfl": "12186",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "2449",
+        "gsis": "00-0031588"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "2449",
+        "fullName": "Stefon Diggs",
+        "team": "WAS",
+        "age": 32,
+        "height": "72",
+        "weight": "191",
+        "number": 8,
+        "college": "Maryland",
+        "birthDate": "1993-11-29",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 8,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 11,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0031588"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        },
+        {
+          "id": "17512",
+          "name": "Williams, Antonio"
+        },
+        {
+          "id": "17184",
+          "name": "Lane, Jaylin"
+        },
+        {
+          "id": "16635",
+          "name": "McCaffrey, Luke"
+        }
+      ]
     },
     {
       "id": "17075",
@@ -18932,7 +18971,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
