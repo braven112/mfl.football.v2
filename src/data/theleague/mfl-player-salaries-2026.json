@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-06T13:45:49.268Z"
+    "fetchedAt": "2026-08-06T22:35:27.207Z"
   },
   "players": [
     {
@@ -49,7 +49,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -1305,7 +1305,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -1320,6 +1320,10 @@
         {
           "id": "14109",
           "name": "McLaurin, Terry"
+        },
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon"
         }
       ]
     },
@@ -1453,8 +1457,8 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": null
       },
       "nflverse": null,
@@ -2033,7 +2037,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -4080,7 +4084,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -4097,12 +4101,12 @@
           "name": "McLaurin, Terry"
         },
         {
-          "id": "17512",
-          "name": "Williams, Antonio"
+          "id": "12186",
+          "name": "Diggs, Stefon"
         },
         {
-          "id": "17184",
-          "name": "Lane, Jaylin"
+          "id": "17512",
+          "name": "Williams, Antonio"
         }
       ]
     },
@@ -4139,7 +4143,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "QB"
         ],
@@ -4150,12 +4154,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "13113",
-          "name": "Watson, Deshaun"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17074",
@@ -5609,7 +5608,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -5620,12 +5619,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "17474",
-          "name": "Johnson, Emmett"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17269",
@@ -6105,7 +6099,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "TE"
         ],
@@ -6530,7 +6524,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -7380,7 +7374,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -10220,7 +10214,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -10231,7 +10225,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17031",
+          "name": "Sanders, Shedeur"
+        }
+      ]
     },
     {
       "id": "16597",
@@ -11278,8 +11277,8 @@
           "TE"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Nose",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -12415,8 +12414,8 @@
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Shoulder",
         "gsisId": null
       },
       "nflverse": null,
@@ -12515,7 +12514,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -12534,10 +12533,6 @@
         {
           "id": "15721",
           "name": "White, Rachaad"
-        },
-        {
-          "id": "17478",
-          "name": "Allen, Kaytron"
         }
       ]
     },
@@ -12958,7 +12953,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -12977,10 +12972,6 @@
         {
           "id": "17599",
           "name": "Douglas, Caleb"
-        },
-        {
-          "id": "15788",
-          "name": "Tolbert, Jalen"
         }
       ]
     },
@@ -13068,7 +13059,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -13079,7 +13070,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17049",
+          "name": "Smith, Brashard"
+        }
+      ]
     },
     {
       "id": "17505",
@@ -13820,7 +13816,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 8,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -13835,18 +13831,6 @@
         {
           "id": "14109",
           "name": "McLaurin, Terry"
-        },
-        {
-          "id": "17512",
-          "name": "Williams, Antonio"
-        },
-        {
-          "id": "17184",
-          "name": "Lane, Jaylin"
-        },
-        {
-          "id": "16635",
-          "name": "McCaffrey, Luke"
         }
       ]
     },
@@ -14356,12 +14340,12 @@
           "name": "Douglas, Caleb"
         },
         {
-          "id": "15788",
-          "name": "Tolbert, Jalen"
-        },
-        {
           "id": "17506",
           "name": "Bell, Chris"
+        },
+        {
+          "id": "15788",
+          "name": "Tolbert, Jalen"
         }
       ]
     },
@@ -15432,7 +15416,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -15451,6 +15435,10 @@
         {
           "id": "15721",
           "name": "White, Rachaad"
+        },
+        {
+          "id": "15713",
+          "name": "Ford, Jerome"
         }
       ]
     },
@@ -16525,8 +16513,8 @@
           "RB"
         ],
         "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Groin",
         "gsisId": " 00-0035700"
       },
       "nflverse": null,
@@ -17654,7 +17642,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -17962,8 +17950,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Knee",
         "gsisId": null
       },
       "nflverse": null,
@@ -18512,7 +18500,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -18531,6 +18519,10 @@
         {
           "id": "17599",
           "name": "Douglas, Caleb"
+        },
+        {
+          "id": "17506",
+          "name": "Bell, Chris"
         }
       ]
     },
@@ -18971,7 +18963,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -18988,8 +18980,16 @@
           "name": "McLaurin, Terry"
         },
         {
+          "id": "12186",
+          "name": "Diggs, Stefon"
+        },
+        {
           "id": "17512",
           "name": "Williams, Antonio"
+        },
+        {
+          "id": "16635",
+          "name": "McCaffrey, Luke"
         }
       ]
     },
@@ -19026,7 +19026,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
