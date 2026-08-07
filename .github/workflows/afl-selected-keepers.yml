@@ -1,0 +1,34 @@
+name: AFL Selected Keepers Check
+
+# On-demand diagnostic: queries MFL's selectedKeepers export for the AFL
+# (auth-restricted endpoint — needs the MFL secrets, which only exist in
+# Actions) and prints a per-franchise keeper-selection report to the log.
+# No commits; read the run output.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Fetch selected keepers (AFL)
+        env:
+          MFL_LEAGUE_ID: '19621'
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+        run: node ./scripts/fetch-selected-keepers.mjs --sweep
