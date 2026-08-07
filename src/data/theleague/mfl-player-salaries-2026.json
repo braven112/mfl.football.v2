@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-07T14:09:16.241Z"
+    "fetchedAt": "2026-08-07T15:09:20.044Z"
   },
   "players": [
     {
@@ -9698,8 +9698,8 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Knee",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -14324,8 +14324,8 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": null
       },
       "nflverse": null,
@@ -14773,7 +14773,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "KR",
+        "depthChartPosition": "SWR",
         "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
@@ -14785,7 +14785,20 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15290",
+          "name": "Collins, Nico"
+        },
+        {
+          "id": "17083",
+          "name": "Higgins, Jayden"
+        },
+        {
+          "id": "16204",
+          "name": "Dell, Tank"
+        }
+      ]
     },
     {
       "id": "17048",
