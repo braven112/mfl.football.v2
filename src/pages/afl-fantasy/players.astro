@@ -64,9 +64,10 @@ import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleag
 // imports only that small snapshot, so it renders on-demand (routing works) while
 // contributing ~0.4MB, not ~15MB, to the function. Refreshes every deploy.
 
-// MFL player-photo CDN host — sourced from the league registry, never
-// hardcoded (CLAUDE.md: never hardcode league constants like the MFL host).
-const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
+// League registry entry — single lookup serves the MFL photo host and the
+// league id; never hardcode either (CLAUDE.md league-constants rule).
+const aflLeague = getLeagueBySlug('afl-fantasy')!;
+const mflHost = aflLeague.mflHost;
 
 // ── Derived free-agent snapshot ──
 // Year resolution, per-year feed parsing, row assembly, the default sort, and the
@@ -106,12 +107,11 @@ const conferenceMeta = snapshot.conferences;
 // NB: this makes the SSR HTML session-personalized — never add shared-cache
 // headers (s-maxage/CDN caching) to this page or one user's default
 // conference gets served to everyone.
-const aflLeagueId = getLeagueBySlug('afl-fantasy')!.id;
 const authUser = getAuthUser(Astro.request);
 const { userConfId, activeConfId } = resolveConferenceSelection(
   conferenceMeta,
   authUser,
-  aflLeagueId,
+  aflLeague.id,
   Astro.url.searchParams.get('conf'),
 );
 
@@ -187,15 +187,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" />
         <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} onerror={topFaHeadOnerror} />
       </div>
-      {topFa && (
-        <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite">
-          <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
-          <span class="hero-spotlight__name" id="hero-spotlight-name">{topFaDefStar ? topFaDefStar.name : topFa.name}</span>
-          <span class="hero-spotlight__meta" id="hero-spotlight-meta">
-            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
-          </span>
-        </div>
-      )}
+      <!-- Rendered even with no initial topFa (just hidden): updateSpotlight()
+           looks these elements up once, so a caption that isn't in the SSR
+           HTML could never appear after a conference switch reveals a top
+           free agent. -->
+      <div class="hero-spotlight-caption" id="hero-spotlight-caption" aria-live="polite" style={topFa ? undefined : 'display:none'}>
+        <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
+        <span class="hero-spotlight__name" id="hero-spotlight-name">{topFa ? (topFaDefStar ? topFaDefStar.name : topFa.name) : ''}</span>
+        <span class="hero-spotlight__meta" id="hero-spotlight-meta">
+          {topFa ? `${topFa.position === 'PK' ? 'K' : topFa.position}${topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}${topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}` : ''}
+        </span>
+      </div>
       <div class="hero-top">
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
