@@ -12,6 +12,8 @@
  *   `content: url(...)` renders a broken-image icon on load failure (the Aug
  *   2026 dark-mode logo bug this system guards against).
  */
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect } from 'vitest';
 import { buildCollegeLogoDarkCss, resolveCollegeDarkLogoUrl } from '../src/utils/college-logo-dark-css';
 import collegeLogos from '../src/data/college-logos.json';
@@ -108,6 +110,36 @@ describe('college dark-logo mirror inputs', () => {
     const validIds = new Set(collectCollegeDarkLogos(collegeLogos).map((i) => i.key));
     for (const id of darkLogoManifest.ids) {
       expect(validIds.has(id)).toBe(true);
+    }
+  });
+
+  it('resolver and fetch script agree on the mirrorable URL shape (regex lockstep)', () => {
+    // The NCAA dark-URL regex is duplicated in the fetch script (.mjs, can't
+    // import the TS util) and the resolver. If they drift, the mirror fills
+    // the manifest but the resolver never matches — every college swap
+    // silently stays remote. This locks them together: every URL the script
+    // considers mirrorable must resolve to that key's local path.
+    for (const item of collectCollegeDarkLogos(collegeLogos)) {
+      expect(resolveCollegeDarkLogoUrl(item.url, [item.key])).toBe(
+        `/assets/college-logos/dark/${item.key}.png`,
+      );
+    }
+  });
+
+  it('every committed manifest id has its mirrored PNG on disk', () => {
+    // The manifest is tracked but the PNGs it vouches for are gitignored, so
+    // a populated manifest must never be committed: any checkout that didn't
+    // run the prebuild fetch (CI, a teammate's astro dev) would emit CSS
+    // pointing at files it doesn't have — broken icons in dark mode, the bug
+    // this system exists to prevent. In CI the committed manifest is empty
+    // and this passes trivially; after a local prebuild the files exist.
+    const darkDir = path.join(__dirname, '..', 'public', 'assets', 'college-logos', 'dark');
+    for (const id of darkLogoManifest.ids) {
+      expect(
+        fs.existsSync(path.join(darkDir, `${id}.png`)),
+        `manifest lists ${id} but public/assets/college-logos/dark/${id}.png is missing — ` +
+          'a populated manifest must not be committed (the PNGs are gitignored)',
+      ).toBe(true);
     }
   });
 });

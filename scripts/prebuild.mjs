@@ -56,9 +56,12 @@ for (const { name, cmd } of SEQUENTIAL) {
 }
 
 console.log('[prebuild] Starting parallel fetches…');
-// Use Promise.all with child_process.exec for true parallelism
-import('child_process').then(({ exec }) => {
-  const promises = PARALLEL.map(
+// exec (not execSync) for true parallelism; awaited at top level so the
+// script's lifetime explicitly covers every child instead of relying on the
+// event loop staying alive. Failures stay non-fatal (resolve, never reject).
+const { exec } = await import('child_process');
+await Promise.all(
+  PARALLEL.map(
     ({ name, cmd }) =>
       new Promise((resolve) => {
         const start = Date.now();
@@ -74,9 +77,6 @@ import('child_process').then(({ exec }) => {
         child.stdout?.pipe(process.stdout);
         child.stderr?.pipe(process.stderr);
       })
-  );
-
-  Promise.all(promises).then(() => {
-    console.log(`[prebuild] Done in ${Date.now() - totalStart}ms`);
-  });
-});
+  )
+);
+console.log(`[prebuild] Done in ${Date.now() - totalStart}ms`);

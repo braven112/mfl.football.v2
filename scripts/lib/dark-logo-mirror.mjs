@@ -14,19 +14,31 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fetchWithRetry } from './fetch-retry.mjs';
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 
+// The 1KB floor is a sanity check against tiny error payloads served with a
+// 200 (CDN edge error pages, empty placeholders): every real ESPN 500px logo
+// cut is tens of KB, so anything under 1KB is not a usable logo.
 export function isValidPng(buf) {
   return Buffer.isBuffer(buf) && buf.length > 1024 && buf.subarray(0, 4).equals(PNG_MAGIC);
 }
 
 async function fetchPng(url) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (!isValidPng(buf)) throw new Error(`response is not a PNG (${buf.length} bytes)`);
-  return buf;
+  return fetchWithRetry(url, {
+    attempts: 3,
+    baseDelayMs: 500,
+    // One overall budget per logo (not per attempt) — AbortSignal.timeout
+    // starts ticking at creation and fetchWithRetry reuses fetchOptions
+    // across attempts, so a per-attempt-sized value would starve retries.
+    fetchOptions: { signal: AbortSignal.timeout(45000) },
+    parse: async (res) => {
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (!isValidPng(buf)) throw new Error(`response is not a PNG (${buf.length} bytes)`);
+      return buf;
+    },
+  });
 }
 
 /**
@@ -60,15 +72,16 @@ export async function mirrorDarkLogos({
   const workers = Array.from({ length: concurrency }, async () => {
     for (let item = queue.shift(); item; item = queue.shift()) {
       const outPath = path.join(outDir, `${item.key}.png`);
+      const tmpPath = `${outPath}.tmp`;
       try {
         const buf = await fetchPng(item.url);
-        const tmpPath = `${outPath}.tmp`;
         fs.writeFileSync(tmpPath, buf);
         fs.renameSync(tmpPath, outPath);
         fetched++;
       } catch (err) {
         failed++;
         console.warn(`  ✗ ${item.key}: ${err.message}`);
+        fs.rmSync(tmpPath, { force: true });
       }
     }
   });

@@ -12,6 +12,8 @@
  *   because `content: url(...)` renders a broken-image icon on load failure
  *   (the Aug 2026 AFL players-page bug this system now guards against).
  */
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect } from 'vitest';
 import { buildNflLogoDarkCss, resolveNflDarkLogoUrl } from '../src/utils/nfl-logo-dark-css';
 import { getAllNFLTeamCodes, getNFLTeamLogo, normalizeTeamCode, TEAM_CODE_MAP } from '../src/utils/nfl-logo';
@@ -101,6 +103,23 @@ describe('nfl-dark-logos manifest + fetch script', () => {
     const canonical = new Set(getAllNFLTeamCodes());
     for (const code of darkLogoManifest.codes) {
       expect(canonical.has(code)).toBe(true);
+    }
+  });
+
+  it('every committed manifest code has its mirrored PNG on disk', () => {
+    // The manifest is tracked but the PNGs it vouches for are gitignored, so
+    // a populated manifest must never be committed: any checkout that didn't
+    // run the prebuild fetch (CI, a teammate's astro dev) would emit CSS
+    // pointing at files it doesn't have — broken icons in dark mode, the bug
+    // this system exists to prevent. In CI the committed manifest is empty
+    // and this passes trivially; after a local prebuild the files exist.
+    const darkDir = path.join(__dirname, '..', 'public', 'assets', 'nfl-logos', 'dark');
+    for (const code of darkLogoManifest.codes) {
+      expect(
+        fs.existsSync(path.join(darkDir, `${code}.png`)),
+        `manifest lists ${code} but public/assets/nfl-logos/dark/${code}.png is missing — ` +
+          'a populated manifest must not be committed (the PNGs are gitignored)',
+      ).toBe(true);
     }
   });
 });

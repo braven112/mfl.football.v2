@@ -62,8 +62,12 @@ async function main() {
 // Importable for tests without side effects (tests import NFL_TEAM_CODES).
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch((err) => {
-    // Non-fatal by contract: a failed fetch leaves the committed manifest (or
-    // the last successful one) in place and the CSS falls back to ESPN URLs.
+    // Per-logo network failures are handled inside mirrorDarkLogos and stay
+    // non-fatal (the manifest + CSS fall back to ESPN URLs). Reaching this
+    // catch means something structural broke (fs error, bad manifest write) —
+    // exit non-zero so the prebuild log shows ✗ instead of a false ✓. The
+    // prebuild orchestrator still treats fetch failures as non-fatal.
     console.error(`[fetch-nfl-dark-logos] failed: ${err.message}`);
+    process.exit(1);
   });
 }

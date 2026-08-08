@@ -55,13 +55,18 @@ async function main() {
     outDir: path.join(ROOT, 'public', 'assets', 'college-logos', 'dark'),
     manifestPath: path.join(ROOT, 'src', 'data', 'college-dark-logos-manifest.json'),
     manifestField: 'ids',
-    concurrency: 12,
+    // Matches the NFL mirror's conservative rate; ~236 files still complete
+    // in a few seconds and stay well clear of any per-IP CDN throttling.
+    concurrency: 6,
   });
 }
 
 // Importable for tests without side effects.
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch((err) => {
+    // Per-logo network failures are non-fatal inside mirrorDarkLogos; this
+    // catch means a structural failure — exit non-zero so prebuild logs ✗.
     console.error(`[fetch-college-dark-logos] failed: ${err.message}`);
+    process.exit(1);
   });
 }
