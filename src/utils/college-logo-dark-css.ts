@@ -22,9 +22,21 @@
  * the rule set is large (~236 schools). So this is emitted per-page via
  * `src/components/CollegeLogoDarkStyles.astro` on the pages that actually
  * render college logos, rather than globally in the shared layout.
+ *
+ * Dark-variant source (Aug 2026): self-hosted when possible, mirroring the
+ * NFL swap. `content: url(...)` has NO error fallback — a failed load renders
+ * a broken-image icon, not the light logo still in the src attribute — so
+ * pointing swaps at ESPN's CDN makes every logo a render-time cross-origin
+ * dependency. `scripts/fetch-college-dark-logos.mjs` (prebuild) mirrors the
+ * NCAA `500-dark` cuts into `public/assets/college-logos/dark/{id}.png` and
+ * records what it fetched in `src/data/college-dark-logos-manifest.json`;
+ * `resolveCollegeDarkLogoUrl` serves the local copy for manifest-listed ids
+ * and keeps the JSON's ESPN URL for anything missing, so a failed prebuild
+ * fetch degrades to the old remote behavior — never to a 404ing local path.
  */
 
 import collegeLogos from '../data/college-logos.json';
+import darkLogoManifest from '../data/college-dark-logos-manifest.json';
 
 interface CollegeLogoEntry {
   logo?: string | null;
@@ -42,6 +54,54 @@ function cssStringEscape(value: string): string {
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/</g, '\\3c ');
+}
+
+/**
+ * Matches the ESPN NCAA dark-cut URLs stored in college-logos.json; capture
+ * group 1 is the ESPN NCAA id, which is also the mirror's local filename and
+ * manifest key. Kept in lockstep with scripts/fetch-college-dark-logos.mjs
+ * by tests/college-logo-dark-css.test.ts.
+ */
+const NCAA_DARK_URL_RE = /^https:\/\/a\.espncdn\.com\/i\/teamlogos\/ncaa\/500-dark\/(\d+)\.png$/;
+
+/**
+ * NCAA ids whose `500-dark` cut does not exist on ESPN's CDN at all — their
+ * dark swap rules always pointed at a permanent 404, rendering broken-image
+ * icons in dark mode on every connection. Curated (not build-detected):
+ * ESPN's CDN also serves *transient* 404s (observed on a real NFL logo
+ * during a Vercel build), so inferring "permanently missing" from one
+ * build's 404s would randomly drop a real school's swap for a whole deploy.
+ * Verified 2026-08-08 via the prebuild mirror logs (retried 404s on every
+ * build). If a future college-logos.json refresh adds more, the prebuild
+ * log's `✗ <id>: HTTP 404` lines across consecutive deploys identify them.
+ */
+export const KNOWN_MISSING_NCAA_DARK_IDS: readonly string[] = [
+  '2347', // Louisiana / Louisiana-Lafayette
+  '556', // Malone University
+  '2770', // Manitoba
+];
+
+/**
+ * Dark logo URL for a college entry: the self-hosted mirror when the prebuild
+ * fetch produced it (same-origin, survives ESPN CDN unreachability),
+ * otherwise the ESPN URL from college-logos.json unchanged — or `null` for
+ * ids in the curated known-missing list, meaning emit no swap rule and keep
+ * the light logo in dark mode: strictly better than a rule pointing at a
+ * known 404, which renders a broken-image icon on every connection.
+ * Parameters are injectable for tests; production callers use the build's
+ * real manifest and the curated list.
+ */
+export function resolveCollegeDarkLogoUrl(
+  darkUrl: string,
+  manifestIds: readonly string[] = darkLogoManifest.ids,
+  knownMissing: readonly string[] = KNOWN_MISSING_NCAA_DARK_IDS,
+): string | null {
+  const id = darkUrl.match(NCAA_DARK_URL_RE)?.[1];
+  if (id && manifestIds.includes(id)) {
+    return `/assets/college-logos/dark/${id}.png`;
+  }
+  if (id && knownMissing.includes(id)) return null;
+  return darkUrl;
 }
 
 /**
@@ -74,8 +134,10 @@ export function buildCollegeLogoDarkCss(): string {
   }
   const rules: string[] = [];
   for (const [light, dark] of darkByLight) {
+    const resolved = resolveCollegeDarkLogoUrl(dark);
+    if (!resolved) continue; // dark cut doesn't exist upstream — keep light logo
     rules.push(
-      `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(dark)}"); }`,
+      `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(resolved)}"); }`,
     );
   }
   cachedCss = rules.join('\n');

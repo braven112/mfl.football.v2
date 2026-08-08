@@ -125,12 +125,60 @@ serving a stale build regardless; a directly-launched `pnpm exec astro dev
 
 **Tests:** `tests/nfl-logo-dark-css.test.ts`, `tests/college-logo-dark-css.test.ts`.
 
+**Branch prereq gotcha (2026-07-07 dark-mode branch):** the committed
+`claude/stoic-gauss-85d450` Header imports `utils/theme-preference` and
+`components/ThemeToggle.astro`, which were UNCOMMITTED in that worktree — the
+branch alone didn't build. That branch carries copies of `theme-preference.ts`,
+`ThemeToggle.astro`, and `ThemeScript.astro` (plus the `class:list` dark wiring
+in `TheLeagueLayout`) so the theme system is coherent; expect these to
+reconcile trivially when the dark-mode branch lands.
+
 ---
 
-**Branch prereq gotcha:** the committed `claude/stoic-gauss-85d450` Header
-imports `utils/theme-preference` and `components/ThemeToggle.astro`, which
-were UNCOMMITTED in that worktree — the branch alone didn't build. This branch
-carries copies of `theme-preference.ts`, `ThemeToggle.astro`, and
-`ThemeScript.astro` (plus the `class:list` dark wiring in `TheLeagueLayout`)
-so the theme system is coherent; expect these to reconcile trivially when the
-dark-mode branch lands.
+## 2026-08-08 - `content: url()` has no error fallback — self-host the dark cut
+
+**Context:** the AFL players page rendered a column of broken-image icons in
+dark mode on a flaky mobile connection. The rows' `<img src="/assets/nfl-logos/
+{CODE}.svg">` are tiny same-origin files, but the dark swap replaced every one
+of them with `content: url(https://a.espncdn.com/.../500-dark/{CODE}.png)` —
+and when a `content` image fails to load, the browser shows the broken-image
+icon; it does NOT fall back to the light logo still sitting in the src
+attribute, and no `error` event fires on the img (so JS onerror fallbacks —
+which is why the ESPN headshots on the same page degraded gracefully while the
+logos didn't — can't catch it either). Net effect: the swap silently turned a
+reliable local asset into a hard cross-origin dependency per logo.
+
+**Fix:** `scripts/fetch-nfl-dark-logos.mjs` (prebuild, parallel lane) mirrors
+ESPN's 32 `500-dark` PNGs into `public/assets/nfl-logos/dark/` (gitignored)
+and writes `src/data/nfl-dark-logos-manifest.json` listing what's actually on
+disk. `resolveNflDarkLogoUrl` in `nfl-logo-dark-css.ts` emits the local path
+for manifest-listed teams and the old ESPN URL otherwise — so a failed
+prebuild fetch degrades to the previous remote behavior, never to a stylesheet
+pointing at local files the build doesn't have. The committed manifest default
+is `{ "codes": [] }` (dev/test keep remote behavior without running the fetch).
+
+**Extended to the college-logo swap in the same branch:** the shared mirror
+logic lives in `scripts/lib/dark-logo-mirror.mjs`;
+`scripts/fetch-college-dark-logos.mjs` mirrors the ~236 distinct NCAA
+`500-dark` cuts from `college-logos.json` into
+`public/assets/college-logos/dark/{espnId}.png` with its own manifest
+(`src/data/college-dark-logos-manifest.json`, keyed by ESPN NCAA id) and
+`resolveCollegeDarkLogoUrl` fallback. Note the college LIGHT srcs are also
+remote ESPN URLs (there are no local college SVGs), so light mode remains
+CDN-dependent — self-hosting only the dark cut removes the *second* failure
+point the swap added, which is what turned loaded pages into broken icons.
+Mirroring the light cut too (and rewriting `logo` srcs everywhere they're
+embedded, including derived data like `free-agents.json`) is the bigger
+follow-up if full offline-CDN resilience is ever wanted.
+
+**Two upstream-404 gotchas from the first real deploys:** (1) three NCAA ids
+(2347 Louisiana-Lafayette, 556 Malone, 2770 Manitoba) have NO `500-dark` cut
+on ESPN at all — their swap rules had always pointed at a permanent 404
+(broken icon in dark mode on every connection). They're skipped via the
+curated `KNOWN_MISSING_NCAA_DARK_IDS` in `college-logo-dark-css.ts` (light
+logo in dark mode instead). (2) ESPN's CDN also serves *transient* 404s — PIT
+404'd on one Vercel build minutes after fetching fine on the previous one —
+so "permanently missing" must NEVER be inferred from one build's 404s (an
+earlier iteration did exactly that and would have randomly dropped a real
+team's dark swap for a whole deploy). Curate permanent 404s by hand; let
+transient ones fall back to the remote ESPN URL via the manifest mechanism.

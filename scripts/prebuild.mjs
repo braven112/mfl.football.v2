@@ -14,7 +14,7 @@
  *   - fetch:adp
  */
 
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 
 const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
@@ -34,6 +34,8 @@ const PARALLEL = [
   { name: 'fetch:adp', cmd: 'pnpm run fetch:adp' },
   { name: 'fetch:nfl-draft-date', cmd: 'pnpm run fetch:nfl-draft-date' },
   { name: 'fetch:nfl-news-digest', cmd: 'pnpm run fetch:nfl-news-digest' },
+  { name: 'fetch:nfl-dark-logos', cmd: 'pnpm run fetch:nfl-dark-logos' },
+  { name: 'fetch:college-dark-logos', cmd: 'pnpm run fetch:college-dark-logos' },
 ];
 
 const run = (label, cmd) => {
@@ -54,9 +56,11 @@ for (const { name, cmd } of SEQUENTIAL) {
 }
 
 console.log('[prebuild] Starting parallel fetches…');
-// Use Promise.all with child_process.exec for true parallelism
-import('child_process').then(({ exec }) => {
-  const promises = PARALLEL.map(
+// exec (not execSync) for true parallelism; awaited at top level so the
+// script's lifetime explicitly covers every child instead of relying on the
+// event loop staying alive. Failures stay non-fatal (resolve, never reject).
+await Promise.all(
+  PARALLEL.map(
     ({ name, cmd }) =>
       new Promise((resolve) => {
         const start = Date.now();
@@ -72,9 +76,6 @@ import('child_process').then(({ exec }) => {
         child.stdout?.pipe(process.stdout);
         child.stderr?.pipe(process.stderr);
       })
-  );
-
-  Promise.all(promises).then(() => {
-    console.log(`[prebuild] Done in ${Date.now() - totalStart}ms`);
-  });
-});
+  )
+);
+console.log(`[prebuild] Done in ${Date.now() - totalStart}ms`);

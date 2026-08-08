@@ -8,6 +8,14 @@
       "impact": "user",
       "area": "free-agents",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-08",
+      "type": "bug-fix",
+      "summary": "NFL team and college logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo sets instead of leaning on ESPN's servers every time a page renders.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
     }
   ]
 }
