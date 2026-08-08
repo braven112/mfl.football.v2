@@ -233,6 +233,30 @@ describe('fetchLiveAflRosters', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps the last-known-good payload across CONSECUTIVE failures (outage longer than the error TTL)', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+    vi.advanceTimersByTime(61_000);
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    vi.advanceTimersByTime(21_000); // past the error TTL → second failed refetch
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not let a zero-rostered (shape-valid junk) payload evict the last-known-good one', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    vi.advanceTimersByTime(61_000);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ rosters: { franchise: [{ id: '0001' }, { id: '0002' }] } }),
+    });
+    expect(await fetchLive(2026)).toEqual(okPayload);
+  });
+
   it('treats a 200 with an {error} body (bad league/year) as a failure', async () => {
     const fetchLive = await freshFetch();
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ error: 'unknown league' }) });

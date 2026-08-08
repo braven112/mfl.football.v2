@@ -448,16 +448,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   // Duplicate-player league: a player rostered in only one conference is
-  // still a free agent in the other — tag which conference(s) can add him.
-  // Fully-free and fully-rostered players get no tag (dot covers the latter).
-  function buildConfTag(p) {
-    if (!conferenceMeta || !Array.isArray(p.confs)) return '';
+  // still a free agent in the other. Shared by the row tag and the hero
+  // caption — returns null unless the player is PARTIALLY rostered.
+  function confAvailability(p) {
+    if (!conferenceMeta || !Array.isArray(p.confs)) return null;
     const held = p.confs.length;
-    if (held === 0 || held >= conferenceMeta.ids.length) return '';
+    if (held === 0 || held >= conferenceMeta.ids.length) return null;
     const availIds = conferenceMeta.ids.filter((id) => !p.confs.includes(id));
-    const abbrevs = availIds.map((id) => conferenceMeta.names[id]?.abbrev || id).join('/');
-    const fullNames = availIds.map((id) => conferenceMeta.names[id]?.name || id).join(', ');
-    return `<span class="conf-tag" title="Available in the ${escapeAttr(fullNames)} only">FA in ${escapeAttr(abbrevs)}</span>`;
+    return {
+      abbrevs: availIds.map((id) => conferenceMeta.names[id]?.abbrev || id).join('/'),
+      fullNames: availIds.map((id) => conferenceMeta.names[id]?.name || id).join(', '),
+    };
+  }
+
+  // Row tag for partially-rostered players; fully-free and fully-rostered
+  // players get no tag (the dot covers the latter).
+  function buildConfTag(p) {
+    const avail = confAvailability(p);
+    if (!avail) return '';
+    return `<span class="conf-tag" title="Available in the ${escapeAttr(avail.fullNames)} only">FA in ${escapeAttr(avail.abbrevs)}</span>`;
   }
 
   // ── Hero spotlight (top player of the current filter/sort) ──
@@ -557,14 +566,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const teamPart = p.team && p.team !== 'FA' ? ` · ${p.team}` : '';
       const projPart = p.projected != null ? ` · ${p.projected.toFixed(1)} pts` : '';
       // Mirror the SSR caption: qualify a top FA only one conference can add.
-      let availPart = '';
-      if (conferenceMeta && Array.isArray(p.confs) && p.confs.length > 0 && p.confs.length < conferenceMeta.ids.length) {
-        const avail = conferenceMeta.ids
-          .filter((id) => !p.confs.includes(id))
-          .map((id) => conferenceMeta.names[id]?.abbrev || id)
-          .join('/');
-        availPart = ` · ${avail} only`;
-      }
+      const avail = confAvailability(p);
+      const availPart = avail ? ` · ${avail.abbrevs} only` : '';
       spotlightMetaEl.textContent = `${pos}${teamPart}${projPart}${availPart}`;
     }
 

@@ -147,8 +147,16 @@ async function doFetchRosters(year: string): Promise<unknown | null> {
     if (!res.ok) throw new Error(`MFL rosters HTTP ${res.status}`);
     const data = await res.json();
     // MFL answers 200 with an {error} body for a bad league/year.
-    if (!(data as { rosters?: { franchise?: unknown } })?.rosters?.franchise) {
+    const franchisesRaw = (data as { rosters?: { franchise?: unknown } })?.rosters?.franchise;
+    if (!franchisesRaw) {
       throw new Error('MFL rosters payload missing rosters.franchise');
+    }
+    // Shape-valid junk must not evict the last-known-good payload: an
+    // all-empty export (zero rostered players) is the "MFL hiccup" case the
+    // overlay rejects anyway, so treat it as a failed fetch here too.
+    const franchises = Array.isArray(franchisesRaw) ? franchisesRaw : [franchisesRaw];
+    if (!franchises.some((f) => (f as { player?: unknown })?.player)) {
+      throw new Error('MFL rosters payload has zero rostered players');
     }
     rostersCache = { at: Date.now(), ok: true, year, data };
     return data;
@@ -159,8 +167,10 @@ async function doFetchRosters(year: string): Promise<unknown | null> {
     console.warn('[afl-free-agents-live] MFL rosters fetch failed — serving last-good/baked flags:', err);
     // Keep serving the last-known-good payload for this year during a blip
     // (a minute-old roster beats oscillating back to deploy-time flags);
-    // the shorter error TTL retries soon.
-    const lastGood = prior && prior.ok && prior.year === year ? prior.data : null;
+    // the shorter error TTL retries soon. Chained off prior.data — not
+    // prior.ok — so the payload survives consecutive failures across error
+    // windows for the whole outage.
+    const lastGood = prior && prior.year === year && prior.data != null ? prior.data : null;
     rostersCache = { at: Date.now(), ok: false, year, data: lastGood };
     return lastGood;
   }
