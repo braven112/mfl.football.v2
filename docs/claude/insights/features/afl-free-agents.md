@@ -67,3 +67,25 @@ snapshot that needs one fast-moving slice to be fresh: snapshot for the bulk,
 tiny live fetch for the volatile flags, short cache, loud-free fallback.
 Note the derived faCounts/topFa must be recomputed after the overlay — the
 baked ones bake in the stale flags.
+
+## 2026-08-08 - The Page Renders ONE Conference at a Time (Hard Boundary)
+
+**Context:** Even with per-conference `confs` data, a mixed league-wide list
+confused owners — an AL owner saw NL-available players they can't add.
+
+**Insight:** For duplicate-player conference leagues, availability UI should
+be conference-SCOPED, not conference-ANNOTATED. The page defaults to the
+signed-in owner's conference (session JWT → `franchiseConferences` map from
+the snapshot; AL for signed-out), and a hero switcher flips the whole view.
+Within a view, "rostered" is view-relative (`p.confs.includes(activeConf)`),
+and counts/pills/spotlight re-scope via `conferenceScopedView` in
+`afl-free-agents-live.ts`. Cross-conference intel ("FA in NL") only appears
+on rows the "Include rostered" toggle reveals — never in the default list.
+
+**Evidence:** `src/pages/afl-fantasy/players.astro` (conf-switcher +
+`isRosteredForView`); the two views genuinely differ (Aug 2026: 923 players
+each, Burrow tops AL, Lamar tops NL, Pitts AL-only).
+
+**Recommendation:** Any future AFL availability surface should scope to one
+conference with an explicit switcher, defaulting to the viewer's own — don't
+annotate a merged list.
