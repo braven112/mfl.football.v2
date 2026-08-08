@@ -39,6 +39,7 @@
     "compute:afl-awards": "node scripts/compute-afl-awards.mjs",
     "compute:afl-awards:offline": "node scripts/compute-afl-awards.mjs --offline",
     "fetch:nfl-news-digest": "node scripts/fetch-nfl-news-digest.mjs",
+    "fetch:nfl-dark-logos": "node scripts/fetch-nfl-dark-logos.mjs",
     "fetch:trade-bait": "MFL_LEAGUE_ID=13522 MFL_LEAGUE_SLUG=theleague node scripts/fetch-trade-bait.mjs",
     "fetch:live:lineups": "node scripts/fetch-live-lineups.mjs",
     "fetch:live:odds": "node scripts/fetch-live-odds.mjs",

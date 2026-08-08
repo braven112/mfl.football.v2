@@ -127,6 +127,35 @@ serving a stale build regardless; a directly-launched `pnpm exec astro dev
 
 ---
 
+## 2026-08-08 - `content: url()` has no error fallback — self-host the dark cut
+
+**Context:** the AFL players page rendered a column of broken-image icons in
+dark mode on a flaky mobile connection. The rows' `<img src="/assets/nfl-logos/
+{CODE}.svg">` are tiny same-origin files, but the dark swap replaced every one
+of them with `content: url(https://a.espncdn.com/.../500-dark/{CODE}.png)` —
+and when a `content` image fails to load, the browser shows the broken-image
+icon; it does NOT fall back to the light logo still sitting in the src
+attribute, and no `error` event fires on the img (so JS onerror fallbacks —
+which is why the ESPN headshots on the same page degraded gracefully while the
+logos didn't — can't catch it either). Net effect: the swap silently turned a
+reliable local asset into a hard cross-origin dependency per logo.
+
+**Fix:** `scripts/fetch-nfl-dark-logos.mjs` (prebuild, parallel lane) mirrors
+ESPN's 32 `500-dark` PNGs into `public/assets/nfl-logos/dark/` (gitignored)
+and writes `src/data/nfl-dark-logos-manifest.json` listing what's actually on
+disk. `resolveNflDarkLogoUrl` in `nfl-logo-dark-css.ts` emits the local path
+for manifest-listed teams and the old ESPN URL otherwise — so a failed
+prebuild fetch degrades to the previous remote behavior, never to a stylesheet
+pointing at local files the build doesn't have. The committed manifest default
+is `{ "codes": [] }` (dev/test keep remote behavior without running the fetch).
+
+**Same fragility still exists in the college-logo swap** (`college-logo-dark-
+css.ts`, ~236 ESPN NCAA URLs) — un-fixed because mirroring 236 files per build
+is a bigger hammer; if broken college logos get reported in dark mode, this is
+why, and the manifest pattern here is the template.
+
+---
+
 **Branch prereq gotcha:** the committed `claude/stoic-gauss-85d450` Header
 imports `utils/theme-preference` and `components/ThemeToggle.astro`, which
 were UNCOMMITTED in that worktree — the branch alone didn't build. This branch
