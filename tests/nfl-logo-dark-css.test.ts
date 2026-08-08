@@ -91,12 +91,14 @@ describe('resolveNflDarkLogoUrl', () => {
     expect(resolveNflDarkLogoUrl('DEN', [])).toBe(getNFLTeamLogo('DEN', 'dark'));
   });
 
-  it('returns null (emit no rule) for teams whose dark cut 404s upstream', () => {
-    // A retried 404 means the dark cut does not exist on ESPN — a swap rule
-    // pointing at it would render a broken icon on every connection, so the
-    // builder must skip the rule and keep the light logo in dark mode.
+  it('returns null (emit no rule) for teams in a curated known-missing list', () => {
+    // A permanently missing dark cut means a swap rule would point at a 404
+    // and render a broken icon on every connection — the builder must skip
+    // the rule and keep the light logo in dark mode. (All 32 NFL cuts exist
+    // today, so the production list is empty; the mechanism is exercised via
+    // the injectable parameter.)
     expect(resolveNflDarkLogoUrl('DEN', [], ['DEN'])).toBeNull();
-    // On-disk presence wins over a stale missing marker.
+    // On-disk presence wins over the missing list.
     expect(resolveNflDarkLogoUrl('DEN', ['DEN'], ['DEN'])).toBe('/assets/nfl-logos/dark/DEN.png');
   });
 });

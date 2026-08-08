@@ -65,26 +65,42 @@ function cssStringEscape(value: string): string {
 const NCAA_DARK_URL_RE = /^https:\/\/a\.espncdn\.com\/i\/teamlogos\/ncaa\/500-dark\/(\d+)\.png$/;
 
 /**
+ * NCAA ids whose `500-dark` cut does not exist on ESPN's CDN at all — their
+ * dark swap rules always pointed at a permanent 404, rendering broken-image
+ * icons in dark mode on every connection. Curated (not build-detected):
+ * ESPN's CDN also serves *transient* 404s (observed on a real NFL logo
+ * during a Vercel build), so inferring "permanently missing" from one
+ * build's 404s would randomly drop a real school's swap for a whole deploy.
+ * Verified 2026-08-08 via the prebuild mirror logs (retried 404s on every
+ * build). If a future college-logos.json refresh adds more, the prebuild
+ * log's `✗ <id>: HTTP 404` lines across consecutive deploys identify them.
+ */
+export const KNOWN_MISSING_NCAA_DARK_IDS: readonly string[] = [
+  '2347', // Louisiana / Louisiana-Lafayette
+  '556', // Malone University
+  '2770', // Manitoba
+];
+
+/**
  * Dark logo URL for a college entry: the self-hosted mirror when the prebuild
  * fetch produced it (same-origin, survives ESPN CDN unreachability),
- * otherwise the ESPN URL from college-logos.json unchanged — or `null` when
- * the prebuild proved the dark cut doesn't exist upstream (retried HTTP 404;
- * ESPN never published one for some small schools, e.g. Louisiana-Lafayette).
- * A `null` means: emit no swap rule, keep the light logo in dark mode —
- * strictly better than a rule pointing at a known 404, which renders a
- * broken-image icon on every connection. `manifestIds`/`manifestMissing` are
- * injectable for tests; production callers use the build's real manifest.
+ * otherwise the ESPN URL from college-logos.json unchanged — or `null` for
+ * ids in the curated known-missing list, meaning emit no swap rule and keep
+ * the light logo in dark mode: strictly better than a rule pointing at a
+ * known 404, which renders a broken-image icon on every connection.
+ * Parameters are injectable for tests; production callers use the build's
+ * real manifest and the curated list.
  */
 export function resolveCollegeDarkLogoUrl(
   darkUrl: string,
   manifestIds: readonly string[] = darkLogoManifest.ids,
-  manifestMissing: readonly string[] = darkLogoManifest.missing ?? [],
+  knownMissing: readonly string[] = KNOWN_MISSING_NCAA_DARK_IDS,
 ): string | null {
   const id = darkUrl.match(NCAA_DARK_URL_RE)?.[1];
   if (id && manifestIds.includes(id)) {
     return `/assets/college-logos/dark/${id}.png`;
   }
-  if (id && manifestMissing.includes(id)) return null;
+  if (id && knownMissing.includes(id)) return null;
   return darkUrl;
 }
 

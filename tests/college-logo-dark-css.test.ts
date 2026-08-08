@@ -15,7 +15,11 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
-import { buildCollegeLogoDarkCss, resolveCollegeDarkLogoUrl } from '../src/utils/college-logo-dark-css';
+import {
+  buildCollegeLogoDarkCss,
+  resolveCollegeDarkLogoUrl,
+  KNOWN_MISSING_NCAA_DARK_IDS,
+} from '../src/utils/college-logo-dark-css';
 import collegeLogos from '../src/data/college-logos.json';
 import darkLogoManifest from '../src/data/college-dark-logos-manifest.json';
 import { collectCollegeDarkLogos, NCAA_DARK_URL_RE } from '../scripts/fetch-college-dark-logos.mjs';
@@ -37,10 +41,12 @@ describe('buildCollegeLogoDarkCss', () => {
     }
   });
 
-  it('dedupes by light src (one rule per distinct light logo)', () => {
+  it('dedupes by light src (one rule per distinct light logo with a resolvable dark cut)', () => {
+    // Entries whose dark cut is in the curated known-missing list emit no
+    // rule at all (light logo in dark mode beats a rule pointing at a 404).
     const distinctLight = new Set(
       Object.values(collegeLogos as Record<string, { logo?: string | null; logoDark?: string | null }>)
-        .filter((e) => e?.logo && e?.logoDark)
+        .filter((e) => e?.logo && e?.logoDark && resolveCollegeDarkLogoUrl(e.logoDark) !== null)
         .map((e) => e.logo as string),
     );
     expect(lines).toHaveLength(distinctLight.size);
@@ -78,16 +84,21 @@ describe('resolveCollegeDarkLogoUrl', () => {
     expect(resolveCollegeDarkLogoUrl(odd, ['333'])).toBe(odd);
   });
 
-  it('returns null (emit no rule) for ids whose dark cut 404s upstream', () => {
-    // ESPN never published dark cuts for a few small schools (e.g.
-    // Louisiana-Lafayette, id 2347) — the prebuild records the retried 404s
-    // in the manifest's `missing` list and the builder skips those swaps,
-    // keeping the light logo instead of a rule pointing at a known 404.
+  it('returns null (emit no rule) for ids in the curated known-missing list', () => {
+    // ESPN never published dark cuts for a few small schools — those swap
+    // rules always pointed at a permanent 404 (broken icon in dark mode on
+    // every connection), so the builder skips them entirely.
     expect(resolveCollegeDarkLogoUrl(espnDark, [], ['333'])).toBeNull();
-    // On-disk presence wins over a stale missing marker.
+    // On-disk presence wins over the missing list.
     expect(resolveCollegeDarkLogoUrl(espnDark, ['333'], ['333'])).toBe(
       '/assets/college-logos/dark/333.png',
     );
+    // The real curated ids are skipped by default.
+    for (const id of KNOWN_MISSING_NCAA_DARK_IDS) {
+      expect(
+        resolveCollegeDarkLogoUrl(`https://a.espncdn.com/i/teamlogos/ncaa/500-dark/${id}.png`, []),
+      ).toBeNull();
+    }
   });
 });
 

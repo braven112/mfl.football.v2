@@ -170,3 +170,15 @@ point the swap added, which is what turned loaded pages into broken icons.
 Mirroring the light cut too (and rewriting `logo` srcs everywhere they're
 embedded, including derived data like `free-agents.json`) is the bigger
 follow-up if full offline-CDN resilience is ever wanted.
+
+**Two upstream-404 gotchas from the first real deploys:** (1) three NCAA ids
+(2347 Louisiana-Lafayette, 556 Malone, 2770 Manitoba) have NO `500-dark` cut
+on ESPN at all — their swap rules had always pointed at a permanent 404
+(broken icon in dark mode on every connection). They're skipped via the
+curated `KNOWN_MISSING_NCAA_DARK_IDS` in `college-logo-dark-css.ts` (light
+logo in dark mode instead). (2) ESPN's CDN also serves *transient* 404s — PIT
+404'd on one Vercel build minutes after fetching fine on the previous one —
+so "permanently missing" must NEVER be inferred from one build's 404s (an
+earlier iteration did exactly that and would have randomly dropped a real
+team's dark swap for a whole deploy). Curate permanent 404s by hand; let
+transient ones fall back to the remote ESPN URL via the manifest mechanism.
