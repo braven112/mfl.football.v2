@@ -114,58 +114,15 @@ function rosterSetsFor(
  * malformed, empty, partial, or referencing a franchise the snapshot's
  * conference map doesn't know).
  */
-export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): FaView {
-  if (memo && memo.snapshot === snapshot && memo.rostersJson === rostersJson) return memo.view;
-
-  const rosterSets = rosterSetsFor(rostersJson, snapshot.conferences, snapshot.rosterFranchiseCount);
-  if (!rosterSets) return snapshotView(snapshot);
-  const confCount: number = rosterSets.confIds.length;
-
-  const players = snapshot.players.map((p) => {
-    const confs: string[] = confsForPlayer(p.id, rosterSets);
-    return { ...p, confs, rostered: confs.length === confCount };
-  });
-
-  // Snapshot players are already in default-sort order, so the first
-  // available player is the hero spotlight (mirrors the compute script).
-  const freeAgents = players.filter((p) => !p.rostered);
-  const faCounts: Record<string, number> = { ALL: freeAgents.length };
-  for (const p of freeAgents) faCounts[p.position] = (faCounts[p.position] || 0) + 1;
-  const top = freeAgents[0] ?? null;
-  const topFa: FaTopPlayer | null = top
-    ? {
-        id: top.id,
-        name: top.name,
-        position: top.position,
-        team: top.team,
-        espnId: top.espnId,
-        projected: top.projected,
-        confs: top.confs,
-      }
-    : null;
-
-  const view: FaView = { players, faCounts, topFa, freeAgentsCount: freeAgents.length };
-  memo = { snapshot, rostersJson, view };
-  return view;
-}
-
-/**
- * Re-scope a view to ONE conference: "free agent" means not rostered in that
- * conference, regardless of what the other conference holds. This is the
- * per-conference boundary the page renders — an AL owner browsing free
- * agents should only see (and count) players an AL team can actually add.
- * Players are NOT filtered here (the client needs the full pool for its
- * "include rostered" toggle); only the derived counts/spotlight are scoped.
- * Pass a null confId (single shared pool) to get the view's own numbers.
- */
-export function conferenceScopedView(
-  view: FaView,
-  confId: string | null,
-): { faCounts: Record<string, number>; topFa: FaTopPlayer | null; freeAgentsCount: number } {
-  if (!confId) {
-    return { faCounts: view.faCounts, topFa: view.topFa, freeAgentsCount: view.freeAgentsCount };
-  }
-  const freeAgents = view.players.filter((p) => !(p.confs ?? []).includes(confId));
+// Shared derivation for "here are the free agents → counts + hero spotlight"
+// — used by the league-wide view and every conference-scoped view so the two
+// can't drift. Input must already be in default-sort order (snapshot players
+// are; see the compute script).
+function deriveFaStats(freeAgents: FaSnapshotPlayer[]): {
+  faCounts: Record<string, number>;
+  topFa: FaTopPlayer | null;
+  freeAgentsCount: number;
+} {
   const faCounts: Record<string, number> = { ALL: freeAgents.length };
   for (const p of freeAgents) faCounts[p.position] = (faCounts[p.position] || 0) + 1;
   const top = freeAgents[0] ?? null;
@@ -181,6 +138,88 @@ export function conferenceScopedView(
       }
     : null;
   return { faCounts, topFa, freeAgentsCount: freeAgents.length };
+}
+
+export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): FaView {
+  if (memo && memo.snapshot === snapshot && memo.rostersJson === rostersJson) return memo.view;
+
+  const rosterSets = rosterSetsFor(rostersJson, snapshot.conferences, snapshot.rosterFranchiseCount);
+  if (!rosterSets) return snapshotView(snapshot);
+  const confCount: number = rosterSets.confIds.length;
+
+  const players = snapshot.players.map((p) => {
+    const confs: string[] = confsForPlayer(p.id, rosterSets);
+    return { ...p, confs, rostered: confs.length === confCount };
+  });
+
+  const view: FaView = { players, ...deriveFaStats(players.filter((p) => !p.rostered)) };
+  memo = { snapshot, rostersJson, view };
+  return view;
+}
+
+/**
+ * Re-scope a view to ONE conference: "free agent" means not rostered in that
+ * conference, regardless of what the other conference holds. This is the
+ * per-conference boundary the page renders — an AL owner browsing free
+ * agents should only see (and count) players an AL team can actually add.
+ * Players are NOT filtered here (the client needs the full pool for its
+ * "include rostered" toggle); only the derived counts/spotlight are scoped.
+ * Pass a null confId (single shared pool) for league-wide numbers.
+ *
+ * `includeRookies: false` mirrors the page's default client filter state
+ * (rookies hidden) — the SSR-rendered counts/spotlight must match what the
+ * client's first render computes, or the numbers visibly pop on hydration.
+ */
+export function conferenceScopedView(
+  view: FaView,
+  confId: string | null,
+  { includeRookies = true }: { includeRookies?: boolean } = {},
+): { faCounts: Record<string, number>; topFa: FaTopPlayer | null; freeAgentsCount: number } {
+  const isFree = confId
+    ? (p: FaSnapshotPlayer) => !(p.confs ?? []).includes(confId)
+    : (p: FaSnapshotPlayer) => !p.rostered;
+  return deriveFaStats(
+    view.players.filter((p) => isFree(p) && (includeRookies || !(p as { rookie?: boolean }).rookie)),
+  );
+}
+
+/**
+ * Resolve which conference the page opens on, and which one is the viewer's
+ * own. Precedence: a valid ?conf= request (conference id or abbrev,
+ * case-insensitive — shareable links) → the signed-in owner's conference
+ * (session must belong to this league; franchise must be an OWN property of
+ * the map — a JSON-imported object still has Object.prototype, so a hostile
+ * franchiseId like "constructor" must not resolve) → the first conference.
+ * Single-pool leagues (null meta) resolve to null/null.
+ */
+export function resolveConferenceSelection(
+  conferenceMeta: FaConferenceMeta | null,
+  authUser: { franchiseId: string; leagueId: string } | null,
+  aflLeagueId: string,
+  requestedConf?: string | null,
+): { userConfId: string | null; activeConfId: string | null } {
+  if (!conferenceMeta) return { userConfId: null, activeConfId: null };
+
+  let userConfId: string | null = null;
+  if (
+    authUser?.leagueId === aflLeagueId &&
+    Object.hasOwn(conferenceMeta.franchiseConferences, authUser.franchiseId)
+  ) {
+    const conf = conferenceMeta.franchiseConferences[authUser.franchiseId];
+    if (typeof conf === 'string') userConfId = conf;
+  }
+
+  if (requestedConf) {
+    const want = String(requestedConf).toLowerCase();
+    const match = conferenceMeta.ids.find(
+      (id) =>
+        id.toLowerCase() === want ||
+        (conferenceMeta.names[id]?.abbrev || '').toLowerCase() === want,
+    );
+    if (match) return { userConfId, activeConfId: match };
+  }
+
+  return { userConfId, activeConfId: userConfId ?? conferenceMeta.ids[0] };
 }
 
 // Module-level cache: one MFL fetch per warm serverless instance per minute,

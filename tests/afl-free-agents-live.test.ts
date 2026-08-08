@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { applyLiveRosters, conferenceScopedView, type FaSnapshot } from '../src/utils/afl-free-agents-live';
+import {
+  applyLiveRosters,
+  conferenceScopedView,
+  resolveConferenceSelection,
+  type FaSnapshot,
+} from '../src/utils/afl-free-agents-live';
 import { buildConferenceStructure } from '../src/utils/afl-conference-rosters.mjs';
 
 // The AFL is a duplicate-player conference league: the same NFL player can be
@@ -191,12 +196,80 @@ describe('conferenceScopedView', () => {
     expect(nl.topFa?.id).toBe('p3');
   });
 
-  it('returns the league-wide view untouched for a null conference (single pool)', () => {
+  it('returns league-wide numbers for a null conference (single pool)', () => {
     const view = makeView();
     const scoped = conferenceScopedView(view, null);
-    expect(scoped.faCounts).toBe(view.faCounts);
-    expect(scoped.topFa).toBe(view.topFa);
+    expect(scoped.faCounts).toEqual(view.faCounts);
+    expect(scoped.topFa).toEqual(view.topFa);
     expect(scoped.freeAgentsCount).toBe(view.freeAgentsCount);
+  });
+
+  it('excludes rookies on request so SSR matches the client default filter state', () => {
+    const players = [
+      { id: 'r1', name: 'Rookie WR', position: 'WR', team: 'DAL', espnId: null, projected: 9, rostered: false, confs: [], rookie: true },
+      { id: 'v1', name: 'Vet WR', position: 'WR', team: 'KC', espnId: null, projected: 5, rostered: false, confs: [], rookie: false },
+    ];
+    const view = { players, faCounts: { ALL: 2 }, topFa: null, freeAgentsCount: 2 } as never;
+    const withRookies = conferenceScopedView(view, '00');
+    const noRookies = conferenceScopedView(view, '00', { includeRookies: false });
+    expect(withRookies.freeAgentsCount).toBe(2);
+    expect(withRookies.topFa?.id).toBe('r1');
+    expect(noRookies.freeAgentsCount).toBe(1);
+    expect(noRookies.topFa?.id).toBe('v1');
+  });
+});
+
+describe('resolveConferenceSelection', () => {
+  const AFL_ID = '19621';
+  const meta = makeSnapshot().conferences;
+
+  it('defaults a signed-out visitor to the first conference', () => {
+    expect(resolveConferenceSelection(meta, null, AFL_ID)).toEqual({
+      userConfId: null,
+      activeConfId: '00',
+    });
+  });
+
+  it('defaults a signed-in AFL owner to their own conference', () => {
+    const user = { franchiseId: '0013', leagueId: AFL_ID };
+    expect(resolveConferenceSelection(meta, user, AFL_ID)).toEqual({
+      userConfId: '01',
+      activeConfId: '01',
+    });
+  });
+
+  it('treats a session from another league as signed-out', () => {
+    const user = { franchiseId: '0013', leagueId: '99999' };
+    expect(resolveConferenceSelection(meta, user, AFL_ID).activeConfId).toBe('00');
+  });
+
+  it('ignores a franchiseId that is not an OWN property of the map (prototype chain)', () => {
+    const user = { franchiseId: 'constructor', leagueId: AFL_ID };
+    expect(resolveConferenceSelection(meta, user, AFL_ID)).toEqual({
+      userConfId: null,
+      activeConfId: '00',
+    });
+  });
+
+  it('honors a valid ?conf= request by abbrev or id, case-insensitive, over the user default', () => {
+    const user = { franchiseId: '0013', leagueId: AFL_ID };
+    expect(resolveConferenceSelection(meta, user, AFL_ID, 'al')).toEqual({
+      userConfId: '01',
+      activeConfId: '00',
+    });
+    expect(resolveConferenceSelection(meta, null, AFL_ID, '01').activeConfId).toBe('01');
+  });
+
+  it('falls back to the user default on a junk ?conf= value', () => {
+    const user = { franchiseId: '0013', leagueId: AFL_ID };
+    expect(resolveConferenceSelection(meta, user, AFL_ID, 'XFL').activeConfId).toBe('01');
+  });
+
+  it('resolves to null/null for a single-pool league (no conference meta)', () => {
+    expect(resolveConferenceSelection(null, { franchiseId: '0001', leagueId: AFL_ID }, AFL_ID)).toEqual({
+      userConfId: null,
+      activeConfId: null,
+    });
   });
 });
 
