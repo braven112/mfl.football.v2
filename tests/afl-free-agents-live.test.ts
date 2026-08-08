@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { applyLiveRosters, type FaSnapshot } from '../src/utils/afl-free-agents-live';
+import { buildConferenceStructure } from '../src/utils/afl-conference-rosters.mjs';
 
 // The AFL is a duplicate-player conference league: the same NFL player can be
 // rostered once per conference, so a drop in one conference makes the player
@@ -161,6 +162,27 @@ describe('applyLiveRosters', () => {
     });
     expect(view.players.find((p) => p.id === 'p1')?.rostered).toBe(true);
     expect(view.freeAgentsCount).toBe(2);
+  });
+});
+
+describe('buildConferenceStructure', () => {
+  it('disambiguates colliding conference abbrevs with the conference id', () => {
+    // "National League" and "North League" both initial to "NL" — identical
+    // tags would tell owners in BOTH conferences the player is addable.
+    const structure = buildConferenceStructure({
+      league: {
+        conferences: {
+          conference: [
+            { id: '00', name: 'National League' },
+            { id: '01', name: 'North League' },
+          ],
+        },
+        divisions: { division: [{ id: '00', conference: '00' }, { id: '01', conference: '01' }] },
+        franchises: { franchise: [{ id: '0001', division: '00' }, { id: '0002', division: '01' }] },
+      },
+    })!;
+    expect(structure.names['00'].abbrev).toBe('NL00');
+    expect(structure.names['01'].abbrev).toBe('NL01');
   });
 });
 

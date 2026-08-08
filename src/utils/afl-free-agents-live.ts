@@ -81,6 +81,31 @@ function snapshotView(snapshot: FaSnapshot): FaView {
 // input identity — steady-state requests skip the ~1000-player rebuild.
 let memo: { snapshot: FaSnapshot; rostersJson: unknown; view: FaView } | null = null;
 
+// Roster sets already computed by the fetch layer's cache-promotion
+// validation, so the first applyLiveRosters call on a fresh payload doesn't
+// repeat the 24-franchise walk. Keyed by payload identity; the validation
+// inputs are stored so a mismatched caller recomputes instead of reusing.
+type RosterSets = ReturnType<typeof buildRosteredByConf>;
+const validatedSets = new WeakMap<
+  object,
+  { conferences: FaConferenceMeta | null; count: number | undefined; sets: RosterSets }
+>();
+
+function rosterSetsFor(
+  rostersJson: unknown,
+  conferences: FaConferenceMeta | null,
+  count: number | undefined,
+): RosterSets {
+  if (rostersJson && typeof rostersJson === 'object') {
+    const hit = validatedSets.get(rostersJson);
+    if (hit && hit.conferences === conferences && hit.count === count) return hit.sets;
+    const sets = buildRosteredByConf(rostersJson, conferences, count);
+    validatedSets.set(rostersJson, { conferences, count, sets });
+    return sets;
+  }
+  return buildRosteredByConf(rostersJson, conferences, count);
+}
+
 /**
  * Recompute rostered/confs flags (and the derived FA counts + hero spotlight)
  * from a live MFL rosters payload. Pure — never mutates the snapshot (it's an
@@ -92,11 +117,7 @@ let memo: { snapshot: FaSnapshot; rostersJson: unknown; view: FaView } | null = 
 export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): FaView {
   if (memo && memo.snapshot === snapshot && memo.rostersJson === rostersJson) return memo.view;
 
-  const rosterSets = buildRosteredByConf(
-    rostersJson,
-    snapshot.conferences,
-    snapshot.rosterFranchiseCount,
-  );
+  const rosterSets = rosterSetsFor(rostersJson, snapshot.conferences, snapshot.rosterFranchiseCount);
   if (!rosterSets) return snapshotView(snapshot);
   const confCount: number = rosterSets.confIds.length;
 
@@ -152,8 +173,9 @@ async function doFetchRosters(year: string, validation?: FaFetchValidation): Pro
     // Shape-valid junk must not evict the last-known-good payload, so a
     // payload has to pass the SAME plausibility bar the overlay applies
     // (missing/{error} body, partial, unmapped franchise, zero rostered)
-    // before it is promoted into the cache as good.
-    if (!buildRosteredByConf(data, validation?.conferences ?? null, validation?.rosterFranchiseCount)) {
+    // before it is promoted into the cache as good. The computed sets are
+    // reused by applyLiveRosters via rosterSetsFor's WeakMap.
+    if (!rosterSetsFor(data, validation?.conferences ?? null, validation?.rosterFranchiseCount)) {
       throw new Error('MFL rosters payload failed plausibility validation');
     }
     rostersCache = { at: Date.now(), ok: true, year, data };

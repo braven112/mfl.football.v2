@@ -62,6 +62,16 @@ export function buildConferenceStructure(leagueJson) {
   for (const id of ids) {
     if (!names[id]) names[id] = { name: `Conference ${id}`, abbrev: id };
   }
+  // Colliding initials ("National League" / "North League" → both "NL")
+  // would render identical tags for OPPOSITE availability states; suffix the
+  // conference id to keep every abbrev distinct.
+  const abbrevCounts = {};
+  for (const id of ids) abbrevCounts[names[id].abbrev] = (abbrevCounts[names[id].abbrev] || 0) + 1;
+  for (const id of ids) {
+    if (abbrevCounts[names[id].abbrev] > 1) {
+      names[id] = { ...names[id], abbrev: `${names[id].abbrev}${id}` };
+    }
+  }
   return { ids, names, franchiseConferences };
 }
 
