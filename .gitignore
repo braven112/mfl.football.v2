@@ -41,10 +41,12 @@ data/*/keeper-plans.json
 src/data/salary-history/**/raw-*.json
 src/data/salary-history/**/summary-2*.json
 
-# Self-hosted dark NFL logos, mirrored from ESPN during prebuild
-# (scripts/fetch-nfl-dark-logos.mjs); the committed manifest in
-# src/data/nfl-dark-logos-manifest.json tracks what a build actually has.
+# Self-hosted dark NFL + college logos, mirrored from ESPN during prebuild
+# (scripts/fetch-nfl-dark-logos.mjs, scripts/fetch-college-dark-logos.mjs);
+# the committed manifests in src/data/nfl-dark-logos-manifest.json and
+# src/data/college-dark-logos-manifest.json track what a build actually has.
 public/assets/nfl-logos/dark/
+public/assets/college-logos/dark/
 
 # Design files (PSDs/AI stored in Vercel Blob)
 *.psd

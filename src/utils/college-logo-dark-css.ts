@@ -22,9 +22,21 @@
  * the rule set is large (~236 schools). So this is emitted per-page via
  * `src/components/CollegeLogoDarkStyles.astro` on the pages that actually
  * render college logos, rather than globally in the shared layout.
+ *
+ * Dark-variant source (Aug 2026): self-hosted when possible, mirroring the
+ * NFL swap. `content: url(...)` has NO error fallback — a failed load renders
+ * a broken-image icon, not the light logo still in the src attribute — so
+ * pointing swaps at ESPN's CDN makes every logo a render-time cross-origin
+ * dependency. `scripts/fetch-college-dark-logos.mjs` (prebuild) mirrors the
+ * NCAA `500-dark` cuts into `public/assets/college-logos/dark/{id}.png` and
+ * records what it fetched in `src/data/college-dark-logos-manifest.json`;
+ * `resolveCollegeDarkLogoUrl` serves the local copy for manifest-listed ids
+ * and keeps the JSON's ESPN URL for anything missing, so a failed prebuild
+ * fetch degrades to the old remote behavior — never to a 404ing local path.
  */
 
 import collegeLogos from '../data/college-logos.json';
+import darkLogoManifest from '../data/college-dark-logos-manifest.json';
 
 interface CollegeLogoEntry {
   logo?: string | null;
@@ -42,6 +54,31 @@ function cssStringEscape(value: string): string {
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/</g, '\\3c ');
+}
+
+/**
+ * Matches the ESPN NCAA dark-cut URLs stored in college-logos.json; capture
+ * group 1 is the ESPN NCAA id, which is also the mirror's local filename and
+ * manifest key. Kept in lockstep with scripts/fetch-college-dark-logos.mjs
+ * by tests/college-logo-dark-css.test.ts.
+ */
+const NCAA_DARK_URL_RE = /^https:\/\/a\.espncdn\.com\/i\/teamlogos\/ncaa\/500-dark\/(\d+)\.png$/;
+
+/**
+ * Dark logo URL for a college entry: the self-hosted mirror when the prebuild
+ * fetch produced it (same-origin, survives ESPN CDN unreachability),
+ * otherwise the ESPN URL from college-logos.json unchanged. `manifestIds` is
+ * injectable for tests; production callers use the build's real manifest.
+ */
+export function resolveCollegeDarkLogoUrl(
+  darkUrl: string,
+  manifestIds: readonly string[] = darkLogoManifest.ids,
+): string {
+  const id = darkUrl.match(NCAA_DARK_URL_RE)?.[1];
+  if (id && manifestIds.includes(id)) {
+    return `/assets/college-logos/dark/${id}.png`;
+  }
+  return darkUrl;
 }
 
 /**
@@ -75,7 +112,7 @@ export function buildCollegeLogoDarkCss(): string {
   const rules: string[] = [];
   for (const [light, dark] of darkByLight) {
     rules.push(
-      `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(dark)}"); }`,
+      `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(resolveCollegeDarkLogoUrl(dark))}"); }`,
     );
   }
   cachedCss = rules.join('\n');
