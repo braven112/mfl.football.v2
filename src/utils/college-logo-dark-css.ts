@@ -67,17 +67,24 @@ const NCAA_DARK_URL_RE = /^https:\/\/a\.espncdn\.com\/i\/teamlogos\/ncaa\/500-da
 /**
  * Dark logo URL for a college entry: the self-hosted mirror when the prebuild
  * fetch produced it (same-origin, survives ESPN CDN unreachability),
- * otherwise the ESPN URL from college-logos.json unchanged. `manifestIds` is
+ * otherwise the ESPN URL from college-logos.json unchanged — or `null` when
+ * the prebuild proved the dark cut doesn't exist upstream (retried HTTP 404;
+ * ESPN never published one for some small schools, e.g. Louisiana-Lafayette).
+ * A `null` means: emit no swap rule, keep the light logo in dark mode —
+ * strictly better than a rule pointing at a known 404, which renders a
+ * broken-image icon on every connection. `manifestIds`/`manifestMissing` are
  * injectable for tests; production callers use the build's real manifest.
  */
 export function resolveCollegeDarkLogoUrl(
   darkUrl: string,
   manifestIds: readonly string[] = darkLogoManifest.ids,
-): string {
+  manifestMissing: readonly string[] = darkLogoManifest.missing ?? [],
+): string | null {
   const id = darkUrl.match(NCAA_DARK_URL_RE)?.[1];
   if (id && manifestIds.includes(id)) {
     return `/assets/college-logos/dark/${id}.png`;
   }
+  if (id && manifestMissing.includes(id)) return null;
   return darkUrl;
 }
 
@@ -111,8 +118,10 @@ export function buildCollegeLogoDarkCss(): string {
   }
   const rules: string[] = [];
   for (const [light, dark] of darkByLight) {
+    const resolved = resolveCollegeDarkLogoUrl(dark);
+    if (!resolved) continue; // dark cut doesn't exist upstream — keep light logo
     rules.push(
-      `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(resolveCollegeDarkLogoUrl(dark))}"); }`,
+      `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(resolved)}"); }`,
     );
   }
   cachedCss = rules.join('\n');

@@ -90,6 +90,15 @@ describe('resolveNflDarkLogoUrl', () => {
   it('falls back to the ESPN 500-dark URL for teams the build could not fetch', () => {
     expect(resolveNflDarkLogoUrl('DEN', [])).toBe(getNFLTeamLogo('DEN', 'dark'));
   });
+
+  it('returns null (emit no rule) for teams whose dark cut 404s upstream', () => {
+    // A retried 404 means the dark cut does not exist on ESPN — a swap rule
+    // pointing at it would render a broken icon on every connection, so the
+    // builder must skip the rule and keep the light logo in dark mode.
+    expect(resolveNflDarkLogoUrl('DEN', [], ['DEN'])).toBeNull();
+    // On-disk presence wins over a stale missing marker.
+    expect(resolveNflDarkLogoUrl('DEN', ['DEN'], ['DEN'])).toBe('/assets/nfl-logos/dark/DEN.png');
+  });
 });
 
 describe('nfl-dark-logos manifest + fetch script', () => {

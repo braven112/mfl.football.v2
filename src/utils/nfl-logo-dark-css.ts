@@ -64,16 +64,22 @@ function swapRule(lightSrc: string, darkUrl: string): string {
 /**
  * Dark logo URL for a canonical team code: the self-hosted mirror when the
  * prebuild fetch produced it (same-origin, survives ESPN CDN unreachability),
- * otherwise ESPN's `500-dark` URL. `manifestCodes` is injectable for tests;
- * production callers use the build's real manifest.
+ * otherwise ESPN's `500-dark` URL — or `null` when the prebuild proved the
+ * dark cut doesn't exist upstream (retried HTTP 404), meaning no swap rule
+ * should be emitted at all: the light logo in dark mode beats a rule pointing
+ * at a known 404, which renders a broken-image icon on every connection.
+ * `manifestCodes`/`manifestMissing` are injectable for tests; production
+ * callers use the build's real manifest.
  */
 export function resolveNflDarkLogoUrl(
   canonicalCode: string,
   manifestCodes: readonly string[] = darkLogoManifest.codes,
-): string {
+  manifestMissing: readonly string[] = darkLogoManifest.missing ?? [],
+): string | null {
   if (manifestCodes.includes(canonicalCode)) {
     return `/assets/nfl-logos/dark/${canonicalCode}.png`;
   }
+  if (manifestMissing.includes(canonicalCode)) return null;
   return getNFLTeamLogo(canonicalCode, 'dark');
 }
 
@@ -102,7 +108,8 @@ export function buildNflLogoDarkCss(): string {
 
   // ESPN logos — always canonical.
   for (const code of getAllNFLTeamCodes()) {
-    rules.push(swapRule(getNFLTeamLogo(code), cssStringEscape(resolveNflDarkLogoUrl(code))));
+    const dark = resolveNflDarkLogoUrl(code);
+    if (dark) rules.push(swapRule(getNFLTeamLogo(code), cssStringEscape(dark)));
   }
 
   // Local SVGs — canonical codes plus every legacy alias filename.
@@ -110,9 +117,8 @@ export function buildNflLogoDarkCss(): string {
   for (const code of localCodes) {
     const canonical = normalizeTeamCode(code);
     if (!canonical || canonical === 'NFL') continue;
-    rules.push(
-      swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(resolveNflDarkLogoUrl(canonical))),
-    );
+    const dark = resolveNflDarkLogoUrl(canonical);
+    if (dark) rules.push(swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(dark)));
   }
 
   cachedCss = rules.join('\n');

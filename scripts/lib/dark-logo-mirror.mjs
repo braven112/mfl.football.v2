@@ -67,6 +67,7 @@ export async function mirrorDarkLogos({
 
   let fetched = 0;
   let failed = 0;
+  const missing404 = new Set();
 
   const queue = [...items];
   const workers = Array.from({ length: concurrency }, async () => {
@@ -82,6 +83,12 @@ export async function mirrorDarkLogos({
         failed++;
         console.warn(`  ✗ ${item.key}: ${err.message}`);
         fs.rmSync(tmpPath, { force: true });
+        // A 404 that survived every retry means the dark cut does not exist
+        // upstream (e.g. ESPN never published one for a small school). Record
+        // it so the CSS builders can skip the swap entirely — falling back to
+        // the remote URL would ship a rule pointing at a known 404, which
+        // renders a broken-image icon in dark mode on EVERY connection.
+        if (err?.message === 'HTTP 404') missing404.add(item.key);
       }
     }
   });
@@ -101,11 +108,18 @@ export async function mirrorDarkLogos({
     .map((item) => item.key)
     .sort();
 
+  // A key can't be both present (a still-valid file from a previous local
+  // run) and missing upstream-forever; on-disk wins.
+  const missing = [...missing404].filter((key) => !present.includes(key)).sort();
+
   // tmp+rename like the PNGs above — this tracked JSON is statically imported
   // by astro build, so a truncated half-write would break every subsequent
   // build/dev/test until manually reverted.
   const manifestTmp = `${manifestPath}.tmp`;
-  fs.writeFileSync(manifestTmp, `${JSON.stringify({ [manifestField]: present }, null, 2)}\n`);
+  fs.writeFileSync(
+    manifestTmp,
+    `${JSON.stringify({ [manifestField]: present, missing }, null, 2)}\n`,
+  );
   fs.renameSync(manifestTmp, manifestPath);
 
   console.log(

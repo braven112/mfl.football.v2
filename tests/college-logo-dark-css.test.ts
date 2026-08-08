@@ -77,6 +77,18 @@ describe('resolveCollegeDarkLogoUrl', () => {
     const odd = 'https://example.com/custom-dark.png';
     expect(resolveCollegeDarkLogoUrl(odd, ['333'])).toBe(odd);
   });
+
+  it('returns null (emit no rule) for ids whose dark cut 404s upstream', () => {
+    // ESPN never published dark cuts for a few small schools (e.g.
+    // Louisiana-Lafayette, id 2347) — the prebuild records the retried 404s
+    // in the manifest's `missing` list and the builder skips those swaps,
+    // keeping the light logo instead of a rule pointing at a known 404.
+    expect(resolveCollegeDarkLogoUrl(espnDark, [], ['333'])).toBeNull();
+    // On-disk presence wins over a stale missing marker.
+    expect(resolveCollegeDarkLogoUrl(espnDark, ['333'], ['333'])).toBe(
+      '/assets/college-logos/dark/333.png',
+    );
+  });
 });
 
 describe('college dark-logo mirror inputs', () => {
