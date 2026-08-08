@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { applyLiveRosters, type FaSnapshot } from '../src/utils/afl-free-agents-live';
+import { applyLiveRosters, conferenceScopedView, type FaSnapshot } from '../src/utils/afl-free-agents-live';
 import { buildConferenceStructure } from '../src/utils/afl-conference-rosters.mjs';
 
 // The AFL is a duplicate-player conference league: the same NFL player can be
@@ -162,6 +162,41 @@ describe('applyLiveRosters', () => {
     });
     expect(view.players.find((p) => p.id === 'p1')?.rostered).toBe(true);
     expect(view.freeAgentsCount).toBe(2);
+  });
+});
+
+describe('conferenceScopedView', () => {
+  // The page renders one conference at a time: "free agent" within a view
+  // means not rostered in THAT conference, whatever the other one holds.
+  function makeView() {
+    return applyLiveRosters(
+      makeSnapshot(),
+      // p1 held in both; p2 held only in the NL; p3 free everywhere.
+      rostersPayload({ '0001': ['p1'], '0002': [], '0013': ['p1', 'p2'], '0014': [] }),
+    );
+  }
+
+  it('scopes counts and the spotlight to the active conference', () => {
+    const view = makeView();
+    const al = conferenceScopedView(view, '00');
+    // AL view: p2 (NL-held) and p3 are addable by AL teams.
+    expect(al.freeAgentsCount).toBe(2);
+    expect(al.faCounts).toEqual({ ALL: 2, RB: 1, WR: 1 });
+    expect(al.topFa?.id).toBe('p2');
+
+    const nl = conferenceScopedView(view, '01');
+    // NL view: only p3 — p1 and p2 are both on NL rosters.
+    expect(nl.freeAgentsCount).toBe(1);
+    expect(nl.faCounts).toEqual({ ALL: 1, WR: 1 });
+    expect(nl.topFa?.id).toBe('p3');
+  });
+
+  it('returns the league-wide view untouched for a null conference (single pool)', () => {
+    const view = makeView();
+    const scoped = conferenceScopedView(view, null);
+    expect(scoped.faCounts).toBe(view.faCounts);
+    expect(scoped.topFa).toBe(view.topFa);
+    expect(scoped.freeAgentsCount).toBe(view.freeAgentsCount);
   });
 });
 

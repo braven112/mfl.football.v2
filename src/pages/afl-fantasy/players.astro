@@ -16,8 +16,13 @@
  *
  * AFL is a duplicate-player conference league (registry duplicatePlayers:
  * true): the same NFL player can be rostered once per conference, so
- * availability is per-conference — `rostered` means held in BOTH conferences,
- * and partially-held players carry an "FA in AL/NL" tag.
+ * availability is per-conference. The page renders ONE conference at a time
+ * — a hard boundary, because an AL owner can't add an NL-available player —
+ * defaulting to the signed-in owner's conference (AL otherwise), with a
+ * hero switcher to view the other conference. Within the active view,
+ * "rostered" means rostered in THAT conference; rows revealed by "Include
+ * rostered" carry an "FA in <other>" tag when the other conference can
+ * still add them.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
@@ -31,7 +36,8 @@ import '../../styles/player-cell.css';
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
 import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
-import { fetchLiveAflRosters, applyLiveRosters, type FaSnapshot } from '../../utils/afl-free-agents-live';
+import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, type FaSnapshot } from '../../utils/afl-free-agents-live';
+import { getAuthUser } from '../../utils/auth';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
@@ -80,30 +86,35 @@ const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
 const snapshot = freeAgentsData as unknown as FaSnapshot;
 const liveView = applyLiveRosters(snapshot, await fetchLiveAflRosters(snapshot.generatedForYear, snapshot));
 const players = liveView.players;
-const faCounts = liveView.faCounts;
 const nflTeamsList = freeAgentsData.nflTeamsList as string[];
 const hasProjected = freeAgentsData.hasProjected;
 const hasLastYrPts = freeAgentsData.hasLastYrPts;
 const hasAdp = freeAgentsData.hasAdp;
 const defaultSort = freeAgentsData.defaultSort;
 const defaultDir = freeAgentsData.defaultDir;
-const freeAgentsCount = liveView.freeAgentsCount;
 
-// Duplicate-player conference metadata ("FA in AL/NL" tags). Null when the
-// league has a single shared pool.
+// Duplicate-player conference metadata. Null when the league has a single
+// shared pool (no switcher, league-wide availability).
 const conferenceMeta = snapshot.conferences;
 
-// Initial hero spotlight: top free agent by the default sort (live overlay).
-const topFa = liveView.topFa;
-// When the top FA is only available in one conference, qualify the caption
-// ("… · NL only") so half the league doesn't think they can add him.
-const topFaAvailOnly =
-  topFa && conferenceMeta && topFa.confs && topFa.confs.length > 0 && topFa.confs.length < conferenceMeta.ids.length
-    ? conferenceMeta.ids
-        .filter((id) => !topFa.confs!.includes(id))
-        .map((id) => conferenceMeta.names[id]?.abbrev || id)
-        .join('/') + ' only'
+// ── Conference boundary ──
+// One conference at a time: default to the signed-in owner's conference
+// (session JWT → franchise → conference), else the first conference (AL).
+// The hero switcher flips the whole view client-side.
+const aflLeagueId = getLeagueBySlug('afl-fantasy')!.id;
+const authUser = getAuthUser(Astro.request);
+const userConfId =
+  conferenceMeta && authUser?.leagueId === aflLeagueId
+    ? conferenceMeta.franchiseConferences[authUser.franchiseId] ?? null
     : null;
+const activeConfId = conferenceMeta ? userConfId ?? conferenceMeta.ids[0] : null;
+
+// Counts + hero spotlight scoped to the active conference (or league-wide
+// when there's no conference structure).
+const scoped = conferenceScopedView(liveView, activeConfId);
+const faCounts = scoped.faCounts;
+const freeAgentsCount = scoped.freeAgentsCount;
+const topFa = scoped.topFa;
 const topFaIsDef = topFa?.position === 'DEF';
 // For a team defense, spotlight the team's marquee defender (if mapped) so the
 // hero shows a face over the logo watermark instead of a bare crest.
@@ -142,6 +153,7 @@ const playerDataJson = JSON.stringify(players);
 const faCountsJson = JSON.stringify(faCounts);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 const conferenceMetaJson = JSON.stringify(conferenceMeta ?? null);
+const activeConfIdJson = JSON.stringify(activeConfId);
 
 // NFL-team avatar backdrops (same pattern as players.astro / projected-free-
 // agents): precomputed maps (ESPN codes + MFL aliases) so the client-side
@@ -174,14 +186,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
           <span class="hero-spotlight__name" id="hero-spotlight-name">{topFaDefStar ? topFaDefStar.name : topFa.name}</span>
           <span class="hero-spotlight__meta" id="hero-spotlight-meta">
-            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}{topFaAvailOnly ? ` · ${topFaAvailOnly}` : ''}
+            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
           </span>
         </div>
       )}
       <div class="hero-top">
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
-          <span class="hero-count">{freeAgentsCount} available players</span>
+          <span class="hero-count"><span id="hero-count-num">{freeAgentsCount}</span> available players</span>
         </div>
         <a href={r('/afl-fantasy/rosters')} class="hero-cross-link">
           View rosters
@@ -190,6 +202,26 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           </svg>
         </a>
       </div>
+
+      <!-- Conference boundary: one conference at a time. Duplicate-player
+           league — an AL owner can't add an NL-available player, so the
+           views never mix. Defaults to the signed-in owner's conference. -->
+      {conferenceMeta && activeConfId && (
+        <div class="conf-switcher" id="conf-switcher" role="tablist" aria-label="Conference">
+          {conferenceMeta.ids.map((id) => (
+            <button
+              class={`conf-switch-btn${id === activeConfId ? ' active' : ''}`}
+              data-conf={id}
+              role="tab"
+              aria-selected={id === activeConfId ? 'true' : 'false'}
+              title={id === userConfId ? 'Your conference' : undefined}
+            >
+              {conferenceMeta.names[id]?.name || id}
+              {id === userConfId && <span class="conf-switch-btn__you">Yours</span>}
+            </button>
+          ))}
+        </div>
+      )}
 
       <!-- Search -->
       <div class="hero-search">
@@ -366,10 +398,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
+  // Active conference view (null = single shared pool). The page shows ONE
+  // conference at a time — the hero switcher flips this and refilters.
+  let activeConf = JSON.parse(activeConfIdJson);
   const nflAvatarBg = JSON.parse(nflAvatarBgJson);
   const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
   const nflAvatarRing = JSON.parse(nflAvatarRingJson);
@@ -447,26 +482,28 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // Duplicate-player league: a player rostered in only one conference is
-  // still a free agent in the other. Shared by the row tag and the hero
-  // caption — returns null unless the player is PARTIALLY rostered.
-  function confAvailability(p) {
-    if (!conferenceMeta || !Array.isArray(p.confs)) return null;
-    const held = p.confs.length;
-    if (held === 0 || held >= conferenceMeta.ids.length) return null;
-    const availIds = conferenceMeta.ids.filter((id) => !p.confs.includes(id));
-    return {
-      abbrevs: availIds.map((id) => conferenceMeta.names[id]?.abbrev || id).join('/'),
-      fullNames: availIds.map((id) => conferenceMeta.names[id]?.name || id).join(', '),
-    };
+  // "Rostered" is relative to the active conference view: a player held in
+  // the NL is a free agent in the AL view. Single-pool leagues fall back to
+  // the league-wide flag.
+  function isRosteredForView(p) {
+    if (activeConf) return Array.isArray(p.confs) && p.confs.includes(activeConf);
+    return p.rostered;
   }
 
-  // Row tag for partially-rostered players; fully-free and fully-rostered
-  // players get no tag (the dot covers the latter).
+  function confName(id) {
+    return conferenceMeta?.names[id]?.name || id;
+  }
+
+  // Row tag: only for rows the "Include rostered" toggle reveals — a player
+  // rostered in the ACTIVE conference but still available in another gets
+  // "FA in <other>", so the boundary stays clear without mixing the views.
   function buildConfTag(p) {
-    const avail = confAvailability(p);
-    if (!avail) return '';
-    return `<span class="conf-tag" title="Available in the ${escapeAttr(avail.fullNames)} only">FA in ${escapeAttr(avail.abbrevs)}</span>`;
+    if (!activeConf || !Array.isArray(p.confs) || !p.confs.includes(activeConf)) return '';
+    const availIds = conferenceMeta.ids.filter((id) => !p.confs.includes(id));
+    if (availIds.length === 0) return '';
+    const abbrevs = availIds.map((id) => conferenceMeta.names[id]?.abbrev || id).join('/');
+    const fullNames = availIds.map(confName).join(', ');
+    return `<span class="conf-tag" title="Still available in the ${escapeAttr(fullNames)}">FA in ${escapeAttr(abbrevs)}</span>`;
   }
 
   // ── Hero spotlight (top player of the current filter/sort) ──
@@ -566,9 +603,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const teamPart = p.team && p.team !== 'FA' ? ` · ${p.team}` : '';
       const projPart = p.projected != null ? ` · ${p.projected.toFixed(1)} pts` : '';
       // Mirror the SSR caption: qualify a top FA only one conference can add.
-      const avail = confAvailability(p);
-      const availPart = avail ? ` · ${avail.abbrevs} only` : '';
-      spotlightMetaEl.textContent = `${pos}${teamPart}${projPart}${availPart}`;
+      spotlightMetaEl.textContent = `${pos}${teamPart}${projPart}`;
     }
 
     // The image swap is skipped when the #1 player is unchanged. For a DEF, the
@@ -696,7 +731,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   function matchesBaseFilters(p, query) {
-    if (!showRostered && p.rostered) return false;
+    if (!showRostered && isRosteredForView(p)) return false;
     if (!showRookies && p.rookie) return false;
     if (!passesAdvancedFilters(p)) return false;
     if (query) {
@@ -750,7 +785,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const headshot = isDef ? getNflLogo(p.team) : getHeadshotUrl(p.id, p.espnId);
       const logo = getNflLogo(p.team);
       const posLabel = p.position === 'PK' ? 'K' : p.position;
-      const rosteredClass = p.rostered ? ' row--rostered' : '';
+      const rosteredForView = isRosteredForView(p);
+      const rosteredClass = rosteredForView ? ' row--rostered' : '';
 
       const modalJson = escapeAttr(JSON.stringify({
         id: p.id, espnId: p.espnId || null, name: p.name,
@@ -762,8 +798,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : (p.lastYrPts != null ? p.lastYrPts : null),
       }));
-      const rosteredDot = p.rostered
-        ? `<span class="rostered-dot" title="${conferenceMeta ? 'Rostered in every conference' : 'Rostered'}"></span>`
+      const rosteredDot = rosteredForView
+        ? `<span class="rostered-dot" title="${activeConf ? `Rostered in the ${escapeAttr(confName(activeConf))}` : 'Rostered'}"></span>`
         : '';
       const confTag = buildConfTag(p);
 
@@ -852,6 +888,29 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         activePosition = tab.getAttribute('data-pos');
         tabsEl.querySelectorAll('.pos-pill').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
+        filterPlayers();
+      });
+    }
+
+    // Conference switcher — flips the whole view to the other conference.
+    const updateHeroCount = () => {
+      const el = document.getElementById('hero-count-num');
+      if (el) el.textContent = String(players.filter((p) => !isRosteredForView(p)).length);
+    };
+    const switcher = document.getElementById('conf-switcher');
+    if (switcher) {
+      switcher.addEventListener('click', (e) => {
+        const btn = e.target.closest('.conf-switch-btn');
+        if (!btn) return;
+        const conf = btn.getAttribute('data-conf');
+        if (!conf || conf === activeConf) return;
+        activeConf = conf;
+        switcher.querySelectorAll('.conf-switch-btn').forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        updateHeroCount();
         filterPlayers();
       });
     }
@@ -1212,6 +1271,59 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
     letter-spacing: 0.04em;
+  }
+
+  /* ── Conference switcher ── */
+  .conf-switcher {
+    position: relative;
+    z-index: 5;
+    display: inline-flex;
+    gap: 0;
+    margin-bottom: 1rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    background: color-mix(in srgb, var(--content-bg, #fff) 70%, transparent);
+    overflow: hidden;
+  }
+  .conf-switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .conf-switch-btn + .conf-switch-btn {
+    border-left: 1px solid var(--content-border, #d1d5db);
+  }
+  .conf-switch-btn:hover {
+    color: var(--league-accent, #c41e3a);
+    background: color-mix(in srgb, var(--league-accent, #c41e3a) 6%, transparent);
+  }
+  .conf-switch-btn.active {
+    background: var(--league-accent, #c41e3a);
+    color: #fff;
+    cursor: default;
+  }
+  .conf-switch-btn__you {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-full, 999px);
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+  }
+  .conf-switch-btn.active .conf-switch-btn__you {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
   }
 
   /* ── Hero search ── */

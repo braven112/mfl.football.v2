@@ -4,7 +4,7 @@
     {
       "date": "2026-08-08",
       "type": "bug-fix",
-      "summary": "The AFL Free Agents page was hiding every player still rostered in the OTHER conference — so a guy dropped in your conference (looking at you, Kyle Pitts) never showed up as available. Availability is now tracked per conference, complete with an 'FA in AL/NL' tag, and roster moves now hit the page within a minute of happening on MFL instead of waiting for the next site deploy.",
+      "summary": "The AFL Free Agents page was hiding every player still rostered in the OTHER conference — so a guy dropped in your conference (looking at you, Kyle Pitts) never showed up as available. The page now shows one conference at a time — it opens on YOUR conference when you're signed in, with an AL/NL switcher in the header to peek across the aisle — and roster moves hit the page within a minute of happening on MFL instead of waiting for the next site deploy.",
       "impact": "user",
       "area": "free-agents",
       "league": "afl"

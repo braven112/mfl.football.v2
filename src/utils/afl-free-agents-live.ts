@@ -149,6 +149,40 @@ export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): Fa
   return view;
 }
 
+/**
+ * Re-scope a view to ONE conference: "free agent" means not rostered in that
+ * conference, regardless of what the other conference holds. This is the
+ * per-conference boundary the page renders — an AL owner browsing free
+ * agents should only see (and count) players an AL team can actually add.
+ * Players are NOT filtered here (the client needs the full pool for its
+ * "include rostered" toggle); only the derived counts/spotlight are scoped.
+ * Pass a null confId (single shared pool) to get the view's own numbers.
+ */
+export function conferenceScopedView(
+  view: FaView,
+  confId: string | null,
+): { faCounts: Record<string, number>; topFa: FaTopPlayer | null; freeAgentsCount: number } {
+  if (!confId) {
+    return { faCounts: view.faCounts, topFa: view.topFa, freeAgentsCount: view.freeAgentsCount };
+  }
+  const freeAgents = view.players.filter((p) => !(p.confs ?? []).includes(confId));
+  const faCounts: Record<string, number> = { ALL: freeAgents.length };
+  for (const p of freeAgents) faCounts[p.position] = (faCounts[p.position] || 0) + 1;
+  const top = freeAgents[0] ?? null;
+  const topFa: FaTopPlayer | null = top
+    ? {
+        id: top.id,
+        name: top.name,
+        position: top.position,
+        team: top.team,
+        espnId: top.espnId,
+        projected: top.projected,
+        confs: top.confs,
+      }
+    : null;
+  return { faCounts, topFa, freeAgentsCount: freeAgents.length };
+}
+
 // Module-level cache: one MFL fetch per warm serverless instance per minute,
 // so page traffic never hammers MFL. Failures are cached briefly too, so an
 // MFL outage doesn't add a 5s timeout to every request. Keyed by year (a
