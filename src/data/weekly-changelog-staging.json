@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-08-10",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-08-08",
+      "type": "bug-fix",
+      "summary": "NFL team logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo set instead of leaning on ESPN's servers every time a page renders.",
+      "impact": "user",
+      "area": "players",
+      "league": "both"
+    }
+  ]
 }
