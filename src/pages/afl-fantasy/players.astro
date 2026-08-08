@@ -78,7 +78,7 @@ const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
 // minute. Only membership is live; the player pool itself still refreshes at
 // deploy time.
 const snapshot = freeAgentsData as unknown as FaSnapshot;
-const liveView = applyLiveRosters(snapshot, await fetchLiveAflRosters(snapshot.generatedForYear));
+const liveView = applyLiveRosters(snapshot, await fetchLiveAflRosters(snapshot.generatedForYear, snapshot));
 const players = liveView.players;
 const faCounts = liveView.faCounts;
 const nflTeamsList = freeAgentsData.nflTeamsList as string[];

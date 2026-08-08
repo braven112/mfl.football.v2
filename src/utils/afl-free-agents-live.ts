@@ -138,7 +138,10 @@ const ERROR_TTL_MS = 20_000;
 let rostersCache: { at: number; ok: boolean; year: string; data: unknown } | null = null;
 let inflight: { year: string; promise: Promise<unknown | null> } | null = null;
 
-async function doFetchRosters(year: string): Promise<unknown | null> {
+/** Snapshot fields the fetch layer uses to validate a payload before caching it. */
+export type FaFetchValidation = Pick<FaSnapshot, 'conferences' | 'rosterFranchiseCount'>;
+
+async function doFetchRosters(year: string, validation?: FaFetchValidation): Promise<unknown | null> {
   const prior = rostersCache;
   const afl = getLeagueBySlug('afl-fantasy')!;
   const url = buildMflExportUrl({ type: 'rosters', leagueId: afl.id, year });
@@ -146,17 +149,12 @@ async function doFetchRosters(year: string): Promise<unknown | null> {
     const res = await fetchWithTimeout(url, { timeoutMs: 5000 });
     if (!res.ok) throw new Error(`MFL rosters HTTP ${res.status}`);
     const data = await res.json();
-    // MFL answers 200 with an {error} body for a bad league/year.
-    const franchisesRaw = (data as { rosters?: { franchise?: unknown } })?.rosters?.franchise;
-    if (!franchisesRaw) {
-      throw new Error('MFL rosters payload missing rosters.franchise');
-    }
-    // Shape-valid junk must not evict the last-known-good payload: an
-    // all-empty export (zero rostered players) is the "MFL hiccup" case the
-    // overlay rejects anyway, so treat it as a failed fetch here too.
-    const franchises = Array.isArray(franchisesRaw) ? franchisesRaw : [franchisesRaw];
-    if (!franchises.some((f) => (f as { player?: unknown })?.player)) {
-      throw new Error('MFL rosters payload has zero rostered players');
+    // Shape-valid junk must not evict the last-known-good payload, so a
+    // payload has to pass the SAME plausibility bar the overlay applies
+    // (missing/{error} body, partial, unmapped franchise, zero rostered)
+    // before it is promoted into the cache as good.
+    if (!buildRosteredByConf(data, validation?.conferences ?? null, validation?.rosterFranchiseCount)) {
+      throw new Error('MFL rosters payload failed plausibility validation');
     }
     rostersCache = { at: Date.now(), ok: true, year, data };
     return data;
@@ -178,10 +176,16 @@ async function doFetchRosters(year: string): Promise<unknown | null> {
 
 /**
  * Fetch the AFL's live rosters export from MFL (public read, no auth), cached
- * in memory for 60s. Returns null on any failure — callers fall back to the
- * snapshot's baked roster flags via applyLiveRosters.
+ * in memory for 60s. Pass the snapshot (or its conferences +
+ * rosterFranchiseCount) so the payload is validated to the overlay's
+ * plausibility bar before being cached. Returns null on any failure —
+ * callers fall back to the snapshot's baked roster flags via
+ * applyLiveRosters.
  */
-export async function fetchLiveAflRosters(year: number | string): Promise<unknown | null> {
+export async function fetchLiveAflRosters(
+  year: number | string,
+  validation?: FaFetchValidation,
+): Promise<unknown | null> {
   const yearKey = String(year);
   const now = Date.now();
   if (
@@ -192,7 +196,7 @@ export async function fetchLiveAflRosters(year: number | string): Promise<unknow
     return rostersCache.data;
   }
   if (inflight && inflight.year === yearKey) return inflight.promise;
-  const promise = doFetchRosters(yearKey).finally(() => {
+  const promise = doFetchRosters(yearKey, validation).finally(() => {
     if (inflight?.promise === promise) inflight = null;
   });
   inflight = { year: yearKey, promise };

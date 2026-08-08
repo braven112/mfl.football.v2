@@ -257,6 +257,33 @@ describe('fetchLiveAflRosters', () => {
     expect(await fetchLive(2026)).toEqual(okPayload);
   });
 
+  it('rejects a partial payload at the cache layer when snapshot validation is supplied', async () => {
+    const fetchLive = await freshFetch();
+    const validation = {
+      conferences: makeSnapshot().conferences,
+      rosterFranchiseCount: 4,
+    };
+    const fullPayload = {
+      rosters: {
+        franchise: [
+          { id: '0001', player: { id: 'p1' } },
+          { id: '0002', player: { id: 'p2' } },
+          { id: '0013', player: { id: 'p1' } },
+          { id: '0014', player: { id: 'p3' } },
+        ],
+      },
+    };
+    fetchMock.mockResolvedValue({ ok: true, json: async () => fullPayload });
+    expect(await fetchLive(2026, validation)).toEqual(fullPayload);
+    vi.advanceTimersByTime(61_000);
+    // Truncated refetch fails validation → last-good payload survives.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ rosters: { franchise: [{ id: '0001', player: { id: 'p1' } }] } }),
+    });
+    expect(await fetchLive(2026, validation)).toEqual(fullPayload);
+  });
+
   it('treats a 200 with an {error} body (bad league/year) as a failure', async () => {
     const fetchLive = await freshFetch();
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ error: 'unknown league' }) });

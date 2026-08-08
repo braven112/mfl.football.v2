@@ -226,6 +226,19 @@ if (Array.isArray(lastYearData)) {
 // (src/utils/afl-free-agents-live.ts) via afl-conference-rosters.mjs so the
 // two consumers can't drift.
 let conferenceStructure = buildConferenceStructure(leagueData);
+if (!conferenceStructure) {
+  // A missing/unusable league.json must not silently bake single-pool
+  // semantics (the hidden-player bug) when the last committed snapshot
+  // proves the league is multi-conference — keep the prior snapshot; its
+  // conference metadata keeps the live overlay fully functional.
+  const prior = readJson(OUTPUT_PATH);
+  if (prior?.players?.length && prior?.conferences) {
+    console.warn(
+      '[compute-afl-free-agents] league feed missing or carries no usable conference structure — keeping the previous derived snapshot'
+    );
+    process.exit(0);
+  }
+}
 let rosterSets = buildRosteredByConf(rostersData, conferenceStructure);
 if (!rosterSets && conferenceStructure) {
   // Distinguish the two null causes: a single-pool retry succeeding means

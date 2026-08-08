@@ -29,12 +29,15 @@ availability ("FA in AL").
 old global set kept `rostered: true`. Fix in `compute-afl-free-agents.mjs`
 grew the FA pool 897 → 947.
 
-**Recommendation:** The conference math intentionally lives in two places
-that must stay in sync: the build-time script and
-`applyLiveRosters()` in `src/utils/afl-free-agents-live.ts` (which is unit
-tested — `tests/afl-free-agents-live.test.ts`). Any AFL surface that reasons
-about availability (needs analysis, add-drop tooling, Schefter FA lanes)
-must use per-conference sets, never a global one.
+**Recommendation:** The conference math has ONE implementation:
+`src/utils/afl-conference-rosters.mjs` (plain .mjs so both node scripts and
+TS/src import it — same pattern as `leagues-data.mjs`), consumed by the
+build-time script and by `applyLiveRosters()` in
+`src/utils/afl-free-agents-live.ts`, unit tested in
+`tests/afl-free-agents-live.test.ts`. Any AFL surface that reasons about
+availability (needs analysis, add-drop tooling, Schefter FA lanes) must
+import that module, never re-implement a rostered set — and never a global
+one.
 
 ## 2026-08-08 - Live Overlay on a Build-Time Snapshot (SSR Freshness Pattern)
 
