@@ -149,10 +149,19 @@ prebuild fetch degrades to the previous remote behavior, never to a stylesheet
 pointing at local files the build doesn't have. The committed manifest default
 is `{ "codes": [] }` (dev/test keep remote behavior without running the fetch).
 
-**Same fragility still exists in the college-logo swap** (`college-logo-dark-
-css.ts`, ~236 ESPN NCAA URLs) — un-fixed because mirroring 236 files per build
-is a bigger hammer; if broken college logos get reported in dark mode, this is
-why, and the manifest pattern here is the template.
+**Extended to the college-logo swap in the same branch:** the shared mirror
+logic lives in `scripts/lib/dark-logo-mirror.mjs`;
+`scripts/fetch-college-dark-logos.mjs` mirrors the ~236 distinct NCAA
+`500-dark` cuts from `college-logos.json` into
+`public/assets/college-logos/dark/{espnId}.png` with its own manifest
+(`src/data/college-dark-logos-manifest.json`, keyed by ESPN NCAA id) and
+`resolveCollegeDarkLogoUrl` fallback. Note the college LIGHT srcs are also
+remote ESPN URLs (there are no local college SVGs), so light mode remains
+CDN-dependent — self-hosting only the dark cut removes the *second* failure
+point the swap added, which is what turned loaded pages into broken icons.
+Mirroring the light cut too (and rewriting `logo` srcs everywhere they're
+embedded, including derived data like `free-agents.json`) is the bigger
+follow-up if full offline-CDN resilience is ever wanted.
 
 ---
 

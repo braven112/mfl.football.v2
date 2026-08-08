@@ -35,6 +35,7 @@ const PARALLEL = [
   { name: 'fetch:nfl-draft-date', cmd: 'pnpm run fetch:nfl-draft-date' },
   { name: 'fetch:nfl-news-digest', cmd: 'pnpm run fetch:nfl-news-digest' },
   { name: 'fetch:nfl-dark-logos', cmd: 'pnpm run fetch:nfl-dark-logos' },
+  { name: 'fetch:college-dark-logos', cmd: 'pnpm run fetch:college-dark-logos' },
 ];
 
 const run = (label, cmd) => {

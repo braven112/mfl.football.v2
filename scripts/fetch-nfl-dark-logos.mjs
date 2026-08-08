@@ -25,16 +25,15 @@
  * script keep the remote behavior too.
  *
  * Never exits non-zero on network failure — prebuild fetches are non-fatal.
+ * Sibling: scripts/fetch-college-dark-logos.mjs (same pattern, NCAA cuts).
  */
 
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mirrorDarkLogos } from './lib/dark-logo-mirror.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const OUT_DIR = path.join(ROOT, 'public', 'assets', 'nfl-logos', 'dark');
-const MANIFEST_PATH = path.join(ROOT, 'src', 'data', 'nfl-dark-logos-manifest.json');
 
 // Canonical ESPN team codes. Mirrors getAllNFLTeamCodes() in
 // src/utils/nfl-logo.ts (TS, not importable from a node script);
@@ -46,68 +45,18 @@ export const NFL_TEAM_CODES = [
   'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WSH',
 ];
 
-const DARK_LOGO_URL = (code) => `https://a.espncdn.com/i/teamlogos/nfl/500-dark/${code}.png`;
-
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
-
-function isValidPng(buf) {
-  return Buffer.isBuffer(buf) && buf.length > 1024 && buf.subarray(0, 4).equals(PNG_MAGIC);
-}
-
-async function fetchDarkLogo(code) {
-  const res = await fetch(DARK_LOGO_URL(code), { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (!isValidPng(buf)) throw new Error(`response is not a PNG (${buf.length} bytes)`);
-  return buf;
-}
-
 async function main() {
-  fs.mkdirSync(OUT_DIR, { recursive: true });
-
-  let fetched = 0;
-  let failed = 0;
-
-  // Modest concurrency — 32 small files, no need to hammer the CDN.
-  const queue = [...NFL_TEAM_CODES];
-  const workers = Array.from({ length: 6 }, async () => {
-    for (let code = queue.shift(); code; code = queue.shift()) {
-      const outPath = path.join(OUT_DIR, `${code}.png`);
-      try {
-        const buf = await fetchDarkLogo(code);
-        const tmpPath = `${outPath}.tmp`;
-        fs.writeFileSync(tmpPath, buf);
-        fs.renameSync(tmpPath, outPath);
-        fetched++;
-      } catch (err) {
-        failed++;
-        console.warn(`  ✗ ${code}: ${err.message}`);
-      }
-    }
+  await mirrorDarkLogos({
+    label: 'fetch-nfl-dark-logos',
+    items: NFL_TEAM_CODES.map((code) => ({
+      key: code,
+      url: `https://a.espncdn.com/i/teamlogos/nfl/500-dark/${code}.png`,
+    })),
+    outDir: path.join(ROOT, 'public', 'assets', 'nfl-logos', 'dark'),
+    manifestPath: path.join(ROOT, 'src', 'data', 'nfl-dark-logos-manifest.json'),
+    manifestField: 'codes',
+    concurrency: 6,
   });
-  await Promise.all(workers);
-
-  // The manifest reflects what is actually on disk (this run's fetches plus
-  // any still-valid file from a previous local run), not what we attempted.
-  const codes = NFL_TEAM_CODES.filter((code) => {
-    const p = path.join(OUT_DIR, `${code}.png`);
-    try {
-      return isValidPng(fs.readFileSync(p));
-    } catch {
-      return false;
-    }
-  }).sort();
-
-  fs.writeFileSync(MANIFEST_PATH, `${JSON.stringify({ codes }, null, 2)}\n`);
-
-  console.log(
-    `[fetch-nfl-dark-logos] ${fetched} fetched, ${failed} failed; manifest lists ${codes.length}/${NFL_TEAM_CODES.length} teams`,
-  );
-  if (codes.length < NFL_TEAM_CODES.length) {
-    console.warn(
-      '[fetch-nfl-dark-logos] missing teams fall back to the ESPN CDN swap (pre-self-hosting behavior)',
-    );
-  }
 }
 
 // Importable for tests without side effects (tests import NFL_TEAM_CODES).
