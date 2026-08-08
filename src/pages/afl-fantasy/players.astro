@@ -108,7 +108,7 @@ const conferenceMeta = snapshot.conferences;
 // headers (s-maxage/CDN caching) to this page or one user's default
 // conference gets served to everyone.
 const authUser = getAuthUser(Astro.request);
-const { userConfId, activeConfId } = resolveConferenceSelection(
+const { activeConfId } = resolveConferenceSelection(
   conferenceMeta,
   authUser,
   aflLeague.id,
@@ -222,10 +222,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               class={`conf-switch-btn${id === activeConfId ? ' active' : ''}`}
               data-conf={id}
               aria-pressed={id === activeConfId ? 'true' : 'false'}
-              title={id === userConfId ? 'Your conference' : undefined}
             >
               {conferenceMeta.names[id]?.name || id}
-              {id === userConfId && <span class="conf-switch-btn__you">Yours</span>}
             </button>
           ))}
         </div>
@@ -1302,7 +1300,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .conf-switch-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
     padding: 0.45rem 1rem;
     border: none;
     background: transparent;
@@ -1325,21 +1322,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     color: #fff;
     cursor: default;
   }
-  .conf-switch-btn__you {
-    font-size: 0.5625rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.1rem 0.35rem;
-    border-radius: var(--radius-full, 999px);
-    background: var(--color-gray-100, #f3f4f6);
-    color: var(--color-gray-500, #6b7280);
-  }
-  .conf-switch-btn.active .conf-switch-btn__you {
-    background: rgba(255, 255, 255, 0.25);
-    color: #fff;
-  }
-
   /* ── Hero search ── */
   .hero-search {
     position: relative;
