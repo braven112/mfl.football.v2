@@ -9,7 +9,15 @@
  * carries and shows only browse-relevant columns: identity, age, experience,
  * draft, physicals, dynasty ADP, last-season points, and projected points.
  *
- * Data is loaded at build time from the AFL MFL feed JSON (data/afl-fantasy).
+ * Data is loaded at build time from the AFL MFL feed JSON (data/afl-fantasy),
+ * with roster-membership flags re-derived per request from the live MFL
+ * rosters API (see the live overlay note below) so adds/drops show up within
+ * about a minute instead of waiting for the next deploy.
+ *
+ * AFL is a duplicate-player conference league (registry duplicatePlayers:
+ * true): the same NFL player can be rostered once per conference, so
+ * availability is per-conference — `rostered` means held in BOTH conferences,
+ * and partially-held players carry an "FA in AL/NL" tag.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
@@ -23,6 +31,7 @@ import '../../styles/player-cell.css';
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
 import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
+import { fetchLiveAflRosters, applyLiveRosters, type FaSnapshot } from '../../utils/afl-free-agents-live';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
@@ -59,18 +68,33 @@ const mflHost = getLeagueBySlug('afl-fantasy')!.mflHost;
 // years of AFL feeds. That work now happens at build time in
 // scripts/compute-afl-free-agents.mjs; this page consumes only the finished
 // result, keeping the SSR bundle small (see the SSR note above).
-const players = freeAgentsData.players;
-const faCounts = freeAgentsData.faCounts as Record<string, number>;
+//
+// ── Live roster overlay ──
+// The snapshot's roster-membership flags freeze at deploy time, so a player
+// dropped on MFL after the last deploy kept showing as rostered (Kyle Pitts,
+// Aug 2026). Since this page is SSR anyway, re-derive rostered/confs per
+// request from the live MFL rosters export (60s in-memory cache; falls back
+// to the baked flags when MFL is unreachable) — moves surface within about a
+// minute. Only membership is live; the player pool itself still refreshes at
+// deploy time.
+const snapshot = freeAgentsData as unknown as FaSnapshot;
+const liveView = applyLiveRosters(snapshot, await fetchLiveAflRosters(snapshot.generatedForYear));
+const players = liveView.players;
+const faCounts = liveView.faCounts;
 const nflTeamsList = freeAgentsData.nflTeamsList as string[];
 const hasProjected = freeAgentsData.hasProjected;
 const hasLastYrPts = freeAgentsData.hasLastYrPts;
 const hasAdp = freeAgentsData.hasAdp;
 const defaultSort = freeAgentsData.defaultSort;
 const defaultDir = freeAgentsData.defaultDir;
-const freeAgentsCount = faCounts.ALL ?? 0;
+const freeAgentsCount = liveView.freeAgentsCount;
 
-// Initial hero spotlight: top free agent by the default sort (from the snapshot).
-const topFa = freeAgentsData.topFa;
+// Duplicate-player conference metadata ("FA in AL/NL" tags). Null when the
+// league has a single shared pool.
+const conferenceMeta = snapshot.conferences;
+
+// Initial hero spotlight: top free agent by the default sort (live overlay).
+const topFa = liveView.topFa;
 const topFaIsDef = topFa?.position === 'DEF';
 // For a team defense, spotlight the team's marquee defender (if mapped) so the
 // hero shows a face over the logo watermark instead of a bare crest.
@@ -108,6 +132,7 @@ const topFaHeadOnerror = topFaHeadEspnId
 const playerDataJson = JSON.stringify(players);
 const faCountsJson = JSON.stringify(faCounts);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
+const conferenceMetaJson = JSON.stringify(conferenceMeta ?? null);
 
 // NFL-team avatar backdrops (same pattern as players.astro / projected-free-
 // agents): precomputed maps (ESPN codes + MFL aliases) so the client-side
@@ -332,8 +357,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, faCountsJson, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
   const players = JSON.parse(playerDataJson);
+  // Duplicate-player conference metadata (null = single shared pool).
+  const conferenceMeta = JSON.parse(conferenceMetaJson);
   const nflAvatarBg = JSON.parse(nflAvatarBgJson);
   const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
   const nflAvatarRing = JSON.parse(nflAvatarRingJson);
@@ -409,6 +436,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   function escapeAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Duplicate-player league: a player rostered in only one conference is
+  // still a free agent in the other — tag which conference(s) can add him.
+  // Fully-free and fully-rostered players get no tag (dot covers the latter).
+  function buildConfTag(p) {
+    if (!conferenceMeta || !Array.isArray(p.confs)) return '';
+    const held = p.confs.length;
+    if (held === 0 || held >= conferenceMeta.ids.length) return '';
+    const availIds = conferenceMeta.ids.filter((id) => !p.confs.includes(id));
+    const abbrevs = availIds.map((id) => conferenceMeta.names[id]?.abbrev || id).join('/');
+    const fullNames = availIds.map((id) => conferenceMeta.names[id]?.name || id).join(', ');
+    return `<span class="conf-tag" title="Available in the ${escapeAttr(fullNames)} only">FA in ${escapeAttr(abbrevs)}</span>`;
   }
 
   // ── Hero spotlight (top player of the current filter/sort) ──
@@ -701,7 +741,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : (p.lastYrPts != null ? p.lastYrPts : null),
       }));
-      const rosteredDot = p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : '';
+      const rosteredDot = p.rostered
+        ? `<span class="rostered-dot" title="${conferenceMeta ? 'Rostered in every conference' : 'Rostered'}"></span>`
+        : '';
+      const confTag = buildConfTag(p);
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
@@ -716,7 +759,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}</strong>
               <div class="player-meta">
-                ${isDef ? '' : `<img src="${logo}" alt="${escapeAttr(p.team)}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>
+                ${isDef ? '' : `<img src="${logo}" alt="${escapeAttr(p.team)}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>${confTag}
               </div>
             </div>
           </div>
@@ -1597,6 +1640,26 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     text-align: center;
     font-size: 0.8125rem;
     color: var(--color-gray-500, #64748b);
+  }
+
+  /* Conference availability tag (duplicate-player league: rostered in one
+     conference, still a free agent in the other) */
+  :global(.conf-tag) {
+    display: inline-block;
+    padding: 0.05rem 0.3rem;
+    margin-left: 0.3rem;
+    border-radius: 4px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #15803d;
+    background: rgba(22, 163, 74, 0.12);
+  }
+  :global(html.dark .conf-tag) {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.16);
   }
 
   /* Rostered row */

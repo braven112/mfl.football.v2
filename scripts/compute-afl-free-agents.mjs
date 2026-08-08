@@ -151,6 +151,7 @@ const seasonYear = getCurrentSeasonYear();
 
 const playersData = readFeed(currentYear, 'players.json');
 const rostersData = readFeed(currentYear, 'rosters.json');
+const leagueData = readFeed(currentYear, 'league.json');
 const projectedScoresData = readFeed(currentYear, 'projectedScores.json');
 const adpDynastyData = readFeed(currentYear, 'adp-dynasty.json');
 const lastYearData = readFeed(seasonYear, 'weekly-results-raw.json');
@@ -208,18 +209,64 @@ if (Array.isArray(lastYearData)) {
   }
 }
 
-// Rostered player set (AFL has no salaries/contracts — membership only)
-const rosteredIds = new Set();
+// ── Conference structure (duplicate-player league) ──
+// AFL runs 24 franchises as two duplicate-player conferences (registry
+// `duplicatePlayers: true`): the same NFL player can be rostered once per
+// conference, and a drop only frees the player IN THAT CONFERENCE. A single
+// global rostered set hid every player the other conference still held
+// (Kyle Pitts / Parker Washington, Aug 2026), so roster membership is
+// tracked per conference: `rostered` means "held in EVERY conference"
+// (unavailable to everyone) and `confs` lists which conferences hold him.
+// Falls back to a single shared pool when the league feed carries no
+// conference structure (or any franchise can't be mapped to one).
+function buildConferenceStructure(league) {
+  const divisions = league?.league?.divisions?.division;
+  const conferences = league?.league?.conferences?.conference;
+  const franchises = league?.league?.franchises?.franchise;
+  if (!divisions || !conferences || !franchises) return null;
+  const divArr = Array.isArray(divisions) ? divisions : [divisions];
+  const confArr = Array.isArray(conferences) ? conferences : [conferences];
+  const frArr = Array.isArray(franchises) ? franchises : [franchises];
+  if (confArr.length < 2) return null;
+  const divToConf = {};
+  for (const d of divArr) {
+    if (d?.id != null && d?.conference != null) divToConf[d.id] = d.conference;
+  }
+  const franchiseConferences = {};
+  for (const f of frArr) {
+    const conf = f?.division != null ? divToConf[f.division] : undefined;
+    if (!f?.id || conf == null) return null; // unmappable franchise → single pool
+    franchiseConferences[f.id] = conf;
+  }
+  const names = {};
+  for (const c of confArr) {
+    if (c?.id == null) continue;
+    const name = c.name || `Conference ${c.id}`;
+    names[c.id] = { name, abbrev: name.split(/\s+/).map((w) => w[0]).join('').toUpperCase() };
+  }
+  const ids = [...new Set(Object.values(franchiseConferences))].sort();
+  return { ids, names, franchiseConferences };
+}
+const conferenceStructure = buildConferenceStructure(leagueData);
+
+// Rostered player sets per conference (AFL has no salaries/contracts —
+// membership only). Single-pool leagues use one pseudo-conference ''.
+const confIds = conferenceStructure ? conferenceStructure.ids : [''];
+const rosteredByConf = new Map(confIds.map((id) => [id, new Set()]));
 if (rostersData?.rosters?.franchise) {
   const franchises = Array.isArray(rostersData.rosters.franchise)
     ? rostersData.rosters.franchise
     : [rostersData.rosters.franchise];
   for (const franchise of franchises) {
+    const confId = conferenceStructure
+      ? conferenceStructure.franchiseConferences[franchise?.id]
+      : '';
+    const confSet = rosteredByConf.get(confId) ?? rosteredByConf.get(confIds[0]);
     const rosterPlayers = franchise?.player
       ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
       : [];
     for (const p of rosterPlayers) {
-      if (p?.id) rosteredIds.add(p.id);
+      if (p?.id) confSet.add(p.id);
     }
   }
 }
@@ -265,6 +312,10 @@ if (Array.isArray(allPlayers)) {
     const pts = lastYrPtsMap.get(p.id);
     const gp = lastYrGamesMap.get(p.id);
 
+    // Conferences currently holding this player; "rostered" (= hidden by the
+    // page's default filter) only when EVERY conference holds him.
+    const confs = confIds.filter((cid) => rosteredByConf.get(cid).has(p.id));
+
     playerList.push({
       id: p.id,
       name: displayName,
@@ -276,7 +327,8 @@ if (Array.isArray(allPlayers)) {
       age: pos === 'DEF' ? 25 : age,
       espnId: p.espn_id || espnCollegeIds.players?.[p.id]?.espnCollegeId || null,
       projected: projectedMap.get(p.id) ?? null,
-      rostered: rosteredIds.has(p.id),
+      rostered: confs.length === confIds.length,
+      confs,
       exp: pos === 'DEF' ? 5 : exp,
       draftRd: (draftRd && draftRd > 0) ? draftRd : null,
       college: p.college || null,
@@ -346,6 +398,9 @@ const output = {
   generatedForYear: currentYear,
   seasonYear,
   mflHost,
+  // Conference metadata for the live roster overlay + per-conference
+  // availability tags (null when the league has one shared player pool).
+  conferences: conferenceStructure,
   hasProjected,
   hasLastYrPts,
   hasAdp,
