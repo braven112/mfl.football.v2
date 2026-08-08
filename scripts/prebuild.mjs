@@ -14,7 +14,7 @@
  *   - fetch:adp
  */
 
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 
 const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
@@ -59,7 +59,6 @@ console.log('[prebuild] Starting parallel fetches…');
 // exec (not execSync) for true parallelism; awaited at top level so the
 // script's lifetime explicitly covers every child instead of relying on the
 // event loop staying alive. Failures stay non-fatal (resolve, never reject).
-const { exec } = await import('child_process');
 await Promise.all(
   PARALLEL.map(
     ({ name, cmd }) =>

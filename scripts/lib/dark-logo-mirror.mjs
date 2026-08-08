@@ -101,7 +101,12 @@ export async function mirrorDarkLogos({
     .map((item) => item.key)
     .sort();
 
-  fs.writeFileSync(manifestPath, `${JSON.stringify({ [manifestField]: present }, null, 2)}\n`);
+  // tmp+rename like the PNGs above — this tracked JSON is statically imported
+  // by astro build, so a truncated half-write would break every subsequent
+  // build/dev/test until manually reverted.
+  const manifestTmp = `${manifestPath}.tmp`;
+  fs.writeFileSync(manifestTmp, `${JSON.stringify({ [manifestField]: present }, null, 2)}\n`);
+  fs.renameSync(manifestTmp, manifestPath);
 
   console.log(
     `[${label}] ${fetched} fetched, ${failed} failed; manifest lists ${present.length}/${items.length} logos`,

@@ -125,6 +125,14 @@ serving a stale build regardless; a directly-launched `pnpm exec astro dev
 
 **Tests:** `tests/nfl-logo-dark-css.test.ts`, `tests/college-logo-dark-css.test.ts`.
 
+**Branch prereq gotcha (2026-07-07 dark-mode branch):** the committed
+`claude/stoic-gauss-85d450` Header imports `utils/theme-preference` and
+`components/ThemeToggle.astro`, which were UNCOMMITTED in that worktree — the
+branch alone didn't build. That branch carries copies of `theme-preference.ts`,
+`ThemeToggle.astro`, and `ThemeScript.astro` (plus the `class:list` dark wiring
+in `TheLeagueLayout`) so the theme system is coherent; expect these to
+reconcile trivially when the dark-mode branch lands.
+
 ---
 
 ## 2026-08-08 - `content: url()` has no error fallback — self-host the dark cut
@@ -162,13 +170,3 @@ point the swap added, which is what turned loaded pages into broken icons.
 Mirroring the light cut too (and rewriting `logo` srcs everywhere they're
 embedded, including derived data like `free-agents.json`) is the bigger
 follow-up if full offline-CDN resilience is ever wanted.
-
----
-
-**Branch prereq gotcha:** the committed `claude/stoic-gauss-85d450` Header
-imports `utils/theme-preference` and `components/ThemeToggle.astro`, which
-were UNCOMMITTED in that worktree — the branch alone didn't build. This branch
-carries copies of `theme-preference.ts`, `ThemeToggle.astro`, and
-`ThemeScript.astro` (plus the `class:list` dark wiring in `TheLeagueLayout`)
-so the theme system is coherent; expect these to reconcile trivially when the
-dark-mode branch lands.

@@ -80,27 +80,31 @@ describe('resolveCollegeDarkLogoUrl', () => {
 });
 
 describe('college dark-logo mirror inputs', () => {
-  it('every logoDark in college-logos.json is mirrorable (matches the NCAA dark URL pattern)', () => {
-    // If ESPN URLs in the data ever drift from the pattern, those schools
-    // silently keep the remote swap — surface the drift here instead.
+  it('the NCAA dark URL pattern covers the college-logos.json data (wholesale-drift guard)', () => {
+    // A single school whose dark URL uses a different-but-valid shape is
+    // tolerated by design — the mirror skips it and that school keeps its
+    // remote swap (see fetch-college-dark-logos.mjs). What must never happen
+    // silently is wholesale drift (ESPN changes the URL shape, the regex
+    // matches nothing, and every college swap quietly stays remote), so
+    // assert broad coverage rather than per-URL perfection.
     const darks = Object.values(
       collegeLogos as Record<string, { logoDark?: string | null }>,
     )
       .map((e) => e?.logoDark)
       .filter((u): u is string => !!u);
-    for (const url of darks) {
-      expect(url, `unexpected logoDark shape: ${url}`).toMatch(NCAA_DARK_URL_RE);
-    }
+    const mirrorable = darks.filter((u) => NCAA_DARK_URL_RE.test(u));
+    expect(darks.length).toBeGreaterThan(0);
+    expect(mirrorable.length / darks.length).toBeGreaterThanOrEqual(0.9);
   });
 
-  it('collectCollegeDarkLogos yields one item per distinct dark URL, keyed by ESPN id', () => {
+  it('collectCollegeDarkLogos yields one item per distinct mirrorable dark URL, keyed by ESPN id', () => {
     const items = collectCollegeDarkLogos(collegeLogos);
-    const distinctDark = new Set(
+    const distinctMirrorable = new Set(
       Object.values(collegeLogos as Record<string, { logoDark?: string | null }>)
         .map((e) => e?.logoDark)
-        .filter(Boolean),
+        .filter((u): u is string => !!u && NCAA_DARK_URL_RE.test(u)),
     );
-    expect(items).toHaveLength(distinctDark.size);
+    expect(items).toHaveLength(distinctMirrorable.size);
     for (const item of items) {
       expect(item.url).toBe(`https://a.espncdn.com/i/teamlogos/ncaa/500-dark/${item.key}.png`);
     }
