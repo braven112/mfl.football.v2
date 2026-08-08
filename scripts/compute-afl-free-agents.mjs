@@ -36,6 +36,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import {
+  buildConferenceStructure,
+  buildRosteredByConf,
+  confsForPlayer,
+} from '../src/utils/afl-conference-rosters.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,6 +156,7 @@ const seasonYear = getCurrentSeasonYear();
 
 const playersData = readFeed(currentYear, 'players.json');
 const rostersData = readFeed(currentYear, 'rosters.json');
+const leagueData = readFeed(currentYear, 'league.json');
 const projectedScoresData = readFeed(currentYear, 'projectedScores.json');
 const adpDynastyData = readFeed(currentYear, 'adp-dynasty.json');
 const lastYearData = readFeed(seasonYear, 'weekly-results-raw.json');
@@ -208,21 +214,80 @@ if (Array.isArray(lastYearData)) {
   }
 }
 
-// Rostered player set (AFL has no salaries/contracts — membership only)
-const rosteredIds = new Set();
-if (rostersData?.rosters?.franchise) {
-  const franchises = Array.isArray(rostersData.rosters.franchise)
-    ? rostersData.rosters.franchise
-    : [rostersData.rosters.franchise];
-  for (const franchise of franchises) {
-    const rosterPlayers = franchise?.player
-      ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
-      : [];
-    for (const p of rosterPlayers) {
-      if (p?.id) rosteredIds.add(p.id);
-    }
+// ── Conference structure (duplicate-player league) ──
+// AFL runs 24 franchises as two duplicate-player conferences (registry
+// `duplicatePlayers: true`): the same NFL player can be rostered once per
+// conference, and a drop only frees the player IN THAT CONFERENCE. A single
+// global rostered set hid every player the other conference still held
+// (Kyle Pitts / Parker Washington, Aug 2026), so roster membership is
+// tracked per conference: `rostered` means "held in EVERY conference"
+// (unavailable to everyone) and `confs` lists which conferences hold him.
+// The math is shared with the live request-time overlay
+// (src/utils/afl-free-agents-live.ts) via afl-conference-rosters.mjs so the
+// two consumers can't drift.
+let conferenceStructure = buildConferenceStructure(leagueData);
+if (!conferenceStructure) {
+  // A missing/unusable league.json must not silently bake single-pool
+  // semantics (the hidden-player bug) when the last committed snapshot
+  // proves the league is multi-conference — keep the prior snapshot; its
+  // conference metadata keeps the live overlay fully functional.
+  const prior = readJson(OUTPUT_PATH);
+  if (prior?.players?.length && prior?.conferences) {
+    console.warn(
+      '[compute-afl-free-agents] league feed missing or carries no usable conference structure — keeping the previous derived snapshot'
+    );
+    process.exit(0);
   }
 }
+let rosterSets = buildRosteredByConf(rostersData, conferenceStructure);
+if (!rosterSets && conferenceStructure) {
+  // Distinguish the two null causes: a single-pool retry succeeding means
+  // the rosters feed is fine but doesn't line up with the league feed's
+  // conference map (the feeds are fetched independently and can drift —
+  // expansion, re-ID, one fetch stale). A retry failing too means the
+  // rosters feed itself is unusable, handled below.
+  const singlePool = buildRosteredByConf(rostersData, null);
+  if (singlePool) {
+    // Baking single-pool semantics would reship the exact hidden-player bug
+    // this pipeline exists to prevent, for a whole deploy. Prefer keeping
+    // the previous committed snapshot: its conference metadata stays valid,
+    // so the request-time live overlay keeps serving fresh roster flags.
+    const prior = readJson(OUTPUT_PATH);
+    if (prior?.players?.length && prior?.conferences) {
+      console.warn(
+        '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map — keeping the previous derived snapshot'
+      );
+      process.exit(0);
+    }
+    console.warn(
+      '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map and no usable prior snapshot exists — falling back to a single shared pool'
+    );
+    conferenceStructure = null;
+    rosterSets = singlePool;
+  }
+}
+// Rosters feed missing/empty/zero-rostered → bake everyone as available
+// (the pre-conference behavior for a missing feed). Conference metadata is
+// kept so the live overlay can still restore real flags at request time.
+if (!rosterSets) {
+  console.warn(
+    '[compute-afl-free-agents] rosters feed missing or empty — baking all players as available'
+  );
+  const emptyConfIds = conferenceStructure ? conferenceStructure.ids : [''];
+  rosterSets = {
+    confIds: emptyConfIds,
+    rosteredByConf: new Map(emptyConfIds.map((id) => [id, new Set()])),
+  };
+}
+const { confIds } = rosterSets;
+
+// Baked so the live overlay can spot a partial rosters payload even when
+// the league runs a single shared pool (no conference map to count).
+const rosterFranchiseCount = (() => {
+  const raw = rostersData?.rosters?.franchise;
+  if (!raw) return 0;
+  return Array.isArray(raw) ? raw.length : 1;
+})();
 
 // Fantasy-relevant positions (AFL is offense + K + team DEF, no IDP)
 const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
@@ -265,6 +330,10 @@ if (Array.isArray(allPlayers)) {
     const pts = lastYrPtsMap.get(p.id);
     const gp = lastYrGamesMap.get(p.id);
 
+    // Conferences currently holding this player; "rostered" (= hidden by the
+    // page's default filter) only when EVERY conference holds him.
+    const confs = confsForPlayer(p.id, rosterSets);
+
     playerList.push({
       id: p.id,
       name: displayName,
@@ -276,7 +345,8 @@ if (Array.isArray(allPlayers)) {
       age: pos === 'DEF' ? 25 : age,
       espnId: p.espn_id || espnCollegeIds.players?.[p.id]?.espnCollegeId || null,
       projected: projectedMap.get(p.id) ?? null,
-      rostered: rosteredIds.has(p.id),
+      rostered: confs.length === confIds.length,
+      confs,
       exp: pos === 'DEF' ? 5 : exp,
       draftRd: (draftRd && draftRd > 0) ? draftRd : null,
       college: p.college || null,
@@ -332,6 +402,7 @@ const topFa = top
       team: top.team,
       espnId: top.espnId,
       projected: top.projected,
+      confs: top.confs,
     }
   : null;
 
@@ -346,6 +417,10 @@ const output = {
   generatedForYear: currentYear,
   seasonYear,
   mflHost,
+  // Conference metadata for the live roster overlay + per-conference
+  // availability tags (null when the league has one shared player pool).
+  conferences: conferenceStructure,
+  rosterFranchiseCount,
   hasProjected,
   hasLastYrPts,
   hasAdp,
