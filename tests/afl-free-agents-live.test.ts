@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { applyLiveRosters, type FaSnapshot } from '../src/utils/afl-free-agents-live';
 
 // The AFL is a duplicate-player conference league: the same NFL player can be
@@ -67,7 +67,7 @@ describe('applyLiveRosters', () => {
   it('recomputes FA counts and the hero spotlight from the live flags', () => {
     const view = applyLiveRosters(
       makeSnapshot(),
-      rostersPayload({ '0001': ['p1'], '0013': ['p1', 'p2'] }),
+      rostersPayload({ '0001': ['p1'], '0002': [], '0013': ['p1', 'p2'], '0014': [] }),
     );
     expect(view.freeAgentsCount).toBe(2);
     expect(view.faCounts).toEqual({ ALL: 2, RB: 1, WR: 1 });
@@ -78,9 +78,26 @@ describe('applyLiveRosters', () => {
 
   it('does not mutate the snapshot (shared JSON module across SSR requests)', () => {
     const snapshot = makeSnapshot();
-    applyLiveRosters(snapshot, rostersPayload({ '0001': [], '0013': ['p1'] }));
+    applyLiveRosters(
+      snapshot,
+      rostersPayload({ '0001': [], '0002': [], '0013': ['p1'], '0014': [] }),
+    );
     expect(snapshot.players.find((p) => p.id === 'p1')?.rostered).toBe(true);
     expect(snapshot.faCounts).toEqual({ ALL: 1, WR: 1 });
+  });
+
+  it('memoizes the view for identical snapshot + payload inputs (cached rosters object)', () => {
+    const snapshot = makeSnapshot();
+    const payload = rostersPayload({ '0001': ['p1'], '0002': [], '0013': ['p1'], '0014': [] });
+    const first = applyLiveRosters(snapshot, payload);
+    expect(applyLiveRosters(snapshot, payload)).toBe(first);
+    // Different payload object → recompute.
+    expect(
+      applyLiveRosters(
+        snapshot,
+        rostersPayload({ '0001': ['p1'], '0002': [], '0013': ['p1'], '0014': [] }),
+      ),
+    ).not.toBe(first);
   });
 
   it('falls back to the baked snapshot view for a missing or malformed payload', () => {
@@ -96,14 +113,29 @@ describe('applyLiveRosters', () => {
 
   it('falls back when the payload rosters zero players (likely MFL hiccup)', () => {
     const snapshot = makeSnapshot();
-    const view = applyLiveRosters(snapshot, rostersPayload({ '0001': [], '0013': [] }));
+    const view = applyLiveRosters(
+      snapshot,
+      rostersPayload({ '0001': [], '0002': [], '0013': [], '0014': [] }),
+    );
     expect(view.players).toBe(snapshot.players);
   });
 
   it('falls back when a franchise is missing from the conference map', () => {
     const snapshot = makeSnapshot();
-    const view = applyLiveRosters(snapshot, rostersPayload({ '0099': ['p1'], '0013': ['p2'] }));
+    const view = applyLiveRosters(
+      snapshot,
+      rostersPayload({ '0099': ['p1'], '0002': [], '0013': ['p2'], '0014': [] }),
+    );
     expect(view.players).toBe(snapshot.players);
+  });
+
+  it('falls back when the payload carries fewer franchises than the conference map (partial payload)', () => {
+    // A truncated rosters export would otherwise wrongly free every player
+    // held only by the omitted franchises.
+    const snapshot = makeSnapshot();
+    const view = applyLiveRosters(snapshot, rostersPayload({ '0001': ['p1'], '0013': ['p1', 'p2'] }));
+    expect(view.players).toBe(snapshot.players);
+    expect(view.freeAgentsCount).toBe(1);
   });
 
   it('treats every roster as one pool when the league has no conference structure', () => {
@@ -123,5 +155,86 @@ describe('applyLiveRosters', () => {
     });
     expect(view.players.find((p) => p.id === 'p1')?.rostered).toBe(true);
     expect(view.freeAgentsCount).toBe(2);
+  });
+});
+
+describe('fetchLiveAflRosters', () => {
+  const okPayload = { rosters: { franchise: [{ id: '0001', player: { id: 'p1' } }] } };
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  // Module-level cache state persists across imports, so each test gets a
+  // fresh module instance.
+  async function freshFetch() {
+    vi.resetModules();
+    const mod = await import('../src/utils/afl-free-agents-live');
+    return mod.fetchLiveAflRosters;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('fetches once, serves the cached payload inside the 60s TTL, refetches after', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(61_000);
+    await fetchLive(2026);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keys the cache by year — a different year inside the TTL refetches', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
+    await fetchLive(2026);
+    await fetchLive(2027);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/2026/');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/2027/');
+  });
+
+  it('caches a failure for only 20s, then retries', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+    expect(await fetchLive(2026)).toBeNull();
+    expect(await fetchLive(2026)).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(21_000);
+    fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
+    expect(await fetchLive(2026)).toEqual(okPayload);
+  });
+
+  it('treats a 200 with an {error} body (bad league/year) as a failure', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ error: 'unknown league' }) });
+    expect(await fetchLive(2026)).toBeNull();
+  });
+
+  it('returns null when the fetch itself rejects (timeout / network)', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockRejectedValue(new Error('aborted'));
+    expect(await fetchLive(2026)).toBeNull();
+  });
+
+  it('dedupes concurrent cold-cache calls into one in-flight fetch', async () => {
+    const fetchLive = await freshFetch();
+    let release!: (value: { ok: boolean; json: () => Promise<unknown> }) => void;
+    fetchMock.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+    const [a, b] = [fetchLive(2026), fetchLive(2026)];
+    release({ ok: true, json: async () => okPayload });
+    expect(await a).toEqual(okPayload);
+    expect(await b).toEqual(okPayload);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

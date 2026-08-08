@@ -36,6 +36,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import {
+  buildConferenceStructure,
+  buildRosteredByConf,
+  confsForPlayer,
+} from '../src/utils/afl-conference-rosters.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -217,59 +222,27 @@ if (Array.isArray(lastYearData)) {
 // (Kyle Pitts / Parker Washington, Aug 2026), so roster membership is
 // tracked per conference: `rostered` means "held in EVERY conference"
 // (unavailable to everyone) and `confs` lists which conferences hold him.
-// Falls back to a single shared pool when the league feed carries no
-// conference structure (or any franchise can't be mapped to one).
-function buildConferenceStructure(league) {
-  const divisions = league?.league?.divisions?.division;
-  const conferences = league?.league?.conferences?.conference;
-  const franchises = league?.league?.franchises?.franchise;
-  if (!divisions || !conferences || !franchises) return null;
-  const divArr = Array.isArray(divisions) ? divisions : [divisions];
-  const confArr = Array.isArray(conferences) ? conferences : [conferences];
-  const frArr = Array.isArray(franchises) ? franchises : [franchises];
-  if (confArr.length < 2) return null;
-  const divToConf = {};
-  for (const d of divArr) {
-    if (d?.id != null && d?.conference != null) divToConf[d.id] = d.conference;
-  }
-  const franchiseConferences = {};
-  for (const f of frArr) {
-    const conf = f?.division != null ? divToConf[f.division] : undefined;
-    if (!f?.id || conf == null) return null; // unmappable franchise → single pool
-    franchiseConferences[f.id] = conf;
-  }
-  const names = {};
-  for (const c of confArr) {
-    if (c?.id == null) continue;
-    const name = c.name || `Conference ${c.id}`;
-    names[c.id] = { name, abbrev: name.split(/\s+/).map((w) => w[0]).join('').toUpperCase() };
-  }
-  const ids = [...new Set(Object.values(franchiseConferences))].sort();
-  return { ids, names, franchiseConferences };
+// The math is shared with the live request-time overlay
+// (src/utils/afl-free-agents-live.ts) via afl-conference-rosters.mjs so the
+// two consumers can't drift.
+let conferenceStructure = buildConferenceStructure(leagueData);
+let rosterSets = buildRosteredByConf(rostersData, conferenceStructure);
+if (!rosterSets && conferenceStructure) {
+  // league.json and rosters.json are fetched independently and can drift
+  // (expansion, re-ID, one fetch stale). Rather than guess a conference for
+  // an unmappable rosters franchise, drop to one shared pool.
+  console.warn(
+    '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map — falling back to a single shared pool'
+  );
+  conferenceStructure = null;
+  rosterSets = buildRosteredByConf(rostersData, null);
 }
-const conferenceStructure = buildConferenceStructure(leagueData);
-
-// Rostered player sets per conference (AFL has no salaries/contracts —
-// membership only). Single-pool leagues use one pseudo-conference ''.
-const confIds = conferenceStructure ? conferenceStructure.ids : [''];
-const rosteredByConf = new Map(confIds.map((id) => [id, new Set()]));
-if (rostersData?.rosters?.franchise) {
-  const franchises = Array.isArray(rostersData.rosters.franchise)
-    ? rostersData.rosters.franchise
-    : [rostersData.rosters.franchise];
-  for (const franchise of franchises) {
-    const confId = conferenceStructure
-      ? conferenceStructure.franchiseConferences[franchise?.id]
-      : '';
-    const confSet = rosteredByConf.get(confId) ?? rosteredByConf.get(confIds[0]);
-    const rosterPlayers = franchise?.player
-      ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
-      : [];
-    for (const p of rosterPlayers) {
-      if (p?.id) confSet.add(p.id);
-    }
-  }
+// Still unusable (missing/empty rosters feed) → empty single pool, i.e. the
+// pre-conference behavior of "no roster data, everyone shows as available".
+if (!rosterSets) {
+  rosterSets = { confIds: [''], rosteredByConf: new Map([['', new Set()]]) };
 }
+const { confIds } = rosterSets;
 
 // Fantasy-relevant positions (AFL is offense + K + team DEF, no IDP)
 const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
@@ -314,7 +287,7 @@ if (Array.isArray(allPlayers)) {
 
     // Conferences currently holding this player; "rostered" (= hidden by the
     // page's default filter) only when EVERY conference holds him.
-    const confs = confIds.filter((cid) => rosteredByConf.get(cid).has(p.id));
+    const confs = confsForPlayer(p.id, rosterSets);
 
     playerList.push({
       id: p.id,
@@ -384,6 +357,7 @@ const topFa = top
       team: top.team,
       espnId: top.espnId,
       projected: top.projected,
+      confs: top.confs,
     }
   : null;
 

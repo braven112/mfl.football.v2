@@ -95,6 +95,15 @@ const conferenceMeta = snapshot.conferences;
 
 // Initial hero spotlight: top free agent by the default sort (live overlay).
 const topFa = liveView.topFa;
+// When the top FA is only available in one conference, qualify the caption
+// ("… · NL only") so half the league doesn't think they can add him.
+const topFaAvailOnly =
+  topFa && conferenceMeta && topFa.confs && topFa.confs.length > 0 && topFa.confs.length < conferenceMeta.ids.length
+    ? conferenceMeta.ids
+        .filter((id) => !topFa.confs!.includes(id))
+        .map((id) => conferenceMeta.names[id]?.abbrev || id)
+        .join('/') + ' only'
+    : null;
 const topFaIsDef = topFa?.position === 'DEF';
 // For a team defense, spotlight the team's marquee defender (if mapped) so the
 // hero shows a face over the logo watermark instead of a bare crest.
@@ -165,7 +174,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
           <span class="hero-spotlight__name" id="hero-spotlight-name">{topFaDefStar ? topFaDefStar.name : topFa.name}</span>
           <span class="hero-spotlight__meta" id="hero-spotlight-meta">
-            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
+            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}{topFaAvailOnly ? ` · ${topFaAvailOnly}` : ''}
           </span>
         </div>
       )}
@@ -547,7 +556,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const pos = p.position === 'PK' ? 'K' : p.position;
       const teamPart = p.team && p.team !== 'FA' ? ` · ${p.team}` : '';
       const projPart = p.projected != null ? ` · ${p.projected.toFixed(1)} pts` : '';
-      spotlightMetaEl.textContent = `${pos}${teamPart}${projPart}`;
+      // Mirror the SSR caption: qualify a top FA only one conference can add.
+      let availPart = '';
+      if (conferenceMeta && Array.isArray(p.confs) && p.confs.length > 0 && p.confs.length < conferenceMeta.ids.length) {
+        const avail = conferenceMeta.ids
+          .filter((id) => !p.confs.includes(id))
+          .map((id) => conferenceMeta.names[id]?.abbrev || id)
+          .join('/');
+        availPart = ` · ${avail} only`;
+      }
+      spotlightMetaEl.textContent = `${pos}${teamPart}${projPart}${availPart}`;
     }
 
     // The image swap is skipped when the #1 player is unchanged. For a DEF, the
