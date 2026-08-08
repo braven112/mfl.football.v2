@@ -228,21 +228,53 @@ if (Array.isArray(lastYearData)) {
 let conferenceStructure = buildConferenceStructure(leagueData);
 let rosterSets = buildRosteredByConf(rostersData, conferenceStructure);
 if (!rosterSets && conferenceStructure) {
-  // league.json and rosters.json are fetched independently and can drift
-  // (expansion, re-ID, one fetch stale). Rather than guess a conference for
-  // an unmappable rosters franchise, drop to one shared pool.
-  console.warn(
-    '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map — falling back to a single shared pool'
-  );
-  conferenceStructure = null;
-  rosterSets = buildRosteredByConf(rostersData, null);
+  // Distinguish the two null causes: a single-pool retry succeeding means
+  // the rosters feed is fine but doesn't line up with the league feed's
+  // conference map (the feeds are fetched independently and can drift —
+  // expansion, re-ID, one fetch stale). A retry failing too means the
+  // rosters feed itself is unusable, handled below.
+  const singlePool = buildRosteredByConf(rostersData, null);
+  if (singlePool) {
+    // Baking single-pool semantics would reship the exact hidden-player bug
+    // this pipeline exists to prevent, for a whole deploy. Prefer keeping
+    // the previous committed snapshot: its conference metadata stays valid,
+    // so the request-time live overlay keeps serving fresh roster flags.
+    const prior = readJson(OUTPUT_PATH);
+    if (prior?.players?.length && prior?.conferences) {
+      console.warn(
+        '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map — keeping the previous derived snapshot'
+      );
+      process.exit(0);
+    }
+    console.warn(
+      '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map and no usable prior snapshot exists — falling back to a single shared pool'
+    );
+    conferenceStructure = null;
+    rosterSets = singlePool;
+  }
 }
-// Still unusable (missing/empty rosters feed) → empty single pool, i.e. the
-// pre-conference behavior of "no roster data, everyone shows as available".
+// Rosters feed missing/empty/zero-rostered → bake everyone as available
+// (the pre-conference behavior for a missing feed). Conference metadata is
+// kept so the live overlay can still restore real flags at request time.
 if (!rosterSets) {
-  rosterSets = { confIds: [''], rosteredByConf: new Map([['', new Set()]]) };
+  console.warn(
+    '[compute-afl-free-agents] rosters feed missing or empty — baking all players as available'
+  );
+  const emptyConfIds = conferenceStructure ? conferenceStructure.ids : [''];
+  rosterSets = {
+    confIds: emptyConfIds,
+    rosteredByConf: new Map(emptyConfIds.map((id) => [id, new Set()])),
+  };
 }
 const { confIds } = rosterSets;
+
+// Baked so the live overlay can spot a partial rosters payload even when
+// the league runs a single shared pool (no conference map to count).
+const rosterFranchiseCount = (() => {
+  const raw = rostersData?.rosters?.franchise;
+  if (!raw) return 0;
+  return Array.isArray(raw) ? raw.length : 1;
+})();
 
 // Fantasy-relevant positions (AFL is offense + K + team DEF, no IDP)
 const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
@@ -375,6 +407,7 @@ const output = {
   // Conference metadata for the live roster overlay + per-conference
   // availability tags (null when the league has one shared player pool).
   conferences: conferenceStructure,
+  rosterFranchiseCount,
   hasProjected,
   hasLastYrPts,
   hasAdp,

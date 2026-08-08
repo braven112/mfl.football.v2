@@ -18,6 +18,7 @@
  */
 import { getLeagueBySlug } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
+import { fetchWithTimeout } from './fetch-with-timeout';
 import { buildRosteredByConf, confsForPlayer } from './afl-conference-rosters.mjs';
 
 export interface FaConferenceMeta {
@@ -51,6 +52,8 @@ export interface FaTopPlayer {
 export interface FaSnapshot {
   generatedForYear: number;
   conferences: FaConferenceMeta | null;
+  /** Franchise count in the rosters feed at bake time (partial-payload guard). */
+  rosterFranchiseCount?: number;
   faCounts: Record<string, number>;
   topFa: FaTopPlayer | null;
   players: FaSnapshotPlayer[];
@@ -89,7 +92,11 @@ let memo: { snapshot: FaSnapshot; rostersJson: unknown; view: FaView } | null = 
 export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): FaView {
   if (memo && memo.snapshot === snapshot && memo.rostersJson === rostersJson) return memo.view;
 
-  const rosterSets = buildRosteredByConf(rostersJson, snapshot.conferences);
+  const rosterSets = buildRosteredByConf(
+    rostersJson,
+    snapshot.conferences,
+    snapshot.rosterFranchiseCount,
+  );
   if (!rosterSets) return snapshotView(snapshot);
   const confCount: number = rosterSets.confIds.length;
 
@@ -132,10 +139,11 @@ let rostersCache: { at: number; ok: boolean; year: string; data: unknown } | nul
 let inflight: { year: string; promise: Promise<unknown | null> } | null = null;
 
 async function doFetchRosters(year: string): Promise<unknown | null> {
+  const prior = rostersCache;
   const afl = getLeagueBySlug('afl-fantasy')!;
   const url = buildMflExportUrl({ type: 'rosters', leagueId: afl.id, year });
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const res = await fetchWithTimeout(url, { timeoutMs: 5000 });
     if (!res.ok) throw new Error(`MFL rosters HTTP ${res.status}`);
     const data = await res.json();
     // MFL answers 200 with an {error} body for a bad league/year.
@@ -148,9 +156,13 @@ async function doFetchRosters(year: string): Promise<unknown | null> {
     // Loud enough to spot in Vercel logs if MFL persistently rejects the
     // request (e.g. the league stops answering unauthenticated reads) —
     // otherwise the page silently degrades to deploy-time flags forever.
-    console.warn('[afl-free-agents-live] MFL rosters fetch failed — serving baked snapshot flags:', err);
-    rostersCache = { at: Date.now(), ok: false, year, data: null };
-    return null;
+    console.warn('[afl-free-agents-live] MFL rosters fetch failed — serving last-good/baked flags:', err);
+    // Keep serving the last-known-good payload for this year during a blip
+    // (a minute-old roster beats oscillating back to deploy-time flags);
+    // the shorter error TTL retries soon.
+    const lastGood = prior && prior.ok && prior.year === year ? prior.data : null;
+    rostersCache = { at: Date.now(), ok: false, year, data: lastGood };
+    return lastGood;
   }
 }
 

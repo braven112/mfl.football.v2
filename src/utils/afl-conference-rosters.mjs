@@ -12,6 +12,12 @@
  * the request-time live overlay (src/utils/afl-free-agents-live.ts). Plain
  * .mjs on purpose, same pattern as src/config/leagues-data.mjs: node scripts
  * and TS/src code can both import it, so the two consumers cannot drift.
+ *
+ * (src/utils/afl-structure.ts also parses league.json divisions, but for a
+ * different job — per-season HISTORICAL structure for standings, including
+ * the 2003–2012 six-division eras. This module only needs the current
+ * year's franchise → conference availability map; don't merge the two
+ * without accounting for the historical shapes.)
  */
 
 /**
@@ -65,20 +71,27 @@ export function buildConferenceStructure(leagueJson) {
  * shared pool uses one pseudo-conference '') or null when the payload can't
  * be trusted, so callers fall back rather than guess:
  *   - missing/empty `rosters.franchise`;
- *   - multi-conference structure and a franchise the map can't place, or
- *     fewer franchises than the map expects (partial payload — players held
- *     by the omitted franchises would all be wrongly freed);
+ *   - multi-conference structure and a franchise the map can't place;
+ *   - fewer franchises than expected (partial payload — players held by
+ *     the omitted franchises would all be wrongly freed). The expectation
+ *     comes from the conference map in multi-conference mode, and from the
+ *     optional `expectedFranchiseCount` (e.g. the snapshot's baked count)
+ *     in single-pool mode;
  *   - zero rostered players in total (an all-empty export is far more
  *     likely an MFL hiccup than a league-wide roster purge).
  */
-export function buildRosteredByConf(rostersJson, conferenceStructure) {
+export function buildRosteredByConf(rostersJson, conferenceStructure, expectedFranchiseCount) {
   const franchisesRaw = rostersJson?.rosters?.franchise;
   if (!franchisesRaw) return null;
   const franchises = Array.isArray(franchisesRaw) ? franchisesRaw : [franchisesRaw];
   const confIds = conferenceStructure?.ids?.length ? conferenceStructure.ids : [''];
   const franchiseConfs = conferenceStructure?.franchiseConferences ?? {};
   const multiConference = confIds.length > 1;
-  if (multiConference && franchises.length < Object.keys(franchiseConfs).length) return null;
+  const expected = Math.max(
+    multiConference ? Object.keys(franchiseConfs).length : 0,
+    expectedFranchiseCount ?? 0,
+  );
+  if (expected > 0 && franchises.length < expected) return null;
   const rosteredByConf = new Map(confIds.map((id) => [id, new Set()]));
   let totalRostered = 0;
   for (const franchise of franchises) {

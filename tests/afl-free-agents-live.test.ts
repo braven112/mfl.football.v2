@@ -138,6 +138,12 @@ describe('applyLiveRosters', () => {
     expect(view.freeAgentsCount).toBe(1);
   });
 
+  it('single-pool mode still rejects a partial payload via the baked franchise count', () => {
+    const snapshot = makeSnapshot({ conferences: null, rosterFranchiseCount: 4 });
+    const view = applyLiveRosters(snapshot, rostersPayload({ '0001': ['p1'], '0013': ['p2'] }));
+    expect(view.players).toBe(snapshot.players);
+  });
+
   it('treats every roster as one pool when the league has no conference structure', () => {
     const snapshot = makeSnapshot({ conferences: null });
     const view = applyLiveRosters(snapshot, rostersPayload({ '0001': ['p1'], '0013': ['p2'] }));
@@ -213,6 +219,18 @@ describe('fetchLiveAflRosters', () => {
     vi.advanceTimersByTime(21_000);
     fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
     expect(await fetchLive(2026)).toEqual(okPayload);
+  });
+
+  it('serves the last-known-good payload when a refetch fails (no flap back to baked flags)', async () => {
+    const fetchLive = await freshFetch();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => okPayload });
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    vi.advanceTimersByTime(61_000);
+    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+    // Refetch fails → still the stale-good payload, cached on the error TTL.
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    expect(await fetchLive(2026)).toEqual(okPayload);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('treats a 200 with an {error} body (bad league/year) as a failure', async () => {
