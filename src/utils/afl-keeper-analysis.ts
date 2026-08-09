@@ -29,6 +29,12 @@ export const KDEF_GAP_THRESHOLD = 40;
 
 const KDEF_POSITIONS = new Set(['PK', 'Def']);
 
+/**
+ * No team keeps two QBs, so only a roster's top-scoring QB is eligible for
+ * the optimal seven, and a kept backup QB is neutral — never a miss.
+ */
+export const MAX_OPTIMAL_QBS = 1;
+
 // --- Feed shapes (loose — MFL JSON is stringly typed) ---
 
 interface MflWeeklyPlayer {
@@ -89,7 +95,7 @@ export interface PlayerInfo {
 
 // --- Output shapes ---
 
-export type KeeperBadge = 'hit' | 'miss' | 'got-away' | 'kdef-neutral';
+export type KeeperBadge = 'hit' | 'miss' | 'got-away' | 'kdef-neutral' | 'qb2-neutral';
 
 export interface AnalyzedPlayer extends PlayerInfo {
   points: number;
@@ -112,6 +118,8 @@ export interface FranchiseAnalysis {
   gotAway: number;
   /** Kept K/DEF in a non-exception season — shown, never counted as a miss. */
   kdefNeutralKept: number;
+  /** Kept backup QBs (beyond the team's best kept QB) — shown, never a miss. */
+  backupQbNeutralKept: number;
   /** K/DEF that cracked the raw (unfiltered) top seven. */
   kdefRawTopSevenCount: number;
   keptPoints: number;
@@ -313,8 +321,10 @@ function rankByPoints(pids: Iterable<string>, points: Map<string, number>): stri
 }
 
 /**
- * The hindsight-optimal seven for a prev roster (K/DEF excluded unless the
- * position earned a dominance exception) plus the unfiltered raw top seven.
+ * The hindsight-optimal seven for a prev roster plus the unfiltered raw
+ * top seven. Position rules:
+ * - K/DEF excluded unless the position earned a dominance exception.
+ * - At most one QB (the roster's top scorer) — no team keeps two.
  */
 export function computeOptimalSeven(
   prevRosterPids: Set<string>,
@@ -323,9 +333,15 @@ export function computeOptimalSeven(
   exceptionPositions: Set<string>
 ): { optimal: string[]; rawTopSeven: string[] } {
   const ranked = rankByPoints(prevRosterPids, points);
+  let qbsTaken = 0;
   const eligible = ranked.filter((pid) => {
     const position = playersById.get(pid)?.position ?? '?';
-    return !KDEF_POSITIONS.has(position) || exceptionPositions.has(position);
+    if (KDEF_POSITIONS.has(position) && !exceptionPositions.has(position)) return false;
+    if (position === 'QB') {
+      if (qbsTaken >= MAX_OPTIMAL_QBS) return false;
+      qbsTaken += 1;
+    }
+    return true;
   });
   return {
     optimal: eligible.slice(0, KEEPER_LIMIT),
@@ -352,6 +368,18 @@ export function gradeFranchise(
   const rawTopSet = new Set(rawTopSeven);
   const ranked = rankByPoints(prevRosterPids, points);
 
+  // The marginal alternative: the lowest-scoring optimal player the team
+  // did NOT keep. A kept K/DEF or backup QB that outscored them was a good
+  // keeper in hindsight — grade it a hit, not a neutral.
+  const optimalNotKept = optimal.filter((pid) => !kept.has(pid));
+  const marginalAltPoints = optimalNotKept.length
+    ? Math.min(...optimalNotKept.map((pid) => points.get(pid) ?? 0))
+    : Infinity;
+
+  // A team's best-scoring kept QB grades normally; further kept QBs are
+  // backups — nobody keeps two, so they can never be a miss.
+  const topKeptQb = ranked.find((pid) => kept.has(pid) && playersById.get(pid)?.position === 'QB');
+
   const players: AnalyzedPlayer[] = ranked.map((pid, i) => {
     const info = playersById.get(pid) ?? {
       id: pid,
@@ -359,20 +387,24 @@ export function gradeFranchise(
       position: '?',
       nflTeam: '',
     };
+    const playerPoints = points.get(pid) ?? 0;
     const isKept = kept.has(pid);
     const isOptimal = optimalSet.has(pid);
-    const isKdef = KDEF_POSITIONS.has(info.position);
-    const gradable = !isKdef || exceptionPositions.has(info.position);
+    const isNeutralKdef =
+      KDEF_POSITIONS.has(info.position) && !exceptionPositions.has(info.position);
+    const isBackupKeptQb = isKept && info.position === 'QB' && pid !== topKeptQb;
+    const beatMarginalAlt = playerPoints > marginalAltPoints;
 
     let badge: KeeperBadge | null = null;
     if (isKept && isOptimal) badge = 'hit';
-    else if (isKept && !gradable) badge = 'kdef-neutral';
+    else if (isKept && isNeutralKdef) badge = beatMarginalAlt ? 'hit' : 'kdef-neutral';
+    else if (isBackupKeptQb) badge = beatMarginalAlt ? 'hit' : 'qb2-neutral';
     else if (isKept) badge = 'miss';
     else if (isOptimal) badge = 'got-away';
 
     return {
       ...info,
-      points: points.get(pid) ?? 0,
+      points: playerPoints,
       rank: i + 1,
       kept: isKept,
       optimal: isOptimal,
@@ -393,6 +425,7 @@ export function gradeFranchise(
     misses: players.filter((p) => p.badge === 'miss').length,
     gotAway: players.filter((p) => p.badge === 'got-away').length,
     kdefNeutralKept: players.filter((p) => p.badge === 'kdef-neutral').length,
+    backupQbNeutralKept: players.filter((p) => p.badge === 'qb2-neutral').length,
     kdefRawTopSevenCount: players.filter(
       (p) => p.rawTopSeven && KDEF_POSITIONS.has(p.position)
     ).length,

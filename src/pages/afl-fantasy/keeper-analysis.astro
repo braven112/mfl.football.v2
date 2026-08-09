@@ -236,7 +236,14 @@ const kdefExceptionText =
         <li>
           Kickers and defenses are excluded from the optimal seven unless the
           position's top scorer finished {KDEF_GAP_THRESHOLD}+ points clear
-          of the runner-up (they still show as raw top-7 flags).
+          of the runner-up (they still show as raw top-7 flags). But a
+          <em>kept</em> kicker or defense that outscored an optimal player
+          the team let walk counts as a hit — the keep paid off.
+        </li>
+        <li>
+          Only one QB counts toward the optimal seven — no team keeps two.
+          A kept backup QB is never a miss, and grades a hit if he outscored
+          an optimal player the team let walk.
         </li>
         <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
       </ul>

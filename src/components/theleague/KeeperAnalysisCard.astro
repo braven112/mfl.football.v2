@@ -100,6 +100,11 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
             {!previewMode && p.badge === 'kdef-neutral' && (
               <span class="ka-pill ka-pill--kdef">K/DEF</span>
             )}
+            {!previewMode && p.badge === 'qb2-neutral' && (
+              <span class="ka-pill ka-pill--kdef" title="Second QB — nobody keeps two, so it's not a miss">
+                QB2
+              </span>
+            )}
             {!previewMode && !p.kept && p.rawTopSeven && isKdefPosition(p.position) && (
               <span class="ka-pill ka-pill--kdef" title="Cracked the raw top 7, but K/DEF are excluded from grading">
                 K/DEF

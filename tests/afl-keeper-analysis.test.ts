@@ -195,6 +195,32 @@ describe('computeOptimalSeven', () => {
     expect(optimal).toHaveLength(7);
   });
 
+  it('caps the optimal seven at one QB (the roster top scorer)', () => {
+    const twoQbPlayers = playersFeed([
+      ['q1', 'Quarterback, One', 'QB'],
+      ['q2', 'Quarterback, Two', 'QB'],
+      ['r1', 'Runner, One', 'RB'],
+      ['r2', 'Runner, Two', 'RB'],
+      ['w1', 'Wideout, One', 'WR'],
+      ['w2', 'Wideout, Two', 'WR'],
+      ['t1', 'Tightend, One', 'TE'],
+      ['t2', 'Tightend, Two', 'TE'],
+    ]);
+    const twoQbById = buildPlayersById(twoQbPlayers, undefined);
+    const twoQbRoster = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 't1', 't2']);
+    // Both QBs are top-2 raw scorers; only q1 may enter the optimal seven.
+    const twoQbPoints = new Map([
+      ['q1', 300], ['q2', 290],
+      ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170], ['t1', 160], ['t2', 150],
+    ]);
+    const { optimal, rawTopSeven } = computeOptimalSeven(twoQbRoster, twoQbPoints, twoQbById, new Set());
+    expect(optimal).toContain('q1');
+    expect(optimal).not.toContain('q2');
+    expect(optimal).toHaveLength(7); // t2 backfills the slot
+    expect(optimal).toContain('t2');
+    expect(rawTopSeven).toContain('q2'); // raw view is unfiltered
+  });
+
   it('breaks point ties deterministically by id', () => {
     const tied = new Map(points);
     tied.set('x1', 140); // tie with t2 at the 7th-slot boundary
@@ -245,6 +271,78 @@ describe('gradeFranchise', () => {
     expect(analysis.hits).toBe(6);
     expect(analysis.misses).toBe(0);
     expect(analysis.gotAway).toBe(1); // t2
+  });
+
+  it('kept backup QB is neutral, not a miss; letting a backup QB walk is not got-away', () => {
+    const twoQbPlayers = playersFeed([
+      ['q1', 'Quarterback, One', 'QB'],
+      ['q2', 'Quarterback, Two', 'QB'],
+      ['r1', 'Runner, One', 'RB'],
+      ['r2', 'Runner, Two', 'RB'],
+      ['w1', 'Wideout, One', 'WR'],
+      ['w2', 'Wideout, Two', 'WR'],
+      ['t1', 'Tightend, One', 'TE'],
+      ['t2', 'Tightend, Two', 'TE'],
+      ['x1', 'Extra, One', 'WR'],
+    ]);
+    const twoQbById = buildPlayersById(twoQbPlayers, undefined);
+    const twoQbRoster = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'x1']);
+    const twoQbPoints = new Map([
+      ['q1', 300], ['q2', 290],
+      ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170], ['t1', 160], ['t2', 150],
+      ['x1', 10],
+    ]);
+    // Kept both QBs plus 5 of the optimal; t1 (160) and t2 (150) walked.
+    const twoQbKept = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 'x1']);
+    const analysis = gradeFranchise('0001', twoQbRoster, twoQbKept, twoQbPoints, twoQbById, new Set());
+    const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
+    // q2 (290) outscored t1 (160), the best optimal player let go → good keeper.
+    expect(byPid['q2']).toBe('hit');
+    expect(byPid['x1']).toBe('miss');
+    expect(analysis.gotAway).toBe(2); // t1, t2 — q2 never counts as got-away
+
+    // Same shape but the backup QB underperformed the walked alternative.
+    const weakQ2 = new Map(twoQbPoints);
+    weakQ2.set('q2', 120); // below t1's 160 and t2's 150
+    const analysis2 = gradeFranchise('0001', twoQbRoster, twoQbKept, weakQ2, twoQbById, new Set());
+    const byPid2 = Object.fromEntries(analysis2.players.map((p) => [p.id, p.badge]));
+    expect(byPid2['q2']).toBe('qb2-neutral'); // never a miss
+    expect(analysis2.backupQbNeutralKept).toBe(1);
+    expect(analysis2.misses).toBe(1); // only x1
+  });
+
+  it('kept K/DEF that outscored a walked optimal player grades a hit', () => {
+    const kdefPlayers = playersFeed([
+      ['q1', 'Quarterback, One', 'QB'],
+      ['r1', 'Runner, One', 'RB'],
+      ['r2', 'Runner, Two', 'RB'],
+      ['w1', 'Wideout, One', 'WR'],
+      ['w2', 'Wideout, Two', 'WR'],
+      ['t1', 'Tightend, One', 'TE'],
+      ['t2', 'Tightend, Two', 'TE'],
+      ['k1', 'Kicker, Alpha', 'PK'],
+    ]);
+    const kdefById = buildPlayersById(kdefPlayers, undefined);
+    const kdefRoster = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'k1']);
+    const kdefPoints = new Map([
+      ['q1', 300], ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170],
+      ['t1', 160], ['t2', 150], ['k1', 155],
+    ]);
+    // Kept the kicker over t2; k1 (155) outscored the walked t2 (150).
+    const keptWithK = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 'k1']);
+    const analysis = gradeFranchise('0001', kdefRoster, keptWithK, kdefPoints, kdefById, new Set());
+    const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
+    expect(byPid['k1']).toBe('hit'); // the keep paid off
+    expect(analysis.hits).toBe(7);
+    expect(analysis.kdefNeutralKept).toBe(0);
+
+    // Kicker below the walked alternative stays neutral (never a miss).
+    const weakK = new Map(kdefPoints);
+    weakK.set('k1', 100);
+    const analysis2 = gradeFranchise('0001', kdefRoster, keptWithK, weakK, kdefById, new Set());
+    const byPid2 = Object.fromEntries(analysis2.players.map((p) => [p.id, p.badge]));
+    expect(byPid2['k1']).toBe('kdef-neutral');
+    expect(analysis2.misses).toBe(0);
   });
 
   it('computes kept/optimal points and efficiency', () => {
@@ -328,7 +426,7 @@ describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () =
     for (const f of analysis.franchises) {
       expect(f.keptCount).toBeGreaterThanOrEqual(6);
       expect(f.keptCount).toBeLessThanOrEqual(7);
-      expect(f.hits + f.misses + f.kdefNeutralKept).toBe(f.keptCount);
+      expect(f.hits + f.misses + f.kdefNeutralKept + f.backupQbNeutralKept).toBe(f.keptCount);
       expect(f.optimalPoints).toBeGreaterThan(0);
     }
     // 2025 had no 40-pt dominant K/DEF (max gap: Seahawks D, 31).
