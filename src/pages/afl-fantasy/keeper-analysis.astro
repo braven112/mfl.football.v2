@@ -133,11 +133,20 @@ const kdefExceptionText =
   <div class="keeper-analysis">
     <header class="ka-hero">
       <div class="ka-hero__text">
+        <div class="ka-hero__byline">
+          <img
+            class="ka-hero__avatar"
+            src="/assets/claude-schefter-avatar.webp"
+            alt="Claude Schefter"
+            loading="eager"
+          />
+          <span class="ka-hero__eyebrow">A Claude Schefter Report</span>
+        </div>
         <h1>Keeper Report Card</h1>
         <p class="ka-hero__sub">
           Every {prevYear} roster, re-ranked by {selectedYear} points. The
           highlighted rows are the hindsight-optimal seven — the keeps are
-          graded against them.
+          graded against them. Hindsight is undefeated. Filed accordingly.
         </p>
         <p class="ka-hero__meta">
           {previewMode
@@ -246,6 +255,10 @@ const kdefExceptionText =
           an optimal player the team let walk.
         </li>
         <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
+        <li>
+          Numbers come straight from the season's MFL feeds; the judgment is
+          Claude Schefter's. Per source: the source is the box score.
+        </li>
       </ul>
     </footer>
   </div>
@@ -265,6 +278,29 @@ const kdefExceptionText =
     gap: 1rem;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
+  }
+
+  .ka-hero__byline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ka-hero__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--league-accent, #c41e3a);
+  }
+
+  .ka-hero__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--content-text-muted, #6b7280);
   }
 
   .ka-hero h1 {
