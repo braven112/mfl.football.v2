@@ -1,51 +1,9 @@
-run: 2026-08-09T17:20:43Z event=push flags=--league=afl
+run: 2026-08-09T17:29:41Z event=push flags=--league=afl --dry-run
 
-League: afl (19621)
-Target years: 2003, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022
+League: afl (19621) [DRY RUN]
+Target years: 2003
 
 2003: NO POINTS — pf present but zero on every franchise — MFL has no points data for this year
-2010: OK — records match committed feed; pf usable (sample 0023: 18 games × avgpf 125.5 = 2259.00 vs exact pf 2134.27)
-  note: avgpf×games approximation was off >2% for 24/24 franchises (pf/approx mean 0.9444, spread 0.0009)
-  gained fields: confpct, divpct, pf, vp
-  wrote standings.json
-2011: OK — records match committed feed; pf usable (sample 0009: 18 games × avgpf 123.9 = 2230.20 vs exact pf 2105.57)
-  note: avgpf×games approximation was off >2% for 24/24 franchises (pf/approx mean 0.9444, spread 0.0007)
-  gained fields: confpct, divpct, pf, vp
-  wrote standings.json
-2012: OK — records match committed feed; pf usable (sample 0023: 18 games × avgpf 146.3 = 2633.40 vs exact pf 2487.46)
-  note: avgpf×games approximation was off >2% for 24/24 franchises (pf/approx mean 0.9445, spread 0.0008)
-  gained fields: confpct, divpct, pf, vp
-  wrote standings.json
-2013: OK — records match committed feed; pf usable (sample 0008: 17 games × avgpf 131.0 = 2227.00 vs exact pf 2226.83)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-  wrote standings.json
-2014: OK — records match committed feed; pf usable (sample 0004: 17 games × avgpf 138.1 = 2347.70 vs exact pf 2347.89)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-  wrote standings.json
-2015: OK — records match committed feed; pf usable (sample 0016: 17 games × avgpf 131.8 = 2240.60 vs exact pf 2239.89)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-  wrote standings.json
-2016: OK — records match committed feed; pf usable (sample 0005: 17 games × avgpf 137.6 = 2339.20 vs exact pf 2338.57)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-  wrote standings.json
-2017: OK — records match committed feed; pf usable (sample 0021: 17 games × avgpf 121.8 = 2070.60 vs exact pf 2069.91)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-  wrote standings.json
-2018: OK — records match committed feed; pf usable (sample 0005: 17 games × avgpf 140.1 = 2381.70 vs exact pf 2381.30)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-  wrote standings.json
-2019: OK — records match committed feed; pf usable (sample 0001: 17 games × avgpf 147.1 = 2500.70 vs exact pf 2501.30)
-  gained fields: all_play_pct, confpct, divpct, h2ht, pa, pf, vp
-  wrote standings.json
-2020: OK — records match committed feed; pf usable (sample 0009: 17 games × avgpf 126.9 = 2157.30 vs exact pf 2158.14)
-  gained fields: all_play_pct, confpct, divpct, h2ht, pa, pf, vp
-  wrote standings.json
-2021: OK — records match committed feed; pf usable (sample 0008: 17 games × avgpf 147.8 = 2512.60 vs exact pf 2512.43)
-  gained fields: all_play_pct, confpct, divpct, h2ht, pa, pf, vp
-  wrote standings.json
-2022: OK — records match committed feed; pf usable (sample 0005: 17 games × avgpf 127.2 = 2162.40 vs exact pf 2162.70)
-  gained fields: confpct, divpct, h2ht, pa, pf, vp
-  wrote standings.json
 
-Summary: 13 verified + written, 1 with no points on MFL, 0 failed
+Summary: 0 verified, 1 with no points on MFL, 0 failed
   NO POINTS 2003: pf present but zero on every franchise — MFL has no points data for this year
