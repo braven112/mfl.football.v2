@@ -447,6 +447,9 @@
      cascade-aware. */
   --trophy-gold: #e6c976;                        /* year stamps, rims  5.66:1 */
   --trophy-gold-edge: #c9a44c;                   /* borders only, never text */
+  /* Text placed ON trophy gold — the sweep ribbon. Near-black rather than the
+     footer's white, which would be 1.9:1 on this gold; this is ~11:1. */
+  --trophy-gold-ink: #14100a;
 
   /* ========================================
      Component Tokens - Accent Content
