@@ -2,7 +2,7 @@
 /**
  * What's New index — shared implementation for both leagues.
  *
- * Server-rendered to read the whats_new_last_visit cookie for "NEW" badges.
+ * Server-rendered to read the whats_new_last_visit cookie for "UNREAD" badges.
  * The interactive listing (filters, card grid, timeline sidebar) is a
  * React island. The page header stays as Astro HTML for SEO.
  *
@@ -48,7 +48,7 @@ const basePath = hideLeaguePrefix ? '' : `/${league.slug}`;
 
 const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
 
-// Read the last-visit cookie for "NEW" badge computation
+// Read the last-visit cookie for "UNREAD" badge computation
 const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
 const lastVisitDate = lastVisitCookie?.value ?? null;
 
@@ -72,7 +72,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       <h1 class="whats-new-page__title">
         What's New
         {newCount > 0 && (
-          <span class="whats-new-page__new-count">{newCount} new</span>
+          <span class="whats-new-page__new-count">{newCount} unread</span>
         )}
       </h1>
       <p class="whats-new-page__subtitle">
@@ -437,7 +437,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
   }
 
-  /* Card meta row (badge + NEW) */
+  /* Card meta row (category badge + UNREAD) */
   .wn-card__meta {
     display: flex;
     align-items: center;

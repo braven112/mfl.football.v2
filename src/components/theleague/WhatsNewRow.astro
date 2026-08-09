@@ -25,7 +25,7 @@ interface Props {
   allReleasesLink?: string;
   /** Cache-busted sprite URL */
   spriteUrl?: string;
-  /** Last visit date for "NEW" badges (from cookie) */
+  /** Last visit date for "UNREAD" badges (from cookie) */
   lastVisitDate?: string | null;
   /** Apex host shown in the card's fake browser bar (per-league) */
   urlHost?: string;
@@ -96,9 +96,9 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
                   {WHATS_NEW_CATEGORY_LABELS[entry.category]}
                 </span>
                 {entry.isNew && (
-                  <span class="wnr-card__new-badge" title="New since your last visit">
+                  <span class="wnr-card__new-badge" title="Published since your last visit">
                     <span class="wnr-card__new-dot" aria-hidden="true" />
-                    NEW
+                    UNREAD
                   </span>
                 )}
               </div>
