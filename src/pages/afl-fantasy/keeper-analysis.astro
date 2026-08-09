@@ -11,7 +11,7 @@
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
-import KeeperAnalysisCard from '../../components/theleague/KeeperAnalysisCard.astro';
+import KeeperAnalysisCard from '../../components/afl-fantasy/KeeperAnalysisCard.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
 import { getCurrentSeasonYear } from '../../utils/league-year';
@@ -264,8 +264,11 @@ const kdefExceptionText =
       <ul>
         <li>
           Points are {selectedYear} regular-season fantasy points in AFL
-          scoring, raw totals. A kept player traded mid-season still credits
-          his full season to the team that kept him.
+          scoring, summed across the weeks a player was on a roster (MFL
+          records scores for rostered players only, so unrostered stretches
+          don't count). A kept player traded mid-season still credits his
+          full season to the team that kept him. Totals update live during
+          game weekends as the feeds refresh.
         </li>
         <li>
           Keeper classes are reconstructed from MFL rosters: players who

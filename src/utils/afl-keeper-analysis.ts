@@ -154,7 +154,11 @@ export interface KeeperAnalysis {
   summary: KeeperAnalysisSummary;
   /** True when the points season hasn't produced any scores yet (pre-week-1). */
   previewMode: boolean;
-  /** Highest completed regular-season week (0 in preview mode). */
+  /**
+   * Highest regular-season week with any recorded scores (0 in preview
+   * mode). During a live game weekend this includes the in-flight week —
+   * scores accrue as the feeds refresh.
+   */
   throughWeek: number;
 }
 
@@ -344,6 +348,38 @@ export function getDraftedPidsByFranchise(
   return byFranchise;
 }
 
+/**
+ * For each franchise, every player drafted in ITS draft unit (= its
+ * conference — the AFL's AL and NL draft separately from duplicate player
+ * pools). A player drafted anywhere in the franchise's own unit re-entered
+ * that conference's pool and can't be one of its keeps (covers
+ * drafted-elsewhere-then-traded-back), while the SAME NFL player being
+ * drafted in the other conference says nothing about this one.
+ */
+export function getUnitDraftedPidsByFranchise(
+  draftResults: MflDraftResultsFeed | undefined
+): Map<string, Set<string>> {
+  const byFranchise = new Map<string, Set<string>>();
+  for (const unit of asArray(draftResults?.draftResults?.draftUnit)) {
+    const unitPids = new Set<string>();
+    const unitFids = new Set<string>();
+    for (const pick of asArray(unit?.draftPick)) {
+      if (pick?.franchise) unitFids.add(pick.franchise);
+      const pid = pick?.player;
+      if (pid && pid !== '----') unitPids.add(pid);
+    }
+    for (const fid of unitFids) {
+      const existing = byFranchise.get(fid);
+      if (existing) {
+        for (const pid of unitPids) existing.add(pid);
+      } else {
+        byFranchise.set(fid, new Set(unitPids));
+      }
+    }
+  }
+  return byFranchise;
+}
+
 /** kept = prevRoster ∩ opening − drafted. */
 export function reconstructKeepers(
   prevRosterPids: Set<string>,
@@ -494,7 +530,7 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
   const { points, maxCompletedWeek } = computeSeasonPoints(input.curWeeklyRaw ?? []);
   const exceptions = computeKdefExceptions(points, playersById);
   const exceptionPositions = new Set(exceptions.map((e) => e.position));
-  const draftedByFranchise = getDraftedPidsByFranchise(input.curDraftResults);
+  const unitDrafted = getUnitDraftedPidsByFranchise(input.curDraftResults);
 
   const franchises: FranchiseAnalysis[] = [];
   for (const franchise of input.prevRosters?.rosters?.franchise ?? []) {
@@ -504,7 +540,7 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
     const kept = reconstructKeepers(
       prevPids,
       opening,
-      draftedByFranchise.get(franchise.id) ?? new Set()
+      unitDrafted.get(franchise.id) ?? new Set()
     );
     franchises.push(
       gradeFranchise(franchise.id, prevPids, kept, points, playersById, exceptionPositions)

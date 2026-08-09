@@ -8,6 +8,7 @@ import {
   computeOptimalSeven,
   computeSeasonPoints,
   getDraftedPidsByFranchise,
+  getUnitDraftedPidsByFranchise,
   getOpeningRosterPids,
   gradeFranchise,
   KDEF_GAP_THRESHOLD,
@@ -192,6 +193,25 @@ describe('keeper reconstruction', () => {
     };
     const rosters = rostersFeed({ '0001': ['1', '2', '3'] });
     expect([...getOpeningRosterPids([shell], rosters, '0001')].sort()).toEqual(['1', '2', '3']);
+  });
+
+  it('scopes the drafted pool to the franchise draft unit (conference)', () => {
+    const draftResults = {
+      draftResults: {
+        draftUnit: [
+          // AL unit: 0001 and 0002 draft; 55 drafted by 0002.
+          { draftPick: [{ franchise: '0001', player: '54' }, { franchise: '0002', player: '55' }] },
+          // NL unit: 0013 drafts the SAME NFL player 55 (duplicate pool).
+          { draftPick: [{ franchise: '0013', player: '55' }] },
+        ],
+      },
+    };
+    const byUnit = getUnitDraftedPidsByFranchise(draftResults);
+    // 0001's pool includes 0002's pick (same unit) — a drafted-then-traded-back
+    // player can't be a keep...
+    expect(byUnit.get('0001')?.has('55')).toBe(true);
+    // ...and 0013's NL pool is independent of the AL picks.
+    expect(byUnit.get('0013')?.has('54')).toBe(false);
   });
 
   it('parses draft picks and ignores passed picks', () => {
