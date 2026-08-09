@@ -8,14 +8,23 @@ name: Backfill Standings Points (ALL=1)
 # previously clobbered rich playoff-bracket data (see
 # docs/claude/insights/domains/mfl-api.md, 2026-07-04).
 #
-# Run from the GitHub Actions UI (or `gh workflow run`), picking the branch
-# to backfill. Always dry-run first: the run log prints a per-year verdict
-# (fields gained, pf vs avgpf×games cross-check) without writing anything.
+# Two triggers:
+#  - workflow_dispatch from the Actions UI / gh CLI, with inputs.
+#  - a push that touches .github/backfill-standings-points-request.json —
+#    inputs are read from that file. This exists so remote Claude Code
+#    sessions (whose egress allows git but not the GitHub API) can fire a
+#    run by committing the request file and read the outcome from the
+#    report file the run commits back to the branch.
+#
+# Always dry-run first: the run reports a per-year verdict (fields gained,
+# pf vs avgpf×games cross-check) to the log AND to
+# .github/backfill-standings-points-report.txt, committed back to the
+# launching branch, without touching any feed.
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Fetch + verify + report only; write nothing, commit nothing'
+        description: 'Fetch + verify + report only; write no feeds'
         required: false
         default: 'true'
       league:
@@ -26,6 +35,9 @@ on:
         description: 'Optional space-separated years (e.g. "2015 2016"); blank = every season missing usable pf'
         required: false
         default: ''
+  push:
+    paths:
+      - '.github/backfill-standings-points-request.json'
 
 concurrency:
   group: backfill-standings-points
@@ -51,24 +63,48 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Resolve inputs
+        id: cfg
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            REQ=./.github/backfill-standings-points-request.json
+            echo "dry_run=$(node -p "String(require('$REQ').dry_run ?? true)")" >> "$GITHUB_OUTPUT"
+            echo "league=$(node -p "require('$REQ').league ?? 'afl'")" >> "$GITHUB_OUTPUT"
+            echo "years=$(node -p "(require('$REQ').years ?? []).join(' ')")" >> "$GITHUB_OUTPUT"
+          else
+            echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+            echo "league=${{ inputs.league }}" >> "$GITHUB_OUTPUT"
+            echo "years=${{ inputs.years }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Backfill standings points
         run: |
-          FLAGS="--league=${{ inputs.league }}"
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          FLAGS="--league=${{ steps.cfg.outputs.league }}"
+          if [ "${{ steps.cfg.outputs.dry_run }}" = "true" ]; then
             FLAGS="$FLAGS --dry-run"
           fi
-          for Y in ${{ inputs.years }}; do
+          for Y in ${{ steps.cfg.outputs.years }}; do
             FLAGS="$FLAGS --year=$Y"
           done
-          node ./scripts/backfill-standings-points.mjs $FLAGS
+          set -o pipefail
+          {
+            echo "run: $(date -u +%FT%TZ) event=${{ github.event_name }} flags=$FLAGS"
+            echo
+          } > .github/backfill-standings-points-report.txt
+          node ./scripts/backfill-standings-points.mjs $FLAGS 2>&1 \
+            | tee -a .github/backfill-standings-points-report.txt
 
-      - name: Commit and push
-        if: ${{ inputs.dry_run != 'true' }}
+      # Report commits on every run (including dry runs and failures) so
+      # API-less sessions can read the outcome; feed changes only exist on
+      # non-dry runs. The request file never matches these paths, so a
+      # report push cannot re-trigger the workflow.
+      - name: Commit and push report (+ any feed changes)
+        if: ${{ always() }}
         uses: ./.github/actions/commit-push
         with:
-          check-paths: 'data/*/mfl-feeds/*/standings.json'
-          add-paths: 'data/*/mfl-feeds/*/standings.json'
-          commit-message: 'chore: backfill exact standings points via leagueStandings ALL=1'
-          no-changes-message: 'No standings gained exact points — nothing to commit.'
+          check-paths: '.github/backfill-standings-points-report.txt data/*/mfl-feeds/*/standings.json'
+          add-paths: '.github/backfill-standings-points-report.txt data/*/mfl-feeds/*/standings.json'
+          commit-message: 'chore: standings points backfill run report'
+          no-changes-message: 'Nothing to commit.'
           git-user-name: 'Standings Points Backfill Bot'
           push-ref: ${{ github.ref_name }}
