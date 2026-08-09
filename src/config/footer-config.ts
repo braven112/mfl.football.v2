@@ -184,7 +184,7 @@ const THELEAGUE_COLUMNS: ColumnMap = {
  *
  * AFL runs contracts:false / salaryCap:false, so none of TheLeague's Front
  * Office pages exist here; its Front Office is the league-wide tools instead.
- * Two entries are `soon` — pages Brandon is building.
+ * One entry is `soon` — a page Brandon is building.
  */
 const AFL_COLUMNS: ColumnMap = {
   'My Team': [
@@ -205,7 +205,7 @@ const AFL_COLUMNS: ColumnMap = {
   ],
   'Front Office': [
     'afl-draft-predictor',
-    { label: 'Keeper Report Card', soon: true },
+    'afl-keeper-analysis',
     { id: 'afl-schedule-strength', label: 'The Gauntlet' },
     // NO league-comparison: it lives at the bare path /league-comparison, which
     // is TheLeague-only, and it is a salary-cap tool — AFL runs salaryCap:false.
