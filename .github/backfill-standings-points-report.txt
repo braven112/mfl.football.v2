@@ -1,35 +1,16 @@
-run: 2026-08-09T17:15:30Z event=push flags=--league=afl --dry-run
+run: 2026-08-09T17:17:42Z event=push flags=--league=afl --dry-run --year=2010 --year=2011 --year=2012
 
 League: afl (19621) [DRY RUN]
-Target years: 2003, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022
+Target years: 2010, 2011, 2012
 
-2003: NO POINTS — pf present but zero on every franchise — MFL has no points data for this year
-2010: ERROR — pf vs avgpf × games disagrees on 24/24 franchises
-2011: ERROR — pf vs avgpf × games disagrees on 24/24 franchises
-2012: ERROR — pf vs avgpf × games disagrees on 24/24 franchises
-2013: OK — pf verified (sample 0008: avgpf×games 2227.00 → pf 2226.83)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-2014: OK — pf verified (sample 0004: avgpf×games 2347.70 → pf 2347.89)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-2015: OK — pf verified (sample 0016: avgpf×games 2240.60 → pf 2239.89)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-2016: OK — pf verified (sample 0005: avgpf×games 2339.20 → pf 2338.57)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-2017: OK — pf verified (sample 0021: avgpf×games 2070.60 → pf 2069.91)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-2018: OK — pf verified (sample 0005: avgpf×games 2381.70 → pf 2381.30)
-  gained fields: all_play_pct, confpct, divpct, pa, pf, vp
-2019: OK — pf verified (sample 0001: avgpf×games 2500.70 → pf 2501.30)
-  gained fields: all_play_pct, confpct, divpct, h2ht, pa, pf, vp
-2020: OK — pf verified (sample 0009: avgpf×games 2157.30 → pf 2158.14)
-  gained fields: all_play_pct, confpct, divpct, h2ht, pa, pf, vp
-2021: OK — pf verified (sample 0008: avgpf×games 2512.60 → pf 2512.43)
-  gained fields: all_play_pct, confpct, divpct, h2ht, pa, pf, vp
-2022: OK — pf verified (sample 0005: avgpf×games 2162.40 → pf 2162.70)
-  gained fields: confpct, divpct, h2ht, pa, pf, vp
+2010: OK — records match committed feed; pf usable (sample 0023: 18 games × avgpf 125.5 = 2259.00 vs exact pf 2134.27)
+  note: avgpf×games approximation was off >2% for 24/24 franchises (pf/approx mean 0.9444, spread 0.0009)
+  gained fields: confpct, divpct, pf, vp
+2011: OK — records match committed feed; pf usable (sample 0009: 18 games × avgpf 123.9 = 2230.20 vs exact pf 2105.57)
+  note: avgpf×games approximation was off >2% for 24/24 franchises (pf/approx mean 0.9444, spread 0.0007)
+  gained fields: confpct, divpct, pf, vp
+2012: OK — records match committed feed; pf usable (sample 0023: 18 games × avgpf 146.3 = 2633.40 vs exact pf 2487.46)
+  note: avgpf×games approximation was off >2% for 24/24 franchises (pf/approx mean 0.9445, spread 0.0008)
+  gained fields: confpct, divpct, pf, vp
 
-Summary: 10 verified, 1 with no points on MFL, 3 failed
-  FAILED 2010: pf disagrees with avgpf × games on 24/24 franchises — wrong data?
-  FAILED 2011: pf disagrees with avgpf × games on 24/24 franchises — wrong data?
-  FAILED 2012: pf disagrees with avgpf × games on 24/24 franchises — wrong data?
-  NO POINTS 2003: pf present but zero on every franchise — MFL has no points data for this year
+Summary: 3 verified, 0 with no points on MFL, 0 failed
