@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveLeaguePath } from '../src/utils/nav-utils';
+import { resolveLeaguePath, resolveDirectoryHref } from '../src/utils/nav-utils';
 
 // resolveLeaguePath is the outbound complement to the middleware host map.
 // When the request comes in on a league apex host (theleague.us,
@@ -73,5 +73,38 @@ describe('resolveLeaguePath', () => {
     it('does not strip /afl-fantasy-x (substring collision guard)', () => {
       expect(resolveLeaguePath('/afl-fantasy-x', true)).toBe('/afl-fantasy-x');
     });
+  });
+});
+
+describe('resolveDirectoryHref', () => {
+  it('prefixes a bare directory path with the target league', () => {
+    expect(resolveDirectoryHref('/rosters', 'theleague')).toBe('/theleague/rosters');
+    expect(resolveDirectoryHref('/rosters', 'afl')).toBe('/afl-fantasy/rosters');
+    expect(resolveDirectoryHref('/rosters', 'bb1')).toBe('/best-ball-1/rosters');
+  });
+
+  it('does NOT double-prefix an already-prefixed path', () => {
+    // The bug this helper exists to prevent: /theleague/theleague/lineup.
+    expect(resolveDirectoryHref('/theleague/lineup', 'theleague')).toBe('/theleague/lineup');
+    expect(resolveDirectoryHref('/afl-fantasy/rosters', 'afl')).toBe('/afl-fantasy/rosters');
+  });
+
+  it('re-points a path from one league to another', () => {
+    expect(resolveDirectoryHref('/afl-fantasy/rosters', 'theleague')).toBe('/theleague/rosters');
+    expect(resolveDirectoryHref('/theleague/lineup', 'afl')).toBe('/afl-fantasy/lineup');
+  });
+
+  it('preserves query strings', () => {
+    expect(resolveDirectoryHref('/rosters?view=planner', 'theleague')).toBe(
+      '/theleague/rosters?view=planner'
+    );
+    expect(resolveDirectoryHref('/afl-fantasy/standings?view=all_play', 'afl')).toBe(
+      '/afl-fantasy/standings?view=all_play'
+    );
+  });
+
+  it('maps a bare league root to the league prefix', () => {
+    expect(resolveDirectoryHref('/', 'afl')).toBe('/afl-fantasy');
+    expect(resolveDirectoryHref('/afl-fantasy', 'afl')).toBe('/afl-fantasy');
   });
 });

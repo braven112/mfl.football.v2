@@ -146,6 +146,35 @@ export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
 }
 
 /**
+ * Turn a `page-directory.json` path into an href for a given league.
+ *
+ * Directory paths are inconsistent about prefixes by design: shared pages are
+ * stored unprefixed (`/rosters`), while league-specific ones carry their own
+ * (`/afl-fantasy/rosters`, `/theleague/lineup`). Anything reading the
+ * directory therefore has to normalise before prefixing, or it emits
+ * `/theleague/theleague/lineup`.
+ *
+ * Strips whichever known league prefix is present, then re-prefixes with the
+ * target league. Query strings and hashes survive, so directory entries like
+ * `/rosters?view=planner` keep working.
+ */
+export function resolveDirectoryHref(path: string, league: LeagueSlug): string {
+  let bare = path;
+  for (const prefix of Object.values(LEAGUE_PREFIXES)) {
+    if (bare === prefix) {
+      bare = '/';
+      break;
+    }
+    if (bare.startsWith(`${prefix}/`)) {
+      bare = bare.slice(prefix.length);
+      break;
+    }
+  }
+  const prefix = getLeaguePrefix(league);
+  return bare === '/' ? prefix : `${prefix}${bare}`;
+}
+
+/**
  * Build the nav footer's "logged-in" team chip info from a franchise id and a
  * league's team roster.
  *
