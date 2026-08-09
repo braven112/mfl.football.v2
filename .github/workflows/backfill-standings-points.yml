@@ -1,0 +1,74 @@
+name: Backfill Standings Points (ALL=1)
+
+# Manually-triggered, standings-only backfill: re-fetches historical
+# standings.json files with the leagueStandings ALL=1 parameter to recover
+# exact pf/pa for seasons whose committed feeds only carry avgpf (AFL
+# 2010–2022). Deliberately does NOT reuse backfill-historical-feeds.yml —
+# that script's --force refetches every feed type for a year and has
+# previously clobbered rich playoff-bracket data (see
+# docs/claude/insights/domains/mfl-api.md, 2026-07-04).
+#
+# Run from the GitHub Actions UI (or `gh workflow run`), picking the branch
+# to backfill. Always dry-run first: the run log prints a per-year verdict
+# (fields gained, pf vs avgpf×games cross-check) without writing anything.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Fetch + verify + report only; write nothing, commit nothing'
+        required: false
+        default: 'true'
+      league:
+        description: 'League to backfill (afl | theleague)'
+        required: false
+        default: 'afl'
+      years:
+        description: 'Optional space-separated years (e.g. "2015 2016"); blank = every season missing usable pf'
+        required: false
+        default: ''
+
+concurrency:
+  group: backfill-standings-points
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (current branch)
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          ref: ${{ github.ref }}
+
+      # The script only uses node built-ins + src/config/leagues-data.mjs
+      # (dependency-free ESM), so no pnpm install is needed.
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Backfill standings points
+        run: |
+          FLAGS="--league=${{ inputs.league }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            FLAGS="$FLAGS --dry-run"
+          fi
+          for Y in ${{ inputs.years }}; do
+            FLAGS="$FLAGS --year=$Y"
+          done
+          node ./scripts/backfill-standings-points.mjs $FLAGS
+
+      - name: Commit and push
+        if: ${{ inputs.dry_run != 'true' }}
+        uses: ./.github/actions/commit-push
+        with:
+          check-paths: 'data/*/mfl-feeds/*/standings.json'
+          add-paths: 'data/*/mfl-feeds/*/standings.json'
+          commit-message: 'chore: backfill exact standings points via leagueStandings ALL=1'
+          no-changes-message: 'No standings gained exact points — nothing to commit.'
+          git-user-name: 'Standings Points Backfill Bot'
+          push-ref: ${{ github.ref_name }}
