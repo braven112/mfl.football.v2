@@ -120,6 +120,13 @@ const currentLeagueMflId =
 // Get team preference based on current league context
 let myteam: string | null = null;
 let teamInfo: NavTeamInfo | null = null;
+/**
+ * The signed JWT session's franchise, or null. Strictly the session — never
+ * the preference cookie or ?myteam=, unlike `myteam` above. Consumed by the
+ * footer to name the AFL all-play link after the tier the signed-in owner
+ * actually plays in.
+ */
+let sessionFranchiseId: string | null = null;
 
 if (league === 'afl') {
 	// AFL: Check AFL-specific preference cookie first, fall back to JWT
@@ -135,6 +142,7 @@ if (league === 'afl') {
 	// without a login), so it must not feed the chip — only `myteam` above, which
 	// drives personalization/browse-as, may fall back to it.
 	const navTeamId = aflJwtFranchiseId || null;
+	sessionFranchiseId = navTeamId;
 
 	if (navTeamId) {
 		// Dynamic import AFL config only when needed
@@ -152,6 +160,7 @@ if (league === 'afl') {
 
 	// Nav chip reflects the signed JWT session ONLY (see TheLeague branch note).
 	const navTeamId = bb1JwtFranchiseId || null;
+	sessionFranchiseId = navTeamId;
 
 	if (navTeamId) {
 		// Dynamic import bb1 config only when needed
@@ -172,6 +181,7 @@ if (league === 'afl') {
 			? layoutAuthUser.franchiseId
 			: null;
 	const navTeamId = theLeagueJwtFranchiseId || null;
+	sessionFranchiseId = navTeamId;
 
 	if (navTeamId) {
 		teamInfo = buildNavTeamInfo(navTeamId, leagueConfigData.teams, 'theleague' as LeagueSlug);
@@ -293,7 +303,7 @@ const themePref = getThemePreference(Astro.cookies);
 			<main>
 				<slot />
 			</main>
-			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} />
+			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />
 		</div>
 
 		<!-- PWA Auth Gate: require login when running as installed app -->

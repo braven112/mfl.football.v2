@@ -911,3 +911,34 @@ rosters.astro). The newest run then owns ALL entry points. The root cause
 **Evidence:** src/pages/theleague/rosters.astro `initCutdownPanelBindings`
 (window.__cdpH), verified with a Playwright run asserting the exact POST
 payload after each edit path.
+
+---
+## 2026-08-09 - `page-directory.json` Paths Are Inconsistently Prefixed — Normalize Before Re-Prefixing
+
+**Context:** Building the site footer's link deck off directory ids so paths
+and titles have one source of truth.
+
+**Insight:** Directory `path` values are NOT uniform, by design:
+
+- TheLeague's shared pages are stored **bare**: `/rosters`, `/players`, `/stats`
+- Some TheLeague pages are stored **prefixed**: `/theleague/lineup`,
+  `/theleague/pecking-order`
+- AFL and best-ball entries are **always prefixed**: `/afl-fantasy/rosters`
+
+So "prefix the active league onto `entry.path`" is wrong for two of the three
+shapes and silently emits `/theleague/theleague/lineup`. `QuickLinks.astro`
+had exactly this bug. The corollary for league scoping: a bare path belongs to
+TheLeague, which is how you decide whether a directory entry is even eligible
+for another league's UI — assuming bare means "shared" surfaces `/salary-archive`
+on AFL, which runs `salaryCap:false` and has no such page.
+
+**Evidence:** `resolveDirectoryHref(path, league)` in `src/utils/nav-utils.ts`
+strips whichever known prefix is present, then re-prefixes, preserving query
+strings (directory entries like `/rosters?view=planner` depend on this).
+Covered by `tests/resolve-league-path.test.ts`.
+
+**Recommendation:** Never string-concatenate a league prefix onto a directory
+path. Use `resolveDirectoryHref()`, then `resolveLeaguePath()` for the apex-host
+case. For "does this page exist for league X", test the prefix explicitly
+(`/afl-fantasy` → AFL, `/best-ball-1` → best-ball, anything else → TheLeague)
+rather than treating unprefixed as universal.

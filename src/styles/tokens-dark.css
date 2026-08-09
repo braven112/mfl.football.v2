@@ -560,6 +560,13 @@ html.dark[data-league="afl"] ::selection {
    ======================================== */
 html.dark[data-league="bb1"] {
   --league-accent: #34d399;                            /* emerald brightened for dark */
+  /* ── Breadcrumb strip + footer. REQUIRED: the generic html.dark block sets
+     --breadcrumb-bar-bg to TheLeague's blue gradient and loads after the
+     light per-league block, so without re-asserting it here best-ball's dark
+     breadcrumb bar and footer both render TheLeague blue. AFL re-asserts its
+     navy the same way. ── */
+  --breadcrumb-bar-bg: #0a3326;                        /* deeper than the light --bb-green */
+  --breadcrumb-bar-border: var(--league-accent, #34d399);
   --logo-name-primary-color: #ffffff;                  /* "Best Ball" wordmark — white (html.dark's green is TheLeague's logo green) */
   --link-color-accent: #34d399;
   --link-color-accent-hover: #6ee7b7;
