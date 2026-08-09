@@ -1,0 +1,391 @@
+---
+/**
+ * AFL Keeper Report Card — hindsight grading of each franchise's keeper
+ * class. Shows every previous-season roster ranked by the points those
+ * players scored the FOLLOWING season, highlights the optimal seven, and
+ * grades the actual keeps (hits / misses / the ones that got away).
+ *
+ * ?year=<points season>. Cycle = (year-1) rosters → (year) points. The
+ * keeper era began with the 2024→2025 transition; earlier seasons were
+ * full redraft and are not offered.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import YearSelector from '../../components/theleague/YearSelector.astro';
+import KeeperAnalysisCard from '../../components/theleague/KeeperAnalysisCard.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getConferenceShort, isValidConferenceId } from '../../utils/afl-conference';
+import { resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
+import {
+  AFL_KEEPER_ERA_FIRST_PREV_YEAR,
+  buildKeeperAnalysis,
+  computeSeasonPoints,
+  KDEF_GAP_THRESHOLD,
+  type KeeperAnalysis,
+  type MflDraftResultsFeed,
+  type MflPlayersFeed,
+  type MflRostersFeed,
+  type WeeklyResultsRaw,
+} from '../../utils/afl-keeper-analysis';
+
+export const prerender = false;
+
+const league = getLeagueContext(Astro.url);
+const baseUrl = getLeagueBaseUrl(league);
+
+// Committed MFL feeds, baked at build time (refreshed by roster-sync cron).
+const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
+const playerFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true });
+const draftFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/draftResults.json', { eager: true });
+const weeklyRawFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results-raw.json', { eager: true });
+const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/fetch.meta.json', { eager: true });
+
+// Eager JSON glob modules expose the parsed JSON as `default` (plus named
+// top-level keys); unwrap to the plain object.
+const feed = <T,>(feeds: Record<string, unknown>, year: number, file: string): T | undefined => {
+  const mod = feeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${file}`] as
+    | { default?: T }
+    | undefined;
+  return (mod?.default ?? mod) as T | undefined;
+};
+
+// Cycles: points season Y where (Y-1) rosters + (Y) weekly results exist,
+// within the keeper era. Auto-grows as new seasons' feeds land.
+const availableYears = Object.keys(weeklyRawFeeds)
+  .map((path) => path.match(/\/(\d{4})\/weekly-results-raw\.json$/)?.[1])
+  .filter((y): y is string => !!y)
+  .map((y) => parseInt(y, 10))
+  .filter(
+    (y) =>
+      y - 1 >= AFL_KEEPER_ERA_FIRST_PREV_YEAR &&
+      !!feed<MflRostersFeed>(rosterFeeds, y - 1, 'rosters.json')
+  )
+  .sort((a, b) => b - a);
+
+// Default: latest cycle whose points season has actually produced scores;
+// before Week 1 that's the last completed cycle (full grades beat an empty
+// preview as the landing view).
+const yearHasPoints = (y: number) =>
+  computeSeasonPoints(feed<WeeklyResultsRaw>(weeklyRawFeeds, y, 'weekly-results-raw.json') ?? []).points.size > 0;
+const defaultYear =
+  availableYears.find(yearHasPoints) ?? availableYears[availableYears.length - 1] ?? getCurrentSeasonYear();
+
+const requestedYear = Astro.url.searchParams.get('year');
+const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+if (!availableYears.includes(selectedYear)) {
+  return Astro.redirect(`${baseUrl}/keeper-analysis?year=${defaultYear}`);
+}
+const prevYear = selectedYear - 1;
+
+const analysis: KeeperAnalysis = buildKeeperAnalysis({
+  prevRosters: feed<MflRostersFeed>(rosterFeeds, prevYear, 'rosters.json')!,
+  prevPlayers: feed<MflPlayersFeed>(playerFeeds, prevYear, 'players.json'),
+  curPlayers: feed<MflPlayersFeed>(playerFeeds, selectedYear, 'players.json'),
+  curWeeklyRaw: feed<WeeklyResultsRaw>(weeklyRawFeeds, selectedYear, 'weekly-results-raw.json'),
+  curRosters: feed<MflRostersFeed>(rosterFeeds, selectedYear, 'rosters.json'),
+  curDraftResults: feed<MflDraftResultsFeed>(draftFeeds, selectedYear, 'draftResults.json'),
+});
+const { previewMode } = analysis;
+
+// Era-correct team branding for the ROSTER season (the keeper class's year).
+const yearConfig = resolveConfigForYear(
+  aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
+  prevYear
+);
+type AflTeamEntry = TeamConfig & { icon?: string; tier?: string; conference?: string };
+const teamsById = new Map<string, AflTeamEntry>(
+  (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
+);
+const teamName = (fid: string) => teamsById.get(fid)?.name ?? `Franchise ${fid}`;
+const teamIcon = (fid: string) => teamsById.get(fid)?.icon;
+const teamConference = (fid: string) => {
+  const c = teamsById.get(fid)?.conference;
+  return c && isValidConferenceId(c) ? getConferenceShort(c) : undefined;
+};
+
+const fetchMeta = feed<{ lastFetched?: string }>(fetchMetaFeeds, selectedYear, 'fetch.meta.json');
+const lastFetched = fetchMeta?.lastFetched
+  ? new Date(fetchMeta.lastFetched).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short',
+    })
+  : null;
+
+const best = analysis.franchises[0];
+const worst = analysis.franchises[analysis.franchises.length - 1];
+const fmtPts = (n: number) =>
+  n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+const kdefExceptionText =
+  analysis.summary.kdefExceptions.length > 0
+    ? analysis.summary.kdefExceptions
+        .map((e) => `${e.playerName} lapped the position by ${Math.round(e.gap)} points — skipping it counts as a real miss this year`)
+        .join('; ')
+    : `No kicker or defense finished ${KDEF_GAP_THRESHOLD}+ points clear of the position — they're excluded from grading`;
+---
+
+<TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
+  <div class="keeper-analysis">
+    <header class="ka-hero">
+      <div class="ka-hero__text">
+        <h1>Keeper Report Card</h1>
+        <p class="ka-hero__sub">
+          Every {prevYear} roster, re-ranked by {selectedYear} points. The
+          highlighted rows are the hindsight-optimal seven — the keeps are
+          graded against them.
+        </p>
+        <p class="ka-hero__meta">
+          {previewMode
+            ? `The ${selectedYear} season hasn't kicked off — keeper classes shown as declared.`
+            : `Points through Week ${analysis.throughWeek}`}
+          {lastFetched && ` · Data as of ${lastFetched}`}
+        </p>
+      </div>
+      <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+    </header>
+
+    {previewMode && (
+      <div class="ka-banner">
+        Grades unlock when the {selectedYear} season kicks off — until then,
+        every keep is still a genius move.
+      </div>
+    )}
+
+    {!previewMode && best && worst && (
+      <section class="ka-summary" aria-label="League summary">
+        <div class="ka-summary__tiles">
+          <div class="ka-tile ka-tile--best">
+            <span class="ka-tile__label">Best keeper class</span>
+            <span class="ka-tile__team">
+              {teamIcon(best.franchiseId) && (
+                <img src={teamIcon(best.franchiseId)} alt="" loading="lazy" />
+              )}
+              {teamName(best.franchiseId)}
+            </span>
+            <span class="ka-tile__stat">
+              {fmtPts(best.keptPoints)} pts · {best.hits}/{best.keptCount} hits
+            </span>
+          </div>
+          <div class="ka-tile ka-tile--worst">
+            <span class="ka-tile__label">Toughest hindsight</span>
+            <span class="ka-tile__team">
+              {teamIcon(worst.franchiseId) && (
+                <img src={teamIcon(worst.franchiseId)} alt="" loading="lazy" />
+              )}
+              {teamName(worst.franchiseId)}
+            </span>
+            <span class="ka-tile__stat">
+              {fmtPts(worst.keptPoints)} pts · {worst.hits}/{worst.keptCount} hits
+            </span>
+          </div>
+          <div class="ka-tile">
+            <span class="ka-tile__label">League-wide</span>
+            <span class="ka-tile__big">
+              {analysis.summary.totalHits} hits · {analysis.summary.totalMisses} misses
+            </span>
+            <span class="ka-tile__stat">
+              {analysis.summary.totalGotAway} optimal keepers got away
+            </span>
+          </div>
+          <div class="ka-tile">
+            <span class="ka-tile__label">K/DEF watch</span>
+            <span class="ka-tile__big">
+              {analysis.summary.franchisesWithKdefInRawTopSeven} of {analysis.franchises.length}
+            </span>
+            <span class="ka-tile__stat">
+              raw top-7s crashed by a kicker or defense
+            </span>
+          </div>
+        </div>
+        <p class="ka-summary__kdef-note">{kdefExceptionText}.</p>
+      </section>
+    )}
+
+    <section class="ka-cards" aria-label="Franchise report cards">
+      {analysis.franchises.map((franchise, i) => (
+        <KeeperAnalysisCard
+          analysis={franchise}
+          teamName={teamName(franchise.franchiseId)}
+          teamIcon={teamIcon(franchise.franchiseId)}
+          conferenceShort={teamConference(franchise.franchiseId)}
+          tier={teamsById.get(franchise.franchiseId)?.tier}
+          previewMode={previewMode}
+          classRank={i + 1}
+        />
+      ))}
+    </section>
+
+    <footer class="ka-methodology">
+      <h2>Methodology</h2>
+      <ul>
+        <li>
+          Points are {selectedYear} regular-season fantasy points in AFL
+          scoring, raw totals. A kept player traded mid-season still credits
+          his full season to the team that kept him.
+        </li>
+        <li>
+          Keeper classes are reconstructed from MFL rosters: players who
+          finished {prevYear} on the roster and opened {selectedYear} on the
+          same roster without being drafted.
+        </li>
+        <li>
+          Kickers and defenses are excluded from the optimal seven unless the
+          position's top scorer finished {KDEF_GAP_THRESHOLD}+ points clear
+          of the runner-up (they still show as raw top-7 flags).
+        </li>
+        <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
+      </ul>
+    </footer>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .keeper-analysis {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  .ka-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .ka-hero h1 {
+    margin: 0 0 0.4rem;
+    font-size: 2rem;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .ka-hero__sub {
+    margin: 0;
+    max-width: 620px;
+    color: var(--content-text-muted, #6b7280);
+    line-height: 1.55;
+  }
+
+  .ka-hero__meta {
+    margin: 0.4rem 0 0;
+    font-size: 0.8rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ka-banner {
+    background: var(--badge-info-bg, #dbeafe);
+    color: var(--badge-info-text, #1e40af);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+
+  .ka-summary {
+    margin-bottom: 2rem;
+  }
+
+  .ka-summary__tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .ka-tile {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .ka-tile--best {
+    border-left: 3px solid var(--badge-success-text, #166534);
+  }
+
+  .ka-tile--worst {
+    border-left: 3px solid var(--badge-error-text, #991b1b);
+  }
+
+  .ka-tile__label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted, #6b7280);
+    font-weight: 600;
+  }
+
+  .ka-tile__team {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .ka-tile__team img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+
+  .ka-tile__big {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .ka-tile__stat {
+    font-size: 0.78rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ka-summary__kdef-note {
+    margin: 0.75rem 0 0;
+    font-size: 0.82rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ka-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .ka-methodology {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--content-border, #e5e7eb);
+    padding-top: 1.25rem;
+  }
+
+  .ka-methodology h2 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .ka-methodology ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .ka-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,322 @@
+---
+/**
+ * One franchise's keeper report card: ranked previous-season roster with
+ * kept/optimal badges and grade tallies. Pure presentation — all math comes
+ * from src/utils/afl-keeper-analysis.ts.
+ */
+import PlayerCell from './PlayerCell.astro';
+import type { FranchiseAnalysis, AnalyzedPlayer } from '../../utils/afl-keeper-analysis';
+
+export interface Props {
+  analysis: FranchiseAnalysis;
+  teamName: string;
+  teamIcon?: string;
+  conferenceShort?: string;
+  tier?: string;
+  previewMode: boolean;
+  /** League-wide rank of this keeper class by kept points (1-based). */
+  classRank: number;
+}
+
+const { analysis, teamName, teamIcon, conferenceShort, tier, previewMode, classRank } = Astro.props;
+
+const isKdefPosition = (position: string) => position === 'PK' || position === 'Def';
+
+// Featured rows: everyone with a story (optimal ∪ kept ∪ raw top 7); the
+// rest of the roster collapses behind <details>. Preview mode (no points
+// yet) shows only the keeper class, ordered by position then name.
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE'];
+const positionSort = (a: AnalyzedPlayer, b: AnalyzedPlayer) => {
+  const ai = POSITION_ORDER.indexOf(a.position);
+  const bi = POSITION_ORDER.indexOf(b.position);
+  return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.name.localeCompare(b.name);
+};
+
+const featured = previewMode
+  ? analysis.players.filter((p) => p.kept).sort(positionSort)
+  : analysis.players.filter((p) => p.optimal || p.kept || p.rawTopSeven);
+const rest = previewMode ? [] : analysis.players.filter((p) => !featured.includes(p));
+
+const fmtPts = (n: number) =>
+  n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const efficiencyPct = Math.round(analysis.efficiency * 100);
+---
+
+<article class="ka-card" id={`franchise-${analysis.franchiseId}`}>
+  <header class="ka-card__header">
+    <div class="ka-card__header-row">
+      {teamIcon && <img class="ka-card__icon" src={teamIcon} alt={`${teamName} icon`} loading="lazy" />}
+      <h3 class="ka-card__name">{teamName}</h3>
+      <span class="ka-card__grade-line">
+        {previewMode ? (
+          `${analysis.keptCount} kept`
+        ) : (
+          <>
+            <strong>{analysis.hits}/{analysis.keptCount}</strong> hits
+          </>
+        )}
+      </span>
+    </div>
+    <div class="ka-card__meta">
+      {conferenceShort && <span class="ka-card__chip">{conferenceShort}</span>}
+      {tier && <span class="ka-card__chip ka-card__chip--tier">{tier}</span>}
+      {!previewMode && (
+        <span class="ka-card__grade-sub">
+          #{classRank} class · {fmtPts(analysis.keptPoints)} kept pts · {efficiencyPct}% of optimal
+        </span>
+      )}
+    </div>
+  </header>
+
+  <table class="ka-table">
+    <thead>
+      <tr>
+        {!previewMode && <th class="ka-table__rank">#</th>}
+        <th class="ka-table__player">Player</th>
+        <th class="ka-table__pts">{previewMode ? '' : 'Pts'}</th>
+        <th class="ka-table__badge"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {featured.map((p) => (
+        <tr class:list={['ka-row', p.optimal && !previewMode && 'ka-row--optimal']}>
+          {!previewMode && <td class="ka-table__rank">{p.rank}</td>}
+          <td class="ka-table__player">
+            <PlayerCell
+              name={p.name}
+              position={p.position === 'Def' ? 'DEF' : p.position}
+              nflTeam={p.nflTeam}
+              mflId={p.id}
+              size="compact"
+            />
+          </td>
+          <td class="ka-table__pts">{previewMode ? '' : fmtPts(p.points)}</td>
+          <td class="ka-table__badge">
+            {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
+            {!previewMode && p.badge === 'miss' && <span class="ka-pill ka-pill--miss">Miss</span>}
+            {!previewMode && p.badge === 'got-away' && (
+              <span class="ka-pill ka-pill--gotaway">Got away</span>
+            )}
+            {!previewMode && p.badge === 'kdef-neutral' && (
+              <span class="ka-pill ka-pill--kdef">K/DEF</span>
+            )}
+            {!previewMode && !p.kept && p.rawTopSeven && isKdefPosition(p.position) && (
+              <span class="ka-pill ka-pill--kdef" title="Cracked the raw top 7, but K/DEF are excluded from grading">
+                K/DEF
+              </span>
+            )}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  {rest.length > 0 && (
+    <details class="ka-card__rest">
+      <summary>Show full roster ({rest.length} more)</summary>
+      <table class="ka-table">
+        <tbody>
+          {rest.map((p) => (
+            <tr class="ka-row">
+              <td class="ka-table__rank">{p.rank}</td>
+              <td class="ka-table__player">
+                <PlayerCell
+                  name={p.name}
+                  position={p.position === 'Def' ? 'DEF' : p.position}
+                  nflTeam={p.nflTeam}
+                  mflId={p.id}
+                  size="compact"
+                />
+              </td>
+              <td class="ka-table__pts">{fmtPts(p.points)}</td>
+              <td class="ka-table__badge"></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  )}
+</article>
+
+<style>
+  .ka-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .ka-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .ka-card__header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .ka-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .ka-card__name {
+    margin: 0;
+    font-size: 1.02rem;
+    line-height: 1.25;
+    color: var(--page-text, #1a1a1a);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ka-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .ka-card__chip {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #eeeeee);
+    color: var(--content-text-muted, #6b7280);
+    white-space: nowrap;
+  }
+
+  .ka-card__grade-line {
+    font-size: 0.95rem;
+    color: var(--page-text, #1a1a1a);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .ka-card__grade-sub {
+    font-size: 0.72rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ka-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ka-table th {
+    text-align: left;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #6b7280);
+    padding: 0.25rem 0.4rem;
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
+  }
+
+  .ka-row td {
+    padding: 0.35rem 0.4rem;
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
+    vertical-align: middle;
+  }
+
+  .ka-row:last-child td {
+    border-bottom: none;
+  }
+
+  .ka-row--optimal {
+    background: var(--badge-success-bg, #dcfce7);
+  }
+
+  /* Shrink-to-fit side columns; the player column absorbs the remainder
+     and PlayerCell's own ellipsis handles overflow. */
+  .ka-table__rank {
+    width: 1%;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    color: var(--content-text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ka-table__player {
+    width: 100%;
+    max-width: 0;
+  }
+
+  .ka-table__pts {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  /* Pills stay nowrap individually but wrap as a group, so a KEPT+MISS
+     pair stacks instead of widening the column. */
+  .ka-table__badge {
+    width: 1%;
+    text-align: right;
+  }
+
+  .ka-pill {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.14rem 0.4rem;
+    border-radius: 999px;
+    margin: 0.1rem 0 0.1rem 0.2rem;
+    white-space: nowrap;
+  }
+
+  .ka-pill--kept {
+    background: var(--league-accent, #c41e3a);
+    color: var(--color-white, #ffffff);
+  }
+
+  .ka-pill--miss {
+    background: var(--badge-error-bg, #fee2e2);
+    color: var(--badge-error-text, #991b1b);
+  }
+
+  .ka-pill--gotaway {
+    background: var(--badge-warning-bg, #fef3c7);
+    color: var(--badge-warning-text, #92400e);
+  }
+
+  .ka-pill--kdef {
+    background: var(--badge-info-bg, #dbeafe);
+    color: var(--badge-info-text, #1e40af);
+  }
+
+  .ka-card__rest summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--content-text-muted, #6b7280);
+    padding: 0.25rem 0;
+  }
+
+  @media (max-width: 640px) {
+    .ka-card {
+      padding: 0.75rem;
+    }
+
+    .ka-card__grade-sub {
+      display: none;
+    }
+
+    .ka-table__badge {
+      width: auto;
+    }
+  }
+</style>

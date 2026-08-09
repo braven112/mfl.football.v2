@@ -1,0 +1,337 @@
+import { describe, expect, it } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  buildKeeperAnalysis,
+  buildPlayersById,
+  computeKdefExceptions,
+  computeOptimalSeven,
+  computeSeasonPoints,
+  getDraftedPidsByFranchise,
+  getOpeningRosterPids,
+  gradeFranchise,
+  KDEF_GAP_THRESHOLD,
+  reconstructKeepers,
+  type MflPlayersFeed,
+  type MflRostersFeed,
+  type WeeklyResultsRaw,
+} from '../src/utils/afl-keeper-analysis';
+
+// --- Fixture builders (tiny synthetic league) ---
+
+function playersFeed(
+  players: Array<[id: string, name: string, position: string, team?: string]>
+): MflPlayersFeed {
+  return {
+    players: {
+      player: players.map(([id, name, position, team]) => ({ id, name, position, team })),
+    },
+  };
+}
+
+function week(
+  weekNum: string,
+  matchups: Array<{
+    regularSeason?: string;
+    franchises: Array<{ id: string; players: Array<[id: string, score: string]> }>;
+  }>
+): WeeklyResultsRaw[number] {
+  return {
+    weeklyResults: {
+      week: weekNum,
+      matchup: matchups.map((m) => ({
+        regularSeason: m.regularSeason ?? '1',
+        franchise: m.franchises.map((f) => ({
+          id: f.id,
+          player: f.players.map(([id, score]) => ({ id, score })),
+        })),
+      })),
+    },
+  };
+}
+
+function rostersFeed(rosters: Record<string, string[]>): MflRostersFeed {
+  return {
+    rosters: {
+      franchise: Object.entries(rosters).map(([id, pids]) => ({
+        id,
+        player: pids.map((pid) => ({ id: pid })),
+      })),
+    },
+  };
+}
+
+describe('computeSeasonPoints', () => {
+  it('sums a player once per week even when rostered in both conferences', () => {
+    const raw = [
+      week('1', [
+        { franchises: [{ id: '0001', players: [['100', '20.5']] }] },
+        { franchises: [{ id: '0013', players: [['100', '20.5']] }] },
+      ]),
+      week('2', [{ franchises: [{ id: '0001', players: [['100', '10.0']] }] }]),
+    ];
+    const { points } = computeSeasonPoints(raw);
+    expect(points.get('100')).toBeCloseTo(30.5);
+  });
+
+  it('skips non-regular-season matchups', () => {
+    const raw = [
+      week('15', [{ regularSeason: '0', franchises: [{ id: '0001', players: [['100', '99']] }] }]),
+      week('3', [{ franchises: [{ id: '0001', players: [['100', '7']] }] }]),
+    ];
+    const { points, maxCompletedWeek } = computeSeasonPoints(raw);
+    expect(points.get('100')).toBeCloseTo(7);
+    expect(maxCompletedWeek).toBe(3);
+  });
+
+  it('reports maxCompletedWeek 0 and no points for an empty season', () => {
+    const { points, maxCompletedWeek } = computeSeasonPoints([]);
+    expect(points.size).toBe(0);
+    expect(maxCompletedWeek).toBe(0);
+  });
+});
+
+describe('keeper reconstruction', () => {
+  it('kept = prev ∩ opening − drafted', () => {
+    const kept = reconstructKeepers(
+      new Set(['1', '2', '3', '4']),
+      new Set(['2', '3', '4', '9']),
+      new Set(['4'])
+    );
+    expect([...kept].sort()).toEqual(['2', '3']);
+  });
+
+  it('uses week-1 starters+nonstarters when week 1 exists', () => {
+    const raw = [
+      week('1', [
+        { franchises: [{ id: '0001', players: [['1', '5'], ['2', '0']] }] },
+      ]),
+    ];
+    const rosters = rostersFeed({ '0001': ['99'] });
+    expect([...getOpeningRosterPids(raw, rosters, '0001')].sort()).toEqual(['1', '2']);
+  });
+
+  it('falls back to current rosters pre-week-1 (live cycle)', () => {
+    const rosters = rostersFeed({ '0001': ['1', '2', '3'] });
+    expect([...getOpeningRosterPids([], rosters, '0001')].sort()).toEqual(['1', '2', '3']);
+  });
+
+  it('parses draft picks and ignores passed picks', () => {
+    const drafted = getDraftedPidsByFranchise({
+      draftResults: {
+        draftUnit: [
+          { draftPick: [{ franchise: '0001', player: '55' }, { franchise: '0001', player: '----' }] },
+          { draftPick: { franchise: '0002', player: '66' } },
+        ],
+      },
+    });
+    expect([...(drafted.get('0001') ?? [])]).toEqual(['55']);
+    expect([...(drafted.get('0002') ?? [])]).toEqual(['66']);
+  });
+});
+
+describe('K/DEF dominance rule', () => {
+  const players = playersFeed([
+    ['k1', 'Kicker, Alpha', 'PK'],
+    ['k2', 'Kicker, Beta', 'PK'],
+    ['d1', 'Patriots, New England', 'Def', 'NEP'],
+    ['d2', 'Bills, Buffalo', 'Def', 'BUF'],
+  ]);
+  const byId = buildPlayersById(players, undefined);
+
+  it(`no exception below the ${KDEF_GAP_THRESHOLD}-point gap`, () => {
+    const points = new Map([
+      ['k1', 150], ['k2', 110.1],
+      ['d1', 150], ['d2', 111],
+    ]);
+    expect(computeKdefExceptions(points, byId)).toEqual([]);
+  });
+
+  it('grants an exception at exactly the threshold', () => {
+    const points = new Map([
+      ['d1', 185], ['d2', 185 - KDEF_GAP_THRESHOLD],
+      ['k1', 100], ['k2', 90],
+    ]);
+    const exceptions = computeKdefExceptions(points, byId);
+    expect(exceptions).toHaveLength(1);
+    expect(exceptions[0]).toMatchObject({ position: 'Def', playerId: 'd1', gap: KDEF_GAP_THRESHOLD });
+  });
+});
+
+describe('computeOptimalSeven', () => {
+  const players = playersFeed([
+    ['q1', 'Quarterback, One', 'QB'],
+    ['r1', 'Runner, One', 'RB'],
+    ['r2', 'Runner, Two', 'RB'],
+    ['w1', 'Wideout, One', 'WR'],
+    ['w2', 'Wideout, Two', 'WR'],
+    ['t1', 'Tightend, One', 'TE'],
+    ['t2', 'Tightend, Two', 'TE'],
+    ['x1', 'Extra, One', 'WR'],
+    ['k1', 'Kicker, Alpha', 'PK'],
+    ['d1', 'Patriots, New England', 'Def', 'NEP'],
+  ]);
+  const byId = buildPlayersById(players, undefined);
+  const roster = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'x1', 'k1', 'd1']);
+  // K and DEF are the top-2 raw scorers.
+  const points = new Map([
+    ['k1', 300], ['d1', 290],
+    ['q1', 200], ['r1', 190], ['r2', 180], ['w1', 170], ['w2', 160], ['t1', 150],
+    ['t2', 140], ['x1', 130],
+  ]);
+
+  it('excludes K/DEF from optimal but keeps them in rawTopSeven', () => {
+    const { optimal, rawTopSeven } = computeOptimalSeven(roster, points, byId, new Set());
+    expect(optimal).toEqual(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2']);
+    expect(rawTopSeven).toContain('k1');
+    expect(rawTopSeven).toContain('d1');
+    expect(rawTopSeven).toHaveLength(7);
+  });
+
+  it('includes an exception position in optimal', () => {
+    const { optimal } = computeOptimalSeven(roster, points, byId, new Set(['Def']));
+    expect(optimal).toContain('d1');
+    expect(optimal).not.toContain('k1');
+    expect(optimal).toHaveLength(7);
+  });
+
+  it('breaks point ties deterministically by id', () => {
+    const tied = new Map(points);
+    tied.set('x1', 140); // tie with t2 at the 7th-slot boundary
+    const { optimal } = computeOptimalSeven(roster, tied, byId, new Set());
+    expect(optimal[6]).toBe('t2'); // 't2' < 'x1' — x1 misses the cut
+    expect(optimal).not.toContain('x1');
+  });
+});
+
+describe('gradeFranchise', () => {
+  const players = playersFeed([
+    ['q1', 'Quarterback, One', 'QB'],
+    ['r1', 'Runner, One', 'RB'],
+    ['r2', 'Runner, Two', 'RB'],
+    ['w1', 'Wideout, One', 'WR'],
+    ['w2', 'Wideout, Two', 'WR'],
+    ['t1', 'Tightend, One', 'TE'],
+    ['t2', 'Tightend, Two', 'TE'],
+    ['x1', 'Extra, One', 'WR'],
+    ['k1', 'Kicker, Alpha', 'PK'],
+  ]);
+  const byId = buildPlayersById(players, undefined);
+  const roster = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'x1', 'k1']);
+  const points = new Map([
+    ['q1', 200], ['r1', 190], ['r2', 180], ['w1', 170], ['w2', 160], ['t1', 150],
+    ['t2', 140], ['x1', 130], ['k1', 120],
+  ]);
+  // Optimal: q1 r1 r2 w1 w2 t1 t2. Kept: 5 optimal + x1 (miss) + k1 (neutral).
+  const kept = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 'x1', 'k1']);
+
+  it('partitions hits / misses / got-away / neutral correctly', () => {
+    const analysis = gradeFranchise('0001', roster, kept, points, byId, new Set());
+    expect(analysis.hits).toBe(5);
+    expect(analysis.misses).toBe(1); // x1
+    expect(analysis.gotAway).toBe(2); // t1, t2
+    expect(analysis.kdefNeutralKept).toBe(1); // k1 — not a miss
+    const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
+    expect(byPid['x1']).toBe('miss');
+    expect(byPid['k1']).toBe('kdef-neutral');
+    expect(byPid['t1']).toBe('got-away');
+    expect(byPid['q1']).toBe('hit');
+  });
+
+  it('handles a 6-keep team without a phantom miss', () => {
+    const sixKept = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1']);
+    const analysis = gradeFranchise('0001', roster, sixKept, points, byId, new Set());
+    expect(analysis.keptCount).toBe(6);
+    expect(analysis.hits).toBe(6);
+    expect(analysis.misses).toBe(0);
+    expect(analysis.gotAway).toBe(1); // t2
+  });
+
+  it('computes kept/optimal points and efficiency', () => {
+    const analysis = gradeFranchise('0001', roster, kept, points, byId, new Set());
+    expect(analysis.keptPoints).toBeCloseTo(200 + 190 + 180 + 170 + 160 + 130 + 120);
+    expect(analysis.optimalPoints).toBeCloseTo(200 + 190 + 180 + 170 + 160 + 150 + 140);
+    expect(analysis.efficiency).toBeCloseTo(analysis.keptPoints / analysis.optimalPoints);
+  });
+});
+
+describe('buildKeeperAnalysis', () => {
+  const prevPlayers = playersFeed([
+    ['a1', 'Ace, One', 'QB'], ['a2', 'Ace, Two', 'RB'], ['a3', 'Ace, Three', 'WR'],
+    ['b1', 'Bench, One', 'QB'], ['b2', 'Bench, Two', 'RB'], ['b3', 'Bench, Three', 'WR'],
+  ]);
+
+  it('flags previewMode with zero points and still reconstructs keeps', () => {
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2', 'a3'], '0002': ['b1', 'b2', 'b3'] }),
+      prevPlayers,
+      curWeeklyRaw: [],
+      curRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1'] }),
+    });
+    expect(analysis.previewMode).toBe(true);
+    expect(analysis.throughWeek).toBe(0);
+    const f1 = analysis.franchises.find((f) => f.franchiseId === '0001')!;
+    expect(f1.keptCount).toBe(2);
+  });
+
+  it('ranks franchises by kept points and fills the summary', () => {
+    // Week-1 rosters define the opening rosters: 0001 kept a1+a2, 0002 kept
+    // only b1 — b2 walked and scored 50 for an unrelated franchise.
+    const curWeeklyRaw = [
+      week('1', [
+        {
+          franchises: [
+            { id: '0001', players: [['a1', '30'], ['a2', '20']] },
+            { id: '0002', players: [['b1', '5']] },
+            { id: '0003', players: [['b2', '50']] },
+          ],
+        },
+      ]),
+    ];
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2', 'a3'], '0002': ['b1', 'b2', 'b3'] }),
+      prevPlayers,
+      curWeeklyRaw,
+      curRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1'] }),
+    });
+    expect(analysis.previewMode).toBe(false);
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001'); // 50 kept pts vs 5
+    expect(analysis.summary.bestFranchiseId).toBe('0001');
+    expect(analysis.summary.worstFranchiseId).toBe('0002');
+    const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
+    expect(f2.gotAway).toBeGreaterThan(0); // let b2 (50 pts) walk
+  });
+});
+
+// --- Integration: real committed feeds (regression against data drift) ---
+
+const FEEDS_DIR = join(process.cwd(), 'data/afl-fantasy/mfl-feeds');
+const hasRealFeeds =
+  existsSync(join(FEEDS_DIR, '2024/rosters.json')) &&
+  existsSync(join(FEEDS_DIR, '2025/weekly-results-raw.json'));
+
+describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () => {
+  const load = (rel: string) => JSON.parse(readFileSync(join(FEEDS_DIR, rel), 'utf-8'));
+
+  it('reconstructs 24 franchises with 6-7 keeps each and sane grades', () => {
+    const analysis = buildKeeperAnalysis({
+      prevRosters: load('2024/rosters.json'),
+      prevPlayers: load('2024/players.json'),
+      curPlayers: load('2025/players.json'),
+      curWeeklyRaw: load('2025/weekly-results-raw.json'),
+      curRosters: load('2025/rosters.json'),
+      curDraftResults: load('2025/draftResults.json'),
+    });
+    expect(analysis.franchises).toHaveLength(24);
+    expect(analysis.previewMode).toBe(false);
+    expect(analysis.throughWeek).toBeGreaterThanOrEqual(14);
+    for (const f of analysis.franchises) {
+      expect(f.keptCount).toBeGreaterThanOrEqual(6);
+      expect(f.keptCount).toBeLessThanOrEqual(7);
+      expect(f.hits + f.misses + f.kdefNeutralKept).toBe(f.keptCount);
+      expect(f.optimalPoints).toBeGreaterThan(0);
+    }
+    // 2025 had no 40-pt dominant K/DEF (max gap: Seahawks D, 31).
+    expect(analysis.summary.kdefExceptions).toEqual([]);
+  });
+});
