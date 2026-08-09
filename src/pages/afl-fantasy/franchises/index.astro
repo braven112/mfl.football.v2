@@ -80,6 +80,9 @@ const titleYears = (t: TitleTypeProgress): string =>
   t.years.slice().sort((a, b) => a - b).join(', ');
 
 const pointsApproximate = rows.some((r) => r.stats?.pointsApproximate);
+const pointsMissingYears = [
+  ...new Set(rows.flatMap((r) => r.stats?.pointsMissingYears ?? [])),
+].sort((a, b) => a - b);
 
 // Every distinct historical identity across all franchises, newest-first —
 // grouped by ownerEra when set, otherwise by normalized name, skipping
@@ -106,7 +109,13 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
         franchise page.
       </p>
       {pointsApproximate && (
-        <p class="points-note">Points totals are approximate before 2023.</p>
+        <p class="points-note">Some seasons' points are approximated from per-game averages.</p>
+      )}
+      {pointsMissingYears.length > 0 && (
+        <p class="points-note">
+          MFL has no points data for {pointsMissingYears.join(', ')}; those
+          seasons count toward records but not points totals.
+        </p>
       )}
     </header>
 
