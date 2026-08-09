@@ -143,6 +143,17 @@ impact: the page contributes ~0.4MB (the derived file) to `_render` instead of
 ~15MB of eager globs — so the SSR fix is deploy-neutral (315MB vs the 314MB
 prerendered baseline) rather than the +15MB a naive SSR revert would add.
 
+**Addendum (2026-08-09, keeper-report-card):** hit the same wall again
+(260.74MB) with bare `*/` globs on `keeper-analysis.astro`. When a page only
+ever needs a bounded year range, a **year-filtered glob pattern** is a lighter
+fix than a compute script: `import.meta.glob('.../mfl-feeds/20{2[4-9],[3-9][0-9]}/rosters.json')`
+matches 2024–2099 (Vite globs are micromatch — brace + character-class syntax
+works), cutting ~55MB of pre-era JSON to ~7MB with zero build steps. Use the
+compute-script pattern when the page genuinely folds ALL years; use the
+year-range glob when old years are unrenderable by design. Diagnosis shortcut:
+deployment state `ERROR` with a green build → check the Vercel build log's
+"Deploying outputs..." tail (`mcp__Vercel__get_deployment_build_logs`).
+
 Note the shared `_render` function is already ~314MB locally (near the ceiling)
 before this page, driven by OTHER pages' dynamic `fs.readFileSync(join(cwd, …,
 year, …))` reads that nft can't resolve and so traces for all 24 years (e.g.
