@@ -15,7 +15,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { getRedis } from './redis-client';
 
-export const KEEPER_LIMIT = 7;
+export { KEEPER_LIMIT } from './afl-keeper-constants';
+import { KEEPER_LIMIT } from './afl-keeper-constants';
 
 export interface KeeperPlan {
   leagueId: string;
