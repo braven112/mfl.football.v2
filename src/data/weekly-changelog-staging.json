@@ -2,6 +2,14 @@
   "weekOf": "2026-08-10",
   "changes": [
     {
+      "date": "2026-08-09",
+      "type": "style-tweak",
+      "summary": "The Franchise History cards traded their full-width banner art for the crest-style icon lockup the AFL franchises page uses — same career records and award pills, tidier cards, and both leagues' franchise pages now share one design language.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
       "date": "2026-08-08",
       "type": "bug-fix",
       "summary": "The AFL Free Agents page was hiding every player still rostered in the OTHER conference — so a guy dropped in your conference (looking at you, Kyle Pitts) never showed up as available. Availability is now tracked per conference, and roster moves hit the page within a minute of happening on MFL instead of waiting for the next site deploy. (The conference-scoped view that landed with this got its own What's New article.)",
