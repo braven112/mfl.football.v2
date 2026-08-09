@@ -30,9 +30,17 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../config/leagues'
 
 interface Props {
   hideLeaguePrefix?: boolean;
+  /**
+   * The viewer's franchise, used only to name the AFL all-play link after the
+   * tier they actually play in. Passed down from the layout, which already
+   * resolves it — the footer deliberately does no auth of its own, since it
+   * renders on prerendered pages too.
+   */
+  franchiseId?: string | null;
 }
 
 const hideLeaguePrefix = Astro.props.hideLeaguePrefix ?? false;
+const franchiseId = Astro.props.franchiseId ?? null;
 
 const league = getLeagueContext(Astro.url);
 const slug = league.slug as CanonicalLeagueSlug;
@@ -42,7 +50,7 @@ const navSlug = getLeagueBySlug(slug)?.navSlug ?? 'theleague';
 const href = (path: string) =>
   resolveLeaguePath(resolveDirectoryHref(path, navSlug), hideLeaguePrefix);
 
-const columns = getFooterColumns(slug);
+const columns = getFooterColumns(slug, franchiseId);
 const deepCuts = getDeepCuts(slug, columns);
 
 const showBand = leagueHasChampionBand(slug);
@@ -50,9 +58,11 @@ const champions = showBand ? getFooterChampions(slug) : [];
 const draftStatus = showBand ? null : getFooterDraftStatus(slug);
 
 /**
- * Sweep names scale off the title count rather than being hardcoded to two:
- * the real 2025 AFL season is a FOUR-trophy haul (championship, Premier
- * League, NL Champion, NL East).
+ * Sweep names scale off the title count rather than being hardcoded to two.
+ * The real 2025 AFL season is a Treble (championship, Premier League, NL
+ * East) — the conference title is dropped as redundant, since reaching the
+ * title game requires winning it. Quadruple stays defined because a Cup year
+ * could still produce four.
  */
 const SWEEP_NAMES: Record<number, string> = {
   2: 'The Double',

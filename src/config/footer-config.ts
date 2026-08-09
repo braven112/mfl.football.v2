@@ -12,6 +12,8 @@
 
 import type { CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
+import { getTierForYear, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
+import { getCurrentSeasonYear } from '../utils/league-year';
 
 /**
  * The five columns, in order, for every full-management league.
@@ -53,6 +55,36 @@ type ColumnMap = Partial<Record<string, ReadonlyArray<FooterLink | string>>>;
 
 const link = (entry: FooterLink | string): FooterLink =>
   typeof entry === 'string' ? { id: entry } : entry;
+
+/**
+ * The all-play standings view renders BOTH tiers on one page, so Premier
+ * League and D-League share a destination and differ only by label.
+ */
+export const AFL_ALL_PLAY_PATH = '/afl-fantasy/standings?view=all_play';
+
+/**
+ * Name the all-play link after the tier the viewer actually plays in.
+ *
+ * Premier League is the default — for signed-out visitors, for anyone whose
+ * franchise isn't in the tier history, and for every Premier League owner. A
+ * D-League owner sees "D-League" instead, because sending them to a link named
+ * after a table they aren't in is the kind of small wrongness that makes a
+ * footer feel generic.
+ */
+function applyTierLabel(
+  columns: FooterColumn[],
+  franchiseId: string | null
+): FooterColumn[] {
+  if (!franchiseId) return columns;
+  const tier = getTierForYear(franchiseId, getCurrentSeasonYear());
+  if (tier !== D_LEAGUE) return columns;
+  return columns.map((col) => ({
+    ...col,
+    links: col.links.map((l) =>
+      l.path === AFL_ALL_PLAY_PATH ? { ...l, label: D_LEAGUE } : l
+    ),
+  }));
+}
 
 /**
  * TheLeague — the full 40-link set. Directory ids, not paths.
@@ -127,8 +159,9 @@ const AFL_COLUMNS: ColumnMap = {
   ],
   'This Week': [
     'afl-standings',
-    // No directory entry for the all-play view; it's a query variant.
-    { label: 'Premier League Table', path: '/afl-fantasy/standings?view=all_play' },
+    // No directory entry for the all-play view; it's a query variant. The
+    // label is rewritten per viewer by applyTierLabel() below.
+    { label: PREMIER_LEAGUE, path: AFL_ALL_PLAY_PATH },
     'afl-playoffs',
     'afl-players',
     'afl-calendar',
@@ -212,7 +245,10 @@ export interface FooterColumn {
  * 404ing. Admin-only pages are dropped too; the footer's admin affordances
  * live in the utility bar, which the component gates separately.
  */
-export function getFooterColumns(slug: CanonicalLeagueSlug): FooterColumn[] {
+export function getFooterColumns(
+  slug: CanonicalLeagueSlug,
+  franchiseId: string | null = null
+): FooterColumn[] {
   const map = BY_LEAGUE[slug] ?? {};
   const declared = Object.keys(map);
 
@@ -223,7 +259,7 @@ export function getFooterColumns(slug: CanonicalLeagueSlug): FooterColumn[] {
     ...declared.filter((c) => !(DECK_COLUMNS as readonly string[]).includes(c)),
   ];
 
-  return ordered
+  const columns = ordered
     .map((title) => ({
       title,
       links: (map[title] ?? [])
@@ -239,6 +275,8 @@ export function getFooterColumns(slug: CanonicalLeagueSlug): FooterColumn[] {
         .filter((l): l is ResolvedFooterLink => l !== null),
     }))
     .filter((col) => col.links.length > 0);
+
+  return slug === 'afl-fantasy' ? applyTierLabel(columns, franchiseId) : columns;
 }
 
 /**

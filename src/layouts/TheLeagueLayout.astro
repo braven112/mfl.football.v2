@@ -293,7 +293,7 @@ const themePref = getThemePreference(Astro.cookies);
 			<main>
 				<slot />
 			</main>
-			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} />
+			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={myteam} />
 		</div>
 
 		<!-- PWA Auth Gate: require login when running as installed app -->

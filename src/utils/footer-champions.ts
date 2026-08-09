@@ -19,6 +19,12 @@
  * bracket, and "won the Premier League and the NIT" is not a Double. Without
  * this rule the real 2024 season would have shown Drunk Indians on a Double.
  *
+ * The conference title is also dropped from a card that already carries the
+ * AFL Championship: you cannot reach the title game without winning your
+ * conference, so listing both double-counts one run. That turns the real 2025
+ * Ninjas season from a "Quadruple" into the Treble it actually is —
+ * championship, Premier League, division.
+ *
  * Years: this is results-shaped data, so everything here keys off
  * getCurrentSeasonYear(), never getCurrentLeagueYear().
  */
@@ -122,9 +128,21 @@ function aflSpotlights(year: number, prefix: string): ChampionSpotlight[] {
     // winners would flood the band every season.
     if (!majors.length) continue;
 
+    // Winning the AFL Championship implies winning your conference to get
+    // there, so the conference badge is redundant on that card. Drop it rather
+    // than inflate the sweep count with a title the championship already
+    // captures. Conference titles still stand alone on a card whose owner lost
+    // the final — that team just has no gold title, so it gets no card at all.
+    const hasChampionship = bucket.entries.some((e) => e.slug === 'afl-championship');
+    const entries = hasChampionship
+      ? bucket.entries.filter(
+          (e) => e.slug !== 'al-champion' && e.slug !== 'nl-champion'
+        )
+      : bucket.entries;
+
     // Majors first, then the rest in canonical AWARD_TYPES order.
     const rank = (slug: AwardSlug) => AWARD_TYPES.findIndex((a) => a.slug === slug);
-    const ordered = [...bucket.entries].sort((a, b) => {
+    const ordered = [...entries].sort((a, b) => {
       if (a.major !== b.major) return a.major ? -1 : 1;
       return rank(a.slug) - rank(b.slug);
     });
