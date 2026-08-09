@@ -16,7 +16,7 @@ import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getConferenceShort, isValidConferenceId } from '../../utils/afl-conference';
-import { resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
+import { chooseTeamName, resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
 import {
   AFL_KEEPER_ERA_FIRST_PREV_YEAR,
   buildKeeperAnalysis,
@@ -75,15 +75,22 @@ const yearHasPoints = (y: number) =>
 const defaultYear =
   availableYears.find(yearHasPoints) ?? availableYears[availableYears.length - 1] ?? getCurrentSeasonYear();
 
+// Guard the no-cycles case BEFORE the redirect check: with an empty
+// availableYears, defaultYear can never satisfy `includes`, and redirecting
+// to it would loop forever (ERR_TOO_MANY_REDIRECTS). Render an empty state
+// instead.
+const hasCycles = availableYears.length > 0;
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
-if (!availableYears.includes(selectedYear)) {
+if (hasCycles && !availableYears.includes(selectedYear)) {
   return Astro.redirect(`${baseUrl}/keeper-analysis?year=${defaultYear}`);
 }
 const prevYear = selectedYear - 1;
 
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
-  prevRosters: feed<MflRostersFeed>(rosterFeeds, prevYear, 'rosters.json')!,
+  prevRosters: feed<MflRostersFeed>(rosterFeeds, prevYear, 'rosters.json') ?? {
+    rosters: { franchise: [] },
+  },
   prevPlayers: feed<MflPlayersFeed>(playerFeeds, prevYear, 'players.json'),
   curPlayers: feed<MflPlayersFeed>(playerFeeds, selectedYear, 'players.json'),
   curWeeklyRaw: feed<WeeklyResultsRaw>(weeklyRawFeeds, selectedYear, 'weekly-results-raw.json'),
@@ -101,7 +108,19 @@ type AflTeamEntry = TeamConfig & { icon?: string; tier?: string; conference?: st
 const teamsById = new Map<string, AflTeamEntry>(
   (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
 );
-const teamName = (fid: string) => teamsById.get(fid)?.name ?? `Franchise ${fid}`;
+// Card-width display names via the shared helper (nameMedium preference,
+// ≤15-char cap) — matches the other AFL card surfaces.
+const teamName = (fid: string) => {
+  const team = teamsById.get(fid);
+  if (!team) return `Franchise ${fid}`;
+  return chooseTeamName({
+    fullName: team.name,
+    nameMedium: team.nameMedium,
+    nameShort: team.nameShort,
+    abbrev: team.abbrev,
+    aliases: team.aliases,
+  });
+};
 const teamIcon = (fid: string) => teamsById.get(fid)?.icon;
 const teamConference = (fid: string) => {
   const c = teamsById.get(fid)?.conference;
@@ -162,7 +181,14 @@ const kdefExceptionText =
       <YearSelector currentYear={selectedYear} availableYears={availableYears} />
     </header>
 
-    {previewMode && (
+    {!hasCycles && (
+      <div class="ka-banner">
+        No keeper-era data is available yet — the report card starts with the
+        2024 → 2025 cycle once its feeds are committed.
+      </div>
+    )}
+
+    {previewMode && hasCycles && (
       <div class="ka-banner">
         Grades unlock when the {selectedYear} season kicks off — until then,
         every keep is still a genius move.
@@ -257,6 +283,13 @@ const kdefExceptionText =
           Only one QB counts toward the optimal seven — no team keeps two.
           A kept backup QB is never a miss, and grades a hit if he outscored
           an optimal player the team let walk.
+        </li>
+        <li>
+          An earned hit doesn't erase the matching "got away" — keeping the
+          kicker that beat your alternative and letting that alternative walk
+          are both facts, and both get shown. For the same reason a team
+          whose K/DEF or QB2 keeps outscored the skill-only optimal seven can
+          grade above 100% of optimal.
         </li>
         <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
         <li>

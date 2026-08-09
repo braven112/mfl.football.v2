@@ -96,6 +96,31 @@ describe('computeSeasonPoints', () => {
     expect(maxCompletedWeek).toBe(3);
   });
 
+  it('excludes top-level franchise blocks on playoff weeks, includes them on bye weeks', () => {
+    const playoffWeek = week('15', [
+      { regularSeason: '0', franchises: [{ id: '0001', players: [['100', '99']] }] },
+    ]);
+    // Idle (eliminated) franchise listed outside the matchups with real scores —
+    // the 2025 feed's week 17 shape.
+    playoffWeek.weeklyResults.franchise = [{ id: '0002', player: [{ id: '200', score: '45.6' }] }];
+    const byeWeek = week('3', [{ franchises: [{ id: '0001', players: [['100', '7']] }] }]);
+    byeWeek.weeklyResults.franchise = [{ id: '0003', player: [{ id: '300', score: '11.5' }] }];
+
+    const { points, maxCompletedWeek } = computeSeasonPoints([playoffWeek, byeWeek]);
+    expect(points.get('200')).toBeUndefined(); // playoff-week idle scores excluded
+    expect(points.get('300')).toBeCloseTo(11.5); // regular-season bye scores included
+    expect(maxCompletedWeek).toBe(3); // playoff week never counts as "completed"
+  });
+
+  it('skips entries whose week is missing or unparseable', () => {
+    const badWeek = week('1', [{ franchises: [{ id: '0001', players: [['100', '50']] }] }]);
+    delete badWeek.weeklyResults.week;
+    const goodWeek = week('2', [{ franchises: [{ id: '0001', players: [['100', '8']] }] }]);
+    const { points, maxCompletedWeek } = computeSeasonPoints([badWeek, goodWeek]);
+    expect(points.get('100')).toBeCloseTo(8);
+    expect(maxCompletedWeek).toBe(2);
+  });
+
   it('reports maxCompletedWeek 0 and no points for an empty season', () => {
     const { points, maxCompletedWeek } = computeSeasonPoints([]);
     expect(points.size).toBe(0);
@@ -126,6 +151,14 @@ describe('keeper reconstruction', () => {
   it('falls back to current rosters pre-week-1 (live cycle)', () => {
     const rosters = rostersFeed({ '0001': ['1', '2', '3'] });
     expect([...getOpeningRosterPids([], rosters, '0001')].sort()).toEqual(['1', '2', '3']);
+  });
+
+  it('never falls back to end-of-season rosters when week 1 exists', () => {
+    // Franchise 0002 is missing from week 1 — the final rosters.json must NOT
+    // stand in for its opening roster (it would count mid-season pickups as keeps).
+    const raw = [week('1', [{ franchises: [{ id: '0001', players: [['1', '5']] }] }])];
+    const rosters = rostersFeed({ '0002': ['9'] });
+    expect(getOpeningRosterPids(raw, rosters, '0002').size).toBe(0);
   });
 
   it('parses draft picks and ignores passed picks', () => {
@@ -434,7 +467,9 @@ describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () =
     });
     expect(analysis.franchises).toHaveLength(24);
     expect(analysis.previewMode).toBe(false);
-    expect(analysis.throughWeek).toBeGreaterThanOrEqual(14);
+    // Exactly the 14-week regular season — a higher number means playoff-week
+    // scores leaked in (the top-level-franchise contamination bug).
+    expect(analysis.throughWeek).toBe(14);
     for (const f of analysis.franchises) {
       expect(f.keptCount).toBeGreaterThanOrEqual(6);
       expect(f.keptCount).toBeLessThanOrEqual(7);

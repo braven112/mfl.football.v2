@@ -12,13 +12,14 @@
  * Kickers and team defenses are excluded from the optimal-seven grading
  * unless the league's #1 scorer at that position finished
  * KDEF_GAP_THRESHOLD+ points clear of #2 that season (positional-dominance
- * escape hatch — historically only the 2021 Patriots defense qualified).
- * They still surface as neutral "raw top 7" flags.
+ * escape hatch — no unit has cleared it in the five seasons checked; the
+ * closest was the 2021 Patriots defense at 33). They still surface as
+ * neutral "raw top 7" flags.
  *
  * Pure module: callers inject parsed feed JSON; no file/network I/O here.
  */
 
-import { KEEPER_LIMIT } from './afl-keepers-storage';
+import { KEEPER_LIMIT } from './afl-keeper-constants';
 import { formatMflName } from './player-name-matching';
 
 /** First prev-season year of the keeper era (cycle = prevYear → prevYear+1). */
@@ -171,10 +172,21 @@ function asArray<T>(value: T[] | T | undefined | null): T[] {
  * conferences, so the same NFL player can appear on one roster in each
  * conference the same week — summing naively would double-count him.
  */
+const seasonPointsMemo = new WeakMap<
+  WeeklyResultsRaw,
+  { points: Map<string, number>; maxCompletedWeek: number }
+>();
+
 export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
   points: Map<string, number>;
   maxCompletedWeek: number;
 } {
+  // The feed arrays come from eager import.meta.glob modules whose identity
+  // is stable for the life of the deploy, so a WeakMap memo makes every
+  // request after the first a lookup.
+  const memoized = weeklyRaw ? seasonPointsMemo.get(weeklyRaw) : undefined;
+  if (memoized) return memoized;
+
   const perPlayerWeek = new Map<string, number>();
   let maxCompletedWeek = 0;
 
@@ -182,12 +194,24 @@ export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
     const wr = entry?.weeklyResults;
     if (!wr) continue;
     const week = Number.parseInt(wr.week ?? '', 10);
-    const franchises: MflWeeklyFranchise[] = [];
-    for (const matchup of asArray(wr.matchup)) {
-      if (matchup.regularSeason !== undefined && matchup.regularSeason !== '1') continue;
-      franchises.push(...asArray(matchup.franchise));
+    // A missing/unparseable week would collapse every such entry onto one
+    // `pid|NaN` dedupe key (last write wins) — skip the entry entirely.
+    if (!Number.isFinite(week)) continue;
+
+    const matchups = asArray(wr.matchup);
+    const regularMatchups = matchups.filter((m) => m.regularSeason !== '0');
+    const franchises: MflWeeklyFranchise[] = regularMatchups.flatMap((m) =>
+      asArray(m.franchise)
+    );
+    // Top-level franchise blocks (franchises idle that week) only belong in
+    // regular-season totals when the week itself is a regular-season week.
+    // Playoff weeks list eliminated franchises here with real scores — the
+    // 2025 feed's week 17 carries six of them, and counting them inflates
+    // "regular-season" totals and maxCompletedWeek.
+    const isRegularSeasonWeek = matchups.length === 0 || regularMatchups.length > 0;
+    if (isRegularSeasonWeek) {
+      franchises.push(...asArray(wr.franchise));
     }
-    franchises.push(...asArray(wr.franchise));
 
     let weekHasScores = false;
     for (const franchise of franchises) {
@@ -199,7 +223,7 @@ export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
         perPlayerWeek.set(`${player.id}|${week}`, score);
       }
     }
-    if (weekHasScores && Number.isFinite(week)) {
+    if (weekHasScores) {
       maxCompletedWeek = Math.max(maxCompletedWeek, week);
     }
   }
@@ -209,7 +233,9 @@ export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
     const pid = key.slice(0, key.indexOf('|'));
     points.set(pid, (points.get(pid) ?? 0) + score);
   }
-  return { points, maxCompletedWeek };
+  const result = { points, maxCompletedWeek };
+  if (weeklyRaw) seasonPointsMemo.set(weeklyRaw, result);
+  return result;
 }
 
 /** Build id → PlayerInfo from players feeds; prev-year primary (covers retirees), cur-year overlays fresher NFL team codes. */
@@ -263,8 +289,13 @@ export function computeKdefExceptions(
 
 /**
  * A franchise's opening roster for the points season: week-1 rostered
- * players (starters + nonstarters) once the season has begun, else the
- * current rosters feed (live pre-draft cycle — keeps only, verified 7/7).
+ * players (starters + nonstarters) once the season has begun. The
+ * rosters.json fallback applies ONLY when the season has no week-1 entry
+ * at all (live pre-draft cycle, where the roster is the keeps — verified
+ * 7/7): for a completed season, rosters.json is the FINAL snapshot, and
+ * falling back to it would count mid-season re-acquisitions as "keeps".
+ * A franchise absent from an existing week 1 returns an empty set — a
+ * loudly-wrong 0-keep card beats a silently redefined keeper class.
  */
 export function getOpeningRosterPids(
   curWeeklyRaw: WeeklyResultsRaw | undefined,
@@ -282,7 +313,7 @@ export function getOpeningRosterPids(
       if (fr.id !== franchiseId) continue;
       for (const p of asArray(fr.player)) if (p?.id) pids.add(p.id);
     }
-    if (pids.size > 0) return pids;
+    return pids;
   }
   const franchise = curRosters?.rosters?.franchise?.find((f) => f.id === franchiseId);
   return new Set(asArray(franchise?.player).map((p) => p.id));

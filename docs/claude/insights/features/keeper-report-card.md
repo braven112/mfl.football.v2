@@ -33,15 +33,26 @@ week. Summing `weekly-results-raw.json` scores naively double-counts him.
 `computeSeasonPoints` keys on `pid|week` before totaling. Also filter
 `matchup.regularSeason === '1'` — the same file carries playoff weeks.
 
+**Playoff contamination gotcha (found by /live review):** filtering matchups
+is NOT enough. Playoff weeks list eliminated franchises in a top-level
+`weeklyResults.franchise` array (outside any matchup) WITH real player
+scores — 2025's week 17 carries six of them. Top-level blocks are legit on
+regular-season bye weeks, so gate them on the week being a regular-season
+week (≥1 non-`regularSeason:'0'` matchup, or no matchups at all). Ungated,
+102 players' totals inflated, two grades flipped, and `maxCompletedWeek`
+read 17 on a 14-week regular season. Any script summing these feeds by hand
+(research one-offs included) has the same trap.
+
 ## 2026-08-09 - Grading Rules Are User-Decided Product Policy (Don't "Fix" Them)
 
 **Insight:** Three rules came from explicit owner decisions backed by data
 runs — they are not bugs to simplify away:
 - **K/DEF dominance rule:** kickers/defenses are excluded from the optimal
   seven unless the position's league #1 finished 40+ points clear of #2.
-  Without it, 61% of team-seasons (54/88 across 2020→2025) had a K/DEF in the
-  raw top 7; with it, only the 2021 Patriots defense (49-pt gap) ever
-  qualifies. Kicker gaps historically max out at 26.
+  Without it, ~60% of team-seasons (53/88 across 2020→2025) had a K/DEF in
+  the raw top 7; with it, no unit has ever qualified — closest was the 2021
+  Patriots defense at 33. (An earlier "2021 Pats qualified at 49" figure was
+  an artifact of the playoff-week contamination bug below.)
 - **One-QB cap:** only a roster's top-scoring QB is optimal-eligible
   (`MAX_OPTIMAL_QBS = 1`) — no team keeps two, so a backup QB is never a miss
   and never "got away."
