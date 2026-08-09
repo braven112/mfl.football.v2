@@ -35,11 +35,15 @@ const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 
 // Committed MFL feeds, baked at build time (refreshed by roster-sync cron).
-const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
-const playerFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true });
-const draftFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/draftResults.json', { eager: true });
-const weeklyRawFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results-raw.json', { eager: true });
-const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/fetch.meta.json', { eager: true });
+// The year pattern matches 2024-2099 — the keeper era only
+// (AFL_KEEPER_ERA_FIRST_PREV_YEAR). A bare */ glob here bakes ~55MB of
+// pre-keeper-era JSON into the server bundle and pushes the Vercel function
+// past its 250MB uncompressed limit; the era filter keeps it to ~7MB.
+const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/rosters.json', { eager: true });
+const playerFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/players.json', { eager: true });
+const draftFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/draftResults.json', { eager: true });
+const weeklyRawFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/weekly-results-raw.json', { eager: true });
+const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/fetch.meta.json', { eager: true });
 
 // Eager JSON glob modules expose the parsed JSON as `default` (plus named
 // top-level keys); unwrap to the plain object.
