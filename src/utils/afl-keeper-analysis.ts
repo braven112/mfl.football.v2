@@ -65,7 +65,9 @@ interface MflWeeklyResultsEntry {
 export type WeeklyResultsRaw = MflWeeklyResultsEntry[];
 
 export interface MflPlayersFeed {
-  players: { player: Array<{ id: string; name?: string; position?: string; team?: string }> };
+  players: {
+    player: Array<{ id: string; name?: string; position?: string; team?: string; espn_id?: string }>;
+  };
 }
 
 export interface MflRostersFeed {
@@ -91,6 +93,8 @@ export interface PlayerInfo {
   name: string;
   position: string;
   nflTeam: string;
+  /** ESPN player id from the MFL feed — powers PlayerCell's ESPN headshot cascade. */
+  espnId?: string;
 }
 
 // --- Output shapes ---
@@ -223,6 +227,7 @@ export function buildPlayersById(
         name: p.name ? formatMflName(p.name) : (existing?.name ?? `Player #${p.id}`),
         position: p.position ?? existing?.position ?? '?',
         nflTeam: p.team ?? existing?.nflTeam ?? '',
+        espnId: p.espn_id ?? existing?.espnId,
       });
     }
   }

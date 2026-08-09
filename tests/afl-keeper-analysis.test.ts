@@ -61,6 +61,18 @@ function rostersFeed(rosters: Record<string, string[]>): MflRostersFeed {
   };
 }
 
+describe('buildPlayersById', () => {
+  it('carries espn_id through as espnId for the headshot cascade', () => {
+    const prev = {
+      players: { player: [{ id: '100', name: 'Hall, Breece', position: 'RB', team: 'NYJ', espn_id: '4427366' }] },
+    };
+    const cur = { players: { player: [{ id: '100', name: 'Hall, Breece', position: 'RB', team: 'NYJ' }] } };
+    const byId = buildPlayersById(prev, cur);
+    // cur-year record has no espn_id — the prev-year value must survive the overlay
+    expect(byId.get('100')?.espnId).toBe('4427366');
+  });
+});
+
 describe('computeSeasonPoints', () => {
   it('sums a player once per week even when rostered in both conferences', () => {
     const raw = [
