@@ -147,8 +147,27 @@ describe('what counts as a Double', () => {
     expect(card.sort()).toEqual(['afl-championship', 'premier-league']);
   });
 
-  it('AFL Cup + division is a Double — the Cup is gold too (2016)', () => {
+  it('the retired AFL Cup still counts in historical seasons (2016)', () => {
+    // The Cup was replaced by the Premier League, so it can never appear in a
+    // current-season card — but the trophy history must still read correctly.
     expect(sizeOfCardContaining(2016, 'afl-cup')).toBe(2);
+  });
+
+  it('the Cup and the Premier League never share a season', () => {
+    // They are the same slot in different eras, which is why the modern
+    // ceiling is a Treble: only two gold awards can ever coexist.
+    const seasons = (awardsHistory as any).seasons;
+    for (const s of seasons) {
+      const a = s.awards ?? {};
+      expect(Boolean(a['afl-cup'] && a['premier-league'])).toBe(false);
+    }
+  });
+
+  it('no season can produce more than a Treble under the modern awards', () => {
+    for (const s of (awardsHistory as any).seasons) {
+      if (!s.awards?.['premier-league']) continue; // modern era only
+      for (const card of cardsFor(s.year)) expect(card.length).toBeLessThanOrEqual(3);
+    }
   });
 
   it('the conference title never inflates a Championship card (2025 is a Treble)', () => {

@@ -10,7 +10,9 @@
  * Which titles earn a card, and which merely ride along, is decided by the
  * existing AFL award tiers (see src/utils/afl-awards.ts):
  *
- *   gold        AFL Championship / AFL Cup / Premier League   → earns a card
+ *   gold        AFL Championship / Premier League              → earns a card
+ *               (also the AFL Cup, retired after 2016 and replaced by the
+ *               Premier League — it can only appear in historical seasons)
  *   conference  AL / NL Champion                              → rides along
  *   division    the six divisions                             → rides along
  *   silver      D-League / NIT                                → excluded
